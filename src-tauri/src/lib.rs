@@ -27,9 +27,37 @@ async fn generate_ai_command(prompt: String) -> Result<String, String> {
     let request_body = OllamaRequest {
         model: "llama3".to_string(),
         prompt: format!(
-            "You are a terminal expert. Only respond with executable shell commands in JSON format. \
-             Example: {{\"command\": \"ls -la\"}}. Prompt: {}",
+            "You are a terminal expert. Convert the user's natural language request into a single executable shell command. \
+             Respond ONLY with a JSON object in the following format: {{\"command\": \"the command here\", \"explanation\": \"short explanation\"}}. \
+             Do not include any other text or markdown formatting. Prompt: {}",
             prompt
+        ),
+        stream: false,
+    };
+
+    let response = client
+        .post("http://localhost:11434/api/generate")
+        .json(&request_body)
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    let ollama_res: OllamaResponse = response.json().await.map_err(|e| e.to_string())?;
+    Ok(ollama_res.response)
+}
+
+#[tauri::command]
+async fn analyze_error(command: String, stderr: String) -> Result<String, String> {
+    let client = reqwest::Client::new();
+    let request_body = OllamaRequest {
+        model: "llama3".to_string(),
+        prompt: format!(
+            "The following command failed: `{}`. \
+             Error message: `{}`. \
+             Analyze the error and suggest a fix. \
+             Respond ONLY with a JSON object: {{\"analysis\": \"why it failed\", \"suggestion\": \"the corrected command\"}}. \
+             Do not include any other text. ",
+            command, stderr
         ),
         stream: false,
     };
@@ -72,7 +100,7 @@ pub fn run() {
     };
 
     let cmd = CommandBuilder::new(shell);
-    let mut child = pair.slave.spawn_command(cmd).expect("failed to spawn shell");
+    let mut _child = pair.slave.spawn_command(cmd).expect("failed to spawn shell");
 
     let mut reader = pair.master.try_clone_reader().expect("failed to clone reader");
     let writer = pair.master.take_writer().expect("failed to take writer");
@@ -101,7 +129,7 @@ pub fn run() {
             });
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![generate_ai_command, write_to_pty])
+        .invoke_handler(tauri::generate_handler![generate_ai_command, analyze_error, write_to_pty])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

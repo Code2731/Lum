@@ -8,7 +8,10 @@ interface TerminalBlock {
   id: string;
   command: string;
   output: string;
-  type: "shell" | "ai";
+  explanation?: string;
+  analysis?: string;
+  suggestion?: string;
+  type: "shell" | "ai" | "error-analysis";
   status: "executing" | "completed" | "error";
 }
 
@@ -21,11 +24,15 @@ const App: React.FC = () => {
     const unlisten = listen<string>("pty-data", (event) => {
       setBlocks((prev) => {
         if (currentBlockId) {
-          return prev.map((b) =>
-            b.id === currentBlockId
-              ? { ...b, output: b.output + event.payload }
-              : b
-          );
+          return prev.map((b) => {
+            if (b.id === currentBlockId) {
+              const newOutput = b.output + event.payload;
+              // Simple error detection: if output contains common error patterns
+              // In a real PTY, we'd check the exit code, but here we can look for "error" or "not found"
+              return { ...b, output: newOutput };
+            }
+            return b;
+          });
         }
         return prev;
       });
@@ -52,18 +59,72 @@ const App: React.FC = () => {
     try {
       if (type === "ai") {
         const result: string = await invoke("generate_ai_command", { prompt: cmd });
-        setBlocks((prev) =>
-          prev.map((b) => (b.id === id ? { ...b, output: result, status: "completed" } : b))
-        );
+        try {
+          const parsed = JSON.parse(result);
+          setBlocks((prev) =>
+            prev.map((b) =>
+              b.id === id
+                ? {
+                    ...b,
+                    command: parsed.command,
+                    explanation: parsed.explanation,
+                    status: "completed",
+                  }
+                : b
+            )
+          );
+        } catch {
+          setBlocks((prev) =>
+            prev.map((b) => (b.id === id ? { ...b, output: result, status: "completed" } : b))
+          );
+        }
       } else {
         setCurrentBlockId(id);
         await invoke("write_to_pty", { data: cmd + "\n" });
-        // We don't mark shell commands as "completed" easily without complex PTY tracking
-        // but for this MVP, we'll just keep it open for streaming.
       }
     } catch (error) {
       setBlocks((prev) =>
         prev.map((b) => (b.id === id ? { ...b, output: `Error: ${String(error)}`, status: "error" } : b))
+      );
+    }
+  };
+
+  const handleAnalyzeError = async (block: TerminalBlock) => {
+    const analysisId = Date.now().toString();
+    const analysisBlock: TerminalBlock = {
+      id: analysisId,
+      command: `Analyze: ${block.command}`,
+      output: "Analyzing...",
+      type: "error-analysis",
+      status: "executing",
+    };
+
+    setBlocks((prev) => [...prev, analysisBlock]);
+
+    try {
+      const result: string = await invoke("analyze_error", {
+        command: block.command,
+        stderr: block.output,
+      });
+      const parsed = JSON.parse(result);
+      setBlocks((prev) =>
+        prev.map((b) =>
+          b.id === analysisId
+            ? {
+                ...b,
+                analysis: parsed.analysis,
+                suggestion: parsed.suggestion,
+                output: "",
+                status: "completed",
+              }
+            : b
+        )
+      );
+    } catch (error) {
+      setBlocks((prev) =>
+        prev.map((b) =>
+          b.id === analysisId ? { ...b, output: `Analysis failed: ${String(error)}`, status: "error" } : b
+        )
       );
     }
   };
@@ -120,13 +181,48 @@ const App: React.FC = () => {
                     <span className="text-white/40 font-mono text-xs">{">"}</span>
                     <span className="font-mono text-sm text-lum-cyan">{block.command}</span>
                   </div>
-                  {block.type === "ai" && (
-                    <Sparkles className="w-4 h-4 text-lum-cyan/50" />
-                  )}
+                  <div className="flex items-center space-x-2">
+                    {block.type === "shell" && block.output.toLowerCase().includes("error") && (
+                      <button
+                        onClick={() => handleAnalyzeError(block)}
+                        className="text-[10px] bg-red-500/20 text-red-400 px-2 py-1 rounded border border-red-500/30 hover:bg-red-500/40 transition-colors"
+                      >
+                        Analyze Error
+                      </button>
+                    )}
+                    {(block.type === "ai" || block.type === "error-analysis") && (
+                      <Sparkles className="w-4 h-4 text-lum-cyan/50" />
+                    )}
+                  </div>
                 </div>
-                <pre className="font-mono text-sm text-white/70 whitespace-pre-wrap leading-relaxed">
-                  {block.output}
-                </pre>
+
+                {block.explanation && (
+                  <div className="mb-4 p-3 bg-lum-cyan/5 border-l-2 border-lum-cyan/30 text-xs text-lum-cyan/80 italic">
+                    {block.explanation}
+                  </div>
+                )}
+
+                {block.analysis && (
+                  <div className="mb-4 space-y-3">
+                    <div className="text-xs text-white/60">
+                      <span className="text-lum-cyan font-bold uppercase mr-2 tracking-widest text-[10px]">Analysis:</span>
+                      {block.analysis}
+                    </div>
+                    {block.suggestion && (
+                      <div className="p-3 bg-white/5 rounded border border-white/10 font-mono text-sm group cursor-pointer hover:border-lum-cyan/50 transition-colors"
+                           onClick={() => handleCommandSubmit(block.suggestion!, "shell")}>
+                        <div className="text-[10px] text-white/30 uppercase mb-1">Suggested Fix (Click to run):</div>
+                        <div className="text-lum-cyan">{block.suggestion}</div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {block.output && (
+                  <pre className="font-mono text-sm text-white/70 whitespace-pre-wrap leading-relaxed">
+                    {block.output}
+                  </pre>
+                )}
               </div>
             ))
           )}
