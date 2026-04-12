@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Folder, Command } from "lucide-react";
+import { Terminal, Sparkles, Folder, ChevronRight, Zap } from "lucide-react";
 
 interface CommandInputProps {
   onCommandSubmit: (cmd: string, type: "shell" | "ai") => void;
@@ -20,56 +20,38 @@ const CommandInput: React.FC<CommandInputProps> = ({ onCommandSubmit, selectedMo
   };
 
   return (
-    <div className="w-full flex items-start px-4 py-3 bg-[#111317] border-t border-term-border-light relative z-10 shadow-[0_-10px_20px_rgba(0,0,0,0.2)]">
-      
-      {/* Left Margin / Indicator area */}
-      <div className="w-6 flex justify-center mt-1 shrink-0">
-        {isAI ? (
-          <div className="w-1.5 h-1.5 rounded-full bg-term-accent mt-1 animate-pulse" />
-        ) : (
-          <div className="w-1.5 h-1.5 rounded-full bg-term-muted mt-1" />
-        )}
-      </div>
-
-      <div className="flex-1 flex flex-col justify-center">
-        {/* Context / Prompt Header */}
-        <div className="flex items-center space-x-2 mb-1.5 select-none">
-          <Folder className="w-3 h-3 text-term-muted" strokeWidth={2.5} />
-          <span className="text-[11px] font-mono text-term-muted tracking-tight font-medium">~/lum-workspace</span>
-          
-          {isAI && (
-            <>
-              <span className="text-[10px] text-term-muted px-1.5 py-0.5 rounded border border-white/5 bg-white/[0.02] ml-2">
-                Ask {selectedModel}
-              </span>
-            </>
-          )}
+    <div className="w-full px-4 pb-6">
+      <div className={`warp-prompt-container ${isAI ? 'border-warp-accent/30 ring-1 ring-warp-accent/10' : ''}`}>
+        {/* Warp Breadcrumb: Path Info */}
+        <div className="warp-path-breadcrumb">
+          <Folder className="w-3.5 h-3.5 mr-0.5" />
+          <span>lum-terminal</span>
+          <ChevronRight className="w-3.5 h-3.5 opacity-30" />
         </div>
 
-        {/* Input Field */}
-        <div className="flex items-center w-full relative group">
-          <span className={`absolute left-0 top-0 text-[14px] font-mono select-none ${isAI ? 'text-term-accent' : 'text-term-success'}`}>
+        {/* Warp Input: The Prompt */}
+        <div className="warp-input-area">
+          <span className={`font-bold text-[15px] select-none ${isAI ? 'text-warp-accent' : 'text-green-400'}`}>
             ❯
           </span>
+          
           <input
             type="text"
-            className={`w-full bg-transparent border-none outline-none text-[14px] font-mono pl-5 h-6 selection:bg-term-accent/30 ${isAI ? 'text-term-text' : 'text-term-text'}`}
-            placeholder=""
+            className="flex-1 bg-transparent border-none outline-none text-white text-[14px] font-mono selection:bg-warp-accent/30 py-1"
+            placeholder={isAI ? `Ask AI (${selectedModel})...` : ""}
             value={value}
             onChange={(e) => setValue(e.target.value)}
             onKeyDown={handleKeyDown}
             autoFocus
-            spellCheck="false"
-            autoComplete="off"
-            autoCorrect="off"
           />
-        </div>
-      </div>
 
-      {/* Right Edge: Subtle Helper */}
-      <div className="shrink-0 flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity ml-4 pt-1">
-        <Command className="w-3 h-3 text-term-muted" />
-        <span className="text-[10px] font-mono text-term-muted">Enter</span>
+          {isAI && (
+            <div className="flex items-center space-x-2 px-2 py-1 bg-warp-accent/10 border border-warp-accent/10 rounded text-[10px] text-warp-accent font-black tracking-widest uppercase">
+              <Zap className="w-3 h-3 fill-warp-accent" />
+              <span>{selectedModel}</span>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

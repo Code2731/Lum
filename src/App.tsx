@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Terminal, Box, Download, Trash2, Loader2, Copy, RotateCcw, AlertCircle, Settings, Command } from "lucide-react";
+import { Terminal, Clock, Sparkles, Box, Download, Trash2, ChevronRight, Loader2, Copy, RotateCcw, CheckCircle2, AlertCircle, Cpu, Zap } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import Ansi from "ansi-to-react";
@@ -31,7 +31,7 @@ const App: React.FC = () => {
 
   useEffect(() => {
     if (scrollRef.current) {
-      scrollRef.current.scrollTo({ top: scrollRef.current.scrollHeight });
+      scrollRef.current.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'auto' });
     }
   }, [blocks]);
 
@@ -73,7 +73,7 @@ const App: React.FC = () => {
     const id = Date.now().toString();
     const newBlock: TerminalBlock = {
       id, command: cmd, output: "", type, status: "executing",
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     };
     setBlocks((prev) => [...prev, newBlock]);
     setHistory((prev) => Array.from(new Set([cmd, ...prev])).slice(0, 50));
@@ -94,8 +94,8 @@ const App: React.FC = () => {
   const handleAnalyzeError = async (block: TerminalBlock) => {
     const analysisId = Date.now().toString();
     const analysisBlock: TerminalBlock = {
-      id: analysisId, command: `Analyze failure: ${block.command}`, output: "", type: "error-analysis", status: "executing",
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+      id: analysisId, command: `Analyze: ${block.command}`, output: "", type: "error-analysis", status: "executing",
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     };
     setBlocks((prev) => [...prev, analysisBlock]);
     try {
@@ -126,160 +126,121 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-term-bg font-sans">
+    <div className="flex h-screen w-screen bg-warp-bg font-sans overflow-hidden">
       
-      {/* 1. Native Mac-style Thin Sidebar */}
-      <aside className="w-[240px] bg-term-sidebar border-r border-term-border-light flex flex-col h-full select-none shrink-0 z-20">
-        
-        {/* Top Header */}
-        <div className="h-12 px-4 flex items-center border-b border-term-border-light">
-          <div className="flex items-center space-x-2">
-            <Terminal className="w-4 h-4 text-term-accent" strokeWidth={2.5} />
-            <span className="font-semibold text-[14px] tracking-tight text-white/90">LUM Terminal</span>
+      {/* 1. Warp Sidebar: Minimal & Unified */}
+      <aside className="w-64 bg-warp-sidebar border-r border-warp-border flex flex-col p-6 space-y-8 select-none shrink-0">
+        <div className="flex items-center space-x-3 mb-2 px-1">
+          <div className="w-8 h-8 bg-warp-accent rounded flex items-center justify-center">
+            <Zap className="text-black w-5 h-5 fill-black" />
           </div>
+          <span className="text-xl font-black text-white tracking-tight">LUM</span>
         </div>
 
-        {/* Navigation Content */}
-        <div className="flex-1 overflow-y-auto px-3 py-4 space-y-6">
-          
-          {/* Models Section */}
-          <div>
-            <div className="px-1 mb-2 flex items-center space-x-2 text-term-muted">
-              <Box className="w-3.5 h-3.5" />
-              <span className="text-[11px] font-bold uppercase tracking-widest">Models</span>
-            </div>
-            <div className="space-y-0.5">
+        <nav className="flex-1 overflow-y-auto space-y-6 scrollbar-hide">
+          <div className="space-y-3">
+            <div className="text-[10px] text-warp-dim uppercase tracking-widest font-black px-3">Models</div>
+            <div className="space-y-1">
               {models.map((m) => (
-                <div key={m} className={`nav-item group ${selectedModel === m ? 'active' : ''}`} onClick={() => setSelectedModel(m)}>
-                  <span className="truncate pr-2">{m}</span>
-                  <button onClick={(e) => { e.stopPropagation(); handleDeleteModel(m); }} className="opacity-0 group-hover:opacity-100 hover:text-term-error p-1 -mr-1 transition-all"><Trash2 className="w-3.5 h-3.5" /></button>
+                <div key={m} className={`warp-nav-item group ${selectedModel === m ? 'active' : ''}`} onClick={() => setSelectedModel(m)}>
+                  <span className="truncate flex-1 font-medium">{m}</span>
+                  <button onClick={(e) => { e.stopPropagation(); handleDeleteModel(m); }} className="opacity-0 group-hover:opacity-100 p-1 text-warp-dim hover:text-red-400"><Trash2 className="w-3.5 h-3.5" /></button>
                 </div>
               ))}
             </div>
-
-            {/* Subtle Input for Pulling */}
-            <div className="mt-2 px-1 relative">
-              <input 
-                type="text" 
-                placeholder="Pull model..." 
-                className="w-full bg-black/20 border border-white/5 rounded-md text-[12px] px-2.5 py-1.5 outline-none focus:border-term-accent/40 text-term-text placeholder-term-muted"
-                value={newModelName} 
-                onChange={(e) => setNewModelName(e.target.value)} 
-                onKeyDown={(e) => e.key === 'Enter' && handlePullModel()} 
-              />
-              {isPulling && (
-                <Loader2 className="w-3.5 h-3.5 absolute right-3 top-2 animate-spin text-term-accent" />
-              )}
+            <div className="px-3">
+              <div className="flex items-center space-x-2 bg-white/5 rounded border border-white/5 focus-within:border-warp-accent/30 transition-all p-1.5">
+                <input type="text" placeholder="Pull model..." className="bg-transparent border-none outline-none text-[10px] text-white/50 p-1 flex-1 min-w-0" value={newModelName} onChange={(e) => setNewModelName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handlePullModel()} />
+                <button onClick={handlePullModel} disabled={isPulling} className="p-1 text-warp-accent/60 hover:text-warp-accent disabled:opacity-30">{isPulling ? <Loader2 className="w-3 h-3 animate-spin" /> : <Download className="w-3 h-3" />}</button>
+              </div>
             </div>
           </div>
 
-          {/* History Section */}
-          <div>
-            <div className="px-1 mb-2 flex items-center space-x-2 text-term-muted">
-              <Command className="w-3.5 h-3.5" />
-              <span className="text-[11px] font-bold uppercase tracking-widest">History</span>
-            </div>
-            <div className="space-y-0.5">
+          <div className="space-y-4">
+            <div className="text-[10px] text-warp-dim uppercase tracking-widest font-black px-3">History</div>
+            <div className="space-y-1">
               {history.map((h, i) => (
-                <div key={i} className="px-3 py-1.5 rounded-md text-[12px] font-mono text-term-muted hover:text-term-text hover:bg-white/[0.03] cursor-pointer truncate" onClick={() => handleCommandSubmit(h, "shell")}>
-                  {h}
-                </div>
+                <div key={i} className="text-[11px] text-warp-dim hover:text-white cursor-pointer truncate px-3 py-1.5 rounded-lg hover:bg-white/[0.03] transition-all font-mono">{h}</div>
               ))}
             </div>
           </div>
-        </div>
+        </nav>
 
-        {/* Footer Status */}
-        <div className="p-4 border-t border-term-border-light bg-[#111317]">
-          <div className="flex items-center justify-between text-[11px]">
-            <div className="flex items-center space-x-2">
-              <div className={`w-2 h-2 rounded-full ${ollamaOnline ? "bg-term-success" : "bg-term-error"}`} />
-              <span className="text-term-muted font-medium">{ollamaOnline ? "Ollama Connected" : "Ollama Offline"}</span>
-            </div>
-            <Settings className="w-4 h-4 text-term-muted hover:text-white cursor-pointer transition-colors" />
+        <div className="pt-6 border-t border-warp-border flex items-center justify-between text-[10px]">
+          <div className="flex items-center space-x-2">
+            <div className={`w-1.5 h-1.5 rounded-full ${ollamaOnline ? "bg-warp-accent shadow-[0_0_10px_rgba(0,243,255,0.4)]" : "bg-red-500"}`} />
+            <span className="text-warp-dim font-bold uppercase tracking-wider">{ollamaOnline ? "Ready" : "Offline"}</span>
           </div>
+          <span className="text-white/10 font-mono tracking-widest">v1.0.0</span>
         </div>
       </aside>
 
-      {/* 2. Main Terminal View - Seamless Blocks */}
-      <main className="flex-1 flex flex-col h-full bg-term-bg relative w-full min-w-0">
-        
-        {/* Output Stream */}
-        <div ref={scrollRef} className="flex-1 overflow-y-auto pt-6 pb-4 px-2 scrollbar-hide">
+      {/* 2. Main Terminal: The Iconic Block Stream */}
+      <main className="flex-1 flex flex-col h-full bg-warp-bg relative min-w-0">
+        <div ref={scrollRef} className="flex-1 overflow-y-auto p-12 space-y-6 scrollbar-hide">
           {blocks.length === 0 ? (
-            <div className="h-full flex flex-col items-center justify-center opacity-30 select-none">
-              <Terminal className="w-12 h-12 text-term-muted mb-4" strokeWidth={1} />
-              <h1 className="text-lg font-medium text-term-text mb-1">LUM Workspace initialized</h1>
-              <p className="text-[13px] text-term-muted font-mono">Current Model: {selectedModel}</p>
+            <div className="h-full flex flex-col items-center justify-center text-center opacity-30 select-none">
+              <Sparkles className="w-16 h-16 text-warp-accent mb-6" />
+              <h1 className="text-2xl font-black text-white/90 mb-2">Welcome to LUM Workspace</h1>
+              <p className="text-xs text-warp-dim font-medium">Your AI-native terminal using <span className="text-warp-accent">{selectedModel}</span>.</p>
             </div>
           ) : (
             blocks.map((block) => (
-              <div key={block.id} className="terminal-stream-block group">
-                
-                {/* Status Indicator Bar */}
-                <div className={`block-indicator ${
-                  block.status === 'executing' ? 'bg-term-accent animate-pulse' : 
-                  block.status === 'error' ? 'bg-term-error' : 
-                  'bg-term-border-light group-hover:bg-term-muted/40'
-                }`} />
-
-                {/* Command Header */}
-                <div className="flex items-center justify-between pl-2">
-                  <div className="flex items-center space-x-2">
-                    <span className="text-[14px] font-mono font-bold text-term-text">{block.command}</span>
-                    <span className="text-[10px] text-term-muted font-mono bg-white/[0.03] px-1.5 py-0.5 rounded border border-white/5 opacity-0 group-hover:opacity-100 transition-opacity">
-                      {block.timestamp}
-                    </span>
+              <div key={block.id} className="warp-block-card animate-in fade-in slide-in-from-bottom-2 duration-300">
+                {/* Block Header */}
+                <div className="warp-block-header">
+                  <div className="flex items-center space-x-3 overflow-hidden">
+                    {block.status === "executing" ? <Loader2 className="w-3.5 h-3.5 text-warp-accent animate-spin" /> : 
+                     block.status === "error" ? <AlertCircle className="w-3.5 h-3.5 text-red-500" /> : 
+                     <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />}
+                    <span className="font-mono text-[13px] font-bold text-white/90 truncate">{block.command}</span>
                   </div>
-                  
-                  {/* Hover Actions */}
-                  <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button className="p-1 text-term-muted hover:text-white rounded hover:bg-white/10" title="Copy output"><Copy className="w-3.5 h-3.5" /></button>
-                    <button className="p-1 text-term-muted hover:text-white rounded hover:bg-white/10" title="Run again"><RotateCcw className="w-3.5 h-3.5" /></button>
+                  <div className="flex items-center space-x-4 shrink-0">
+                    <span className="text-[10px] text-warp-dim font-mono tracking-widest">{block.timestamp}</span>
+                    <div className="flex items-center space-x-2 border-l border-warp-border pl-4">
+                      <button className="p-1 text-warp-dim hover:text-white transition-all"><Copy className="w-3.5 h-3.5" /></button>
+                      <button className="p-1 text-warp-dim hover:text-white transition-all"><RotateCcw className="w-3.5 h-3.5" /></button>
+                    </div>
                   </div>
                 </div>
 
-                {/* Output Content */}
-                <div className="mt-2 pl-2">
-                  
-                  {/* AI Explanation / Thought */}
+                {/* Block Body */}
+                <div className="p-5">
                   {block.explanation && (
-                    <div className="mb-3 text-[13px] text-term-muted italic border-l-2 border-term-accent/30 pl-3 py-0.5 max-w-4xl">
+                    <div className="mb-4 text-[12px] text-warp-accent/80 italic border-l-2 border-warp-accent/30 pl-4 py-0.5 leading-relaxed">
                       {block.explanation}
                     </div>
                   )}
 
-                  {/* AI Error Analysis */}
                   {block.analysis && (
-                    <div className="mb-4 max-w-4xl">
-                      <div className="text-[13px] text-term-text leading-relaxed p-3 bg-term-error/10 border border-term-error/20 rounded-md">
-                        <span className="text-term-error font-bold uppercase mr-3 tracking-widest text-[10px]">Diagnosis</span>
+                    <div className="mb-5 space-y-4">
+                      <div className="text-[12px] text-white/70 leading-relaxed p-4 bg-red-500/[0.03] border-l-2 border-red-500/20 rounded-r-lg">
+                        <span className="text-red-400 font-black uppercase mr-3 tracking-[0.2em] text-[10px]">Failure Analysis</span>
                         {block.analysis}
                       </div>
                       {block.suggestion && (
-                        <div className="mt-2 p-3 bg-white/[0.02] border border-white/5 rounded-md font-mono text-[13px] flex items-center justify-between group/sugg cursor-pointer hover:bg-term-accent/5 hover:border-term-accent/20 transition-colors"
+                        <div className="p-4 bg-warp-accent/[0.04] rounded-xl border border-warp-accent/10 font-mono text-[12px] group cursor-pointer hover:bg-warp-accent/[0.08] hover:border-warp-accent/30 transition-all"
                              onClick={() => handleCommandSubmit(block.suggestion!, "shell")}>
-                          <span className="text-term-accent">{block.suggestion}</span>
-                          <span className="text-[10px] text-term-muted group-hover/sugg:text-term-accent uppercase font-bold tracking-widest flex items-center">
-                            Apply Fix
-                          </span>
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-[9px] text-warp-accent/50 uppercase font-black tracking-widest">Suggested Fix</span>
+                            <ChevronRight className="w-3.5 h-3.5 text-warp-accent/30 group-hover:translate-x-1 transition-transform" />
+                          </div>
+                          <div className="text-warp-accent font-bold">{block.suggestion}</div>
                         </div>
                       )}
                     </div>
                   )}
 
-                  {/* Terminal Standard Output */}
                   {block.output && (
-                    <div className="font-mono text-[13.5px] leading-relaxed text-[#cccccc] overflow-x-auto selection:bg-term-accent/30 mt-1 max-w-full">
+                    <div className="font-mono text-[13px] leading-relaxed text-[#f3f4f6] overflow-x-auto selection:bg-warp-accent/30">
                       <Ansi>{block.output}</Ansi>
                     </div>
                   )}
                   
-                  {/* Error Action Hook */}
                   {block.type === "shell" && block.output.toLowerCase().includes("error") && !block.analysis && (
-                    <button onClick={() => handleAnalyzeError(block)} className="mt-3 flex items-center space-x-1.5 text-[11px] text-term-error hover:text-red-400 font-medium">
-                      <AlertCircle className="w-3.5 h-3.5" />
-                      <span className="border-b border-dashed border-term-error/50">Ask AI to fix this error</span>
+                    <button onClick={() => handleAnalyzeError(block)} className="mt-4 flex items-center space-x-2 text-[10.5px] bg-red-500/10 text-red-400 px-4 py-2 rounded-lg border border-red-500/10 hover:bg-red-500/20 transition-all font-black uppercase tracking-widest">
+                      <Sparkles className="w-3.5 h-3.5" />
+                      <span>Ask AI for a Fix</span>
                     </button>
                   )}
                 </div>
@@ -288,8 +249,10 @@ const App: React.FC = () => {
           )}
         </div>
 
-        {/* 3. Integrated Bottom Prompt (No Floating) */}
-        <CommandInput onCommandSubmit={handleCommandSubmit} selectedModel={selectedModel} />
+        {/* 3. The Warp Input Dock: Unified at Bottom */}
+        <div className="bg-gradient-to-t from-warp-bg via-warp-bg to-transparent pt-32 pb-6 px-12">
+          <CommandInput onCommandSubmit={handleCommandSubmit} selectedModel={selectedModel} />
+        </div>
       </main>
     </div>
   );
