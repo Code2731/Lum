@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Terminal, Clock, Sparkles } from "lucide-react";
+import { Terminal, Clock, Sparkles, Box, Download, Trash2, ChevronRight, Plus, Loader2 } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import CommandInput from "./components/CommandInput";
@@ -20,21 +20,42 @@ const App: React.FC = () => {
   const [history, setHistory] = useState<string[]>([]);
   const [currentBlockId, setCurrentBlockId] = useState<string | null>(null);
   const [ollamaOnline, setOllamaOnline] = useState(false);
+  
+  // Model Management State
+  const [models, setModels] = useState<string[]>([]);
+  const [selectedModel, setSelectedModel] = useState<string>("llama3");
+  const [newModelName, setNewModelName] = useState("");
+  const [isPulling, setIsPulling] = useState(false);
 
   useEffect(() => {
     const checkStatus = async () => {
       try {
         const isOnline: boolean = await invoke("check_ollama_status");
         setOllamaOnline(isOnline);
+        if (isOnline) {
+          fetchModels();
+        }
       } catch {
         setOllamaOnline(false);
+      }
+    };
+
+    const fetchModels = async () => {
+      try {
+        const modelList: string[] = await invoke("list_models");
+        setModels(modelList);
+        if (modelList.length > 0 && !modelList.includes(selectedModel)) {
+          setSelectedModel(modelList[0]);
+        }
+      } catch (e) {
+        console.error("Failed to fetch models", e);
       }
     };
 
     checkStatus();
     const interval = setInterval(checkStatus, 5000);
     return () => clearInterval(interval);
-  }, []);
+  }, [selectedModel]);
 
   useEffect(() => {
     const unlisten = listen<string>("pty-data", (event) => {
@@ -42,10 +63,7 @@ const App: React.FC = () => {
         if (currentBlockId) {
           return prev.map((b) => {
             if (b.id === currentBlockId) {
-              const newOutput = b.output + event.payload;
-              // Simple error detection: if output contains common error patterns
-              // In a real PTY, we'd check the exit code, but here we can look for "error" or "not found"
-              return { ...b, output: newOutput };
+              return { ...b, output: b.output + event.payload };
             }
             return b;
           });
@@ -74,7 +92,10 @@ const App: React.FC = () => {
 
     try {
       if (type === "ai") {
-        const result: string = await invoke("generate_ai_command", { prompt: cmd });
+        const result: string = await invoke("generate_ai_command", { 
+          prompt: cmd,
+          model: selectedModel 
+        });
         try {
           const parsed = JSON.parse(result);
           setBlocks((prev) =>
@@ -121,6 +142,7 @@ const App: React.FC = () => {
       const result: string = await invoke("analyze_error", {
         command: block.command,
         stderr: block.output,
+        model: selectedModel
       });
       const parsed = JSON.parse(result);
       setBlocks((prev) =>
@@ -145,10 +167,36 @@ const App: React.FC = () => {
     }
   };
 
+  const handlePullModel = async () => {
+    if (!newModelName) return;
+    setIsPulling(true);
+    try {
+      await invoke("pull_model", { name: newModelName });
+      const modelList: string[] = await invoke("list_models");
+      setModels(modelList);
+      setNewModelName("");
+    } catch (e) {
+      alert(`Download failed: ${e}`);
+    } finally {
+      setIsPulling(false);
+    }
+  };
+
+  const handleDeleteModel = async (name: string) => {
+    if (!confirm(`Delete model ${name}?`)) return;
+    try {
+      await invoke("delete_model", { name });
+      const modelList: string[] = await invoke("list_models");
+      setModels(modelList);
+    } catch (e) {
+      alert(`Delete failed: ${e}`);
+    }
+  };
+
   return (
     <div className="flex h-screen w-screen overflow-hidden">
       {/* Glass Sidebar */}
-      <aside className="w-64 glass-sidebar flex flex-col p-6 space-y-8 h-full">
+      <aside className="w-72 glass-sidebar flex flex-col p-6 space-y-8 h-full">
         <div className="flex items-center space-x-3">
           <div className="w-10 h-10 bg-lum-cyan rounded-lg flex items-center justify-center shadow-[var(--color-lum-neon-glow)]">
             <Terminal className="text-lum-bg w-6 h-6" />
@@ -156,18 +204,72 @@ const App: React.FC = () => {
           <span className="text-2xl font-black tracking-tighter text-white">LUM</span>
         </div>
 
-        <nav className="flex-1 space-y-4 overflow-y-auto pr-2">
-          <div className="text-[10px] text-white/40 uppercase tracking-widest font-bold">History</div>
-          {history.length === 0 ? (
-            <div className="text-white/20 text-sm italic">No recent history</div>
-          ) : (
-            history.map((h, i) => (
-              <div key={i} className="flex items-center space-x-3 text-white/50 hover:text-lum-cyan cursor-pointer transition-colors group">
-                <Clock className="w-4 h-4 group-hover:scale-110" />
-                <span className="truncate text-sm font-medium">{h}</span>
+        <nav className="flex-1 flex flex-col space-y-8 overflow-y-auto pr-2 scrollbar-hide">
+          {/* Model Management Section */}
+          <div className="space-y-4">
+            <div className="text-[10px] text-white/40 uppercase tracking-widest font-bold flex items-center">
+              <Box className="w-3 h-3 mr-2" /> AI Models
+            </div>
+            
+            <div className="space-y-1">
+              {models.map((m) => (
+                <div 
+                  key={m} 
+                  className={`group flex items-center justify-between p-2 rounded-md transition-all cursor-pointer ${selectedModel === m ? 'bg-lum-cyan/10 border border-lum-cyan/30' : 'hover:bg-white/5 border border-transparent'}`}
+                  onClick={() => setSelectedModel(m)}
+                >
+                  <div className="flex items-center space-x-2 truncate">
+                    <ChevronRight className={`w-3 h-3 ${selectedModel === m ? 'text-lum-cyan' : 'text-white/20'}`} />
+                    <span className={`text-sm truncate ${selectedModel === m ? 'text-lum-cyan font-bold' : 'text-white/60'}`}>{m}</span>
+                  </div>
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); handleDeleteModel(m); }}
+                    className="opacity-0 group-hover:opacity-100 p-1 hover:text-red-400 transition-all"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            <div className="pt-2">
+              <div className="flex items-center space-x-2 bg-white/5 rounded-md p-1 border border-white/10 focus-within:border-lum-cyan/50 transition-all">
+                <input 
+                  type="text" 
+                  placeholder="Model name..." 
+                  className="bg-transparent border-none outline-none text-xs text-white/80 p-1 flex-1 min-w-0"
+                  value={newModelName}
+                  onChange={(e) => setNewModelName(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handlePullModel()}
+                />
+                <button 
+                  onClick={handlePullModel}
+                  disabled={isPulling}
+                  className="p-1.5 bg-lum-cyan/20 text-lum-cyan rounded hover:bg-lum-cyan/30 disabled:opacity-50"
+                >
+                  {isPulling ? <Loader2 className="w-3 h-3 animate-spin" /> : <Download className="w-3 h-3" />}
+                </button>
               </div>
-            ))
-          )}
+              <p className="text-[9px] text-white/20 mt-1 px-1">Example: gemma2, llama3, mistral</p>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <div className="text-[10px] text-white/40 uppercase tracking-widest font-bold flex items-center">
+              <Clock className="w-3 h-3 mr-2" /> History
+            </div>
+            {history.length === 0 ? (
+              <div className="text-white/20 text-sm italic px-2">No recent history</div>
+            ) : (
+              <div className="space-y-2">
+                {history.map((h, i) => (
+                  <div key={i} className="flex items-center space-x-3 text-white/40 hover:text-lum-cyan cursor-pointer transition-colors group px-2">
+                    <span className="truncate text-xs font-medium">{h}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </nav>
 
         <div className="mt-auto pt-6 border-t border-white/10 flex items-center space-x-3">
@@ -185,7 +287,8 @@ const App: React.FC = () => {
               <div>
                 <h1 className="text-3xl font-black text-white/80 mb-2">Welcome to LUM</h1>
                 <p className="text-white/40 max-w-sm">
-                  Your local AI-native terminal. Start typing or use <kbd className="bg-white/10 px-1.5 rounded">/</kbd> for AI assistance.
+                  Your local AI-native terminal using <span className="text-lum-cyan font-bold">{selectedModel}</span>. 
+                  Start typing or use <kbd className="bg-white/10 px-1.5 rounded">/</kbd> for AI assistance.
                 </p>
               </div>
             </div>

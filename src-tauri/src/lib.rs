@@ -17,6 +17,28 @@ struct OllamaResponse {
     response: String,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+struct PullRequest {
+    name: String,
+    stream: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct DeleteRequest {
+    name: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct ModelListResponse {
+    models: Vec<Model>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct Model {
+    name: String,
+    size: u64,
+}
+
 pub struct TerminalState {
     pub writer: Arc<Mutex<Box<dyn Write + Send>>>,
 }
@@ -31,10 +53,56 @@ async fn check_ollama_status() -> bool {
 }
 
 #[tauri::command]
-async fn generate_ai_command(prompt: String) -> Result<String, String> {
+async fn list_models() -> Result<Vec<String>, String> {
+    let client = reqwest::Client::new();
+    let res = client.get("http://localhost:11434/api/tags")
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+    
+    let json: ModelListResponse = res.json().await.map_err(|e| e.to_string())?;
+    Ok(json.models.into_iter().map(|m| m.name).collect())
+}
+
+#[tauri::command]
+async fn pull_model(name: String) -> Result<(), String> {
+    let client = reqwest::Client::new();
+    let req = PullRequest { name, stream: false };
+    let res = client.post("http://localhost:11434/api/pull")
+        .json(&req)
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    if res.status().is_success() {
+        Ok(())
+    } else {
+        Err(format!("Failed to pull model: {}", res.status()))
+    }
+}
+
+#[tauri::command]
+async fn delete_model(name: String) -> Result<(), String> {
+    let client = reqwest::Client::new();
+    let req = DeleteRequest { name };
+    let res = client.delete("http://localhost:11434/api/delete")
+        .json(&req)
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    if res.status().is_success() {
+        Ok(())
+    } else {
+        Err(format!("Failed to delete model: {}", res.status()))
+    }
+}
+
+#[tauri::command]
+async fn generate_ai_command(prompt: String, model: String) -> Result<String, String> {
     let client = reqwest::Client::new();
     let request_body = OllamaRequest {
-        model: "llama3".to_string(),
+        model,
         prompt: format!(
             "You are a terminal expert. Convert the user's natural language request into a single executable shell command. \
              Respond ONLY with a JSON object in the following format: {{\"command\": \"the command here\", \"explanation\": \"short explanation\"}}. \
@@ -56,10 +124,10 @@ async fn generate_ai_command(prompt: String) -> Result<String, String> {
 }
 
 #[tauri::command]
-async fn analyze_error(command: String, stderr: String) -> Result<String, String> {
+async fn analyze_error(command: String, stderr: String, model: String) -> Result<String, String> {
     let client = reqwest::Client::new();
     let request_body = OllamaRequest {
-        model: "llama3".to_string(),
+        model,
         prompt: format!(
             "The following command failed: `{}`. \
              Error message: `{}`. \
@@ -105,7 +173,7 @@ pub fn run() {
     let shell = if cfg!(target_os = "windows") {
         "powershell.exe"
     } else {
-        "zsh" // Default for macOS
+        "zsh"
     };
 
     let cmd = CommandBuilder::new(shell);
@@ -138,7 +206,15 @@ pub fn run() {
             });
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![generate_ai_command, analyze_error, write_to_pty, check_ollama_status])
+        .invoke_handler(tauri::generate_handler![
+            generate_ai_command, 
+            analyze_error, 
+            write_to_pty, 
+            check_ollama_status,
+            list_models,
+            pull_model,
+            delete_model
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
