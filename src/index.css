@@ -1,0 +1,31 @@
+@import "tailwindcss";
+
+@theme {
+  --color-lum-bg: #0d1117;
+  --color-lum-cyan: #00f3ff;
+  --color-lum-neon-glow: 0 0 10px rgba(0, 243, 255, 0.5), 0 0 20px rgba(0, 243, 255, 0.3);
+}
+
+@layer base {
+  body {
+    @apply bg-lum-bg text-white font-sans antialiased;
+  }
+}
+
+@layer components {
+  .glass-sidebar {
+    @apply bg-white/5 backdrop-blur-md border-r border-white/10;
+  }
+  
+  .neon-input-container {
+    @apply relative rounded-lg border border-white/20 transition-all duration-300;
+  }
+
+  .neon-input-container:focus-within {
+    @apply border-lum-cyan/50 shadow-[var(--color-lum-neon-glow)];
+  }
+
+  .terminal-block {
+    @apply bg-white/5 rounded-lg p-4 mb-4 border border-white/5;
+  }
+}
