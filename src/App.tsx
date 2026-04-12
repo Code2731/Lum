@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { Terminal, Clock, Sparkles, Box, Download, Trash2, ChevronRight, Plus, Loader2 } from "lucide-react";
+import React, { useState, useEffect, useRef } from "react";
+import { Terminal, Clock, Sparkles, Box, Download, Trash2, ChevronRight, Loader2, Copy, RotateCcw, CheckCircle2, AlertCircle } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import CommandInput from "./components/CommandInput";
@@ -13,6 +13,7 @@ interface TerminalBlock {
   suggestion?: string;
   type: "shell" | "ai" | "error-analysis";
   status: "executing" | "completed" | "error";
+  timestamp: string;
 }
 
 const App: React.FC = () => {
@@ -20,21 +21,25 @@ const App: React.FC = () => {
   const [history, setHistory] = useState<string[]>([]);
   const [currentBlockId, setCurrentBlockId] = useState<string | null>(null);
   const [ollamaOnline, setOllamaOnline] = useState(false);
-  
-  // Model Management State
   const [models, setModels] = useState<string[]>([]);
   const [selectedModel, setSelectedModel] = useState<string>("llama3");
   const [newModelName, setNewModelName] = useState("");
   const [isPulling, setIsPulling] = useState(false);
+  
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [blocks]);
 
   useEffect(() => {
     const checkStatus = async () => {
       try {
         const isOnline: boolean = await invoke("check_ollama_status");
         setOllamaOnline(isOnline);
-        if (isOnline) {
-          fetchModels();
-        }
+        if (isOnline) fetchModels();
       } catch {
         setOllamaOnline(false);
       }
@@ -47,9 +52,7 @@ const App: React.FC = () => {
         if (modelList.length > 0 && !modelList.includes(selectedModel)) {
           setSelectedModel(modelList[0]);
         }
-      } catch (e) {
-        console.error("Failed to fetch models", e);
-      }
+      } catch (e) { console.error(e); }
     };
 
     checkStatus();
@@ -61,20 +64,14 @@ const App: React.FC = () => {
     const unlisten = listen<string>("pty-data", (event) => {
       setBlocks((prev) => {
         if (currentBlockId) {
-          return prev.map((b) => {
-            if (b.id === currentBlockId) {
-              return { ...b, output: b.output + event.payload };
-            }
-            return b;
-          });
+          return prev.map((b) =>
+            b.id === currentBlockId ? { ...b, output: b.output + event.payload } : b
+          );
         }
         return prev;
       });
     });
-
-    return () => {
-      unlisten.then((f) => f());
-    };
+    return () => { unlisten.then((f) => f()); };
   }, [currentBlockId]);
 
   const handleCommandSubmit = async (cmd: string, type: "shell" | "ai") => {
@@ -85,44 +82,27 @@ const App: React.FC = () => {
       output: "",
       type,
       status: "executing",
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     };
 
     setBlocks((prev) => [...prev, newBlock]);
-    setHistory((prev) => [cmd, ...prev].slice(0, 50));
+    setHistory((prev) => Array.from(new Set([cmd, ...prev])).slice(0, 50));
 
     try {
       if (type === "ai") {
-        const result: string = await invoke("generate_ai_command", { 
-          prompt: cmd,
-          model: selectedModel 
-        });
+        const result: string = await invoke("generate_ai_command", { prompt: cmd, model: selectedModel });
         try {
           const parsed = JSON.parse(result);
-          setBlocks((prev) =>
-            prev.map((b) =>
-              b.id === id
-                ? {
-                    ...b,
-                    command: parsed.command,
-                    explanation: parsed.explanation,
-                    status: "completed",
-                  }
-                : b
-            )
-          );
+          setBlocks((prev) => prev.map((b) => b.id === id ? { ...b, command: parsed.command, explanation: parsed.explanation, status: "completed" } : b));
         } catch {
-          setBlocks((prev) =>
-            prev.map((b) => (b.id === id ? { ...b, output: result, status: "completed" } : b))
-          );
+          setBlocks((prev) => prev.map((b) => b.id === id ? { ...b, output: result, status: "completed" } : b));
         }
       } else {
         setCurrentBlockId(id);
         await invoke("write_to_pty", { data: cmd + "\n" });
       }
     } catch (error) {
-      setBlocks((prev) =>
-        prev.map((b) => (b.id === id ? { ...b, output: `Error: ${String(error)}`, status: "error" } : b))
-      );
+      setBlocks((prev) => prev.map((b) => b.id === id ? { ...b, output: `Error: ${String(error)}`, status: "error" } : b));
     }
   };
 
@@ -131,39 +111,18 @@ const App: React.FC = () => {
     const analysisBlock: TerminalBlock = {
       id: analysisId,
       command: `Analyze: ${block.command}`,
-      output: "Analyzing...",
+      output: "",
       type: "error-analysis",
       status: "executing",
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     };
-
     setBlocks((prev) => [...prev, analysisBlock]);
-
     try {
-      const result: string = await invoke("analyze_error", {
-        command: block.command,
-        stderr: block.output,
-        model: selectedModel
-      });
+      const result: string = await invoke("analyze_error", { command: block.command, stderr: block.output, model: selectedModel });
       const parsed = JSON.parse(result);
-      setBlocks((prev) =>
-        prev.map((b) =>
-          b.id === analysisId
-            ? {
-                ...b,
-                analysis: parsed.analysis,
-                suggestion: parsed.suggestion,
-                output: "",
-                status: "completed",
-              }
-            : b
-        )
-      );
+      setBlocks((prev) => prev.map((b) => b.id === analysisId ? { ...b, analysis: parsed.analysis, suggestion: parsed.suggestion, status: "completed" } : b));
     } catch (error) {
-      setBlocks((prev) =>
-        prev.map((b) =>
-          b.id === analysisId ? { ...b, output: `Analysis failed: ${String(error)}`, status: "error" } : b
-        )
-      );
+      setBlocks((prev) => prev.map((b) => b.id === analysisId ? { ...b, output: `Analysis failed: ${String(error)}`, status: "error" } : b));
     }
   };
 
@@ -175,11 +134,7 @@ const App: React.FC = () => {
       const modelList: string[] = await invoke("list_models");
       setModels(modelList);
       setNewModelName("");
-    } catch (e) {
-      alert(`Download failed: ${e}`);
-    } finally {
-      setIsPulling(false);
-    }
+    } catch (e) { alert(e); } finally { setIsPulling(false); }
   };
 
   const handleDeleteModel = async (name: string) => {
@@ -188,168 +143,135 @@ const App: React.FC = () => {
       await invoke("delete_model", { name });
       const modelList: string[] = await invoke("list_models");
       setModels(modelList);
-    } catch (e) {
-      alert(`Delete failed: ${e}`);
-    }
+    } catch (e) { alert(e); }
   };
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden">
-      {/* Glass Sidebar */}
-      <aside className="w-72 glass-sidebar flex flex-col p-6 space-y-8 h-full">
-        <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 bg-lum-cyan rounded-lg flex items-center justify-center shadow-[var(--color-lum-neon-glow)]">
-            <Terminal className="text-lum-bg w-6 h-6" />
+    <div className="flex h-screen w-screen overflow-hidden bg-warp-bg">
+      {/* Warp Style Sidebar */}
+      <aside className="w-64 bg-warp-sidebar border-r border-warp-border flex flex-col p-6 space-y-8 h-full">
+        <div className="flex items-center space-x-3 mb-4">
+          <div className="w-8 h-8 bg-warp-accent rounded flex items-center justify-center shadow-[var(--shadow-neon)]">
+            <Terminal className="text-warp-bg w-5 h-5" />
           </div>
-          <span className="text-2xl font-black tracking-tighter text-white">LUM</span>
+          <span className="text-xl font-black tracking-tight text-white">LUM</span>
         </div>
 
         <nav className="flex-1 flex flex-col space-y-8 overflow-y-auto pr-2 scrollbar-hide">
-          {/* Model Management Section */}
           <div className="space-y-4">
-            <div className="text-[10px] text-white/40 uppercase tracking-widest font-bold flex items-center">
-              <Box className="w-3 h-3 mr-2" /> AI Models
+            <div className="text-[10px] text-white/30 uppercase tracking-[0.2em] font-bold flex items-center px-1">
+              <Box className="w-3 h-3 mr-2" /> Models
             </div>
-            
             <div className="space-y-1">
               {models.map((m) => (
-                <div 
-                  key={m} 
-                  className={`group flex items-center justify-between p-2 rounded-md transition-all cursor-pointer ${selectedModel === m ? 'bg-lum-cyan/10 border border-lum-cyan/30' : 'hover:bg-white/5 border border-transparent'}`}
-                  onClick={() => setSelectedModel(m)}
-                >
+                <div key={m} className={`group flex items-center justify-between p-2 rounded transition-all cursor-pointer ${selectedModel === m ? 'bg-warp-accent/10 text-warp-accent' : 'text-white/40 hover:bg-white/5'}`} onClick={() => setSelectedModel(m)}>
                   <div className="flex items-center space-x-2 truncate">
-                    <ChevronRight className={`w-3 h-3 ${selectedModel === m ? 'text-lum-cyan' : 'text-white/20'}`} />
-                    <span className={`text-sm truncate ${selectedModel === m ? 'text-lum-cyan font-bold' : 'text-white/60'}`}>{m}</span>
+                    <span className={`text-xs truncate ${selectedModel === m ? 'font-bold' : ''}`}>{m}</span>
                   </div>
-                  <button 
-                    onClick={(e) => { e.stopPropagation(); handleDeleteModel(m); }}
-                    className="opacity-0 group-hover:opacity-100 p-1 hover:text-red-400 transition-all"
-                  >
-                    <Trash2 className="w-3 h-3" />
-                  </button>
+                  <button onClick={(e) => { e.stopPropagation(); handleDeleteModel(m); }} className="opacity-0 group-hover:opacity-100 p-1 hover:text-red-400 transition-all"><Trash2 className="w-3 h-3" /></button>
                 </div>
               ))}
             </div>
-
-            <div className="pt-2">
-              <div className="flex items-center space-x-2 bg-white/5 rounded-md p-1 border border-white/10 focus-within:border-lum-cyan/50 transition-all">
-                <input 
-                  type="text" 
-                  placeholder="Model name..." 
-                  className="bg-transparent border-none outline-none text-xs text-white/80 p-1 flex-1 min-w-0"
-                  value={newModelName}
-                  onChange={(e) => setNewModelName(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handlePullModel()}
-                />
-                <button 
-                  onClick={handlePullModel}
-                  disabled={isPulling}
-                  className="p-1.5 bg-lum-cyan/20 text-lum-cyan rounded hover:bg-lum-cyan/30 disabled:opacity-50"
-                >
-                  {isPulling ? <Loader2 className="w-3 h-3 animate-spin" /> : <Download className="w-3 h-3" />}
-                </button>
-              </div>
-              <p className="text-[9px] text-white/20 mt-1 px-1">Example: gemma2, llama3, mistral</p>
+            <div className="flex items-center space-x-2 bg-white/5 rounded border border-white/5 focus-within:border-warp-accent/30 transition-all p-1 mt-2">
+              <input type="text" placeholder="Pull model..." className="bg-transparent border-none outline-none text-[10px] text-white/60 p-1 flex-1 min-w-0" value={newModelName} onChange={(e) => setNewModelName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handlePullModel()} />
+              <button onClick={handlePullModel} disabled={isPulling} className="p-1 text-warp-accent/60 hover:text-warp-accent disabled:opacity-30">{isPulling ? <Loader2 className="w-3 h-3 animate-spin" /> : <Download className="w-3 h-3" />}</button>
             </div>
           </div>
 
           <div className="space-y-4">
-            <div className="text-[10px] text-white/40 uppercase tracking-widest font-bold flex items-center">
-              <Clock className="w-3 h-3 mr-2" /> History
+            <div className="text-[10px] text-white/30 uppercase tracking-[0.2em] font-bold px-1">History</div>
+            <div className="space-y-1">
+              {history.map((h, i) => (
+                <div key={i} className="text-[10px] text-white/30 hover:text-warp-accent/60 cursor-pointer truncate px-2 py-1 rounded hover:bg-white/5 transition-all">{h}</div>
+              ))}
             </div>
-            {history.length === 0 ? (
-              <div className="text-white/20 text-sm italic px-2">No recent history</div>
-            ) : (
-              <div className="space-y-2">
-                {history.map((h, i) => (
-                  <div key={i} className="flex items-center space-x-3 text-white/40 hover:text-lum-cyan cursor-pointer transition-colors group px-2">
-                    <span className="truncate text-xs font-medium">{h}</span>
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
         </nav>
 
-        <div className="mt-auto pt-6 border-t border-white/10 flex items-center space-x-3">
-          <div className={`w-2 h-2 rounded-full ${ollamaOnline ? "bg-green-500 animate-pulse shadow-[0_0_8px_#22c55e]" : "bg-red-500 shadow-[0_0_8px_#ef4444]"}`} />
-          <span className="text-xs text-white/50 font-medium">Ollama: {ollamaOnline ? "Online" : "Offline"}</span>
+        <div className="mt-auto pt-6 border-t border-warp-border flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <div className={`w-1.5 h-1.5 rounded-full ${ollamaOnline ? "bg-warp-accent animate-pulse" : "bg-red-500"}`} />
+            <span className="text-[10px] text-white/30 font-bold uppercase tracking-widest">{ollamaOnline ? "Online" : "Offline"}</span>
+          </div>
+          <span className="text-[9px] text-white/20 font-mono">v1.0.0</span>
         </div>
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 flex flex-col h-full bg-[#0d1117] relative">
-        <div className="flex-1 overflow-y-auto p-12 space-y-6 scrollbar-hide">
+      <main className="flex-1 flex flex-col h-full bg-warp-bg relative">
+        <div ref={scrollRef} className="flex-1 overflow-y-auto p-8 space-y-4 scrollbar-hide">
           {blocks.length === 0 ? (
-            <div className="h-full flex flex-col items-center justify-center text-center space-y-6">
-              <Sparkles className="w-16 h-16 text-lum-cyan/20" />
-              <div>
-                <h1 className="text-3xl font-black text-white/80 mb-2">Welcome to LUM</h1>
-                <p className="text-white/40 max-w-sm">
-                  Your local AI-native terminal using <span className="text-lum-cyan font-bold">{selectedModel}</span>. 
-                  Start typing or use <kbd className="bg-white/10 px-1.5 rounded">/</kbd> for AI assistance.
-                </p>
-              </div>
+            <div className="h-full flex flex-col items-center justify-center text-center opacity-30">
+              <Sparkles className="w-12 h-12 text-warp-accent mb-4" />
+              <h1 className="text-xl font-bold text-white mb-2">Ready for Command</h1>
+              <p className="text-xs text-white/60">Using {selectedModel} model</p>
             </div>
           ) : (
             blocks.map((block) => (
-              <div key={block.id} className="terminal-block animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <div className="flex items-center justify-between mb-4 pb-4 border-b border-white/5">
-                  <div className="flex items-center space-x-3">
-                    <span className="text-white/40 font-mono text-xs">{">"}</span>
-                    <span className="font-mono text-sm text-lum-cyan">{block.command}</span>
+              <div key={block.id} className="warp-card animate-in fade-in slide-in-from-bottom-2 duration-300">
+                <div className="block-header">
+                  <div className="flex items-center space-x-3 overflow-hidden">
+                    {block.status === "executing" ? <Loader2 className="w-3.5 h-3.5 text-warp-accent animate-spin" /> : 
+                     block.status === "error" ? <AlertCircle className="w-3.5 h-3.5 text-red-400" /> : 
+                     <CheckCircle2 className="w-3.5 h-3.5 text-green-400" />}
+                    <span className="font-mono text-xs text-warp-accent truncate">{block.command}</span>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    {block.type === "shell" && block.output.toLowerCase().includes("error") && (
-                      <button
-                        onClick={() => handleAnalyzeError(block)}
-                        className="text-[10px] bg-red-500/20 text-red-400 px-2 py-1 rounded border border-red-500/30 hover:bg-red-500/40 transition-colors"
-                      >
-                        Analyze Error
-                      </button>
-                    )}
-                    {(block.type === "ai" || block.type === "error-analysis") && (
-                      <Sparkles className="w-4 h-4 text-lum-cyan/50" />
-                    )}
+                  <div className="flex items-center space-x-4 ml-4">
+                    <div className="flex items-center space-x-1 text-[10px] text-white/20 font-mono">
+                      <Clock className="w-3 h-3" />
+                      <span>{block.timestamp}</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <button className="p-1 text-white/20 hover:text-white transition-all"><Copy className="w-3 h-3" /></button>
+                      <button className="p-1 text-white/20 hover:text-white transition-all"><RotateCcw className="w-3 h-3" /></button>
+                    </div>
                   </div>
                 </div>
 
-                {block.explanation && (
-                  <div className="mb-4 p-3 bg-lum-cyan/5 border-l-2 border-lum-cyan/30 text-xs text-lum-cyan/80 italic">
-                    {block.explanation}
-                  </div>
-                )}
-
-                {block.analysis && (
-                  <div className="mb-4 space-y-3">
-                    <div className="text-xs text-white/60">
-                      <span className="text-lum-cyan font-bold uppercase mr-2 tracking-widest text-[10px]">Analysis:</span>
-                      {block.analysis}
+                <div className="p-4">
+                  {block.explanation && (
+                    <div className="mb-4 text-xs text-warp-accent/60 italic border-l border-warp-accent/30 pl-3 py-1">
+                      {block.explanation}
                     </div>
-                    {block.suggestion && (
-                      <div className="p-3 bg-white/5 rounded border border-white/10 font-mono text-sm group cursor-pointer hover:border-lum-cyan/50 transition-colors"
-                           onClick={() => handleCommandSubmit(block.suggestion!, "shell")}>
-                        <div className="text-[10px] text-white/30 uppercase mb-1">Suggested Fix (Click to run):</div>
-                        <div className="text-lum-cyan">{block.suggestion}</div>
-                      </div>
-                    )}
-                  </div>
-                )}
+                  )}
 
-                {block.output && (
-                  <pre className="font-mono text-sm text-white/70 whitespace-pre-wrap leading-relaxed">
-                    {block.output}
-                  </pre>
-                )}
+                  {block.analysis && (
+                    <div className="mb-4 space-y-3">
+                      <div className="text-xs text-white/50 leading-relaxed">
+                        <span className="text-warp-accent/80 font-bold uppercase mr-2 tracking-widest text-[10px]">AI Insight:</span>
+                        {block.analysis}
+                      </div>
+                      {block.suggestion && (
+                        <div className="p-3 bg-warp-accent/5 rounded border border-warp-accent/10 font-mono text-xs group cursor-pointer hover:border-warp-accent/40 transition-all"
+                             onClick={() => handleCommandSubmit(block.suggestion!, "shell")}>
+                          <div className="text-[9px] text-warp-accent/40 uppercase mb-1 font-bold">Suggested Fix</div>
+                          <div className="text-warp-accent">{block.suggestion}</div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {block.output && (
+                    <pre className="font-mono text-xs text-white/80 whitespace-pre-wrap leading-relaxed overflow-x-auto">
+                      {block.output}
+                    </pre>
+                  )}
+                  
+                  {block.type === "shell" && block.output.toLowerCase().includes("error") && !block.analysis && (
+                    <button onClick={() => handleAnalyzeError(block)} className="mt-4 flex items-center space-x-2 text-[10px] bg-red-500/10 text-red-400 px-3 py-1.5 rounded border border-red-500/20 hover:bg-red-500/20 transition-all">
+                      <Sparkles className="w-3 h-3" />
+                      <span>Analyze Error with AI</span>
+                    </button>
+                  )}
+                </div>
               </div>
             ))
           )}
         </div>
 
-        {/* Input Bar Section */}
-        <div className="p-12 pt-0">
-          <CommandInput onCommandSubmit={handleCommandSubmit} />
+        {/* Input Area */}
+        <div className="bg-gradient-to-t from-warp-bg via-warp-bg to-transparent pt-8">
+          <CommandInput onCommandSubmit={handleCommandSubmit} selectedModel={selectedModel} />
         </div>
       </main>
     </div>

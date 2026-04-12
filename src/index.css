@@ -1,31 +1,48 @@
 @import "tailwindcss";
 
 @theme {
-  --color-lum-bg: #0d1117;
-  --color-lum-cyan: #00f3ff;
-  --color-lum-neon-glow: 0 0 10px rgba(0, 243, 255, 0.5), 0 0 20px rgba(0, 243, 255, 0.3);
+  --color-warp-bg: #0b0d0f;
+  --color-warp-sidebar: #14171a;
+  --color-warp-block: #1a1d21;
+  --color-warp-accent: #00f3ff;
+  --color-warp-border: rgba(255, 255, 255, 0.08);
+  --color-warp-text-dim: #9ca3af;
+  --shadow-neon: 0 0 15px rgba(0, 243, 255, 0.3);
 }
 
 @layer base {
   body {
-    @apply bg-lum-bg text-white font-sans antialiased;
+    @apply bg-warp-bg text-white font-sans antialiased overflow-hidden;
   }
 }
 
 @layer components {
-  .glass-sidebar {
-    @apply bg-white/5 backdrop-blur-md border-r border-white/10;
-  }
-  
-  .neon-input-container {
-    @apply relative rounded-lg border border-white/20 transition-all duration-300;
+  .warp-card {
+    @apply bg-warp-block rounded-xl border border-warp-border overflow-hidden transition-all duration-200;
   }
 
-  .neon-input-container:focus-within {
-    @apply border-lum-cyan/50 shadow-[var(--color-lum-neon-glow)];
+  .warp-input-container {
+    @apply flex items-center bg-warp-block border border-warp-border rounded-lg px-4 py-3 shadow-lg transition-all duration-300;
   }
 
-  .terminal-block {
-    @apply bg-white/5 rounded-lg p-4 mb-4 border border-white/5;
+  .warp-input-container:focus-within {
+    @apply border-warp-accent/50 ring-1 ring-warp-accent/20 shadow-[var(--shadow-neon)];
+  }
+
+  .prompt-symbol {
+    @apply text-warp-accent font-bold mr-2;
+  }
+
+  .block-header {
+    @apply flex items-center justify-between px-4 py-2 bg-white/5 border-b border-white/5;
+  }
+
+  /* Custom Scrollbar for Warp feel */
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
   }
 }
