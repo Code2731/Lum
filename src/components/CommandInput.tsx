@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Terminal, Sparkles, Folder, ChevronRight, Zap, Command } from "lucide-react";
+import { Folder, Command } from "lucide-react";
 
 interface CommandInputProps {
   onCommandSubmit: (cmd: string, type: "shell" | "ai") => void;
@@ -20,52 +20,56 @@ const CommandInput: React.FC<CommandInputProps> = ({ onCommandSubmit, selectedMo
   };
 
   return (
-    <div className="w-full px-8 pb-10">
-      <div className="warp-input-dock">
-        {/* Left Side: Context Breadcrumb */}
-        <div className="flex items-center space-x-3 mr-6 shrink-0">
-          <div className="prompt-pill">
-            <Folder className="w-3 h-3 text-warp-accent/80" />
-            <span className="tracking-tight">lum-terminal</span>
-          </div>
-          <ChevronRight className="w-3.5 h-3.5 text-white/5" />
+    <div className="w-full flex items-start px-4 py-3 bg-[#111317] border-t border-term-border-light relative z-10 shadow-[0_-10px_20px_rgba(0,0,0,0.2)]">
+      
+      {/* Left Margin / Indicator area */}
+      <div className="w-6 flex justify-center mt-1 shrink-0">
+        {isAI ? (
+          <div className="w-1.5 h-1.5 rounded-full bg-term-accent mt-1 animate-pulse" />
+        ) : (
+          <div className="w-1.5 h-1.5 rounded-full bg-term-muted mt-1" />
+        )}
+      </div>
+
+      <div className="flex-1 flex flex-col justify-center">
+        {/* Context / Prompt Header */}
+        <div className="flex items-center space-x-2 mb-1.5 select-none">
+          <Folder className="w-3 h-3 text-term-muted" strokeWidth={2.5} />
+          <span className="text-[11px] font-mono text-term-muted tracking-tight font-medium">~/lum-workspace</span>
+          
+          {isAI && (
+            <>
+              <span className="text-[10px] text-term-muted px-1.5 py-0.5 rounded border border-white/5 bg-white/[0.02] ml-2">
+                Ask {selectedModel}
+              </span>
+            </>
+          )}
         </div>
 
-        {/* Input: The Core Area */}
-        <div className="flex-1 flex items-center space-x-4">
-          <div className={`flex items-center justify-center w-7 h-7 rounded-lg transition-all ${isAI ? 'bg-warp-accent/20 border border-warp-accent/40' : 'bg-white/5 border border-white/5'}`}>
-            {isAI ? (
-              <Zap className="w-3.5 h-3.5 text-warp-accent fill-warp-accent/20 animate-pulse" />
-            ) : (
-              <Terminal className="w-3.5 h-3.5 text-white/30" />
-            )}
-          </div>
-          
+        {/* Input Field */}
+        <div className="flex items-center w-full relative group">
+          <span className={`absolute left-0 top-0 text-[14px] font-mono select-none ${isAI ? 'text-term-accent' : 'text-term-success'}`}>
+            ❯
+          </span>
           <input
             type="text"
-            className="flex-1 bg-transparent border-none outline-none text-white/90 placeholder-white/[0.08] text-[13.5px] font-mono selection:bg-warp-accent/40"
-            placeholder={isAI ? `What do you want to do with ${selectedModel}?` : "Type a command or / for AI assistant..."}
+            className={`w-full bg-transparent border-none outline-none text-[14px] font-mono pl-5 h-6 selection:bg-term-accent/30 ${isAI ? 'text-term-text' : 'text-term-text'}`}
+            placeholder=""
             value={value}
             onChange={(e) => setValue(e.target.value)}
             onKeyDown={handleKeyDown}
             autoFocus
+            spellCheck="false"
+            autoComplete="off"
+            autoCorrect="off"
           />
         </div>
+      </div>
 
-        {/* Right Side: Indicators */}
-        <div className="flex items-center space-x-4 ml-4 shrink-0">
-          {isAI ? (
-            <div className="flex items-center space-x-2 px-3 py-1.5 bg-warp-accent/10 border border-warp-accent/10 rounded-lg">
-              <Sparkles className="w-3 h-3 text-warp-accent" />
-              <span className="text-[9px] text-warp-accent font-black uppercase tracking-[0.15em]">{selectedModel}</span>
-            </div>
-          ) : (
-            <div className="flex items-center space-x-1.5 px-2.5 py-1.5 bg-white/[0.03] border border-white/[0.05] rounded-lg">
-              <Command className="w-3 h-3 text-white/20" />
-              <span className="text-[10px] text-white/20 font-bold tracking-widest font-mono">K</span>
-            </div>
-          )}
-        </div>
+      {/* Right Edge: Subtle Helper */}
+      <div className="shrink-0 flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity ml-4 pt-1">
+        <Command className="w-3 h-3 text-term-muted" />
+        <span className="text-[10px] font-mono text-term-muted">Enter</span>
       </div>
     </div>
   );

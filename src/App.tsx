@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Terminal, Clock, Sparkles, Box, Download, Trash2, ChevronRight, Loader2, Copy, RotateCcw, CheckCircle2, AlertCircle, Cpu, LayoutGrid, Settings, HelpCircle } from "lucide-react";
+import { Terminal, Box, Download, Trash2, Loader2, Copy, RotateCcw, AlertCircle, Settings, Command } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import Ansi from "ansi-to-react";
@@ -31,10 +31,7 @@ const App: React.FC = () => {
 
   useEffect(() => {
     if (scrollRef.current) {
-      scrollRef.current.scrollTo({
-        top: scrollRef.current.scrollHeight,
-        behavior: 'smooth'
-      });
+      scrollRef.current.scrollTo({ top: scrollRef.current.scrollHeight });
     }
   }, [blocks]);
 
@@ -76,7 +73,7 @@ const App: React.FC = () => {
     const id = Date.now().toString();
     const newBlock: TerminalBlock = {
       id, command: cmd, output: "", type, status: "executing",
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
     };
     setBlocks((prev) => [...prev, newBlock]);
     setHistory((prev) => Array.from(new Set([cmd, ...prev])).slice(0, 50));
@@ -97,8 +94,8 @@ const App: React.FC = () => {
   const handleAnalyzeError = async (block: TerminalBlock) => {
     const analysisId = Date.now().toString();
     const analysisBlock: TerminalBlock = {
-      id: analysisId, command: `Analyze: ${block.command}`, output: "", type: "error-analysis", status: "executing",
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      id: analysisId, command: `Analyze failure: ${block.command}`, output: "", type: "error-analysis", status: "executing",
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
     };
     setBlocks((prev) => [...prev, analysisBlock]);
     try {
@@ -108,126 +105,181 @@ const App: React.FC = () => {
     } catch (error) { setBlocks((prev) => prev.map((b) => b.id === analysisId ? { ...b, output: `Analysis failed: ${String(error)}`, status: "error" } : b)); }
   };
 
+  const handlePullModel = async () => {
+    if (!newModelName) return;
+    setIsPulling(true);
+    try {
+      await invoke("pull_model", { name: newModelName });
+      const modelList: string[] = await invoke("list_models");
+      setModels(modelList);
+      setNewModelName("");
+    } catch (e) { alert(e); } finally { setIsPulling(false); }
+  };
+
+  const handleDeleteModel = async (name: string) => {
+    if (!confirm(`Delete model ${name}?`)) return;
+    try {
+      await invoke("delete_model", { name });
+      const modelList: string[] = await invoke("list_models");
+      setModels(modelList);
+    } catch (e) { alert(e); }
+  };
+
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-warp-bg">
-      {/* Sidebar - Precision Warp Design */}
-      <aside className="w-72 bg-warp-sidebar flex flex-col p-6 space-y-8 h-full border-r border-white/[0.04]">
-        <div className="flex items-center space-x-3.5 mb-2 px-2">
-          <div className="w-9 h-9 bg-warp-accent rounded-xl flex items-center justify-center shadow-[var(--shadow-glow)]">
-            <Cpu className="text-black w-5 h-5" />
-          </div>
-          <div className="flex flex-col">
-            <span className="text-lg font-black tracking-tight text-white leading-tight">LUM</span>
-            <span className="text-[9px] font-bold text-warp-accent/60 tracking-widest uppercase">Universal Machine</span>
+    <div className="flex h-screen w-screen overflow-hidden bg-term-bg font-sans">
+      
+      {/* 1. Native Mac-style Thin Sidebar */}
+      <aside className="w-[240px] bg-term-sidebar border-r border-term-border-light flex flex-col h-full select-none shrink-0 z-20">
+        
+        {/* Top Header */}
+        <div className="h-12 px-4 flex items-center border-b border-term-border-light">
+          <div className="flex items-center space-x-2">
+            <Terminal className="w-4 h-4 text-term-accent" strokeWidth={2.5} />
+            <span className="font-semibold text-[14px] tracking-tight text-white/90">LUM Terminal</span>
           </div>
         </div>
 
-        <nav className="flex-1 flex flex-col space-y-8 overflow-y-auto pr-2 scrollbar-hide">
-          <div className="space-y-3">
-            <div className="text-[10px] text-white/20 uppercase tracking-[0.25em] font-black px-3 flex items-center justify-between">
-              <span>Installed Models</span>
-              <Box className="w-3 h-3" />
+        {/* Navigation Content */}
+        <div className="flex-1 overflow-y-auto px-3 py-4 space-y-6">
+          
+          {/* Models Section */}
+          <div>
+            <div className="px-1 mb-2 flex items-center space-x-2 text-term-muted">
+              <Box className="w-3.5 h-3.5" />
+              <span className="text-[11px] font-bold uppercase tracking-widest">Models</span>
             </div>
-            <div className="space-y-1">
+            <div className="space-y-0.5">
               {models.map((m) => (
-                <div key={m} className={`sidebar-item ${selectedModel === m ? 'active' : ''}`} onClick={() => setSelectedModel(m)}>
-                  <div className={`w-1 h-3 rounded-full ${selectedModel === m ? 'bg-warp-accent' : 'bg-transparent'}`} />
-                  <span className="text-[13px] font-medium flex-1 truncate">{m}</span>
-                  <button onClick={(e) => { e.stopPropagation(); /* Delete Logic */ }} className="opacity-0 group-hover:opacity-100 p-1 text-white/20 hover:text-red-400"><Trash2 className="w-3 h-3" /></button>
+                <div key={m} className={`nav-item group ${selectedModel === m ? 'active' : ''}`} onClick={() => setSelectedModel(m)}>
+                  <span className="truncate pr-2">{m}</span>
+                  <button onClick={(e) => { e.stopPropagation(); handleDeleteModel(m); }} className="opacity-0 group-hover:opacity-100 hover:text-term-error p-1 -mr-1 transition-all"><Trash2 className="w-3.5 h-3.5" /></button>
+                </div>
+              ))}
+            </div>
+
+            {/* Subtle Input for Pulling */}
+            <div className="mt-2 px-1 relative">
+              <input 
+                type="text" 
+                placeholder="Pull model..." 
+                className="w-full bg-black/20 border border-white/5 rounded-md text-[12px] px-2.5 py-1.5 outline-none focus:border-term-accent/40 text-term-text placeholder-term-muted"
+                value={newModelName} 
+                onChange={(e) => setNewModelName(e.target.value)} 
+                onKeyDown={(e) => e.key === 'Enter' && handlePullModel()} 
+              />
+              {isPulling && (
+                <Loader2 className="w-3.5 h-3.5 absolute right-3 top-2 animate-spin text-term-accent" />
+              )}
+            </div>
+          </div>
+
+          {/* History Section */}
+          <div>
+            <div className="px-1 mb-2 flex items-center space-x-2 text-term-muted">
+              <Command className="w-3.5 h-3.5" />
+              <span className="text-[11px] font-bold uppercase tracking-widest">History</span>
+            </div>
+            <div className="space-y-0.5">
+              {history.map((h, i) => (
+                <div key={i} className="px-3 py-1.5 rounded-md text-[12px] font-mono text-term-muted hover:text-term-text hover:bg-white/[0.03] cursor-pointer truncate" onClick={() => handleCommandSubmit(h, "shell")}>
+                  {h}
                 </div>
               ))}
             </div>
           </div>
+        </div>
 
-          <div className="space-y-4">
-            <div className="text-[10px] text-white/20 uppercase tracking-[0.25em] font-black px-3">History</div>
-            <div className="space-y-1 px-1">
-              {history.map((h, i) => (
-                <div key={i} className="text-[11px] text-white/30 hover:text-warp-accent cursor-pointer truncate px-3 py-2 rounded-lg hover:bg-white/[0.03] transition-all font-mono">{h}</div>
-              ))}
+        {/* Footer Status */}
+        <div className="p-4 border-t border-term-border-light bg-[#111317]">
+          <div className="flex items-center justify-between text-[11px]">
+            <div className="flex items-center space-x-2">
+              <div className={`w-2 h-2 rounded-full ${ollamaOnline ? "bg-term-success" : "bg-term-error"}`} />
+              <span className="text-term-muted font-medium">{ollamaOnline ? "Ollama Connected" : "Ollama Offline"}</span>
             </div>
-          </div>
-        </nav>
-
-        <div className="pt-6 border-t border-white/[0.04] space-y-4 px-2">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className={`status-dot ${ollamaOnline ? "bg-warp-accent" : "bg-red-500"}`} />
-              <span className="text-[10px] text-white/40 font-black uppercase tracking-[0.1em]">{ollamaOnline ? "Ollama Ready" : "System Offline"}</span>
-            </div>
+            <Settings className="w-4 h-4 text-term-muted hover:text-white cursor-pointer transition-colors" />
           </div>
         </div>
       </aside>
 
-      {/* Main Terminal View */}
-      <main className="flex-1 flex flex-col h-full bg-[#090b10] relative">
-        <div ref={scrollRef} className="flex-1 overflow-y-auto px-12 pt-16 pb-32 space-y-8 scrollbar-hide">
+      {/* 2. Main Terminal View - Seamless Blocks */}
+      <main className="flex-1 flex flex-col h-full bg-term-bg relative w-full min-w-0">
+        
+        {/* Output Stream */}
+        <div ref={scrollRef} className="flex-1 overflow-y-auto pt-6 pb-4 px-2 scrollbar-hide">
           {blocks.length === 0 ? (
-            <div className="h-full flex flex-col items-center justify-center opacity-40">
-              <Sparkles className="w-16 h-16 text-warp-accent/20 mb-6" />
-              <h1 className="text-2xl font-black text-white/90 mb-2">Welcome to your AI workspace</h1>
-              <p className="text-xs text-white/30 font-medium">Start typing to begin or use <kbd className="bg-white/5 border border-white/10 px-1 rounded mx-1">/</kbd> for AI</p>
+            <div className="h-full flex flex-col items-center justify-center opacity-30 select-none">
+              <Terminal className="w-12 h-12 text-term-muted mb-4" strokeWidth={1} />
+              <h1 className="text-lg font-medium text-term-text mb-1">LUM Workspace initialized</h1>
+              <p className="text-[13px] text-term-muted font-mono">Current Model: {selectedModel}</p>
             </div>
           ) : (
             blocks.map((block) => (
-              <div key={block.id} className="warp-block animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <div className="warp-block-header">
-                  <div className="flex items-center space-x-4">
-                    <div className={`p-1 rounded-md ${block.status === 'executing' ? 'text-warp-accent bg-warp-accent/10' : block.status === 'error' ? 'text-red-500 bg-red-500/10' : 'text-green-500 bg-green-500/10'}`}>
-                      {block.status === "executing" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 
-                       block.status === "error" ? <AlertCircle className="w-3.5 h-3.5" /> : 
-                       <CheckCircle2 className="w-3.5 h-3.5" />}
-                    </div>
-                    <span className="font-mono text-[13px] font-bold text-white/80">{block.command}</span>
+              <div key={block.id} className="terminal-stream-block group">
+                
+                {/* Status Indicator Bar */}
+                <div className={`block-indicator ${
+                  block.status === 'executing' ? 'bg-term-accent animate-pulse' : 
+                  block.status === 'error' ? 'bg-term-error' : 
+                  'bg-term-border-light group-hover:bg-term-muted/40'
+                }`} />
+
+                {/* Command Header */}
+                <div className="flex items-center justify-between pl-2">
+                  <div className="flex items-center space-x-2">
+                    <span className="text-[14px] font-mono font-bold text-term-text">{block.command}</span>
+                    <span className="text-[10px] text-term-muted font-mono bg-white/[0.03] px-1.5 py-0.5 rounded border border-white/5 opacity-0 group-hover:opacity-100 transition-opacity">
+                      {block.timestamp}
+                    </span>
                   </div>
-                  <div className="flex items-center space-x-4">
-                    <span className="text-[10px] font-mono text-white/10 tracking-widest">{block.timestamp}</span>
-                    <div className="flex items-center space-x-1 border-l border-white/[0.04] pl-4">
-                      <button className="p-1.5 text-white/20 hover:text-white hover:bg-white/5 rounded transition-all"><Copy className="w-3.5 h-3.5" /></button>
-                      <button className="p-1.5 text-white/20 hover:text-white hover:bg-white/5 rounded transition-all"><RotateCcw className="w-3.5 h-3.5" /></button>
-                    </div>
+                  
+                  {/* Hover Actions */}
+                  <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button className="p-1 text-term-muted hover:text-white rounded hover:bg-white/10" title="Copy output"><Copy className="w-3.5 h-3.5" /></button>
+                    <button className="p-1 text-term-muted hover:text-white rounded hover:bg-white/10" title="Run again"><RotateCcw className="w-3.5 h-3.5" /></button>
                   </div>
                 </div>
 
-                <div className="p-6">
+                {/* Output Content */}
+                <div className="mt-2 pl-2">
+                  
+                  {/* AI Explanation / Thought */}
                   {block.explanation && (
-                    <div className="mb-6 flex items-start space-x-4 bg-warp-accent/[0.03] p-4 rounded-xl border border-warp-accent/10">
-                      <Sparkles className="w-4 h-4 text-warp-accent mt-0.5" />
-                      <div className="text-[12px] text-warp-accent/80 font-medium leading-relaxed italic">
-                        {block.explanation}
-                      </div>
+                    <div className="mb-3 text-[13px] text-term-muted italic border-l-2 border-term-accent/30 pl-3 py-0.5 max-w-4xl">
+                      {block.explanation}
                     </div>
                   )}
 
+                  {/* AI Error Analysis */}
                   {block.analysis && (
-                    <div className="mb-6 space-y-4">
-                      <div className="text-[12.5px] text-white/60 leading-relaxed p-4 bg-red-500/[0.02] border-l-2 border-red-500/20 rounded-r-xl">
-                        <span className="text-red-400 font-black uppercase mr-3 tracking-[0.2em] text-[10px]">AI Diagnosis</span>
+                    <div className="mb-4 max-w-4xl">
+                      <div className="text-[13px] text-term-text leading-relaxed p-3 bg-term-error/10 border border-term-error/20 rounded-md">
+                        <span className="text-term-error font-bold uppercase mr-3 tracking-widest text-[10px]">Diagnosis</span>
                         {block.analysis}
                       </div>
                       {block.suggestion && (
-                        <div className="p-4 bg-warp-accent/[0.04] rounded-2xl border border-warp-accent/10 font-mono text-[12.5px] group cursor-pointer hover:bg-warp-accent/[0.08] hover:border-warp-accent/40 transition-all"
+                        <div className="mt-2 p-3 bg-white/[0.02] border border-white/5 rounded-md font-mono text-[13px] flex items-center justify-between group/sugg cursor-pointer hover:bg-term-accent/5 hover:border-term-accent/20 transition-colors"
                              onClick={() => handleCommandSubmit(block.suggestion!, "shell")}>
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="text-[9px] text-warp-accent/50 uppercase font-black tracking-widest">Suggested Fix</span>
-                            <ChevronRight className="w-3.5 h-3.5 text-warp-accent/30 group-hover:translate-x-1 transition-transform" />
-                          </div>
-                          <div className="text-warp-accent font-bold">{block.suggestion}</div>
+                          <span className="text-term-accent">{block.suggestion}</span>
+                          <span className="text-[10px] text-term-muted group-hover/sugg:text-term-accent uppercase font-bold tracking-widest flex items-center">
+                            Apply Fix
+                          </span>
                         </div>
                       )}
                     </div>
                   )}
 
+                  {/* Terminal Standard Output */}
                   {block.output && (
-                    <div className="font-mono text-[13px] leading-relaxed overflow-x-auto terminal-output">
+                    <div className="font-mono text-[13.5px] leading-relaxed text-[#cccccc] overflow-x-auto selection:bg-term-accent/30 mt-1 max-w-full">
                       <Ansi>{block.output}</Ansi>
                     </div>
                   )}
                   
+                  {/* Error Action Hook */}
                   {block.type === "shell" && block.output.toLowerCase().includes("error") && !block.analysis && (
-                    <button onClick={() => handleAnalyzeError(block)} className="mt-6 flex items-center space-x-2.5 bg-red-500/10 text-red-400 px-4 py-2 rounded-xl border border-red-500/20 hover:bg-red-500/20 transition-all font-black text-[10.5px] uppercase tracking-wider">
-                      <Sparkles className="w-3.5 h-3.5" />
-                      <span>Analyze Failure</span>
+                    <button onClick={() => handleAnalyzeError(block)} className="mt-3 flex items-center space-x-1.5 text-[11px] text-term-error hover:text-red-400 font-medium">
+                      <AlertCircle className="w-3.5 h-3.5" />
+                      <span className="border-b border-dashed border-term-error/50">Ask AI to fix this error</span>
                     </button>
                   )}
                 </div>
@@ -236,12 +288,8 @@ const App: React.FC = () => {
           )}
         </div>
 
-        {/* Floating Dock Experience */}
-        <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-[#090b10] via-[#090b10] to-transparent pt-32 pb-4 pointer-events-none">
-          <div className="pointer-events-auto">
-            <CommandInput onCommandSubmit={handleCommandSubmit} selectedModel={selectedModel} />
-          </div>
-        </div>
+        {/* 3. Integrated Bottom Prompt (No Floating) */}
+        <CommandInput onCommandSubmit={handleCommandSubmit} selectedModel={selectedModel} />
       </main>
     </div>
   );
