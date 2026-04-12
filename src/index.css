@@ -1,65 +1,83 @@
 @import "tailwindcss";
 
 @theme {
-  --color-warp-bg: #090b10;
-  --color-warp-sidebar: #0f1117;
-  --color-warp-block: #161922;
+  --color-warp-bg: #0b0e14;
+  --color-warp-sidebar: #0f121a;
+  --color-warp-block: #161b22;
   --color-warp-accent: #00f3ff;
-  --color-warp-border: rgba(255, 255, 255, 0.06);
-  --color-warp-text: #e2e8f0;
-  --color-warp-dim: #64748b;
+  --color-warp-border: rgba(255, 255, 255, 0.05);
+  --color-warp-text: #e1e4e8;
+  --color-warp-dim: #545d68;
   
-  --shadow-warp-block: 0 4px 20px rgba(0, 0, 0, 0.4);
-  --shadow-neon: 0 0 20px rgba(0, 243, 255, 0.15);
+  --shadow-warp: 0 8px 32px rgba(0, 0, 0, 0.6);
+  --shadow-glow: 0 0 20px rgba(0, 243, 255, 0.2);
 }
 
 @layer base {
   body {
     @apply bg-warp-bg text-warp-text font-sans antialiased overflow-hidden selection:bg-warp-accent/30;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  
+  code, pre {
+    font-family: 'JetBrains Mono', 'Fira Code', 'Menlo', 'Monaco', 'Courier New', monospace;
   }
 }
 
 @layer components {
-  /* Warp Block Style */
+  /* Warp Premium Block */
   .warp-block {
-    @apply bg-warp-block/40 border border-warp-border rounded-xl shadow-[var(--shadow-warp-block)] backdrop-blur-sm overflow-hidden transition-all duration-300 mb-4;
+    @apply bg-[#161b22]/60 border border-white/[0.04] rounded-xl shadow-[var(--shadow-warp)] backdrop-blur-xl mb-6 transition-all duration-300;
   }
 
   .warp-block-header {
-    @apply flex items-center justify-between px-5 py-2.5 bg-white/[0.03] border-b border-white/[0.04];
+    @apply flex items-center justify-between px-6 py-3 bg-white/[0.02] border-b border-white/[0.03];
   }
 
-  /* Warp Input Dock */
+  /* Warp Floating Dock */
   .warp-input-dock {
-    @apply relative flex items-center bg-[#1a1f29]/80 border border-white/10 rounded-2xl px-5 py-4 shadow-2xl backdrop-blur-xl transition-all duration-500;
+    @apply relative flex items-center bg-[#1c212b]/95 border border-white/10 rounded-2xl px-6 py-4 shadow-2xl backdrop-blur-2xl transition-all duration-500 max-w-5xl mx-auto;
   }
 
   .warp-input-dock:focus-within {
-    @apply border-warp-accent/40 shadow-[var(--shadow-neon)] bg-[#1a1f29];
+    @apply border-warp-accent/40 shadow-[var(--shadow-glow)] bg-[#1c212b];
   }
 
-  /* Interactive Elements */
-  .icon-button {
-    @apply p-1.5 text-warp-dim hover:text-white hover:bg-white/5 rounded-md transition-all;
+  /* Prompt Breadcrumb */
+  .prompt-pill {
+    @apply flex items-center space-x-2 text-warp-accent/60 font-mono text-[11px] bg-warp-accent/10 px-3 py-1 rounded-full border border-warp-accent/20 font-bold;
   }
 
-  /* Prompt Styles */
-  .prompt-path {
-    @apply flex items-center space-x-2 text-warp-accent/60 font-mono text-[11px] bg-warp-accent/5 px-2.5 py-1 rounded-full border border-warp-accent/10;
+  /* Sidebar Items */
+  .sidebar-item {
+    @apply flex items-center space-x-3 px-3 py-2.5 rounded-xl transition-all duration-200 cursor-pointer;
+  }
+
+  .sidebar-item.active {
+    @apply bg-white/[0.05] border border-white/[0.05] shadow-inner text-warp-accent;
+  }
+
+  .sidebar-item:not(.active) {
+    @apply text-warp-dim hover:bg-white/[0.02] hover:text-white/80;
+  }
+
+  /* Status Indicator */
+  .status-dot {
+    @apply w-1.5 h-1.5 rounded-full shadow-[0_0_8px_currentColor];
   }
 }
 
-/* Custom Scrollbar */
+/* Custom Scrollbar for true Warp feel */
 ::-webkit-scrollbar {
-  width: 6px;
+  width: 5px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.08);
   border-radius: 10px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.15);
 }
