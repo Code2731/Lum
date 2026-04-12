@@ -1,6 +1,5 @@
 import React, { useState } from "react";
-import { Search, Terminal, Sparkles } from "lucide-react";
-import { invoke } from "@tauri-apps/api/core";
+import { Terminal, Sparkles } from "lucide-react";
 
 interface CommandInputProps {
   onCommandSubmit: (cmd: string, type: "shell" | "ai") => void;

@@ -22,6 +22,15 @@ pub struct TerminalState {
 }
 
 #[tauri::command]
+async fn check_ollama_status() -> bool {
+    let client = reqwest::Client::new();
+    match client.get("http://localhost:11434/api/tags").send().await {
+        Ok(res) => res.status().is_success(),
+        Err(_) => false,
+    }
+}
+
+#[tauri::command]
 async fn generate_ai_command(prompt: String) -> Result<String, String> {
     let client = reqwest::Client::new();
     let request_body = OllamaRequest {
@@ -129,7 +138,7 @@ pub fn run() {
             });
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![generate_ai_command, analyze_error, write_to_pty])
+        .invoke_handler(tauri::generate_handler![generate_ai_command, analyze_error, write_to_pty, check_ollama_status])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

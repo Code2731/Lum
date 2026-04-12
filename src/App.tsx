@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { History, LayoutGrid, Terminal, Command, Clock, Search, Sparkles } from "lucide-react";
+import { Terminal, Clock, Sparkles } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import CommandInput from "./components/CommandInput";
@@ -19,6 +19,22 @@ const App: React.FC = () => {
   const [blocks, setBlocks] = useState<TerminalBlock[]>([]);
   const [history, setHistory] = useState<string[]>([]);
   const [currentBlockId, setCurrentBlockId] = useState<string | null>(null);
+  const [ollamaOnline, setOllamaOnline] = useState(false);
+
+  useEffect(() => {
+    const checkStatus = async () => {
+      try {
+        const isOnline: boolean = await invoke("check_ollama_status");
+        setOllamaOnline(isOnline);
+      } catch {
+        setOllamaOnline(false);
+      }
+    };
+
+    checkStatus();
+    const interval = setInterval(checkStatus, 5000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     const unlisten = listen<string>("pty-data", (event) => {
@@ -155,8 +171,8 @@ const App: React.FC = () => {
         </nav>
 
         <div className="mt-auto pt-6 border-t border-white/10 flex items-center space-x-3">
-          <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse shadow-[0_0_8px_#22c55e]" />
-          <span className="text-xs text-white/50 font-medium">Ollama: Online</span>
+          <div className={`w-2 h-2 rounded-full ${ollamaOnline ? "bg-green-500 animate-pulse shadow-[0_0_8px_#22c55e]" : "bg-red-500 shadow-[0_0_8px_#ef4444]"}`} />
+          <span className="text-xs text-white/50 font-medium">Ollama: {ollamaOnline ? "Online" : "Offline"}</span>
         </div>
       </aside>
 
