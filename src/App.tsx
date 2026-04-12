@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Copy, RotateCcw, AlertCircle, CheckCircle2, Box, Settings, Cpu, Zap, Search, Terminal as TerminalIcon, History as HistoryIcon, User } from "lucide-react";
+import { Copy, RotateCcw, AlertCircle, CheckCircle2, Box, Settings, Cpu, Zap, Search, Terminal as TerminalIcon } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import Ansi from "ansi-to-react";
@@ -104,51 +104,49 @@ const App: React.FC = () => {
   return (
     <div className="flex h-screen w-screen bg-[#0c0c0c] text-[#b0b0b0] font-sans overflow-hidden">
       
-      {/* 1. Ultra-Slim Sidebar: Icon Only */}
+      {/* 1. Warp Sidebar (Ultra Slim) */}
       <aside className="w-12 bg-[#080808] border-r border-white/5 flex flex-col items-center py-4 space-y-6 select-none shrink-0">
-        <div className="w-8 h-8 bg-[#268bd2] rounded-md flex items-center justify-center mb-4">
+        <div className="w-8 h-8 bg-warp-accent rounded-md flex items-center justify-center mb-4">
           <Zap className="text-black w-5 h-5 fill-black" />
         </div>
-        <HistoryIcon className="w-5 h-5 text-white/20 hover:text-white transition-colors cursor-pointer" />
-        <Box className="w-5 h-5 text-white/20 hover:text-white transition-colors cursor-pointer" />
         <div className="mt-auto flex flex-col items-center space-y-6">
-          <div className={`w-1.5 h-1.5 rounded-full ${ollamaOnline ? 'bg-[#95d886]' : 'bg-red-500'}`} title={ollamaOnline ? 'Ollama Ready' : 'Offline'} />
-          <Settings className="w-5 h-5 text-white/20 hover:text-white transition-colors cursor-pointer" />
+          <div className={`w-1.5 h-1.5 rounded-full ${ollamaOnline ? 'bg-warp-green' : 'bg-red-500'}`} />
+          <Settings className="w-5 h-5 text-white/10 hover:text-white transition-colors cursor-pointer" />
         </div>
       </aside>
 
-      {/* 2. Main Terminal Canvas */}
+      {/* 2. Main Experience: The Warp Block Stream */}
       <main className="flex-1 flex flex-col h-full bg-[#0c0c0c] relative min-w-0">
-        
-        {/* Terminal Blocks Stream */}
-        <div ref={scrollRef} className="flex-1 overflow-y-auto pt-4 scrollbar-hide">
+        <div ref={scrollRef} className="flex-1 overflow-y-auto scrollbar-hide">
           {blocks.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center opacity-10 select-none">
               <TerminalIcon className="w-20 h-20 mb-4" strokeWidth={1} />
-              <h1 className="text-xl font-bold">LUM_READY</h1>
+              <h1 className="text-xl font-bold font-mono tracking-tighter">LUM TERMINAL v1.0</h1>
             </div>
           ) : (
             blocks.map((block) => (
-              <div 
-                key={block.id} 
-                className={`warp-block group ${block.status === 'executing' ? 'running' : block.status === 'error' ? 'error' : 'success'}`}
-              >
-                {/* Block Header */}
-                <div className="warp-block-header">
-                  <div className="flex items-center gap-3 overflow-hidden">
-                    <span className="text-[12px] font-mono font-bold text-white/80 truncate opacity-80">{block.command}</span>
-                  </div>
-                  <div className="flex items-center gap-4 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <span className="text-[9px] text-white/10 font-mono tracking-widest uppercase">{block.status}</span>
-                    <Copy className="w-3.5 h-3.5 text-white/20 hover:text-white cursor-pointer" />
-                    <RotateCcw className="w-3.5 h-3.5 text-white/20 hover:text-white cursor-pointer" onClick={() => handleCommandSubmit(block.command, "shell")} />
+              <div key={block.id} className="warp-block">
+                <div className="warp-block-active-frame" />
+                
+                {/* Prompt Line (Warp Style) */}
+                <div className="warp-prompt-line">
+                  <span className="text-warp-accent font-bold text-[15px]">➜</span>
+                  <span className="text-warp-dim text-[11px] font-bold tracking-tight">~/lum-terminal</span>
+                  <span className="font-mono text-[13.5px] font-bold text-warp-text-bright truncate">{block.command}</span>
+                  
+                  <div className="ml-auto flex items-center gap-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <span className="text-[9px] text-white/10 font-mono uppercase tracking-widest">{block.status}</span>
+                    <div className="flex items-center gap-2 border-l border-white/5 pl-4">
+                      <Copy className="w-3.5 h-3.5 text-white/20 hover:text-white cursor-pointer" />
+                      <RotateCcw className="w-3.5 h-3.5 text-white/20 hover:text-white cursor-pointer" onClick={() => handleCommandSubmit(block.command, "shell")} />
+                    </div>
                   </div>
                 </div>
 
-                {/* Block Body */}
-                <div className="px-4 py-3">
+                {/* Output Area */}
+                <div className="px-12 pb-4">
                   {block.explanation && (
-                    <div className="mb-3 text-[12px] text-[#268bd2]/80 italic border-l border-[#268bd2]/20 pl-3 leading-relaxed">
+                    <div className="mb-3 text-[12.5px] text-warp-accent/80 italic border-l border-warp-accent/20 pl-4 py-0.5 leading-relaxed">
                       {block.explanation}
                     </div>
                   )}
@@ -156,29 +154,27 @@ const App: React.FC = () => {
                   {block.analysis && (
                     <div className="mb-4 space-y-2">
                       <div className="text-[12px] text-white/60 leading-relaxed p-3 bg-red-500/5 border border-red-500/10 rounded">
-                        <span className="text-red-400 font-bold uppercase mr-3 text-[9px] tracking-widest">Diagnosis</span>
+                        <span className="text-red-400 font-black uppercase mr-3 tracking-widest text-[9px]">Diagnosis</span>
                         {block.analysis}
                       </div>
                       {block.suggestion && (
-                        <div className="p-2 px-3 bg-[#268bd2]/5 border border-[#268bd2]/10 rounded font-mono text-[12px] flex items-center justify-between cursor-pointer hover:bg-[#268bd2]/10 transition-all"
+                        <div className="p-2 px-3 bg-warp-accent/5 border border-warp-accent/10 rounded font-mono text-[12px] flex items-center justify-between cursor-pointer hover:bg-warp-accent/10 transition-all"
                              onClick={() => handleCommandSubmit(block.suggestion!, "shell")}>
-                          <span className="text-[#268bd2] font-bold">{block.suggestion}</span>
-                          <span className="text-[9px] text-white/20 uppercase font-black tracking-widest">Apply</span>
+                          <span className="text-warp-accent font-bold">{block.suggestion}</span>
+                          <span className="text-[9px] text-white/20 uppercase font-black tracking-widest">Apply Fix</span>
                         </div>
                       )}
                     </div>
                   )}
 
-                  {block.output && (
-                    <div className="font-mono text-[13.5px] leading-relaxed text-[#e0e0e0] overflow-x-auto selection:bg-[#268bd2]/40 whitespace-pre-wrap">
-                      <Ansi>{block.output}</Ansi>
-                    </div>
-                  )}
+                  <div className="font-mono text-[13px] leading-[1.6] text-warp-text-bright overflow-x-auto selection:bg-warp-accent/40 whitespace-pre-wrap">
+                    <Ansi>{block.output || (block.status === 'executing' ? 'Executing...' : '')}</Ansi>
+                  </div>
                   
                   {block.type === "shell" && block.output.toLowerCase().includes("error") && !block.analysis && (
-                    <button onClick={() => handleAnalyzeError(block)} className="mt-3 flex items-center gap-2 text-[10px] text-red-400/60 hover:text-red-400 transition-colors font-bold uppercase tracking-widest">
+                    <button onClick={() => handleAnalyzeError(block)} className="mt-4 flex items-center gap-2 text-[10px] text-red-400/60 hover:text-red-400 transition-colors font-bold uppercase tracking-widest border border-red-500/10 px-2 py-1 rounded">
                       <Zap className="w-3 h-3" />
-                      <span>Ask AI to Fix</span>
+                      <span>Diagnose with AI</span>
                     </button>
                   )}
                 </div>
@@ -187,7 +183,7 @@ const App: React.FC = () => {
           )}
         </div>
 
-        {/* 3. The Warp Integrated Prompt */}
+        {/* 3. The Pinned Warp Editor */}
         <CommandInput 
           onCommandSubmit={handleCommandSubmit} 
           selectedModel={selectedModel} 
