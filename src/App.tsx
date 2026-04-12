@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useRef } from "react";
-import { Copy, RotateCcw, AlertCircle, CheckCircle2, Box, Settings, Cpu, Zap, Search, Terminal as TerminalIcon } from "lucide-react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { Copy, RotateCcw, Zap, Minus, Square, X } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import Ansi from "ansi-to-react";
 import CommandInput from "./components/CommandInput";
 
@@ -14,182 +15,339 @@ interface TerminalBlock {
   suggestion?: string;
   type: "shell" | "ai" | "error-analysis";
   status: "executing" | "completed" | "error";
-  timestamp: string;
+  cwd: string;
+  gitBranch: string | null;
 }
 
-const App: React.FC = () => {
+const App = () => {
   const [blocks, setBlocks] = useState<TerminalBlock[]>([]);
   const [currentBlockId, setCurrentBlockId] = useState<string | null>(null);
   const [ollamaOnline, setOllamaOnline] = useState(false);
   const [models, setModels] = useState<string[]>([]);
-  const [selectedModel, setSelectedModel] = useState<string>("llama3");
-  const [context, setContext] = useState({ cwd: "~", git_branch: null });
-  
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const [selectedModel, setSelectedModel] = useState("");
+  const [context, setContext] = useState<{ cwd: string; git_branch: string | null }>({
+    cwd: "~",
+    git_branch: null,
+  });
 
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const currentBlockIdRef = useRef<string | null>(null);
+  currentBlockIdRef.current = currentBlockId;
+
+  const appWindow = getCurrentWindow();
+
+  // 자동 스크롤
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [blocks]);
 
+  // 시스템 컨텍스트 + Ollama 동기화
   useEffect(() => {
     const sync = async () => {
       try {
-        const [ctx, online]: [any, boolean] = await Promise.all([
-          invoke("get_system_context"),
-          invoke("check_ollama_status")
-        ]);
+        const ctx = await invoke<{ cwd: string; git_branch: string | null }>("get_system_context");
         setContext(ctx);
+      } catch (e) {
+        console.error("context error:", e);
+      }
+      try {
+        const online = await invoke<boolean>("check_ollama_status");
         setOllamaOnline(online);
-        if (online && models.length === 0) {
-          const modelList: string[] = await invoke("list_models");
-          setModels(modelList);
+        if (online) {
+          const list = await invoke<string[]>("list_models");
+          setModels(list);
+          setSelectedModel((prev) => (prev && list.includes(prev) ? prev : list[0] || ""));
         }
-      } catch (e) { console.error(e); }
+      } catch (e) {
+        console.error("ollama error:", e);
+        setOllamaOnline(false);
+      }
     };
     sync();
-    const interval = setInterval(sync, 10000);
-    return () => clearInterval(interval);
+    const iv = setInterval(sync, 10000);
+    return () => clearInterval(iv);
   }, []);
 
+  // PTY 출력 스트리밍
   useEffect(() => {
     const unlisten = listen<string>("pty-data", (event) => {
-      setBlocks((prev) => {
-        if (currentBlockId) {
-          return prev.map((b) => b.id === currentBlockId ? { ...b, output: b.output + event.payload } : b);
-        }
-        return prev;
-      });
-    });
-    return () => { unlisten.then((f) => f()); };
-  }, [currentBlockId]);
-
-  const handleCommandSubmit = async (cmd: string, type: "shell" | "ai") => {
-    const id = Date.now().toString();
-    const newBlock: TerminalBlock = {
-      id, command: cmd, output: "", type, status: "executing",
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    };
-    setBlocks((prev) => [...prev, newBlock]);
-
-    try {
-      if (type === "ai") {
-        const result: string = await invoke("generate_ai_command", { prompt: cmd, model: selectedModel });
-        try {
-          const parsed = JSON.parse(result);
-          setBlocks((prev) => prev.map((b) => b.id === id ? { ...b, command: parsed.command, explanation: parsed.explanation, status: "completed" } : b));
-        } catch { setBlocks((prev) => prev.map((b) => b.id === id ? { ...b, output: result, status: "completed" } : b)); }
-      } else {
-        setCurrentBlockId(id);
-        await invoke("write_to_pty", { data: cmd + "\n" });
+      const blockId = currentBlockIdRef.current;
+      if (blockId) {
+        setBlocks((prev) =>
+          prev.map((b) => (b.id === blockId ? { ...b, output: b.output + event.payload } : b))
+        );
       }
-    } catch (error) { setBlocks((prev) => prev.map((b) => b.id === id ? { ...b, output: `Error: ${String(error)}`, status: "error" } : b)); }
+    });
+    return () => {
+      unlisten.then((f) => f());
+    };
+  }, []);
+
+  const shortPath = (p: string) => {
+    const parts = p.replace(/\\/g, "/").split("/");
+    return parts[parts.length - 1] || "~";
   };
 
-  const handleAnalyzeError = async (block: TerminalBlock) => {
-    const analysisId = `err-${Date.now()}`;
-    const analysisBlock: TerminalBlock = {
-      id: analysisId, command: `Analyze failure: ${block.command}`, output: "", type: "error-analysis", status: "executing",
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    };
-    setBlocks((prev) => [...prev, analysisBlock]);
-    try {
-      const result: string = await invoke("analyze_error", { command: block.command, stderr: block.output, model: selectedModel });
-      const parsed = JSON.parse(result);
-      setBlocks((prev) => prev.map((b) => b.id === analysisId ? { ...b, analysis: parsed.analysis, suggestion: parsed.suggestion, status: "completed" } : b));
-    } catch (error) { setBlocks((prev) => prev.map((b) => b.id === analysisId ? { ...b, output: `Analysis failed: ${String(error)}`, status: "error" } : b)); }
-  };
+  const handleCommand = useCallback(
+    async (cmd: string, type: "shell" | "ai") => {
+      const id = Date.now().toString();
+      setBlocks((prev) => [
+        ...prev,
+        {
+          id,
+          command: cmd,
+          output: "",
+          type,
+          status: "executing",
+          cwd: context.cwd,
+          gitBranch: context.git_branch,
+        },
+      ]);
+
+      try {
+        if (type === "ai") {
+          const result = await invoke<string>("generate_ai_command", {
+            prompt: cmd,
+            model: selectedModel,
+          });
+          try {
+            // LLM이 JSON 외 텍스트를 포함할 수 있으므로 추출 시도
+            const jsonMatch = result.match(/\{[\s\S]*\}/);
+            const parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : null;
+            if (parsed?.command) {
+              setBlocks((prev) =>
+                prev.map((b) =>
+                  b.id === id
+                    ? {
+                        ...b,
+                        command: parsed.command,
+                        explanation: parsed.explanation || "",
+                        output: `$ ${parsed.command}`,
+                        status: "completed",
+                      }
+                    : b
+                )
+              );
+            } else {
+              throw new Error("no command");
+            }
+          } catch {
+            // JSON 파싱 실패 → 원문 그대로 표시
+            setBlocks((prev) =>
+              prev.map((b) => (b.id === id ? { ...b, output: result, status: "completed" } : b))
+            );
+          }
+        } else {
+          const prevId = currentBlockIdRef.current;
+          if (prevId) {
+            setBlocks((prev) =>
+              prev.map((b) =>
+                b.id === prevId && b.status === "executing" ? { ...b, status: "completed" } : b
+              )
+            );
+          }
+          setCurrentBlockId(id);
+          await invoke("write_to_pty", { data: cmd + "\n" });
+        }
+      } catch (error) {
+        setBlocks((prev) =>
+          prev.map((b) =>
+            b.id === id ? { ...b, output: `Error: ${String(error)}`, status: "error" } : b
+          )
+        );
+      }
+    },
+    [context, selectedModel]
+  );
+
+  const handleAnalyzeError = useCallback(
+    async (block: TerminalBlock) => {
+      const id = `err-${Date.now()}`;
+      setBlocks((prev) => [
+        ...prev,
+        {
+          id,
+          command: `에러 분석: ${block.command}`,
+          output: "",
+          type: "error-analysis" as const,
+          status: "executing" as const,
+          cwd: block.cwd,
+          gitBranch: block.gitBranch,
+        },
+      ]);
+      try {
+        const result = await invoke<string>("analyze_error", {
+          command: block.command,
+          stderr: block.output,
+          model: selectedModel,
+        });
+        const parsed = JSON.parse(result);
+        setBlocks((prev) =>
+          prev.map((b) =>
+            b.id === id
+              ? { ...b, analysis: parsed.analysis, suggestion: parsed.suggestion, status: "completed" }
+              : b
+          )
+        );
+      } catch (error) {
+        setBlocks((prev) =>
+          prev.map((b) =>
+            b.id === id ? { ...b, output: `분석 실패: ${String(error)}`, status: "error" } : b
+          )
+        );
+      }
+    },
+    [selectedModel]
+  );
 
   return (
-    <div className="flex h-screen w-screen bg-[#0c0c0c] text-[#b0b0b0] font-sans overflow-hidden">
-      
-      {/* 1. Warp Sidebar (Ultra Slim) */}
-      <aside className="w-12 bg-[#080808] border-r border-white/5 flex flex-col items-center py-4 space-y-6 select-none shrink-0">
-        <div className="w-8 h-8 bg-warp-accent rounded-md flex items-center justify-center mb-4">
-          <Zap className="text-black w-5 h-5 fill-black" />
+    <div className="app-root">
+      {/* ===== 커스텀 타이틀 바 ===== */}
+      <header
+        className="titlebar"
+        onMouseDown={(e) => {
+          // 자식 버튼/select 클릭이 아닌 경우에만 드래그
+          if ((e.target as HTMLElement).closest("button, select")) return;
+          appWindow.startDragging();
+        }}
+        onDoubleClick={(e) => {
+          if ((e.target as HTMLElement).closest("button, select")) return;
+          appWindow.toggleMaximize();
+        }}
+      >
+        <div className="titlebar-left">
+          <span className="titlebar-label">{shortPath(context.cwd)}</span>
+          {context.git_branch && (
+            <span className="titlebar-git">
+              <span className="titlebar-git-icon">⎇</span> {context.git_branch}
+            </span>
+          )}
         </div>
-        <div className="mt-auto flex flex-col items-center space-y-6">
-          <div className={`w-1.5 h-1.5 rounded-full ${ollamaOnline ? 'bg-warp-green' : 'bg-red-500'}`} />
-          <Settings className="w-5 h-5 text-white/10 hover:text-white transition-colors cursor-pointer" />
+        <div className="titlebar-center">
+          {ollamaOnline && models.length > 0 && (
+            <select
+              className="model-select"
+              value={selectedModel}
+              onChange={(e) => setSelectedModel(e.target.value)}
+            >
+              {models.map((m) => (
+                <option key={m} value={m}>
+                  {m}
+                </option>
+              ))}
+            </select>
+          )}
+          <div className={`status-dot ${ollamaOnline ? "online" : "offline"}`} />
         </div>
-      </aside>
+        <div className="titlebar-controls">
+          <button className="titlebar-btn" onClick={() => appWindow.minimize()}>
+            <Minus size={14} />
+          </button>
+          <button className="titlebar-btn" onClick={() => appWindow.toggleMaximize()}>
+            <Square size={11} />
+          </button>
+          <button className="titlebar-btn titlebar-btn-close" onClick={() => appWindow.close()}>
+            <X size={14} />
+          </button>
+        </div>
+      </header>
 
-      {/* 2. Main Experience: The Warp Block Stream */}
-      <main className="flex-1 flex flex-col h-full bg-[#0c0c0c] relative min-w-0">
-        <div ref={scrollRef} className="flex-1 overflow-y-auto scrollbar-hide">
-          {blocks.length === 0 ? (
-            <div className="h-full flex flex-col items-center justify-center opacity-10 select-none">
-              <TerminalIcon className="w-20 h-20 mb-4" strokeWidth={1} />
-              <h1 className="text-xl font-bold font-mono tracking-tighter">LUM TERMINAL v1.0</h1>
-            </div>
-          ) : (
-            blocks.map((block) => (
-              <div key={block.id} className="warp-block">
-                <div className="warp-block-active-frame" />
-                
-                {/* Prompt Line (Warp Style) */}
-                <div className="warp-prompt-line">
-                  <span className="text-warp-accent font-bold text-[15px]">➜</span>
-                  <span className="text-warp-dim text-[11px] font-bold tracking-tight">~/lum-terminal</span>
-                  <span className="font-mono text-[13.5px] font-bold text-warp-text-bright truncate">{block.command}</span>
-                  
-                  <div className="ml-auto flex items-center gap-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <span className="text-[9px] text-white/10 font-mono uppercase tracking-widest">{block.status}</span>
-                    <div className="flex items-center gap-2 border-l border-white/5 pl-4">
-                      <Copy className="w-3.5 h-3.5 text-white/20 hover:text-white cursor-pointer" />
-                      <RotateCcw className="w-3.5 h-3.5 text-white/20 hover:text-white cursor-pointer" onClick={() => handleCommandSubmit(block.command, "shell")} />
-                    </div>
-                  </div>
+      {/* ===== 블록 스트림 ===== */}
+      <main className="block-stream" ref={scrollRef}>
+        {blocks.length === 0 ? (
+          <div className="empty-state">
+            <div className="empty-state-icon">▸</div>
+            <div className="empty-state-text">LUM Terminal</div>
+            <div className="empty-state-hint">명령어를 입력하세요. / 로 시작하면 AI 모드</div>
+          </div>
+        ) : (
+          blocks.map((block) => (
+            <div key={block.id} className="block">
+              {/* 프롬프트 */}
+              <div className="block-header">
+                <span className="prompt-arrow">➜</span>
+                <span className="prompt-path">{shortPath(block.cwd)}</span>
+                {block.gitBranch && (
+                  <span className="prompt-git">
+                    git:(<span className="prompt-git-branch">{block.gitBranch}</span>)
+                  </span>
+                )}
+                <span className="prompt-cmd">{block.command}</span>
+
+                {block.status === "executing" && <span className="status-executing">●</span>}
+
+                {/* hover 액션 */}
+                <div className="block-actions">
+                  <button
+                    className="block-action-btn"
+                    onClick={() => navigator.clipboard.writeText(block.output)}
+                    title="복사"
+                  >
+                    <Copy size={13} />
+                  </button>
+                  <button
+                    className="block-action-btn"
+                    onClick={() => handleCommand(block.command, "shell")}
+                    title="재실행"
+                  >
+                    <RotateCcw size={13} />
+                  </button>
                 </div>
+              </div>
 
-                {/* Output Area */}
-                <div className="px-12 pb-4">
-                  {block.explanation && (
-                    <div className="mb-3 text-[12.5px] text-warp-accent/80 italic border-l border-warp-accent/20 pl-4 py-0.5 leading-relaxed">
-                      {block.explanation}
-                    </div>
-                  )}
+              {/* AI 설명 */}
+              {block.explanation && <div className="block-explanation">{block.explanation}</div>}
 
-                  {block.analysis && (
-                    <div className="mb-4 space-y-2">
-                      <div className="text-[12px] text-white/60 leading-relaxed p-3 bg-red-500/5 border border-red-500/10 rounded">
-                        <span className="text-red-400 font-black uppercase mr-3 tracking-widest text-[9px]">Diagnosis</span>
-                        {block.analysis}
-                      </div>
-                      {block.suggestion && (
-                        <div className="p-2 px-3 bg-warp-accent/5 border border-warp-accent/10 rounded font-mono text-[12px] flex items-center justify-between cursor-pointer hover:bg-warp-accent/10 transition-all"
-                             onClick={() => handleCommandSubmit(block.suggestion!, "shell")}>
-                          <span className="text-warp-accent font-bold">{block.suggestion}</span>
-                          <span className="text-[9px] text-white/20 uppercase font-black tracking-widest">Apply Fix</span>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  <div className="font-mono text-[13px] leading-[1.6] text-warp-text-bright overflow-x-auto selection:bg-warp-accent/40 whitespace-pre-wrap">
-                    <Ansi>{block.output || (block.status === 'executing' ? 'Executing...' : '')}</Ansi>
+              {/* 에러 분석 */}
+              {block.analysis && (
+                <div className="block-analysis">
+                  <div className="analysis-body">
+                    <span className="analysis-label">진단</span>
+                    {block.analysis}
                   </div>
-                  
-                  {block.type === "shell" && block.output.toLowerCase().includes("error") && !block.analysis && (
-                    <button onClick={() => handleAnalyzeError(block)} className="mt-4 flex items-center gap-2 text-[10px] text-red-400/60 hover:text-red-400 transition-colors font-bold uppercase tracking-widest border border-red-500/10 px-2 py-1 rounded">
-                      <Zap className="w-3 h-3" />
-                      <span>Diagnose with AI</span>
+                  {block.suggestion && (
+                    <button
+                      className="analysis-fix"
+                      onClick={() => handleCommand(block.suggestion!, "shell")}
+                    >
+                      <code>{block.suggestion}</code>
+                      <span className="analysis-fix-label">적용</span>
                     </button>
                   )}
                 </div>
-              </div>
-            ))
-          )}
-        </div>
+              )}
 
-        {/* 3. The Pinned Warp Editor */}
-        <CommandInput 
-          onCommandSubmit={handleCommandSubmit} 
-          selectedModel={selectedModel} 
-          context={context}
-        />
+              {/* 출력 */}
+              {(block.output || block.status === "executing") && (
+                <div className="block-output">
+                  <Ansi>{block.output}</Ansi>
+                </div>
+              )}
+
+              {/* 에러 AI 분석 버튼 */}
+              {block.type === "shell" &&
+                block.status === "completed" &&
+                block.output.toLowerCase().includes("error") &&
+                !block.analysis && (
+                  <button className="error-analyze-btn" onClick={() => handleAnalyzeError(block)}>
+                    <Zap size={12} />
+                    AI 에러 분석
+                  </button>
+                )}
+            </div>
+          ))
+        )}
       </main>
+
+      {/* ===== 하단 에디터 ===== */}
+      <CommandInput
+        onCommandSubmit={handleCommand}
+        selectedModel={selectedModel}
+        context={context}
+        ollamaOnline={ollamaOnline}
+      />
     </div>
   );
 };

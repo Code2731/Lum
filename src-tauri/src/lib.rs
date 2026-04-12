@@ -3,9 +3,10 @@ use serde::{Deserialize, Serialize};
 use std::io::{Read, Write};
 use std::sync::{Arc, Mutex};
 use std::thread;
+use std::time::Duration;
 use std::env;
 use std::process::Command;
-use tauri::{AppHandle, Emitter, State};
+use tauri::{Emitter, State};
 
 #[derive(Debug, Serialize, Deserialize)]
 struct OllamaRequest {
@@ -51,11 +52,14 @@ fn get_system_context() -> SystemContext {
 }
 
 #[tauri::command]
-async fn check_ollama_status() -> bool {
-    let client = reqwest::Client::new();
+async fn check_ollama_status() -> Result<bool, String> {
+    let client = reqwest::Client::builder()
+        .timeout(Duration::from_secs(5))
+        .build()
+        .map_err(|e| e.to_string())?;
     match client.get("http://localhost:11434/api/tags").send().await {
-        Ok(res) => res.status().is_success(),
-        Err(_) => false,
+        Ok(res) => Ok(res.status().is_success()),
+        Err(_) => Ok(false),
     }
 }
 
@@ -75,7 +79,10 @@ async fn list_models() -> Result<Vec<String>, String> {
 
 #[tauri::command]
 async fn generate_ai_command(prompt: String, model: String) -> Result<String, String> {
-    let client = reqwest::Client::new();
+    let client = reqwest::Client::builder()
+        .timeout(Duration::from_secs(120))
+        .build()
+        .map_err(|e| e.to_string())?;
     let request_body = OllamaRequest {
         model,
         prompt: format!(
@@ -94,7 +101,10 @@ async fn generate_ai_command(prompt: String, model: String) -> Result<String, St
 
 #[tauri::command]
 async fn analyze_error(command: String, stderr: String, model: String) -> Result<String, String> {
-    let client = reqwest::Client::new();
+    let client = reqwest::Client::builder()
+        .timeout(Duration::from_secs(120))
+        .build()
+        .map_err(|e| e.to_string())?;
     let request_body = OllamaRequest {
         model,
         prompt: format!(

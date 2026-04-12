@@ -1,70 +1,109 @@
-import React, { useState } from "react";
-import { Folder, ChevronRight, Zap } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { Zap } from "lucide-react";
 
-interface CommandInputProps {
+interface Props {
   onCommandSubmit: (cmd: string, type: "shell" | "ai") => void;
   selectedModel: string;
-  context: {
-    cwd: string;
-    git_branch: string | null;
-  };
+  ollamaOnline: boolean;
+  context: { cwd: string; git_branch: string | null };
 }
 
-const CommandInput: React.FC<CommandInputProps> = ({ onCommandSubmit, selectedModel, context }) => {
+const CommandInput = ({ onCommandSubmit, selectedModel, ollamaOnline, context }: Props) => {
   const [value, setValue] = useState("");
+  const [history, setHistory] = useState<string[]>([]);
+  const [historyIdx, setHistoryIdx] = useState(-1);
+  const ref = useRef<HTMLTextAreaElement>(null);
+
   const isAI = value.startsWith("/");
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter" && value.trim()) {
-      const type = isAI ? "ai" : "shell";
-      const command = isAI ? value.slice(1) : value;
-      onCommandSubmit(command, type);
+  useEffect(() => {
+    ref.current?.focus();
+  }, []);
+
+  const shortPath = (p: string) => {
+    const parts = p.replace(/\\/g, "/").split("/");
+    return parts[parts.length - 1] || "~";
+  };
+
+  const submit = () => {
+    const trimmed = value.trim();
+    if (!trimmed) return;
+    const type = isAI ? "ai" : "shell";
+    const cmd = isAI ? trimmed.slice(1).trim() : trimmed;
+    if (cmd) {
+      setHistory((prev) => [...prev, trimmed]);
+      setHistoryIdx(-1);
+      onCommandSubmit(cmd, type);
       setValue("");
+      if (ref.current) ref.current.style.height = "auto";
     }
   };
 
-  const currentFolder = context.cwd.split('/').pop() || 'root';
+  const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      submit();
+      return;
+    }
+    if (e.key === "ArrowUp" && !value) {
+      e.preventDefault();
+      if (history.length > 0) {
+        const i = historyIdx === -1 ? history.length - 1 : Math.max(0, historyIdx - 1);
+        setHistoryIdx(i);
+        setValue(history[i]);
+      }
+    }
+    if (e.key === "ArrowDown" && historyIdx !== -1) {
+      e.preventDefault();
+      if (historyIdx < history.length - 1) {
+        setHistoryIdx(historyIdx + 1);
+        setValue(history[historyIdx + 1]);
+      } else {
+        setHistoryIdx(-1);
+        setValue("");
+      }
+    }
+  };
 
   return (
-    <div className="warp-editor-block">
-      {/* Warp Editor Header: Path & Git */}
-      <div className="flex items-center gap-2 mb-3">
-        <div className="path-pill">
-          <Folder className="w-3 h-3 opacity-40" />
-          <span>{currentFolder}</span>
+    <div className="editor" onClick={() => ref.current?.focus()}>
+      <div className={`editor-box ${isAI ? "editor-box-ai" : ""}`}>
+        {/* 경로 + git */}
+        <div className="editor-header">
+          <span className="editor-path">{shortPath(context.cwd)}</span>
+          {context.git_branch && (
+            <>
+              <span className="editor-on">on</span>
+              <span className="editor-branch">{context.git_branch}</span>
+            </>
+          )}
+          {isAI && ollamaOnline && (
+            <span className="editor-ai-badge">
+              <Zap size={10} />
+              AI · {selectedModel}
+            </span>
+          )}
         </div>
-        {context.git_branch && (
-          <div className="path-pill !text-warp-green/60">
-            <span>{context.git_branch}</span>
-          </div>
-        )}
-        <ChevronRight className="w-3 h-3 text-white/5" />
-      </div>
 
-      {/* Warp Input Line: Prompt + Editor */}
-      <div className="flex items-center gap-3">
-        <span className="text-warp-accent font-bold text-[16px] select-none">➜</span>
-        
-        <div className="flex-1 flex items-center relative">
-          <input
-            type="text"
-            className="flex-1 bg-transparent border-none outline-none text-warp-text-bright text-[14px] font-mono selection:bg-warp-accent/40 py-0.5"
-            placeholder={isAI ? `Ask AI (${selectedModel})...` : ""}
+        {/* 입력 */}
+        <div className="editor-input-row">
+          <span className="editor-prompt">$</span>
+          <textarea
+            ref={ref}
+            className="editor-input"
+            rows={1}
             value={value}
-            onChange={(e) => setValue(e.target.value)}
-            onKeyDown={handleKeyDown}
+            placeholder={isAI ? "AI에게 질문하세요..." : ""}
+            onChange={(e) => {
+              setValue(e.target.value);
+              e.target.style.height = "auto";
+              e.target.style.height = Math.min(e.target.scrollHeight, 120) + "px";
+            }}
+            onKeyDown={onKeyDown}
             autoFocus
             spellCheck={false}
           />
-          {value.length === 0 && <div className="warp-cursor" />}
         </div>
-
-        {isAI && (
-          <div className="flex items-center gap-2 px-2 py-0.5 bg-warp-accent/10 border border-warp-accent/20 rounded text-[9px] text-warp-accent font-black uppercase tracking-widest">
-            <Zap className="w-3 h-3 fill-warp-accent" />
-            <span>AI MODE</span>
-          </div>
-        )}
       </div>
     </div>
   );
