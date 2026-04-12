@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import { Folder, ChevronRight, Zap, GitBranch } from "lucide-react";
-import { motion } from "framer-motion";
 
 interface CommandInputProps {
   onCommandSubmit: (cmd: string, type: "shell" | "ai") => void;
@@ -24,55 +23,53 @@ const CommandInput: React.FC<CommandInputProps> = ({ onCommandSubmit, selectedMo
     }
   };
 
-  const displayPath = context.cwd.split('/').pop() || 'root';
+  const currentFolder = context.cwd.split('/').pop() || 'root';
 
   return (
-    <div className="w-full max-w-5xl mx-auto px-6 pb-10">
-      <div className={`warp-prompt-dock ${isAI ? 'border-warp-accent/40' : ''}`}>
-        {/* Breadcrumb Header */}
-        <div className="flex items-center gap-2 mb-3 select-none">
-          <div className="flex items-center gap-1.5 px-2 py-0.5 bg-white/5 rounded border border-white/5 text-[11px] text-warp-dim font-bold">
-            <Folder className="w-3 h-3 opacity-60" />
-            <span>{displayPath}</span>
-          </div>
-          
-          {context.git_branch && (
-            <div className="flex items-center gap-1.5 px-2 py-0.5 bg-[#95d886]/10 rounded border border-[#95d886]/10 text-[11px] text-[#95d886]/80 font-bold">
-              <GitBranch className="w-3 h-3 opacity-60" />
+    <div className="warp-input-wrapper">
+      {/* Path Breadcrumb */}
+      <div className="flex items-center gap-2 mb-2 select-none">
+        <div className="breadcrumb-item">
+          <Folder className="w-3 h-3 mr-1 opacity-40" />
+          <span>{currentFolder}</span>
+        </div>
+        {context.git_branch && (
+          <>
+            <ChevronRight className="w-3 h-3 text-white/5" />
+            <div className="breadcrumb-item !text-[#95d886]/60">
+              <GitBranch className="w-3 h-3 mr-1 opacity-40" />
               <span>{context.git_branch}</span>
             </div>
-          )}
-          
-          <ChevronRight className="w-3 h-3 text-white/5" />
+          </>
+        )}
+      </div>
+
+      {/* Input Line */}
+      <div className="flex items-center gap-3">
+        <span className={isAI ? "text-[#268bd2] font-bold text-[15px]" : "text-[#268bd2] font-bold text-[15px]"}>
+          ➜
+        </span>
+        
+        <div className="flex-1 flex items-center relative">
+          <input
+            type="text"
+            className="flex-1 bg-transparent border-none outline-none text-warp-text-bright text-[14px] font-mono selection:bg-[#268bd2]/40"
+            placeholder={isAI ? `Ask AI (${selectedModel})...` : ""}
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            onKeyDown={handleKeyDown}
+            autoFocus
+            spellCheck={false}
+          />
+          {value.length === 0 && <div className="cursor-block" />}
         </div>
 
-        {/* Input Line */}
-        <div className="flex items-center gap-4">
-          <span className={`text-lg font-bold select-none ${isAI ? 'text-warp-accent' : 'text-warp-accent'}`}>
-            ➜
-          </span>
-          
-          <div className="flex-1 flex items-center relative">
-            <input
-              type="text"
-              className="flex-1 bg-transparent border-none outline-none text-white text-[14px] font-mono selection:bg-warp-accent/30 py-0.5"
-              placeholder={isAI ? `Ask ${selectedModel}...` : "Command or /AI"}
-              value={value}
-              onChange={(e) => setValue(e.target.value)}
-              onKeyDown={handleKeyDown}
-              autoFocus
-              spellCheck={false}
-            />
-            {value.length === 0 && <div className="warp-cursor" />}
+        {isAI && (
+          <div className="flex items-center gap-1.5 px-2 py-0.5 bg-[#268bd2]/10 border border-[#268bd2]/20 rounded text-[10px] text-[#268bd2] font-black uppercase tracking-widest">
+            <Zap className="w-3 h-3 fill-[#268bd2]" />
+            <span>AI</span>
           </div>
-
-          {isAI && (
-            <div className="flex items-center gap-2 px-2.5 py-1 bg-warp-accent/10 border border-warp-accent/20 rounded-md">
-              <Zap className="w-3 h-3 fill-warp-accent text-warp-accent" />
-              <span className="text-[10px] text-warp-accent font-black uppercase tracking-widest">{selectedModel}</span>
-            </div>
-          )}
-        </div>
+        )}
       </div>
     </div>
   );

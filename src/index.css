@@ -2,67 +2,68 @@
 
 @theme {
   --color-warp-bg: #0c0c0c;
-  --color-warp-sidebar: #14171a;
-  --color-warp-block: #1a1a1a;
+  --color-warp-sidebar: #080808;
+  --color-warp-header: #1a1a1a;
+  --color-warp-content: #121212;
   --color-warp-accent: #268bd2;
-  --color-warp-text: #cccccc;
-  --color-warp-dim: #666666;
-  --color-warp-border: rgba(255, 255, 255, 0.08);
+  --color-warp-green: #95d886;
+  --color-warp-border: rgba(255, 255, 255, 0.06);
+  --color-warp-text: #b0b0b0;
+  --color-warp-text-bright: #e0e0e0;
 }
 
 @layer base {
   body {
     @apply bg-warp-bg text-warp-text antialiased overflow-hidden selection:bg-warp-accent/30;
-    font-family: -apple-system, BlinkMacSystemFont, "Inter", sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: subpixel-antialiased;
   }
   
   pre, code, input {
-    font-family: 'JetBrains Mono', 'Menlo', 'Monaco', monospace;
-    font-variant-ligatures: none;
+    font-family: 'SF Mono', 'JetBrains Mono', 'Menlo', monospace;
+    font-size: 13px;
+    line-height: 1.5;
   }
 }
 
 @layer components {
-  /* Warp Signature Block */
+  /* Warp Actual Block Structure */
   .warp-block {
-    @apply flex flex-col mb-4 rounded-lg border border-warp-border overflow-hidden bg-warp-block/20 transition-all duration-200;
+    @apply flex flex-col mb-2 border-l-[3px] border-transparent bg-warp-content/40 hover:bg-warp-content/60 transition-colors;
   }
-
-  .warp-block:hover {
-    @apply border-white/20 bg-warp-block/40;
-  }
+  
+  .warp-block.running { @apply border-warp-accent; }
+  .warp-block.success { @apply border-warp-green/40; }
+  .warp-block.error { @apply border-red-500/40; }
 
   .warp-block-header {
-    @apply flex items-center justify-between px-4 py-2 bg-white/5 border-b border-warp-border;
+    @apply flex items-center justify-between px-4 py-1.5 bg-white/[0.02] border-b border-warp-border;
   }
 
-  /* The Integrated Editor Prompt */
-  .warp-prompt-dock {
-    @apply bg-warp-block/80 border border-white/10 rounded-xl px-4 py-3 shadow-2xl backdrop-blur-xl transition-all duration-300;
+  /* Integrated Editor Input */
+  .warp-input-wrapper {
+    @apply flex flex-col bg-[#111] border-t border-warp-border p-4 pb-8;
   }
 
-  .warp-prompt-dock:focus-within {
-    @apply border-warp-accent/50 ring-1 ring-warp-accent/20;
+  .breadcrumb-item {
+    @apply flex items-center text-[11px] font-bold text-white/30 hover:text-white/60 cursor-default transition-colors;
   }
 
-  /* Status Icons */
-  .status-icon {
-    @apply w-3.5 h-3.5 flex items-center justify-center rounded;
+  .cursor-block {
+    @apply w-2 h-[18px] bg-warp-green ml-1;
+    animation: blink 1s step-end infinite;
+  }
+
+  @keyframes blink {
+    from, to { opacity: 1; }
+    50% { opacity: 0; }
   }
 }
 
-/* Scrollbar */
 ::-webkit-scrollbar {
-  width: 10px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
+  width: 6px;
 }
 ::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.05);
-  border-radius: 5px;
-  border: 3px solid var(--color-warp-bg);
-}
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
 }
