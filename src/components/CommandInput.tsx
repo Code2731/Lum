@@ -1,11 +1,17 @@
 import React, { useState } from "react";
+import { Folder, ChevronRight, Zap, GitBranch } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface CommandInputProps {
   onCommandSubmit: (cmd: string, type: "shell" | "ai") => void;
   selectedModel: string;
+  context: {
+    cwd: string;
+    git_branch: string | null;
+  };
 }
 
-const CommandInput: React.FC<CommandInputProps> = ({ onCommandSubmit, selectedModel }) => {
+const CommandInput: React.FC<CommandInputProps> = ({ onCommandSubmit, selectedModel, context }) => {
   const [value, setValue] = useState("");
   const isAI = value.startsWith("/");
 
@@ -18,42 +24,66 @@ const CommandInput: React.FC<CommandInputProps> = ({ onCommandSubmit, selectedMo
     }
   };
 
-  return (
-    <div className="warp-input-container px-6">
-      <div className="flex items-center gap-3">
-        {/* Warp Prompt Symbol */}
-        <span className="text-[#268bd2] font-bold text-lg select-none">➜</span>
-        
-        {/* Context info for AI Mode */}
-        {isAI && (
-          <span className="text-[#268bd2]/60 text-xs font-bold uppercase border border-[#268bd2]/20 px-1.5 py-0.5 rounded bg-[#268bd2]/5">
-            AI: {selectedModel}
-          </span>
-        )}
+  const displayPath = context.cwd.split('/').pop() || 'root';
 
-        <div className="relative flex-1 flex items-center">
-          <input
-            type="text"
-            className="bg-transparent border-none outline-none w-full text-white text-[14px] font-mono selection:bg-[#268bd2]/40"
-            placeholder={isAI ? "Ask AI anything..." : "Enter command..."}
-            value={value}
-            onChange={(e) => setValue(e.target.value)}
-            onKeyDown={handleKeyDown}
-            autoFocus
-            spellCheck={false}
-          />
+  return (
+    <div className="w-full px-6 pb-8">
+      <motion.div 
+        layout
+        className={`warp-editor-prompt ${isAI ? 'border-warp-blue/30 ring-1 ring-warp-blue/10' : ''}`}
+      >
+        {/* Breadcrumb Area */}
+        <div className="flex items-center space-x-2 mb-3 select-none">
+          <div className="breadcrumb-pill">
+            <Folder className="w-3 h-3 opacity-60" />
+            <span>{displayPath}</span>
+          </div>
           
-          {/* Warp Custom Blinking Cursor */}
-          <div className="w-2 h-5 bg-[#95d886] animate-pulse ml-1 shrink-0" />
+          {context.git_branch && (
+            <div className="breadcrumb-pill !text-warp-green/80 !border-warp-green/10">
+              <GitBranch className="w-3 h-3 opacity-60" />
+              <span>{context.git_branch}</span>
+            </div>
+          )}
+
+          <ChevronRight className="w-3.5 h-3.5 text-white/5" />
         </div>
-      </div>
-      
-      {/* Path Breadcrumb (Warp Style) */}
-      <div className="flex items-center gap-2 mt-2 ml-8 opacity-40 text-[10px]">
-        <span>~/lum-terminal</span>
-        <span className="text-white/20">|</span>
-        <span>main*</span>
-      </div>
+
+        {/* Input Area */}
+        <div className="flex items-center space-x-4">
+          <span className={`text-[16px] font-bold select-none ${isAI ? 'text-warp-blue' : 'text-warp-green'}`}>
+            ➜
+          </span>
+          
+          <div className="flex-1 flex items-center relative">
+            <input
+              type="text"
+              className="flex-1 bg-transparent border-none outline-none text-white text-[14.5px] font-mono selection:bg-warp-blue/30 py-0.5"
+              placeholder={isAI ? `Ask ${selectedModel}...` : "Command or /AI"}
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+              onKeyDown={handleKeyDown}
+              autoFocus
+              spellCheck={false}
+            />
+            {value.length === 0 && <div className="warp-cursor" />}
+          </div>
+
+          <AnimatePresence>
+            {isAI && (
+              <motion.div 
+                initial={{ opacity: 0, x: 10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 10 }}
+                className="flex items-center space-x-2 px-3 py-1.5 bg-warp-blue/10 border border-warp-blue/20 rounded-lg"
+              >
+                <Zap className="w-3 h-3 fill-warp-blue text-warp-blue" />
+                <span className="text-[10px] text-warp-blue font-black uppercase tracking-widest">{selectedModel}</span>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </motion.div>
     </div>
   );
 };

@@ -3,6 +3,8 @@ use serde::{Deserialize, Serialize};
 use std::io::{Read, Write};
 use std::sync::{Arc, Mutex};
 use std::thread;
+use std::env;
+use std::process::Command;
 use tauri::{AppHandle, Emitter, State};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -18,29 +20,34 @@ struct OllamaResponse {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-struct PullRequest {
-    name: String,
-    stream: bool,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-struct DeleteRequest {
-    name: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-struct ModelListResponse {
-    models: Vec<Model>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-struct Model {
-    name: String,
-    size: u64,
+struct SystemContext {
+    cwd: String,
+    git_branch: Option<String>,
 }
 
 pub struct TerminalState {
     pub writer: Arc<Mutex<Box<dyn Write + Send>>>,
+}
+
+#[tauri::command]
+fn get_system_context() -> SystemContext {
+    let cwd = env::current_dir()
+        .map(|p| p.to_string_lossy().to_string())
+        .unwrap_or_else(|_| "/".to_string());
+
+    let git_branch = Command::new("git")
+        .args(["rev-parse", "--abbrev-ref", "HEAD"])
+        .output()
+        .ok()
+        .and_then(|output| {
+            if output.status.success() {
+                Some(String::from_utf8_lossy(&output.stdout).trim().to_string())
+            } else {
+                None
+            }
+        });
+
+    SystemContext { cwd, git_branch }
 }
 
 #[tauri::command]
@@ -55,47 +62,15 @@ async fn check_ollama_status() -> bool {
 #[tauri::command]
 async fn list_models() -> Result<Vec<String>, String> {
     let client = reqwest::Client::new();
-    let res = client.get("http://localhost:11434/api/tags")
-        .send()
-        .await
-        .map_err(|e| e.to_string())?;
+    let res = client.get("http://localhost:11434/api/tags").send().await.map_err(|e| e.to_string())?;
     
+    #[derive(Debug, Serialize, Deserialize)]
+    struct Model { name: String }
+    #[derive(Debug, Serialize, Deserialize)]
+    struct ModelListResponse { models: Vec<Model> }
+
     let json: ModelListResponse = res.json().await.map_err(|e| e.to_string())?;
     Ok(json.models.into_iter().map(|m| m.name).collect())
-}
-
-#[tauri::command]
-async fn pull_model(name: String) -> Result<(), String> {
-    let client = reqwest::Client::new();
-    let req = PullRequest { name, stream: false };
-    let res = client.post("http://localhost:11434/api/pull")
-        .json(&req)
-        .send()
-        .await
-        .map_err(|e| e.to_string())?;
-
-    if res.status().is_success() {
-        Ok(())
-    } else {
-        Err(format!("Failed to pull model: {}", res.status()))
-    }
-}
-
-#[tauri::command]
-async fn delete_model(name: String) -> Result<(), String> {
-    let client = reqwest::Client::new();
-    let req = DeleteRequest { name };
-    let res = client.delete("http://localhost:11434/api/delete")
-        .json(&req)
-        .send()
-        .await
-        .map_err(|e| e.to_string())?;
-
-    if res.status().is_success() {
-        Ok(())
-    } else {
-        Err(format!("Failed to delete model: {}", res.status()))
-    }
 }
 
 #[tauri::command]
@@ -106,19 +81,13 @@ async fn generate_ai_command(prompt: String, model: String) -> Result<String, St
         prompt: format!(
             "You are a terminal expert. Convert the user's natural language request into a single executable shell command. \
              Respond ONLY with a JSON object in the following format: {{\"command\": \"the command here\", \"explanation\": \"short explanation\"}}. \
-             Do not include any other text or markdown formatting. Prompt: {}",
+             Do not include any other text. Prompt: {}",
             prompt
         ),
         stream: false,
     };
 
-    let response = client
-        .post("http://localhost:11434/api/generate")
-        .json(&request_body)
-        .send()
-        .await
-        .map_err(|e| e.to_string())?;
-
+    let response = client.post("http://localhost:11434/api/generate").json(&request_body).send().await.map_err(|e| e.to_string())?;
     let ollama_res: OllamaResponse = response.json().await.map_err(|e| e.to_string())?;
     Ok(ollama_res.response)
 }
@@ -129,23 +98,14 @@ async fn analyze_error(command: String, stderr: String, model: String) -> Result
     let request_body = OllamaRequest {
         model,
         prompt: format!(
-            "The following command failed: `{}`. \
-             Error message: `{}`. \
-             Analyze the error and suggest a fix. \
-             Respond ONLY with a JSON object: {{\"analysis\": \"why it failed\", \"suggestion\": \"the corrected command\"}}. \
-             Do not include any other text. ",
+            "The following command failed: `{}`. Error message: `{}`. Analyze the error and suggest a fix. \
+             Respond ONLY with a JSON object: {{\"analysis\": \"why it failed\", \"suggestion\": \"the corrected command\"}}. ",
             command, stderr
         ),
         stream: false,
     };
 
-    let response = client
-        .post("http://localhost:11434/api/generate")
-        .json(&request_body)
-        .send()
-        .await
-        .map_err(|e| e.to_string())?;
-
+    let response = client.post("http://localhost:11434/api/generate").json(&request_body).send().await.map_err(|e| e.to_string())?;
     let ollama_res: OllamaResponse = response.json().await.map_err(|e| e.to_string())?;
     Ok(ollama_res.response)
 }
@@ -161,30 +121,13 @@ fn write_to_pty(data: String, state: State<'_, TerminalState>) -> Result<(), Str
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let pty_system = native_pty_system();
-    let pair = pty_system
-        .openpty(PtySize {
-            rows: 24,
-            cols: 80,
-            pixel_width: 0,
-            pixel_height: 0,
-        })
-        .expect("failed to open pty");
-
-    let shell = if cfg!(target_os = "windows") {
-        "powershell.exe"
-    } else {
-        "zsh"
-    };
-
+    let pair = pty_system.openpty(PtySize { rows: 24, cols: 80, pixel_width: 0, pixel_height: 0 }).expect("failed to open pty");
+    let shell = if cfg!(target_os = "windows") { "powershell.exe" } else { "zsh" };
     let cmd = CommandBuilder::new(shell);
     let mut _child = pair.slave.spawn_command(cmd).expect("failed to spawn shell");
-
     let mut reader = pair.master.try_clone_reader().expect("failed to clone reader");
     let writer = pair.master.take_writer().expect("failed to take writer");
-
-    let terminal_state = TerminalState {
-        writer: Arc::new(Mutex::new(writer)),
-    };
+    let terminal_state = TerminalState { writer: Arc::new(Mutex::new(writer)) };
 
     tauri::Builder::default()
         .manage(terminal_state)
@@ -207,13 +150,12 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            get_system_context, 
             generate_ai_command, 
             analyze_error, 
             write_to_pty, 
             check_ollama_status,
-            list_models,
-            pull_model,
-            delete_model
+            list_models
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
