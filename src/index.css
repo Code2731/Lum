@@ -1,48 +1,65 @@
 @import "tailwindcss";
 
 @theme {
-  --color-warp-bg: #0b0d0f;
-  --color-warp-sidebar: #14171a;
-  --color-warp-block: #1a1d21;
+  --color-warp-bg: #090b10;
+  --color-warp-sidebar: #0f1117;
+  --color-warp-block: #161922;
   --color-warp-accent: #00f3ff;
-  --color-warp-border: rgba(255, 255, 255, 0.08);
-  --color-warp-text-dim: #9ca3af;
-  --shadow-neon: 0 0 15px rgba(0, 243, 255, 0.3);
+  --color-warp-border: rgba(255, 255, 255, 0.06);
+  --color-warp-text: #e2e8f0;
+  --color-warp-dim: #64748b;
+  
+  --shadow-warp-block: 0 4px 20px rgba(0, 0, 0, 0.4);
+  --shadow-neon: 0 0 20px rgba(0, 243, 255, 0.15);
 }
 
 @layer base {
   body {
-    @apply bg-warp-bg text-white font-sans antialiased overflow-hidden;
+    @apply bg-warp-bg text-warp-text font-sans antialiased overflow-hidden selection:bg-warp-accent/30;
   }
 }
 
 @layer components {
-  .warp-card {
-    @apply bg-warp-block rounded-xl border border-warp-border overflow-hidden transition-all duration-200;
+  /* Warp Block Style */
+  .warp-block {
+    @apply bg-warp-block/40 border border-warp-border rounded-xl shadow-[var(--shadow-warp-block)] backdrop-blur-sm overflow-hidden transition-all duration-300 mb-4;
   }
 
-  .warp-input-container {
-    @apply flex items-center bg-warp-block border border-warp-border rounded-lg px-4 py-3 shadow-lg transition-all duration-300;
+  .warp-block-header {
+    @apply flex items-center justify-between px-5 py-2.5 bg-white/[0.03] border-b border-white/[0.04];
   }
 
-  .warp-input-container:focus-within {
-    @apply border-warp-accent/50 ring-1 ring-warp-accent/20 shadow-[var(--shadow-neon)];
+  /* Warp Input Dock */
+  .warp-input-dock {
+    @apply relative flex items-center bg-[#1a1f29]/80 border border-white/10 rounded-2xl px-5 py-4 shadow-2xl backdrop-blur-xl transition-all duration-500;
   }
 
-  .prompt-symbol {
-    @apply text-warp-accent font-bold mr-2;
+  .warp-input-dock:focus-within {
+    @apply border-warp-accent/40 shadow-[var(--shadow-neon)] bg-[#1a1f29];
   }
 
-  .block-header {
-    @apply flex items-center justify-between px-4 py-2 bg-white/5 border-b border-white/5;
+  /* Interactive Elements */
+  .icon-button {
+    @apply p-1.5 text-warp-dim hover:text-white hover:bg-white/5 rounded-md transition-all;
   }
 
-  /* Custom Scrollbar for Warp feel */
-  .scrollbar-hide::-webkit-scrollbar {
-    display: none;
+  /* Prompt Styles */
+  .prompt-path {
+    @apply flex items-center space-x-2 text-warp-accent/60 font-mono text-[11px] bg-warp-accent/5 px-2.5 py-1 rounded-full border border-warp-accent/10;
   }
-  .scrollbar-hide {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-  }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.1);
 }
