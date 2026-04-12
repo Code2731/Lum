@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Folder, ChevronRight, Zap, GitBranch } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 
 interface CommandInputProps {
   onCommandSubmit: (cmd: string, type: "shell" | "ai") => void;
@@ -27,38 +27,35 @@ const CommandInput: React.FC<CommandInputProps> = ({ onCommandSubmit, selectedMo
   const displayPath = context.cwd.split('/').pop() || 'root';
 
   return (
-    <div className="w-full px-6 pb-8">
-      <motion.div 
-        layout
-        className={`warp-editor-prompt ${isAI ? 'border-warp-blue/30 ring-1 ring-warp-blue/10' : ''}`}
-      >
-        {/* Breadcrumb Area */}
-        <div className="flex items-center space-x-2 mb-3 select-none">
-          <div className="breadcrumb-pill">
+    <div className="w-full max-w-5xl mx-auto px-6 pb-10">
+      <div className={`warp-prompt-dock ${isAI ? 'border-warp-accent/40' : ''}`}>
+        {/* Breadcrumb Header */}
+        <div className="flex items-center gap-2 mb-3 select-none">
+          <div className="flex items-center gap-1.5 px-2 py-0.5 bg-white/5 rounded border border-white/5 text-[11px] text-warp-dim font-bold">
             <Folder className="w-3 h-3 opacity-60" />
             <span>{displayPath}</span>
           </div>
           
           {context.git_branch && (
-            <div className="breadcrumb-pill !text-warp-green/80 !border-warp-green/10">
+            <div className="flex items-center gap-1.5 px-2 py-0.5 bg-[#95d886]/10 rounded border border-[#95d886]/10 text-[11px] text-[#95d886]/80 font-bold">
               <GitBranch className="w-3 h-3 opacity-60" />
               <span>{context.git_branch}</span>
             </div>
           )}
-
-          <ChevronRight className="w-3.5 h-3.5 text-white/5" />
+          
+          <ChevronRight className="w-3 h-3 text-white/5" />
         </div>
 
-        {/* Input Area */}
-        <div className="flex items-center space-x-4">
-          <span className={`text-[16px] font-bold select-none ${isAI ? 'text-warp-blue' : 'text-warp-green'}`}>
+        {/* Input Line */}
+        <div className="flex items-center gap-4">
+          <span className={`text-lg font-bold select-none ${isAI ? 'text-warp-accent' : 'text-warp-accent'}`}>
             ➜
           </span>
           
           <div className="flex-1 flex items-center relative">
             <input
               type="text"
-              className="flex-1 bg-transparent border-none outline-none text-white text-[14.5px] font-mono selection:bg-warp-blue/30 py-0.5"
+              className="flex-1 bg-transparent border-none outline-none text-white text-[14px] font-mono selection:bg-warp-accent/30 py-0.5"
               placeholder={isAI ? `Ask ${selectedModel}...` : "Command or /AI"}
               value={value}
               onChange={(e) => setValue(e.target.value)}
@@ -69,21 +66,14 @@ const CommandInput: React.FC<CommandInputProps> = ({ onCommandSubmit, selectedMo
             {value.length === 0 && <div className="warp-cursor" />}
           </div>
 
-          <AnimatePresence>
-            {isAI && (
-              <motion.div 
-                initial={{ opacity: 0, x: 10 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 10 }}
-                className="flex items-center space-x-2 px-3 py-1.5 bg-warp-blue/10 border border-warp-blue/20 rounded-lg"
-              >
-                <Zap className="w-3 h-3 fill-warp-blue text-warp-blue" />
-                <span className="text-[10px] text-warp-blue font-black uppercase tracking-widest">{selectedModel}</span>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          {isAI && (
+            <div className="flex items-center gap-2 px-2.5 py-1 bg-warp-accent/10 border border-warp-accent/20 rounded-md">
+              <Zap className="w-3 h-3 fill-warp-accent text-warp-accent" />
+              <span className="text-[10px] text-warp-accent font-black uppercase tracking-widest">{selectedModel}</span>
+            </div>
+          )}
         </div>
-      </motion.div>
+      </div>
     </div>
   );
 };

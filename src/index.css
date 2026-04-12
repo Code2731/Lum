@@ -1,73 +1,57 @@
 @import "tailwindcss";
 
 @theme {
-  --color-warp-bg: #0b0d0f;
+  --color-warp-bg: #0c0c0c;
   --color-warp-sidebar: #14171a;
-  --color-warp-header: #1a1d21;
-  --color-warp-content: #14171a;
-  --color-warp-accent: #00f3ff;
-  --color-warp-blue: #268bd2;
-  --color-warp-green: #95d886;
+  --color-warp-block: #1a1a1a;
+  --color-warp-accent: #268bd2;
+  --color-warp-text: #cccccc;
+  --color-warp-dim: #666666;
   --color-warp-border: rgba(255, 255, 255, 0.08);
-  --color-warp-text: #e2e8f0;
-  --color-warp-dim: #9ca3af;
 }
 
 @layer base {
   body {
     @apply bg-warp-bg text-warp-text antialiased overflow-hidden selection:bg-warp-accent/30;
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
+    font-family: -apple-system, BlinkMacSystemFont, "Inter", sans-serif;
   }
   
-  code, pre, .font-mono {
-    font-family: 'JetBrains Mono', 'Fira Code', 'Menlo', 'Monaco', monospace;
+  pre, code, input {
+    font-family: 'JetBrains Mono', 'Menlo', 'Monaco', monospace;
     font-variant-ligatures: none;
   }
 }
 
 @layer components {
-  /* Warp High-End Block */
+  /* Warp Signature Block */
   .warp-block {
-    @apply flex flex-col mb-6 rounded-xl border border-warp-border overflow-hidden bg-warp-content shadow-2xl transition-all duration-300;
+    @apply flex flex-col mb-4 rounded-lg border border-warp-border overflow-hidden bg-warp-block/20 transition-all duration-200;
+  }
+
+  .warp-block:hover {
+    @apply border-white/20 bg-warp-block/40;
   }
 
   .warp-block-header {
-    @apply flex items-center justify-between px-5 py-3 bg-warp-header/80 backdrop-blur-md border-b border-warp-border;
+    @apply flex items-center justify-between px-4 py-2 bg-white/5 border-b border-warp-border;
   }
 
   /* The Integrated Editor Prompt */
-  .warp-editor-prompt {
-    @apply flex flex-col bg-[#1a1d21]/90 border border-white/10 rounded-xl px-5 py-4 shadow-[0_20px_50px_rgba(0,0,0,0.5)] backdrop-blur-2xl transition-all duration-300;
+  .warp-prompt-dock {
+    @apply bg-warp-block/80 border border-white/10 rounded-xl px-4 py-3 shadow-2xl backdrop-blur-xl transition-all duration-300;
   }
 
-  .warp-editor-prompt:focus-within {
-    @apply border-warp-accent/40 ring-1 ring-warp-accent/10;
+  .warp-prompt-dock:focus-within {
+    @apply border-warp-accent/50 ring-1 ring-warp-accent/20;
   }
 
-  /* Breadcrumb Pill */
-  .breadcrumb-pill {
-    @apply flex items-center space-x-2 text-warp-dim text-[11px] font-bold bg-white/5 px-3 py-1 rounded-full border border-white/5;
-  }
-
-  /* Custom Blinking Cursor */
-  .warp-cursor {
-    @apply w-[7px] h-[18px] bg-warp-green ml-1;
-    animation: warp-blink 1s step-end infinite;
-  }
-
-  @keyframes warp-blink {
-    from, to { opacity: 1; }
-    50% { opacity: 0; }
+  /* Status Icons */
+  .status-icon {
+    @apply w-3.5 h-3.5 flex items-center justify-center rounded;
   }
 }
 
-/* Authentic Terminal Output Styling */
-.terminal-output {
-  @apply text-[13.5px] leading-[1.6] tracking-tight;
-}
-
+/* Scrollbar */
 ::-webkit-scrollbar {
   width: 10px;
 }
@@ -75,10 +59,10 @@
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.08);
-  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 5px;
   border: 3px solid var(--color-warp-bg);
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.1);
 }
