@@ -1,68 +1,46 @@
 @import "tailwindcss";
 
 @theme {
-  --color-warp-bg: #0b0d0f;
-  --color-warp-sidebar: #14171a;
-  --color-warp-header: #1a1d21;
-  --color-warp-content: #14171a;
-  --color-warp-accent: #00f3ff;
-  --color-warp-border: rgba(255, 255, 255, 0.08);
-  --color-warp-text: #e2e8f0;
-  --color-warp-dim: #9ca3af;
+  --color-warp-bg: #0c0c0c;
+  --color-warp-block: #1a1a1a;
+  --color-warp-accent: #268bd2;
+  --color-warp-text: #cccccc;
+  --color-warp-cursor: #95d886;
+  --color-warp-border: rgba(255, 255, 255, 0.1);
 }
 
 @layer base {
   body {
-    @apply bg-warp-bg text-warp-text font-sans antialiased overflow-hidden selection:bg-warp-accent/30;
+    @apply bg-warp-bg text-warp-text antialiased overflow-hidden selection:bg-warp-accent/30;
+    font-family: 'JetBrains Mono', 'Fira Code', 'Menlo', 'Monaco', 'Courier New', monospace;
   }
 }
 
 @layer components {
-  /* Warp Block: The signature look */
-  .warp-block-card {
-    @apply flex flex-col mb-4 rounded-xl border border-warp-border overflow-hidden bg-warp-content shadow-xl;
+  /* Warp Signature Block */
+  .warp-block {
+    @apply border border-warp-border rounded-lg overflow-hidden bg-warp-block/30 mb-4;
   }
 
   .warp-block-header {
-    @apply flex items-center justify-between px-4 py-2.5 bg-warp-header border-b border-warp-border;
+    @apply flex items-center justify-between px-4 py-2 bg-white/5 border-b border-warp-border;
   }
 
-  /* Warp Prompt: The Editor Feel */
-  .warp-prompt-container {
-    @apply flex flex-col bg-warp-header border border-warp-border rounded-xl px-4 py-3 shadow-2xl;
+  /* Warp Bottom Input */
+  .warp-input-container {
+    @apply mt-auto border-t border-warp-border pt-4 pb-6 bg-warp-bg;
   }
 
-  .warp-path-breadcrumb {
-    @apply flex items-center space-x-1.5 text-warp-dim text-[11px] mb-2 font-medium;
+  /* Custom Scrollbar for Warp */
+  ::-webkit-scrollbar {
+    width: 10px;
   }
-
-  .warp-input-area {
-    @apply flex items-center space-x-3;
+  ::-webkit-scrollbar-track {
+    background: transparent;
   }
-
-  /* Sidebar */
-  .warp-nav-item {
-    @apply flex items-center px-3 py-2 rounded-lg text-sm transition-all cursor-pointer mb-1;
+  ::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 5px;
+    border: 2px solid var(--color-warp-bg);
   }
-  .warp-nav-item.active {
-    @apply bg-white/5 text-white border border-white/5;
-  }
-  .warp-nav-item:not(.active) {
-    @apply text-warp-dim hover:bg-white/[0.03] hover:text-white/80;
-  }
-}
-
-/* Custom Scrollbar */
-::-webkit-scrollbar {
-  width: 8px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 10px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.15);
 }
