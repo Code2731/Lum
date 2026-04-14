@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { Zap } from "lucide-react";
 import Editor from "react-simple-code-editor";
 import { invoke } from "@tauri-apps/api/core";
@@ -25,6 +25,17 @@ const CommandInput = ({ onCommandSubmit, selectedModel, ollamaOnline, context }:
 
   const isAI = value.startsWith("/");
 
+  // 고스트 텍스트 예측 (히스토리 기반)
+  const ghostText = useMemo(() => {
+    if (!value || isAI || value.trim() === "") return "";
+    // 히스토리 중 현재 입력값으로 시작하는 가장 최근 명령어 찾기
+    const match = history.find(cmd => cmd.startsWith(value) && cmd !== value);
+    if (match) {
+      return match.slice(value.length);
+    }
+    return "";
+  }, [value, history, isAI]);
+
   const shortPath = (p: string) => {
     const parts = p.replace(/\\/g, "/").split("/");
     return parts[parts.length - 1] || "~";
@@ -36,7 +47,8 @@ const CommandInput = ({ onCommandSubmit, selectedModel, ollamaOnline, context }:
     const type = isAI ? "ai" : "shell";
     const cmd = isAI ? trimmed.slice(1).trim() : trimmed;
     if (cmd) {
-      setHistory((prev) => [...prev, trimmed]);
+      // 히스토리 업데이트 (중복 제거 후 맨 앞에 추가)
+      setHistory((prev) => [trimmed, ...prev.filter(c => c !== trimmed)].slice(0, 100));
       setHistoryIdx(-1);
       onCommandSubmit(cmd, type);
       setValue("");
@@ -50,6 +62,13 @@ const CommandInput = ({ onCommandSubmit, selectedModel, ollamaOnline, context }:
       submit();
       return;
     }
+
+    // Right Arrow로 고스트 텍스트 수락
+    if (e.key === "ArrowRight" && ghostText !== "") {
+      e.preventDefault();
+      setValue(value + ghostText);
+      return;
+    }
     
     // 자동 완성 (Tab)
     if (e.key === "Tab") {
@@ -57,12 +76,10 @@ const CommandInput = ({ onCommandSubmit, selectedModel, ollamaOnline, context }:
       if (isAI) return;
 
       if (showCompletions && completions.length > 0) {
-        // 이미 추천 목록이 떠 있으면 다음 항목 선택
         const next = (compIdx + 1) % completions.length;
         setCompIdx(next);
         applyCompletion(completions[next]);
       } else {
-        // 새로운 추천 요청
         const lastWord = value.split(" ").pop() || "";
         try {
           const results = await invoke<string[]>("get_completions", {
@@ -75,14 +92,11 @@ const CommandInput = ({ onCommandSubmit, selectedModel, ollamaOnline, context }:
             setShowCompletions(true);
             applyCompletion(results[0]);
           }
-        } catch (err) {
-          console.error("completion error:", err);
-        }
+        } catch (err) {}
       }
       return;
     }
 
-    // 이스케이프 (자동 완성 닫기)
     if (e.key === "Escape") {
       setShowCompletions(false);
       return;
@@ -91,24 +105,23 @@ const CommandInput = ({ onCommandSubmit, selectedModel, ollamaOnline, context }:
     if (e.key === "ArrowUp" && !value) {
       e.preventDefault();
       if (history.length > 0) {
-        const i = historyIdx === -1 ? history.length - 1 : Math.max(0, historyIdx - 1);
+        const i = historyIdx === -1 ? 0 : Math.min(history.length - 1, historyIdx + 1);
         setHistoryIdx(i);
         setValue(history[i]);
       }
     }
     if (e.key === "ArrowDown" && historyIdx !== -1) {
       e.preventDefault();
-      if (historyIdx < history.length - 1) {
-        setHistoryIdx(historyIdx + 1);
-        setValue(history[historyIdx + 1]);
+      if (historyIdx > 0) {
+        setHistoryIdx(historyIdx - 1);
+        setValue(history[historyIdx - 1]);
       } else {
         setHistoryIdx(-1);
         setValue("");
       }
     }
     
-    // 일반 입력 시 자동 완성 닫기
-    if (e.key !== "Tab" && e.key !== "ArrowUp" && e.key !== "ArrowDown") {
+    if (e.key !== "Tab" && e.key !== "ArrowUp" && e.key !== "ArrowDown" && e.key !== "ArrowRight") {
       setShowCompletions(false);
     }
   };
@@ -129,7 +142,6 @@ const CommandInput = ({ onCommandSubmit, selectedModel, ollamaOnline, context }:
 
   return (
     <div className="editor">
-      {/* 자동 완성 추천 목록 */}
       {showCompletions && completions.length > 1 && (
         <div className="autocomplete-popover">
           {completions.map((c, i) => (
@@ -141,9 +153,8 @@ const CommandInput = ({ onCommandSubmit, selectedModel, ollamaOnline, context }:
       )}
 
       <div className={`editor-box ${isAI ? "editor-box-ai" : ""}`}>
-        {/* 경로 + git */}
         <div className="editor-header">
-...          <span className="editor-path">{shortPath(context.cwd)}</span>
+          <span className="editor-path">{shortPath(context.cwd)}</span>
           {context.git_branch && (
             <>
               <span className="editor-on">on</span>
@@ -158,10 +169,9 @@ const CommandInput = ({ onCommandSubmit, selectedModel, ollamaOnline, context }:
           )}
         </div>
 
-        {/* 입력 */}
         <div className="editor-input-row">
           <span className="editor-prompt">{isAI ? <Zap size={14} style={{ color: "#a78bfa" }} /> : "$"}</span>
-          <div className="editor-input-wrapper" style={{ width: '100%' }}>
+          <div className="editor-input-wrapper" style={{ width: '100%', position: 'relative' }}>
             <Editor
               value={value}
               onValueChange={(code) => setValue(code)}
@@ -174,11 +184,33 @@ const CommandInput = ({ onCommandSubmit, selectedModel, ollamaOnline, context }:
                 fontSize: 14,
                 width: '100%',
                 outline: 'none',
+                background: 'transparent',
+                zIndex: 2,
+                position: 'relative'
               }}
               textareaId="command-editor-textarea"
               placeholder={isAI ? "AI에게 질문하세요..." : ""}
               autoFocus
             />
+            {/* 고스트 텍스트 레이어 */}
+            {!isAI && ghostText && value && (
+              <div 
+                className="ghost-text-layer"
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  fontFamily: '"Fira Code", "Fira Mono", monospace',
+                  fontSize: 14,
+                  pointerEvents: 'none',
+                  whiteSpace: 'pre',
+                  zIndex: 1,
+                  color: 'transparent'
+                }}
+              >
+                {value}<span style={{ color: 'rgba(255, 255, 255, 0.3)' }}>{ghostText}</span>
+              </div>
+            )}
           </div>
         </div>
       </div>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Copy, RotateCcw, Zap, Minus, Square, X, Trash2, Settings, Plus, Search, Columns, Rows, CheckCircle2, Play, FilePlus, Download, HardDrive, Loader2, Command, History, File, Layers } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";

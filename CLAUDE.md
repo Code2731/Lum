@@ -16,10 +16,11 @@ npm run tauri build          # 프로덕션 빌드
 run.bat                      # Ollama 자동 시작 + 개발 모드 실행 (Windows)
 ```
 
-Rust 백엔드만 체크:
+## Testing Commands
+
 ```bash
-cd src-tauri && cargo check
-cd src-tauri && cargo build
+npm test                     # Vitest 실행 (프론트엔드 단위/통합 테스트)
+cd src-tauri && cargo test   # Rust 단위 테스트 실행
 ```
 
 ## Architecture
@@ -28,25 +29,26 @@ cd src-tauri && cargo build
 
 ### Backend (`src-tauri/src/lib.rs`)
 - **PTY 관리**: `HashMap`을 통해 탭/팬별 독립적인 PTY 세션 관리.
-- **AI 연동**: Ollama API 연동. 지능형 프로젝트 요약(RAG-lite) 및 임베딩 생성(`generate_embedding`)을 통한 의미론적 검색 지원.
-- **모델 관리**: 모델 다운로드(pull) 및 삭제(delete) 기능. 다운로드 시 실시간 이벤트를 프론트엔드로 스트리밍.
-- **주요 커맨드**: `spawn_pty`, `write_to_pty`, `generate_ai_command`, `generate_embedding`, `pull_model`, `delete_model`, `create_file`, `load_config`, `save_config`.
+- **AI 연동**: Ollama API. 임베딩 기반 의미론적 검색 및 지능형 프로젝트 요약(RAG-lite).
+- **모델 관리**: 모델 다운로드(pull) 및 삭제(delete). 스트리밍 방식으로 진행률 공유.
+- **주요 커맨드**: `spawn_pty`, `write_to_pty`, `generate_ai_command`, `generate_embedding`, `pull_model`, `delete_model`, `create_file`, `load_config`, `save_config`, `get_project_files`.
 
 ### Frontend (`src/`)
-- **App.tsx**: 메인 레이아웃. `react-resizable-panels`로 스플릿 팬 구현. `react-virtuoso`로 가상 스크롤 처리.
-- **마크다운 및 시각화**: `react-markdown`을 사용하여 리치 텍스트 렌더링. 출력 데이터(JSON)를 지능적으로 분석하여 표(Table)로 보여주는 **Smart Visualizer** 내장.
-- **에디터 및 검색**: `react-simple-code-editor` + `PrismJS`. 퍼지 및 의미론적(Vector Embeddings) 커맨드 팔레트 검색 기능.
-- **자동 복구 (Auto-Fix)**: 에러 발생 시 AI가 분석 후 해결 명령어를 자동 실행.
-- **영속성**: `.lum_session.json` 및 `.lum_config.json`을 통한 데이터/설정 유지.
+- **App.tsx**: 메인 레이아웃 및 상태 관리. 멀티 탭, 스플릿 팬, 커맨드 팔레트(`Cmd+K`) 통합.
+- **에디터**: `react-simple-code-editor` + `PrismJS`. 고스트 텍스트(예측) 및 Tab 자동 완성 기능.
+- **테스트**: `Vitest` + `@testing-library/react`. `src/test/setup.ts` 환경 설정.
+- **유틸리티**: `src/utils.ts` (코사인 유사도 계산, 경로 처리 등 핵심 비즈니스 로직).
+- **영속성**: `.lum_session.json` 및 `.lum_config.json`을 통한 워크스페이스 상태 유지.
 
 ## Tech Stack
 
-- **Rust**: Tauri v2, portable-pty, ignore, reqwest, serde, tokio
-- **Frontend**: React 19, TypeScript, Tailwind CSS v4, react-resizable-panels, react-virtuoso, react-markdown, PrismJS
+- **Rust**: Tauri v2, portable-pty, ignore, reqwest, futures-util, serde
+- **Frontend**: React 19, TypeScript, Tailwind CSS v4, Vitest, Fuse.js, react-markdown, react-resizable-panels, react-virtuoso, PrismJS
 - **AI**: Ollama 로컬 API
 
 ## Key Conventions
 
-- 한국어 응답, 한국어 주석
-- 핵심 스타일은 `index.css`의 CSS 변수 관리, Tailwind는 유틸리티 보조
-- AI 워크플로우: AI가 제안한 액션(run, create)을 UI에서 단계별 실행 가능
+- 한국어 응답, 한국어 주석 필수.
+- TDD 준수: 핵심 로직 추가 시 `npm test` 및 `cargo test` 확인.
+- AI 워크플로우: AI가 제안한 액션을 UI에서 승인 후 단계별 실행.
+- 성능 최적화: 대용량 로그는 가상 스크롤(`react-virtuoso`)로 처리.

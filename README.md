@@ -3,24 +3,22 @@
 Warp 스타일 블록 기반 AI 터미널 에뮬레이터. 로컬 LLM(Ollama) 기반으로 비용 제로, 개인정보 보호, Rust 기반 고성능을 목표로 합니다.
 
 ## Tech Stack
-- **Backend**: Rust (Tauri v2), portable-pty, ignore
-- **Frontend**: React 19 + TypeScript + Tailwind CSS v4 + react-resizable-panels + react-virtuoso
-- **AI Engine**: Ollama (로컬 API)
+- **Backend**: Rust (Tauri v2), portable-pty, ignore, futures-util
+- **Frontend**: React 19 + TypeScript + Tailwind CSS v4 + Vitest + Fuse.js
+- **AI Engine**: Ollama (로컬 API - Llama3, Mistral 등)
 
 ## Features
 - **블록 기반 UI**: 명령어 실행 결과를 개별 블록으로 렌더링 (Warp 스타일)
 - **멀티 탭 및 스플릿 팬**: 하나의 창에서 여러 탭을 관리하고, 각 탭 내에서 화면을 가로/세로로 분할 가능
+- **유니버설 커맨드 팔레트**: `Cmd+K`로 파일, 명령어 히스토리, 앱 기능을 통합 검색 (Fuse.js 퍼지 검색 적용)
+- **예측형 고스트 텍스트**: 명령어 입력 시 히스토리를 분석하여 다음 입력을 회색 텍스트로 제안, `→` 키로 즉시 완성
 - **AI 워크플로우 (Agentic UI)**: AI가 제안한 다단계 작업(명령어 실행, 파일 생성 등)을 클릭 한 번으로 승인 및 실행
-- **의미론적 히스토리 검색 (Semantic Search)**: 단순 키워드를 넘어, 명령어와 결과의 의미(Vector Embeddings)를 바탕으로 과거 작업 기록을 지능적으로 검색 (`Cmd+K` 후 `? ` 접두사 사용)
-- **자율 에러 복구 (Auto-Fix Loop)**: 에러 발생 시 AI가 스스로 분석하고 해결 명령어를 자동 실행
-- **지능형 데이터 시각화 (Smart Visualizer)**: 터미널 출력 결과가 JSON 배열일 경우, 가독성 높은 표(Table) 형태로 자동 렌더링
-- **리치 마크다운 렌더링**: AI 답변 내의 코드 블록 실행 버튼 및 마크다운 문법 지원
+- **의미론적 히스토리 검색**: 단순 키워드를 넘어, 벡터 유사도(Embeddings)를 바탕으로 과거 작업 기록 검색 (`? ` 접두사 사용)
+- **자율 에러 복구 (Auto-Fix)**: 에러 발생 시 AI가 스스로 분석하고 해결 명령어를 자동 실행
+- **지능형 데이터 시각화**: JSON 배열 출력 결과를 가독성 높은 표(Table) 형태로 자동 변환
 - **로컬 모델 매니저**: Ollama 모델 다운로드(Pull) 및 삭제 기능을 GUI에서 직접 관리 (실시간 진행률 표시)
-- **지능형 AI 컨텍스트**: 프로젝트 전체 구조(RAG-lite)와 파일 내용을 인식하여 스마트한 응답 제공
-- **커스텀 타이틀바**: 드래그, 최소화/최대화/닫기, 검색 및 설정 기능 통합
-- **세션 영속성**: 앱 재시작 시 이전 터미널 실행 기록 및 분할된 팬 상태까지 자동 복구
-- **에디터 경험 강화**: Tab 자동 완성, PrismJS 기반 구문 강조, AI 모드 전용 UI
-- **대용량 로그 최적화**: 가상 스크롤을 통한 수천 줄 로그의 쾌적한 렌더링
+- **품질 보증 (TDD)**: Vitest(프론트엔드) 및 Cargo Test(백엔드)를 통한 핵심 로직 자동 검증
+- **세션 및 레이아웃 영속성**: 앱 재시작 시 이전 터미널 히스토리와 분할된 팬 상태까지 완벽 복구
 
 ## Prerequisites
 - [Rust](https://www.rust-lang.org/tools/install)
@@ -39,9 +37,15 @@ npm install
 run.bat    # Windows
 ```
 
+## Testing
+```bash
+npm test              # 프론트엔드 단위/통합 테스트
+cd src-tauri && cargo test  # 백엔드 단위 테스트
+```
+
 ## Usage
 - 일반 명령어 입력 → 활성화된 팬에서 실행
 - `/질문` 입력 → AI가 명령어 또는 워크플로우 제안
-- **Tab**: 파일/폴더 자동 완성
-- **Split**: 상단 버튼으로 화면 분할
-- **Settings**: 폰트 크기, 투명도, 강조 색상 및 AI 모델 관리
+- `Cmd+K`: 커맨드 팔레트 열기 (파일/명령어 검색)
+- `→ (Right Arrow)`: 고스트 텍스트 자동 완성 수락
+- `Cmd+D` / `Cmd+Shift+D`: 화면 수직/수평 분할
