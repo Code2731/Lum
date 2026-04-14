@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect } from "react";
 import { Zap } from "lucide-react";
 import Editor from "react-simple-code-editor";
+import { invoke } from "@tauri-apps/api/core";
 import Prism from "prismjs";
 import "prismjs/components/prism-bash";
-import "prismjs/themes/prism-tomorrow.css"; // 다크 테마 기반
+import "prismjs/themes/prism-tomorrow.css";
 
 interface Props {
   onCommandSubmit: (cmd: string, type: "shell" | "ai") => void;
@@ -16,7 +17,11 @@ const CommandInput = ({ onCommandSubmit, selectedModel, ollamaOnline, context }:
   const [value, setValue] = useState("");
   const [history, setHistory] = useState<string[]>([]);
   const [historyIdx, setHistoryIdx] = useState(-1);
-  const editorRef = useRef<any>(null);
+  
+  // 자동 완성 상태
+  const [completions, setCompletions] = useState<string[]>([]);
+  const [compIdx, setCompIdx] = useState(0);
+  const [showCompletions, setShowCompletions] = useState(false);
 
   const isAI = value.startsWith("/");
 
@@ -35,15 +40,54 @@ const CommandInput = ({ onCommandSubmit, selectedModel, ollamaOnline, context }:
       setHistoryIdx(-1);
       onCommandSubmit(cmd, type);
       setValue("");
+      setShowCompletions(false);
     }
   };
 
-  const onKeyDown = (e: React.KeyboardEvent) => {
+  const onKeyDown = async (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       submit();
       return;
     }
+    
+    // 자동 완성 (Tab)
+    if (e.key === "Tab") {
+      e.preventDefault();
+      if (isAI) return;
+
+      if (showCompletions && completions.length > 0) {
+        // 이미 추천 목록이 떠 있으면 다음 항목 선택
+        const next = (compIdx + 1) % completions.length;
+        setCompIdx(next);
+        applyCompletion(completions[next]);
+      } else {
+        // 새로운 추천 요청
+        const lastWord = value.split(" ").pop() || "";
+        try {
+          const results = await invoke<string[]>("get_completions", {
+            cwd: context.cwd,
+            partial: lastWord
+          });
+          if (results.length > 0) {
+            setCompletions(results);
+            setCompIdx(0);
+            setShowCompletions(true);
+            applyCompletion(results[0]);
+          }
+        } catch (err) {
+          console.error("completion error:", err);
+        }
+      }
+      return;
+    }
+
+    // 이스케이프 (자동 완성 닫기)
+    if (e.key === "Escape") {
+      setShowCompletions(false);
+      return;
+    }
+
     if (e.key === "ArrowUp" && !value) {
       e.preventDefault();
       if (history.length > 0) {
@@ -62,21 +106,44 @@ const CommandInput = ({ onCommandSubmit, selectedModel, ollamaOnline, context }:
         setValue("");
       }
     }
+    
+    // 일반 입력 시 자동 완성 닫기
+    if (e.key !== "Tab" && e.key !== "ArrowUp" && e.key !== "ArrowDown") {
+      setShowCompletions(false);
+    }
+  };
+
+  const applyCompletion = (completion: string) => {
+    const words = value.split(" ");
+    words.pop();
+    words.push(completion);
+    setValue(words.join(" "));
   };
 
   const highlight = (code: string) => {
     if (code.startsWith("/")) {
-      return `<span style="color: #a78bfa">${code}</span>`; // AI 모드 강조 (보라색 계열)
+      return `<span style="color: #a78bfa">${code}</span>`;
     }
     return Prism.highlight(code, Prism.languages.bash || Prism.languages.plain, "bash");
   };
 
   return (
     <div className="editor">
+      {/* 자동 완성 추천 목록 */}
+      {showCompletions && completions.length > 1 && (
+        <div className="autocomplete-popover">
+          {completions.map((c, i) => (
+            <div key={c} className={`autocomplete-item ${i === compIdx ? "active" : ""}`}>
+              {c}
+            </div>
+          ))}
+        </div>
+      )}
+
       <div className={`editor-box ${isAI ? "editor-box-ai" : ""}`}>
         {/* 경로 + git */}
         <div className="editor-header">
-          <span className="editor-path">{shortPath(context.cwd)}</span>
+...          <span className="editor-path">{shortPath(context.cwd)}</span>
           {context.git_branch && (
             <>
               <span className="editor-on">on</span>

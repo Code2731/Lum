@@ -12,10 +12,8 @@ LUM (Local Universal Machine) — Warp 스타일 블록 기반 AI 터미널 에�
 npm install                  # 프론트엔드 의존성 설치
 npm run tauri dev            # 개발 모드 실행 (Rust + Vite HMR)
 npm run tauri build          # 프로덕션 빌드
-npm run dev                  # Vite 프론트엔드만 실행 (포트 1420)
-npm run build                # tsc + vite build (프론트엔드만)
-run.bat                      # Ollama 자동 시작 + 개발 모드 실행 (Windows)
 ./run.sh                     # Ollama 자동 시작 + 개발 모드 실행 (macOS/Linux)
+run.bat                      # Ollama 자동 시작 + 개발 모드 실행 (Windows)
 ```
 
 Rust 백엔드만 체크:
@@ -29,37 +27,25 @@ cd src-tauri && cargo build
 **Tauri v2 앱** — Rust 백엔드 + React/TypeScript 프론트엔드. 커스텀 타이틀바 (decorations: false).
 
 ### Backend (`src-tauri/src/lib.rs`)
-- 단일 파일에 모든 Tauri 커맨드 정의
-- `portable-pty`로 시스템 셸(Windows: powershell, else: zsh) 생성 및 PTY 양방향 통신
-- PTY 읽기 스레드가 `pty-data` 이벤트로 프론트엔드에 출력 스트리밍
-- `TerminalState`: PTY writer를 `Arc<Mutex<>>` 로 관리
-- Ollama REST API (`localhost:11434`) 호출로 AI 기능 제공: 모델 목록, 명령어 생성, 에러 분석
-- 주요 커맨드: `get_system_context`, `write_to_pty`, `check_ollama_status`, `list_models`, `generate_ai_command`, `analyze_error`, `save_session`, `load_session`
-- Tauri v2 커맨드는 반드시 `Result<T, String>` 반환 (bool 직접 반환 불가)
+- **PTY 관리**: `HashMap`을 통해 탭/팬별 독립적인 PTY 세션 관리.
+- **AI 연동**: Ollama API 연동. 지능형 프로젝트 요약(RAG-lite) 기능을 통해 프로젝트 구조 인지.
+- **모델 관리**: 모델 다운로드(pull) 및 삭제(delete) 기능. 다운로드 시 실시간 이벤트를 프론트엔드로 스트리밍.
+- **주요 커맨드**: `spawn_pty`, `write_to_pty`, `generate_ai_command`, `pull_model`, `delete_model`, `create_file`, `load_config`, `save_config`.
 
 ### Frontend (`src/`)
-- `App.tsx`: 메인 컴포넌트. 블록 기반 터미널 UI (Virtuoso 가상 스크롤 적용), 커스텀 타이틀바(드래그/최소화/최대화/닫기), Ollama 상태 표시 및 세션 영속성 관리
-- `components/CommandInput.tsx`: 하단 고정 입력 에디터. PrismJS 기반 구문 강조, `/` 접두사로 AI 모드 전환 및 스타일링. 멀티라인, 커맨드 히스토리(↑↓) 지원
-- `index.css`: CSS 변수 기반 Warp 테마 + Tailwind CSS v4 보조. 핵심 레이아웃은 순수 CSS
-- ANSI 출력 렌더링에 `ansi-to-react` 사용
-
-### 프론트-백 통신 패턴
-- 명령어 실행: `invoke("write_to_pty")` → PTY → `pty-data` 이벤트 → `listen()` 으로 수신
-- AI 요청: `invoke("generate_ai_command")` / `invoke("analyze_error")` → Ollama API → JSON 응답
-- 윈도우 제어: `getCurrentWindow()` → `startDragging()`, `minimize()`, `toggleMaximize()`, `close()`
-
-### Tauri v2 Capabilities (`src-tauri/capabilities/default.json`)
-- 윈도우 제어 권한 필수: `allow-start-dragging`, `allow-minimize`, `allow-toggle-maximize`, `allow-close` 등
+- **App.tsx**: 메인 레이아웃. `react-resizable-panels`로 스플릿 팬 구현. `react-virtuoso`로 가상 스크롤 처리.
+- **마크다운**: `react-markdown`을 사용하여 AI 답변 내 코드 블록 실행 버튼 및 리치 텍스트 렌더링.
+- **에디터**: `react-simple-code-editor` + `PrismJS`. Tab 자동 완성 및 AI 모드 스타일링 지원.
+- **영속성**: `.lum_session.json` 및 `.lum_config.json`을 통한 데이터/설정 유지.
 
 ## Tech Stack
 
-- **Rust**: Tauri v2, portable-pty, reqwest (120s timeout), serde, tokio
-- **Frontend**: React 19, TypeScript, Tailwind CSS v4 + @tailwindcss/vite, Vite 7, lucide-react, ansi-to-react
-- **AI**: Ollama 로컬 API (llama3, gemma4 등)
+- **Rust**: Tauri v2, portable-pty, ignore, reqwest, serde, tokio
+- **Frontend**: React 19, TypeScript, Tailwind CSS v4, react-resizable-panels, react-virtuoso, react-markdown, PrismJS
+- **AI**: Ollama 로컬 API
 
 ## Key Conventions
 
 - 한국어 응답, 한국어 주석
-- 핵심 스타일은 `index.css`의 CSS 변수(`--bg`, `--accent` 등)로 관리, Tailwind는 유틸리티 보조
-- Tailwind v4 사용 시 반드시 `@tailwindcss/vite` 플러그인을 `vite.config.ts`에 등록
-- AI 모드: 입력이 `/`로 시작하면 AI, 아니면 셸 명령어
+- 핵심 스타일은 `index.css`의 CSS 변수 관리, Tailwind는 유틸리티 보조
+- AI 워크플로우: AI가 제안한 액션(run, create)을 UI에서 단계별 실행 가능

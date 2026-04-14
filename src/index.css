@@ -29,6 +29,7 @@
   --font-size:   13px;
   --line-height: 1.55;
   --radius:      8px;
+  --opacity:     0.95;
 }
 
 * {
@@ -43,9 +44,42 @@ body {
   line-height: var(--line-height);
   color: var(--text);
   background: var(--bg);
+  opacity: var(--opacity);
   overflow: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* 자동 완성 팝오버 */
+.autocomplete-popover {
+  position: absolute;
+  bottom: 85px;
+  left: 20px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  z-index: 1000;
+  max-height: 200px;
+  overflow-y: auto;
+  min-width: 200px;
+}
+
+.autocomplete-item {
+  padding: 6px 12px;
+  font-size: 12px;
+  color: var(--text-dim);
+  cursor: pointer;
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+}
+
+.autocomplete-item:last-child {
+  border-bottom: none;
+}
+
+.autocomplete-item.active {
+  background: rgba(0, 212, 170, 0.15);
+  color: var(--accent);
 }
 
 ::selection {
@@ -64,7 +98,7 @@ body {
 }
 
 /* ============================================================
-   타이틀 바 (Warp 탭 바)
+   타이틀 바 및 검색 바
    ============================================================ */
 .titlebar {
   display: flex;
@@ -76,6 +110,300 @@ body {
   flex-shrink: 0;
   user-select: none;
   cursor: default;
+}
+
+.search-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 10px;
+  width: 250px;
+  transition: border-color 0.2s;
+}
+
+.search-bar:focus-within {
+  border-color: var(--accent);
+}
+
+.search-bar input {
+  background: none;
+  border: none;
+  outline: none;
+  color: var(--text-bright);
+  font-size: 11px;
+  width: 100%;
+}
+
+.search-icon {
+  color: var(--text-muted);
+}
+
+/* ============================================================
+   탭 바 (Tab Bar)
+   ============================================================ */
+.tab-bar {
+  display: flex;
+  align-items: center;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  padding: 4px 8px 0 8px;
+  gap: 2px;
+  flex-shrink: 0;
+  overflow-x: auto;
+}
+
+.tab-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  border-bottom: none;
+  border-radius: 6px 6px 0 0;
+  color: var(--text-dim);
+  font-size: 11px;
+  cursor: pointer;
+  max-width: 150px;
+  transition: background 0.15s, color 0.15s;
+}
+
+.tab-item.active {
+  background: var(--surface);
+  color: var(--text-bright);
+  border-color: var(--border);
+}
+
+.tab-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tab-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.tab-close:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-bright);
+}
+
+.add-tab-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  margin-left: 4px;
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.add-tab-btn:hover {
+  color: var(--text-bright);
+}
+
+/* ============================================================
+   설정 탭 및 모델 매니저
+   ============================================================ */
+.settings-tabs {
+  display: flex;
+  gap: 12px;
+}
+
+.settings-tab {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px 0;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+}
+
+.settings-tab.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+.models-manager {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  max-height: 400px;
+  overflow-y: auto;
+  padding-right: 8px;
+}
+
+.model-section h4 {
+  font-size: 11px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+  letter-spacing: 1px;
+}
+
+.model-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.model-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.model-icon {
+  color: var(--text-muted);
+}
+
+.model-name {
+  flex: 1;
+  font-size: 13px;
+  color: var(--text-bright);
+}
+
+.model-name small {
+  color: var(--text-muted);
+  font-size: 10px;
+  margin-left: 4px;
+}
+
+.model-info {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.model-desc {
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.model-delete-btn, .model-download-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: all 0.1s;
+}
+
+.model-delete-btn:hover {
+  color: var(--red);
+  background: rgba(248, 81, 73, 0.1);
+}
+
+.model-download-btn:hover {
+  color: var(--accent);
+  background: rgba(0, 212, 170, 0.1);
+}
+
+.model-badge {
+  font-size: 10px;
+  color: var(--green);
+  background: rgba(63, 185, 80, 0.1);
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-weight: 600;
+}
+
+/* 다운로드 프로그레스 */
+.pull-progress-card {
+  padding: 12px;
+  background: rgba(0, 212, 170, 0.05);
+  border: 1px solid rgba(0, 212, 170, 0.2);
+  border-radius: 8px;
+  margin-bottom: 8px;
+}
+
+.pull-status {
+  font-size: 12px;
+  color: var(--accent);
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+.progress-bar-bg {
+  height: 4px;
+  background: var(--bg-subtle);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.3s ease;
+}
+
+.settings-body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.setting-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.setting-item label {
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.setting-item input[type="range"] {
+  width: 100%;
+  accent-color: var(--accent);
+}
+
+.color-presets {
+  display: flex;
+  gap: 8px;
+}
+
+.color-swatch {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: transform 0.1s;
+}
+
+.color-swatch:hover {
+  transform: scale(1.1);
+}
+
+.color-swatch.active {
+  border-color: var(--text-bright);
 }
 
 .titlebar-left {
@@ -177,13 +505,53 @@ body {
 }
 
 /* ============================================================
-   블록 스트림 (메인 영역)
+   블록 스트림 (메인 영역 - Split Panes)
    ============================================================ */
-.block-stream {
+.block-stream-container {
   flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
-  padding: 4px 0;
+  display: flex;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+.pane-panel {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  height: 100%;
+  border: 1px solid transparent;
+  transition: border-color 0.2s;
+}
+
+.pane-panel.active {
+  border-color: rgba(0, 212, 170, 0.2);
+}
+
+.pane-content {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 리사이즈 핸들 */
+.pane-resize-handle {
+  width: 4px;
+  height: 4px;
+  background: var(--border);
+  transition: background 0.2s;
+  cursor: col-resize;
+  flex-shrink: 0;
+}
+
+.pane-resize-handle:hover, 
+.pane-resize-handle[data-panel-group-direction="vertical"]:hover {
+  background: var(--accent);
+}
+
+[data-panel-group-direction="vertical"] > .pane-resize-handle {
+  width: 100%;
+  cursor: row-resize;
 }
 
 /* 빈 상태 */
@@ -328,15 +696,86 @@ body {
   overflow-x: auto;
 }
 
-/* AI 설명 */
+/* ============================================================
+   마크다운 스타일
+   ============================================================ */
 .block-explanation {
   margin: 4px 12px 4px 12px;
-  padding: 6px 10px;
-  font-size: 12px;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: var(--text);
+  opacity: 1;
+  font-style: normal;
+  border-left: 3px solid var(--accent);
+  background: rgba(0, 212, 170, 0.03);
+  border-radius: 0 6px 6px 0;
+}
+
+.block-explanation p {
+  margin-bottom: 8px;
+}
+
+.block-explanation p:last-child {
+  margin-bottom: 0;
+}
+
+.block-explanation ul, .block-explanation ol {
+  margin-left: 20px;
+  margin-bottom: 8px;
+}
+
+.md-code-block {
+  margin: 10px 0;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.md-code-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 12px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.md-code-lang {
+  font-size: 10px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.md-code-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.md-code-actions button {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  transition: color 0.1s;
+}
+
+.md-code-actions button:hover {
   color: var(--accent);
-  opacity: 0.8;
-  font-style: italic;
-  border-left: 2px solid rgba(0, 212, 170, 0.3);
+}
+
+.md-code-block code {
+  display: block;
+  padding: 12px;
+  font-size: 12px;
+  overflow-x: auto;
+  color: var(--text-bright);
+  font-family: var(--font-mono);
+  line-height: 1.5;
 }
 
 /* 에러 분석 */
@@ -526,4 +965,86 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.12);
+}
+
+/* ============================================================
+   AI 워크플로우 액션 (Agentic UI)
+   ============================================================ */
+.workflow-actions {
+  margin: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.workflow-step {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px;
+  border-radius: 6px;
+  background: var(--surface);
+}
+
+.workflow-step-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--bg-subtle);
+  color: var(--text-muted);
+}
+
+.workflow-step-icon.running {
+  color: var(--yellow);
+}
+
+.workflow-step-icon.completed {
+  color: var(--green);
+  background: rgba(63, 185, 80, 0.1);
+}
+
+.workflow-step-icon.error {
+  color: var(--red);
+  background: rgba(248, 81, 73, 0.1);
+}
+
+.workflow-step-label {
+  flex: 1;
+  font-size: 12px;
+  color: var(--text-bright);
+}
+
+.workflow-step-btn {
+  padding: 4px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: all 0.1s;
+}
+
+.workflow-step-btn:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.workflow-step-btn.completed {
+  border-color: var(--green);
+  color: var(--green);
+  cursor: default;
+}
+
+.workflow-step-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }

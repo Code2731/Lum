@@ -9,19 +9,70 @@ use std::process::Command;
 use tauri::{Emitter, State};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-struct TerminalBlock {
-    id: String,
-    command: String,
-    output: String,
-    explanation: Option<String>,
-    analysis: Option<String>,
-    suggestion: Option<String>,
-    #[serde(rename = "type")]
-    block_type: String, // "shell" | "ai" | "error-analysis"
-    status: String,    // "executing" | "completed" | "error"
-    cwd: String,
-    #[serde(rename = "gitBranch")]
-    git_branch: Option<String>,
+struct AppConfig {
+    theme: String, // "dark", "light", "custom"
+    font_size: u32,
+    opacity: f32,
+    accent_color: String,
+}
+
+impl Default for AppConfig {
+    fn default() -> Self {
+        Self {
+            theme: "dark".to_string(),
+            font_size: 14,
+            opacity: 0.95,
+            accent_color: "#a78bfa".to_string(),
+        }
+    }
+}
+
+#[tauri::command]
+fn get_completions(cwd: String, partial: String) -> Result<Vec<String>, String> {
+    let path = std::path::Path::new(&cwd);
+    if !path.exists() {
+        return Ok(vec![]);
+    }
+
+    let entries = std::fs::read_dir(path).map_err(|e| e.to_string())?;
+    let mut matches = Vec::new();
+
+    for entry in entries {
+        if let Ok(entry) = entry {
+            let name = entry.file_name().to_string_lossy().to_string();
+            if name.starts_with(&partial) {
+                let is_dir = entry.file_type().map(|t| t.is_dir()).unwrap_or(false);
+                if is_dir {
+                    matches.push(format!("{}/", name));
+                } else {
+                    matches.push(name);
+                }
+            }
+        }
+    }
+    matches.sort();
+    Ok(matches)
+}
+
+#[tauri::command]
+fn load_config() -> Result<AppConfig, String> {
+    let home = env::var("HOME").or_else(|_| env::var("USERPROFILE")).map_err(|e| e.to_string())?;
+    let path = std::path::Path::new(&home).join(".lum_config.json");
+    if !path.exists() {
+        return Ok(AppConfig::default());
+    }
+    let json = std::fs::read_to_string(path).map_err(|e| e.to_string())?;
+    let config: AppConfig = serde_json::from_str(&json).map_err(|e| e.to_string())?;
+    Ok(config)
+}
+
+#[tauri::command]
+fn save_config(config: AppConfig) -> Result<(), String> {
+    let home = env::var("HOME").or_else(|_| env::var("USERPROFILE")).map_err(|e| e.to_string())?;
+    let path = std::path::Path::new(&home).join(".lum_config.json");
+    let json = serde_json::to_string_pretty(&config).map_err(|e| e.to_string())?;
+    std::fs::write(path, json).map_err(|e| e.to_string())?;
+    Ok(())
 }
 
 #[tauri::command]
@@ -55,6 +106,41 @@ struct SystemContext {
     cwd: String,
     git_branch: Option<String>,
     files: Vec<String>,
+    project_summary: String, // 프로젝트 요약 정보 추가
+}
+
+fn get_project_summary_info(cwd: &str) -> String {
+    use ignore::WalkBuilder;
+    let mut summary = String::from("Project Structure:\n");
+    let mut file_count = 0;
+    
+    // 1. 파일 트리 요약 (최대 50개 파일만 표시하여 컨텍스트 절약)
+    for result in WalkBuilder::new(cwd).build() {
+        if let Ok(entry) = result {
+            if entry.file_type().map(|t| t.is_file()).unwrap_or(false) {
+                if file_count < 50 {
+                    let path = entry.path().strip_prefix(cwd).unwrap_or(entry.path());
+                    summary.push_str(&format!("- {}\n", path.display()));
+                    file_count += 1;
+                }
+            }
+        }
+    }
+
+    // 2. 주요 설정 파일 내용 포함 (내용이 너무 길면 앞부분만)
+    let key_files = ["package.json", "Cargo.toml", "README.md", "CLAUDE.md"];
+    summary.push_str("\nKey Files Content:\n");
+    for file_name in key_files {
+        let path = std::path::Path::new(cwd).join(file_name);
+        if path.exists() {
+            if let Ok(content) = std::fs::read_to_string(&path) {
+                let snippet = if content.len() > 500 { &content[..500] } else { &content };
+                summary.push_str(&format!("--- {} ---\n{}\n", file_name, snippet));
+            }
+        }
+    }
+    
+    summary
 }
 
 #[tauri::command]
@@ -83,7 +169,9 @@ fn get_system_context() -> SystemContext {
         })
         .unwrap_or_default();
 
-    SystemContext { cwd, git_branch, files }
+    let project_summary = get_project_summary_info(&cwd);
+
+    SystemContext { cwd, git_branch, files, project_summary }
 }
 
 #[tauri::command]
@@ -121,10 +209,19 @@ async fn generate_ai_command(prompt: String, model: String, context: String) -> 
     let request_body = OllamaRequest {
         model,
         prompt: format!(
-            "You are a terminal expert. Convert the user's natural language request into a single executable shell command.\n\
+            "You are a terminal expert. Convert the user's natural language request into executable steps.\n\
              Context: {}\n\
              Request: {}\n\
-             Respond ONLY with a JSON object: {{\"command\": \"the command\", \"explanation\": \"short explanation\"}}.",
+             Respond ONLY with a JSON object in this format:\n\
+             {{\n\
+               \"command\": \"the primary command\",\n\
+               \"explanation\": \"markdown explanation\",\n\
+               \"actions\": [\n\
+                 {{ \"type\": \"run\", \"cmd\": \"command to run\", \"label\": \"Step label\" }},\n\
+                 {{ \"type\": \"create\", \"path\": \"file path\", \"content\": \"file content\", \"label\": \"Create file label\" }}\n\
+               ]\n\
+             }}\n\
+             Important: Use markdown in 'explanation'. Ensure the JSON is valid.",
             context, prompt
         ),
         stream: false,
@@ -148,7 +245,8 @@ async fn analyze_error(command: String, stderr: String, model: String, context: 
              Error: `{}`.\n\
              Context: {}\n\
              Analyze and suggest a fix.\n\
-             Respond ONLY with a JSON object: {{\"analysis\": \"reason\", \"suggestion\": \"fixed command\"}}.",
+             Respond ONLY with a JSON object: {{\"analysis\": \"markdown analysis\", \"suggestion\": \"fixed command\"}}.\n\
+             Use markdown in 'analysis' for clarity.",
             command, stderr, context
         ),
         stream: false,
@@ -159,16 +257,14 @@ async fn analyze_error(command: String, stderr: String, model: String, context: 
     Ok(ollama_res.response)
 }
 
-#[tauri::command]
-fn write_to_pty(data: String, state: State<'_, TerminalState>) -> Result<(), String> {
-    let mut writer = state.writer.lock().unwrap();
-    writer.write_all(data.as_bytes()).map_err(|e| e.to_string())?;
-    writer.flush().map_err(|e| e.to_string())?;
-    Ok(())
+use std::collections::HashMap;
+
+pub struct TerminalState {
+    pub writers: Arc<Mutex<HashMap<String, Arc<Mutex<Box<dyn Write + Send>>>>>>,
 }
 
-#[cfg_attr(mobile, tauri::mobile_entry_point)]
-pub fn run() {
+#[tauri::command]
+fn spawn_pty(tab_id: String, state: State<'_, TerminalState>, handle: tauri::AppHandle) -> Result<(), String> {
     let pty_system = native_pty_system();
     let pair = pty_system.openpty(PtySize { rows: 24, cols: 80, pixel_width: 0, pixel_height: 0 }).expect("failed to open pty");
     let shell = if cfg!(target_os = "windows") { "powershell.exe" } else { "zsh" };
@@ -176,28 +272,126 @@ pub fn run() {
     let mut _child = pair.slave.spawn_command(cmd).expect("failed to spawn shell");
     let mut reader = pair.master.try_clone_reader().expect("failed to clone reader");
     let writer = pair.master.take_writer().expect("failed to take writer");
-    let terminal_state = TerminalState { writer: Arc::new(Mutex::new(writer)) };
+
+    {
+        let mut writers = state.writers.lock().unwrap();
+        writers.insert(tab_id.clone(), Arc::new(Mutex::new(writer)));
+    }
+
+    let tab_id_clone = tab_id.clone();
+    thread::spawn(move || {
+        let mut buffer = [0u8; 1024];
+        loop {
+            match reader.read(&mut buffer) {
+                Ok(0) => break,
+                Ok(n) => {
+                    let data = String::from_utf8_lossy(&buffer[..n]).to_string();
+                    handle.emit("pty-data", serde_json::json!({ "tab_id": tab_id_clone, "data": data })).unwrap();
+                }
+                Err(_) => break,
+            }
+        }
+    });
+
+    Ok(())
+}
+
+#[tauri::command]
+fn write_to_pty(tab_id: String, data: String, state: State<'_, TerminalState>) -> Result<(), String> {
+    let writers = state.writers.lock().unwrap();
+    if let Some(writer_arc) = writers.get(&tab_id) {
+        let mut writer = writer_arc.lock().unwrap();
+        writer.write_all(data.as_bytes()).map_err(|e| e.to_string())?;
+        writer.flush().map_err(|e| e.to_string())?;
+        Ok(())
+    } else {
+        Err("Tab not found".to_string())
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct OllamaPullRequest {
+    name: String,
+    stream: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+struct OllamaPullResponse {
+    status: String,
+    digest: Option<String>,
+    total: Option<u64>,
+    completed: Option<u64>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct OllamaDeleteRequest {
+    name: String,
+}
+
+#[tauri::command]
+async fn pull_model(name: String, handle: tauri::AppHandle) -> Result<(), String> {
+    let client = reqwest::Client::builder()
+        .timeout(Duration::from_secs(3600)) // 다운로드는 시간이 오래 걸릴 수 있으므로 1시간 타임아웃
+        .build()
+        .map_err(|e| e.to_string())?;
+
+    let request_body = OllamaPullRequest { name: name.clone(), stream: true };
+    let mut res = client.post("http://localhost:11434/api/pull")
+        .json(&request_body)
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    use futures_util::StreamExt;
+    let mut stream = res.bytes_stream();
+
+    while let Some(chunk) = stream.next().await {
+        let chunk = chunk.map_err(|e| e.to_string())?;
+        if let Ok(line) = serde_json::from_slice::<OllamaPullResponse>(&chunk) {
+            handle.emit("pull-progress", line).unwrap();
+        }
+    }
+
+    Ok(())
+}
+
+#[tauri::command]
+async fn delete_model(name: String) -> Result<(), String> {
+    let client = reqwest::Client::new();
+    let request_body = OllamaDeleteRequest { name };
+    
+    let res = client.delete("http://localhost:11434/api/delete")
+        .json(&request_body)
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    if res.status().is_success() {
+        Ok(())
+    } else {
+        Err(format!("Failed to delete model: {}", res.status()))
+    }
+}
+
+#[tauri::command]
+fn create_file(path: String, content: String) -> Result<(), String> {
+    let p = std::path::Path::new(&path);
+    if let Some(parent) = p.parent() {
+        std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+    std::fs::write(p, content).map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[cfg_attr(mobile, tauri::mobile_entry_point)]
+pub fn run() {
+    let terminal_state = TerminalState { 
+        writers: Arc::new(Mutex::new(HashMap::new())) 
+    };
 
     tauri::Builder::default()
         .manage(terminal_state)
         .plugin(tauri_plugin_opener::init())
-        .setup(move |app| {
-            let handle = app.handle().clone();
-            thread::spawn(move || {
-                let mut buffer = [0u8; 1024];
-                loop {
-                    match reader.read(&mut buffer) {
-                        Ok(0) => break,
-                        Ok(n) => {
-                            let data = String::from_utf8_lossy(&buffer[..n]).to_string();
-                            handle.emit("pty-data", data).unwrap();
-                        }
-                        Err(_) => break,
-                    }
-                }
-            });
-            Ok(())
-        })
         .invoke_handler(tauri::generate_handler![
             get_system_context, 
             generate_ai_command, 
@@ -206,7 +400,14 @@ pub fn run() {
             check_ollama_status,
             list_models,
             save_session,
-            load_session
+            load_session,
+            get_completions,
+            load_config,
+            save_config,
+            spawn_pty,
+            create_file,
+            pull_model,
+            delete_model
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
