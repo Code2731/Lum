@@ -16,6 +16,7 @@
     "ansi-to-react": "^6.2.6",
     "clsx": "^2.1.1",
     "framer-motion": "^12.38.0",
+    "fuse.js": "^7.3.0",
     "lucide-react": "^1.8.0",
     "prismjs": "^1.30.0",
     "react": "^19.1.0",

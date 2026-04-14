@@ -323,13 +323,130 @@ body {
   background: rgba(0, 212, 170, 0.1);
 }
 
-.model-badge {
+/* ============================================================
+   커맨드 팔레트 (Universal Palette)
+   ============================================================ */
+.palette-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(8px);
+  display: flex;
+  justify-content: center;
+  padding-top: 15vh;
+  z-index: 3000;
+}
+
+.palette-modal {
+  background: var(--surface-2);
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
+  width: 600px;
+  max-height: 50vh;
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.6);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.palette-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.palette-search-icon {
+  color: var(--accent);
+}
+
+.palette-header input {
+  flex: 1;
+  background: none;
+  border: none;
+  outline: none;
+  color: var(--text-bright);
+  font-size: 16px;
+  font-family: var(--font-mono);
+}
+
+.palette-header kbd {
   font-size: 10px;
-  color: var(--green);
-  background: rgba(63, 185, 80, 0.1);
-  padding: 2px 8px;
-  border-radius: 10px;
-  font-weight: 600;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: var(--text-muted);
+}
+
+.palette-results {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+}
+
+.palette-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.palette-item.active {
+  background: rgba(0, 212, 170, 0.15);
+}
+
+.palette-item-icon {
+  color: var(--text-dim);
+}
+
+.palette-item.active .palette-item-icon {
+  color: var(--accent);
+}
+
+.palette-item-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.palette-item-title {
+  font-size: 13px;
+  color: var(--text-bright);
+}
+
+.palette-item-subtitle {
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.palette-item-hint {
+  font-size: 10px;
+  color: var(--text-muted);
+  background: var(--bg-subtle);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.palette-empty {
+  padding: 20px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.tab-index {
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-right: 4px;
+  opacity: 0.5;
 }
 
 /* 다운로드 프로그레스 */
@@ -1047,4 +1164,84 @@ body {
 .workflow-step-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* ============================================================
+   Auto-Fix 및 스마트 시각화
+   ============================================================ */
+.error-actions-group {
+  display: flex;
+  gap: 8px;
+  margin: 0 12px 8px 12px;
+}
+
+.error-autofix-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--bg);
+  background: var(--yellow);
+  border: 1px solid var(--yellow);
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.error-autofix-btn:hover {
+  background: transparent;
+  color: var(--yellow);
+}
+
+.error-analyze-btn {
+  margin: 0;
+}
+
+.smart-visualizer {
+  margin: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  overflow: hidden;
+  background: var(--surface-2);
+}
+
+.sv-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+  text-align: left;
+}
+
+.sv-table th {
+  background: var(--surface);
+  color: var(--text-dim);
+  font-weight: 600;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.sv-table td {
+  padding: 6px 10px;
+  color: var(--text-bright);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.sv-table tr:last-child td {
+  border-bottom: none;
+}
+
+.sv-table tr:hover td {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.sv-more {
+  padding: 6px;
+  text-align: center;
+  font-size: 10px;
+  color: var(--text-muted);
+  background: var(--surface);
+  border-top: 1px solid var(--border);
 }

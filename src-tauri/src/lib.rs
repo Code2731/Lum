@@ -9,6 +9,50 @@ use std::process::Command;
 use tauri::{Emitter, State};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+struct Action {
+    #[serde(rename = "type")]
+    action_type: String,
+    cmd: Option<String>,
+    path: Option<String>,
+    content: Option<String>,
+    label: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+struct TerminalBlock {
+    id: String,
+    command: String,
+    output: String,
+    explanation: Option<String>,
+    actions: Option<Vec<Action>>,
+    analysis: Option<String>,
+    suggestion: Option<String>,
+    #[serde(rename = "type")]
+    block_type: String,
+    status: String,
+    cwd: String,
+    #[serde(rename = "gitBranch")]
+    git_branch: Option<String>,
+    embedding: Option<Vec<f32>>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+struct Pane {
+    id: String,
+    blocks: Vec<TerminalBlock>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+struct Tab {
+    id: String,
+    name: String,
+    panes: Vec<Pane>,
+    #[serde(rename = "activePaneId")]
+    active_pane_id: String,
+    orientation: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
 struct AppConfig {
     theme: String, // "dark", "light", "custom"
     font_size: u32,
@@ -76,24 +120,24 @@ fn save_config(config: AppConfig) -> Result<(), String> {
 }
 
 #[tauri::command]
-fn save_session(blocks: Vec<TerminalBlock>) -> Result<(), String> {
+fn save_session(tabs: Vec<Tab>) -> Result<(), String> {
     let home = env::var("HOME").or_else(|_| env::var("USERPROFILE")).map_err(|e| e.to_string())?;
     let path = std::path::Path::new(&home).join(".lum_session.json");
-    let json = serde_json::to_string_pretty(&blocks).map_err(|e| e.to_string())?;
+    let json = serde_json::to_string_pretty(&tabs).map_err(|e| e.to_string())?;
     std::fs::write(path, json).map_err(|e| e.to_string())?;
     Ok(())
 }
 
 #[tauri::command]
-fn load_session() -> Result<Vec<TerminalBlock>, String> {
+fn load_session() -> Result<Vec<Tab>, String> {
     let home = env::var("HOME").or_else(|_| env::var("USERPROFILE")).map_err(|e| e.to_string())?;
     let path = std::path::Path::new(&home).join(".lum_session.json");
     if !path.exists() {
         return Ok(vec![]);
     }
     let json = std::fs::read_to_string(path).map_err(|e| e.to_string())?;
-    let blocks: Vec<TerminalBlock> = serde_json::from_str(&json).map_err(|e| e.to_string())?;
-    Ok(blocks)
+    let tabs: Vec<Tab> = serde_json::from_str(&json).map_err(|e| e.to_string())?;
+    Ok(tabs)
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -257,6 +301,36 @@ async fn analyze_error(command: String, stderr: String, model: String, context: 
     Ok(ollama_res.response)
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+struct OllamaEmbeddingRequest {
+    model: String,
+    prompt: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct OllamaEmbeddingResponse {
+    embedding: Vec<f32>,
+}
+
+#[tauri::command]
+async fn generate_embedding(prompt: String, model: String) -> Result<Vec<f32>, String> {
+    let client = reqwest::Client::builder()
+        .timeout(Duration::from_secs(30))
+        .build()
+        .map_err(|e| e.to_string())?;
+    
+    let request_body = OllamaEmbeddingRequest { model, prompt };
+    
+    let response = client.post("http://localhost:11434/api/embeddings")
+        .json(&request_body)
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+        
+    let ollama_res: OllamaEmbeddingResponse = response.json().await.map_err(|e| e.to_string())?;
+    Ok(ollama_res.embedding)
+}
+
 use std::collections::HashMap;
 
 pub struct TerminalState {
@@ -264,11 +338,19 @@ pub struct TerminalState {
 }
 
 #[tauri::command]
-fn spawn_pty(tab_id: String, state: State<'_, TerminalState>, handle: tauri::AppHandle) -> Result<(), String> {
+fn spawn_pty(tab_id: String, cwd: Option<String>, state: State<'_, TerminalState>, handle: tauri::AppHandle) -> Result<(), String> {
     let pty_system = native_pty_system();
     let pair = pty_system.openpty(PtySize { rows: 24, cols: 80, pixel_width: 0, pixel_height: 0 }).expect("failed to open pty");
+    
     let shell = if cfg!(target_os = "windows") { "powershell.exe" } else { "zsh" };
-    let cmd = CommandBuilder::new(shell);
+    let mut cmd = CommandBuilder::new(shell);
+    
+    if let Some(path) = cwd {
+        let p = std::path::Path::new(&path);
+        if p.exists() {
+            cmd.cwd(p.to_path_buf());
+        }
+    }
     let mut _child = pair.slave.spawn_command(cmd).expect("failed to spawn shell");
     let mut reader = pair.master.try_clone_reader().expect("failed to clone reader");
     let writer = pair.master.take_writer().expect("failed to take writer");
@@ -383,6 +465,22 @@ fn create_file(path: String, content: String) -> Result<(), String> {
     Ok(())
 }
 
+#[tauri::command]
+fn get_project_files() -> Result<Vec<String>, String> {
+    use ignore::WalkBuilder;
+    let cwd = env::current_dir().map_err(|e| e.to_string())?;
+    let mut files = Vec::new();
+    for result in WalkBuilder::new(&cwd).build() {
+        if let Ok(entry) = result {
+            if entry.file_type().map(|t| t.is_file()).unwrap_or(false) {
+                let path = entry.path().strip_prefix(&cwd).unwrap_or(entry.path());
+                files.push(path.to_string_lossy().to_string());
+            }
+        }
+    }
+    Ok(files)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let terminal_state = TerminalState { 
@@ -407,7 +505,9 @@ pub fn run() {
             spawn_pty,
             create_file,
             pull_model,
-            delete_model
+            delete_model,
+            get_project_files,
+            generate_embedding
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
