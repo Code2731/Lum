@@ -15,6 +15,7 @@ npm run tauri build          # 프로덕션 빌드
 npm run dev                  # Vite 프론트엔드만 실행 (포트 1420)
 npm run build                # tsc + vite build (프론트엔드만)
 run.bat                      # Ollama 자동 시작 + 개발 모드 실행 (Windows)
+./run.sh                     # Ollama 자동 시작 + 개발 모드 실행 (macOS/Linux)
 ```
 
 Rust 백엔드만 체크:
@@ -33,12 +34,12 @@ cd src-tauri && cargo build
 - PTY 읽기 스레드가 `pty-data` 이벤트로 프론트엔드에 출력 스트리밍
 - `TerminalState`: PTY writer를 `Arc<Mutex<>>` 로 관리
 - Ollama REST API (`localhost:11434`) 호출로 AI 기능 제공: 모델 목록, 명령어 생성, 에러 분석
-- 주요 커맨드: `get_system_context`, `write_to_pty`, `check_ollama_status`, `list_models`, `generate_ai_command`, `analyze_error`
+- 주요 커맨드: `get_system_context`, `write_to_pty`, `check_ollama_status`, `list_models`, `generate_ai_command`, `analyze_error`, `save_session`, `load_session`
 - Tauri v2 커맨드는 반드시 `Result<T, String>` 반환 (bool 직접 반환 불가)
 
 ### Frontend (`src/`)
-- `App.tsx`: 메인 컴포넌트. 블록 기반 터미널 UI, 커스텀 타이틀바(드래그/최소화/최대화/닫기), Ollama 상태 표시 및 모델 선택
-- `components/CommandInput.tsx`: 하단 고정 입력 에디터. `/` 접두사로 AI 모드 전환. 멀티라인, 커맨드 히스토리(↑↓) 지원
+- `App.tsx`: 메인 컴포넌트. 블록 기반 터미널 UI (Virtuoso 가상 스크롤 적용), 커스텀 타이틀바(드래그/최소화/최대화/닫기), Ollama 상태 표시 및 세션 영속성 관리
+- `components/CommandInput.tsx`: 하단 고정 입력 에디터. PrismJS 기반 구문 강조, `/` 접두사로 AI 모드 전환 및 스타일링. 멀티라인, 커맨드 히스토리(↑↓) 지원
 - `index.css`: CSS 변수 기반 Warp 테마 + Tailwind CSS v4 보조. 핵심 레이아웃은 순수 CSS
 - ANSI 출력 렌더링에 `ansi-to-react` 사용
 

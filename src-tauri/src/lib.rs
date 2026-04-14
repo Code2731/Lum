@@ -8,11 +8,41 @@ use std::env;
 use std::process::Command;
 use tauri::{Emitter, State};
 
-#[derive(Debug, Serialize, Deserialize)]
-struct OllamaRequest {
-    model: String,
-    prompt: String,
-    stream: bool,
+#[derive(Debug, Serialize, Deserialize, Clone)]
+struct TerminalBlock {
+    id: String,
+    command: String,
+    output: String,
+    explanation: Option<String>,
+    analysis: Option<String>,
+    suggestion: Option<String>,
+    #[serde(rename = "type")]
+    block_type: String, // "shell" | "ai" | "error-analysis"
+    status: String,    // "executing" | "completed" | "error"
+    cwd: String,
+    #[serde(rename = "gitBranch")]
+    git_branch: Option<String>,
+}
+
+#[tauri::command]
+fn save_session(blocks: Vec<TerminalBlock>) -> Result<(), String> {
+    let home = env::var("HOME").or_else(|_| env::var("USERPROFILE")).map_err(|e| e.to_string())?;
+    let path = std::path::Path::new(&home).join(".lum_session.json");
+    let json = serde_json::to_string_pretty(&blocks).map_err(|e| e.to_string())?;
+    std::fs::write(path, json).map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
+fn load_session() -> Result<Vec<TerminalBlock>, String> {
+    let home = env::var("HOME").or_else(|_| env::var("USERPROFILE")).map_err(|e| e.to_string())?;
+    let path = std::path::Path::new(&home).join(".lum_session.json");
+    if !path.exists() {
+        return Ok(vec![]);
+    }
+    let json = std::fs::read_to_string(path).map_err(|e| e.to_string())?;
+    let blocks: Vec<TerminalBlock> = serde_json::from_str(&json).map_err(|e| e.to_string())?;
+    Ok(blocks)
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -24,10 +54,7 @@ struct OllamaResponse {
 struct SystemContext {
     cwd: String,
     git_branch: Option<String>,
-}
-
-pub struct TerminalState {
-    pub writer: Arc<Mutex<Box<dyn Write + Send>>>,
+    files: Vec<String>,
 }
 
 #[tauri::command]
@@ -48,7 +75,15 @@ fn get_system_context() -> SystemContext {
             }
         });
 
-    SystemContext { cwd, git_branch }
+    let files = std::fs::read_dir(&cwd)
+        .map(|entries| {
+            entries
+                .filter_map(|e| e.ok().and_then(|entry| entry.file_name().into_string().ok()))
+                .collect()
+        })
+        .unwrap_or_default();
+
+    SystemContext { cwd, git_branch, files }
 }
 
 #[tauri::command]
@@ -78,7 +113,7 @@ async fn list_models() -> Result<Vec<String>, String> {
 }
 
 #[tauri::command]
-async fn generate_ai_command(prompt: String, model: String) -> Result<String, String> {
+async fn generate_ai_command(prompt: String, model: String, context: String) -> Result<String, String> {
     let client = reqwest::Client::builder()
         .timeout(Duration::from_secs(120))
         .build()
@@ -86,10 +121,11 @@ async fn generate_ai_command(prompt: String, model: String) -> Result<String, St
     let request_body = OllamaRequest {
         model,
         prompt: format!(
-            "You are a terminal expert. Convert the user's natural language request into a single executable shell command. \
-             Respond ONLY with a JSON object in the following format: {{\"command\": \"the command here\", \"explanation\": \"short explanation\"}}. \
-             Do not include any other text. Prompt: {}",
-            prompt
+            "You are a terminal expert. Convert the user's natural language request into a single executable shell command.\n\
+             Context: {}\n\
+             Request: {}\n\
+             Respond ONLY with a JSON object: {{\"command\": \"the command\", \"explanation\": \"short explanation\"}}.",
+            context, prompt
         ),
         stream: false,
     };
@@ -100,7 +136,7 @@ async fn generate_ai_command(prompt: String, model: String) -> Result<String, St
 }
 
 #[tauri::command]
-async fn analyze_error(command: String, stderr: String, model: String) -> Result<String, String> {
+async fn analyze_error(command: String, stderr: String, model: String, context: String) -> Result<String, String> {
     let client = reqwest::Client::builder()
         .timeout(Duration::from_secs(120))
         .build()
@@ -108,9 +144,12 @@ async fn analyze_error(command: String, stderr: String, model: String) -> Result
     let request_body = OllamaRequest {
         model,
         prompt: format!(
-            "The following command failed: `{}`. Error message: `{}`. Analyze the error and suggest a fix. \
-             Respond ONLY with a JSON object: {{\"analysis\": \"why it failed\", \"suggestion\": \"the corrected command\"}}. ",
-            command, stderr
+            "The following command failed: `{}`.\n\
+             Error: `{}`.\n\
+             Context: {}\n\
+             Analyze and suggest a fix.\n\
+             Respond ONLY with a JSON object: {{\"analysis\": \"reason\", \"suggestion\": \"fixed command\"}}.",
+            command, stderr, context
         ),
         stream: false,
     };
@@ -165,7 +204,9 @@ pub fn run() {
             analyze_error, 
             write_to_pty, 
             check_ollama_status,
-            list_models
+            list_models,
+            save_session,
+            load_session
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

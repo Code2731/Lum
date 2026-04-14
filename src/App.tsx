@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Copy, RotateCcw, Zap, Minus, Square, X } from "lucide-react";
+import { Copy, RotateCcw, Zap, Minus, Square, X, Trash2 } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { Virtuoso, VirtuosoHandle } from "react-virtuoso";
 import Ansi from "ansi-to-react";
 import CommandInput from "./components/CommandInput";
 
@@ -25,29 +26,54 @@ const App = () => {
   const [ollamaOnline, setOllamaOnline] = useState(false);
   const [models, setModels] = useState<string[]>([]);
   const [selectedModel, setSelectedModel] = useState("");
-  const [context, setContext] = useState<{ cwd: string; git_branch: string | null }>({
+  const [context, setContext] = useState<{ cwd: string; git_branch: string | null; files: string[] }>({
     cwd: "~",
     git_branch: null,
+    files: [],
   });
 
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const virtuosoRef = useRef<VirtuosoHandle>(null);
   const currentBlockIdRef = useRef<string | null>(null);
   currentBlockIdRef.current = currentBlockId;
 
   const appWindow = getCurrentWindow();
 
-  // 자동 스크롤
+  // 세션 불러오기
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    const init = async () => {
+      try {
+        const savedBlocks = await invoke<TerminalBlock[]>("load_session");
+        // 이전 실행 중이던 상태는 completed로 변경
+        const restored = savedBlocks.map((b) => (b.status === "executing" ? { ...b, status: "completed" as const } : b));
+        setBlocks(restored);
+      } catch (e) {
+        console.error("load session error:", e);
+      }
+    };
+    init();
+  }, []);
+
+  // 세션 저장 (blocks 변경 시마다)
+  useEffect(() => {
+    if (blocks.length > 0) {
+      // 실행 중인 블록이 너무 많지 않을 때만 저장 (I/O 부하 방지)
+      const toSave = blocks.slice(-50).map(b => ({...b})); // 최근 50개만 저장
+      invoke("save_session", { blocks: toSave }).catch(console.error);
     }
   }, [blocks]);
+
+  // 자동 스크롤
+  useEffect(() => {
+    if (virtuosoRef.current) {
+      virtuosoRef.current.scrollToIndex({ index: blocks.length - 1, behavior: 'auto' });
+    }
+  }, [blocks.length]);
 
   // 시스템 컨텍스트 + Ollama 동기화
   useEffect(() => {
     const sync = async () => {
       try {
-        const ctx = await invoke<{ cwd: string; git_branch: string | null }>("get_system_context");
+        const ctx = await invoke<{ cwd: string; git_branch: string | null; files: string[] }>("get_system_context");
         setContext(ctx);
       } catch (e) {
         console.error("context error:", e);
@@ -70,20 +96,15 @@ const App = () => {
     return () => clearInterval(iv);
   }, []);
 
-  // PTY 출력 스트리밍
-  useEffect(() => {
-    const unlisten = listen<string>("pty-data", (event) => {
-      const blockId = currentBlockIdRef.current;
-      if (blockId) {
-        setBlocks((prev) =>
-          prev.map((b) => (b.id === blockId ? { ...b, output: b.output + event.payload } : b))
-        );
-      }
-    });
-    return () => {
-      unlisten.then((f) => f());
-    };
-  }, []);
+  // AI 컨텍스트 구성 도우미
+  const getAiContext = useCallback(() => {
+    const recentBlocks = blocks.slice(-5);
+    const history = recentBlocks
+      .map((b) => `Command: ${b.command}\nOutput: ${b.output.slice(0, 200)}...`)
+      .join("\n\n");
+    const files = context.files.join(", ");
+    return `Current Directory: ${context.cwd}\nGit Branch: ${context.git_branch || "none"}\nFiles in CWD: ${files}\n\nRecent History:\n${history}`;
+  }, [blocks, context]);
 
   const shortPath = (p: string) => {
     const parts = p.replace(/\\/g, "/").split("/");
@@ -108,9 +129,11 @@ const App = () => {
 
       try {
         if (type === "ai") {
+          const aiContext = getAiContext();
           const result = await invoke<string>("generate_ai_command", {
             prompt: cmd,
             model: selectedModel,
+            context: aiContext,
           });
           try {
             // LLM이 JSON 외 텍스트를 포함할 수 있으므로 추출 시도
@@ -159,7 +182,7 @@ const App = () => {
         );
       }
     },
-    [context, selectedModel]
+    [context, selectedModel, getAiContext]
   );
 
   const handleAnalyzeError = useCallback(
@@ -178,10 +201,12 @@ const App = () => {
         },
       ]);
       try {
+        const aiContext = getAiContext();
         const result = await invoke<string>("analyze_error", {
           command: block.command,
           stderr: block.output,
           model: selectedModel,
+          context: aiContext,
         });
         const parsed = JSON.parse(result);
         setBlocks((prev) =>
@@ -199,8 +224,13 @@ const App = () => {
         );
       }
     },
-    [selectedModel]
+    [selectedModel, getAiContext]
   );
+
+  const clearSession = useCallback(() => {
+    setBlocks([]);
+    invoke("save_session", { blocks: [] }).catch(console.error);
+  }, []);
 
   return (
     <div className="app-root">
@@ -208,7 +238,6 @@ const App = () => {
       <header
         className="titlebar"
         onMouseDown={(e) => {
-          // 자식 버튼/select 클릭이 아닌 경우에만 드래그
           if ((e.target as HTMLElement).closest("button, select")) return;
           appWindow.startDragging();
         }}
@@ -242,6 +271,9 @@ const App = () => {
           <div className={`status-dot ${ollamaOnline ? "online" : "offline"}`} />
         </div>
         <div className="titlebar-controls">
+          <button className="titlebar-btn" onClick={clearSession} title="세션 초기화">
+            <Trash2 size={14} />
+          </button>
           <button className="titlebar-btn" onClick={() => appWindow.minimize()}>
             <Minus size={14} />
           </button>
@@ -254,8 +286,8 @@ const App = () => {
         </div>
       </header>
 
-      {/* ===== 블록 스트림 ===== */}
-      <main className="block-stream" ref={scrollRef}>
+      {/* ===== 블록 스트림 (Virtuoso) ===== */}
+      <main className="block-stream">
         {blocks.length === 0 ? (
           <div className="empty-state">
             <div className="empty-state-icon">▸</div>
@@ -263,81 +295,86 @@ const App = () => {
             <div className="empty-state-hint">명령어를 입력하세요. / 로 시작하면 AI 모드</div>
           </div>
         ) : (
-          blocks.map((block) => (
-            <div key={block.id} className="block">
-              {/* 프롬프트 */}
-              <div className="block-header">
-                <span className="prompt-arrow">➜</span>
-                <span className="prompt-path">{shortPath(block.cwd)}</span>
-                {block.gitBranch && (
-                  <span className="prompt-git">
-                    git:(<span className="prompt-git-branch">{block.gitBranch}</span>)
-                  </span>
-                )}
-                <span className="prompt-cmd">{block.command}</span>
+          <Virtuoso
+            ref={virtuosoRef}
+            data={blocks}
+            initialTopMostItemIndex={blocks.length - 1}
+            itemContent={(index, block) => (
+              <div key={block.id} className="block">
+                {/* 프롬프트 */}
+                <div className="block-header">
+                  <span className="prompt-arrow">➜</span>
+                  <span className="prompt-path">{shortPath(block.cwd)}</span>
+                  {block.gitBranch && (
+                    <span className="prompt-git">
+                      git:(<span className="prompt-git-branch">{block.gitBranch}</span>)
+                    </span>
+                  )}
+                  <span className="prompt-cmd">{block.command}</span>
 
-                {block.status === "executing" && <span className="status-executing">●</span>}
+                  {block.status === "executing" && <span className="status-executing">●</span>}
 
-                {/* hover 액션 */}
-                <div className="block-actions">
-                  <button
-                    className="block-action-btn"
-                    onClick={() => navigator.clipboard.writeText(block.output)}
-                    title="복사"
-                  >
-                    <Copy size={13} />
-                  </button>
-                  <button
-                    className="block-action-btn"
-                    onClick={() => handleCommand(block.command, "shell")}
-                    title="재실행"
-                  >
-                    <RotateCcw size={13} />
-                  </button>
-                </div>
-              </div>
-
-              {/* AI 설명 */}
-              {block.explanation && <div className="block-explanation">{block.explanation}</div>}
-
-              {/* 에러 분석 */}
-              {block.analysis && (
-                <div className="block-analysis">
-                  <div className="analysis-body">
-                    <span className="analysis-label">진단</span>
-                    {block.analysis}
-                  </div>
-                  {block.suggestion && (
+                  {/* hover 액션 */}
+                  <div className="block-actions">
                     <button
-                      className="analysis-fix"
-                      onClick={() => handleCommand(block.suggestion!, "shell")}
+                      className="block-action-btn"
+                      onClick={() => navigator.clipboard.writeText(block.output)}
+                      title="복사"
                     >
-                      <code>{block.suggestion}</code>
-                      <span className="analysis-fix-label">적용</span>
+                      <Copy size={13} />
+                    </button>
+                    <button
+                      className="block-action-btn"
+                      onClick={() => handleCommand(block.command, "shell")}
+                      title="재실행"
+                    >
+                      <RotateCcw size={13} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* AI 설명 */}
+                {block.explanation && <div className="block-explanation">{block.explanation}</div>}
+
+                {/* 에러 분석 */}
+                {block.analysis && (
+                  <div className="block-analysis">
+                    <div className="analysis-body">
+                      <span className="analysis-label">진단</span>
+                      {block.analysis}
+                    </div>
+                    {block.suggestion && (
+                      <button
+                        className="analysis-fix"
+                        onClick={() => handleCommand(block.suggestion!, "shell")}
+                      >
+                        <code>{block.suggestion}</code>
+                        <span className="analysis-fix-label">적용</span>
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {/* 출력 */}
+                {(block.output || block.status === "executing") && (
+                  <div className="block-output">
+                    <Ansi>{block.output}</Ansi>
+                  </div>
+                )}
+
+                {/* 에러 AI 분석 버튼 */}
+                {block.type === "shell" &&
+                  block.status === "completed" &&
+                  block.output.toLowerCase().includes("error") &&
+                  !block.analysis && (
+                    <button className="error-analyze-btn" onClick={() => handleAnalyzeError(block)}>
+                      <Zap size={12} />
+                      AI 에러 분석
                     </button>
                   )}
-                </div>
-              )}
-
-              {/* 출력 */}
-              {(block.output || block.status === "executing") && (
-                <div className="block-output">
-                  <Ansi>{block.output}</Ansi>
-                </div>
-              )}
-
-              {/* 에러 AI 분석 버튼 */}
-              {block.type === "shell" &&
-                block.status === "completed" &&
-                block.output.toLowerCase().includes("error") &&
-                !block.analysis && (
-                  <button className="error-analyze-btn" onClick={() => handleAnalyzeError(block)}>
-                    <Zap size={12} />
-                    AI 에러 분석
-                  </button>
-                )}
-            </div>
-          ))
+              </div>
+            )}
+          />
         )}
       </main>
 

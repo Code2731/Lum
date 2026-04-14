@@ -1,5 +1,9 @@
 import { useState, useRef, useEffect } from "react";
 import { Zap } from "lucide-react";
+import Editor from "react-simple-code-editor";
+import Prism from "prismjs";
+import "prismjs/components/prism-bash";
+import "prismjs/themes/prism-tomorrow.css"; // 다크 테마 기반
 
 interface Props {
   onCommandSubmit: (cmd: string, type: "shell" | "ai") => void;
@@ -12,13 +16,9 @@ const CommandInput = ({ onCommandSubmit, selectedModel, ollamaOnline, context }:
   const [value, setValue] = useState("");
   const [history, setHistory] = useState<string[]>([]);
   const [historyIdx, setHistoryIdx] = useState(-1);
-  const ref = useRef<HTMLTextAreaElement>(null);
+  const editorRef = useRef<any>(null);
 
   const isAI = value.startsWith("/");
-
-  useEffect(() => {
-    ref.current?.focus();
-  }, []);
 
   const shortPath = (p: string) => {
     const parts = p.replace(/\\/g, "/").split("/");
@@ -35,11 +35,10 @@ const CommandInput = ({ onCommandSubmit, selectedModel, ollamaOnline, context }:
       setHistoryIdx(-1);
       onCommandSubmit(cmd, type);
       setValue("");
-      if (ref.current) ref.current.style.height = "auto";
     }
   };
 
-  const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+  const onKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       submit();
@@ -65,8 +64,15 @@ const CommandInput = ({ onCommandSubmit, selectedModel, ollamaOnline, context }:
     }
   };
 
+  const highlight = (code: string) => {
+    if (code.startsWith("/")) {
+      return `<span style="color: #a78bfa">${code}</span>`; // AI 모드 강조 (보라색 계열)
+    }
+    return Prism.highlight(code, Prism.languages.bash || Prism.languages.plain, "bash");
+  };
+
   return (
-    <div className="editor" onClick={() => ref.current?.focus()}>
+    <div className="editor">
       <div className={`editor-box ${isAI ? "editor-box-ai" : ""}`}>
         {/* 경로 + git */}
         <div className="editor-header">
@@ -87,22 +93,26 @@ const CommandInput = ({ onCommandSubmit, selectedModel, ollamaOnline, context }:
 
         {/* 입력 */}
         <div className="editor-input-row">
-          <span className="editor-prompt">$</span>
-          <textarea
-            ref={ref}
-            className="editor-input"
-            rows={1}
-            value={value}
-            placeholder={isAI ? "AI에게 질문하세요..." : ""}
-            onChange={(e) => {
-              setValue(e.target.value);
-              e.target.style.height = "auto";
-              e.target.style.height = Math.min(e.target.scrollHeight, 120) + "px";
-            }}
-            onKeyDown={onKeyDown}
-            autoFocus
-            spellCheck={false}
-          />
+          <span className="editor-prompt">{isAI ? <Zap size={14} style={{ color: "#a78bfa" }} /> : "$"}</span>
+          <div className="editor-input-wrapper" style={{ width: '100%' }}>
+            <Editor
+              value={value}
+              onValueChange={(code) => setValue(code)}
+              highlight={highlight}
+              padding={0}
+              onKeyDown={onKeyDown}
+              className="editor-input"
+              style={{
+                fontFamily: '"Fira Code", "Fira Mono", monospace',
+                fontSize: 14,
+                width: '100%',
+                outline: 'none',
+              }}
+              textareaId="command-editor-textarea"
+              placeholder={isAI ? "AI에게 질문하세요..." : ""}
+              autoFocus
+            />
+          </div>
         </div>
       </div>
     </div>
