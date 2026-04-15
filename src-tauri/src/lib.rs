@@ -503,20 +503,99 @@ fn create_file(path: String, content: String) -> Result<(), String> {
     Ok(())
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone)]
+struct CodeChunk {
+    path: String,
+    content: String,
+    embedding: Option<Vec<f32>>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+struct ProjectIndex {
+    chunks: Vec<CodeChunk>,
+}
+
 #[tauri::command]
-fn get_project_files() -> Result<Vec<String>, String> {
+async fn index_project(model: String, handle: tauri::AppHandle) -> Result<usize, String> {
     use ignore::WalkBuilder;
     let cwd = env::current_dir().map_err(|e| e.to_string())?;
-    let mut files = Vec::new();
+    let mut chunks = Vec::new();
+
+    // 1. 파일 스캔 및 내용 읽기
     for result in WalkBuilder::new(&cwd).build() {
         if let Ok(entry) = result {
             if entry.file_type().map(|t| t.is_file()).unwrap_or(false) {
-                let path = entry.path().strip_prefix(&cwd).unwrap_or(entry.path());
-                files.push(path.to_string_lossy().to_string());
+                let path = entry.path().to_path_buf();
+                let ext = path.extension().and_then(|s| s.to_str()).unwrap_or("");
+                
+                // 소스코드 파일들만 인덱싱 (ts, tsx, rs, js, py 등)
+                if ["ts", "tsx", "rs", "js", "py", "html", "css", "md"].contains(&ext) {
+                    if let Ok(content) = std::fs::read_to_string(&path) {
+                        let relative_path = path.strip_prefix(&cwd).unwrap_or(&path).to_string_lossy().to_string();
+                        
+                        // 2. 간단한 라인 단위 청킹 (500자 내외로 쪼개기)
+                        for chunk_content in content.as_str().split("\n\n") {
+                            if chunk_content.trim().is_empty() { continue; }
+                            chunks.push(CodeChunk {
+                                path: relative_path.clone(),
+                                content: chunk_content.trim().to_string(),
+                                embedding: None,
+                            });
+                        }
+                    }
+                }
             }
         }
     }
-    Ok(files)
+
+    // 3. 벡터화 (Ollama 임베딩 API 호출) - 속도를 위해 일부만 샘플링하거나 병렬 처리 가능하지만 여기서는 순차 처리
+    let client = reqwest::Client::new();
+    let total = chunks.len();
+    let mut indexed_count = 0;
+
+    for chunk in chunks.iter_mut().take(100) { // 데모를 위해 우선 100개 청크만 제한
+        let req = OllamaEmbeddingRequest { model: model.clone(), prompt: chunk.content.clone() };
+        if let Ok(res) = client.post("http://localhost:11434/api/embeddings").json(&req).send().await {
+            if let Ok(data) = res.json::<OllamaEmbeddingResponse>().await {
+                chunk.embedding = Some(data.embedding);
+                indexed_count += 1;
+                handle.emit("index-progress", serde_json::json!({ "current": indexed_count, "total": 100 })).unwrap();
+            }
+        }
+    }
+
+    // 인덱스 저장 (간편하게 전역 상태나 파일로 관리 가능)
+    let index_path = std::path::Path::new(&env::var("HOME").unwrap_or_else(|_| ".".to_string())).join(".lum_code_index.json");
+    let json = serde_json::to_string(&chunks).map_err(|e| e.to_string())?;
+    std::fs::write(index_path, json).map_err(|e| e.to_string())?;
+
+    Ok(indexed_count)
+}
+
+#[tauri::command]
+async fn search_codebase(query: String, model: String) -> Result<Vec<CodeChunk>, String> {
+    let client = reqwest::Client::new();
+    let req = OllamaEmbeddingRequest { model, prompt: query };
+    let res = client.post("http://localhost:11434/api/embeddings").json(&req).send().await.map_err(|e| e.to_string())?;
+    let query_emb: OllamaEmbeddingResponse = res.json().await.map_err(|e| e.to_string())?;
+
+    // 저장된 인덱스 로드
+    let index_path = std::path::Path::new(&env::var("HOME").unwrap_or_else(|_| ".".to_string())).join(".lum_code_index.json");
+    if !index_path.exists() { return Ok(vec![]); }
+    let json = std::fs::read_to_string(index_path).map_err(|e| e.to_string())?;
+    let chunks: Vec<CodeChunk> = serde_json::from_str(&json).map_err(|e| e.to_string())?;
+
+    // 유사도 검색
+    let mut scored: Vec<(f32, CodeChunk)> = chunks.into_iter()
+        .filter(|c| c.embedding.is_some())
+        .map(|c| {
+            let sim = cosine_similarity(&query_emb.embedding, c.embedding.as_ref().unwrap());
+            (sim, c)
+        })
+        .collect();
+
+    scored.sort_by(|a, b| b.0.partial_cmp(&a.0).unwrap());
+    Ok(scored.into_iter().take(5).map(|(_, c)| c).collect())
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -544,8 +623,9 @@ pub fn run() {
             create_file,
             pull_model,
             delete_model,
-            get_project_files,
-            generate_embedding
+            generate_embedding,
+            index_project,
+            search_codebase
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

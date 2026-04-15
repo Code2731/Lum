@@ -478,6 +478,58 @@ body {
   transition: width 0.3s ease;
 }
 
+/* ============================================================
+   인덱싱 (RAG) UI
+   ============================================================ */
+.index-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-bright);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.index-btn:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: rgba(0, 212, 170, 0.05);
+}
+
+.index-btn.indexing {
+  color: var(--yellow);
+  border-color: var(--yellow);
+  cursor: wait;
+}
+
+.index-progress-mini {
+  margin-top: 10px;
+}
+
+.index-progress-text {
+  font-size: 10px;
+  color: var(--text-muted);
+  text-align: right;
+  margin-top: 4px;
+}
+
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.5; }
+  100% { opacity: 1; }
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
 .settings-body {
   padding: 20px;
   display: flex;

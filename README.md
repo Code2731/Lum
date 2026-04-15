@@ -5,11 +5,12 @@ Warp 스타일 블록 기반 AI 터미널 에뮬레이터. 로컬 LLM(Ollama) �
 ## Tech Stack
 - **Backend**: Rust (Tauri v2), portable-pty, ignore, futures-util
 - **Frontend**: React 19 + TypeScript + Tailwind CSS v4 + Vitest + Fuse.js
-- **AI Engine**: Ollama (로컬 API - Llama3, Mistral 등)
+- **AI Engine**: Ollama (로컬 API - Llama3, Mistral, Nomic-Embed-Text 등)
 
 ## Features
 - **블록 기반 UI**: 명령어 실행 결과를 개별 블록으로 렌더링 (Warp 스타일)
 - **멀티 탭 및 스플릿 팬**: 하나의 창에서 여러 탭을 관리하고, 각 탭 내에서 화면을 가로/세로로 분할 가능
+- **심층 코드베이스 RAG (New)**: 프로젝트 전체 소스코드를 함수 단위로 벡터화하여 AI에게 저장소 전체에 대한 완벽한 지식 제공 (설정에서 인덱싱 가능)
 - **유니버설 커맨드 팔레트**: `Cmd+K`로 파일, 명령어 히스토리, 앱 기능을 통합 검색 (Fuse.js 퍼지 검색 적용)
 - **예측형 고스트 텍스트**: 명령어 입력 시 히스토리를 분석하여 다음 입력을 회색 텍스트로 제안, `→` 키로 즉시 완성
 - **AI 워크플로우 (Agentic UI)**: AI가 제안한 다단계 작업(명령어 실행, 파일 생성 등)을 클릭 한 번으로 승인 및 실행
@@ -46,6 +47,12 @@ cd src-tauri && cargo test  # 백엔드 단위 테스트
 ## Usage
 - 일반 명령어 입력 → 활성화된 팬에서 실행
 - `/질문` 입력 → AI가 명령어 또는 워크플로우 제안
+- **Settings -> Index Codebase**: 프로젝트 전체 코드 인덱싱 시작
 - `Cmd+K`: 커맨드 팔레트 열기 (파일/명령어 검색)
 - `→ (Right Arrow)`: 고스트 텍스트 자동 완성 수락
-- `Cmd+D` / `Cmd+Shift+D`: 화면 수직/수평 분할
+
+## 🚀 2026 Future Roadmap
+- **Phase 9: 멀티모달 시각 인식 (Visual-Aware Terminal)**: 내장 웹뷰 팬 통합 및 화면 분석을 통한 프런트엔드 자동 수정 (다음 단계)
+- **Phase 10: 자율 에이전트 군집 (Agent Swarms)**: Coder, Reviewer, Tester 에이전트 간의 협력 워크플로우
+- **Phase 11: WebGPU 온디바이스 AI**: 로컬 GPU를 직접 활용한 초고속 오프라인 AI 추론
+- **Phase 12: 자율 실행 샌드박스 (Secure Sandbox)**: WASM/Docker 기반의 안전한 AI 명령어 검증 환경
