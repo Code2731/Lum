@@ -35,7 +35,7 @@ cd src-tauri && cargo test   # Rust 단위 테스트 실행
 - **주요 커맨드**: `spawn_pty`, `write_to_pty`, `generate_ai_command`, `generate_embedding`, `pull_model`, `delete_model`, `create_file`, `load_config`, `save_config`, `index_project`, `search_codebase`.
 
 ### Frontend (`src/`)
-- **App.tsx**: 메인 레이아웃 및 상태 관리. 멀티 탭, 스플릿 팬, 커맨드 팔레트(`Cmd+K`), RAG 인덱싱 통합.
+- **App.tsx**: 메인 레이아웃 및 상태 관리. 멀티 탭, 스플릿 팬, 커맨드 팔레트(`Cmd+K`), 웹뷰(Visual Context) 통합.
 - **에디터**: `react-simple-code-editor` + `PrismJS`. 고스트 텍스트(예측) 및 Tab 자동 완성 기능.
 - **UI/UX**: `react-resizable-panels`(스플릿), `react-virtuoso`(가상 스크롤), `react-markdown`(AI 답변).
 - **영속성**: `.lum_session.json` 및 `.lum_config.json`, `.lum_code_index.json`을 통한 데이터/설정 유지.
@@ -53,7 +53,6 @@ cd src-tauri && cargo test   # Rust 단위 테스트 실행
 - AI 워크플로우: AI가 제안한 액션을 UI에서 승인 후 단계별 실행.
 
 ## 🚀 2026 Future Roadmap
-- Phase 9: Visual Context (WebKit 통합 및 화면 분석)
 - Phase 10: Agent Swarms (멀티 에이전트 협력)
 - Phase 11: WebGPU Local AI (wgpu 기반 온디바이스 추론)
 - Phase 12: Secure Sandbox (WASM 기반 명령어 검증)

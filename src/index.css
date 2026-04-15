@@ -1112,6 +1112,13 @@ body {
   caret-color: var(--accent);
 }
 
+.editor-input textarea,
+.editor-input pre {
+  outline: none !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
 .editor-input::placeholder {
   color: var(--text-muted);
 }

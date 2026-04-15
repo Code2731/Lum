@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { Zap } from "lucide-react";
 import Editor from "react-simple-code-editor";
 import { invoke } from "@tauri-apps/api/core";
@@ -173,44 +173,47 @@ const CommandInput = ({ onCommandSubmit, selectedModel, ollamaOnline, context }:
           <span className="editor-prompt">{isAI ? <Zap size={14} style={{ color: "#a78bfa" }} /> : "$"}</span>
           <div className="editor-input-wrapper" style={{ width: '100%', position: 'relative' }}>
             <Editor
-              value={value}
-              onValueChange={(code) => setValue(code)}
-              highlight={highlight}
-              padding={0}
-              onKeyDown={onKeyDown}
-              className="editor-input"
-              style={{
-                fontFamily: '"Fira Code", "Fira Mono", monospace',
-                fontSize: 14,
-                width: '100%',
-                outline: 'none',
-                background: 'transparent',
-                zIndex: 2,
-                position: 'relative'
-              }}
-              textareaId="command-editor-textarea"
-              placeholder={isAI ? "AI에게 질문하세요..." : ""}
-              autoFocus
+            value={value}
+            onValueChange={(code) => setValue(code)}
+            highlight={highlight}
+            padding={0}
+            onKeyDown={onKeyDown}
+            className="editor-input"
+            style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: 'var(--font-size)',
+              lineHeight: 'var(--line-height)',
+              width: '100%',
+              outline: 'none',
+              background: 'transparent',
+              zIndex: 2,
+              position: 'relative'
+            }}
+            textareaId="command-editor-textarea"
+            placeholder={isAI ? "AI에게 질문하세요..." : ""}
+            autoFocus
             />
             {/* 고스트 텍스트 레이어 */}
             {!isAI && ghostText && value && (
-              <div 
-                className="ghost-text-layer"
-                style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  fontFamily: '"Fira Code", "Fira Mono", monospace',
-                  fontSize: 14,
-                  pointerEvents: 'none',
-                  whiteSpace: 'pre',
-                  zIndex: 1,
-                  color: 'transparent'
-                }}
-              >
-                {value}<span style={{ color: 'rgba(255, 255, 255, 0.3)' }}>{ghostText}</span>
-              </div>
+            <div 
+              className="ghost-text-layer"
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                fontFamily: 'var(--font-mono)',
+                fontSize: 'var(--font-size)',
+                lineHeight: 'var(--line-height)',
+                pointerEvents: 'none',
+                whiteSpace: 'pre',
+                zIndex: 1,
+                color: 'transparent'
+              }}
+            >
+              {value}<span style={{ color: 'rgba(255, 255, 255, 0.3)' }}>{ghostText}</span>
+            </div>
             )}
+
           </div>
         </div>
       </div>
