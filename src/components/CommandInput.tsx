@@ -13,11 +13,16 @@ interface Props {
   context: { cwd: string; git_branch: string | null };
 }
 
-const CommandInput = ({ onCommandSubmit, selectedModel, ollamaOnline, context }: Props) => {
+const CommandInput = ({
+  onCommandSubmit,
+  selectedModel,
+  ollamaOnline,
+  context,
+}: Props) => {
   const [value, setValue] = useState("");
   const [history, setHistory] = useState<string[]>([]);
   const [historyIdx, setHistoryIdx] = useState(-1);
-  
+
   // 자동 완성 상태
   const [completions, setCompletions] = useState<string[]>([]);
   const [compIdx, setCompIdx] = useState(0);
@@ -29,7 +34,7 @@ const CommandInput = ({ onCommandSubmit, selectedModel, ollamaOnline, context }:
   const ghostText = useMemo(() => {
     if (!value || isAI || value.trim() === "") return "";
     // 히스토리 중 현재 입력값으로 시작하는 가장 최근 명령어 찾기
-    const match = history.find(cmd => cmd.startsWith(value) && cmd !== value);
+    const match = history.find((cmd) => cmd.startsWith(value) && cmd !== value);
     if (match) {
       return match.slice(value.length);
     }
@@ -48,7 +53,9 @@ const CommandInput = ({ onCommandSubmit, selectedModel, ollamaOnline, context }:
     const cmd = isAI ? trimmed.slice(1).trim() : trimmed;
     if (cmd) {
       // 히스토리 업데이트 (중복 제거 후 맨 앞에 추가)
-      setHistory((prev) => [trimmed, ...prev.filter(c => c !== trimmed)].slice(0, 100));
+      setHistory((prev) =>
+        [trimmed, ...prev.filter((c) => c !== trimmed)].slice(0, 100),
+      );
       setHistoryIdx(-1);
       onCommandSubmit(cmd, type);
       setValue("");
@@ -69,7 +76,7 @@ const CommandInput = ({ onCommandSubmit, selectedModel, ollamaOnline, context }:
       setValue(value + ghostText);
       return;
     }
-    
+
     // 자동 완성 (Tab)
     if (e.key === "Tab") {
       e.preventDefault();
@@ -84,7 +91,7 @@ const CommandInput = ({ onCommandSubmit, selectedModel, ollamaOnline, context }:
         try {
           const results = await invoke<string[]>("get_completions", {
             cwd: context.cwd,
-            partial: lastWord
+            partial: lastWord,
           });
           if (results.length > 0) {
             setCompletions(results);
@@ -105,7 +112,8 @@ const CommandInput = ({ onCommandSubmit, selectedModel, ollamaOnline, context }:
     if (e.key === "ArrowUp" && !value) {
       e.preventDefault();
       if (history.length > 0) {
-        const i = historyIdx === -1 ? 0 : Math.min(history.length - 1, historyIdx + 1);
+        const i =
+          historyIdx === -1 ? 0 : Math.min(history.length - 1, historyIdx + 1);
         setHistoryIdx(i);
         setValue(history[i]);
       }
@@ -120,8 +128,13 @@ const CommandInput = ({ onCommandSubmit, selectedModel, ollamaOnline, context }:
         setValue("");
       }
     }
-    
-    if (e.key !== "Tab" && e.key !== "ArrowUp" && e.key !== "ArrowDown" && e.key !== "ArrowRight") {
+
+    if (
+      e.key !== "Tab" &&
+      e.key !== "ArrowUp" &&
+      e.key !== "ArrowDown" &&
+      e.key !== "ArrowRight"
+    ) {
       setShowCompletions(false);
     }
   };
@@ -137,7 +150,11 @@ const CommandInput = ({ onCommandSubmit, selectedModel, ollamaOnline, context }:
     if (code.startsWith("/")) {
       return `<span style="color: #a78bfa">${code}</span>`;
     }
-    return Prism.highlight(code, Prism.languages.bash || Prism.languages.plain, "bash");
+    return Prism.highlight(
+      code,
+      Prism.languages.bash || Prism.languages.plain,
+      "bash",
+    );
   };
 
   return (
@@ -145,7 +162,10 @@ const CommandInput = ({ onCommandSubmit, selectedModel, ollamaOnline, context }:
       {showCompletions && completions.length > 1 && (
         <div className="autocomplete-popover">
           {completions.map((c, i) => (
-            <div key={c} className={`autocomplete-item ${i === compIdx ? "active" : ""}`}>
+            <div
+              key={c}
+              className={`autocomplete-item ${i === compIdx ? "active" : ""}`}
+            >
               {c}
             </div>
           ))}
@@ -170,50 +190,57 @@ const CommandInput = ({ onCommandSubmit, selectedModel, ollamaOnline, context }:
         </div>
 
         <div className="editor-input-row">
-          <span className="editor-prompt">{isAI ? <Zap size={14} style={{ color: "#a78bfa" }} /> : "$"}</span>
-          <div className="editor-input-wrapper" style={{ width: '100%', position: 'relative' }}>
+          <span className="editor-prompt">
+            {isAI ? <Zap size={14} style={{ color: "#a78bfa" }} /> : "$"}
+          </span>
+          <div
+            className="editor-input-wrapper"
+            style={{ width: "100%", position: "relative" }}
+          >
             <Editor
-            value={value}
-            onValueChange={(code) => setValue(code)}
-            highlight={highlight}
-            padding={0}
-            onKeyDown={onKeyDown}
-            className="editor-input"
-            style={{
-              fontFamily: 'var(--font-mono)',
-              fontSize: 'var(--font-size)',
-              lineHeight: 'var(--line-height)',
-              width: '100%',
-              outline: 'none',
-              background: 'transparent',
-              zIndex: 2,
-              position: 'relative'
-            }}
-            textareaId="command-editor-textarea"
-            placeholder={isAI ? "AI에게 질문하세요..." : ""}
-            autoFocus
+              value={value}
+              onValueChange={(code) => setValue(code)}
+              highlight={highlight}
+              padding={0}
+              onKeyDown={onKeyDown}
+              className="editor-input"
+              style={{
+                fontFamily: "var(--font-mono)",
+                fontSize: "var(--font-size)",
+                lineHeight: "var(--line-height)",
+                width: "100%",
+                outline: "none",
+                background: "transparent",
+                zIndex: 2,
+                position: "relative",
+              }}
+              textareaId="command-editor-textarea"
+              placeholder={isAI ? "AI에게 질문하세요..." : ""}
+              autoFocus
             />
             {/* 고스트 텍스트 레이어 */}
             {!isAI && ghostText && value && (
-            <div 
-              className="ghost-text-layer"
-              style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                fontFamily: 'var(--font-mono)',
-                fontSize: 'var(--font-size)',
-                lineHeight: 'var(--line-height)',
-                pointerEvents: 'none',
-                whiteSpace: 'pre',
-                zIndex: 1,
-                color: 'transparent'
-              }}
-            >
-              {value}<span style={{ color: 'rgba(255, 255, 255, 0.3)' }}>{ghostText}</span>
-            </div>
+              <div
+                className="ghost-text-layer"
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  fontFamily: "var(--font-mono)",
+                  fontSize: "var(--font-size)",
+                  lineHeight: "var(--line-height)",
+                  pointerEvents: "none",
+                  whiteSpace: "pre",
+                  zIndex: 1,
+                  color: "transparent",
+                }}
+              >
+                {value}
+                <span style={{ color: "rgba(255, 255, 255, 0.3)" }}>
+                  {ghostText}
+                </span>
+              </div>
             )}
-
           </div>
         </div>
       </div>

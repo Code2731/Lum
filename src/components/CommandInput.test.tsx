@@ -5,7 +5,13 @@ import CommandInput from "./CommandInput";
 // react-simple-code-editor는 내부적으로 복잡한 DOM을 가지므로,
 // 테스트 환경에서는 단순 textarea로 모킹하여 핵심 인터랙션만 검증합니다.
 vi.mock("react-simple-code-editor", () => ({
-  default: ({ value, onValueChange, onKeyDown, placeholder, textareaId }: any) => (
+  default: ({
+    value,
+    onValueChange,
+    onKeyDown,
+    placeholder,
+    textareaId,
+  }: any) => (
     <textarea
       data-testid="mock-editor"
       id={textareaId}
@@ -36,9 +42,9 @@ describe("CommandInput Component", () => {
   it("/ 입력 시 AI 모드로 전환되어야 함", () => {
     render(<CommandInput {...defaultProps} />);
     const input = screen.getByTestId("mock-editor");
-    
+
     fireEvent.change(input, { target: { value: "/도와줘" } });
-    
+
     // AI 모델 뱃지가 나타나야 함
     expect(screen.getByText(/AI · llama3/i)).toBeInTheDocument();
     // placeholder가 AI 모드용으로 변경되어야 함
@@ -48,7 +54,7 @@ describe("CommandInput Component", () => {
   it("Enter 키 입력 시 셸 명령어가 올바르게 제출되어야 함", () => {
     render(<CommandInput {...defaultProps} />);
     const input = screen.getByTestId("mock-editor");
-    
+
     fireEvent.change(input, { target: { value: "ls -la" } });
     fireEvent.keyDown(input, { key: "Enter", code: "Enter" });
 
@@ -59,7 +65,7 @@ describe("CommandInput Component", () => {
   it("AI 명령어 입력 시 슬래시(/)가 제거된 상태로 제출되어야 함", () => {
     render(<CommandInput {...defaultProps} />);
     const input = screen.getByTestId("mock-editor");
-    
+
     fireEvent.change(input, { target: { value: "/파일 찾아줘" } });
     fireEvent.keyDown(input, { key: "Enter", code: "Enter" });
 

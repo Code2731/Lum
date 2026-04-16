@@ -1,0 +1,49 @@
+name: LUM CI (Continuous Integration)
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # 1. Setup Node.js & Test Frontend
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Frontend Dependencies
+        run: npm install
+
+      - name: Run Frontend Tests (Vitest)
+        run: npm test
+
+      - name: Build Frontend
+        run: npm run build
+
+      # 2. Setup Rust & Test Backend
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Install System Dependencies (Linux)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: Rust Format Check
+        run: cd src-tauri && cargo fmt -- --check
+
+      - name: Backend Check & Clippy
+        run: cd src-tauri && cargo check && cargo clippy -- -D warnings
+
+      - name: Run Backend Tests
+        run: cd src-tauri && cargo test
