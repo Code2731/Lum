@@ -42,6 +42,7 @@ import {
 import Fuse from "fuse.js";
 import CommandInput from "./components/CommandInput";
 import VisualChart from "./components/VisualChart";
+import DynamicUIRenderer from "./components/DynamicUIRenderer";
 
 interface Action {
   type: "run" | "create";
@@ -98,6 +99,7 @@ interface TerminalBlock {
   reasoningSteps?: ReasoningStep[];
   securityReport?: SecurityReport;
   visualData?: VisualData;
+  dynamicUI?: string;
 }
 
 interface AppConfig {
@@ -708,6 +710,7 @@ const App = () => {
                                     explanation: parsed?.explanation || "",
                                     actions: parsed?.actions || [],
                                     visualData: parsed?.visualData || undefined,
+                                    dynamicUI: parsed?.dynamicUI || undefined,
                                     output: parsed ? `$ ${parsed.command}` : coderRes,
                                     status: "completed" as const,
                                   }
@@ -1559,6 +1562,10 @@ const App = () => {
 
                                 {block.visualData && (
                                   <VisualChart visualData={block.visualData} />
+                                )}
+
+                                {block.dynamicUI && (
+                                  <DynamicUIRenderer code={block.dynamicUI} />
                                 )}
 
                                 {block.explanation && (

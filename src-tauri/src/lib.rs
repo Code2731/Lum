@@ -389,11 +389,13 @@ async fn generate_ai_command(
                ],\n\
                \"healingPlan\": [\n\
                  {{ \"type\": \"run | create\", \"cmd\": \"command\", \"path\": \"path\", \"content\": \"content\", \"label\": \"Reason for this step\" }}\n\
-               ]\n\
+               ],\n\
+               \"dynamicUI\": \"raw React JSX code with Tailwind classes\"\n\
              }}\n\
-             Note: Include 'visualData' ONLY if visualization is needed.\n\
+             Note: Include 'visualData' for standard charts.\n\
              Note: Include 'toolCalls' if you need external information.\n\
-             Note: Include 'healingPlan' ONLY if you are in SELF_HEALING mode to fix an error.\n\
+             Note: Include 'healingPlan' ONLY if you are in SELF_HEALING mode.\n\
+             Note: Include 'dynamicUI' ONLY if the user asks for a custom dashboard, interactive tool, or complex UI. Use 'lucide-react' for icons.\n\
              Important: Use markdown in 'explanation'. Ensure the JSON is valid.",
             context, prompt
         )
