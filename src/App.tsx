@@ -49,6 +49,11 @@ interface Action {
   status?: "pending" | "running" | "completed" | "error";
 }
 
+interface ReasoningStep {
+  agent: "Planner" | "Coder" | "Reviewer";
+  content: string;
+}
+
 interface TerminalBlock {
   id: string;
   command: string;
@@ -62,6 +67,7 @@ interface TerminalBlock {
   cwd: string;
   gitBranch: string | null;
   embedding?: number[];
+  reasoningSteps?: ReasoningStep[];
 }
 
 interface AppConfig {
@@ -69,6 +75,7 @@ interface AppConfig {
   font_size: number;
   opacity: number;
   accent_color: string;
+  gemini_api_key?: string;
 }
 
 interface Pane {
@@ -112,8 +119,8 @@ interface PaletteItem {
 const POPULAR_MODELS = [
   { name: "llama3", desc: "Meta의 최신 모델 (8B)", size: "4.7GB" },
   { name: "mistral", desc: "가장 인기 있는 범용 모델", size: "4.1GB" },
-  { name: "gemma:7b", desc: "Google의 경량 모델", size: "5.0GB" },
-  { name: "phi3", desc: "Microsoft의 초경량 모델", size: "2.3GB" },
+  { name: "gemini-1.5-flash", desc: "Google Flash (Free Tier)", size: "Cloud" },
+  { name: "gemini-1.5-pro", desc: "Google Pro (Paid Tier)", size: "Cloud" },
   { name: "codellama", desc: "코딩 특화 모델", size: "3.8GB" },
 ];
 
@@ -462,6 +469,7 @@ const App = () => {
         status: "executing",
         cwd: context.cwd,
         gitBranch: context.git_branch,
+        reasoningSteps: [],
       };
       setTabs((prev) =>
         prev.map((t) =>
@@ -475,8 +483,10 @@ const App = () => {
             : t,
         ),
       );
+
       try {
         if (type === "ai") {
+          // 1. 코드베이스 검색 (RAG)
           const searchResults = await invoke<CodeChunk[]>("search_codebase", {
             query: cmd,
             model: selectedModel,
@@ -484,14 +494,79 @@ const App = () => {
           const codebaseContext = searchResults
             .map((r) => `File: ${r.path}\nContent:\n${r.content}`)
             .join("\n---\n");
-          const fullContext = `Project Summary:\n${context.project_summary}\n\nRelevant Code:\n${codebaseContext}\n\nCWD: ${context.cwd}${showWebview ? `\nWatching: ${webviewUrl}` : ""}`;
-          const result = await invoke<string>("generate_ai_command", {
-            prompt: cmd,
+          
+          const baseContext = `Project Summary:\n${context.project_summary}\n\nRelevant Code:\n${codebaseContext}\n\nCWD: ${context.cwd}`;
+
+          // --- AGENT SWARM START ---
+          
+          // [Step 1: Planner]
+          const planPrompt = `${baseContext}\n\nUser Request: ${cmd}\n\nAs a 'Planner' agent, create a step-by-step plan to fulfill this request. Respond with a concise plan.`;
+          const planRes = await invoke<string>("generate_ai_command", {
+            prompt: planPrompt,
             model: selectedModel,
-            context: fullContext,
+            context: "PLANNING_MODE",
           });
-          const jsonMatch = result.match(/\{[\s\S]*\}/);
+          
+          setTabs(prev => prev.map(t => t.id === activeTab.id ? {
+            ...t, panes: t.panes.map(p => p.id === paneId ? {
+              ...p, blocks: p.blocks.map(b => b.id === id ? {
+                ...b, reasoningSteps: [...(b.reasoningSteps || []), { agent: "Planner", content: planRes }]
+              } : b)
+            } : p)
+          } : t));
+
+          // [Step 2: Coder]
+          const coderPrompt = `${baseContext}\n\nPlan: ${planRes}\n\nAs a 'Coder' agent, implement the plan. Respond ONLY with a JSON object containing 'command', 'explanation', and 'actions' as specified before.`;
+          const coderRes = await invoke<string>("generate_ai_command", {
+            prompt: coderPrompt,
+            model: selectedModel,
+            context: "CODING_MODE",
+          });
+
+          setTabs(prev => prev.map(t => t.id === activeTab.id ? {
+            ...t, panes: t.panes.map(p => p.id === paneId ? {
+              ...p, blocks: p.blocks.map(b => b.id === id ? {
+                ...b, reasoningSteps: [...(b.reasoningSteps || []), { agent: "Coder", content: "Code implementation generated." }]
+              } : b)
+            } : p)
+          } : t));
+
+          // [Step 3: Reviewer]
+          const reviewerPrompt = `Review this implementation:\n${coderRes}\n\nContext: ${baseContext}\n\nAs a 'Reviewer' agent, check for bugs or improvements. Respond with a short review message.`;
+          const reviewerRes = await invoke<string>("generate_ai_command", {
+            prompt: reviewerPrompt,
+            model: selectedModel,
+            context: "REVIEW_MODE",
+          });
+
+          setTabs(prev => prev.map(t => t.id === activeTab.id ? {
+            ...t, panes: t.panes.map(p => p.id === paneId ? {
+              ...p, blocks: p.blocks.map(b => b.id === id ? {
+                ...b, reasoningSteps: [...(b.reasoningSteps || []), { agent: "Reviewer", content: reviewerRes }]
+              } : b)
+            } : p)
+          } : t));
+
+          // [Step 4: Tester]
+          const testerPrompt = `Based on the plan and implementation:\nPlan: ${planRes}\nCode: ${coderRes}\n\nAs a 'Tester' agent, identify potential edge cases and suggest a testing strategy or a command to verify the fix. Respond with a concise test plan.`;
+          const testerRes = await invoke<string>("generate_ai_command", {
+            prompt: testerPrompt,
+            model: selectedModel,
+            context: "TESTING_MODE",
+          });
+
+          setTabs(prev => prev.map(t => t.id === activeTab.id ? {
+            ...t, panes: t.panes.map(p => p.id === paneId ? {
+              ...p, blocks: p.blocks.map(b => b.id === id ? {
+                ...b, reasoningSteps: [...(b.reasoningSteps || []), { agent: "Tester", content: testerRes }]
+              } : b)
+            } : p)
+          } : t));
+
+          // --- FINAL RENDER ---
+          const jsonMatch = coderRes.match(/\{[\s\S]*\}/);
           const parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : null;
+          
           setTabs((prev) =>
             prev.map((t) =>
               t.id === activeTab.id
@@ -508,7 +583,7 @@ const App = () => {
                                     command: parsed?.command || b.command,
                                     explanation: parsed?.explanation || "",
                                     actions: parsed?.actions || [],
-                                    output: parsed ? `$ ${parsed.command}` : result,
+                                    output: parsed ? `$ ${parsed.command}` : coderRes,
                                     status: "completed" as const,
                                   }
                                 : b,
@@ -1247,6 +1322,28 @@ const App = () => {
                                     <span className="status-executing">●</span>
                                   )}
                                 </div>
+
+                                {/* Reasoning Steps (Agent Swarms) */}
+                                {block.reasoningSteps && block.reasoningSteps.length > 0 && (
+                                  <div className="reasoning-container">
+                                    {block.reasoningSteps.map((step, idx) => (
+                                      <div key={idx} className="reasoning-step">
+                                        <div className="reasoning-header">
+                                          <BrainCircuit size={12} className={`agent-icon ${step.agent.toLowerCase()}`} />
+                                          <span className="agent-name">{step.agent}</span>
+                                        </div>
+                                        <div className="reasoning-content">{step.content}</div>
+                                      </div>
+                                    ))}
+                                    {block.status === "executing" && (
+                                      <div className="reasoning-loader">
+                                        <Loader2 size={12} className="animate-spin" />
+                                        <span>AI 군집이 다음 단계를 논의 중입니다...</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+
                                 {block.explanation && (
                                   <div className="block-explanation">
                                     <ReactMarkdown
@@ -1582,7 +1679,29 @@ const App = () => {
                     )}
                   </div>
                   <div className="setting-item">
+                    <label>Gemini API Key</label>
+                    <div className="api-key-input-container">
+                      <input
+                        type="password"
+                        placeholder="Enter your Gemini API Key"
+                        value={config.gemini_api_key || ""}
+                        onChange={(e) =>
+                          updateConfig({ gemini_api_key: e.target.value })
+                        }
+                      />
+                      <a
+                        href="https://aistudio.google.com/app/apikey"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="api-key-link"
+                      >
+                        Get Key
+                      </a>
+                    </div>
+                  </div>
+                  <div className="setting-item">
                     <label>Font Size ({config.font_size}px)</label>
+
                     <input
                       type="range"
                       min="10"

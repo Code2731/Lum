@@ -53,6 +53,7 @@ cd src-tauri && cargo test   # Rust 단위 테스트 실행
 - AI 워크플로우: AI가 제안한 액션을 UI에서 승인 후 단계별 실행.
 
 ## 🚀 2026 Future Roadmap
-- Phase 10: Agent Swarms (멀티 에이전트 협력)
+- [x] Phase 10: Agent Swarms (Planner, Coder, Reviewer, Tester 협력 완료)
+- [x] Gemini Integration: Gemini 1.5 Flash/Pro 지원 및 GEMINI_SYSTEM_MD 연동 완료
 - Phase 11: WebGPU Local AI (wgpu 기반 온디바이스 추론)
 - Phase 12: Secure Sandbox (WASM 기반 명령어 검증)

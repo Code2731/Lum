@@ -54,7 +54,8 @@ cd src-tauri && cargo test  # 백엔드 단위 테스트
 - `Cmd+B`: 시각적 웹 브라우저(Visual Browser) 팬 켜기/끄기
 
 ## 🚀 2026 Future Roadmap
-- **Phase 10: 자율 에이전트 군집 (Agent Swarms)**: Coder, Reviewer, Tester 에이전트 간의 협력 워크플로우
+- **Phase 10: 자율 에이전트 군집 (Agent Swarms)**: ✅ 완료 (Planner, Coder, Reviewer, Tester)
+- **Gemini 통합**: ✅ 완료 (Gemini 1.5 Flash/Pro 지원 및 커스텀 시스템 프롬프트 지원)
 - **Phase 11: WebGPU 온디바이스 AI**: 로컬 GPU를 직접 활용한 초고속 오프라인 AI 추론
 - **Phase 12: 자율 실행 샌드박스 (Secure Sandbox)**: WASM/Docker 기반의 안전한 AI 명령어 검증 환경
 

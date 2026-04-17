@@ -181,10 +181,15 @@ const CommandInput = ({
               <span className="editor-branch">{context.git_branch}</span>
             </>
           )}
-          {isAI && ollamaOnline && (
-            <span className="editor-ai-badge">
+          {isAI && (ollamaOnline || selectedModel.startsWith("gemini-")) && (
+            <span
+              className={`editor-ai-badge ${selectedModel.startsWith("gemini-") ? "gemini" : ""}`}
+            >
               <Zap size={10} />
               AI · {selectedModel}
+              {selectedModel === "gemini-1.5-flash" && (
+                <span className="free-tag">Free</span>
+              )}
             </span>
           )}
         </div>

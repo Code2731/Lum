@@ -19,6 +19,12 @@ struct Action {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+struct ReasoningStep {
+    agent: String,   // "Planner" | "Coder" | "Reviewer"
+    content: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
 struct TerminalBlock {
     id: String,
     command: String,
@@ -34,6 +40,8 @@ struct TerminalBlock {
     #[serde(rename = "gitBranch")]
     git_branch: Option<String>,
     embedding: Option<Vec<f32>>,
+    #[serde(rename = "reasoningSteps")]
+    reasoning_steps: Option<Vec<ReasoningStep>>, // 사고 과정 필드 추가
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -58,6 +66,7 @@ struct AppConfig {
     font_size: u32,
     opacity: f32,
     accent_color: String,
+    gemini_api_key: Option<String>, // Gemini API 키 추가
 }
 
 impl Default for AppConfig {
@@ -67,6 +76,7 @@ impl Default for AppConfig {
             font_size: 14,
             opacity: 0.95,
             accent_color: "#a78bfa".to_string(),
+            gemini_api_key: None,
         }
     }
 }
@@ -324,9 +334,17 @@ async fn generate_ai_command(
         .timeout(Duration::from_secs(120))
         .build()
         .map_err(|e| e.to_string())?;
-    let request_body = OllamaRequest {
-        model,
-        prompt: format!(
+
+    // GEMINI_SYSTEM_MD 환경 변수 확인 (Gemini CLI 업데이트 대응)
+    let custom_system_prompt = env::var("GEMINI_SYSTEM_MD")
+        .ok()
+        .and_then(|p| std::fs::read_to_string(p).ok())
+        .unwrap_or_else(|| "".to_string());
+
+    let full_prompt = if !custom_system_prompt.is_empty() {
+        format!("System: {}\nContext: {}\nRequest: {}", custom_system_prompt, context, prompt)
+    } else {
+        format!(
             "You are a terminal expert. Convert the user's natural language request into executable steps.\n\
              Context: {}\n\
              Request: {}\n\
@@ -341,18 +359,55 @@ async fn generate_ai_command(
              }}\n\
              Important: Use markdown in 'explanation'. Ensure the JSON is valid.",
             context, prompt
-        ),
-        stream: false,
+        )
     };
 
-    let response = client
-        .post("http://localhost:11434/api/generate")
-        .json(&request_body)
-        .send()
-        .await
-        .map_err(|e| e.to_string())?;
-    let ollama_res: OllamaResponse = response.json().await.map_err(|e| e.to_string())?;
-    Ok(ollama_res.response)
+    if model.starts_with("gemini-") {
+        // Gemini API 호출
+        let config = load_config().unwrap_or_default();
+        let api_key = config.gemini_api_key.ok_or("Gemini API Key is missing. Please set it in Settings.")?;
+        
+        let url = format!(
+            "https://generativelanguage.googleapis.com/v1beta/models/{}:generateContent?key={}",
+            model, api_key
+        );
+
+        let request_body = serde_json::json!({
+            "contents": [{
+                "parts": [{ "text": full_prompt }]
+            }]
+        });
+
+        let response = client
+            .post(url)
+            .json(&request_body)
+            .send()
+            .await
+            .map_err(|e| e.to_string())?;
+
+        let res_json: serde_json::Value = response.json().await.map_err(|e| e.to_string())?;
+        let result_text = res_json["candidates"][0]["content"]["parts"][0]["text"]
+            .as_str()
+            .ok_or("Failed to parse Gemini response")?;
+        
+        Ok(result_text.to_string())
+    } else {
+        // Ollama API 호출 (기존 로직)
+        let request_body = OllamaRequest {
+            model,
+            prompt: full_prompt,
+            stream: false,
+        };
+
+        let response = client
+            .post("http://localhost:11434/api/generate")
+            .json(&request_body)
+            .send()
+            .await
+            .map_err(|e| e.to_string())?;
+        let ollama_res: OllamaResponse = response.json().await.map_err(|e| e.to_string())?;
+        Ok(ollama_res.response)
+    }
 }
 
 #[tauri::command]
