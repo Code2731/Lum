@@ -606,7 +606,7 @@ async fn pull_model(name: String, handle: tauri::AppHandle) -> Result<(), String
         name: name.clone(),
         stream: true,
     };
-    let mut res = client
+    let res = client
         .post("http://localhost:11434/api/pull")
         .json(&request_body)
         .send()
@@ -708,7 +708,7 @@ async fn index_project(model: String, handle: tauri::AppHandle) -> Result<usize,
 
     // 3. 벡터화 (Ollama 임베딩 API 호출) - 속도를 위해 일부만 샘플링하거나 병렬 처리 가능하지만 여기서는 순차 처리
     let client = reqwest::Client::new();
-    let total = chunks.len();
+    let _total = chunks.len();
     let mut indexed_count = 0;
 
     for chunk in chunks.iter_mut().take(100) {
