@@ -100,6 +100,8 @@ interface TerminalBlock {
   securityReport?: SecurityReport;
   visualData?: VisualData;
   dynamicUI?: string;
+  computerUse?: any[];
+  screenshot?: string;
 }
 
 interface AppConfig {
@@ -711,6 +713,7 @@ const App = () => {
                                     actions: parsed?.actions || [],
                                     visualData: parsed?.visualData || undefined,
                                     dynamicUI: parsed?.dynamicUI || undefined,
+                                    computerUse: parsed?.computerUse || undefined,
                                     output: parsed ? `$ ${parsed.command}` : coderRes,
                                     status: "completed" as const,
                                   }
@@ -723,6 +726,29 @@ const App = () => {
                 : t,
             ),
           );
+
+          // [Computer Use Loop]
+          if (parsed?.computerUse && parsed.computerUse.length > 0) {
+            for (const action of parsed.computerUse) {
+              setTabs(prev => prev.map(t => t.id === activeTab.id ? {
+                ...t, panes: t.panes.map(p => p.id === paneId ? {
+                  ...p, blocks: p.blocks.map(b => b.id === id ? {
+                    ...b, reasoningSteps: [...(b.reasoningSteps || []), { agent: "Coder", content: `🖥️ OS 제어 중: ${action.type}...` }]
+                  } : b)
+                } : p)
+              } : t));
+
+              try {
+                if (action.type === "mouse_move") {
+                   await invoke("simulate_mouse", { action: { x: action.x, y: action.y, click: action.click } });
+                } else if (action.type === "type_text") {
+                   await invoke("simulate_keyboard", { action: { text: action.text, enter: action.enter } });
+                }
+              } catch (e) {
+                console.error("Computer Use Failed:", e);
+              }
+            }
+          }
 
           // [Step 5: Memory Indexing]
           try {
@@ -1562,6 +1588,16 @@ const App = () => {
 
                                 {block.visualData && (
                                   <VisualChart visualData={block.visualData} />
+                                )}
+
+                                {block.screenshot && (
+                                  <div className="block-screenshot">
+                                    <img src={`data:image/png;base64,${block.screenshot}`} alt="Screen Analysis" />
+                                    <div className="screenshot-label">
+                                      <Monitor size={10} />
+                                      AI Screen Context
+                                    </div>
+                                  </div>
                                 )}
 
                                 {block.dynamicUI && (

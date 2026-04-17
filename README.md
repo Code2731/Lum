@@ -65,4 +65,5 @@ cd src-tauri && cargo test  # 백엔드 단위 테스트
 - **Phase 17: 자율 자가 치유 (Autonomous Self-Healing)**: ✅ 완료 (에러 감지 시 AI가 스스로 분석 및 수정 재검증 수행)
 - **Phase 18: 분산형 군집 에이전트 (Distributed Swarms)**: ✅ 완료 (libp2p 기반 P2P 네트워크 및 원격 에이전트 협업 인프라)
 - **Phase 19: 생성형 UI 셸 (AI Native UI Designer)**: ✅ 완료 (실시간 React/Tailwind 코드 생성 및 런타임 렌더링)
+- **Phase 20: 신경망 데스크탑 통합 (Neural Desktop)**: ✅ 완료 (OS 화면 인지 및 마우스/키보드 자율 제어 시스템 구축)
 

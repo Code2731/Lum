@@ -340,6 +340,7 @@ mod mcp;
 mod memory;
 mod audio;
 mod swarm;
+mod desktop;
 
 #[tauri::command]
 async fn generate_ai_command(
@@ -390,12 +391,17 @@ async fn generate_ai_command(
                \"healingPlan\": [\n\
                  {{ \"type\": \"run | create\", \"cmd\": \"command\", \"path\": \"path\", \"content\": \"content\", \"label\": \"Reason for this step\" }}\n\
                ],\n\
-               \"dynamicUI\": \"raw React JSX code with Tailwind classes\"\n\
+               \"dynamicUI\": \"raw React JSX code with Tailwind classes\",\n\
+               \"computerUse\": [\n\
+                 {{ \"type\": \"mouse_move\", \"x\": 500, \"y\": 300, \"click\": true }},\n\
+                 {{ \"type\": \"type_text\", \"text\": \"Hello World\", \"enter\": true }}\n\
+               ]\n\
              }}\n\
              Note: Include 'visualData' for standard charts.\n\
              Note: Include 'toolCalls' if you need external information.\n\
              Note: Include 'healingPlan' ONLY if you are in SELF_HEALING mode.\n\
-             Note: Include 'dynamicUI' ONLY if the user asks for a custom dashboard, interactive tool, or complex UI. Use 'lucide-react' for icons.\n\
+             Note: Include 'dynamicUI' ONLY if custom UI is requested.\n\
+             Note: Include 'computerUse' ONLY if you need to interact with the OS/GUI apps outside the terminal.\n\
              Important: Use markdown in 'explanation'. Ensure the JSON is valid.",
             context, prompt
         )
@@ -867,7 +873,10 @@ pub fn run() {
             audio::stop_voice_recording,
             swarm::start_p2p_node,
             swarm::list_peers,
-            swarm::send_swarm_task
+            swarm::send_swarm_task,
+            desktop::capture_screen,
+            desktop::simulate_mouse,
+            desktop::simulate_keyboard
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

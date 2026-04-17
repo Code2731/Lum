@@ -1555,6 +1555,43 @@ body {
   text-align: center;
 }
 
+.block-screenshot {
+  margin: 10px 12px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  position: relative;
+}
+
+.block-screenshot img {
+  width: 100%;
+  display: block;
+  opacity: 0.8;
+  transition: opacity 0.2s;
+}
+
+.block-screenshot:hover img {
+  opacity: 1;
+}
+
+.screenshot-label {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  padding: 4px 8px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #fff;
+  text-transform: uppercase;
+}
+
 .self-heal-btn {
   display: flex;
   align-items: center;
