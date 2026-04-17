@@ -63,4 +63,5 @@ cd src-tauri && cargo test  # 백엔드 단위 테스트
 - **Phase 15: 장기 기억 엔진 (Semantic Memory)**: ✅ 완료 (과거 대화 및 작업 내역 벡터 검색 지원)
 - **Phase 16: 음성 인터페이스 (Voice-to-Terminal)**: ✅ 완료 (Whisper 기반 음성 명령 인식 인프라 구축)
 - **Phase 17: 자율 자가 치유 (Autonomous Self-Healing)**: ✅ 완료 (에러 감지 시 AI가 스스로 분석 및 수정 재검증 수행)
+- **Phase 18: 분산형 군집 에이전트 (Distributed Swarms)**: ✅ 완료 (libp2p 기반 P2P 네트워크 및 원격 에이전트 협업 인프라)
 

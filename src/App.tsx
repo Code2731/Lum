@@ -107,6 +107,7 @@ interface AppConfig {
   accent_color: string;
   gemini_api_key?: string;
   mcp_servers: McpServerConfig[];
+  p2p_enabled: boolean;
 }
 
 interface Pane {
@@ -161,7 +162,7 @@ const App = () => {
   const [activeTabId, setActiveTabId] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState("");
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [settingsTab, setSettingsTab] = useState<"general" | "models" | "mcp">(
+  const [settingsTab, setSettingsTab] = useState<"general" | "models" | "mcp" | "swarm">(
     "general",
   );
   const [isPaletteOpen, setIsPaletteOpen] = useState(false);
@@ -199,6 +200,7 @@ const App = () => {
     opacity: 0.95,
     accent_color: "#a78bfa",
     mcp_servers: [],
+    p2p_enabled: false,
   });
 
   const virtuosoRefs = useRef<Record<string, VirtuosoHandle | null>>({});
@@ -1862,6 +1864,12 @@ const App = () => {
                   >
                   MCP Servers
                   </button>
+                  <button
+                  className={`settings-tab ${settingsTab === "swarm" ? "active" : ""}`}
+                  onClick={() => setSettingsTab("swarm")}
+                  >
+                  Swarm Network
+                  </button>
                   </div>
 
               <button onClick={() => setIsSettingsOpen(false)}>
@@ -2040,7 +2048,7 @@ const App = () => {
                     </div>
                   </div>
                 </div>
-              ) : (
+              ) : settingsTab === "mcp" ? (
                 <div className="settings-view mcp-manager">
                   <div className="model-section">
                     <h4>Connected MCP Servers</h4>
@@ -2091,6 +2099,45 @@ const App = () => {
                       </button>
                     </div>
                   </div>
+                </div>
+              ) : (
+                <div className="settings-view swarm-manager">
+                  <div className="setting-item">
+                    <label>P2P Distributed Swarm</label>
+                    <button 
+                      className={`index-btn ${config.p2p_enabled ? "online" : ""}`}
+                      onClick={async () => {
+                        const newState = !config.p2p_enabled;
+                        updateConfig({ p2p_enabled: newState });
+                        if (newState) {
+                          const res = await invoke<string>("start_p2p_node");
+                          console.log(res);
+                        }
+                      }}
+                    >
+                      <Layers size={14} />
+                      {config.p2p_enabled ? "P2P Network Active" : "Activate P2P Swarm"}
+                    </button>
+                  </div>
+                  {config.p2p_enabled && (
+                    <div className="model-section">
+                      <h4>Active Peers on Network</h4>
+                      <div className="model-list">
+                        {["LUM-Desktop-Pro (Local)", "LUM-MacBook-Air (Remote)"].map((peer, idx) => (
+                          <div key={idx} className="model-item">
+                            <Monitor size={14} className="model-icon" />
+                            <div className="model-info">
+                              <span className="model-name">{peer}</span>
+                              <span className="model-badge">Connected</span>
+                            </div>
+                            <button className="model-download-btn" title="Delegate Task">
+                              <Zap size={14} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

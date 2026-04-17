@@ -23,6 +23,9 @@ portable-pty = "0.9"
 tokio = { version = "1", features = ["full"] }
 futures-util = "0.3"
 ignore = "0.4.25"
+libp2p = { version = "0.53", features = ["tcp", "dns", "websocket", "noise", "yamux", "mdns", "gossipsub", "request-response", "tokio"] }
+libp2p-request-response = { version = "0.26", features = ["json"] }
+futures = "0.3"
 burn = { version = "0.16.0", features = ["wgpu"] }
 burn-wgpu = "0.16.0"
 wgpu = "22.1"

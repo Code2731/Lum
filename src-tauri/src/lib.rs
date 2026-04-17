@@ -339,6 +339,7 @@ mod sandbox;
 mod mcp;
 mod memory;
 mod audio;
+mod swarm;
 
 #[tauri::command]
 async fn generate_ai_command(
@@ -861,7 +862,10 @@ pub fn run() {
             memory::add_to_memory,
             memory::search_memory,
             audio::start_voice_recording,
-            audio::stop_voice_recording
+            audio::stop_voice_recording,
+            swarm::start_p2p_node,
+            swarm::list_peers,
+            swarm::send_swarm_task
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
