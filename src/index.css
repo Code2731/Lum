@@ -1533,3 +1533,24 @@ body {
   border-color: var(--red);
   color: #fff;
 }
+
+/* ============================================================
+   시각적 셸 (Visual Shell)
+   ============================================================ */
+.visual-chart-container {
+  margin: 10px 12px;
+  padding: 16px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.visual-chart-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-bright);
+  text-align: center;
+}

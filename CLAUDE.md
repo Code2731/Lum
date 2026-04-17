@@ -57,3 +57,4 @@ cd src-tauri && cargo test   # Rust 단위 테스트 실행
 - [x] Gemini Integration: Gemini 1.5 Flash/Pro 지원 및 GEMINI_SYSTEM_MD 연동 완료
 - [x] Phase 11: WebGPU Local AI (Burn-LM/wgpu 인프라, 토크나이저 및 추론 파이프라인 완료)
 - [x] Phase 12: Secure Sandbox (정적 명령어 분석 및 차단 시스템 완료)
+- [x] Phase 14: Multi-Modal Visual Shell (데이터 시각화 및 차트 렌더링 완료)

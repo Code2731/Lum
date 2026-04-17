@@ -58,4 +58,5 @@ cd src-tauri && cargo test  # 백엔드 단위 테스트
 - **Gemini 통합**: ✅ 완료 (Gemini 1.5 Flash/Pro 지원 및 커스텀 시스템 프롬프트 지원)
 - **Phase 11: WebGPU 온디바이스 AI**: ✅ 완료 (Burn-LM 기반 GPU 가속, 토크나이저 및 엔드투엔드 추론 파이프라인 구축)
 - **Phase 12: 자율 실행 샌드박스 (Secure Sandbox)**: ✅ 완료 (위험 명령어 정적 분석 및 사용자 승인 시스템 구축)
+- **Phase 14: 시각적 셸 (Multi-Modal Visual Shell)**: ✅ 완료 (Recharts 기반 데이터 시각화 및 동적 차트 생성)
 

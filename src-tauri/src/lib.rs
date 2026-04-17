@@ -363,8 +363,15 @@ async fn generate_ai_command(
                \"actions\": [\n\
                  {{ \"type\": \"run\", \"cmd\": \"command to run\", \"label\": \"Step label\" }},\n\
                  {{ \"type\": \"create\", \"path\": \"file path\", \"content\": \"file content\", \"label\": \"Create file label\" }}\n\
-               ]\n\
+               ],\n\
+               \"visualData\": {{\n\
+                 \"type\": \"chart\",\n\
+                 \"chartType\": \"line | bar | area | pie\",\n\
+                 \"data\": [{{ \"x\": \"label\", \"y1\": 10, \"y2\": 20 }}],\n\
+                 \"config\": {{ \"xKey\": \"x\", \"yKeys\": [\"y1\", \"y2\"], \"title\": \"Chart Title\" }}\n\
+               }}\n\
              }}\n\
+             Note: Include 'visualData' ONLY if the user request involves data visualization or analysis.\n\
              Important: Use markdown in 'explanation'. Ensure the JSON is valid.",
             context, prompt
         )

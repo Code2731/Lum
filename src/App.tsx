@@ -41,6 +41,7 @@ import {
 } from "react-resizable-panels";
 import Fuse from "fuse.js";
 import CommandInput from "./components/CommandInput";
+import VisualChart from "./components/VisualChart";
 
 interface Action {
   type: "run" | "create";
@@ -52,7 +53,7 @@ interface Action {
 }
 
 interface ReasoningStep {
-  agent: "Planner" | "Coder" | "Reviewer";
+  agent: "Planner" | "Coder" | "Reviewer" | "Tester";
   content: string;
 }
 
@@ -60,6 +61,18 @@ interface SecurityReport {
   status: "Safe" | "Warning" | "Dangerous";
   reason?: string;
   command: string;
+}
+
+interface VisualData {
+  type: "chart";
+  chartType: "line" | "bar" | "area" | "pie";
+  data: any[];
+  config: {
+    xKey: string;
+    yKeys: string[];
+    colors?: string[];
+    title?: string;
+  };
 }
 
 interface TerminalBlock {
@@ -77,6 +90,7 @@ interface TerminalBlock {
   embedding?: number[];
   reasoningSteps?: ReasoningStep[];
   securityReport?: SecurityReport;
+  visualData?: VisualData;
 }
 
 interface AppConfig {
@@ -624,6 +638,7 @@ const App = () => {
                                     command: parsed?.command || b.command,
                                     explanation: parsed?.explanation || "",
                                     actions: parsed?.actions || [],
+                                    visualData: parsed?.visualData || undefined,
                                     output: parsed ? `$ ${parsed.command}` : coderRes,
                                     status: "completed" as const,
                                   }
@@ -1468,6 +1483,10 @@ const App = () => {
                                       </div>
                                     )}
                                   </div>
+                                )}
+
+                                {block.visualData && (
+                                  <VisualChart visualData={block.visualData} />
                                 )}
 
                                 {block.explanation && (
