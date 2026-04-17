@@ -181,14 +181,17 @@ const CommandInput = ({
               <span className="editor-branch">{context.git_branch}</span>
             </>
           )}
-          {isAI && (ollamaOnline || selectedModel.startsWith("gemini-")) && (
+          {isAI && (ollamaOnline || selectedModel.startsWith("gemini-") || selectedModel.startsWith("webgpu-")) && (
             <span
-              className={`editor-ai-badge ${selectedModel.startsWith("gemini-") ? "gemini" : ""}`}
+              className={`editor-ai-badge ${selectedModel.startsWith("gemini-") ? "gemini" : selectedModel.startsWith("webgpu-") ? "webgpu" : ""}`}
             >
               <Zap size={10} />
               AI · {selectedModel}
               {selectedModel === "gemini-1.5-flash" && (
                 <span className="free-tag">Free</span>
+              )}
+              {selectedModel.startsWith("webgpu-") && (
+                <span className="local-tag">Local GPU</span>
               )}
             </span>
           )}

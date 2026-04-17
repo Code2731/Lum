@@ -119,6 +119,7 @@ interface PaletteItem {
 const POPULAR_MODELS = [
   { name: "llama3", desc: "Meta의 최신 모델 (8B)", size: "4.7GB" },
   { name: "mistral", desc: "가장 인기 있는 범용 모델", size: "4.1GB" },
+  { name: "webgpu-phi3-mini", desc: "Local WebGPU (Microsoft)", size: "Local" },
   { name: "gemini-1.5-flash", desc: "Google Flash (Free Tier)", size: "Cloud" },
   { name: "gemini-1.5-pro", desc: "Google Pro (Paid Tier)", size: "Cloud" },
   { name: "codellama", desc: "코딩 특화 모델", size: "3.8GB" },
@@ -137,6 +138,7 @@ const App = () => {
   const [paletteResults, setPaletteResults] = useState<PaletteItem[]>([]);
   const [paletteIdx, setPaletteIdx] = useState(0);
   const [ollamaOnline, setOllamaOnline] = useState(false);
+  const [wgpuSupported, setWgpuSupported] = useState<boolean | null>(null);
   const [models, setModels] = useState<string[]>([]);
   const [selectedModel, setSelectedModel] = useState("");
   const [pullProgress, setPullProgress] = useState<PullProgress | null>(null);
@@ -343,6 +345,8 @@ const App = () => {
           prev && list.includes(prev) ? prev : list[0] || "",
         );
       }
+      const wgpu = await invoke<boolean>("check_wgpu_support").catch(() => false);
+      setWgpuSupported(wgpu);
     } catch {}
   }, []);
 
@@ -1697,6 +1701,16 @@ const App = () => {
                       >
                         Get Key
                       </a>
+                    </div>
+                  </div>
+                  <div className="setting-item">
+                    <label>WebGPU Acceleration</label>
+                    <div className={`status-badge ${wgpuSupported ? "online" : "offline"}`}>
+                      {wgpuSupported === null
+                        ? "Checking..."
+                        : wgpuSupported
+                          ? "Supported"
+                          : "Not Supported"}
                     </div>
                   </div>
                   <div className="setting-item">

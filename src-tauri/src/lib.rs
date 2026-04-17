@@ -324,6 +324,8 @@ async fn list_models() -> Result<Vec<String>, String> {
     Ok(json.models.into_iter().map(|m| m.name).collect())
 }
 
+mod burn_inference;
+
 #[tauri::command]
 async fn generate_ai_command(
     prompt: String,
@@ -334,6 +336,11 @@ async fn generate_ai_command(
         .timeout(Duration::from_secs(120))
         .build()
         .map_err(|e| e.to_string())?;
+
+    // WebGPU 로컬 모델 처리
+    if model.starts_with("webgpu-") {
+        return burn_inference::generate_local_webgpu(prompt).await;
+    }
 
     // GEMINI_SYSTEM_MD 환경 변수 확인 (Gemini CLI 업데이트 대응)
     let custom_system_prompt = env::var("GEMINI_SYSTEM_MD")
@@ -776,6 +783,20 @@ async fn search_codebase(query: String, model: String) -> Result<Vec<CodeChunk>,
     Ok(scored.into_iter().take(5).map(|(_, c)| c).collect())
 }
 
+#[tauri::command]
+async fn check_wgpu_support() -> Result<bool, String> {
+    let instance = wgpu::Instance::default();
+    let adapter = instance
+        .request_adapter(&wgpu::RequestAdapterOptions {
+            power_preference: wgpu::PowerPreference::HighPerformance,
+            force_fallback_adapter: false,
+            compatible_surface: None,
+        })
+        .await;
+
+    Ok(adapter.is_some())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let terminal_state = TerminalState {
@@ -803,7 +824,8 @@ pub fn run() {
             delete_model,
             generate_embedding,
             index_project,
-            search_codebase
+            search_codebase,
+            check_wgpu_support
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
