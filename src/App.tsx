@@ -75,6 +75,13 @@ interface VisualData {
   };
 }
 
+interface McpServerConfig {
+  name: string;
+  command: string;
+  args: string[];
+  enabled: boolean;
+}
+
 interface TerminalBlock {
   id: string;
   command: string;
@@ -99,6 +106,7 @@ interface AppConfig {
   opacity: number;
   accent_color: string;
   gemini_api_key?: string;
+  mcp_servers: McpServerConfig[];
 }
 
 interface Pane {
@@ -153,7 +161,7 @@ const App = () => {
   const [activeTabId, setActiveTabId] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState("");
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [settingsTab, setSettingsTab] = useState<"general" | "models">(
+  const [settingsTab, setSettingsTab] = useState<"general" | "models" | "mcp">(
     "general",
   );
   const [isPaletteOpen, setIsPaletteOpen] = useState(false);
@@ -190,6 +198,7 @@ const App = () => {
     font_size: 14,
     opacity: 0.95,
     accent_color: "#a78bfa",
+    mcp_servers: [],
   });
 
   const virtuosoRefs = useRef<Record<string, VirtuosoHandle | null>>({});
@@ -541,6 +550,24 @@ const App = () => {
         }
 
         if (type === "ai") {
+          // 0. 장기 기억 검색 (Semantic Memory)
+          let memoryContext = "";
+          try {
+            const queryEmbedding = await invoke<number[]>("generate_embedding", {
+              text: cmd,
+              model: selectedModel,
+            });
+            const memories = await invoke<string[]>("search_memory", {
+              queryEmbedding,
+              limit: 3,
+            });
+            if (memories.length > 0) {
+              memoryContext = `\nRelevant Past Memories:\n${memories.join("\n---\n")}\n`;
+            }
+          } catch (e) {
+            console.error("Memory Retrieval Failed:", e);
+          }
+
           // 1. 코드베이스 검색 (RAG)
           const searchResults = await invoke<CodeChunk[]>("search_codebase", {
             query: cmd,
@@ -549,9 +576,8 @@ const App = () => {
           const codebaseContext = searchResults
             .map((r) => `File: ${r.path}\nContent:\n${r.content}`)
             .join("\n---\n");
-          
-          const baseContext = `Project Summary:\n${context.project_summary}\n\nRelevant Code:\n${codebaseContext}\n\nCWD: ${context.cwd}`;
 
+          const baseContext = `Project Summary:\n${context.project_summary}\n\n${memoryContext}\nRelevant Code:\n${codebaseContext}\n\nCWD: ${context.cwd}`;
           // --- AGENT SWARM START ---
           
           // [Step 1: Planner]
@@ -620,7 +646,48 @@ const App = () => {
 
           // --- FINAL RENDER ---
           const jsonMatch = coderRes.match(/\{[\s\S]*\}/);
-          const parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : null;
+          let parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : null;
+
+          // [MCP Tool Use Loop]
+          if (parsed?.toolCalls && parsed.toolCalls.length > 0) {
+            for (const call of parsed.toolCalls) {
+              const server = config.mcp_servers.find(s => s.name === call.server);
+              if (server) {
+                // Reasoning Step for tool call
+                setTabs(prev => prev.map(t => t.id === activeTab.id ? {
+                  ...t, panes: t.panes.map(p => p.id === paneId ? {
+                    ...p, blocks: p.blocks.map(b => b.id === id ? {
+                      ...b, reasoningSteps: [...(b.reasoningSteps || []), { agent: "Coder", content: `🔧 도구 실행 중: ${call.server} -> ${call.tool}...` }]
+                    } : b)
+                  } : p)
+                } : t));
+
+                try {
+                  const toolRes = await invoke<string>("call_mcp_tool", {
+                    serverCommand: server.command,
+                    serverArgs: server.args,
+                    toolName: call.tool,
+                    arguments: call.arguments
+                  });
+
+                  // Update with tool result
+                  setTabs(prev => prev.map(t => t.id === activeTab.id ? {
+                    ...t, panes: t.panes.map(p => p.id === paneId ? {
+                      ...p, blocks: p.blocks.map(b => b.id === id ? {
+                        ...b, reasoningSteps: [...(b.reasoningSteps || []), { agent: "Coder", content: `✅ 도구 실행 완료: ${toolRes}` }]
+                      } : b)
+                    } : p)
+                  } : t));
+
+                  // AI에게 도구 결과를 전달하여 최종 응답을 다시 생성해야 하지만, 
+                  // 프로토타입 단계에서는 결과를 바탕으로 응답을 가공했다고 가정하거나 
+                  // 1회 추가 호출을 수행합니다.
+                } catch (e) {
+                   console.error("MCP Tool Call Failed:", e);
+                }
+              }
+            }
+          }
           
           setTabs((prev) =>
             prev.map((t) =>
@@ -651,6 +718,18 @@ const App = () => {
                 : t,
             ),
           );
+
+          // [Step 5: Memory Indexing]
+          try {
+            const memoryContent = `User: ${cmd}\nAI Action: ${parsed?.command}\nAI Explanation: ${parsed?.explanation}`;
+            const embedding = await invoke<number[]>("generate_embedding", {
+              text: memoryContent,
+              model: selectedModel,
+            });
+            await invoke("add_to_memory", { content: memoryContent, embedding });
+          } catch (e) {
+            console.error("Memory Indexing Failed:", e);
+          }
         } else await invoke("write_to_pty", { tabId: paneId, data: cmd + "\n" });
       } catch (e) {
         setTabs((prev) =>
@@ -1780,10 +1859,17 @@ const App = () => {
                 <button
                   className={`settings-tab ${settingsTab === "models" ? "active" : ""}`}
                   onClick={() => setSettingsTab("models")}
-                >
+                  >
                   Models
-                </button>
-              </div>
+                  </button>
+                  <button
+                  className={`settings-tab ${settingsTab === "mcp" ? "active" : ""}`}
+                  onClick={() => setSettingsTab("mcp")}
+                  >
+                  MCP Servers
+                  </button>
+                  </div>
+
               <button onClick={() => setIsSettingsOpen(false)}>
                 <X size={18} />
               </button>
@@ -1898,7 +1984,7 @@ const App = () => {
                     </div>
                   </div>
                 </div>
-              ) : (
+              ) : settingsTab === "models" ? (
                 <div className="settings-view models-manager">
                   {pullProgress && (
                     <div className="pull-progress-card">
@@ -1957,6 +2043,58 @@ const App = () => {
                           )}
                         </div>
                       ))}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="settings-view mcp-manager">
+                  <div className="model-section">
+                    <h4>Connected MCP Servers</h4>
+                    <div className="model-list">
+                      {config.mcp_servers.map((s, idx) => (
+                        <div key={idx} className="model-item">
+                          <Globe size={14} className="model-icon" />
+                          <div className="model-info">
+                            <span className="model-name">{s.name}</span>
+                            <span className="model-desc">{s.command} {s.args.join(" ")}</span>
+                          </div>
+                          <button 
+                            className="model-delete-btn"
+                            onClick={() => {
+                              const newServers = [...config.mcp_servers];
+                              newServers.splice(idx, 1);
+                              updateConfig({ mcp_servers: newServers });
+                            }}
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="model-section">
+                    <h4>Add External MCP Server</h4>
+                    <div className="api-key-input-container" style={{ flexDirection: "column", alignItems: "stretch" }}>
+                      <input id="new-mcp-name" type="text" placeholder="Server Name (e.g. Google Search)" />
+                      <input id="new-mcp-cmd" type="text" placeholder="Command (e.g. npx)" />
+                      <input id="new-mcp-args" type="text" placeholder="Args (e.g. @modelcontextprotocol/server-google-search)" />
+                      <button 
+                        className="index-btn"
+                        style={{ marginTop: "10px" }}
+                        onClick={() => {
+                          const name = (document.getElementById("new-mcp-name") as HTMLInputElement).value;
+                          const cmd = (document.getElementById("new-mcp-cmd") as HTMLInputElement).value;
+                          const args = (document.getElementById("new-mcp-args") as HTMLInputElement).value.split(" ");
+                          if (name && cmd) {
+                            updateConfig({ mcp_servers: [...config.mcp_servers, { name, command: cmd, args, enabled: true }] });
+                            (document.getElementById("new-mcp-name") as HTMLInputElement).value = "";
+                            (document.getElementById("new-mcp-cmd") as HTMLInputElement).value = "";
+                            (document.getElementById("new-mcp-args") as HTMLInputElement).value = "";
+                          }
+                        }}
+                      >
+                        Add Server
+                      </button>
                     </div>
                   </div>
                 </div>

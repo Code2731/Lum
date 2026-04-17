@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Zap } from "lucide-react";
+import { Zap, Mic, MicOff } from "lucide-react";
 import Editor from "react-simple-code-editor";
 import { invoke } from "@tauri-apps/api/core";
 import Prism from "prismjs";
@@ -20,6 +20,27 @@ const CommandInput = ({
   context,
 }: Props) => {
   const [value, setValue] = useState("");
+  const [isRecording, setIsRecording] = useState(false);
+
+  const handleMicClick = async () => {
+    if (isRecording) {
+      setIsRecording(false);
+      try {
+        const text = await invoke<string>("stop_voice_recording");
+        if (text) setValue(text);
+      } catch (e) {
+        console.error("Transcription failed:", e);
+      }
+    } else {
+      setIsRecording(true);
+      try {
+        await invoke("start_voice_recording");
+      } catch (e) {
+        console.error("Failed to start recording:", e);
+        setIsRecording(false);
+      }
+    }
+  };
   const [history, setHistory] = useState<string[]>([]);
   const [historyIdx, setHistoryIdx] = useState(-1);
 
@@ -172,8 +193,15 @@ const CommandInput = ({
         </div>
       )}
 
-      <div className={`editor-box ${isAI ? "editor-box-ai" : ""}`}>
+      <div className={`editor-box ${isAI ? "editor-box-ai" : ""} ${isRecording ? "recording" : ""}`}>
         <div className="editor-header">
+          <button 
+            className={`mic-btn ${isRecording ? "active" : ""}`}
+            onClick={handleMicClick}
+            title="Voice Command"
+          >
+            {isRecording ? <Mic size={14} /> : <MicOff size={14} />}
+          </button>
           <span className="editor-path">{shortPath(context.cwd)}</span>
           {context.git_branch && (
             <>

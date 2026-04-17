@@ -61,12 +61,21 @@ struct Tab {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+struct McpServerConfig {
+    name: String,
+    command: String,
+    args: Vec<String>,
+    enabled: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
 struct AppConfig {
     theme: String, // "dark", "light", "custom"
     font_size: u32,
     opacity: f32,
     accent_color: String,
     gemini_api_key: Option<String>, // Gemini API 키 추가
+    mcp_servers: Vec<McpServerConfig>, // MCP 서버 설정 추가
 }
 
 impl Default for AppConfig {
@@ -77,6 +86,7 @@ impl Default for AppConfig {
             opacity: 0.95,
             accent_color: "#a78bfa".to_string(),
             gemini_api_key: None,
+            mcp_servers: vec![],
         }
     }
 }
@@ -326,6 +336,9 @@ async fn list_models() -> Result<Vec<String>, String> {
 
 mod burn_inference;
 mod sandbox;
+mod mcp;
+mod memory;
+mod audio;
 
 #[tauri::command]
 async fn generate_ai_command(
@@ -369,9 +382,13 @@ async fn generate_ai_command(
                  \"chartType\": \"line | bar | area | pie\",\n\
                  \"data\": [{{ \"x\": \"label\", \"y1\": 10, \"y2\": 20 }}],\n\
                  \"config\": {{ \"xKey\": \"x\", \"yKeys\": [\"y1\", \"y2\"], \"title\": \"Chart Title\" }}\n\
-               }}\n\
+               }},\n\
+               \"toolCalls\": [\n\
+                 {{ \"server\": \"server_name\", \"tool\": \"tool_name\", \"arguments\": {{ \"arg1\": \"val1\" }} }}\n\
+               ]\n\
              }}\n\
-             Note: Include 'visualData' ONLY if the user request involves data visualization or analysis.\n\
+             Note: Include 'visualData' ONLY if visualization is needed.\n\
+             Note: Include 'toolCalls' if you need external information or to perform specific actions via MCP tools.\n\
              Important: Use markdown in 'explanation'. Ensure the JSON is valid.",
             context, prompt
         )
@@ -834,7 +851,13 @@ pub fn run() {
             index_project,
             search_codebase,
             check_wgpu_support,
-            sandbox::verify_command_safety
+            sandbox::verify_command_safety,
+            mcp::call_mcp_tool,
+            mcp::list_internal_tools,
+            memory::add_to_memory,
+            memory::search_memory,
+            audio::start_voice_recording,
+            audio::stop_voice_recording
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
