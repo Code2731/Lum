@@ -91,7 +91,7 @@ interface TerminalBlock {
   analysis?: string;
   suggestion?: string;
   type: "shell" | "ai" | "error-analysis";
-  status: "executing" | "completed" | "error" | "blocked";
+  status: "executing" | "completed" | "error" | "blocked" | "healing";
   cwd: string;
   gitBranch: string | null;
   embedding?: number[];
@@ -762,6 +762,94 @@ const App = () => {
     [activeTab, context, selectedModel, showWebview, webviewUrl],
   );
 
+  const handleSelfHeal = async (blockId: string) => {
+    if (!activeTab || !activeTab.activePaneId) return;
+    const paneId = activeTab.activePaneId;
+
+    // 1. 상태를 healing으로 변경
+    let errorCmd = "";
+    let errorOutput = "";
+    setTabs((prev) =>
+      prev.map((t) =>
+        t.id === activeTab.id
+          ? {
+              ...t,
+              panes: t.panes.map((p) =>
+                p.id === paneId
+                  ? {
+                      ...p,
+                      blocks: p.blocks.map((b) => {
+                        if (b.id === blockId) {
+                          errorCmd = b.command;
+                          errorOutput = b.output;
+                          return { ...b, status: "healing" as const, reasoningSteps: [{ agent: "Planner", content: "에러 분석 및 자율 치유 루프를 시작합니다..." }] };
+                        }
+                        return b;
+                      }),
+                    }
+                  : p,
+              ),
+            }
+          : t,
+      ),
+    );
+
+    try {
+      // 2. AI에게 에러 분석 및 치유 계획 요청
+      const healPrompt = `The command '${errorCmd}' failed with the following error:\n${errorOutput}\n\nPlease analyze this error and provide a 'healingPlan' to fix it.`;
+      const res = await invoke<string>("generate_ai_command", {
+        prompt: healPrompt,
+        model: selectedModel,
+        context: "SELF_HEALING",
+      });
+
+      const jsonMatch = res.match(/\{[\s\S]*\}/);
+      const parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : null;
+
+      if (parsed?.healingPlan) {
+        for (const step of parsed.healingPlan) {
+          // 각 단계를 reasoningSteps에 기록
+          setTabs(prev => prev.map(t => t.id === activeTab.id ? {
+            ...t, panes: t.panes.map(p => p.id === paneId ? {
+              ...p, blocks: p.blocks.map(b => b.id === blockId ? {
+                ...b, reasoningSteps: [...(b.reasoningSteps || []), { agent: "Coder", content: `🔧 실행 중: ${step.label}` }]
+              } : b)
+            } : p)
+          } : t));
+
+          if (step.type === "run") {
+            await invoke("write_to_pty", { tabId: paneId, data: step.cmd + "\n" });
+          } else if (step.type === "create") {
+            await invoke("create_file", { path: step.path, content: step.content });
+          }
+          // 실행 대기 시간
+          await new Promise(r => setTimeout(r, 1000));
+        }
+
+        // 3. 재검증
+        setTabs(prev => prev.map(t => t.id === activeTab.id ? {
+          ...t, panes: t.panes.map(p => p.id === paneId ? {
+            ...p, blocks: p.blocks.map(b => b.id === blockId ? {
+              ...b, reasoningSteps: [...(b.reasoningSteps || []), { agent: "Tester", content: "치유 완료. 재검증을 위해 원래 명령어를 다시 실행합니다." }]
+            } : b)
+          } : p)
+        } : t));
+
+        await invoke("write_to_pty", { tabId: paneId, data: errorCmd + "\n" });
+        
+        setTabs(prev => prev.map(t => t.id === activeTab.id ? {
+          ...t, panes: t.panes.map(p => p.id === paneId ? {
+            ...p, blocks: p.blocks.map(b => b.id === blockId ? {
+              ...b, status: "completed" as const
+            } : b)
+          } : p)
+        } : t));
+      }
+    } catch (e) {
+      console.error("Self Healing Failed:", e);
+    }
+  };
+
   const handleOverrideSecurity = async (blockId: string) => {
     if (!activeTab || !activeTab.activePaneId) return;
     const paneId = activeTab.activePaneId;
@@ -1099,103 +1187,6 @@ const App = () => {
       }
     } else if (e.key === "Escape") {
       setIsPaletteOpen(false);
-    }
-  };
-
-  const handleAutoFix = async (block: TerminalBlock) => {
-    if (!activeTab || !activeTab.activePaneId) return;
-    const paneId = activeTab.activePaneId;
-    const id = `err-${Date.now()}`;
-    setTabs((prev) =>
-      prev.map((t) =>
-        t.id === activeTab.id
-          ? {
-              ...t,
-              panes: t.panes.map((p) =>
-                p.id === paneId
-                  ? {
-                      ...p,
-                      blocks: [
-                        ...p.blocks,
-                        {
-                          id,
-                          command: `Auto-Fix: ${block.command}`,
-                          output: "분석 중...",
-                          type: "error-analysis",
-                          status: "executing",
-                          cwd: block.cwd,
-                          gitBranch: block.gitBranch,
-                        },
-                      ],
-                    }
-                  : p,
-              ),
-            }
-          : t,
-      ),
-    );
-    try {
-      const result = await invoke<string>("analyze_error", {
-        command: block.command,
-        stderr: block.output,
-        model: selectedModel,
-        context: `CWD: ${context.cwd}`,
-      });
-      const parsed = JSON.parse(result);
-      setTabs((prev) =>
-        prev.map((t) =>
-          t.id === activeTab.id
-            ? {
-                ...t,
-                panes: t.panes.map((p) =>
-                  p.id === paneId
-                    ? {
-                        ...p,
-                        blocks: p.blocks.map((b) =>
-                          b.id === id
-                            ? {
-                                ...b,
-                                analysis: parsed.analysis,
-                                suggestion: parsed.suggestion,
-                                status: "completed" as const,
-                              }
-                            : b,
-                        ),
-                      }
-                    : p,
-                ),
-              }
-            : t,
-        ),
-      );
-      if (parsed.suggestion)
-        setTimeout(() => handleCommand(parsed.suggestion, "shell"), 1500);
-    } catch {
-      setTabs((prev) =>
-        prev.map((t) =>
-          t.id === activeTab.id
-            ? {
-                ...t,
-                panes: t.panes.map((p) =>
-                  p.id === paneId
-                    ? {
-                        ...p,
-                        blocks: p.blocks.map((b) =>
-                          b.id === id
-                            ? {
-                                ...b,
-                                output: "Auto-Fix failed.",
-                                status: "error" as const,
-                              }
-                            : b,
-                        ),
-                      }
-                    : p,
-                ),
-              }
-            : t,
-        ),
-      );
     }
   };
 
@@ -1734,7 +1725,8 @@ const App = () => {
                                     return null;
                                   })()}
                                 {(block.output ||
-                                  block.status === "executing") && (
+                                  block.status === "executing" ||
+                                  block.status === "healing") && (
                                   <div className="block-output">
                                     <Ansi>{block.output}</Ansi>
                                   </div>
@@ -1755,10 +1747,12 @@ const App = () => {
                                         <Zap size={12} /> AI Analyze
                                       </button>
                                       <button
-                                        className="error-autofix-btn"
-                                        onClick={() => handleAutoFix(block)}
+                                        className="self-heal-btn"
+                                        onClick={() => handleSelfHeal(block.id)}
+                                        disabled={(block.status as any) === "healing"}
                                       >
-                                        <Play size={12} /> Auto-Fix
+                                        <RefreshCcw size={12} className={(block.status as any) === "healing" ? "animate-spin" : ""} />
+                                        {(block.status as any) === "healing" ? "Self-Healing..." : "Autonomous Self-Heal"}
                                       </button>
                                     </div>
                                   )}

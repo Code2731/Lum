@@ -385,10 +385,14 @@ async fn generate_ai_command(
                }},\n\
                \"toolCalls\": [\n\
                  {{ \"server\": \"server_name\", \"tool\": \"tool_name\", \"arguments\": {{ \"arg1\": \"val1\" }} }}\n\
+               ],\n\
+               \"healingPlan\": [\n\
+                 {{ \"type\": \"run | create\", \"cmd\": \"command\", \"path\": \"path\", \"content\": \"content\", \"label\": \"Reason for this step\" }}\n\
                ]\n\
              }}\n\
              Note: Include 'visualData' ONLY if visualization is needed.\n\
-             Note: Include 'toolCalls' if you need external information or to perform specific actions via MCP tools.\n\
+             Note: Include 'toolCalls' if you need external information.\n\
+             Note: Include 'healingPlan' ONLY if you are in SELF_HEALING mode to fix an error.\n\
              Important: Use markdown in 'explanation'. Ensure the JSON is valid.",
             context, prompt
         )

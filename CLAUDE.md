@@ -61,3 +61,4 @@ cd src-tauri && cargo test   # Rust 단위 테스트 실행
 - [x] Phase 14: Multi-Modal Visual Shell (데이터 시각화 및 차트 렌더링 완료)
 - [x] Phase 15: Semantic Memory (의미 기반 장기 기억 엔진 완료)
 - [x] Phase 16: Voice-to-Terminal (음성 인식 인터페이스 인프라 완료)
+- [x] Phase 17: Autonomous Self-Healing (에러 분석 및 자율 치유 루프 완료)

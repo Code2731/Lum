@@ -168,9 +168,9 @@ describe("App Integration (Terminal Workspace)", () => {
 
     render(<App />);
 
-    // 2. Auto-Fix 버튼이 렌더링되는지 확인
+    // 2. Autonomous Self-Heal 버튼이 렌더링되는지 확인
     await waitFor(() => {
-      expect(screen.getByText(/Auto-Fix/i)).toBeInTheDocument();
+      expect(screen.getByText(/Autonomous Self-Heal/i)).toBeInTheDocument();
     });
   });
 });
