@@ -57,5 +57,5 @@ cd src-tauri && cargo test  # 백엔드 단위 테스트
 - **Phase 10: 자율 에이전트 군집 (Agent Swarms)**: ✅ 완료 (Planner, Coder, Reviewer, Tester)
 - **Gemini 통합**: ✅ 완료 (Gemini 1.5 Flash/Pro 지원 및 커스텀 시스템 프롬프트 지원)
 - **Phase 11: WebGPU 온디바이스 AI**: ✅ 완료 (Burn-LM 기반 GPU 가속, 토크나이저 및 엔드투엔드 추론 파이프라인 구축)
-- **Phase 12: 자율 실행 샌드박스 (Secure Sandbox)**: WASM/Docker 기반의 안전한 AI 명령어 검증 환경
+- **Phase 12: 자율 실행 샌드박스 (Secure Sandbox)**: ✅ 완료 (위험 명령어 정적 분석 및 사용자 승인 시스템 구축)
 

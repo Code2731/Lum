@@ -325,6 +325,7 @@ async fn list_models() -> Result<Vec<String>, String> {
 }
 
 mod burn_inference;
+mod sandbox;
 
 #[tauri::command]
 async fn generate_ai_command(
@@ -825,7 +826,8 @@ pub fn run() {
             generate_embedding,
             index_project,
             search_codebase,
-            check_wgpu_support
+            check_wgpu_support,
+            sandbox::verify_command_safety
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

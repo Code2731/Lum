@@ -12,6 +12,8 @@ import {
   Columns,
   Rows,
   CheckCircle2,
+  ShieldAlert,
+  ShieldCheck,
   Play,
   FilePlus,
   Download,
@@ -54,6 +56,12 @@ interface ReasoningStep {
   content: string;
 }
 
+interface SecurityReport {
+  status: "Safe" | "Warning" | "Dangerous";
+  reason?: string;
+  command: string;
+}
+
 interface TerminalBlock {
   id: string;
   command: string;
@@ -63,11 +71,12 @@ interface TerminalBlock {
   analysis?: string;
   suggestion?: string;
   type: "shell" | "ai" | "error-analysis";
-  status: "executing" | "completed" | "error";
+  status: "executing" | "completed" | "error" | "blocked";
   cwd: string;
   gitBranch: string | null;
   embedding?: number[];
   reasoningSteps?: ReasoningStep[];
+  securityReport?: SecurityReport;
 }
 
 interface AppConfig {
@@ -489,6 +498,34 @@ const App = () => {
       );
 
       try {
+        if (type === "shell") {
+          const report = await invoke<SecurityReport>("verify_command_safety", { command: cmd });
+          if (report.status !== "Safe") {
+            setTabs((prev) =>
+              prev.map((t) =>
+                t.id === activeTab.id
+                  ? {
+                      ...t,
+                      panes: t.panes.map((p) =>
+                        p.id === paneId
+                          ? {
+                              ...p,
+                              blocks: p.blocks.map((b) =>
+                                b.id === id
+                                  ? { ...b, status: "blocked" as const, securityReport: report }
+                                  : b,
+                              ),
+                            }
+                          : p,
+                      ),
+                    }
+                  : t,
+              ),
+            );
+            return;
+          }
+        }
+
         if (type === "ai") {
           // 1. 코드베이스 검색 (RAG)
           const searchResults = await invoke<CodeChunk[]>("search_codebase", {
@@ -630,6 +667,65 @@ const App = () => {
     },
     [activeTab, context, selectedModel, showWebview, webviewUrl],
   );
+
+  const handleOverrideSecurity = async (blockId: string) => {
+    if (!activeTab || !activeTab.activePaneId) return;
+    const paneId = activeTab.activePaneId;
+    
+    // Find the block and its command
+    let commandToRun = "";
+    setTabs((prev) =>
+      prev.map((t) =>
+        t.id === activeTab.id
+          ? {
+              ...t,
+              panes: t.panes.map((p) =>
+                p.id === paneId
+                  ? {
+                      ...p,
+                      blocks: p.blocks.map((b) => {
+                        if (b.id === blockId) {
+                          commandToRun = b.command;
+                          return { ...b, status: "executing" as const };
+                        }
+                        return b;
+                      }),
+                    }
+                  : p,
+              ),
+            }
+          : t,
+      ),
+    );
+
+    if (commandToRun) {
+      try {
+        await invoke("write_to_pty", { tabId: paneId, data: commandToRun + "\n" });
+      } catch (e) {
+        setTabs((prev) =>
+          prev.map((t) =>
+            t.id === activeTab.id
+              ? {
+                  ...t,
+                  panes: t.panes.map((p) =>
+                    p.id === paneId
+                      ? {
+                          ...p,
+                          blocks: p.blocks.map((b) =>
+                            b.id === blockId
+                              ? { ...b, status: "error" as const, output: `Error: ${e}` }
+                              : b,
+                          ),
+                        }
+                      : p,
+                  ),
+                }
+              : t,
+          ),
+        );
+      }
+    }
+  };
 
   const handleRunAction = async (blockId: string, actionIdx: number) => {
     if (!activeTab || !activeTab.activePaneId) return;
@@ -1325,9 +1421,35 @@ const App = () => {
                                   {block.status === "executing" && (
                                     <span className="status-executing">●</span>
                                   )}
-                                </div>
+                                  {block.status === "blocked" && (
+                                    <span className="status-blocked">
+                                      <ShieldAlert size={12} />
+                                    </span>
+                                  )}
+                                  </div>
 
-                                {/* Reasoning Steps (Agent Swarms) */}
+                                  {/* Security Report (Phase 12) */}
+                                  {block.securityReport && (
+                                  <div className={`security-report ${block.securityReport.status.toLowerCase()}`}>
+                                    <div className="security-header">
+                                      <ShieldAlert size={14} className="security-icon" />
+                                      <span className="security-title">Security Check: {block.securityReport.status}</span>
+                                    </div>
+                                    <div className="security-reason">{block.securityReport.reason}</div>
+                                    {block.status === "blocked" && (
+                                      <button 
+                                        className="security-override-btn"
+                                        onClick={() => handleOverrideSecurity(block.id)}
+                                      >
+                                        <ShieldCheck size={12} />
+                                        Run Anyway (Override)
+                                      </button>
+                                    )}
+                                  </div>
+                                  )}
+
+                                  {/* Reasoning Steps (Agent Swarms) */}
+
                                 {block.reasoningSteps && block.reasoningSteps.length > 0 && (
                                   <div className="reasoning-container">
                                     {block.reasoningSteps.map((step, idx) => (
