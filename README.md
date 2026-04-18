@@ -66,4 +66,5 @@ cd src-tauri && cargo test  # 백엔드 단위 테스트
 - **Phase 18: 분산형 군집 에이전트 (Distributed Swarms)**: ✅ 완료 (libp2p 기반 P2P 네트워크 및 원격 에이전트 협업 인프라)
 - **Phase 19: 생성형 UI 셸 (AI Native UI Designer)**: ✅ 완료 (실시간 React/Tailwind 코드 생성 및 런타임 렌더링)
 - **Phase 20: 신경망 데스크탑 통합 (Neural Desktop)**: ✅ 완료 (OS 화면 인지 및 마우스/키보드 자율 제어 시스템 구축)
+- **Phase 21: 시각적 자율 에이전트 (Neural Vision & OS Autonomy)**: 🏗️ 진행 중 (멀티모달 시각 인지 루프 및 자율 조작 피드백 시스템 구축)
 

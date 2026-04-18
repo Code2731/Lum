@@ -65,3 +65,4 @@ cd src-tauri && cargo test   # Rust 단위 테스트 실행
 - [x] Phase 18: Multi-Agent Distributed Swarms (P2P 분산 군집 인프라 완료)
 - [x] Phase 19: AI Native UI Designer (실시간 React/JSX UI 생성 완료)
 - [x] Phase 20: Neural Desktop Integration (OS 시각 인지 및 제어 완료)
+- [ ] Phase 21: Neural Vision & OS Autonomy (시각적 자율 에이전트 루프 진행 중)

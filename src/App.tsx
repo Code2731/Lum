@@ -583,7 +583,29 @@ const App = () => {
             .map((r) => `File: ${r.path}\nContent:\n${r.content}`)
             .join("\n---\n");
 
-          const baseContext = `Project Summary:\n${context.project_summary}\n\n${memoryContext}\nRelevant Code:\n${codebaseContext}\n\nCWD: ${context.cwd}`;
+          // [Step 0: Context Gathering & Visual Perception]
+          let visualContext = "";
+          let capturedScreenshot = "";
+          if (cmd.includes("화면") || cmd.includes("데스크톱") || cmd.includes("클릭") || cmd.includes("열어줘") || cmd.includes("조작")) {
+            try {
+              const base64 = await invoke<string>("capture_screen");
+              capturedScreenshot = base64;
+              visualContext = `\n[Visual Context: CURRENT_SCREENSHOT_CAPTURED]\nAI has access to the current desktop view for this request.`;
+              
+              // 시각적 피드백을 위해 블록에 스크린샷 저장
+              setTabs(prev => prev.map(t => t.id === activeTab.id ? {
+                ...t, panes: t.panes.map(p => p.id === paneId ? {
+                  ...p, blocks: p.blocks.map(b => b.id === id ? {
+                    ...b, screenshot: capturedScreenshot, reasoningSteps: [...(b.reasoningSteps || []), { agent: "Planner", content: "🖥️ 현재 화면을 캡처하여 분석 중..." }]
+                  } : b)
+                } : p)
+              } : t));
+            } catch (e) {
+              console.error("Visual perception failed:", e);
+            }
+          }
+
+          const baseContext = `Project Summary:\n${context.project_summary}\n\n${memoryContext}\nRelevant Code:\n${codebaseContext}\n\nCWD: ${context.cwd}${visualContext}`;
           // --- AGENT SWARM START ---
           
           // [Step 1: Planner]
@@ -592,6 +614,7 @@ const App = () => {
             prompt: planPrompt,
             model: selectedModel,
             context: "PLANNING_MODE",
+            imageData: capturedScreenshot || null,
           });
           
           setTabs(prev => prev.map(t => t.id === activeTab.id ? {
@@ -608,6 +631,7 @@ const App = () => {
             prompt: coderPrompt,
             model: selectedModel,
             context: "CODING_MODE",
+            imageData: capturedScreenshot || null,
           });
 
           setTabs(prev => prev.map(t => t.id === activeTab.id ? {
@@ -624,6 +648,7 @@ const App = () => {
             prompt: reviewerPrompt,
             model: selectedModel,
             context: "REVIEW_MODE",
+            imageData: capturedScreenshot || null,
           });
 
           setTabs(prev => prev.map(t => t.id === activeTab.id ? {
@@ -640,6 +665,7 @@ const App = () => {
             prompt: testerPrompt,
             model: selectedModel,
             context: "TESTING_MODE",
+            imageData: capturedScreenshot || null,
           });
 
           setTabs(prev => prev.map(t => t.id === activeTab.id ? {
@@ -832,6 +858,7 @@ const App = () => {
         prompt: healPrompt,
         model: selectedModel,
         context: "SELF_HEALING",
+        imageData: null,
       });
 
       const jsonMatch = res.match(/\{[\s\S]*\}/);

@@ -124,6 +124,20 @@ mod tests {
         assert!((cosine_similarity(&vec1, &vec2) - 1.0).abs() < 1e-6); // 동일 벡터
         assert!((cosine_similarity(&vec1, &vec3) - 0.0).abs() < 1e-6); // 직교 벡터
     }
+
+    #[test]
+    fn test_action_serialization() {
+        let action = Action {
+            action_type: "run".to_string(),
+            cmd: Some("ls".to_string()),
+            path: None,
+            content: None,
+            label: "List files".to_string(),
+        };
+        let json = serde_json::to_string(&action).unwrap();
+        assert!(json.contains("\"type\":\"run\""));
+        assert!(json.contains("\"cmd\":\"ls\""));
+    }
 }
 
 #[tauri::command]
@@ -347,6 +361,7 @@ async fn generate_ai_command(
     prompt: String,
     model: String,
     context: String,
+    image_data: Option<String>,
 ) -> Result<String, String> {
     let client = reqwest::Client::builder()
         .timeout(Duration::from_secs(120))
@@ -368,7 +383,7 @@ async fn generate_ai_command(
         format!("System: {}\nContext: {}\nRequest: {}", custom_system_prompt, context, prompt)
     } else {
         format!(
-            "You are a terminal expert. Convert the user's natural language request into executable steps.\n\
+            "You are a terminal expert with visual perception capabilities. Convert the user's natural language request into executable steps.\n\
              Context: {}\n\
              Request: {}\n\
              Respond ONLY with a JSON object in this format:\n\
@@ -397,6 +412,7 @@ async fn generate_ai_command(
                  {{ \"type\": \"type_text\", \"text\": \"Hello World\", \"enter\": true }}\n\
                ]\n\
              }}\n\
+             Note: If an image is provided, use it to find UI elements (icons, buttons) and provide exact pixel coordinates (x, y) for 'computerUse' actions.\n\
              Note: Include 'visualData' for standard charts.\n\
              Note: Include 'toolCalls' if you need external information.\n\
              Note: Include 'healingPlan' ONLY if you are in SELF_HEALING mode.\n\
@@ -417,9 +433,20 @@ async fn generate_ai_command(
             model, api_key
         );
 
+        let mut parts = vec![serde_json::json!({ "text": full_prompt })];
+        
+        if let Some(img) = image_data {
+            parts.push(serde_json::json!({
+                "inline_data": {
+                    "mime_type": "image/png",
+                    "data": img
+                }
+            }));
+        }
+
         let request_body = serde_json::json!({
             "contents": [{
-                "parts": [{ "text": full_prompt }]
+                "parts": parts
             }]
         });
 
