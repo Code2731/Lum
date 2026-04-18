@@ -409,7 +409,10 @@ async fn generate_ai_command(
                \"dynamicUI\": \"raw React JSX code with Tailwind classes\",\n\
                \"computerUse\": [\n\
                  {{ \"type\": \"mouse_move\", \"x\": 500, \"y\": 300, \"click\": true }},\n\
-                 {{ \"type\": \"type_text\", \"text\": \"Hello World\", \"enter\": true }}\n\
+                 {{ \"type\": \"type_text\", \"text\": \"Hello World\", \"enter\": true }},\n\
+                 {{ \"type\": \"scroll\", \"x\": 500, \"y\": 400, \"amount\": 3 }},\n\
+                 {{ \"type\": \"key_combo\", \"modifier\": \"cmd\", \"key\": \"v\" }},\n\
+                 {{ \"type\": \"click\", \"x\": 100, \"y\": 200, \"button\": \"right\" }}\n\
                ]\n\
              }}\n\
              Note: If an image is provided, use it to find UI elements (icons, buttons) and provide exact pixel coordinates (x, y) for 'computerUse' actions.\n\
@@ -862,6 +865,97 @@ async fn check_wgpu_support() -> Result<bool, String> {
     Ok(adapter.is_some())
 }
 
+/// 시각적 목표 달성 검증: 스크린샷을 AI에 전달해 목표 달성 여부 판단
+/// 반환: { "achieved": bool, "reason": String, "nextActions": [...] }
+#[tauri::command]
+async fn verify_vision_goal(
+    goal: String,
+    screenshot_base64: String,
+    model: String,
+    iteration: u32,
+) -> Result<String, String> {
+    let client = reqwest::Client::builder()
+        .timeout(Duration::from_secs(60))
+        .build()
+        .map_err(|e| e.to_string())?;
+
+    let prompt = format!(
+        "You are a visual AI agent verifying OS automation goals.\n\
+         Goal: {}\n\
+         Iteration: {}/10\n\
+         Look at the provided screenshot and determine:\n\
+         1. Was the goal achieved? (achieved: true/false)\n\
+         2. If not achieved, what is the current screen state?\n\
+         3. If not achieved, what are the next computer actions to take?\n\
+         Respond ONLY with a JSON object:\n\
+         {{\n\
+           \"achieved\": false,\n\
+           \"reason\": \"Current state description\",\n\
+           \"nextActions\": [\n\
+             {{ \"type\": \"mouse_move\", \"x\": 500, \"y\": 300, \"click\": true }},\n\
+             {{ \"type\": \"type_text\", \"text\": \"Hello\", \"enter\": false }},\n\
+             {{ \"type\": \"scroll\", \"x\": 500, \"y\": 300, \"amount\": 3 }},\n\
+             {{ \"type\": \"key_combo\", \"modifier\": \"cmd\", \"key\": \"v\" }},\n\
+             {{ \"type\": \"click\", \"x\": 100, \"y\": 200, \"button\": \"right\" }}\n\
+           ]\n\
+         }}\n\
+         If goal IS achieved, set achieved: true and nextActions: [].\n\
+         Important: Be precise with pixel coordinates based on the screenshot.",
+        goal, iteration
+    );
+
+    if model.starts_with("gemini-") {
+        let config = load_config().unwrap_or_default();
+        let api_key = config.gemini_api_key.ok_or("Gemini API Key is missing.")?;
+        let url = format!(
+            "https://generativelanguage.googleapis.com/v1beta/models/{}:generateContent?key={}",
+            model, api_key
+        );
+
+        let request_body = serde_json::json!({
+            "contents": [{
+                "parts": [
+                    { "text": prompt },
+                    {
+                        "inline_data": {
+                            "mime_type": "image/png",
+                            "data": screenshot_base64
+                        }
+                    }
+                ]
+            }]
+        });
+
+        let response = client
+            .post(url)
+            .json(&request_body)
+            .send()
+            .await
+            .map_err(|e| e.to_string())?;
+
+        let res_json: serde_json::Value = response.json().await.map_err(|e| e.to_string())?;
+        let result_text = res_json["candidates"][0]["content"]["parts"][0]["text"]
+            .as_str()
+            .ok_or("Failed to parse Gemini response")?;
+        Ok(result_text.to_string())
+    } else {
+        // Ollama: 멀티모달 미지원 시 텍스트만으로 판단
+        let request_body = OllamaRequest {
+            model,
+            prompt: format!("{}\n(Note: Screenshot analysis not available for Ollama)", prompt),
+            stream: false,
+        };
+        let response = client
+            .post("http://localhost:11434/api/generate")
+            .json(&request_body)
+            .send()
+            .await
+            .map_err(|e| e.to_string())?;
+        let ollama_res: OllamaResponse = response.json().await.map_err(|e| e.to_string())?;
+        Ok(ollama_res.response)
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let terminal_state = TerminalState {
@@ -903,7 +997,11 @@ pub fn run() {
             swarm::send_swarm_task,
             desktop::capture_screen,
             desktop::simulate_mouse,
-            desktop::simulate_keyboard
+            desktop::simulate_keyboard,
+            desktop::simulate_scroll,
+            desktop::simulate_key_combo,
+            desktop::simulate_click,
+            verify_vision_goal
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

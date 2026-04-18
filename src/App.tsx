@@ -753,26 +753,112 @@ const App = () => {
             ),
           );
 
-          // [Computer Use Loop]
+          // [Computer Use — 자율 피드백 루프]
           if (parsed?.computerUse && parsed.computerUse.length > 0) {
-            for (const action of parsed.computerUse) {
+            const MAX_ITERATIONS = 10;
+            const goal = cmd; // 사용자의 원래 목표
+            let currentActions: any[] = parsed.computerUse;
+            let iteration = 1;
+
+            const addStep = (msg: string) => {
               setTabs(prev => prev.map(t => t.id === activeTab.id ? {
                 ...t, panes: t.panes.map(p => p.id === paneId ? {
                   ...p, blocks: p.blocks.map(b => b.id === id ? {
-                    ...b, reasoningSteps: [...(b.reasoningSteps || []), { agent: "Coder", content: `🖥️ OS 제어 중: ${action.type}...` }]
+                    ...b, reasoningSteps: [...(b.reasoningSteps || []), { agent: "Coder" as const, content: msg }]
                   } : b)
                 } : p)
               } : t));
+            };
 
+            const executeComputerAction = async (action: any): Promise<void> => {
+              switch (action.type) {
+                case "mouse_move":
+                  await invoke("simulate_mouse", { action: { x: action.x, y: action.y, click: action.click ?? false } });
+                  break;
+                case "type_text":
+                  await invoke("simulate_keyboard", { action: { text: action.text, enter: action.enter ?? false } });
+                  break;
+                case "scroll":
+                  await invoke("simulate_scroll", { action: { x: action.x, y: action.y, amount: action.amount ?? 3 } });
+                  break;
+                case "key_combo":
+                  await invoke("simulate_key_combo", { action: { modifier: action.modifier, key: action.key } });
+                  break;
+                case "click":
+                  await invoke("simulate_click", { action: { x: action.x, y: action.y, button: action.button ?? "left" } });
+                  break;
+                default:
+                  console.warn("알 수 없는 액션 타입:", action.type);
+              }
+            };
+
+            while (iteration <= MAX_ITERATIONS && currentActions.length > 0) {
+              addStep(`🤖 자율 에이전트 루프 #${iteration}/${MAX_ITERATIONS} 시작 (${currentActions.length}개 액션)`);
+
+              // 액션 순차 실행
+              for (const action of currentActions) {
+                addStep(`🖥️ 실행: [${action.type}] ${action.type === "mouse_move" || action.type === "click" ? `(${action.x}, ${action.y})` : action.type === "type_text" ? `"${action.text}"` : action.type === "scroll" ? `amount=${action.amount}` : `${action.modifier}+${action.key}`}`);
+                try {
+                  await executeComputerAction(action);
+                  // 액션 후 짧은 대기 (UI 반응 시간)
+                  await new Promise(r => setTimeout(r, 600));
+                } catch (e) {
+                  addStep(`⚠️ 액션 실패: ${e}`);
+                }
+              }
+
+              // 목표 달성 검증을 위한 새 스크린샷 캡처
+              addStep(`📸 현재 화면 캡처 중... (목표 달성 여부 확인)`);
               try {
-                if (action.type === "mouse_move") {
-                   await invoke("simulate_mouse", { action: { x: action.x, y: action.y, click: action.click } });
-                } else if (action.type === "type_text") {
-                   await invoke("simulate_keyboard", { action: { text: action.text, enter: action.enter } });
+                const newScreenshot = await invoke<string>("capture_screen");
+
+                // 스크린샷 UI 업데이트 (최신 상태 표시)
+                setTabs(prev => prev.map(t => t.id === activeTab.id ? {
+                  ...t, panes: t.panes.map(p => p.id === paneId ? {
+                    ...p, blocks: p.blocks.map(b => b.id === id ? {
+                      ...b, screenshot: newScreenshot
+                    } : b)
+                  } : p)
+                } : t));
+
+                // AI에게 목표 달성 여부 판단 요청
+                const verifyRes = await invoke<string>("verify_vision_goal", {
+                  goal,
+                  screenshotBase64: newScreenshot,
+                  model: selectedModel,
+                  iteration,
+                });
+
+                // JSON 파싱
+                const jsonMatch = verifyRes.match(/\{[\s\S]*\}/);
+                if (!jsonMatch) {
+                  addStep(`✅ 검증 완료 (파싱 불가, 루프 종료)`);
+                  break;
+                }
+                const verifyParsed = JSON.parse(jsonMatch[0]);
+
+                if (verifyParsed.achieved) {
+                  addStep(`✅ 목표 달성! ${verifyParsed.reason || ""}`);
+                  break;
+                } else {
+                  addStep(`🔄 미달성: ${verifyParsed.reason || "계속 진행"} → 다음 액션 계획 중...`);
+                  if (verifyParsed.nextActions && verifyParsed.nextActions.length > 0) {
+                    currentActions = verifyParsed.nextActions;
+                  } else {
+                    addStep(`🛑 다음 액션 없음, 루프 종료`);
+                    break;
+                  }
                 }
               } catch (e) {
-                console.error("Computer Use Failed:", e);
+                addStep(`⚠️ 검증 실패: ${e} → 루프 종료`);
+                break;
               }
+
+              iteration++;
+            }
+
+            if (iteration > MAX_ITERATIONS) {
+              addStep(`⏹️ 최대 반복 횟수(${MAX_ITERATIONS}회) 도달, 자율 에이전트 루프 종료`);
             }
           }
 
