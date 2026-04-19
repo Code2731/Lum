@@ -2,6 +2,9 @@
 
 Warp 스타일 블록 기반 AI 터미널 에뮬레이터. 로컬 LLM(Ollama & xLLM/EXL2) 기반으로 비용 제로, 개인정보 보호, Rust 기반 고성능을 목표로 합니다.
 
+[![Download for Windows](https://img.shields.io/badge/Download-Windows-0078D4?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/Code2731/Lum/releases/latest/download/LUM-Setup.exe)
+[![Download for macOS](https://img.shields.io/badge/Download-macOS-000000?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/Code2731/Lum/releases/latest/download/LUM.dmg)
+
 ## 🚀 Key Features
 
 - **Warp-style Block UI**: 명령어 실행 결과를 개별 블록으로 렌더링하여 가독성과 관리 효율성을 극대화합니다.
