@@ -961,9 +961,14 @@ pub fn run() {
     let terminal_state = TerminalState {
         writers: Arc::new(Mutex::new(HashMap::new())),
     };
+    
+    let mcp_state = mcp::McpState {
+        servers: Arc::new(Mutex::new(HashMap::new())),
+    };
 
     tauri::Builder::default()
         .manage(terminal_state)
+        .manage(mcp_state)
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
             get_system_context,
