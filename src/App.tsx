@@ -83,6 +83,13 @@ interface McpServerConfig {
   enabled: boolean;
 }
 
+interface ReviewReport {
+  summary: string;
+  score: { readability: number; security: number; performance: number };
+  issues: { file: string; line: number; severity: "low" | "med" | "high"; desc: string; fix: string }[];
+  metrics: { complexity: "low" | "med" | "high"; maintainability: number };
+}
+
 interface TerminalBlock {
   id: string;
   command: string;
@@ -91,7 +98,7 @@ interface TerminalBlock {
   actions?: Action[];
   analysis?: string;
   suggestion?: string;
-  type: "shell" | "ai" | "error-analysis";
+  type: "shell" | "ai" | "error-analysis" | "refactor" | "review";
   status: "executing" | "completed" | "error" | "blocked" | "healing";
   cwd: string;
   gitBranch: string | null;
@@ -100,6 +107,7 @@ interface TerminalBlock {
   securityReport?: SecurityReport;
   visualData?: VisualData;
   dynamicUI?: string;
+  reviewReport?: ReviewReport;
   computerUse?: any[];
   screenshot?: string;
 }
@@ -1425,8 +1433,129 @@ const App = () => {
   };
   const shortPath = (p: string) => p.replace(/\\/g, "/").split("/").pop() || "~";
 
+  const [showSetupWizard, setShowSetupWizard] = useState(false);
+  const [setupStep, setSetupStep] = useState(1);
+
+  const [hardwareSpecs, setHardwareSpecs] = useState<{
+    total_memory_gb: number;
+    wgpu_supported: boolean;
+    recommended_engine: "ollama" | "xllm";
+  } | null>(null);
+
+  const recommendedModel = useMemo(() => {
+    if (!hardwareSpecs) return "qwen2.5-coder:7b";
+    // xLLM을 사용할 경우 더 큰 모델도 쾌적하게 동작함
+    if (hardwareSpecs.recommended_engine === "xllm") {
+       if (hardwareSpecs.total_memory_gb >= 32) return "qwen2.5-coder:32b (EXL2)";
+       return "qwen2.5-coder:7b (EXL2)";
+    }
+    if (hardwareSpecs.total_memory_gb >= 16) return "qwen2.5-coder:7b";
+    return "qwen2.5-coder:1.5b";
+  }, [hardwareSpecs]);
+
+  useEffect(() => {
+    const checkOnboarding = async () => {
+      try {
+        const specs = await invoke<any>("get_hardware_specs");
+        setHardwareSpecs(specs);
+
+        const online = await invoke<boolean>("check_ollama_status");
+        if (!online) {
+           setShowSetupWizard(true);
+           setSetupStep(1);
+        } else {
+           const installedModels = await invoke<string[]>("list_models");
+           if (installedModels.length === 0) {
+             setShowSetupWizard(true);
+             setSetupStep(2);
+           }
+        }
+      } catch (e) {
+        setShowSetupWizard(true);
+      }
+    };
+    checkOnboarding();
+  }, []);
+
   return (
     <div className="app-root">
+      {showSetupWizard && (
+        <div className="setup-wizard-overlay">
+          <div className="setup-wizard-modal">
+            <div className="setup-wizard-header">
+              <Zap size={24} className="text-accent animate-pulse" />
+              <h2>LUM Setup Wizard</h2>
+            </div>
+            
+            <div className="setup-wizard-body">
+              {setupStep === 1 && (
+                <div className="setup-step">
+                  <h3>1. Ollama를 찾을 수 없습니다</h3>
+                  <p>LUM은 로컬 AI 터미널입니다. Ollama를 설치하고 실행해야 AI 기능을 사용할 수 있습니다.</p>
+                  <a href="https://ollama.com" target="_blank" rel="noreferrer" className="setup-link">
+                    Ollama 다운로드 사이트로 이동
+                  </a>
+                  <button className="setup-btn" onClick={() => syncOllama().then(() => setSetupStep(2))}>
+                    설치 완료 후 확인
+                  </button>
+                </div>
+              )}
+              {setupStep === 2 && (
+                <div className="setup-step">
+                  <h3>2. 최적의 추론 엔진 및 모델 선택</h3>
+                  <p>LUM이 사양({hardwareSpecs?.total_memory_gb}GB RAM, {hardwareSpecs?.wgpu_supported ? "GPU 가속" : "CPU"})을 분석했습니다.</p>
+
+                  <div className={`recommendation-box ${hardwareSpecs?.recommended_engine === "xllm" ? "xllm-pro" : ""}`}>
+                    <div className="recommendation-badge">
+                       {hardwareSpecs?.recommended_engine === "xllm" ? "🔥 xLLM (EXL2) PRO 엔진 추천" : "Recommended for You"}
+                    </div>
+                    <div className="recommendation-content">
+                       <Zap size={20} className="text-accent" />
+                       <div>
+                         <div className="recommendation-name">{recommendedModel}</div>
+                         <div className="recommendation-desc">
+                           {hardwareSpecs?.recommended_engine === "xllm" 
+                             ? "GPU 최적화 EXL2 포맷으로 Ollama 대비 최대 5배 빠른 코딩 지원" 
+                             : "범용 GGUF 포맷으로 안정적인 로컬 코딩 지원"}
+                         </div>
+                       </div>
+                    </div>
+                  </div>
+
+                  {pullProgress ? (
+                     <div className="pull-progress-card">
+                       <div className="pull-status">{pullProgress.status} ({Math.round((pullProgress.completed || 0) / (pullProgress.total || 1) * 100)}%)</div>
+                       <div className="progress-bar-bg">
+                         <div className="progress-bar-fill" style={{ width: `${((pullProgress.completed || 0) / (pullProgress.total || 1)) * 100}%` }} />
+                       </div>
+                     </div>
+                  ) : (
+                    <button className="setup-btn primary" onClick={() => handlePullModel(recommendedModel)}>
+                      {recommendedModel} 설치 시작
+                    </button>
+                  )}
+                  {(models.includes(recommendedModel) || models.some(m => m.startsWith(recommendedModel.split(' ')[0]))) && (
+                    <button className="setup-btn" onClick={() => setSetupStep(3)}>
+                      다음 단계
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {setupStep === 3 && (
+                <div className="setup-step">
+                  <h3>3. 모든 준비가 완료되었습니다!</h3>
+                  <p>이제 LUM의 강력한 자율 에이전트와 시각적 셸을 경험해 보세요.</p>
+                  <button className="setup-btn primary" onClick={() => setShowSetupWizard(false)}>
+                    시작하기
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {isPaletteOpen && (
         <div className="palette-overlay" onClick={() => setIsPaletteOpen(false)}>
           <div className="palette-modal" onClick={(e) => e.stopPropagation()}>
@@ -1715,6 +1844,43 @@ const App = () => {
 
                                 {block.dynamicUI && (
                                   <DynamicUIRenderer code={block.dynamicUI} />
+                                )}
+
+                                {block.reviewReport && (
+                                  <div className="review-report-container">
+                                    <div className="review-header">
+                                      <div className="review-scores">
+                                        {Object.entries(block.reviewReport.score).map(([key, val]) => (
+                                          <div key={key} className="score-item">
+                                            <div className="score-label">{key.toUpperCase()}</div>
+                                            <div className="score-bar-bg">
+                                              <div className="score-bar-fill" style={{ width: `${val}%`, backgroundColor: val > 80 ? "var(--accent)" : val > 50 ? "#d29922" : "#f85149" }} />
+                                            </div>
+                                            <div className="score-value">{val}</div>
+                                          </div>
+                                        ))}
+                                      </div>
+                                      <div className="review-metrics">
+                                        <div className="metric-badge">Complexity: {block.reviewReport.metrics.complexity}</div>
+                                        <div className="metric-badge">Maintainability: {block.reviewReport.metrics.maintainability}%</div>
+                                      </div>
+                                    </div>
+                                    <div className="review-summary">{block.reviewReport.summary}</div>
+                                    <div className="review-issues">
+                                      {block.reviewReport.issues.map((issue, idx) => (
+                                        <div key={idx} className={`issue-card severity-${issue.severity}`}>
+                                          <div className="issue-meta">
+                                            <span className="issue-file">{issue.file}:{issue.line}</span>
+                                            <span className={`issue-tag ${issue.severity}`}>{issue.severity.toUpperCase()}</span>
+                                          </div>
+                                          <div className="issue-desc">{issue.desc}</div>
+                                          <div className="issue-fix">
+                                            <strong>Fix:</strong> <code>{issue.fix}</code>
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
                                 )}
 
                                 {block.explanation && (

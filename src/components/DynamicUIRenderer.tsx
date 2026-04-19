@@ -1,15 +1,14 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import * as Babel from "@babel/standalone";
-import * as LucideIcons from "lucide-react";
-import * as Recharts from "recharts";
+import { ShieldAlert, ShieldCheck, Loader2 } from "lucide-react";
 
 interface Props {
   code: string;
 }
 
 const DynamicUIRenderer: React.FC<Props> = ({ code }) => {
-  const [Component, setComponent] = useState<React.ComponentType | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
 
   useEffect(() => {
     try {
@@ -21,53 +20,91 @@ const DynamicUIRenderer: React.FC<Props> = ({ code }) => {
 
       if (!transpiled) throw new Error("Transpilation failed");
 
-      // 2. 컴포넌트 생성 루틴
-      // React, Lucide, Recharts 등을 스코프에 주입
-      const exports: any = {};
-      const require = (moduleName: string) => {
-        if (moduleName === "react") return React;
-        if (moduleName === "lucide-react") return LucideIcons;
-        if (moduleName === "recharts") return Recharts;
-        throw new Error(`Module ${moduleName} is not supported in dynamic UI`);
-      };
+      // 2. iframe 내부로 주입할 HTML 구성 (Sandboxed 환경)
+      // React, Lucide, Recharts 등을 CDN을 통해 로드하거나 로컬에서 주입
+      const srcDoc = `
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <script src="https://unpkg.com/react@19/umd/react.production.min.js"></script>
+            <script src="https://unpkg.com/react-dom@19/umd/react-dom.production.min.js"></script>
+            <script src="https://cdn.tailwindcss.com"></script>
+            <style>
+              body { margin: 0; background: transparent; overflow: hidden; color: white; font-family: sans-serif; }
+              .dynamic-root { padding: 1rem; border-radius: 0.5rem; background: rgba(255, 255, 255, 0.05); }
+            </style>
+          </head>
+          <body>
+            <div id="root" class="dynamic-root"></div>
+            <script>
+              try {
+                // React 등 전역 노출
+                const React = window.React;
+                const ReactDOM = window.ReactDOM;
 
-      const func = new Function("React", "require", "exports", transpiled);
-      func(React, require, exports);
+                // 트랜스파일된 코드 실행
+                (function() {
+                  ${transpiled.replace(/import\s+.*?\s+from\s+['"].*?['"];?/g, "")}
+                  
+                  const Component = (typeof exports !== 'undefined' && exports.default) || 
+                                    (typeof exports !== 'undefined' && exports.Component) || 
+                                    (typeof App !== 'undefined' ? App : null);
+                  
+                  if (Component) {
+                    const root = ReactDOM.createRoot(document.getElementById('root'));
+                    root.render(React.createElement(Component));
+                  }
+                })();
+              } catch (err) {
+                window.parent.postMessage({ type: 'RENDER_ERROR', error: err.message }, '*');
+              }
+            </script>
+          </body>
+        </html>
+      `;
 
-      const DynamicComponent = exports.default || exports.Component || Object.values(exports)[0];
-      
-      if (typeof DynamicComponent !== "function") {
-          throw new Error("No valid React component found in exported code");
+      if (iframeRef.current) {
+        iframeRef.current.srcdoc = srcDoc;
       }
-
-      setComponent(() => DynamicComponent);
       setError(null);
     } catch (err: any) {
-      console.error("Dynamic UI Error:", err);
       setError(err.message);
     }
+
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data?.type === 'RENDER_ERROR') {
+        setError(event.data.error);
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
   }, [code]);
 
-  if (error) {
-    return (
-      <div className="dynamic-ui-error">
-        <div className="flex items-center gap-2 text-red-500 mb-2">
-          <LucideIcons.ShieldAlert size={16} />
-          <span className="font-bold text-xs uppercase">UI Render Error</span>
-        </div>
-        <pre className="text-[10px] bg-black/20 p-2 rounded overflow-auto max-h-32 text-red-400">
-          {error}
-        </pre>
-      </div>
-    );
-  }
-
   return (
-    <div className="dynamic-ui-container">
-      {Component ? <Component /> : (
-        <div className="flex items-center justify-center p-8 text-dim">
-           <LucideIcons.Loader2 size={24} className="animate-spin" />
+    <div className="dynamic-ui-wrapper border border-white/10 rounded-lg overflow-hidden my-4">
+      <div className="bg-white/5 px-3 py-1 flex items-center justify-between text-[10px] uppercase tracking-wider font-bold">
+        <div className="flex items-center gap-2">
+          {error ? <ShieldAlert size={12} className="text-red-400" /> : <ShieldCheck size={12} className="text-green-400" />}
+          <span>Sandboxed AI Native UI</span>
         </div>
+        <div className="text-white/40">Read-Only Sandbox</div>
+      </div>
+      
+      {error ? (
+        <div className="p-4 bg-red-900/10 text-red-400 text-xs font-mono whitespace-pre-wrap">
+          {error}
+        </div>
+      ) : (
+        <iframe
+          ref={iframeRef}
+          title="AI Generated UI Sandbox"
+          sandbox="allow-scripts"
+          className="w-full h-auto min-h-[150px] border-none bg-transparent"
+          onLoad={(e) => {
+             // iframe 높이 자동 조절 등 추가 가능
+          }}
+        />
       )}
     </div>
   );

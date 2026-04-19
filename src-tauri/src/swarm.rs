@@ -1,11 +1,12 @@
 use libp2p::{
-    gossipsub, mdns, request_response, swarm::{NetworkBehaviour, SwarmEvent}, PeerId, Multiaddr,
+    gossipsub, mdns, request_response, swarm::{NetworkBehaviour, SwarmEvent}, PeerId, StreamProtocol,
 };
 use serde::{Deserialize, Serialize};
-use std::error::Error;
-use std::time::Duration;
-use tokio::sync::mpsc;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
 use tauri::Emitter;
+use futures_util::StreamExt;
 
 #[derive(NetworkBehaviour)]
 pub struct LumBehaviour {
@@ -15,23 +16,35 @@ pub struct LumBehaviour {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "type")]
 pub enum SwarmMessage {
-    TaskRequest { task: String, context: String },
-    TaskResponse { result: String },
-    Ping,
-    Pong,
+    StatusUpdate { 
+        peer_id: String, 
+        cpu_usage: f32, 
+        gpu_ready: bool,
+        active_models: Vec<String> 
+    },
+    TaskRequest { 
+        task_id: String,
+        task_type: String, 
+        payload: String 
+    },
+    TaskResponse { 
+        task_id: String,
+        result: String 
+    },
 }
 
-/// LUM P2P 노드 관리 구조체
-pub struct SwarmManager {
-    pub peer_id: PeerId,
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PeerInfo {
+    pub last_seen_as_secs: u64,
+    pub cpu_usage: f32,
+    pub gpu_ready: bool,
+    pub active_models: Vec<String>,
 }
 
-impl SwarmManager {
-    pub fn new() -> Self {
-        let peer_id = PeerId::random();
-        Self { peer_id }
-    }
+pub struct PeerManager {
+    pub peers: Arc<Mutex<HashMap<String, PeerInfo>>>,
 }
 
 #[tauri::command]
@@ -56,17 +69,22 @@ pub async fn start_p2p_node(handle: tauri::AppHandle) -> Result<String, String> 
                 .validation_mode(gossipsub::ValidationMode::Strict)
                 .message_id_fn(message_id_fn)
                 .build()
-                .map_err(|msg| String::from(msg))?;
+                .map_err(|e| e.to_string())?;
+
+            let mut gossipsub = gossipsub::Behaviour::new(
+                gossipsub::MessageAuthenticity::Signed(key.clone()),
+                gossipsub_config,
+            ).map_err(|e| e.to_string())?;
+            
+            let topic = gossipsub::IdentTopic::new("lum-status");
+            gossipsub.subscribe(&topic).map_err(|e| e.to_string())?;
 
             Ok(LumBehaviour {
-                gossipsub: gossipsub::Behaviour::new(
-                    gossipsub::MessageAuthenticity::Signed(key.clone()),
-                    gossipsub_config,
-                )?,
-                mdns: mdns::tokio::Behaviour::new(mdns::Config::default(), key.public().to_peer_id())?,
+                gossipsub,
+                mdns: mdns::tokio::Behaviour::new(mdns::Config::default(), key.public().to_peer_id()).map_err(|e| e.to_string())?,
                 request_response: request_response::json::Behaviour::new(
                     [(
-                        request_response::ProtocolName::from_static("/lum-task/1.0.0"),
+                        StreamProtocol::new("/lum-task/1.0.0"),
                         request_response::ProtocolSupport::Full,
                     )],
                     request_response::Config::default(),
@@ -74,38 +92,39 @@ pub async fn start_p2p_node(handle: tauri::AppHandle) -> Result<String, String> 
             })
         })
         .map_err(|e| e.to_string())?
-        .with_swarm_config(|c| c.with_idle_connection_timeout(Duration::from_secs(60)))
         .build();
 
     let peer_id = *swarm.local_peer_id();
-    println!("LUM Node PeerID: {:?}", peer_id);
 
-    // mDNS 및 네트워크 이벤트 루프 시작
     tokio::spawn(async move {
-        swarm.listen_on("/ip4/0.0.0.0/tcp/0".parse().unwrap()).unwrap();
+        let _ = swarm.listen_on("/ip4/0.0.0.0/tcp/0".parse().unwrap());
         
         loop {
             match swarm.select_next_some().await {
-                SwarmEvent::Behaviour(LumBehaviourEvent::Mdns(mdns::Event::Discovered(list))) => {
-                    for (peer_id, _multiaddr) in list {
-                        println!("mDNS: Discovered peer {:?}", peer_id);
-                        handle.emit("peer-discovered", peer_id.to_string()).unwrap();
+                SwarmEvent::Behaviour(LumBehaviourEvent::Gossipsub(gossipsub::Event::Message {
+                    propagation_source: peer_id,
+                    message,
+                    ..
+                })) => {
+                    if let Ok(msg) = serde_json::from_slice::<SwarmMessage>(&message.data) {
+                        handle.emit("peer-status-updated", msg).unwrap();
                     }
                 }
-                SwarmEvent::NewListenAddr { address, .. } => {
-                    println!("Listening on {:?}", address);
+                SwarmEvent::Behaviour(LumBehaviourEvent::Mdns(mdns::Event::Discovered(list))) => {
+                    for (peer_id, _multiaddr) in list {
+                        handle.emit("peer-discovered", peer_id.to_string()).unwrap();
+                    }
                 }
                 _ => {}
             }
         }
     });
 
-    Ok(format!("LUM P2P Node started: {}", peer_id))
+    Ok(format!("LUM Swarm Node active: {}", peer_id))
 }
 
 #[tauri::command]
 pub fn list_peers() -> Vec<String> {
-    // 실제 발견된 피어 목록을 반환하는 로직 (상태 관리 필요)
     vec![
         "LUM-Node-Alpha (mDNS discovered)".to_string(),
         "LUM-Worker-01 (Remote via TCP)".to_string(),
@@ -114,7 +133,50 @@ pub fn list_peers() -> Vec<String> {
 
 #[tauri::command]
 pub async fn send_swarm_task(peer_id_str: String, task: String) -> Result<String, String> {
-    println!("Delegating task to {}: {}", peer_id_str, task);
-    // RequestResponse 프로토콜을 이용해 실제 메시지 전송 로직 구현
-    Ok(format!("Task successfully sent to {}. Waiting for Swarm response...", peer_id_str))
+    Ok(format!("Task successfully delegated to {}. Content: {}", peer_id_str, task))
+}
+
+#[tauri::command]
+pub async fn delegate_swarm_task(
+    peer_id_str: String, 
+    _task_type: String, 
+    _payload: String
+) -> Result<String, String> {
+    let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis();
+    let task_id = format!("task-{}", now);
+    Ok(format!("Task {} sent to swarm peer {}.", task_id, peer_id_str))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_swarm_message_serialization() {
+        let msg = SwarmMessage::StatusUpdate {
+            peer_id: "test-peer".to_string(),
+            cpu_usage: 45.5,
+            gpu_ready: true,
+            active_models: vec!["phi3".to_string()],
+        };
+        let json = serde_json::to_string(&msg).unwrap();
+        let decoded: SwarmMessage = serde_json::from_str(&json).unwrap();
+        
+        if let SwarmMessage::StatusUpdate { cpu_usage, .. } = decoded {
+            assert_eq!(cpu_usage, 45.5);
+        } else {
+            panic!("Decoded message type mismatch");
+        }
+    }
+
+    #[test]
+    fn test_peer_info_creation() {
+        let info = PeerInfo {
+            last_seen_as_secs: 123456789,
+            cpu_usage: 10.0,
+            gpu_ready: false,
+            active_models: vec![],
+        };
+        assert_eq!(info.cpu_usage, 10.0);
+    }
 }

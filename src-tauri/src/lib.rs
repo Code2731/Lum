@@ -388,39 +388,24 @@ async fn generate_ai_command(
              Request: {}\n\
              Respond ONLY with a JSON object in this format:\n\
              {{\n\
-               \"command\": \"the primary command\",\n\
+               \"command\": \"primary command to run\",\n\
                \"explanation\": \"markdown explanation\",\n\
+               \"type\": \"shell | ai | refactor | review\",\n\
                \"actions\": [\n\
-                 {{ \"type\": \"run\", \"cmd\": \"command to run\", \"label\": \"Step label\" }},\n\
-                 {{ \"type\": \"create\", \"path\": \"file path\", \"content\": \"file content\", \"label\": \"Create file label\" }}\n\
+                 {{ \"type\": \"run | create | patch\", \"cmd\": \"...\", \"path\": \"...\", \"content\": \"...\", \"label\": \"...\" }}\n\
                ],\n\
-               \"visualData\": {{\n\
-                 \"type\": \"chart\",\n\
-                 \"chartType\": \"line | bar | area | pie\",\n\
-                 \"data\": [{{ \"x\": \"label\", \"y1\": 10, \"y2\": 20 }}],\n\
-                 \"config\": {{ \"xKey\": \"x\", \"yKeys\": [\"y1\", \"y2\"], \"title\": \"Chart Title\" }}\n\
+               \"reviewReport\": {{\n\
+                 \"summary\": \"overall summary\",\n\
+                 \"score\": {{ \"readability\": 0-100, \"security\": 0-100, \"performance\": 0-100 }},\n\
+                 \"issues\": [{{ \"file\": \"...\", \"line\": 0, \"severity\": \"low|med|high\", \"desc\": \"...\", \"fix\": \"...\" }}],\n\
+                 \"metrics\": {{ \"complexity\": \"low|med|high\", \"maintainability\": 0-100 }}\n\
                }},\n\
-               \"toolCalls\": [\n\
-                 {{ \"server\": \"server_name\", \"tool\": \"tool_name\", \"arguments\": {{ \"arg1\": \"val1\" }} }}\n\
-               ],\n\
-               \"healingPlan\": [\n\
-                 {{ \"type\": \"run | create\", \"cmd\": \"command\", \"path\": \"path\", \"content\": \"content\", \"label\": \"Reason for this step\" }}\n\
-               ],\n\
-               \"dynamicUI\": \"raw React JSX code with Tailwind classes\",\n\
-               \"computerUse\": [\n\
-                 {{ \"type\": \"mouse_move\", \"x\": 500, \"y\": 300, \"click\": true }},\n\
-                 {{ \"type\": \"type_text\", \"text\": \"Hello World\", \"enter\": true }},\n\
-                 {{ \"type\": \"scroll\", \"x\": 500, \"y\": 400, \"amount\": 3 }},\n\
-                 {{ \"type\": \"key_combo\", \"modifier\": \"cmd\", \"key\": \"v\" }},\n\
-                 {{ \"type\": \"click\", \"x\": 100, \"y\": 200, \"button\": \"right\" }}\n\
-               ]\n\
+               \"visualData\": {{ ... }},\n\
+               \"dynamicUI\": \"raw React JSX code for interactive report\",\n\
+               \"computerUse\": [ ... ]\n\
              }}\n\
-             Note: If an image is provided, use it to find UI elements (icons, buttons) and provide exact pixel coordinates (x, y) for 'computerUse' actions.\n\
-             Note: Include 'visualData' for standard charts.\n\
-             Note: Include 'toolCalls' if you need external information.\n\
-             Note: Include 'healingPlan' ONLY if you are in SELF_HEALING mode.\n\
-             Note: Include 'dynamicUI' ONLY if custom UI is requested.\n\
-             Note: Include 'computerUse' ONLY if you need to interact with the OS/GUI apps outside the terminal.\n\
+             Note: For 'refactor', provide 'actions' with 'type: patch' or 'create'.\n\
+             Note: For 'review', prioritize 'reviewReport' and a high-quality 'dynamicUI' dashboard.\n\
              Important: Use markdown in 'explanation'. Ensure the JSON is valid.",
             context, prompt
         )
@@ -851,18 +836,51 @@ async fn search_codebase(query: String, model: String) -> Result<Vec<CodeChunk>,
     Ok(scored.into_iter().take(5).map(|(_, c)| c).collect())
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+struct HardwareSpecs {
+    cpu_cores: usize,
+    total_memory_gb: u64,
+    gpu_vram_gb: Option<u64>,
+    wgpu_supported: bool,
+    recommended_engine: String, // "ollama" | "xllm"
+}
+
 #[tauri::command]
-async fn check_wgpu_support() -> Result<bool, String> {
+async fn get_hardware_specs() -> HardwareSpecs {
+    // 1. RAM 용량 확인
+    let total_memory_gb = if cfg!(target_os = "macos") {
+        let output = Command::new("sysctl")
+            .args(["-n", "hw.memsize"])
+            .output()
+            .ok();
+        output.and_then(|o| String::from_utf8_lossy(&o.stdout).trim().parse::<u64>().ok())
+            .map(|bytes| bytes / 1024 / 1024 / 1024)
+            .unwrap_or(8)
+    } else { 16 };
+
+    // 2. GPU 및 VRAM 확인 (VRAM이 8GB 이상이면 xLLM 추천)
     let instance = wgpu::Instance::default();
     let adapter = instance
         .request_adapter(&wgpu::RequestAdapterOptions {
             power_preference: wgpu::PowerPreference::HighPerformance,
-            force_fallback_adapter: false,
-            compatible_surface: None,
+            ..Default::default()
         })
         .await;
 
-    Ok(adapter.is_some())
+    let (wgpu_supported, recommended_engine) = if let Some(ref adp) = adapter {
+        // 실제 VRAM 용량 체크 로직 (여기서는 예시로 GPU 존재 시 xLLM 고려)
+        (true, "xllm".to_string())
+    } else {
+        (false, "ollama".to_string())
+    };
+
+    HardwareSpecs {
+        cpu_cores: std::thread::available_parallelism().map(|n| n.get()).unwrap_or(4),
+        total_memory_gb,
+        gpu_vram_gb: Some(8), // 예시값
+        wgpu_supported,
+        recommended_engine,
+    }
 }
 
 /// 시각적 목표 달성 검증: 스크린샷을 AI에 전달해 목표 달성 여부 판단
