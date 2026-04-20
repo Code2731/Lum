@@ -29,22 +29,24 @@ export const useTerminalBlocks = () => {
   const [activeTab, setActiveTab] = useState<string>("default");
 
   const addBlock = useCallback((block: Partial<TerminalBlock>) => {
-    const newBlock: TerminalBlock = {
-      id: uuidv4(),
-      command: "",
-      output: "",
-      status: "executing",
-      cwd: "/",
-      gitBranch: null,
-      type: "shell",
-      // 기본 위치: 마지막 블록 옆 또는 랜덤 배치
-      position: { x: blocks.length * 350, y: 50 },
-      links: [],
-      ...block,
-    };
-    setBlocks((prev) => [...prev, newBlock]);
-    return newBlock.id;
-  }, [blocks.length]);
+    const id = uuidv4();
+    setBlocks((prev) => {
+      const newBlock: TerminalBlock = {
+        id,
+        command: "",
+        output: "",
+        status: "executing",
+        cwd: "/",
+        gitBranch: null,
+        type: "shell",
+        position: { x: prev.length * 350, y: 50 },
+        links: [],
+        ...block,
+      };
+      return [...prev, newBlock];
+    });
+    return id;
+  }, []);
 
   const updateBlock = useCallback((id: string, updates: Partial<TerminalBlock>) => {
     setBlocks((prev) =>

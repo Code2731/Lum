@@ -81,7 +81,7 @@ pub fn simulate_key_combo(modifier: String, key: String) -> Result<(), String> {
         "ctrl" | "control" => enigo::Key::Control,
         "alt" | "option" => enigo::Key::Alt,
         "shift" => enigo::Key::Shift,
-        _ => enigo::Key::Meta,
+        _ => return Err(format!("Unknown modifier: '{}'", modifier)),
     };
     
     let k = match key.to_lowercase().as_str() {
