@@ -13,6 +13,8 @@ import TerminalPane from "./components/TerminalPane";
 import ModelManager from "./components/ModelManager";
 import HealingPanel, { type HealingResult } from "./components/HealingPanel";
 import RagPanel from "./components/RagPanel";
+import CommandBlockBar from "./components/CommandBlockBar";
+import { useCommandBlocks } from "./hooks/useCommandBlocks";
 
 const stripAnsi = (s: string) =>
   s.replace(/\x1b\[[0-9;]*[a-zA-Z]/g, "").replace(/\x1b\][^\x07]*\x07/g, "");
@@ -69,6 +71,10 @@ const App: React.FC = () => {
 
   // 탭별 PTY 쓰기 함수
   const ptyWriteRefs = useRef<Map<string, (d: string) => void>>(new Map());
+
+  // 커맨드 블록 (OSC 133 파싱)
+  const { blocks: cmdBlocks, feedRaw } = useCommandBlocks();
+  const [dismissedBlockId, setDismissedBlockId] = useState<string | null>(null);
 
   // Self-Healing
   const [healingError, setHealingError] = useState<string | null>(null);
@@ -153,10 +159,11 @@ const App: React.FC = () => {
     });
   }, []);
 
-  // 활성 팬 출력 → 에러 감지
+  // 활성 팬 출력 → OSC 133 블록 파싱 + 에러 감지
   const handleTerminalOutput = useCallback(
     (paneId: string) => (data: string) => {
       if (paneId !== activePaneIdRef.current) return;
+      feedRaw(data);
       const text = stripAnsi(data);
       outputBufRef.current += text;
       if (outputBufRef.current.length > 3000) {
@@ -260,6 +267,13 @@ const App: React.FC = () => {
   ];
 
   const activeTab = tabs.find((t) => t.id === activeTabId);
+
+  // 가장 최근 완료 블록 — HealingPanel이 표시 중이 아닐 때만 블록바 노출
+  const lastCmdBlock = cmdBlocks[cmdBlocks.length - 1] ?? null;
+  const showBlockBar =
+    lastCmdBlock !== null &&
+    lastCmdBlock.id !== dismissedBlockId &&
+    !healingError;
 
   return (
     <div className="app-root bg-terminal-dark text-white min-h-screen flex flex-col">
@@ -455,6 +469,12 @@ const App: React.FC = () => {
                 )}
               </div>
             ))}
+            {showBlockBar && lastCmdBlock && (
+              <CommandBlockBar
+                block={lastCmdBlock}
+                onDismiss={() => setDismissedBlockId(lastCmdBlock.id)}
+              />
+            )}
             {healingError && (
               <HealingPanel
                 errorSnippet={healingError}
@@ -472,24 +492,43 @@ const App: React.FC = () => {
             <InfiniteCanvas blocks={blocks} onNodeMove={moveBlock} />
           )}
 
-          {/* 리스트 뷰 */}
+          {/* 리스트 뷰 — 커맨드 블록 히스토리 */}
           {viewMode === "list" && (
-            <div className="p-4 space-y-3 overflow-y-auto h-full">
-              {blocks.length === 0 ? (
+            <div className="p-4 space-y-2 overflow-y-auto h-full">
+              {cmdBlocks.length === 0 ? (
                 <p className="text-white/20 text-xs text-center pt-12">
-                  Cmd+K 로 AI에게 질문하세요.
+                  터미널에서 명령어를 실행하면 여기에 히스토리가 쌓입니다.
                 </p>
               ) : (
-                blocks.map((block) => (
-                  <div key={block.id} className="p-3 bg-white/5 rounded-lg border border-white/5">
-                    <pre className="text-xs font-mono text-accent">{block.command}</pre>
-                    {block.output && (
-                      <pre className="text-xs font-mono text-white/60 mt-1 whitespace-pre-wrap">
-                        {block.output}
-                      </pre>
-                    )}
-                  </div>
-                ))
+                [...cmdBlocks].reverse().map((b) => {
+                  const success = b.exitCode === 0 || b.exitCode === null;
+                  return (
+                    <div
+                      key={b.id}
+                      className={`rounded-lg border overflow-hidden ${success ? "border-white/5" : "border-red-500/20"}`}
+                    >
+                      <div className={`flex items-center gap-2 px-3 py-1.5 text-[11px] font-mono ${success ? "bg-white/3" : "bg-red-500/5"}`}>
+                        <span className={`shrink-0 tabular-nums ${success ? "text-green-400" : "text-red-400"}`}>
+                          {success ? "✓" : `✗ ${b.exitCode}`}
+                        </span>
+                        <span className="text-white/50 truncate">
+                          <span className="text-white/25">$ </span>
+                          {b.command || "…"}
+                        </span>
+                        {b.endedAt && (
+                          <span className="ml-auto text-white/20 shrink-0 text-[9px]">
+                            {new Date(b.endedAt).toLocaleTimeString()}
+                          </span>
+                        )}
+                      </div>
+                      {b.output.trim() && (
+                        <pre className="px-3 py-2 text-[10px] font-mono text-white/40 whitespace-pre-wrap line-clamp-6 bg-[#0d1117]">
+                          {b.output.trim()}
+                        </pre>
+                      )}
+                    </div>
+                  );
+                })
               )}
             </div>
           )}

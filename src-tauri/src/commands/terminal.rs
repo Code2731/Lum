@@ -1,6 +1,31 @@
 use crate::error::{LumError, Result};
 use crate::platform;
 use portable_pty::{native_pty_system, CommandBuilder, PtySize};
+
+/// zsh/bash 셸 통합 스크립트 — OSC 133 A/C/D 시퀀스를 PTY 출력에 주입
+fn shell_integration_script(shell: &str) -> String {
+    let name = std::path::Path::new(shell)
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("");
+    match name {
+        "zsh" => concat!(
+            " autoload -Uz add-zsh-hook 2>/dev/null;",
+            " _lum_precmd(){ printf '\\033]133;D;%d\\007' \"$?\" };",
+            " _lum_preexec(){ printf '\\033]133;C;%s\\007' \"$1\" };",
+            " add-zsh-hook precmd _lum_precmd;",
+            " add-zsh-hook preexec _lum_preexec\n"
+        )
+        .to_string(),
+        "bash" => concat!(
+            " _lum_precmd(){ local e=$?; printf '\\033]133;D;%d\\007' \"$e\"; };",
+            " PROMPT_COMMAND=\"_lum_precmd${PROMPT_COMMAND:+; $PROMPT_COMMAND}\";",
+            " trap 'printf \"\\033]133;C;$BASH_COMMAND\\007\"' DEBUG\n"
+        )
+        .to_string(),
+        _ => String::new(),
+    }
+}
 use std::collections::HashMap;
 use std::io::{Read, Write};
 use std::sync::{Arc, Mutex};
@@ -133,6 +158,17 @@ pub async fn spawn_pty(
         }
         // 셸 종료 시 이벤트 발송
         let _ = app_r.emit("pty_exit", id_r);
+    });
+
+    // ── 셸 통합 스크립트 주입 (400ms 후 — 셸 초기화 완료 대기) ─
+    let init_tx = write_tx.clone();
+    let shell_name = shell.to_string();
+    std::thread::spawn(move || {
+        std::thread::sleep(std::time::Duration::from_millis(400));
+        let script = shell_integration_script(&shell_name);
+        if !script.is_empty() {
+            let _ = init_tx.send(script.into_bytes());
+        }
     });
 
     // ── 채널 핸들 저장 ─────────────────────────────────────────

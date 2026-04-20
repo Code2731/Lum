@@ -73,3 +73,4 @@ cd src-tauri && cargo test   # Rust 단위 테스트 실행
 - [x] Phase 26: Shared RAG Swarm (index_project/search_codebase/generate_embedding + gossipsub RagQuery/RagResult 피어 간 벡터 검색 공유 완료)
 - [x] Phase 27: Multi-Tab PTY (탭 상태 관리, close_pty 커맨드, Cmd+T/W 단축키, CSS show/hide 마운팅, ptyWriteRefs Map 패턴 완료)
 - [x] Phase 28: Split Pane Terminal (react-resizable-panels Group/Separator, 수평·수직 분할, activePaneId 포커스 추적, Cmd+Shift+D/E 단축키 완료)
+- [x] Phase 29: Command Blocks (OSC 133 Shell Integration, zsh/bash preexec/precmd 훅 주입, useCommandBlocks 파서, CommandBlockBar UI, 리스트 뷰 히스토리 완료)
