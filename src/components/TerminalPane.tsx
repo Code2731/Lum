@@ -14,6 +14,7 @@ interface Props {
   id: string;
   cwd?: string;
   onOutput?: (data: string) => void;
+  onReady?: (write: (data: string) => void) => void;
 }
 
 const IS_WINDOWS = navigator.userAgent.includes("Windows");
@@ -46,7 +47,7 @@ const THEME = {
   brightWhite: "#f0f6fc",
 };
 
-const TerminalPane: React.FC<Props> = ({ id, cwd, onOutput }) => {
+const TerminalPane: React.FC<Props> = ({ id, cwd, onOutput, onReady }) => {
   const outerRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const termRef = useRef<Terminal | null>(null);
@@ -130,6 +131,11 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, onOutput }) => {
       invoke("write_to_pty", { id, data }).catch(() => {});
     });
 
+    // 외부에서 PTY로 직접 쓸 수 있는 콜백 노출
+    onReady?.((data) => {
+      invoke("write_to_pty", { id, data }).catch(() => {});
+    });
+
     // 컨테이너 크기 변경 → fit + resize_pty
     const resizeObserver = new ResizeObserver(() => doFitAndResize());
     if (outerRef.current) resizeObserver.observe(outerRef.current);
@@ -145,7 +151,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, onOutput }) => {
       fitAddonRef.current = null;
       spawnedRef.current = false;
     };
-  }, [id, cwd, onOutput, doFitAndResize]);
+  }, [id, cwd, onOutput, onReady, doFitAndResize]);
 
   return (
     // outerRef: ResizeObserver 감지 대상 (전체 영역)

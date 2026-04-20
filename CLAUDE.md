@@ -69,3 +69,4 @@ cd src-tauri && cargo test   # Rust 단위 테스트 실행
 - [x] Phase 22: xLLM Migration & Model Manager (Ollama → TabbyAPI/ExLlamaV2, 하드웨어 인식 추천, HuggingFace 다운로드/삭제 UI 완료)
 - [x] Phase 23: Real PTY Terminal (portable-pty 채널 아키텍처 + xterm.js 렌더링, 실제 셸 실행 검증 완료)
 - [x] Phase 24: Cross-Platform Polish (platform.rs 모듈, Wayland 감지 가드, 번들 타겟 명시화, audio stub 정직화 완료)
+- [x] Phase 25: AI Self-Healing Loop (터미널 출력 에러 감지 → analyze_error AI 분석 → 수정 커맨드 안전도 배지 + PTY 실행 완료)

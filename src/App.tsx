@@ -7,20 +7,47 @@ import { Zap, Cpu, Loader2, TerminalSquare, LayoutList, MousePointer2, Package }
 import InfiniteCanvas from "./components/layout/InfiniteCanvas";
 import TerminalPane from "./components/TerminalPane";
 import ModelManager from "./components/ModelManager";
+import HealingPanel, { type HealingResult } from "./components/HealingPanel";
+
+// ANSI 이스케이프 코드 제거
+const stripAnsi = (s: string) => s.replace(/\x1b\[[0-9;]*[a-zA-Z]/g, "").replace(/\x1b\][^\x07]*\x07/g, "");
+
+// 에러 패턴 (대소문자 무관)
+const ERROR_PATTERNS = [
+  /command not found/i,
+  /no such file or directory/i,
+  /permission denied/i,
+  /enoent/i,
+  /npm err!/i,
+  /error:/i,
+  /traceback \(most recent call last\)/i,
+  /syntaxerror/i,
+  /typeerror/i,
+  /exception in thread/i,
+  /cargo.*error/i,
+  /build failed/i,
+];
 
 type ViewMode = "terminal" | "canvas" | "list";
 
 const App: React.FC = () => {
   const { blocks, addBlock, updateBlock, moveBlock } = useTerminalBlocks();
-  const { isProcessing, processAICommand } = useAIProcessing();
+  const { isProcessing, processAICommand, analyzeError } = useAIProcessing();
   const { specs, loading: specsLoading } = useHardwareSpecs();
   const [viewMode, setViewMode] = useState<ViewMode>("terminal");
   const [xllmOnline, setXllmOnline] = useState(false);
   const [showModelManager, setShowModelManager] = useState(false);
-  // AI 입력은 터미널 뷰에서 오버레이로 표시
   const [aiInput, setAiInput] = useState("");
   const [showAiBar, setShowAiBar] = useState(false);
   const aiInputRef = useRef<HTMLInputElement>(null);
+
+  // Self-Healing 상태
+  const [healingError, setHealingError] = useState<string | null>(null);
+  const [healingResult, setHealingResult] = useState<HealingResult | null>(null);
+  const [isHealingAnalyzing, setIsHealingAnalyzing] = useState(false);
+  const outputBufRef = useRef("");
+  const errorDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const ptyWriteRef = useRef<((data: string) => void) | null>(null);
 
   // xLLM 서버 상태 확인
   React.useEffect(() => {
@@ -30,6 +57,62 @@ const App: React.FC = () => {
   }, []);
 
   const selectedModel = specs?.recommended_model ?? "Qwen2.5-Coder-7B-Instruct-EXL2-4bpw";
+
+  // 터미널 출력 → 에러 감지
+  const handleTerminalOutput = useCallback((data: string) => {
+    const text = stripAnsi(data);
+    outputBufRef.current += text;
+    if (outputBufRef.current.length > 3000) {
+      outputBufRef.current = outputBufRef.current.slice(-3000);
+    }
+    if (errorDebounceRef.current) clearTimeout(errorDebounceRef.current);
+    errorDebounceRef.current = setTimeout(() => {
+      const buf = outputBufRef.current;
+      outputBufRef.current = "";
+      const matched = ERROR_PATTERNS.some((p) => p.test(buf));
+      if (matched && !healingError) {
+        const snippet = buf.split("\n").filter((l) => l.trim()).slice(-5).join("\n");
+        setHealingError(snippet);
+        setHealingResult(null);
+      }
+    }, 800);
+  }, [healingError]);
+
+  // AI 에러 분석
+  const handleHealingAnalyze = useCallback(async () => {
+    if (!healingError) return;
+    setIsHealingAnalyzing(true);
+    try {
+      const res = await analyzeError("", healingError, selectedModel, "");
+      const suggestion: string = res?.suggestion ?? "";
+      let safetyLevel: HealingResult["safetyLevel"] = "Safe";
+      if (suggestion) {
+        const report = await invoke<{ level: HealingResult["safetyLevel"] }>(
+          "verify_command_safety",
+          { command: suggestion },
+        );
+        safetyLevel = report.level;
+      }
+      setHealingResult({
+        analysis: res?.analysis ?? "분석 결과를 가져오지 못했습니다.",
+        suggestion,
+        safetyLevel,
+      });
+    } catch {
+      setHealingResult({ analysis: "AI 분석에 실패했습니다. xLLM 서버 상태를 확인하세요.", suggestion: "", safetyLevel: "Blocked" });
+    } finally {
+      setIsHealingAnalyzing(false);
+    }
+  }, [healingError, selectedModel, analyzeError]);
+
+  // 제안 커맨드 PTY 실행
+  const handleHealingExecute = useCallback((cmd: string) => {
+    if (ptyWriteRef.current) {
+      ptyWriteRef.current(cmd + "\n");
+    }
+    setHealingError(null);
+    setHealingResult(null);
+  }, []);
 
   const handleAiSubmit = useCallback(async () => {
     const cmd = aiInput.trim();
@@ -136,11 +219,19 @@ const App: React.FC = () => {
         <div className={`absolute inset-0 ${viewMode === "terminal" ? "block" : "hidden"}`}>
           <TerminalPane
             id="main"
-            onOutput={(data) => {
-              // 터미널 출력을 AI 컨텍스트로 활용 (향후 Self-Healing에 전달)
-              void data;
-            }}
+            onOutput={handleTerminalOutput}
+            onReady={(write) => { ptyWriteRef.current = write; }}
           />
+          {healingError && (
+            <HealingPanel
+              errorSnippet={healingError}
+              result={healingResult}
+              isAnalyzing={isHealingAnalyzing}
+              onAnalyze={handleHealingAnalyze}
+              onExecute={handleHealingExecute}
+              onDismiss={() => { setHealingError(null); setHealingResult(null); }}
+            />
+          )}
         </div>
 
         {/* 캔버스 뷰 */}
