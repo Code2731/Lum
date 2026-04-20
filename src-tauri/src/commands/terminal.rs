@@ -62,7 +62,7 @@ pub async fn spawn_pty(
         cwd
     };
 
-    let mut cmd = CommandBuilder::new(&shell);
+    let mut cmd = CommandBuilder::new(shell);
     cmd.cwd(&work_dir);
     // Windows cmd/PowerShell은 TERM 불필요, Unix 계열만 설정
     #[cfg(not(windows))]

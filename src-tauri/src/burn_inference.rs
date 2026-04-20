@@ -64,9 +64,7 @@ impl<B: Backend> TransformerBlock<B> {
         let x = self.ffn_norm.forward(x);
         let gate = self.w_gate.forward(x.clone());
         let _up = self.w_up.forward(x);
-        let x = self.w_down.forward(gate) + residual;
-
-        x
+        self.w_down.forward(gate) + residual
     }
 }
 

@@ -2,7 +2,7 @@ use futures_util::StreamExt;
 use libp2p::{
     gossipsub, mdns, request_response,
     swarm::{NetworkBehaviour, SwarmEvent},
-    PeerId, StreamProtocol,
+    StreamProtocol,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -110,7 +110,7 @@ pub async fn start_p2p_node(handle: tauri::AppHandle) -> Result<String, String> 
             match swarm.select_next_some().await {
                 SwarmEvent::Behaviour(LumBehaviourEvent::Gossipsub(
                     gossipsub::Event::Message {
-                        propagation_source: peer_id,
+                        propagation_source: _peer_id,
                         message,
                         ..
                     },
