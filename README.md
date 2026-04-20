@@ -25,7 +25,7 @@ LUM은 진짜 셸을 실행합니다. 채팅 UI가 아닙니다.
 - **Real PTY Terminal**: portable-pty 기반 실제 셸 실행 + xterm.js 렌더링. 채팅이 아닌 진짜 터미널.
 - **Hardware-Aware Model Recommendations**: PC 사양(RAM·GPU)을 자동 진단하여 **Qwen2.5-Coder / Phi-3.5 EXL2** 최적 모델 추천.
 - **Model Manager**: 추천 EXL2 모델을 HuggingFace에서 직접 다운로드하고 설치된 모델을 관리(삭제).
-- **Autonomous Self-Healing**: 터미널 에러를 AI가 분석하고 복구 명령어를 제안하는 루프.
+- **AI Self-Healing Loop**: 터미널 출력에서 에러를 자동 감지 → AI 원인 분석 → 안전도 배지(Safe/Warning/Dangerous)와 함께 수정 커맨드 제안 → 승인 시 PTY 직접 실행.
 - **Production-Grade Security**: 파괴적 명령어 감지(Security Gate) 및 AI 생성 UI 완전 격리(Sandbox).
 - **Distributed Swarms (libp2p)**: 네트워크 내 다른 LUM 노드들과 협업하는 P2P 지능망 인프라.
 
@@ -61,6 +61,7 @@ write_to_pty → SyncSender → 쓰기 스레드 → PTY Master → $SHELL
 - **Backend (Rust)**: `commands/terminal.rs` — 채널 기반 PTY (쓰기/리사이즈/읽기 스레드 분리)
 - **Frontend (React)**: `TerminalPane.tsx` — xterm.js + FitAddon + ResizeObserver
 - **AI Layer**: `Cmd+K` 오버레이로 현재 셸 컨텍스트를 xLLM에 전달
+- **Self-Healing**: `HealingPanel.tsx` — 에러 패턴 감지 → `analyze_error` → `verify_command_safety` → PTY 실행
 
 ## 🛠 Tech Stack
 
@@ -91,7 +92,7 @@ npm run tauri dev
 - [x] Phase 22: xLLM Migration & Model Manager
 - [x] Phase 23: Real PTY Terminal (portable-pty + xterm.js)
 - [x] Phase 24: Cross-Platform Polish (platform.rs, Wayland 감지, 번들 타겟 명시화)
-- [ ] Phase 25: AI Self-Healing Loop (터미널 출력 → AI 분석 → 자동 수정 제안)
+- [x] Phase 25: AI Self-Healing Loop (에러 자동 감지 → AI 분석 → 안전도 배지 → PTY 실행)
 - [ ] Phase 26: Shared RAG Swarm (노드 간 벡터 지식 공유)
 
 ---
