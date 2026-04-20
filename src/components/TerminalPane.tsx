@@ -1,9 +1,10 @@
-import React, { useEffect, useRef, useCallback } from "react";
+import React, { useEffect, useRef, useCallback, useState } from "react";
 import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import "@xterm/xterm/css/xterm.css";
+import { findCompletion } from "../utils/ghostText";
 
 interface PtyData {
   id: string;
@@ -22,7 +23,6 @@ const FONT_FAMILY = IS_WINDOWS
   ? '"JetBrains Mono", "Cascadia Code", "Consolas", "Courier New", monospace'
   : '"JetBrains Mono", "Menlo", "Monaco", monospace';
 
-// GitHub Dark 팔레트
 const THEME = {
   background: "#0d1117",
   foreground: "#c9d1d9",
@@ -47,12 +47,24 @@ const THEME = {
   brightWhite: "#f0f6fc",
 };
 
+// Approximate cell dimensions for ghost text positioning
+const CELL_W = 7.8;
+const CELL_H = 18.2;
+const PANE_PADDING_X = 10;
+const PANE_PADDING_Y = 6;
+
 const TerminalPane: React.FC<Props> = ({ id, cwd, onOutput, onReady }) => {
   const outerRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const termRef = useRef<Terminal | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
   const spawnedRef = useRef(false);
+
+  // Ghost text state
+  const [ghostText, setGhostText] = useState<string | null>(null);
+  const [ghostPos, setGhostPos] = useState({ x: 0, y: 0 });
+  const inputBufRef = useRef("");
+  const suggestionRef = useRef<{ suffix: string; insert: string } | null>(null);
 
   const doFitAndResize = useCallback(() => {
     const fit = fitAddonRef.current;
@@ -66,6 +78,30 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, onOutput, onReady }) => {
     }
   }, [id]);
 
+  const ghostTextRef = useRef<string | null>(null);
+
+  const updateGhost = useCallback((term: Terminal, inputBuf: string) => {
+    const suggestion = findCompletion(inputBuf);
+    suggestionRef.current = suggestion;
+
+    if (!suggestion) {
+      if (ghostTextRef.current !== null) {
+        ghostTextRef.current = null;
+        setGhostText(null);
+      }
+      return;
+    }
+
+    const cursorX = term.buffer.active.cursorX;
+    const cursorY = term.buffer.active.cursorY;
+    setGhostPos({
+      x: PANE_PADDING_X + cursorX * CELL_W,
+      y: PANE_PADDING_Y + cursorY * CELL_H,
+    });
+    ghostTextRef.current = suggestion.suffix;
+    setGhostText(suggestion.suffix);
+  }, []);
+
   useEffect(() => {
     const container = containerRef.current;
     if (!container || spawnedRef.current) return;
@@ -77,10 +113,9 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, onOutput, onReady }) => {
       lineHeight: 1.4,
       cursorBlink: true,
       cursorStyle: "bar",
-      allowTransparency: false, // 투명도 끔 — 캔버스 렌더링 안정화
+      allowTransparency: false,
       scrollback: 5000,
       theme: THEME,
-      // 최소 크기 보장
       cols: 80,
       rows: 24,
     });
@@ -91,52 +126,77 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, onOutput, onReady }) => {
     termRef.current = term;
     fitAddonRef.current = fitAddon;
 
-    // xterm.js open 직후에는 레이아웃이 아직 확정되지 않았을 수 있음
-    // 두 번 fit: 즉시 + 100ms 후 (레이아웃 완료 보장)
     const doInitialFit = () => {
       try { fitAddon.fit(); } catch {}
 
       const { cols, rows } = term;
-      invoke("spawn_pty", {
-        id,
-        cwd: cwd ?? "",
-        cols,
-        rows,
-      }).catch((e: unknown) => {
+      invoke("spawn_pty", { id, cwd: cwd ?? "", cols, rows }).catch((e: unknown) => {
         term.write(`\r\n\x1b[31m[PTY 오류: ${e}]\x1b[0m\r\n`);
       });
     };
 
-    // 첫 번째 fit: requestAnimationFrame
     requestAnimationFrame(() => {
-      // 두 번째 fit: 레이아웃 완전히 확정된 후
       setTimeout(doInitialFit, 80);
     });
 
-    // PTY 출력 수신
     const unlistenData = listen<PtyData>("pty_data", (event) => {
       if (event.payload.id !== id) return;
       term.write(event.payload.data);
       onOutput?.(event.payload.data);
     });
 
-    // PTY 종료 수신
     const unlistenExit = listen<string>("pty_exit", (event) => {
       if (event.payload !== id) return;
       term.write("\r\n\x1b[2m[프로세스 종료 — 새 탭을 열어주세요]\x1b[0m\r\n");
     });
 
-    // 사용자 키 입력 → PTY 전달
     term.onData((data) => {
+      // Tab intercept — accept ghost text suggestion
+      if (data === "\t" && suggestionRef.current) {
+        invoke("write_to_pty", { id, data: suggestionRef.current.insert }).catch(() => {});
+        inputBufRef.current += suggestionRef.current.insert;
+        suggestionRef.current = null;
+        setGhostText(null);
+        return;
+      }
+
+      // Track input buffer for ghost text
+      if (data === "\r" || data === "\n") {
+        // Command submitted — clear buffer
+        inputBufRef.current = "";
+        setGhostText(null);
+        suggestionRef.current = null;
+      } else if (data === "\x7f" || data === "\b") {
+        // Backspace
+        inputBufRef.current = inputBufRef.current.slice(0, -1);
+        updateGhost(term, inputBufRef.current);
+      } else if (data.length === 1 && data >= " ") {
+        // Printable character
+        inputBufRef.current += data;
+        updateGhost(term, inputBufRef.current);
+      } else if (data === "\x03" || data === "\x04") {
+        inputBufRef.current = "";
+        ghostTextRef.current = null;
+        setGhostText(null);
+        suggestionRef.current = null;
+      } else if (data.startsWith("\x1b")) {
+        // ESC sequences (arrow keys, word-jump, etc.) move cursor without updating inputBuf
+        // Reset buffer to avoid stale ghost text
+        inputBufRef.current = "";
+        if (ghostTextRef.current !== null) {
+          ghostTextRef.current = null;
+          setGhostText(null);
+          suggestionRef.current = null;
+        }
+      }
+
       invoke("write_to_pty", { id, data }).catch(() => {});
     });
 
-    // 외부에서 PTY로 직접 쓸 수 있는 콜백 노출
     onReady?.((data) => {
       invoke("write_to_pty", { id, data }).catch(() => {});
     });
 
-    // 컨테이너 크기 변경 → fit + resize_pty
     const resizeObserver = new ResizeObserver(() => doFitAndResize());
     if (outerRef.current) resizeObserver.observe(outerRef.current);
     window.addEventListener("resize", doFitAndResize);
@@ -151,10 +211,9 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, onOutput, onReady }) => {
       fitAddonRef.current = null;
       spawnedRef.current = false;
     };
-  }, [id, cwd, onOutput, onReady, doFitAndResize]);
+  }, [id, cwd, onOutput, onReady, doFitAndResize, updateGhost]);
 
   return (
-    // outerRef: ResizeObserver 감지 대상 (전체 영역)
     <div
       ref={outerRef}
       style={{
@@ -162,18 +221,38 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, onOutput, onReady }) => {
         height: "100%",
         backgroundColor: THEME.background,
         overflow: "hidden",
+        position: "relative",
       }}
     >
-      {/* containerRef: xterm.js가 마운트되는 실제 컨테이너 */}
       <div
         ref={containerRef}
         style={{
           width: "100%",
           height: "100%",
-          padding: "6px 10px",
+          padding: `${PANE_PADDING_Y}px ${PANE_PADDING_X}px`,
           boxSizing: "border-box",
         }}
       />
+      {ghostText && (
+        <div
+          aria-hidden
+          style={{
+            position: "absolute",
+            left: ghostPos.x,
+            top: ghostPos.y,
+            height: CELL_H,
+            lineHeight: `${CELL_H}px`,
+            fontSize: 13,
+            fontFamily: FONT_FAMILY,
+            color: "rgba(201,209,217,0.35)",
+            pointerEvents: "none",
+            whiteSpace: "pre",
+            zIndex: 10,
+          }}
+        >
+          {ghostText}
+        </div>
+      )}
     </div>
   );
 };

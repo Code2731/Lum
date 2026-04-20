@@ -79,6 +79,9 @@ pub fn run() {
             // Config
             commands::config::load_app_config,
             commands::config::save_xllm_settings,
+            // Session Persistence
+            commands::session::save_session,
+            commands::session::load_session,
             // xLLM 모델 관리
             commands::xllm::get_xllm_model_info,
             commands::xllm::switch_xllm_model,

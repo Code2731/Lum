@@ -50,6 +50,9 @@ let tabCounter = 1;
 const makeTab = (): Tab => ({ id: `tab-${Date.now()}`, title: `Shell ${tabCounter++}` });
 const splitId = (tabId: string) => `${tabId}-b`;
 
+interface SessionTab { id: string; title: string; split_dir?: string }
+interface SessionData { version: number; tabs: SessionTab[]; active_tab_id: string }
+
 const App: React.FC = () => {
   const { blocks, addBlock, updateBlock, moveBlock } = useTerminalBlocks();
   const { isProcessing, processAICommand, analyzeError } = useAIProcessing();
@@ -63,9 +66,10 @@ const App: React.FC = () => {
   const [showAiBar, setShowAiBar] = useState(false);
   const aiInputRef = useRef<HTMLInputElement>(null);
 
-  // 탭 상태
+  // 탭 상태 (세션 복원 전 초기값 — useEffect에서 복원)
   const [tabs, setTabs] = useState<Tab[]>(() => [makeTab()]);
   const [activeTabId, setActiveTabId] = useState<string>(() => tabs[0]?.id ?? "");
+  const sessionRestoredRef = useRef(false);
 
   // 포커스된 PTY ID (탭 내 스플릿 팬 구분)
   const [activePaneId, setActivePaneId] = useState<string>(() => tabs[0]?.id ?? "");
@@ -94,6 +98,53 @@ const App: React.FC = () => {
   activeTabIdRef.current = activeTabId;
 
   const selectedModel = specs?.recommended_model ?? "Qwen2.5-Coder-7B-Instruct-EXL2-4bpw";
+
+  // 세션 복원 — 앱 마운트 직후 한 번 실행
+  useEffect(() => {
+    invoke<SessionData>("load_session")
+      .then((session) => {
+        if (!session.tabs?.length) return;
+        // tabCounter를 복원된 탭 제목에서 최대값으로 업데이트
+        for (const t of session.tabs) {
+          const m = t.title.match(/^Shell (\d+)$/);
+          if (m) tabCounter = Math.max(tabCounter, parseInt(m[1]) + 1);
+        }
+        const restored: Tab[] = session.tabs.map((t) => ({
+          id: t.id,
+          title: t.title,
+          splitDir: (t.split_dir as SplitDir | undefined) ?? undefined,
+        }));
+        setTabs(restored);
+        const activeId = session.active_tab_id && restored.find((t) => t.id === session.active_tab_id)
+          ? session.active_tab_id
+          : restored[0].id;
+        setActiveTabId(activeId);
+        setActivePaneId(activeId);
+        sessionRestoredRef.current = true;
+      })
+      .catch(() => {
+        // 세션 파일 없으면 기본 탭 유지
+        sessionRestoredRef.current = true;
+      });
+  }, []);
+
+  // 세션 저장 — 탭/활성탭 변경 시 1초 디바운스
+  const sessionSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (!sessionRestoredRef.current) return;
+    if (sessionSaveTimerRef.current) clearTimeout(sessionSaveTimerRef.current);
+    sessionSaveTimerRef.current = setTimeout(() => {
+      const data: SessionData = {
+        version: 1,
+        tabs: tabs.map((t) => ({ id: t.id, title: t.title, split_dir: t.splitDir })),
+        active_tab_id: activeTabId,
+      };
+      invoke("save_session", { data }).catch(() => {});
+    }, 1000);
+    return () => {
+      if (sessionSaveTimerRef.current) clearTimeout(sessionSaveTimerRef.current);
+    };
+  }, [tabs, activeTabId]);
 
   // 새 커맨드 블록 완료 시 시맨틱 히스토리 저장 (백그라운드)
   const cmdBlocksLenRef = useRef(0);

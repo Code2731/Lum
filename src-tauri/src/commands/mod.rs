@@ -6,5 +6,6 @@ pub mod history;
 pub mod models;
 pub mod project;
 pub mod rag;
+pub mod session;
 pub mod terminal;
 pub mod xllm;
