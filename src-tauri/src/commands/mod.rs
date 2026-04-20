@@ -7,3 +7,4 @@ pub mod models;
 pub mod project;
 pub mod rag;
 pub mod terminal;
+pub mod xllm;

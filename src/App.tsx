@@ -6,7 +6,7 @@ import { useHardwareSpecs } from "./hooks/useHardwareSpecs";
 import { invoke } from "@tauri-apps/api/core";
 import {
   Zap, Cpu, Loader2, TerminalSquare, LayoutList, MousePointer2,
-  Package, Database, Plus, X, Columns2, Rows2,
+  Package, Database, Plus, X, Columns2, Rows2, SlidersHorizontal,
 } from "lucide-react";
 import InfiniteCanvas from "./components/layout/InfiniteCanvas";
 import TerminalPane from "./components/TerminalPane";
@@ -16,6 +16,7 @@ import RagPanel from "./components/RagPanel";
 import CommandBlockBar from "./components/CommandBlockBar";
 import HistorySearch from "./components/HistorySearch";
 import CommitPanel from "./components/CommitPanel";
+import XllmPanel from "./components/XllmPanel";
 import { useCommandBlocks } from "./hooks/useCommandBlocks";
 
 const stripAnsi = (s: string) =>
@@ -80,6 +81,7 @@ const App: React.FC = () => {
   // 히스토리 / 커밋 패널 표시 여부
   const [showHistorySearch, setShowHistorySearch] = useState(false);
   const [showCommitPanel, setShowCommitPanel] = useState(false);
+  const [showXllmPanel, setShowXllmPanel] = useState(false);
   const [dismissedBlockId, setDismissedBlockId] = useState<string | null>(null);
 
   // Self-Healing
@@ -307,6 +309,7 @@ const App: React.FC = () => {
         setShowAiBar(false);
         setShowHistorySearch(false);
         setShowCommitPanel(false);
+        setShowXllmPanel(false);
       }
     };
     window.addEventListener("keydown", handler);
@@ -388,6 +391,13 @@ const App: React.FC = () => {
             className={`p-1.5 rounded transition-colors ${showRagPanel ? "text-accent bg-accent/10" : "text-white/40 hover:text-white hover:bg-white/10"}`}
           >
             <Database size={13} />
+          </button>
+          <button
+            aria-label="xLLM 최적화 설정"
+            onClick={() => setShowXllmPanel(true)}
+            className="p-1.5 rounded text-white/40 hover:text-white hover:bg-white/10 transition-colors"
+          >
+            <SlidersHorizontal size={13} />
           </button>
           <button
             aria-label="모델 관리"
@@ -644,6 +654,10 @@ const App: React.FC = () => {
           onExecute={handleCommitExecute}
           onClose={() => setShowCommitPanel(false)}
         />
+      )}
+
+      {showXllmPanel && (
+        <XllmPanel onClose={() => setShowXllmPanel(false)} />
       )}
     </div>
   );

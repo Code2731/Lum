@@ -76,6 +76,13 @@ pub fn run() {
             commands::history::get_recent_history,
             // Git
             commands::git::generate_commit_message,
+            // Config
+            commands::config::load_app_config,
+            commands::config::save_xllm_settings,
+            // xLLM 모델 관리
+            commands::xllm::get_xllm_model_info,
+            commands::xllm::switch_xllm_model,
+            commands::xllm::unload_xllm_model,
             // MCP Tools
             mcp::call_mcp_tool,
             mcp::list_internal_tools

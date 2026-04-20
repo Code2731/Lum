@@ -25,13 +25,33 @@ pub async fn call_xllm(client: &reqwest::Client, model: &str, prompt: &str) -> R
     let base_url = config.xllm_url();
     let url = format!("{}/v1/chat/completions", base_url);
 
-    let mut req = client.post(&url).json(&serde_json::json!({
+    // ① PD Disaggregation 자동 감지
+    //   Prefill 단계(긴 컨텍스트)와 Decode 단계를 구분해 파라미터 최적화.
+    //   임계값 초과 → Q4 KV 캐시로 prefill 메모리 절감, temperature 하향 조정
+    let threshold = config.pd_threshold_chars.unwrap_or(8000) as usize;
+    let is_long_context = prompt.len() > threshold;
+
+    // ③ KV Cache Quantization — 긴 컨텍스트면 Q4 강제, 아니면 설정값(기본 Q8)
+    let cache_mode = if is_long_context {
+        "Q4"
+    } else {
+        config.cache_mode.as_deref().unwrap_or("Q8")
+    };
+
+    let mut body = serde_json::json!({
         "model": model,
         "messages": [{ "role": "user", "content": prompt }],
-        "stream": false
-    }));
+        "stream": false,
+        "cache_mode": cache_mode,
+    });
 
-    // API 키는 선택적 — 로컬 서버는 불필요
+    // 긴 컨텍스트(decode 단계) — 더 결정론적 샘플링으로 답변 품질 안정화
+    if is_long_context {
+        body["temperature"] = serde_json::Value::from(0.3f32);
+        body["top_p"] = serde_json::Value::from(0.85f32);
+    }
+
+    let mut req = client.post(&url).json(&body);
     if let Some(key) = config.xllm_api_key {
         req = req.header("x-api-key", key);
     }
@@ -46,11 +66,19 @@ pub async fn call_xllm(client: &reqwest::Client, model: &str, prompt: &str) -> R
         .await
         .map_err(|e| LumError::AiEngine(e.to_string()))?;
 
-    // OpenAI 호환 응답: choices[0].message.content
     res_json["choices"][0]["message"]["content"]
         .as_str()
         .map(|s| s.to_string())
         .ok_or_else(|| LumError::AiEngine(format!("xLLM 응답 파싱 실패: {}", res_json)))
+}
+
+/// ② Elastic Scheduling — 작업 유형에 따라 최적 모델 선택
+pub fn model_for_task(config: &crate::commands::config::AppConfig, task: &str, fallback: &str) -> String {
+    match task {
+        "coding" => config.coding_model.clone().unwrap_or_else(|| fallback.to_string()),
+        "docs" | "documentation" => config.doc_model.clone().unwrap_or_else(|| fallback.to_string()),
+        _ => fallback.to_string(),
+    }
 }
 
 /// xLLM 서버 상태 확인 — /v1/models 엔드포인트로 핑

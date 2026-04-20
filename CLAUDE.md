@@ -76,3 +76,4 @@ cd src-tauri && cargo test   # Rust 단위 테스트 실행
 - [x] Phase 29: Command Blocks (OSC 133 Shell Integration, zsh/bash preexec/precmd 훅 주입, useCommandBlocks 파서, CommandBlockBar UI, 리스트 뷰 히스토리 완료)
 - [x] Phase 30: Semantic History Search (history.rs 임베딩 저장, search_history/get_recent_history 커맨드, HistorySearch 모달, Ctrl+R 캡처 인터셉트 완료)
 - [x] Phase 31: AI Commit Message (git.rs generate_commit_message, git diff --cached + xLLM, CommitPanel UI, Cmd+Shift+G 단축키 완료)
+- [x] Phase 32: xLLM 실전 최적화 (① PD Disaggregation 자동 감지, ② Elastic Scheduling model_for_task, ③ KV Cache Q4/Q8/FP16, switch_xllm_model, XllmPanel UI 완료)
