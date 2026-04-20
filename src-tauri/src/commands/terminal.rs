@@ -1,45 +1,160 @@
 use crate::error::{Result, LumError};
-use tauri::command;
+use portable_pty::{native_pty_system, CommandBuilder, PtySize};
+use std::io::{Read, Write};
 use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
+use tauri::{command, AppHandle, Emitter, State};
+
+// 채널 기반 설계: PTY 객체는 전용 스레드에서만 소유 (Send 제약 회피)
+pub struct PtyHandle {
+    pub write_tx: std::sync::mpsc::SyncSender<Vec<u8>>,
+    pub resize_tx: std::sync::mpsc::SyncSender<(u16, u16)>,
+}
 
 pub struct TerminalState {
-    pub writers: Arc<Mutex<HashMap<String, String>>>, // PTY 스트림 핸들러 (실제론 스트림 타입)
+    pub ptys: Arc<Mutex<HashMap<String, PtyHandle>>>,
+}
+
+#[derive(serde::Serialize, Clone)]
+struct PtyData {
+    id: String,
+    data: String,
 }
 
 #[command]
 pub async fn spawn_pty(
+    app: AppHandle,
+    state: State<'_, TerminalState>,
     id: String,
     cwd: String,
-    command: String,
-) -> Result<String> {
-    // PTY 생성 시뮬레이션
-    println!("Spawning PTY for block {}: {} in {}", id, command, cwd);
-    Ok(format!("PTY {} spawned.", id))
+    cols: u16,
+    rows: u16,
+) -> Result<()> {
+    // 이미 실행 중인 PTY가 있으면 스킵
+    {
+        let ptys = state.ptys.lock().map_err(|_| LumError::Io("lock 오류".into()))?;
+        if ptys.contains_key(&id) {
+            return Ok(());
+        }
+    }
+
+    let pty_system = native_pty_system();
+    let size = PtySize { rows, cols, pixel_width: 0, pixel_height: 0 };
+
+    let pair = pty_system
+        .openpty(size)
+        .map_err(|e| LumError::Io(format!("PTY 생성 실패: {}", e)))?;
+
+    // 시스템 기본 셸 결정
+    let shell = std::env::var("SHELL")
+        .unwrap_or_else(|_| if cfg!(windows) { "cmd.exe".into() } else { "/bin/bash".into() });
+
+    let work_dir = if cwd.is_empty() {
+        std::env::var("HOME").unwrap_or_else(|_| ".".into())
+    } else {
+        cwd
+    };
+
+    let mut cmd = CommandBuilder::new(&shell);
+    cmd.cwd(&work_dir);
+    // TERM 환경변수 설정 (색상 지원)
+    cmd.env("TERM", "xterm-256color");
+    cmd.env("COLORTERM", "truecolor");
+
+    let _child = pair.slave
+        .spawn_command(cmd)
+        .map_err(|e| LumError::Io(format!("셸 실행 실패: {}", e)))?;
+
+    let mut writer = pair.master
+        .take_writer()
+        .map_err(|e| LumError::Io(e.to_string()))?;
+    let mut reader = pair.master
+        .try_clone_reader()
+        .map_err(|e| LumError::Io(e.to_string()))?;
+
+    // 쓰기/리사이즈 채널 (SyncSender: 버퍼 꽉 차면 블록)
+    let (write_tx, write_rx) = std::sync::mpsc::sync_channel::<Vec<u8>>(64);
+    let (resize_tx, resize_rx) = std::sync::mpsc::sync_channel::<(u16, u16)>(8);
+
+    // ── 쓰기 스레드 ────────────────────────────────────────────
+    std::thread::spawn(move || {
+        for data in write_rx {
+            if writer.write_all(&data).is_err() {
+                break;
+            }
+        }
+    });
+
+    // ── 리사이즈 스레드 ────────────────────────────────────────
+    let master = pair.master;
+    std::thread::spawn(move || {
+        for (r, c) in resize_rx {
+            let _ = master.resize(PtySize {
+                rows: r,
+                cols: c,
+                pixel_width: 0,
+                pixel_height: 0,
+            });
+        }
+    });
+
+    // ── 읽기 스레드 (PTY 출력 → Tauri 이벤트) ─────────────────
+    let app_r = app.clone();
+    let id_r = id.clone();
+    std::thread::spawn(move || {
+        let mut buf = [0u8; 4096];
+        loop {
+            match reader.read(&mut buf) {
+                Ok(0) | Err(_) => break,
+                Ok(n) => {
+                    let data = String::from_utf8_lossy(&buf[..n]).to_string();
+                    let _ = app_r.emit("pty_data", PtyData { id: id_r.clone(), data });
+                }
+            }
+        }
+        // 셸 종료 시 이벤트 발송
+        let _ = app_r.emit("pty_exit", id_r);
+    });
+
+    // ── 채널 핸들 저장 ─────────────────────────────────────────
+    let mut ptys = state.ptys.lock().map_err(|_| LumError::Io("lock 오류".into()))?;
+    ptys.insert(id, PtyHandle { write_tx, resize_tx });
+
+    Ok(())
 }
 
 #[command]
 pub async fn write_to_pty(
+    state: State<'_, TerminalState>,
     id: String,
     data: String,
 ) -> Result<()> {
-    // PTY 데이터 전송
-    println!("Writing to PTY {}: {}", id, data);
+    let ptys = state.ptys.lock().map_err(|_| LumError::Io("lock 오류".into()))?;
+    if let Some(handle) = ptys.get(&id) {
+        handle
+            .write_tx
+            .send(data.into_bytes())
+            .map_err(|_| LumError::Io("PTY 쓰기 채널 닫힘".into()))?;
+    }
     Ok(())
 }
 
 #[command]
 pub async fn resize_pty(
+    state: State<'_, TerminalState>,
     id: String,
-    rows: u16,
     cols: u16,
+    rows: u16,
 ) -> Result<()> {
-    // PTY 리사이징
-    println!("Resizing PTY {} to {}x{}", id, rows, cols);
+    let ptys = state.ptys.lock().map_err(|_| LumError::Io("lock 오류".into()))?;
+    if let Some(handle) = ptys.get(&id) {
+        // 실패해도 무시 (채널이 닫혔을 수 있음)
+        let _ = handle.resize_tx.send((rows, cols));
+    }
     Ok(())
 }
 
-/// 현재 디렉토리 기준으로 셸 자동 완성 후보를 반환한다.
+/// 현재 디렉토리 기준 셸 자동완성 후보 반환
 #[command]
 pub fn get_completions(cwd: String, partial: String) -> Result<Vec<String>> {
     let path = std::path::Path::new(&cwd);
@@ -48,7 +163,6 @@ pub fn get_completions(cwd: String, partial: String) -> Result<Vec<String>> {
     }
 
     let entries = std::fs::read_dir(path).map_err(|e| LumError::Io(e.to_string()))?;
-
     let matches: Vec<String> = entries
         .filter_map(|entry| {
             let entry = entry.ok()?;
@@ -59,7 +173,7 @@ pub fn get_completions(cwd: String, partial: String) -> Result<Vec<String>> {
                 None
             }
         })
-        .take(20) // 최대 20개
+        .take(20)
         .collect();
 
     Ok(matches)

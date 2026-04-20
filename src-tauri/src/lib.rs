@@ -16,7 +16,7 @@ use crate::mcp::McpState;
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let terminal_state = TerminalState {
-        writers: Arc::new(Mutex::new(HashMap::new())),
+        ptys: Arc::new(Mutex::new(HashMap::new())),
     };
     
     let mcp_state = McpState {
