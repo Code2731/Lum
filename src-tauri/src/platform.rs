@@ -1,50 +1,35 @@
-/// 플랫폼별 공통 경로 헬퍼
-///
-/// HOME/$APPDATA 등 OS별 환경변수 차이를 추상화.
-/// Windows: USERPROFILE / APPDATA / LOCALAPPDATA
-/// macOS/Linux: HOME
 use std::path::PathBuf;
+use std::sync::OnceLock;
 
-/// 사용자 홈 디렉토리 반환 (모든 플랫폼)
+/// 홈 디렉토리를 못 찾으면 현재 디렉토리로 폴백 (dirs가 None을 반환하는 경우 방어)
 pub fn home_dir() -> PathBuf {
     dirs::home_dir().unwrap_or_else(|| PathBuf::from("."))
 }
 
-/// 앱 데이터 디렉토리 반환
-///   Windows : %APPDATA%\Lum
-///   macOS   : ~/Library/Application Support/Lum
-///   Linux   : ~/.local/share/lum
-pub fn app_data_dir() -> PathBuf {
-    dirs::data_dir()
-        .unwrap_or_else(home_dir)
-        .join("Lum")
-}
-
-/// 기본 모델 저장 경로 (TabbyAPI 호환)
-///   ~/tabby/models  (모든 OS, TabbyAPI 기본값)
+/// TabbyAPI 기본 모델 경로 ~/tabby/models
 pub fn default_models_dir() -> PathBuf {
     home_dir().join("tabby").join("models")
 }
 
-/// 기본 셸 결정
-///   Windows : PowerShell → cmd.exe 순 폴백
-///   macOS/Linux : $SHELL → /bin/sh 폴백
-pub fn default_shell() -> String {
-    #[cfg(windows)]
-    {
-        // PowerShell이 있으면 우선 사용
-        if which_exists("pwsh") {
-            return "pwsh".to_string();
+/// 기본 셸 — 최초 호출 시 한 번만 결정하고 이후 캐시
+pub fn default_shell() -> &'static str {
+    static SHELL: OnceLock<String> = OnceLock::new();
+    SHELL.get_or_init(|| {
+        #[cfg(windows)]
+        {
+            if which_exists("pwsh") {
+                return "pwsh".to_string();
+            }
+            if which_exists("powershell") {
+                return "powershell".to_string();
+            }
+            "cmd.exe".to_string()
         }
-        if which_exists("powershell") {
-            return "powershell".to_string();
+        #[cfg(not(windows))]
+        {
+            std::env::var("SHELL").unwrap_or_else(|_| "/bin/sh".to_string())
         }
-        "cmd.exe".to_string()
-    }
-    #[cfg(not(windows))]
-    {
-        std::env::var("SHELL").unwrap_or_else(|_| "/bin/sh".to_string())
-    }
+    })
 }
 
 #[cfg(windows)]

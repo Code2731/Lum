@@ -49,7 +49,7 @@ pub async fn spawn_pty(
     // 플랫폼별 기본 셸·홈 디렉토리
     let shell = platform::default_shell();
     let work_dir = if cwd.is_empty() {
-        platform::home_dir().to_string_lossy().to_string()
+        platform::home_dir().to_string_lossy().into_owned()
     } else {
         cwd
     };

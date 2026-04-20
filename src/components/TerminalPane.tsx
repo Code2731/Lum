@@ -16,6 +16,11 @@ interface Props {
   onOutput?: (data: string) => void;
 }
 
+const IS_WINDOWS = navigator.userAgent.includes("Windows");
+const FONT_FAMILY = IS_WINDOWS
+  ? '"JetBrains Mono", "Cascadia Code", "Consolas", "Courier New", monospace'
+  : '"JetBrains Mono", "Menlo", "Monaco", monospace';
+
 // GitHub Dark 팔레트
 const THEME = {
   background: "#0d1117",
@@ -65,14 +70,8 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, onOutput }) => {
     if (!container || spawnedRef.current) return;
     spawnedRef.current = true;
 
-    // Windows에는 Menlo/Monaco가 없으므로 Consolas 우선
-    const isWindows = navigator.userAgent.includes("Windows");
-    const fontFamily = isWindows
-      ? '"JetBrains Mono", "Cascadia Code", "Consolas", "Courier New", monospace'
-      : '"JetBrains Mono", "Menlo", "Monaco", monospace';
-
     const term = new Terminal({
-      fontFamily,
+      fontFamily: FONT_FAMILY,
       fontSize: 13,
       lineHeight: 1.4,
       cursorBlink: true,
