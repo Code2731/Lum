@@ -1,19 +1,18 @@
-import React, { useState, useRef, useCallback } from "react";
+import React, { useState, useRef, useCallback, useEffect } from "react";
 import { useTerminalBlocks } from "./hooks/useTerminalBlocks";
 import { useAIProcessing } from "./hooks/useAIProcessing";
 import { useHardwareSpecs } from "./hooks/useHardwareSpecs";
 import { invoke } from "@tauri-apps/api/core";
-import { Zap, Cpu, Loader2, TerminalSquare, LayoutList, MousePointer2, Package, Database } from "lucide-react";
+import { Zap, Cpu, Loader2, TerminalSquare, LayoutList, MousePointer2, Package, Database, Plus, X } from "lucide-react";
 import InfiniteCanvas from "./components/layout/InfiniteCanvas";
 import TerminalPane from "./components/TerminalPane";
 import ModelManager from "./components/ModelManager";
 import HealingPanel, { type HealingResult } from "./components/HealingPanel";
 import RagPanel from "./components/RagPanel";
 
-// ANSI 이스케이프 코드 제거
-const stripAnsi = (s: string) => s.replace(/\x1b\[[0-9;]*[a-zA-Z]/g, "").replace(/\x1b\][^\x07]*\x07/g, "");
+const stripAnsi = (s: string) =>
+  s.replace(/\x1b\[[0-9;]*[a-zA-Z]/g, "").replace(/\x1b\][^\x07]*\x07/g, "");
 
-// 에러 패턴 (대소문자 무관)
 const ERROR_PATTERNS = [
   /command not found/i,
   /no such file or directory/i,
@@ -31,10 +30,19 @@ const ERROR_PATTERNS = [
 
 type ViewMode = "terminal" | "canvas" | "list";
 
+interface Tab {
+  id: string;
+  title: string;
+}
+
+let tabCounter = 1;
+const makeTab = (): Tab => ({ id: `tab-${Date.now()}`, title: `Shell ${tabCounter++}` });
+
 const App: React.FC = () => {
   const { blocks, addBlock, updateBlock, moveBlock } = useTerminalBlocks();
   const { isProcessing, processAICommand, analyzeError } = useAIProcessing();
   const { specs, loading: specsLoading } = useHardwareSpecs();
+
   const [viewMode, setViewMode] = useState<ViewMode>("terminal");
   const [xllmOnline, setXllmOnline] = useState(false);
   const [showModelManager, setShowModelManager] = useState(false);
@@ -43,16 +51,23 @@ const App: React.FC = () => {
   const [showAiBar, setShowAiBar] = useState(false);
   const aiInputRef = useRef<HTMLInputElement>(null);
 
-  // Self-Healing 상태
+  // 탭 상태
+  const [tabs, setTabs] = useState<Tab[]>(() => [makeTab()]);
+  const [activeTabId, setActiveTabId] = useState<string>(() => tabs[0]?.id ?? "");
+
+  // 탭별 PTY 쓰기 함수
+  const ptyWriteRefs = useRef<Map<string, (d: string) => void>>(new Map());
+
+  // Self-Healing — 활성 탭 기준
   const [healingError, setHealingError] = useState<string | null>(null);
   const [healingResult, setHealingResult] = useState<HealingResult | null>(null);
   const [isHealingAnalyzing, setIsHealingAnalyzing] = useState(false);
   const outputBufRef = useRef("");
   const errorDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const ptyWriteRef = useRef<((data: string) => void) | null>(null);
+  const activeTabIdRef = useRef(activeTabId);
+  activeTabIdRef.current = activeTabId;
 
-  // xLLM 서버 상태 확인
-  React.useEffect(() => {
+  useEffect(() => {
     invoke<boolean>("check_xllm_status")
       .then(setXllmOnline)
       .catch(() => setXllmOnline(false));
@@ -60,25 +75,70 @@ const App: React.FC = () => {
 
   const selectedModel = specs?.recommended_model ?? "Qwen2.5-Coder-7B-Instruct-EXL2-4bpw";
 
-  // 터미널 출력 → 에러 감지
-  const handleTerminalOutput = useCallback((data: string) => {
-    const text = stripAnsi(data);
-    outputBufRef.current += text;
-    if (outputBufRef.current.length > 3000) {
-      outputBufRef.current = outputBufRef.current.slice(-3000);
-    }
-    if (errorDebounceRef.current) clearTimeout(errorDebounceRef.current);
-    errorDebounceRef.current = setTimeout(() => {
-      const buf = outputBufRef.current;
-      outputBufRef.current = "";
-      const matched = ERROR_PATTERNS.some((p) => p.test(buf));
-      if (matched && !healingError) {
-        const snippet = buf.split("\n").filter((l) => l.trim()).slice(-5).join("\n");
-        setHealingError(snippet);
-        setHealingResult(null);
+  // 새 탭 생성
+  const addTab = useCallback(() => {
+    const tab = makeTab();
+    setTabs((prev) => [...prev, tab]);
+    setActiveTabId(tab.id);
+    // 탭 전환 시 healing 상태 초기화
+    setHealingError(null);
+    setHealingResult(null);
+    outputBufRef.current = "";
+  }, []);
+
+  // 탭 닫기
+  const closeTab = useCallback(
+    (id: string, e: React.MouseEvent) => {
+      e.stopPropagation();
+      invoke("close_pty", { id }).catch(() => {});
+      ptyWriteRefs.current.delete(id);
+
+      setTabs((prev) => {
+        if (prev.length === 1) return prev; // 마지막 탭은 닫지 않음
+        const next = prev.filter((t) => t.id !== id);
+        if (id === activeTabIdRef.current) {
+          const idx = prev.findIndex((t) => t.id === id);
+          const nextActive = next[Math.min(idx, next.length - 1)];
+          setActiveTabId(nextActive.id);
+        }
+        return next;
+      });
+      setHealingError(null);
+      setHealingResult(null);
+    },
+    [],
+  );
+
+  // 탭 전환
+  const switchTab = useCallback((id: string) => {
+    setActiveTabId(id);
+    setHealingError(null);
+    setHealingResult(null);
+    outputBufRef.current = "";
+  }, []);
+
+  // 활성 탭 출력 → 에러 감지
+  const handleTerminalOutput = useCallback(
+    (tabId: string) => (data: string) => {
+      if (tabId !== activeTabIdRef.current) return;
+      const text = stripAnsi(data);
+      outputBufRef.current += text;
+      if (outputBufRef.current.length > 3000) {
+        outputBufRef.current = outputBufRef.current.slice(-3000);
       }
-    }, 800);
-  }, [healingError]);
+      if (errorDebounceRef.current) clearTimeout(errorDebounceRef.current);
+      errorDebounceRef.current = setTimeout(() => {
+        const buf = outputBufRef.current;
+        outputBufRef.current = "";
+        if (ERROR_PATTERNS.some((p) => p.test(buf))) {
+          const snippet = buf.split("\n").filter((l) => l.trim()).slice(-5).join("\n");
+          setHealingError(snippet);
+          setHealingResult(null);
+        }
+      }, 800);
+    },
+    [],
+  );
 
   // AI 에러 분석
   const handleHealingAnalyze = useCallback(async () => {
@@ -101,17 +161,19 @@ const App: React.FC = () => {
         safetyLevel,
       });
     } catch {
-      setHealingResult({ analysis: "AI 분석에 실패했습니다. xLLM 서버 상태를 확인하세요.", suggestion: "", safetyLevel: "Blocked" });
+      setHealingResult({
+        analysis: "AI 분석에 실패했습니다. xLLM 서버 상태를 확인하세요.",
+        suggestion: "",
+        safetyLevel: "Blocked",
+      });
     } finally {
       setIsHealingAnalyzing(false);
     }
   }, [healingError, selectedModel, analyzeError]);
 
-  // 제안 커맨드 PTY 실행
+  // 제안 커맨드 → 활성 탭 PTY 실행
   const handleHealingExecute = useCallback((cmd: string) => {
-    if (ptyWriteRef.current) {
-      ptyWriteRef.current(cmd + "\n");
-    }
+    ptyWriteRefs.current.get(activeTabIdRef.current)?.(cmd + "\n");
     setHealingError(null);
     setHealingResult(null);
   }, []);
@@ -130,8 +192,8 @@ const App: React.FC = () => {
     }
   }, [aiInput, selectedModel, addBlock, updateBlock, processAICommand]);
 
-  // Cmd+K 또는 Ctrl+K: AI 입력 바 토글
-  React.useEffect(() => {
+  // 키보드 단축키
+  useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "k") {
         e.preventDefault();
@@ -140,11 +202,20 @@ const App: React.FC = () => {
           return !v;
         });
       }
+      if ((e.metaKey || e.ctrlKey) && e.key === "t") {
+        e.preventDefault();
+        addTab();
+      }
+      if ((e.metaKey || e.ctrlKey) && e.key === "w") {
+        e.preventDefault();
+        const fakeEvent = { stopPropagation: () => {} } as React.MouseEvent;
+        closeTab(activeTabIdRef.current, fakeEvent);
+      }
       if (e.key === "Escape") setShowAiBar(false);
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, []);
+  }, [addTab, closeTab]);
 
   const VIEW_BUTTONS: { mode: ViewMode; icon: React.ReactNode; label: string }[] = [
     { mode: "terminal", icon: <TerminalSquare size={14} />, label: "터미널" },
@@ -162,7 +233,6 @@ const App: React.FC = () => {
             <span className="text-xs font-bold tracking-widest uppercase">LUM</span>
           </div>
 
-          {/* 하드웨어 상태 */}
           <div className="flex items-center gap-1 text-[10px] text-white/40">
             <Cpu size={10} />
             {specsLoading ? (
@@ -179,7 +249,6 @@ const App: React.FC = () => {
             ) : null}
           </div>
 
-          {/* 뷰 전환 */}
           <div className="flex bg-white/5 p-0.5 rounded-md">
             {VIEW_BUTTONS.map(({ mode, icon, label }) => (
               <button
@@ -222,58 +291,99 @@ const App: React.FC = () => {
         </div>
       </header>
 
+      {/* ── 탭 바 (터미널 뷰에서만 표시) ─────────────────────── */}
+      {viewMode === "terminal" && (
+        <div className="flex items-center border-b border-white/5 bg-[#0d1117] shrink-0 overflow-x-auto">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => switchTab(tab.id)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-[11px] border-r border-white/5 whitespace-nowrap transition-colors group ${
+                tab.id === activeTabId
+                  ? "bg-[#161b22] text-white"
+                  : "text-white/40 hover:text-white/70 hover:bg-white/3"
+              }`}
+            >
+              <TerminalSquare size={10} className="shrink-0" />
+              {tab.title}
+              {tabs.length > 1 && (
+                <span
+                  role="button"
+                  onClick={(e) => closeTab(tab.id, e)}
+                  className="ml-0.5 opacity-0 group-hover:opacity-100 hover:text-white transition-opacity rounded p-0.5 hover:bg-white/10"
+                  aria-label={`${tab.title} 닫기`}
+                >
+                  <X size={9} />
+                </span>
+              )}
+            </button>
+          ))}
+          <button
+            onClick={addTab}
+            aria-label="새 탭 (Cmd+T)"
+            title="새 탭 (Cmd+T)"
+            className="px-2 py-1.5 text-white/30 hover:text-white/70 hover:bg-white/5 transition-colors shrink-0"
+          >
+            <Plus size={12} />
+          </button>
+        </div>
+      )}
+
       {/* ── 메인 콘텐츠 ──────────────────────────────────────── */}
       <main className="flex-1 overflow-hidden flex relative">
         <div className="flex-1 overflow-hidden relative">
-        {/* 터미널 뷰 (항상 마운트 — 숨김/표시만 전환해 PTY 세션 유지) */}
-        <div className={`absolute inset-0 ${viewMode === "terminal" ? "block" : "hidden"}`}>
-          <TerminalPane
-            id="main"
-            onOutput={handleTerminalOutput}
-            onReady={(write) => { ptyWriteRef.current = write; }}
-          />
-          {healingError && (
-            <HealingPanel
-              errorSnippet={healingError}
-              result={healingResult}
-              isAnalyzing={isHealingAnalyzing}
-              onAnalyze={handleHealingAnalyze}
-              onExecute={handleHealingExecute}
-              onDismiss={() => { setHealingError(null); setHealingResult(null); }}
-            />
-          )}
-        </div>
-
-        {/* 캔버스 뷰 */}
-        {viewMode === "canvas" && (
-          <InfiniteCanvas blocks={blocks} onNodeMove={moveBlock} />
-        )}
-
-        {/* 리스트 뷰 */}
-        {viewMode === "list" && (
-          <div className="p-4 space-y-3 overflow-y-auto h-full">
-            {blocks.length === 0 ? (
-              <p className="text-white/20 text-xs text-center pt-12">
-                Cmd+K 로 AI에게 질문하세요.
-              </p>
-            ) : (
-              blocks.map((block) => (
-                <div
-                  key={block.id}
-                  className="p-3 bg-white/5 rounded-lg border border-white/5"
-                >
-                  <pre className="text-xs font-mono text-accent">{block.command}</pre>
-                  {block.output && (
-                    <pre className="text-xs font-mono text-white/60 mt-1 whitespace-pre-wrap">
-                      {block.output}
-                    </pre>
-                  )}
-                </div>
-              ))
+          {/* 터미널 뷰 — 모든 탭 마운트 유지, 활성 탭만 표시 */}
+          <div className={`absolute inset-0 ${viewMode === "terminal" ? "block" : "hidden"}`}>
+            {tabs.map((tab) => (
+              <div
+                key={tab.id}
+                className={`absolute inset-0 ${tab.id === activeTabId ? "block" : "hidden"}`}
+              >
+                <TerminalPane
+                  id={tab.id}
+                  onOutput={handleTerminalOutput(tab.id)}
+                  onReady={(write) => { ptyWriteRefs.current.set(tab.id, write); }}
+                />
+              </div>
+            ))}
+            {healingError && (
+              <HealingPanel
+                errorSnippet={healingError}
+                result={healingResult}
+                isAnalyzing={isHealingAnalyzing}
+                onAnalyze={handleHealingAnalyze}
+                onExecute={handleHealingExecute}
+                onDismiss={() => { setHealingError(null); setHealingResult(null); }}
+              />
             )}
           </div>
-        )}
 
+          {/* 캔버스 뷰 */}
+          {viewMode === "canvas" && (
+            <InfiniteCanvas blocks={blocks} onNodeMove={moveBlock} />
+          )}
+
+          {/* 리스트 뷰 */}
+          {viewMode === "list" && (
+            <div className="p-4 space-y-3 overflow-y-auto h-full">
+              {blocks.length === 0 ? (
+                <p className="text-white/20 text-xs text-center pt-12">
+                  Cmd+K 로 AI에게 질문하세요.
+                </p>
+              ) : (
+                blocks.map((block) => (
+                  <div key={block.id} className="p-3 bg-white/5 rounded-lg border border-white/5">
+                    <pre className="text-xs font-mono text-accent">{block.command}</pre>
+                    {block.output && (
+                      <pre className="text-xs font-mono text-white/60 mt-1 whitespace-pre-wrap">
+                        {block.output}
+                      </pre>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+          )}
         </div>
 
         {/* RAG 사이드 패널 */}
@@ -283,33 +393,32 @@ const App: React.FC = () => {
           </div>
         )}
 
-        {/* AI 입력 오버레이 (Cmd+K) — main의 relative 컨텍스트 기준 */}
+        {/* AI 입력 오버레이 (Cmd+K) */}
         {showAiBar && (
           <div className="absolute inset-x-0 bottom-0 p-4 bg-gradient-to-t from-terminal-dark/95 to-transparent pointer-events-none">
             <div className="pointer-events-auto">
-            <div className="flex items-center gap-2 bg-white/8 border border-white/10 rounded-lg px-3 py-2 backdrop-blur-sm">
-              <Zap size={13} className="text-accent shrink-0" />
-              <input
-                ref={aiInputRef}
-                className="bg-transparent border-none outline-none text-xs flex-1"
-                placeholder="AI에게 질문하세요… (Enter 전송 · Esc 닫기)"
-                value={aiInput}
-                disabled={isProcessing}
-                onChange={(e) => setAiInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") handleAiSubmit();
-                  if (e.key === "Escape") setShowAiBar(false);
-                }}
-              />
-              {isProcessing && <Loader2 size={12} className="animate-spin text-white/40 shrink-0" />}
-            </div>
-            <p className="text-[9px] text-white/20 text-center mt-1">Cmd+K 로 닫기</p>
+              <div className="flex items-center gap-2 bg-white/8 border border-white/10 rounded-lg px-3 py-2 backdrop-blur-sm">
+                <Zap size={13} className="text-accent shrink-0" />
+                <input
+                  ref={aiInputRef}
+                  className="bg-transparent border-none outline-none text-xs flex-1"
+                  placeholder="AI에게 질문하세요… (Enter 전송 · Esc 닫기)"
+                  value={aiInput}
+                  disabled={isProcessing}
+                  onChange={(e) => setAiInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleAiSubmit();
+                    if (e.key === "Escape") setShowAiBar(false);
+                  }}
+                />
+                {isProcessing && <Loader2 size={12} className="animate-spin text-white/40 shrink-0" />}
+              </div>
+              <p className="text-[9px] text-white/20 text-center mt-1">Cmd+K 로 닫기</p>
             </div>
           </div>
         )}
       </main>
 
-      {/* 모달 */}
       {showModelManager && (
         <ModelManager
           onClose={() => setShowModelManager(false)}

@@ -184,6 +184,17 @@ pub async fn resize_pty(
     Ok(())
 }
 
+/// PTY 세션 종료 및 채널 핸들 제거
+#[command]
+pub async fn close_pty(state: State<'_, TerminalState>, id: String) -> Result<()> {
+    let mut ptys = state
+        .ptys
+        .lock()
+        .map_err(|_| LumError::Io("lock 오류".into()))?;
+    ptys.remove(&id);
+    Ok(())
+}
+
 /// 현재 디렉토리 기준 셸 자동완성 후보 반환
 #[command]
 pub fn get_completions(cwd: String, partial: String) -> Result<Vec<String>> {
