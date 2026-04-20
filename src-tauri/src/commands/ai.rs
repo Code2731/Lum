@@ -1,10 +1,9 @@
-use serde::{Deserialize, Serialize};
-use crate::error::{Result, LumError};
 use crate::commands::config::load_config;
+use crate::error::{LumError, Result};
+use serde::{Deserialize, Serialize};
 use tauri::command;
 
-const GEMINI_BASE_URL: &str =
-    "https://generativelanguage.googleapis.com/v1beta/models";
+const GEMINI_BASE_URL: &str = "https://generativelanguage.googleapis.com/v1beta/models";
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct AIResponse {
@@ -21,11 +20,7 @@ pub struct AIResponse {
 
 /// xLLM OpenAI 호환 Chat Completions API 호출
 /// 엔드포인트: POST {base_url}/v1/chat/completions
-async fn call_xllm(
-    client: &reqwest::Client,
-    model: &str,
-    prompt: &str,
-) -> Result<String> {
+async fn call_xllm(client: &reqwest::Client, model: &str, prompt: &str) -> Result<String> {
     let config = load_config()?;
     let base_url = config.xllm_url();
     let url = format!("{}/v1/chat/completions", base_url);
@@ -55,9 +50,7 @@ async fn call_xllm(
     res_json["choices"][0]["message"]["content"]
         .as_str()
         .map(|s| s.to_string())
-        .ok_or_else(|| {
-            LumError::AiEngine(format!("xLLM 응답 파싱 실패: {}", res_json))
-        })
+        .ok_or_else(|| LumError::AiEngine(format!("xLLM 응답 파싱 실패: {}", res_json)))
 }
 
 /// xLLM 서버 상태 확인 — /v1/models 엔드포인트로 핑
@@ -130,7 +123,10 @@ fn build_gemini_body(prompt: &str, image_base64: Option<&str>) -> serde_json::Va
 fn extract_gemini_text(res: &serde_json::Value) -> Result<String> {
     if let Some(err) = res.get("error") {
         return Err(LumError::AiEngine(
-            err["message"].as_str().unwrap_or("Unknown Gemini error").to_string(),
+            err["message"]
+                .as_str()
+                .unwrap_or("Unknown Gemini error")
+                .to_string(),
         ));
     }
     res["candidates"][0]["content"]["parts"][0]["text"]
@@ -255,7 +251,6 @@ pub async fn verify_vision_goal(
         .trim_end_matches("```")
         .trim();
 
-    serde_json::from_str(json_str).map_err(|e| {
-        LumError::AiEngine(format!("응답 JSON 파싱 실패: {}. 원본: {}", e, raw))
-    })
+    serde_json::from_str(json_str)
+        .map_err(|e| LumError::AiEngine(format!("응답 JSON 파싱 실패: {}. 원본: {}", e, raw)))
 }

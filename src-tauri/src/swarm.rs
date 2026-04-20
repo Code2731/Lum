@@ -1,12 +1,14 @@
+use futures_util::StreamExt;
 use libp2p::{
-    gossipsub, mdns, request_response, swarm::{NetworkBehaviour, SwarmEvent}, PeerId, StreamProtocol,
+    gossipsub, mdns, request_response,
+    swarm::{NetworkBehaviour, SwarmEvent},
+    PeerId, StreamProtocol,
 };
 use serde::{Deserialize, Serialize};
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tauri::Emitter;
-use futures_util::StreamExt;
 
 #[derive(NetworkBehaviour)]
 pub struct LumBehaviour {
@@ -18,20 +20,20 @@ pub struct LumBehaviour {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type")]
 pub enum SwarmMessage {
-    StatusUpdate { 
-        peer_id: String, 
-        cpu_usage: f32, 
+    StatusUpdate {
+        peer_id: String,
+        cpu_usage: f32,
         gpu_ready: bool,
-        active_models: Vec<String> 
+        active_models: Vec<String>,
     },
-    TaskRequest { 
+    TaskRequest {
         task_id: String,
-        task_type: String, 
-        payload: String 
+        task_type: String,
+        payload: String,
     },
-    TaskResponse { 
+    TaskResponse {
         task_id: String,
-        result: String 
+        result: String,
     },
 }
 
@@ -74,14 +76,19 @@ pub async fn start_p2p_node(handle: tauri::AppHandle) -> Result<String, String> 
             let mut gossipsub = gossipsub::Behaviour::new(
                 gossipsub::MessageAuthenticity::Signed(key.clone()),
                 gossipsub_config,
-            ).map_err(|e| e.to_string())?;
-            
+            )
+            .map_err(|e| e.to_string())?;
+
             let topic = gossipsub::IdentTopic::new("lum-status");
             gossipsub.subscribe(&topic).map_err(|e| e.to_string())?;
 
             Ok(LumBehaviour {
                 gossipsub,
-                mdns: mdns::tokio::Behaviour::new(mdns::Config::default(), key.public().to_peer_id()).map_err(|e| e.to_string())?,
+                mdns: mdns::tokio::Behaviour::new(
+                    mdns::Config::default(),
+                    key.public().to_peer_id(),
+                )
+                .map_err(|e| e.to_string())?,
                 request_response: request_response::json::Behaviour::new(
                     [(
                         StreamProtocol::new("/lum-task/1.0.0"),
@@ -98,14 +105,16 @@ pub async fn start_p2p_node(handle: tauri::AppHandle) -> Result<String, String> 
 
     tokio::spawn(async move {
         let _ = swarm.listen_on("/ip4/0.0.0.0/tcp/0".parse().unwrap());
-        
+
         loop {
             match swarm.select_next_some().await {
-                SwarmEvent::Behaviour(LumBehaviourEvent::Gossipsub(gossipsub::Event::Message {
-                    propagation_source: peer_id,
-                    message,
-                    ..
-                })) => {
+                SwarmEvent::Behaviour(LumBehaviourEvent::Gossipsub(
+                    gossipsub::Event::Message {
+                        propagation_source: peer_id,
+                        message,
+                        ..
+                    },
+                )) => {
                     if let Ok(msg) = serde_json::from_slice::<SwarmMessage>(&message.data) {
                         handle.emit("peer-status-updated", msg).unwrap();
                     }
@@ -133,18 +142,27 @@ pub fn list_peers() -> Vec<String> {
 
 #[tauri::command]
 pub async fn send_swarm_task(peer_id_str: String, task: String) -> Result<String, String> {
-    Ok(format!("Task successfully delegated to {}. Content: {}", peer_id_str, task))
+    Ok(format!(
+        "Task successfully delegated to {}. Content: {}",
+        peer_id_str, task
+    ))
 }
 
 #[tauri::command]
 pub async fn delegate_swarm_task(
-    peer_id_str: String, 
-    _task_type: String, 
-    _payload: String
+    peer_id_str: String,
+    _task_type: String,
+    _payload: String,
 ) -> Result<String, String> {
-    let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis();
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_millis();
     let task_id = format!("task-{}", now);
-    Ok(format!("Task {} sent to swarm peer {}.", task_id, peer_id_str))
+    Ok(format!(
+        "Task {} sent to swarm peer {}.",
+        task_id, peer_id_str
+    ))
 }
 
 #[cfg(test)]
@@ -161,7 +179,7 @@ mod tests {
         };
         let json = serde_json::to_string(&msg).unwrap();
         let decoded: SwarmMessage = serde_json::from_str(&json).unwrap();
-        
+
         if let SwarmMessage::StatusUpdate { cpu_usage, .. } = decoded {
             assert_eq!(cpu_usage, 45.5);
         } else {

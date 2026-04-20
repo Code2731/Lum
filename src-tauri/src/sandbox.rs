@@ -1,20 +1,37 @@
 use serde::{Deserialize, Serialize};
 
 const BLOCKED_PATTERNS: &[&str] = &[
-    "rm -rf /", "mkfs", "> /dev/sda", "dd if=",
-    "format c:", "format c /", "del /s /q c:\\", "rd /s /q c:\\",
-    "diskpart", "cipher /w:c", "sfc /scannow /offbootdir",
+    "rm -rf /",
+    "mkfs",
+    "> /dev/sda",
+    "dd if=",
+    "format c:",
+    "format c /",
+    "del /s /q c:\\",
+    "rd /s /q c:\\",
+    "diskpart",
+    "cipher /w:c",
+    "sfc /scannow /offbootdir",
 ];
 
 const DANGEROUS_PATTERNS: &[&str] = &[
-    "rm -rf", "sudo ", "chmod 777", "chown", "curl | bash", "wget | bash",
-    "del /f", "rd /s", "reg delete", "reg add", "schtasks /delete", "net user",
-    "icacls", "takeown /f",
+    "rm -rf",
+    "sudo ",
+    "chmod 777",
+    "chown",
+    "curl | bash",
+    "wget | bash",
+    "del /f",
+    "rd /s",
+    "reg delete",
+    "reg add",
+    "schtasks /delete",
+    "net user",
+    "icacls",
+    "takeown /f",
 ];
 
-const WARNING_PATTERNS: &[&str] = &[
-    "npm install -g", "pip install", "rm ", "mv ",
-];
+const WARNING_PATTERNS: &[&str] = &["npm install -g", "pip install", "rm ", "mv "];
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum SecurityLevel {
@@ -54,7 +71,9 @@ pub fn verify_command_safety(command: String) -> CommandSafetyReport {
     if !detected_danger.is_empty() {
         return CommandSafetyReport {
             level: SecurityLevel::Dangerous,
-            reason: "시스템 설정을 변경하거나 파일을 삭제할 수 있는 위험한 명령어가 포함되어 있습니다.".to_string(),
+            reason:
+                "시스템 설정을 변경하거나 파일을 삭제할 수 있는 위험한 명령어가 포함되어 있습니다."
+                    .to_string(),
             sensitive_patterns: detected_danger,
         };
     }

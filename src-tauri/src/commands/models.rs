@@ -1,11 +1,11 @@
-use tauri::{command, AppHandle, Emitter};
-use serde::{Deserialize, Serialize};
-use tokio::io::AsyncWriteExt;
-use futures_util::StreamExt;
-use crate::error::{Result, LumError};
 use crate::commands::config::load_config;
+use crate::error::{LumError, Result};
 use crate::platform;
+use futures_util::StreamExt;
+use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
+use tauri::{command, AppHandle, Emitter};
+use tokio::io::AsyncWriteExt;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct LocalModel {
@@ -108,10 +108,7 @@ pub async fn download_model(
         .map_err(|e| LumError::Io(e.to_string()))?;
 
     // HuggingFace API로 파일 목록 조회
-    let api_url = format!(
-        "https://huggingface.co/api/models/{}/tree/{}",
-        repo_id, rev
-    );
+    let api_url = format!("https://huggingface.co/api/models/{}/tree/{}", repo_id, rev);
     let mut req = client.get(&api_url);
     if let Some(token) = &hf_token {
         req = req.header("Authorization", format!("Bearer {}", token));

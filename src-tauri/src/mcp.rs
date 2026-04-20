@@ -1,9 +1,9 @@
 use serde::{Deserialize, Serialize};
-use std::process::{Child, Command, Stdio};
-use std::io::{Write, BufReader, BufRead};
 use serde_json::json;
-use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
+use std::io::{BufRead, BufReader, Write};
+use std::process::{Child, Command, Stdio};
+use std::sync::{Arc, Mutex};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct McpToolCall {
@@ -47,7 +47,14 @@ pub async fn call_mcp_tool(
         let stdout = child.stdout.take().ok_or("Failed to open stdout")?;
         let reader = BufReader::new(stdout);
 
-        servers.insert(server_name.clone(), McpProcess { child, stdin, reader });
+        servers.insert(
+            server_name.clone(),
+            McpProcess {
+                child,
+                stdin,
+                reader,
+            },
+        );
     }
 
     let process = servers.get_mut(&server_name).unwrap();
@@ -64,12 +71,18 @@ pub async fn call_mcp_tool(
     });
 
     let request_str = serde_json::to_string(&request).map_err(|e| e.to_string())? + "\n";
-    process.stdin.write_all(request_str.as_bytes()).map_err(|e| e.to_string())?;
+    process
+        .stdin
+        .write_all(request_str.as_bytes())
+        .map_err(|e| e.to_string())?;
     process.stdin.flush().map_err(|e| e.to_string())?;
 
     // 3. 응답 읽기
     let mut response = String::new();
-    process.reader.read_line(&mut response).map_err(|e| e.to_string())?;
+    process
+        .reader
+        .read_line(&mut response)
+        .map_err(|e| e.to_string())?;
 
     Ok(response)
 }
@@ -86,6 +99,6 @@ pub fn list_internal_tools() -> Vec<serde_json::Value> {
             "name": "google_search",
             "description": "Search Google via MCP",
             "inputSchema": { "type": "object", "properties": { "query": { "type": "string" } } }
-        })
+        }),
     ]
 }

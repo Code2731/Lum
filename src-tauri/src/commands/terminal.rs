@@ -1,9 +1,9 @@
-use crate::error::{Result, LumError};
+use crate::error::{LumError, Result};
 use crate::platform;
 use portable_pty::{native_pty_system, CommandBuilder, PtySize};
+use std::collections::HashMap;
 use std::io::{Read, Write};
 use std::sync::{Arc, Mutex};
-use std::collections::HashMap;
 use tauri::{command, AppHandle, Emitter, State};
 
 // 채널 기반 설계: PTY 객체는 전용 스레드에서만 소유 (Send 제약 회피)
@@ -33,14 +33,22 @@ pub async fn spawn_pty(
 ) -> Result<()> {
     // 이미 실행 중인 PTY가 있으면 스킵
     {
-        let ptys = state.ptys.lock().map_err(|_| LumError::Io("lock 오류".into()))?;
+        let ptys = state
+            .ptys
+            .lock()
+            .map_err(|_| LumError::Io("lock 오류".into()))?;
         if ptys.contains_key(&id) {
             return Ok(());
         }
     }
 
     let pty_system = native_pty_system();
-    let size = PtySize { rows, cols, pixel_width: 0, pixel_height: 0 };
+    let size = PtySize {
+        rows,
+        cols,
+        pixel_width: 0,
+        pixel_height: 0,
+    };
 
     let pair = pty_system
         .openpty(size)
@@ -63,14 +71,17 @@ pub async fn spawn_pty(
         cmd.env("COLORTERM", "truecolor");
     }
 
-    let _child = pair.slave
+    let _child = pair
+        .slave
         .spawn_command(cmd)
         .map_err(|e| LumError::Io(format!("셸 실행 실패: {}", e)))?;
 
-    let mut writer = pair.master
+    let mut writer = pair
+        .master
         .take_writer()
         .map_err(|e| LumError::Io(e.to_string()))?;
-    let mut reader = pair.master
+    let mut reader = pair
+        .master
         .try_clone_reader()
         .map_err(|e| LumError::Io(e.to_string()))?;
 
@@ -110,7 +121,13 @@ pub async fn spawn_pty(
                 Ok(0) | Err(_) => break,
                 Ok(n) => {
                     let data = String::from_utf8_lossy(&buf[..n]).to_string();
-                    let _ = app_r.emit("pty_data", PtyData { id: id_r.clone(), data });
+                    let _ = app_r.emit(
+                        "pty_data",
+                        PtyData {
+                            id: id_r.clone(),
+                            data,
+                        },
+                    );
                 }
             }
         }
@@ -119,19 +136,27 @@ pub async fn spawn_pty(
     });
 
     // ── 채널 핸들 저장 ─────────────────────────────────────────
-    let mut ptys = state.ptys.lock().map_err(|_| LumError::Io("lock 오류".into()))?;
-    ptys.insert(id, PtyHandle { write_tx, resize_tx });
+    let mut ptys = state
+        .ptys
+        .lock()
+        .map_err(|_| LumError::Io("lock 오류".into()))?;
+    ptys.insert(
+        id,
+        PtyHandle {
+            write_tx,
+            resize_tx,
+        },
+    );
 
     Ok(())
 }
 
 #[command]
-pub async fn write_to_pty(
-    state: State<'_, TerminalState>,
-    id: String,
-    data: String,
-) -> Result<()> {
-    let ptys = state.ptys.lock().map_err(|_| LumError::Io("lock 오류".into()))?;
+pub async fn write_to_pty(state: State<'_, TerminalState>, id: String, data: String) -> Result<()> {
+    let ptys = state
+        .ptys
+        .lock()
+        .map_err(|_| LumError::Io("lock 오류".into()))?;
     if let Some(handle) = ptys.get(&id) {
         handle
             .write_tx
@@ -148,7 +173,10 @@ pub async fn resize_pty(
     cols: u16,
     rows: u16,
 ) -> Result<()> {
-    let ptys = state.ptys.lock().map_err(|_| LumError::Io("lock 오류".into()))?;
+    let ptys = state
+        .ptys
+        .lock()
+        .map_err(|_| LumError::Io("lock 오류".into()))?;
     if let Some(handle) = ptys.get(&id) {
         // 실패해도 무시 (채널이 닫혔을 수 있음)
         let _ = handle.resize_tx.send((rows, cols));

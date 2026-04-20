@@ -1,6 +1,6 @@
+use crate::platform;
 use serde::{Deserialize, Serialize};
 use std::fs;
-use crate::platform;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct MemoryEntry {
@@ -51,32 +51,38 @@ pub async fn add_to_memory(content: String, embedding: Vec<f32>) -> Result<(), S
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap_or_default()
         .as_secs();
-    
+
     memory.entries.push(MemoryEntry {
         content,
         embedding,
         timestamp,
     });
-    
+
     // 최근 1000개만 유지 (최적화)
     if memory.entries.len() > 1000 {
         memory.entries.remove(0);
     }
-    
+
     memory.save()
 }
 
 #[tauri::command]
 pub async fn search_memory(query_embedding: Vec<f32>, limit: usize) -> Result<Vec<String>, String> {
     let memory = SemanticMemory::load();
-    let mut scored: Vec<(f32, String)> = memory.entries.iter()
+    let mut scored: Vec<(f32, String)> = memory
+        .entries
+        .iter()
         .map(|entry| {
             let score = cosine_similarity(&query_embedding, &entry.embedding);
             (score, entry.content.clone())
         })
         .filter(|(score, _)| *score > 0.7) // 유사도 임계값
         .collect();
-    
+
     scored.sort_by(|a, b| b.0.total_cmp(&a.0));
-    Ok(scored.into_iter().take(limit).map(|(_, content)| content).collect())
+    Ok(scored
+        .into_iter()
+        .take(limit)
+        .map(|(_, content)| content)
+        .collect())
 }

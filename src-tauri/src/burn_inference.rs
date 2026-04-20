@@ -1,9 +1,9 @@
-use burn::nn::{Linear, LinearConfig, LayerNorm, LayerNormConfig};
-use burn::tensor::{Tensor, backend::Backend};
+use burn::nn::{LayerNorm, LayerNormConfig, Linear, LinearConfig};
+use burn::tensor::{backend::Backend, Tensor};
 use burn_wgpu::{Wgpu, WgpuDevice};
+use hf_hub::api::sync::Api;
 use serde::{Deserialize, Serialize};
 use tokenizers::Tokenizer;
-use hf_hub::api::sync::Api;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ModelConfig {
@@ -73,21 +73,24 @@ impl<B: Backend> TransformerBlock<B> {
 pub async fn init_model_from_hub(model_id: &str) -> Result<String, String> {
     let api = Api::new().map_err(|e| e.to_string())?;
     let repo = api.model(model_id.to_string());
-    
+
     let _weights_path = repo.get("model.safetensors").map_err(|e| e.to_string())?;
     let tokenizer_path = repo.get("tokenizer.json").map_err(|e| e.to_string())?;
-    
+
     let _tokenizer = Tokenizer::from_file(tokenizer_path).map_err(|e| e.to_string())?;
 
-    Ok(format!("Model {} infrastructure ready via Burn-WGPU.", model_id))
+    Ok(format!(
+        "Model {} infrastructure ready via Burn-WGPU.",
+        model_id
+    ))
 }
 
 pub async fn generate_local_webgpu(_prompt: String) -> Result<String, String> {
     let device = WgpuDevice::default();
     let config = ModelConfig::default();
-    
+
     let _block: TransformerBlock<Wgpu> = TransformerBlock::new(&device, &config);
-    
+
     let output = format!(
         "[LUM Neural Engine - Advanced Mode]\n\
          - Model: Phi-3-mini Architecture\n\
@@ -125,12 +128,16 @@ mod tests {
             vocab_size: 1000,
             norm_eps: 1e-5,
         };
-        
+
         let block: TransformerBlock<Wgpu> = TransformerBlock::new(&device, &config);
-        
-        let input: Tensor<Wgpu, 3> = Tensor::random(Shape::new([1, 10, 128]), burn::tensor::Distribution::Default, &device);
+
+        let input: Tensor<Wgpu, 3> = Tensor::random(
+            Shape::new([1, 10, 128]),
+            burn::tensor::Distribution::Default,
+            &device,
+        );
         let output = block.forward(input);
-        
+
         assert_eq!(output.shape(), Shape::new([1, 10, 128]));
     }
 }

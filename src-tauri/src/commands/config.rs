@@ -1,6 +1,6 @@
-use serde::{Deserialize, Serialize};
-use crate::error::{Result, LumError};
+use crate::error::{LumError, Result};
 use crate::platform;
+use serde::{Deserialize, Serialize};
 
 const CONFIG_FILE: &str = ".lum_config.json";
 

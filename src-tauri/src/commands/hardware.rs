@@ -1,7 +1,7 @@
+use crate::error::Result;
 use serde::{Deserialize, Serialize};
 use sysinfo::System;
 use tauri::command;
-use crate::error::Result;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct HardwareSpecs {
@@ -35,10 +35,7 @@ pub struct HardwareSpecs {
 ///
 /// Discrete GPU는 최소 8GB VRAM을 가정 (최신 게이밍 GPU 기준).
 /// Integrated GPU는 공유 RAM을 사용하므로 RAM 기준으로 판단.
-fn recommend_model(
-    total_memory_gb: f32,
-    gpu_type: &str,
-) -> (&'static str, &'static str) {
+fn recommend_model(total_memory_gb: f32, gpu_type: &str) -> (&'static str, &'static str) {
     match gpu_type {
         "discrete" => {
             // Discrete GPU: VRAM ≥ 8GB 가정
@@ -133,8 +130,7 @@ pub async fn get_hardware_specs() -> Result<HardwareSpecs> {
     };
 
     // ── 모델 추천 ─────────────────────────────────────────────
-    let (recommended_model, recommendation_reason) =
-        recommend_model(total_memory_gb, &gpu_type);
+    let (recommended_model, recommendation_reason) = recommend_model(total_memory_gb, &gpu_type);
 
     let recommended_engine = if wgpu_supported { "xllm" } else { "cpu" }.to_string();
 
