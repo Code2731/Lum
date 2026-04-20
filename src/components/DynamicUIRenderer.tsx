@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import * as Babel from "@babel/standalone";
-import { ShieldAlert, ShieldCheck, Loader2 } from "lucide-react";
+import { ShieldAlert, ShieldCheck } from "lucide-react";
 
 interface Props {
   code: string;
