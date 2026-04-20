@@ -17,8 +17,18 @@ pub struct KeyboardAction {
     pub enter: bool,
 }
 
+#[cfg(target_os = "linux")]
+fn check_wayland() -> Result<(), String> {
+    if std::env::var("WAYLAND_DISPLAY").is_ok() {
+        return Err("Wayland 환경에서는 데스크톱 자동화가 지원되지 않습니다. XWayland를 사용하세요.".to_string());
+    }
+    Ok(())
+}
+
 #[tauri::command]
 pub async fn capture_screen() -> Result<String, String> {
+    #[cfg(target_os = "linux")]
+    check_wayland()?;
     let screens = Screen::all().map_err(|e| e.to_string())?;
     if let Some(screen) = screens.first() {
         let image = screen.capture().map_err(|e| e.to_string())?;
@@ -34,6 +44,8 @@ pub async fn capture_screen() -> Result<String, String> {
 
 #[tauri::command]
 pub fn simulate_mouse(action: MouseAction) -> Result<(), String> {
+    #[cfg(target_os = "linux")]
+    check_wayland()?;
     let mut enigo = Enigo::new(&Settings::default()).map_err(|e| e.to_string())?;
     enigo.move_mouse(action.x, action.y, Coordinate::Abs).map_err(|e| e.to_string())?;
     if action.click {
@@ -44,6 +56,8 @@ pub fn simulate_mouse(action: MouseAction) -> Result<(), String> {
 
 #[tauri::command]
 pub fn simulate_keyboard(action: KeyboardAction) -> Result<(), String> {
+    #[cfg(target_os = "linux")]
+    check_wayland()?;
     let mut enigo = Enigo::new(&Settings::default()).map_err(|e| e.to_string())?;
     enigo.text(&action.text).map_err(|e| e.to_string())?;
     if action.enter {
@@ -54,6 +68,8 @@ pub fn simulate_keyboard(action: KeyboardAction) -> Result<(), String> {
 
 #[tauri::command]
 pub fn simulate_click(x: i32, y: i32, button: String) -> Result<(), String> {
+    #[cfg(target_os = "linux")]
+    check_wayland()?;
     let mut enigo = Enigo::new(&Settings::default()).map_err(|e| e.to_string())?;
     enigo.move_mouse(x, y, Coordinate::Abs).map_err(|e| e.to_string())?;
     let b = match button.as_str() {
@@ -67,6 +83,8 @@ pub fn simulate_click(x: i32, y: i32, button: String) -> Result<(), String> {
 
 #[tauri::command]
 pub fn simulate_scroll(x: i32, y: i32, amount: i32) -> Result<(), String> {
+    #[cfg(target_os = "linux")]
+    check_wayland()?;
     let mut enigo = Enigo::new(&Settings::default()).map_err(|e| e.to_string())?;
     enigo.move_mouse(x, y, Coordinate::Abs).map_err(|e| e.to_string())?;
     enigo.scroll(amount, enigo::Axis::Vertical).map_err(|e| e.to_string())?;
@@ -75,6 +93,8 @@ pub fn simulate_scroll(x: i32, y: i32, amount: i32) -> Result<(), String> {
 
 #[tauri::command]
 pub fn simulate_key_combo(modifier: String, key: String) -> Result<(), String> {
+    #[cfg(target_os = "linux")]
+    check_wayland()?;
     let mut enigo = Enigo::new(&Settings::default()).map_err(|e| e.to_string())?;
     let m = match modifier.to_lowercase().as_str() {
         "cmd" | "command" | "meta" => enigo::Key::Meta,
