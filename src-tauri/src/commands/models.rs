@@ -4,6 +4,7 @@ use tokio::io::AsyncWriteExt;
 use futures_util::StreamExt;
 use crate::error::{Result, LumError};
 use crate::commands::config::load_config;
+use crate::platform;
 use std::path::PathBuf;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -34,8 +35,7 @@ fn models_dir() -> Result<PathBuf> {
     let dir = if let Some(d) = config.xllm_models_dir {
         PathBuf::from(d)
     } else {
-        let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
-        PathBuf::from(home).join("tabby").join("models")
+        platform::default_models_dir()
     };
     Ok(dir)
 }

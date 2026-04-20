@@ -65,8 +65,14 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, onOutput }) => {
     if (!container || spawnedRef.current) return;
     spawnedRef.current = true;
 
+    // Windows에는 Menlo/Monaco가 없으므로 Consolas 우선
+    const isWindows = navigator.userAgent.includes("Windows");
+    const fontFamily = isWindows
+      ? '"JetBrains Mono", "Cascadia Code", "Consolas", "Courier New", monospace'
+      : '"JetBrains Mono", "Menlo", "Monaco", monospace';
+
     const term = new Terminal({
-      fontFamily: '"JetBrains Mono", "Menlo", "Monaco", monospace',
+      fontFamily,
       fontSize: 13,
       lineHeight: 1.4,
       cursorBlink: true,

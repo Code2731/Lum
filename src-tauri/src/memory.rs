@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::fs;
-use std::path::PathBuf;
+use crate::platform;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct MemoryEntry {
@@ -16,7 +16,7 @@ pub struct SemanticMemory {
 
 impl SemanticMemory {
     pub fn load() -> Self {
-        let path = PathBuf::from(".lum_memory.json");
+        let path = platform::home_dir().join(".lum_memory.json");
         if let Ok(data) = fs::read_to_string(path) {
             serde_json::from_str(&data).unwrap_or_default()
         } else {
@@ -25,7 +25,7 @@ impl SemanticMemory {
     }
 
     pub fn save(&self) -> Result<(), String> {
-        let path = PathBuf::from(".lum_memory.json");
+        let path = platform::home_dir().join(".lum_memory.json");
         let data = serde_json::to_string_pretty(self).map_err(|e| e.to_string())?;
         fs::write(path, data).map_err(|e| e.to_string())
     }

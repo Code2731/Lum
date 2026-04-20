@@ -1,4 +1,5 @@
 use crate::error::{Result, LumError};
+use crate::platform;
 use portable_pty::{native_pty_system, CommandBuilder, PtySize};
 use std::io::{Read, Write};
 use std::sync::{Arc, Mutex};
@@ -45,21 +46,22 @@ pub async fn spawn_pty(
         .openpty(size)
         .map_err(|e| LumError::Io(format!("PTY 생성 실패: {}", e)))?;
 
-    // 시스템 기본 셸 결정
-    let shell = std::env::var("SHELL")
-        .unwrap_or_else(|_| if cfg!(windows) { "cmd.exe".into() } else { "/bin/bash".into() });
-
+    // 플랫폼별 기본 셸·홈 디렉토리
+    let shell = platform::default_shell();
     let work_dir = if cwd.is_empty() {
-        std::env::var("HOME").unwrap_or_else(|_| ".".into())
+        platform::home_dir().to_string_lossy().to_string()
     } else {
         cwd
     };
 
     let mut cmd = CommandBuilder::new(&shell);
     cmd.cwd(&work_dir);
-    // TERM 환경변수 설정 (색상 지원)
-    cmd.env("TERM", "xterm-256color");
-    cmd.env("COLORTERM", "truecolor");
+    // Windows cmd/PowerShell은 TERM 불필요, Unix 계열만 설정
+    #[cfg(not(windows))]
+    {
+        cmd.env("TERM", "xterm-256color");
+        cmd.env("COLORTERM", "truecolor");
+    }
 
     let _child = pair.slave
         .spawn_command(cmd)

@@ -1,5 +1,4 @@
 use serde::{Deserialize, Serialize};
-use std::collections::HashSet;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum SecurityLevel {
@@ -21,8 +20,14 @@ pub struct CommandSafetyReport {
 pub fn verify_command_safety(command: String) -> CommandSafetyReport {
     let cmd_lower = command.to_lowercase();
     
-    // 1. 차단된 패턴 (절대 금지)
-    let blocked_patterns = ["rm -rf /", "mkfs", "> /dev/sda", "dd if="];
+    // 1. 차단된 패턴 (절대 금지) — Unix + Windows 공통
+    let blocked_patterns = [
+        // Unix 파괴 명령
+        "rm -rf /", "mkfs", "> /dev/sda", "dd if=",
+        // Windows 파괴 명령
+        "format c:", "format c /", "del /s /q c:\\", "rd /s /q c:\\",
+        "diskpart", "cipher /w:c", "sfc /scannow /offbootdir",
+    ];
     for p in blocked_patterns {
         if cmd_lower.contains(p) {
             return CommandSafetyReport {
@@ -33,8 +38,14 @@ pub fn verify_command_safety(command: String) -> CommandSafetyReport {
         }
     }
 
-    // 2. 위험 패턴 (사용자 강한 승인 필요)
-    let dangerous_patterns = ["rm -rf", "sudo ", "chmod 777", "chown", "curl | bash", "wget | bash"];
+    // 2. 위험 패턴 (사용자 강한 승인 필요) — Unix + Windows
+    let dangerous_patterns = [
+        // Unix
+        "rm -rf", "sudo ", "chmod 777", "chown", "curl | bash", "wget | bash",
+        // Windows
+        "del /f", "rd /s", "reg delete", "reg add", "schtasks /delete", "net user",
+        "icacls", "takeown /f",
+    ];
     let mut detected_danger = Vec::new();
     for p in dangerous_patterns {
         if cmd_lower.contains(p) {

@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use crate::error::{Result, LumError};
+use crate::platform;
 
 const CONFIG_FILE: &str = ".lum_config.json";
 
@@ -34,11 +35,12 @@ impl AppConfig {
     }
 }
 
-pub fn load_config() -> Result<AppConfig> {
-    let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
-    let path = format!("{}/{}", home, CONFIG_FILE);
+fn config_path() -> std::path::PathBuf {
+    platform::home_dir().join(CONFIG_FILE)
+}
 
-    match std::fs::read_to_string(&path) {
+pub fn load_config() -> Result<AppConfig> {
+    match std::fs::read_to_string(config_path()) {
         Ok(content) => serde_json::from_str(&content).map_err(|e| LumError::Config(e.to_string())),
         Err(_) => Ok(AppConfig::default()),
     }

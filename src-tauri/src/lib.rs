@@ -1,5 +1,6 @@
 pub mod commands;
 pub mod error;
+pub mod platform;
 pub mod audio;
 pub mod memory;
 pub mod mcp;
