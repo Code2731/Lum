@@ -16,7 +16,7 @@ interface Props {
   onOutput?: (data: string) => void;
 }
 
-// GitHub Dark 테마 팔레트
+// GitHub Dark 팔레트
 const THEME = {
   background: "#0d1117",
   foreground: "#c9d1d9",
@@ -42,58 +42,69 @@ const THEME = {
 };
 
 const TerminalPane: React.FC<Props> = ({ id, cwd, onOutput }) => {
+  const outerRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const termRef = useRef<Terminal | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
   const spawnedRef = useRef(false);
 
-  const doResize = useCallback(() => {
-    const term = termRef.current;
+  const doFitAndResize = useCallback(() => {
     const fit = fitAddonRef.current;
-    if (!term || !fit) return;
+    const term = termRef.current;
+    if (!fit || !term) return;
     try {
       fit.fit();
       invoke("resize_pty", { id, cols: term.cols, rows: term.rows }).catch(() => {});
     } catch {
-      // 터미널이 아직 마운트 중일 수 있음
+      // fit 실패는 무시 (언마운트 중일 수 있음)
     }
   }, [id]);
 
   useEffect(() => {
-    if (!containerRef.current || spawnedRef.current) return;
+    const container = containerRef.current;
+    if (!container || spawnedRef.current) return;
     spawnedRef.current = true;
 
     const term = new Terminal({
-      fontFamily: '"JetBrains Mono", "Menlo", "Monaco", "Courier New", monospace',
+      fontFamily: '"JetBrains Mono", "Menlo", "Monaco", monospace',
       fontSize: 13,
       lineHeight: 1.4,
       cursorBlink: true,
       cursorStyle: "bar",
-      allowTransparency: true,
+      allowTransparency: false, // 투명도 끔 — 캔버스 렌더링 안정화
       scrollback: 5000,
       theme: THEME,
+      // 최소 크기 보장
+      cols: 80,
+      rows: 24,
     });
 
     const fitAddon = new FitAddon();
     term.loadAddon(fitAddon);
-    term.open(containerRef.current);
+    term.open(container);
     termRef.current = term;
     fitAddonRef.current = fitAddon;
 
-    // 초기 렌더 후 fit
-    requestAnimationFrame(() => {
-      fitAddon.fit();
-      const { cols, rows } = term;
+    // xterm.js open 직후에는 레이아웃이 아직 확정되지 않았을 수 있음
+    // 두 번 fit: 즉시 + 100ms 후 (레이아웃 완료 보장)
+    const doInitialFit = () => {
+      try { fitAddon.fit(); } catch {}
 
-      // PTY 생성
+      const { cols, rows } = term;
       invoke("spawn_pty", {
         id,
         cwd: cwd ?? "",
         cols,
         rows,
-      }).catch((e) => {
+      }).catch((e: unknown) => {
         term.write(`\r\n\x1b[31m[PTY 오류: ${e}]\x1b[0m\r\n`);
       });
+    };
+
+    // 첫 번째 fit: requestAnimationFrame
+    requestAnimationFrame(() => {
+      // 두 번째 fit: 레이아웃 완전히 확정된 후
+      setTimeout(doInitialFit, 80);
     });
 
     // PTY 출력 수신
@@ -106,42 +117,53 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, onOutput }) => {
     // PTY 종료 수신
     const unlistenExit = listen<string>("pty_exit", (event) => {
       if (event.payload !== id) return;
-      term.write("\r\n\x1b[2m[프로세스 종료]\x1b[0m\r\n");
+      term.write("\r\n\x1b[2m[프로세스 종료 — 새 탭을 열어주세요]\x1b[0m\r\n");
     });
 
-    // 사용자 키 입력 → PTY 전송
+    // 사용자 키 입력 → PTY 전달
     term.onData((data) => {
       invoke("write_to_pty", { id, data }).catch(() => {});
     });
 
-    // 창 크기 변경 감지
-    const resizeObserver = new ResizeObserver(() => doResize());
-    resizeObserver.observe(containerRef.current);
-    window.addEventListener("resize", doResize);
+    // 컨테이너 크기 변경 → fit + resize_pty
+    const resizeObserver = new ResizeObserver(() => doFitAndResize());
+    if (outerRef.current) resizeObserver.observe(outerRef.current);
+    window.addEventListener("resize", doFitAndResize);
 
     return () => {
       unlistenData.then((fn) => fn());
       unlistenExit.then((fn) => fn());
       resizeObserver.disconnect();
-      window.removeEventListener("resize", doResize);
+      window.removeEventListener("resize", doFitAndResize);
       term.dispose();
       termRef.current = null;
       fitAddonRef.current = null;
       spawnedRef.current = false;
     };
-  }, [id, cwd, onOutput, doResize]);
+  }, [id, cwd, onOutput, doFitAndResize]);
 
   return (
+    // outerRef: ResizeObserver 감지 대상 (전체 영역)
     <div
-      ref={containerRef}
+      ref={outerRef}
       style={{
         width: "100%",
         height: "100%",
-        padding: "4px 8px",
-        boxSizing: "border-box",
         backgroundColor: THEME.background,
+        overflow: "hidden",
       }}
-    />
+    >
+      {/* containerRef: xterm.js가 마운트되는 실제 컨테이너 */}
+      <div
+        ref={containerRef}
+        style={{
+          width: "100%",
+          height: "100%",
+          padding: "6px 10px",
+          boxSizing: "border-box",
+        }}
+      />
+    </div>
   );
 };
 

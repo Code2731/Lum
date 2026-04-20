@@ -133,7 +133,7 @@ const App: React.FC = () => {
       {/* ── 메인 콘텐츠 ──────────────────────────────────────── */}
       <main className="flex-1 overflow-hidden relative">
         {/* 터미널 뷰 (항상 마운트 — 숨김/표시만 전환해 PTY 세션 유지) */}
-        <div className={`absolute inset-0 ${viewMode === "terminal" ? "flex" : "hidden"}`}>
+        <div className={`absolute inset-0 ${viewMode === "terminal" ? "block" : "hidden"}`}>
           <TerminalPane
             id="main"
             onOutput={(data) => {
