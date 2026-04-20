@@ -3,11 +3,12 @@ import { useTerminalBlocks } from "./hooks/useTerminalBlocks";
 import { useAIProcessing } from "./hooks/useAIProcessing";
 import { useHardwareSpecs } from "./hooks/useHardwareSpecs";
 import { invoke } from "@tauri-apps/api/core";
-import { Zap, Cpu, Loader2, TerminalSquare, LayoutList, MousePointer2, Package } from "lucide-react";
+import { Zap, Cpu, Loader2, TerminalSquare, LayoutList, MousePointer2, Package, Database } from "lucide-react";
 import InfiniteCanvas from "./components/layout/InfiniteCanvas";
 import TerminalPane from "./components/TerminalPane";
 import ModelManager from "./components/ModelManager";
 import HealingPanel, { type HealingResult } from "./components/HealingPanel";
+import RagPanel from "./components/RagPanel";
 
 // ANSI 이스케이프 코드 제거
 const stripAnsi = (s: string) => s.replace(/\x1b\[[0-9;]*[a-zA-Z]/g, "").replace(/\x1b\][^\x07]*\x07/g, "");
@@ -37,6 +38,7 @@ const App: React.FC = () => {
   const [viewMode, setViewMode] = useState<ViewMode>("terminal");
   const [xllmOnline, setXllmOnline] = useState(false);
   const [showModelManager, setShowModelManager] = useState(false);
+  const [showRagPanel, setShowRagPanel] = useState(false);
   const [aiInput, setAiInput] = useState("");
   const [showAiBar, setShowAiBar] = useState(false);
   const aiInputRef = useRef<HTMLInputElement>(null);
@@ -204,6 +206,13 @@ const App: React.FC = () => {
             </div>
           )}
           <button
+            aria-label="RAG 코드 검색"
+            onClick={() => setShowRagPanel((v) => !v)}
+            className={`p-1.5 rounded transition-colors ${showRagPanel ? "text-accent bg-accent/10" : "text-white/40 hover:text-white hover:bg-white/10"}`}
+          >
+            <Database size={13} />
+          </button>
+          <button
             aria-label="모델 관리"
             onClick={() => setShowModelManager(true)}
             className="p-1.5 rounded text-white/40 hover:text-white hover:bg-white/10 transition-colors"
@@ -214,7 +223,9 @@ const App: React.FC = () => {
       </header>
 
       {/* ── 메인 콘텐츠 ──────────────────────────────────────── */}
-      <main className="flex-1 overflow-hidden relative">
+      <main className="flex-1 overflow-hidden flex">
+        {/* 콘텐츠 영역 */}
+        <div className="flex-1 overflow-hidden relative">
         {/* 터미널 뷰 (항상 마운트 — 숨김/표시만 전환해 PTY 세션 유지) */}
         <div className={`absolute inset-0 ${viewMode === "terminal" ? "block" : "hidden"}`}>
           <TerminalPane
@@ -261,6 +272,15 @@ const App: React.FC = () => {
                 </div>
               ))
             )}
+          </div>
+        )}
+
+        </div>{/* 콘텐츠 영역 닫기 */}
+
+        {/* RAG 사이드 패널 */}
+        {showRagPanel && (
+          <div className="w-80 border-l border-white/5 shrink-0 overflow-hidden">
+            <RagPanel model={selectedModel} onClose={() => setShowRagPanel(false)} />
           </div>
         )}
 

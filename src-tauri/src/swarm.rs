@@ -1,3 +1,4 @@
+use crate::memory::SemanticMemory;
 use futures_util::StreamExt;
 use libp2p::{
     gossipsub, mdns, request_response,
@@ -34,6 +35,18 @@ pub enum SwarmMessage {
     TaskResponse {
         task_id: String,
         result: String,
+    },
+    /// 스웜 RAG 쿼리: 이 노드의 코드 인덱스에서 검색 요청
+    RagQuery {
+        query_id: String,
+        embedding: Vec<f32>,
+        limit: usize,
+    },
+    /// 스웜 RAG 응답
+    RagResult {
+        query_id: String,
+        peer_id: String,
+        results: Vec<String>,
     },
 }
 
@@ -116,7 +129,25 @@ pub async fn start_p2p_node(handle: tauri::AppHandle) -> Result<String, String> 
                     },
                 )) => {
                     if let Ok(msg) = serde_json::from_slice::<SwarmMessage>(&message.data) {
-                        handle.emit("peer-status-updated", msg).unwrap();
+                        // RagQuery 수신 시 로컬 인덱스 검색 후 결과 emit
+                        if let SwarmMessage::RagQuery {
+                            ref query_id,
+                            ref embedding,
+                            limit,
+                        } = msg
+                        {
+                            let results = search_local_index(embedding, limit);
+                            let _ = handle.emit(
+                                "swarm-rag-result",
+                                SwarmMessage::RagResult {
+                                    query_id: query_id.clone(),
+                                    peer_id: peer_id.to_string(),
+                                    results,
+                                },
+                            );
+                        } else {
+                            handle.emit("peer-status-updated", msg).unwrap();
+                        }
                     }
                 }
                 SwarmEvent::Behaviour(LumBehaviourEvent::Mdns(mdns::Event::Discovered(list))) => {
@@ -130,6 +161,35 @@ pub async fn start_p2p_node(handle: tauri::AppHandle) -> Result<String, String> 
     });
 
     Ok(format!("LUM Swarm Node active: {}", peer_id))
+}
+
+fn cosine_similarity(a: &[f32], b: &[f32]) -> f32 {
+    if a.len() != b.len() || a.is_empty() {
+        return 0.0;
+    }
+    let dot: f32 = a.iter().zip(b).map(|(x, y)| x * y).sum();
+    let na: f32 = a.iter().map(|x| x * x).sum::<f32>().sqrt();
+    let nb: f32 = b.iter().map(|x| x * x).sum::<f32>().sqrt();
+    if na == 0.0 || nb == 0.0 {
+        return 0.0;
+    }
+    dot / (na * nb)
+}
+
+fn search_local_index(embedding: &[f32], limit: usize) -> Vec<String> {
+    let memory = SemanticMemory::load();
+    let mut scored: Vec<(f32, String)> = memory
+        .entries
+        .iter()
+        .map(|e| (cosine_similarity(embedding, &e.embedding), e.content.clone()))
+        .filter(|(s, _)| *s > 0.5)
+        .collect();
+    scored.sort_by(|a, b| b.0.total_cmp(&a.0));
+    scored
+        .into_iter()
+        .take(limit.max(1).min(20))
+        .map(|(_, c)| c)
+        .collect()
 }
 
 #[tauri::command]

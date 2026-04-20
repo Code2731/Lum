@@ -65,6 +65,10 @@ pub fn run() {
             memory::search_memory,
             // Terminal Completions
             commands::terminal::get_completions,
+            // RAG (Retrieval-Augmented Generation)
+            commands::rag::index_project,
+            commands::rag::search_codebase,
+            commands::rag::generate_embedding,
             // MCP Tools
             mcp::call_mcp_tool,
             mcp::list_internal_tools
