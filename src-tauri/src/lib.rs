@@ -28,6 +28,9 @@ pub fn run() {
         .manage(mcp_state)
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
+            // Hardware
+            commands::hardware::get_hardware_specs,
+
             // AI Commands
             commands::ai::generate_ai_command,
             commands::ai::analyze_error,
