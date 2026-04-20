@@ -1,6 +1,8 @@
 pub mod ai;
 pub mod config;
+pub mod git;
 pub mod hardware;
+pub mod history;
 pub mod models;
 pub mod project;
 pub mod rag;

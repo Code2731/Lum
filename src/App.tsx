@@ -14,6 +14,8 @@ import ModelManager from "./components/ModelManager";
 import HealingPanel, { type HealingResult } from "./components/HealingPanel";
 import RagPanel from "./components/RagPanel";
 import CommandBlockBar from "./components/CommandBlockBar";
+import HistorySearch from "./components/HistorySearch";
+import CommitPanel from "./components/CommitPanel";
 import { useCommandBlocks } from "./hooks/useCommandBlocks";
 
 const stripAnsi = (s: string) =>
@@ -74,6 +76,10 @@ const App: React.FC = () => {
 
   // 커맨드 블록 (OSC 133 파싱)
   const { blocks: cmdBlocks, feedRaw } = useCommandBlocks();
+
+  // 히스토리 / 커밋 패널 표시 여부
+  const [showHistorySearch, setShowHistorySearch] = useState(false);
+  const [showCommitPanel, setShowCommitPanel] = useState(false);
   const [dismissedBlockId, setDismissedBlockId] = useState<string | null>(null);
 
   // Self-Healing
@@ -85,13 +91,31 @@ const App: React.FC = () => {
   const activeTabIdRef = useRef(activeTabId);
   activeTabIdRef.current = activeTabId;
 
+  const selectedModel = specs?.recommended_model ?? "Qwen2.5-Coder-7B-Instruct-EXL2-4bpw";
+
+  // 새 커맨드 블록 완료 시 시맨틱 히스토리 저장 (백그라운드)
+  const cmdBlocksLenRef = useRef(0);
+  useEffect(() => {
+    if (cmdBlocks.length <= cmdBlocksLenRef.current) return;
+    const newBlocks = cmdBlocks.slice(cmdBlocksLenRef.current);
+    cmdBlocksLenRef.current = cmdBlocks.length;
+    for (const b of newBlocks) {
+      if (b.command.trim()) {
+        invoke("add_history_entry", {
+          command: b.command,
+          exitCode: b.exitCode ?? 0,
+          cwd: "",
+          model: selectedModel,
+        }).catch(() => {});
+      }
+    }
+  }, [cmdBlocks, selectedModel]);
+
   useEffect(() => {
     invoke<boolean>("check_xllm_status")
       .then(setXllmOnline)
       .catch(() => setXllmOnline(false));
   }, []);
-
-  const selectedModel = specs?.recommended_model ?? "Qwen2.5-Coder-7B-Instruct-EXL2-4bpw";
 
   const resetHealing = useCallback(() => {
     setHealingError(null);
@@ -220,6 +244,16 @@ const App: React.FC = () => {
     setHealingResult(null);
   }, []);
 
+  // 히스토리 선택 — 엔터 없이 붙여넣기 (사용자가 검토 후 Enter)
+  const handleHistorySelect = useCallback((command: string) => {
+    ptyWriteRefs.current.get(activePaneIdRef.current)?.(command);
+  }, []);
+
+  // 커밋 메시지 패널 → 활성 PTY로 실행
+  const handleCommitExecute = useCallback((cmd: string) => {
+    ptyWriteRefs.current.get(activePaneIdRef.current)?.(cmd + "\n");
+  }, []);
+
   const handleAiSubmit = useCallback(async () => {
     const cmd = aiInput.trim();
     if (!cmd) return;
@@ -234,8 +268,21 @@ const App: React.FC = () => {
     }
   }, [aiInput, selectedModel, addBlock, updateBlock, processAICommand]);
 
+  const viewModeRef = useRef(viewMode);
+  viewModeRef.current = viewMode;
+
   // 키보드 단축키
   useEffect(() => {
+    // Ctrl+R — xterm 에 도달하기 전에 캡처해서 히스토리 패널 표시
+    const captureHandler = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.key === "r" && viewModeRef.current === "terminal") {
+        e.preventDefault();
+        e.stopPropagation();
+        setShowHistorySearch(true);
+      }
+    };
+    window.addEventListener("keydown", captureHandler, { capture: true });
+
     const handler = (e: KeyboardEvent) => {
       const mod = e.metaKey || e.ctrlKey;
       if (mod && e.key === "k") {
@@ -254,10 +301,19 @@ const App: React.FC = () => {
       if (mod && e.shiftKey && e.key === "d") { e.preventDefault(); toggleSplit("h"); }
       // Cmd+Shift+E: 수직 스플릿 토글
       if (mod && e.shiftKey && e.key === "e") { e.preventDefault(); toggleSplit("v"); }
-      if (e.key === "Escape") setShowAiBar(false);
+      // Cmd+Shift+G: AI 커밋 메시지 패널
+      if (mod && e.shiftKey && e.key === "g") { e.preventDefault(); setShowCommitPanel(true); }
+      if (e.key === "Escape") {
+        setShowAiBar(false);
+        setShowHistorySearch(false);
+        setShowCommitPanel(false);
+      }
     };
     window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
+    return () => {
+      window.removeEventListener("keydown", captureHandler, { capture: true });
+      window.removeEventListener("keydown", handler);
+    };
   }, [addTab, closeTab, toggleSplit]);
 
   const VIEW_BUTTONS: { mode: ViewMode; icon: React.ReactNode; label: string }[] = [
@@ -571,6 +627,22 @@ const App: React.FC = () => {
         <ModelManager
           onClose={() => setShowModelManager(false)}
           recommendedModel={specs?.recommended_model}
+        />
+      )}
+
+      {showHistorySearch && (
+        <HistorySearch
+          model={selectedModel}
+          onSelect={handleHistorySelect}
+          onClose={() => setShowHistorySearch(false)}
+        />
+      )}
+
+      {showCommitPanel && (
+        <CommitPanel
+          model={selectedModel}
+          onExecute={handleCommitExecute}
+          onClose={() => setShowCommitPanel(false)}
         />
       )}
     </div>

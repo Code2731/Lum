@@ -20,7 +20,7 @@ pub struct AIResponse {
 
 /// xLLM OpenAI 호환 Chat Completions API 호출
 /// 엔드포인트: POST {base_url}/v1/chat/completions
-async fn call_xllm(client: &reqwest::Client, model: &str, prompt: &str) -> Result<String> {
+pub async fn call_xllm(client: &reqwest::Client, model: &str, prompt: &str) -> Result<String> {
     let config = load_config()?;
     let base_url = config.xllm_url();
     let url = format!("{}/v1/chat/completions", base_url);

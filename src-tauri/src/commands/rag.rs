@@ -36,7 +36,7 @@ pub struct SearchResult {
     pub score: f32,
 }
 
-async fn embed(client: &reqwest::Client, model: &str, text: &str) -> Option<Vec<f32>> {
+pub async fn embed(client: &reqwest::Client, model: &str, text: &str) -> Option<Vec<f32>> {
     let res = client
         .post(format!("{XLLM_BASE}/v1/embeddings"))
         .json(&EmbeddingRequest {

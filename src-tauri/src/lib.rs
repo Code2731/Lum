@@ -70,6 +70,12 @@ pub fn run() {
             commands::rag::index_project,
             commands::rag::search_codebase,
             commands::rag::generate_embedding,
+            // History (Semantic Search)
+            commands::history::add_history_entry,
+            commands::history::search_history,
+            commands::history::get_recent_history,
+            // Git
+            commands::git::generate_commit_message,
             // MCP Tools
             mcp::call_mcp_tool,
             mcp::list_internal_tools
