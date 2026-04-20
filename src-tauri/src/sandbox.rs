@@ -19,7 +19,7 @@ pub struct CommandSafetyReport {
 /// 명령어의 위험성을 정적 분석합니다.
 #[tauri::command]
 pub fn verify_command_safety(command: String) -> CommandSafetyReport {
-    let cmd_lower = command.toLowerCase();
+    let cmd_lower = command.to_lowercase();
     
     // 1. 차단된 패턴 (절대 금지)
     let blocked_patterns = ["rm -rf /", "mkfs", "> /dev/sda", "dd if="];

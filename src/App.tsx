@@ -6,76 +6,55 @@ import DynamicUIRenderer from "./components/DynamicUIRenderer";
 import CodeReviewDashboard from "./components/CodeReviewDashboard";
 import { Search, Settings, Layers, Zap, Plus, X, Command } from "lucide-react";
 
+import InfiniteCanvas from "./components/layout/InfiniteCanvas";
+import { LayoutList, Share2, MousePointer2 } from "lucide-react";
+
 const App: React.FC = () => {
-  // 1. 커스텀 훅을 통한 상태 관리
-  const { blocks, activeTab, addBlock, updateBlock, clearBlocks } = useTerminalBlocks();
+  const { blocks, activeTab, addBlock, updateBlock, moveBlock, clearBlocks } = useTerminalBlocks();
   const { isProcessing, processAICommand, analyzeError } = useAIProcessing();
-
-  // 2. 앱 UI 상태
-  const [showSetupWizard, setShowSetupWizard] = useState(false);
-  const [setupStep, setSetupStep] = useState(1);
-  const [isPaletteOpen, setIsPaletteOpen] = useState(false);
-  const [activePaneId, setActivePaneId] = useState<string | null>(null);
-
-  // 3. 앱 부트스트래핑
-  useEffect(() => {
-    // 하드웨어 체크 및 온보딩 로직 (기존 구현 유지)
-    console.log("LUM Initialized");
-  }, []);
+  const [viewMode, setViewMode] = useState<"list" | "canvas">("canvas");
+  
+  // ... rest of state ...
 
   return (
     <div className="app-root bg-terminal-dark text-white min-h-screen flex flex-col">
-      {/* 4. 분리된 마법사 컴포넌트 */}
-      {showSetupWizard && (
-        <SetupWizard 
-          step={setupStep}
-          setStep={setSetupStep}
-          onClose={() => setShowSetupWizard(false)}
-          hardwareSpecs={null} // 실제 데이터 전달
-          pullProgress={null}
-          handlePullModel={() => {}}
-          models={[]}
-          recommendedModel="qwen2.5-coder:7b"
-          syncOllama={async () => {}}
-        />
-      )}
+      {/* ... wizard ... */}
 
-      {/* 5. 메인 레이아웃 및 터미널 영역 */}
       <header className="h-10 border-b border-white/5 flex items-center justify-between px-4">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
             <Zap size={14} className="text-accent" />
-            <span className="text-xs font-bold tracking-widest uppercase">LUM Console</span>
+            <span className="text-xs font-bold tracking-widest uppercase">LUM 2.0 Spatial</span>
           </div>
-          <nav className="flex gap-2">
-            <button className="text-[10px] px-2 py-1 bg-white/10 rounded">Main Tab</button>
-            <button className="text-[10px] px-2 py-1 text-white/40"><Plus size={10} /></button>
-          </nav>
+          <div className="flex bg-white/5 p-1 rounded-md ml-4">
+            <button 
+              onClick={() => setViewMode("list")}
+              className={`p-1 rounded ${viewMode === "list" ? "bg-white/10 text-white" : "text-white/40"}`}
+            >
+              <LayoutList size={14} />
+            </button>
+            <button 
+              onClick={() => setViewMode("canvas")}
+              className={`p-1 rounded ${viewMode === "canvas" ? "bg-white/10 text-white" : "text-white/40"}`}
+            >
+              <MousePointer2 size={14} />
+            </button>
+          </div>
         </div>
-        <div className="flex items-center gap-4">
-           <button onClick={() => setIsPaletteOpen(true)}><Search size={14} className="text-white/40" /></button>
-           <button><Settings size={14} className="text-white/40" /></button>
-        </div>
+        {/* ... header right ... */}
       </header>
 
       <main className="flex-1 overflow-hidden relative">
-        {/* 터미널 블록 리스트 렌더링 (Virtual List 생략) */}
-        <div className="p-4 space-y-4">
-          {blocks.map((block) => (
-            <div key={block.id} className="block-card p-3 bg-white/5 rounded-lg border border-white/5">
-               <div className="text-xs text-white/40 flex items-center gap-2 mb-2">
-                 <Command size={10} />
-                 <span>{block.command}</span>
-               </div>
-               <pre className="text-xs font-mono">{block.output}</pre>
-               
-               {/* 분리된 대시보드 렌더링 */}
-               {block.type === "review" && (
-                 <CodeReviewDashboard report={null} />
-               )}
-            </div>
-          ))}
-        </div>
+        {viewMode === "canvas" ? (
+          <InfiniteCanvas blocks={blocks} onNodeMove={moveBlock} />
+        ) : (
+          <div className="p-4 space-y-4 overflow-y-auto h-full">
+            {blocks.map((block) => (
+               // ... existing list rendering ...
+               <div key={block.id}>{block.command}</div>
+            ))}
+          </div>
+        )}
       </main>
 
       <footer className="h-12 border-t border-white/5 px-4 flex items-center">

@@ -19,6 +19,9 @@ export interface TerminalBlock {
   status: "executing" | "completed" | "error" | "blocked" | "healing";
   cwd: string;
   gitBranch: string | null;
+  // Infinite Canvas 전용 속성 추가
+  position: { x: number; y: number };
+  links: string[]; // 연결된 다른 블록의 ID 리스트
 }
 
 export const useTerminalBlocks = () => {
@@ -34,15 +37,24 @@ export const useTerminalBlocks = () => {
       cwd: "/",
       gitBranch: null,
       type: "shell",
+      // 기본 위치: 마지막 블록 옆 또는 랜덤 배치
+      position: { x: blocks.length * 350, y: 50 },
+      links: [],
       ...block,
     };
     setBlocks((prev) => [...prev, newBlock]);
     return newBlock.id;
-  }, []);
+  }, [blocks.length]);
 
   const updateBlock = useCallback((id: string, updates: Partial<TerminalBlock>) => {
     setBlocks((prev) =>
       prev.map((b) => (b.id === id ? { ...b, ...updates } : b))
+    );
+  }, []);
+
+  const moveBlock = useCallback((id: string, x: number, y: number) => {
+    setBlocks((prev) =>
+      prev.map((b) => (b.id === id ? { ...b, position: { x, y } } : b))
     );
   }, []);
 
@@ -56,6 +68,7 @@ export const useTerminalBlocks = () => {
     setActiveTab,
     addBlock,
     updateBlock,
+    moveBlock,
     clearBlocks,
   };
 };

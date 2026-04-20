@@ -1,13 +1,14 @@
 use thiserror::Error;
-use serde::{Serialize, SerializeStruct};
+use serde::Serialize;
 
-#[derive(Error, Debug)]
+#[derive(Error, Debug, Serialize)]
+#[serde(tag = "type", content = "message")]
 pub enum LumError {
     #[error("IO Error: {0}")]
-    Io(#[from] std::io::Error),
+    Io(String),
 
     #[error("Tauri Error: {0}")]
-    Tauri(#[from] tauri::Error),
+    Tauri(String),
 
     #[error("AI Engine Error: {0}")]
     AiEngine(String),
@@ -22,15 +23,16 @@ pub enum LumError {
     Config(String),
 }
 
-impl Serialize for LumError {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        let mut state = serializer.serialize_struct("LumError", 2)?;
-        state.serialize_field("type", &format!("{:?}", self))?;
-        state.serialize_field("message", &self.to_string())?;
-        state.end()
+// 명시적인 변환 구현 (thiserror와 serde 호환을 위해)
+impl From<std::io::Error> for LumError {
+    fn from(err: std::io::Error) -> Self {
+        LumError::Io(err.to_string())
+    }
+}
+
+impl From<tauri::Error> for LumError {
+    fn from(err: tauri::Error) -> Self {
+        LumError::Tauri(err.to_string())
     }
 }
 
