@@ -49,7 +49,7 @@ pub async fn add_to_memory(content: String, embedding: Vec<f32>) -> Result<(), S
     let mut memory = SemanticMemory::load();
     let timestamp = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
-        .unwrap()
+        .unwrap_or_default()
         .as_secs();
     
     memory.entries.push(MemoryEntry {
@@ -77,6 +77,6 @@ pub async fn search_memory(query_embedding: Vec<f32>, limit: usize) -> Result<Ve
         .filter(|(score, _)| *score > 0.7) // 유사도 임계값
         .collect();
     
-    scored.sort_by(|a, b| b.0.partial_cmp(&a.0).unwrap());
+    scored.sort_by(|a, b| b.0.total_cmp(&a.0));
     Ok(scored.into_iter().take(limit).map(|(_, content)| content).collect())
 }

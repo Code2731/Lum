@@ -101,9 +101,6 @@ const DynamicUIRenderer: React.FC<Props> = ({ code }) => {
           title="AI Generated UI Sandbox"
           sandbox="allow-scripts"
           className="w-full h-auto min-h-[150px] border-none bg-transparent"
-          onLoad={(e) => {
-             // iframe 높이 자동 조절 등 추가 가능
-          }}
         />
       )}
     </div>

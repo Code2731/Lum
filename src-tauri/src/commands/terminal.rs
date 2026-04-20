@@ -1,4 +1,4 @@
-use crate::error::Result;
+use crate::error::{Result, LumError};
 use tauri::command;
 use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
@@ -37,4 +37,30 @@ pub async fn resize_pty(
     // PTY 리사이징
     println!("Resizing PTY {} to {}x{}", id, rows, cols);
     Ok(())
+}
+
+/// 현재 디렉토리 기준으로 셸 자동 완성 후보를 반환한다.
+#[command]
+pub fn get_completions(cwd: String, partial: String) -> Result<Vec<String>> {
+    let path = std::path::Path::new(&cwd);
+    if !path.exists() {
+        return Ok(vec![]);
+    }
+
+    let entries = std::fs::read_dir(path).map_err(|e| LumError::Io(e.to_string()))?;
+
+    let matches: Vec<String> = entries
+        .filter_map(|entry| {
+            let entry = entry.ok()?;
+            let name = entry.file_name().to_string_lossy().to_string();
+            if partial.is_empty() || name.starts_with(&partial) {
+                Some(name)
+            } else {
+                None
+            }
+        })
+        .take(20) // 최대 20개
+        .collect();
+
+    Ok(matches)
 }

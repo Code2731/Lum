@@ -63,8 +63,13 @@ const App: React.FC = () => {
               const cmd = e.currentTarget.value.trim();
               if (!cmd) return;
               e.currentTarget.value = "";
-              addBlock({ command: cmd, type: "ai" });
-              await processAICommand(cmd, "llama3", "");
+              const blockId = addBlock({ command: cmd, type: "ai" });
+              try {
+                const result = await processAICommand(cmd, "llama3", "");
+                updateBlock(blockId, { output: result?.explanation ?? "", status: "completed" });
+              } catch (err) {
+                updateBlock(blockId, { output: `Error: ${err}`, status: "error" });
+              }
             }}
           />
         </div>

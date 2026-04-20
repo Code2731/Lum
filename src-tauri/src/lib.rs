@@ -1,5 +1,7 @@
 pub mod commands;
 pub mod error;
+pub mod audio;
+pub mod memory;
 pub mod mcp;
 pub mod swarm;
 pub mod desktop;
@@ -51,6 +53,15 @@ pub fn run() {
             swarm::send_swarm_task,
             swarm::delegate_swarm_task,
             
+            // Memory & Audio
+            audio::start_voice_recording,
+            audio::stop_voice_recording,
+            memory::add_to_memory,
+            memory::search_memory,
+
+            // Terminal Completions
+            commands::terminal::get_completions,
+
             // MCP Tools
             mcp::call_mcp_tool,
             mcp::list_internal_tools
