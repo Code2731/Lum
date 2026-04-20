@@ -10,7 +10,7 @@ interface Props {
   handlePullModel: (model: string) => void;
   models: string[];
   recommendedModel: string;
-  syncOllama: () => Promise<void>;
+  syncXllm: () => Promise<void>;
 }
 
 const SetupWizard: React.FC<Props> = ({
@@ -22,7 +22,7 @@ const SetupWizard: React.FC<Props> = ({
   handlePullModel,
   models,
   recommendedModel,
-  syncOllama,
+  syncXllm,
 }) => {
   return (
     <div className="setup-wizard-overlay">
@@ -35,55 +35,50 @@ const SetupWizard: React.FC<Props> = ({
         <div className="setup-wizard-body">
           {step === 1 && (
             <div className="setup-step">
-              <h3>1. Ollama를 찾을 수 없습니다</h3>
+              <h3>1. xLLM 서버를 찾을 수 없습니다</h3>
               <p>
-                LUM은 로컬 AI 터미널입니다. Ollama를 설치하고 실행해야 AI 기능을
-                사용할 수 있습니다.
+                LUM은 로컬 AI 터미널입니다. xLLM(TabbyAPI)을 설치하고 실행해야
+                AI 기능을 사용할 수 있습니다.
               </p>
               <a
-                href="https://ollama.com"
+                href="https://github.com/theroyallab/tabbyAPI"
                 target="_blank"
                 rel="noreferrer"
                 className="setup-link"
               >
-                Ollama 다운로드 사이트로 이동
+                TabbyAPI (xLLM) 설치 가이드
               </a>
+              <p className="setup-hint">
+                설치 후 <code>python main.py</code>로 실행하면{" "}
+                <code>http://127.0.0.1:5000</code>에서 자동으로 연결됩니다.
+              </p>
               <button
                 className="setup-btn"
-                onClick={() => syncOllama().then(() => setStep(2))}
+                onClick={() => syncXllm().then(() => setStep(2))}
               >
-                설치 완료 후 확인
+                서버 실행 후 확인
               </button>
             </div>
           )}
           {step === 2 && (
             <div className="setup-step">
-              <h3>2. 최적의 추론 엔진 및 모델 선택</h3>
+              <h3>2. 최적의 모델 선택</h3>
               <p>
-                LUM이 사양(
-                {hardwareSpecs?.total_memory_gb}GB RAM,{" "}
+                LUM이 사양({hardwareSpecs?.total_memory_gb}GB RAM,{" "}
                 {hardwareSpecs?.wgpu_supported ? "GPU 가속" : "CPU"})을
                 분석했습니다.
               </p>
 
-              <div
-                className={`recommendation-box ${
-                  hardwareSpecs?.recommended_engine === "xllm" ? "xllm-pro" : ""
-                }`}
-              >
+              <div className="recommendation-box xllm-pro">
                 <div className="recommendation-badge">
-                  {hardwareSpecs?.recommended_engine === "xllm"
-                    ? "🔥 xLLM (EXL2) PRO 엔진 추천"
-                    : "Recommended for You"}
+                  🔥 xLLM (EXL2) — ExLlamaV2 최적화 추론
                 </div>
                 <div className="recommendation-content">
                   <Zap size={20} className="text-accent" />
                   <div>
                     <div className="recommendation-name">{recommendedModel}</div>
                     <div className="recommendation-desc">
-                      {hardwareSpecs?.recommended_engine === "xllm"
-                        ? "GPU 최적화 EXL2 포맷으로 Ollama 대비 최대 5배 빠른 코딩 지원"
-                        : "범용 GGUF 포맷으로 안정적인 로컬 코딩 지원"}
+                      GPU 최적화 EXL2 포맷 — 동급 모델 대비 최대 5배 빠른 추론 속도
                     </div>
                   </div>
                 </div>
@@ -118,7 +113,7 @@ const SetupWizard: React.FC<Props> = ({
                   className="setup-btn primary"
                   onClick={() => handlePullModel(recommendedModel)}
                 >
-                  {recommendedModel} 설치 시작
+                  {recommendedModel} 로드
                 </button>
               )}
               {(models.includes(recommendedModel) ||

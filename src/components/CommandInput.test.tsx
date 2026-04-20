@@ -28,7 +28,7 @@ describe("CommandInput Component", () => {
   const defaultProps = {
     onCommandSubmit: mockSubmit,
     selectedModel: "llama3",
-    ollamaOnline: true,
+    xllmOnline: true,
     context: { cwd: "/Users/test", git_branch: "main" },
   };
 

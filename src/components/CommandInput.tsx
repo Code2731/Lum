@@ -9,14 +9,14 @@ import "prismjs/themes/prism-tomorrow.css";
 interface Props {
   onCommandSubmit: (cmd: string, type: "shell" | "ai") => void;
   selectedModel: string;
-  ollamaOnline: boolean;
+  xllmOnline: boolean;
   context: { cwd: string; git_branch: string | null };
 }
 
 const CommandInput = ({
   onCommandSubmit,
   selectedModel,
-  ollamaOnline,
+  xllmOnline,
   context,
 }: Props) => {
   const [value, setValue] = useState("");
@@ -209,7 +209,7 @@ const CommandInput = ({
               <span className="editor-branch">{context.git_branch}</span>
             </>
           )}
-          {isAI && (ollamaOnline || selectedModel.startsWith("gemini-") || selectedModel.startsWith("webgpu-")) && (
+          {isAI && (xllmOnline || selectedModel.startsWith("gemini-") || selectedModel.startsWith("webgpu-")) && (
             <span
               className={`editor-ai-badge ${selectedModel.startsWith("gemini-") ? "gemini" : selectedModel.startsWith("webgpu-") ? "webgpu" : ""}`}
             >
