@@ -72,3 +72,4 @@ cd src-tauri && cargo test   # Rust 단위 테스트 실행
 - [x] Phase 25: AI Self-Healing Loop (터미널 출력 에러 감지 → analyze_error AI 분석 → 수정 커맨드 안전도 배지 + PTY 실행 완료)
 - [x] Phase 26: Shared RAG Swarm (index_project/search_codebase/generate_embedding + gossipsub RagQuery/RagResult 피어 간 벡터 검색 공유 완료)
 - [x] Phase 27: Multi-Tab PTY (탭 상태 관리, close_pty 커맨드, Cmd+T/W 단축키, CSS show/hide 마운팅, ptyWriteRefs Map 패턴 완료)
+- [x] Phase 28: Split Pane Terminal (react-resizable-panels Group/Separator, 수평·수직 분할, activePaneId 포커스 추적, Cmd+Shift+D/E 단축키 완료)

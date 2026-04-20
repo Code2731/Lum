@@ -1,9 +1,13 @@
 import React, { useState, useRef, useCallback, useEffect } from "react";
+import { Group as PanelGroup, Panel, Separator as PanelResizeHandle } from "react-resizable-panels";
 import { useTerminalBlocks } from "./hooks/useTerminalBlocks";
 import { useAIProcessing } from "./hooks/useAIProcessing";
 import { useHardwareSpecs } from "./hooks/useHardwareSpecs";
 import { invoke } from "@tauri-apps/api/core";
-import { Zap, Cpu, Loader2, TerminalSquare, LayoutList, MousePointer2, Package, Database, Plus, X } from "lucide-react";
+import {
+  Zap, Cpu, Loader2, TerminalSquare, LayoutList, MousePointer2,
+  Package, Database, Plus, X, Columns2, Rows2,
+} from "lucide-react";
 import InfiniteCanvas from "./components/layout/InfiniteCanvas";
 import TerminalPane from "./components/TerminalPane";
 import ModelManager from "./components/ModelManager";
@@ -29,14 +33,17 @@ const ERROR_PATTERNS = [
 ];
 
 type ViewMode = "terminal" | "canvas" | "list";
+type SplitDir = "h" | "v";
 
 interface Tab {
   id: string;
   title: string;
+  splitDir?: SplitDir;
 }
 
 let tabCounter = 1;
 const makeTab = (): Tab => ({ id: `tab-${Date.now()}`, title: `Shell ${tabCounter++}` });
+const splitId = (tabId: string) => `${tabId}-b`;
 
 const App: React.FC = () => {
   const { blocks, addBlock, updateBlock, moveBlock } = useTerminalBlocks();
@@ -55,10 +62,15 @@ const App: React.FC = () => {
   const [tabs, setTabs] = useState<Tab[]>(() => [makeTab()]);
   const [activeTabId, setActiveTabId] = useState<string>(() => tabs[0]?.id ?? "");
 
+  // 포커스된 PTY ID (탭 내 스플릿 팬 구분)
+  const [activePaneId, setActivePaneId] = useState<string>(() => tabs[0]?.id ?? "");
+  const activePaneIdRef = useRef(activePaneId);
+  activePaneIdRef.current = activePaneId;
+
   // 탭별 PTY 쓰기 함수
   const ptyWriteRefs = useRef<Map<string, (d: string) => void>>(new Map());
 
-  // Self-Healing — 활성 탭 기준
+  // Self-Healing
   const [healingError, setHealingError] = useState<string | null>(null);
   const [healingResult, setHealingResult] = useState<HealingResult | null>(null);
   const [isHealingAnalyzing, setIsHealingAnalyzing] = useState(false);
@@ -75,52 +87,76 @@ const App: React.FC = () => {
 
   const selectedModel = specs?.recommended_model ?? "Qwen2.5-Coder-7B-Instruct-EXL2-4bpw";
 
-  // 새 탭 생성
-  const addTab = useCallback(() => {
-    const tab = makeTab();
-    setTabs((prev) => [...prev, tab]);
-    setActiveTabId(tab.id);
-    // 탭 전환 시 healing 상태 초기화
+  const resetHealing = useCallback(() => {
     setHealingError(null);
     setHealingResult(null);
     outputBufRef.current = "";
   }, []);
+
+  // 새 탭
+  const addTab = useCallback(() => {
+    const tab = makeTab();
+    setTabs((prev) => [...prev, tab]);
+    setActiveTabId(tab.id);
+    setActivePaneId(tab.id);
+    resetHealing();
+  }, [resetHealing]);
 
   // 탭 닫기
   const closeTab = useCallback(
     (id: string, e: React.MouseEvent) => {
       e.stopPropagation();
       invoke("close_pty", { id }).catch(() => {});
+      invoke("close_pty", { id: splitId(id) }).catch(() => {});
       ptyWriteRefs.current.delete(id);
+      ptyWriteRefs.current.delete(splitId(id));
 
       setTabs((prev) => {
-        if (prev.length === 1) return prev; // 마지막 탭은 닫지 않음
+        if (prev.length === 1) return prev;
         const next = prev.filter((t) => t.id !== id);
         if (id === activeTabIdRef.current) {
           const idx = prev.findIndex((t) => t.id === id);
-          const nextActive = next[Math.min(idx, next.length - 1)];
-          setActiveTabId(nextActive.id);
+          const nextTab = next[Math.min(idx, next.length - 1)];
+          setActiveTabId(nextTab.id);
+          setActivePaneId(nextTab.id);
         }
         return next;
       });
-      setHealingError(null);
-      setHealingResult(null);
+      resetHealing();
     },
-    [],
+    [resetHealing],
   );
 
   // 탭 전환
-  const switchTab = useCallback((id: string) => {
-    setActiveTabId(id);
-    setHealingError(null);
-    setHealingResult(null);
-    outputBufRef.current = "";
+  const switchTab = useCallback(
+    (id: string) => {
+      setActiveTabId(id);
+      setActivePaneId(id);
+      resetHealing();
+    },
+    [resetHealing],
+  );
+
+  // 스플릿 토글 — 같은 방향이면 해제, 다른 방향이면 전환
+  const toggleSplit = useCallback((dir: SplitDir) => {
+    const tabId = activeTabIdRef.current;
+    setTabs((prev) => {
+      const tab = prev.find((t) => t.id === tabId);
+      const nextDir = tab?.splitDir === dir ? undefined : dir;
+      if (!nextDir) {
+        // 스플릿 해제: split PTY 닫기
+        invoke("close_pty", { id: splitId(tabId) }).catch(() => {});
+        ptyWriteRefs.current.delete(splitId(tabId));
+        setActivePaneId(tabId);
+      }
+      return prev.map((t) => (t.id === tabId ? { ...t, splitDir: nextDir } : t));
+    });
   }, []);
 
-  // 활성 탭 출력 → 에러 감지
+  // 활성 팬 출력 → 에러 감지
   const handleTerminalOutput = useCallback(
-    (tabId: string) => (data: string) => {
-      if (tabId !== activeTabIdRef.current) return;
+    (paneId: string) => (data: string) => {
+      if (paneId !== activePaneIdRef.current) return;
       const text = stripAnsi(data);
       outputBufRef.current += text;
       if (outputBufRef.current.length > 3000) {
@@ -171,9 +207,8 @@ const App: React.FC = () => {
     }
   }, [healingError, selectedModel, analyzeError]);
 
-  // 제안 커맨드 → 활성 탭 PTY 실행
   const handleHealingExecute = useCallback((cmd: string) => {
-    ptyWriteRefs.current.get(activeTabIdRef.current)?.(cmd + "\n");
+    ptyWriteRefs.current.get(activePaneIdRef.current)?.(cmd + "\n");
     setHealingError(null);
     setHealingResult(null);
   }, []);
@@ -195,33 +230,36 @@ const App: React.FC = () => {
   // 키보드 단축키
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+      const mod = e.metaKey || e.ctrlKey;
+      if (mod && e.key === "k") {
         e.preventDefault();
         setShowAiBar((v) => {
           if (!v) setTimeout(() => aiInputRef.current?.focus(), 50);
           return !v;
         });
       }
-      if ((e.metaKey || e.ctrlKey) && e.key === "t") {
+      if (mod && e.key === "t") { e.preventDefault(); addTab(); }
+      if (mod && e.key === "w") {
         e.preventDefault();
-        addTab();
+        closeTab(activeTabIdRef.current, { stopPropagation: () => {} } as React.MouseEvent);
       }
-      if ((e.metaKey || e.ctrlKey) && e.key === "w") {
-        e.preventDefault();
-        const fakeEvent = { stopPropagation: () => {} } as React.MouseEvent;
-        closeTab(activeTabIdRef.current, fakeEvent);
-      }
+      // Cmd+Shift+D: 수평 스플릿 토글
+      if (mod && e.shiftKey && e.key === "d") { e.preventDefault(); toggleSplit("h"); }
+      // Cmd+Shift+E: 수직 스플릿 토글
+      if (mod && e.shiftKey && e.key === "e") { e.preventDefault(); toggleSplit("v"); }
       if (e.key === "Escape") setShowAiBar(false);
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [addTab, closeTab]);
+  }, [addTab, closeTab, toggleSplit]);
 
   const VIEW_BUTTONS: { mode: ViewMode; icon: React.ReactNode; label: string }[] = [
     { mode: "terminal", icon: <TerminalSquare size={14} />, label: "터미널" },
     { mode: "list", icon: <LayoutList size={14} />, label: "리스트" },
     { mode: "canvas", icon: <MousePointer2 size={14} />, label: "캔버스" },
   ];
+
+  const activeTab = tabs.find((t) => t.id === activeTabId);
 
   return (
     <div className="app-root bg-terminal-dark text-white min-h-screen flex flex-col">
@@ -291,7 +329,7 @@ const App: React.FC = () => {
         </div>
       </header>
 
-      {/* ── 탭 바 (터미널 뷰에서만 표시) ─────────────────────── */}
+      {/* ── 탭 바 ─────────────────────────────────────────────── */}
       {viewMode === "terminal" && (
         <div className="flex items-center border-b border-white/5 bg-[#0d1117] shrink-0 overflow-x-auto">
           {tabs.map((tab) => (
@@ -326,6 +364,34 @@ const App: React.FC = () => {
           >
             <Plus size={12} />
           </button>
+
+          {/* 스플릿 버튼 */}
+          <div className="ml-auto flex items-center gap-0.5 px-2 shrink-0">
+            <button
+              onClick={() => toggleSplit("h")}
+              aria-label="수평 분할 (Cmd+Shift+D)"
+              title="수평 분할 (Cmd+Shift+D)"
+              className={`p-1.5 rounded transition-colors ${
+                activeTab?.splitDir === "h"
+                  ? "text-accent bg-accent/10"
+                  : "text-white/30 hover:text-white/70 hover:bg-white/5"
+              }`}
+            >
+              <Columns2 size={12} />
+            </button>
+            <button
+              onClick={() => toggleSplit("v")}
+              aria-label="수직 분할 (Cmd+Shift+E)"
+              title="수직 분할 (Cmd+Shift+E)"
+              className={`p-1.5 rounded transition-colors ${
+                activeTab?.splitDir === "v"
+                  ? "text-accent bg-accent/10"
+                  : "text-white/30 hover:text-white/70 hover:bg-white/5"
+              }`}
+            >
+              <Rows2 size={12} />
+            </button>
+          </div>
         </div>
       )}
 
@@ -337,13 +403,56 @@ const App: React.FC = () => {
             {tabs.map((tab) => (
               <div
                 key={tab.id}
-                className={`absolute inset-0 ${tab.id === activeTabId ? "block" : "hidden"}`}
+                className={`absolute inset-0 ${tab.id === activeTabId ? "flex" : "hidden"} flex-col`}
               >
-                <TerminalPane
-                  id={tab.id}
-                  onOutput={handleTerminalOutput(tab.id)}
-                  onReady={(write) => { ptyWriteRefs.current.set(tab.id, write); }}
-                />
+                {tab.splitDir ? (
+                  <PanelGroup
+                    orientation={tab.splitDir === "h" ? "horizontal" : "vertical"}
+                    className="flex-1"
+                  >
+                    <Panel minSize={20}>
+                      <PaneWrapper
+                        paneId={tab.id}
+                        activePaneId={activePaneId}
+                        onFocus={setActivePaneId}
+                      >
+                        <TerminalPane
+                          id={tab.id}
+                          onOutput={handleTerminalOutput(tab.id)}
+                          onReady={(write) => { ptyWriteRefs.current.set(tab.id, write); }}
+                        />
+                      </PaneWrapper>
+                    </Panel>
+                    <PanelResizeHandle
+                      className={
+                        tab.splitDir === "h"
+                          ? "w-1 bg-white/5 hover:bg-accent/30 transition-colors cursor-col-resize"
+                          : "h-1 bg-white/5 hover:bg-accent/30 transition-colors cursor-row-resize"
+                      }
+                    />
+                    <Panel minSize={20}>
+                      <PaneWrapper
+                        paneId={splitId(tab.id)}
+                        activePaneId={activePaneId}
+                        onFocus={setActivePaneId}
+                      >
+                        <TerminalPane
+                          id={splitId(tab.id)}
+                          onOutput={handleTerminalOutput(splitId(tab.id))}
+                          onReady={(write) => { ptyWriteRefs.current.set(splitId(tab.id), write); }}
+                        />
+                      </PaneWrapper>
+                    </Panel>
+                  </PanelGroup>
+                ) : (
+                  <div className="flex-1">
+                    <TerminalPane
+                      id={tab.id}
+                      onOutput={handleTerminalOutput(tab.id)}
+                      onReady={(write) => { ptyWriteRefs.current.set(tab.id, write); }}
+                    />
+                  </div>
+                )}
               </div>
             ))}
             {healingError && (
@@ -428,5 +537,24 @@ const App: React.FC = () => {
     </div>
   );
 };
+
+// 스플릿 팬 래퍼 — 포커스 표시 + 클릭으로 활성 팬 선택
+interface PaneWrapperProps {
+  paneId: string;
+  activePaneId: string;
+  onFocus: (id: string) => void;
+  children: React.ReactNode;
+}
+
+const PaneWrapper: React.FC<PaneWrapperProps> = ({ paneId, activePaneId, onFocus, children }) => (
+  <div
+    className={`h-full relative ${
+      paneId === activePaneId ? "ring-1 ring-inset ring-accent/25" : "ring-1 ring-inset ring-white/5"
+    }`}
+    onMouseDown={() => onFocus(paneId)}
+  >
+    {children}
+  </div>
+);
 
 export default App;
