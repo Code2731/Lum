@@ -29,6 +29,17 @@ LUM은 진짜 셸을 실행합니다. 채팅 UI가 아닙니다.
 - **Production-Grade Security**: 파괴적 명령어 감지(Security Gate) 및 AI 생성 UI 완전 격리(Sandbox).
 - **Distributed Swarms (libp2p)**: 네트워크 내 다른 LUM 노드들과 협업하는 P2P 지능망 인프라.
 
+## 🖥 Cross-Platform Support
+
+| 플랫폼 | 셸 | 데스크톱 자동화 | 번들 포맷 |
+|--------|-----|----------------|----------|
+| macOS | `$SHELL` (zsh/bash) | enigo (스크린샷, 마우스/키보드) | `.dmg` |
+| Windows | PowerShell → cmd.exe | enigo | `.msi` / `.nsis` |
+| Linux (X11) | `$SHELL` (bash/zsh) | enigo | `.deb` / `.AppImage` |
+| Linux (Wayland) | `$SHELL` | 미지원 (XWayland 사용 필요) | `.deb` / `.AppImage` |
+
+> **음성 녹음**: `cpal` + Whisper STT 미구현 — 현재 명확한 오류 반환.
+
 ## 🏗 Architecture
 
 ```
@@ -79,8 +90,9 @@ npm run tauri dev
 
 - [x] Phase 22: xLLM Migration & Model Manager
 - [x] Phase 23: Real PTY Terminal (portable-pty + xterm.js)
-- [ ] Phase 24: AI Self-Healing Loop (터미널 출력 → AI 분석 → 자동 수정 제안)
-- [ ] Phase 25: Shared RAG Swarm (노드 간 벡터 지식 공유)
+- [x] Phase 24: Cross-Platform Polish (platform.rs, Wayland 감지, 번들 타겟 명시화)
+- [ ] Phase 25: AI Self-Healing Loop (터미널 출력 → AI 분석 → 자동 수정 제안)
+- [ ] Phase 26: Shared RAG Swarm (노드 간 벡터 지식 공유)
 
 ---
 
