@@ -117,6 +117,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "WebGPU 어댑터 없는 환경(CI)에서는 건너뜀"]
     fn test_transformer_block_dimensions() {
         let device = WgpuDevice::default();
         let config = ModelConfig {
