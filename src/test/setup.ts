@@ -6,4 +6,4 @@ class ResizeObserverStub {
   unobserve() {}
   disconnect() {}
 }
-global.ResizeObserver = ResizeObserverStub;
+window.ResizeObserver = ResizeObserverStub;

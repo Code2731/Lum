@@ -4,13 +4,19 @@ import { invoke } from "@tauri-apps/api/core";
 export const useAIProcessing = () => {
   const [isProcessing, setIsProcessing] = useState(false);
 
-  const processAICommand = useCallback(async (prompt: string, model: string, context: string) => {
+  const processAICommand = useCallback(async (
+    prompt: string,
+    model: string,
+    context: string,
+    imageData?: string | null,
+  ) => {
     setIsProcessing(true);
     try {
       const response = await invoke<string>("generate_ai_command", {
         prompt,
         model,
         context,
+        imageData: imageData ?? null,
       });
       return JSON.parse(response);
     } catch (e) {
@@ -21,7 +27,12 @@ export const useAIProcessing = () => {
     }
   }, []);
 
-  const analyzeError = useCallback(async (command: string, stderr: string, model: string, context: string) => {
+  const analyzeError = useCallback(async (
+    command: string,
+    stderr: string,
+    model: string,
+    context: string,
+  ) => {
     setIsProcessing(true);
     try {
       const response = await invoke<string>("analyze_error", {
@@ -39,9 +50,22 @@ export const useAIProcessing = () => {
     }
   }, []);
 
+  const verifyVisionGoal = useCallback(async (
+    goal: string,
+    screenshotBase64: string,
+    model: string,
+    iteration: number,
+  ) => {
+    return invoke<{ achieved: boolean; reason: string; nextActions: any[] }>(
+      "verify_vision_goal",
+      { goal, screenshotBase64, model, iteration },
+    );
+  }, []);
+
   return {
     isProcessing,
     processAICommand,
     analyzeError,
+    verifyVisionGoal,
   };
 };
