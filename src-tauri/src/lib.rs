@@ -31,6 +31,11 @@ pub fn run() {
             // Hardware
             commands::hardware::get_hardware_specs,
 
+            // Model Management
+            commands::models::list_local_models,
+            commands::models::download_model,
+            commands::models::delete_model,
+
             // AI Commands
             commands::ai::generate_ai_command,
             commands::ai::analyze_error,

@@ -19,6 +19,10 @@ pub struct AppConfig {
     /// Gemini API 키 — 클라우드 폴백용 (선택)
     pub gemini_api_key: Option<String>,
     pub p2p_enabled: Option<bool>,
+    /// xLLM 모델 저장 디렉토리 (기본값: ~/tabby/models)
+    pub xllm_models_dir: Option<String>,
+    /// TabbyAPI Admin 키 (모델 관리 API용)
+    pub xllm_admin_key: Option<String>,
 }
 
 impl AppConfig {

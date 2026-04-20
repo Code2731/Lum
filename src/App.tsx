@@ -5,7 +5,8 @@ import { useHardwareSpecs } from "./hooks/useHardwareSpecs";
 import { invoke } from "@tauri-apps/api/core";
 import { Zap, Cpu, Loader2 } from "lucide-react";
 import InfiniteCanvas from "./components/layout/InfiniteCanvas";
-import { LayoutList, MousePointer2 } from "lucide-react";
+import ModelManager from "./components/ModelManager";
+import { LayoutList, MousePointer2, Package } from "lucide-react";
 
 const App: React.FC = () => {
   const { blocks, addBlock, updateBlock, moveBlock } = useTerminalBlocks();
@@ -13,6 +14,7 @@ const App: React.FC = () => {
   const { specs, loading: specsLoading } = useHardwareSpecs();
   const [viewMode, setViewMode] = useState<"list" | "canvas">("canvas");
   const [xllmOnline, setXllmOnline] = useState(false);
+  const [showModelManager, setShowModelManager] = useState(false);
 
   // xLLM 서버 상태 확인
   React.useEffect(() => {
@@ -71,15 +73,24 @@ const App: React.FC = () => {
           </div>
         </div>
 
-        {/* 추천 모델 뱃지 */}
-        {specs && (
-          <div
-            className="text-[10px] px-2 py-1 rounded bg-white/5 text-white/50 truncate max-w-xs"
-            title={specs.recommendation_reason}
+        <div className="flex items-center gap-2">
+          {/* 추천 모델 뱃지 */}
+          {specs && (
+            <div
+              className="text-[10px] px-2 py-1 rounded bg-white/5 text-white/50 truncate max-w-xs"
+              title={specs.recommendation_reason}
+            >
+              {specs.recommended_model}
+            </div>
+          )}
+          <button
+            aria-label="모델 관리"
+            onClick={() => setShowModelManager(true)}
+            className="p-1.5 rounded text-white/40 hover:text-white hover:bg-white/10 transition-colors"
           >
-            {specs.recommended_model}
-          </div>
-        )}
+            <Package size={13} />
+          </button>
+        </div>
       </header>
 
       <main className="flex-1 overflow-hidden relative">
@@ -98,6 +109,13 @@ const App: React.FC = () => {
           </div>
         )}
       </main>
+
+      {showModelManager && (
+        <ModelManager
+          onClose={() => setShowModelManager(false)}
+          recommendedModel={specs?.recommended_model}
+        />
+      )}
 
       <footer className="h-12 border-t border-white/5 px-4 flex items-center">
         <div className="flex-1 flex items-center gap-2">

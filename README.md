@@ -14,7 +14,8 @@ LUM 2.0은 선형적인 터미널의 한계를 파괴합니다.
 
 ## 🚀 Key Features
 
-- **Hardware-Aware Model Recommendations**: PC 사양을 진단하여 **Qwen2.5-Coder (Ollama/xLLM)** 중 최적의 모델과 엔진을 자동 추천합니다.
+- **Hardware-Aware Model Recommendations**: PC 사양(RAM·GPU)을 자동 진단하여 **Qwen2.5-Coder / Phi-3.5 EXL2** 최적 모델을 추천합니다.
+- **Model Manager**: 추천 EXL2 모델을 HuggingFace에서 직접 다운로드하고, 설치된 모델을 관리(삭제)할 수 있는 내장 UI.
 - **Coding Expert Agent**: 실시간 리팩토링 및 시각적 코드 리뷰 리포트 대시보드를 제공합니다.
 - **Autonomous Self-Healing**: 터미널 에러 발생 시 AI가 스스로 분석하고 복구 명령어를 실행하는 루프를 지원합니다.
 - **Production-Grade Security**: 파괴적 명령어 감지(Security Gate) 및 AI 생성 UI의 완전 격리(Sandbox) 렌더링.
@@ -28,14 +29,14 @@ LUM 2.0은 선형적인 터미널의 한계를 파괴합니다.
 ## 🛠 Tech Stack
 - **Core**: Rust (Tauri v2), React 19, TypeScript
 - **UI/UX**: Tailwind CSS v4, @xyflow/react (Infinite Canvas), Lucide Icons, Recharts
-- **AI Engine**: Ollama (GGUF), xLLM (EXL2), Gemini 1.5 Pro, Burn-LM (On-device WebGPU)
+- **AI Engine**: xLLM / TabbyAPI (EXL2), Gemini 1.5 Pro (비전), Burn-LM (On-device WebGPU)
 
 ## 📦 Getting Started
 
 ### Prerequisites
 - [Rust](https://www.rust-lang.org/tools/install)
 - [Node.js](https://nodejs.org/)
-- [Ollama](https://ollama.com/)
+- [TabbyAPI](https://github.com/theroyallab/tabbyAPI) (xLLM 로컬 추론 서버, 기본 포트: 5000)
 
 ### Installation
 ```bash

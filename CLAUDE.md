@@ -66,3 +66,4 @@ cd src-tauri && cargo test   # Rust 단위 테스트 실행
 - [x] Phase 19: AI Native UI Designer (실시간 React/JSX UI 생성 완료)
 - [x] Phase 20: Neural Desktop Integration (OS 시각 인지 및 제어 완료)
 - [x] Phase 21: Neural Vision & OS Autonomy (자율 피드백 루프, 멀티액션, 시각적 목표 검증 완료)
+- [x] Phase 22: xLLM Migration & Model Manager (Ollama → TabbyAPI/ExLlamaV2, 하드웨어 인식 추천, HuggingFace 다운로드/삭제 UI 완료)
