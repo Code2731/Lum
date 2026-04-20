@@ -223,8 +223,7 @@ const App: React.FC = () => {
       </header>
 
       {/* ── 메인 콘텐츠 ──────────────────────────────────────── */}
-      <main className="flex-1 overflow-hidden flex">
-        {/* 콘텐츠 영역 */}
+      <main className="flex-1 overflow-hidden flex relative">
         <div className="flex-1 overflow-hidden relative">
         {/* 터미널 뷰 (항상 마운트 — 숨김/표시만 전환해 PTY 세션 유지) */}
         <div className={`absolute inset-0 ${viewMode === "terminal" ? "block" : "hidden"}`}>
@@ -275,7 +274,7 @@ const App: React.FC = () => {
           </div>
         )}
 
-        </div>{/* 콘텐츠 영역 닫기 */}
+        </div>
 
         {/* RAG 사이드 패널 */}
         {showRagPanel && (
@@ -284,9 +283,10 @@ const App: React.FC = () => {
           </div>
         )}
 
-        {/* AI 입력 오버레이 (Cmd+K) */}
+        {/* AI 입력 오버레이 (Cmd+K) — main의 relative 컨텍스트 기준 */}
         {showAiBar && (
-          <div className="absolute inset-x-0 bottom-0 p-4 bg-gradient-to-t from-terminal-dark/95 to-transparent">
+          <div className="absolute inset-x-0 bottom-0 p-4 bg-gradient-to-t from-terminal-dark/95 to-transparent pointer-events-none">
+            <div className="pointer-events-auto">
             <div className="flex items-center gap-2 bg-white/8 border border-white/10 rounded-lg px-3 py-2 backdrop-blur-sm">
               <Zap size={13} className="text-accent shrink-0" />
               <input
@@ -304,6 +304,7 @@ const App: React.FC = () => {
               {isProcessing && <Loader2 size={12} className="animate-spin text-white/40 shrink-0" />}
             </div>
             <p className="text-[9px] text-white/20 text-center mt-1">Cmd+K 로 닫기</p>
+            </div>
           </div>
         )}
       </main>

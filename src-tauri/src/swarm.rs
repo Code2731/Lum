@@ -1,4 +1,4 @@
-use crate::memory::SemanticMemory;
+use crate::memory::{cosine_similarity, SemanticMemory};
 use futures_util::StreamExt;
 use libp2p::{
     gossipsub, mdns, request_response,
@@ -123,11 +123,15 @@ pub async fn start_p2p_node(handle: tauri::AppHandle) -> Result<String, String> 
             match swarm.select_next_some().await {
                 SwarmEvent::Behaviour(LumBehaviourEvent::Gossipsub(
                     gossipsub::Event::Message {
-                        propagation_source: _peer_id,
+                        propagation_source,
                         message,
                         ..
                     },
                 )) => {
+                    // 자신이 broadcast한 메시지는 무시 (자기 RagQuery 자기 수신 방지)
+                    if propagation_source == peer_id {
+                        continue;
+                    }
                     if let Ok(msg) = serde_json::from_slice::<SwarmMessage>(&message.data) {
                         // RagQuery 수신 시 로컬 인덱스 검색 후 결과 emit
                         if let SwarmMessage::RagQuery {
@@ -161,19 +165,6 @@ pub async fn start_p2p_node(handle: tauri::AppHandle) -> Result<String, String> 
     });
 
     Ok(format!("LUM Swarm Node active: {}", peer_id))
-}
-
-fn cosine_similarity(a: &[f32], b: &[f32]) -> f32 {
-    if a.len() != b.len() || a.is_empty() {
-        return 0.0;
-    }
-    let dot: f32 = a.iter().zip(b).map(|(x, y)| x * y).sum();
-    let na: f32 = a.iter().map(|x| x * x).sum::<f32>().sqrt();
-    let nb: f32 = b.iter().map(|x| x * x).sum::<f32>().sqrt();
-    if na == 0.0 || nb == 0.0 {
-        return 0.0;
-    }
-    dot / (na * nb)
 }
 
 fn search_local_index(embedding: &[f32], limit: usize) -> Vec<String> {

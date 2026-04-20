@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { Search, FolderOpen, Loader2, Database, Share2, FileCode, X } from "lucide-react";
@@ -14,6 +14,10 @@ interface SwarmRagResult {
   results: string[];
 }
 
+type IndexStatus =
+  | { ok: true; files: number; chunks: number }
+  | { ok: false; error: string };
+
 interface Props {
   model: string;
   onClose: () => void;
@@ -21,14 +25,42 @@ interface Props {
 
 const RagPanel: React.FC<Props> = ({ model, onClose }) => {
   const [indexPath, setIndexPath] = useState("");
-  const [indexStatus, setIndexStatus] = useState<{ files: number; chunks: number } | null>(null);
+  const [indexStatus, setIndexStatus] = useState<IndexStatus | null>(null);
   const [isIndexing, setIsIndexing] = useState(false);
 
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
   const [swarmResults, setSwarmResults] = useState<SwarmRagResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
-  const [swarmSearching, setSwarmSearching] = useState(false);
+  const [swarmQueryId, setSwarmQueryId] = useState<string | null>(null);
+
+  // 스웜 리스너를 useEffect로 관리 — 컴포넌트 언마운트 시 자동 해제
+  const unlistenRef = useRef<(() => void) | null>(null);
+  const swarmTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (!swarmQueryId) return;
+
+    let cancelled = false;
+    listen<SwarmRagResult>("swarm-rag-result", (event) => {
+      if (event.payload.query_id === swarmQueryId && !cancelled) {
+        setSwarmResults((prev) => [...prev, event.payload]);
+      }
+    }).then((fn) => {
+      unlistenRef.current = fn;
+    });
+
+    swarmTimerRef.current = setTimeout(() => {
+      setSwarmQueryId(null);
+    }, 2000);
+
+    return () => {
+      cancelled = true;
+      unlistenRef.current?.();
+      unlistenRef.current = null;
+      if (swarmTimerRef.current) clearTimeout(swarmTimerRef.current);
+    };
+  }, [swarmQueryId]);
 
   const handleIndex = useCallback(async () => {
     if (!indexPath.trim()) return;
@@ -39,9 +71,9 @@ const RagPanel: React.FC<Props> = ({ model, onClose }) => {
         rootPath: indexPath.trim(),
         model,
       });
-      setIndexStatus(result);
+      setIndexStatus({ ok: true, ...result });
     } catch (e) {
-      setIndexStatus({ files: -1, chunks: -1 });
+      setIndexStatus({ ok: false, error: String(e) });
     } finally {
       setIsIndexing(false);
     }
@@ -65,12 +97,8 @@ const RagPanel: React.FC<Props> = ({ model, onClose }) => {
 
   const handleSwarmSearch = useCallback(async () => {
     if (!query.trim()) return;
-    setSwarmSearching(true);
     setSwarmResults([]);
 
-    const queryId = `rag-${Date.now()}`;
-
-    // 쿼리 임베딩 생성
     let embedding: number[];
     try {
       embedding = await invoke<number[]>("generate_embedding", {
@@ -78,11 +106,10 @@ const RagPanel: React.FC<Props> = ({ model, onClose }) => {
         model,
       });
     } catch {
-      setSwarmSearching(false);
       return;
     }
 
-    // 스웜 노드들에 RagQuery broadcast (gossipsub)
+    const queryId = `rag-${Date.now()}`;
     try {
       await invoke("send_swarm_task", {
         peerIdStr: "broadcast",
@@ -91,18 +118,10 @@ const RagPanel: React.FC<Props> = ({ model, onClose }) => {
     } catch {
       // 스웜 미연결 시 무시
     }
-
-    // 2초 내 피어 응답 수집
-    const unlisten = await listen<SwarmRagResult>("swarm-rag-result", (event) => {
-      if (event.payload.query_id === queryId) {
-        setSwarmResults((prev) => [...prev, event.payload]);
-      }
-    });
-    setTimeout(() => {
-      unlisten();
-      setSwarmSearching(false);
-    }, 2000);
+    setSwarmQueryId(queryId);
   }, [query, model]);
+
+  const swarmSearching = swarmQueryId !== null;
 
   return (
     <div className="flex flex-col h-full bg-[#0d1117] text-white text-xs">
@@ -142,10 +161,10 @@ const RagPanel: React.FC<Props> = ({ model, onClose }) => {
             </button>
           </div>
           {indexStatus && (
-            <p className={`text-[10px] ${indexStatus.files < 0 ? "text-red-400" : "text-green-400"}`}>
-              {indexStatus.files < 0
-                ? "인덱싱 실패 — xLLM 서버 상태를 확인하세요."
-                : `${indexStatus.files}개 파일 · ${indexStatus.chunks}개 청크 인덱싱 완료`}
+            <p className={`text-[10px] ${indexStatus.ok ? "text-green-400" : "text-red-400"}`}>
+              {indexStatus.ok
+                ? `${indexStatus.files}개 파일 · ${indexStatus.chunks}개 청크 인덱싱 완료`
+                : `인덱싱 실패 — ${indexStatus.error}`}
             </p>
           )}
         </section>

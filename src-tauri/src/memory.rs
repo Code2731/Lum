@@ -31,17 +31,17 @@ impl SemanticMemory {
     }
 }
 
-fn cosine_similarity(a: &[f32], b: &[f32]) -> f32 {
+pub fn cosine_similarity(a: &[f32], b: &[f32]) -> f32 {
     if a.len() != b.len() || a.is_empty() {
         return 0.0;
     }
-    let dot_product: f32 = a.iter().zip(b.iter()).map(|(x, y)| x * y).sum();
-    let norm_a: f32 = a.iter().map(|x| x * x).sum::<f32>().sqrt();
-    let norm_b: f32 = b.iter().map(|x| x * x).sum::<f32>().sqrt();
-    if norm_a == 0.0 || norm_b == 0.0 {
+    let dot: f32 = a.iter().zip(b.iter()).map(|(x, y)| x * y).sum();
+    let na: f32 = a.iter().map(|x| x * x).sum::<f32>().sqrt();
+    let nb: f32 = b.iter().map(|x| x * x).sum::<f32>().sqrt();
+    if na == 0.0 || nb == 0.0 {
         return 0.0;
     }
-    dot_product / (norm_a * norm_b)
+    dot / (na * nb)
 }
 
 #[tauri::command]
@@ -58,9 +58,8 @@ pub async fn add_to_memory(content: String, embedding: Vec<f32>) -> Result<(), S
         timestamp,
     });
 
-    // 최근 1000개만 유지 (최적화)
     if memory.entries.len() > 1000 {
-        memory.entries.remove(0);
+        memory.entries.drain(0..memory.entries.len() - 1000);
     }
 
     memory.save()

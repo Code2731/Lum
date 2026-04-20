@@ -1,4 +1,5 @@
-use crate::memory::{MemoryEntry, SemanticMemory};
+use crate::memory::{cosine_similarity, MemoryEntry, SemanticMemory};
+use futures::future::join_all;
 use ignore::Walk;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
@@ -35,15 +36,13 @@ pub struct SearchResult {
     pub score: f32,
 }
 
-/// xLLM /v1/embeddings 로 벡터 생성
 async fn embed(client: &reqwest::Client, model: &str, text: &str) -> Option<Vec<f32>> {
-    let body = EmbeddingRequest {
-        model: model.to_string(),
-        input: text.to_string(),
-    };
     let res = client
         .post(format!("{XLLM_BASE}/v1/embeddings"))
-        .json(&body)
+        .json(&EmbeddingRequest {
+            model: model.to_string(),
+            input: text.to_string(),
+        })
         .send()
         .await
         .ok()?;
@@ -51,7 +50,6 @@ async fn embed(client: &reqwest::Client, model: &str, text: &str) -> Option<Vec<
     parsed.data.into_iter().next().map(|d| d.embedding)
 }
 
-/// 텍스트를 CHUNK_SIZE 단위로 분할 (CHUNK_OVERLAP 겹침)
 fn chunk_text(text: &str) -> Vec<String> {
     let chars: Vec<char> = text.chars().collect();
     let mut chunks = Vec::new();
@@ -67,25 +65,23 @@ fn chunk_text(text: &str) -> Vec<String> {
     chunks
 }
 
-/// 프로젝트 파일을 청킹 + 임베딩 후 SemanticMemory에 저장
 #[tauri::command]
 pub async fn index_project(root_path: String, model: String) -> Result<IndexResult, String> {
     let client = reqwest::Client::new();
-    let mut memory = SemanticMemory::load();
     let timestamp = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
-        .unwrap_or_default()
+        .map_err(|e| format!("시스템 시간 오류: {}", e))?
         .as_secs();
 
+    // 파일 목록 + 청크 수집
+    let mut contents: Vec<String> = Vec::new();
     let mut file_count = 0usize;
-    let mut chunk_count = 0usize;
 
     for entry in Walk::new(Path::new(&root_path))
         .filter_map(|e| e.ok())
         .filter(|e| e.file_type().map(|t| t.is_file()).unwrap_or(false))
     {
         let path = entry.path();
-        // 텍스트 파일만 (간단한 확장자 허용 목록)
         let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("");
         if !matches!(
             ext,
@@ -94,39 +90,47 @@ pub async fn index_project(root_path: String, model: String) -> Result<IndexResu
         ) {
             continue;
         }
-
         let Ok(text) = std::fs::read_to_string(path) else {
             continue;
         };
         if text.len() < 10 {
             continue;
         }
-
         let rel_path = path
             .strip_prefix(&root_path)
             .unwrap_or(path)
             .to_string_lossy()
             .to_string();
-
         file_count += 1;
-
         for chunk in chunk_text(&text) {
-            let content = format!("[{}]\n{}", rel_path, chunk);
-            if let Some(embedding) = embed(&client, &model, &content).await {
-                memory.entries.push(MemoryEntry {
-                    content,
-                    embedding,
-                    timestamp,
-                });
-                chunk_count += 1;
-            }
+            contents.push(format!("[{}]\n{}", rel_path, chunk));
+        }
+    }
+
+    // 모든 청크를 병렬로 임베딩
+    let futures: Vec<_> = contents
+        .iter()
+        .map(|c| embed(&client, &model, c))
+        .collect();
+    let embeddings = join_all(futures).await;
+
+    let mut memory = SemanticMemory::load();
+    let chunk_count = embeddings.iter().filter(|e| e.is_some()).count();
+
+    for (content, embedding) in contents.into_iter().zip(embeddings) {
+        if let Some(embedding) = embedding {
+            memory.entries.push(MemoryEntry {
+                content,
+                embedding,
+                timestamp,
+            });
         }
     }
 
     // 최신 5000개만 보존
     if memory.entries.len() > 5000 {
-        let drain = memory.entries.len() - 5000;
-        memory.entries.drain(0..drain);
+        let keep = memory.entries.len() - 5000;
+        memory.entries.drain(0..keep);
     }
 
     memory.save().map_err(|e| e.to_string())?;
@@ -136,7 +140,6 @@ pub async fn index_project(root_path: String, model: String) -> Result<IndexResu
     })
 }
 
-/// 쿼리 임베딩 생성 후 SemanticMemory 검색
 #[tauri::command]
 pub async fn search_codebase(
     query: String,
@@ -164,24 +167,10 @@ pub async fn search_codebase(
     Ok(scored)
 }
 
-/// 외부 임베딩 생성 (swarm 피어가 쿼리 임베딩을 공유할 때 사용)
 #[tauri::command]
 pub async fn generate_embedding(text: String, model: String) -> Result<Vec<f32>, String> {
     let client = reqwest::Client::new();
     embed(&client, &model, &text)
         .await
         .ok_or("임베딩 생성 실패 — xLLM 서버 상태를 확인하세요.".to_string())
-}
-
-fn cosine_similarity(a: &[f32], b: &[f32]) -> f32 {
-    if a.len() != b.len() || a.is_empty() {
-        return 0.0;
-    }
-    let dot: f32 = a.iter().zip(b).map(|(x, y)| x * y).sum();
-    let na: f32 = a.iter().map(|x| x * x).sum::<f32>().sqrt();
-    let nb: f32 = b.iter().map(|x| x * x).sum::<f32>().sqrt();
-    if na == 0.0 || nb == 0.0 {
-        return 0.0;
-    }
-    dot / (na * nb)
 }
