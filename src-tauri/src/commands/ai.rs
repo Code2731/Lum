@@ -4,6 +4,9 @@ use futures_util::StreamExt;
 use serde::{Deserialize, Serialize};
 use tauri::{command, Emitter};
 
+const XLLM_TOKEN_EVENT: &str = "xllm_token";
+const SSE_MAX_LINE_BUF: usize = 64 * 1024;
+
 const GEMINI_BASE_URL: &str = "https://generativelanguage.googleapis.com/v1beta/models";
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -114,10 +117,13 @@ async fn call_xllm_stream(
         let bytes = chunk.map_err(|e| LumError::AiEngine(e.to_string()))?;
         line_buf.push_str(&String::from_utf8_lossy(&bytes));
 
-        // SSE 줄 단위 파싱: "data: {...}\n"
+        if line_buf.len() > SSE_MAX_LINE_BUF {
+            return Err(LumError::AiEngine("SSE 응답 버퍼 초과 — 서버 응답이 비정상입니다".to_string()));
+        }
+
         while let Some(nl) = line_buf.find('\n') {
             let line = line_buf[..nl].trim().to_string();
-            line_buf = line_buf[nl + 1..].to_string();
+            line_buf.drain(..nl + 1);
 
             if let Some(data) = line.strip_prefix("data: ") {
                 if data.trim() == "[DONE]" {
@@ -127,7 +133,7 @@ async fn call_xllm_stream(
                     if let Some(token) = json["choices"][0]["delta"]["content"].as_str() {
                         if !token.is_empty() {
                             full_text.push_str(token);
-                            let _ = app.emit("xllm_token", token.to_string());
+                            let _ = app.emit(XLLM_TOKEN_EVENT, token.to_string());
                         }
                     }
                 }
@@ -293,7 +299,7 @@ pub async fn stream_ai_command(
     if model.starts_with("gemini") {
         // Gemini는 스트리밍 미지원 — 단일 응답 반환
         let result = call_gemini(&client, &model, &full_prompt, None).await?;
-        let _ = app.emit("xllm_token", result.clone());
+        let _ = app.emit(XLLM_TOKEN_EVENT, result.clone());
         Ok(result)
     } else {
         call_xllm_stream(&app, &client, &model, &full_prompt).await

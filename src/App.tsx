@@ -112,7 +112,6 @@ const App: React.FC = () => {
     setShowAiBar(false);
     const blockId = addBlock({ command: cmd, type: "ai" });
     try {
-      // ⑥ EPD 스트리밍 — 첫 토큰부터 캔버스 블록에 실시간 반영
       await streamAICommand(cmd, selectedModel, "", (accumulated) => {
         updateBlock(blockId, { output: accumulated, status: "executing" });
       });

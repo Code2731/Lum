@@ -12,7 +12,6 @@ interface AppConfig {
   pd_threshold_chars?: number;
   max_seq_len?: number;
   xllm_admin_key?: string;
-  // Phase 37
   draft_model?: string;
   speculative_n_draft?: number;
   sparse_attention?: boolean;
