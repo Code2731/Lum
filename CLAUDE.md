@@ -35,8 +35,14 @@ cd src-tauri && cargo test   # Rust 단위 테스트 실행
 - **주요 커맨드**: `spawn_pty`, `write_to_pty`, `generate_ai_command`, `generate_embedding`, `pull_model`, `delete_model`, `create_file`, `load_config`, `save_config`, `index_project`, `search_codebase`.
 
 ### Frontend (`src/`)
-- **App.tsx**: 메인 레이아웃 및 상태 관리. 멀티 탭, 스플릿 팬, 커맨드 팔레트(`Cmd+K`), 웹뷰(Visual Context) 통합.
-- **에디터**: `react-simple-code-editor` + `PrismJS`. 고스트 텍스트(예측) 및 Tab 자동 완성 기능.
+- **App.tsx**: 메인 레이아웃 (~370줄). 커스텀 훅으로 상태를 위임하고 렌더링만 담당.
+- **커스텀 훅** (`src/hooks/`):
+  - `useTabManager` — 탭/팬 상태 + 세션 저장/복원 (`~/.lum_session.json`, 1초 디바운스)
+  - `useAutoHealing` — 터미널 출력 에러 감지 → AI 분석 → 안전도 배지 → PTY 실행
+  - `usePanelVisibility` — 모달·사이드패널 show/hide 상태 일괄 관리
+  - `useUpdateCheck` — GitHub Releases API 버전 비교, 업데이트 배너
+  - `useCommandBlocks` — OSC 133 파싱, 커맨드 블록 히스토리
+  - `useTerminalBlocks`, `useAIProcessing`, `useHardwareSpecs` — AI·하드웨어 레이어
 - **UI/UX**: `react-resizable-panels`(스플릿), `react-virtuoso`(가상 스크롤), `react-markdown`(AI 답변).
 - **영속성**: `.lum_session.json` 및 `.lum_config.json`, `.lum_code_index.json`을 통한 데이터/설정 유지.
 
@@ -81,3 +87,4 @@ cd src-tauri && cargo test   # Rust 단위 테스트 실행
 - [x] Phase 34: AI Inline Edit (# 프리픽스 → generate_ai_command 600ms 디바운스 → ⚡ AI 팝업 + Tab 확정, modelRef 패턴으로 useEffect 재실행 없이 최신 모델 반영 완료)
 - [x] Phase 35: AI Context Awareness (context.rs get_project_context — Node/Rust/Go/Python/Java 자동 감지 + git 여부, get_recent_history 5개 병렬 조회 → context 문자열 구성, generate_ai_command에 주입 완료)
 - [x] Phase 36: Auto Update Check (updater.rs check_for_update — GitHub API /releases/latest 조회, semver 비교, App.tsx 업데이트 배너 + 다운로드 링크 완료)
+- [x] Refactor: App.tsx 훅 분리 (776줄 → 370줄, useTabManager/useAutoHealing/usePanelVisibility/useUpdateCheck 추출, ai.rs 미사용 model_for_task 제거 완료)
