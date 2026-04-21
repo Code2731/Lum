@@ -3,6 +3,11 @@ import { Group as PanelGroup, Panel, Separator as PanelResizeHandle } from "reac
 import { useTerminalBlocks } from "./hooks/useTerminalBlocks";
 import { useAIProcessing } from "./hooks/useAIProcessing";
 import { useHardwareSpecs } from "./hooks/useHardwareSpecs";
+import { useCommandBlocks } from "./hooks/useCommandBlocks";
+import { useTabManager, splitId } from "./hooks/useTabManager";
+import { useAutoHealing } from "./hooks/useAutoHealing";
+import { usePanelVisibility } from "./hooks/usePanelVisibility";
+import { useUpdateCheck } from "./hooks/useUpdateCheck";
 import { invoke } from "@tauri-apps/api/core";
 import {
   Zap, Cpu, Loader2, TerminalSquare, LayoutList, MousePointer2,
@@ -11,154 +16,61 @@ import {
 import InfiniteCanvas from "./components/layout/InfiniteCanvas";
 import TerminalPane from "./components/TerminalPane";
 import ModelManager from "./components/ModelManager";
-import HealingPanel, { type HealingResult } from "./components/HealingPanel";
+import HealingPanel from "./components/HealingPanel";
 import RagPanel from "./components/RagPanel";
 import CommandBlockBar from "./components/CommandBlockBar";
 import HistorySearch from "./components/HistorySearch";
 import CommitPanel from "./components/CommitPanel";
 import XllmPanel from "./components/XllmPanel";
-import { useCommandBlocks } from "./hooks/useCommandBlocks";
-
-const stripAnsi = (s: string) =>
-  s.replace(/\x1b\[[0-9;]*[a-zA-Z]/g, "").replace(/\x1b\][^\x07]*\x07/g, "");
-
-const ERROR_PATTERNS = [
-  /command not found/i,
-  /no such file or directory/i,
-  /permission denied/i,
-  /enoent/i,
-  /npm err!/i,
-  /error:/i,
-  /traceback \(most recent call last\)/i,
-  /syntaxerror/i,
-  /typeerror/i,
-  /exception in thread/i,
-  /cargo.*error/i,
-  /build failed/i,
-];
 
 type ViewMode = "terminal" | "canvas" | "list";
-type SplitDir = "h" | "v";
-
-interface Tab {
-  id: string;
-  title: string;
-  splitDir?: SplitDir;
-}
-
-let tabCounter = 1;
-const makeTab = (): Tab => ({ id: `tab-${Date.now()}`, title: `Shell ${tabCounter++}` });
-const splitId = (tabId: string) => `${tabId}-b`;
-
-interface SessionTab { id: string; title: string; split_dir?: string }
-interface SessionData { version: number; tabs: SessionTab[]; active_tab_id: string }
 
 const App: React.FC = () => {
   const { blocks, addBlock, updateBlock, moveBlock } = useTerminalBlocks();
   const { isProcessing, processAICommand, analyzeError } = useAIProcessing();
   const { specs, loading: specsLoading } = useHardwareSpecs();
-
-  const [viewMode, setViewMode] = useState<ViewMode>("terminal");
-  const [xllmOnline, setXllmOnline] = useState(false);
-  const [showModelManager, setShowModelManager] = useState(false);
-  const [showRagPanel, setShowRagPanel] = useState(false);
-  const [aiInput, setAiInput] = useState("");
-  const [showAiBar, setShowAiBar] = useState(false);
-  const aiInputRef = useRef<HTMLInputElement>(null);
-
-  // 탭 상태 (세션 복원 전 초기값 — useEffect에서 복원)
-  const [tabs, setTabs] = useState<Tab[]>(() => [makeTab()]);
-  const [activeTabId, setActiveTabId] = useState<string>(() => tabs[0]?.id ?? "");
-  const sessionRestoredRef = useRef(false);
-
-  // 포커스된 PTY ID (탭 내 스플릿 팬 구분)
-  const [activePaneId, setActivePaneId] = useState<string>(() => tabs[0]?.id ?? "");
-  const activePaneIdRef = useRef(activePaneId);
-  activePaneIdRef.current = activePaneId;
-
-  // 탭별 PTY 쓰기 함수
-  const ptyWriteRefs = useRef<Map<string, (d: string) => void>>(new Map());
-
-  // 커맨드 블록 (OSC 133 파싱)
   const { blocks: cmdBlocks, feedRaw } = useCommandBlocks();
-
-  // 히스토리 / 커밋 패널 표시 여부
-  const [showHistorySearch, setShowHistorySearch] = useState(false);
-  const [showCommitPanel, setShowCommitPanel] = useState(false);
-  const [showXllmPanel, setShowXllmPanel] = useState(false);
-  const [dismissedBlockId, setDismissedBlockId] = useState<string | null>(null);
-
-  // Self-Healing
-  const [healingError, setHealingError] = useState<string | null>(null);
-  const [healingResult, setHealingResult] = useState<HealingResult | null>(null);
-  const [isHealingAnalyzing, setIsHealingAnalyzing] = useState(false);
-  const outputBufRef = useRef("");
-  const errorDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const activeTabIdRef = useRef(activeTabId);
-  activeTabIdRef.current = activeTabId;
 
   const selectedModel = specs?.recommended_model ?? "Qwen2.5-Coder-7B-Instruct-EXL2-4bpw";
 
-  // 업데이트 알림
-  const [updateInfo, setUpdateInfo] = useState<{ latest: string; releaseUrl: string; releaseName: string } | null>(null);
+  const {
+    tabs, activeTabId, activePaneId, setActivePaneId,
+    activeTabIdRef, activePaneIdRef, ptyWriteRefs,
+    addTab, closeTab, switchTab, toggleSplit,
+  } = useTabManager(undefined);
+
+  const {
+    healingError, healingResult, isHealingAnalyzing,
+    resetHealing, detectError, handleAnalyze, handleExecute, clearHealing,
+  } = useAutoHealing(selectedModel, activePaneIdRef, ptyWriteRefs, analyzeError);
+
+  const {
+    showModelManager, setShowModelManager,
+    showRagPanel, setShowRagPanel,
+    showHistorySearch, setShowHistorySearch,
+    showCommitPanel, setShowCommitPanel,
+    showXllmPanel, setShowXllmPanel,
+    closeOverlays,
+  } = usePanelVisibility();
+
+  const { updateInfo, dismissUpdate } = useUpdateCheck();
+
+  const [viewMode, setViewMode] = useState<ViewMode>("terminal");
+  const [xllmOnline, setXllmOnline] = useState(false);
+  const [aiInput, setAiInput] = useState("");
+  const [showAiBar, setShowAiBar] = useState(false);
+  const [dismissedBlockId, setDismissedBlockId] = useState<string | null>(null);
+  const aiInputRef = useRef<HTMLInputElement>(null);
+  const viewModeRef = useRef(viewMode);
+  viewModeRef.current = viewMode;
+
   useEffect(() => {
-    invoke<{ has_update: boolean; latest: string; release_url: string; release_name: string }>("check_for_update")
-      .then((info) => {
-        if (info.has_update) {
-          setUpdateInfo({ latest: info.latest, releaseUrl: info.release_url, releaseName: info.release_name });
-        }
-      })
-      .catch(() => {});
+    invoke<boolean>("check_xllm_status")
+      .then(setXllmOnline)
+      .catch(() => setXllmOnline(false));
   }, []);
 
-  // 세션 복원 — 앱 마운트 직후 한 번 실행
-  useEffect(() => {
-    invoke<SessionData>("load_session")
-      .then((session) => {
-        if (!session.tabs?.length) return;
-        // tabCounter를 복원된 탭 제목에서 최대값으로 업데이트
-        for (const t of session.tabs) {
-          const m = t.title.match(/^Shell (\d+)$/);
-          if (m) tabCounter = Math.max(tabCounter, parseInt(m[1]) + 1);
-        }
-        const restored: Tab[] = session.tabs.map((t) => ({
-          id: t.id,
-          title: t.title,
-          splitDir: (t.split_dir as SplitDir | undefined) ?? undefined,
-        }));
-        setTabs(restored);
-        const activeId = session.active_tab_id && restored.find((t) => t.id === session.active_tab_id)
-          ? session.active_tab_id
-          : restored[0].id;
-        setActiveTabId(activeId);
-        setActivePaneId(activeId);
-        sessionRestoredRef.current = true;
-      })
-      .catch(() => {
-        // 세션 파일 없으면 기본 탭 유지
-        sessionRestoredRef.current = true;
-      });
-  }, []);
-
-  // 세션 저장 — 탭/활성탭 변경 시 1초 디바운스
-  const sessionSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(() => {
-    if (!sessionRestoredRef.current) return;
-    if (sessionSaveTimerRef.current) clearTimeout(sessionSaveTimerRef.current);
-    sessionSaveTimerRef.current = setTimeout(() => {
-      const data: SessionData = {
-        version: 1,
-        tabs: tabs.map((t) => ({ id: t.id, title: t.title, split_dir: t.splitDir })),
-        active_tab_id: activeTabId,
-      };
-      invoke("save_session", { data }).catch(() => {});
-    }, 1000);
-    return () => {
-      if (sessionSaveTimerRef.current) clearTimeout(sessionSaveTimerRef.current);
-    };
-  }, [tabs, activeTabId]);
-
-  // 새 커맨드 블록 완료 시 시맨틱 히스토리 저장 (백그라운드)
+  // 새 커맨드 블록 완료 시 시맨틱 히스토리 저장
   const cmdBlocksLenRef = useRef(0);
   useEffect(() => {
     if (cmdBlocks.length <= cmdBlocksLenRef.current) return;
@@ -176,148 +88,22 @@ const App: React.FC = () => {
     }
   }, [cmdBlocks, selectedModel]);
 
-  useEffect(() => {
-    invoke<boolean>("check_xllm_status")
-      .then(setXllmOnline)
-      .catch(() => setXllmOnline(false));
-  }, []);
-
-  const resetHealing = useCallback(() => {
-    setHealingError(null);
-    setHealingResult(null);
-    outputBufRef.current = "";
-  }, []);
-
-  // 새 탭
-  const addTab = useCallback(() => {
-    const tab = makeTab();
-    setTabs((prev) => [...prev, tab]);
-    setActiveTabId(tab.id);
-    setActivePaneId(tab.id);
-    resetHealing();
-  }, [resetHealing]);
-
-  // 탭 닫기
-  const closeTab = useCallback(
-    (id: string, e: React.MouseEvent) => {
-      e.stopPropagation();
-      invoke("close_pty", { id }).catch(() => {});
-      invoke("close_pty", { id: splitId(id) }).catch(() => {});
-      ptyWriteRefs.current.delete(id);
-      ptyWriteRefs.current.delete(splitId(id));
-
-      setTabs((prev) => {
-        if (prev.length === 1) return prev;
-        const next = prev.filter((t) => t.id !== id);
-        if (id === activeTabIdRef.current) {
-          const idx = prev.findIndex((t) => t.id === id);
-          const nextTab = next[Math.min(idx, next.length - 1)];
-          setActiveTabId(nextTab.id);
-          setActivePaneId(nextTab.id);
-        }
-        return next;
-      });
-      resetHealing();
-    },
-    [resetHealing],
-  );
-
-  // 탭 전환
-  const switchTab = useCallback(
-    (id: string) => {
-      setActiveTabId(id);
-      setActivePaneId(id);
-      resetHealing();
-    },
-    [resetHealing],
-  );
-
-  // 스플릿 토글 — 같은 방향이면 해제, 다른 방향이면 전환
-  const toggleSplit = useCallback((dir: SplitDir) => {
-    const tabId = activeTabIdRef.current;
-    setTabs((prev) => {
-      const tab = prev.find((t) => t.id === tabId);
-      const nextDir = tab?.splitDir === dir ? undefined : dir;
-      if (!nextDir) {
-        // 스플릿 해제: split PTY 닫기
-        invoke("close_pty", { id: splitId(tabId) }).catch(() => {});
-        ptyWriteRefs.current.delete(splitId(tabId));
-        setActivePaneId(tabId);
-      }
-      return prev.map((t) => (t.id === tabId ? { ...t, splitDir: nextDir } : t));
-    });
-  }, []);
-
-  // 활성 팬 출력 → OSC 133 블록 파싱 + 에러 감지
   const handleTerminalOutput = useCallback(
     (paneId: string) => (data: string) => {
       if (paneId !== activePaneIdRef.current) return;
       feedRaw(data);
-      const text = stripAnsi(data);
-      outputBufRef.current += text;
-      if (outputBufRef.current.length > 3000) {
-        outputBufRef.current = outputBufRef.current.slice(-3000);
-      }
-      if (errorDebounceRef.current) clearTimeout(errorDebounceRef.current);
-      errorDebounceRef.current = setTimeout(() => {
-        const buf = outputBufRef.current;
-        outputBufRef.current = "";
-        if (ERROR_PATTERNS.some((p) => p.test(buf))) {
-          const snippet = buf.split("\n").filter((l) => l.trim()).slice(-5).join("\n");
-          setHealingError(snippet);
-          setHealingResult(null);
-        }
-      }, 800);
+      detectError(data);
     },
-    [],
+    [activePaneIdRef, feedRaw, detectError],
   );
 
-  // AI 에러 분석
-  const handleHealingAnalyze = useCallback(async () => {
-    if (!healingError) return;
-    setIsHealingAnalyzing(true);
-    try {
-      const res = await analyzeError("", healingError, selectedModel, "");
-      const suggestion: string = res?.suggestion ?? "";
-      let safetyLevel: HealingResult["safetyLevel"] = "Safe";
-      if (suggestion) {
-        const report = await invoke<{ level: HealingResult["safetyLevel"] }>(
-          "verify_command_safety",
-          { command: suggestion },
-        );
-        safetyLevel = report.level;
-      }
-      setHealingResult({
-        analysis: res?.analysis ?? "분석 결과를 가져오지 못했습니다.",
-        suggestion,
-        safetyLevel,
-      });
-    } catch {
-      setHealingResult({
-        analysis: "AI 분석에 실패했습니다. xLLM 서버 상태를 확인하세요.",
-        suggestion: "",
-        safetyLevel: "Blocked",
-      });
-    } finally {
-      setIsHealingAnalyzing(false);
-    }
-  }, [healingError, selectedModel, analyzeError]);
-
-  const handleHealingExecute = useCallback((cmd: string) => {
-    ptyWriteRefs.current.get(activePaneIdRef.current)?.(cmd + "\n");
-    setHealingError(null);
-    setHealingResult(null);
-  }, []);
-
-  // 히스토리 선택 — 엔터 없이 붙여넣기 (사용자가 검토 후 Enter)
   const handleHistorySelect = useCallback((command: string) => {
     ptyWriteRefs.current.get(activePaneIdRef.current)?.(command);
-  }, []);
+  }, [activePaneIdRef, ptyWriteRefs]);
 
-  // 커밋 메시지 패널 → 활성 PTY로 실행
   const handleCommitExecute = useCallback((cmd: string) => {
     ptyWriteRefs.current.get(activePaneIdRef.current)?.(cmd + "\n");
-  }, []);
+  }, [activePaneIdRef, ptyWriteRefs]);
 
   const handleAiSubmit = useCallback(async () => {
     const cmd = aiInput.trim();
@@ -333,12 +119,18 @@ const App: React.FC = () => {
     }
   }, [aiInput, selectedModel, addBlock, updateBlock, processAICommand]);
 
-  const viewModeRef = useRef(viewMode);
-  viewModeRef.current = viewMode;
+  // 탭 전환 시 healing 초기화
+  const addTabWithReset = useCallback(() => { resetHealing(); addTab(); }, [resetHealing, addTab]);
+  const closeTabWithReset = useCallback(
+    (id: string, e: React.MouseEvent) => { resetHealing(); closeTab(id, e); },
+    [resetHealing, closeTab],
+  );
+  const switchTabWithReset = useCallback(
+    (id: string) => { resetHealing(); switchTab(id); },
+    [resetHealing, switchTab],
+  );
 
-  // 키보드 단축키
   useEffect(() => {
-    // Ctrl+R — xterm 에 도달하기 전에 캡처해서 히스토리 패널 표시
     const captureHandler = (e: KeyboardEvent) => {
       if (e.ctrlKey && e.key === "r" && viewModeRef.current === "terminal") {
         e.preventDefault();
@@ -357,22 +149,17 @@ const App: React.FC = () => {
           return !v;
         });
       }
-      if (mod && e.key === "t") { e.preventDefault(); addTab(); }
+      if (mod && e.key === "t") { e.preventDefault(); addTabWithReset(); }
       if (mod && e.key === "w") {
         e.preventDefault();
-        closeTab(activeTabIdRef.current, { stopPropagation: () => {} } as React.MouseEvent);
+        closeTabWithReset(activeTabIdRef.current, { stopPropagation: () => {} } as React.MouseEvent);
       }
-      // Cmd+Shift+D: 수평 스플릿 토글
       if (mod && e.shiftKey && e.key === "d") { e.preventDefault(); toggleSplit("h"); }
-      // Cmd+Shift+E: 수직 스플릿 토글
       if (mod && e.shiftKey && e.key === "e") { e.preventDefault(); toggleSplit("v"); }
-      // Cmd+Shift+G: AI 커밋 메시지 패널
       if (mod && e.shiftKey && e.key === "g") { e.preventDefault(); setShowCommitPanel(true); }
       if (e.key === "Escape") {
         setShowAiBar(false);
-        setShowHistorySearch(false);
-        setShowCommitPanel(false);
-        setShowXllmPanel(false);
+        closeOverlays();
       }
     };
     window.addEventListener("keydown", handler);
@@ -380,7 +167,7 @@ const App: React.FC = () => {
       window.removeEventListener("keydown", captureHandler, { capture: true });
       window.removeEventListener("keydown", handler);
     };
-  }, [addTab, closeTab, toggleSplit]);
+  }, [addTabWithReset, closeTabWithReset, toggleSplit, closeOverlays, activeTabIdRef, setShowCommitPanel, setShowHistorySearch]);
 
   const VIEW_BUTTONS: { mode: ViewMode; icon: React.ReactNode; label: string }[] = [
     { mode: "terminal", icon: <TerminalSquare size={14} />, label: "터미널" },
@@ -389,13 +176,8 @@ const App: React.FC = () => {
   ];
 
   const activeTab = tabs.find((t) => t.id === activeTabId);
-
-  // 가장 최근 완료 블록 — HealingPanel이 표시 중이 아닐 때만 블록바 노출
   const lastCmdBlock = cmdBlocks[cmdBlocks.length - 1] ?? null;
-  const showBlockBar =
-    lastCmdBlock !== null &&
-    lastCmdBlock.id !== dismissedBlockId &&
-    !healingError;
+  const showBlockBar = lastCmdBlock !== null && lastCmdBlock.id !== dismissedBlockId && !healingError;
 
   return (
     <div className="app-root bg-terminal-dark text-white min-h-screen flex flex-col">
@@ -488,7 +270,7 @@ const App: React.FC = () => {
             다운로드
           </a>
           <button
-            onClick={() => setUpdateInfo(null)}
+            onClick={dismissUpdate}
             className="ml-auto text-white/30 hover:text-white/60 transition-colors"
             aria-label="알림 닫기"
           >
@@ -503,7 +285,7 @@ const App: React.FC = () => {
           {tabs.map((tab) => (
             <button
               key={tab.id}
-              onClick={() => switchTab(tab.id)}
+              onClick={() => switchTabWithReset(tab.id)}
               className={`flex items-center gap-1.5 px-3 py-1.5 text-[11px] border-r border-white/5 whitespace-nowrap transition-colors group ${
                 tab.id === activeTabId
                   ? "bg-[#161b22] text-white"
@@ -515,7 +297,7 @@ const App: React.FC = () => {
               {tabs.length > 1 && (
                 <span
                   role="button"
-                  onClick={(e) => closeTab(tab.id, e)}
+                  onClick={(e) => closeTabWithReset(tab.id, e)}
                   className="ml-0.5 opacity-0 group-hover:opacity-100 hover:text-white transition-opacity rounded p-0.5 hover:bg-white/10"
                   aria-label={`${tab.title} 닫기`}
                 >
@@ -525,7 +307,7 @@ const App: React.FC = () => {
             </button>
           ))}
           <button
-            onClick={addTab}
+            onClick={addTabWithReset}
             aria-label="새 탭 (Cmd+T)"
             title="새 탭 (Cmd+T)"
             className="px-2 py-1.5 text-white/30 hover:text-white/70 hover:bg-white/5 transition-colors shrink-0"
@@ -533,7 +315,6 @@ const App: React.FC = () => {
             <Plus size={12} />
           </button>
 
-          {/* 스플릿 버튼 */}
           <div className="ml-auto flex items-center gap-0.5 px-2 shrink-0">
             <button
               onClick={() => toggleSplit("h")}
@@ -566,7 +347,6 @@ const App: React.FC = () => {
       {/* ── 메인 콘텐츠 ──────────────────────────────────────── */}
       <main className="flex-1 overflow-hidden flex relative">
         <div className="flex-1 overflow-hidden relative">
-          {/* 터미널 뷰 — 모든 탭 마운트 유지, 활성 탭만 표시 */}
           <div className={`absolute inset-0 ${viewMode === "terminal" ? "block" : "hidden"}`}>
             {tabs.map((tab) => (
               <div
@@ -579,11 +359,7 @@ const App: React.FC = () => {
                     className="flex-1"
                   >
                     <Panel minSize={20}>
-                      <PaneWrapper
-                        paneId={tab.id}
-                        activePaneId={activePaneId}
-                        onFocus={setActivePaneId}
-                      >
+                      <PaneWrapper paneId={tab.id} activePaneId={activePaneId} onFocus={setActivePaneId}>
                         <TerminalPane
                           id={tab.id}
                           model={selectedModel}
@@ -600,11 +376,7 @@ const App: React.FC = () => {
                       }
                     />
                     <Panel minSize={20}>
-                      <PaneWrapper
-                        paneId={splitId(tab.id)}
-                        activePaneId={activePaneId}
-                        onFocus={setActivePaneId}
-                      >
+                      <PaneWrapper paneId={splitId(tab.id)} activePaneId={activePaneId} onFocus={setActivePaneId}>
                         <TerminalPane
                           id={splitId(tab.id)}
                           model={selectedModel}
@@ -637,19 +409,17 @@ const App: React.FC = () => {
                 errorSnippet={healingError}
                 result={healingResult}
                 isAnalyzing={isHealingAnalyzing}
-                onAnalyze={handleHealingAnalyze}
-                onExecute={handleHealingExecute}
-                onDismiss={() => { setHealingError(null); setHealingResult(null); }}
+                onAnalyze={() => handleAnalyze(healingError)}
+                onExecute={handleExecute}
+                onDismiss={clearHealing}
               />
             )}
           </div>
 
-          {/* 캔버스 뷰 */}
           {viewMode === "canvas" && (
             <InfiniteCanvas blocks={blocks} onNodeMove={moveBlock} />
           )}
 
-          {/* 리스트 뷰 — 커맨드 블록 히스토리 */}
           {viewMode === "list" && (
             <div className="p-4 space-y-2 overflow-y-auto h-full">
               {cmdBlocks.length === 0 ? (
@@ -691,14 +461,12 @@ const App: React.FC = () => {
           )}
         </div>
 
-        {/* RAG 사이드 패널 */}
         {showRagPanel && (
           <div className="w-80 border-l border-white/5 shrink-0 overflow-hidden">
             <RagPanel model={selectedModel} onClose={() => setShowRagPanel(false)} />
           </div>
         )}
 
-        {/* AI 입력 오버레이 (Cmd+K) */}
         {showAiBar && (
           <div className="absolute inset-x-0 bottom-0 p-4 bg-gradient-to-t from-terminal-dark/95 to-transparent pointer-events-none">
             <div className="pointer-events-auto">
@@ -754,7 +522,6 @@ const App: React.FC = () => {
   );
 };
 
-// 스플릿 팬 래퍼 — 포커스 표시 + 클릭으로 활성 팬 선택
 interface PaneWrapperProps {
   paneId: string;
   activePaneId: string;

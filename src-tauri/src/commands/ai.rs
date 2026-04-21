@@ -72,15 +72,6 @@ pub async fn call_xllm(client: &reqwest::Client, model: &str, prompt: &str) -> R
         .ok_or_else(|| LumError::AiEngine(format!("xLLM 응답 파싱 실패: {}", res_json)))
 }
 
-/// ② Elastic Scheduling — 작업 유형에 따라 최적 모델 선택
-pub fn model_for_task(config: &crate::commands::config::AppConfig, task: &str, fallback: &str) -> String {
-    match task {
-        "coding" => config.coding_model.clone().unwrap_or_else(|| fallback.to_string()),
-        "docs" | "documentation" => config.doc_model.clone().unwrap_or_else(|| fallback.to_string()),
-        _ => fallback.to_string(),
-    }
-}
-
 /// xLLM 서버 상태 확인 — /v1/models 엔드포인트로 핑
 #[command]
 pub async fn check_xllm_status() -> Result<bool> {
