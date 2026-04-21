@@ -1,7 +1,8 @@
-use crate::commands::config::load_config;
+use crate::commands::config::{load_config, AppConfig};
 use crate::error::{LumError, Result};
+use futures_util::StreamExt;
 use serde::{Deserialize, Serialize};
-use tauri::command;
+use tauri::{command, Emitter};
 
 const GEMINI_BASE_URL: &str = "https://generativelanguage.googleapis.com/v1beta/models";
 
@@ -18,38 +19,82 @@ pub struct AIResponse {
 
 // ─── xLLM (TabbyAPI / ExLlamaV2) ────────────────────────────────────────────
 
-/// xLLM OpenAI 호환 Chat Completions API 호출
-/// 엔드포인트: POST {base_url}/v1/chat/completions
+/// 공통 요청 바디 생성 — PD Disaggregation / SSD / Sparse Attention / KV Cache
+fn xllm_body(config: &AppConfig, model: &str, prompt: &str, stream: bool) -> serde_json::Value {
+    let is_long = prompt.len() > config.pd_threshold_chars.unwrap_or(8000) as usize;
+
+    // ③ KV Cache — 긴 컨텍스트면 Q4 강제
+    let cache_mode = if is_long { "Q4" } else { config.cache_mode.as_deref().unwrap_or("Q8") };
+
+    let mut body = serde_json::json!({
+        "model": model,
+        "messages": [{ "role": "user", "content": prompt }],
+        "stream": stream,
+        "cache_mode": cache_mode,
+    });
+
+    // ① PD Disaggregation — 긴 컨텍스트 decode 단계 안정화
+    if is_long {
+        body["temperature"] = serde_json::Value::from(0.3f32);
+        body["top_p"] = serde_json::Value::from(0.85f32);
+    }
+
+    // ④ SSD (Speculative Speculative Decoding) — 드래프트 모델 설정 시 활성화
+    if let Some(ref draft) = config.draft_model {
+        body["draft_model"] = serde_json::Value::String(draft.clone());
+        body["speculative_ngram"] = true.into();
+        body["speculative_ngram_token_count"] =
+            (config.speculative_n_draft.unwrap_or(5) as u64).into();
+    }
+
+    // ⑤ Dynamic Sparse Attention — 활성화 시 attention sink + top-k 헤드 제한
+    if config.sparse_attention.unwrap_or(false) {
+        body["attention_sink_size"] = 4u64.into();
+        body["top_k_attn"] = (config.sparse_top_k.unwrap_or(64) as u64).into();
+    }
+
+    body
+}
+
+/// xLLM 단일 응답 호출 (기존 호환)
 pub async fn call_xllm(client: &reqwest::Client, model: &str, prompt: &str) -> Result<String> {
     let config = load_config()?;
     let base_url = config.xllm_url();
     let url = format!("{}/v1/chat/completions", base_url);
 
-    // ① PD Disaggregation 자동 감지
-    //   Prefill 단계(긴 컨텍스트)와 Decode 단계를 구분해 파라미터 최적화.
-    //   임계값 초과 → Q4 KV 캐시로 prefill 메모리 절감, temperature 하향 조정
-    let threshold = config.pd_threshold_chars.unwrap_or(8000) as usize;
-    let is_long_context = prompt.len() > threshold;
+    let body = xllm_body(&config, model, prompt, false);
 
-    // ③ KV Cache Quantization — 긴 컨텍스트면 Q4 강제, 아니면 설정값(기본 Q8)
-    let cache_mode = if is_long_context {
-        "Q4"
-    } else {
-        config.cache_mode.as_deref().unwrap_or("Q8")
-    };
-
-    let mut body = serde_json::json!({
-        "model": model,
-        "messages": [{ "role": "user", "content": prompt }],
-        "stream": false,
-        "cache_mode": cache_mode,
-    });
-
-    // 긴 컨텍스트(decode 단계) — 더 결정론적 샘플링으로 답변 품질 안정화
-    if is_long_context {
-        body["temperature"] = serde_json::Value::from(0.3f32);
-        body["top_p"] = serde_json::Value::from(0.85f32);
+    let mut req = client.post(&url).json(&body);
+    if let Some(key) = config.xllm_api_key {
+        req = req.header("x-api-key", key);
     }
+
+    let res_json: serde_json::Value = req
+        .send()
+        .await
+        .map_err(|e| LumError::Network(format!("xLLM 서버 연결 실패 ({}): {}", base_url, e)))?
+        .json()
+        .await
+        .map_err(|e| LumError::AiEngine(e.to_string()))?;
+
+    res_json["choices"][0]["message"]["content"]
+        .as_str()
+        .map(|s| s.to_string())
+        .ok_or_else(|| LumError::AiEngine(format!("xLLM 응답 파싱 실패: {}", res_json)))
+}
+
+/// ⑥ EPD 스트리밍 호출 — SSE 파싱 후 토큰마다 Tauri 이벤트 emit
+async fn call_xllm_stream(
+    app: &tauri::AppHandle,
+    client: &reqwest::Client,
+    model: &str,
+    prompt: &str,
+) -> Result<String> {
+    let config = load_config()?;
+    let base_url = config.xllm_url();
+    let url = format!("{}/v1/chat/completions", base_url);
+
+    let body = xllm_body(&config, model, prompt, true);
 
     let mut req = client.post(&url).json(&body);
     if let Some(key) = config.xllm_api_key {
@@ -59,17 +104,38 @@ pub async fn call_xllm(client: &reqwest::Client, model: &str, prompt: &str) -> R
     let response = req
         .send()
         .await
-        .map_err(|e| LumError::Network(format!("xLLM 서버 연결 실패 ({}): {}", base_url, e)))?;
+        .map_err(|e| LumError::Network(format!("xLLM 스트림 연결 실패 ({}): {}", base_url, e)))?;
 
-    let res_json: serde_json::Value = response
-        .json()
-        .await
-        .map_err(|e| LumError::AiEngine(e.to_string()))?;
+    let mut byte_stream = response.bytes_stream();
+    let mut full_text = String::new();
+    let mut line_buf = String::new();
 
-    res_json["choices"][0]["message"]["content"]
-        .as_str()
-        .map(|s| s.to_string())
-        .ok_or_else(|| LumError::AiEngine(format!("xLLM 응답 파싱 실패: {}", res_json)))
+    while let Some(chunk) = byte_stream.next().await {
+        let bytes = chunk.map_err(|e| LumError::AiEngine(e.to_string()))?;
+        line_buf.push_str(&String::from_utf8_lossy(&bytes));
+
+        // SSE 줄 단위 파싱: "data: {...}\n"
+        while let Some(nl) = line_buf.find('\n') {
+            let line = line_buf[..nl].trim().to_string();
+            line_buf = line_buf[nl + 1..].to_string();
+
+            if let Some(data) = line.strip_prefix("data: ") {
+                if data.trim() == "[DONE]" {
+                    continue;
+                }
+                if let Ok(json) = serde_json::from_str::<serde_json::Value>(data) {
+                    if let Some(token) = json["choices"][0]["delta"]["content"].as_str() {
+                        if !token.is_empty() {
+                            full_text.push_str(token);
+                            let _ = app.emit("xllm_token", token.to_string());
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(full_text)
 }
 
 /// xLLM 서버 상태 확인 — /v1/models 엔드포인트로 핑
@@ -205,6 +271,32 @@ pub async fn generate_ai_command(
         call_gemini(&client, &model, &full_prompt, image_data.as_deref()).await
     } else {
         call_xllm(&client, &model, &full_prompt).await
+    }
+}
+
+/// ⑥ EPD 스트리밍 AI 커맨드 — 첫 토큰을 즉시 `xllm_token` 이벤트로 전달
+/// Gemini 모델은 SSE를 지원하지 않으므로 비스트리밍 폴백
+#[command]
+pub async fn stream_ai_command(
+    app: tauri::AppHandle,
+    prompt: String,
+    model: String,
+    context: String,
+) -> Result<String> {
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(120))
+        .build()
+        .map_err(|e| LumError::Network(e.to_string()))?;
+
+    let full_prompt = format!("Context: {}\nRequest: {}", context, prompt);
+
+    if model.starts_with("gemini") {
+        // Gemini는 스트리밍 미지원 — 단일 응답 반환
+        let result = call_gemini(&client, &model, &full_prompt, None).await?;
+        let _ = app.emit("xllm_token", result.clone());
+        Ok(result)
+    } else {
+        call_xllm_stream(&app, &client, &model, &full_prompt).await
     }
 }
 

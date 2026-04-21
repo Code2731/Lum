@@ -27,7 +27,7 @@ type ViewMode = "terminal" | "canvas" | "list";
 
 const App: React.FC = () => {
   const { blocks, addBlock, updateBlock, moveBlock } = useTerminalBlocks();
-  const { isProcessing, processAICommand, analyzeError } = useAIProcessing();
+  const { isProcessing, analyzeError, streamAICommand } = useAIProcessing();
   const { specs, loading: specsLoading } = useHardwareSpecs();
   const { blocks: cmdBlocks, feedRaw } = useCommandBlocks();
 
@@ -112,12 +112,15 @@ const App: React.FC = () => {
     setShowAiBar(false);
     const blockId = addBlock({ command: cmd, type: "ai" });
     try {
-      const result = await processAICommand(cmd, selectedModel, "");
-      updateBlock(blockId, { output: result?.explanation ?? "", status: "completed" });
+      // ⑥ EPD 스트리밍 — 첫 토큰부터 캔버스 블록에 실시간 반영
+      await streamAICommand(cmd, selectedModel, "", (accumulated) => {
+        updateBlock(blockId, { output: accumulated, status: "executing" });
+      });
+      updateBlock(blockId, { status: "completed" });
     } catch (err) {
       updateBlock(blockId, { output: `Error: ${err}`, status: "error" });
     }
-  }, [aiInput, selectedModel, addBlock, updateBlock, processAICommand]);
+  }, [aiInput, selectedModel, addBlock, updateBlock, streamAICommand]);
 
   // 탭 전환 시 healing 초기화
   const addTabWithReset = useCallback(() => { resetHealing(); addTab(); }, [resetHealing, addTab]);

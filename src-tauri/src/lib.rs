@@ -37,6 +37,7 @@ pub fn run() {
             commands::models::delete_model,
             // AI Commands
             commands::ai::generate_ai_command,
+            commands::ai::stream_ai_command,
             commands::ai::analyze_error,
             commands::ai::verify_vision_goal,
             commands::ai::check_xllm_status,

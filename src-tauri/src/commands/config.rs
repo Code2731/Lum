@@ -36,6 +36,16 @@ pub struct AppConfig {
     pub pd_threshold_chars: Option<u32>,
     /// 모델 로드 시 최대 시퀀스 길이 (기본 8192)
     pub max_seq_len: Option<u32>,
+
+    // ── Phase 37: SSD / Sparse Attention / EPD ──────────────────────────────
+    /// ④ SSD 드래프트 모델명 (예: DeepSeek-Coder-1.3B-Instruct-EXL2)
+    pub draft_model: Option<String>,
+    /// ④ SSD 드래프트 토큰 수 (기본 5) — 클수록 빠르지만 적중률 의존
+    pub speculative_n_draft: Option<u32>,
+    /// ⑤ Dynamic Sparse Attention 활성화
+    pub sparse_attention: Option<bool>,
+    /// ⑤ Sparse Attention top-k 헤드 수 (기본 64)
+    pub sparse_top_k: Option<u32>,
 }
 
 impl AppConfig {
@@ -78,6 +88,10 @@ pub fn save_xllm_settings(
     doc_model: Option<String>,
     pd_threshold_chars: Option<u32>,
     max_seq_len: Option<u32>,
+    draft_model: Option<String>,
+    speculative_n_draft: Option<u32>,
+    sparse_attention: Option<bool>,
+    sparse_top_k: Option<u32>,
 ) -> Result<()> {
     let mut config = load_config()?;
     config.cache_mode = cache_mode;
@@ -85,5 +99,9 @@ pub fn save_xllm_settings(
     config.doc_model = doc_model;
     config.pd_threshold_chars = pd_threshold_chars;
     config.max_seq_len = max_seq_len;
+    config.draft_model = draft_model;
+    config.speculative_n_draft = speculative_n_draft;
+    config.sparse_attention = sparse_attention;
+    config.sparse_top_k = sparse_top_k;
     save_config(&config)
 }

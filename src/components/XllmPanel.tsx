@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import {
   SlidersHorizontal, Loader2, X, RefreshCw, ArrowLeftRight,
-  Zap, Database, Cpu, CheckCircle2,
+  Zap, Database, Cpu, CheckCircle2, GitFork, Sparkles,
 } from "lucide-react";
 
 interface AppConfig {
@@ -12,6 +12,11 @@ interface AppConfig {
   pd_threshold_chars?: number;
   max_seq_len?: number;
   xllm_admin_key?: string;
+  // Phase 37
+  draft_model?: string;
+  speculative_n_draft?: number;
+  sparse_attention?: boolean;
+  sparse_top_k?: number;
 }
 
 interface ModelInfo {
@@ -80,6 +85,10 @@ const XllmPanel: React.FC<Props> = ({ onClose }) => {
         docModel: config.doc_model ?? null,
         pdThresholdChars: config.pd_threshold_chars ?? null,
         maxSeqLen: config.max_seq_len ?? null,
+        draftModel: config.draft_model ?? null,
+        speculativeNDraft: config.speculative_n_draft ?? null,
+        sparseAttention: config.sparse_attention ?? null,
+        sparseTopK: config.sparse_top_k ?? null,
       });
       setStatusMsg("설정 저장 완료");
     } catch (e) {
@@ -254,6 +263,87 @@ const XllmPanel: React.FC<Props> = ({ onClose }) => {
                 Q4 캐시 + 36GB → 32768 이상도 가능
               </span>
             </div>
+          </section>
+
+          {/* ④ SSD 드래프트 모델 */}
+          <section className="space-y-2">
+            <label className="text-[10px] text-white/40 uppercase tracking-wider flex items-center gap-1.5">
+              <GitFork size={9} /> ④ SSD — Speculative Decoding 드래프트 모델
+            </label>
+            <p className="text-[10px] text-white/25 -mt-1">
+              소형 드래프트 모델이 비동기로 다음 토큰을 미리 추측 → 1.5~2× 속도 향상 (3080 기준)
+            </p>
+            <div className="space-y-2">
+              <div className="space-y-1">
+                <span className="text-[10px] text-white/30">드래프트 모델 디렉토리명</span>
+                <input
+                  className="w-full bg-white/5 border border-white/10 rounded px-2.5 py-1.5 text-[12px] font-mono outline-none focus:border-accent/50 transition-colors"
+                  placeholder="DeepSeek-Coder-1.3B-Instruct-EXL2"
+                  value={config.draft_model ?? ""}
+                  onChange={(e) => setConfig((c) => ({ ...c, draft_model: e.target.value || undefined }))}
+                />
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-[10px] text-white/30 shrink-0">드래프트 토큰 수</span>
+                <input
+                  type="number"
+                  className="w-20 bg-white/5 border border-white/10 rounded px-2.5 py-1.5 text-[12px] font-mono outline-none focus:border-accent/50 transition-colors"
+                  value={config.speculative_n_draft ?? 5}
+                  min={1}
+                  max={16}
+                  onChange={(e) =>
+                    setConfig((c) => ({ ...c, speculative_n_draft: parseInt(e.target.value) || 5 }))
+                  }
+                />
+                <span className="text-[11px] text-white/25">
+                  높을수록 빠르지만 적중률 의존 (권장 4–8)
+                </span>
+              </div>
+            </div>
+          </section>
+
+          {/* ⑤ Dynamic Sparse Attention */}
+          <section className="space-y-2">
+            <label className="text-[10px] text-white/40 uppercase tracking-wider flex items-center gap-1.5">
+              <Sparkles size={9} /> ⑤ Dynamic Sparse Attention
+            </label>
+            <p className="text-[10px] text-white/25 -mt-1">
+              긴 컨텍스트에서 중요 토큰만 선택 집중 → VRAM 10GB에서 128K+ 컨텍스트 안정 처리
+            </p>
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] text-white/50">활성화</span>
+              <button
+                onClick={() => setConfig((c) => ({ ...c, sparse_attention: !c.sparse_attention }))}
+                className={`relative w-10 h-5 rounded-full transition-colors ${
+                  config.sparse_attention ? "bg-accent" : "bg-white/15"
+                }`}
+              >
+                <span
+                  className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${
+                    config.sparse_attention ? "translate-x-5" : "translate-x-0.5"
+                  }`}
+                />
+              </button>
+            </div>
+            {config.sparse_attention && (
+              <div className="flex items-center gap-3">
+                <span className="text-[10px] text-white/30 shrink-0">Top-K 헤드</span>
+                <input
+                  type="number"
+                  className="w-20 bg-white/5 border border-white/10 rounded px-2.5 py-1.5 text-[12px] font-mono outline-none focus:border-accent/50 transition-colors"
+                  value={config.sparse_top_k ?? 64}
+                  min={16}
+                  max={256}
+                  step={16}
+                  onChange={(e) =>
+                    setConfig((c) => ({ ...c, sparse_top_k: parseInt(e.target.value) || 64 }))
+                  }
+                />
+                <span className="text-[11px] text-white/25">
+                  낮을수록 메모리 절감, 높을수록 정확도 향상
+                </span>
+              </div>
+            )}
           </section>
 
           {/* 모델 전환 */}

@@ -1,5 +1,6 @@
 import { useState, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 
 export const useAIProcessing = () => {
   const [isProcessing, setIsProcessing] = useState(false);
@@ -62,10 +63,35 @@ export const useAIProcessing = () => {
     );
   }, []);
 
+  // ⑥ EPD 스트리밍 — xllm_token 이벤트로 토큰 수신, onToken(누적문자열) 콜백 호출
+  const streamAICommand = useCallback(async (
+    prompt: string,
+    model: string,
+    context: string,
+    onToken: (accumulated: string) => void,
+  ) => {
+    setIsProcessing(true);
+    let accumulated = "";
+
+    const unlisten = await listen<string>("xllm_token", (event) => {
+      accumulated += event.payload;
+      onToken(accumulated);
+    });
+
+    try {
+      const result = await invoke<string>("stream_ai_command", { prompt, model, context });
+      return result;
+    } finally {
+      unlisten();
+      setIsProcessing(false);
+    }
+  }, []);
+
   return {
     isProcessing,
     processAICommand,
     analyzeError,
     verifyVisionGoal,
+    streamAICommand,
   };
 };
