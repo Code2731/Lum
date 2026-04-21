@@ -82,6 +82,7 @@ pub fn run() {
             commands::config::load_app_config,
             commands::config::save_xllm_settings,
             commands::config::save_terminal_appearance,
+            commands::config::save_quick_actions,
             commands::config::check_onboarding_complete,
             commands::config::complete_onboarding,
             // Session Persistence

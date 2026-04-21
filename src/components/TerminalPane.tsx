@@ -5,6 +5,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import "@xterm/xterm/css/xterm.css";
 import { findCompletion } from "../utils/ghostText";
+import { parseOsc7 } from "../utils/tabIcon";
 import type { XtermTheme } from "../hooks/useTerminalTheme";
 
 interface PtyData {
@@ -20,6 +21,7 @@ interface Props {
   fontSize?: number;
   fontFamily?: string;
   onOutput?: (data: string) => void;
+  onCwdChange?: (cwd: string) => void;
   onReady?: (write: (data: string) => void) => void;
 }
 
@@ -59,7 +61,7 @@ const PANE_PADDING_Y = 6;
 
 const DEFAULT_MODEL = "Qwen2.5-Coder-7B-Instruct-EXL2-4bpw";
 
-const TerminalPane: React.FC<Props> = ({ id, cwd, model, xtermTheme, fontSize, fontFamily, onOutput, onReady }) => {
+const TerminalPane: React.FC<Props> = ({ id, cwd, model, xtermTheme, fontSize, fontFamily, onOutput, onCwdChange, onReady }) => {
   const outerRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const termRef = useRef<Terminal | null>(null);
@@ -235,10 +237,14 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, model, xtermTheme, fontSize, f
 
     requestAnimationFrame(() => { setTimeout(doInitialFit, 80); });
 
+    const onCwdChangeRef = { current: onCwdChange };
     const unlistenData = listen<PtyData>("pty_data", (event) => {
       if (event.payload.id !== id) return;
       term.write(event.payload.data);
       onOutput?.(event.payload.data);
+      // OSC 7 — shell cwd 변경 알림
+      const newCwd = parseOsc7(event.payload.data);
+      if (newCwd) onCwdChangeRef.current?.(newCwd);
     });
 
     const unlistenExit = listen<string>("pty_exit", (event) => {

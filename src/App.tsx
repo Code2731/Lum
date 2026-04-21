@@ -9,10 +9,13 @@ import { useAutoHealing } from "./hooks/useAutoHealing";
 import { usePanelVisibility } from "./hooks/usePanelVisibility";
 import { useUpdateCheck } from "./hooks/useUpdateCheck";
 import { useTerminalTheme } from "./hooks/useTerminalTheme";
+import { useQuickActions } from "./hooks/useQuickActions";
+import { inferTabIcon } from "./utils/tabIcon";
 import { invoke } from "@tauri-apps/api/core";
 import {
   Zap, Cpu, Loader2, TerminalSquare, LayoutList, MousePointer2,
   Package, Database, Plus, X, Columns2, Rows2, SlidersHorizontal, ArrowUpCircle, GitCompareArrows, Palette,
+  GitBranch, Container,
 } from "lucide-react";
 import InfiniteCanvas from "./components/layout/InfiniteCanvas";
 import TerminalPane from "./components/TerminalPane";
@@ -26,6 +29,7 @@ import XllmPanel from "./components/XllmPanel";
 import OnboardingWizard from "./components/OnboardingWizard";
 import DiffReviewPanel from "./components/DiffReviewPanel";
 import ThemePanel from "./components/ThemePanel";
+import QuickActionsBar from "./components/QuickActionsBar";
 
 type ViewMode = "terminal" | "canvas" | "list";
 
@@ -40,7 +44,7 @@ const App: React.FC = () => {
   const {
     tabs, activeTabId, activePaneId, setActivePaneId,
     activeTabIdRef, activePaneIdRef, ptyWriteRefs,
-    addTab, closeTab, switchTab, toggleSplit,
+    addTab, closeTab, switchTab, toggleSplit, renameTab, updateTabCwd,
   } = useTabManager(undefined);
 
   const {
@@ -60,10 +64,15 @@ const App: React.FC = () => {
   } = usePanelVisibility();
 
   const { appearance, saveAppearance, xtermTheme } = useTerminalTheme();
+  const { actions: quickActions, addAction, updateAction, deleteAction, moveAction } = useQuickActions();
 
   const { updateInfo, dismissUpdate } = useUpdateCheck();
 
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [showQuickBar, setShowQuickBar] = useState(true);
+  // 탭 더블클릭 rename 상태
+  const [renamingTabId, setRenamingTabId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
   const [viewMode, setViewMode] = useState<ViewMode>("terminal");
   const [xllmOnline, setXllmOnline] = useState(false);
   const [aiInput, setAiInput] = useState("");
@@ -176,6 +185,17 @@ const App: React.FC = () => {
       if (mod && e.shiftKey && e.key === "g") { e.preventDefault(); setShowCommitPanel(true); }
       if (mod && e.shiftKey && e.key === "r") { e.preventDefault(); setShowDiffReview(true); }
       if (mod && e.key === ",") { e.preventDefault(); setShowThemePanel(true); }
+      if (mod && e.shiftKey && e.key === "q") { e.preventDefault(); setShowQuickBar(v => !v); }
+      // Cmd+1~9 — Quick Actions 단축키
+      if (mod && !e.shiftKey && /^[1-9]$/.test(e.key)) {
+        const n = Number(e.key);
+        const action = quickActions.find(a => a.shortcut === n);
+        if (action) {
+          e.preventDefault();
+          const write = ptyWriteRefs.current.get(activePaneIdRef.current);
+          write?.(action.command + "\r");
+        }
+      }
       if (e.key === "Escape") {
         setShowAiBar(false);
         closeOverlays();
@@ -186,7 +206,7 @@ const App: React.FC = () => {
       window.removeEventListener("keydown", captureHandler, { capture: true });
       window.removeEventListener("keydown", handler);
     };
-  }, [addTabWithReset, closeTabWithReset, toggleSplit, closeOverlays, activeTabIdRef, setShowCommitPanel, setShowHistorySearch, setShowDiffReview, setShowThemePanel]);
+  }, [addTabWithReset, closeTabWithReset, toggleSplit, closeOverlays, activeTabIdRef, setShowCommitPanel, setShowHistorySearch, setShowDiffReview, setShowThemePanel, quickActions, ptyWriteRefs, activePaneIdRef]);
 
   const VIEW_BUTTONS: { mode: ViewMode; icon: React.ReactNode; label: string }[] = [
     { mode: "terminal", icon: <TerminalSquare size={14} />, label: "터미널" },
@@ -316,18 +336,36 @@ const App: React.FC = () => {
       {viewMode === "terminal" && (
         <div className="flex items-center border-b border-white/5 bg-[#0d1117] shrink-0 overflow-x-auto">
           {tabs.map((tab) => (
-            <button
+            <div
               key={tab.id}
               onClick={() => switchTabWithReset(tab.id)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-[11px] border-r border-white/5 whitespace-nowrap transition-colors group ${
+              onDoubleClick={() => {
+                setRenamingTabId(tab.id);
+                setRenameValue(tab.title);
+              }}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-[11px] border-r border-white/5 whitespace-nowrap transition-colors group cursor-pointer ${
                 tab.id === activeTabId
                   ? "bg-[#161b22] text-white"
                   : "text-white/40 hover:text-white/70 hover:bg-white/3"
               }`}
             >
-              <TerminalSquare size={10} className="shrink-0" />
-              {tab.title}
-              {tabs.length > 1 && (
+              <TabIconComponent icon={tab.icon} />
+              {renamingTabId === tab.id ? (
+                <input
+                  autoFocus
+                  value={renameValue}
+                  onChange={e => setRenameValue(e.target.value)}
+                  onBlur={() => { renameTab(tab.id, renameValue); setRenamingTabId(null); }}
+                  onKeyDown={e => {
+                    if (e.key === "Enter") { renameTab(tab.id, renameValue); setRenamingTabId(null); }
+                    if (e.key === "Escape") setRenamingTabId(null);
+                    e.stopPropagation();
+                  }}
+                  onClick={e => e.stopPropagation()}
+                  className="w-20 bg-transparent border-b border-accent/60 outline-none text-white text-[11px]"
+                />
+              ) : tab.title}
+              {tabs.length > 1 && renamingTabId !== tab.id && (
                 <span
                   role="button"
                   onClick={(e) => closeTabWithReset(tab.id, e)}
@@ -337,7 +375,7 @@ const App: React.FC = () => {
                   <X size={9} />
                 </span>
               )}
-            </button>
+            </div>
           ))}
           <button
             onClick={addTabWithReset}
@@ -377,6 +415,21 @@ const App: React.FC = () => {
         </div>
       )}
 
+      {/* ── Quick Actions 바 ─────────────────────────────────── */}
+      {viewMode === "terminal" && showQuickBar && (
+        <QuickActionsBar
+          actions={quickActions}
+          onExecute={cmd => {
+            const write = ptyWriteRefs.current.get(activePaneIdRef.current);
+            write?.(cmd + "\r");
+          }}
+          onAdd={addAction}
+          onUpdate={updateAction}
+          onDelete={deleteAction}
+          onMove={moveAction}
+        />
+      )}
+
       {/* ── 메인 콘텐츠 ──────────────────────────────────────── */}
       <main className="flex-1 overflow-hidden flex relative">
         <div className="flex-1 overflow-hidden relative">
@@ -400,6 +453,7 @@ const App: React.FC = () => {
                           fontSize={appearance.fontSize}
                           fontFamily={appearance.fontFamily}
                           onOutput={handleTerminalOutput(tab.id)}
+                          onCwdChange={cwd => updateTabCwd(tab.id, cwd, inferTabIcon(cwd))}
                           onReady={(write) => { ptyWriteRefs.current.set(tab.id, write); }}
                         />
                       </PaneWrapper>
@@ -420,6 +474,7 @@ const App: React.FC = () => {
                           fontSize={appearance.fontSize}
                           fontFamily={appearance.fontFamily}
                           onOutput={handleTerminalOutput(splitId(tab.id))}
+                          onCwdChange={cwd => updateTabCwd(splitId(tab.id), cwd, inferTabIcon(cwd))}
                           onReady={(write) => { ptyWriteRefs.current.set(splitId(tab.id), write); }}
                         />
                       </PaneWrapper>
@@ -434,6 +489,7 @@ const App: React.FC = () => {
                       fontSize={appearance.fontSize}
                       fontFamily={appearance.fontFamily}
                       onOutput={handleTerminalOutput(tab.id)}
+                      onCwdChange={cwd => updateTabCwd(tab.id, cwd, inferTabIcon(cwd))}
                       onReady={(write) => { ptyWriteRefs.current.set(tab.id, write); }}
                     />
                   </div>
@@ -600,5 +656,18 @@ const PaneWrapper: React.FC<PaneWrapperProps> = ({ paneId, activePaneId, onFocus
     {children}
   </div>
 );
+
+// 탭 아이콘 헬퍼
+const TabIconComponent: React.FC<{ icon?: string }> = ({ icon }) => {
+  const cls = "shrink-0";
+  switch (icon) {
+    case "git":     return <GitBranch size={10} className={cls} />;
+    case "node":    return <Package size={10} className={cls} />;
+    case "rust":    return <Zap size={10} className={cls} />;
+    case "python":  return <Cpu size={10} className={cls} />;
+    case "docker":  return <Container size={10} className={cls} />;
+    default:        return <TerminalSquare size={10} className={cls} />;
+  }
+};
 
 export default App;

@@ -3,11 +3,14 @@ import type React from "react";
 import { invoke } from "@tauri-apps/api/core";
 
 export type SplitDir = "h" | "v";
+export type TabIcon = "terminal" | "git" | "node" | "rust" | "python" | "go" | "java" | "docker";
 
 export interface Tab {
   id: string;
   title: string;
   splitDir?: SplitDir;
+  cwd?: string;
+  icon?: TabIcon;
 }
 
 interface SessionTab { id: string; title: string; split_dir?: string }
@@ -118,6 +121,14 @@ export function useTabManager(onTabChange?: () => void) {
     [onTabChange],
   );
 
+  const renameTab = useCallback((id: string, title: string) => {
+    setTabs(prev => prev.map(t => t.id === id ? { ...t, title: title.trim() || t.title } : t));
+  }, []);
+
+  const updateTabCwd = useCallback((id: string, cwd: string, icon?: TabIcon) => {
+    setTabs(prev => prev.map(t => t.id === id ? { ...t, cwd, icon: icon ?? t.icon } : t));
+  }, []);
+
   const toggleSplit = useCallback((dir: SplitDir) => {
     const tabId = activeTabIdRef.current;
     setTabs((prev) => {
@@ -142,6 +153,8 @@ export function useTabManager(onTabChange?: () => void) {
     ptyWriteRefs,
     addTab,
     closeTab,
+    renameTab,
+    updateTabCwd,
     switchTab,
     toggleSplit,
   };

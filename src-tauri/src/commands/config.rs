@@ -49,6 +49,17 @@ pub struct AppConfig {
     pub sparse_top_k: Option<u32>,
     /// 온보딩 완료 여부 — false면 첫 실행 마법사 표시
     pub onboarding_completed: Option<bool>,
+    /// Quick Actions — 즐겨찾기 커맨드 목록
+    pub quick_actions: Option<Vec<QuickAction>>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Default, Clone)]
+pub struct QuickAction {
+    pub id: String,
+    pub label: String,
+    pub command: String,
+    /// 1-9 단축키 (선택)
+    pub shortcut: Option<u8>,
 }
 
 impl AppConfig {
@@ -119,6 +130,14 @@ pub fn save_xllm_settings(
     config.speculative_n_draft = speculative_n_draft;
     config.sparse_attention = sparse_attention;
     config.sparse_top_k = sparse_top_k;
+    save_config(&config)
+}
+
+/// Quick Actions 저장
+#[tauri::command]
+pub fn save_quick_actions(actions: Vec<QuickAction>) -> Result<()> {
+    let mut config = load_config()?;
+    config.quick_actions = Some(actions);
     save_config(&config)
 }
 

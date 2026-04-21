@@ -92,3 +92,5 @@ cd src-tauri && cargo test   # Rust 단위 테스트 실행
 - [x] Phase 38: First-Run Onboarding Wizard (5단계 모달, 하드웨어 자동 분석, xLLM 서버 확인, 모델 다운로드, onboarding_completed 플래그 완료)
 - [x] Phase 39: AI Diff Reviewer (analyze_diff — git diff/--cached + RISK:|PATH:|NOTE: 파싱, 파일별 safe/caution/risk 배지, DiffReviewPanel 아코디언 UI, Cmd+Shift+R 단축키 완료)
 - [x] Phase 40: Terminal Themes & Font (5개 빌트인 테마 Dracula/Tokyo Night/One Dark/Solarized/GitHub Dark, 폰트 크기 슬라이더, 폰트 패밀리 선택, useTerminalTheme 훅, TerminalPane 동적 적용, save_terminal_appearance 커맨드, Cmd+, 단축키 완료)
+- [x] Phase 41: Quick Actions (즐겨찾기 커맨드 바 — useQuickActions 훅, QuickActionsBar/QuickActionsEditor UI, Cmd+Shift+Q 토글, Cmd+1~9 단축키, save_quick_actions 커맨드, 순서 변경/삭제/편집 완료)
+- [x] Phase 42: Smart Tab Rename & Auto-Icon (더블클릭 인라인 rename, OSC 7 cwd 감지 → inferTabIcon 아이콘 자동 변경, Tab.cwd/icon 필드, updateTabCwd 액션 완료)
