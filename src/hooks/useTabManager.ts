@@ -14,7 +14,10 @@ interface SessionTab { id: string; title: string; split_dir?: string }
 interface SessionData { version: number; tabs: SessionTab[]; active_tab_id: string }
 
 let tabCounter = 1;
-const makeTab = (): Tab => ({ id: `tab-${Date.now()}`, title: `Shell ${tabCounter++}` });
+const makeTab = (): Tab => {
+  const n = tabCounter++;
+  return { id: `tab-${n}`, title: `Shell ${n}` };
+};
 export const splitId = (tabId: string) => `${tabId}-b`;
 
 export function useTabManager(onTabChange?: () => void) {
@@ -93,9 +96,11 @@ export function useTabManager(onTabChange?: () => void) {
         const next = prev.filter((t) => t.id !== id);
         if (id === activeTabIdRef.current) {
           const idx = prev.findIndex((t) => t.id === id);
-          const nextTab = next[Math.min(idx, next.length - 1)];
-          setActiveTabId(nextTab.id);
-          setActivePaneId(nextTab.id);
+          if (idx >= 0 && next.length > 0) {
+            const nextTab = next[Math.min(idx, next.length - 1)];
+            setActiveTabId(nextTab.id);
+            setActivePaneId(nextTab.id);
+          }
         }
         return next;
       });

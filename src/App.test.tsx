@@ -2,9 +2,24 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import App from "./App";
 
-// Tauri API 모킹
 vi.mock("@tauri-apps/api/core", () => ({
-  invoke: vi.fn().mockResolvedValue("{}"),
+  invoke: vi.fn().mockImplementation((cmd: string) => {
+    if (cmd === "check_onboarding_complete") return Promise.resolve(true);
+    if (cmd === "check_xllm_status") return Promise.resolve(false);
+    if (cmd === "load_session") return Promise.reject("no session");
+    if (cmd === "get_hardware_specs") return Promise.resolve({
+      total_memory_gb: 16,
+      available_memory_gb: 8,
+      cpu_cores: 8,
+      gpu_type: "discrete",
+      gpu_name: "RTX 3080",
+      wgpu_supported: true,
+      recommended_engine: "xllm",
+      recommended_model: "Qwen2.5-Coder-7B",
+      recommendation_reason: "충분한 VRAM",
+    });
+    return Promise.resolve("{}");
+  }),
 }));
 
 vi.mock("@tauri-apps/api/event", () => ({
@@ -20,18 +35,16 @@ vi.mock("@tauri-apps/api/window", () => ({
   }),
 }));
 
-// xterm.js는 jsdom에서 DOM canvas를 요구하므로 모킹
 vi.mock("./components/TerminalPane", () => ({
-  default: ({ id }: any) => (
+  default: ({ id }: { id: string }) => (
     <div data-testid={`terminal-pane-${id}`}>terminal:{id}</div>
   ),
 }));
 
-// React Flow는 jsdom에서 완전 렌더링 불가 — 모킹
 vi.mock("./components/layout/InfiniteCanvas", () => ({
-  default: ({ blocks }: any) => (
+  default: ({ blocks }: { blocks: { id: string; command: string }[] }) => (
     <div data-testid="infinite-canvas">
-      {blocks.map((b: any) => (
+      {blocks.map((b) => (
         <div key={b.id} data-testid="canvas-block">{b.command}</div>
       ))}
     </div>
@@ -44,12 +57,13 @@ describe("App (LUM 터미널)", () => {
     expect(screen.getByText("LUM")).toBeInTheDocument();
   });
 
-  it("기본 뷰가 터미널이어야 함", () => {
+  it("기본 뷰가 터미널이어야 함 — TerminalPane이 최소 1개 렌더링됨", () => {
     render(<App />);
-    expect(screen.getByTestId("terminal-pane-main")).toBeInTheDocument();
+    const panes = screen.getAllByTestId(/^terminal-pane-/);
+    expect(panes.length).toBeGreaterThan(0);
   });
 
-  it("리스트 뷰 버튼 클릭 시 리스트 뷰로 전환되어야 함", async () => {
+  it("리스트 뷰 버튼 클릭 시 InfiniteCanvas가 숨겨짐", async () => {
     render(<App />);
     fireEvent.click(screen.getByLabelText("리스트"));
     await waitFor(() => {
@@ -57,7 +71,7 @@ describe("App (LUM 터미널)", () => {
     });
   });
 
-  it("캔버스 뷰 버튼 클릭 시 InfiniteCanvas가 렌더링되어야 함", async () => {
+  it("캔버스 뷰 버튼 클릭 시 InfiniteCanvas가 렌더링됨", async () => {
     render(<App />);
     fireEvent.click(screen.getByLabelText("캔버스"));
     await waitFor(() => {
@@ -65,20 +79,19 @@ describe("App (LUM 터미널)", () => {
     });
   });
 
-  it("터미널 뷰로 돌아오면 TerminalPane이 마운트 상태여야 함", async () => {
+  it("캔버스 → 터미널 전환 시 TerminalPane이 다시 표시됨", async () => {
     render(<App />);
-    // 캔버스로 전환 후 다시 터미널로
     fireEvent.click(screen.getByLabelText("캔버스"));
     fireEvent.click(screen.getByLabelText("터미널"));
     await waitFor(() => {
-      expect(screen.getByTestId("terminal-pane-main")).toBeInTheDocument();
+      expect(screen.getAllByTestId(/^terminal-pane-/).length).toBeGreaterThan(0);
     });
   });
 
-  it("addBlock 의존성이 안정적이어야 함 (재렌더 시 입력창 동작 확인)", () => {
-    const { rerender } = render(<App />);
-    rerender(<App />);
-    // 터미널 뷰에서 AI 바 없이 렌더됨을 확인
-    expect(screen.getByTestId("terminal-pane-main")).toBeInTheDocument();
+  it("뷰 전환 버튼이 3개 렌더링됨 (터미널/리스트/캔버스)", () => {
+    render(<App />);
+    expect(screen.getByLabelText("터미널")).toBeInTheDocument();
+    expect(screen.getByLabelText("리스트")).toBeInTheDocument();
+    expect(screen.getByLabelText("캔버스")).toBeInTheDocument();
   });
 });

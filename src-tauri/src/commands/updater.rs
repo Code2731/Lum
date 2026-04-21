@@ -52,3 +52,46 @@ fn is_newer(latest: &str, current: &str) -> bool {
     };
     parse(latest) > parse(current)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn newer_major_version() {
+        assert!(is_newer("2.0.0", "1.9.9"));
+        assert!(!is_newer("1.9.9", "2.0.0"));
+    }
+
+    #[test]
+    fn newer_minor_version() {
+        assert!(is_newer("1.1.0", "1.0.9"));
+        assert!(!is_newer("1.0.9", "1.1.0"));
+    }
+
+    #[test]
+    fn newer_patch_version() {
+        assert!(is_newer("1.0.1", "1.0.0"));
+        assert!(!is_newer("1.0.0", "1.0.1"));
+    }
+
+    #[test]
+    fn same_version_is_not_newer() {
+        assert!(!is_newer("1.0.0", "1.0.0"));
+        assert!(!is_newer("2.3.4", "2.3.4"));
+    }
+
+    #[test]
+    fn malformed_version_treated_as_zero() {
+        // "invalid" → (0,0,0), "0.0.1" → (0,0,1): 0.0.1 이 더 큼
+        assert!(!is_newer("invalid", "0.0.1"));
+        assert!(is_newer("0.0.1", "invalid"));
+    }
+
+    #[test]
+    fn partial_version_string() {
+        // "2.0" → (2,0,0), "1.9.9" → (1,9,9): 2.0 이 더 큼
+        assert!(is_newer("2.0", "1.9.9"));
+        assert!(!is_newer("1.9.9", "2.0"));
+    }
+}

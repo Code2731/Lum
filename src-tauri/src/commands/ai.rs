@@ -144,6 +144,96 @@ async fn call_xllm_stream(
     Ok(full_text)
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn config_with(f: impl FnOnce(&mut AppConfig)) -> AppConfig {
+        let mut c = AppConfig::default();
+        f(&mut c);
+        c
+    }
+
+    #[test]
+    fn body_short_context_uses_q8_and_no_temperature() {
+        let c = AppConfig::default();
+        let body = xllm_body(&c, "model", "hello", false);
+        assert_eq!(body["cache_mode"], "Q8");
+        assert!(body["temperature"].is_null());
+        assert_eq!(body["stream"], false);
+    }
+
+    #[test]
+    fn body_long_context_forces_q4_and_low_temperature() {
+        let c = config_with(|c| c.pd_threshold_chars = Some(5));
+        let body = xllm_body(&c, "model", "this is longer than 5", false);
+        assert_eq!(body["cache_mode"], "Q4");
+        let temp = body["temperature"].as_f64().unwrap();
+        assert!((temp - 0.3).abs() < 0.01);
+        let top_p = body["top_p"].as_f64().unwrap();
+        assert!((top_p - 0.85).abs() < 0.01);
+    }
+
+    #[test]
+    fn body_ssd_params_injected_when_draft_model_set() {
+        let c = config_with(|c| {
+            c.draft_model = Some("DeepSeek-1.3B".to_string());
+            c.speculative_n_draft = Some(6);
+        });
+        let body = xllm_body(&c, "model", "prompt", false);
+        assert_eq!(body["draft_model"], "DeepSeek-1.3B");
+        assert_eq!(body["speculative_ngram"], true);
+        assert_eq!(body["speculative_ngram_token_count"], 6);
+    }
+
+    #[test]
+    fn body_ssd_default_n_draft_is_5() {
+        let c = config_with(|c| c.draft_model = Some("draft".to_string()));
+        let body = xllm_body(&c, "model", "prompt", false);
+        assert_eq!(body["speculative_ngram_token_count"], 5);
+    }
+
+    #[test]
+    fn body_no_ssd_when_draft_model_absent() {
+        let c = AppConfig::default();
+        let body = xllm_body(&c, "model", "prompt", false);
+        assert!(body["draft_model"].is_null());
+        assert!(body["speculative_ngram"].is_null());
+    }
+
+    #[test]
+    fn body_sparse_attention_params_injected_when_enabled() {
+        let c = config_with(|c| {
+            c.sparse_attention = Some(true);
+            c.sparse_top_k = Some(32);
+        });
+        let body = xllm_body(&c, "model", "prompt", false);
+        assert_eq!(body["attention_sink_size"], 4);
+        assert_eq!(body["top_k_attn"], 32);
+    }
+
+    #[test]
+    fn body_sparse_attention_default_top_k_is_64() {
+        let c = config_with(|c| c.sparse_attention = Some(true));
+        let body = xllm_body(&c, "model", "prompt", false);
+        assert_eq!(body["top_k_attn"], 64);
+    }
+
+    #[test]
+    fn body_sparse_attention_absent_when_disabled() {
+        let c = AppConfig::default();
+        let body = xllm_body(&c, "model", "prompt", false);
+        assert!(body["attention_sink_size"].is_null());
+    }
+
+    #[test]
+    fn body_stream_flag_respected() {
+        let c = AppConfig::default();
+        assert_eq!(xllm_body(&c, "m", "p", false)["stream"], false);
+        assert_eq!(xllm_body(&c, "m", "p", true)["stream"], true);
+    }
+}
+
 /// xLLM 서버 상태 확인 — /v1/models 엔드포인트로 핑
 #[command]
 pub async fn check_xllm_status() -> Result<bool> {
