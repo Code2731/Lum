@@ -8,6 +8,7 @@ export function usePanelVisibility() {
   const [showXllmPanel, setShowXllmPanel] = useState(false);
   const [showDiffReview, setShowDiffReview] = useState(false);
   const [showThemePanel, setShowThemePanel] = useState(false);
+  const [showWorkspace, setShowWorkspace] = useState(false);
 
   const closeOverlays = useCallback(() => {
     setShowHistorySearch(false);
@@ -15,6 +16,7 @@ export function usePanelVisibility() {
     setShowXllmPanel(false);
     setShowDiffReview(false);
     setShowThemePanel(false);
+    setShowWorkspace(false);
   }, []);
 
   return {
@@ -25,6 +27,7 @@ export function usePanelVisibility() {
     showXllmPanel, setShowXllmPanel,
     showDiffReview, setShowDiffReview,
     showThemePanel, setShowThemePanel,
+    showWorkspace, setShowWorkspace,
     closeOverlays,
   };
 }

@@ -10,12 +10,14 @@ import { usePanelVisibility } from "./hooks/usePanelVisibility";
 import { useUpdateCheck } from "./hooks/useUpdateCheck";
 import { useTerminalTheme } from "./hooks/useTerminalTheme";
 import { useQuickActions } from "./hooks/useQuickActions";
+import { useCommandNotifier } from "./hooks/useCommandNotifier";
+import { useWorkspace } from "./hooks/useWorkspace";
 import { inferTabIcon } from "./utils/tabIcon";
 import { invoke } from "@tauri-apps/api/core";
 import {
   Zap, Cpu, Loader2, TerminalSquare, LayoutList, MousePointer2,
   Package, Database, Plus, X, Columns2, Rows2, SlidersHorizontal, ArrowUpCircle, GitCompareArrows, Palette,
-  GitBranch, Container,
+  GitBranch, Container, Layers,
 } from "lucide-react";
 import InfiniteCanvas from "./components/layout/InfiniteCanvas";
 import TerminalPane from "./components/TerminalPane";
@@ -30,6 +32,7 @@ import OnboardingWizard from "./components/OnboardingWizard";
 import DiffReviewPanel from "./components/DiffReviewPanel";
 import ThemePanel from "./components/ThemePanel";
 import QuickActionsBar from "./components/QuickActionsBar";
+import WorkspacePanel from "./components/WorkspacePanel";
 
 type ViewMode = "terminal" | "canvas" | "list";
 
@@ -38,13 +41,14 @@ const App: React.FC = () => {
   const { isProcessing, analyzeError, streamAICommand } = useAIProcessing();
   const { specs, loading: specsLoading } = useHardwareSpecs();
   const { blocks: cmdBlocks, feedRaw } = useCommandBlocks();
+  useCommandNotifier(cmdBlocks);
 
   const selectedModel = specs?.recommended_model ?? "Qwen2.5-Coder-7B-Instruct-EXL2-4bpw";
 
   const {
     tabs, activeTabId, activePaneId, setActivePaneId,
     activeTabIdRef, activePaneIdRef, ptyWriteRefs,
-    addTab, closeTab, switchTab, toggleSplit, renameTab, updateTabCwd,
+    addTab, closeTab, switchTab, toggleSplit, renameTab, updateTabCwd, restoreTabs,
   } = useTabManager(undefined);
 
   const {
@@ -60,11 +64,13 @@ const App: React.FC = () => {
     showXllmPanel, setShowXllmPanel,
     showDiffReview, setShowDiffReview,
     showThemePanel, setShowThemePanel,
+    showWorkspace, setShowWorkspace,
     closeOverlays,
   } = usePanelVisibility();
 
   const { appearance, saveAppearance, xtermTheme } = useTerminalTheme();
   const { actions: quickActions, addAction, updateAction, deleteAction, moveAction } = useQuickActions();
+  const { workspaces, loading: wsLoading, loadWorkspaces, saveWorkspace, deleteWorkspace } = useWorkspace();
 
   const { updateInfo, dismissUpdate } = useUpdateCheck();
 
@@ -186,6 +192,8 @@ const App: React.FC = () => {
       if (mod && e.shiftKey && e.key === "r") { e.preventDefault(); setShowDiffReview(true); }
       if (mod && e.key === ",") { e.preventDefault(); setShowThemePanel(true); }
       if (mod && e.shiftKey && e.key === "q") { e.preventDefault(); setShowQuickBar(v => !v); }
+      if (mod && e.shiftKey && e.key === "s") { e.preventDefault(); setShowWorkspace(true); loadWorkspaces(); }
+      if (mod && e.shiftKey && e.key === "o") { e.preventDefault(); setShowWorkspace(true); loadWorkspaces(); }
       // Cmd+1~9 — Quick Actions 단축키
       if (mod && !e.shiftKey && /^[1-9]$/.test(e.key)) {
         const n = Number(e.key);
@@ -206,7 +214,7 @@ const App: React.FC = () => {
       window.removeEventListener("keydown", captureHandler, { capture: true });
       window.removeEventListener("keydown", handler);
     };
-  }, [addTabWithReset, closeTabWithReset, toggleSplit, closeOverlays, activeTabIdRef, setShowCommitPanel, setShowHistorySearch, setShowDiffReview, setShowThemePanel, quickActions, ptyWriteRefs, activePaneIdRef]);
+  }, [addTabWithReset, closeTabWithReset, toggleSplit, closeOverlays, activeTabIdRef, setShowCommitPanel, setShowHistorySearch, setShowDiffReview, setShowThemePanel, quickActions, ptyWriteRefs, activePaneIdRef, setShowWorkspace, loadWorkspaces]);
 
   const VIEW_BUTTONS: { mode: ViewMode; icon: React.ReactNode; label: string }[] = [
     { mode: "terminal", icon: <TerminalSquare size={14} />, label: "터미널" },
@@ -282,6 +290,13 @@ const App: React.FC = () => {
             className="p-1.5 rounded text-white/40 hover:text-white hover:bg-white/10 transition-colors"
           >
             <SlidersHorizontal size={13} />
+          </button>
+          <button
+            aria-label="워크스페이스 (Cmd+Shift+S)"
+            onClick={() => { setShowWorkspace(true); loadWorkspaces(); }}
+            className={`p-1.5 rounded transition-colors ${showWorkspace ? "text-accent bg-accent/10" : "text-white/40 hover:text-white hover:bg-white/10"}`}
+          >
+            <Layers size={13} />
           </button>
           <button
             aria-label="AI Diff Reviewer (Cmd+Shift+R)"
@@ -448,6 +463,7 @@ const App: React.FC = () => {
                       <PaneWrapper paneId={tab.id} activePaneId={activePaneId} onFocus={setActivePaneId}>
                         <TerminalPane
                           id={tab.id}
+                          cwd={tab.cwd}
                           model={selectedModel}
                           xtermTheme={xtermTheme}
                           fontSize={appearance.fontSize}
@@ -469,6 +485,7 @@ const App: React.FC = () => {
                       <PaneWrapper paneId={splitId(tab.id)} activePaneId={activePaneId} onFocus={setActivePaneId}>
                         <TerminalPane
                           id={splitId(tab.id)}
+                          cwd={tab.cwd}
                           model={selectedModel}
                           xtermTheme={xtermTheme}
                           fontSize={appearance.fontSize}
@@ -484,6 +501,7 @@ const App: React.FC = () => {
                   <div className="flex-1">
                     <TerminalPane
                       id={tab.id}
+                      cwd={tab.cwd}
                       model={selectedModel}
                       xtermTheme={xtermTheme}
                       fontSize={appearance.fontSize}
@@ -629,6 +647,38 @@ const App: React.FC = () => {
           appearance={appearance}
           onSave={saveAppearance}
           onClose={() => setShowThemePanel(false)}
+        />
+      )}
+
+      {showWorkspace && (
+        <WorkspacePanel
+          currentTabs={tabs.map(t => ({
+            id: t.id,
+            title: t.title,
+            cwd: t.cwd ?? "",
+            split_dir: t.splitDir,
+          }))}
+          activeTabId={activeTabId}
+          workspaces={workspaces}
+          loading={wsLoading}
+          onSave={async name => {
+            await saveWorkspace(
+              name,
+              tabs.map(t => ({ id: t.id, title: t.title, cwd: t.cwd ?? "", split_dir: t.splitDir })),
+              activeTabId,
+            );
+          }}
+          onRestore={ws => {
+            const restored = ws.tabs.map(t => ({
+              id: t.id,
+              title: t.title,
+              cwd: t.cwd,
+              splitDir: t.split_dir as "h" | "v" | undefined,
+            }));
+            restoreTabs(restored, ws.active_tab_id);
+          }}
+          onDelete={deleteWorkspace}
+          onClose={() => setShowWorkspace(false)}
         />
       )}
 

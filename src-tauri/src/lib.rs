@@ -89,6 +89,10 @@ pub fn run() {
             // Session Persistence
             commands::session::save_session,
             commands::session::load_session,
+            // Workspace
+            commands::workspace::save_workspace,
+            commands::workspace::list_workspaces,
+            commands::workspace::delete_workspace,
             // Project Context
             commands::context::get_project_context,
             // Updater
