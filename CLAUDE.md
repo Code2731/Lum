@@ -88,3 +88,4 @@ cd src-tauri && cargo test   # Rust 단위 테스트 실행
 - [x] Phase 35: AI Context Awareness (context.rs get_project_context — Node/Rust/Go/Python/Java 자동 감지 + git 여부, get_recent_history 5개 병렬 조회 → context 문자열 구성, generate_ai_command에 주입 완료)
 - [x] Phase 36: Auto Update Check (updater.rs check_for_update — GitHub API /releases/latest 조회, semver 비교, App.tsx 업데이트 배너 + 다운로드 링크 완료)
 - [x] Refactor: App.tsx 훅 분리 (776줄 → 370줄, useTabManager/useAutoHealing/usePanelVisibility/useUpdateCheck 추출, ai.rs 미사용 model_for_task 제거 완료)
+- [x] Phase 37: SSD + Dynamic Sparse Attention + EPD Streaming (xllm_body 헬퍼, draft_model·speculative_ngram, attention_sink_size·top_k_attn, call_xllm_stream SSE 파싱 → xllm_token 이벤트 → streamAICommand → 캔버스 실시간 렌더링 완료)

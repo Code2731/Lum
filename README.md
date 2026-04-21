@@ -33,6 +33,9 @@ LUM은 진짜 셸을 실행합니다. 채팅 UI가 아닙니다.
 - **Semantic History Search** (`Ctrl+R`): 임베딩 기반 의미 검색으로 과거 명령어를 자연어로 찾기.
 - **AI Commit Message** (`Cmd+Shift+G`): `git diff --cached` 분석 → Conventional Commit 형식 자동 생성.
 - **xLLM 실전 최적화**: PD Disaggregation(장문 자동 Q4), Elastic Scheduling(역할별 모델 분리), KV Cache Q4/Q8/FP16 선택.
+- **SSD (Speculative Speculative Decoding)**: 소형 드래프트 모델과 타깃 모델의 비동기 파이프라인 — 3080 기준 1.5~2× 추론 가속.
+- **Dynamic Sparse Attention**: 긴 컨텍스트에서 중요 토큰만 선택 집중(attention_sink + top-k 헤드) — VRAM 10GB에서 128K+ 컨텍스트 안정 처리.
+- **EPD Streaming (실시간 토큰 출력)**: Encode-Prefill-Decode 분리 구조로 SSE 스트리밍 — Cmd+K AI 바에서 첫 토큰부터 캔버스 블록에 실시간 렌더링.
 - **Production-Grade Security**: 파괴적 명령어 감지(Security Gate) 및 AI 생성 UI 완전 격리(Sandbox).
 - **Distributed Swarms (libp2p)**: 네트워크 내 다른 LUM 노드들과 협업하는 P2P 지능망 인프라.
 
@@ -111,6 +114,7 @@ npm run tauri dev
 - [x] Phase 34: AI Inline Edit (`# <자연어>` → ⚡ AI가 셸 명령어로 변환, Tab으로 확정)
 - [x] Phase 35: AI Context Awareness (프로젝트 타입 자동 감지 + 최근 명령어 히스토리를 AI에 주입, `# 테스트 실행` → Node면 `npm test`, Rust면 `cargo test`)
 - [x] Phase 36: Auto Update Check (GitHub Releases API로 최신 버전 감지, 업데이트 배너 + 다운로드 링크)
+- [x] Phase 37: SSD + Dynamic Sparse Attention + EPD Streaming (드래프트 모델 비동기 파이프라인, Sparse Attention top-k, SSE 스트리밍 실시간 렌더링)
 
 ---
 
