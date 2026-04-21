@@ -80,6 +80,8 @@ pub fn run() {
             // Config
             commands::config::load_app_config,
             commands::config::save_xllm_settings,
+            commands::config::check_onboarding_complete,
+            commands::config::complete_onboarding,
             // Session Persistence
             commands::session::save_session,
             commands::session::load_session,

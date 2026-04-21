@@ -46,6 +46,8 @@ pub struct AppConfig {
     pub sparse_attention: Option<bool>,
     /// ⑤ Sparse Attention top-k 헤드 수 (기본 64)
     pub sparse_top_k: Option<u32>,
+    /// 온보딩 완료 여부 — false면 첫 실행 마법사 표시
+    pub onboarding_completed: Option<bool>,
 }
 
 impl AppConfig {
@@ -78,6 +80,19 @@ pub fn save_config(config: &AppConfig) -> Result<()> {
 #[tauri::command]
 pub fn load_app_config() -> Result<AppConfig> {
     load_config()
+}
+
+#[tauri::command]
+pub fn check_onboarding_complete() -> Result<bool> {
+    let config = load_config()?;
+    Ok(config.onboarding_completed.unwrap_or(false))
+}
+
+#[tauri::command]
+pub fn complete_onboarding() -> Result<()> {
+    let mut config = load_config()?;
+    config.onboarding_completed = Some(true);
+    save_config(&config)
 }
 
 /// xLLM 최적화 설정 저장 (프론트엔드 → 파일)

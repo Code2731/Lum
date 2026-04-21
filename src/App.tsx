@@ -22,6 +22,7 @@ import CommandBlockBar from "./components/CommandBlockBar";
 import HistorySearch from "./components/HistorySearch";
 import CommitPanel from "./components/CommitPanel";
 import XllmPanel from "./components/XllmPanel";
+import OnboardingWizard from "./components/OnboardingWizard";
 
 type ViewMode = "terminal" | "canvas" | "list";
 
@@ -55,6 +56,7 @@ const App: React.FC = () => {
 
   const { updateInfo, dismissUpdate } = useUpdateCheck();
 
+  const [showOnboarding, setShowOnboarding] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>("terminal");
   const [xllmOnline, setXllmOnline] = useState(false);
   const [aiInput, setAiInput] = useState("");
@@ -63,6 +65,12 @@ const App: React.FC = () => {
   const aiInputRef = useRef<HTMLInputElement>(null);
   const viewModeRef = useRef(viewMode);
   viewModeRef.current = viewMode;
+
+  useEffect(() => {
+    invoke<boolean>("check_onboarding_complete")
+      .then((done) => { if (!done) setShowOnboarding(true); })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     invoke<boolean>("check_xllm_status")
@@ -519,6 +527,10 @@ const App: React.FC = () => {
 
       {showXllmPanel && (
         <XllmPanel onClose={() => setShowXllmPanel(false)} />
+      )}
+
+      {showOnboarding && (
+        <OnboardingWizard onComplete={() => setShowOnboarding(false)} />
       )}
     </div>
   );
