@@ -62,9 +62,11 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, model, onOutput, onReady }) =>
   const fitAddonRef = useRef<FitAddon | null>(null);
   const spawnedRef = useRef(false);
 
-  // useEffect 재실행 없이 최신 model 값 참조
+  // useEffect 재실행 없이 최신 prop 값 참조
   const modelRef = useRef(model ?? DEFAULT_MODEL);
   useEffect(() => { modelRef.current = model ?? DEFAULT_MODEL; }, [model]);
+  const cwdRef = useRef(cwd ?? "");
+  useEffect(() => { cwdRef.current = cwd ?? ""; }, [cwd]);
 
   // Static CLI ghost text
   const [ghostText, setGhostText] = useState<string | null>(null);
@@ -141,26 +143,33 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, model, onOutput, onReady }) =>
 
     const cursorY = term.buffer.active.cursorY;
 
-    aiDebounceRef.current = setTimeout(() => {
+    aiDebounceRef.current = setTimeout(async () => {
       setAiLoading(true);
-      invoke<string>("generate_ai_command", {
-        prompt,
-        model: modelRef.current,
-        context: "",
-        imageData: null,
-      })
-        .then((raw) => {
-          const cmd: string = JSON.parse(raw)?.command ?? "";
-          if (!cmd) {
-            setAiLoading(false);
-            return;
-          }
-          // 두 state를 같은 tick에 업데이트해 렌더 1회로 통합
-          aiSuggestionRef.current = cmd;
-          setAiLoading(false);
-          setAiGhost({ cmd, y: PANE_PADDING_Y + (cursorY + 1) * CELL_H });
-        })
-        .catch(() => setAiLoading(false));
+      try {
+        // 프로젝트 컨텍스트 + 최근 히스토리 병렬 조회
+        const [projectCtx, recentHistory] = await Promise.all([
+          invoke<string>("get_project_context", { cwd: cwdRef.current }),
+          invoke<Array<{ command: string }>>("get_recent_history", { limit: 5 }).catch(() => []),
+        ]);
+        const recentCmds = recentHistory.map((h) => h.command).filter(Boolean).join(", ");
+        const context = [projectCtx, recentCmds ? `recent: ${recentCmds}` : ""]
+          .filter(Boolean)
+          .join(" | ");
+
+        const raw = await invoke<string>("generate_ai_command", {
+          prompt,
+          model: modelRef.current,
+          context,
+          imageData: null,
+        });
+        const cmd: string = JSON.parse(raw)?.command ?? "";
+        if (!cmd) { setAiLoading(false); return; }
+        aiSuggestionRef.current = cmd;
+        setAiLoading(false);
+        setAiGhost({ cmd, y: PANE_PADDING_Y + (cursorY + 1) * CELL_H });
+      } catch {
+        setAiLoading(false);
+      }
     }, 600);
   }, [clearAiGhost]);
 

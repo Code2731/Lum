@@ -82,6 +82,8 @@ pub fn run() {
             // Session Persistence
             commands::session::save_session,
             commands::session::load_session,
+            // Project Context
+            commands::context::get_project_context,
             // xLLM 모델 관리
             commands::xllm::get_xllm_model_info,
             commands::xllm::switch_xllm_model,
