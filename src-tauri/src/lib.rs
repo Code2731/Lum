@@ -84,6 +84,8 @@ pub fn run() {
             commands::session::load_session,
             // Project Context
             commands::context::get_project_context,
+            // Updater
+            commands::updater::check_for_update,
             // xLLM 모델 관리
             commands::xllm::get_xllm_model_info,
             commands::xllm::switch_xllm_model,

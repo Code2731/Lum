@@ -110,6 +110,7 @@ npm run tauri dev
 - [x] Phase 33: CLI Ghost Text + Session Persistence (Tab 자동완성 오버레이, 세션 자동 복원)
 - [x] Phase 34: AI Inline Edit (`# <자연어>` → ⚡ AI가 셸 명령어로 변환, Tab으로 확정)
 - [x] Phase 35: AI Context Awareness (프로젝트 타입 자동 감지 + 최근 명령어 히스토리를 AI에 주입, `# 테스트 실행` → Node면 `npm test`, Rust면 `cargo test`)
+- [x] Phase 36: Auto Update Check (GitHub Releases API로 최신 버전 감지, 업데이트 배너 + 다운로드 링크)
 
 ---
 

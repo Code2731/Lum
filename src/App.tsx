@@ -6,7 +6,7 @@ import { useHardwareSpecs } from "./hooks/useHardwareSpecs";
 import { invoke } from "@tauri-apps/api/core";
 import {
   Zap, Cpu, Loader2, TerminalSquare, LayoutList, MousePointer2,
-  Package, Database, Plus, X, Columns2, Rows2, SlidersHorizontal,
+  Package, Database, Plus, X, Columns2, Rows2, SlidersHorizontal, ArrowUpCircle,
 } from "lucide-react";
 import InfiniteCanvas from "./components/layout/InfiniteCanvas";
 import TerminalPane from "./components/TerminalPane";
@@ -98,6 +98,18 @@ const App: React.FC = () => {
   activeTabIdRef.current = activeTabId;
 
   const selectedModel = specs?.recommended_model ?? "Qwen2.5-Coder-7B-Instruct-EXL2-4bpw";
+
+  // 업데이트 알림
+  const [updateInfo, setUpdateInfo] = useState<{ latest: string; releaseUrl: string; releaseName: string } | null>(null);
+  useEffect(() => {
+    invoke<{ has_update: boolean; latest: string; release_url: string; release_name: string }>("check_for_update")
+      .then((info) => {
+        if (info.has_update) {
+          setUpdateInfo({ latest: info.latest, releaseUrl: info.release_url, releaseName: info.release_name });
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   // 세션 복원 — 앱 마운트 직후 한 번 실행
   useEffect(() => {
@@ -459,6 +471,31 @@ const App: React.FC = () => {
           </button>
         </div>
       </header>
+
+      {/* ── 업데이트 배너 ───────────────────────────────────────── */}
+      {updateInfo && (
+        <div className="flex items-center gap-2 px-4 py-1.5 bg-accent/10 border-b border-accent/20 shrink-0 text-[11px]">
+          <ArrowUpCircle size={12} className="text-accent shrink-0" />
+          <span className="text-white/70">
+            새 버전 <span className="text-accent font-semibold">v{updateInfo.latest}</span> 출시 — {updateInfo.releaseName}
+          </span>
+          <a
+            href={updateInfo.releaseUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="ml-1 text-accent hover:text-accent/80 underline underline-offset-2 transition-colors"
+          >
+            다운로드
+          </a>
+          <button
+            onClick={() => setUpdateInfo(null)}
+            className="ml-auto text-white/30 hover:text-white/60 transition-colors"
+            aria-label="알림 닫기"
+          >
+            <X size={11} />
+          </button>
+        </div>
+      )}
 
       {/* ── 탭 바 ─────────────────────────────────────────────── */}
       {viewMode === "terminal" && (
