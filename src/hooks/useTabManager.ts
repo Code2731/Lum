@@ -143,15 +143,12 @@ export function useTabManager(onTabChange?: () => void) {
     });
   }, []);
 
-  // 워크스페이스 복원 — 모든 PTY 닫고 새 탭 세트로 교체
   const restoreTabs = useCallback((newTabs: Tab[], newActiveId: string) => {
-    // 기존 PTY 모두 종료
     for (const t of tabs) {
       invoke("close_pty", { id: t.id }).catch(() => {});
       invoke("close_pty", { id: splitId(t.id) }).catch(() => {});
     }
     ptyWriteRefs.current.clear();
-    // tabCounter를 복원 탭 번호에 맞게 업데이트
     for (const t of newTabs) {
       const m = t.title.match(/^Shell (\d+)$/);
       if (m) tabCounter = Math.max(tabCounter, parseInt(m[1]) + 1);

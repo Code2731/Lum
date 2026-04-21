@@ -28,16 +28,14 @@ export function useCommandNotifier(
   const notifiedRef = useRef<Set<string>>(new Set());
   const permGrantedRef = useRef(false);
 
-  // 앱 시작 시 권한 요청
   useEffect(() => {
     requestNotificationPermission().then(ok => { permGrantedRef.current = ok; });
   }, []);
 
-  // 완료된 블록 중 threshold 초과한 것만 알림
   useEffect(() => {
     for (const b of blocks) {
       if (notifiedRef.current.has(b.id)) continue;
-      if (b.endedAt === null) continue; // 아직 실행 중
+      if (b.endedAt === null) continue;
       if (!b.command.trim()) continue;
 
       const duration = b.endedAt - b.startedAt;
@@ -48,7 +46,6 @@ export function useCommandNotifier(
       if (permGrantedRef.current) {
         sendNotification(b.command, b.exitCode, Math.round(duration / 1000));
       }
-      // document title 플래시 (탭이 백그라운드일 때 사용자 주의 유도)
       flashTitle(b.exitCode);
     }
   }, [blocks, thresholdMs]);

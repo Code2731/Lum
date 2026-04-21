@@ -192,8 +192,7 @@ const App: React.FC = () => {
       if (mod && e.shiftKey && e.key === "r") { e.preventDefault(); setShowDiffReview(true); }
       if (mod && e.key === ",") { e.preventDefault(); setShowThemePanel(true); }
       if (mod && e.shiftKey && e.key === "q") { e.preventDefault(); setShowQuickBar(v => !v); }
-      if (mod && e.shiftKey && e.key === "s") { e.preventDefault(); setShowWorkspace(true); loadWorkspaces(); }
-      if (mod && e.shiftKey && e.key === "o") { e.preventDefault(); setShowWorkspace(true); loadWorkspaces(); }
+      if (mod && e.shiftKey && (e.key === "s" || e.key === "o")) { e.preventDefault(); setShowWorkspace(true); loadWorkspaces(); }
       // Cmd+1~9 — Quick Actions 단축키
       if (mod && !e.shiftKey && /^[1-9]$/.test(e.key)) {
         const n = Number(e.key);
@@ -225,6 +224,7 @@ const App: React.FC = () => {
   const activeTab = tabs.find((t) => t.id === activeTabId);
   const lastCmdBlock = cmdBlocks[cmdBlocks.length - 1] ?? null;
   const showBlockBar = lastCmdBlock !== null && lastCmdBlock.id !== dismissedBlockId && !healingError;
+  const wsTabs = tabs.map(t => ({ id: t.id, title: t.title, cwd: t.cwd ?? "", split_dir: t.splitDir }));
 
   return (
     <div className="app-root bg-terminal-dark text-white min-h-screen flex flex-col">
@@ -652,22 +652,11 @@ const App: React.FC = () => {
 
       {showWorkspace && (
         <WorkspacePanel
-          currentTabs={tabs.map(t => ({
-            id: t.id,
-            title: t.title,
-            cwd: t.cwd ?? "",
-            split_dir: t.splitDir,
-          }))}
+          currentTabs={wsTabs}
           activeTabId={activeTabId}
           workspaces={workspaces}
           loading={wsLoading}
-          onSave={async name => {
-            await saveWorkspace(
-              name,
-              tabs.map(t => ({ id: t.id, title: t.title, cwd: t.cwd ?? "", split_dir: t.splitDir })),
-              activeTabId,
-            );
-          }}
+          onSave={async name => { await saveWorkspace(name, wsTabs, activeTabId); }}
           onRestore={ws => {
             const restored = ws.tabs.map(t => ({
               id: t.id,

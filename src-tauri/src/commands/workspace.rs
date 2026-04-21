@@ -53,13 +53,14 @@ fn unix_now() -> u64 {
 
 #[tauri::command]
 pub fn save_workspace(name: String, tabs: Vec<WorkspaceTab>, active_tab_id: String) -> Result<Workspace, String> {
+    let now = unix_now();
     let mut store = load_store();
     let ws = Workspace {
-        id: format!("ws-{}", unix_now()),
+        id: format!("ws-{}", now),
         name,
         tabs,
         active_tab_id,
-        created_at: unix_now(),
+        created_at: now,
     };
     store.workspaces.push(ws.clone());
     save_store(&store)?;
