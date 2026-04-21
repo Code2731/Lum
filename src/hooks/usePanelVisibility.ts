@@ -6,11 +6,15 @@ export function usePanelVisibility() {
   const [showHistorySearch, setShowHistorySearch] = useState(false);
   const [showCommitPanel, setShowCommitPanel] = useState(false);
   const [showXllmPanel, setShowXllmPanel] = useState(false);
+  const [showDiffReview, setShowDiffReview] = useState(false);
+  const [showThemePanel, setShowThemePanel] = useState(false);
 
   const closeOverlays = useCallback(() => {
     setShowHistorySearch(false);
     setShowCommitPanel(false);
     setShowXllmPanel(false);
+    setShowDiffReview(false);
+    setShowThemePanel(false);
   }, []);
 
   return {
@@ -19,6 +23,8 @@ export function usePanelVisibility() {
     showHistorySearch, setShowHistorySearch,
     showCommitPanel, setShowCommitPanel,
     showXllmPanel, setShowXllmPanel,
+    showDiffReview, setShowDiffReview,
+    showThemePanel, setShowThemePanel,
     closeOverlays,
   };
 }

@@ -8,10 +8,11 @@ import { useTabManager, splitId } from "./hooks/useTabManager";
 import { useAutoHealing } from "./hooks/useAutoHealing";
 import { usePanelVisibility } from "./hooks/usePanelVisibility";
 import { useUpdateCheck } from "./hooks/useUpdateCheck";
+import { useTerminalTheme } from "./hooks/useTerminalTheme";
 import { invoke } from "@tauri-apps/api/core";
 import {
   Zap, Cpu, Loader2, TerminalSquare, LayoutList, MousePointer2,
-  Package, Database, Plus, X, Columns2, Rows2, SlidersHorizontal, ArrowUpCircle,
+  Package, Database, Plus, X, Columns2, Rows2, SlidersHorizontal, ArrowUpCircle, GitCompareArrows, Palette,
 } from "lucide-react";
 import InfiniteCanvas from "./components/layout/InfiniteCanvas";
 import TerminalPane from "./components/TerminalPane";
@@ -23,6 +24,8 @@ import HistorySearch from "./components/HistorySearch";
 import CommitPanel from "./components/CommitPanel";
 import XllmPanel from "./components/XllmPanel";
 import OnboardingWizard from "./components/OnboardingWizard";
+import DiffReviewPanel from "./components/DiffReviewPanel";
+import ThemePanel from "./components/ThemePanel";
 
 type ViewMode = "terminal" | "canvas" | "list";
 
@@ -51,8 +54,12 @@ const App: React.FC = () => {
     showHistorySearch, setShowHistorySearch,
     showCommitPanel, setShowCommitPanel,
     showXllmPanel, setShowXllmPanel,
+    showDiffReview, setShowDiffReview,
+    showThemePanel, setShowThemePanel,
     closeOverlays,
   } = usePanelVisibility();
+
+  const { appearance, saveAppearance, xtermTheme } = useTerminalTheme();
 
   const { updateInfo, dismissUpdate } = useUpdateCheck();
 
@@ -167,6 +174,8 @@ const App: React.FC = () => {
       if (mod && e.shiftKey && e.key === "d") { e.preventDefault(); toggleSplit("h"); }
       if (mod && e.shiftKey && e.key === "e") { e.preventDefault(); toggleSplit("v"); }
       if (mod && e.shiftKey && e.key === "g") { e.preventDefault(); setShowCommitPanel(true); }
+      if (mod && e.shiftKey && e.key === "r") { e.preventDefault(); setShowDiffReview(true); }
+      if (mod && e.key === ",") { e.preventDefault(); setShowThemePanel(true); }
       if (e.key === "Escape") {
         setShowAiBar(false);
         closeOverlays();
@@ -177,7 +186,7 @@ const App: React.FC = () => {
       window.removeEventListener("keydown", captureHandler, { capture: true });
       window.removeEventListener("keydown", handler);
     };
-  }, [addTabWithReset, closeTabWithReset, toggleSplit, closeOverlays, activeTabIdRef, setShowCommitPanel, setShowHistorySearch]);
+  }, [addTabWithReset, closeTabWithReset, toggleSplit, closeOverlays, activeTabIdRef, setShowCommitPanel, setShowHistorySearch, setShowDiffReview, setShowThemePanel]);
 
   const VIEW_BUTTONS: { mode: ViewMode; icon: React.ReactNode; label: string }[] = [
     { mode: "terminal", icon: <TerminalSquare size={14} />, label: "터미널" },
@@ -253,6 +262,20 @@ const App: React.FC = () => {
             className="p-1.5 rounded text-white/40 hover:text-white hover:bg-white/10 transition-colors"
           >
             <SlidersHorizontal size={13} />
+          </button>
+          <button
+            aria-label="AI Diff Reviewer (Cmd+Shift+R)"
+            onClick={() => setShowDiffReview(true)}
+            className={`p-1.5 rounded transition-colors ${showDiffReview ? "text-accent bg-accent/10" : "text-white/40 hover:text-white hover:bg-white/10"}`}
+          >
+            <GitCompareArrows size={13} />
+          </button>
+          <button
+            aria-label="터미널 테마 설정 (Cmd+,)"
+            onClick={() => setShowThemePanel(true)}
+            className={`p-1.5 rounded transition-colors ${showThemePanel ? "text-accent bg-accent/10" : "text-white/40 hover:text-white hover:bg-white/10"}`}
+          >
+            <Palette size={13} />
           </button>
           <button
             aria-label="모델 관리"
@@ -373,6 +396,9 @@ const App: React.FC = () => {
                         <TerminalPane
                           id={tab.id}
                           model={selectedModel}
+                          xtermTheme={xtermTheme}
+                          fontSize={appearance.fontSize}
+                          fontFamily={appearance.fontFamily}
                           onOutput={handleTerminalOutput(tab.id)}
                           onReady={(write) => { ptyWriteRefs.current.set(tab.id, write); }}
                         />
@@ -390,6 +416,9 @@ const App: React.FC = () => {
                         <TerminalPane
                           id={splitId(tab.id)}
                           model={selectedModel}
+                          xtermTheme={xtermTheme}
+                          fontSize={appearance.fontSize}
+                          fontFamily={appearance.fontFamily}
                           onOutput={handleTerminalOutput(splitId(tab.id))}
                           onReady={(write) => { ptyWriteRefs.current.set(splitId(tab.id), write); }}
                         />
@@ -401,6 +430,9 @@ const App: React.FC = () => {
                     <TerminalPane
                       id={tab.id}
                       model={selectedModel}
+                      xtermTheme={xtermTheme}
+                      fontSize={appearance.fontSize}
+                      fontFamily={appearance.fontFamily}
                       onOutput={handleTerminalOutput(tab.id)}
                       onReady={(write) => { ptyWriteRefs.current.set(tab.id, write); }}
                     />
@@ -527,6 +559,21 @@ const App: React.FC = () => {
 
       {showXllmPanel && (
         <XllmPanel onClose={() => setShowXllmPanel(false)} />
+      )}
+
+      {showDiffReview && (
+        <DiffReviewPanel
+          model={selectedModel}
+          onClose={() => setShowDiffReview(false)}
+        />
+      )}
+
+      {showThemePanel && (
+        <ThemePanel
+          appearance={appearance}
+          onSave={saveAppearance}
+          onClose={() => setShowThemePanel(false)}
+        />
       )}
 
       {showOnboarding && (

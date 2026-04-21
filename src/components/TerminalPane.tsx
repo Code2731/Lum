@@ -5,6 +5,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import "@xterm/xterm/css/xterm.css";
 import { findCompletion } from "../utils/ghostText";
+import type { XtermTheme } from "../hooks/useTerminalTheme";
 
 interface PtyData {
   id: string;
@@ -15,6 +16,9 @@ interface Props {
   id: string;
   cwd?: string;
   model?: string;
+  xtermTheme?: XtermTheme;
+  fontSize?: number;
+  fontFamily?: string;
   onOutput?: (data: string) => void;
   onReady?: (write: (data: string) => void) => void;
 }
@@ -55,7 +59,7 @@ const PANE_PADDING_Y = 6;
 
 const DEFAULT_MODEL = "Qwen2.5-Coder-7B-Instruct-EXL2-4bpw";
 
-const TerminalPane: React.FC<Props> = ({ id, cwd, model, onOutput, onReady }) => {
+const TerminalPane: React.FC<Props> = ({ id, cwd, model, xtermTheme, fontSize, fontFamily, onOutput, onReady }) => {
   const outerRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const termRef = useRef<Terminal | null>(null);
@@ -64,11 +68,34 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, model, onOutput, onReady }) =>
 
   const modelRef = useRef(model ?? DEFAULT_MODEL);
   const cwdRef = useRef(cwd ?? "");
-  // useEffect 재실행 없이 최신 prop 값 참조 — terminal respawn 방지
   useEffect(() => {
     modelRef.current = model ?? DEFAULT_MODEL;
     cwdRef.current = cwd ?? "";
   }, [model, cwd]);
+
+  // 테마/폰트 동적 적용
+  useEffect(() => {
+    const term = termRef.current;
+    if (!term) return;
+    if (xtermTheme) term.options.theme = xtermTheme;
+  }, [xtermTheme]);
+
+  useEffect(() => {
+    const term = termRef.current;
+    const fit = fitAddonRef.current;
+    if (!term || !fit) return;
+    term.options.fontSize = fontSize ?? 13;
+    try { fit.fit(); } catch {}
+    invoke("resize_pty", { id, cols: term.cols, rows: term.rows }).catch(() => {});
+  }, [fontSize, id]);
+
+  useEffect(() => {
+    const term = termRef.current;
+    if (!term) return;
+    const IS_WIN = navigator.userAgent.includes("Windows");
+    const fallback = IS_WIN ? "Cascadia Code, Consolas, monospace" : "Menlo, Monaco, monospace";
+    term.options.fontFamily = fontFamily ? `"${fontFamily}", ${fallback}` : FONT_FAMILY;
+  }, [fontFamily]);
 
   // Static CLI ghost text
   const [ghostText, setGhostText] = useState<string | null>(null);

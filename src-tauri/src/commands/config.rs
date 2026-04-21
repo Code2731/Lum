@@ -11,6 +11,7 @@ pub const XLLM_DEFAULT_URL: &str = "http://127.0.0.1:5000";
 pub struct AppConfig {
     pub theme: Option<String>,
     pub font_size: Option<u32>,
+    pub font_family: Option<String>,
     pub opacity: Option<f64>,
     pub accent_color: Option<String>,
     /// xLLM(TabbyAPI) 서버 주소 (기본값: http://127.0.0.1:5000)
@@ -118,5 +119,21 @@ pub fn save_xllm_settings(
     config.speculative_n_draft = speculative_n_draft;
     config.sparse_attention = sparse_attention;
     config.sparse_top_k = sparse_top_k;
+    save_config(&config)
+}
+
+/// 터미널 테마/폰트 설정 저장
+#[tauri::command]
+pub fn save_terminal_appearance(
+    theme: Option<String>,
+    font_size: Option<u32>,
+    font_family: Option<String>,
+    opacity: Option<f64>,
+) -> Result<()> {
+    let mut config = load_config()?;
+    config.theme = theme;
+    config.font_size = font_size;
+    config.font_family = font_family;
+    config.opacity = opacity;
     save_config(&config)
 }

@@ -77,9 +77,11 @@ pub fn run() {
             commands::history::get_recent_history,
             // Git
             commands::git::generate_commit_message,
+            commands::git::analyze_diff,
             // Config
             commands::config::load_app_config,
             commands::config::save_xllm_settings,
+            commands::config::save_terminal_appearance,
             commands::config::check_onboarding_complete,
             commands::config::complete_onboarding,
             // Session Persistence
