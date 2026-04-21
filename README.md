@@ -24,6 +24,7 @@ LUM은 진짜 셸을 실행합니다. 채팅 UI가 아닙니다.
 
 - **Real PTY Terminal**: portable-pty 기반 실제 셸 실행 + xterm.js 렌더링. 채팅이 아닌 진짜 터미널.
 - **CLI Ghost Text Autocomplete**: `git`, `npm`, `cargo`, `docker`, `kubectl` 등 10개 CLI 툴의 서브커맨드·플래그를 Tab으로 즉시 완성. Fish-shell 스타일 ghost text 오버레이.
+- **AI Inline Edit**: `# 대용량 파일 찾기` 처럼 `#`으로 시작하는 자연어 입력을 로컬 AI가 즉시 셸 명령어로 변환. ⚡ 팝업으로 미리보기 후 Tab 한 번으로 확정.
 - **Session Persistence**: 앱을 닫아도 탭 구성(분할 방향 포함)을 자동 저장 → 재시작 시 그대로 복원.
 - **Hardware-Aware Model Recommendations**: PC 사양(RAM·GPU)을 자동 진단하여 **Qwen2.5-Coder / Phi-3.5 EXL2** 최적 모델 추천.
 - **Model Manager**: 추천 EXL2 모델을 HuggingFace에서 직접 다운로드하고 설치된 모델을 관리(삭제).
@@ -106,6 +107,7 @@ npm run tauri dev
 - [x] Phase 31: AI Commit Message (git diff --cached → xLLM Conventional Commit)
 - [x] Phase 32: xLLM 실전 최적화 (PD Disaggregation, Elastic Scheduling, KV Cache Q4/Q8/FP16)
 - [x] Phase 33: CLI Ghost Text + Session Persistence (Tab 자동완성 오버레이, 세션 자동 복원)
+- [x] Phase 34: AI Inline Edit (`# <자연어>` → ⚡ AI가 셸 명령어로 변환, Tab으로 확정)
 
 ---
 

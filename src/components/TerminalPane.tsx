@@ -14,6 +14,7 @@ interface PtyData {
 interface Props {
   id: string;
   cwd?: string;
+  model?: string;
   onOutput?: (data: string) => void;
   onReady?: (write: (data: string) => void) => void;
 }
@@ -47,24 +48,37 @@ const THEME = {
   brightWhite: "#f0f6fc",
 };
 
-// Approximate cell dimensions for ghost text positioning
 const CELL_W = 7.8;
 const CELL_H = 18.2;
 const PANE_PADDING_X = 10;
 const PANE_PADDING_Y = 6;
 
-const TerminalPane: React.FC<Props> = ({ id, cwd, onOutput, onReady }) => {
+const DEFAULT_MODEL = "Qwen2.5-Coder-7B-Instruct-EXL2-4bpw";
+
+const TerminalPane: React.FC<Props> = ({ id, cwd, model, onOutput, onReady }) => {
   const outerRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const termRef = useRef<Terminal | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
   const spawnedRef = useRef(false);
 
-  // Ghost text state
+  // model prop을 ref로 유지 — useEffect 재실행 없이 최신값 사용
+  const modelRef = useRef(model ?? DEFAULT_MODEL);
+  useEffect(() => { modelRef.current = model ?? DEFAULT_MODEL; }, [model]);
+
+  // Static CLI ghost text
   const [ghostText, setGhostText] = useState<string | null>(null);
   const [ghostPos, setGhostPos] = useState({ x: 0, y: 0 });
+  const ghostTextRef = useRef<string | null>(null);
   const inputBufRef = useRef("");
   const suggestionRef = useRef<{ suffix: string; insert: string } | null>(null);
+
+  // AI inline edit (# 프리픽스)
+  const [aiGhost, setAiGhost] = useState<{ cmd: string; x: number; y: number } | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const aiGhostRef = useRef<string | null>(null);
+  const aiSuggestionRef = useRef<string | null>(null);
+  const aiDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const doFitAndResize = useCallback(() => {
     const fit = fitAddonRef.current;
@@ -73,14 +87,22 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, onOutput, onReady }) => {
     try {
       fit.fit();
       invoke("resize_pty", { id, cols: term.cols, rows: term.rows }).catch(() => {});
-    } catch {
-      // fit 실패는 무시 (언마운트 중일 수 있음)
-    }
+    } catch {}
   }, [id]);
 
-  const ghostTextRef = useRef<string | null>(null);
+  const clearAiGhost = useCallback(() => {
+    if (aiDebounceRef.current) clearTimeout(aiDebounceRef.current);
+    aiSuggestionRef.current = null;
+    if (aiGhostRef.current !== null) {
+      aiGhostRef.current = null;
+      setAiGhost(null);
+    }
+  }, []);
 
   const updateGhost = useCallback((term: Terminal, inputBuf: string) => {
+    // # 프리픽스 모드면 static ghost text 업데이트 건너뜀
+    if (inputBuf.startsWith("# ")) return;
+
     const suggestion = findCompletion(inputBuf);
     suggestionRef.current = suggestion;
 
@@ -101,6 +123,43 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, onOutput, onReady }) => {
     ghostTextRef.current = suggestion.suffix;
     setGhostText(suggestion.suffix);
   }, []);
+
+  const triggerAiCompletion = useCallback((term: Terminal, inputBuf: string) => {
+    if (aiDebounceRef.current) clearTimeout(aiDebounceRef.current);
+
+    const prompt = inputBuf.slice(2).trim();
+    if (!prompt) {
+      clearAiGhost();
+      return;
+    }
+
+    const cursorX = term.buffer.active.cursorX;
+    const cursorY = term.buffer.active.cursorY;
+
+    aiDebounceRef.current = setTimeout(() => {
+      setAiLoading(true);
+      invoke<string>("generate_ai_command", {
+        prompt,
+        model: modelRef.current,
+        context: "",
+        imageData: null,
+      })
+        .then((raw) => {
+          const parsed = JSON.parse(raw);
+          const cmd: string = parsed?.command ?? "";
+          if (!cmd) return;
+          aiSuggestionRef.current = cmd;
+          aiGhostRef.current = cmd;
+          setAiGhost({
+            cmd,
+            x: PANE_PADDING_X + cursorX * CELL_W,
+            y: PANE_PADDING_Y + (cursorY + 1) * CELL_H,
+          });
+        })
+        .catch(() => {})
+        .finally(() => setAiLoading(false));
+    }, 600);
+  }, [clearAiGhost]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -128,16 +187,13 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, onOutput, onReady }) => {
 
     const doInitialFit = () => {
       try { fitAddon.fit(); } catch {}
-
       const { cols, rows } = term;
       invoke("spawn_pty", { id, cwd: cwd ?? "", cols, rows }).catch((e: unknown) => {
         term.write(`\r\n\x1b[31m[PTY 오류: ${e}]\x1b[0m\r\n`);
       });
     };
 
-    requestAnimationFrame(() => {
-      setTimeout(doInitialFit, 80);
-    });
+    requestAnimationFrame(() => { setTimeout(doInitialFit, 80); });
 
     const unlistenData = listen<PtyData>("pty_data", (event) => {
       if (event.payload.id !== id) return;
@@ -151,43 +207,69 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, onOutput, onReady }) => {
     });
 
     term.onData((data) => {
-      // Tab intercept — accept ghost text suggestion
-      if (data === "\t" && suggestionRef.current) {
-        invoke("write_to_pty", { id, data: suggestionRef.current.insert }).catch(() => {});
-        inputBufRef.current += suggestionRef.current.insert;
-        suggestionRef.current = null;
-        setGhostText(null);
-        return;
+      // Tab — AI 제안 우선, 없으면 static ghost text
+      if (data === "\t") {
+        if (aiSuggestionRef.current) {
+          // Ctrl+U로 현재 입력 지우고 AI 제안 삽입
+          invoke("write_to_pty", { id, data: "\x15" + aiSuggestionRef.current }).catch(() => {});
+          inputBufRef.current = aiSuggestionRef.current;
+          aiSuggestionRef.current = null;
+          aiGhostRef.current = null;
+          setAiGhost(null);
+          return;
+        }
+        if (suggestionRef.current) {
+          invoke("write_to_pty", { id, data: suggestionRef.current.insert }).catch(() => {});
+          inputBufRef.current += suggestionRef.current.insert;
+          suggestionRef.current = null;
+          ghostTextRef.current = null;
+          setGhostText(null);
+          return;
+        }
       }
 
-      // Track input buffer for ghost text
+      // 입력 버퍼 추적
       if (data === "\r" || data === "\n") {
-        // Command submitted — clear buffer
         inputBufRef.current = "";
+        ghostTextRef.current = null;
         setGhostText(null);
         suggestionRef.current = null;
+        clearAiGhost();
       } else if (data === "\x7f" || data === "\b") {
-        // Backspace
         inputBufRef.current = inputBufRef.current.slice(0, -1);
-        updateGhost(term, inputBufRef.current);
+        const buf = inputBufRef.current;
+        if (buf.startsWith("# ")) {
+          triggerAiCompletion(term, buf);
+        } else {
+          clearAiGhost();
+          updateGhost(term, buf);
+        }
       } else if (data.length === 1 && data >= " ") {
-        // Printable character
         inputBufRef.current += data;
-        updateGhost(term, inputBufRef.current);
+        const buf = inputBufRef.current;
+        if (buf.startsWith("# ")) {
+          // static ghost text 숨기고 AI 완성 트리거
+          if (ghostTextRef.current !== null) { ghostTextRef.current = null; setGhostText(null); }
+          suggestionRef.current = null;
+          triggerAiCompletion(term, buf);
+        } else {
+          clearAiGhost();
+          updateGhost(term, buf);
+        }
       } else if (data === "\x03" || data === "\x04") {
         inputBufRef.current = "";
         ghostTextRef.current = null;
         setGhostText(null);
         suggestionRef.current = null;
+        clearAiGhost();
       } else if (data.startsWith("\x1b")) {
-        // ESC sequences (arrow keys, word-jump, etc.) move cursor without updating inputBuf
-        // Reset buffer to avoid stale ghost text
         inputBufRef.current = "";
         if (ghostTextRef.current !== null) {
           ghostTextRef.current = null;
           setGhostText(null);
           suggestionRef.current = null;
         }
+        clearAiGhost();
       }
 
       invoke("write_to_pty", { id, data }).catch(() => {});
@@ -211,7 +293,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, onOutput, onReady }) => {
       fitAddonRef.current = null;
       spawnedRef.current = false;
     };
-  }, [id, cwd, onOutput, onReady, doFitAndResize, updateGhost]);
+  }, [id, cwd, onOutput, onReady, doFitAndResize, updateGhost, triggerAiCompletion, clearAiGhost]);
 
   return (
     <div
@@ -233,6 +315,8 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, onOutput, onReady }) => {
           boxSizing: "border-box",
         }}
       />
+
+      {/* Static CLI ghost text (Tab 자동완성) */}
       {ghostText && (
         <div
           aria-hidden
@@ -251,6 +335,46 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, onOutput, onReady }) => {
           }}
         >
           {ghostText}
+        </div>
+      )}
+
+      {/* AI 인라인 에디트 팝업 (# 프리픽스) */}
+      {(aiGhost || aiLoading) && (
+        <div
+          aria-hidden
+          style={{
+            position: "absolute",
+            left: PANE_PADDING_X,
+            top: aiGhost ? aiGhost.y : (PANE_PADDING_Y + CELL_H * 2),
+            pointerEvents: "none",
+            zIndex: 20,
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            background: "rgba(13,17,23,0.92)",
+            border: "1px solid rgba(88,166,255,0.25)",
+            borderRadius: 6,
+            padding: "3px 8px",
+            maxWidth: "90%",
+          }}
+        >
+          <span style={{ fontSize: 10, color: "#58a6ff", fontFamily: FONT_FAMILY, opacity: 0.8 }}>
+            ⚡ AI
+          </span>
+          {aiLoading ? (
+            <span style={{ fontSize: 11, color: "rgba(88,166,255,0.5)", fontFamily: FONT_FAMILY }}>
+              생성 중…
+            </span>
+          ) : (
+            <>
+              <span style={{ fontSize: 12, color: "rgba(88,166,255,0.85)", fontFamily: FONT_FAMILY, whiteSpace: "pre" }}>
+                {aiGhost?.cmd}
+              </span>
+              <span style={{ fontSize: 10, color: "rgba(255,255,255,0.25)", fontFamily: FONT_FAMILY }}>
+                Tab
+              </span>
+            </>
+          )}
         </div>
       )}
     </div>

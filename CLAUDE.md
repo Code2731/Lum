@@ -78,3 +78,4 @@ cd src-tauri && cargo test   # Rust 단위 테스트 실행
 - [x] Phase 31: AI Commit Message (git.rs generate_commit_message, git diff --cached + xLLM, CommitPanel UI, Cmd+Shift+G 단축키 완료)
 - [x] Phase 32: xLLM 실전 최적화 (① PD Disaggregation 자동 감지, ② Elastic Scheduling model_for_task, ③ KV Cache Q4/Q8/FP16, switch_xllm_model, XllmPanel UI 완료)
 - [x] Phase 33: CLI Ghost Text Autocomplete + Session Persistence (cliSpecs.ts 10개 툴 DB, ghostText.ts findCompletion, TerminalPane Tab 인터셉트 + 오버레이, session.rs save/load_session, App.tsx 1초 디바운스 자동 저장 + 마운트 복원 완료)
+- [x] Phase 34: AI Inline Edit (# 프리픽스 → generate_ai_command 600ms 디바운스 → ⚡ AI 팝업 + Tab 확정, modelRef 패턴으로 useEffect 재실행 없이 최신 모델 반영 완료)

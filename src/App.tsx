@@ -549,6 +549,7 @@ const App: React.FC = () => {
                       >
                         <TerminalPane
                           id={tab.id}
+                          model={selectedModel}
                           onOutput={handleTerminalOutput(tab.id)}
                           onReady={(write) => { ptyWriteRefs.current.set(tab.id, write); }}
                         />
@@ -569,6 +570,7 @@ const App: React.FC = () => {
                       >
                         <TerminalPane
                           id={splitId(tab.id)}
+                          model={selectedModel}
                           onOutput={handleTerminalOutput(splitId(tab.id))}
                           onReady={(write) => { ptyWriteRefs.current.set(splitId(tab.id), write); }}
                         />
@@ -579,6 +581,7 @@ const App: React.FC = () => {
                   <div className="flex-1">
                     <TerminalPane
                       id={tab.id}
+                      model={selectedModel}
                       onOutput={handleTerminalOutput(tab.id)}
                       onReady={(write) => { ptyWriteRefs.current.set(tab.id, write); }}
                     />
