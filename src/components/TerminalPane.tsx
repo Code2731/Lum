@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useCallback, useState } from "react";
 import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
+import { SearchAddon } from "@xterm/addon-search";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import "@xterm/xterm/css/xterm.css";
@@ -66,7 +67,39 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, model, xtermTheme, fontSize, f
   const containerRef = useRef<HTMLDivElement>(null);
   const termRef = useRef<Terminal | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
+  const searchAddonRef = useRef<SearchAddon | null>(null);
   const spawnedRef = useRef(false);
+
+  // ── Search (Cmd+F) ─────────────────────────────────────────────────────
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchRegex, setSearchRegex] = useState(false);
+  const [searchCase, setSearchCase] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  const doSearch = useCallback((q: string, forward = true) => {
+    const s = searchAddonRef.current;
+    if (!s || !q) return;
+    const opts = { regex: searchRegex, caseSensitive: searchCase, decorations: { matchBackground: "#264f78", matchBorder: "#58a6ff", matchOverviewRuler: "#58a6ff", activeMatchBackground: "#58a6ff55", activeMatchBorder: "#58a6ff", activeMatchColorOverviewRuler: "#58a6ff" } };
+    if (forward) s.findNext(q, opts); else s.findPrevious(q, opts);
+  }, [searchRegex, searchCase]);
+
+  const openSearch = useCallback(() => {
+    setSearchOpen(true);
+    setTimeout(() => searchInputRef.current?.focus(), 50);
+  }, []);
+
+  const closeSearch = useCallback(() => {
+    setSearchOpen(false);
+    setSearchQuery("");
+    searchAddonRef.current?.clearDecorations?.();
+    termRef.current?.focus();
+  }, []);
+
+  // ── AI Explain (? prefix) ──────────────────────────────────────────────
+  const [explainPopup, setExplainPopup] = useState<{ text: string; y: number } | null>(null);
+  const [explainLoading, setExplainLoading] = useState(false);
+  const explainDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const modelRef = useRef(model ?? DEFAULT_MODEL);
   const cwdRef = useRef(cwd ?? "");
@@ -112,6 +145,12 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, model, xtermTheme, fontSize, f
   const aiSuggestionRef = useRef<string | null>(null);
   const aiDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const clearExplain = useCallback(() => {
+    if (explainDebounceRef.current) clearTimeout(explainDebounceRef.current);
+    setExplainPopup(null);
+    setExplainLoading(false);
+  }, []);
+
   const doFitAndResize = useCallback(() => {
     const fit = fitAddonRef.current;
     const term = termRef.current;
@@ -137,7 +176,8 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, model, xtermTheme, fontSize, f
       suggestionRef.current = null;
     }
     clearAiGhost();
-  }, [clearAiGhost]);
+    clearExplain();
+  }, [clearAiGhost, clearExplain]);
 
   const updateGhost = useCallback((term: Terminal, inputBuf: string) => {
     if (inputBuf.startsWith("# ")) return;
@@ -161,6 +201,27 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, model, xtermTheme, fontSize, f
     });
     ghostTextRef.current = suggestion.suffix;
     setGhostText(suggestion.suffix);
+  }, []);
+
+  const triggerExplain = useCallback((term: Terminal, inputBuf: string) => {
+    if (explainDebounceRef.current) clearTimeout(explainDebounceRef.current);
+    const query = inputBuf.slice(2).trim(); // "? " 이후
+    if (!query) { setExplainPopup(null); setExplainLoading(false); return; }
+    const cursorY = term.buffer.active.cursorY;
+    explainDebounceRef.current = setTimeout(async () => {
+      setExplainLoading(true);
+      setExplainPopup(null);
+      try {
+        const explanation = await invoke<string>("explain_command", {
+          command: query,
+          model: modelRef.current,
+        });
+        setExplainLoading(false);
+        setExplainPopup({ text: explanation.trim(), y: PANE_PADDING_Y + (cursorY + 1) * CELL_H });
+      } catch {
+        setExplainLoading(false);
+      }
+    }, 500);
   }, []);
 
   const triggerAiCompletion = useCallback((term: Terminal, inputBuf: string) => {
@@ -222,10 +283,23 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, model, xtermTheme, fontSize, f
     });
 
     const fitAddon = new FitAddon();
+    const searchAddon = new SearchAddon();
     term.loadAddon(fitAddon);
+    term.loadAddon(searchAddon);
     term.open(container);
     termRef.current = term;
     fitAddonRef.current = fitAddon;
+    searchAddonRef.current = searchAddon;
+
+    // Cmd+F / Ctrl+F — 검색창 열기
+    term.attachCustomKeyEventHandler((e) => {
+      const mod = e.metaKey || e.ctrlKey;
+      if (mod && e.key === "f" && e.type === "keydown") {
+        openSearch();
+        return false;
+      }
+      return true;
+    });
 
     const doInitialFit = () => {
       try { fitAddon.fit(); } catch {}
@@ -278,8 +352,13 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, model, xtermTheme, fontSize, f
         const buf = inputBufRef.current;
         if (buf.startsWith("# ")) {
           triggerAiCompletion(term, buf);
+        } else if (buf.startsWith("? ")) {
+          clearAiGhost();
+          if (ghostTextRef.current !== null) { ghostTextRef.current = null; setGhostText(null); }
+          triggerExplain(term, buf);
         } else {
           clearAiGhost();
+          clearExplain();
           updateGhost(term, buf);
         }
       } else if (data.length === 1 && data >= " ") {
@@ -288,9 +367,16 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, model, xtermTheme, fontSize, f
         if (buf.startsWith("# ")) {
           if (ghostTextRef.current !== null) { ghostTextRef.current = null; setGhostText(null); }
           suggestionRef.current = null;
+          clearExplain();
           triggerAiCompletion(term, buf);
+        } else if (buf.startsWith("? ")) {
+          if (ghostTextRef.current !== null) { ghostTextRef.current = null; setGhostText(null); }
+          suggestionRef.current = null;
+          clearAiGhost();
+          triggerExplain(term, buf);
         } else {
           clearAiGhost();
+          clearExplain();
           updateGhost(term, buf);
         }
       } else if (data === "\x03" || data === "\x04" || data.startsWith("\x1b")) {
@@ -310,6 +396,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, model, xtermTheme, fontSize, f
 
     return () => {
       if (aiDebounceRef.current) clearTimeout(aiDebounceRef.current);
+      if (explainDebounceRef.current) clearTimeout(explainDebounceRef.current);
       unlistenData.then((fn) => fn());
       unlistenExit.then((fn) => fn());
       resizeObserver.disconnect();
@@ -317,9 +404,10 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, model, xtermTheme, fontSize, f
       term.dispose();
       termRef.current = null;
       fitAddonRef.current = null;
+      searchAddonRef.current = null;
       spawnedRef.current = false;
     };
-  }, [id, cwd, onOutput, onReady, doFitAndResize, updateGhost, triggerAiCompletion, clearAiGhost, resetInputState]);
+  }, [id, cwd, onOutput, onReady, doFitAndResize, updateGhost, triggerAiCompletion, clearAiGhost, triggerExplain, clearExplain, resetInputState, openSearch]);
 
   return (
     <div
@@ -399,6 +487,124 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, model, xtermTheme, fontSize, f
               </span>
             </>
           )}
+        </div>
+      )}
+
+      {/* ── AI Explain 팝업 (? prefix) ─────────────────────────────────── */}
+      {(explainPopup || explainLoading) && (
+        <div
+          style={{
+            position: "absolute",
+            left: PANE_PADDING_X,
+            top: explainPopup ? explainPopup.y : PANE_PADDING_Y + CELL_H * 2,
+            zIndex: 25,
+            maxWidth: "min(520px, 90%)",
+            background: "rgba(13,17,23,0.97)",
+            border: "1px solid rgba(63,185,80,0.3)",
+            borderRadius: 8,
+            padding: "6px 10px",
+            pointerEvents: "auto",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: explainPopup ? 4 : 0 }}>
+            <span style={{ fontSize: 10, color: "#3fb950", fontFamily: FONT_FAMILY }}>? 설명</span>
+            {!explainLoading && (
+              <button
+                onClick={clearExplain}
+                style={{ marginLeft: "auto", background: "none", border: "none", color: "rgba(255,255,255,0.25)", cursor: "pointer", fontSize: 11, padding: "0 2px" }}
+              >
+                ✕
+              </button>
+            )}
+          </div>
+          {explainLoading ? (
+            <span style={{ fontSize: 11, color: "rgba(63,185,80,0.5)", fontFamily: FONT_FAMILY }}>
+              분석 중…
+            </span>
+          ) : (
+            <span style={{ fontSize: 11, color: "rgba(201,209,217,0.85)", fontFamily: FONT_FAMILY, whiteSpace: "pre-wrap", lineHeight: 1.5 }}>
+              {explainPopup?.text}
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* ── 검색 바 (Cmd+F) ───────────────────────────────────────────── */}
+      {searchOpen && (
+        <div
+          style={{
+            position: "absolute",
+            top: 8,
+            right: 12,
+            zIndex: 30,
+            display: "flex",
+            alignItems: "center",
+            gap: 4,
+            background: "rgba(13,17,23,0.97)",
+            border: "1px solid rgba(88,166,255,0.3)",
+            borderRadius: 8,
+            padding: "4px 6px",
+            boxShadow: "0 4px 16px rgba(0,0,0,0.4)",
+          }}
+        >
+          <input
+            ref={searchInputRef}
+            value={searchQuery}
+            onChange={e => { setSearchQuery(e.target.value); doSearch(e.target.value); }}
+            onKeyDown={e => {
+              if (e.key === "Enter") doSearch(searchQuery, !e.shiftKey);
+              if (e.key === "Escape") closeSearch();
+              e.stopPropagation();
+            }}
+            placeholder="검색…"
+            style={{
+              background: "transparent",
+              border: "none",
+              outline: "none",
+              color: "#c9d1d9",
+              fontSize: 12,
+              fontFamily: FONT_FAMILY,
+              width: 160,
+            }}
+          />
+          {/* 대소문자 */}
+          <button
+            onClick={() => setSearchCase(v => !v)}
+            title="대소문자 구분"
+            style={{
+              background: searchCase ? "rgba(88,166,255,0.2)" : "transparent",
+              border: "1px solid " + (searchCase ? "rgba(88,166,255,0.5)" : "rgba(255,255,255,0.1)"),
+              borderRadius: 4,
+              color: searchCase ? "#58a6ff" : "rgba(255,255,255,0.3)",
+              cursor: "pointer",
+              fontSize: 10,
+              padding: "1px 5px",
+              fontFamily: FONT_FAMILY,
+            }}
+          >
+            Aa
+          </button>
+          {/* 정규식 */}
+          <button
+            onClick={() => setSearchRegex(v => !v)}
+            title="정규식"
+            style={{
+              background: searchRegex ? "rgba(88,166,255,0.2)" : "transparent",
+              border: "1px solid " + (searchRegex ? "rgba(88,166,255,0.5)" : "rgba(255,255,255,0.1)"),
+              borderRadius: 4,
+              color: searchRegex ? "#58a6ff" : "rgba(255,255,255,0.3)",
+              cursor: "pointer",
+              fontSize: 10,
+              padding: "1px 5px",
+              fontFamily: FONT_FAMILY,
+            }}
+          >
+            .*
+          </button>
+          {/* 이전/다음 */}
+          <button onClick={() => doSearch(searchQuery, false)} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.4)", cursor: "pointer", fontSize: 14, padding: "0 2px" }} title="이전 (Shift+Enter)">‹</button>
+          <button onClick={() => doSearch(searchQuery, true)}  style={{ background: "none", border: "none", color: "rgba(255,255,255,0.4)", cursor: "pointer", fontSize: 14, padding: "0 2px" }} title="다음 (Enter)">›</button>
+          <button onClick={closeSearch} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.25)", cursor: "pointer", fontSize: 12, padding: "0 2px" }}>✕</button>
         </div>
       )}
     </div>

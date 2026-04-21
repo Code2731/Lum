@@ -461,3 +461,36 @@ pub async fn verify_vision_goal(
     serde_json::from_str(json_str)
         .map_err(|e| LumError::AiEngine(format!("응답 JSON 파싱 실패: {}. 원본: {}", e, raw)))
 }
+
+/// 커맨드 설명 — ? prefix 입력 시 AI가 역할·옵션·주의사항을 한국어로 설명
+#[command]
+pub async fn explain_command(command: String, model: String) -> Result<String> {
+    let config = load_config()?;
+    let prompt = format!(
+        "다음 터미널 커맨드를 초보자도 이해할 수 있도록 한국어로 설명하세요.\n\
+형식:\n\
+- 첫 줄: 한 줄 요약\n\
+- 주요 옵션/인수 설명 (있을 경우)\n\
+- 주의사항 (있을 경우)\n\
+마크다운 없이 일반 텍스트로만 출력하세요.\n\n\
+커맨드: {}",
+        command
+    );
+    let client = reqwest::Client::new();
+    if !model.is_empty() && config.xllm_base_url.is_some() || config.coding_model.is_some() {
+        match call_xllm(&client, &model, &prompt).await {
+            Ok(r) => return Ok(r.trim().to_string()),
+            Err(_) => {}
+        }
+    }
+    // Gemini 폴백
+    if let Some(key) = &config.gemini_api_key {
+        if !key.is_empty() {
+            match call_gemini(&client, &model, &prompt, None).await {
+                Ok(r) => return Ok(r.trim().to_string()),
+                Err(_) => {}
+            }
+        }
+    }
+    Err(LumError::AiEngine("AI 엔진을 사용할 수 없습니다. xLLM 또는 Gemini API 키를 설정하세요.".into()))
+}

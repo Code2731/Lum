@@ -94,3 +94,5 @@ cd src-tauri && cargo test   # Rust 단위 테스트 실행
 - [x] Phase 40: Terminal Themes & Font (5개 빌트인 테마 Dracula/Tokyo Night/One Dark/Solarized/GitHub Dark, 폰트 크기 슬라이더, 폰트 패밀리 선택, useTerminalTheme 훅, TerminalPane 동적 적용, save_terminal_appearance 커맨드, Cmd+, 단축키 완료)
 - [x] Phase 41: Quick Actions (즐겨찾기 커맨드 바 — useQuickActions 훅, QuickActionsBar/QuickActionsEditor UI, Cmd+Shift+Q 토글, Cmd+1~9 단축키, save_quick_actions 커맨드, 순서 변경/삭제/편집 완료)
 - [x] Phase 42: Smart Tab Rename & Auto-Icon (더블클릭 인라인 rename, OSC 7 cwd 감지 → inferTabIcon 아이콘 자동 변경, Tab.cwd/icon 필드, updateTabCwd 액션 완료)
+- [x] Phase 43: Terminal Search (Cmd+F — @xterm/addon-search, 검색 바 오버레이, 대소문자·정규식 토글, Shift+Enter 이전/Enter 다음 네비게이션 완료)
+- [x] Phase 44: AI Explain Command (? 프리픽스 → explain_command 500ms 디바운스 → 초록 팝업 설명, xLLM/Gemini 폴백, # = 자연어→커맨드 / ? = 커맨드→설명 대칭 UX 완료)

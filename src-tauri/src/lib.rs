@@ -39,6 +39,7 @@ pub fn run() {
             commands::ai::generate_ai_command,
             commands::ai::stream_ai_command,
             commands::ai::analyze_error,
+            commands::ai::explain_command,
             commands::ai::verify_vision_goal,
             commands::ai::check_xllm_status,
             commands::ai::list_xllm_models,
