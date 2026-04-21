@@ -62,7 +62,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, model, onOutput, onReady }) =>
   const fitAddonRef = useRef<FitAddon | null>(null);
   const spawnedRef = useRef(false);
 
-  // model prop을 ref로 유지 — useEffect 재실행 없이 최신값 사용
+  // useEffect 재실행 없이 최신 model 값 참조
   const modelRef = useRef(model ?? DEFAULT_MODEL);
   useEffect(() => { modelRef.current = model ?? DEFAULT_MODEL; }, [model]);
 
@@ -73,10 +73,9 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, model, onOutput, onReady }) =>
   const inputBufRef = useRef("");
   const suggestionRef = useRef<{ suffix: string; insert: string } | null>(null);
 
-  // AI inline edit (# 프리픽스)
-  const [aiGhost, setAiGhost] = useState<{ cmd: string; x: number; y: number } | null>(null);
+  // AI inline edit (# prefix)
+  const [aiGhost, setAiGhost] = useState<{ cmd: string; y: number } | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
-  const aiGhostRef = useRef<string | null>(null);
   const aiSuggestionRef = useRef<string | null>(null);
   const aiDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -93,14 +92,21 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, model, onOutput, onReady }) =>
   const clearAiGhost = useCallback(() => {
     if (aiDebounceRef.current) clearTimeout(aiDebounceRef.current);
     aiSuggestionRef.current = null;
-    if (aiGhostRef.current !== null) {
-      aiGhostRef.current = null;
-      setAiGhost(null);
-    }
+    setAiGhost(null);
   }, []);
 
+  // Enter / Ctrl+C / Ctrl+D / ESC 등 입력 라인 전체 리셋
+  const resetInputState = useCallback(() => {
+    inputBufRef.current = "";
+    if (ghostTextRef.current !== null) {
+      ghostTextRef.current = null;
+      setGhostText(null);
+      suggestionRef.current = null;
+    }
+    clearAiGhost();
+  }, [clearAiGhost]);
+
   const updateGhost = useCallback((term: Terminal, inputBuf: string) => {
-    // # 프리픽스 모드면 static ghost text 업데이트 건너뜀
     if (inputBuf.startsWith("# ")) return;
 
     const suggestion = findCompletion(inputBuf);
@@ -133,7 +139,6 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, model, onOutput, onReady }) =>
       return;
     }
 
-    const cursorX = term.buffer.active.cursorX;
     const cursorY = term.buffer.active.cursorY;
 
     aiDebounceRef.current = setTimeout(() => {
@@ -145,19 +150,17 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, model, onOutput, onReady }) =>
         imageData: null,
       })
         .then((raw) => {
-          const parsed = JSON.parse(raw);
-          const cmd: string = parsed?.command ?? "";
-          if (!cmd) return;
+          const cmd: string = JSON.parse(raw)?.command ?? "";
+          if (!cmd) {
+            setAiLoading(false);
+            return;
+          }
+          // 두 state를 같은 tick에 업데이트해 렌더 1회로 통합
           aiSuggestionRef.current = cmd;
-          aiGhostRef.current = cmd;
-          setAiGhost({
-            cmd,
-            x: PANE_PADDING_X + cursorX * CELL_W,
-            y: PANE_PADDING_Y + (cursorY + 1) * CELL_H,
-          });
+          setAiLoading(false);
+          setAiGhost({ cmd, y: PANE_PADDING_Y + (cursorY + 1) * CELL_H });
         })
-        .catch(() => {})
-        .finally(() => setAiLoading(false));
+        .catch(() => setAiLoading(false));
     }, 600);
   }, [clearAiGhost]);
 
@@ -207,14 +210,11 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, model, onOutput, onReady }) =>
     });
 
     term.onData((data) => {
-      // Tab — AI 제안 우선, 없으면 static ghost text
       if (data === "\t") {
         if (aiSuggestionRef.current) {
-          // Ctrl+U로 현재 입력 지우고 AI 제안 삽입
           invoke("write_to_pty", { id, data: "\x15" + aiSuggestionRef.current }).catch(() => {});
           inputBufRef.current = aiSuggestionRef.current;
           aiSuggestionRef.current = null;
-          aiGhostRef.current = null;
           setAiGhost(null);
           return;
         }
@@ -228,13 +228,8 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, model, onOutput, onReady }) =>
         }
       }
 
-      // 입력 버퍼 추적
       if (data === "\r" || data === "\n") {
-        inputBufRef.current = "";
-        ghostTextRef.current = null;
-        setGhostText(null);
-        suggestionRef.current = null;
-        clearAiGhost();
+        resetInputState();
       } else if (data === "\x7f" || data === "\b") {
         inputBufRef.current = inputBufRef.current.slice(0, -1);
         const buf = inputBufRef.current;
@@ -248,7 +243,6 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, model, onOutput, onReady }) =>
         inputBufRef.current += data;
         const buf = inputBufRef.current;
         if (buf.startsWith("# ")) {
-          // static ghost text 숨기고 AI 완성 트리거
           if (ghostTextRef.current !== null) { ghostTextRef.current = null; setGhostText(null); }
           suggestionRef.current = null;
           triggerAiCompletion(term, buf);
@@ -256,20 +250,8 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, model, onOutput, onReady }) =>
           clearAiGhost();
           updateGhost(term, buf);
         }
-      } else if (data === "\x03" || data === "\x04") {
-        inputBufRef.current = "";
-        ghostTextRef.current = null;
-        setGhostText(null);
-        suggestionRef.current = null;
-        clearAiGhost();
-      } else if (data.startsWith("\x1b")) {
-        inputBufRef.current = "";
-        if (ghostTextRef.current !== null) {
-          ghostTextRef.current = null;
-          setGhostText(null);
-          suggestionRef.current = null;
-        }
-        clearAiGhost();
+      } else if (data === "\x03" || data === "\x04" || data.startsWith("\x1b")) {
+        resetInputState();
       }
 
       invoke("write_to_pty", { id, data }).catch(() => {});
@@ -284,6 +266,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, model, onOutput, onReady }) =>
     window.addEventListener("resize", doFitAndResize);
 
     return () => {
+      if (aiDebounceRef.current) clearTimeout(aiDebounceRef.current);
       unlistenData.then((fn) => fn());
       unlistenExit.then((fn) => fn());
       resizeObserver.disconnect();
@@ -293,7 +276,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, model, onOutput, onReady }) =>
       fitAddonRef.current = null;
       spawnedRef.current = false;
     };
-  }, [id, cwd, onOutput, onReady, doFitAndResize, updateGhost, triggerAiCompletion, clearAiGhost]);
+  }, [id, cwd, onOutput, onReady, doFitAndResize, updateGhost, triggerAiCompletion, clearAiGhost, resetInputState]);
 
   return (
     <div
@@ -316,7 +299,6 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, model, onOutput, onReady }) =>
         }}
       />
 
-      {/* Static CLI ghost text (Tab 자동완성) */}
       {ghostText && (
         <div
           aria-hidden
@@ -338,14 +320,13 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, model, onOutput, onReady }) =>
         </div>
       )}
 
-      {/* AI 인라인 에디트 팝업 (# 프리픽스) */}
       {(aiGhost || aiLoading) && (
         <div
           aria-hidden
           style={{
             position: "absolute",
             left: PANE_PADDING_X,
-            top: aiGhost ? aiGhost.y : (PANE_PADDING_Y + CELL_H * 2),
+            top: aiGhost ? aiGhost.y : PANE_PADDING_Y + CELL_H * 2,
             pointerEvents: "none",
             zIndex: 20,
             display: "flex",
