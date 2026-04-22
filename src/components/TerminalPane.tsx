@@ -73,6 +73,14 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, model, xtermTheme, fontSize, f
   const searchAddonRef = useRef<SearchAddon | null>(null);
   const spawnedRef = useRef(false);
 
+  // 콜백 레퍼런스 — 재초기화 없이 최신 값 참조
+  const onOutputRef = useRef(onOutput);
+  const onReadyRef = useRef(onReady);
+  const onCwdChangeRef = useRef(onCwdChange);
+  useEffect(() => { onOutputRef.current = onOutput; }, [onOutput]);
+  useEffect(() => { onReadyRef.current = onReady; }, [onReady]);
+  useEffect(() => { onCwdChangeRef.current = onCwdChange; }, [onCwdChange]);
+
   // ── Search (Cmd+F) ─────────────────────────────────────────────────────
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -334,12 +342,10 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, model, xtermTheme, fontSize, f
 
     requestAnimationFrame(() => { setTimeout(doInitialFit, 80); });
 
-    const onCwdChangeRef = { current: onCwdChange };
     const unlistenData = listen<PtyData>("pty_data", (event) => {
       if (event.payload.id !== id) return;
       term.write(event.payload.data);
-      onOutput?.(event.payload.data);
-      // OSC 7 — shell cwd 변경 알림
+      onOutputRef.current?.(event.payload.data);
       const newCwd = parseOsc7(event.payload.data);
       if (newCwd) onCwdChangeRef.current?.(newCwd);
     });
@@ -409,7 +415,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, model, xtermTheme, fontSize, f
       invoke("write_to_pty", { id, data }).catch(() => {});
     });
 
-    onReady?.((data) => {
+    onReadyRef.current?.((data) => {
       invoke("write_to_pty", { id, data }).catch(() => {});
     });
 
@@ -430,7 +436,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, model, xtermTheme, fontSize, f
       searchAddonRef.current = null;
       spawnedRef.current = false;
     };
-  }, [id, cwd, onOutput, onReady, doFitAndResize, updateGhost, triggerAiCompletion, clearAiGhost, triggerExplain, clearExplain, resetInputState, openSearch]);
+  }, [id, doFitAndResize, updateGhost, triggerAiCompletion, clearAiGhost, triggerExplain, clearExplain, resetInputState, openSearch]);
 
   return (
     <div
