@@ -3,6 +3,7 @@ use futures::future::join_all;
 use ignore::Walk;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
+use std::time::Duration;
 
 const CHUNK_SIZE: usize = 600;
 const CHUNK_OVERLAP: usize = 100;
@@ -39,6 +40,7 @@ pub struct SearchResult {
 pub async fn embed(client: &reqwest::Client, model: &str, text: &str) -> Option<Vec<f32>> {
     let res = client
         .post(format!("{XLLM_BASE}/v1/embeddings"))
+        .timeout(Duration::from_secs(30))
         .json(&EmbeddingRequest {
             model: model.to_string(),
             input: text.to_string(),
@@ -66,8 +68,16 @@ fn chunk_text(text: &str) -> Vec<String> {
 }
 
 #[tauri::command]
+fn rag_client() -> reqwest::Client {
+    reqwest::Client::builder()
+        .timeout(Duration::from_secs(30))
+        .build()
+        .unwrap_or_default()
+}
+
+#[tauri::command]
 pub async fn index_project(root_path: String, model: String) -> Result<IndexResult, String> {
-    let client = reqwest::Client::new();
+    let client = rag_client();
     let timestamp = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .map_err(|e| format!("시스템 시간 오류: {}", e))?
@@ -146,7 +156,7 @@ pub async fn search_codebase(
     model: String,
     limit: usize,
 ) -> Result<Vec<SearchResult>, String> {
-    let client = reqwest::Client::new();
+    let client = rag_client();
     let embedding = embed(&client, &model, &query)
         .await
         .ok_or("임베딩 생성 실패 — xLLM 서버 상태를 확인하세요.")?;
@@ -169,7 +179,7 @@ pub async fn search_codebase(
 
 #[tauri::command]
 pub async fn generate_embedding(text: String, model: String) -> Result<Vec<f32>, String> {
-    let client = reqwest::Client::new();
+    let client = rag_client();
     embed(&client, &model, &text)
         .await
         .ok_or("임베딩 생성 실패 — xLLM 서버 상태를 확인하세요.".to_string())

@@ -47,7 +47,7 @@ const RagPanel: React.FC<Props> = ({ model, onClose }) => {
         setSwarmResults((prev) => [...prev, event.payload]);
       }
     }).then((fn) => {
-      unlistenRef.current = fn;
+      if (cancelled) fn(); else unlistenRef.current = fn;
     });
 
     swarmTimerRef.current = setTimeout(() => {

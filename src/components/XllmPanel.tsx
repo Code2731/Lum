@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import {
   SlidersHorizontal, Loader2, X, RefreshCw, ArrowLeftRight,
@@ -57,8 +57,12 @@ const XllmPanel: React.FC<Props> = ({ onClose }) => {
   const [isSaving, setIsSaving] = useState(false);
   const [statusMsg, setStatusMsg] = useState<string | null>(null);
   const [isLoadingInfo, setIsLoadingInfo] = useState(false);
+  const switchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // 설정 + 현재 모델 정보 로드
+  useEffect(() => {
+    return () => { if (switchTimerRef.current) clearTimeout(switchTimerRef.current); };
+  }, []);
+
   useEffect(() => {
     invoke<AppConfig>("load_app_config")
       .then((c) => setConfig(c))
@@ -109,7 +113,7 @@ const XllmPanel: React.FC<Props> = ({ onClose }) => {
       });
       setStatusMsg(msg);
       setSwitchTarget("");
-      setTimeout(refreshModelInfo, 1000);
+      switchTimerRef.current = setTimeout(refreshModelInfo, 1000);
     } catch (e) {
       setStatusMsg(`전환 실패: ${e}`);
     } finally {
