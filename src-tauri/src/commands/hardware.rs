@@ -5,41 +5,54 @@ use tauri::command;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct HardwareSpecs {
-    /// 전체 RAM (GB)
     pub total_memory_gb: f32,
-    /// 사용 가능한 RAM (GB)
     pub available_memory_gb: f32,
-    /// CPU 코어 수
     pub cpu_cores: usize,
-    /// GPU 종류: "discrete", "integrated", "none"
     pub gpu_type: String,
-    /// wgpu 가속 지원 여부 (DiscreteGpu or IntegratedGpu)
     pub wgpu_supported: bool,
-    /// GPU 이름 (감지된 경우)
     pub gpu_name: String,
-    /// 추천 엔진: "xllm" | "cpu"
     pub recommended_engine: String,
-    /// 추천 모델 ID (xLLM EXL2)
     pub recommended_model: String,
-    /// 추천 이유
     pub recommendation_reason: String,
 }
 
-/// RAM + GPU 기반 xLLM EXL2 모델 추천 로직
-///
-/// EXL2 모델별 최소 VRAM 요구량 (4bpw 기준):
-///  - 3B  : ~2.5 GB
-///  - 7B  : ~4.5 GB
-///  - 14B : ~8.5 GB
-///  - 32B : ~19 GB
-///
-/// Discrete GPU는 최소 8GB VRAM을 가정 (최신 게이밍 GPU 기준).
-/// Integrated GPU는 공유 RAM을 사용하므로 RAM 기준으로 판단.
+// wgpu GPU 감지 — local-ai 피처 활성화 시
+#[cfg(feature = "local-ai")]
+async fn detect_gpu() -> (String, bool, String) {
+    use wgpu::{DeviceType, Instance, RequestAdapterOptions, PowerPreference};
+    let instance = Instance::default();
+    let adapter = instance
+        .request_adapter(&RequestAdapterOptions {
+            power_preference: PowerPreference::HighPerformance,
+            force_fallback_adapter: false,
+            compatible_surface: None,
+        })
+        .await;
+
+    if let Some(adapter) = adapter {
+        let info = adapter.get_info();
+        let name = info.name.clone();
+        let (gpu_type, supported) = match info.device_type {
+            DeviceType::DiscreteGpu => ("discrete", true),
+            DeviceType::IntegratedGpu | DeviceType::VirtualGpu => ("integrated", true),
+            _ => ("none", false),
+        };
+        (gpu_type.to_string(), supported, name)
+    } else {
+        ("none".to_string(), false, String::new())
+    }
+}
+
+// local-ai 없는 기본 빌드: GPU 감지 생략
+#[cfg(not(feature = "local-ai"))]
+async fn detect_gpu() -> (String, bool, String) {
+    ("none".to_string(), false, String::new())
+}
+
+/// RAM + GPU 기반 xLLM EXL2 모델 추천
 fn recommend_model(total_memory_gb: f32, gpu_type: &str) -> (&'static str, &'static str) {
     match gpu_type {
         "discrete" => {
-            // Discrete GPU: VRAM ≥ 8GB 가정
-            // 더 정밀한 VRAM 감지가 필요하면 플랫폼별 API 사용 필요
             if total_memory_gb >= 32.0 {
                 (
                     "Qwen2.5-Coder-14B-Instruct-EXL2-5bpw",
@@ -53,7 +66,6 @@ fn recommend_model(total_memory_gb: f32, gpu_type: &str) -> (&'static str, &'sta
             }
         }
         "integrated" => {
-            // Integrated GPU: RAM을 공유하므로 RAM 기준
             if total_memory_gb >= 32.0 {
                 (
                     "Qwen2.5-Coder-7B-Instruct-EXL2-4bpw",
@@ -72,7 +84,6 @@ fn recommend_model(total_memory_gb: f32, gpu_type: &str) -> (&'static str, &'sta
             }
         }
         _ => {
-            // GPU 없음: CPU 추론
             if total_memory_gb >= 32.0 {
                 (
                     "Qwen2.5-Coder-7B-Instruct-EXL2-4bpw",
@@ -95,43 +106,15 @@ fn recommend_model(total_memory_gb: f32, gpu_type: &str) -> (&'static str, &'sta
 
 #[command]
 pub async fn get_hardware_specs() -> Result<HardwareSpecs> {
-    // ── RAM 감지 ──────────────────────────────────────────────
     let mut sys = System::new_all();
     sys.refresh_all();
 
-    let total_bytes = sys.total_memory();
-    let available_bytes = sys.available_memory();
-    let total_memory_gb = total_bytes as f32 / 1024.0 / 1024.0 / 1024.0;
-    let available_memory_gb = available_bytes as f32 / 1024.0 / 1024.0 / 1024.0;
+    let total_memory_gb = sys.total_memory() as f32 / 1024.0 / 1024.0 / 1024.0;
+    let available_memory_gb = sys.available_memory() as f32 / 1024.0 / 1024.0 / 1024.0;
     let cpu_cores = sys.cpus().len();
 
-    // ── GPU 감지 (wgpu) ───────────────────────────────────────
-    let instance = wgpu::Instance::default();
-    let adapter = instance
-        .request_adapter(&wgpu::RequestAdapterOptions {
-            power_preference: wgpu::PowerPreference::HighPerformance,
-            force_fallback_adapter: false,
-            compatible_surface: None,
-        })
-        .await;
-
-    let (gpu_type, wgpu_supported, gpu_name) = if let Some(adapter) = adapter {
-        let info = adapter.get_info();
-        let name = info.name.clone();
-        let (gpu_type, supported) = match info.device_type {
-            wgpu::DeviceType::DiscreteGpu => ("discrete", true),
-            wgpu::DeviceType::IntegratedGpu => ("integrated", true),
-            wgpu::DeviceType::VirtualGpu => ("integrated", true),
-            _ => ("none", false),
-        };
-        (gpu_type.to_string(), supported, name)
-    } else {
-        ("none".to_string(), false, "Unknown".to_string())
-    };
-
-    // ── 모델 추천 ─────────────────────────────────────────────
+    let (gpu_type, wgpu_supported, gpu_name) = detect_gpu().await;
     let (recommended_model, recommendation_reason) = recommend_model(total_memory_gb, &gpu_type);
-
     let recommended_engine = if wgpu_supported { "xllm" } else { "cpu" }.to_string();
 
     Ok(HardwareSpecs {

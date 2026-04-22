@@ -47,13 +47,20 @@ jobs:
             librsvg2-dev patchelf libasound2-dev \
             libxdo-dev libxtst-dev libx11-dev libxrandr-dev
 
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
       - name: Install frontend dependencies
-        run: npm install
+        run: npm ci
 
       - name: Build and release
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           tagName: ${{ github.ref_name }}
           releaseName: 'LUM ${{ github.ref_name }}'
@@ -68,8 +75,10 @@ jobs:
             - **Windows**: `LUM-Setup.exe` (NSIS) 또는 `LUM_x64_en-US.msi`
             - **Linux**: `lum_amd64.deb` 또는 `lum_amd64.AppImage`
 
+            > 코드 서명이 없으므로 macOS는 `우클릭 → 열기`, Windows는 `추가 정보 → 실행`으로 설치하세요.
+
             ### 주요 변경사항
             이 릴리즈의 변경사항은 [CHANGELOG](https://github.com/Code2731/Lum/commits/main)를 참고하세요.
-          releaseDraft: false
+          releaseDraft: true
           prerelease: false
           args: ${{ matrix.args }}

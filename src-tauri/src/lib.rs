@@ -1,4 +1,5 @@
 pub mod audio;
+#[cfg(feature = "local-ai")]
 pub mod burn_inference;
 pub mod commands;
 pub mod desktop;
@@ -28,6 +29,8 @@ pub fn run() {
         .manage(terminal_state)
         .manage(mcp_state)
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
         .invoke_handler(tauri::generate_handler![
             // Hardware
             commands::hardware::get_hardware_specs,
@@ -98,10 +101,15 @@ pub fn run() {
             commands::context::get_project_context,
             // Updater
             commands::updater::check_for_update,
+            commands::updater::install_update,
             // xLLM 모델 관리
             commands::xllm::get_xllm_model_info,
             commands::xllm::switch_xllm_model,
             commands::xllm::unload_xllm_model,
+            // SSH 프로필 영속성
+            commands::ssh_profiles::list_ssh_profiles,
+            commands::ssh_profiles::save_ssh_profile,
+            commands::ssh_profiles::delete_ssh_profile,
             // MCP Tools
             mcp::call_mcp_tool,
             mcp::list_internal_tools

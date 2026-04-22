@@ -26,6 +26,14 @@
       "csp": null
     }
   },
+  "plugins": {
+    "updater": {
+      "pubkey": "PLACEHOLDER_REPLACE_WITH_OUTPUT_OF: npm run tauri signer generate",
+      "endpoints": [
+        "https://github.com/Code2731/Lum/releases/latest/download/latest.json"
+      ]
+    }
+  },
   "bundle": {
     "active": true,
     "targets": ["msi", "nsis", "dmg", "deb", "appimage"],

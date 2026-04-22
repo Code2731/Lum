@@ -39,6 +39,7 @@ import CommandPalette from "./components/CommandPalette";
 import TabContextMenu from "./components/TabContextMenu";
 import ResizeHandles from "./components/ResizeHandles";
 import WindowControls from "./components/WindowControls";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import { TAB_COLORS } from "./hooks/useTabManager";
 
 type ViewMode = "terminal" | "canvas" | "list";
@@ -80,7 +81,7 @@ const App: React.FC = () => {
   const { actions: quickActions, addAction, updateAction, deleteAction, moveAction } = useQuickActions();
   const { workspaces, loading: wsLoading, loadWorkspaces, saveWorkspace, deleteWorkspace } = useWorkspace();
 
-  const { updateInfo, dismissUpdate } = useUpdateCheck();
+  const { updateInfo, installing, progress, installError, installUpdate, dismissUpdate } = useUpdateCheck();
 
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showQuickBar, setShowQuickBar] = useState(true);
@@ -364,26 +365,48 @@ const App: React.FC = () => {
 
       {/* ── 업데이트 배너 ───────────────────────────────────────── */}
       {updateInfo && (
-        <div className="flex items-center gap-2 px-4 py-1.5 bg-accent/10 border-b border-accent/20 shrink-0 text-[11px]">
-          <ArrowUpCircle size={12} className="text-accent shrink-0" />
-          <span className="text-white/70">
-            새 버전 <span className="text-accent font-semibold">v{updateInfo.latest}</span> 출시 — {updateInfo.releaseName}
-          </span>
-          <a
-            href={updateInfo.releaseUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="ml-1 text-accent hover:text-accent/80 underline underline-offset-2 transition-colors"
-          >
-            다운로드
-          </a>
-          <button
-            onClick={dismissUpdate}
-            className="ml-auto text-white/30 hover:text-white/60 transition-colors"
-            aria-label="알림 닫기"
-          >
-            <X size={11} />
-          </button>
+        <div className="flex flex-col gap-1 px-4 py-1.5 bg-accent/10 border-b border-accent/20 shrink-0">
+          <div className="flex items-center gap-2 text-[11px]">
+            <ArrowUpCircle size={12} className="text-accent shrink-0" />
+            <span className="text-white/70">
+              새 버전 <span className="text-accent font-semibold">v{updateInfo.latest}</span> 출시 — {updateInfo.releaseName}
+            </span>
+            {!installing && (
+              <button
+                onClick={installUpdate}
+                className="ml-1 text-accent hover:text-accent/80 font-medium underline underline-offset-2 transition-colors"
+              >
+                지금 설치
+              </button>
+            )}
+            {installing && !progress && (
+              <span className="ml-1 text-white/40">준비 중…</span>
+            )}
+            {installError && (
+              <span className="ml-1 text-red-400 truncate max-w-xs">{installError}</span>
+            )}
+            <button
+              onClick={dismissUpdate}
+              disabled={installing}
+              className="ml-auto text-white/30 hover:text-white/60 disabled:opacity-30 transition-colors"
+              aria-label="알림 닫기"
+            >
+              <X size={11} />
+            </button>
+          </div>
+          {installing && progress && progress.total > 0 && (
+            <div className="flex items-center gap-2 text-[10px] text-white/40 pb-0.5">
+              <div className="flex-1 h-1 bg-white/10 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-accent rounded-full transition-all duration-150"
+                  style={{ width: `${Math.min(100, (progress.downloaded / progress.total) * 100).toFixed(1)}%` }}
+                />
+              </div>
+              <span className="tabular-nums shrink-0">
+                {(progress.downloaded / 1024 / 1024).toFixed(1)} / {(progress.total / 1024 / 1024).toFixed(1)} MB
+              </span>
+            </div>
+          )}
         </div>
       )}
 
@@ -528,18 +551,20 @@ const App: React.FC = () => {
                   >
                     <Panel minSize={20}>
                       <PaneWrapper paneId={tab.id} activePaneId={activePaneId} onFocus={setActivePaneId}>
-                        <TerminalPane
-                          id={tab.id}
-                          cwd={tab.cwd}
-                          sshProfile={tab.sshProfile}
-                          model={selectedModel}
-                          xtermTheme={xtermTheme}
-                          fontSize={appearance.fontSize}
-                          fontFamily={appearance.fontFamily}
-                          onOutput={handleTerminalOutput(tab.id)}
-                          onCwdChange={cwd => updateTabCwd(tab.id, cwd, inferTabIcon(cwd))}
-                          onReady={(write) => { ptyWriteRefs.current.set(tab.id, write); }}
-                        />
+                        <ErrorBoundary label="터미널">
+                          <TerminalPane
+                            id={tab.id}
+                            cwd={tab.cwd}
+                            sshProfile={tab.sshProfile}
+                            model={selectedModel}
+                            xtermTheme={xtermTheme}
+                            fontSize={appearance.fontSize}
+                            fontFamily={appearance.fontFamily}
+                            onOutput={handleTerminalOutput(tab.id)}
+                            onCwdChange={cwd => updateTabCwd(tab.id, cwd, inferTabIcon(cwd))}
+                            onReady={(write) => { ptyWriteRefs.current.set(tab.id, write); }}
+                          />
+                        </ErrorBoundary>
                       </PaneWrapper>
                     </Panel>
                     <PanelResizeHandle
@@ -551,35 +576,39 @@ const App: React.FC = () => {
                     />
                     <Panel minSize={20}>
                       <PaneWrapper paneId={splitId(tab.id)} activePaneId={activePaneId} onFocus={setActivePaneId}>
-                        <TerminalPane
-                          id={splitId(tab.id)}
-                          cwd={tab.cwd}
-                          sshProfile={tab.sshProfile}
-                          model={selectedModel}
-                          xtermTheme={xtermTheme}
-                          fontSize={appearance.fontSize}
-                          fontFamily={appearance.fontFamily}
-                          onOutput={handleTerminalOutput(splitId(tab.id))}
-                          onCwdChange={cwd => updateTabCwd(splitId(tab.id), cwd, inferTabIcon(cwd))}
-                          onReady={(write) => { ptyWriteRefs.current.set(splitId(tab.id), write); }}
-                        />
+                        <ErrorBoundary label="터미널">
+                          <TerminalPane
+                            id={splitId(tab.id)}
+                            cwd={tab.cwd}
+                            sshProfile={tab.sshProfile}
+                            model={selectedModel}
+                            xtermTheme={xtermTheme}
+                            fontSize={appearance.fontSize}
+                            fontFamily={appearance.fontFamily}
+                            onOutput={handleTerminalOutput(splitId(tab.id))}
+                            onCwdChange={cwd => updateTabCwd(splitId(tab.id), cwd, inferTabIcon(cwd))}
+                            onReady={(write) => { ptyWriteRefs.current.set(splitId(tab.id), write); }}
+                          />
+                        </ErrorBoundary>
                       </PaneWrapper>
                     </Panel>
                   </PanelGroup>
                 ) : (
                   <div className="flex-1">
-                    <TerminalPane
-                      id={tab.id}
-                      cwd={tab.cwd}
-                      sshProfile={tab.sshProfile}
-                      model={selectedModel}
-                      xtermTheme={xtermTheme}
-                      fontSize={appearance.fontSize}
-                      fontFamily={appearance.fontFamily}
-                      onOutput={handleTerminalOutput(tab.id)}
-                      onCwdChange={cwd => updateTabCwd(tab.id, cwd, inferTabIcon(cwd))}
-                      onReady={(write) => { ptyWriteRefs.current.set(tab.id, write); }}
-                    />
+                    <ErrorBoundary label="터미널">
+                      <TerminalPane
+                        id={tab.id}
+                        cwd={tab.cwd}
+                        sshProfile={tab.sshProfile}
+                        model={selectedModel}
+                        xtermTheme={xtermTheme}
+                        fontSize={appearance.fontSize}
+                        fontFamily={appearance.fontFamily}
+                        onOutput={handleTerminalOutput(tab.id)}
+                        onCwdChange={cwd => updateTabCwd(tab.id, cwd, inferTabIcon(cwd))}
+                        onReady={(write) => { ptyWriteRefs.current.set(tab.id, write); }}
+                      />
+                    </ErrorBoundary>
                   </div>
                 )}
               </div>
@@ -649,7 +678,9 @@ const App: React.FC = () => {
 
         {showRagPanel && (
           <div className="w-80 border-l border-white/5 shrink-0 overflow-hidden">
-            <RagPanel model={selectedModel} onClose={() => setShowRagPanel(false)} />
+            <ErrorBoundary label="RAG">
+              <RagPanel model={selectedModel} onClose={() => setShowRagPanel(false)} />
+            </ErrorBoundary>
           </div>
         )}
 
@@ -694,22 +725,28 @@ const App: React.FC = () => {
       )}
 
       {showCommitPanel && (
-        <CommitPanel
-          model={selectedModel}
-          onExecute={handleCommitExecute}
-          onClose={() => setShowCommitPanel(false)}
-        />
+        <ErrorBoundary label="커밋">
+          <CommitPanel
+            model={selectedModel}
+            onExecute={handleCommitExecute}
+            onClose={() => setShowCommitPanel(false)}
+          />
+        </ErrorBoundary>
       )}
 
       {showXllmPanel && (
-        <XllmPanel onClose={() => setShowXllmPanel(false)} />
+        <ErrorBoundary label="xLLM">
+          <XllmPanel onClose={() => setShowXllmPanel(false)} />
+        </ErrorBoundary>
       )}
 
       {showDiffReview && (
-        <DiffReviewPanel
-          model={selectedModel}
-          onClose={() => setShowDiffReview(false)}
-        />
+        <ErrorBoundary label="Diff 리뷰">
+          <DiffReviewPanel
+            model={selectedModel}
+            onClose={() => setShowDiffReview(false)}
+          />
+        </ErrorBoundary>
       )}
 
       {showThemePanel && (

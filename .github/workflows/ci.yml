@@ -45,6 +45,11 @@ jobs:
       - name: Rust Format Check
         run: cd src-tauri && cargo fmt -- --check
 
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
       - name: Backend Check & Clippy
         run: cd src-tauri && cargo check && cargo clippy -- -D warnings
 

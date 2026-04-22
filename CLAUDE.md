@@ -11,7 +11,8 @@ LUM (Local Universal Machine) — Warp 스타일 블록 기반 AI 터미널 에�
 ```bash
 npm install                  # 프론트엔드 의존성 설치
 npm run tauri dev            # 개발 모드 실행 (Rust + Vite HMR)
-npm run tauri build          # 프로덕션 빌드
+npm run tauri build          # 프로덕션 빌드 (경량 — burn/wgpu 제외)
+npm run tauri build -- --features local-ai  # 로컬 AI 추론 포함 빌드
 ./run.sh                     # (선택) Ollama 자동 시작 + 개발 모드 실행 (macOS/Linux)
 run.bat                      # (선택) Ollama 자동 시작 + 개발 모드 실행 (Windows)
 ```
@@ -22,6 +23,8 @@ run.bat                      # (선택) Ollama 자동 시작 + 개발 모드 실
 
 ```bash
 npm test                     # Vitest 실행 (프론트엔드 단위/통합 테스트)
+npx playwright test          # E2E 스모크 테스트 (Tauri invoke 모킹, Vite 서버 필요)
+npx playwright test --ui     # E2E UI 모드
 cd src-tauri && cargo test   # Rust 단위 테스트 실행
 ```
 
@@ -39,20 +42,24 @@ cd src-tauri && cargo test   # Rust 단위 테스트 실행
 ### Frontend (`src/`)
 - **App.tsx**: 메인 레이아웃 (~370줄). 커스텀 훅으로 상태를 위임하고 렌더링만 담당.
 - **커스텀 훅** (`src/hooks/`):
-  - `useTabManager` — 탭/팬 상태 + 세션 저장/복원 (`~/.lum_session.json`, 1초 디바운스)
+  - `useTabManager` — 탭/팬 상태 + 세션 저장/복원 (`~/.lum_session.json`, 1초 디바운스). `SshProfile` 타입 포함.
   - `useAutoHealing` — 터미널 출력 에러 감지 → AI 분석 → 안전도 배지 → PTY 실행
   - `usePanelVisibility` — 모달·사이드패널 show/hide 상태 일괄 관리
-  - `useUpdateCheck` — GitHub Releases API 버전 비교, 업데이트 배너
+  - `useUpdateCheck` — GitHub Releases API 버전 비교 + `tauri-plugin-updater` 기반 다운로드/설치/재시작
   - `useCommandBlocks` — OSC 133 파싱, 커맨드 블록 히스토리
+  - `useSshProfiles` — SSH 프로필 저장/불러오기 (`~/.lum_ssh_profiles.json`)
   - `useTerminalBlocks`, `useAIProcessing`, `useHardwareSpecs` — AI·하드웨어 레이어
+- **ErrorBoundary** (`src/components/ErrorBoundary.tsx`): 터미널·패널 크래시 격리. `label` prop으로 위치 식별.
+- **E2E 테스트** (`e2e/`): Playwright 스모크 테스트 5개. Tauri invoke 모킹(`e2e/setup/tauri-mock.ts`).
 - **UI/UX**: `react-resizable-panels`(스플릿), `react-virtuoso`(가상 스크롤), `react-markdown`(AI 답변).
-- **영속성**: `.lum_session.json` 및 `.lum_config.json`, `.lum_code_index.json`을 통한 데이터/설정 유지.
+- **영속성**: `.lum_session.json`, `.lum_config.json`, `.lum_code_index.json`, `.lum_ssh_profiles.json`을 통한 데이터/설정 유지.
 
 ## Tech Stack
 
-- **Rust**: Tauri v2, portable-pty, ignore, reqwest, futures-util
-- **Frontend**: React 19, TypeScript, Tailwind CSS v4, Vitest, Fuse.js, react-markdown, react-resizable-panels, react-virtuoso, PrismJS
+- **Rust**: Tauri v2, portable-pty, tauri-plugin-updater, tauri-plugin-process, ignore, reqwest, futures-util
+- **Frontend**: React 19, TypeScript, Tailwind CSS v4, Vitest, Playwright, Fuse.js, react-markdown, react-resizable-panels, react-virtuoso, PrismJS
 - **AI**: xLLM(TabbyAPI/ExLlamaV2) 로컬 서버, Gemini Cloud API 폴백
+- **Cargo Features**: `local-ai` — burn/wgpu/tokenizers/hf-hub 포함 (기본 빌드에서 제외, 배포 바이너리 ~150MB 절감)
 
 ## Key Conventions
 
@@ -106,3 +113,8 @@ cd src-tauri && cargo test   # Rust 단위 테스트 실행
 - [x] Phase 47: SSH Terminal (spawn_ssh_pty — 시스템 ssh 바이너리를 portable-pty로 실행, write/resize/close 기존 PTY 인프라 재사용, SshConnectModal UI, Cmd+Shift+H 단축키, 탭 바 🔒 SSH 인디케이터 완료)
 - [x] Phase 48: CLI Autocomplete DB 확장 (cliSpecs.ts 10개 → 38개: yarn/pnpm/python/pip/docker-compose/terraform/helm/rsync/make/ps/kill/tar/chmod/apt/brew/ping/cat/tail/head/wc/sed/awk/vim/systemctl/journalctl/lsof/netstat/scp 추가 완료)
 - [x] Phase 49: Smart Diff Truncation (git.rs smart_truncate_diff — 단순 cut-off 대신 파일 단위 분할 + 균등 예산 배분, 모든 변경 파일을 AI가 커버 가능 완료)
+- [x] Phase 50: React ErrorBoundary (ErrorBoundary.tsx 클래스 컴포넌트, TerminalPane 3개 + RagPanel/CommitPanel/XllmPanel/DiffReviewPanel 래핑, label prop 위치 식별, 다시 시도 버튼 완료)
+- [x] Phase 51: Playwright E2E 스모크 테스트 (tauri-mock.ts invoke 모킹, smoke.spec.ts 5개 테스트 — 앱 로드/탭 생성/SSH 모달/Escape/커맨드 팔레트, tsconfig.e2e.json 분리 완료)
+- [x] Phase 52: SSH 프로필 영속성 (ssh_profiles.rs list/save/delete_ssh_profile, ~/.lum_ssh_profiles.json, useSshProfiles.ts RustSshProfileEntry 브릿지 타입, SshConnectModal 저장된 프로필 목록 + 저장 체크박스 완료)
+- [x] Phase 53: 자동 업데이트 설치 (tauri-plugin-updater 연동, install_update 커맨드, update_progress 이벤트 → 진행률 바 UI, app.restart() 자동 재시작, GitHub Actions TAURI_SIGNING_PRIVATE_KEY 서명 완료)
+- [x] Phase 54: 성능 최적화 — local-ai Feature Flag (burn/burn-wgpu/wgpu/tokenizers/hf-hub를 optional dep으로 분리, default 빌드에서 ~150MB 절감, hardware.rs GPU 감지 cfg 조건부 컴파일, CI/release.yml Rust 캐시 추가 완료)

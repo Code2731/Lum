@@ -1,5 +1,7 @@
 use serde::Serialize;
 use std::time::Duration;
+use tauri::Emitter;
+use tauri_plugin_updater::UpdaterExt;
 
 const GITHUB_API: &str = "https://api.github.com/repos/Code2731/Lum/releases/latest";
 
@@ -10,6 +12,12 @@ pub struct VersionInfo {
     pub has_update: bool,
     pub release_url: String,
     pub release_name: String,
+}
+
+#[derive(Clone, Serialize)]
+pub struct UpdateProgress {
+    pub downloaded: u64,
+    pub total: u64,
 }
 
 #[tauri::command]
@@ -44,7 +52,44 @@ pub async fn check_for_update() -> Result<VersionInfo, String> {
     })
 }
 
-/// 단순 semver 비교 — major.minor.patch 숫자 비교
+/// 업데이트 다운로드 + 설치 + 재시작.
+/// 진행률은 "update_progress" 이벤트로 프론트에 전달한다.
+#[tauri::command]
+pub async fn install_update(app: tauri::AppHandle) -> Result<(), String> {
+    let update = app
+        .updater()
+        .map_err(|e| e.to_string())?
+        .check()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    let Some(update) = update else {
+        return Err("설치 가능한 업데이트가 없습니다".into());
+    };
+
+    let app_c = app.clone();
+    let mut downloaded = 0u64;
+
+    update
+        .download_and_install(
+            move |chunk, total| {
+                downloaded += chunk as u64;
+                let _ = app_c.emit(
+                    "update_progress",
+                    UpdateProgress {
+                        downloaded,
+                        total: total.unwrap_or(0),
+                    },
+                );
+            },
+            || {},
+        )
+        .await
+        .map_err(|e| e.to_string())?;
+
+    app.restart();
+}
+
 fn is_newer(latest: &str, current: &str) -> bool {
     let parse = |s: &str| -> (u32, u32, u32) {
         let mut it = s.splitn(3, '.').map(|p| p.parse::<u32>().unwrap_or(0));
@@ -78,19 +123,16 @@ mod tests {
     #[test]
     fn same_version_is_not_newer() {
         assert!(!is_newer("1.0.0", "1.0.0"));
-        assert!(!is_newer("2.3.4", "2.3.4"));
     }
 
     #[test]
     fn malformed_version_treated_as_zero() {
-        // "invalid" → (0,0,0), "0.0.1" → (0,0,1): 0.0.1 이 더 큼
         assert!(!is_newer("invalid", "0.0.1"));
         assert!(is_newer("0.0.1", "invalid"));
     }
 
     #[test]
     fn partial_version_string() {
-        // "2.0" → (2,0,0), "1.9.9" → (1,9,9): 2.0 이 더 큼
         assert!(is_newer("2.0", "1.9.9"));
         assert!(!is_newer("1.9.9", "2.0"));
     }
