@@ -73,13 +73,14 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, model, xtermTheme, fontSize, f
   const searchAddonRef = useRef<SearchAddon | null>(null);
   const spawnedRef = useRef(false);
 
-  // 콜백 레퍼런스 — 재초기화 없이 최신 값 참조
   const onOutputRef = useRef(onOutput);
   const onReadyRef = useRef(onReady);
   const onCwdChangeRef = useRef(onCwdChange);
-  useEffect(() => { onOutputRef.current = onOutput; }, [onOutput]);
-  useEffect(() => { onReadyRef.current = onReady; }, [onReady]);
-  useEffect(() => { onCwdChangeRef.current = onCwdChange; }, [onCwdChange]);
+  useEffect(() => {
+    onOutputRef.current = onOutput;
+    onReadyRef.current = onReady;
+    onCwdChangeRef.current = onCwdChange;
+  }, [onOutput, onReady, onCwdChange]);
 
   // ── Search (Cmd+F) ─────────────────────────────────────────────────────
   const [searchOpen, setSearchOpen] = useState(false);
