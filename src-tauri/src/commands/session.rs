@@ -13,6 +13,10 @@ pub struct SessionTab {
     pub title: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub split_dir: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub color: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub group: Option<String>,
 }
 
 #[derive(Serialize, Deserialize)]

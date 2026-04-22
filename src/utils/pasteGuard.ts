@@ -14,7 +14,7 @@ const RULES: Array<{ re: RegExp; reason: string; level: "warn" | "danger" }> = [
   { re: /sudo\s+rm/i,                                    reason: "root 권한 삭제",               level: "warn"   },
   { re: /sudo\s+dd/i,                                    reason: "root 권한 디스크 쓰기",         level: "danger" },
   { re: /chmod\s+-R\s+777/i,                             reason: "전체 권한 개방 (777)",          level: "warn"   },
-  { re: /:()\s*\{.*:\|:&\}/,                             reason: "Fork Bomb",                   level: "danger" },
+  { re: /:\(\)\s*\{.*:\|:&\}/,                            reason: "Fork Bomb",                   level: "danger" },
 ];
 
 export function checkPasteDanger(text: string): DangerMatch | null {

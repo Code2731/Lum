@@ -477,7 +477,7 @@ pub async fn explain_command(command: String, model: String) -> Result<String> {
         command
     );
     let client = reqwest::Client::new();
-    if !model.is_empty() && config.xllm_base_url.is_some() || config.coding_model.is_some() {
+    if !model.is_empty() && (config.xllm_base_url.is_some() || config.coding_model.is_some()) {
         match call_xllm(&client, &model, &prompt).await {
             Ok(r) => return Ok(r.trim().to_string()),
             Err(_) => {}

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 
 export interface QuickAction {
@@ -9,20 +9,21 @@ export interface QuickAction {
 }
 
 const SAVE_DEBOUNCE_MS = 800;
-let saveTimer: ReturnType<typeof setTimeout> | null = null;
 
 export function useQuickActions() {
   const [actions, setActions] = useState<QuickAction[]>([]);
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     invoke<{ quick_actions?: QuickAction[] }>("load_app_config")
       .then(cfg => setActions(cfg.quick_actions ?? []))
       .catch(() => {});
+    return () => { if (saveTimerRef.current) clearTimeout(saveTimerRef.current); };
   }, []);
 
   const persist = useCallback((next: QuickAction[]) => {
-    if (saveTimer) clearTimeout(saveTimer);
-    saveTimer = setTimeout(() => {
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => {
       invoke("save_quick_actions", { actions: next }).catch(() => {});
     }, SAVE_DEBOUNCE_MS);
   }, []);
