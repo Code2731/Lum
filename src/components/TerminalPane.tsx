@@ -7,7 +7,10 @@ import { listen } from "@tauri-apps/api/event";
 import "@xterm/xterm/css/xterm.css";
 import { findCompletion } from "../utils/ghostText";
 import { parseOsc7 } from "../utils/tabIcon";
+import { checkPasteDanger } from "../utils/pasteGuard";
+import PasteGuardModal from "./PasteGuardModal";
 import type { XtermTheme } from "../hooks/useTerminalTheme";
+import type { DangerMatch } from "../utils/pasteGuard";
 
 interface PtyData {
   id: string;
@@ -132,6 +135,9 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, model, xtermTheme, fontSize, f
     term.options.fontFamily = fontFamily ? `"${fontFamily}", ${fallback}` : FONT_FAMILY;
   }, [fontFamily]);
 
+  // Paste guard
+  const [pasteGuard, setPasteGuard] = useState<{ match: DangerMatch; text: string } | null>(null);
+
   // Static CLI ghost text
   const [ghostText, setGhostText] = useState<string | null>(null);
   const [ghostPos, setGhostPos] = useState({ x: 0, y: 0 });
@@ -149,6 +155,23 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, model, xtermTheme, fontSize, f
     if (explainDebounceRef.current) clearTimeout(explainDebounceRef.current);
     setExplainPopup(null);
     setExplainLoading(false);
+  }, []);
+
+  useEffect(() => {
+    const el = outerRef.current;
+    if (!el) return;
+    const handler = (e: ClipboardEvent) => {
+      const text = e.clipboardData?.getData("text") ?? "";
+      if (!text) return;
+      const danger = checkPasteDanger(text);
+      if (danger) {
+        e.preventDefault();
+        e.stopPropagation();
+        setPasteGuard({ match: danger, text });
+      }
+    };
+    el.addEventListener("paste", handler, { capture: true });
+    return () => el.removeEventListener("paste", handler, { capture: true });
   }, []);
 
   const doFitAndResize = useCallback(() => {
@@ -606,6 +629,17 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, model, xtermTheme, fontSize, f
           <button onClick={() => doSearch(searchQuery, true)}  style={{ background: "none", border: "none", color: "rgba(255,255,255,0.4)", cursor: "pointer", fontSize: 14, padding: "0 2px" }} title="다음 (Enter)">›</button>
           <button onClick={closeSearch} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.25)", cursor: "pointer", fontSize: 12, padding: "0 2px" }}>✕</button>
         </div>
+      )}
+
+      {pasteGuard && (
+        <PasteGuardModal
+          match={pasteGuard.match}
+          onConfirm={() => {
+            invoke("write_to_pty", { id, data: pasteGuard.text }).catch(() => {});
+            setPasteGuard(null);
+          }}
+          onCancel={() => setPasteGuard(null)}
+        />
       )}
     </div>
   );

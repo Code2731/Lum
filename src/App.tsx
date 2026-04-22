@@ -33,6 +33,9 @@ import DiffReviewPanel from "./components/DiffReviewPanel";
 import ThemePanel from "./components/ThemePanel";
 import QuickActionsBar from "./components/QuickActionsBar";
 import WorkspacePanel from "./components/WorkspacePanel";
+import CommandPalette from "./components/CommandPalette";
+import TabContextMenu from "./components/TabContextMenu";
+import { TAB_COLORS } from "./hooks/useTabManager";
 
 type ViewMode = "terminal" | "canvas" | "list";
 
@@ -48,7 +51,8 @@ const App: React.FC = () => {
   const {
     tabs, activeTabId, activePaneId, setActivePaneId,
     activeTabIdRef, activePaneIdRef, ptyWriteRefs,
-    addTab, closeTab, switchTab, toggleSplit, renameTab, updateTabCwd, restoreTabs,
+    addTab, closeTab, switchTab, toggleSplit, renameTab, updateTabCwd,
+    updateTabColor, updateTabGroup, restoreTabs,
   } = useTabManager(undefined);
 
   const {
@@ -79,6 +83,9 @@ const App: React.FC = () => {
   // 탭 더블클릭 rename 상태
   const [renamingTabId, setRenamingTabId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
+  const [showPalette, setShowPalette] = useState(false);
+  const [tabCtxMenu, setTabCtxMenu] = useState<{ tabId: string; x: number; y: number } | null>(null);
+  const [recentCmds, setRecentCmds] = useState<string[]>([]);
   const [viewMode, setViewMode] = useState<ViewMode>("terminal");
   const [xllmOnline, setXllmOnline] = useState(false);
   const [aiInput, setAiInput] = useState("");
@@ -100,7 +107,7 @@ const App: React.FC = () => {
       .catch(() => setXllmOnline(false));
   }, []);
 
-  // 새 커맨드 블록 완료 시 시맨틱 히스토리 저장
+  // 새 커맨드 블록 완료 시 시맨틱 히스토리 저장 + 팔레트용 최근 커맨드 갱신
   const cmdBlocksLenRef = useRef(0);
   useEffect(() => {
     if (cmdBlocks.length <= cmdBlocksLenRef.current) return;
@@ -116,6 +123,13 @@ const App: React.FC = () => {
         }).catch(() => {});
       }
     }
+    setRecentCmds(
+      cmdBlocks
+        .filter(b => b.command.trim())
+        .map(b => b.command)
+        .slice(-20)
+        .reverse(),
+    );
   }, [cmdBlocks, selectedModel]);
 
   const handleTerminalOutput = useCallback(
@@ -174,7 +188,11 @@ const App: React.FC = () => {
 
     const handler = (e: KeyboardEvent) => {
       const mod = e.metaKey || e.ctrlKey;
-      if (mod && e.key === "k") {
+      if (mod && !e.shiftKey && e.key === "k") {
+        e.preventDefault();
+        setShowPalette(v => !v);
+      }
+      if (mod && e.shiftKey && e.key === "k") {
         e.preventDefault();
         setShowAiBar((v) => {
           if (!v) setTimeout(() => aiInputRef.current?.focus(), 50);
@@ -205,6 +223,8 @@ const App: React.FC = () => {
       }
       if (e.key === "Escape") {
         setShowAiBar(false);
+        setShowPalette(false);
+        setTabCtxMenu(null);
         closeOverlays();
       }
     };
@@ -213,7 +233,7 @@ const App: React.FC = () => {
       window.removeEventListener("keydown", captureHandler, { capture: true });
       window.removeEventListener("keydown", handler);
     };
-  }, [addTabWithReset, closeTabWithReset, toggleSplit, closeOverlays, activeTabIdRef, setShowCommitPanel, setShowHistorySearch, setShowDiffReview, setShowThemePanel, quickActions, ptyWriteRefs, activePaneIdRef, setShowWorkspace, loadWorkspaces]);
+  }, [addTabWithReset, closeTabWithReset, toggleSplit, closeOverlays, activeTabIdRef, setShowCommitPanel, setShowHistorySearch, setShowDiffReview, setShowThemePanel, quickActions, ptyWriteRefs, activePaneIdRef, setShowWorkspace, loadWorkspaces, setShowPalette]);
 
   const VIEW_BUTTONS: { mode: ViewMode; icon: React.ReactNode; label: string }[] = [
     { mode: "terminal", icon: <TerminalSquare size={14} />, label: "터미널" },
@@ -358,13 +378,27 @@ const App: React.FC = () => {
                 setRenamingTabId(tab.id);
                 setRenameValue(tab.title);
               }}
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-[11px] border-r border-white/5 whitespace-nowrap transition-colors group cursor-pointer ${
+              onContextMenu={e => {
+                e.preventDefault();
+                setTabCtxMenu({ tabId: tab.id, x: e.clientX, y: e.clientY });
+              }}
+              className={`relative flex items-center gap-1.5 px-3 py-1.5 text-[11px] border-r border-white/5 whitespace-nowrap transition-colors group cursor-pointer ${
                 tab.id === activeTabId
                   ? "bg-[#161b22] text-white"
                   : "text-white/40 hover:text-white/70 hover:bg-white/3"
               }`}
+              style={tab.color ? { borderBottom: `2px solid ${TAB_COLORS[tab.color]}` } : undefined}
             >
+              {tab.color && (
+                <span
+                  className="w-1.5 h-1.5 rounded-full shrink-0"
+                  style={{ backgroundColor: TAB_COLORS[tab.color] }}
+                />
+              )}
               <TabIconComponent icon={tab.icon} />
+              {tab.group && (
+                <span className="text-[9px] text-white/25 font-medium">[{tab.group}]</span>
+              )}
               {renamingTabId === tab.id ? (
                 <input
                   autoFocus
@@ -674,6 +708,46 @@ const App: React.FC = () => {
       {showOnboarding && (
         <OnboardingWizard onComplete={() => setShowOnboarding(false)} />
       )}
+
+      {showPalette && (
+        <CommandPalette
+          tabs={tabs}
+          activeTabId={activeTabId}
+          workspaces={workspaces}
+          quickActions={quickActions}
+          recentHistory={recentCmds}
+          onSwitchTab={id => { switchTabWithReset(id); }}
+          onRestoreWorkspace={ws => {
+            const restored = ws.tabs.map(t => ({
+              id: t.id,
+              title: t.title,
+              cwd: t.cwd,
+              splitDir: t.split_dir as "h" | "v" | undefined,
+            }));
+            restoreTabs(restored, ws.active_tab_id);
+          }}
+          onRunAction={cmd => {
+            ptyWriteRefs.current.get(activePaneIdRef.current)?.(cmd + "\r");
+          }}
+          onClose={() => setShowPalette(false)}
+        />
+      )}
+
+      {tabCtxMenu && (() => {
+        const tab = tabs.find(t => t.id === tabCtxMenu.tabId);
+        return (
+          <TabContextMenu
+            tabId={tabCtxMenu.tabId}
+            currentColor={tab?.color}
+            currentGroup={tab?.group}
+            x={tabCtxMenu.x}
+            y={tabCtxMenu.y}
+            onSetColor={updateTabColor}
+            onSetGroup={updateTabGroup}
+            onClose={() => setTabCtxMenu(null)}
+          />
+        );
+      })()}
     </div>
   );
 };

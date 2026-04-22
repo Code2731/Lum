@@ -4,6 +4,18 @@ import { invoke } from "@tauri-apps/api/core";
 
 export type SplitDir = "h" | "v";
 export type TabIcon = "terminal" | "git" | "node" | "rust" | "python" | "go" | "java" | "docker";
+export type TabColor = "blue" | "green" | "yellow" | "red" | "purple" | "pink" | "cyan" | "orange";
+
+export const TAB_COLORS: Record<TabColor, string> = {
+  blue:   "#58a6ff",
+  green:  "#3fb950",
+  yellow: "#d29922",
+  red:    "#ff7b72",
+  purple: "#bc8cff",
+  pink:   "#f778ba",
+  cyan:   "#39c5cf",
+  orange: "#f0883e",
+};
 
 export interface Tab {
   id: string;
@@ -11,9 +23,11 @@ export interface Tab {
   splitDir?: SplitDir;
   cwd?: string;
   icon?: TabIcon;
+  color?: TabColor;
+  group?: string;
 }
 
-interface SessionTab { id: string; title: string; split_dir?: string }
+interface SessionTab { id: string; title: string; split_dir?: string; color?: string; group?: string }
 interface SessionData { version: number; tabs: SessionTab[]; active_tab_id: string }
 
 let tabCounter = 1;
@@ -46,6 +60,8 @@ export function useTabManager(onTabChange?: () => void) {
           id: t.id,
           title: t.title,
           splitDir: (t.split_dir as SplitDir | undefined) ?? undefined,
+          color: (t.color as TabColor | undefined) ?? undefined,
+          group: t.group,
         }));
         setTabs(restored);
         const activeId =
@@ -68,7 +84,7 @@ export function useTabManager(onTabChange?: () => void) {
     sessionSaveTimerRef.current = setTimeout(() => {
       const data: SessionData = {
         version: 1,
-        tabs: tabs.map((t) => ({ id: t.id, title: t.title, split_dir: t.splitDir })),
+        tabs: tabs.map((t) => ({ id: t.id, title: t.title, split_dir: t.splitDir, color: t.color, group: t.group })),
         active_tab_id: activeTabId,
       };
       invoke("save_session", { data }).catch(() => {});
@@ -129,6 +145,14 @@ export function useTabManager(onTabChange?: () => void) {
     setTabs(prev => prev.map(t => t.id === id ? { ...t, cwd, icon: icon ?? t.icon } : t));
   }, []);
 
+  const updateTabColor = useCallback((id: string, color: TabColor | undefined) => {
+    setTabs(prev => prev.map(t => t.id === id ? { ...t, color } : t));
+  }, []);
+
+  const updateTabGroup = useCallback((id: string, group: string | undefined) => {
+    setTabs(prev => prev.map(t => t.id === id ? { ...t, group } : t));
+  }, []);
+
   const toggleSplit = useCallback((dir: SplitDir) => {
     const tabId = activeTabIdRef.current;
     setTabs((prev) => {
@@ -170,6 +194,8 @@ export function useTabManager(onTabChange?: () => void) {
     closeTab,
     renameTab,
     updateTabCwd,
+    updateTabColor,
+    updateTabGroup,
     switchTab,
     toggleSplit,
     restoreTabs,
