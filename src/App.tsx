@@ -20,6 +20,8 @@ import {
   GitBranch, Container, Layers, Lock,
 } from "lucide-react";
 import SshConnectModal from "./components/SshConnectModal";
+import AgentPanel from "./components/AgentPanel";
+import { useAgentLoop } from "./hooks/useAgentLoop";
 import type { SshProfile } from "./hooks/useTabManager";
 import InfiniteCanvas from "./components/layout/InfiniteCanvas";
 import TerminalPane from "./components/TerminalPane";
@@ -83,6 +85,9 @@ const App: React.FC = () => {
 
   const { updateInfo, installing, progress, installError, installUpdate, dismissUpdate } = useUpdateCheck();
 
+  // 에이전트 루프 (>> 프리픽스 태스크)
+  const agentLoop = useAgentLoop(selectedModel);
+
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showQuickBar, setShowQuickBar] = useState(true);
   // 탭 더블클릭 rename 상태
@@ -139,8 +144,21 @@ const App: React.FC = () => {
       if (paneId !== activePaneIdRef.current) return;
       feedRaw(data);
       detectError(data);
+      agentLoop.feedOutput(data);
     },
-    [activePaneIdRef, feedRaw, detectError],
+    [activePaneIdRef, feedRaw, detectError, agentLoop.feedOutput],
+  );
+
+  // 에이전트 태스크 시작 핸들러 (activeTabIdRef 통해 선언 순서 문제 회피)
+  const handleAgentTrigger = useCallback(
+    async (task: string) => {
+      const currentTab = tabs.find((t) => t.id === activeTabIdRef.current);
+      const context = await invoke<string>("get_project_context", {
+        path: currentTab?.cwd ?? "",
+      }).catch(() => "");
+      agentLoop.startTask(task, context);
+    },
+    [agentLoop.startTask, tabs, activeTabIdRef],
   );
 
   const handleHistorySelect = useCallback((command: string) => {
@@ -563,6 +581,7 @@ const App: React.FC = () => {
                             onOutput={handleTerminalOutput(tab.id)}
                             onCwdChange={cwd => updateTabCwd(tab.id, cwd, inferTabIcon(cwd))}
                             onReady={(write) => { ptyWriteRefs.current.set(tab.id, write); }}
+                            onAgentTrigger={handleAgentTrigger}
                           />
                         </ErrorBoundary>
                       </PaneWrapper>
@@ -588,6 +607,7 @@ const App: React.FC = () => {
                             onOutput={handleTerminalOutput(splitId(tab.id))}
                             onCwdChange={cwd => updateTabCwd(splitId(tab.id), cwd, inferTabIcon(cwd))}
                             onReady={(write) => { ptyWriteRefs.current.set(splitId(tab.id), write); }}
+                            onAgentTrigger={handleAgentTrigger}
                           />
                         </ErrorBoundary>
                       </PaneWrapper>
@@ -607,6 +627,7 @@ const App: React.FC = () => {
                         onOutput={handleTerminalOutput(tab.id)}
                         onCwdChange={cwd => updateTabCwd(tab.id, cwd, inferTabIcon(cwd))}
                         onReady={(write) => { ptyWriteRefs.current.set(tab.id, write); }}
+                        onAgentTrigger={handleAgentTrigger}
                       />
                     </ErrorBoundary>
                   </div>
@@ -628,6 +649,26 @@ const App: React.FC = () => {
                 onExecute={handleExecute}
                 onDismiss={clearHealing}
               />
+            )}
+            {/* ── 에이전트 패널 (>> 태스크) ─────────────── */}
+            {agentLoop.state.status !== "idle" && (
+              <div className="absolute bottom-16 right-4 z-30">
+                <AgentPanel
+                  state={agentLoop.state}
+                  onApprove={() => {
+                    const write = ptyWriteRefs.current.get(activePaneIdRef.current);
+                    if (write) {
+                      agentLoop.approve(
+                        agentLoop.state.plan,
+                        agentLoop.state.task,
+                        (cmd) => write(cmd),
+                      );
+                    }
+                  }}
+                  onCancel={agentLoop.cancel}
+                  onClose={agentLoop.reset}
+                />
+              </div>
             )}
           </div>
 

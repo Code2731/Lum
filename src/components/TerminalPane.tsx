@@ -29,6 +29,7 @@ interface Props {
   onOutput?: (data: string) => void;
   onCwdChange?: (cwd: string) => void;
   onReady?: (write: (data: string) => void) => void;
+  onAgentTrigger?: (task: string) => void;
 }
 
 const IS_WINDOWS = navigator.userAgent.includes("Windows");
@@ -67,7 +68,7 @@ const PANE_PADDING_Y = 6;
 
 const DEFAULT_MODEL = "Qwen2.5-Coder-7B-Instruct-EXL2-4bpw";
 
-const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme, fontSize, fontFamily, onOutput, onCwdChange, onReady }) => {
+const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme, fontSize, fontFamily, onOutput, onCwdChange, onReady, onAgentTrigger }) => {
   const outerRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const termRef = useRef<Terminal | null>(null);
@@ -78,11 +79,13 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
   const onOutputRef = useRef(onOutput);
   const onReadyRef = useRef(onReady);
   const onCwdChangeRef = useRef(onCwdChange);
+  const onAgentTriggerRef = useRef(onAgentTrigger);
   useEffect(() => {
     onOutputRef.current = onOutput;
     onReadyRef.current = onReady;
     onCwdChangeRef.current = onCwdChange;
-  }, [onOutput, onReady, onCwdChange]);
+    onAgentTriggerRef.current = onAgentTrigger;
+  }, [onOutput, onReady, onCwdChange, onAgentTrigger]);
 
   // ── Search (Cmd+F) ─────────────────────────────────────────────────────
   const [searchOpen, setSearchOpen] = useState(false);
@@ -392,11 +395,24 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
       }
 
       if (data === "\r" || data === "\n") {
+        // >> 프리픽스: 에이전트 태스크 트리거
+        if (inputBufRef.current.startsWith(">> ")) {
+          const task = inputBufRef.current.slice(3).trim();
+          if (task && onAgentTriggerRef.current) {
+            // 입력한 줄을 터미널 뷰에서 지우기 (Ctrl+U)
+            invoke("write_to_pty", { id, data: "\x15" }).catch(() => {});
+            onAgentTriggerRef.current(task);
+            resetInputState();
+            return;
+          }
+        }
         resetInputState();
       } else if (data === "\x7f" || data === "\b") {
         inputBufRef.current = inputBufRef.current.slice(0, -1);
         const buf = inputBufRef.current;
-        if (buf.startsWith("# ")) {
+        if (buf.startsWith(">> ")) {
+          // 에이전트 프리픽스 — 특별 처리 없음
+        } else if (buf.startsWith("# ")) {
           triggerAiCompletion(term, buf);
         } else if (buf.startsWith("? ")) {
           clearAiGhost();
@@ -410,7 +426,13 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
       } else if (data.length === 1 && data >= " ") {
         inputBufRef.current += data;
         const buf = inputBufRef.current;
-        if (buf.startsWith("# ")) {
+        if (buf.startsWith(">> ")) {
+          // 에이전트 태스크 프리픽스 — 입력 버퍼만 추적, 특별 UI 없음
+          if (ghostTextRef.current !== null) { ghostTextRef.current = null; setGhostText(null); }
+          suggestionRef.current = null;
+          clearAiGhost();
+          clearExplain();
+        } else if (buf.startsWith("# ")) {
           if (ghostTextRef.current !== null) { ghostTextRef.current = null; setGhostText(null); }
           suggestionRef.current = null;
           clearExplain();

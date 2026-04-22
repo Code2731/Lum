@@ -39,6 +39,8 @@ pub fn run() {
             commands::models::download_model,
             commands::models::delete_model,
             // AI Commands
+            commands::agent::agent_plan,
+            commands::agent::agent_observe,
             commands::ai::generate_ai_command,
             commands::ai::stream_ai_command,
             commands::ai::analyze_error,
