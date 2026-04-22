@@ -1,3 +1,4 @@
+use crate::commands::config::load_config;
 use crate::memory::{cosine_similarity, MemoryEntry, SemanticMemory};
 use futures::future::join_all;
 use ignore::Walk;
@@ -7,7 +8,6 @@ use std::time::Duration;
 
 const CHUNK_SIZE: usize = 600;
 const CHUNK_OVERLAP: usize = 100;
-const XLLM_BASE: &str = "http://localhost:5000";
 
 #[derive(Serialize)]
 struct EmbeddingRequest {
@@ -37,9 +37,9 @@ pub struct SearchResult {
     pub score: f32,
 }
 
-pub async fn embed(client: &reqwest::Client, model: &str, text: &str) -> Option<Vec<f32>> {
+pub async fn embed(client: &reqwest::Client, base_url: &str, model: &str, text: &str) -> Option<Vec<f32>> {
     let res = client
-        .post(format!("{XLLM_BASE}/v1/embeddings"))
+        .post(format!("{base_url}/v1/embeddings"))
         .timeout(Duration::from_secs(30))
         .json(&EmbeddingRequest {
             model: model.to_string(),
@@ -78,6 +78,9 @@ fn rag_client() -> reqwest::Client {
 #[tauri::command]
 pub async fn index_project(root_path: String, model: String) -> Result<IndexResult, String> {
     let client = rag_client();
+    let base_url = load_config()
+        .map(|c| c.xllm_url())
+        .unwrap_or_else(|_| "http://127.0.0.1:5000".to_string());
     let timestamp = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .map_err(|e| format!("시스템 시간 오류: {}", e))?
@@ -120,7 +123,7 @@ pub async fn index_project(root_path: String, model: String) -> Result<IndexResu
     // 모든 청크를 병렬로 임베딩
     let futures: Vec<_> = contents
         .iter()
-        .map(|c| embed(&client, &model, c))
+        .map(|c| embed(&client, &base_url, &model, c))
         .collect();
     let embeddings = join_all(futures).await;
 
@@ -157,7 +160,10 @@ pub async fn search_codebase(
     limit: usize,
 ) -> Result<Vec<SearchResult>, String> {
     let client = rag_client();
-    let embedding = embed(&client, &model, &query)
+    let base_url = load_config()
+        .map(|c| c.xllm_url())
+        .unwrap_or_else(|_| "http://127.0.0.1:5000".to_string());
+    let embedding = embed(&client, &base_url, &model, &query)
         .await
         .ok_or("임베딩 생성 실패 — xLLM 서버 상태를 확인하세요.")?;
 
@@ -180,7 +186,10 @@ pub async fn search_codebase(
 #[tauri::command]
 pub async fn generate_embedding(text: String, model: String) -> Result<Vec<f32>, String> {
     let client = rag_client();
-    embed(&client, &model, &text)
+    let base_url = load_config()
+        .map(|c| c.xllm_url())
+        .unwrap_or_else(|_| "http://127.0.0.1:5000".to_string());
+    embed(&client, &base_url, &model, &text)
         .await
         .ok_or("임베딩 생성 실패 — xLLM 서버 상태를 확인하세요.".to_string())
 }

@@ -476,7 +476,10 @@ pub async fn explain_command(command: String, model: String) -> Result<String> {
 커맨드: {}",
         command
     );
-    let client = reqwest::Client::new();
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(30))
+        .build()
+        .unwrap_or_default();
     if !model.is_empty() && (config.xllm_base_url.is_some() || config.coding_model.is_some()) {
         match call_xllm(&client, &model, &prompt).await {
             Ok(r) => return Ok(r.trim().to_string()),

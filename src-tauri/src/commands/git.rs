@@ -35,9 +35,9 @@ pub async fn generate_commit_message(repo_path: String, model: String) -> Result
         ));
     }
 
-    // 토큰 절약을 위해 8000자 초과 시 truncate
-    let diff_ctx = if diff.len() > 8000 {
-        format!("{}\n...(이하 생략)...", &diff[..8000])
+    // 토큰 절약을 위해 8000자 초과 시 truncate (chars 단위로 멀티바이트 경계 안전)
+    let diff_ctx = if diff.chars().count() > 8000 {
+        format!("{}\n...(이하 생략)...", diff.chars().take(8000).collect::<String>())
     } else {
         diff
     };
@@ -53,7 +53,10 @@ pub async fn generate_commit_message(repo_path: String, model: String) -> Result
         diff_ctx
     );
 
-    let client = reqwest::Client::new();
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(120))
+        .build()
+        .unwrap_or_default();
     let msg = call_xllm(&client, &model, &prompt).await?;
     Ok(msg.trim().to_string())
 }
@@ -106,8 +109,8 @@ pub async fn analyze_diff(
 
     let files: Vec<&str> = stat_out.lines().filter(|l| !l.is_empty()).collect();
 
-    let diff_ctx = if diff.len() > 10_000 {
-        format!("{}\n...(이하 생략)...", &diff[..10_000])
+    let diff_ctx = if diff.chars().count() > 10_000 {
+        format!("{}\n...(이하 생략)...", diff.chars().take(10_000).collect::<String>())
     } else {
         diff
     };
@@ -125,7 +128,10 @@ risk 기준:\n\
         diff_ctx
     );
 
-    let client = reqwest::Client::new();
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(120))
+        .build()
+        .unwrap_or_default();
     let raw = call_xllm(&client, &model, &prompt).await?;
 
     let mut reviews: Vec<FileDiffReview> = raw

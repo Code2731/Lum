@@ -94,7 +94,7 @@ const HistorySearch: React.FC<Props> = ({ model, onSelect, onClose }) => {
     (e: React.KeyboardEvent) => {
       if (e.key === "ArrowDown") {
         e.preventDefault();
-        setSelectedIdx((i) => Math.min(i + 1, displayList.length - 1));
+        setSelectedIdx((i) => displayList.length > 0 ? Math.min(i + 1, displayList.length - 1) : 0);
       } else if (e.key === "ArrowUp") {
         e.preventDefault();
         setSelectedIdx((i) => Math.max(i - 1, 0));

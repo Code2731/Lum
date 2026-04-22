@@ -1,3 +1,4 @@
+use crate::commands::config::load_config;
 use crate::commands::rag::embed;
 use crate::memory::cosine_similarity;
 use serde::{Deserialize, Serialize};
@@ -47,8 +48,14 @@ pub async fn add_history_entry(
     if command.trim().is_empty() {
         return Ok(());
     }
-    let client = reqwest::Client::new();
-    let embedding = embed(&client, &model, &command).await.unwrap_or_default();
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(30))
+        .build()
+        .unwrap_or_default();
+    let base_url = load_config()
+        .map(|c| c.xllm_url())
+        .unwrap_or_else(|_| "http://127.0.0.1:5000".to_string());
+    let embedding = embed(&client, &base_url, &model, &command).await.unwrap_or_default();
 
     let ts = SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -80,8 +87,14 @@ pub async fn search_history(
     model: String,
     limit: usize,
 ) -> Result<Vec<HistoryEntry>, String> {
-    let client = reqwest::Client::new();
-    let q_emb = embed(&client, &model, &query)
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(30))
+        .build()
+        .unwrap_or_default();
+    let base_url = load_config()
+        .map(|c| c.xllm_url())
+        .unwrap_or_else(|_| "http://127.0.0.1:5000".to_string());
+    let q_emb = embed(&client, &base_url, &model, &query)
         .await
         .ok_or_else(|| "임베딩 생성 실패".to_string())?;
 

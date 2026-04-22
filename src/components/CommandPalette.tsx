@@ -101,7 +101,7 @@ const CommandPalette: React.FC<Props> = ({
   }, [results, selected]);
 
   const onKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "ArrowDown") { e.preventDefault(); setSelected(s => Math.min(s + 1, results.length - 1)); }
+    if (e.key === "ArrowDown") { e.preventDefault(); setSelected(s => results.length > 0 ? Math.min(s + 1, results.length - 1) : 0); }
     if (e.key === "ArrowUp")   { e.preventDefault(); setSelected(s => Math.max(s - 1, 0)); }
     if (e.key === "Enter")     { e.preventDefault(); confirm(); }
     if (e.key === "Escape")    { e.preventDefault(); onClose(); }

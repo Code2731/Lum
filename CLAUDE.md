@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-LUM (Local Universal Machine) — Warp 스타일 블록 기반 AI 터미널 에뮬레이터. 로컬 LLM(Ollama)을 사용하여 비용 제로, 개인정보 보호를 목표로 한다.
+LUM (Local Universal Machine) — Warp 스타일 블록 기반 AI 터미널 에뮬레이터. xLLM(TabbyAPI/ExLlamaV2)을 기본 AI 백엔드로 사용하며, Gemini Cloud API 폴백을 지원한다. 비용 제로, 개인정보 보호를 목표로 한다. Ollama는 불필요하다.
 
 ## Build & Dev Commands
 
@@ -12,9 +12,11 @@ LUM (Local Universal Machine) — Warp 스타일 블록 기반 AI 터미널 에�
 npm install                  # 프론트엔드 의존성 설치
 npm run tauri dev            # 개발 모드 실행 (Rust + Vite HMR)
 npm run tauri build          # 프로덕션 빌드
-./run.sh                     # Ollama 자동 시작 + 개발 모드 실행 (macOS/Linux)
-run.bat                      # Ollama 자동 시작 + 개발 모드 실행 (Windows)
+./run.sh                     # (선택) Ollama 자동 시작 + 개발 모드 실행 (macOS/Linux)
+run.bat                      # (선택) Ollama 자동 시작 + 개발 모드 실행 (Windows)
 ```
+
+> **참고**: xLLM(TabbyAPI)만 사용한다면 `npm run tauri dev` 직접 실행으로 충분. run.sh/run.bat은 Ollama 선택적 사용 시 편의 스크립트.
 
 ## Testing Commands
 
@@ -30,7 +32,7 @@ cd src-tauri && cargo test   # Rust 단위 테스트 실행
 ### Backend (`src-tauri/src/lib.rs`)
 - **PTY 관리**: `HashMap`을 통해 탭/팬별 독립적인 PTY 세션 관리.
 - **심층 RAG**: `index_project` 및 `search_codebase` 커맨드를 통해 소스코드 청킹 및 임베딩 벡터 검색 지원.
-- **AI 연동**: Ollama API. 임베딩 기반 의미론적 검색 및 지능형 프로젝트 요약.
+- **AI 연동**: xLLM(TabbyAPI/ExLlamaV2) 기본 + Gemini Cloud API 폴백. 임베딩 기반 의미론적 검색 및 지능형 프로젝트 요약. xLLM 서버 주소는 설정에서 변경 가능 (기본값: `http://127.0.0.1:5000`).
 - **모델 관리**: 모델 다운로드(pull) 및 삭제(delete). 스트리밍 방식으로 진행률 공유.
 - **주요 커맨드**: `spawn_pty`, `write_to_pty`, `generate_ai_command`, `generate_embedding`, `pull_model`, `delete_model`, `create_file`, `load_config`, `save_config`, `index_project`, `search_codebase`.
 
@@ -50,7 +52,7 @@ cd src-tauri && cargo test   # Rust 단위 테스트 실행
 
 - **Rust**: Tauri v2, portable-pty, ignore, reqwest, futures-util
 - **Frontend**: React 19, TypeScript, Tailwind CSS v4, Vitest, Fuse.js, react-markdown, react-resizable-panels, react-virtuoso, PrismJS
-- **AI**: Ollama 로컬 API
+- **AI**: xLLM(TabbyAPI/ExLlamaV2) 로컬 서버, Gemini Cloud API 폴백
 
 ## Key Conventions
 
@@ -98,3 +100,6 @@ cd src-tauri && cargo test   # Rust 단위 테스트 실행
 - [x] Phase 44: AI Explain Command (? 프리픽스 → explain_command 500ms 디바운스 → 초록 팝업 설명, xLLM/Gemini 폴백, # = 자연어→커맨드 / ? = 커맨드→설명 대칭 UX 완료)
 - [x] Phase 45: Long-Running Command Notifier (useCommandNotifier — 10초 이상 커맨드 완료 시 브라우저 Notification API + 탭 타이틀 플래시 ✅/❌ 완료)
 - [x] Phase 46: Workspace Save & Restore (workspace.rs save/list/delete_workspace, WorkspaceTab cwd 저장, WorkspacePanel UI, restoreTabs 액션, TerminalPane cwd prop 전달, Cmd+Shift+S/O 단축키 완료)
+- [x] Bug Fix Round 1: TerminalPane useEffect deps 버그 (cwd/onOutput/onReady 를 ref로 분리 → cd 명령 시 PTY 재마운트 방지), SessionTab color/group 필드 누락, explain_command 연산자 우선순위, fork bomb 정규식 `\(\)` 수정, useQuickActions 모듈 스코프 타이머 → useRef 이전, RagPanel 리스너 race condition, XllmPanel setTimeout 누수, rag.rs reqwest 타임아웃 추가 완료
+- [x] Bug Fix Round 2: git.rs 한국어/멀티바이트 UTF-8 경계 패닉 (`chars().take(N)` 수정), ai.rs explain_command reqwest 타임아웃 추가, rag.rs/history.rs 하드코딩 XLLM_BASE → config.xllm_url() 동적 조회, CommandPalette/HistorySearch 빈 리스트 ArrowDown 음수 인덱스, WorkspacePanel deleteConfirm 상태 미초기화 완료
+- [x] Windows Compat: run.bat Ollama 경로 하드코딩 → %LOCALAPPDATA%/%ProgramFiles%/PATH 자동 탐색, tabIcon.ts Windows 경로 구분자 `\` 정규화, terminal.rs PowerShell(pwsh/powershell) OSC 133 shell integration 추가 완료

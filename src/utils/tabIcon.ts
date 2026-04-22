@@ -2,7 +2,8 @@ import type { TabIcon } from "../hooks/useTabManager";
 
 // 디렉토리 경로 또는 프로세스명으로 아이콘 추론
 export function inferTabIcon(cwd: string): TabIcon {
-  const lower = cwd.toLowerCase();
+  // Windows \ 경로를 / 로 정규화해 패턴 통일
+  const lower = cwd.toLowerCase().replace(/\\/g, "/");
   if (lower.includes("docker") || lower.includes("container")) return "docker";
   if (lower.includes("go/") || lower.includes("/go") || lower.endsWith("/go")) return "go";
   if (lower.includes("python") || lower.includes("venv") || lower.includes(".py")) return "python";

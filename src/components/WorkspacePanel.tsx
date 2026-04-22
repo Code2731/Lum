@@ -40,7 +40,7 @@ const WorkspacePanel: React.FC<Props> = ({
         <div className="flex items-center gap-2.5 px-5 py-4 border-b border-white/8 shrink-0">
           <Layers size={15} className="text-accent" />
           <span className="text-sm font-semibold">워크스페이스</span>
-          <button onClick={onClose} className="ml-auto text-white/30 hover:text-white/70 transition-colors">
+          <button onClick={() => { setDeleteConfirm(null); onClose(); }} className="ml-auto text-white/30 hover:text-white/70 transition-colors">
             <X size={14} />
           </button>
         </div>

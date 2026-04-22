@@ -2,7 +2,7 @@ use crate::error::{LumError, Result};
 use crate::platform;
 use portable_pty::{native_pty_system, CommandBuilder, PtySize};
 
-/// zsh/bash 셸 통합 스크립트 — OSC 133 A/C/D 시퀀스를 PTY 출력에 주입
+/// 셸 통합 스크립트 — OSC 133 A/C/D 시퀀스를 PTY 출력에 주입
 fn shell_integration_script(shell: &str) -> String {
     let name = std::path::Path::new(shell)
         .file_name()
@@ -21,6 +21,18 @@ fn shell_integration_script(shell: &str) -> String {
             " _lum_precmd(){ local e=$?; printf '\\033]133;D;%d\\007' \"$e\"; };",
             " PROMPT_COMMAND=\"_lum_precmd${PROMPT_COMMAND:+; $PROMPT_COMMAND}\";",
             " trap 'printf \"\\033]133;C;$BASH_COMMAND\\007\"' DEBUG\n"
+        )
+        .to_string(),
+        // PowerShell 7 (pwsh) 및 Windows PowerShell — prompt 함수 오버라이드로 OSC 133 주입
+        "pwsh" | "powershell" => concat!(
+            "function global:prompt {",
+            " $e=$LASTEXITCODE;",
+            " [Console]::Write(\"`e]133;D;$e`a\");",
+            " $p=(Get-Location).Path;",
+            " [Console]::Write(\"`e]7;file://$env:COMPUTERNAME/$($p.Replace('\\','/'))`a\");",
+            " [Console]::Write(\"`e]133;A`a\");",
+            " \"PS $p> \"",
+            " }\r\n"
         )
         .to_string(),
         _ => String::new(),
