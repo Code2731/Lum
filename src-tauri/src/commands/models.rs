@@ -118,10 +118,20 @@ pub async fn download_model(
         .send()
         .await
         .map_err(|e| LumError::Network(e.to_string()))?;
+    if !resp.status().is_success() {
+        let status = resp.status();
+        let hint = match status.as_u16() {
+            401 | 403 => " (HuggingFace 토큰이 필요하거나 비공개 리포지토리입니다)",
+            404 => " (리포지토리 또는 해당 revision이 존재하지 않습니다)",
+            429 => " (요청 횟수 초과 — 잠시 후 다시 시도하세요)",
+            _ => "",
+        };
+        return Err(LumError::Network(format!("HuggingFace API 오류: {}{}", status, hint)));
+    }
     let files: Vec<HfFileEntry> = resp
         .json()
         .await
-        .map_err(|e| LumError::Network(e.to_string()))?;
+        .map_err(|e| LumError::Network(format!("파일 목록 파싱 실패: {}", e)))?;
 
     for file_entry in files.iter().filter(|f| f.file_type == "file") {
         let file_name = file_entry

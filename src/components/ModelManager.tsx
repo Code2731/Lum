@@ -78,6 +78,8 @@ const ModelManager: React.FC<Props> = ({ onClose, recommendedModel }) => {
   const [tab, setTab] = useState<"installed" | "download">("installed");
   const [localModels, setLocalModels] = useState<LocalModel[]>([]);
   const [downloading, setDownloading] = useState<Record<string, DownloadProgress>>({});
+  const [starting, setStarting] = useState<Set<string>>(new Set());
+  const [downloadError, setDownloadError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [hfToken, setHfToken] = useState("");
 
@@ -95,6 +97,7 @@ const ModelManager: React.FC<Props> = ({ onClose, recommendedModel }) => {
 
     const unlisten = listen<DownloadProgress>("model_download_progress", (event) => {
       const p = event.payload;
+      setStarting(prev => { const s = new Set(prev); s.delete(p.repo_id); return s; });
       if (p.done) {
         setDownloading((prev) => {
           const next = { ...prev };
@@ -113,7 +116,9 @@ const ModelManager: React.FC<Props> = ({ onClose, recommendedModel }) => {
   }, [loadLocalModels]);
 
   const handleDownload = async (model: CuratedModel) => {
-    if (downloading[model.repo_id]) return;
+    if (downloading[model.repo_id] || starting.has(model.repo_id)) return;
+    setDownloadError(null);
+    setStarting(prev => new Set(prev).add(model.repo_id));
     try {
       await invoke("download_model", {
         repoId: model.repo_id,
@@ -121,7 +126,10 @@ const ModelManager: React.FC<Props> = ({ onClose, recommendedModel }) => {
         hfToken: hfToken || null,
       });
     } catch (err) {
-      console.error("다운로드 실패:", err);
+      const msg = typeof err === "string" ? err : (err as Error)?.message ?? "알 수 없는 오류";
+      setDownloadError(msg);
+    } finally {
+      setStarting(prev => { const s = new Set(prev); s.delete(model.repo_id); return s; });
     }
   };
 
@@ -213,8 +221,17 @@ const ModelManager: React.FC<Props> = ({ onClose, recommendedModel }) => {
                 />
               </div>
 
+              {downloadError && (
+                <div className="flex items-start gap-2 px-3 py-2.5 bg-red-500/10 border border-red-500/20 rounded-lg text-xs text-red-400 mb-1">
+                  <span className="shrink-0 mt-0.5">⚠</span>
+                  <span className="break-all">{downloadError}</span>
+                  <button onClick={() => setDownloadError(null)} className="ml-auto shrink-0 text-red-400/60 hover:text-red-400">✕</button>
+                </div>
+              )}
+
               {CURATED_MODELS.map((m) => {
                 const prog = downloading[m.repo_id];
+                const isStarting = starting.has(m.repo_id);
                 const isRecommended = recommendedModel
                   ?.toLowerCase()
                   .includes(m.label.split(" ")[1].toLowerCase());
@@ -248,11 +265,11 @@ const ModelManager: React.FC<Props> = ({ onClose, recommendedModel }) => {
                       </div>
                       <button
                         onClick={() => handleDownload(m)}
-                        disabled={!!prog}
+                        disabled={!!prog || isStarting}
                         className="shrink-0 flex items-center gap-1 px-2.5 py-1.5 rounded bg-white/10 hover:bg-accent/20 text-xs transition-colors disabled:opacity-50"
                       >
                         <Download size={11} />
-                        {prog ? `${progressPct(prog)}%` : "받기"}
+                        {isStarting ? "연결 중…" : prog ? `${progressPct(prog)}%` : "받기"}
                       </button>
                     </div>
 
