@@ -15,7 +15,10 @@
         "title": "LUM Terminal",
         "width": 960,
         "height": 680,
+        "minWidth": 640,
+        "minHeight": 400,
         "decorations": false,
+        "resizable": true,
         "transparent": false
       }
     ],

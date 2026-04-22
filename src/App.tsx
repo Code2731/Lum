@@ -35,6 +35,8 @@ import QuickActionsBar from "./components/QuickActionsBar";
 import WorkspacePanel from "./components/WorkspacePanel";
 import CommandPalette from "./components/CommandPalette";
 import TabContextMenu from "./components/TabContextMenu";
+import ResizeHandles from "./components/ResizeHandles";
+import WindowControls from "./components/WindowControls";
 import { TAB_COLORS } from "./hooks/useTabManager";
 
 type ViewMode = "terminal" | "canvas" | "list";
@@ -252,9 +254,14 @@ const App: React.FC = () => {
 
   return (
     <div className="app-root bg-terminal-dark text-white min-h-screen flex flex-col">
+      <ResizeHandles />
       {/* ── 헤더 ─────────────────────────────────────────────── */}
-      <header className="h-10 border-b border-white/5 flex items-center justify-between px-4 shrink-0">
+      <header
+        data-tauri-drag-region
+        className="h-10 border-b border-white/5 flex items-center justify-between px-4 shrink-0 select-none"
+      >
         <div className="flex items-center gap-4">
+          <WindowControls />
           <div className="flex items-center gap-2">
             <Zap size={14} className="text-accent" />
             <span className="text-xs font-bold tracking-widest uppercase">LUM</span>
