@@ -103,3 +103,6 @@ cd src-tauri && cargo test   # Rust 단위 테스트 실행
 - [x] Bug Fix Round 1: TerminalPane useEffect deps 버그 (cwd/onOutput/onReady 를 ref로 분리 → cd 명령 시 PTY 재마운트 방지), SessionTab color/group 필드 누락, explain_command 연산자 우선순위, fork bomb 정규식 `\(\)` 수정, useQuickActions 모듈 스코프 타이머 → useRef 이전, RagPanel 리스너 race condition, XllmPanel setTimeout 누수, rag.rs reqwest 타임아웃 추가 완료
 - [x] Bug Fix Round 2: git.rs 한국어/멀티바이트 UTF-8 경계 패닉 (`chars().take(N)` 수정), ai.rs explain_command reqwest 타임아웃 추가, rag.rs/history.rs 하드코딩 XLLM_BASE → config.xllm_url() 동적 조회, CommandPalette/HistorySearch 빈 리스트 ArrowDown 음수 인덱스, WorkspacePanel deleteConfirm 상태 미초기화 완료
 - [x] Windows Compat: run.bat Ollama 경로 하드코딩 → %LOCALAPPDATA%/%ProgramFiles%/PATH 자동 탐색, tabIcon.ts Windows 경로 구분자 `\` 정규화, terminal.rs PowerShell(pwsh/powershell) OSC 133 shell integration 추가 완료
+- [x] Phase 47: SSH Terminal (spawn_ssh_pty — 시스템 ssh 바이너리를 portable-pty로 실행, write/resize/close 기존 PTY 인프라 재사용, SshConnectModal UI, Cmd+Shift+H 단축키, 탭 바 🔒 SSH 인디케이터 완료)
+- [x] Phase 48: CLI Autocomplete DB 확장 (cliSpecs.ts 10개 → 38개: yarn/pnpm/python/pip/docker-compose/terraform/helm/rsync/make/ps/kill/tar/chmod/apt/brew/ping/cat/tail/head/wc/sed/awk/vim/systemctl/journalctl/lsof/netstat/scp 추가 완료)
+- [x] Phase 49: Smart Diff Truncation (git.rs smart_truncate_diff — 단순 cut-off 대신 파일 단위 분할 + 균등 예산 배분, 모든 변경 파일을 AI가 커버 가능 완료)

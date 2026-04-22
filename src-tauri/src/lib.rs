@@ -48,6 +48,7 @@ pub fn run() {
             commands::terminal::write_to_pty,
             commands::terminal::resize_pty,
             commands::terminal::close_pty,
+            commands::terminal::spawn_ssh_pty,
             // System & Security
             sandbox::verify_command_safety,
             desktop::capture_screen,

@@ -11,6 +11,7 @@ import { checkPasteDanger } from "../utils/pasteGuard";
 import PasteGuardModal from "./PasteGuardModal";
 import type { XtermTheme } from "../hooks/useTerminalTheme";
 import type { DangerMatch } from "../utils/pasteGuard";
+import type { SshProfile } from "../hooks/useTabManager";
 
 interface PtyData {
   id: string;
@@ -20,6 +21,7 @@ interface PtyData {
 interface Props {
   id: string;
   cwd?: string;
+  sshProfile?: SshProfile;
   model?: string;
   xtermTheme?: XtermTheme;
   fontSize?: number;
@@ -65,7 +67,7 @@ const PANE_PADDING_Y = 6;
 
 const DEFAULT_MODEL = "Qwen2.5-Coder-7B-Instruct-EXL2-4bpw";
 
-const TerminalPane: React.FC<Props> = ({ id, cwd, model, xtermTheme, fontSize, fontFamily, onOutput, onCwdChange, onReady }) => {
+const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme, fontSize, fontFamily, onOutput, onCwdChange, onReady }) => {
   const outerRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const termRef = useRef<Terminal | null>(null);
@@ -336,9 +338,23 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, model, xtermTheme, fontSize, f
     const doInitialFit = () => {
       try { fitAddon.fit(); } catch {}
       const { cols, rows } = term;
-      invoke("spawn_pty", { id, cwd: cwd ?? "", cols, rows }).catch((e: unknown) => {
-        term.write(`\r\n\x1b[31m[PTY 오류: ${e}]\x1b[0m\r\n`);
-      });
+      if (sshProfile) {
+        invoke("spawn_ssh_pty", {
+          id,
+          host: sshProfile.host,
+          port: sshProfile.port,
+          username: sshProfile.username,
+          keyPath: sshProfile.keyPath,
+          cols,
+          rows,
+        }).catch((e: unknown) => {
+          term.write(`\r\n\x1b[31m[SSH 오류: ${e}]\x1b[0m\r\n`);
+        });
+      } else {
+        invoke("spawn_pty", { id, cwd: cwd ?? "", cols, rows }).catch((e: unknown) => {
+          term.write(`\r\n\x1b[31m[PTY 오류: ${e}]\x1b[0m\r\n`);
+        });
+      }
     };
 
     requestAnimationFrame(() => { setTimeout(doInitialFit, 80); });

@@ -17,8 +17,10 @@ import { invoke } from "@tauri-apps/api/core";
 import {
   Zap, Cpu, Loader2, TerminalSquare, LayoutList, MousePointer2,
   Package, Database, Plus, X, Columns2, Rows2, SlidersHorizontal, ArrowUpCircle, GitCompareArrows, Palette,
-  GitBranch, Container, Layers,
+  GitBranch, Container, Layers, Lock,
 } from "lucide-react";
+import SshConnectModal from "./components/SshConnectModal";
+import type { SshProfile } from "./hooks/useTabManager";
 import InfiniteCanvas from "./components/layout/InfiniteCanvas";
 import TerminalPane from "./components/TerminalPane";
 import ModelManager from "./components/ModelManager";
@@ -53,7 +55,7 @@ const App: React.FC = () => {
   const {
     tabs, activeTabId, activePaneId, setActivePaneId,
     activeTabIdRef, activePaneIdRef, ptyWriteRefs,
-    addTab, closeTab, switchTab, toggleSplit, renameTab, updateTabCwd,
+    addTab, createSshTab, closeTab, switchTab, toggleSplit, renameTab, updateTabCwd,
     updateTabColor, updateTabGroup, restoreTabs,
   } = useTabManager(undefined);
 
@@ -86,6 +88,7 @@ const App: React.FC = () => {
   const [renamingTabId, setRenamingTabId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
   const [showPalette, setShowPalette] = useState(false);
+  const [showSshModal, setShowSshModal] = useState(false);
   const [tabCtxMenu, setTabCtxMenu] = useState<{ tabId: string; x: number; y: number } | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("terminal");
   const [xllmOnline, setXllmOnline] = useState(false);
@@ -205,6 +208,7 @@ const App: React.FC = () => {
       if (mod && e.shiftKey && e.key === "d") { e.preventDefault(); toggleSplit("h"); }
       if (mod && e.shiftKey && e.key === "e") { e.preventDefault(); toggleSplit("v"); }
       if (mod && e.shiftKey && e.key === "g") { e.preventDefault(); setShowCommitPanel(true); }
+      if (mod && e.shiftKey && e.key === "h") { e.preventDefault(); setShowSshModal(true); }
       if (mod && e.shiftKey && e.key === "r") { e.preventDefault(); setShowDiffReview(true); }
       if (mod && e.key === ",") { e.preventDefault(); setShowThemePanel(true); }
       if (mod && e.shiftKey && e.key === "q") { e.preventDefault(); setShowQuickBar(v => !v); }
@@ -244,6 +248,11 @@ const App: React.FC = () => {
   const showBlockBar = lastCmdBlock !== null && lastCmdBlock.id !== dismissedBlockId && !healingError;
   const wsTabs = tabs.map(t => ({ id: t.id, title: t.title, cwd: t.cwd ?? "", split_dir: t.splitDir }));
   const contextTab = tabCtxMenu ? tabs.find(t => t.id === tabCtxMenu.tabId) : undefined;
+
+  const handleSshConnect = useCallback((profile: SshProfile) => {
+    createSshTab(profile);
+    setShowSshModal(false);
+  }, [createSshTab]);
 
   const handleRestoreWorkspace = useCallback((ws: import("./hooks/useWorkspace").Workspace) => {
     restoreTabs(
@@ -424,7 +433,12 @@ const App: React.FC = () => {
                   onClick={e => e.stopPropagation()}
                   className="w-20 bg-transparent border-b border-accent/60 outline-none text-white text-[11px]"
                 />
-              ) : tab.title}
+              ) : (
+                <>
+                  {tab.sshProfile && <Lock size={9} className="text-cyan-400 shrink-0" />}
+                  {tab.title}
+                </>
+              )}
               {tabs.length > 1 && renamingTabId !== tab.id && (
                 <span
                   role="button"
@@ -444,6 +458,14 @@ const App: React.FC = () => {
             className="px-2 py-1.5 text-white/30 hover:text-white/70 hover:bg-white/5 transition-colors shrink-0"
           >
             <Plus size={12} />
+          </button>
+          <button
+            onClick={() => setShowSshModal(true)}
+            aria-label="SSH 연결 (Cmd+Shift+H)"
+            title="SSH 연결 (Cmd+Shift+H)"
+            className="px-2 py-1.5 text-white/30 hover:text-white/70 hover:bg-white/5 transition-colors shrink-0"
+          >
+            <Lock size={12} />
           </button>
 
           <div className="ml-auto flex items-center gap-0.5 px-2 shrink-0">
@@ -509,6 +531,7 @@ const App: React.FC = () => {
                         <TerminalPane
                           id={tab.id}
                           cwd={tab.cwd}
+                          sshProfile={tab.sshProfile}
                           model={selectedModel}
                           xtermTheme={xtermTheme}
                           fontSize={appearance.fontSize}
@@ -531,6 +554,7 @@ const App: React.FC = () => {
                         <TerminalPane
                           id={splitId(tab.id)}
                           cwd={tab.cwd}
+                          sshProfile={tab.sshProfile}
                           model={selectedModel}
                           xtermTheme={xtermTheme}
                           fontSize={appearance.fontSize}
@@ -547,6 +571,7 @@ const App: React.FC = () => {
                     <TerminalPane
                       id={tab.id}
                       cwd={tab.cwd}
+                      sshProfile={tab.sshProfile}
                       model={selectedModel}
                       xtermTheme={xtermTheme}
                       fontSize={appearance.fontSize}
@@ -738,6 +763,13 @@ const App: React.FC = () => {
           onSetColor={updateTabColor}
           onSetGroup={updateTabGroup}
           onClose={() => setTabCtxMenu(null)}
+        />
+      )}
+
+      {showSshModal && (
+        <SshConnectModal
+          onConnect={handleSshConnect}
+          onClose={() => setShowSshModal(false)}
         />
       )}
     </div>

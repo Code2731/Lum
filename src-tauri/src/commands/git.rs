@@ -35,12 +35,8 @@ pub async fn generate_commit_message(repo_path: String, model: String) -> Result
         ));
     }
 
-    // 토큰 절약을 위해 8000자 초과 시 truncate (chars 단위로 멀티바이트 경계 안전)
-    let diff_ctx = if diff.chars().count() > 8000 {
-        format!("{}\n...(이하 생략)...", diff.chars().take(8000).collect::<String>())
-    } else {
-        diff
-    };
+    // 파일별 균등 예산으로 smart truncate (모든 변경 파일을 AI가 볼 수 있도록)
+    let diff_ctx = smart_truncate_diff(&diff, 8000);
 
     let prompt = format!(
         "다음 git diff를 분석해 커밋 메시지를 작성하세요.\n\
@@ -109,11 +105,8 @@ pub async fn analyze_diff(
 
     let files: Vec<&str> = stat_out.lines().filter(|l| !l.is_empty()).collect();
 
-    let diff_ctx = if diff.chars().count() > 10_000 {
-        format!("{}\n...(이하 생략)...", diff.chars().take(10_000).collect::<String>())
-    } else {
-        diff
-    };
+    // 파일별 균등 예산으로 smart truncate (모든 변경 파일을 AI가 볼 수 있도록)
+    let diff_ctx = smart_truncate_diff(&diff, 10_000);
 
     let prompt = format!(
         "다음 git diff를 파일별로 분석하세요.\n\
@@ -167,4 +160,47 @@ fn parse_review_line(line: &str) -> Option<FileDiffReview> {
     let summary = parts[2].trim_start_matches("NOTE:").trim().to_string();
     if path.is_empty() { return None; }
     Some(FileDiffReview { path, risk, summary })
+}
+
+/// diff를 파일 단위로 분할해 파일별 예산 내에서 균등 truncate.
+/// 단순 cut-off 방식과 달리 모든 변경 파일을 AI가 볼 수 있다.
+fn smart_truncate_diff(diff: &str, max_chars: usize) -> String {
+    if diff.chars().count() <= max_chars {
+        return diff.to_string();
+    }
+    // "diff --git " 경계로 파일별 섹션 분할
+    let mut sections: Vec<&str> = Vec::new();
+    let mut prev = 0;
+    let marker = "\ndiff --git ";
+    let mut search = 0;
+    while let Some(pos) = diff[search..].find(marker) {
+        let abs = search + pos;
+        if abs > prev {
+            sections.push(&diff[prev..abs]);
+        }
+        prev = abs + 1; // '\n' 이후부터
+        search = abs + 1;
+    }
+    sections.push(&diff[prev..]);
+    let sections: Vec<&str> = sections.into_iter().filter(|s| !s.trim().is_empty()).collect();
+
+    if sections.len() <= 1 {
+        return format!(
+            "{}\n...(이하 생략)...",
+            diff.chars().take(max_chars).collect::<String>()
+        );
+    }
+
+    let per_file = (max_chars / sections.len()).max(300);
+    let mut result = String::new();
+    for section in &sections {
+        let chars: Vec<char> = section.chars().collect();
+        if chars.len() <= per_file {
+            result.push_str(section);
+        } else {
+            result.push_str(&chars[..per_file].iter().collect::<String>());
+            result.push_str("\n...(이하 생략)...\n");
+        }
+    }
+    result
 }

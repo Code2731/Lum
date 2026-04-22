@@ -243,6 +243,95 @@ pub async fn close_pty(state: State<'_, TerminalState>, id: String) -> Result<()
     Ok(())
 }
 
+/// SSH 원격 세션 — 시스템 ssh 바이너리를 PTY로 실행 (write_to_pty/resize_pty/close_pty 공유)
+#[command]
+pub async fn spawn_ssh_pty(
+    app: AppHandle,
+    state: State<'_, TerminalState>,
+    id: String,
+    host: String,
+    port: u16,
+    username: String,
+    key_path: Option<String>,
+    cols: u16,
+    rows: u16,
+) -> Result<()> {
+    {
+        let ptys = state.ptys.lock().map_err(|_| LumError::Io("lock 오류".into()))?;
+        if ptys.contains_key(&id) {
+            return Ok(());
+        }
+    }
+
+    let pty_system = native_pty_system();
+    let pair = pty_system
+        .openpty(PtySize { rows, cols, pixel_width: 0, pixel_height: 0 })
+        .map_err(|e| LumError::Io(format!("PTY 생성 실패: {}", e)))?;
+
+    let mut cmd = CommandBuilder::new("ssh");
+    cmd.arg(format!("{}@{}", username, host));
+    cmd.arg("-p");
+    cmd.arg(port.to_string());
+    if let Some(ref key) = key_path {
+        cmd.arg("-i");
+        cmd.arg(key);
+    }
+    // 연결 타임아웃 10초
+    cmd.arg("-o"); cmd.arg("ConnectTimeout=10");
+    cmd.arg("-o"); cmd.arg("ServerAliveInterval=30");
+
+    #[cfg(not(windows))]
+    {
+        cmd.env("TERM", "xterm-256color");
+        cmd.env("COLORTERM", "truecolor");
+    }
+
+    let _child = pair.slave
+        .spawn_command(cmd)
+        .map_err(|e| LumError::Io(format!("SSH 실행 실패: {}", e)))?;
+
+    let mut writer = pair.master.take_writer()
+        .map_err(|e| LumError::Io(e.to_string()))?;
+    let mut reader = pair.master.try_clone_reader()
+        .map_err(|e| LumError::Io(e.to_string()))?;
+
+    let (write_tx, write_rx) = std::sync::mpsc::sync_channel::<Vec<u8>>(64);
+    let (resize_tx, resize_rx) = std::sync::mpsc::sync_channel::<(u16, u16)>(8);
+
+    std::thread::spawn(move || {
+        for data in write_rx {
+            if writer.write_all(&data).is_err() { break; }
+        }
+    });
+
+    let master = pair.master;
+    std::thread::spawn(move || {
+        for (r, c) in resize_rx {
+            let _ = master.resize(PtySize { rows: r, cols: c, pixel_width: 0, pixel_height: 0 });
+        }
+    });
+
+    let app_r = app.clone();
+    let id_r = id.clone();
+    std::thread::spawn(move || {
+        let mut buf = [0u8; 4096];
+        loop {
+            match reader.read(&mut buf) {
+                Ok(0) | Err(_) => break,
+                Ok(n) => {
+                    let data = String::from_utf8_lossy(&buf[..n]).to_string();
+                    let _ = app_r.emit("pty_data", PtyData { id: id_r.clone(), data });
+                }
+            }
+        }
+        let _ = app_r.emit("pty_exit", id_r);
+    });
+
+    let mut ptys = state.ptys.lock().map_err(|_| LumError::Io("lock 오류".into()))?;
+    ptys.insert(id, PtyHandle { write_tx, resize_tx });
+    Ok(())
+}
+
 /// 현재 디렉토리 기준 셸 자동완성 후보 반환
 #[command]
 pub fn get_completions(cwd: String, partial: String) -> Result<Vec<String>> {

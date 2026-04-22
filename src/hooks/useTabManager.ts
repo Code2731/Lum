@@ -17,6 +17,13 @@ export const TAB_COLORS: Record<TabColor, string> = {
   orange: "#f0883e",
 };
 
+export interface SshProfile {
+  host: string;
+  port: number;
+  username: string;
+  keyPath?: string;
+}
+
 export interface Tab {
   id: string;
   title: string;
@@ -25,6 +32,7 @@ export interface Tab {
   icon?: TabIcon;
   color?: TabColor;
   group?: string;
+  sshProfile?: SshProfile;
 }
 
 interface SessionTab { id: string; title: string; split_dir?: string; color?: string; group?: string }
@@ -100,6 +108,20 @@ export function useTabManager(onTabChange?: () => void) {
     setActiveTabId(tab.id);
     setActivePaneId(tab.id);
     onTabChange?.();
+  }, [onTabChange]);
+
+  const createSshTab = useCallback((profile: SshProfile): string => {
+    const id = `tab-${tabCounter++}`;
+    const tab: Tab = {
+      id,
+      title: `${profile.username}@${profile.host}`,
+      sshProfile: profile,
+    };
+    setTabs((prev) => [...prev, tab]);
+    setActiveTabId(id);
+    setActivePaneId(id);
+    onTabChange?.();
+    return id;
   }, [onTabChange]);
 
   const closeTab = useCallback(
@@ -190,6 +212,7 @@ export function useTabManager(onTabChange?: () => void) {
     activePaneIdRef,
     ptyWriteRefs,
     addTab,
+    createSshTab,
     closeTab,
     renameTab,
     updateTabCwd,
