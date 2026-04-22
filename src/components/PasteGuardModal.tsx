@@ -27,8 +27,8 @@ const PasteGuardModal: React.FC<Props> = ({ match, onConfirm, onCancel }) => {
         </div>
 
         <div className="px-5 py-4 space-y-3">
-          <div className={`flex items-start gap-2 p-3 rounded-xl border ${isDanger ? "border-red-500/15 bg-red-500/5" : "border-yellow-500/15 bg-yellow-500/5"}`}>
-            <span className={`text-xs font-medium mt-0.5 shrink-0 ${isDanger ? "text-red-400" : "text-yellow-400"}`}>
+          <div className={`p-3 rounded-xl border ${isDanger ? "border-red-500/15 bg-red-500/5" : "border-yellow-500/15 bg-yellow-500/5"}`}>
+            <span className={`text-xs font-medium ${isDanger ? "text-red-400" : "text-yellow-400"}`}>
               {match.reason}
             </span>
           </div>

@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Layers, X, Save, Trash2, FolderOpen, TerminalSquare, Clock } from "lucide-react";
 import type { Workspace, WorkspaceTab } from "../hooks/useWorkspace";
+import { shortPath } from "../utils";
 
 interface Props {
   currentTabs: WorkspaceTab[];
@@ -59,7 +60,7 @@ const WorkspacePanel: React.FC<Props> = ({
                   >
                     <TerminalSquare size={8} />
                     {t.title}
-                    {t.cwd && <span className="text-white/25 font-mono truncate max-w-[80px]">{t.cwd.split("/").pop()}</span>}
+                    {t.cwd && <span className="text-white/25 font-mono truncate max-w-[80px]">{shortPath(t.cwd)}</span>}
                   </span>
                 ))}
               </div>
@@ -142,7 +143,7 @@ const WorkspacePanel: React.FC<Props> = ({
                   >
                     <TerminalSquare size={7} />
                     {t.title}
-                    {t.cwd && <span className="font-mono text-white/20 truncate max-w-[60px]">{t.cwd.split("/").pop()}</span>}
+                    {t.cwd && <span className="font-mono text-white/20 truncate max-w-[60px]">{shortPath(t.cwd)}</span>}
                   </span>
                 ))}
               </div>

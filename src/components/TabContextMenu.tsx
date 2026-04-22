@@ -21,7 +21,6 @@ const TabContextMenu: React.FC<Props> = ({
   x, y, onSetColor, onSetGroup, onClose,
 }) => {
   const ref = useRef<HTMLDivElement>(null);
-  const groupInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const handle = (e: MouseEvent) => {
@@ -46,7 +45,6 @@ const TabContextMenu: React.FC<Props> = ({
       className="bg-[#161b22] border border-white/10 rounded-xl shadow-2xl w-52 overflow-hidden"
       onContextMenu={e => e.preventDefault()}
     >
-      {/* 색상 선택 */}
       <div className="px-3 pt-3 pb-2">
         <div className="flex items-center gap-1.5 mb-2">
           <Palette size={11} className="text-white/30" />
@@ -79,7 +77,6 @@ const TabContextMenu: React.FC<Props> = ({
 
       <div className="border-t border-white/6 mx-3" />
 
-      {/* 그룹 레이블 */}
       <div className="px-3 py-2.5">
         <div className="flex items-center gap-1.5 mb-1.5">
           <Tag size={11} className="text-white/30" />
@@ -94,7 +91,6 @@ const TabContextMenu: React.FC<Props> = ({
           )}
         </div>
         <input
-          ref={groupInputRef}
           defaultValue={currentGroup ?? ""}
           placeholder="예: backend, deploy…"
           className="w-full bg-white/5 border border-white/8 rounded-lg px-2 py-1 text-[11px] text-white/70 placeholder:text-white/20 outline-none focus:border-accent/40"

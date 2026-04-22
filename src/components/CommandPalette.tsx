@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import Fuse from "fuse.js";
 import { TerminalSquare, Layers, Zap, History, Search, ArrowRight } from "lucide-react";
 import type { Tab } from "../hooks/useTabManager";
 import type { Workspace } from "../hooks/useWorkspace";
 import type { QuickAction } from "../hooks/useQuickActions";
+import { shortPath } from "../utils";
 
 type ItemKind = "tab" | "workspace" | "action" | "history";
 
@@ -50,14 +51,14 @@ const CommandPalette: React.FC<Props> = ({
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
-  const allItems: PaletteItem[] = [
+  const allItems = useMemo<PaletteItem[]>(() => [
     ...tabs
       .filter(t => t.id !== activeTabId)
       .map(t => ({
         id: `tab-${t.id}`,
         kind: "tab" as ItemKind,
         label: t.title,
-        subtitle: t.cwd?.split("/").pop(),
+        subtitle: t.cwd ? shortPath(t.cwd) : undefined,
         onSelect: () => { onSwitchTab(t.id); onClose(); },
       })),
     ...workspaces.map(ws => ({
@@ -80,12 +81,17 @@ const CommandPalette: React.FC<Props> = ({
       label: cmd,
       onSelect: () => { onRunAction(cmd); onClose(); },
     })),
-  ];
+  ], [tabs, activeTabId, workspaces, quickActions, recentHistory, onSwitchTab, onRestoreWorkspace, onRunAction, onClose]);
 
-  const fuse = new Fuse(allItems, { keys: ["label", "subtitle"], threshold: 0.4 });
-  const results = query.trim()
-    ? fuse.search(query).map(r => r.item)
-    : allItems.slice(0, 20);
+  const fuse = useMemo(
+    () => new Fuse(allItems, { keys: ["label", "subtitle"], threshold: 0.4 }),
+    [allItems],
+  );
+
+  const results = useMemo(
+    () => query.trim() ? fuse.search(query).map(r => r.item) : allItems.slice(0, 20),
+    [query, fuse, allItems],
+  );
 
   useEffect(() => { setSelected(0); }, [query]);
   useEffect(() => { inputRef.current?.focus(); }, []);
@@ -115,7 +121,6 @@ const CommandPalette: React.FC<Props> = ({
         className="bg-[#0d1117] border border-white/10 rounded-2xl w-[600px] max-h-[65vh] flex flex-col shadow-2xl overflow-hidden"
         onClick={e => e.stopPropagation()}
       >
-        {/* 검색 입력 */}
         <div className="flex items-center gap-3 px-4 py-3 border-b border-white/8">
           <Search size={14} className="text-white/30 shrink-0" />
           <input
@@ -129,7 +134,6 @@ const CommandPalette: React.FC<Props> = ({
           <kbd className="text-[10px] text-white/20 border border-white/10 rounded px-1">esc</kbd>
         </div>
 
-        {/* 결과 목록 */}
         <div ref={listRef} className="flex-1 overflow-y-auto py-1">
           {results.length === 0 ? (
             <p className="text-xs text-white/25 text-center py-8">결과 없음</p>

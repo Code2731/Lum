@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, useEffect } from "react";
+import React, { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { Group as PanelGroup, Panel, Separator as PanelResizeHandle } from "react-resizable-panels";
 import { useTerminalBlocks } from "./hooks/useTerminalBlocks";
 import { useAIProcessing } from "./hooks/useAIProcessing";
@@ -85,7 +85,6 @@ const App: React.FC = () => {
   const [renameValue, setRenameValue] = useState("");
   const [showPalette, setShowPalette] = useState(false);
   const [tabCtxMenu, setTabCtxMenu] = useState<{ tabId: string; x: number; y: number } | null>(null);
-  const [recentCmds, setRecentCmds] = useState<string[]>([]);
   const [viewMode, setViewMode] = useState<ViewMode>("terminal");
   const [xllmOnline, setXllmOnline] = useState(false);
   const [aiInput, setAiInput] = useState("");
@@ -107,7 +106,11 @@ const App: React.FC = () => {
       .catch(() => setXllmOnline(false));
   }, []);
 
-  // 새 커맨드 블록 완료 시 시맨틱 히스토리 저장 + 팔레트용 최근 커맨드 갱신
+  const recentCmds = useMemo(
+    () => cmdBlocks.filter(b => b.command.trim()).map(b => b.command).slice(-20).reverse(),
+    [cmdBlocks],
+  );
+
   const cmdBlocksLenRef = useRef(0);
   useEffect(() => {
     if (cmdBlocks.length <= cmdBlocksLenRef.current) return;
@@ -123,13 +126,6 @@ const App: React.FC = () => {
         }).catch(() => {});
       }
     }
-    setRecentCmds(
-      cmdBlocks
-        .filter(b => b.command.trim())
-        .map(b => b.command)
-        .slice(-20)
-        .reverse(),
-    );
   }, [cmdBlocks, selectedModel]);
 
   const handleTerminalOutput = useCallback(
@@ -245,6 +241,14 @@ const App: React.FC = () => {
   const lastCmdBlock = cmdBlocks[cmdBlocks.length - 1] ?? null;
   const showBlockBar = lastCmdBlock !== null && lastCmdBlock.id !== dismissedBlockId && !healingError;
   const wsTabs = tabs.map(t => ({ id: t.id, title: t.title, cwd: t.cwd ?? "", split_dir: t.splitDir }));
+  const contextTab = tabCtxMenu ? tabs.find(t => t.id === tabCtxMenu.tabId) : undefined;
+
+  const handleRestoreWorkspace = useCallback((ws: import("./hooks/useWorkspace").Workspace) => {
+    restoreTabs(
+      ws.tabs.map(t => ({ id: t.id, title: t.title, cwd: t.cwd, splitDir: t.split_dir as "h" | "v" | undefined })),
+      ws.active_tab_id,
+    );
+  }, [restoreTabs]);
 
   return (
     <div className="app-root bg-terminal-dark text-white min-h-screen flex flex-col">
@@ -691,15 +695,7 @@ const App: React.FC = () => {
           workspaces={workspaces}
           loading={wsLoading}
           onSave={async name => { await saveWorkspace(name, wsTabs, activeTabId); }}
-          onRestore={ws => {
-            const restored = ws.tabs.map(t => ({
-              id: t.id,
-              title: t.title,
-              cwd: t.cwd,
-              splitDir: t.split_dir as "h" | "v" | undefined,
-            }));
-            restoreTabs(restored, ws.active_tab_id);
-          }}
+          onRestore={handleRestoreWorkspace}
           onDelete={deleteWorkspace}
           onClose={() => setShowWorkspace(false)}
         />
@@ -716,16 +712,8 @@ const App: React.FC = () => {
           workspaces={workspaces}
           quickActions={quickActions}
           recentHistory={recentCmds}
-          onSwitchTab={id => { switchTabWithReset(id); }}
-          onRestoreWorkspace={ws => {
-            const restored = ws.tabs.map(t => ({
-              id: t.id,
-              title: t.title,
-              cwd: t.cwd,
-              splitDir: t.split_dir as "h" | "v" | undefined,
-            }));
-            restoreTabs(restored, ws.active_tab_id);
-          }}
+          onSwitchTab={switchTabWithReset}
+          onRestoreWorkspace={handleRestoreWorkspace}
           onRunAction={cmd => {
             ptyWriteRefs.current.get(activePaneIdRef.current)?.(cmd + "\r");
           }}
@@ -733,21 +721,18 @@ const App: React.FC = () => {
         />
       )}
 
-      {tabCtxMenu && (() => {
-        const tab = tabs.find(t => t.id === tabCtxMenu.tabId);
-        return (
-          <TabContextMenu
-            tabId={tabCtxMenu.tabId}
-            currentColor={tab?.color}
-            currentGroup={tab?.group}
-            x={tabCtxMenu.x}
-            y={tabCtxMenu.y}
-            onSetColor={updateTabColor}
-            onSetGroup={updateTabGroup}
-            onClose={() => setTabCtxMenu(null)}
-          />
-        );
-      })()}
+      {tabCtxMenu && (
+        <TabContextMenu
+          tabId={tabCtxMenu.tabId}
+          currentColor={contextTab?.color}
+          currentGroup={contextTab?.group}
+          x={tabCtxMenu.x}
+          y={tabCtxMenu.y}
+          onSetColor={updateTabColor}
+          onSetGroup={updateTabGroup}
+          onClose={() => setTabCtxMenu(null)}
+        />
+      )}
     </div>
   );
 };

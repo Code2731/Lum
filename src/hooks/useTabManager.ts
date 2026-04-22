@@ -145,13 +145,12 @@ export function useTabManager(onTabChange?: () => void) {
     setTabs(prev => prev.map(t => t.id === id ? { ...t, cwd, icon: icon ?? t.icon } : t));
   }, []);
 
-  const updateTabColor = useCallback((id: string, color: TabColor | undefined) => {
-    setTabs(prev => prev.map(t => t.id === id ? { ...t, color } : t));
+  const updateTab = useCallback((id: string, patch: Partial<Tab>) => {
+    setTabs(prev => prev.map(t => t.id === id ? { ...t, ...patch } : t));
   }, []);
 
-  const updateTabGroup = useCallback((id: string, group: string | undefined) => {
-    setTabs(prev => prev.map(t => t.id === id ? { ...t, group } : t));
-  }, []);
+  const updateTabColor = useCallback((id: string, color: TabColor | undefined) => updateTab(id, { color }), [updateTab]);
+  const updateTabGroup = useCallback((id: string, group: string | undefined) => updateTab(id, { group }), [updateTab]);
 
   const toggleSplit = useCallback((dir: SplitDir) => {
     const tabId = activeTabIdRef.current;
