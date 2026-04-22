@@ -17,11 +17,13 @@ import { invoke } from "@tauri-apps/api/core";
 import {
   Zap, Cpu, Loader2, TerminalSquare, LayoutList, MousePointer2,
   Package, Database, Plus, X, Columns2, Rows2, SlidersHorizontal, ArrowUpCircle, GitCompareArrows, Palette,
-  GitBranch, Container, Layers, Lock,
+  GitBranch, Container, Layers, Lock, MessageSquare,
 } from "lucide-react";
 import SshConnectModal from "./components/SshConnectModal";
 import AgentPanel from "./components/AgentPanel";
+import AIChatPanel from "./components/AIChatPanel";
 import { useAgentLoop } from "./hooks/useAgentLoop";
+import { useAIChat } from "./hooks/useAIChat";
 import type { SshProfile } from "./hooks/useTabManager";
 import InfiniteCanvas from "./components/layout/InfiniteCanvas";
 import TerminalPane from "./components/TerminalPane";
@@ -87,6 +89,21 @@ const App: React.FC = () => {
 
   // 에이전트 루프 (>> 프리픽스 태스크)
   const agentLoop = useAgentLoop(selectedModel);
+
+  // AI 채팅 사이드패널
+  const [showChatPanel, setShowChatPanel] = useState(false);
+  const getTerminalContext = useCallback(() => {
+    const activeTab = tabs.find((t) => t.id === activeTabIdRef.current);
+    const cwd = activeTab?.cwd ?? "";
+    const recentCmds = cmdBlocks
+      .slice(-5)
+      .map((b) => `$ ${b.command} (exit: ${b.exitCode ?? 0})`)
+      .join("\n");
+    return [cwd ? `CWD: ${cwd}` : "", recentCmds ? `Recent commands:\n${recentCmds}` : ""]
+      .filter(Boolean)
+      .join("\n");
+  }, [tabs, activeTabIdRef, cmdBlocks]);
+  const aiChat = useAIChat(selectedModel, getTerminalContext);
 
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showQuickBar, setShowQuickBar] = useState(true);
@@ -229,6 +246,7 @@ const App: React.FC = () => {
       if (mod && e.shiftKey && e.key === "g") { e.preventDefault(); setShowCommitPanel(true); }
       if (mod && e.shiftKey && e.key === "h") { e.preventDefault(); setShowSshModal(true); }
       if (mod && e.shiftKey && e.key === "r") { e.preventDefault(); setShowDiffReview(true); }
+      if (mod && e.shiftKey && e.key === "a") { e.preventDefault(); setShowChatPanel(v => !v); }
       if (mod && e.key === ",") { e.preventDefault(); setShowThemePanel(true); }
       if (mod && e.shiftKey && e.key === "q") { e.preventDefault(); setShowQuickBar(v => !v); }
       if (mod && e.shiftKey && (e.key === "s" || e.key === "o")) { e.preventDefault(); setShowWorkspace(true); loadWorkspaces(); }
@@ -254,7 +272,7 @@ const App: React.FC = () => {
       window.removeEventListener("keydown", captureHandler, { capture: true });
       window.removeEventListener("keydown", handler);
     };
-  }, [addTabWithReset, closeTabWithReset, toggleSplit, closeOverlays, activeTabIdRef, setShowCommitPanel, setShowHistorySearch, setShowDiffReview, setShowThemePanel, quickActions, ptyWriteRefs, activePaneIdRef, setShowWorkspace, loadWorkspaces, setShowPalette]);
+  }, [addTabWithReset, closeTabWithReset, toggleSplit, closeOverlays, activeTabIdRef, setShowCommitPanel, setShowHistorySearch, setShowDiffReview, setShowThemePanel, quickActions, ptyWriteRefs, activePaneIdRef, setShowWorkspace, loadWorkspaces, setShowPalette, setShowChatPanel]);
 
   const VIEW_BUTTONS: { mode: ViewMode; icon: React.ReactNode; label: string }[] = [
     { mode: "terminal", icon: <TerminalSquare size={14} />, label: "터미널" },
@@ -370,6 +388,13 @@ const App: React.FC = () => {
             className={`p-1.5 rounded transition-colors ${showThemePanel ? "text-accent bg-accent/10" : "text-white/40 hover:text-white hover:bg-white/10"}`}
           >
             <Palette size={13} />
+          </button>
+          <button
+            aria-label="AI Chat (Cmd+Shift+A)"
+            onClick={() => setShowChatPanel(v => !v)}
+            className={`p-1.5 rounded transition-colors ${showChatPanel ? "text-accent bg-accent/10" : "text-white/40 hover:text-white hover:bg-white/10"}`}
+          >
+            <MessageSquare size={13} />
           </button>
           <button
             aria-label="모델 관리"
@@ -722,6 +747,18 @@ const App: React.FC = () => {
             <ErrorBoundary label="RAG">
               <RagPanel model={selectedModel} onClose={() => setShowRagPanel(false)} />
             </ErrorBoundary>
+          </div>
+        )}
+
+        {showChatPanel && (
+          <div className="w-80 border-l border-white/5 shrink-0 overflow-hidden">
+            <AIChatPanel
+              messages={aiChat.messages}
+              streaming={aiChat.streaming}
+              onSend={aiChat.sendMessage}
+              onClear={aiChat.clear}
+              onClose={() => setShowChatPanel(false)}
+            />
           </div>
         )}
 

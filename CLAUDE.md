@@ -118,3 +118,5 @@ cd src-tauri && cargo test   # Rust 단위 테스트 실행
 - [x] Phase 52: SSH 프로필 영속성 (ssh_profiles.rs list/save/delete_ssh_profile, ~/.lum_ssh_profiles.json, useSshProfiles.ts RustSshProfileEntry 브릿지 타입, SshConnectModal 저장된 프로필 목록 + 저장 체크박스 완료)
 - [x] Phase 53: 자동 업데이트 설치 (tauri-plugin-updater 연동, install_update 커맨드, update_progress 이벤트 → 진행률 바 UI, app.restart() 자동 재시작, GitHub Actions TAURI_SIGNING_PRIVATE_KEY 서명 완료)
 - [x] Phase 54: 성능 최적화 — local-ai Feature Flag (burn/burn-wgpu/wgpu/tokenizers/hf-hub를 optional dep으로 분리, default 빌드에서 ~150MB 절감, hardware.rs GPU 감지 cfg 조건부 컴파일, CI/release.yml Rust 캐시 추가 완료)
+- [x] Phase 55: Agentic Task Loop (>> 프리픽스 → agent_plan/agent_observe Tauri 커맨드, useAgentLoop 상태 머신, OSC 133 D 시그널 완료 감지, AgentPanel 위험도 배지 승인/중단 UI 완료)
+- [x] Phase 56: AI Chat Sidebar (useAIChat 멀티턴 스트리밍 훅, AIChatPanel 사이드패널 — 최근 명령어+cwd 컨텍스트 자동 주입, react-markdown 코드블록 렌더링, Cmd+Shift+A 토글 완료)

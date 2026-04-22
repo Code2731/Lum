@@ -209,6 +209,7 @@ npm run tauri dev
 - [x] Phase 53: 자동 업데이트 설치
 - [x] Phase 54: local-ai Feature Flag (~150MB 절감)
 - [x] Phase 55: Agentic Task Loop (`>>` 프리픽스)
+- [x] Phase 56: AI Chat Sidebar (`Cmd+Shift+A` — 멀티턴 대화, 터미널 컨텍스트 자동 주입)
 
 </details>
 
