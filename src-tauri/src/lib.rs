@@ -114,6 +114,10 @@ pub fn run() {
             commands::ssh_profiles::delete_ssh_profile,
             // 환경 파일 자동 감지
             commands::env::detect_env_files,
+            // 스크립트 라이브러리
+            commands::scripts::list_scripts,
+            commands::scripts::save_script,
+            commands::scripts::delete_script,
             // MCP Tools
             mcp::call_mcp_tool,
             mcp::list_internal_tools

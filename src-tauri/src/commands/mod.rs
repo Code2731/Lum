@@ -10,6 +10,7 @@ pub mod history;
 pub mod models;
 pub mod project;
 pub mod rag;
+pub mod scripts;
 pub mod session;
 pub mod ssh_profiles;
 pub mod terminal;

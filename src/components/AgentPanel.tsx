@@ -9,6 +9,7 @@ import {
   Square,
   X,
   ChevronRight,
+  BookOpen,
 } from "lucide-react";
 import type { AgentState, AgentStep, CompletedStep } from "../hooks/useAgentLoop";
 
@@ -17,6 +18,7 @@ interface Props {
   onApprove: () => void;
   onCancel: () => void;
   onClose: () => void;
+  onSaveScript?: (commands: string[]) => void;
 }
 
 // 위험도 배지 스타일
@@ -78,7 +80,7 @@ const CompletedStepRow: React.FC<{ step: CompletedStep }> = ({ step }) => {
   );
 };
 
-const AgentPanel: React.FC<Props> = ({ state, onApprove, onCancel, onClose }) => {
+const AgentPanel: React.FC<Props> = ({ state, onApprove, onCancel, onClose, onSaveScript }) => {
   const { status, task, plan, currentStepIdx, completed, message } = state;
 
   const currentStep = plan[currentStepIdx] ?? null;
@@ -285,6 +287,15 @@ const AgentPanel: React.FC<Props> = ({ state, onApprove, onCancel, onClose }) =>
           </button>
         )}
 
+        {status === "done" && onSaveScript && completed.length > 0 && (
+          <button
+            onClick={() => onSaveScript(completed.map((c) => c.cmd))}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] rounded-md bg-white/5 text-white/50 hover:bg-white/10 hover:text-white/70 transition-colors"
+          >
+            <BookOpen size={11} />
+            스크립트 저장
+          </button>
+        )}
         {(status === "done" || status === "failed" || status === "cancelled") && (
           <button
             onClick={onClose}

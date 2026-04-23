@@ -17,7 +17,7 @@ import { invoke } from "@tauri-apps/api/core";
 import {
   Zap, Cpu, Loader2, TerminalSquare, LayoutList, MousePointer2,
   Package, Database, Plus, X, Columns2, Rows2, SlidersHorizontal, ArrowUpCircle, GitCompareArrows, Palette,
-  GitBranch, Container, Layers, Lock, MessageSquare,
+  GitBranch, Container, Layers, Lock, MessageSquare, BookOpen,
 } from "lucide-react";
 import SshConnectModal from "./components/SshConnectModal";
 import AgentPanel from "./components/AgentPanel";
@@ -26,6 +26,8 @@ import { useAgentLoop } from "./hooks/useAgentLoop";
 import { useAIChat } from "./hooks/useAIChat";
 import { useEnvAutoDetector } from "./hooks/useEnvAutoDetector";
 import EnvSuggestionToast from "./components/EnvSuggestionToast";
+import { useScriptLibrary } from "./hooks/useScriptLibrary";
+import ScriptLibraryPanel from "./components/ScriptLibraryPanel";
 import type { SshProfile } from "./hooks/useTabManager";
 import InfiniteCanvas from "./components/layout/InfiniteCanvas";
 import TerminalPane from "./components/TerminalPane";
@@ -94,6 +96,10 @@ const App: React.FC = () => {
 
   // 환경 파일 자동 감지
   const envDetector = useEnvAutoDetector(activePaneIdRef, ptyWriteRefs);
+
+  // 스크립트 라이브러리
+  const scriptLib = useScriptLibrary(activePaneIdRef, ptyWriteRefs);
+  const [showScriptPanel, setShowScriptPanel] = useState(false);
 
   // AI 채팅 사이드패널
   const [showChatPanel, setShowChatPanel] = useState(false);
@@ -252,6 +258,7 @@ const App: React.FC = () => {
       if (mod && e.shiftKey && e.key === "h") { e.preventDefault(); setShowSshModal(true); }
       if (mod && e.shiftKey && e.key === "r") { e.preventDefault(); setShowDiffReview(true); }
       if (mod && e.shiftKey && e.key === "a") { e.preventDefault(); setShowChatPanel(v => !v); }
+      if (mod && e.shiftKey && e.key === "l") { e.preventDefault(); setShowScriptPanel(v => { if (!v) scriptLib.loadScripts(); return !v; }); }
       if (mod && e.key === ",") { e.preventDefault(); setShowThemePanel(true); }
       if (mod && e.shiftKey && e.key === "q") { e.preventDefault(); setShowQuickBar(v => !v); }
       if (mod && e.shiftKey && (e.key === "s" || e.key === "o")) { e.preventDefault(); setShowWorkspace(true); loadWorkspaces(); }
@@ -400,6 +407,13 @@ const App: React.FC = () => {
             className={`p-1.5 rounded transition-colors ${showChatPanel ? "text-accent bg-accent/10" : "text-white/40 hover:text-white hover:bg-white/10"}`}
           >
             <MessageSquare size={13} />
+          </button>
+          <button
+            aria-label="스크립트 라이브러리 (Cmd+Shift+L)"
+            onClick={() => { setShowScriptPanel(v => { if (!v) scriptLib.loadScripts(); return !v; }); }}
+            className={`p-1.5 rounded transition-colors ${showScriptPanel ? "text-accent bg-accent/10" : "text-white/40 hover:text-white hover:bg-white/10"}`}
+          >
+            <BookOpen size={13} />
           </button>
           <button
             aria-label="모델 관리"
@@ -705,6 +719,11 @@ const App: React.FC = () => {
                   }}
                   onCancel={agentLoop.cancel}
                   onClose={agentLoop.reset}
+                  onSaveScript={(cmds) => {
+                    scriptLib.saveScript(agentLoop.state.task || "에이전트 태스크", "", cmds);
+                    setShowScriptPanel(true);
+                    scriptLib.loadScripts();
+                  }}
                 />
               </div>
             )}
@@ -772,6 +791,22 @@ const App: React.FC = () => {
               onClear={aiChat.clear}
               onClose={() => setShowChatPanel(false)}
             />
+          </div>
+        )}
+
+        {showScriptPanel && (
+          <div className="w-72 border-l border-white/5 shrink-0 overflow-hidden">
+            <ErrorBoundary label="스크립트 라이브러리">
+              <ScriptLibraryPanel
+                scripts={scriptLib.scripts}
+                loading={scriptLib.loading}
+                onLoad={scriptLib.loadScripts}
+                onRun={scriptLib.runScript}
+                onDelete={scriptLib.deleteScript}
+                onSave={async (name, desc, cmds) => { await scriptLib.saveScript(name, desc, cmds); }}
+                onClose={() => setShowScriptPanel(false)}
+              />
+            </ErrorBoundary>
           </div>
         )}
 
