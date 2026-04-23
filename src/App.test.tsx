@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import App from "./App";
 
 vi.mock("@tauri-apps/api/core", () => ({
@@ -32,22 +32,18 @@ vi.mock("@tauri-apps/api/window", () => ({
     toggleMaximize: vi.fn(),
     close: vi.fn(),
     startDragging: vi.fn(),
+    isMaximized: vi.fn().mockResolvedValue(false),
+    onResized: vi.fn().mockResolvedValue(() => {}),
   }),
+}));
+
+vi.mock("@tauri-apps/plugin-opener", () => ({
+  openUrl: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock("./components/TerminalPane", () => ({
   default: ({ id }: { id: string }) => (
     <div data-testid={`terminal-pane-${id}`}>terminal:{id}</div>
-  ),
-}));
-
-vi.mock("./components/layout/InfiniteCanvas", () => ({
-  default: ({ blocks }: { blocks: { id: string; command: string }[] }) => (
-    <div data-testid="infinite-canvas">
-      {blocks.map((b) => (
-        <div key={b.id} data-testid="canvas-block">{b.command}</div>
-      ))}
-    </div>
   ),
 }));
 
@@ -63,35 +59,28 @@ describe("App (LUM 터미널)", () => {
     expect(panes.length).toBeGreaterThan(0);
   });
 
-  it("리스트 뷰 버튼 클릭 시 InfiniteCanvas가 숨겨짐", async () => {
+  it("새 탭 버튼이 툴바에 있어야 함", () => {
     render(<App />);
-    fireEvent.click(screen.getByLabelText("리스트"));
-    await waitFor(() => {
-      expect(screen.queryByTestId("infinite-canvas")).not.toBeInTheDocument();
-    });
+    expect(screen.getByLabelText("새 탭 (Cmd+T)")).toBeInTheDocument();
   });
 
-  it("캔버스 뷰 버튼 클릭 시 InfiniteCanvas가 렌더링됨", async () => {
+  it("SSH 연결 버튼이 툴바에 있어야 함", () => {
     render(<App />);
-    fireEvent.click(screen.getByLabelText("캔버스"));
-    await waitFor(() => {
-      expect(screen.getByTestId("infinite-canvas")).toBeInTheDocument();
-    });
+    expect(screen.getByLabelText("SSH 연결 (Cmd+Shift+H)")).toBeInTheDocument();
   });
 
-  it("캔버스 → 터미널 전환 시 TerminalPane이 다시 표시됨", async () => {
+  it("AI Chat 버튼이 툴바에 있어야 함", () => {
     render(<App />);
-    fireEvent.click(screen.getByLabelText("캔버스"));
-    fireEvent.click(screen.getByLabelText("터미널"));
-    await waitFor(() => {
-      expect(screen.getAllByTestId(/^terminal-pane-/).length).toBeGreaterThan(0);
-    });
+    expect(screen.getByLabelText("AI Chat (Cmd+Shift+A)")).toBeInTheDocument();
   });
 
-  it("뷰 전환 버튼이 3개 렌더링됨 (터미널/리스트/캔버스)", () => {
+  it("알림 센터 버튼이 툴바에 있어야 함", () => {
     render(<App />);
-    expect(screen.getByLabelText("터미널")).toBeInTheDocument();
-    expect(screen.getByLabelText("리스트")).toBeInTheDocument();
-    expect(screen.getByLabelText("캔버스")).toBeInTheDocument();
+    expect(screen.getByLabelText("알림 센터")).toBeInTheDocument();
+  });
+
+  it("스크립트 라이브러리 버튼이 툴바에 있어야 함", () => {
+    render(<App />);
+    expect(screen.getByLabelText("스크립트 라이브러리 (Cmd+Shift+L)")).toBeInTheDocument();
   });
 });
