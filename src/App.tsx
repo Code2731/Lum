@@ -17,7 +17,7 @@ import { invoke } from "@tauri-apps/api/core";
 import {
   Zap, Cpu, Loader2, TerminalSquare, LayoutList, MousePointer2,
   Package, Database, Plus, X, Columns2, Rows2, SlidersHorizontal, ArrowUpCircle, GitCompareArrows, Palette,
-  GitBranch, Container, Layers, Lock, MessageSquare, BookOpen,
+  GitBranch, Container, Layers, Lock, MessageSquare, BookOpen, Bell,
 } from "lucide-react";
 import SshConnectModal from "./components/SshConnectModal";
 import AgentPanel from "./components/AgentPanel";
@@ -28,6 +28,8 @@ import { useEnvAutoDetector } from "./hooks/useEnvAutoDetector";
 import EnvSuggestionToast from "./components/EnvSuggestionToast";
 import { useScriptLibrary } from "./hooks/useScriptLibrary";
 import ScriptLibraryPanel from "./components/ScriptLibraryPanel";
+import { useNotificationCenter } from "./hooks/useNotificationCenter";
+import NotificationCenter from "./components/NotificationCenter";
 import type { SshProfile } from "./hooks/useTabManager";
 import InfiniteCanvas from "./components/layout/InfiniteCanvas";
 import TerminalPane from "./components/TerminalPane";
@@ -101,6 +103,10 @@ const App: React.FC = () => {
   const scriptLib = useScriptLibrary(activePaneIdRef, ptyWriteRefs);
   const [showScriptPanel, setShowScriptPanel] = useState(false);
 
+  // 알림 센터
+  const notifCenter = useNotificationCenter();
+  const [showNotifCenter, setShowNotifCenter] = useState(false);
+
   // AI 채팅 사이드패널
   const [showChatPanel, setShowChatPanel] = useState(false);
   const getTerminalContext = useCallback(() => {
@@ -164,8 +170,64 @@ const App: React.FC = () => {
           model: selectedModel,
         }).catch(() => {});
       }
+      // 10초 이상 걸린 명령어 → 알림 센터 기록
+      if (b.command.trim() && b.endedAt !== null && b.endedAt - b.startedAt >= 10_000) {
+        const ok = b.exitCode === 0 || b.exitCode === null;
+        notifCenter.addNotification({
+          type: "command",
+          title: ok ? "명령어 완료" : "명령어 실패",
+          body: `${b.command.slice(0, 60)}${b.command.length > 60 ? "…" : ""} · ${Math.round((b.endedAt - b.startedAt) / 1000)}초 소요`,
+        });
+      }
     }
-  }, [cmdBlocks, selectedModel]);
+  }, [cmdBlocks, selectedModel]); // notifCenter.addNotification은 안정된 useCallback이므로 deps 불필요
+
+  // 에이전트 태스크 완료 알림
+  const agentStatusRef = useRef(agentLoop.state.status);
+  useEffect(() => {
+    const prev = agentStatusRef.current;
+    const cur = agentLoop.state.status;
+    agentStatusRef.current = cur;
+    if (prev === cur) return;
+    if (cur === "done") {
+      notifCenter.addNotification({
+        type: "agent",
+        title: "에이전트 태스크 완료",
+        body: agentLoop.state.task || "태스크가 완료되었습니다.",
+      });
+    } else if (cur === "failed") {
+      notifCenter.addNotification({
+        type: "agent",
+        title: "에이전트 태스크 실패",
+        body: agentLoop.state.message || agentLoop.state.task || "태스크 실행 중 오류가 발생했습니다.",
+      });
+    }
+  }, [agentLoop.state.status]);
+
+  // AI 자가 치유 감지 알림
+  const healingNotifiedRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (healingError && healingError !== healingNotifiedRef.current) {
+      healingNotifiedRef.current = healingError;
+      notifCenter.addNotification({
+        type: "healing",
+        title: "AI 자가 치유 감지",
+        body: healingError.slice(0, 80),
+      });
+    }
+  }, [healingError]);
+
+  // 환경 파일 감지 알림
+  useEffect(() => {
+    if (envDetector.visible && envDetector.suggestions.length > 0) {
+      const names = envDetector.suggestions.map(s => s.file).join(", ");
+      notifCenter.addNotification({
+        type: "env",
+        title: "환경 파일 감지",
+        body: `${names} — 설치 명령어를 확인하세요.`,
+      });
+    }
+  }, [envDetector.visible]);
 
   const handleTerminalOutput = useCallback(
     (paneId: string) => (data: string) => {
@@ -415,6 +477,29 @@ const App: React.FC = () => {
           >
             <BookOpen size={13} />
           </button>
+          {/* 알림 센터 */}
+          <div className="relative">
+            <button
+              aria-label="알림 센터"
+              onClick={() => { setShowNotifCenter(v => !v); if (!showNotifCenter) notifCenter.markAllRead(); }}
+              className={`p-1.5 rounded transition-colors ${showNotifCenter ? "text-accent bg-accent/10" : "text-white/40 hover:text-white hover:bg-white/10"}`}
+            >
+              <Bell size={13} />
+              {notifCenter.unreadCount > 0 && (
+                <span className="absolute top-0.5 right-0.5 w-2 h-2 rounded-full bg-red-500 text-[8px] flex items-center justify-center pointer-events-none" />
+              )}
+            </button>
+            {showNotifCenter && (
+              <NotificationCenter
+                notifications={notifCenter.notifications}
+                unreadCount={notifCenter.unreadCount}
+                onMarkAllRead={notifCenter.markAllRead}
+                onDismiss={notifCenter.dismiss}
+                onClear={notifCenter.clear}
+                onClose={() => setShowNotifCenter(false)}
+              />
+            )}
+          </div>
           <button
             aria-label="모델 관리"
             onClick={() => setShowModelManager(true)}
