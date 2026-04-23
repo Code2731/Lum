@@ -17,7 +17,7 @@ import { invoke } from "@tauri-apps/api/core";
 import {
   Zap, Cpu, Loader2, TerminalSquare, LayoutList, MousePointer2,
   Package, Database, Plus, X, Columns2, Rows2, SlidersHorizontal, ArrowUpCircle, GitCompareArrows, Palette,
-  GitBranch, Container, Layers, Lock, MessageSquare, BookOpen, Bell,
+  GitBranch, Container, Layers, Lock, MessageSquare, BookOpen, Bell, Activity,
 } from "lucide-react";
 import SshConnectModal from "./components/SshConnectModal";
 import AgentPanel from "./components/AgentPanel";
@@ -28,6 +28,7 @@ import { useEnvAutoDetector } from "./hooks/useEnvAutoDetector";
 import EnvSuggestionToast from "./components/EnvSuggestionToast";
 import { useScriptLibrary } from "./hooks/useScriptLibrary";
 import ScriptLibraryPanel from "./components/ScriptLibraryPanel";
+import SystemMonitorPanel from "./components/SystemMonitorPanel";
 import { useNotificationCenter } from "./hooks/useNotificationCenter";
 import NotificationCenter from "./components/NotificationCenter";
 import type { SshProfile } from "./hooks/useTabManager";
@@ -102,6 +103,7 @@ const App: React.FC = () => {
   // 스크립트 라이브러리
   const scriptLib = useScriptLibrary(activePaneIdRef, ptyWriteRefs);
   const [showScriptPanel, setShowScriptPanel] = useState(false);
+  const [showSysmon, setShowSysmon] = useState(false);
 
   // 알림 센터
   const notifCenter = useNotificationCenter();
@@ -323,6 +325,7 @@ const App: React.FC = () => {
       if (mod && e.shiftKey && e.key === "r") { e.preventDefault(); setShowDiffReview(true); }
       if (mod && e.shiftKey && e.key === "a") { e.preventDefault(); setShowChatPanel(v => !v); }
       if (mod && e.shiftKey && e.key === "l") { e.preventDefault(); setShowScriptPanel(v => { if (!v) scriptLib.loadScripts(); return !v; }); }
+      if (mod && e.shiftKey && e.key === "m") { e.preventDefault(); setShowSysmon(v => !v); }
       if (mod && e.key === ",") { e.preventDefault(); setShowThemePanel(true); }
       if (mod && e.shiftKey && e.key === "q") { e.preventDefault(); setShowQuickBar(v => !v); }
       if (mod && e.shiftKey && (e.key === "s" || e.key === "o")) { e.preventDefault(); setShowWorkspace(true); loadWorkspaces(); }
@@ -478,6 +481,14 @@ const App: React.FC = () => {
             className={`p-1.5 rounded transition-colors ${showScriptPanel ? "text-accent bg-accent/10" : "text-white/40 hover:text-white hover:bg-white/10"}`}
           >
             <BookOpen size={13} />
+          </button>
+          <button
+            aria-label="시스템 모니터 (Cmd+Shift+M)"
+            title="시스템 모니터 (Cmd+Shift+M)"
+            onClick={() => setShowSysmon(v => !v)}
+            className={`p-1.5 rounded transition-colors ${showSysmon ? "text-accent bg-accent/10" : "text-white/40 hover:text-white hover:bg-white/10"}`}
+          >
+            <Activity size={13} />
           </button>
           {/* 알림 센터 */}
           <div className="relative">
@@ -892,6 +903,14 @@ const App: React.FC = () => {
                 onSave={scriptLib.saveScript}
                 onClose={() => setShowScriptPanel(false)}
               />
+            </ErrorBoundary>
+          </div>
+        )}
+
+        {showSysmon && (
+          <div className="w-64 border-l border-white/5 shrink-0 overflow-hidden">
+            <ErrorBoundary label="시스템 모니터">
+              <SystemMonitorPanel onClose={() => setShowSysmon(false)} />
             </ErrorBoundary>
           </div>
         )}

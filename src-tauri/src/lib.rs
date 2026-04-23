@@ -10,6 +10,7 @@ pub mod platform;
 pub mod sandbox;
 pub mod swarm;
 
+use crate::commands::sysmon::SysmonState;
 use crate::commands::terminal::TerminalState;
 use crate::mcp::McpState;
 use std::collections::HashMap;
@@ -28,6 +29,7 @@ pub fn run() {
     tauri::Builder::default()
         .manage(terminal_state)
         .manage(mcp_state)
+        .manage(SysmonState::new())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
@@ -118,6 +120,8 @@ pub fn run() {
             commands::scripts::list_scripts,
             commands::scripts::save_script,
             commands::scripts::delete_script,
+            // System Monitor
+            commands::sysmon::get_system_stats,
             // MCP Tools
             mcp::call_mcp_tool,
             mcp::list_internal_tools

@@ -14,5 +14,6 @@ pub mod scripts;
 pub mod session;
 pub mod ssh_profiles;
 pub mod terminal;
+pub mod sysmon;
 pub mod workspace;
 pub mod xllm;
