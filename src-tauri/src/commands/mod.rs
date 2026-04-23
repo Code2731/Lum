@@ -15,5 +15,6 @@ pub mod session;
 pub mod ssh_profiles;
 pub mod terminal;
 pub mod sysmon;
+pub mod tabbyapi_setup;
 pub mod workspace;
 pub mod xllm;

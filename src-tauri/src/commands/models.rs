@@ -99,6 +99,13 @@ pub async fn download_model(
 ) -> Result<()> {
     let rev = revision.unwrap_or_else(|| "main".to_string());
 
+    // 호출 시 전달된 토큰 우선, 없으면 config에 저장된 토큰 사용
+    let token: Option<String> = hf_token
+        .filter(|t| !t.is_empty())
+        .or_else(|| {
+            load_config().ok().and_then(|c| c.hf_token).filter(|t| !t.is_empty())
+        });
+
     // API 호출용(타임아웃 있음)과 파일 다운로드용(타임아웃 없음) 클라이언트를 분리
     let api_client = reqwest::Client::builder()
         .connect_timeout(std::time::Duration::from_secs(30))
@@ -119,8 +126,8 @@ pub async fn download_model(
     // HuggingFace API로 파일 목록 조회
     let api_url = format!("https://huggingface.co/api/models/{}/tree/{}", repo_id, rev);
     let mut req = api_client.get(&api_url);
-    if let Some(token) = &hf_token {
-        req = req.header("Authorization", format!("Bearer {}", token));
+    if let Some(ref t) = token {
+        req = req.header("Authorization", format!("Bearer {}", t));
     }
 
     let resp = req
@@ -131,7 +138,7 @@ pub async fn download_model(
     if !resp.status().is_success() {
         let status = resp.status();
         let hint = match status.as_u16() {
-            401 | 403 => " — HuggingFace 토큰이 필요하거나 비공개 모델입니다. 설정에서 토큰을 입력하세요.",
+            401 | 403 => " — 인증이 필요한 모델입니다. 위의 HuggingFace 토큰 입력란에 토큰을 입력한 후 다시 시도하세요.",
             404 => " — 리포지토리 또는 revision이 존재하지 않습니다.",
             429 => " — 요청 횟수 초과. 잠시 후 다시 시도하세요.",
             _ => "",
@@ -165,8 +172,8 @@ pub async fn download_model(
         );
 
         let mut dl_req = dl_client.get(&file_url);
-        if let Some(token) = &hf_token {
-            dl_req = dl_req.header("Authorization", format!("Bearer {}", token));
+        if let Some(ref t) = token {
+            dl_req = dl_req.header("Authorization", format!("Bearer {}", t));
         }
 
         let response = dl_req

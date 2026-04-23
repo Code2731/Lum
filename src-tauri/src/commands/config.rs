@@ -51,6 +51,8 @@ pub struct AppConfig {
     pub onboarding_completed: Option<bool>,
     /// Quick Actions — 즐겨찾기 커맨드 목록
     pub quick_actions: Option<Vec<QuickAction>>,
+    /// HuggingFace 액세스 토큰 — EXL2 모델 다운로드용 (한 번만 입력)
+    pub hf_token: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Default, Clone)]
@@ -110,6 +112,7 @@ pub fn complete_onboarding() -> Result<()> {
 /// xLLM 최적화 설정 저장 (프론트엔드 → 파일)
 #[tauri::command]
 pub fn save_xllm_settings(
+    server_url: Option<String>,
     cache_mode: Option<String>,
     coding_model: Option<String>,
     doc_model: Option<String>,
@@ -121,6 +124,7 @@ pub fn save_xllm_settings(
     sparse_top_k: Option<u32>,
 ) -> Result<()> {
     let mut config = load_config()?;
+    config.xllm_base_url = server_url.filter(|s| !s.is_empty());
     config.cache_mode = cache_mode;
     config.coding_model = coding_model;
     config.doc_model = doc_model;
@@ -138,6 +142,14 @@ pub fn save_xllm_settings(
 pub fn save_quick_actions(actions: Vec<QuickAction>) -> Result<()> {
     let mut config = load_config()?;
     config.quick_actions = Some(actions);
+    save_config(&config)
+}
+
+/// HuggingFace 토큰 저장 — 빈 문자열이면 삭제
+#[tauri::command]
+pub fn save_hf_token(token: String) -> Result<()> {
+    let mut config = load_config()?;
+    config.hf_token = if token.is_empty() { None } else { Some(token) };
     save_config(&config)
 }
 

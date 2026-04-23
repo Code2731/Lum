@@ -20,7 +20,27 @@ pub struct AIResponse {
     pub dynamic_ui: Option<String>,
 }
 
-// ─── xLLM (TabbyAPI / ExLlamaV2) ────────────────────────────────────────────
+// ─── xLLM (TabbyAPI / MLX-LM / OpenAI 호환) ────────────────────────────────
+
+/// 서버에서 현재 로드된 첫 번째 모델 ID 조회 (MLX-LM·TabbyAPI 공통)
+async fn get_server_model_id(client: &reqwest::Client, base_url: &str) -> String {
+    let url = format!("{}/v1/models", base_url);
+    let Ok(resp) = client
+        .get(&url)
+        .timeout(std::time::Duration::from_secs(2))
+        .send()
+        .await
+    else {
+        return "default".to_string();
+    };
+    let Ok(json) = resp.json::<serde_json::Value>().await else {
+        return "default".to_string();
+    };
+    json["data"][0]["id"]
+        .as_str()
+        .unwrap_or("default")
+        .to_string()
+}
 
 /// 공통 요청 바디 생성 — PD Disaggregation / SSD / Sparse Attention / KV Cache
 fn xllm_body(config: &AppConfig, model: &str, prompt: &str, stream: bool) -> serde_json::Value {
@@ -29,11 +49,16 @@ fn xllm_body(config: &AppConfig, model: &str, prompt: &str, stream: bool) -> ser
     // ③ KV Cache — 긴 컨텍스트면 Q4 강제
     let cache_mode = if is_long { "Q4" } else { config.cache_mode.as_deref().unwrap_or("Q8") };
 
+    // max_tokens: OpenAI 표준 파라미터 — MLX-LM·TabbyAPI 모두 지원
+    let max_tokens = config.max_seq_len.unwrap_or(4096).min(32768);
+
     let mut body = serde_json::json!({
         "model": model,
         "messages": [{ "role": "user", "content": prompt }],
         "stream": stream,
-        "cache_mode": cache_mode,
+        "max_tokens": max_tokens,
+        "cache_mode": cache_mode,       // TabbyAPI 전용, MLX-LM은 무시
+        "stop": ["<|im_end|>", "<|endoftext|>", "<|im_start|>"],
     });
 
     // ① PD Disaggregation — 긴 컨텍스트 decode 단계 안정화
@@ -60,12 +85,14 @@ fn xllm_body(config: &AppConfig, model: &str, prompt: &str, stream: bool) -> ser
 }
 
 /// xLLM 단일 응답 호출 (기존 호환)
-pub async fn call_xllm(client: &reqwest::Client, model: &str, prompt: &str) -> Result<String> {
+pub async fn call_xllm(client: &reqwest::Client, _model: &str, prompt: &str) -> Result<String> {
     let config = load_config()?;
     let base_url = config.xllm_url();
     let url = format!("{}/v1/chat/completions", base_url);
 
-    let body = xllm_body(&config, model, prompt, false);
+    // 서버의 실제 로드된 모델 ID 사용 (MLX-LM·TabbyAPI 공통)
+    let actual_model = get_server_model_id(client, &base_url).await;
+    let body = xllm_body(&config, &actual_model, prompt, false);
 
     let mut req = client.post(&url).json(&body);
     if let Some(key) = config.xllm_api_key {
@@ -90,14 +117,16 @@ pub async fn call_xllm(client: &reqwest::Client, model: &str, prompt: &str) -> R
 async fn call_xllm_stream(
     app: &tauri::AppHandle,
     client: &reqwest::Client,
-    model: &str,
+    _model: &str,
     prompt: &str,
 ) -> Result<String> {
     let config = load_config()?;
     let base_url = config.xllm_url();
     let url = format!("{}/v1/chat/completions", base_url);
 
-    let body = xllm_body(&config, model, prompt, true);
+    // 서버의 실제 로드된 모델 ID 사용
+    let actual_model = get_server_model_id(client, &base_url).await;
+    let body = xllm_body(&config, &actual_model, prompt, true);
 
     let mut req = client.post(&url).json(&body);
     if let Some(key) = config.xllm_api_key {
@@ -107,7 +136,18 @@ async fn call_xllm_stream(
     let response = req
         .send()
         .await
-        .map_err(|e| LumError::Network(format!("xLLM 스트림 연결 실패 ({}): {}", base_url, e)))?;
+        .map_err(|e| LumError::Network(format!("xLLM 서버에 연결할 수 없습니다 ({}): {}", base_url, e)))?;
+
+    if !response.status().is_success() {
+        let status = response.status();
+        let body = response.text().await.unwrap_or_default();
+        return Err(LumError::AiEngine(format!(
+            "xLLM 서버 오류 HTTP {} ({}): {}",
+            status,
+            base_url,
+            if body.is_empty() { "응답 없음".to_string() } else { body.chars().take(200).collect() }
+        )));
+    }
 
     let mut byte_stream = response.bytes_stream();
     let mut full_text = String::new();
@@ -387,7 +427,6 @@ pub async fn stream_ai_command(
     let full_prompt = format!("Context: {}\nRequest: {}", context, prompt);
 
     if model.starts_with("gemini") {
-        // Gemini는 스트리밍 미지원 — 단일 응답 반환
         let result = call_gemini(&client, &model, &full_prompt, None).await?;
         let _ = app.emit(XLLM_TOKEN_EVENT, result.clone());
         Ok(result)

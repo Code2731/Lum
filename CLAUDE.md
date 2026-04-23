@@ -126,3 +126,7 @@ cd src-tauri && cargo test   # Rust 단위 테스트 실행
 - [x] Phase 60: Smart Paste (2줄 이상 붙여넣기 자동 감지 → SmartPasteModal — 한 번에 실행/단계별 실행/텍스트만 붙여넣기, parseCommandLines 쉘 프롬프트 접두사 제거, PasteGuardModal보다 먼저 처리 완료)
 - [x] Phase 61: Right-click Context Menu (터미널 선택 텍스트 우클릭 → 복사/명령어 실행/AI 설명/웹 검색/파일·URL 열기, tauri-plugin-opener 연동, 화면 경계 자동 조정 완료)
 - [x] Phase 62: System Monitor (Cmd+Shift+M — CPU/메모리 게이지, 상위 프로세스 6개, 2초 폴링, SysmonState Mutex 관리로 정확한 CPU 측정 완료)
+- [x] Phase 63: Apple Silicon MLX-LM 전환 (tabbyapi_setup.rs — cfg!(target_arch="aarch64") 분기, MLX-LM venv 설치/시작/중지, tqdm \r 파이프 블로킹 → Stdio::null()+폴링으로 해결, get_server_model_id() 동적 모델 ID 조회, xllm_body에 stop tokens 추가, AirPlay 포트 충돌 방지 완료)
+- [x] Phase 64: AI Chat 코드베이스 인식 (read_path_for_context — 파일/폴더 재귀 읽기 최대 40KB, get_git_context — git status/diff/log 자동 주입, get_staged_diff — 커밋 메시지 생성용, useAIChat 경로 감지·git 키워드 감지·자동 context 주입, AIChatPanel 코드블록 ▶ 실행 버튼 — PTY 직접 전송 완료)
+- [x] Phase 65: Model Manager 확장 (MLX_MODELS 4→18개 — 코딩/범용/추론/경량 카테고리, Gemma 3/DeepSeek R1/Phi-4/Mistral/Llama 3.x/Qwen2.5 전계열, 카테고리 필터 버튼, mlx-community·turboderp·HuggingFace 링크 버튼, get_platform_arch 커맨드, XllmPanel 모델 선택 드롭다운, start_tabbyapi model 파라미터 추가 완료)
+- [x] Phase 66: XllmPanel 플랫폼 정직화 (NVIDIA 전용 기능에 ⚠ 배지 표시 — KV Cache Q4/Q8·모델 역할 분리·SSD·Sparse Attention이 MLX-LM에서 미동작임을 명시, max_tokens 실제 전송 추가, AI Chat 스크롤 버그 수정 — flex-1 min-h-0 체인, 타이틀바 LUM 로고 제거 완료)

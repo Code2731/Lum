@@ -75,7 +75,7 @@ export const useAIProcessing = () => {
     let accumulated = "";
 
     const unlisten = await listen<string>(XLLM_TOKEN_EVENT, (event) => {
-      accumulated += event.payload;
+      accumulated += event.payload.replace(/<\|im_end\|>|<\|endoftext\|>|<\|im_start\|>/g, "");
       onToken(accumulated);
     });
 

@@ -20,22 +20,39 @@ use std::sync::{Arc, Mutex};
 pub fn run() {
     let terminal_state = TerminalState {
         ptys: Arc::new(Mutex::new(HashMap::new())),
+        spawning: Arc::new(Mutex::new(std::collections::HashSet::new())),
     };
 
     let mcp_state = McpState {
         servers: Arc::new(Mutex::new(HashMap::new())),
     };
 
+    #[cfg(feature = "local-ai")]
+    let local_ai_state = burn_inference::LocalAIState::new();
+
     tauri::Builder::default()
         .manage(terminal_state)
         .manage(mcp_state)
         .manage(SysmonState::new())
+        .manage({
+            #[cfg(feature = "local-ai")]
+            { local_ai_state }
+            #[cfg(not(feature = "local-ai"))]
+            { () }
+        })
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
         .invoke_handler(tauri::generate_handler![
             // Hardware
             commands::hardware::get_hardware_specs,
+            // Local AI (burn/wgpu) — local-ai 피처 빌드에서만 노출
+            #[cfg(feature = "local-ai")]
+            burn_inference::init_local_model,
+            #[cfg(feature = "local-ai")]
+            burn_inference::generate_with_local_model,
+            #[cfg(feature = "local-ai")]
+            burn_inference::get_local_model_status,
             // Model Management
             commands::models::list_local_models,
             commands::models::download_model,
@@ -92,6 +109,7 @@ pub fn run() {
             commands::config::save_xllm_settings,
             commands::config::save_terminal_appearance,
             commands::config::save_quick_actions,
+            commands::config::save_hf_token,
             commands::config::check_onboarding_complete,
             commands::config::complete_onboarding,
             // Session Persistence
@@ -103,6 +121,9 @@ pub fn run() {
             commands::workspace::delete_workspace,
             // Project Context
             commands::context::get_project_context,
+            commands::context::get_git_context,
+            commands::context::get_staged_diff,
+            commands::context::read_path_for_context,
             // Updater
             commands::updater::check_for_update,
             commands::updater::install_update,
@@ -122,6 +143,13 @@ pub fn run() {
             commands::scripts::delete_script,
             // System Monitor
             commands::sysmon::get_system_stats,
+            // TabbyAPI / MLX-LM 설치·실행 관리
+            commands::tabbyapi_setup::get_platform_arch,
+            commands::tabbyapi_setup::check_tabbyapi_status,
+            commands::tabbyapi_setup::get_recommended_port,
+            commands::tabbyapi_setup::install_tabbyapi,
+            commands::tabbyapi_setup::start_tabbyapi,
+            commands::tabbyapi_setup::stop_tabbyapi,
             // MCP Tools
             mcp::call_mcp_tool,
             mcp::list_internal_tools

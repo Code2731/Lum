@@ -2,43 +2,78 @@ use crate::error::{LumError, Result};
 use crate::platform;
 use portable_pty::{native_pty_system, CommandBuilder, PtySize};
 
-/// 셸 통합 스크립트 — OSC 133 A/C/D 시퀀스를 PTY 출력에 주입
-fn shell_integration_script(shell: &str) -> String {
-    let name = std::path::Path::new(shell)
-        .file_name()
-        .and_then(|n| n.to_str())
-        .unwrap_or("");
-    match name {
-        "zsh" => concat!(
-            " autoload -Uz add-zsh-hook 2>/dev/null;",
-            " _lum_precmd(){ printf '\\033]133;D;%d\\007' \"$?\" };",
-            " _lum_preexec(){ printf '\\033]133;C;%s\\007' \"$1\" };",
-            " add-zsh-hook precmd _lum_precmd;",
-            " add-zsh-hook preexec _lum_preexec\n"
-        )
-        .to_string(),
-        "bash" => concat!(
-            " _lum_precmd(){ local e=$?; printf '\\033]133;D;%d\\007' \"$e\"; };",
-            " PROMPT_COMMAND=\"_lum_precmd${PROMPT_COMMAND:+; $PROMPT_COMMAND}\";",
-            " trap 'printf \"\\033]133;C;$BASH_COMMAND\\007\"' DEBUG\n"
-        )
-        .to_string(),
-        // PowerShell 7 (pwsh) 및 Windows PowerShell — prompt 함수 오버라이드로 OSC 133 주입
-        "pwsh" | "powershell" => concat!(
-            "function global:prompt {",
-            " $e=$LASTEXITCODE;",
-            " [Console]::Write(\"`e]133;D;$e`a\");",
-            " $p=(Get-Location).Path;",
-            " [Console]::Write(\"`e]7;file://$env:COMPUTERNAME/$($p.Replace('\\','/'))`a\");",
-            " [Console]::Write(\"`e]133;A`a\");",
-            " \"PS $p> \"",
-            " }\r\n"
-        )
-        .to_string(),
-        _ => String::new(),
+/// zsh: ZDOTDIR 방식으로 훅 주입 — stdin echo 없이 셸 시작 시 자동 로드
+#[cfg(not(windows))]
+fn setup_zsh_zdotdir() -> Option<String> {
+    let zdotdir = std::env::temp_dir().join("lum_zdotdir");
+    std::fs::create_dir_all(&zdotdir).ok()?;
+
+    let home = dirs::home_dir()?;
+
+    // .zshenv 포워딩 (비대화형 포함 항상 소싱)
+    let real_zshenv = home.join(".zshenv");
+    if real_zshenv.exists() {
+        let _ = std::fs::write(
+            zdotdir.join(".zshenv"),
+            format!("[[ -f \"{p}\" ]] && source \"{p}\"\n", p = real_zshenv.display()),
+        );
     }
+
+    // .zprofile 포워딩 (로그인 셸)
+    let real_zprofile = home.join(".zprofile");
+    if real_zprofile.exists() {
+        let _ = std::fs::write(
+            zdotdir.join(".zprofile"),
+            format!("[[ -f \"{p}\" ]] && source \"{p}\"\n", p = real_zprofile.display()),
+        );
+    }
+
+    // .zshrc — OSC 133 훅 먼저 등록 후 실제 .zshrc 소싱
+    let real_zshrc = home.join(".zshrc");
+    let zshrc = format!(
+        "autoload -Uz add-zsh-hook 2>/dev/null\n\
+         _lum_precmd(){{ printf '\\033]133;D;%d\\007' \"$?\" }}\n\
+         _lum_preexec(){{ printf '\\033]133;C;%s\\007' \"$1\" }}\n\
+         add-zsh-hook precmd _lum_precmd\n\
+         add-zsh-hook preexec _lum_preexec\n\
+         [[ -f \"{p}\" ]] && source \"{p}\"\n",
+        p = real_zshrc.display()
+    );
+    std::fs::write(zdotdir.join(".zshrc"), zshrc).ok()?;
+
+    Some(zdotdir.to_string_lossy().into_owned())
 }
-use std::collections::HashMap;
+
+/// bash: 임시 init 파일로 훅 주입 후 실제 .bashrc 소싱
+#[cfg(not(windows))]
+fn setup_bash_initfile() -> Option<String> {
+    let init_path = std::env::temp_dir().join("lum_bash_init.sh");
+    let home = dirs::home_dir()?;
+    let real_bashrc = home.join(".bashrc");
+    let content = format!(
+        "_lum_precmd(){{ local e=$?; printf '\\033]133;D;%d\\007' \"$e\"; }}\n\
+         PROMPT_COMMAND=\"_lum_precmd${{PROMPT_COMMAND:+; $PROMPT_COMMAND}}\"\n\
+         trap 'printf \"\\033]133;C;$BASH_COMMAND\\007\"' DEBUG\n\
+         [[ -f \"{p}\" ]] && source \"{p}\"\n",
+        p = real_bashrc.display()
+    );
+    std::fs::write(&init_path, content).ok()?;
+    Some(init_path.to_string_lossy().into_owned())
+}
+
+/// PowerShell OSC 133 훅 (Windows — spawn_pty에서 stdin 주입)
+#[cfg(windows)]
+const POWERSHELL_INIT: &str = concat!(
+    "function global:prompt {",
+    " $e=$LASTEXITCODE;",
+    " [Console]::Write(\"`e]133;D;$e`a\");",
+    " $p=(Get-Location).Path;",
+    " [Console]::Write(\"`e]7;file://$env:COMPUTERNAME/$($p.Replace('\\','/'))`a\");",
+    " [Console]::Write(\"`e]133;A`a\");",
+    " \"PS $p> \"",
+    " }\r\n"
+);
+use std::collections::{HashMap, HashSet};
 use std::io::{Read, Write};
 use std::sync::{Arc, Mutex};
 use tauri::{command, AppHandle, Emitter, State};
@@ -51,6 +86,8 @@ pub struct PtyHandle {
 
 pub struct TerminalState {
     pub ptys: Arc<Mutex<HashMap<String, PtyHandle>>>,
+    /// spawn_pty 동시 호출로 같은 ID에 PTY가 두 개 생기는 TOCTOU 방지
+    pub spawning: Arc<Mutex<HashSet<String>>>,
 }
 
 #[derive(serde::Serialize, Clone)]
@@ -68,15 +105,14 @@ pub async fn spawn_pty(
     cols: u16,
     rows: u16,
 ) -> Result<()> {
-    // 이미 실행 중인 PTY가 있으면 스킵
+    // TOCTOU 방지: ptys 맵과 spawning 셋을 동시에 확인 — 락 사이 경쟁 없음
     {
-        let ptys = state
-            .ptys
-            .lock()
-            .map_err(|_| LumError::Io("lock 오류".into()))?;
-        if ptys.contains_key(&id) {
+        let ptys = state.ptys.lock().map_err(|_| LumError::Io("lock 오류".into()))?;
+        let mut spawning = state.spawning.lock().map_err(|_| LumError::Io("lock 오류".into()))?;
+        if ptys.contains_key(&id) || spawning.contains(&id) {
             return Ok(());
         }
+        spawning.insert(id.clone());
     }
 
     let pty_system = native_pty_system();
@@ -99,13 +135,40 @@ pub async fn spawn_pty(
         cwd
     };
 
-    let mut cmd = CommandBuilder::new(shell);
+    let shell_name = std::path::Path::new(&shell)
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("")
+        .to_string();
+
+    // bash --init-file 사용 시 별도 CommandBuilder 필요
+    #[cfg(not(windows))]
+    let mut cmd = if shell_name == "bash" {
+        if let Some(init_file) = setup_bash_initfile() {
+            let mut c = CommandBuilder::new(&shell);
+            c.arg("--init-file");
+            c.arg(init_file);
+            c
+        } else {
+            CommandBuilder::new(&shell)
+        }
+    } else {
+        CommandBuilder::new(&shell)
+    };
+    #[cfg(windows)]
+    let mut cmd = CommandBuilder::new(&shell);
+
     cmd.cwd(&work_dir);
-    // Windows cmd/PowerShell은 TERM 불필요, Unix 계열만 설정
+    // Unix: TERM + 셸별 훅 환경변수 설정
     #[cfg(not(windows))]
     {
         cmd.env("TERM", "xterm-256color");
         cmd.env("COLORTERM", "truecolor");
+        if shell_name == "zsh" {
+            if let Some(zdotdir) = setup_zsh_zdotdir() {
+                cmd.env("ZDOTDIR", zdotdir);
+            }
+        }
     }
 
     let _child = pair
@@ -172,29 +235,13 @@ pub async fn spawn_pty(
         let _ = app_r.emit("pty_exit", id_r);
     });
 
-    // ── 셸 통합 스크립트 주입 (400ms 후 — 셸 초기화 완료 대기) ─
-    let init_tx = write_tx.clone();
-    let shell_name = shell.to_string();
-    std::thread::spawn(move || {
-        std::thread::sleep(std::time::Duration::from_millis(400));
-        let script = shell_integration_script(&shell_name);
-        if !script.is_empty() {
-            let _ = init_tx.send(script.into_bytes());
-        }
-    });
-
-    // ── 채널 핸들 저장 ─────────────────────────────────────────
-    let mut ptys = state
-        .ptys
-        .lock()
-        .map_err(|_| LumError::Io("lock 오류".into()))?;
-    ptys.insert(
-        id,
-        PtyHandle {
-            write_tx,
-            resize_tx,
-        },
-    );
+    // ── 채널 핸들 저장 + spawning 제거 (원자적) ──────────────────
+    {
+        let mut ptys = state.ptys.lock().map_err(|_| LumError::Io("lock 오류".into()))?;
+        let mut spawning = state.spawning.lock().map_err(|_| LumError::Io("lock 오류".into()))?;
+        ptys.insert(id.clone(), PtyHandle { write_tx, resize_tx });
+        spawning.remove(&id);
+    }
 
     Ok(())
 }

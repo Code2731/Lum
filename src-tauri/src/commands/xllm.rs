@@ -10,22 +10,43 @@ pub struct XllmModelInfo {
     pub rope_scale: Option<f32>,
 }
 
-/// 현재 로드된 xLLM 모델 정보 조회 (TabbyAPI GET /v1/model)
+/// 현재 로드된 모델 정보 조회 — /v1/models (MLX-LM·OpenAI 호환) 우선,
+/// 실패 시 TabbyAPI 전용 /v1/model 폴백
 #[tauri::command]
 pub async fn get_xllm_model_info() -> Result<XllmModelInfo> {
     let config = load_config()?;
-    let url = format!("{}/v1/model", config.xllm_url());
+    let base_url = config.xllm_url();
     let client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(5))
         .build()
         .map_err(|e| LumError::Network(e.to_string()))?;
 
-    let mut req = client.get(&url);
+    // OpenAI 표준 /v1/models 엔드포인트 시도 (MLX-LM, TabbyAPI 모두 지원)
+    let models_url = format!("{}/v1/models", base_url);
+    let mut req = client.get(&models_url);
     if let Some(key) = &config.xllm_api_key {
         req = req.header("x-api-key", key);
     }
+    if let Ok(resp) = req.send().await {
+        if let Ok(json) = resp.json::<serde_json::Value>().await {
+            if let Some(first) = json["data"].as_array().and_then(|a| a.first()) {
+                return Ok(XllmModelInfo {
+                    id: first["id"].as_str().unwrap_or("unknown").to_string(),
+                    max_seq_len: None,
+                    cache_mode: None,
+                    rope_scale: None,
+                });
+            }
+        }
+    }
 
-    let res: serde_json::Value = req
+    // TabbyAPI 전용 /v1/model 폴백
+    let model_url = format!("{}/v1/model", base_url);
+    let mut req2 = client.get(&model_url);
+    if let Some(key) = &config.xllm_api_key {
+        req2 = req2.header("x-api-key", key);
+    }
+    let res: serde_json::Value = req2
         .send()
         .await
         .map_err(|e| LumError::Network(e.to_string()))?

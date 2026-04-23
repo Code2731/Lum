@@ -17,7 +17,7 @@ import { invoke } from "@tauri-apps/api/core";
 import {
   Zap, Cpu, Loader2, TerminalSquare, LayoutList, MousePointer2,
   Package, Database, Plus, X, Columns2, Rows2, SlidersHorizontal, ArrowUpCircle, GitCompareArrows, Palette,
-  GitBranch, Container, Layers, Lock, MessageSquare, BookOpen, Bell, Activity,
+  GitBranch, Container, Layers, Lock, MessageSquare, BookOpen, Bell, Activity, Brain,
 } from "lucide-react";
 import SshConnectModal from "./components/SshConnectModal";
 import AgentPanel from "./components/AgentPanel";
@@ -50,6 +50,7 @@ import CommandPalette from "./components/CommandPalette";
 import TabContextMenu from "./components/TabContextMenu";
 import ResizeHandles from "./components/ResizeHandles";
 import WindowControls from "./components/WindowControls";
+import LocalAIPanel from "./components/LocalAIPanel";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { TAB_COLORS } from "./hooks/useTabManager";
 
@@ -108,6 +109,9 @@ const App: React.FC = () => {
   // 알림 센터
   const notifCenter = useNotificationCenter();
   const [showNotifCenter, setShowNotifCenter] = useState(false);
+
+  // 로컬 AI 패널
+  const [showLocalAI, setShowLocalAI] = useState(false);
 
   // AI 채팅 사이드패널
   const [showChatPanel, setShowChatPanel] = useState(false);
@@ -387,11 +391,6 @@ const App: React.FC = () => {
       >
         <div className="flex items-center gap-4">
           <WindowControls />
-          <div className="flex items-center gap-2">
-            <Zap size={14} className="text-accent" />
-            <span className="text-xs font-bold tracking-widest uppercase">LUM</span>
-          </div>
-
           <div className="flex items-center gap-1 text-[10px] text-white/40">
             <Cpu size={10} />
             {specsLoading ? (
@@ -439,6 +438,14 @@ const App: React.FC = () => {
             className={`p-1.5 rounded transition-colors ${showRagPanel ? "text-accent bg-accent/10" : "text-white/40 hover:text-white hover:bg-white/10"}`}
           >
             <Database size={13} />
+          </button>
+          <button
+            aria-label="로컬 AI 추론 (burn/wgpu)"
+            title="로컬 AI 추론 (burn/wgpu)"
+            onClick={() => setShowLocalAI(v => !v)}
+            className={`p-1.5 rounded transition-colors ${showLocalAI ? "text-accent bg-accent/10" : "text-white/40 hover:text-white hover:bg-white/10"}`}
+          >
+            <Brain size={13} />
           </button>
           <button
             aria-label="xLLM 최적화 설정"
@@ -515,6 +522,7 @@ const App: React.FC = () => {
           </div>
           <button
             aria-label="모델 관리"
+            title="모델 관리 (HuggingFace 다운로드)"
             onClick={() => setShowModelManager(true)}
             className="p-1.5 rounded text-white/40 hover:text-white hover:bg-white/10 transition-colors"
           >
@@ -880,13 +888,17 @@ const App: React.FC = () => {
         )}
 
         {showChatPanel && (
-          <div className="w-80 border-l border-white/5 shrink-0 overflow-hidden">
+          <div className="w-80 border-l border-white/5 shrink-0 flex flex-col overflow-hidden">
             <AIChatPanel
               messages={aiChat.messages}
               streaming={aiChat.streaming}
+              error={aiChat.error}
               onSend={aiChat.sendMessage}
               onClear={aiChat.clear}
               onClose={() => setShowChatPanel(false)}
+              onExecute={(cmd) => {
+                ptyWriteRefs.current.get(activePaneIdRef.current)?.(cmd + "\n");
+              }}
             />
           </div>
         )}
@@ -968,6 +980,12 @@ const App: React.FC = () => {
       {showXllmPanel && (
         <ErrorBoundary label="xLLM">
           <XllmPanel onClose={() => setShowXllmPanel(false)} />
+        </ErrorBoundary>
+      )}
+
+      {showLocalAI && (
+        <ErrorBoundary label="로컬 AI">
+          <LocalAIPanel onClose={() => setShowLocalAI(false)} />
         </ErrorBoundary>
       )}
 
