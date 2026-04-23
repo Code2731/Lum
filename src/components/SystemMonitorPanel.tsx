@@ -33,14 +33,13 @@ function ProcTable({
   return (
     <div className="space-y-0.5">
       {procs.map((p) => {
-        const val = mode === "cpu" ? p.cpu_percent : p.memory_mb;
         const label =
           mode === "cpu"
             ? `${p.cpu_percent.toFixed(1)}%`
             : p.memory_mb >= 1024
               ? `${(p.memory_mb / 1024).toFixed(1)} GB`
               : `${p.memory_mb.toFixed(0)} MB`;
-        const barPct = mode === "cpu" ? p.cpu_percent : Math.min((val / 8192) * 100, 100);
+        const barPct = mode === "cpu" ? p.cpu_percent : Math.min((p.memory_mb / 8192) * 100, 100);
 
         return (
           <div key={`${p.pid}-${mode}`} className="flex items-center gap-2">

@@ -4,6 +4,9 @@ use std::sync::Mutex;
 use sysinfo::{ProcessesToUpdate, System};
 use tauri::{command, State};
 
+const BYTES_PER_GB: f64 = 1_073_741_824.0;
+const BYTES_PER_MB: f64 = 1_048_576.0;
+
 pub struct SysmonState {
     pub sys: Mutex<System>,
 }
@@ -14,7 +17,7 @@ impl SysmonState {
     }
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Clone)]
 pub struct ProcessInfo {
     pub pid: u32,
     pub name: String,
@@ -35,53 +38,47 @@ pub struct SystemStats {
 
 #[command]
 pub fn get_system_stats(state: State<SysmonState>) -> Result<SystemStats> {
-    let mut sys = state.sys.lock().unwrap();
+    // 데이터 수집 후 즉시 lock 해제 — 정렬은 lock 범위 밖에서 수행
+    let (cpu_usage, memory_used_gb, memory_total_gb, cpu_count, procs) = {
+        let mut sys = state.sys.lock().unwrap();
+        sys.refresh_cpu_usage();
+        sys.refresh_memory();
+        sys.refresh_processes(ProcessesToUpdate::All, false);
 
-    sys.refresh_cpu_usage();
-    sys.refresh_memory();
-    sys.refresh_processes(ProcessesToUpdate::All, false);
+        let procs: Vec<ProcessInfo> = sys
+            .processes()
+            .values()
+            .map(|p| ProcessInfo {
+                pid: p.pid().as_u32(),
+                name: p.name().to_string_lossy().to_string(),
+                cpu_percent: p.cpu_usage(),
+                memory_mb: p.memory() as f64 / BYTES_PER_MB,
+            })
+            .collect();
 
-    let cpu_usage = sys.global_cpu_usage();
-    let memory_used_gb = sys.used_memory() as f64 / 1_073_741_824.0;
-    let memory_total_gb = sys.total_memory() as f64 / 1_073_741_824.0;
+        (
+            sys.global_cpu_usage(),
+            sys.used_memory() as f64 / BYTES_PER_GB,
+            sys.total_memory() as f64 / BYTES_PER_GB,
+            sys.cpus().len(),
+            procs,
+        )
+    };
+
     let memory_percent = if memory_total_gb > 0.0 {
         (memory_used_gb / memory_total_gb * 100.0) as f32
     } else {
         0.0
     };
-    let cpu_count = sys.cpus().len();
 
-    let mut procs: Vec<ProcessInfo> = sys
-        .processes()
-        .values()
-        .map(|p| ProcessInfo {
-            pid: p.pid().as_u32(),
-            name: p.name().to_string_lossy().to_string(),
-            cpu_percent: p.cpu_usage(),
-            memory_mb: p.memory() as f64 / 1_048_576.0,
-        })
-        .collect();
+    // 한 번 수집된 Vec을 clone해서 각각 정렬 (이중 수집 제거)
+    let mut top_cpu = procs.clone();
+    top_cpu.sort_by(|a, b| b.cpu_percent.partial_cmp(&a.cpu_percent).unwrap_or(std::cmp::Ordering::Equal));
+    top_cpu.truncate(6);
 
-    procs.sort_by(|a, b| {
-        b.cpu_percent.partial_cmp(&a.cpu_percent).unwrap_or(std::cmp::Ordering::Equal)
-    });
-    let top_cpu: Vec<ProcessInfo> = procs.drain(..procs.len().min(6)).collect();
-
-    let mut procs2: Vec<ProcessInfo> = sys
-        .processes()
-        .values()
-        .map(|p| ProcessInfo {
-            pid: p.pid().as_u32(),
-            name: p.name().to_string_lossy().to_string(),
-            cpu_percent: p.cpu_usage(),
-            memory_mb: p.memory() as f64 / 1_048_576.0,
-        })
-        .collect();
-
-    procs2.sort_by(|a, b| {
-        b.memory_mb.partial_cmp(&a.memory_mb).unwrap_or(std::cmp::Ordering::Equal)
-    });
-    let top_mem: Vec<ProcessInfo> = procs2.drain(..procs2.len().min(6)).collect();
+    let mut top_mem = procs;
+    top_mem.sort_by(|a, b| b.memory_mb.partial_cmp(&a.memory_mb).unwrap_or(std::cmp::Ordering::Equal));
+    top_mem.truncate(6);
 
     Ok(SystemStats {
         cpu_usage,
