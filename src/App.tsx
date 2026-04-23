@@ -24,6 +24,8 @@ import AgentPanel from "./components/AgentPanel";
 import AIChatPanel from "./components/AIChatPanel";
 import { useAgentLoop } from "./hooks/useAgentLoop";
 import { useAIChat } from "./hooks/useAIChat";
+import { useEnvAutoDetector } from "./hooks/useEnvAutoDetector";
+import EnvSuggestionToast from "./components/EnvSuggestionToast";
 import type { SshProfile } from "./hooks/useTabManager";
 import InfiniteCanvas from "./components/layout/InfiniteCanvas";
 import TerminalPane from "./components/TerminalPane";
@@ -89,6 +91,9 @@ const App: React.FC = () => {
 
   // 에이전트 루프 (>> 프리픽스 태스크)
   const agentLoop = useAgentLoop(selectedModel);
+
+  // 환경 파일 자동 감지
+  const envDetector = useEnvAutoDetector(activePaneIdRef, ptyWriteRefs);
 
   // AI 채팅 사이드패널
   const [showChatPanel, setShowChatPanel] = useState(false);
@@ -604,7 +609,7 @@ const App: React.FC = () => {
                             fontSize={appearance.fontSize}
                             fontFamily={appearance.fontFamily}
                             onOutput={handleTerminalOutput(tab.id)}
-                            onCwdChange={cwd => updateTabCwd(tab.id, cwd, inferTabIcon(cwd))}
+                            onCwdChange={cwd => { updateTabCwd(tab.id, cwd, inferTabIcon(cwd)); if (tab.id === activePaneIdRef.current) envDetector.detectEnv(cwd); }}
                             onReady={(write) => { ptyWriteRefs.current.set(tab.id, write); }}
                             onAgentTrigger={handleAgentTrigger}
                           />
@@ -630,7 +635,7 @@ const App: React.FC = () => {
                             fontSize={appearance.fontSize}
                             fontFamily={appearance.fontFamily}
                             onOutput={handleTerminalOutput(splitId(tab.id))}
-                            onCwdChange={cwd => updateTabCwd(splitId(tab.id), cwd, inferTabIcon(cwd))}
+                            onCwdChange={cwd => { updateTabCwd(splitId(tab.id), cwd, inferTabIcon(cwd)); if (splitId(tab.id) === activePaneIdRef.current) envDetector.detectEnv(cwd); }}
                             onReady={(write) => { ptyWriteRefs.current.set(splitId(tab.id), write); }}
                             onAgentTrigger={handleAgentTrigger}
                           />
@@ -650,7 +655,7 @@ const App: React.FC = () => {
                         fontSize={appearance.fontSize}
                         fontFamily={appearance.fontFamily}
                         onOutput={handleTerminalOutput(tab.id)}
-                        onCwdChange={cwd => updateTabCwd(tab.id, cwd, inferTabIcon(cwd))}
+                        onCwdChange={cwd => { updateTabCwd(tab.id, cwd, inferTabIcon(cwd)); if (tab.id === activePaneIdRef.current) envDetector.detectEnv(cwd); }}
                         onReady={(write) => { ptyWriteRefs.current.set(tab.id, write); }}
                         onAgentTrigger={handleAgentTrigger}
                       />
@@ -673,6 +678,14 @@ const App: React.FC = () => {
                 onAnalyze={() => handleAnalyze(healingError)}
                 onExecute={handleExecute}
                 onDismiss={clearHealing}
+              />
+            )}
+            {/* ── 환경 파일 제안 토스트 ────────────────── */}
+            {envDetector.visible && (
+              <EnvSuggestionToast
+                suggestions={envDetector.suggestions}
+                onExecute={envDetector.executeCmd}
+                onDismiss={envDetector.dismiss}
               />
             )}
             {/* ── 에이전트 패널 (>> 태스크) ─────────────── */}

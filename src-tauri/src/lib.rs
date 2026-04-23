@@ -112,6 +112,8 @@ pub fn run() {
             commands::ssh_profiles::list_ssh_profiles,
             commands::ssh_profiles::save_ssh_profile,
             commands::ssh_profiles::delete_ssh_profile,
+            // 환경 파일 자동 감지
+            commands::env::detect_env_files,
             // MCP Tools
             mcp::call_mcp_tool,
             mcp::list_internal_tools
