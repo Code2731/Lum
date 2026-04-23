@@ -8,7 +8,9 @@ import "@xterm/xterm/css/xterm.css";
 import { findCompletion } from "../utils/ghostText";
 import { parseOsc7 } from "../utils/tabIcon";
 import { checkPasteDanger } from "../utils/pasteGuard";
+import { parseCommandLines, isMultiLineCommand } from "../utils/smartPaste";
 import PasteGuardModal from "./PasteGuardModal";
+import SmartPasteModal from "./SmartPasteModal";
 import type { XtermTheme } from "../hooks/useTerminalTheme";
 import type { DangerMatch } from "../utils/pasteGuard";
 import type { SshProfile } from "../hooks/useTabManager";
@@ -152,6 +154,10 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
   // Paste guard
   const [pasteGuard, setPasteGuard] = useState<{ match: DangerMatch; text: string } | null>(null);
 
+  // Smart paste
+  const [smartPaste, setSmartPaste] = useState<{ lines: string[]; rawText: string } | null>(null);
+  const writeToPtyRef = useRef<(data: string) => void>(() => {});
+
   // Static CLI ghost text
   const [ghostText, setGhostText] = useState<string | null>(null);
   const [ghostPos, setGhostPos] = useState({ x: 0, y: 0 });
@@ -182,6 +188,12 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
         e.preventDefault();
         e.stopPropagation();
         setPasteGuard({ match: danger, text });
+        return;
+      }
+      if (isMultiLineCommand(text)) {
+        e.preventDefault();
+        e.stopPropagation();
+        setSmartPaste({ lines: parseCommandLines(text), rawText: text });
       }
     };
     el.addEventListener("paste", handler, { capture: true });
@@ -454,6 +466,8 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
       invoke("write_to_pty", { id, data }).catch(() => {});
     });
 
+    writeToPtyRef.current = (data) => invoke("write_to_pty", { id, data }).catch(() => {});
+
     onReadyRef.current?.((data) => {
       invoke("write_to_pty", { id, data }).catch(() => {});
     });
@@ -676,6 +690,24 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
         </div>
       )}
 
+      {smartPaste && (
+        <SmartPasteModal
+          lines={smartPaste.lines}
+          rawText={smartPaste.rawText}
+          onRunAll={() => {
+            for (const line of smartPaste.lines) {
+              writeToPtyRef.current(line + "\r");
+            }
+            setSmartPaste(null);
+          }}
+          onPasteText={() => {
+            writeToPtyRef.current(smartPaste.rawText);
+            setSmartPaste(null);
+          }}
+          onClose={() => setSmartPaste(null)}
+          writeLine={(line) => writeToPtyRef.current(line + "\r")}
+        />
+      )}
       {pasteGuard && (
         <PasteGuardModal
           match={pasteGuard.match}
