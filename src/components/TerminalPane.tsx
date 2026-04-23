@@ -8,9 +8,11 @@ import "@xterm/xterm/css/xterm.css";
 import { findCompletion } from "../utils/ghostText";
 import { parseOsc7 } from "../utils/tabIcon";
 import { checkPasteDanger } from "../utils/pasteGuard";
-import { parseCommandLines, isMultiLineCommand } from "../utils/smartPaste";
+import { parseCommandLines } from "../utils/smartPaste";
 import PasteGuardModal from "./PasteGuardModal";
 import SmartPasteModal from "./SmartPasteModal";
+import TerminalContextMenu from "./TerminalContextMenu";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import type { XtermTheme } from "../hooks/useTerminalTheme";
 import type { DangerMatch } from "../utils/pasteGuard";
 import type { SshProfile } from "../hooks/useTabManager";
@@ -158,6 +160,9 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
   const [smartPaste, setSmartPaste] = useState<{ lines: string[]; rawText: string } | null>(null);
   const writeToPtyRef = useRef<(data: string) => void>(() => {});
 
+  // Right-click context menu
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; text: string } | null>(null);
+
   // Static CLI ghost text
   const [ghostText, setGhostText] = useState<string | null>(null);
   const [ghostPos, setGhostPos] = useState({ x: 0, y: 0 });
@@ -190,10 +195,12 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
         setPasteGuard({ match: danger, text });
         return;
       }
-      if (isMultiLineCommand(text)) {
+      // parseCommandLines를 한 번만 호출해 결과를 재사용 (이전엔 isMultiLineCommand 내부 + 여기서 중복 호출)
+      const lines = parseCommandLines(text);
+      if (lines.length >= 2) {
         e.preventDefault();
         e.stopPropagation();
-        setSmartPaste({ lines: parseCommandLines(text), rawText: text });
+        setSmartPaste({ lines, rawText: text });
       }
     };
     el.addEventListener("paste", handler, { capture: true });
@@ -491,9 +498,37 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     };
   }, [id, doFitAndResize, updateGhost, triggerAiCompletion, clearAiGhost, triggerExplain, clearExplain, resetInputState, openSearch]);
 
+  const handleContextMenu = useCallback((e: React.MouseEvent) => {
+    const selected = termRef.current?.getSelection().trim() ?? "";
+    if (!selected) return;
+    e.preventDefault();
+    setContextMenu({ x: e.clientX, y: e.clientY, text: selected });
+  }, []);
+
+  const isPathOrUrl = (text: string) =>
+    /^https?:\/\//.test(text) ||
+    /^[/~]/.test(text) ||
+    /^\.[./]/.test(text);
+
+  const ctxExplain = useCallback(async (text: string) => {
+    try {
+      setExplainLoading(true);
+      setExplainPopup(null);
+      const explanation = await invoke<string>("explain_command", {
+        command: text,
+        model: modelRef.current,
+      });
+      setExplainLoading(false);
+      setExplainPopup({ text: explanation.trim(), y: PANE_PADDING_Y + CELL_H * 2 });
+    } catch {
+      setExplainLoading(false);
+    }
+  }, []);
+
   return (
     <div
       ref={outerRef}
+      onContextMenu={handleContextMenu}
       style={{
         width: "100%",
         height: "100%",
@@ -690,6 +725,25 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
         </div>
       )}
 
+      {contextMenu && (
+        <TerminalContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          text={contextMenu.text}
+          isPathOrUrl={isPathOrUrl(contextMenu.text)}
+          onClose={() => setContextMenu(null)}
+          onCopy={() => navigator.clipboard.writeText(contextMenu.text)}
+          onRun={() => writeToPtyRef.current(contextMenu.text + "\r")}
+          onExplain={() => ctxExplain(contextMenu.text)}
+          onWebSearch={() => openUrl(`https://www.google.com/search?q=${encodeURIComponent(contextMenu.text)}`)}
+          onOpen={() => openUrl(
+            /^https?:\/\//.test(contextMenu.text)
+              ? contextMenu.text
+              : `file://${contextMenu.text.replace(/^~/, "")}`,
+          )}
+        />
+      )}
+
       {smartPaste && (
         <SmartPasteModal
           lines={smartPaste.lines}
@@ -701,7 +755,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
             setSmartPaste(null);
           }}
           onPasteText={() => {
-            writeToPtyRef.current(smartPaste.rawText);
+            writeToPtyRef.current(smartPaste.rawText.replace(/\r\n/g, "\n"));
             setSmartPaste(null);
           }}
           onClose={() => setSmartPaste(null)}

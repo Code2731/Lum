@@ -52,6 +52,8 @@ LUM (Local Universal Machine) is a **real terminal emulator** that runs your act
 | **Smart Env Auto-Loader** | Detects `.nvmrc`, `pyproject.toml`, `Pipfile`, `package.json`, etc. on `cd` → slide-up toast with one-click install commands. |
 | **Script Library** | Save agent task runs as reusable scripts. Browse, run, and delete from a side panel (`Cmd+Shift+L`). |
 | **Notification Center** | Aggregates long-running command completions, agent task results, healing triggers, and env detections in one bell-icon panel. |
+| **Smart Paste** | Detects multi-line clipboard content → dialog to run all at once, step-by-step, or paste as raw text. |
+| **Right-click Context Menu** | Right-click any selected terminal text → copy, run as command, AI explain, web search, or open file/URL. |
 
 ### Architecture
 
@@ -160,6 +162,8 @@ LUM(Local Universal Machine)은 **실제 셸을 실행하는 터미널 에뮬레
 | **스마트 환경 자동 로더** | `cd` 시 `.nvmrc`, `pyproject.toml`, `Pipfile`, `package.json` 등 감지 → 설치 명령어 슬라이드업 토스트. |
 | **스크립트 라이브러리** | 에이전트 태스크를 재사용 스크립트로 저장·실행 (`Cmd+Shift+L`). |
 | **알림 센터** | 장시간 명령어·에이전트·AI 치유·환경 감지 이벤트를 벨 아이콘 패널에 통합. |
+| **스마트 붙여넣기** | 멀티라인 클립보드 자동 감지 → 한 번에 실행 / 단계별 실행 / 텍스트 그대로 붙여넣기 선택 다이얼로그. |
+| **우클릭 컨텍스트 메뉴** | 터미널 텍스트 선택 후 우클릭 → 복사 / 명령어 실행 / AI 설명 / 웹 검색 / 파일·URL 열기. |
 
 ### 시작하기
 
@@ -219,6 +223,8 @@ npm run tauri dev
 - [x] Phase 57: Smart Environment Auto-Loader (cwd 변경 시 환경 파일 자동 감지, 설치 명령어 슬라이드업 토스트)
 - [x] Phase 58: Script Library (`Cmd+Shift+L` — 에이전트 태스크 저장·재실행, 스크립트 패널)
 - [x] Phase 59: Notification Center (명령/에이전트/힐링/환경 이벤트 통합 벨 아이콘 패널)
+- [x] Phase 60: Smart Paste (멀티라인 붙여넣기 감지 → 한 번에 실행 / 단계별 실행 / 텍스트 붙여넣기 선택 다이얼로그)
+- [x] Phase 61: Right-click Context Menu (선택 텍스트 우클릭 → 복사 / 명령어 실행 / AI 설명 / 웹 검색 / 파일·URL 열기)
 
 </details>
 

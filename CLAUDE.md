@@ -123,3 +123,5 @@ cd src-tauri && cargo test   # Rust 단위 테스트 실행
 - [x] Phase 57: Smart Environment Auto-Loader (OSC 7 cwd 변경 시 .nvmrc/.python-version/pyproject.toml/Pipfile/Gemfile/package.json 등 10종 감지 → EnvSuggestionToast 슬라이드업 + 실행 버튼, detect_env_files Tauri 커맨드, 600ms 디바운스 완료)
 - [x] Phase 58: Script Library (에이전트 태스크 완료 → 스크립트 저장, list/save/delete_script Tauri 커맨드, ScriptLibraryPanel 사이드패널, Cmd+Shift+L 토글, BookOpen 툴바 버튼 완료)
 - [x] Phase 59: Notification Center (명령어 완료·에이전트·AI 자가 치유·환경 파일 이벤트 통합 알림 센터, Bell 툴바 버튼 + 미읽음 배지, 드롭다운 패널 완료)
+- [x] Phase 60: Smart Paste (2줄 이상 붙여넣기 자동 감지 → SmartPasteModal — 한 번에 실행/단계별 실행/텍스트만 붙여넣기, parseCommandLines 쉘 프롬프트 접두사 제거, PasteGuardModal보다 먼저 처리 완료)
+- [x] Phase 61: Right-click Context Menu (터미널 선택 텍스트 우클릭 → 복사/명령어 실행/AI 설명/웹 검색/파일·URL 열기, tauri-plugin-opener 연동, 화면 경계 자동 조정 완료)
