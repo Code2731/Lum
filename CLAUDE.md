@@ -120,3 +120,6 @@ cd src-tauri && cargo test   # Rust 단위 테스트 실행
 - [x] Phase 54: 성능 최적화 — local-ai Feature Flag (burn/burn-wgpu/wgpu/tokenizers/hf-hub를 optional dep으로 분리, default 빌드에서 ~150MB 절감, hardware.rs GPU 감지 cfg 조건부 컴파일, CI/release.yml Rust 캐시 추가 완료)
 - [x] Phase 55: Agentic Task Loop (>> 프리픽스 → agent_plan/agent_observe Tauri 커맨드, useAgentLoop 상태 머신, OSC 133 D 시그널 완료 감지, AgentPanel 위험도 배지 승인/중단 UI 완료)
 - [x] Phase 56: AI Chat Sidebar (useAIChat 멀티턴 스트리밍 훅, AIChatPanel 사이드패널 — 최근 명령어+cwd 컨텍스트 자동 주입, react-markdown 코드블록 렌더링, Cmd+Shift+A 토글 완료)
+- [x] Phase 57: Smart Environment Auto-Loader (OSC 7 cwd 변경 시 .nvmrc/.python-version/pyproject.toml/Pipfile/Gemfile/package.json 등 10종 감지 → EnvSuggestionToast 슬라이드업 + 실행 버튼, detect_env_files Tauri 커맨드, 600ms 디바운스 완료)
+- [x] Phase 58: Script Library (에이전트 태스크 완료 → 스크립트 저장, list/save/delete_script Tauri 커맨드, ScriptLibraryPanel 사이드패널, Cmd+Shift+L 토글, BookOpen 툴바 버튼 완료)
+- [x] Phase 59: Notification Center (명령어 완료·에이전트·AI 자가 치유·환경 파일 이벤트 통합 알림 센터, Bell 툴바 버튼 + 미읽음 배지, 드롭다운 패널 완료)

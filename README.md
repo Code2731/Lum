@@ -49,6 +49,9 @@ LUM (Local Universal Machine) is a **real terminal emulator** that runs your act
 | **Hardware-Aware AI** | Auto-detects RAM and GPU → recommends the best EXL2 model for your machine. |
 | **Auto Update** | Background version check; one-click download and install via `tauri-plugin-updater`. |
 | **xLLM Optimization** | PD Disaggregation, Elastic Scheduling, KV Cache Q4/Q8/FP16, Speculative Decoding, Sparse Attention, EPD Streaming. |
+| **Smart Env Auto-Loader** | Detects `.nvmrc`, `pyproject.toml`, `Pipfile`, `package.json`, etc. on `cd` → slide-up toast with one-click install commands. |
+| **Script Library** | Save agent task runs as reusable scripts. Browse, run, and delete from a side panel (`Cmd+Shift+L`). |
+| **Notification Center** | Aggregates long-running command completions, agent task results, healing triggers, and env detections in one bell-icon panel. |
 
 ### Architecture
 
@@ -154,6 +157,9 @@ LUM(Local Universal Machine)은 **실제 셸을 실행하는 터미널 에뮬레
 | **하드웨어 인식 AI** | RAM·GPU 자동 감지 → 최적화된 EXL2 모델 추천. |
 | **자동 업데이트** | 백그라운드 버전 확인; 원클릭 다운로드·설치. |
 | **xLLM 최적화** | PD Disaggregation, Elastic Scheduling, KV Cache Q4/Q8/FP16, Speculative Decoding, Sparse Attention, EPD Streaming. |
+| **스마트 환경 자동 로더** | `cd` 시 `.nvmrc`, `pyproject.toml`, `Pipfile`, `package.json` 등 감지 → 설치 명령어 슬라이드업 토스트. |
+| **스크립트 라이브러리** | 에이전트 태스크를 재사용 스크립트로 저장·실행 (`Cmd+Shift+L`). |
+| **알림 센터** | 장시간 명령어·에이전트·AI 치유·환경 감지 이벤트를 벨 아이콘 패널에 통합. |
 
 ### 시작하기
 
@@ -210,6 +216,9 @@ npm run tauri dev
 - [x] Phase 54: local-ai Feature Flag (~150MB 절감)
 - [x] Phase 55: Agentic Task Loop (`>>` 프리픽스)
 - [x] Phase 56: AI Chat Sidebar (`Cmd+Shift+A` — 멀티턴 대화, 터미널 컨텍스트 자동 주입)
+- [x] Phase 57: Smart Environment Auto-Loader (cwd 변경 시 환경 파일 자동 감지, 설치 명령어 슬라이드업 토스트)
+- [x] Phase 58: Script Library (`Cmd+Shift+L` — 에이전트 태스크 저장·재실행, 스크립트 패널)
+- [x] Phase 59: Notification Center (명령/에이전트/힐링/환경 이벤트 통합 벨 아이콘 패널)
 
 </details>
 
