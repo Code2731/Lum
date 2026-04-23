@@ -126,8 +126,13 @@ const ModelManager: React.FC<Props> = ({ onClose, recommendedModel }) => {
         hfToken: hfToken || null,
       });
     } catch (err) {
-      const msg = typeof err === "string" ? err : (err as Error)?.message ?? "알 수 없는 오류";
+      // Tauri v2 에러는 { type, message } 객체로 직렬화됨
+      const raw = err as { message?: string } | string | null;
+      const msg = typeof raw === "string"
+        ? raw
+        : (raw?.message ?? JSON.stringify(raw) ?? "알 수 없는 오류");
       setDownloadError(msg);
+      setTab("download"); // 에러가 있는 탭으로 자동 이동
     } finally {
       setStarting(prev => { const s = new Set(prev); s.delete(model.repo_id); return s; });
     }
@@ -181,6 +186,15 @@ const ModelManager: React.FC<Props> = ({ onClose, recommendedModel }) => {
           ))}
         </div>
 
+        {/* 다운로드 에러 — 탭에 관계없이 항상 표시 */}
+        {downloadError && (
+          <div className="flex items-start gap-2 px-4 py-2.5 bg-red-500/10 border-b border-red-500/20 text-xs text-red-400">
+            <span className="shrink-0 mt-0.5">⚠</span>
+            <span className="flex-1 break-all">{downloadError}</span>
+            <button onClick={() => setDownloadError(null)} className="shrink-0 text-red-400/60 hover:text-red-400">✕</button>
+          </div>
+        )}
+
         {/* 콘텐츠 */}
         <div className="flex-1 overflow-y-auto p-4 space-y-2">
           {tab === "installed" ? (
@@ -221,13 +235,6 @@ const ModelManager: React.FC<Props> = ({ onClose, recommendedModel }) => {
                 />
               </div>
 
-              {downloadError && (
-                <div className="flex items-start gap-2 px-3 py-2.5 bg-red-500/10 border border-red-500/20 rounded-lg text-xs text-red-400 mb-1">
-                  <span className="shrink-0 mt-0.5">⚠</span>
-                  <span className="break-all">{downloadError}</span>
-                  <button onClick={() => setDownloadError(null)} className="ml-auto shrink-0 text-red-400/60 hover:text-red-400">✕</button>
-                </div>
-              )}
 
               {CURATED_MODELS.map((m) => {
                 const prog = downloading[m.repo_id];

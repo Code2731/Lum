@@ -98,9 +98,18 @@ pub async fn download_model(
     hf_token: Option<String>,
 ) -> Result<()> {
     let rev = revision.unwrap_or_else(|| "main".to_string());
-    let client = reqwest::Client::new();
 
-    // HuggingFace 저장소 구조를 유지하면서 폴더 이름 생성 (예: author--model-name)
+    // API 호출용(타임아웃 있음)과 파일 다운로드용(타임아웃 없음) 클라이언트를 분리
+    let api_client = reqwest::Client::builder()
+        .connect_timeout(std::time::Duration::from_secs(30))
+        .timeout(std::time::Duration::from_secs(60))
+        .build()
+        .map_err(|e| LumError::Network(e.to_string()))?;
+    let dl_client = reqwest::Client::builder()
+        .connect_timeout(std::time::Duration::from_secs(30))
+        .build()
+        .map_err(|e| LumError::Network(e.to_string()))?;
+
     let folder_name = repo_id.replace('/', "--");
     let out_dir = models_dir()?.join(&folder_name);
     tokio::fs::create_dir_all(&out_dir)
@@ -109,7 +118,7 @@ pub async fn download_model(
 
     // HuggingFace API로 파일 목록 조회
     let api_url = format!("https://huggingface.co/api/models/{}/tree/{}", repo_id, rev);
-    let mut req = client.get(&api_url);
+    let mut req = api_client.get(&api_url);
     if let Some(token) = &hf_token {
         req = req.header("Authorization", format!("Bearer {}", token));
     }
@@ -117,23 +126,33 @@ pub async fn download_model(
     let resp = req
         .send()
         .await
-        .map_err(|e| LumError::Network(e.to_string()))?;
+        .map_err(|e| LumError::Network(format!("HuggingFace 연결 실패: {}", e)))?;
+
     if !resp.status().is_success() {
         let status = resp.status();
         let hint = match status.as_u16() {
-            401 | 403 => " (HuggingFace 토큰이 필요하거나 비공개 리포지토리입니다)",
-            404 => " (리포지토리 또는 해당 revision이 존재하지 않습니다)",
-            429 => " (요청 횟수 초과 — 잠시 후 다시 시도하세요)",
+            401 | 403 => " — HuggingFace 토큰이 필요하거나 비공개 모델입니다. 설정에서 토큰을 입력하세요.",
+            404 => " — 리포지토리 또는 revision이 존재하지 않습니다.",
+            429 => " — 요청 횟수 초과. 잠시 후 다시 시도하세요.",
             _ => "",
         };
-        return Err(LumError::Network(format!("HuggingFace API 오류: {}{}", status, hint)));
+        return Err(LumError::Network(format!("HuggingFace API {} 오류{}", status, hint)));
     }
+
     let files: Vec<HfFileEntry> = resp
         .json()
         .await
         .map_err(|e| LumError::Network(format!("파일 목록 파싱 실패: {}", e)))?;
 
-    for file_entry in files.iter().filter(|f| f.file_type == "file") {
+    let file_entries: Vec<&HfFileEntry> = files.iter().filter(|f| f.file_type == "file").collect();
+    if file_entries.is_empty() {
+        return Err(LumError::Network(format!(
+            "'{}/{}' 브랜치에 파일이 없습니다. revision 이름을 확인하세요.",
+            repo_id, rev
+        )));
+    }
+
+    for file_entry in &file_entries {
         let file_name = file_entry
             .path
             .split('/')
@@ -145,7 +164,7 @@ pub async fn download_model(
             repo_id, rev, file_entry.path
         );
 
-        let mut dl_req = client.get(&file_url);
+        let mut dl_req = dl_client.get(&file_url);
         if let Some(token) = &hf_token {
             dl_req = dl_req.header("Authorization", format!("Bearer {}", token));
         }
@@ -153,7 +172,16 @@ pub async fn download_model(
         let response = dl_req
             .send()
             .await
-            .map_err(|e| LumError::Network(e.to_string()))?;
+            .map_err(|e| LumError::Network(format!("파일 다운로드 실패 ({}): {}", file_name, e)))?;
+
+        if !response.status().is_success() {
+            return Err(LumError::Network(format!(
+                "파일 다운로드 오류 {} ({})",
+                response.status(),
+                file_name
+            )));
+        }
+
         let total = response.content_length().unwrap_or(0);
         let out_path = out_dir.join(&file_name);
 
@@ -161,6 +189,7 @@ pub async fn download_model(
             .await
             .map_err(|e| LumError::Io(e.to_string()))?;
         let mut downloaded = 0u64;
+        let mut last_emit = 0u64;
         let mut stream = response.bytes_stream();
 
         while let Some(chunk) = stream.next().await {
@@ -170,8 +199,9 @@ pub async fn download_model(
                 .await
                 .map_err(|e| LumError::Io(e.to_string()))?;
 
-            // 256KB마다 이벤트 전송 (너무 자주 emit하면 UI 부담)
-            if downloaded % (256 * 1024) < chunk.len() as u64 {
+            // 512KB마다 이벤트 전송
+            if downloaded - last_emit >= 512 * 1024 {
+                last_emit = downloaded;
                 let _ = app.emit(
                     "model_download_progress",
                     DownloadProgress {
@@ -185,7 +215,7 @@ pub async fn download_model(
             }
         }
 
-        // 파일 완료 이벤트
+        // 파일 하나 완료
         let _ = app.emit(
             "model_download_progress",
             DownloadProgress {
@@ -198,7 +228,7 @@ pub async fn download_model(
         );
     }
 
-    // 전체 완료 이벤트
+    // 전체 완료
     let _ = app.emit(
         "model_download_progress",
         DownloadProgress {
