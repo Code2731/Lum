@@ -31,7 +31,7 @@ export function useScriptLibrary(
   const saveScript = useCallback(
     async (name: string, description: string, commands: string[]) => {
       const script = await invoke<Script>("save_script", { name, description, commands });
-      setScripts((prev) => [...prev, script]);
+      setScripts((prev) => [script, ...prev]);
       return script;
     },
     [],

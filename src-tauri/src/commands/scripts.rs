@@ -33,10 +33,10 @@ fn save_store(store: &ScriptStore) -> Result<(), String> {
     std::fs::write(scripts_path(), json).map_err(|e| e.to_string())
 }
 
-fn unix_now() -> u64 {
+fn unix_now_ms() -> u64 {
     std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
-        .map(|d| d.as_secs())
+        .map(|d| d.as_millis() as u64)
         .unwrap_or(0)
 }
 
@@ -51,7 +51,7 @@ pub fn save_script(
     description: String,
     commands: Vec<String>,
 ) -> Result<Script, String> {
-    let now = unix_now();
+    let now = unix_now_ms();
     let mut store = load_store();
     let script = Script {
         id: format!("sc-{now}"),

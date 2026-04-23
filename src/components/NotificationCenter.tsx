@@ -37,16 +37,18 @@ const NotificationCenter: React.FC<Props> = ({
   notifications, unreadCount, onMarkAllRead, onDismiss, onClear, onClose,
 }) => {
   const panelRef = useRef<HTMLDivElement>(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
-        onClose();
+        onCloseRef.current();
       }
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
-  }, [onClose]);
+  }, []); // 리스너는 한 번만 등록, 최신 onClose는 ref를 통해 참조
 
   return (
     <div

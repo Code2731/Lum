@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 
 export interface EnvSuggestion {
@@ -17,12 +17,14 @@ export function useEnvAutoDetector(
   const lastCwdRef = useRef("");
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); }, []);
+
   const detectEnv = useCallback(async (cwd: string) => {
     if (!cwd || cwd === lastCwdRef.current) return;
-    lastCwdRef.current = cwd;
 
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = setTimeout(async () => {
+      lastCwdRef.current = cwd;
       try {
         const result = await invoke<EnvSuggestion[]>("detect_env_files", { cwd });
         if (result.length > 0) {

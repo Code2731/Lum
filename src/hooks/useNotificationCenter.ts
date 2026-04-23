@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 
 export type NotifType = "command" | "agent" | "healing" | "env";
 
@@ -39,7 +39,10 @@ export function useNotificationCenter() {
 
   const clear = useCallback(() => setNotifications([]), []);
 
-  const unreadCount = notifications.filter((n) => !n.read).length;
+  const unreadCount = useMemo(
+    () => notifications.filter((n) => !n.read).length,
+    [notifications],
+  );
 
   return { notifications, unreadCount, addNotification, markAllRead, dismiss, clear };
 }

@@ -182,27 +182,27 @@ const App: React.FC = () => {
     }
   }, [cmdBlocks, selectedModel]); // notifCenter.addNotification은 안정된 useCallback이므로 deps 불필요
 
-  // 에이전트 태스크 완료 알림
+  // 에이전트 태스크 완료 알림 — status 전환 시점에 task/message 최신값 사용
   const agentStatusRef = useRef(agentLoop.state.status);
   useEffect(() => {
     const prev = agentStatusRef.current;
-    const cur = agentLoop.state.status;
-    agentStatusRef.current = cur;
-    if (prev === cur) return;
-    if (cur === "done") {
+    const { status, task, message } = agentLoop.state;
+    agentStatusRef.current = status;
+    if (prev === status) return;
+    if (status === "done") {
       notifCenter.addNotification({
         type: "agent",
         title: "에이전트 태스크 완료",
-        body: agentLoop.state.task || "태스크가 완료되었습니다.",
+        body: task || "태스크가 완료되었습니다.",
       });
-    } else if (cur === "failed") {
+    } else if (status === "failed") {
       notifCenter.addNotification({
         type: "agent",
         title: "에이전트 태스크 실패",
-        body: agentLoop.state.message || agentLoop.state.task || "태스크 실행 중 오류가 발생했습니다.",
+        body: message || task || "태스크 실행 중 오류가 발생했습니다.",
       });
     }
-  }, [agentLoop.state.status]);
+  }, [agentLoop.state]);
 
   // AI 자가 치유 감지 알림
   const healingNotifiedRef = useRef<string | null>(null);
@@ -217,17 +217,19 @@ const App: React.FC = () => {
     }
   }, [healingError]);
 
-  // 환경 파일 감지 알림
+  // 환경 파일 감지 알림 — 동일 파일 목록 중복 방지
+  const lastEnvKeyRef = useRef("");
   useEffect(() => {
-    if (envDetector.visible && envDetector.suggestions.length > 0) {
-      const names = envDetector.suggestions.map(s => s.file).join(", ");
-      notifCenter.addNotification({
-        type: "env",
-        title: "환경 파일 감지",
-        body: `${names} — 설치 명령어를 확인하세요.`,
-      });
-    }
-  }, [envDetector.visible]);
+    if (!envDetector.visible || envDetector.suggestions.length === 0) return;
+    const key = envDetector.suggestions.map(s => s.file).join(",");
+    if (key === lastEnvKeyRef.current) return;
+    lastEnvKeyRef.current = key;
+    notifCenter.addNotification({
+      type: "env",
+      title: "환경 파일 감지",
+      body: `${key.replace(/,/g, ", ")} — 설치 명령어를 확인하세요.`,
+    });
+  }, [envDetector.visible, envDetector.suggestions]);
 
   const handleTerminalOutput = useCallback(
     (paneId: string) => (data: string) => {
@@ -807,7 +809,6 @@ const App: React.FC = () => {
                   onSaveScript={(cmds) => {
                     scriptLib.saveScript(agentLoop.state.task || "에이전트 태스크", "", cmds);
                     setShowScriptPanel(true);
-                    scriptLib.loadScripts();
                   }}
                 />
               </div>
@@ -888,7 +889,7 @@ const App: React.FC = () => {
                 onLoad={scriptLib.loadScripts}
                 onRun={scriptLib.runScript}
                 onDelete={scriptLib.deleteScript}
-                onSave={async (name, desc, cmds) => { await scriptLib.saveScript(name, desc, cmds); }}
+                onSave={scriptLib.saveScript}
                 onClose={() => setShowScriptPanel(false)}
               />
             </ErrorBoundary>

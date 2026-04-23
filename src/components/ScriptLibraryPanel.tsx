@@ -8,7 +8,7 @@ interface Props {
   onLoad: () => void;
   onRun: (commands: string[]) => void;
   onDelete: (id: string) => void;
-  onSave: (name: string, description: string, commands: string[]) => Promise<void>;
+  onSave: (name: string, description: string, commands: string[]) => Promise<unknown>;
   onClose: () => void;
 }
 
@@ -121,7 +121,7 @@ const ScriptLibraryPanel: React.FC<Props> = ({
             </p>
           </div>
         )}
-        {[...scripts].reverse().map((sc) => (
+        {scripts.map((sc) => (
           <div key={sc.id} className="rounded-lg border border-white/5 bg-white/2 overflow-hidden">
             <div className="flex items-start gap-2 px-2.5 py-2">
               <Terminal size={11} className="text-accent/50 mt-0.5 shrink-0" />
