@@ -37,9 +37,13 @@ interface Props {
 }
 
 const IS_WINDOWS = navigator.userAgent.includes("Windows");
+const IS_MAC = navigator.userAgent.includes("Mac");
+// 한글(CJK) 폴백 글꼴을 명시적으로 포함해 xterm.js 캔버스 렌더러의 글자 깨짐 방지
 const FONT_FAMILY = IS_WINDOWS
-  ? '"JetBrains Mono", "Cascadia Code", "Consolas", "Courier New", monospace'
-  : '"JetBrains Mono", "Menlo", "Monaco", monospace';
+  ? '"JetBrains Mono", "Cascadia Code", "Malgun Gothic", "Consolas", monospace'
+  : IS_MAC
+    ? '"JetBrains Mono", "Menlo", "Apple SD Gothic Neo", "Monaco", monospace'
+    : '"JetBrains Mono", "Menlo", "Noto Sans CJK KR", "DejaVu Sans Mono", monospace';
 
 const THEME = {
   background: "#0d1117",
@@ -148,8 +152,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
   useEffect(() => {
     const term = termRef.current;
     if (!term) return;
-    const IS_WIN = navigator.userAgent.includes("Windows");
-    const fallback = IS_WIN ? "Cascadia Code, Consolas, monospace" : "Menlo, Monaco, monospace";
+    const fallback = FONT_FAMILY;
     term.options.fontFamily = fontFamily ? `"${fontFamily}", ${fallback}` : FONT_FAMILY;
   }, [fontFamily]);
 
