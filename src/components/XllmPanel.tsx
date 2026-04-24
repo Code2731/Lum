@@ -85,7 +85,9 @@ const XllmPanel: React.FC<Props> = ({ onClose }) => {
   const [recommendedPort, setRecommendedPort] = useState(5001);
   const [dlProgress, setDlProgress] = useState<{ percent: number; done: boolean } | null>(null);
   const [isAppleSilicon, setIsAppleSilicon] = useState(false);
+  const [isIntelMac, setIsIntelMac] = useState(false);
   const [selectedMlxModel, setSelectedMlxModel] = useState("mlx-community/Qwen2.5-Coder-7B-Instruct-4bit");
+  const [localModels, setLocalModels] = useState<{ id: string; size_mb: number }[]>([]);
 
   useEffect(() => {
     return () => { if (switchTimerRef.current) clearTimeout(switchTimerRef.current); };
@@ -109,7 +111,13 @@ const XllmPanel: React.FC<Props> = ({ onClose }) => {
 
   useEffect(() => {
     invoke<AppConfig>("load_app_config").then(setConfig).catch(() => {});
-    invoke<string>("get_platform_arch").then((a) => setIsAppleSilicon(a === "aarch64")).catch(() => {});
+    invoke<string>("get_platform_arch").then((a) => {
+      setIsAppleSilicon(a === "aarch64");
+      setIsIntelMac(a === "intel-mac");
+    }).catch(() => {});
+    invoke<{ id: string; size_mb: number }[]>("list_local_models")
+      .then((m) => setLocalModels(m.filter((x) => x.size_mb > 0)))
+      .catch(() => {});
     refreshModelInfo();
     checkTabbyStatus();
     invoke<number>("get_recommended_port").then(setRecommendedPort).catch(() => {});
@@ -288,8 +296,15 @@ const XllmPanel: React.FC<Props> = ({ onClose }) => {
                 </div>
               )}
 
+              {/* Intel Mac 안내 — 설치/실행 불가 */}
+              {isIntelMac && (
+                <div className="px-3 py-2 rounded bg-yellow-400/5 border border-yellow-400/15 text-[11px] text-yellow-300/80">
+                  ⚠ Intel Mac은 로컬 AI 서버(MLX / CUDA)를 지원하지 않습니다. 설정에서 <b>Gemini API</b> 키를 입력해 클라우드 폴백을 사용하세요.
+                </div>
+              )}
+
               {/* 버튼 */}
-              {tabbyStatus && !isCheckingTabby && (
+              {!isIntelMac && tabbyStatus && !isCheckingTabby && (
                 <div className="flex gap-2">
                   {!tabbyStatus.installed && (
                     <button
@@ -511,23 +526,38 @@ const XllmPanel: React.FC<Props> = ({ onClose }) => {
               </p>
             ) : (
               <div className="space-y-2">
+                {localModels.length === 0 && (
+                  <p className="text-[10px] text-yellow-400/70 bg-yellow-400/5 border border-yellow-400/10 rounded px-2.5 py-1.5">
+                    ⚠ 다운로드된 모델이 없습니다. 모델 관리자에서 먼저 모델을 다운로드하세요.
+                  </p>
+                )}
                 <div className="space-y-1">
                   <span className="text-[10px] text-white/30">코딩 모델 (generate_ai_command, git commit)</span>
-                  <input
-                    className="w-full bg-white/5 border border-white/10 rounded px-2.5 py-1.5 text-[12px] font-mono outline-none focus:border-accent/50 transition-colors"
-                    placeholder="Qwen2.5-Coder-7B-Instruct-EXL2-4bpw"
+                  <select
+                    className="w-full bg-white/5 border border-white/10 rounded px-2.5 py-1.5 text-[12px] font-mono outline-none focus:border-accent/50 transition-colors disabled:opacity-50"
                     value={config.coding_model ?? ""}
-                    onChange={(e) => setConfig((c) => ({ ...c, coding_model: e.target.value }))}
-                  />
+                    onChange={(e) => setConfig((c) => ({ ...c, coding_model: e.target.value || undefined }))}
+                    disabled={localModels.length === 0}
+                  >
+                    <option value="">(기본 모델 사용)</option>
+                    {localModels.map((m) => (
+                      <option key={`c-${m.id}`} value={m.id}>{m.id}</option>
+                    ))}
+                  </select>
                 </div>
                 <div className="space-y-1">
                   <span className="text-[10px] text-white/30">문서화 모델 (analyze_error, 요약)</span>
-                  <input
-                    className="w-full bg-white/5 border border-white/10 rounded px-2.5 py-1.5 text-[12px] font-mono outline-none focus:border-accent/50 transition-colors"
-                    placeholder="gemma-3-4b-it-EXL2-4bpw"
+                  <select
+                    className="w-full bg-white/5 border border-white/10 rounded px-2.5 py-1.5 text-[12px] font-mono outline-none focus:border-accent/50 transition-colors disabled:opacity-50"
                     value={config.doc_model ?? ""}
-                    onChange={(e) => setConfig((c) => ({ ...c, doc_model: e.target.value }))}
-                  />
+                    onChange={(e) => setConfig((c) => ({ ...c, doc_model: e.target.value || undefined }))}
+                    disabled={localModels.length === 0}
+                  >
+                    <option value="">(기본 모델 사용)</option>
+                    {localModels.map((m) => (
+                      <option key={`d-${m.id}`} value={m.id}>{m.id}</option>
+                    ))}
+                  </select>
                 </div>
               </div>
             )}
@@ -552,13 +582,21 @@ const XllmPanel: React.FC<Props> = ({ onClose }) => {
             ) : (
               <div className="space-y-2">
                 <div className="space-y-1">
-                  <span className="text-[10px] text-white/30">드래프트 모델 디렉토리명</span>
-                  <input
-                    className="w-full bg-white/5 border border-white/10 rounded px-2.5 py-1.5 text-[12px] font-mono outline-none focus:border-accent/50 transition-colors"
-                    placeholder="DeepSeek-Coder-1.3B-Instruct-EXL2"
+                  <span className="text-[10px] text-white/30">드래프트 모델</span>
+                  <select
+                    className="w-full bg-white/5 border border-white/10 rounded px-2.5 py-1.5 text-[12px] font-mono outline-none focus:border-accent/50 transition-colors disabled:opacity-50"
                     value={config.draft_model ?? ""}
                     onChange={(e) => setConfig((c) => ({ ...c, draft_model: e.target.value || undefined }))}
-                  />
+                    disabled={localModels.length === 0}
+                  >
+                    <option value="">(사용 안 함)</option>
+                    {localModels.map((m) => (
+                      <option key={`draft-${m.id}`} value={m.id}>{m.id}</option>
+                    ))}
+                  </select>
+                  {localModels.length === 0 && (
+                    <p className="text-[10px] text-yellow-400/60">다운로드된 모델이 없습니다.</p>
+                  )}
                 </div>
                 <div className="flex items-center gap-3">
                   <span className="text-[10px] text-white/30 shrink-0">드래프트 토큰 수</span>
@@ -640,13 +678,17 @@ const XllmPanel: React.FC<Props> = ({ onClose }) => {
               모델 전환 (Fast Role Reversal)
             </label>
             <div className="flex gap-2">
-              <input
-                className="flex-1 bg-white/5 border border-white/10 rounded px-2.5 py-1.5 text-[12px] font-mono outline-none focus:border-accent/50 transition-colors"
-                placeholder="모델 디렉토리명 입력"
+              <select
+                className="flex-1 bg-white/5 border border-white/10 rounded px-2.5 py-1.5 text-[12px] font-mono outline-none focus:border-accent/50 transition-colors disabled:opacity-50"
                 value={switchTarget}
                 onChange={(e) => setSwitchTarget(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleSwitch()}
-              />
+                disabled={localModels.length === 0}
+              >
+                <option value="">(전환할 모델 선택)</option>
+                {localModels.map((m) => (
+                  <option key={`sw-${m.id}`} value={m.id}>{m.id}</option>
+                ))}
+              </select>
               <button
                 onClick={handleSwitch}
                 disabled={isSwitching || !switchTarget.trim()}
@@ -656,6 +698,9 @@ const XllmPanel: React.FC<Props> = ({ onClose }) => {
                 전환
               </button>
             </div>
+            {localModels.length === 0 && (
+              <p className="text-[10px] text-yellow-400/60">다운로드된 모델이 없습니다 — 모델 관리자에서 먼저 다운로드하세요.</p>
+            )}
           </section>
         </div>
 

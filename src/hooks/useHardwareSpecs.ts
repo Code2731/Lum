@@ -8,6 +8,7 @@ export interface HardwareSpecs {
   gpu_type: "discrete" | "integrated" | "none";
   wgpu_supported: boolean;
   gpu_name: string;
+  gpu_vram_gb?: number; // Windows 외장 GPU VRAM (없으면 undefined)
   recommended_engine: "xllm" | "cpu";
   recommended_model: string;
   recommendation_reason: string;

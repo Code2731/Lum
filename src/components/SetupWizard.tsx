@@ -64,7 +64,9 @@ const SetupWizard: React.FC<Props> = ({
             <div className="setup-step">
               <h3>2. 최적의 모델 선택</h3>
               <p>
-                LUM이 사양({hardwareSpecs?.total_memory_gb}GB RAM,{" "}
+                LUM이 사양({hardwareSpecs?.gpu_type === "discrete" && hardwareSpecs?.gpu_vram_gb
+                  ? `${hardwareSpecs.gpu_vram_gb}GB VRAM`
+                  : `${hardwareSpecs?.total_memory_gb}GB RAM`},{" "}
                 {hardwareSpecs?.wgpu_supported ? "GPU 가속" : "CPU"})을
                 분석했습니다.
               </p>

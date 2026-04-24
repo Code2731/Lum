@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { Download, Trash2, X, HardDrive, Cpu, ExternalLink } from "lucide-react";
+import { Download, Trash2, X, HardDrive, Cpu, ExternalLink, Play, CheckCircle2 } from "lucide-react";
 
 interface LocalModel {
   id: string;
@@ -77,21 +77,72 @@ const MLX_MODELS: CuratedModel[] = [
 ];
 
 // ── NVIDIA (EXL2 / TabbyAPI) ──────────────────────────────────────
+// min_ram_gb = 필요 VRAM(GB). 실제 존재하는 HuggingFace EXL2 repo만 포함.
+// ★ 상단 3개는 NVIDIA 10GB VRAM(RTX 3080 등)에 최적화된 추천 구성.
 const CURATED_MODELS: CuratedModel[] = [
-  { category: "coding",   repo_id: "turboderp/Qwen2.5-Coder-3B-Instruct-exl2",  revision: "4.0bpw", label: "Qwen2.5-Coder 3B (4bpw)",  description: "최소 사양 — 8GB VRAM",   size_gb: 2.5,  min_ram_gb: 8  },
-  { category: "coding",   repo_id: "turboderp/Qwen2.5-Coder-7B-Instruct-exl2",  revision: "5.0bpw", label: "Qwen2.5-Coder 7B (5bpw)",  description: "균형형 — 16GB VRAM",     size_gb: 5.5,  min_ram_gb: 16 },
-  { category: "coding",   repo_id: "turboderp/Qwen2.5-Coder-14B-Instruct-exl2", revision: "5.0bpw", label: "Qwen2.5-Coder 14B (5bpw)", description: "고품질 — 24GB VRAM",     size_gb: 10.5, min_ram_gb: 24 },
-  { category: "coding",   repo_id: "turboderp/Qwen2.5-Coder-32B-Instruct-exl2", revision: "4.0bpw", label: "Qwen2.5-Coder 32B (4bpw)", description: "최고 품질 — 48GB VRAM",  size_gb: 18,   min_ram_gb: 48, badge: "★ 추천" },
-  { category: "general",  repo_id: "turboderp/Llama-3.1-8B-Instruct-exl2",       revision: "5.0bpw", label: "Llama 3.1 8B (5bpw)",      description: "범용 — 16GB VRAM",       size_gb: 6,    min_ram_gb: 16 },
-  { category: "reasoning",repo_id: "turboderp/DeepSeek-R1-Distill-Qwen-7B-exl2", revision: "5.0bpw", label: "DeepSeek R1 7B (5bpw)",    description: "추론 특화 — 16GB VRAM",  size_gb: 5.5,  min_ram_gb: 16 },
+  // ── 🥇 10GB VRAM 최우선 추천 3종 ────────────────────────────────
+  // 1. 추론 — DeepSeek-R1-Distill-Qwen-7B: 사고 체인(CoT), 에러 분석 / 로직 추론 최강
+  {
+    category: "reasoning",
+    repo_id: "lucyknada/deepseek-ai_DeepSeek-R1-Distill-Qwen-7B-exl2",
+    revision: "6.0bpw",
+    label: "DeepSeek R1 7B (6bpw)",
+    description: "🥇 사고(CoT) — 에러 분석·로직 추론에 최강 · ~6.5GB VRAM",
+    size_gb: 6.5,
+    min_ram_gb: 8,
+    badge: "🧠 추론 최강",
+  },
+  // 2. 코딩 — Qwen2.5-Coder-7B-Instruct: 자연어→CLI 변환 SOTA
+  {
+    category: "coding",
+    repo_id: "DrNicefellow/Qwen2.5-Coder-7B-Instruct-5.5bpw-exl2",
+    revision: "main",
+    label: "Qwen2.5-Coder 7B (5.5bpw)",
+    description: "🥇 코딩 SOTA — 자연어→CLI 즉각 변환, Warp 스타일 · ~6GB VRAM",
+    size_gb: 6.0,
+    min_ram_gb: 8,
+    badge: "⚡ 코딩 SOTA",
+  },
+  // 3. 한계 돌파 — Qwen2.5-Coder-14B 4bpw (DeepSeek-V2-Lite는 EXL2 미지원이라 대체)
+  {
+    category: "coding",
+    repo_id: "bartowski/Qwen2.5-Coder-14B-Instruct-exl2",
+    revision: "4_25",
+    label: "Qwen2.5-Coder 14B (4.25bpw)",
+    description: "🥇 한계 돌파 — 14B 체급 프로젝트 맥락 이해, 10GB VRAM 한계 · ~9GB",
+    size_gb: 9.0,
+    min_ram_gb: 10,
+    badge: "🚀 한계 돌파",
+  },
+
+  // ── 기타 코딩 옵션 ─────────────────────────────────────────────
+  { category: "coding",   repo_id: "DrNicefellow/Qwen2.5-Coder-7B-Instruct-4.0bpw-exl2",  revision: "main", label: "Qwen2.5-Coder 7B (4bpw)",  description: "코딩 경량 · ~4.5GB VRAM",     size_gb: 4.5,  min_ram_gb: 6  },
+  { category: "coding",   repo_id: "DrNicefellow/Qwen2.5-Coder-7B-Instruct-8.0bpw-h8-exl2", revision: "main", label: "Qwen2.5-Coder 7B (8bpw)", description: "코딩 고품질 · ~8.5GB VRAM", size_gb: 8.5,  min_ram_gb: 10 },
+  { category: "coding",   repo_id: "bartowski/Qwen2.5-Coder-14B-Instruct-exl2",            revision: "5_0",    label: "Qwen2.5-Coder 14B (5bpw)", description: "코딩 고품질 · ~10.5GB VRAM",  size_gb: 10.5, min_ram_gb: 12 },
+  { category: "coding",   repo_id: "bartowski/Qwen2.5-Coder-14B-Instruct-exl2",            revision: "6_5",    label: "Qwen2.5-Coder 14B (6.5bpw)", description: "코딩 최고품질 · ~13GB VRAM", size_gb: 13,   min_ram_gb: 16 },
+  { category: "coding",   repo_id: "bartowski/Qwen2.5-Coder-32B-Instruct-exl2",            revision: "4_25",   label: "Qwen2.5-Coder 32B (4.25bpw)", description: "최강 코딩 · ~18GB VRAM",    size_gb: 18,   min_ram_gb: 24 },
+
+  // 범용 — Llama 3.1 (bullerwins)
+  { category: "general",  repo_id: "bullerwins/Meta-Llama-3.1-8B-Instruct-exl2_4.0bpw",    revision: "main",   label: "Llama 3.1 8B (4bpw)",      description: "범용 경량 · ~5GB VRAM",     size_gb: 5,    min_ram_gb: 6  },
+  { category: "general",  repo_id: "bullerwins/Meta-Llama-3.1-8B-Instruct-exl2_5.0bpw",    revision: "main",   label: "Llama 3.1 8B (5bpw)",      description: "범용 균형 · ~6GB VRAM",     size_gb: 6,    min_ram_gb: 8  },
+  { category: "general",  repo_id: "bullerwins/Meta-Llama-3.1-8B-Instruct-exl2_8.0bpw",    revision: "main",   label: "Llama 3.1 8B (8bpw)",      description: "범용 고품질 · ~9GB VRAM",   size_gb: 9,    min_ram_gb: 12 },
+
+  // 추론 저bpw 옵션
+  { category: "reasoning",repo_id: "lucyknada/deepseek-ai_DeepSeek-R1-Distill-Qwen-7B-exl2", revision: "4.0bpw", label: "DeepSeek R1 7B (4bpw)",   description: "추론 경량 · ~4.5GB VRAM",   size_gb: 4.5,  min_ram_gb: 6  },
+
+  // 경량 — 3B
+  { category: "lightweight", repo_id: "lucyknada/Qwen_Qwen2.5-Coder-3B-Instruct-exl2",     revision: "4.0bpw", label: "Qwen2.5-Coder 3B (4bpw)",  description: "초경량 · ~2.5GB VRAM",       size_gb: 2.5,  min_ram_gb: 4  },
+  { category: "lightweight", repo_id: "lucyknada/Qwen_Qwen2.5-Coder-3B-Instruct-exl2",     revision: "6.0bpw", label: "Qwen2.5-Coder 3B (6bpw)",  description: "경량 · ~3GB VRAM",           size_gb: 3,    min_ram_gb: 5  },
 ];
 
 interface Props {
   onClose: () => void;
   recommendedModel?: string;
+  gpuVramGb?: number;        // Windows 외장 GPU VRAM
+  totalMemoryGb?: number;    // Mac 통합 메모리 또는 시스템 RAM
 }
 
-const ModelManager: React.FC<Props> = ({ onClose, recommendedModel: _recommendedModel }) => {
+const ModelManager: React.FC<Props> = ({ onClose, recommendedModel: _recommendedModel, gpuVramGb, totalMemoryGb }) => {
   const [tab, setTab] = useState<"installed" | "download">("installed");
   const [localModels, setLocalModels] = useState<LocalModel[]>([]);
   const [downloading, setDownloading] = useState<Record<string, DownloadProgress>>({});
@@ -107,6 +158,69 @@ const ModelManager: React.FC<Props> = ({ onClose, recommendedModel: _recommended
   const [customRevision, setCustomRevision] = useState("");
   const [isAppleSilicon, setIsAppleSilicon] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState<ModelCategory | "all">("all");
+  const [loadedModelId, setLoadedModelId] = useState<string | null>(null);
+  const [loadingModel, setLoadingModel] = useState<string | null>(null);
+  const [loadMsg, setLoadMsg] = useState<string | null>(null);
+  const [codingModel, setCodingModel] = useState<string | null>(null);
+  const [docModel, setDocModel] = useState<string | null>(null);
+
+  const refreshRoles = useCallback(() => {
+    invoke<{ coding_model?: string; doc_model?: string }>("load_app_config")
+      .then((c) => { setCodingModel(c.coding_model ?? null); setDocModel(c.doc_model ?? null); })
+      .catch(() => {});
+  }, []);
+
+  const assignRole = useCallback(async (role: "coding" | "doc", modelId: string) => {
+    try {
+      // 전체 설정 로드 후 해당 역할만 변경 (다른 xLLM 설정 유지)
+      const cfg = await invoke<Record<string, unknown>>("load_app_config");
+      const merged: Record<string, unknown> = {
+        ...cfg,
+        ...(role === "coding" ? { coding_model: modelId } : { doc_model: modelId }),
+      };
+      await invoke("save_xllm_settings", {
+        serverUrl: merged["xllm_base_url"] ?? null,
+        cacheMode: merged["cache_mode"] ?? null,
+        codingModel: merged["coding_model"] ?? null,
+        docModel: merged["doc_model"] ?? null,
+        pdThresholdChars: merged["pd_threshold_chars"] ?? null,
+        maxSeqLen: merged["max_seq_len"] ?? null,
+        draftModel: merged["draft_model"] ?? null,
+        speculativeNDraft: merged["speculative_n_draft"] ?? null,
+        sparseAttention: merged["sparse_attention"] ?? null,
+        sparseTopK: merged["sparse_top_k"] ?? null,
+      });
+      if (role === "coding") setCodingModel(modelId);
+      else setDocModel(modelId);
+      setLoadMsg(`✅ ${modelId} → ${role === "coding" ? "코딩" : "문서"} 역할로 지정`);
+    } catch (e) {
+      const raw = e as { message?: string } | string | null;
+      const msg = typeof raw === "string" ? raw : (raw?.message ?? JSON.stringify(raw));
+      setLoadMsg(`❌ 역할 지정 실패: ${msg}`);
+    }
+  }, []);
+
+  const fetchLoaded = useCallback(() => {
+    invoke<{ id: string }>("get_xllm_model_info")
+      .then((info) => setLoadedModelId(info?.id && info.id !== "unknown" ? info.id : null))
+      .catch(() => setLoadedModelId(null));
+  }, []);
+
+  const useModel = useCallback(async (modelId: string) => {
+    setLoadingModel(modelId);
+    setLoadMsg(null);
+    try {
+      const msg = await invoke<string>("switch_xllm_model", { modelName: modelId, cacheMode: null, maxSeqLen: null });
+      setLoadMsg(`✅ ${msg}`);
+      fetchLoaded();
+    } catch (e) {
+      const raw = e as { message?: string } | string | null;
+      const msg = typeof raw === "string" ? raw : (raw?.message ?? JSON.stringify(raw));
+      setLoadMsg(`❌ ${msg}`);
+    } finally {
+      setLoadingModel(null);
+    }
+  }, [fetchLoaded]);
 
   const loadLocalModels = useCallback(async () => {
     try {
@@ -132,6 +246,8 @@ const ModelManager: React.FC<Props> = ({ onClose, recommendedModel: _recommended
       .then((c) => { if (c.hf_token) setHfToken(c.hf_token); })
       .catch(() => {});
     loadLocalModels();
+    fetchLoaded();
+    refreshRoles();
 
     const unlisten = listen<DownloadProgress>("model_download_progress", (event) => {
       const p = event.payload;
@@ -250,45 +366,114 @@ const ModelManager: React.FC<Props> = ({ onClose, recommendedModel: _recommended
                 설치된 모델이 없습니다.
               </div>
             ) : (
-              localModels.map((m) => (
-                <div
-                  key={m.id}
-                  className="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/5"
-                >
-                  <div className="flex-1 min-w-0 mr-2">
-                    <div className="text-xs font-medium truncate">{m.id}</div>
-                    <div className="text-[10px] text-white/40 mt-0.5">
-                      {m.size_mb === 0 ? "빈 폴더 (다운로드 미완료)" : formatMb(m.size_mb)}
-                    </div>
-                  </div>
-                  {deleteConfirm === m.id ? (
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      <span className="text-[10px] text-red-400">삭제?</span>
-                      <button
-                        onClick={() => handleDelete(m.id)}
-                        disabled={deleting === m.id}
-                        className="px-2 py-1 rounded bg-red-500/80 hover:bg-red-500 text-white text-[10px] font-medium disabled:opacity-50 transition-colors"
-                      >
-                        {deleting === m.id ? "삭제 중..." : "확인"}
-                      </button>
-                      <button
-                        onClick={() => setDeleteConfirm(null)}
-                        className="px-2 py-1 rounded bg-white/10 hover:bg-white/20 text-white/60 text-[10px] transition-colors"
-                      >
-                        취소
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => setDeleteConfirm(m.id)}
-                      disabled={deleting === m.id}
-                      className="p-1.5 rounded text-white/30 hover:text-red-400 hover:bg-red-400/10 transition-colors disabled:opacity-50 shrink-0"
+              <>
+                {loadMsg && (
+                  <div className="mb-2 px-3 py-2 rounded text-[11px] bg-white/5 border border-white/10">{loadMsg}</div>
+                )}
+                {localModels.map((m) => {
+                  const isLoaded = loadedModelId === m.id;
+                  const isEmpty = m.size_mb === 0;
+                  const isBusy = loadingModel === m.id;
+                  const isCoding = codingModel === m.id;
+                  const isDoc = docModel === m.id;
+                  return (
+                    <div
+                      key={m.id}
+                      className={`flex flex-col gap-2 p-3 bg-white/5 rounded-lg border transition-colors ${
+                        isLoaded ? "border-green-400/40" : "border-white/5"
+                      }`}
                     >
-                      <Trash2 size={13} />
-                    </button>
-                  )}
-                </div>
-              ))
+                      <div className="flex items-center justify-between gap-2">
+                      <div className="flex-1 min-w-0 mr-2">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <div className="text-xs font-medium truncate">{m.id}</div>
+                          {isLoaded && (
+                            <span className="shrink-0 flex items-center gap-1 text-[9px] px-1.5 py-0.5 bg-green-400/15 text-green-300 rounded-full">
+                              <CheckCircle2 size={9} /> 로드됨
+                            </span>
+                          )}
+                          {isCoding && (
+                            <span className="shrink-0 text-[9px] px-1.5 py-0.5 bg-blue-400/15 text-blue-300 rounded-full">💻 코딩</span>
+                          )}
+                          {isDoc && (
+                            <span className="shrink-0 text-[9px] px-1.5 py-0.5 bg-purple-400/15 text-purple-300 rounded-full">📄 문서</span>
+                          )}
+                        </div>
+                        <div className="text-[10px] text-white/40 mt-0.5">
+                          {isEmpty ? "빈 폴더 (다운로드 미완료)" : formatMb(m.size_mb)}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {!isEmpty && !isLoaded && (
+                          <button
+                            onClick={() => useModel(m.id)}
+                            disabled={isBusy || !!loadingModel}
+                            className="flex items-center gap-1 px-2.5 py-1.5 rounded bg-accent/20 hover:bg-accent/30 text-accent text-[10px] font-medium disabled:opacity-50 transition-colors"
+                          >
+                            <Play size={11} />
+                            {isBusy ? "로드 중…" : "사용"}
+                          </button>
+                        )}
+                        {deleteConfirm === m.id ? (
+                          <>
+                            <span className="text-[10px] text-red-400">삭제?</span>
+                            <button
+                              onClick={() => handleDelete(m.id)}
+                              disabled={deleting === m.id}
+                              className="px-2 py-1 rounded bg-red-500/80 hover:bg-red-500 text-white text-[10px] font-medium disabled:opacity-50 transition-colors"
+                            >
+                              {deleting === m.id ? "삭제 중..." : "확인"}
+                            </button>
+                            <button
+                              onClick={() => setDeleteConfirm(null)}
+                              className="px-2 py-1 rounded bg-white/10 hover:bg-white/20 text-white/60 text-[10px] transition-colors"
+                            >
+                              취소
+                            </button>
+                          </>
+                        ) : (
+                          <button
+                            onClick={() => setDeleteConfirm(m.id)}
+                            disabled={deleting === m.id}
+                            className="p-1.5 rounded text-white/30 hover:text-red-400 hover:bg-red-400/10 transition-colors disabled:opacity-50"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        )}
+                      </div>
+                      </div>
+
+                      {!isEmpty && (
+                        <div className="flex items-center gap-1.5 pl-0.5">
+                          <span className="text-[10px] text-white/30">역할:</span>
+                          <button
+                            onClick={() => assignRole("coding", m.id)}
+                            disabled={isCoding}
+                            className={`px-2 py-0.5 rounded text-[10px] transition-colors ${
+                              isCoding
+                                ? "bg-blue-400/20 text-blue-300 cursor-default"
+                                : "bg-white/5 hover:bg-blue-400/10 text-white/50 hover:text-blue-300"
+                            }`}
+                          >
+                            💻 코딩용으로 지정
+                          </button>
+                          <button
+                            onClick={() => assignRole("doc", m.id)}
+                            disabled={isDoc}
+                            className={`px-2 py-0.5 rounded text-[10px] transition-colors ${
+                              isDoc
+                                ? "bg-purple-400/20 text-purple-300 cursor-default"
+                                : "bg-white/5 hover:bg-purple-400/10 text-white/50 hover:text-purple-300"
+                            }`}
+                          >
+                            📄 문서용으로 지정
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </>
             )
           ) : (
             <>
@@ -411,17 +596,36 @@ const ModelManager: React.FC<Props> = ({ onClose, recommendedModel: _recommended
                 </div>
               </div>
 
-              {(isAppleSilicon ? MLX_MODELS : CURATED_MODELS)
-                .filter((m) => categoryFilter === "all" || m.category === categoryFilter)
+              {(() => {
+                // Mac: 통합 메모리(totalMemoryGb) 기준, Windows: GPU VRAM 기준
+                const availableGb = isAppleSilicon ? totalMemoryGb : gpuVramGb;
+                const list = (isAppleSilicon ? MLX_MODELS : CURATED_MODELS)
+                  .filter((m) => categoryFilter === "all" || m.category === categoryFilter);
+                // 정렬 우선순위: 호환(VRAM 맞음) > 비호환, 호환 내에선 badge 있는 추천 우선.
+                // 동순위 내에선 원본 배열 순서 유지(stable sort).
+                const sorted = [...list].sort((a, b) => {
+                  const aFits = availableGb ? a.min_ram_gb <= availableGb : true;
+                  const bFits = availableGb ? b.min_ram_gb <= availableGb : true;
+                  if (aFits !== bFits) return aFits ? -1 : 1;
+                  const aBadge = !!a.badge;
+                  const bBadge = !!b.badge;
+                  if (aBadge !== bBadge) return aBadge ? -1 : 1;
+                  return 0;
+                });
+                return sorted;
+              })()
                 .map((m) => {
                   const prog = downloading[m.repo_id];
                   const isStarting = starting.has(m.repo_id);
+                  const availableGb = isAppleSilicon ? totalMemoryGb : gpuVramGb;
+                  const isUnsupported = availableGb !== undefined && m.min_ram_gb > availableGb;
+                  const memLabel = isAppleSilicon ? "RAM" : "VRAM";
 
                   return (
                     <div
-                      key={m.repo_id}
+                      key={`${m.repo_id}@${m.revision}`}
                       className={`p-3 bg-white/5 rounded-lg border transition-colors ${
-                        m.badge ? "border-accent/25" : "border-white/5"
+                        isUnsupported ? "border-white/5 opacity-50" : m.badge ? "border-accent/25" : "border-white/5"
                       }`}
                     >
                       <div className="flex items-start justify-between gap-3">
@@ -429,9 +633,14 @@ const ModelManager: React.FC<Props> = ({ onClose, recommendedModel: _recommended
                           <div className="flex items-center gap-1.5 flex-wrap">
                             <span className="text-[10px] text-white/25">{CATEGORY_META[m.category].icon}</span>
                             <span className="text-xs font-medium truncate">{m.label}</span>
-                            {m.badge && (
+                            {m.badge && !isUnsupported && (
                               <span className="text-[9px] px-1.5 py-0.5 bg-accent/20 text-accent rounded-full whitespace-nowrap">
                                 {m.badge}
+                              </span>
+                            )}
+                            {isUnsupported && (
+                              <span className="text-[9px] px-1.5 py-0.5 bg-red-500/15 text-red-300/80 rounded-full whitespace-nowrap">
+                                {memLabel} 부족
                               </span>
                             )}
                           </div>
@@ -441,7 +650,7 @@ const ModelManager: React.FC<Props> = ({ onClose, recommendedModel: _recommended
                               <HardDrive size={9} /> ~{m.size_gb} GB
                             </span>
                             <span className="flex items-center gap-1">
-                              <Cpu size={9} /> RAM {m.min_ram_gb}GB+
+                              <Cpu size={9} /> {memLabel} {m.min_ram_gb}GB+
                             </span>
                           </div>
                         </div>

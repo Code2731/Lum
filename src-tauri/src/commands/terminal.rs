@@ -235,6 +235,16 @@ pub async fn spawn_pty(
         let _ = app_r.emit("pty_exit", id_r);
     });
 
+    // Windows PowerShell: OSC 133 prompt hook을 stdin으로 주입
+    #[cfg(windows)]
+    {
+        let sn = shell_name.to_lowercase();
+        let sn_stem = sn.strip_suffix(".exe").unwrap_or(&sn);
+        if sn_stem == "pwsh" || sn_stem == "powershell" {
+            let _ = write_tx.send(POWERSHELL_INIT.as_bytes().to_vec());
+        }
+    }
+
     // ── 채널 핸들 저장 + spawning 제거 (원자적) ──────────────────
     {
         let mut ptys = state.ptys.lock().map_err(|_| LumError::Io("lock 오류".into()))?;

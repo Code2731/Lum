@@ -10,23 +10,38 @@ const GIT_KEYWORDS =
 const COMMIT_KEYWORDS =
   /\b(커밋\s*메시지|commit\s*message|커밋해|커밋\s*작성|이거\s*커밋|변경사항\s*커밋)\b/i;
 
+// 코드 분석 의도 — CWD 자동 포함 트리거
+const CODE_ANALYSIS_KEYWORDS =
+  /(코드\s*리뷰|code\s*review|리뷰|리팩토링|refactor|분석해|설명해|structure|구조|어떻게\s*돼|뭐하는|프로젝트|버그\s*찾|문제점)/i;
+
 function extractCwd(context: string): string | null {
-  const m = context.match(/CWD:\s*(\S+)/);
-  return m ? m[1] : null;
+  // CWD: 뒤부터 줄 끝까지 — Windows 경로에 공백(Program Files 등)이 있어도 OK
+  const m = context.match(/CWD:\s*(.+?)(?:\r?\n|$)/);
+  return m ? m[1].trim() : null;
 }
 
 function extractPaths(text: string, cwd: string | null): { paths: string[]; useCwd: boolean } {
   const cwdKeywords = /(?:이\s*폴더|현재\s*폴더|이\s*디렉토리|현재\s*디렉토리|여기|this\s*folder|current\s*dir)/i;
-  const useCwd = cwdKeywords.test(text) && cwd != null;
+  // cwd가 있으면 "이 폴더" 키워드 OR 코드 분석 의도 감지 시 자동 포함
+  const useCwd = cwd != null && (cwdKeywords.test(text) || CODE_ANALYSIS_KEYWORDS.test(text));
 
-  const pathRegex = /(?:^|\s)((?:~\/|\.\.?\/|\/)[^\s"'`,;:()[\]{}]+)/gm;
   const paths: string[] = [];
   let m: RegExpExecArray | null;
-  while ((m = pathRegex.exec(text)) !== null) {
+
+  // Unix 경로: ~/, ./, ../, /
+  const unixPath = /(?:^|\s)((?:~\/|\.\.?\/|\/)[^\s"'`,;:()[\]{}]+)/gm;
+  while ((m = unixPath.exec(text)) !== null) {
     paths.push(m[1].replace(/[.,;:]+$/, ""));
   }
 
-  const quoted = /["'`]([^"'`\n]{2,80})["'`]/g;
+  // Windows 경로: C:\, H:/, D:\Users\... — 드라이브 레터 + 백슬래시 또는 슬래시
+  const winPath = /(?:^|\s)([A-Za-z]:[\\/][^\s"'`,;:()[\]{}]+)/gm;
+  while ((m = winPath.exec(text)) !== null) {
+    paths.push(m[1].replace(/[.,;:]+$/, ""));
+  }
+
+  // 따옴표로 감싼 경로 — /, \ 모두 허용
+  const quoted = /["'`]([^"'`\n]{2,120})["'`]/g;
   while ((m = quoted.exec(text)) !== null) {
     const candidate = m[1];
     if (candidate.includes("/") || candidate.includes("\\")) {

@@ -51,6 +51,8 @@ import TabContextMenu from "./components/TabContextMenu";
 import ResizeHandles from "./components/ResizeHandles";
 import WindowControls from "./components/WindowControls";
 import LocalAIPanel from "./components/LocalAIPanel";
+import FileExplorerPanel from "./components/FileExplorerPanel";
+import WelcomeHints from "./components/WelcomeHints";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { TAB_COLORS } from "./hooks/useTabManager";
 
@@ -63,7 +65,20 @@ const App: React.FC = () => {
   const { blocks: cmdBlocks, feedRaw } = useCommandBlocks();
   useCommandNotifier(cmdBlocks);
 
-  const selectedModel = specs?.recommended_model ?? "Qwen2.5-Coder-7B-Instruct-EXL2-4bpw";
+  // TabbyAPI에 실제 로드된 모델 ID — 10초마다 폴링
+  const [loadedModelId, setLoadedModelId] = useState<string | null>(null);
+  useEffect(() => {
+    const fetchLoaded = () => {
+      invoke<{ id: string }>("get_xllm_model_info")
+        .then((info) => { if (info?.id && info.id !== "unknown") setLoadedModelId(info.id); })
+        .catch(() => setLoadedModelId(null));
+    };
+    fetchLoaded();
+    const t = setInterval(fetchLoaded, 10000);
+    return () => clearInterval(t);
+  }, []);
+
+  const selectedModel = loadedModelId ?? specs?.recommended_model ?? "Qwen2.5-Coder-7B-Instruct-EXL2-4bpw";
 
   const {
     tabs, activeTabId, activePaneId, setActivePaneId,
@@ -115,6 +130,14 @@ const App: React.FC = () => {
 
   // AI 채팅 사이드패널
   const [showChatPanel, setShowChatPanel] = useState(false);
+  // 파일 탐색기 사이드바 (기본 열림)
+  const [showFileExplorer, setShowFileExplorer] = useState(() => {
+    try { return localStorage.getItem("lum.fileExplorer") !== "0"; } catch { return true; }
+  });
+  // Welcome 힌트 — 최초 실행 시 1회만
+  const [showWelcome, setShowWelcome] = useState(() => {
+    try { return localStorage.getItem("lum.hintsShown") !== "1"; } catch { return false; }
+  });
   const getTerminalContext = useCallback(() => {
     const activeTab = tabs.find((t) => t.id === activeTabIdRef.current);
     const cwd = activeTab?.cwd ?? "";
@@ -309,6 +332,14 @@ const App: React.FC = () => {
       if (mod && !e.shiftKey && e.key === "k") {
         e.preventDefault();
         setShowPalette(v => !v);
+      }
+      if (mod && !e.shiftKey && e.key === "b") {
+        e.preventDefault();
+        setShowFileExplorer(v => {
+          const next = !v;
+          try { localStorage.setItem("lum.fileExplorer", next ? "1" : "0"); } catch {}
+          return next;
+        });
       }
       if (mod && e.shiftKey && e.key === "k") {
         e.preventDefault();
@@ -705,6 +736,33 @@ const App: React.FC = () => {
 
       {/* ── 메인 콘텐츠 ──────────────────────────────────────── */}
       <main className="flex-1 overflow-hidden flex relative">
+        {showFileExplorer && (
+          <div style={{ width: 260 }} className="shrink-0">
+            <FileExplorerPanel
+              cwd={tabs.find((t) => t.id === activeTabId)?.cwd || ""}
+              onClose={() => {
+                setShowFileExplorer(false);
+                try { localStorage.setItem("lum.fileExplorer", "0"); } catch {}
+              }}
+              onCdTo={(p) => {
+                const write = ptyWriteRefs.current.get(activePaneIdRef.current);
+                const quoted = p.includes(" ") ? `"${p}"` : p;
+                write?.(`cd ${quoted}\r`);
+              }}
+              onOpenFile={(p) => {
+                const write = ptyWriteRefs.current.get(activePaneIdRef.current);
+                const quoted = p.includes(" ") ? `"${p}"` : p;
+                // Windows: start, Mac: open, Linux: xdg-open
+                const cmd = navigator.userAgent.includes("Windows")
+                  ? `start ${quoted}`
+                  : navigator.userAgent.includes("Mac")
+                    ? `open ${quoted}`
+                    : `xdg-open ${quoted}`;
+                write?.(`${cmd}\r`);
+              }}
+            />
+          </div>
+        )}
         <div className="flex-1 overflow-hidden relative">
           <div className={`absolute inset-0 ${viewMode === "terminal" ? "block" : "hidden"}`}>
             {tabs.map((tab) => (
@@ -956,6 +1014,8 @@ const App: React.FC = () => {
         <ModelManager
           onClose={() => setShowModelManager(false)}
           recommendedModel={specs?.recommended_model}
+          gpuVramGb={specs?.gpu_vram_gb}
+          totalMemoryGb={specs?.total_memory_gb}
         />
       )}
 
@@ -1056,6 +1116,15 @@ const App: React.FC = () => {
         <SshConnectModal
           onConnect={handleSshConnect}
           onClose={() => setShowSshModal(false)}
+        />
+      )}
+
+      {showWelcome && (
+        <WelcomeHints
+          onClose={() => {
+            setShowWelcome(false);
+            try { localStorage.setItem("lum.hintsShown", "1"); } catch {}
+          }}
         />
       )}
     </div>

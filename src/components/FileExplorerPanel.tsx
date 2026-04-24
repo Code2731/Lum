@@ -1,0 +1,151 @@
+import { useState, useEffect, useCallback } from "react";
+import { invoke } from "@tauri-apps/api/core";
+import { ChevronRight, Folder, FolderOpen, File, ArrowUp, RefreshCw, Home, X } from "lucide-react";
+
+interface DirEntry {
+  name: string;
+  path: string;
+  is_dir: boolean;
+  size: number;
+}
+
+interface Props {
+  cwd: string;
+  onClose: () => void;
+  onCdTo: (path: string) => void;  // 터미널에 `cd <path>` 주입
+  onOpenFile: (path: string) => void;  // 터미널에 파일 open 주입
+}
+
+function formatSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes}B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)}K`;
+  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)}M`;
+  return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)}G`;
+}
+
+export default function FileExplorerPanel({ cwd, onClose, onCdTo, onOpenFile }: Props) {
+  const [currentPath, setCurrentPath] = useState(cwd || "~");
+  const [entries, setEntries] = useState<DirEntry[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const load = useCallback(async (path: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await invoke<DirEntry[]>("list_directory", { path });
+      setEntries(res);
+      setCurrentPath(path);
+    } catch (e) {
+      setError(typeof e === "string" ? e : (e as { message?: string })?.message ?? "읽기 실패");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    load(cwd || "~");
+  }, [cwd, load]);
+
+  const goUp = useCallback(async () => {
+    try {
+      const parent = await invoke<string | null>("parent_directory", { path: currentPath });
+      if (parent) load(parent);
+    } catch {}
+  }, [currentPath, load]);
+
+  const handleEntryClick = (e: DirEntry, doubleClick: boolean) => {
+    if (e.is_dir) {
+      load(e.path);
+      if (doubleClick) onCdTo(e.path);
+    } else if (doubleClick) {
+      onOpenFile(e.path);
+    }
+  };
+
+  // 경로 segment 브레드크럼
+  const segments = currentPath.replace(/\\/g, "/").split("/").filter(Boolean);
+
+  return (
+    <div className="flex flex-col h-full bg-[#0f1419] border-r border-white/8">
+      <div className="flex items-center justify-between px-3 py-2 border-b border-white/8">
+        <div className="flex items-center gap-1.5 text-[11px] text-white/70 font-medium">
+          <Folder size={12} className="text-accent" />
+          파일 탐색기
+        </div>
+        <button onClick={onClose} className="p-1 rounded hover:bg-white/10 text-white/40">
+          <X size={12} />
+        </button>
+      </div>
+
+      <div className="flex items-center gap-1 px-2 py-1.5 border-b border-white/5">
+        <button
+          onClick={goUp}
+          className="p-1 rounded hover:bg-white/10 text-white/50 hover:text-white/80"
+          title="상위 폴더"
+        >
+          <ArrowUp size={12} />
+        </button>
+        <button
+          onClick={() => load("~")}
+          className="p-1 rounded hover:bg-white/10 text-white/50 hover:text-white/80"
+          title="홈"
+        >
+          <Home size={12} />
+        </button>
+        <button
+          onClick={() => load(currentPath)}
+          className="p-1 rounded hover:bg-white/10 text-white/50 hover:text-white/80"
+          title="새로고침"
+        >
+          <RefreshCw size={11} />
+        </button>
+        <button
+          onClick={() => onCdTo(currentPath)}
+          className="ml-auto px-2 py-0.5 rounded bg-accent/15 hover:bg-accent/25 text-accent text-[10px]"
+          title="터미널을 이 폴더로 이동"
+        >
+          여기로 cd
+        </button>
+      </div>
+
+      <div className="px-3 py-1.5 text-[10px] text-white/40 font-mono truncate border-b border-white/5" title={currentPath}>
+        {segments.length === 0 ? "/" : segments.map((s, i) => (
+          <span key={i}>
+            <span>{s}</span>
+            {i < segments.length - 1 && <ChevronRight size={8} className="inline mx-0.5 text-white/20" />}
+          </span>
+        ))}
+      </div>
+
+      <div className="flex-1 overflow-y-auto">
+        {loading && <div className="text-[10px] text-white/30 px-3 py-2">읽는 중…</div>}
+        {error && (
+          <div className="text-[10px] text-red-400 px-3 py-2 bg-red-500/5 m-2 rounded">
+            {error}
+          </div>
+        )}
+        {!loading && !error && entries.length === 0 && (
+          <div className="text-[10px] text-white/25 px-3 py-2">빈 폴더</div>
+        )}
+        {entries.map((e) => (
+          <div
+            key={e.path}
+            onClick={() => handleEntryClick(e, false)}
+            onDoubleClick={() => handleEntryClick(e, true)}
+            title={e.is_dir ? "더블클릭: 이 폴더로 cd / 클릭: 열기" : "더블클릭: 파일 열기"}
+            className="flex items-center gap-1.5 px-3 py-1 text-[11px] hover:bg-white/5 cursor-pointer text-white/70"
+          >
+            {e.is_dir ? (
+              <FolderOpen size={12} className="text-yellow-400/70 shrink-0" />
+            ) : (
+              <File size={12} className="text-white/35 shrink-0" />
+            )}
+            <span className="flex-1 truncate">{e.name}</span>
+            {!e.is_dir && <span className="text-[9px] text-white/25 shrink-0">{formatSize(e.size)}</span>}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}

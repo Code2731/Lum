@@ -94,11 +94,16 @@ pub fn get_staged_diff(cwd: String) -> String {
 /// path가 상대 경로이면 cwd 기준으로 해석.
 #[tauri::command]
 pub fn read_path_for_context(path: String, cwd: Option<String>) -> Result<String, String> {
+    // Windows 절대 경로 감지: "C:\..." 또는 "H:/..." — 드라이브 레터 + 콜론
+    let is_win_abs = path.len() >= 3
+        && path.chars().nth(1) == Some(':')
+        && matches!(path.chars().nth(2), Some('\\') | Some('/'));
+
     let resolved: PathBuf = if path.starts_with("~/") {
         dirs::home_dir()
             .map(|h| h.join(&path[2..]))
             .ok_or_else(|| "홈 디렉토리를 찾을 수 없음".to_string())?
-    } else if path.starts_with('/') {
+    } else if path.starts_with('/') || is_win_abs {
         PathBuf::from(&path)
     } else {
         PathBuf::from(cwd.as_deref().unwrap_or(".")).join(&path)
@@ -171,6 +176,70 @@ fn read_node_context(dir: &Path) -> Option<String> {
     } else {
         format!("Node.js project \"{name}\" (scripts: {})", scripts.join(", "))
     })
+}
+
+// ── 파일 탐색기용 디렉토리 리스팅 ───────────────────────────────
+
+#[derive(serde::Serialize)]
+pub struct DirEntry {
+    pub name: String,
+    pub path: String,
+    pub is_dir: bool,
+    pub size: u64,
+}
+
+/// 지정 경로의 하위 항목 목록 반환 (파일 탐색기용).
+/// 디렉토리 우선, 이름순 정렬. 숨김 파일/폴더(dot) 제외.
+#[tauri::command]
+pub fn list_directory(path: String) -> Result<Vec<DirEntry>, String> {
+    let resolved: PathBuf = if path.is_empty() || path == "~" {
+        dirs::home_dir().ok_or_else(|| "홈 디렉토리 없음".to_string())?
+    } else if path.starts_with("~/") {
+        dirs::home_dir()
+            .map(|h| h.join(&path[2..]))
+            .ok_or_else(|| "홈 디렉토리 없음".to_string())?
+    } else {
+        PathBuf::from(&path)
+    };
+
+    if !resolved.exists() {
+        return Err(format!("경로 없음: {}", resolved.display()));
+    }
+    if !resolved.is_dir() {
+        return Err(format!("디렉토리 아님: {}", resolved.display()));
+    }
+
+    let mut entries: Vec<DirEntry> = std::fs::read_dir(&resolved)
+        .map_err(|e| e.to_string())?
+        .flatten()
+        .filter_map(|e| {
+            let name = e.file_name().to_string_lossy().into_owned();
+            if name.starts_with('.') {
+                return None;
+            }
+            let meta = e.metadata().ok()?;
+            Some(DirEntry {
+                name,
+                path: e.path().to_string_lossy().into_owned(),
+                is_dir: meta.is_dir(),
+                size: if meta.is_file() { meta.len() } else { 0 },
+            })
+        })
+        .collect();
+
+    entries.sort_by(|a, b| match (a.is_dir, b.is_dir) {
+        (true, false) => std::cmp::Ordering::Less,
+        (false, true) => std::cmp::Ordering::Greater,
+        _ => a.name.to_lowercase().cmp(&b.name.to_lowercase()),
+    });
+
+    Ok(entries)
+}
+
+/// 상위 디렉토리 경로 반환 (파일 탐색기 "위로" 버튼용)
+#[tauri::command]
+pub fn parent_directory(path: String) -> Option<String> {
+    PathBuf::from(&path).parent().map(|p| p.to_string_lossy().into_owned())
 }
 
 fn read_cargo_context(dir: &Path) -> Option<String> {

@@ -124,6 +124,8 @@ pub fn run() {
             commands::context::get_git_context,
             commands::context::get_staged_diff,
             commands::context::read_path_for_context,
+            commands::context::list_directory,
+            commands::context::parent_directory,
             // Updater
             commands::updater::check_for_update,
             commands::updater::install_update,

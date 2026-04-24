@@ -158,7 +158,12 @@ const OnboardingWizard: React.FC<Props> = ({ onComplete }) => {
               ) : (
                 <div className="space-y-3 flex-1">
                   <div className="bg-white/3 border border-white/5 rounded-xl p-4 text-sm space-y-2">
-                    <Row label="메모리" value={`${specs.total_memory_gb} GB`} />
+                    <Row
+                      label={specs.gpu_type === "discrete" && specs.gpu_vram_gb ? "GPU VRAM" : "메모리"}
+                      value={specs.gpu_type === "discrete" && specs.gpu_vram_gb
+                        ? `${specs.gpu_vram_gb} GB`
+                        : `${specs.total_memory_gb} GB`}
+                    />
                     <Row
                       label="GPU"
                       value={

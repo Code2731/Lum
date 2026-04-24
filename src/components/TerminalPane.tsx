@@ -538,6 +538,8 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
         backgroundColor: THEME.background,
         overflow: "hidden",
         position: "relative",
+        padding: `${PANE_PADDING_Y}px ${PANE_PADDING_X}px`,
+        boxSizing: "border-box",
       }}
     >
       <div
@@ -545,8 +547,6 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
         style={{
           width: "100%",
           height: "100%",
-          padding: `${PANE_PADDING_Y}px ${PANE_PADDING_X}px`,
-          boxSizing: "border-box",
         }}
       />
 
