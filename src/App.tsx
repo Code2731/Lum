@@ -17,7 +17,7 @@ import { invoke } from "@tauri-apps/api/core";
 import {
   Zap, Cpu, Loader2, TerminalSquare, LayoutList, MousePointer2,
   Package, Database, Plus, X, Columns2, Rows2, SlidersHorizontal, ArrowUpCircle, GitCompareArrows, Palette,
-  GitBranch, Container, Layers, Lock, BookOpen, Bell, Activity, FolderTree, Brain,
+  GitBranch, Container, Layers, Lock, BookOpen, Bell, Activity, FolderTree, Brain, PlugZap,
 } from "lucide-react";
 import SshConnectModal from "./components/SshConnectModal";
 import AgentPanel from "./components/AgentPanel";
@@ -50,6 +50,7 @@ import TabContextMenu from "./components/TabContextMenu";
 import ResizeHandles from "./components/ResizeHandles";
 import WindowControls from "./components/WindowControls";
 import LocalAIPanel from "./components/LocalAIPanel";
+import McpPanel from "./components/McpPanel";
 import WarpListView from "./components/WarpListView";
 import FileExplorerPanel from "./components/FileExplorerPanel";
 import WelcomeHints from "./components/WelcomeHints";
@@ -146,6 +147,7 @@ const App: React.FC = () => {
 
   // 로컬 AI 패널
   const [showLocalAI, setShowLocalAI] = useState(false);
+  const [showMcpPanel, setShowMcpPanel] = useState(false);
 
   // AI 채팅 사이드패널
   // 파일 탐색기 사이드바 (기본 열림)
@@ -522,6 +524,14 @@ const App: React.FC = () => {
             className={`p-1.5 rounded transition-colors ${showReasoning ? "text-cyan-300 bg-cyan-400/10" : "text-white/30 hover:text-white/60 hover:bg-white/10"}`}
           >
             <Brain size={13} />
+          </button>
+          <button
+            aria-label="MCP 서버 (툴 확장)"
+            title="MCP 서버 관리 — Filesystem·Playwright·Git 등"
+            onClick={() => setShowMcpPanel(v => !v)}
+            className={`p-1.5 rounded transition-colors ${showMcpPanel ? "text-accent bg-accent/10" : "text-white/40 hover:text-white hover:bg-white/10"}`}
+          >
+            <PlugZap size={13} />
           </button>
           <button
             aria-label="RAG 코드 검색"
@@ -1062,6 +1072,12 @@ const App: React.FC = () => {
       {showLocalAI && (
         <ErrorBoundary label="로컬 AI">
           <LocalAIPanel onClose={() => setShowLocalAI(false)} />
+        </ErrorBoundary>
+      )}
+
+      {showMcpPanel && (
+        <ErrorBoundary label="MCP">
+          <McpPanel onClose={() => setShowMcpPanel(false)} />
         </ErrorBoundary>
       )}
 

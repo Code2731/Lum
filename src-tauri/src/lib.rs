@@ -173,8 +173,14 @@ pub fn run() {
             commands::tabbyapi_setup::start_tabbyapi,
             commands::tabbyapi_setup::stop_tabbyapi,
             commands::tabbyapi_setup::restart_with_model,
-            // MCP Tools
-            mcp::call_mcp_tool,
+            // MCP Tools (Phase 74 — 제대로 된 handshake + 서버 관리)
+            mcp::list_mcp_servers,
+            mcp::save_mcp_server,
+            mcp::delete_mcp_server,
+            mcp::mcp_stop_server,
+            mcp::mcp_list_tools,
+            mcp::mcp_call_tool,
+            mcp::mcp_install_presets,
             mcp::list_internal_tools
         ])
         .run(tauri::generate_context!())
