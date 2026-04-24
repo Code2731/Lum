@@ -48,9 +48,11 @@ vi.mock("./components/TerminalPane", () => ({
 }));
 
 describe("App (LUM 터미널)", () => {
-  it("헤더에 'LUM' 브랜드가 렌더링되어야 함", () => {
+  it("Phase 66 이후 헤더에 LUM 텍스트 로고 제거됨 — 아이콘만 사용", () => {
     render(<App />);
-    expect(screen.getByText("LUM")).toBeInTheDocument();
+    // headline에 "LUM" 텍스트가 있어선 안 됨 (툴팁·aria-label은 허용)
+    const matches = screen.queryAllByText("LUM");
+    expect(matches.length).toBe(0);
   });
 
   it("기본 뷰가 터미널이어야 함 — TerminalPane이 최소 1개 렌더링됨", () => {
