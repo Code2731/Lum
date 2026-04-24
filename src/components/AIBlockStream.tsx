@@ -14,6 +14,8 @@ interface Props {
   cwd?: string;
   /** true면 부모 flex 컨테이너의 남은 공간을 전부 차지 (xterm 자리 대체) */
   fullHeight?: boolean;
+  /** 테스트 실패 로그를 AI 대화에 재주입 — 테스트 루프 */
+  onAskAIForFix?: (failureLog: string) => void;
 }
 
 /**
@@ -21,7 +23,7 @@ interface Props {
  * 전체 패널이 하나의 스크롤 컨테이너 — 헤더는 sticky로 상단 고정.
  * 빈 상태면 렌더 안 함. 사용자가 위로 스크롤하면 auto-scroll 중단.
  */
-const AIBlockStream: React.FC<Props> = ({ messages, streaming, error, onClear, onExecute, cwd, fullHeight }) => {
+const AIBlockStream: React.FC<Props> = ({ messages, streaming, error, onClear, onExecute, cwd, fullHeight, onAskAIForFix }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const pinnedToBottomRef = useRef(true);
 
@@ -87,7 +89,7 @@ const AIBlockStream: React.FC<Props> = ({ messages, streaming, error, onClear, o
             <div key={m.id} className="space-y-2">
               <MessageBubble msg={m} onExecute={onExecute} compact={false} />
               {editBlocks.map((b) => (
-                <EditBlockCard key={`${m.id}-${b.index}`} block={b} cwd={cwd!} />
+                <EditBlockCard key={`${m.id}-${b.index}`} block={b} cwd={cwd!} onAskAIForFix={onAskAIForFix} />
               ))}
             </div>
           );

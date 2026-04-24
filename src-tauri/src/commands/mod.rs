@@ -17,6 +17,7 @@ pub mod ssh_profiles;
 pub mod sysmon;
 pub mod tabbyapi_setup;
 pub mod terminal;
+pub mod test_runner;
 pub mod updater;
 pub mod workspace;
 pub mod xllm;

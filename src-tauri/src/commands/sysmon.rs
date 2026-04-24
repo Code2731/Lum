@@ -11,6 +11,12 @@ pub struct SysmonState {
     pub sys: Mutex<System>,
 }
 
+impl Default for SysmonState {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl SysmonState {
     pub fn new() -> Self {
         Self {

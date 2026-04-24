@@ -2,10 +2,13 @@ import React, { useState } from "react";
 import { Check, X, FileCode, Loader2, AlertTriangle } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 import type { EditBlock } from "../utils/editBlockParser";
+import TestResultCard from "./TestResultCard";
 
 interface Props {
   block: EditBlock;
   cwd: string;
+  /** 테스트 실패 로그를 AI 대화로 재주입 */
+  onAskAIForFix?: (failureLog: string) => void;
 }
 
 type Status = "pending" | "applying" | "applied" | "rejected" | "error";
@@ -59,7 +62,7 @@ function renderActions(status: Status, onApply: () => void, onReject: () => void
   }
 }
 
-const EditBlockCard: React.FC<Props> = ({ block, cwd }) => {
+const EditBlockCard: React.FC<Props> = ({ block, cwd, onAskAIForFix }) => {
   const [status, setStatus] = useState<Status>("pending");
   const [error, setError] = useState<string | null>(null);
   const [fuzzy, setFuzzy] = useState(false);
@@ -128,6 +131,13 @@ const EditBlockCard: React.FC<Props> = ({ block, cwd }) => {
           <pre className="px-2 py-1.5 rounded bg-green-500/[0.08] border border-green-500/20 text-green-300/80 overflow-x-auto whitespace-pre-wrap">
             {block.replace}
           </pre>
+        </div>
+      )}
+
+      {/* 편집 적용 후 — 테스트 실행 카드 자동 표시 */}
+      {status === "applied" && (
+        <div className="px-3 pb-2">
+          <TestResultCard cwd={cwd} autoDetect onAskAIForFix={onAskAIForFix} />
         </div>
       )}
     </div>

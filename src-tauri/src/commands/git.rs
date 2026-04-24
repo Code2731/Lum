@@ -133,7 +133,7 @@ risk 기준:\n\
 
     let mut reviews: Vec<FileDiffReview> = raw
         .lines()
-        .filter_map(|line| parse_review_line(line))
+        .filter_map(parse_review_line)
         .collect();
 
     // AI가 누락한 파일은 caution 으로 채움

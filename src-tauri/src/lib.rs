@@ -129,6 +129,9 @@ pub fn run() {
             commands::config::save_vram_cap_override,
             // Phase 72: capability 토글
             commands::config::save_capability_toggles,
+            // Phase 73: 테스트 피드백 루프
+            commands::test_runner::detect_project_tests,
+            commands::test_runner::run_tests,
             // Session Persistence
             commands::session::save_session,
             commands::session::load_session,
