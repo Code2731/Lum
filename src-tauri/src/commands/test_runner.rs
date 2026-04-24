@@ -134,9 +134,11 @@ pub async fn run_tests(
 
     let cmd_str = match command {
         Some(c) if !c.trim().is_empty() => c,
-        _ => detect_test_command(path)
-            .ok_or_else(|| LumError::AiEngine("프로젝트 테스트 커맨드 감지 실패".into()))?
-            .command,
+        _ => {
+            detect_test_command(path)
+                .ok_or_else(|| LumError::AiEngine("프로젝트 테스트 커맨드 감지 실패".into()))?
+                .command
+        }
     };
 
     let timeout = Duration::from_secs(timeout_secs.unwrap_or(120).min(900));
@@ -231,11 +233,7 @@ mod tests {
     #[test]
     fn detect_node_npm() {
         let d = tmp_dir("node_npm");
-        fs::write(
-            d.join("package.json"),
-            r#"{"scripts":{"test":"vitest"}}"#,
-        )
-        .unwrap();
+        fs::write(d.join("package.json"), r#"{"scripts":{"test":"vitest"}}"#).unwrap();
         let cmd = detect_test_command(&d).unwrap();
         assert_eq!(cmd.command, "npm test");
         assert_eq!(cmd.project_type, "node");

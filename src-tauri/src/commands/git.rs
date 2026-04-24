@@ -131,10 +131,7 @@ risk 기준:\n\
         .unwrap_or_default();
     let raw = call_xllm(&client, &model, &prompt).await?;
 
-    let mut reviews: Vec<FileDiffReview> = raw
-        .lines()
-        .filter_map(parse_review_line)
-        .collect();
+    let mut reviews: Vec<FileDiffReview> = raw.lines().filter_map(parse_review_line).collect();
 
     // AI가 누락한 파일은 caution 으로 채움
     for f in &files {
