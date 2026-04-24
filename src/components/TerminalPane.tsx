@@ -601,6 +601,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
         error={aiError ?? null}
         onClear={onClearAI ?? (() => {})}
         onExecute={(cmd) => invoke("write_to_pty", { id, data: cmd + "\r" }).catch(() => {})}
+        cwd={cwd}
       />
 
       {/* Warp 입력바 — 입력 필드, 라우팅은 handleSubmit */}

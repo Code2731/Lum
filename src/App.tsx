@@ -273,9 +273,14 @@ const App: React.FC = () => {
   const handleAgentTrigger = useCallback(
     async (task: string) => {
       const currentTab = tabs.find((t) => t.id === activeTabIdRef.current);
-      const context = await invoke<string>("get_project_context", {
-        cwd: currentTab?.cwd ?? "",
-      }).catch(() => "");
+      const cwd = currentTab?.cwd ?? "";
+      const [projectCtx, repoMap] = await Promise.all([
+        invoke<string>("get_project_context", { cwd }).catch(() => ""),
+        invoke<string>("get_repo_map", { cwd, tokenBudget: 2048 }).catch(() => ""),
+      ]);
+      const context = [projectCtx, repoMap ? `\n[Repo Map]\n${repoMap}` : ""]
+        .filter(Boolean)
+        .join("\n");
       agentLoop.startTask(task, context);
     },
     [agentLoop.startTask, tabs, activeTabIdRef],

@@ -14,6 +14,28 @@ const COMMIT_KEYWORDS =
 const CODE_ANALYSIS_KEYWORDS =
   /(코드\s*리뷰|code\s*review|리뷰|리팩토링|refactor|분석해|설명해|structure|구조|어떻게\s*돼|뭐하는|프로젝트|버그\s*찾|문제점)/i;
 
+// 코드 수정 의도 — SEARCH/REPLACE 지시 주입 트리거
+const CODE_EDIT_KEYWORDS =
+  /(수정|고쳐|바꿔|추가해|삭제해|변경|리팩토|fix|edit|change|add|remove|delete|update|refactor|implement|구현|만들어|작성해|쓰세요)/i;
+
+const EDIT_FORMAT_INSTRUCTION = `
+파일을 수정할 때는 아래 SEARCH/REPLACE 블록 형식을 정확히 사용하세요. 파일 경로는 펜스 바로 뒤 첫 줄에 배치하세요.
+
+\`\`\`언어
+path/to/file.ext
+<<<<<<< SEARCH
+원본 코드 (정확히 일치해야 함)
+=======
+새 코드
+>>>>>>> REPLACE
+\`\`\`
+
+규칙:
+- 한 번에 여러 파일/여러 블록 가능
+- SEARCH는 파일에 반드시 존재하는 문자열 (공백 포함 일치)
+- 새 파일 생성 시 SEARCH는 빈 줄 (파일 내용 전체를 REPLACE에)
+- 설명은 블록 밖 간결히 작성`;
+
 function extractCwd(context: string): string | null {
   // CWD: 뒤부터 줄 끝까지 — Windows 경로에 공백(Program Files 등)이 있어도 OK
   const m = context.match(/CWD:\s*(.+?)(?:\r?\n|$)/);
@@ -115,7 +137,8 @@ export function useAIChat(model: string, getTerminalContext: () => string) {
 
       const termCtx = getTerminalContext();
       const addons = await buildContextAddons(text, termCtx);
-      const context = [...addons, historyLines, termCtx].filter(Boolean).join("\n\n");
+      const editHint = CODE_EDIT_KEYWORDS.test(text) ? EDIT_FORMAT_INSTRUCTION : "";
+      const context = [editHint, ...addons, historyLines, termCtx].filter(Boolean).join("\n\n");
 
       const assistantId = crypto.randomUUID();
       setMessages((prev) => [

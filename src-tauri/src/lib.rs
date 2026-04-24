@@ -63,6 +63,10 @@ pub fn run() {
             // AI Commands
             commands::agent::agent_plan,
             commands::agent::agent_observe,
+            // Phase 70: Repo Map + Edit Apply
+            commands::repo_map::get_repo_map,
+            commands::edit_apply::apply_edit_block,
+            commands::edit_apply::parse_edit_blocks_cmd,
             commands::ai::generate_ai_command,
             commands::ai::stream_ai_command,
             commands::ai::cancel_ai_stream,

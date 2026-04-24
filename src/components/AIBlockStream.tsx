@@ -2,6 +2,8 @@ import React, { useEffect, useRef } from "react";
 import { Loader2, X, Sparkles } from "lucide-react";
 import type { ChatMessage } from "../hooks/useAIChat";
 import { MessageBubble } from "./AIChatPanel";
+import EditBlockCard from "./EditBlockCard";
+import { parseEditBlocks, hasEditBlocks } from "../utils/editBlockParser";
 
 interface Props {
   messages: ChatMessage[];
@@ -9,6 +11,7 @@ interface Props {
   error: string | null;
   onClear: () => void;
   onExecute: (cmd: string) => void;
+  cwd?: string;
 }
 
 /**
@@ -16,8 +19,9 @@ interface Props {
  * - 메시지 없으면 렌더 안 함 (0 height)
  * - 스트리밍/완료 시 자동 스크롤
  * - 최대 60% height, 내부 스크롤
+ * - assistant 메시지에 SEARCH/REPLACE 블록이 있으면 EditBlockCard로 렌더
  */
-const AIBlockStream: React.FC<Props> = ({ messages, streaming, error, onClear, onExecute }) => {
+const AIBlockStream: React.FC<Props> = ({ messages, streaming, error, onClear, onExecute, cwd }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -58,9 +62,21 @@ const AIBlockStream: React.FC<Props> = ({ messages, streaming, error, onClear, o
       </div>
 
       <div ref={scrollRef} className="overflow-y-auto px-4 py-3 flex-1 space-y-3">
-        {messages.map((m) => (
-          <MessageBubble key={m.id} msg={m} onExecute={onExecute} compact={false} />
-        ))}
+        {messages.map((m) => {
+          // assistant 메시지에 SEARCH/REPLACE 블록 있으면 카드로 분리 렌더
+          if (m.role === "assistant" && hasEditBlocks(m.content) && cwd) {
+            const editBlocks = parseEditBlocks(m.content);
+            return (
+              <div key={m.id} className="space-y-2">
+                <MessageBubble msg={m} onExecute={onExecute} compact={false} />
+                {editBlocks.map((b) => (
+                  <EditBlockCard key={`${m.id}-${b.index}`} block={b} cwd={cwd} />
+                ))}
+              </div>
+            );
+          }
+          return <MessageBubble key={m.id} msg={m} onExecute={onExecute} compact={false} />;
+        })}
         {error && (
           <div className="text-[12px] text-red-400/80 px-2.5 py-1.5 rounded bg-red-500/10 border border-red-500/20">
             {error}

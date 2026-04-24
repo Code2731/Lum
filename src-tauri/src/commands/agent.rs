@@ -99,7 +99,7 @@ pub fn strip_ansi(s: &str) -> String {
 pub async fn agent_plan(task: String, context: String, model: String) -> Result<Vec<AgentStep>> {
     let prompt = format!(
         "당신은 터미널 에이전트입니다. 사용자의 태스크를 실행 가능한 셸 커맨드 단계로 분해하세요.\n\n\
-컨텍스트: {context}\n\
+컨텍스트 (repo 구조 포함):\n{context}\n\n\
 태스크: {task}\n\n\
 규칙:\n\
 - 각 단계는 단일 셸 커맨드\n\
