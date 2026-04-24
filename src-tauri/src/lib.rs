@@ -123,6 +123,8 @@ pub fn run() {
             // Phase 71: 안전 모드 + VRAM 캡
             commands::config::save_safety_mode,
             commands::config::save_vram_cap_override,
+            // Phase 72: capability 토글
+            commands::config::save_capability_toggles,
             // Session Persistence
             commands::session::save_session,
             commands::session::load_session,

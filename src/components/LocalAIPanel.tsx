@@ -83,6 +83,20 @@ export default function LocalAIPanel({ onClose }: Props) {
 
         <div className="flex-1 overflow-y-auto p-4 space-y-5">
 
+          {/* 실험 경고 배너 */}
+          <div className="flex items-start gap-2 px-3 py-2.5 bg-yellow-500/10 border border-yellow-500/30 rounded text-[11px] text-yellow-200/90 leading-relaxed">
+            <AlertCircle size={13} className="mt-0.5 shrink-0 text-yellow-400" />
+            <div>
+              <div className="font-semibold mb-1">⚠ 실험 전용 · 미완성 인프라</div>
+              <ul className="list-disc pl-4 space-y-0.5 text-yellow-200/70 text-[10px]">
+                <li><b>기본 빌드에서 비활성</b> — <code className="px-1 bg-black/30 rounded">cargo run --features local-ai</code>로만 활성. 지금 로드 버튼 누르면 invoke 실패.</li>
+                <li><b>가중치 미로딩</b> — safetensors 파서 미구현. 랜덤 weights로 돌아 출력이 의미 없음.</li>
+                <li><b>실제 로컬 추론은 xLLM/MLX-LM</b> — 설정(Cmd+,) → xLLM 패널에서 사용.</li>
+                <li>이 패널은 향후 burn-lm 성숙 시 부활용 인프라로 남겨둠.</li>
+              </ul>
+            </div>
+          </div>
+
           {/* 모델 디렉토리 */}
           <section className="space-y-2">
             <p className="text-[11px] font-medium text-white/60 uppercase tracking-wide">모델 경로</p>

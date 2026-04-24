@@ -121,7 +121,11 @@ export function useAIChat(model: string, getTerminalContext: () => string) {
 
   const sendMessage = useCallback(
     async (text: string) => {
-      if (streaming) return;
+      if (streaming) {
+        console.warn("[AI] sendMessage skipped — already streaming");
+        return;
+      }
+      console.log("[AI] sendMessage:", text, "model:", model);
 
       const userMsg: ChatMessage = {
         id: crypto.randomUUID(),
@@ -150,7 +154,10 @@ export function useAIChat(model: string, getTerminalContext: () => string) {
       setStreaming(true);
       setError(null);
 
+      let tokenCount = 0;
       const unlisten = await listen<string>(XLLM_TOKEN_EVENT, (event) => {
+        tokenCount++;
+        if (tokenCount === 1) console.log("[AI] first token received");
         const token = event.payload.replace(/<\|im_end\|>|<\|endoftext\|>|<\|im_start\|>/g, "");
         setMessages((prev) =>
           prev.map((m) =>
@@ -160,8 +167,11 @@ export function useAIChat(model: string, getTerminalContext: () => string) {
       });
 
       try {
+        console.log("[AI] invoking stream_ai_command, context len:", context.length);
         await invoke("stream_ai_command", { prompt: text, model, context });
+        console.log("[AI] stream_ai_command returned, tokens:", tokenCount);
       } catch (e) {
+        console.error("[AI] stream_ai_command threw:", e);
         const msg = (() => {
           if (!e) return "알 수 없는 오류";
           if (typeof e === "string") return e;

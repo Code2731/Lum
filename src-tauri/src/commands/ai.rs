@@ -110,8 +110,12 @@ pub async fn call_xllm(client: &reqwest::Client, _model: &str, prompt: &str) -> 
         .await
         .map_err(|e| LumError::AiEngine(e.to_string()))?;
 
-    res_json["choices"][0]["message"]["content"]
+    let msg = &res_json["choices"][0]["message"];
+    // content 우선, 없으면 reasoning/reasoning_content (추론 모델 지원)
+    msg["content"]
         .as_str()
+        .or_else(|| msg["reasoning"].as_str())
+        .or_else(|| msg["reasoning_content"].as_str())
         .map(|s| s.to_string())
         .ok_or_else(|| LumError::AiEngine(format!("xLLM 응답 파싱 실패: {}", res_json)))
 }
@@ -177,10 +181,22 @@ async fn call_xllm_stream(
                     continue;
                 }
                 if let Ok(json) = serde_json::from_str::<serde_json::Value>(data) {
-                    if let Some(token) = json["choices"][0]["delta"]["content"].as_str() {
-                        if !token.is_empty() {
-                            full_text.push_str(token);
-                            let _ = app.emit(XLLM_TOKEN_EVENT, token.to_string());
+                    let delta = &json["choices"][0]["delta"];
+                    // content가 있으면 그대로 전달
+                    if let Some(t) = delta["content"].as_str() {
+                        if !t.is_empty() {
+                            full_text.push_str(t);
+                            let _ = app.emit(XLLM_TOKEN_EVENT, t.to_string());
+                        }
+                    }
+                    // reasoning/reasoning_content 토큰 — show_reasoning 설정 따라 표시/숨김
+                    else if let Some(t) = delta["reasoning"].as_str().or_else(|| delta["reasoning_content"].as_str()) {
+                        if !t.is_empty() {
+                            let show = load_config().ok().and_then(|c| c.show_reasoning).unwrap_or(true);
+                            full_text.push_str(t);
+                            if show {
+                                let _ = app.emit(XLLM_TOKEN_EVENT, t.to_string());
+                            }
                         }
                     }
                 }

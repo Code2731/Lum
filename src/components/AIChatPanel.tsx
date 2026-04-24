@@ -188,16 +188,16 @@ export const MessageBubble: React.FC<{
   const codeText = compact ? "text-[10px]" : "text-[13px]";
   const inlineCodeText = compact ? "text-[10px]" : "text-[12.5px]";
   const iconSize = compact ? 11 : 14;
-  const userPad = compact ? "px-2.5 py-1.5 text-[11px]" : "px-3 py-2 text-[14px]";
 
   if (isUser) {
+    // Warp 스타일 — 좌측 정렬, 테두리/배경 없이 아이콘 + 텍스트만
     return (
-      <div className="flex items-start gap-1.5 justify-end">
-        <div className={`max-w-[85%] rounded-xl rounded-tr-sm bg-accent/15 border border-accent/20 text-white/85 leading-relaxed whitespace-pre-wrap break-words ${userPad}`}>
-          {msg.content}
-        </div>
+      <div className="flex items-start gap-1.5">
         <div className="shrink-0 mt-0.5 text-accent/60">
           <User size={iconSize} />
+        </div>
+        <div className={`max-w-[90%] ${bodyText} text-white/85 leading-relaxed whitespace-pre-wrap break-words min-w-0`}>
+          {msg.content}
         </div>
       </div>
     );

@@ -59,6 +59,12 @@ pub struct AppConfig {
     pub safety_mode: Option<String>,
     /// VRAM Cap 사용자 오버라이드 — 0.50 ~ 0.95 (None이면 safety_mode의 기본값 사용)
     pub vram_cap_override: Option<f32>,
+
+    // ── Phase 72: 모델 capability 토글 ─────────────────────────────────────
+    /// 비전(멀티모달) 입력 활성화 — 모델이 지원할 때만 유효
+    pub vision_enabled: Option<bool>,
+    /// 추론(CoT) 토큰 UI 표시 — false면 <think>…</think> 블록 숨김
+    pub show_reasoning: Option<bool>,
 }
 
 impl AppConfig {
@@ -148,6 +154,15 @@ pub fn save_safety_mode(mode: String) -> Result<()> {
 pub fn save_vram_cap_override(cap: Option<f32>) -> Result<()> {
     let mut config = load_config()?;
     config.vram_cap_override = cap.map(|c| c.clamp(0.50, 0.95));
+    save_config(&config)
+}
+
+/// Phase 72: 모델 capability 토글 저장 (vision / reasoning)
+#[tauri::command]
+pub fn save_capability_toggles(vision_enabled: Option<bool>, show_reasoning: Option<bool>) -> Result<()> {
+    let mut config = load_config()?;
+    config.vision_enabled = vision_enabled;
+    config.show_reasoning = show_reasoning;
     save_config(&config)
 }
 

@@ -70,15 +70,20 @@ jobs:
             실제 PTY 터미널 + 로컬 AI가 통합된 Warp 스타일 터미널 에뮬레이터.
 
             ### 설치
-            - **macOS (Apple Silicon)**: `LUM_aarch64.dmg`
-            - **macOS (Intel)**: `LUM_x64.dmg`
-            - **Windows**: `LUM-Setup.exe` (NSIS) 또는 `LUM_x64_en-US.msi`
-            - **Linux**: `lum_amd64.deb` 또는 `lum_amd64.AppImage`
+            파일명 규칙: `LUM.Terminal_{version}_{arch}.{ext}`
+
+            - **macOS (Apple Silicon, M1/M2/M3/M4)**: `LUM.Terminal_*_aarch64.dmg`
+            - **macOS (Intel)**: `LUM.Terminal_*_x64.dmg`
+            - **Windows**: `LUM.Terminal_*_x64-setup.exe` (NSIS) 또는 `LUM.Terminal_*_x64_en-US.msi`
+            - **Linux**: `LUM.Terminal_*_amd64.deb` 또는 `LUM.Terminal_*_amd64.AppImage`
 
             > 코드 서명이 없으므로 macOS는 `우클릭 → 열기`, Windows는 `추가 정보 → 실행`으로 설치하세요.
 
             ### 주요 변경사항
             이 릴리즈의 변경사항은 [CHANGELOG](https://github.com/Code2731/Lum/commits/main)를 참고하세요.
+          # draft 상태로 생성 → 모든 매트릭스(4개 플랫폼)가 완료된 뒤
+          # GitHub Releases 페이지에서 "Publish release" 수동 클릭으로 공개.
+          # false로 두면 2/4 플랫폼만 끝났을 때 publish되는 레이스 위험.
           releaseDraft: true
           prerelease: false
           args: ${{ matrix.args }}

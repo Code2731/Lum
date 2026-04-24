@@ -10,18 +10,60 @@ pub struct XllmModelInfo {
     pub rope_scale: Option<f32>,
 }
 
-/// 현재 로드된 모델 정보 조회 — /v1/models (MLX-LM·OpenAI 호환) 우선,
-/// 실패 시 TabbyAPI 전용 /v1/model 폴백
+/// macOS/Linux: mlx_lm.server 프로세스의 `--model` 인자에서 실제 로드된 모델 ID 추출.
+/// `/v1/models`가 캐시 목록을 MRU 순으로 반환해 첫 엔트리가 로드된 모델과 다른 문제 우회.
+#[cfg(not(windows))]
+fn detect_mlx_loaded_model() -> Option<String> {
+    let out = std::process::Command::new("ps")
+        .args(["-Ao", "command="])
+        .output()
+        .ok()?;
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    for line in stdout.lines() {
+        if !line.contains("mlx_lm.server") {
+            continue;
+        }
+        // "--model <value>" 뒤 토큰 추출 (공백 포함 경로는 보통 없음, 경로엔 공백 허용)
+        let mut tokens = line.split_whitespace();
+        while let Some(t) = tokens.next() {
+            if t == "--model" {
+                if let Some(v) = tokens.next() {
+                    return Some(v.to_string());
+                }
+            }
+        }
+    }
+    None
+}
+
+#[cfg(windows)]
+fn detect_mlx_loaded_model() -> Option<String> {
+    None // Windows는 TabbyAPI 기본이라 /v1/model 폴백이 정확
+}
+
+/// 현재 로드된 모델 정보 조회.
+/// Apple Silicon(MLX-LM): ps 파서로 --model 인자 읽기 (가장 정확)
+/// 그 외: /v1/models 첫 엔트리 → /v1/model 폴백
 #[tauri::command]
 pub async fn get_xllm_model_info() -> Result<XllmModelInfo> {
     let config = load_config()?;
     let base_url = config.xllm_url();
+
+    // MLX-LM 먼저 시도 (ps --model)
+    if let Some(model) = detect_mlx_loaded_model() {
+        return Ok(XllmModelInfo {
+            id: model,
+            max_seq_len: None,
+            cache_mode: None,
+            rope_scale: None,
+        });
+    }
+
     let client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(5))
         .build()
         .map_err(|e| LumError::Network(e.to_string()))?;
 
-    // OpenAI 표준 /v1/models 엔드포인트 시도 (MLX-LM, TabbyAPI 모두 지원)
     let models_url = format!("{}/v1/models", base_url);
     let mut req = client.get(&models_url);
     if let Some(key) = &config.xllm_api_key {

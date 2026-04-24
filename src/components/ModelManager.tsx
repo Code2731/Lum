@@ -16,6 +16,11 @@ interface DownloadProgress {
   downloaded: number;
   total: number;
   done: boolean;
+  /** 프론트엔드가 누적 집계 — 지금까지 완료된 파일 수 */
+  _filesCompleted?: number;
+  /** 프론트엔드가 누적 집계 — 지금까지 다운받은 총 바이트 (완료된 파일 합) */
+  _totalDownloaded?: number;
+  _seenFiles?: string[];
 }
 
 type ModelCategory = "coding" | "general" | "reasoning" | "lightweight";
@@ -29,6 +34,11 @@ interface CuratedModel {
   min_ram_gb: number;
   category: ModelCategory;
   badge?: string;
+  /** 모델 고유 기능 — 켜고 끄는 건 XllmPanel의 전역 토글 */
+  capabilities?: {
+    vision?: boolean;     // 이미지 입력 지원 (VL·멀티모달)
+    reasoning?: boolean;  // chain-of-thought / think 토큰 생성
+  };
 }
 
 const CATEGORY_META: Record<ModelCategory, { icon: string; label: string }> = {
@@ -42,34 +52,72 @@ const CATEGORY_META: Record<ModelCategory, { icon: string; label: string }> = {
 // mlx-community HuggingFace 레포에서 자동 다운로드.
 // 직접 입력란에 mlx-community/model-name 형식으로 다른 모델도 사용 가능.
 const MLX_MODELS: CuratedModel[] = [
-  // 코딩 특화
-  { category: "coding", repo_id: "mlx-community/Qwen2.5-Coder-7B-Instruct-4bit",  revision: "main", label: "Qwen2.5-Coder 7B",  description: "코딩 기본 — 4.5GB, 빠른 응답",        size_gb: 4.5, min_ram_gb: 8  },
-  { category: "coding", repo_id: "mlx-community/Qwen2.5-Coder-14B-Instruct-4bit", revision: "main", label: "Qwen2.5-Coder 14B", description: "코딩 균형형 — 8.5GB",                 size_gb: 8.5, min_ram_gb: 16 },
-  { category: "coding", repo_id: "mlx-community/Qwen2.5-Coder-32B-Instruct-4bit", revision: "main", label: "Qwen2.5-Coder 32B", description: "코딩 최강 — 19GB, 36GB Mac 추천",     size_gb: 19,  min_ram_gb: 24, badge: "★ 추천" },
+  // ─── Qwen3.5 (2026년 최신 — Alibaba + 커뮤니티 증류) ───
+  { category: "general",   repo_id: "mlx-community/Qwen3.5-4B-MLX-4bit",                              revision: "main", label: "Qwen3.5 4B",                  description: "최신 Alibaba — 2.5GB, 빠름",                      size_gb: 2.5, min_ram_gb: 6  },
+  { category: "general",   repo_id: "mlx-community/Qwen3.5-9B-MLX-4bit",                              revision: "main", label: "Qwen3.5 9B (VL)",             description: "최신 Alibaba VL — 5.5GB, 비전+텍스트",             size_gb: 5.5, min_ram_gb: 12, badge: "★ 최신", capabilities: { vision: true } },
+  { category: "reasoning", repo_id: "mlx-community/Qwen3.5-27B-Claude-4.6-Opus-Distilled-MLX-4bit",  revision: "main", label: "Qwen3.5 27B (Claude 증류)",  description: "Claude 4.6 Opus 추론 증류 — 15GB",                 size_gb: 15,  min_ram_gb: 20, badge: "🧠 추천", capabilities: { reasoning: true } },
 
-  // 범용 — Qwen2.5
-  { category: "general", repo_id: "mlx-community/Qwen2.5-7B-Instruct-4bit",        revision: "main", label: "Qwen2.5 7B",         description: "코딩+범용 — 4.5GB",                 size_gb: 4.5, min_ram_gb: 8  },
-  { category: "general", repo_id: "mlx-community/Qwen2.5-14B-Instruct-4bit",       revision: "main", label: "Qwen2.5 14B",        description: "코딩+범용 고품질 — 8.5GB",           size_gb: 8.5, min_ram_gb: 16 },
-  { category: "general", repo_id: "mlx-community/Qwen2.5-32B-Instruct-4bit",       revision: "main", label: "Qwen2.5 32B",        description: "코딩+범용 최강 — 19GB",              size_gb: 19,  min_ram_gb: 24 },
-  { category: "general", repo_id: "mlx-community/Qwen2.5-72B-Instruct-4bit",       revision: "main", label: "Qwen2.5 72B",        description: "최고 품질 — 38GB, Ultra 전용",       size_gb: 38,  min_ram_gb: 48 },
+  // ─── Qwen3 (2025 릴리즈) ───
+  { category: "lightweight", repo_id: "mlx-community/Qwen3-0.6B-4bit",                               revision: "main", label: "Qwen3 0.6B",                  description: "초경량 — 0.4GB, 즉각 응답",                        size_gb: 0.4, min_ram_gb: 2  },
+  { category: "lightweight", repo_id: "mlx-community/Qwen3-1.7B-4bit",                               revision: "main", label: "Qwen3 1.7B",                  description: "경량 — 1GB, 빠른 응답",                            size_gb: 1,   min_ram_gb: 3  },
+  { category: "general",   repo_id: "mlx-community/Qwen3-4B-4bit",                                   revision: "main", label: "Qwen3 4B",                    description: "범용 경량 — 2.5GB",                                size_gb: 2.5, min_ram_gb: 6  },
+  { category: "general",   repo_id: "mlx-community/Qwen3-8B-4bit",                                   revision: "main", label: "Qwen3 8B",                    description: "범용 기본 — 5GB",                                   size_gb: 5,   min_ram_gb: 10 },
+  { category: "general",   repo_id: "mlx-community/Qwen3-14B-4bit",                                  revision: "main", label: "Qwen3 14B",                   description: "범용 고품질 — 8.5GB",                               size_gb: 8.5, min_ram_gb: 16 },
+  { category: "general",   repo_id: "mlx-community/Qwen3-32B-4bit",                                  revision: "main", label: "Qwen3 32B",                   description: "범용 최강 — 19GB",                                  size_gb: 19,  min_ram_gb: 24 },
+  { category: "general",   repo_id: "mlx-community/Qwen3-30B-A3B-4bit",                              revision: "main", label: "Qwen3-30B MoE (A3B)",         description: "MoE 30B 활성 3B — 18GB, 빠른 추론",                size_gb: 18,  min_ram_gb: 24 },
+  { category: "coding",    repo_id: "mlx-community/Qwen3-Coder-30B-A3B-Instruct-4bit",               revision: "main", label: "Qwen3-Coder 30B (MoE)",       description: "최신 코딩 MoE — 18GB, 활성 3B",                     size_gb: 18,  min_ram_gb: 24, badge: "★ 추천" },
+
+  // ─── Qwen2.5 (레거시 하위 호환) ───
+  { category: "coding",  repo_id: "mlx-community/Qwen2.5-Coder-7B-Instruct-4bit",  revision: "main", label: "Qwen2.5-Coder 7B",  description: "코딩 안정판 — 4.5GB",                  size_gb: 4.5, min_ram_gb: 8  },
+  { category: "coding",  repo_id: "mlx-community/Qwen2.5-Coder-14B-Instruct-4bit", revision: "main", label: "Qwen2.5-Coder 14B", description: "코딩 안정판 — 8.5GB",                  size_gb: 8.5, min_ram_gb: 16 },
+  { category: "coding",  repo_id: "mlx-community/Qwen2.5-Coder-32B-Instruct-4bit", revision: "main", label: "Qwen2.5-Coder 32B", description: "코딩 안정판 — 19GB",                   size_gb: 19,  min_ram_gb: 24 },
+  { category: "general", repo_id: "mlx-community/Qwen2.5-7B-Instruct-4bit",        revision: "main", label: "Qwen2.5 7B",         description: "레거시 — 4.5GB",                      size_gb: 4.5, min_ram_gb: 8  },
+  { category: "general", repo_id: "mlx-community/Qwen2.5-14B-Instruct-4bit",       revision: "main", label: "Qwen2.5 14B",        description: "레거시 — 8.5GB",                      size_gb: 8.5, min_ram_gb: 16 },
+  { category: "general", repo_id: "mlx-community/Qwen2.5-32B-Instruct-4bit",       revision: "main", label: "Qwen2.5 32B",        description: "레거시 — 19GB",                       size_gb: 19,  min_ram_gb: 24 },
+  { category: "general", repo_id: "mlx-community/Qwen2.5-72B-Instruct-4bit",       revision: "main", label: "Qwen2.5 72B",        description: "레거시 — 38GB, Ultra 전용",           size_gb: 38,  min_ram_gb: 48 },
 
   // 범용 — Llama
   { category: "general", repo_id: "mlx-community/Llama-3.2-3B-Instruct-4bit",      revision: "main", label: "Llama 3.2 3B",       description: "초경량, 즉각 응답 — 2GB",            size_gb: 2,   min_ram_gb: 4  },
   { category: "general", repo_id: "mlx-community/Meta-Llama-3.1-8B-Instruct-4bit", revision: "main", label: "Llama 3.1 8B",       description: "범용 균형 — 5GB",                    size_gb: 5,   min_ram_gb: 8  },
   { category: "general", repo_id: "mlx-community/Llama-3.3-70B-Instruct-4bit",     revision: "main", label: "Llama 3.3 70B",      description: "범용 최강 — 38GB, Ultra 전용",       size_gb: 38,  min_ram_gb: 48 },
 
-  // 범용 — Gemma 3 (Google)
-  { category: "general", repo_id: "mlx-community/gemma-3-4b-it-4bit",              revision: "main", label: "Gemma 3 4B",         description: "Google — 2.5GB, 빠른 응답",          size_gb: 2.5, min_ram_gb: 6  },
-  { category: "general", repo_id: "mlx-community/gemma-3-12b-it-4bit",             revision: "main", label: "Gemma 3 12B",        description: "Google — 7GB, 고품질",               size_gb: 7,   min_ram_gb: 12 },
-  { category: "general", repo_id: "mlx-community/gemma-3-27b-it-4bit",             revision: "main", label: "Gemma 3 27B",        description: "Google — 15GB, 최고품질",            size_gb: 15,  min_ram_gb: 20 },
+  // 범용 — Gemma 4 (Google, 2026 최신) ★
+  { category: "lightweight", repo_id: "mlx-community/gemma-4-e2b-it-4bit",          revision: "main", label: "Gemma 4 E2B",        description: "Google Edge — 1.5GB, 모바일급 경량",  size_gb: 1.5, min_ram_gb: 4  },
+  { category: "general",   repo_id: "mlx-community/gemma-4-e4b-it-4bit",            revision: "main", label: "Gemma 4 E4B",        description: "Google Edge — 2.5GB, 빠른 응답",       size_gb: 2.5, min_ram_gb: 6  },
+  { category: "general",   repo_id: "mlx-community/gemma-4-26b-a4b-it-4bit",        revision: "main", label: "Gemma 4 26B (MoE A4B)", description: "Google MoE — 15GB, 활성 4B로 빠름",  size_gb: 15,  min_ram_gb: 20, badge: "★ 최신" },
+  { category: "general",   repo_id: "mlx-community/gemma-4-31b-it-4bit",            revision: "main", label: "Gemma 4 31B",        description: "Google 최신 — 18GB, 최고 품질",       size_gb: 18,  min_ram_gb: 24 },
+
+  // 범용 — Gemma 3 (Google, 레거시)
+  { category: "general", repo_id: "mlx-community/gemma-3-4b-it-4bit",              revision: "main", label: "Gemma 3 4B",         description: "Google 레거시 — 2.5GB",              size_gb: 2.5, min_ram_gb: 6  },
+  { category: "general", repo_id: "mlx-community/gemma-3-12b-it-4bit",             revision: "main", label: "Gemma 3 12B",        description: "Google 레거시 — 7GB",                 size_gb: 7,   min_ram_gb: 12 },
+  { category: "general", repo_id: "mlx-community/gemma-3-27b-it-4bit",             revision: "main", label: "Gemma 3 27B",        description: "Google 레거시 — 15GB",                size_gb: 15,  min_ram_gb: 20 },
+
+  // 범용 — LG EXAONE (한국어 최적화)
+  { category: "lightweight", repo_id: "mlx-community/exaone-4.0-1.2b-4bit",             revision: "main", label: "EXAONE 4.0 1.2B",     description: "LG 한국어 최신 — 0.8GB, 모바일급",   size_gb: 0.8, min_ram_gb: 2  },
+  { category: "general",   repo_id: "mlx-community/EXAONE-4.0-32B-4bit",                revision: "main", label: "EXAONE 4.0 32B",      description: "LG 한국어 최신 — 19GB, 한국어 SOTA", size_gb: 19,  min_ram_gb: 24, badge: "🇰🇷 한국어" },
+  { category: "general",   repo_id: "mlx-community/EXAONE-3.5-2.4B-Instruct-4bit",      revision: "main", label: "EXAONE 3.5 2.4B",     description: "LG 한국어 경량 — 1.5GB",              size_gb: 1.5, min_ram_gb: 4  },
+  { category: "general",   repo_id: "mlx-community/EXAONE-3.5-7.8B-Instruct-4bit",      revision: "main", label: "EXAONE 3.5 7.8B",     description: "LG 한국어 균형 — 4.5GB",              size_gb: 4.5, min_ram_gb: 8  },
+  { category: "general",   repo_id: "mlx-community/EXAONE-3.5-32B-Instruct-4bit",       revision: "main", label: "EXAONE 3.5 32B",      description: "LG 한국어 대형 — 19GB",               size_gb: 19,  min_ram_gb: 24 },
+  { category: "reasoning", repo_id: "mlx-community/EXAONE-Deep-2.4B-4bit",              revision: "main", label: "EXAONE Deep 2.4B",    description: "LG 추론 특화 경량 — 1.5GB",           size_gb: 1.5, min_ram_gb: 4,  capabilities: { reasoning: true } },
+  { category: "reasoning", repo_id: "mlx-community/EXAONE-Deep-7.8B-4bit",              revision: "main", label: "EXAONE Deep 7.8B",    description: "LG 추론 특화 — 4.5GB",                size_gb: 4.5, min_ram_gb: 8,  capabilities: { reasoning: true } },
+  { category: "reasoning", repo_id: "mlx-community/EXAONE-Deep-32B-4bit",               revision: "main", label: "EXAONE Deep 32B",     description: "LG 추론 특화 대형 — 19GB",            size_gb: 19,  min_ram_gb: 24, capabilities: { reasoning: true } },
 
   // 범용 — Mistral
   { category: "general", repo_id: "mlx-community/Mistral-7B-Instruct-v0.3-4bit",   revision: "main", label: "Mistral 7B",         description: "유럽 오픈소스 — 4.5GB",              size_gb: 4.5, min_ram_gb: 8  },
 
-  // 추론 특화 — DeepSeek R1
-  { category: "reasoning", repo_id: "mlx-community/DeepSeek-R1-Distill-Qwen-7B-4bit",  revision: "main", label: "DeepSeek R1 7B",  description: "추론·수학·코딩 — 4.5GB",             size_gb: 4.5, min_ram_gb: 8  },
-  { category: "reasoning", repo_id: "mlx-community/DeepSeek-R1-Distill-Qwen-14B-4bit", revision: "main", label: "DeepSeek R1 14B", description: "추론 고품질 — 8.5GB",                size_gb: 8.5, min_ram_gb: 16 },
-  { category: "reasoning", repo_id: "mlx-community/DeepSeek-R1-Distill-Qwen-32B-4bit", revision: "main", label: "DeepSeek R1 32B", description: "추론 최강 — 19GB",                   size_gb: 19,  min_ram_gb: 24 },
+  // 추론 특화 — DeepSeek R1 (Qwen 기반 distill)
+  { category: "reasoning", repo_id: "mlx-community/DeepSeek-R1-Distill-Qwen-7B-4bit",  revision: "main", label: "DeepSeek R1 7B",   description: "추론·수학·코딩 — 4.5GB",             size_gb: 4.5, min_ram_gb: 8,  capabilities: { reasoning: true } },
+  { category: "reasoning", repo_id: "mlx-community/DeepSeek-R1-Distill-Qwen-14B-4bit", revision: "main", label: "DeepSeek R1 14B",  description: "추론 고품질 — 8.5GB",                 size_gb: 8.5, min_ram_gb: 16, capabilities: { reasoning: true } },
+  { category: "reasoning", repo_id: "mlx-community/DeepSeek-R1-Distill-Qwen-32B-4bit", revision: "main", label: "DeepSeek R1 32B",  description: "추론 최강 — 19GB",                    size_gb: 19,  min_ram_gb: 24, capabilities: { reasoning: true } },
+  { category: "reasoning", repo_id: "mlx-community/DeepSeek-R1-Distill-Llama-70B-4bit",revision: "main", label: "DeepSeek R1 70B (Llama)", description: "추론 최대 — 40GB, M3/M4 Max+",  size_gb: 40,  min_ram_gb: 48, capabilities: { reasoning: true } },
+
+  // DeepSeek Coder V2 (MoE 16B active 2.4B — 빠른 추론)
+  { category: "coding",  repo_id: "mlx-community/DeepSeek-Coder-V2-Lite-Instruct-4bit-mlx", revision: "main", label: "DeepSeek-Coder V2 Lite (MoE)", description: "MoE 16B 활성 2.4B — 10GB, 코딩 고속", size_gb: 10,  min_ram_gb: 16, badge: "⚡ MoE" },
+
+  // DeepSeek Coder (원조 — 전통 dense)
+  { category: "lightweight", repo_id: "mlx-community/deepseek-coder-1.3b-instruct-mlx",          revision: "main", label: "DeepSeek-Coder 1.3B", description: "초경량 코딩 — 0.8GB, 자동완성 급",    size_gb: 0.8, min_ram_gb: 2  },
+  { category: "coding",      repo_id: "mlx-community/deepseek-coder-6.7b-instruct-hf-4bit-mlx",  revision: "main", label: "DeepSeek-Coder 6.7B", description: "코딩 기본 dense — 4GB",                size_gb: 4,   min_ram_gb: 8  },
+  { category: "coding",      repo_id: "mlx-community/deepseek-coder-33b-instruct-hf-4bit-mlx",   revision: "main", label: "DeepSeek-Coder 33B", description: "코딩 대형 dense — 18GB",               size_gb: 18,  min_ram_gb: 24 },
 
   // 경량 특화
   { category: "lightweight", repo_id: "mlx-community/phi-4-4bit",                  revision: "main", label: "Phi-4 14B",          description: "Microsoft — 8GB, 매우 효율적",       size_gb: 8,   min_ram_gb: 12 },
@@ -161,6 +209,7 @@ const ModelManager: React.FC<Props> = ({ onClose, recommendedModel: _recommended
   const [loadedModelId, setLoadedModelId] = useState<string | null>(null);
   const [loadingModel, setLoadingModel] = useState<string | null>(null);
   const [loadMsg, setLoadMsg] = useState<string | null>(null);
+  const [loadProgress, setLoadProgress] = useState<{ percent: number; done: boolean; error?: string } | null>(null);
   const [codingModel, setCodingModel] = useState<string | null>(null);
   const [docModel, setDocModel] = useState<string | null>(null);
 
@@ -206,24 +255,43 @@ const ModelManager: React.FC<Props> = ({ onClose, recommendedModel: _recommended
       .catch(() => setLoadedModelId(null));
   }, []);
 
+  // MLX-LM 시작 진행률 이벤트 수신
+  useEffect(() => {
+    const unlisten = listen<{ percent: number; done: boolean; error?: string }>(
+      "mlx_download_progress",
+      (e) => {
+        setLoadProgress(e.payload);
+        if (e.payload.done) {
+          fetchLoaded();
+          setTimeout(() => setLoadProgress(null), e.payload.error ? 8000 : 3000);
+        }
+      },
+    );
+    return () => { unlisten.then((fn) => fn()); };
+  }, [fetchLoaded]);
+
   const useModel = useCallback(async (modelId: string, modelPath?: string) => {
     setLoadingModel(modelId);
     setLoadMsg(null);
+    setLoadProgress({ percent: 0, done: false });
     try {
       if (isAppleSilicon) {
         // MLX-LM은 동적 모델 전환 미지원 — 로컬 경로로 서버 재시작
+        // port:0 → 백엔드에서 실행 중인 포트 자동 감지 (하드코딩 5000 제거)
         const target = modelPath ?? modelId.replace("--", "/");
-        await invoke("restart_with_model", { port: 5000, model: target });
-        setLoadMsg(`⏳ MLX-LM 시작 중… 모델 로드까지 30-60초 소요됩니다. xLLM 패널에서 상태를 확인하세요.`);
+        await invoke("restart_with_model", { port: 0, model: target });
+        // 진행률은 아래 progress 이벤트 리스너가 관리
       } else {
         const msg = await invoke<string>("switch_xllm_model", { modelName: modelId, cacheMode: null, maxSeqLen: null });
         setLoadMsg(`✅ ${msg}`);
+        setLoadProgress(null);
       }
       fetchLoaded();
     } catch (e) {
       const raw = e as { message?: string } | string | null;
       const msg = typeof raw === "string" ? raw : (raw?.message ?? JSON.stringify(raw));
       setLoadMsg(`❌ ${msg}`);
+      setLoadProgress(null);
     } finally {
       setLoadingModel(null);
     }
@@ -267,7 +335,25 @@ const ModelManager: React.FC<Props> = ({ onClose, recommendedModel: _recommended
         });
         loadLocalModels();
       } else {
-        setDownloading((prev) => ({ ...prev, [p.repo_id]: p }));
+        setDownloading((prev) => {
+          const existing = prev[p.repo_id];
+          const seen = existing?._seenFiles ?? [];
+          const isNewFile = !seen.includes(p.file);
+          // 파일이 바뀌었으면 이전 파일의 total을 누적 바이트에 더함
+          const addedBytes = isNewFile && existing && existing.file && existing.file !== p.file
+            ? existing.total
+            : 0;
+          const seenFiles = isNewFile ? [...seen, p.file] : seen;
+          return {
+            ...prev,
+            [p.repo_id]: {
+              ...p,
+              _filesCompleted: Math.max(0, seenFiles.length - 1),
+              _totalDownloaded: (existing?._totalDownloaded ?? 0) + addedBytes,
+              _seenFiles: seenFiles,
+            },
+          };
+        });
       }
     });
 
@@ -382,6 +468,52 @@ const ModelManager: React.FC<Props> = ({ onClose, recommendedModel: _recommended
               <>
                 {loadMsg && (
                   <div className="mb-2 px-3 py-2 rounded text-[11px] bg-white/5 border border-white/10">{loadMsg}</div>
+                )}
+
+                {/* MLX-LM 시작 진행률 바 */}
+                {loadProgress && (
+                  <div className={`mb-2 px-3 py-2 rounded border ${
+                    loadProgress.error
+                      ? "bg-red-500/5 border-red-500/30"
+                      : loadProgress.done
+                        ? "bg-green-500/5 border-green-500/30"
+                        : "bg-accent/5 border-accent/30"
+                  }`}>
+                    <div className="flex items-center justify-between text-[11px] mb-1.5">
+                      <span className={
+                        loadProgress.error ? "text-red-400" :
+                        loadProgress.done ? "text-green-400" :
+                        "text-accent"
+                      }>
+                        {loadProgress.error
+                          ? "❌ 모델 로드 실패"
+                          : loadProgress.done
+                            ? "✅ 모델 로드 완료"
+                            : "⏳ MLX-LM 서버 시작 중"}
+                      </span>
+                      <span className="text-white/40 font-mono">{loadProgress.percent}%</span>
+                    </div>
+                    <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all duration-500 ${
+                          loadProgress.error ? "bg-red-400" :
+                          loadProgress.done ? "bg-green-400" :
+                          "bg-accent"
+                        }`}
+                        style={{ width: `${loadProgress.percent}%` }}
+                      />
+                    </div>
+                    {loadProgress.error && (
+                      <pre className="mt-2 text-[10px] text-red-300/70 whitespace-pre-wrap font-mono max-h-32 overflow-y-auto">
+                        {loadProgress.error}
+                      </pre>
+                    )}
+                    {!loadProgress.done && !loadProgress.error && (
+                      <div className="text-[10px] text-white/30 mt-1.5">
+                        27B 모델은 90초 이상 걸릴 수 있습니다
+                      </div>
+                    )}
+                  </div>
                 )}
                 {localModels.map((m) => {
                   const isLoaded = loadedModelId === m.id;
@@ -662,6 +794,16 @@ const ModelManager: React.FC<Props> = ({ onClose, recommendedModel: _recommended
                                 {m.badge}
                               </span>
                             )}
+                            {m.capabilities?.vision && (
+                              <span title="이미지 입력 지원 (Vision)" className="text-[9px] px-1.5 py-0.5 bg-purple-400/15 text-purple-300/80 rounded-full whitespace-nowrap">
+                                👁 비전
+                              </span>
+                            )}
+                            {m.capabilities?.reasoning && (
+                              <span title="Chain-of-Thought 추론 토큰 생성" className="text-[9px] px-1.5 py-0.5 bg-cyan-400/15 text-cyan-300/80 rounded-full whitespace-nowrap">
+                                🧠 추론
+                              </span>
+                            )}
                             {isUnsupported && (
                               <span className="text-[9px] px-1.5 py-0.5 bg-red-500/15 text-red-300/80 rounded-full whitespace-nowrap">
                                 {memLabel} 부족
@@ -700,14 +842,28 @@ const ModelManager: React.FC<Props> = ({ onClose, recommendedModel: _recommended
                       </div>
 
                       {prog && (
-                        <div className="mt-2">
+                        <div className="mt-2 space-y-1">
+                          <div className="flex items-center justify-between text-[9px] text-white/40">
+                            <span className="truncate flex-1">
+                              {prog._filesCompleted !== undefined && prog._filesCompleted > 0
+                                ? `파일 ${(prog._filesCompleted ?? 0) + 1}번째`
+                                : "다운로드 중"}
+                              {" · "}
+                              <span className="text-white/30">{prog.file}</span>
+                            </span>
+                            <span className="font-mono shrink-0 ml-2">{progressPct(prog)}%</span>
+                          </div>
                           <div className="h-1 bg-white/10 rounded-full overflow-hidden">
                             <div
                               className="h-full bg-accent transition-all duration-300"
                               style={{ width: `${progressPct(prog)}%` }}
                             />
                           </div>
-                          <div className="text-[9px] text-white/30 mt-0.5 truncate">{prog.file}</div>
+                          {prog._totalDownloaded !== undefined && prog._totalDownloaded > 0 && (
+                            <div className="text-[9px] text-white/25">
+                              누적 {formatMb((prog._totalDownloaded + prog.downloaded) / 1024 / 1024)} 다운로드 · 여러 파일 순차 진행 (100% → 0% 반복 정상)
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>

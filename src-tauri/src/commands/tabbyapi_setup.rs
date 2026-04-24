@@ -393,13 +393,18 @@ pub async fn start_tabbyapi(app: tauri::AppHandle, port: u16, model: Option<Stri
         let model = model.as_deref().unwrap_or("mlx-community/Qwen2.5-Coder-7B-Instruct-4bit");
         let mlx_bin = venv_dir.join("bin").join("mlx_lm.server");
 
-        // stderr는 버림 — tqdm이 \r로 출력해 파이프 버퍼를 막으므로 절대 piped 금지
+        // stderr → 로그 파일로 리다이렉트 (파이프는 tqdm \r로 블로킹되므로 파일)
+        // stdout은 버림 (불필요)
+        let log_path = server_dir.join("lum_mlx.log");
+        let log_file = std::fs::File::create(&log_path)
+            .map_err(|e| LumError::Io(format!("MLX 로그 파일 생성 실패: {e}")))?;
+
         if mlx_bin.exists() {
             tokio::process::Command::new(&mlx_bin)
                 .args(["--model", model, "--port", &port.to_string()])
                 .env("PATH", homebrew_path())
                 .stdout(std::process::Stdio::null())
-                .stderr(std::process::Stdio::null())
+                .stderr(std::process::Stdio::from(log_file))
                 .spawn()
                 .map_err(|e| LumError::Io(format!("MLX-LM 시작 실패: {e}")))?;
         } else {
@@ -407,13 +412,14 @@ pub async fn start_tabbyapi(app: tauri::AppHandle, port: u16, model: Option<Stri
                 .args(["-m", "mlx_lm.server", "--model", model, "--port", &port.to_string()])
                 .env("PATH", homebrew_path())
                 .stdout(std::process::Stdio::null())
-                .stderr(std::process::Stdio::null())
+                .stderr(std::process::Stdio::from(log_file))
                 .spawn()
                 .map_err(|e| LumError::Io(format!("MLX-LM 시작 실패: {e}")))?;
         }
 
         // 백그라운드: /v1/models 폴링으로 서버 준비 감지 → 프론트 이벤트 emit
         let poll_url = format!("http://127.0.0.1:{}/v1/models", port);
+        let log_path_for_poll = log_path.clone();
         tokio::spawn(async move {
             let client = reqwest::Client::new();
             let mut tick: u32 = 0;
@@ -421,7 +427,6 @@ pub async fn start_tabbyapi(app: tauri::AppHandle, port: u16, model: Option<Stri
                 tokio::time::sleep(tokio::time::Duration::from_secs(3)).await;
                 tick += 1;
 
-                // 시간 기반 가짜 진행률 (최대 90%까지, 서버 응답 시 100%)
                 let pct = (tick * 6).min(90);
                 let _ = app.emit("mlx_download_progress",
                     serde_json::json!({ "percent": pct, "done": false }));
@@ -438,7 +443,17 @@ pub async fn start_tabbyapi(app: tauri::AppHandle, port: u16, model: Option<Stri
                     return;
                 }
 
-                if tick > 60 { return; } // 3분 타임아웃
+                if tick > 60 {
+                    // 3분 타임아웃 — 로그 스니펫 포함해 에러 이벤트
+                    let log = std::fs::read_to_string(&log_path_for_poll).unwrap_or_default();
+                    let snippet: String = log.lines().rev().take(10)
+                        .collect::<Vec<_>>().into_iter().rev()
+                        .collect::<Vec<_>>().join("\n");
+                    let _ = app.emit("mlx_download_progress", serde_json::json!({
+                        "percent": 0, "done": true, "error": format!("모델 로드 타임아웃 (3분)\n{}", snippet)
+                    }));
+                    return;
+                }
             }
         });
 
@@ -522,26 +537,45 @@ pub fn stop_tabbyapi() -> Result<String> {
     }
 }
 
-/// 모델을 교체하여 서버 재시작 — stop 후 포트 해제 확인(최대 5초)까지 기다린 뒤 start
+/// 실행 중인 xLLM 서버 포트 자동 감지 (5000/5001/5002/8000/8080 순).
+/// 감지 실패 시 None.
+pub fn detect_running_port() -> Option<u16> {
+    for port in [5000u16, 5001, 5002, 8000, 8080] {
+        if is_server_running_on(port) {
+            return Some(port);
+        }
+    }
+    None
+}
+
+/// 모델을 교체하여 서버 재시작.
+/// port=0 이면 자동 감지. stop 후 포트 해제 확인(최대 5초)까지 기다린 뒤 start.
 #[command]
 pub async fn restart_with_model(app: tauri::AppHandle, port: u16, model: String) -> Result<String> {
-    // 1. 기존 서버 종료
-    kill_on_port(port);
+    // 1. 실제 대상 포트 결정 — port=0 이면 자동 감지
+    let target_port = if port == 0 {
+        detect_running_port().unwrap_or(5000)
+    } else {
+        port
+    };
 
-    // 2. 포트가 실제로 해제될 때까지 대기 (최대 5초, 200ms 간격)
+    // 2. 기존 서버 종료
+    kill_on_port(target_port);
+
+    // 3. 포트가 실제로 해제될 때까지 대기 (최대 5초, 200ms 간격)
     let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
     loop {
-        if !is_port_in_use(port) { break; }
+        if !is_port_in_use(target_port) { break; }
         if std::time::Instant::now() >= deadline {
             return Err(LumError::AiEngine(format!(
-                "포트 {port} 해제 실패 — 다른 프로세스가 사용 중일 수 있습니다."
+                "포트 {target_port} 해제 실패 — 다른 프로세스가 사용 중일 수 있습니다."
             )));
         }
         tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
     }
 
-    // 3. 새 모델로 서버 시작 (start_tabbyapi 내부 로직 재사용)
-    start_tabbyapi(app, port, Some(model)).await
+    // 4. 새 모델로 서버 시작
+    start_tabbyapi(app, target_port, Some(model)).await
 }
 
 // ─── 테스트 ───────────────────────────────────────────────────────────────────

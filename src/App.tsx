@@ -17,7 +17,7 @@ import { invoke } from "@tauri-apps/api/core";
 import {
   Zap, Cpu, Loader2, TerminalSquare, LayoutList, MousePointer2,
   Package, Database, Plus, X, Columns2, Rows2, SlidersHorizontal, ArrowUpCircle, GitCompareArrows, Palette,
-  GitBranch, Container, Layers, Lock, BookOpen, Bell, Activity, Brain, FolderTree,
+  GitBranch, Container, Layers, Lock, BookOpen, Bell, Activity, FolderTree, Brain,
 } from "lucide-react";
 import SshConnectModal from "./components/SshConnectModal";
 import AgentPanel from "./components/AgentPanel";
@@ -77,6 +77,25 @@ const App: React.FC = () => {
     const t = setInterval(fetchLoaded, 10000);
     return () => clearInterval(t);
   }, []);
+
+  // Phase 72 — 추론 토큰 표시 전역 토글 (툴바 + XllmPanel 공통 상태)
+  const [showReasoning, setShowReasoning] = useState(true);
+  useEffect(() => {
+    invoke<{ show_reasoning?: boolean }>("load_app_config")
+      .then((c) => setShowReasoning(c.show_reasoning ?? true))
+      .catch(() => {});
+  }, []);
+  const toggleReasoning = useCallback(async () => {
+    const next = !showReasoning;
+    setShowReasoning(next);
+    try {
+      const cfg = await invoke<{ vision_enabled?: boolean }>("load_app_config");
+      await invoke("save_capability_toggles", {
+        visionEnabled: cfg.vision_enabled ?? false,
+        showReasoning: next,
+      });
+    } catch {}
+  }, [showReasoning]);
 
   const selectedModel = loadedModelId ?? specs?.recommended_model ?? "Qwen2.5-Coder-7B-Instruct-EXL2-4bpw";
 
@@ -372,6 +391,11 @@ const App: React.FC = () => {
       if (mod && e.shiftKey && e.key === "r") { e.preventDefault(); setShowDiffReview(true); }
       if (mod && e.shiftKey && e.key === "l") { e.preventDefault(); setShowScriptPanel(v => { if (!v) scriptLib.loadScripts(); return !v; }); }
       if (mod && e.shiftKey && e.key === "m") { e.preventDefault(); setShowSysmon(v => !v); }
+      // 개발자 전용 — 로컬 AI(burn/wgpu) 실험 패널. 기본 빌드에선 커맨드 미등록 상태.
+      if (mod && e.shiftKey && e.altKey && e.key.toLowerCase() === "l") {
+        e.preventDefault();
+        setShowLocalAI(v => !v);
+      }
       if (mod && e.key === ",") { e.preventDefault(); setShowThemePanel(true); }
       if (mod && e.shiftKey && e.key === "q") { e.preventDefault(); setShowQuickBar(v => !v); }
       if (mod && e.shiftKey && (e.key === "s" || e.key === "o")) { e.preventDefault(); setShowWorkspace(true); loadWorkspaces(); }
@@ -466,12 +490,17 @@ const App: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2">
-          {specs && (
+          {(loadedModelId || specs) && (
             <div
-              className="text-[10px] px-2 py-1 rounded bg-white/5 text-white/40 truncate max-w-[200px]"
-              title={specs.recommendation_reason}
+              className="text-[10px] px-2 py-1 rounded bg-white/5 text-white/40 truncate max-w-[260px]"
+              title={loadedModelId ? "현재 로드된 모델" : specs?.recommendation_reason}
             >
-              {specs.recommended_model}
+              {/* 로드된 모델 우선 — 긴 로컬 경로는 마지막 구간만 표시 */}
+              {(() => {
+                const name = loadedModelId ?? specs?.recommended_model ?? "";
+                const m = name.match(/[^/\\]+$/);
+                return m ? m[0] : name;
+              })()}
             </div>
           )}
           <button
@@ -487,20 +516,22 @@ const App: React.FC = () => {
             <FolderTree size={13} />
           </button>
           <button
+            aria-label={`추론 토큰 표시 ${showReasoning ? "켜짐" : "꺼짐"} — 클릭 시 토글`}
+            title={`🧠 추론 토큰 ${showReasoning ? "표시 중 (ON)" : "숨김 (OFF)"} — DeepSeek R1·EXAONE Deep 등`}
+            onClick={toggleReasoning}
+            className={`p-1.5 rounded transition-colors ${showReasoning ? "text-cyan-300 bg-cyan-400/10" : "text-white/30 hover:text-white/60 hover:bg-white/10"}`}
+          >
+            <Brain size={13} />
+          </button>
+          <button
             aria-label="RAG 코드 검색"
             onClick={() => setShowRagPanel((v) => !v)}
             className={`p-1.5 rounded transition-colors ${showRagPanel ? "text-accent bg-accent/10" : "text-white/40 hover:text-white hover:bg-white/10"}`}
           >
             <Database size={13} />
           </button>
-          <button
-            aria-label="로컬 AI 추론 (burn/wgpu)"
-            title="로컬 AI 추론 (burn/wgpu)"
-            onClick={() => setShowLocalAI(v => !v)}
-            className={`p-1.5 rounded transition-colors ${showLocalAI ? "text-accent bg-accent/10" : "text-white/40 hover:text-white hover:bg-white/10"}`}
-          >
-            <Brain size={13} />
-          </button>
+          {/* 로컬 AI (burn/wgpu) 버튼 제거 — 미완성 실험 인프라.
+              접근은 개발자 단축키 Cmd+Shift+Opt+L로만 */}
           <button
             aria-label="xLLM 최적화 설정"
             onClick={() => setShowXllmPanel(true)}

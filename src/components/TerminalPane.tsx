@@ -333,6 +333,8 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
       theme: THEME,
       cols: 80,
       rows: 24,
+      // xterm 6.x — registerDecoration가 proposed API에 속해 명시적 허용 필요
+      allowProposedApi: true,
     });
 
     const fitAddon = new FitAddon();
@@ -587,14 +589,20 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
         position: "relative",
       }}
     >
-      {/* xterm 출력 영역 */}
+      {/* xterm 출력 영역 — AI 대화 활성화 시 숨김 (DOM 유지로 PTY 연결 보존) */}
       <div
-        style={{ flex: 1, minHeight: 0, padding: `${PANE_PADDING_Y}px ${PANE_PADDING_X}px 0`, position: "relative" }}
+        style={{
+          flex: 1,
+          minHeight: 0,
+          padding: `${PANE_PADDING_Y}px ${PANE_PADDING_X}px 0`,
+          position: "relative",
+          display: (aiMessages && aiMessages.length > 0) ? "none" : "block",
+        }}
       >
         <div ref={containerRef} style={{ width: "100%", height: "100%" }} />
       </div>
 
-      {/* AI 답변 스트림 — xterm과 WarpInputBar 사이 */}
+      {/* AI 답변 스트림 — 메시지 있을 때 전체 영역 차지 (xterm 대신) */}
       <AIBlockStream
         messages={aiMessages ?? []}
         streaming={aiStreaming ?? false}
@@ -602,6 +610,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
         onClear={onClearAI ?? (() => {})}
         onExecute={(cmd) => invoke("write_to_pty", { id, data: cmd + "\r" }).catch(() => {})}
         cwd={cwd}
+        fullHeight
       />
 
       {/* Warp 입력바 — 입력 필드, 라우팅은 handleSubmit */}

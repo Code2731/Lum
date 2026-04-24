@@ -22,6 +22,9 @@ interface AppConfig {
   // Phase 71
   safety_mode?: string;       // "safe" | "balanced" | "max"
   vram_cap_override?: number; // 0.50 ~ 0.95
+  // Phase 72
+  vision_enabled?: boolean;
+  show_reasoning?: boolean;
 }
 
 type SafetyMode = "safe" | "balanced" | "max";
@@ -480,6 +483,64 @@ const XllmPanel: React.FC<Props> = ({ onClose }) => {
             </div>
             <p className="text-[10px] text-white/30 leading-relaxed">
               서버 재시작 시 반영 — config.yml의 autosplit_reserve + max_seq_len 동적 계산.
+            </p>
+          </section>
+
+          {/* Phase 72: 모델 capability 토글 */}
+          <section className="space-y-2">
+            <label className="text-[10px] text-white/40 uppercase tracking-wider flex items-center gap-1.5">
+              <Sparkles size={9} /> 모델 기능 토글
+              <span className="ml-auto text-[9px] text-white/30 font-normal normal-case">모델이 지원할 때만 유효</span>
+            </label>
+
+            {/* 비전 */}
+            <label className="flex items-center justify-between gap-2 px-3 py-2 bg-white/3 border border-white/5 rounded-lg cursor-pointer hover:bg-white/5 transition-colors">
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] text-purple-300/90">👁 비전 (이미지 입력)</span>
+                <span className="text-[9px] text-white/30">Qwen3.5-VL, Gemma VL 등</span>
+              </div>
+              <input
+                type="checkbox"
+                checked={config.vision_enabled ?? false}
+                onChange={async (e) => {
+                  const v = e.target.checked;
+                  setConfig((c) => ({ ...c, vision_enabled: v }));
+                  try {
+                    await invoke("save_capability_toggles", {
+                      visionEnabled: v,
+                      showReasoning: config.show_reasoning ?? true,
+                    });
+                  } catch {}
+                }}
+                className="w-3.5 h-3.5 accent-accent cursor-pointer"
+              />
+            </label>
+
+            {/* 추론 표시 */}
+            <label className="flex items-center justify-between gap-2 px-3 py-2 bg-white/3 border border-white/5 rounded-lg cursor-pointer hover:bg-white/5 transition-colors">
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] text-cyan-300/90">🧠 추론 토큰 표시</span>
+                <span className="text-[9px] text-white/30">DeepSeek R1, EXAONE Deep 등</span>
+              </div>
+              <input
+                type="checkbox"
+                checked={config.show_reasoning ?? true}
+                onChange={async (e) => {
+                  const v = e.target.checked;
+                  setConfig((c) => ({ ...c, show_reasoning: v }));
+                  try {
+                    await invoke("save_capability_toggles", {
+                      visionEnabled: config.vision_enabled ?? false,
+                      showReasoning: v,
+                    });
+                  } catch {}
+                }}
+                className="w-3.5 h-3.5 accent-accent cursor-pointer"
+              />
+            </label>
+
+            <p className="text-[10px] text-white/30 leading-relaxed">
+              끄면 추론 모델의 <code className="px-1 bg-white/5 rounded text-[9px]">&lt;think&gt;</code> 체인이 UI에 안 보이고 최종 답만 표시됩니다.
             </p>
           </section>
 

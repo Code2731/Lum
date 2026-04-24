@@ -12,21 +12,28 @@ interface Props {
   onClear: () => void;
   onExecute: (cmd: string) => void;
   cwd?: string;
+  /** true면 부모 flex 컨테이너의 남은 공간을 전부 차지 (xterm 자리 대체) */
+  fullHeight?: boolean;
 }
 
 /**
  * WarpInputBar 위에 놓이는 AI 답변 타임라인.
- * - 메시지 없으면 렌더 안 함 (0 height)
- * - 스트리밍/완료 시 자동 스크롤
- * - 최대 60% height, 내부 스크롤
- * - assistant 메시지에 SEARCH/REPLACE 블록이 있으면 EditBlockCard로 렌더
+ * 전체 패널이 하나의 스크롤 컨테이너 — 헤더는 sticky로 상단 고정.
+ * 빈 상태면 렌더 안 함. 사용자가 위로 스크롤하면 auto-scroll 중단.
  */
-const AIBlockStream: React.FC<Props> = ({ messages, streaming, error, onClear, onExecute, cwd }) => {
+const AIBlockStream: React.FC<Props> = ({ messages, streaming, error, onClear, onExecute, cwd, fullHeight }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const pinnedToBottomRef = useRef(true);
+
+  const handleScroll = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+    pinnedToBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 40;
+  };
 
   useEffect(() => {
     const el = scrollRef.current;
-    if (!el) return;
+    if (!el || !pinnedToBottomRef.current) return;
     el.scrollTop = el.scrollHeight;
   }, [messages, streaming]);
 
@@ -35,17 +42,25 @@ const AIBlockStream: React.FC<Props> = ({ messages, streaming, error, onClear, o
   return (
     <div
       data-testid="ai-block-stream"
+      ref={scrollRef}
+      onScroll={handleScroll}
       style={{
-        flexShrink: 0,
-        maxHeight: "60%",
-        display: "flex",
-        flexDirection: "column",
+        // fullHeight: 부모 flex의 남은 공간 전부 (xterm 대체)
+        // 아니면 기존처럼 콘텐츠 크기 + maxHeight 60vh
+        ...(fullHeight
+          ? { flex: "1 1 0", minHeight: 0 }
+          : { flexShrink: 0, maxHeight: "60vh" }),
+        overflowY: "auto",
         background: "#0d1117",
         borderTop: "1px solid rgba(88,166,255,0.2)",
         boxSizing: "border-box",
       }}
     >
-      <div className="flex items-center justify-between px-4 py-2 border-b border-white/5">
+      {/* 헤더 — sticky로 스크롤 시에도 상단 고정 */}
+      <div
+        className="flex items-center justify-between px-4 py-2 border-b border-white/5"
+        style={{ position: "sticky", top: 0, background: "#0d1117", zIndex: 1 }}
+      >
         <div className="flex items-center gap-2 text-[12px] text-white/50">
           <Sparkles size={13} className="text-accent" />
           <span>AI 대화</span>
@@ -61,7 +76,7 @@ const AIBlockStream: React.FC<Props> = ({ messages, streaming, error, onClear, o
         </button>
       </div>
 
-      <div ref={scrollRef} className="overflow-y-auto px-4 py-3 flex-1 space-y-3">
+      <div className="px-4 py-3 space-y-3">
         {messages.map((m) => {
           const editBlocks =
             m.role === "assistant" && cwd ? parseEditBlocks(m.content) : [];
