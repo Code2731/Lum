@@ -3,7 +3,7 @@ import { Loader2, X, Sparkles } from "lucide-react";
 import type { ChatMessage } from "../hooks/useAIChat";
 import { MessageBubble } from "./AIChatPanel";
 import EditBlockCard from "./EditBlockCard";
-import { parseEditBlocks, hasEditBlocks } from "../utils/editBlockParser";
+import { parseEditBlocks } from "../utils/editBlockParser";
 
 interface Props {
   messages: ChatMessage[];
@@ -63,19 +63,19 @@ const AIBlockStream: React.FC<Props> = ({ messages, streaming, error, onClear, o
 
       <div ref={scrollRef} className="overflow-y-auto px-4 py-3 flex-1 space-y-3">
         {messages.map((m) => {
-          // assistant 메시지에 SEARCH/REPLACE 블록 있으면 카드로 분리 렌더
-          if (m.role === "assistant" && hasEditBlocks(m.content) && cwd) {
-            const editBlocks = parseEditBlocks(m.content);
-            return (
-              <div key={m.id} className="space-y-2">
-                <MessageBubble msg={m} onExecute={onExecute} compact={false} />
-                {editBlocks.map((b) => (
-                  <EditBlockCard key={`${m.id}-${b.index}`} block={b} cwd={cwd} />
-                ))}
-              </div>
-            );
+          const editBlocks =
+            m.role === "assistant" && cwd ? parseEditBlocks(m.content) : [];
+          if (editBlocks.length === 0) {
+            return <MessageBubble key={m.id} msg={m} onExecute={onExecute} compact={false} />;
           }
-          return <MessageBubble key={m.id} msg={m} onExecute={onExecute} compact={false} />;
+          return (
+            <div key={m.id} className="space-y-2">
+              <MessageBubble msg={m} onExecute={onExecute} compact={false} />
+              {editBlocks.map((b) => (
+                <EditBlockCard key={`${m.id}-${b.index}`} block={b} cwd={cwd!} />
+              ))}
+            </div>
+          );
         })}
         {error && (
           <div className="text-[12px] text-red-400/80 px-2.5 py-1.5 rounded bg-red-500/10 border border-red-500/20">

@@ -10,6 +10,55 @@ interface Props {
 
 type Status = "pending" | "applying" | "applied" | "rejected" | "error";
 
+function renderActions(status: Status, onApply: () => void, onReject: () => void) {
+  switch (status) {
+    case "pending":
+      return (
+        <>
+          <button
+            onClick={onApply}
+            className="flex items-center gap-1 px-2 py-0.5 rounded bg-green-500/15 hover:bg-green-500/25 text-green-400 text-[11px] transition-colors"
+            title="파일에 변경 적용"
+          >
+            <Check size={11} />
+            적용
+          </button>
+          <button
+            onClick={onReject}
+            className="flex items-center gap-1 px-2 py-0.5 rounded text-white/40 hover:text-white/70 hover:bg-white/5 text-[11px] transition-colors"
+            title="건너뛰기"
+          >
+            <X size={11} />
+            거부
+          </button>
+        </>
+      );
+    case "applying":
+      return (
+        <span className="flex items-center gap-1 text-accent/70 text-[11px]">
+          <Loader2 size={11} className="animate-spin" />
+          적용 중…
+        </span>
+      );
+    case "applied":
+      return (
+        <span className="flex items-center gap-1 text-green-400 text-[11px]">
+          <Check size={11} />
+          적용됨
+        </span>
+      );
+    case "rejected":
+      return <span className="text-white/30 text-[11px]">거부됨</span>;
+    case "error":
+      return (
+        <span className="flex items-center gap-1 text-red-400 text-[11px]">
+          <AlertTriangle size={11} />
+          실패
+        </span>
+      );
+  }
+}
+
 const EditBlockCard: React.FC<Props> = ({ block, cwd }) => {
   const [status, setStatus] = useState<Status>("pending");
   const [error, setError] = useState<string | null>(null);
@@ -54,49 +103,7 @@ const EditBlockCard: React.FC<Props> = ({ block, cwd }) => {
             </span>
           )}
         </div>
-        <div className="flex items-center gap-1">
-          {status === "pending" && (
-            <>
-              <button
-                onClick={applyEdit}
-                className="flex items-center gap-1 px-2 py-0.5 rounded bg-green-500/15 hover:bg-green-500/25 text-green-400 text-[11px] transition-colors"
-                title="파일에 변경 적용"
-              >
-                <Check size={11} />
-                적용
-              </button>
-              <button
-                onClick={reject}
-                className="flex items-center gap-1 px-2 py-0.5 rounded text-white/40 hover:text-white/70 hover:bg-white/5 text-[11px] transition-colors"
-                title="건너뛰기"
-              >
-                <X size={11} />
-                거부
-              </button>
-            </>
-          )}
-          {status === "applying" && (
-            <span className="flex items-center gap-1 text-accent/70 text-[11px]">
-              <Loader2 size={11} className="animate-spin" />
-              적용 중…
-            </span>
-          )}
-          {status === "applied" && (
-            <span className="flex items-center gap-1 text-green-400 text-[11px]">
-              <Check size={11} />
-              적용됨
-            </span>
-          )}
-          {status === "rejected" && (
-            <span className="text-white/30 text-[11px]">거부됨</span>
-          )}
-          {status === "error" && (
-            <span className="flex items-center gap-1 text-red-400 text-[11px]">
-              <AlertTriangle size={11} />
-              실패
-            </span>
-          )}
-        </div>
+        <div className="flex items-center gap-1">{renderActions(status, applyEdit, reject)}</div>
       </div>
 
       {error && (

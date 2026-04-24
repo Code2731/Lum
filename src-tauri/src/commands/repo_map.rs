@@ -318,17 +318,24 @@ fn render_map(
 
 /// 프로젝트 루트에서 repo map 생성.
 /// token_budget은 대략적인 상한 (문자수 = token * 3으로 환산).
+///
+/// tree-sitter 파싱과 파일 I/O가 blocking — `spawn_blocking`으로 UI 스레드 보호.
 #[command]
 pub async fn get_repo_map(cwd: String, token_budget: Option<usize>) -> Result<String> {
     let budget = token_budget.unwrap_or(4096);
-    let root = PathBuf::from(&cwd);
+    tokio::task::spawn_blocking(move || build_repo_map(&cwd, budget))
+        .await
+        .map_err(|e| crate::error::LumError::Io(format!("repo_map join 실패: {}", e)))?
+}
 
-    // 파일 순회
+fn build_repo_map(cwd: &str, budget: usize) -> Result<String> {
+    let root = PathBuf::from(cwd);
+
     let mut defs_by_file: HashMap<PathBuf, Vec<Symbol>> = HashMap::new();
     let mut refs_by_file: HashMap<PathBuf, Vec<String>> = HashMap::new();
 
     let walker = WalkBuilder::new(&root)
-        .standard_filters(true) // .gitignore 준수
+        .standard_filters(true)
         .hidden(true)
         .max_depth(Some(10))
         .build();
@@ -350,7 +357,6 @@ pub async fn get_repo_map(cwd: String, token_budget: Option<usize>) -> Result<St
             }
         }
         file_count += 1;
-        // 과도한 프로젝트 가드 (3000 파일 초과 시 중단)
         if file_count > 3000 {
             break;
         }
@@ -364,9 +370,7 @@ pub async fn get_repo_map(cwd: String, token_budget: Option<usize>) -> Result<St
     }
 
     let ranks = build_graph_and_rank(&defs_by_file, &refs_by_file);
-    let map = render_map(&defs_by_file, &ranks, &root, budget);
-
-    Ok(map)
+    Ok(render_map(&defs_by_file, &ranks, &root, budget))
 }
 
 // ─── 테스트 ───────────────────────────────────────────────────────────────────

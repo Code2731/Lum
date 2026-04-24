@@ -270,20 +270,34 @@ fn safe_path(cwd: &str, file: &str) -> Result<PathBuf> {
         base.join(file)
     };
 
-    // path traversal 방지: cwd 밖 쓰기 차단
+    // path traversal 방지: cwd 밖 쓰기 차단.
+    // base는 실재해야 정상. target은 새 파일이면 canonicalize 실패 —
+    // 이 경우 parent를 canonicalize해서 symlink escape까지 검증한다.
     let canonical_base = base
         .canonicalize()
-        .unwrap_or_else(|_| base.clone());
-    let canonical_target = target
-        .canonicalize()
-        .unwrap_or_else(|_| target.clone());
+        .map_err(|e| LumError::Security(format!("cwd 해석 실패 ({}): {}", base.display(), e)))?;
+    let canonical_target = match target.canonicalize() {
+        Ok(p) => p,
+        Err(_) => {
+            let parent = target
+                .parent()
+                .ok_or_else(|| LumError::Security("부모 디렉토리 없음".into()))?;
+            let canonical_parent = parent.canonicalize().map_err(|e| {
+                LumError::Security(format!("부모 경로 해석 실패 ({}): {}", parent.display(), e))
+            })?;
+            let file_name = target.file_name().ok_or_else(|| {
+                LumError::Security("파일명 추출 실패".into())
+            })?;
+            canonical_parent.join(file_name)
+        }
+    };
     if !canonical_target.starts_with(&canonical_base) {
         return Err(LumError::Security(format!(
             "경로가 작업 디렉토리 밖을 가리킴: {}",
             target.display()
         )));
     }
-    Ok(target)
+    Ok(canonical_target)
 }
 
 /// 단일 블록 적용
