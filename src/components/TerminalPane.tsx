@@ -391,38 +391,38 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
         promptDecorationRef.current = null;
       }
 
-      term.write(raw);
-
-      // 프롬프트 시작 → 해당 줄을 배경색 decoration으로 완전히 숨김
-      if (hasPromptStart) {
-        const marker = term.registerMarker(0);
-        if (marker) {
-          promptDecorationRef.current?.dispose();
-          const dec = term.registerDecoration({ marker, width: term.cols, x: 0, layer: "top" });
-          if (dec) {
-            dec.onRender((el) => {
-              el.style.backgroundColor = THEME.background;
-              el.style.width = "100%";
-              el.style.height = "100%";
-            });
-            promptDecorationRef.current = dec;
+      // term.write는 비동기 — 콜백 안에서 marker/decoration 등록해야
+      // 프롬프트 렌더 후의 정확한 커서 줄에 decoration이 붙는다
+      term.write(raw, () => {
+        if (hasPromptStart) {
+          const marker = term.registerMarker(0);
+          if (marker) {
+            promptDecorationRef.current?.dispose();
+            const dec = term.registerDecoration({ marker, width: term.cols, x: 0, layer: "top" });
+            if (dec) {
+              dec.onRender((el) => {
+                el.style.backgroundColor = THEME.background;
+                el.style.width = "100%";
+                el.style.height = "100%";
+              });
+              promptDecorationRef.current = dec;
+            }
           }
         }
-      }
 
-      // 블록 시작 → 파란 왼쪽 테두리 decoration
-      if (hasCmdStart) {
-        const marker = term.registerMarker(0);
-        if (marker) {
-          const dec = term.registerDecoration({ marker, width: 2, x: 0 });
-          if (dec) {
-            dec.onRender((el) => {
-              el.style.borderLeft = "2px solid rgba(88,166,255,0.35)";
-              el.style.height = "100%";
-            });
+        if (hasCmdStart) {
+          const marker = term.registerMarker(0);
+          if (marker) {
+            const dec = term.registerDecoration({ marker, width: 2, x: 0 });
+            if (dec) {
+              dec.onRender((el) => {
+                el.style.borderLeft = "2px solid rgba(88,166,255,0.35)";
+                el.style.height = "100%";
+              });
+            }
           }
         }
-      }
+      });
 
       onOutputRef.current?.(raw);
       const newCwd = parseOsc7(raw);

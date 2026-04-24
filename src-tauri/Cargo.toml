@@ -49,6 +49,10 @@ tree-sitter-javascript = "0.23"
 tree-sitter-python = "0.23"
 petgraph = "0.6"
 
+# Phase 71 — NVIDIA GPU 정확 VRAM (NVML). Windows/Linux 전용 — macOS는 sysinfo(통합 메모리).
+[target.'cfg(not(target_os = "macos"))'.dependencies]
+nvml-wrapper = "0.10"
+
 # local-ai 피처일 때만 컴파일 (기본 배포에서 제외 → 바이너리 ~150MB 절감)
 burn     = { version = "0.16.0", features = ["wgpu"], optional = true }
 burn-wgpu = { version = "0.16.0", optional = true }

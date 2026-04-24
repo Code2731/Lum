@@ -53,6 +53,26 @@ pub struct AppConfig {
     pub quick_actions: Option<Vec<QuickAction>>,
     /// HuggingFace 액세스 토큰 — EXL2 모델 다운로드용 (한 번만 입력)
     pub hf_token: Option<String>,
+
+    // ── Phase 71: VRAM 안전 모드 ─────────────────────────────────────────────
+    /// GPU 메모리 사용 안전 모드 — "safe" (70%) | "balanced" (80%) | "max" (90%)
+    pub safety_mode: Option<String>,
+    /// VRAM Cap 사용자 오버라이드 — 0.50 ~ 0.95 (None이면 safety_mode의 기본값 사용)
+    pub vram_cap_override: Option<f32>,
+}
+
+impl AppConfig {
+    /// 현재 VRAM 사용 비율(0.0~1.0) — override 우선, 없으면 safety_mode 기본값, 없으면 0.80
+    pub fn vram_utilization(&self) -> f32 {
+        if let Some(o) = self.vram_cap_override {
+            return o.clamp(0.50, 0.95);
+        }
+        match self.safety_mode.as_deref() {
+            Some("safe") => 0.70,
+            Some("max") => 0.90,
+            _ => 0.80, // balanced(default)
+        }
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Default, Clone)]
@@ -106,6 +126,28 @@ pub fn check_onboarding_complete() -> Result<bool> {
 pub fn complete_onboarding() -> Result<()> {
     let mut config = load_config()?;
     config.onboarding_completed = Some(true);
+    save_config(&config)
+}
+
+/// Phase 71: GPU 안전 모드 저장 (onboarding & 설정 패널)
+#[tauri::command]
+pub fn save_safety_mode(mode: String) -> Result<()> {
+    let valid = matches!(mode.as_str(), "safe" | "balanced" | "max");
+    if !valid {
+        return Err(LumError::Config(format!("알 수 없는 safety_mode: {mode}")));
+    }
+    let mut config = load_config()?;
+    config.safety_mode = Some(mode);
+    // 모드 바뀌면 override 초기화 (명시적 슬라이더 조정 전까지 모드 기본값 적용)
+    config.vram_cap_override = None;
+    save_config(&config)
+}
+
+/// Phase 71: VRAM 상한 오버라이드 슬라이더 (0.50 ~ 0.95)
+#[tauri::command]
+pub fn save_vram_cap_override(cap: Option<f32>) -> Result<()> {
+    let mut config = load_config()?;
+    config.vram_cap_override = cap.map(|c| c.clamp(0.50, 0.95));
     save_config(&config)
 }
 
@@ -167,4 +209,43 @@ pub fn save_terminal_appearance(
     config.font_family = font_family;
     config.opacity = opacity;
     save_config(&config)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn vram_utilization_default_balanced() {
+        let cfg = AppConfig::default();
+        assert!((cfg.vram_utilization() - 0.80).abs() < 1e-6);
+    }
+
+    #[test]
+    fn vram_utilization_safety_mode_기본값() {
+        let mut cfg = AppConfig::default();
+        cfg.safety_mode = Some("safe".into());
+        assert!((cfg.vram_utilization() - 0.70).abs() < 1e-6);
+        cfg.safety_mode = Some("max".into());
+        assert!((cfg.vram_utilization() - 0.90).abs() < 1e-6);
+        cfg.safety_mode = Some("balanced".into());
+        assert!((cfg.vram_utilization() - 0.80).abs() < 1e-6);
+    }
+
+    #[test]
+    fn vram_utilization_override_우선() {
+        let mut cfg = AppConfig::default();
+        cfg.safety_mode = Some("safe".into());
+        cfg.vram_cap_override = Some(0.85);
+        assert!((cfg.vram_utilization() - 0.85).abs() < 1e-6);
+    }
+
+    #[test]
+    fn vram_utilization_override_clamp() {
+        let mut cfg = AppConfig::default();
+        cfg.vram_cap_override = Some(0.25); // below 0.50 → clamped to 0.50
+        assert!((cfg.vram_utilization() - 0.50).abs() < 1e-6);
+        cfg.vram_cap_override = Some(0.99); // above 0.95 → clamped to 0.95
+        assert!((cfg.vram_utilization() - 0.95).abs() < 1e-6);
+    }
 }

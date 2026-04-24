@@ -29,14 +29,16 @@ fn setup_zsh_zdotdir() -> Option<String> {
     }
 
     // .zshrc — OSC 133 훅 먼저 등록 후 실제 .zshrc 소싱
+    // A(프롬프트 시작) · C(커맨드 시작) · D(커맨드 완료+exit) 3종 모두 emit
     let real_zshrc = home.join(".zshrc");
     let zshrc = format!(
         "autoload -Uz add-zsh-hook 2>/dev/null\n\
-         _lum_precmd(){{ printf '\\033]133;D;%d\\007' \"$?\" }}\n\
+         _lum_precmd(){{ printf '\\033]133;D;%d\\007\\033]133;A\\007' \"$?\" }}\n\
          _lum_preexec(){{ printf '\\033]133;C;%s\\007' \"$1\" }}\n\
          add-zsh-hook precmd _lum_precmd\n\
          add-zsh-hook preexec _lum_preexec\n\
-         [[ -f \"{p}\" ]] && source \"{p}\"\n",
+         [[ -f \"{p}\" ]] && source \"{p}\"\n\
+         printf '\\033]133;A\\007'\n",
         p = real_zshrc.display()
     );
     std::fs::write(zdotdir.join(".zshrc"), zshrc).ok()?;
@@ -50,11 +52,13 @@ fn setup_bash_initfile() -> Option<String> {
     let init_path = std::env::temp_dir().join("lum_bash_init.sh");
     let home = dirs::home_dir()?;
     let real_bashrc = home.join(".bashrc");
+    // bash: PROMPT_COMMAND에서 D 직후 A emit → 프롬프트 시작 마크
     let content = format!(
-        "_lum_precmd(){{ local e=$?; printf '\\033]133;D;%d\\007' \"$e\"; }}\n\
+        "_lum_precmd(){{ local e=$?; printf '\\033]133;D;%d\\007\\033]133;A\\007' \"$e\"; }}\n\
          PROMPT_COMMAND=\"_lum_precmd${{PROMPT_COMMAND:+; $PROMPT_COMMAND}}\"\n\
          trap 'printf \"\\033]133;C;$BASH_COMMAND\\007\"' DEBUG\n\
-         [[ -f \"{p}\" ]] && source \"{p}\"\n",
+         [[ -f \"{p}\" ]] && source \"{p}\"\n\
+         printf '\\033]133;A\\007'\n",
         p = real_bashrc.display()
     );
     std::fs::write(&init_path, content).ok()?;

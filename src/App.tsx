@@ -17,7 +17,7 @@ import { invoke } from "@tauri-apps/api/core";
 import {
   Zap, Cpu, Loader2, TerminalSquare, LayoutList, MousePointer2,
   Package, Database, Plus, X, Columns2, Rows2, SlidersHorizontal, ArrowUpCircle, GitCompareArrows, Palette,
-  GitBranch, Container, Layers, Lock, BookOpen, Bell, Activity, Brain,
+  GitBranch, Container, Layers, Lock, BookOpen, Bell, Activity, Brain, FolderTree,
 } from "lucide-react";
 import SshConnectModal from "./components/SshConnectModal";
 import AgentPanel from "./components/AgentPanel";
@@ -474,6 +474,18 @@ const App: React.FC = () => {
               {specs.recommended_model}
             </div>
           )}
+          <button
+            aria-label="파일 탐색기 (Cmd+B)"
+            title="파일 탐색기 (Cmd+B)"
+            onClick={() => setShowFileExplorer(v => {
+              const next = !v;
+              try { localStorage.setItem("lum.fileExplorer", next ? "1" : "0"); } catch {}
+              return next;
+            })}
+            className={`p-1.5 rounded transition-colors ${showFileExplorer ? "text-accent bg-accent/10" : "text-white/40 hover:text-white hover:bg-white/10"}`}
+          >
+            <FolderTree size={13} />
+          </button>
           <button
             aria-label="RAG 코드 검색"
             onClick={() => setShowRagPanel((v) => !v)}

@@ -120,6 +120,9 @@ pub fn run() {
             commands::config::save_hf_token,
             commands::config::check_onboarding_complete,
             commands::config::complete_onboarding,
+            // Phase 71: 안전 모드 + VRAM 캡
+            commands::config::save_safety_mode,
+            commands::config::save_vram_cap_override,
             // Session Persistence
             commands::session::save_session,
             commands::session::load_session,

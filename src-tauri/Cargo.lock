@@ -9194,6 +9194,7 @@ dependencies = [
  "ignore",
  "libp2p",
  "libp2p-request-response",
+ "nvml-wrapper",
  "petgraph",
  "portable-pty",
  "reqwest 0.12.28",

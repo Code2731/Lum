@@ -9,6 +9,41 @@ pub struct TabbyApiStatus {
     pub install_dir: Option<String>,
 }
 
+/// TabbyAPI config.yml 생성.
+///
+/// - `utilization`: 0.50 ~ 0.95 — VRAM 사용 상한 비율
+/// - `total_vram_gb`: 감지된 GPU VRAM (없으면 16GB 보수적 가정)
+/// - `max_seq_len`: None이면 VRAM 기반 자동 계산
+///
+/// `autosplit_reserve`는 "남겨둘 MB" 단위 — `(1 - utilization) * total_vram * 1024` 으로 환산.
+/// `max_seq_len` 자동 계산: VRAM cap으로 쓸 수 있는 GB × 4096 (대략 1GB당 4K 토큰, Q8 cache 기준).
+fn write_tabby_config(
+    server_dir: &std::path::Path,
+    port: u16,
+    utilization: f32,
+    total_vram_gb: Option<f32>,
+    max_seq_len: Option<u32>,
+    cache_mode: &str,
+) -> Result<()> {
+    let vram = total_vram_gb.unwrap_or(16.0);
+    let util = utilization.clamp(0.50, 0.95);
+    let reserve_mb = ((1.0 - util) * vram * 1024.0).round() as u32;
+    let seq_len = max_seq_len.unwrap_or_else(|| {
+        let usable = vram * util;
+        // Q8 기준: 1GB당 ~4K 토큰 (context). 보수적 상한 32K.
+        ((usable * 4096.0) as u32).clamp(4096, 32768)
+    });
+
+    let yaml = format!(
+        "network:\n  host: 127.0.0.1\n  port: {port}\n  disable_auth: true\n\nlogging:\n  log_prompt: false\n  log_generation_params: false\n  log_requests: false\n\nmodel:\n  model_dir: models\n  inline_model_loading: false\n  cache_mode: {cache_mode}\n  max_seq_len: {seq_len}\n  gpu_split_auto: true\n  autosplit_reserve: [{reserve_mb}]\n\ndeveloper:\n  unsafe_launch: false\n  disable_request_streaming: false\n",
+    );
+
+    let config_path = server_dir.join("config.yml");
+    std::fs::write(&config_path, yaml)
+        .map_err(|e| LumError::Io(format!("config.yml 쓰기 실패: {e}")))?;
+    Ok(())
+}
+
 // Apple Silicon → ~/.lum_mlx (MLX-LM), 기타 → ~/tabbyAPI (TabbyAPI/ExLlamaV2)
 fn server_dir() -> Option<std::path::PathBuf> {
     dirs::home_dir().map(|h| {
@@ -423,6 +458,20 @@ pub async fn start_tabbyapi(app: tauri::AppHandle, port: u16, model: Option<Stri
         let _ = std::fs::write(&opts_path, opts.to_string());
     }
 
+    // config.yml — 사용자 안전 모드 + VRAM 캡 + 동적 max_seq_len 반영
+    {
+        use crate::commands::config::load_config;
+        use crate::commands::hardware::get_vram_gb;
+        let cfg = load_config().unwrap_or_default();
+        let utilization = cfg.vram_utilization();
+        let total_vram = get_vram_gb();
+        let cache_mode = cfg.cache_mode.as_deref().unwrap_or("Q8");
+        let max_seq = cfg.max_seq_len;
+        if let Err(e) = write_tabby_config(&server_dir, port, utilization, total_vram, max_seq, cache_mode) {
+            eprintln!("[lum] config.yml 쓰기 경고: {e} — 기본 설정으로 진행");
+        }
+    }
+
     // stderr → 로그 파일 (에러 진단용)
     let log_path = server_dir.join("lum_tabby.log");
     let log_file = std::fs::File::create(&log_path)
@@ -493,4 +542,55 @@ pub async fn restart_with_model(app: tauri::AppHandle, port: u16, model: String)
 
     // 3. 새 모델로 서버 시작 (start_tabbyapi 내부 로직 재사용)
     start_tabbyapi(app, port, Some(model)).await
+}
+
+// ─── 테스트 ───────────────────────────────────────────────────────────────────
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+
+    #[test]
+    fn write_tabby_config_쓰기_확인() {
+        let tmp = std::env::temp_dir().join("lum_tabby_test");
+        fs::create_dir_all(&tmp).unwrap();
+
+        write_tabby_config(&tmp, 5000, 0.80, Some(24.0), Some(16384), "Q8").unwrap();
+
+        let yaml = fs::read_to_string(tmp.join("config.yml")).unwrap();
+        assert!(yaml.contains("port: 5000"));
+        assert!(yaml.contains("cache_mode: Q8"));
+        assert!(yaml.contains("max_seq_len: 16384"));
+        // 24GB × 20% = 4.8GB → 4915 MB reserve (대략 4920 근방)
+        assert!(yaml.contains("autosplit_reserve: [4915]") || yaml.contains("autosplit_reserve: [4916]"));
+
+        fs::remove_dir_all(&tmp).ok();
+    }
+
+    #[test]
+    fn write_tabby_config_vram_cap_clamped() {
+        let tmp = std::env::temp_dir().join("lum_tabby_test_clamp");
+        fs::create_dir_all(&tmp).unwrap();
+
+        // 0.30(50% 미만)은 0.50으로 clamp → reserve = 10GB × 50% = 5120MB
+        write_tabby_config(&tmp, 5001, 0.30, Some(10.0), Some(8192), "Q4").unwrap();
+        let yaml = fs::read_to_string(tmp.join("config.yml")).unwrap();
+        assert!(yaml.contains("autosplit_reserve: [5120]"));
+
+        fs::remove_dir_all(&tmp).ok();
+    }
+
+    #[test]
+    fn write_tabby_config_auto_max_seq_len() {
+        let tmp = std::env::temp_dir().join("lum_tabby_test_auto");
+        fs::create_dir_all(&tmp).unwrap();
+
+        // 16GB × 80% = 12.8GB usable → seq_len = 12.8 × 4096 ≈ 52428 → clamp 32768
+        write_tabby_config(&tmp, 5002, 0.80, Some(16.0), None, "Q8").unwrap();
+        let yaml = fs::read_to_string(tmp.join("config.yml")).unwrap();
+        assert!(yaml.contains("max_seq_len: 32768"));
+
+        fs::remove_dir_all(&tmp).ok();
+    }
 }

@@ -19,7 +19,13 @@ interface AppConfig {
   speculative_n_draft?: number;
   sparse_attention?: boolean;
   sparse_top_k?: number;
+  // Phase 71
+  safety_mode?: string;       // "safe" | "balanced" | "max"
+  vram_cap_override?: number; // 0.50 ~ 0.95
 }
+
+type SafetyMode = "safe" | "balanced" | "max";
+const MODE_DEFAULTS: Record<SafetyMode, number> = { safe: 0.70, balanced: 0.80, max: 0.90 };
 
 interface ModelInfo {
   id: string;
@@ -393,6 +399,87 @@ const XllmPanel: React.FC<Props> = ({ onClose }) => {
               LM Studio: <span className="font-mono text-white/35">:1234</span>
               &nbsp;·&nbsp;
               Ollama: <span className="font-mono text-white/35">:11434</span>
+            </p>
+          </section>
+
+          {/* Phase 71: GPU 안전 모드 + VRAM Cap */}
+          <section className="space-y-2">
+            <label className="text-[10px] text-white/40 uppercase tracking-wider flex items-center gap-1.5">
+              <Zap size={9} /> GPU VRAM 안전 모드
+              <span className="ml-auto text-[9px] text-green-400/70 font-normal normal-case">TabbyAPI autosplit_reserve</span>
+            </label>
+            <div className="flex gap-1.5">
+              {(["safe", "balanced", "max"] as SafetyMode[]).map((m) => {
+                const mode = (config.safety_mode as SafetyMode | undefined) ?? "balanced";
+                const selected = mode === m;
+                const pct = MODE_DEFAULTS[m] * 100;
+                return (
+                  <button
+                    key={m}
+                    onClick={async () => {
+                      try { await invoke("save_safety_mode", { mode: m }); } catch {}
+                      setConfig((c) => ({ ...c, safety_mode: m, vram_cap_override: undefined }));
+                    }}
+                    className={`flex-1 px-2 py-1.5 rounded-lg border text-[11px] transition-colors ${
+                      selected
+                        ? "bg-accent/15 border-accent/40 text-white"
+                        : "bg-white/3 border-white/5 text-white/55 hover:bg-white/5"
+                    }`}
+                  >
+                    <div className="font-medium">{m === "safe" ? "Safe" : m === "balanced" ? "Balanced" : "Max"}</div>
+                    <div className="text-[9px] text-white/40 font-mono mt-0.5">{pct}%</div>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* VRAM Cap 오버라이드 슬라이더 */}
+            <div className="bg-white/3 border border-white/5 rounded-lg p-2.5 space-y-1.5">
+              <div className="flex items-center justify-between text-[10px]">
+                <span className="text-white/40">VRAM Cap 오버라이드</span>
+                <span className="font-mono text-white/70">
+                  {Math.round(
+                    (config.vram_cap_override
+                      ?? MODE_DEFAULTS[(config.safety_mode as SafetyMode) ?? "balanced"]
+                    ) * 100,
+                  )}%
+                </span>
+              </div>
+              <input
+                type="range"
+                min={50}
+                max={95}
+                step={1}
+                value={Math.round(
+                  (config.vram_cap_override
+                    ?? MODE_DEFAULTS[(config.safety_mode as SafetyMode) ?? "balanced"]
+                  ) * 100,
+                )}
+                onChange={async (e) => {
+                  const pct = Number(e.target.value);
+                  const cap = pct / 100;
+                  setConfig((c) => ({ ...c, vram_cap_override: cap }));
+                  try { await invoke("save_vram_cap_override", { cap }); } catch {}
+                }}
+                className="w-full h-1 accent-accent cursor-pointer"
+              />
+              <div className="flex justify-between text-[9px] text-white/25 font-mono">
+                <span>50%</span><span>95%</span>
+              </div>
+              {config.vram_cap_override !== undefined && config.vram_cap_override !== null && (
+                <button
+                  onClick={async () => {
+                    setConfig((c) => ({ ...c, vram_cap_override: undefined }));
+                    try { await invoke("save_vram_cap_override", { cap: null }); } catch {}
+                  }}
+                  className="text-[10px] text-white/40 hover:text-white/70 transition-colors"
+                >
+                  기본값으로 복원
+                </button>
+              )}
+            </div>
+            <p className="text-[10px] text-white/30 leading-relaxed">
+              서버 재시작 시 반영 — config.yml의 autosplit_reserve + max_seq_len 동적 계산.
             </p>
           </section>
 

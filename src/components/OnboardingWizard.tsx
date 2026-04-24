@@ -4,7 +4,7 @@ import { listen } from "@tauri-apps/api/event";
 import type { HardwareSpecs } from "../hooks/useHardwareSpecs";
 import {
   Zap, Cpu, Package, CheckCircle2, Loader2,
-  ChevronRight, RefreshCw, Download, TerminalSquare,
+  ChevronRight, RefreshCw, Download, TerminalSquare, Shield, Gauge, Rocket,
 } from "lucide-react";
 
 interface DownloadProgress {
@@ -14,7 +14,14 @@ interface DownloadProgress {
   done: boolean;
 }
 
-const STEPS = ["시작", "하드웨어", "xLLM 서버", "AI 모델", "완료"];
+const STEPS = ["시작", "하드웨어", "성능 모드", "xLLM 서버", "AI 모델", "완료"];
+
+type SafetyMode = "safe" | "balanced" | "max";
+const MODE_META: Record<SafetyMode, { label: string; pct: number; desc: string; icon: React.ReactNode }> = {
+  safe:     { label: "Safe",     pct: 70, desc: "VRAM 70% 상한 — 크래시 가능성 가장 낮음", icon: <Shield size={14} /> },
+  balanced: { label: "Balanced", pct: 80, desc: "VRAM 80% 상한 — 안정성·성능 균형 (권장)", icon: <Gauge size={14} /> },
+  max:      { label: "Max",      pct: 90, desc: "VRAM 90% 상한 — 최대 컨텍스트, OOM 위험",  icon: <Rocket size={14} /> },
+};
 
 interface Props {
   onComplete: () => void;
@@ -29,6 +36,7 @@ const OnboardingWizard: React.FC<Props> = ({ onComplete }) => {
   const [isDownloading, setIsDownloading] = useState(false);
   const [dlProgress, setDlProgress] = useState<DownloadProgress | null>(null);
   const [isCheckingServer, setIsCheckingServer] = useState(false);
+  const [safetyMode, setSafetyMode] = useState<SafetyMode>("balanced");
 
   // 하드웨어 스캔
   useEffect(() => {
@@ -41,18 +49,18 @@ const OnboardingWizard: React.FC<Props> = ({ onComplete }) => {
       .catch(() => {});
   }, [step]);
 
-  // xLLM 서버 확인
+  // xLLM 서버 확인 (step 3)
   useEffect(() => {
-    if (step !== 2) return;
+    if (step !== 3) return;
     setXllmOnline(null);
     invoke<boolean>("check_xllm_status")
       .then(setXllmOnline)
       .catch(() => setXllmOnline(false));
   }, [step]);
 
-  // 로컬 모델 존재 여부 확인
+  // 로컬 모델 존재 여부 확인 (step 4)
   useEffect(() => {
-    if (step !== 3 || !specs) return;
+    if (step !== 4 || !specs) return;
     setHasModel(null);
     invoke<Array<{ id: string }>>("list_local_models")
       .then((models) => {
@@ -61,6 +69,12 @@ const OnboardingWizard: React.FC<Props> = ({ onComplete }) => {
       })
       .catch(() => setHasModel(false));
   }, [step, specs]);
+
+  // 안전 모드 저장 (step 2 → 3 전환 시)
+  const commitSafetyMode = useCallback(async (mode: SafetyMode) => {
+    try { await invoke("save_safety_mode", { mode }); } catch {}
+    setSafetyMode(mode);
+  }, []);
 
   const recheckServer = useCallback(() => {
     setIsCheckingServer(true);
@@ -188,8 +202,65 @@ const OnboardingWizard: React.FC<Props> = ({ onComplete }) => {
             </>
           )}
 
-          {/* ── Step 2: xLLM 서버 ── */}
+          {/* ── Step 2: 성능 모드 ── */}
           {step === 2 && (
+            <>
+              <div className="flex items-center gap-2">
+                <Shield size={13} className="text-accent" />
+                <span className="text-sm font-medium">성능 모드 선택</span>
+              </div>
+
+              <p className="text-[12px] text-white/50 leading-relaxed">
+                GPU 메모리 사용량 상한을 설정합니다. 낮을수록 안정적이지만 컨텍스트가 짧아집니다.
+                언제든 설정에서 변경 가능합니다.
+              </p>
+
+              <div className="space-y-2 flex-1">
+                {(Object.keys(MODE_META) as SafetyMode[]).map((m) => {
+                  const meta = MODE_META[m];
+                  const selected = safetyMode === m;
+                  return (
+                    <button
+                      key={m}
+                      onClick={() => commitSafetyMode(m)}
+                      className={`w-full flex items-start gap-3 p-3 rounded-xl border text-left transition-colors ${
+                        selected
+                          ? "bg-accent/10 border-accent/40"
+                          : "bg-white/3 border-white/5 hover:bg-white/5"
+                      }`}
+                    >
+                      <div className={`mt-0.5 ${selected ? "text-accent" : "text-white/40"}`}>
+                        {meta.icon}
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className={`text-sm font-medium ${selected ? "text-white" : "text-white/70"}`}>
+                            {meta.label}
+                          </span>
+                          <span className="text-[11px] text-white/40 font-mono">{meta.pct}%</span>
+                          {m === "balanced" && (
+                            <span className="text-[9px] px-1.5 py-0.5 rounded bg-accent/15 text-accent border border-accent/30">
+                              권장
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-white/40 mt-0.5 leading-relaxed">
+                          {meta.desc}
+                        </p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="flex justify-end">
+                <NextBtn onClick={next} disabled={false} />
+              </div>
+            </>
+          )}
+
+          {/* ── Step 3: xLLM 서버 ── */}
+          {step === 3 && (
             <>
               <div className="flex items-center gap-2">
                 <TerminalSquare size={13} className="text-accent" />
@@ -243,8 +314,8 @@ const OnboardingWizard: React.FC<Props> = ({ onComplete }) => {
             </>
           )}
 
-          {/* ── Step 3: 모델 준비 ── */}
-          {step === 3 && (
+          {/* ── Step 4: 모델 준비 ── */}
+          {step === 4 && (
             <>
               <div className="flex items-center gap-2">
                 <Package size={13} className="text-accent" />
@@ -307,8 +378,8 @@ const OnboardingWizard: React.FC<Props> = ({ onComplete }) => {
             </>
           )}
 
-          {/* ── Step 4: 완료 ── */}
-          {step === 4 && (
+          {/* ── Step 5: 완료 ── */}
+          {step === 5 && (
             <div className="flex flex-col items-center justify-center flex-1 text-center gap-4">
               <div className="w-14 h-14 rounded-2xl bg-green-400/10 border border-green-400/20 flex items-center justify-center">
                 <CheckCircle2 size={28} className="text-green-400" />

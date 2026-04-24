@@ -50,10 +50,14 @@ async fn detect_gpu() -> (String, bool, String) {
     ("none".to_string(), false, String::new())
 }
 
-// Windows: nvidia-smi → wmic 순으로 GPU VRAM 감지
-#[cfg(windows)]
-fn get_gpu_vram_gb() -> Option<f32> {
-    // NVIDIA: nvidia-smi (MB 단위, 가장 정확)
+// NVML 우선 (Windows/Linux) → nvidia-smi → wmic 폴백
+#[cfg(not(target_os = "macos"))]
+pub fn get_gpu_vram_gb() -> Option<f32> {
+    // 1. NVML 직접 바인딩 (가장 정확, ~1ms)
+    if let Some(gb) = get_vram_via_nvml() {
+        return Some(gb);
+    }
+    // 2. nvidia-smi (fork 비용)
     if let Ok(out) = std::process::Command::new("nvidia-smi")
         .args(["--query-gpu=memory.total", "--format=csv,noheader,nounits"])
         .output()
@@ -65,7 +69,8 @@ fn get_gpu_vram_gb() -> Option<f32> {
             }
         }
     }
-    // 폴백: wmic (bytes 단위)
+    // 3. wmic (Windows 전용 폴백, AMD/Intel도 감지)
+    #[cfg(windows)]
     if let Ok(out) = std::process::Command::new("wmic")
         .args(["path", "Win32_VideoController", "get", "AdapterRAM", "/format:list"])
         .output()
@@ -85,9 +90,44 @@ fn get_gpu_vram_gb() -> Option<f32> {
     None
 }
 
-#[cfg(not(windows))]
-fn get_gpu_vram_gb() -> Option<f32> {
+/// NVML(NVIDIA Management Library)로 VRAM 직접 조회.
+/// nvidia-smi fork보다 빠르고, CUDA 설치 필요 없이 드라이버만으로 작동.
+#[cfg(not(target_os = "macos"))]
+fn get_vram_via_nvml() -> Option<f32> {
+    use nvml_wrapper::Nvml;
+    let nvml = Nvml::init().ok()?;
+    let count = nvml.device_count().ok()?;
+    if count == 0 {
+        return None;
+    }
+    // 첫 GPU만 사용 (멀티 GPU는 드물고, 모델 로드는 보통 단일 GPU)
+    let device = nvml.device_by_index(0).ok()?;
+    let mem = device.memory_info().ok()?;
+    let gb = mem.total as f32 / 1024.0 / 1024.0 / 1024.0;
+    Some((gb * 10.0).round() / 10.0)
+}
+
+#[cfg(target_os = "macos")]
+pub fn get_gpu_vram_gb() -> Option<f32> {
     None // macOS 통합 메모리 → total_memory_gb 사용
+}
+
+/// TabbyAPI config 생성용 — macOS는 시스템 RAM 반환 (통합 메모리),
+/// Windows/Linux는 NVIDIA VRAM.
+pub fn get_vram_gb() -> Option<f32> {
+    get_gpu_vram_gb().or_else(|| {
+        // macOS fallback: sysinfo 총 RAM의 70% (통합 메모리에서 OS·앱 여유분)
+        #[cfg(target_os = "macos")]
+        {
+            use sysinfo::System;
+            let mut sys = System::new();
+            sys.refresh_memory();
+            let total_gb = sys.total_memory() as f32 / 1024.0 / 1024.0 / 1024.0;
+            Some((total_gb * 0.7 * 10.0).round() / 10.0)
+        }
+        #[cfg(not(target_os = "macos"))]
+        None
+    })
 }
 
 /// RAM/VRAM + GPU 기반 xLLM EXL2 모델 추천
