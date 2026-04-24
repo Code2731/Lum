@@ -2,10 +2,13 @@ use crate::commands::config::{load_config, AppConfig};
 use crate::error::{LumError, Result};
 use futures_util::StreamExt;
 use serde::{Deserialize, Serialize};
+use std::sync::{Arc, atomic::{AtomicBool, Ordering}};
 use tauri::{command, Emitter};
 
 const XLLM_TOKEN_EVENT: &str = "xllm_token";
 const SSE_MAX_LINE_BUF: usize = 64 * 1024;
+
+pub type AiStreamCancel = Arc<AtomicBool>;
 
 const GEMINI_BASE_URL: &str = "https://generativelanguage.googleapis.com/v1beta/models";
 
@@ -119,6 +122,7 @@ async fn call_xllm_stream(
     client: &reqwest::Client,
     _model: &str,
     prompt: &str,
+    cancel: &Arc<AtomicBool>,
 ) -> Result<String> {
     let config = load_config()?;
     let base_url = config.xllm_url();
@@ -154,6 +158,9 @@ async fn call_xllm_stream(
     let mut line_buf = String::new();
 
     while let Some(chunk) = byte_stream.next().await {
+        if cancel.load(Ordering::Relaxed) {
+            break;
+        }
         let bytes = chunk.map_err(|e| LumError::AiEngine(e.to_string()))?;
         line_buf.push_str(&String::from_utf8_lossy(&bytes));
 
@@ -418,7 +425,11 @@ pub async fn stream_ai_command(
     prompt: String,
     model: String,
     context: String,
+    cancel_flag: tauri::State<'_, AiStreamCancel>,
 ) -> Result<String> {
+    // 새 요청 시작 시 취소 플래그 초기화
+    cancel_flag.store(false, Ordering::Relaxed);
+
     let client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(120))
         .build()
@@ -431,8 +442,13 @@ pub async fn stream_ai_command(
         let _ = app.emit(XLLM_TOKEN_EVENT, result.clone());
         Ok(result)
     } else {
-        call_xllm_stream(&app, &client, &model, &full_prompt).await
+        call_xllm_stream(&app, &client, &model, &full_prompt, &cancel_flag).await
     }
+}
+
+#[command]
+pub fn cancel_ai_stream(cancel_flag: tauri::State<'_, AiStreamCancel>) {
+    cancel_flag.store(true, Ordering::Relaxed);
 }
 
 /// 에러 분석

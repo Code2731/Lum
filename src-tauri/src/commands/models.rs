@@ -3,9 +3,14 @@ use crate::error::{LumError, Result};
 use crate::platform;
 use futures_util::StreamExt;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Mutex};
 use tauri::{command, AppHandle, Emitter};
 use tokio::io::AsyncWriteExt;
+
+pub type DownloadCancelMap = Arc<Mutex<HashMap<String, Arc<AtomicBool>>>>;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct LocalModel {
@@ -21,6 +26,7 @@ pub struct DownloadProgress {
     pub downloaded: u64,
     pub total: u64,
     pub done: bool,
+    pub cancelled: bool,
 }
 
 #[derive(Debug, Deserialize)]
@@ -91,22 +97,61 @@ pub async fn delete_model(model_id: String) -> Result<()> {
 }
 
 #[command]
+pub async fn cancel_download(
+    repo_id: String,
+    cancel_map: tauri::State<'_, DownloadCancelMap>,
+) -> Result<()> {
+    if let Ok(map) = cancel_map.lock() {
+        if let Some(flag) = map.get(&repo_id) {
+            flag.store(true, Ordering::Relaxed);
+        }
+    }
+    Ok(())
+}
+
+#[command]
 pub async fn download_model(
     app: AppHandle,
     repo_id: String,
     revision: Option<String>,
     hf_token: Option<String>,
+    cancel_map: tauri::State<'_, DownloadCancelMap>,
 ) -> Result<()> {
     let rev = revision.unwrap_or_else(|| "main".to_string());
 
-    // 호출 시 전달된 토큰 우선, 없으면 config에 저장된 토큰 사용
     let token: Option<String> = hf_token
         .filter(|t| !t.is_empty())
         .or_else(|| {
             load_config().ok().and_then(|c| c.hf_token).filter(|t| !t.is_empty())
         });
 
-    // API 호출용(타임아웃 있음)과 파일 다운로드용(타임아웃 없음) 클라이언트를 분리
+    // 취소 플래그 등록
+    let cancel_flag = Arc::new(AtomicBool::new(false));
+    {
+        let mut map = cancel_map.lock().unwrap();
+        map.insert(repo_id.clone(), cancel_flag.clone());
+    }
+
+    let emit_done = |cancelled: bool| {
+        let _ = app.emit(
+            "model_download_progress",
+            DownloadProgress {
+                repo_id: repo_id.clone(),
+                file: String::new(),
+                downloaded: 0,
+                total: 0,
+                done: true,
+                cancelled,
+            },
+        );
+    };
+
+    let cleanup = |cancel_map: &tauri::State<'_, DownloadCancelMap>| {
+        if let Ok(mut map) = cancel_map.lock() {
+            map.remove(&repo_id);
+        }
+    };
+
     let api_client = reqwest::Client::builder()
         .connect_timeout(std::time::Duration::from_secs(30))
         .timeout(std::time::Duration::from_secs(60))
@@ -123,7 +168,6 @@ pub async fn download_model(
         .await
         .map_err(|e| LumError::Io(e.to_string()))?;
 
-    // HuggingFace API로 파일 목록 조회
     let api_url = format!("https://huggingface.co/api/models/{}/tree/{}", repo_id, rev);
     let mut req = api_client.get(&api_url);
     if let Some(ref t) = token {
@@ -143,6 +187,7 @@ pub async fn download_model(
             429 => " — 요청 횟수 초과. 잠시 후 다시 시도하세요.",
             _ => "",
         };
+        cleanup(&cancel_map);
         return Err(LumError::Network(format!("HuggingFace API {} 오류{}", status, hint)));
     }
 
@@ -153,6 +198,7 @@ pub async fn download_model(
 
     let file_entries: Vec<&HfFileEntry> = files.iter().filter(|f| f.file_type == "file").collect();
     if file_entries.is_empty() {
+        cleanup(&cancel_map);
         return Err(LumError::Network(format!(
             "'{}/{}' 브랜치에 파일이 없습니다. revision 이름을 확인하세요.",
             repo_id, rev
@@ -160,6 +206,13 @@ pub async fn download_model(
     }
 
     for file_entry in &file_entries {
+        if cancel_flag.load(Ordering::Relaxed) {
+            let _ = tokio::fs::remove_dir_all(&out_dir).await;
+            cleanup(&cancel_map);
+            emit_done(true);
+            return Ok(());
+        }
+
         let file_name = file_entry
             .path
             .split('/')
@@ -182,6 +235,7 @@ pub async fn download_model(
             .map_err(|e| LumError::Network(format!("파일 다운로드 실패 ({}): {}", file_name, e)))?;
 
         if !response.status().is_success() {
+            cleanup(&cancel_map);
             return Err(LumError::Network(format!(
                 "파일 다운로드 오류 {} ({})",
                 response.status(),
@@ -198,15 +252,19 @@ pub async fn download_model(
         let mut downloaded = 0u64;
         let mut last_emit = 0u64;
         let mut stream = response.bytes_stream();
+        let mut cancelled = false;
 
         while let Some(chunk) = stream.next().await {
+            if cancel_flag.load(Ordering::Relaxed) {
+                cancelled = true;
+                break;
+            }
             let chunk = chunk.map_err(|e| LumError::Network(e.to_string()))?;
             downloaded += chunk.len() as u64;
             file.write_all(&chunk)
                 .await
                 .map_err(|e| LumError::Io(e.to_string()))?;
 
-            // 512KB마다 이벤트 전송
             if downloaded - last_emit >= 512 * 1024 {
                 last_emit = downloaded;
                 let _ = app.emit(
@@ -217,12 +275,20 @@ pub async fn download_model(
                         downloaded,
                         total,
                         done: false,
+                        cancelled: false,
                     },
                 );
             }
         }
 
-        // 파일 하나 완료
+        if cancelled {
+            drop(file);
+            let _ = tokio::fs::remove_dir_all(&out_dir).await;
+            cleanup(&cancel_map);
+            emit_done(true);
+            return Ok(());
+        }
+
         let _ = app.emit(
             "model_download_progress",
             DownloadProgress {
@@ -231,21 +297,12 @@ pub async fn download_model(
                 downloaded,
                 total,
                 done: false,
+                cancelled: false,
             },
         );
     }
 
-    // 전체 완료
-    let _ = app.emit(
-        "model_download_progress",
-        DownloadProgress {
-            repo_id: repo_id.clone(),
-            file: String::new(),
-            downloaded: 0,
-            total: 0,
-            done: true,
-        },
-    );
-
+    cleanup(&cancel_map);
+    emit_done(false);
     Ok(())
 }

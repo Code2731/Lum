@@ -3,7 +3,12 @@ import { invoke } from "@tauri-apps/api/core";
 import type { HealingResult } from "../components/HealingPanel";
 
 const stripAnsi = (s: string) =>
-  s.replace(/\x1b\[[0-9;]*[a-zA-Z]/g, "").replace(/\x1b\][^\x07]*\x07/g, "");
+  s
+    .replace(/\x1b\][^\x07\x1b]*[\x07\x1b]/g, "")  // OSC (BEL 또는 ESC 종료)
+    .replace(/\x1b\[[0-9;?]*[a-zA-Z]/g, "")          // CSI
+    .replace(/\x1b[()#;?][0-9A-Za-z]/g, "")           // 문자셋 등 기타 ESC
+    .replace(/\x1b./g, "")                             // 나머지 ESC + 1문자
+    .replace(/\x07/g, "");                             // BEL
 
 const ERROR_PATTERNS = [
   /command not found/i,
@@ -46,17 +51,29 @@ export function useAutoHealing(
   }, []);
 
   const detectError = useCallback((rawData: string) => {
-    const text = stripAnsi(rawData);
-    outputBufRef.current += text;
-    if (outputBufRef.current.length > 3000) {
-      outputBufRef.current = outputBufRef.current.slice(-3000);
+    // 원시 데이터를 누적 후 한 번에 스트립 — 청크 경계에 걸린 ESC 시퀀스 방지
+    outputBufRef.current += rawData;
+    if (outputBufRef.current.length > 4000) {
+      outputBufRef.current = outputBufRef.current.slice(-4000);
     }
     if (errorDebounceRef.current) clearTimeout(errorDebounceRef.current);
     errorDebounceRef.current = setTimeout(() => {
-      const buf = outputBufRef.current;
+      const raw = outputBufRef.current;
       outputBufRef.current = "";
-      if (ERROR_PATTERNS.some((p) => p.test(buf))) {
-        const snippet = buf.split("\n").filter((l) => l.trim()).slice(-5).join("\n");
+      const text = stripAnsi(raw);
+
+      // 한글·CJK 등 비-ASCII 명령어의 "command not found"는 의도치 않은 입력 — 무시
+      if (/command not found/i.test(text) && /[^\x00-\x7F]/.test(
+        (text.match(/command not found:\s*(.+)/i)?.[1] ?? ""),
+      )) return;
+
+      if (ERROR_PATTERNS.some((p) => p.test(text))) {
+        const snippet = text
+          .split("\n")
+          .map((l) => l.replace(/[\r\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/g, "").trimEnd())
+          .filter((l) => l.trim())
+          .slice(-5)
+          .join("\n");
         setHealingError(snippet);
         setHealingResult(null);
       }

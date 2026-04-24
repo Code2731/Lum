@@ -159,10 +159,15 @@ export function useAIChat(model: string, getTerminalContext: () => string) {
     [model, messages, streaming, getTerminalContext],
   );
 
+  const cancel = useCallback(() => {
+    invoke("cancel_ai_stream").catch(() => {});
+    setStreaming(false);
+  }, []);
+
   const clear = useCallback(() => {
     setMessages([]);
     setError(null);
   }, []);
 
-  return { messages, streaming, error, sendMessage, clear };
+  return { messages, streaming, error, sendMessage, cancel, clear };
 }

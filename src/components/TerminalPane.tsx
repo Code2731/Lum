@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useCallback, useState } from "react";
 import { Terminal } from "@xterm/xterm";
+import type { IDecoration } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { SearchAddon } from "@xterm/addon-search";
 import { invoke } from "@tauri-apps/api/core";
@@ -12,6 +13,10 @@ import { parseCommandLines } from "../utils/smartPaste";
 import PasteGuardModal from "./PasteGuardModal";
 import SmartPasteModal from "./SmartPasteModal";
 import TerminalContextMenu from "./TerminalContextMenu";
+import WarpInputBar, { type WarpInputBarHandle } from "./WarpInputBar";
+import AIBlockStream from "./AIBlockStream";
+import { routeInput } from "../utils/inputRouter";
+import type { ChatMessage } from "../hooks/useAIChat";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import type { XtermTheme } from "../hooks/useTerminalTheme";
 import type { DangerMatch } from "../utils/pasteGuard";
@@ -34,6 +39,11 @@ interface Props {
   onCwdChange?: (cwd: string) => void;
   onReady?: (write: (data: string) => void) => void;
   onAgentTrigger?: (task: string) => void;
+  onAskAI?: (question: string) => void;
+  aiMessages?: ChatMessage[];
+  aiStreaming?: boolean;
+  aiError?: string | null;
+  onClearAI?: () => void;
 }
 
 const IS_WINDOWS = navigator.userAgent.includes("Windows");
@@ -69,31 +79,32 @@ const THEME = {
   brightWhite: "#f0f6fc",
 };
 
-const CELL_W = 7.8;
-const CELL_H = 18.2;
 const PANE_PADDING_X = 10;
 const PANE_PADDING_Y = 6;
 
 const DEFAULT_MODEL = "Qwen2.5-Coder-7B-Instruct-EXL2-4bpw";
 
-const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme, fontSize, fontFamily, onOutput, onCwdChange, onReady, onAgentTrigger }) => {
+const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme, fontSize, fontFamily, onOutput, onCwdChange, onReady, onAgentTrigger, onAskAI, aiMessages, aiStreaming, aiError, onClearAI }) => {
   const outerRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const termRef = useRef<Terminal | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
   const searchAddonRef = useRef<SearchAddon | null>(null);
   const spawnedRef = useRef(false);
+  const promptDecorationRef = useRef<IDecoration | null>(null);
 
   const onOutputRef = useRef(onOutput);
   const onReadyRef = useRef(onReady);
   const onCwdChangeRef = useRef(onCwdChange);
   const onAgentTriggerRef = useRef(onAgentTrigger);
+  const onAskAIRef = useRef(onAskAI);
   useEffect(() => {
     onOutputRef.current = onOutput;
     onReadyRef.current = onReady;
     onCwdChangeRef.current = onCwdChange;
     onAgentTriggerRef.current = onAgentTrigger;
-  }, [onOutput, onReady, onCwdChange, onAgentTrigger]);
+    onAskAIRef.current = onAskAI;
+  }, [onOutput, onReady, onCwdChange, onAgentTrigger, onAskAI]);
 
   // ── Search (Cmd+F) ─────────────────────────────────────────────────────
   const [searchOpen, setSearchOpen] = useState(false);
@@ -166,16 +177,18 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
   // Right-click context menu
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; text: string } | null>(null);
 
-  // Static CLI ghost text
+  // WarpInputBar — 실제 입력 필드
+  const warpInputRef = useRef<WarpInputBarHandle>(null);
+
+  // Static CLI ghost text (WarpInputBar 위 오버레이)
   const [ghostText, setGhostText] = useState<string | null>(null);
-  const [ghostPos, setGhostPos] = useState({ x: 0, y: 0 });
   const ghostTextRef = useRef<string | null>(null);
-  const inputBufRef = useRef("");
   const suggestionRef = useRef<{ suffix: string; insert: string } | null>(null);
 
-  // AI inline edit (# prefix)
-  const [aiGhost, setAiGhost] = useState<{ cmd: string; y: number } | null>(null);
+  // AI inline edit (# prefix) — WarpInputBar 위 팝업
+  const [aiGhost, setAiGhost] = useState<{ cmd: string } | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
+  const [aiCmdError, setAiCmdError] = useState<string | null>(null);
   const aiSuggestionRef = useRef<string | null>(null);
   const aiDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -224,26 +237,20 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     if (aiDebounceRef.current) clearTimeout(aiDebounceRef.current);
     aiSuggestionRef.current = null;
     setAiGhost(null);
+    setAiCmdError(null);
   }, []);
 
-  // Enter / Ctrl+C / Ctrl+D / ESC 등 입력 라인 전체 리셋
-  const resetInputState = useCallback(() => {
-    inputBufRef.current = "";
-    if (ghostTextRef.current !== null) {
-      ghostTextRef.current = null;
-      setGhostText(null);
-      suggestionRef.current = null;
+  const updateGhost = useCallback((buf: string) => {
+    if (buf.startsWith("# ") || buf.startsWith("? ") || buf.startsWith(">>")) {
+      if (ghostTextRef.current !== null) {
+        ghostTextRef.current = null;
+        setGhostText(null);
+        suggestionRef.current = null;
+      }
+      return;
     }
-    clearAiGhost();
-    clearExplain();
-  }, [clearAiGhost, clearExplain]);
-
-  const updateGhost = useCallback((term: Terminal, inputBuf: string) => {
-    if (inputBuf.startsWith("# ")) return;
-
-    const suggestion = findCompletion(inputBuf);
+    const suggestion = findCompletion(buf);
     suggestionRef.current = suggestion;
-
     if (!suggestion) {
       if (ghostTextRef.current !== null) {
         ghostTextRef.current = null;
@@ -251,22 +258,14 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
       }
       return;
     }
-
-    const cursorX = term.buffer.active.cursorX;
-    const cursorY = term.buffer.active.cursorY;
-    setGhostPos({
-      x: PANE_PADDING_X + cursorX * CELL_W,
-      y: PANE_PADDING_Y + cursorY * CELL_H,
-    });
     ghostTextRef.current = suggestion.suffix;
     setGhostText(suggestion.suffix);
   }, []);
 
-  const triggerExplain = useCallback((term: Terminal, inputBuf: string) => {
+  const triggerExplain = useCallback((buf: string) => {
     if (explainDebounceRef.current) clearTimeout(explainDebounceRef.current);
-    const query = inputBuf.slice(2).trim(); // "? " 이후
+    const query = buf.slice(2).trim();
     if (!query) { setExplainPopup(null); setExplainLoading(false); return; }
-    const cursorY = term.buffer.active.cursorY;
     explainDebounceRef.current = setTimeout(async () => {
       setExplainLoading(true);
       setExplainPopup(null);
@@ -276,29 +275,23 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
           model: modelRef.current,
         });
         setExplainLoading(false);
-        setExplainPopup({ text: explanation.trim(), y: PANE_PADDING_Y + (cursorY + 1) * CELL_H });
+        setExplainPopup({ text: explanation.trim(), y: 0 });
       } catch {
         setExplainLoading(false);
       }
     }, 500);
   }, []);
 
-  const triggerAiCompletion = useCallback((term: Terminal, inputBuf: string) => {
+  const triggerAiCompletion = useCallback((buf: string) => {
     if (aiDebounceRef.current) clearTimeout(aiDebounceRef.current);
-
-    const prompt = inputBuf.slice(2).trim();
-    if (!prompt) {
-      clearAiGhost();
-      return;
-    }
-
-    const cursorY = term.buffer.active.cursorY;
+    const prompt = buf.slice(2).trim();
+    if (!prompt) { clearAiGhost(); return; }
 
     aiDebounceRef.current = setTimeout(async () => {
       setAiLoading(true);
       try {
         const [projectCtx, recentHistory] = await Promise.all([
-          invoke<string>("get_project_context", { cwd: cwdRef.current }),
+          invoke<string>("get_project_context", { cwd: cwdRef.current }).catch(() => ""),
           invoke<Array<{ command: string }>>("get_recent_history", { limit: 5 }).catch(() => []),
         ]);
         const recentCmds = recentHistory.map((h) => h.command).join(", ");
@@ -316,9 +309,10 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
         if (!cmd) { setAiLoading(false); return; }
         aiSuggestionRef.current = cmd;
         setAiLoading(false);
-        setAiGhost({ cmd, y: PANE_PADDING_Y + (cursorY + 1) * CELL_H });
-      } catch {
+        setAiGhost({ cmd });
+      } catch (e) {
         setAiLoading(false);
+        setAiCmdError(String(e).slice(0, 200));
       }
     }, 600);
   }, [clearAiGhost]);
@@ -386,9 +380,52 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
 
     const unlistenData = listen<PtyData>("pty_data", (event) => {
       if (event.payload.id !== id) return;
-      term.write(event.payload.data);
-      onOutputRef.current?.(event.payload.data);
-      const newCwd = parseOsc7(event.payload.data);
+      const raw = event.payload.data;
+
+      const hasPromptStart = raw.includes("\x1b]133;A");
+      const hasCmdStart    = raw.includes("\x1b]133;C");
+
+      // 명령 실행 시작 → 프롬프트 숨김 해제 (명령어 라인이 보이게)
+      if (hasCmdStart) {
+        promptDecorationRef.current?.dispose();
+        promptDecorationRef.current = null;
+      }
+
+      term.write(raw);
+
+      // 프롬프트 시작 → 해당 줄을 배경색 decoration으로 완전히 숨김
+      if (hasPromptStart) {
+        const marker = term.registerMarker(0);
+        if (marker) {
+          promptDecorationRef.current?.dispose();
+          const dec = term.registerDecoration({ marker, width: term.cols, x: 0, layer: "top" });
+          if (dec) {
+            dec.onRender((el) => {
+              el.style.backgroundColor = THEME.background;
+              el.style.width = "100%";
+              el.style.height = "100%";
+            });
+            promptDecorationRef.current = dec;
+          }
+        }
+      }
+
+      // 블록 시작 → 파란 왼쪽 테두리 decoration
+      if (hasCmdStart) {
+        const marker = term.registerMarker(0);
+        if (marker) {
+          const dec = term.registerDecoration({ marker, width: 2, x: 0 });
+          if (dec) {
+            dec.onRender((el) => {
+              el.style.borderLeft = "2px solid rgba(88,166,255,0.35)";
+              el.style.height = "100%";
+            });
+          }
+        }
+      }
+
+      onOutputRef.current?.(raw);
+      const newCwd = parseOsc7(raw);
       if (newCwd) onCwdChangeRef.current?.(newCwd);
     });
 
@@ -397,82 +434,9 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
       term.write("\r\n\x1b[2m[프로세스 종료 — 새 탭을 열어주세요]\x1b[0m\r\n");
     });
 
+    // xterm을 직접 포커스한 경우에만 발생 (보통은 WarpInputBar가 입력 경로).
+    // interactive CLI(vim, less 등)에서 사용자가 xterm에 포커스를 옮길 때만 사용.
     term.onData((data) => {
-      if (data === "\t") {
-        if (aiSuggestionRef.current) {
-          invoke("write_to_pty", { id, data: "\x15" + aiSuggestionRef.current }).catch(() => {});
-          inputBufRef.current = aiSuggestionRef.current;
-          aiSuggestionRef.current = null;
-          setAiGhost(null);
-          return;
-        }
-        if (suggestionRef.current) {
-          invoke("write_to_pty", { id, data: suggestionRef.current.insert }).catch(() => {});
-          inputBufRef.current += suggestionRef.current.insert;
-          suggestionRef.current = null;
-          ghostTextRef.current = null;
-          setGhostText(null);
-          return;
-        }
-      }
-
-      if (data === "\r" || data === "\n") {
-        // >> 프리픽스: 에이전트 태스크 트리거
-        if (inputBufRef.current.startsWith(">> ")) {
-          const task = inputBufRef.current.slice(3).trim();
-          if (task && onAgentTriggerRef.current) {
-            // 입력한 줄을 터미널 뷰에서 지우기 (Ctrl+U)
-            invoke("write_to_pty", { id, data: "\x15" }).catch(() => {});
-            onAgentTriggerRef.current(task);
-            resetInputState();
-            return;
-          }
-        }
-        resetInputState();
-      } else if (data === "\x7f" || data === "\b") {
-        inputBufRef.current = inputBufRef.current.slice(0, -1);
-        const buf = inputBufRef.current;
-        if (buf.startsWith(">> ")) {
-          // 에이전트 프리픽스 — 특별 처리 없음
-        } else if (buf.startsWith("# ")) {
-          triggerAiCompletion(term, buf);
-        } else if (buf.startsWith("? ")) {
-          clearAiGhost();
-          if (ghostTextRef.current !== null) { ghostTextRef.current = null; setGhostText(null); }
-          triggerExplain(term, buf);
-        } else {
-          clearAiGhost();
-          clearExplain();
-          updateGhost(term, buf);
-        }
-      } else if (data.length === 1 && data >= " ") {
-        inputBufRef.current += data;
-        const buf = inputBufRef.current;
-        if (buf.startsWith(">> ")) {
-          // 에이전트 태스크 프리픽스 — 입력 버퍼만 추적, 특별 UI 없음
-          if (ghostTextRef.current !== null) { ghostTextRef.current = null; setGhostText(null); }
-          suggestionRef.current = null;
-          clearAiGhost();
-          clearExplain();
-        } else if (buf.startsWith("# ")) {
-          if (ghostTextRef.current !== null) { ghostTextRef.current = null; setGhostText(null); }
-          suggestionRef.current = null;
-          clearExplain();
-          triggerAiCompletion(term, buf);
-        } else if (buf.startsWith("? ")) {
-          if (ghostTextRef.current !== null) { ghostTextRef.current = null; setGhostText(null); }
-          suggestionRef.current = null;
-          clearAiGhost();
-          triggerExplain(term, buf);
-        } else {
-          clearAiGhost();
-          clearExplain();
-          updateGhost(term, buf);
-        }
-      } else if (data === "\x03" || data === "\x04" || data.startsWith("\x1b")) {
-        resetInputState();
-      }
-
       invoke("write_to_pty", { id, data }).catch(() => {});
     });
 
@@ -489,6 +453,8 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     return () => {
       if (aiDebounceRef.current) clearTimeout(aiDebounceRef.current);
       if (explainDebounceRef.current) clearTimeout(explainDebounceRef.current);
+      promptDecorationRef.current?.dispose();
+      promptDecorationRef.current = null;
       unlistenData.then((fn) => fn());
       unlistenExit.then((fn) => fn());
       resizeObserver.disconnect();
@@ -499,7 +465,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
       searchAddonRef.current = null;
       spawnedRef.current = false;
     };
-  }, [id, doFitAndResize, updateGhost, triggerAiCompletion, clearAiGhost, triggerExplain, clearExplain, resetInputState, openSearch]);
+  }, [id, doFitAndResize, openSearch]);
 
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
     const selected = termRef.current?.getSelection().trim() ?? "";
@@ -522,10 +488,88 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
         model: modelRef.current,
       });
       setExplainLoading(false);
-      setExplainPopup({ text: explanation.trim(), y: PANE_PADDING_Y + CELL_H * 2 });
+      setExplainPopup({ text: explanation.trim(), y: 0 });
     } catch {
       setExplainLoading(false);
     }
+  }, []);
+
+  const clearAllOverlays = useCallback(() => {
+    ghostTextRef.current = null;
+    setGhostText(null);
+    suggestionRef.current = null;
+    if (aiDebounceRef.current) clearTimeout(aiDebounceRef.current);
+    if (explainDebounceRef.current) clearTimeout(explainDebounceRef.current);
+    aiSuggestionRef.current = null;
+    setAiGhost(null);
+    setAiLoading(false);
+    setAiCmdError(null);
+    setExplainPopup(null);
+    setExplainLoading(false);
+  }, []);
+
+  // 입력 라우팅: 기본=AI, 알려진 CLI=shell, !/@/#/?/>> = 명시적 오버라이드
+  const handleSubmit = useCallback((rawInput: string) => {
+    const route = routeInput(rawInput);
+    clearAllOverlays();
+    switch (route.type) {
+      case "empty":
+        return;
+      case "shell":
+        invoke("write_to_pty", { id, data: route.command + "\r" }).catch(() => {});
+        return;
+      case "ai":
+        if (route.question) onAskAIRef.current?.(route.question);
+        return;
+      case "agent":
+        if (route.task) onAgentTriggerRef.current?.(route.task);
+        return;
+      case "aiCmd":
+      case "explain":
+        // # / ? 는 인라인 제안 흐름 — 제출 시엔 아무 것도 안 함 (Tab으로 수용)
+        return;
+    }
+  }, [id, clearAllOverlays]);
+
+  const handleInterrupt = useCallback(() => {
+    invoke("write_to_pty", { id, data: "\x03" }).catch(() => {});
+  }, [id]);
+
+  const handleInputChange = useCallback((buf: string) => {
+    if (buf.startsWith("# ")) {
+      clearExplain();
+      triggerAiCompletion(buf);
+    } else if (buf.startsWith("? ")) {
+      clearAiGhost();
+      triggerExplain(buf);
+    } else if (buf.startsWith(">>")) {
+      clearAiGhost();
+      clearExplain();
+      if (ghostTextRef.current !== null) { ghostTextRef.current = null; setGhostText(null); }
+    } else {
+      clearAiGhost();
+      clearExplain();
+      updateGhost(buf);
+    }
+  }, [clearAiGhost, clearExplain, triggerAiCompletion, triggerExplain, updateGhost]);
+
+  const handleTab = useCallback((buf: string): boolean => {
+    // AI 제안 있으면 전체 교체
+    if (aiSuggestionRef.current) {
+      warpInputRef.current?.setValue(aiSuggestionRef.current);
+      aiSuggestionRef.current = null;
+      setAiGhost(null);
+      return true;
+    }
+    // Ghost text 완성
+    if (suggestionRef.current) {
+      warpInputRef.current?.setValue(buf + suggestionRef.current.insert);
+      suggestionRef.current = null;
+      ghostTextRef.current = null;
+      setGhostText(null);
+      return true;
+    }
+    return false;
   }, []);
 
   return (
@@ -537,17 +581,37 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
         height: "100%",
         backgroundColor: THEME.background,
         overflow: "hidden",
-        position: "relative",
-        padding: `${PANE_PADDING_Y}px ${PANE_PADDING_X}px`,
+        display: "flex",
+        flexDirection: "column",
         boxSizing: "border-box",
+        position: "relative",
       }}
     >
+      {/* xterm 출력 영역 */}
       <div
-        ref={containerRef}
-        style={{
-          width: "100%",
-          height: "100%",
-        }}
+        style={{ flex: 1, minHeight: 0, padding: `${PANE_PADDING_Y}px ${PANE_PADDING_X}px 0`, position: "relative" }}
+      >
+        <div ref={containerRef} style={{ width: "100%", height: "100%" }} />
+      </div>
+
+      {/* AI 답변 스트림 — xterm과 WarpInputBar 사이 */}
+      <AIBlockStream
+        messages={aiMessages ?? []}
+        streaming={aiStreaming ?? false}
+        error={aiError ?? null}
+        onClear={onClearAI ?? (() => {})}
+        onExecute={(cmd) => invoke("write_to_pty", { id, data: cmd + "\r" }).catch(() => {})}
+      />
+
+      {/* Warp 입력바 — 입력 필드, 라우팅은 handleSubmit */}
+      <WarpInputBar
+        ref={warpInputRef}
+        fontFamily={fontFamily ? `"${fontFamily}", ${FONT_FAMILY}` : FONT_FAMILY}
+        fontSize={fontSize ?? 13}
+        onSubmit={handleSubmit}
+        onInterrupt={handleInterrupt}
+        onTab={handleTab}
+        onChange={handleInputChange}
       />
 
       {ghostText && (
@@ -555,47 +619,52 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
           aria-hidden
           style={{
             position: "absolute",
-            left: ghostPos.x,
-            top: ghostPos.y,
-            height: CELL_H,
-            lineHeight: `${CELL_H}px`,
-            fontSize: 13,
+            left: PANE_PADDING_X,
+            bottom: 40,
+            fontSize: 11,
             fontFamily: FONT_FAMILY,
             color: "rgba(201,209,217,0.35)",
             pointerEvents: "none",
             whiteSpace: "pre",
             zIndex: 10,
+            background: "rgba(13,17,23,0.85)",
+            padding: "2px 6px",
+            borderRadius: 4,
           }}
         >
-          {ghostText}
+          ↹ {ghostText}
         </div>
       )}
 
-      {(aiGhost || aiLoading) && (
+      {(aiGhost || aiLoading || aiCmdError) && (
         <div
           aria-hidden
           style={{
             position: "absolute",
             left: PANE_PADDING_X,
-            top: aiGhost ? aiGhost.y : PANE_PADDING_Y + CELL_H * 2,
+            bottom: 40,
             pointerEvents: "none",
             zIndex: 20,
             display: "flex",
             alignItems: "center",
             gap: 6,
-            background: "rgba(13,17,23,0.92)",
-            border: "1px solid rgba(88,166,255,0.25)",
+            background: "rgba(13,17,23,0.95)",
+            border: `1px solid ${aiCmdError ? "rgba(255,123,114,0.4)" : "rgba(88,166,255,0.25)"}`,
             borderRadius: 6,
             padding: "3px 8px",
             maxWidth: "90%",
           }}
         >
-          <span style={{ fontSize: 10, color: "#58a6ff", fontFamily: FONT_FAMILY, opacity: 0.8 }}>
-            ⚡ AI
+          <span style={{ fontSize: 10, color: aiCmdError ? "#ff7b72" : "#58a6ff", fontFamily: FONT_FAMILY, opacity: 0.9 }}>
+            {aiCmdError ? "⚠ AI" : "⚡ AI"}
           </span>
           {aiLoading ? (
             <span style={{ fontSize: 11, color: "rgba(88,166,255,0.5)", fontFamily: FONT_FAMILY }}>
               생성 중…
+            </span>
+          ) : aiCmdError ? (
+            <span style={{ fontSize: 11, color: "rgba(255,123,114,0.85)", fontFamily: FONT_FAMILY, whiteSpace: "pre-wrap" }}>
+              {aiCmdError}
             </span>
           ) : (
             <>
@@ -616,7 +685,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
           style={{
             position: "absolute",
             left: PANE_PADDING_X,
-            top: explainPopup ? explainPopup.y : PANE_PADDING_Y + CELL_H * 2,
+            bottom: 40,
             zIndex: 25,
             maxWidth: "min(520px, 90%)",
             background: "rgba(13,17,23,0.97)",

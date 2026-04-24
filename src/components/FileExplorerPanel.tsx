@@ -45,7 +45,8 @@ export default function FileExplorerPanel({ cwd, onClose, onCdTo, onOpenFile }: 
 
   useEffect(() => {
     load(cwd || "~");
-  }, [cwd, load]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const goUp = useCallback(async () => {
     try {

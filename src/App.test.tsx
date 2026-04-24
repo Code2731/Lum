@@ -69,9 +69,9 @@ describe("App (LUM 터미널)", () => {
     expect(screen.getByLabelText("SSH 연결 (Cmd+Shift+H)")).toBeInTheDocument();
   });
 
-  it("AI Chat 버튼이 툴바에 있어야 함", () => {
+  it("AI Chat 버튼은 제거됨 — AI는 WarpInputBar로 통합", () => {
     render(<App />);
-    expect(screen.getByLabelText("AI Chat (Cmd+Shift+A)")).toBeInTheDocument();
+    expect(screen.queryByLabelText("AI Chat (Cmd+Shift+A)")).toBeNull();
   });
 
   it("알림 센터 버튼이 툴바에 있어야 함", () => {

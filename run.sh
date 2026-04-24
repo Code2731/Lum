@@ -1,22 +1,22 @@
 #!/bin/bash
-echo "🚀 LUM: Local Universal Machine 시작 중..."
+set -e
 
-# Ollama 실행 여부 확인
-if ! curl -s --max-time 2 http://localhost:11434/api/tags >/dev/null 2>&1; then
-    echo "🤖 Ollama 서버가 실행 중이 아닙니다. 백그라운드에서 시작합니다..."
-    
-    # Ollama 명령어가 설치되어 있는지 확인
-    if command -v ollama >/dev/null 2>&1; then
-        ollama serve > /tmp/ollama.log 2>&1 &
-        echo "⏳ Ollama 서버가 준비될 때까지 잠시 기다립니다 (5초)..."
-        sleep 5
-    else
-        echo "⚠️  경고: 'ollama' 명령어를 찾을 수 없습니다. Ollama를 직접 실행해 주세요."
-    fi
+echo "LUM: Local Universal Machine 시작 중..."
+
+# node_modules 확인
+if [ ! -d "node_modules" ]; then
+    echo "의존성 설치 중 (npm install)..."
+    npm install
+fi
+
+# xLLM 서버 상태 확인 (선택 — 없어도 앱 내에서 시작 가능)
+XLLM_URL="${XLLM_URL:-http://127.0.0.1:5000}"
+if curl -sf --max-time 2 "${XLLM_URL}/v1/models" >/dev/null 2>&1; then
+    echo "xLLM 서버 온라인 (${XLLM_URL})"
 else
-    echo "✅ Ollama 서버가 이미 실행 중입니다."
+    echo "xLLM 서버 오프라인 — 앱 내 xLLM 패널에서 시작하세요."
 fi
 
 # Tauri 개발 서버 실행
-echo "🖥️ Tauri 개발 서버 실행 (창이 뜰 때까지 잠시만 기다려주세요)..."
+echo "Tauri 개발 서버 실행 중..."
 npm run tauri dev

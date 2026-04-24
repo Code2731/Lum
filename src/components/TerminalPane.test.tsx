@@ -1,0 +1,169 @@
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { render, fireEvent, waitFor } from "@testing-library/react";
+
+const invokeMock = vi.fn();
+
+vi.mock("@tauri-apps/api/core", () => ({
+  invoke: (cmd: string, args?: unknown) => invokeMock(cmd, args),
+}));
+
+vi.mock("@tauri-apps/api/event", () => ({
+  listen: vi.fn().mockResolvedValue(() => {}),
+}));
+
+vi.mock("@tauri-apps/plugin-opener", () => ({
+  openUrl: vi.fn(),
+}));
+
+vi.mock("@xterm/xterm", () => {
+  class Terminal {
+    options: Record<string, unknown> = {};
+    cols = 80;
+    rows = 24;
+    buffer = { active: { cursorX: 0, cursorY: 0 } };
+    loadAddon() {}
+    open() {}
+    write() {}
+    onData() {}
+    focus() {}
+    dispose() {}
+    attachCustomKeyEventHandler() {}
+    registerMarker() { return null; }
+    registerDecoration() { return null; }
+  }
+  return { Terminal };
+});
+
+vi.mock("@xterm/addon-fit", () => {
+  class FitAddon { fit() {} activate() {} dispose() {} }
+  return { FitAddon };
+});
+
+vi.mock("@xterm/addon-search", () => {
+  class SearchAddon {
+    findNext() {} findPrevious() {} clearDecorations() {} activate() {} dispose() {}
+  }
+  return { SearchAddon };
+});
+
+import TerminalPane from "./TerminalPane";
+
+beforeEach(() => {
+  invokeMock.mockReset();
+  invokeMock.mockImplementation((cmd: string) => {
+    if (cmd === "spawn_pty") return Promise.resolve();
+    if (cmd === "write_to_pty") return Promise.resolve();
+    if (cmd === "resize_pty") return Promise.resolve();
+    if (cmd === "get_project_context") return Promise.resolve("");
+    if (cmd === "get_recent_history") return Promise.resolve([]);
+    if (cmd === "generate_ai_command") return Promise.resolve(JSON.stringify({ command: "ls -la" }));
+    return Promise.resolve();
+  });
+});
+
+function submitInput(container: HTMLElement, value: string) {
+  const input = container.querySelector("input")!;
+  fireEvent.change(input, { target: { value } });
+  fireEvent.keyDown(input, { key: "Enter" });
+}
+
+describe("TerminalPane — 입력 라우팅", () => {
+  it("알려진 CLI (ls) → write_to_pty", async () => {
+    const { container } = render(<TerminalPane id="tab-1" />);
+    submitInput(container, "ls -la");
+    await waitFor(() => {
+      expect(invokeMock).toHaveBeenCalledWith("write_to_pty", {
+        id: "tab-1",
+        data: "ls -la\r",
+      });
+    });
+  });
+
+  it("자연어 → onAskAI 호출, PTY는 건드리지 않음", async () => {
+    const onAskAI = vi.fn();
+    const { container } = render(<TerminalPane id="tab-1" onAskAI={onAskAI} />);
+    submitInput(container, "현재 디렉토리 파일 개수 세줘");
+    await waitFor(() => {
+      expect(onAskAI).toHaveBeenCalledWith("현재 디렉토리 파일 개수 세줘");
+    });
+    const writeCalls = invokeMock.mock.calls.filter((c) => c[0] === "write_to_pty");
+    expect(writeCalls.length).toBe(0);
+  });
+
+  it(">> 에이전트 → onAgentTrigger 호출, PTY/AI 모두 안 건드림", async () => {
+    const onAgentTrigger = vi.fn();
+    const onAskAI = vi.fn();
+    const { container } = render(
+      <TerminalPane id="tab-1" onAgentTrigger={onAgentTrigger} onAskAI={onAskAI} />,
+    );
+    submitInput(container, ">> 이 프로젝트 빌드");
+    await waitFor(() => {
+      expect(onAgentTrigger).toHaveBeenCalledWith("이 프로젝트 빌드");
+    });
+    expect(onAskAI).not.toHaveBeenCalled();
+    const writeCalls = invokeMock.mock.calls.filter((c) => c[0] === "write_to_pty");
+    expect(writeCalls.length).toBe(0);
+  });
+
+  it("! 강제 shell → 자연어여도 PTY", async () => {
+    const onAskAI = vi.fn();
+    const { container } = render(<TerminalPane id="tab-1" onAskAI={onAskAI} />);
+    submitInput(container, "!안녕_shell");
+    await waitFor(() => {
+      expect(invokeMock).toHaveBeenCalledWith("write_to_pty", {
+        id: "tab-1",
+        data: "안녕_shell\r",
+      });
+    });
+    expect(onAskAI).not.toHaveBeenCalled();
+  });
+
+  it("@ 강제 AI → ls여도 AI Chat", async () => {
+    const onAskAI = vi.fn();
+    const { container } = render(<TerminalPane id="tab-1" onAskAI={onAskAI} />);
+    submitInput(container, "@ls 왜 에러?");
+    await waitFor(() => {
+      expect(onAskAI).toHaveBeenCalledWith("ls 왜 에러?");
+    });
+    const writeCalls = invokeMock.mock.calls.filter((c) => c[0] === "write_to_pty");
+    expect(writeCalls.length).toBe(0);
+  });
+
+  it("./run.sh 같은 경로 → shell", async () => {
+    const { container } = render(<TerminalPane id="tab-1" />);
+    submitInput(container, "./run.sh");
+    await waitFor(() => {
+      expect(invokeMock).toHaveBeenCalledWith("write_to_pty", {
+        id: "tab-1",
+        data: "./run.sh\r",
+      });
+    });
+  });
+
+  it("id prop이 다른 PTY로 라우팅됨", async () => {
+    const { container } = render(<TerminalPane id="split-xyz" />);
+    submitInput(container, "pwd");
+    await waitFor(() => {
+      expect(invokeMock).toHaveBeenCalledWith("write_to_pty", {
+        id: "split-xyz",
+        data: "pwd\r",
+      });
+    });
+  });
+
+  it("aiMessages가 비어있으면 AIBlockStream 미렌더", () => {
+    const { queryByTestId } = render(<TerminalPane id="tab-1" aiMessages={[]} />);
+    expect(queryByTestId("ai-block-stream")).toBeNull();
+  });
+
+  it("aiMessages가 있으면 AIBlockStream 렌더", () => {
+    const messages = [
+      { id: "1", role: "user" as const, content: "안녕", timestamp: Date.now() },
+      { id: "2", role: "assistant" as const, content: "네 안녕하세요", timestamp: Date.now() },
+    ];
+    const { getByTestId } = render(
+      <TerminalPane id="tab-1" aiMessages={messages} aiStreaming={false} />,
+    );
+    expect(getByTestId("ai-block-stream")).toBeInTheDocument();
+  });
+});

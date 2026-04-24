@@ -136,8 +136,9 @@ fn kill_on_port(port: u16) {
     }
     #[cfg(not(windows))]
     {
+        // -s TCP:LISTEN: 서버(listening) 프로세스만 — 클라이언트(앱 자신) 제외
         if let Ok(out) = std::process::Command::new("lsof")
-            .args(["-ti", &format!("tcp:{}", port)])
+            .args(["-ti", &format!(":{}", port), "-s", "TCP:LISTEN"])
             .output()
         {
             let text = String::from_utf8_lossy(&out.stdout);
@@ -470,4 +471,26 @@ pub fn stop_tabbyapi() -> Result<String> {
     } else {
         Ok(format!("서버 중지됨 ({killed}개 포트)"))
     }
+}
+
+/// 모델을 교체하여 서버 재시작 — stop 후 포트 해제 확인(최대 5초)까지 기다린 뒤 start
+#[command]
+pub async fn restart_with_model(app: tauri::AppHandle, port: u16, model: String) -> Result<String> {
+    // 1. 기존 서버 종료
+    kill_on_port(port);
+
+    // 2. 포트가 실제로 해제될 때까지 대기 (최대 5초, 200ms 간격)
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
+    loop {
+        if !is_port_in_use(port) { break; }
+        if std::time::Instant::now() >= deadline {
+            return Err(LumError::AiEngine(format!(
+                "포트 {port} 해제 실패 — 다른 프로세스가 사용 중일 수 있습니다."
+            )));
+        }
+        tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
+    }
+
+    // 3. 새 모델로 서버 시작 (start_tabbyapi 내부 로직 재사용)
+    start_tabbyapi(app, port, Some(model)).await
 }

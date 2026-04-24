@@ -34,6 +34,8 @@ pub fn run() {
         .manage(terminal_state)
         .manage(mcp_state)
         .manage(SysmonState::new())
+        .manage(commands::models::DownloadCancelMap::default())
+        .manage(commands::ai::AiStreamCancel::default())
         .manage({
             #[cfg(feature = "local-ai")]
             { local_ai_state }
@@ -57,11 +59,13 @@ pub fn run() {
             commands::models::list_local_models,
             commands::models::download_model,
             commands::models::delete_model,
+            commands::models::cancel_download,
             // AI Commands
             commands::agent::agent_plan,
             commands::agent::agent_observe,
             commands::ai::generate_ai_command,
             commands::ai::stream_ai_command,
+            commands::ai::cancel_ai_stream,
             commands::ai::analyze_error,
             commands::ai::explain_command,
             commands::ai::verify_vision_goal,
@@ -152,6 +156,7 @@ pub fn run() {
             commands::tabbyapi_setup::install_tabbyapi,
             commands::tabbyapi_setup::start_tabbyapi,
             commands::tabbyapi_setup::stop_tabbyapi,
+            commands::tabbyapi_setup::restart_with_model,
             // MCP Tools
             mcp::call_mcp_tool,
             mcp::list_internal_tools

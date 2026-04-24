@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { Download, Trash2, X, HardDrive, Cpu, ExternalLink, Play, CheckCircle2 } from "lucide-react";
+import { Download, Trash2, X, HardDrive, Cpu, ExternalLink, Play, CheckCircle2, XCircle } from "lucide-react";
 
 interface LocalModel {
   id: string;
@@ -206,12 +206,19 @@ const ModelManager: React.FC<Props> = ({ onClose, recommendedModel: _recommended
       .catch(() => setLoadedModelId(null));
   }, []);
 
-  const useModel = useCallback(async (modelId: string) => {
+  const useModel = useCallback(async (modelId: string, modelPath?: string) => {
     setLoadingModel(modelId);
     setLoadMsg(null);
     try {
-      const msg = await invoke<string>("switch_xllm_model", { modelName: modelId, cacheMode: null, maxSeqLen: null });
-      setLoadMsg(`✅ ${msg}`);
+      if (isAppleSilicon) {
+        // MLX-LM은 동적 모델 전환 미지원 — 로컬 경로로 서버 재시작
+        const target = modelPath ?? modelId.replace("--", "/");
+        await invoke("restart_with_model", { port: 5000, model: target });
+        setLoadMsg(`⏳ MLX-LM 시작 중… 모델 로드까지 30-60초 소요됩니다. xLLM 패널에서 상태를 확인하세요.`);
+      } else {
+        const msg = await invoke<string>("switch_xllm_model", { modelName: modelId, cacheMode: null, maxSeqLen: null });
+        setLoadMsg(`✅ ${msg}`);
+      }
       fetchLoaded();
     } catch (e) {
       const raw = e as { message?: string } | string | null;
@@ -220,7 +227,7 @@ const ModelManager: React.FC<Props> = ({ onClose, recommendedModel: _recommended
     } finally {
       setLoadingModel(null);
     }
-  }, [fetchLoaded]);
+  }, [isAppleSilicon, fetchLoaded]);
 
   const loadLocalModels = useCallback(async () => {
     try {
@@ -299,6 +306,12 @@ const ModelManager: React.FC<Props> = ({ onClose, recommendedModel: _recommended
     const repo = customRepo.trim();
     if (!repo) return;
     startDownload(repo, customRevision.trim() || null);
+  };
+
+  const handleCancelDownload = async (repoId: string) => {
+    try {
+      await invoke("cancel_download", { repoId });
+    } catch {}
   };
 
   const handleDelete = async (modelId: string) => {
@@ -406,12 +419,12 @@ const ModelManager: React.FC<Props> = ({ onClose, recommendedModel: _recommended
                       <div className="flex items-center gap-1.5 shrink-0">
                         {!isEmpty && !isLoaded && (
                           <button
-                            onClick={() => useModel(m.id)}
+                            onClick={() => useModel(m.id, m.path)}
                             disabled={isBusy || !!loadingModel}
                             className="flex items-center gap-1 px-2.5 py-1.5 rounded bg-accent/20 hover:bg-accent/30 text-accent text-[10px] font-medium disabled:opacity-50 transition-colors"
                           >
                             <Play size={11} />
-                            {isBusy ? "로드 중…" : "사용"}
+                            {isBusy ? (isAppleSilicon ? "재시작 중…" : "로드 중…") : (isAppleSilicon ? "재시작" : "사용")}
                           </button>
                         )}
                         {deleteConfirm === m.id ? (
@@ -522,14 +535,25 @@ const ModelManager: React.FC<Props> = ({ onClose, recommendedModel: _recommended
                     onKeyDown={(e) => e.key === "Enter" && handleCustomDownload()}
                     className="flex-1 bg-white/5 border border-white/10 rounded px-3 py-1.5 text-xs outline-none focus:border-accent/50 font-mono"
                   />
-                  <button
-                    onClick={handleCustomDownload}
-                    disabled={!customRepo.trim() || !!downloading[customRepo.trim()] || starting.has(customRepo.trim())}
-                    className="flex items-center gap-1 px-3 py-1.5 rounded bg-accent/20 hover:bg-accent/30 text-xs text-accent transition-colors disabled:opacity-40"
-                  >
-                    <Download size={11} />
-                    {starting.has(customRepo.trim()) ? "연결 중…" : downloading[customRepo.trim()] ? `${progressPct(downloading[customRepo.trim()])}%` : "받기"}
-                  </button>
+                  {downloading[customRepo.trim()] ? (
+                    <button
+                      onClick={() => handleCancelDownload(customRepo.trim())}
+                      className="flex items-center gap-1 px-3 py-1.5 rounded bg-red-500/15 hover:bg-red-500/30 text-red-400 text-xs transition-colors"
+                      title="다운로드 취소"
+                    >
+                      <XCircle size={11} />
+                      취소
+                    </button>
+                  ) : (
+                    <button
+                      onClick={handleCustomDownload}
+                      disabled={!customRepo.trim() || starting.has(customRepo.trim())}
+                      className="flex items-center gap-1 px-3 py-1.5 rounded bg-accent/20 hover:bg-accent/30 text-xs text-accent transition-colors disabled:opacity-40"
+                    >
+                      <Download size={11} />
+                      {starting.has(customRepo.trim()) ? "연결 중…" : "받기"}
+                    </button>
+                  )}
                 </div>
                 {downloading[customRepo.trim()] && (
                   <div className="h-1 bg-white/10 rounded-full overflow-hidden">
@@ -654,14 +678,25 @@ const ModelManager: React.FC<Props> = ({ onClose, recommendedModel: _recommended
                             </span>
                           </div>
                         </div>
-                        <button
-                          onClick={() => handleDownload(m)}
-                          disabled={!!prog || isStarting}
-                          className="shrink-0 flex items-center gap-1 px-2.5 py-1.5 rounded bg-white/10 hover:bg-accent/20 text-xs transition-colors disabled:opacity-50"
-                        >
-                          <Download size={11} />
-                          {isStarting ? "연결 중…" : prog ? `${progressPct(prog)}%` : "받기"}
-                        </button>
+                        {prog ? (
+                          <button
+                            onClick={() => handleCancelDownload(m.repo_id)}
+                            className="shrink-0 flex items-center gap-1 px-2.5 py-1.5 rounded bg-red-500/15 hover:bg-red-500/30 text-red-400 text-xs transition-colors"
+                            title="다운로드 취소"
+                          >
+                            <XCircle size={11} />
+                            취소
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => handleDownload(m)}
+                            disabled={isStarting}
+                            className="shrink-0 flex items-center gap-1 px-2.5 py-1.5 rounded bg-white/10 hover:bg-accent/20 text-xs transition-colors disabled:opacity-50"
+                          >
+                            <Download size={11} />
+                            {isStarting ? "연결 중…" : "받기"}
+                          </button>
+                        )}
                       </div>
 
                       {prog && (

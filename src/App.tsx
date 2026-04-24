@@ -17,11 +17,10 @@ import { invoke } from "@tauri-apps/api/core";
 import {
   Zap, Cpu, Loader2, TerminalSquare, LayoutList, MousePointer2,
   Package, Database, Plus, X, Columns2, Rows2, SlidersHorizontal, ArrowUpCircle, GitCompareArrows, Palette,
-  GitBranch, Container, Layers, Lock, MessageSquare, BookOpen, Bell, Activity, Brain,
+  GitBranch, Container, Layers, Lock, BookOpen, Bell, Activity, Brain,
 } from "lucide-react";
 import SshConnectModal from "./components/SshConnectModal";
 import AgentPanel from "./components/AgentPanel";
-import AIChatPanel from "./components/AIChatPanel";
 import { useAgentLoop } from "./hooks/useAgentLoop";
 import { useAIChat } from "./hooks/useAIChat";
 import { useEnvAutoDetector } from "./hooks/useEnvAutoDetector";
@@ -51,6 +50,7 @@ import TabContextMenu from "./components/TabContextMenu";
 import ResizeHandles from "./components/ResizeHandles";
 import WindowControls from "./components/WindowControls";
 import LocalAIPanel from "./components/LocalAIPanel";
+import WarpListView from "./components/WarpListView";
 import FileExplorerPanel from "./components/FileExplorerPanel";
 import WelcomeHints from "./components/WelcomeHints";
 import { ErrorBoundary } from "./components/ErrorBoundary";
@@ -129,7 +129,6 @@ const App: React.FC = () => {
   const [showLocalAI, setShowLocalAI] = useState(false);
 
   // AI 채팅 사이드패널
-  const [showChatPanel, setShowChatPanel] = useState(false);
   // 파일 탐색기 사이드바 (기본 열림)
   const [showFileExplorer, setShowFileExplorer] = useState(() => {
     try { return localStorage.getItem("lum.fileExplorer") !== "0"; } catch { return true; }
@@ -275,11 +274,19 @@ const App: React.FC = () => {
     async (task: string) => {
       const currentTab = tabs.find((t) => t.id === activeTabIdRef.current);
       const context = await invoke<string>("get_project_context", {
-        path: currentTab?.cwd ?? "",
+        cwd: currentTab?.cwd ?? "",
       }).catch(() => "");
       agentLoop.startTask(task, context);
     },
     [agentLoop.startTask, tabs, activeTabIdRef],
+  );
+
+  // 자연어 입력 → AI 스트림에 전송 (AIBlockStream이 자동 표시됨)
+  const handleAskAI = useCallback(
+    (question: string) => {
+      aiChat.sendMessage(question);
+    },
+    [aiChat.sendMessage],
   );
 
   const handleHistorySelect = useCallback((command: string) => {
@@ -358,7 +365,6 @@ const App: React.FC = () => {
       if (mod && e.shiftKey && e.key === "g") { e.preventDefault(); setShowCommitPanel(true); }
       if (mod && e.shiftKey && e.key === "h") { e.preventDefault(); setShowSshModal(true); }
       if (mod && e.shiftKey && e.key === "r") { e.preventDefault(); setShowDiffReview(true); }
-      if (mod && e.shiftKey && e.key === "a") { e.preventDefault(); setShowChatPanel(v => !v); }
       if (mod && e.shiftKey && e.key === "l") { e.preventDefault(); setShowScriptPanel(v => { if (!v) scriptLib.loadScripts(); return !v; }); }
       if (mod && e.shiftKey && e.key === "m") { e.preventDefault(); setShowSysmon(v => !v); }
       if (mod && e.key === ",") { e.preventDefault(); setShowThemePanel(true); }
@@ -386,7 +392,7 @@ const App: React.FC = () => {
       window.removeEventListener("keydown", captureHandler, { capture: true });
       window.removeEventListener("keydown", handler);
     };
-  }, [addTabWithReset, closeTabWithReset, toggleSplit, closeOverlays, activeTabIdRef, setShowCommitPanel, setShowHistorySearch, setShowDiffReview, setShowThemePanel, quickActions, ptyWriteRefs, activePaneIdRef, setShowWorkspace, loadWorkspaces, setShowPalette, setShowChatPanel]);
+  }, [addTabWithReset, closeTabWithReset, toggleSplit, closeOverlays, activeTabIdRef, setShowCommitPanel, setShowHistorySearch, setShowDiffReview, setShowThemePanel, quickActions, ptyWriteRefs, activePaneIdRef, setShowWorkspace, loadWorkspaces, setShowPalette]);
 
   const VIEW_BUTTONS: { mode: ViewMode; icon: React.ReactNode; label: string }[] = [
     { mode: "terminal", icon: <TerminalSquare size={14} />, label: "터미널" },
@@ -413,7 +419,7 @@ const App: React.FC = () => {
   }, [restoreTabs]);
 
   return (
-    <div className="app-root bg-terminal-dark text-white min-h-screen flex flex-col">
+    <div className="app-root bg-terminal-dark text-white h-screen overflow-hidden flex flex-col">
       <ResizeHandles />
       {/* ── 헤더 ─────────────────────────────────────────────── */}
       <header
@@ -505,13 +511,6 @@ const App: React.FC = () => {
             className={`p-1.5 rounded transition-colors ${showThemePanel ? "text-accent bg-accent/10" : "text-white/40 hover:text-white hover:bg-white/10"}`}
           >
             <Palette size={13} />
-          </button>
-          <button
-            aria-label="AI Chat (Cmd+Shift+A)"
-            onClick={() => setShowChatPanel(v => !v)}
-            className={`p-1.5 rounded transition-colors ${showChatPanel ? "text-accent bg-accent/10" : "text-white/40 hover:text-white hover:bg-white/10"}`}
-          >
-            <MessageSquare size={13} />
           </button>
           <button
             aria-label="스크립트 라이브러리 (Cmd+Shift+L)"
@@ -790,6 +789,11 @@ const App: React.FC = () => {
                             onCwdChange={cwd => { updateTabCwd(tab.id, cwd, inferTabIcon(cwd)); if (tab.id === activePaneIdRef.current) envDetector.detectEnv(cwd); }}
                             onReady={(write) => { ptyWriteRefs.current.set(tab.id, write); }}
                             onAgentTrigger={handleAgentTrigger}
+                            onAskAI={handleAskAI}
+                            aiMessages={aiChat.messages}
+                            aiStreaming={aiChat.streaming}
+                            aiError={aiChat.error}
+                            onClearAI={aiChat.clear}
                           />
                         </ErrorBoundary>
                       </PaneWrapper>
@@ -816,13 +820,18 @@ const App: React.FC = () => {
                             onCwdChange={cwd => { updateTabCwd(splitId(tab.id), cwd, inferTabIcon(cwd)); if (splitId(tab.id) === activePaneIdRef.current) envDetector.detectEnv(cwd); }}
                             onReady={(write) => { ptyWriteRefs.current.set(splitId(tab.id), write); }}
                             onAgentTrigger={handleAgentTrigger}
+                            onAskAI={handleAskAI}
+                            aiMessages={aiChat.messages}
+                            aiStreaming={aiChat.streaming}
+                            aiError={aiChat.error}
+                            onClearAI={aiChat.clear}
                           />
                         </ErrorBoundary>
                       </PaneWrapper>
                     </Panel>
                   </PanelGroup>
                 ) : (
-                  <div className="flex-1">
+                  <div className="flex-1 min-h-0">
                     <ErrorBoundary label="터미널">
                       <TerminalPane
                         id={tab.id}
@@ -836,6 +845,11 @@ const App: React.FC = () => {
                         onCwdChange={cwd => { updateTabCwd(tab.id, cwd, inferTabIcon(cwd)); if (tab.id === activePaneIdRef.current) envDetector.detectEnv(cwd); }}
                         onReady={(write) => { ptyWriteRefs.current.set(tab.id, write); }}
                         onAgentTrigger={handleAgentTrigger}
+                        onAskAI={handleAskAI}
+                        aiMessages={aiChat.messages}
+                        aiStreaming={aiChat.streaming}
+                        aiError={aiChat.error}
+                        onClearAI={aiChat.clear}
                       />
                     </ErrorBoundary>
                   </div>
@@ -897,43 +911,13 @@ const App: React.FC = () => {
           )}
 
           {viewMode === "list" && (
-            <div className="p-4 space-y-2 overflow-y-auto h-full">
-              {cmdBlocks.length === 0 ? (
-                <p className="text-white/20 text-xs text-center pt-12">
-                  터미널에서 명령어를 실행하면 여기에 히스토리가 쌓입니다.
-                </p>
-              ) : (
-                [...cmdBlocks].reverse().map((b) => {
-                  const success = b.exitCode === 0 || b.exitCode === null;
-                  return (
-                    <div
-                      key={b.id}
-                      className={`rounded-lg border overflow-hidden ${success ? "border-white/5" : "border-red-500/20"}`}
-                    >
-                      <div className={`flex items-center gap-2 px-3 py-1.5 text-[11px] font-mono ${success ? "bg-white/3" : "bg-red-500/5"}`}>
-                        <span className={`shrink-0 tabular-nums ${success ? "text-green-400" : "text-red-400"}`}>
-                          {success ? "✓" : `✗ ${b.exitCode}`}
-                        </span>
-                        <span className="text-white/50 truncate">
-                          <span className="text-white/25">$ </span>
-                          {b.command || "…"}
-                        </span>
-                        {b.endedAt && (
-                          <span className="ml-auto text-white/20 shrink-0 text-[9px]">
-                            {new Date(b.endedAt).toLocaleTimeString()}
-                          </span>
-                        )}
-                      </div>
-                      {b.output.trim() && (
-                        <pre className="px-3 py-2 text-[10px] font-mono text-white/40 whitespace-pre-wrap line-clamp-6 bg-[#0d1117]">
-                          {b.output.trim()}
-                        </pre>
-                      )}
-                    </div>
-                  );
-                })
-              )}
-            </div>
+            <WarpListView
+              blocks={cmdBlocks}
+              onExecute={(cmd) => {
+                const write = ptyWriteRefs.current.get(activePaneIdRef.current);
+                write?.(cmd);
+              }}
+            />
           )}
         </div>
 
@@ -942,22 +926,6 @@ const App: React.FC = () => {
             <ErrorBoundary label="RAG">
               <RagPanel model={selectedModel} onClose={() => setShowRagPanel(false)} />
             </ErrorBoundary>
-          </div>
-        )}
-
-        {showChatPanel && (
-          <div className="w-80 border-l border-white/5 shrink-0 flex flex-col overflow-hidden">
-            <AIChatPanel
-              messages={aiChat.messages}
-              streaming={aiChat.streaming}
-              error={aiChat.error}
-              onSend={aiChat.sendMessage}
-              onClear={aiChat.clear}
-              onClose={() => setShowChatPanel(false)}
-              onExecute={(cmd) => {
-                ptyWriteRefs.current.get(activePaneIdRef.current)?.(cmd + "\n");
-              }}
-            />
           </div>
         )}
 

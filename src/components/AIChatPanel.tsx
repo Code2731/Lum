@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState, useCallback } from "react";
 import ReactMarkdown from "react-markdown";
-import { Bot, User, Trash2, X, Loader2, Send, Play } from "lucide-react";
+import { Bot, User, Trash2, X, Loader2, Send, Play, StopCircle } from "lucide-react";
 import type { ChatMessage } from "../hooks/useAIChat";
 
 interface Props {
@@ -8,12 +8,13 @@ interface Props {
   streaming: boolean;
   error: string | null;
   onSend: (text: string) => void;
+  onCancel: () => void;
   onClear: () => void;
   onClose: () => void;
   onExecute: (cmd: string) => void;
 }
 
-const AIChatPanel: React.FC<Props> = ({ messages, streaming, error, onSend, onClear, onClose, onExecute }) => {
+const AIChatPanel: React.FC<Props> = ({ messages, streaming, error, onSend, onCancel, onClear, onClose, onExecute }) => {
   const [input, setInput] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -112,13 +113,23 @@ const AIChatPanel: React.FC<Props> = ({ messages, streaming, error, onSend, onCl
             className="flex-1 bg-transparent border-none outline-none resize-none text-[11px] text-white/80 placeholder-white/20 leading-relaxed max-h-24 disabled:opacity-40"
             style={{ fieldSizing: "content" } as React.CSSProperties}
           />
-          <button
-            onClick={handleSubmit}
-            disabled={!input.trim() || streaming}
-            className="shrink-0 p-1 rounded text-accent hover:text-accent/80 disabled:opacity-30 transition-colors"
-          >
-            {streaming ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}
-          </button>
+          {streaming ? (
+            <button
+              onClick={onCancel}
+              className="shrink-0 p-1 rounded text-red-400 hover:text-red-300 transition-colors"
+              title="응답 중단"
+            >
+              <StopCircle size={13} />
+            </button>
+          ) : (
+            <button
+              onClick={handleSubmit}
+              disabled={!input.trim()}
+              className="shrink-0 p-1 rounded text-accent hover:text-accent/80 disabled:opacity-30 transition-colors"
+            >
+              <Send size={13} />
+            </button>
+          )}
         </div>
         <p className="text-[9px] text-white/15 text-center mt-1">Cmd+Shift+A 로 닫기</p>
       </div>
@@ -128,9 +139,9 @@ const AIChatPanel: React.FC<Props> = ({ messages, streaming, error, onSend, onCl
 
 // ─── 실행 버튼이 붙은 코드블록 ──────────────────────────────────
 
-const SHELL_LANGS = new Set(["bash", "sh", "shell", "zsh", "fish", "powershell", "ps1", ""]);
+export const SHELL_LANGS = new Set(["bash", "sh", "shell", "zsh", "fish", "powershell", "ps1", ""]);
 
-const ExecCodeBlock: React.FC<{ code: string; lang: string; onExecute: (cmd: string) => void }> = ({
+export const ExecCodeBlock: React.FC<{ code: string; lang: string; onExecute: (cmd: string) => void }> = ({
   code, lang, onExecute,
 }) => {
   const [ran, setRan] = useState(false);
@@ -165,17 +176,28 @@ const ExecCodeBlock: React.FC<{ code: string; lang: string; onExecute: (cmd: str
 
 // ─── 메시지 버블 ────────────────────────────────────────────────
 
-const MessageBubble: React.FC<{ msg: ChatMessage; onExecute?: (cmd: string) => void }> = ({ msg, onExecute }) => {
+export const MessageBubble: React.FC<{
+  msg: ChatMessage;
+  onExecute?: (cmd: string) => void;
+  compact?: boolean;
+}> = ({ msg, onExecute, compact = true }) => {
   const isUser = msg.role === "user";
+
+  // compact: sidebar용 11px, non-compact: 스트림용 14px
+  const bodyText = compact ? "text-[11px]" : "text-[14px]";
+  const codeText = compact ? "text-[10px]" : "text-[13px]";
+  const inlineCodeText = compact ? "text-[10px]" : "text-[12.5px]";
+  const iconSize = compact ? 11 : 14;
+  const userPad = compact ? "px-2.5 py-1.5 text-[11px]" : "px-3 py-2 text-[14px]";
 
   if (isUser) {
     return (
       <div className="flex items-start gap-1.5 justify-end">
-        <div className="max-w-[85%] px-2.5 py-1.5 rounded-xl rounded-tr-sm bg-accent/15 border border-accent/20 text-[11px] text-white/80 leading-relaxed whitespace-pre-wrap break-words">
+        <div className={`max-w-[85%] rounded-xl rounded-tr-sm bg-accent/15 border border-accent/20 text-white/85 leading-relaxed whitespace-pre-wrap break-words ${userPad}`}>
           {msg.content}
         </div>
         <div className="shrink-0 mt-0.5 text-accent/60">
-          <User size={11} />
+          <User size={iconSize} />
         </div>
       </div>
     );
@@ -184,9 +206,9 @@ const MessageBubble: React.FC<{ msg: ChatMessage; onExecute?: (cmd: string) => v
   return (
     <div className="flex items-start gap-1.5">
       <div className="shrink-0 mt-0.5 text-accent/60">
-        <Bot size={11} />
+        <Bot size={iconSize} />
       </div>
-      <div className="max-w-[90%] text-[11px] text-white/70 leading-relaxed min-w-0">
+      <div className={`max-w-[90%] ${bodyText} text-white/80 leading-relaxed min-w-0`}>
         {msg.content ? (
           <ReactMarkdown
             components={{
@@ -195,30 +217,31 @@ const MessageBubble: React.FC<{ msg: ChatMessage; onExecute?: (cmd: string) => v
                 const isBlock = !!className?.startsWith("language-") || false;
                 const codeStr = String(children).replace(/\n$/, "");
 
-                // 블록 코드이고 실행 가능한 언어면 실행 버튼 포함
                 if (isBlock && onExecute && SHELL_LANGS.has(lang)) {
                   return <ExecCodeBlock code={codeStr} lang={lang} onExecute={onExecute} />;
                 }
 
-                // 일반 블록 코드 (언어 명시됐지만 셸 아님)
                 if (isBlock) {
                   return (
-                    <pre className="mt-1.5 mb-1.5 p-2 rounded-md bg-white/5 border border-white/8 overflow-x-auto text-[10px] font-mono text-white/60">
+                    <pre className={`mt-1.5 mb-1.5 p-2 rounded-md bg-white/5 border border-white/8 overflow-x-auto font-mono text-white/70 ${codeText}`}>
                       <code>{codeStr}</code>
                     </pre>
                   );
                 }
 
                 return (
-                  <code className="px-1 py-0.5 rounded bg-white/8 font-mono text-[10px] text-accent/80">
+                  <code className={`px-1 py-0.5 rounded bg-white/8 font-mono text-accent/80 ${inlineCodeText}`}>
                     {children}
                   </code>
                 );
               },
-              p: ({ children }) => <p className="mb-1 last:mb-0">{children}</p>,
-              ul: ({ children }) => <ul className="pl-3 space-y-0.5 list-disc marker:text-white/30">{children}</ul>,
-              ol: ({ children }) => <ol className="pl-3 space-y-0.5 list-decimal marker:text-white/30">{children}</ol>,
+              p: ({ children }) => <p className="mb-1.5 last:mb-0">{children}</p>,
+              ul: ({ children }) => <ul className="pl-4 space-y-0.5 list-disc marker:text-white/30">{children}</ul>,
+              ol: ({ children }) => <ol className="pl-4 space-y-0.5 list-decimal marker:text-white/30">{children}</ol>,
               li: ({ children }) => <li className="leading-relaxed">{children}</li>,
+              h1: ({ children }) => <h1 className={`font-semibold mt-2 mb-1 ${compact ? "text-[12px]" : "text-[16px]"}`}>{children}</h1>,
+              h2: ({ children }) => <h2 className={`font-semibold mt-2 mb-1 ${compact ? "text-[11.5px]" : "text-[15px]"}`}>{children}</h2>,
+              h3: ({ children }) => <h3 className={`font-semibold mt-1.5 mb-0.5 ${compact ? "text-[11px]" : "text-[14.5px]"}`}>{children}</h3>,
             }}
           >
             {msg.content}
