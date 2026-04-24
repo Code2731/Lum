@@ -55,7 +55,9 @@ pub async fn add_history_entry(
     let base_url = load_config()
         .map(|c| c.xllm_url())
         .unwrap_or_else(|_| "http://127.0.0.1:5000".to_string());
-    let embedding = embed(&client, &base_url, &model, &command).await.unwrap_or_default();
+    let embedding = embed(&client, &base_url, &model, &command)
+        .await
+        .unwrap_or_default();
 
     let ts = SystemTime::now()
         .duration_since(UNIX_EPOCH)

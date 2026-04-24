@@ -172,7 +172,12 @@ fn search_local_index(embedding: &[f32], limit: usize) -> Vec<String> {
     let mut scored: Vec<(f32, String)> = memory
         .entries
         .iter()
-        .map(|e| (cosine_similarity(embedding, &e.embedding), e.content.clone()))
+        .map(|e| {
+            (
+                cosine_similarity(embedding, &e.embedding),
+                e.content.clone(),
+            )
+        })
         .filter(|(s, _)| *s > 0.5)
         .collect();
     scored.sort_by(|a, b| b.0.total_cmp(&a.0));

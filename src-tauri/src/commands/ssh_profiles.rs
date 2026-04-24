@@ -28,8 +28,7 @@ fn load_profiles() -> Vec<SshProfileEntry> {
 }
 
 fn write_profiles(profiles: &[SshProfileEntry]) -> Result<()> {
-    let json = serde_json::to_string_pretty(profiles)
-        .map_err(|e| LumError::Io(e.to_string()))?;
+    let json = serde_json::to_string_pretty(profiles).map_err(|e| LumError::Io(e.to_string()))?;
     std::fs::write(profiles_path(), json).map_err(|e| LumError::Io(e.to_string()))
 }
 

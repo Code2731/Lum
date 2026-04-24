@@ -119,11 +119,12 @@ pub async fn download_model(
 ) -> Result<()> {
     let rev = revision.unwrap_or_else(|| "main".to_string());
 
-    let token: Option<String> = hf_token
-        .filter(|t| !t.is_empty())
-        .or_else(|| {
-            load_config().ok().and_then(|c| c.hf_token).filter(|t| !t.is_empty())
-        });
+    let token: Option<String> = hf_token.filter(|t| !t.is_empty()).or_else(|| {
+        load_config()
+            .ok()
+            .and_then(|c| c.hf_token)
+            .filter(|t| !t.is_empty())
+    });
 
     // 취소 플래그 등록
     let cancel_flag = Arc::new(AtomicBool::new(false));
@@ -188,7 +189,10 @@ pub async fn download_model(
             _ => "",
         };
         cleanup(&cancel_map);
-        return Err(LumError::Network(format!("HuggingFace API {} 오류{}", status, hint)));
+        return Err(LumError::Network(format!(
+            "HuggingFace API {} 오류{}",
+            status, hint
+        )));
     }
 
     let files: Vec<HfFileEntry> = resp

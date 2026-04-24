@@ -111,8 +111,7 @@ pub fn load_config() -> Result<AppConfig> {
 }
 
 pub fn save_config(config: &AppConfig) -> Result<()> {
-    let json = serde_json::to_string_pretty(config)
-        .map_err(|e| LumError::Config(e.to_string()))?;
+    let json = serde_json::to_string_pretty(config).map_err(|e| LumError::Config(e.to_string()))?;
     std::fs::write(config_path(), json).map_err(|e| LumError::Io(e.to_string()))
 }
 
@@ -159,7 +158,10 @@ pub fn save_vram_cap_override(cap: Option<f32>) -> Result<()> {
 
 /// Phase 72: 모델 capability 토글 저장 (vision / reasoning)
 #[tauri::command]
-pub fn save_capability_toggles(vision_enabled: Option<bool>, show_reasoning: Option<bool>) -> Result<()> {
+pub fn save_capability_toggles(
+    vision_enabled: Option<bool>,
+    show_reasoning: Option<bool>,
+) -> Result<()> {
     let mut config = load_config()?;
     config.vision_enabled = vision_enabled;
     config.show_reasoning = show_reasoning;

@@ -64,7 +64,12 @@ impl<B: Backend> RmsNorm<B> {
         let var = (x.clone() * x.clone()).mean_dim(2); // [B, S, 1]
         let rms = (var + self.eps).sqrt();
         let x_norm = x / rms;
-        x_norm * self.scale.clone().reshape([1, 1, hidden]).expand([batch, seq, hidden])
+        x_norm
+            * self
+                .scale
+                .clone()
+                .reshape([1, 1, hidden])
+                .expand([batch, seq, hidden])
     }
 }
 
@@ -97,15 +102,17 @@ fn build_rope_cache<B: Backend>(
 }
 
 fn apply_rope<B: Backend>(
-    x: Tensor<B, 4>,    // [B, S, H, D]
-    cos: Tensor<B, 3>,  // [1, S, D/2]
-    sin: Tensor<B, 3>,  // [1, S, D/2]
+    x: Tensor<B, 4>,   // [B, S, H, D]
+    cos: Tensor<B, 3>, // [1, S, D/2]
+    sin: Tensor<B, 3>, // [1, S, D/2]
 ) -> Tensor<B, 4> {
     let [batch, seq, heads, head_dim] = x.dims();
     let half = head_dim / 2;
 
     let x1 = x.clone().slice([0..batch, 0..seq, 0..heads, 0..half]);
-    let x2 = x.clone().slice([0..batch, 0..seq, 0..heads, half..head_dim]);
+    let x2 = x
+        .clone()
+        .slice([0..batch, 0..seq, 0..heads, half..head_dim]);
 
     let c = cos.unsqueeze_dim::<4>(2).expand([batch, seq, heads, half]);
     let s = sin.unsqueeze_dim::<4>(2).expand([batch, seq, heads, half]);
@@ -134,10 +141,18 @@ impl<B: Backend> Attention<B> {
         let head_dim = cfg.hidden_size / cfg.num_attention_heads;
         let kv_dim = head_dim * cfg.num_key_value_heads;
         Self {
-            q: LinearConfig::new(cfg.hidden_size, cfg.hidden_size).with_bias(true).init(device),
-            k: LinearConfig::new(cfg.hidden_size, kv_dim).with_bias(true).init(device),
-            v: LinearConfig::new(cfg.hidden_size, kv_dim).with_bias(true).init(device),
-            o: LinearConfig::new(cfg.hidden_size, cfg.hidden_size).with_bias(false).init(device),
+            q: LinearConfig::new(cfg.hidden_size, cfg.hidden_size)
+                .with_bias(true)
+                .init(device),
+            k: LinearConfig::new(cfg.hidden_size, kv_dim)
+                .with_bias(true)
+                .init(device),
+            v: LinearConfig::new(cfg.hidden_size, kv_dim)
+                .with_bias(true)
+                .init(device),
+            o: LinearConfig::new(cfg.hidden_size, cfg.hidden_size)
+                .with_bias(false)
+                .init(device),
             num_heads: cfg.num_attention_heads,
             num_kv_heads: cfg.num_key_value_heads,
             head_dim,
@@ -145,19 +160,20 @@ impl<B: Backend> Attention<B> {
         }
     }
 
-    fn forward(
-        &self,
-        x: Tensor<B, 3>,
-        cos: Tensor<B, 3>,
-        sin: Tensor<B, 3>,
-    ) -> Tensor<B, 3> {
+    fn forward(&self, x: Tensor<B, 3>, cos: Tensor<B, 3>, sin: Tensor<B, 3>) -> Tensor<B, 3> {
         let [batch, seq, _] = x.dims();
 
-        let q = self.q.forward(x.clone())
+        let q = self
+            .q
+            .forward(x.clone())
             .reshape([batch, seq, self.num_heads, self.head_dim]);
-        let k = self.k.forward(x.clone())
+        let k = self
+            .k
+            .forward(x.clone())
             .reshape([batch, seq, self.num_kv_heads, self.head_dim]);
-        let v = self.v.forward(x)
+        let v = self
+            .v
+            .forward(x)
             .reshape([batch, seq, self.num_kv_heads, self.head_dim]);
 
         let q = apply_rope(q, cos.clone(), sin.clone());
@@ -165,8 +181,16 @@ impl<B: Backend> Attention<B> {
 
         // GQA: KV 헤드를 Q 헤드 수에 맞게 반복
         let groups = self.num_heads / self.num_kv_heads;
-        let k = if groups > 1 { k.repeat(&[1, 1, groups, 1]) } else { k };
-        let v = if groups > 1 { v.repeat(&[1, 1, groups, 1]) } else { v };
+        let k = if groups > 1 {
+            k.repeat(&[1, 1, groups, 1])
+        } else {
+            k
+        };
+        let v = if groups > 1 {
+            v.repeat(&[1, 1, groups, 1])
+        } else {
+            v
+        };
 
         // [B, S, H, D] → [B, H, S, D]
         let q = q.swap_dims(1, 2);
@@ -183,14 +207,18 @@ impl<B: Backend> Attention<B> {
         let weights = activation::softmax(scores, 3);
         let out = weights.matmul(v); // [B, H, S, D]
 
-        let out = out.swap_dims(1, 2)
+        let out = out
+            .swap_dims(1, 2)
             .reshape([batch, seq, self.num_heads * self.head_dim]);
 
         self.o.forward(out)
     }
 
     fn causal_mask<BB: Backend>(
-        batch: usize, heads: usize, seq: usize, device: &BB::Device,
+        batch: usize,
+        heads: usize,
+        seq: usize,
+        device: &BB::Device,
     ) -> Tensor<BB, 4> {
         let neg_inf = f32::NEG_INFINITY;
         let mut data = vec![0.0f32; seq * seq];
@@ -216,9 +244,15 @@ struct Mlp<B: Backend> {
 impl<B: Backend> Mlp<B> {
     fn new(device: &B::Device, cfg: &Qwen2Config) -> Self {
         Self {
-            gate: LinearConfig::new(cfg.hidden_size, cfg.intermediate_size).with_bias(false).init(device),
-            up: LinearConfig::new(cfg.hidden_size, cfg.intermediate_size).with_bias(false).init(device),
-            down: LinearConfig::new(cfg.intermediate_size, cfg.hidden_size).with_bias(false).init(device),
+            gate: LinearConfig::new(cfg.hidden_size, cfg.intermediate_size)
+                .with_bias(false)
+                .init(device),
+            up: LinearConfig::new(cfg.hidden_size, cfg.intermediate_size)
+                .with_bias(false)
+                .init(device),
+            down: LinearConfig::new(cfg.intermediate_size, cfg.hidden_size)
+                .with_bias(false)
+                .init(device),
         }
     }
 
@@ -270,7 +304,10 @@ impl Qwen2Model {
         let device = WgpuDevice::default();
         let head_dim = cfg.hidden_size / cfg.num_attention_heads;
         let (cos, sin) = build_rope_cache::<Wgpu>(
-            head_dim, cfg.max_position_embeddings, cfg.rope_theta, &device,
+            head_dim,
+            cfg.max_position_embeddings,
+            cfg.rope_theta,
+            &device,
         );
 
         let layers = (0..cfg.num_hidden_layers)
@@ -281,7 +318,9 @@ impl Qwen2Model {
             embed: EmbeddingConfig::new(cfg.vocab_size, cfg.hidden_size).init(&device),
             layers,
             norm: RmsNorm::new(cfg.hidden_size, cfg.rms_norm_eps, &device),
-            lm_head: LinearConfig::new(cfg.hidden_size, cfg.vocab_size).with_bias(false).init(&device),
+            lm_head: LinearConfig::new(cfg.hidden_size, cfg.vocab_size)
+                .with_bias(false)
+                .init(&device),
             cos,
             sin,
             device,
@@ -292,8 +331,14 @@ impl Qwen2Model {
         let [_, seq] = ids.dims();
         let mut x = self.embed.forward(ids);
 
-        let cos = self.cos.clone().slice([0..1, 0..seq, 0..self.cos.dims()[2]]);
-        let sin = self.sin.clone().slice([0..1, 0..seq, 0..self.sin.dims()[2]]);
+        let cos = self
+            .cos
+            .clone()
+            .slice([0..1, 0..seq, 0..self.cos.dims()[2]]);
+        let sin = self
+            .sin
+            .clone()
+            .slice([0..1, 0..seq, 0..self.sin.dims()[2]]);
 
         for layer in &self.layers {
             x = layer.forward(x, cos.clone(), sin.clone());
@@ -342,8 +387,7 @@ pub fn load_f32_from_safetensors(
     key: &str,
 ) -> std::result::Result<(Vec<f32>, Vec<usize>), String> {
     let data = fs::read(path).map_err(|e| e.to_string())?;
-    let tensors = safetensors::SafeTensors::deserialize(&data)
-        .map_err(|e| e.to_string())?;
+    let tensors = safetensors::SafeTensors::deserialize(&data).map_err(|e| e.to_string())?;
 
     let view = tensors
         .tensor(key)
@@ -403,10 +447,11 @@ pub fn init_local_model(model_dir: String, state: State<LocalAIState>) -> Result
             tokenizer_path.display()
         )));
     }
-    let tokenizer = Tokenizer::from_file(&tokenizer_path)
-        .map_err(|e| LumError::AiEngine(e.to_string()))?;
+    let tokenizer =
+        Tokenizer::from_file(&tokenizer_path).map_err(|e| LumError::AiEngine(e.to_string()))?;
 
-    let cfg: Qwen2Config = dir.join("config.json")
+    let cfg: Qwen2Config = dir
+        .join("config.json")
         .exists()
         .then(|| fs::read_to_string(dir.join("config.json")).ok())
         .flatten()
@@ -442,16 +487,17 @@ pub fn generate_with_local_model(
     let tokenizer = tok_guard.as_ref().ok_or_else(|| {
         LumError::AiEngine("모델 미초기화 — init_local_model을 먼저 호출하세요.".into())
     })?;
-    let model = model_guard.as_ref().ok_or_else(|| {
-        LumError::AiEngine("모델 미초기화.".into())
-    })?;
+    let model = model_guard
+        .as_ref()
+        .ok_or_else(|| LumError::AiEngine("모델 미초기화.".into()))?;
 
     let encoding = tokenizer
         .encode(prompt.as_str(), false)
         .map_err(|e| LumError::AiEngine(e.to_string()))?;
 
     let input_ids: Vec<u32> = encoding.get_ids().to_vec();
-    let eos_id = tokenizer.token_to_id("<|im_end|>")
+    let eos_id = tokenizer
+        .token_to_id("<|im_end|>")
         .or_else(|| tokenizer.token_to_id("<|endoftext|>"))
         .unwrap_or(151645);
 
@@ -470,8 +516,7 @@ pub fn get_local_model_status(state: State<LocalAIState>) -> String {
         match guard.as_ref() {
             Some(c) => format!(
                 "로드됨 — Qwen2.5 ({}층, hidden={}, {}Q/{}KV heads)",
-                c.num_hidden_layers, c.hidden_size,
-                c.num_attention_heads, c.num_key_value_heads
+                c.num_hidden_layers, c.hidden_size, c.num_attention_heads, c.num_key_value_heads
             ),
             None => "로드됨".into(),
         }

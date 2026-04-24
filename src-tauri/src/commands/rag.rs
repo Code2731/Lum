@@ -37,7 +37,12 @@ pub struct SearchResult {
     pub score: f32,
 }
 
-pub async fn embed(client: &reqwest::Client, base_url: &str, model: &str, text: &str) -> Option<Vec<f32>> {
+pub async fn embed(
+    client: &reqwest::Client,
+    base_url: &str,
+    model: &str,
+    text: &str,
+) -> Option<Vec<f32>> {
     let res = client
         .post(format!("{base_url}/v1/embeddings"))
         .timeout(Duration::from_secs(30))
@@ -98,8 +103,21 @@ pub async fn index_project(root_path: String, model: String) -> Result<IndexResu
         let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("");
         if !matches!(
             ext,
-            "rs" | "ts" | "tsx" | "js" | "jsx" | "py" | "go" | "md" | "toml" | "json" | "yaml"
-                | "yml" | "txt" | "sh" | "css" | "html"
+            "rs" | "ts"
+                | "tsx"
+                | "js"
+                | "jsx"
+                | "py"
+                | "go"
+                | "md"
+                | "toml"
+                | "json"
+                | "yaml"
+                | "yml"
+                | "txt"
+                | "sh"
+                | "css"
+                | "html"
         ) {
             continue;
         }

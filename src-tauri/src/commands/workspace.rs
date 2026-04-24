@@ -52,7 +52,11 @@ fn unix_now() -> u64 {
 }
 
 #[tauri::command]
-pub fn save_workspace(name: String, tabs: Vec<WorkspaceTab>, active_tab_id: String) -> Result<Workspace, String> {
+pub fn save_workspace(
+    name: String,
+    tabs: Vec<WorkspaceTab>,
+    active_tab_id: String,
+) -> Result<Workspace, String> {
     let now = unix_now();
     let mut store = load_store();
     let ws = Workspace {

@@ -13,7 +13,9 @@ pub struct SysmonState {
 
 impl SysmonState {
     pub fn new() -> Self {
-        Self { sys: Mutex::new(System::new_all()) }
+        Self {
+            sys: Mutex::new(System::new_all()),
+        }
     }
 }
 
@@ -73,11 +75,19 @@ pub fn get_system_stats(state: State<SysmonState>) -> Result<SystemStats> {
 
     // 한 번 수집된 Vec을 clone해서 각각 정렬 (이중 수집 제거)
     let mut top_cpu = procs.clone();
-    top_cpu.sort_by(|a, b| b.cpu_percent.partial_cmp(&a.cpu_percent).unwrap_or(std::cmp::Ordering::Equal));
+    top_cpu.sort_by(|a, b| {
+        b.cpu_percent
+            .partial_cmp(&a.cpu_percent)
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
     top_cpu.truncate(6);
 
     let mut top_mem = procs;
-    top_mem.sort_by(|a, b| b.memory_mb.partial_cmp(&a.memory_mb).unwrap_or(std::cmp::Ordering::Equal));
+    top_mem.sort_by(|a, b| {
+        b.memory_mb
+            .partial_cmp(&a.memory_mb)
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
     top_mem.truncate(6);
 
     Ok(SystemStats {

@@ -99,7 +99,9 @@ pub async fn get_xllm_model_info() -> Result<XllmModelInfo> {
     Ok(XllmModelInfo {
         id: res["id"].as_str().unwrap_or("unknown").to_string(),
         max_seq_len: res["parameters"]["max_seq_len"].as_u64().map(|v| v as u32),
-        cache_mode: res["parameters"]["cache_mode"].as_str().map(|s| s.to_string()),
+        cache_mode: res["parameters"]["cache_mode"]
+            .as_str()
+            .map(|s| s.to_string()),
         rope_scale: res["parameters"]["rope_scale"].as_f64().map(|v| v as f32),
     })
 }
@@ -131,9 +133,7 @@ pub async fn switch_xllm_model(
     body["cache_mode"] = serde_json::Value::String(cm.to_string());
 
     // 최대 시퀀스 길이 — Q4 캐시면 더 긴 컨텍스트 허용
-    let msl = max_seq_len
-        .or(config.max_seq_len)
-        .unwrap_or(8192);
+    let msl = max_seq_len.or(config.max_seq_len).unwrap_or(8192);
     body["max_seq_len"] = serde_json::Value::Number(msl.into());
 
     let mut req = client.post(&url).json(&body);

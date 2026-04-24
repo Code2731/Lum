@@ -60,7 +60,7 @@ pub async fn generate_commit_message(repo_path: String, model: String) -> Result
 #[derive(Serialize, Clone)]
 pub struct FileDiffReview {
     pub path: String,
-    pub risk: String,   // "safe" | "caution" | "risk"
+    pub risk: String, // "safe" | "caution" | "risk"
     pub summary: String,
 }
 
@@ -78,7 +78,9 @@ pub async fn analyze_diff(
     };
 
     let mut diff_args = vec!["diff"];
-    if staged { diff_args.push("--cached"); }
+    if staged {
+        diff_args.push("--cached");
+    }
 
     let diff_out = Command::new("git")
         .args(&diff_args)
@@ -95,7 +97,9 @@ pub async fn analyze_diff(
     let stat_out = Command::new("git")
         .args({
             let mut a = vec!["diff", "--name-only"];
-            if staged { a.push("--cached"); }
+            if staged {
+                a.push("--cached");
+            }
             a
         })
         .current_dir(&dir)
@@ -148,9 +152,13 @@ risk 기준:\n\
 
 fn parse_review_line(line: &str) -> Option<FileDiffReview> {
     let line = line.trim();
-    if !line.starts_with("RISK:") { return None; }
+    if !line.starts_with("RISK:") {
+        return None;
+    }
     let parts: Vec<&str> = line.splitn(3, '|').collect();
-    if parts.len() < 3 { return None; }
+    if parts.len() < 3 {
+        return None;
+    }
     let risk = parts[0].trim_start_matches("RISK:").trim().to_lowercase();
     let risk = match risk.as_str() {
         "safe" | "caution" | "risk" => risk,
@@ -158,8 +166,14 @@ fn parse_review_line(line: &str) -> Option<FileDiffReview> {
     };
     let path = parts[1].trim_start_matches("PATH:").trim().to_string();
     let summary = parts[2].trim_start_matches("NOTE:").trim().to_string();
-    if path.is_empty() { return None; }
-    Some(FileDiffReview { path, risk, summary })
+    if path.is_empty() {
+        return None;
+    }
+    Some(FileDiffReview {
+        path,
+        risk,
+        summary,
+    })
 }
 
 /// diff를 파일 단위로 분할해 파일별 예산 내에서 균등 truncate.
@@ -182,7 +196,10 @@ fn smart_truncate_diff(diff: &str, max_chars: usize) -> String {
         search = abs + 1;
     }
     sections.push(&diff[prev..]);
-    let sections: Vec<&str> = sections.into_iter().filter(|s| !s.trim().is_empty()).collect();
+    let sections: Vec<&str> = sections
+        .into_iter()
+        .filter(|s| !s.trim().is_empty())
+        .collect();
 
     if sections.len() <= 1 {
         return format!(

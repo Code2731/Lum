@@ -120,10 +120,7 @@ pub async fn agent_plan(task: String, context: String, model: String) -> Result<
     // JSON 배열 추출 후 파싱
     let json_str = extract_json_array(&raw);
     let steps: Vec<AgentStep> = serde_json::from_str(&json_str).map_err(|e| {
-        LumError::AiEngine(format!(
-            "agent_plan 응답 파싱 실패: {}. 원본: {}",
-            e, raw
-        ))
+        LumError::AiEngine(format!("agent_plan 응답 파싱 실패: {}. 원본: {}", e, raw))
     })?;
 
     Ok(steps)

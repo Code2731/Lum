@@ -15,7 +15,10 @@ fn setup_zsh_zdotdir() -> Option<String> {
     if real_zshenv.exists() {
         let _ = std::fs::write(
             zdotdir.join(".zshenv"),
-            format!("[[ -f \"{p}\" ]] && source \"{p}\"\n", p = real_zshenv.display()),
+            format!(
+                "[[ -f \"{p}\" ]] && source \"{p}\"\n",
+                p = real_zshenv.display()
+            ),
         );
     }
 
@@ -24,7 +27,10 @@ fn setup_zsh_zdotdir() -> Option<String> {
     if real_zprofile.exists() {
         let _ = std::fs::write(
             zdotdir.join(".zprofile"),
-            format!("[[ -f \"{p}\" ]] && source \"{p}\"\n", p = real_zprofile.display()),
+            format!(
+                "[[ -f \"{p}\" ]] && source \"{p}\"\n",
+                p = real_zprofile.display()
+            ),
         );
     }
 
@@ -111,8 +117,14 @@ pub async fn spawn_pty(
 ) -> Result<()> {
     // TOCTOU 방지: ptys 맵과 spawning 셋을 동시에 확인 — 락 사이 경쟁 없음
     {
-        let ptys = state.ptys.lock().map_err(|_| LumError::Io("lock 오류".into()))?;
-        let mut spawning = state.spawning.lock().map_err(|_| LumError::Io("lock 오류".into()))?;
+        let ptys = state
+            .ptys
+            .lock()
+            .map_err(|_| LumError::Io("lock 오류".into()))?;
+        let mut spawning = state
+            .spawning
+            .lock()
+            .map_err(|_| LumError::Io("lock 오류".into()))?;
         if ptys.contains_key(&id) || spawning.contains(&id) {
             return Ok(());
         }
@@ -251,9 +263,21 @@ pub async fn spawn_pty(
 
     // ── 채널 핸들 저장 + spawning 제거 (원자적) ──────────────────
     {
-        let mut ptys = state.ptys.lock().map_err(|_| LumError::Io("lock 오류".into()))?;
-        let mut spawning = state.spawning.lock().map_err(|_| LumError::Io("lock 오류".into()))?;
-        ptys.insert(id.clone(), PtyHandle { write_tx, resize_tx });
+        let mut ptys = state
+            .ptys
+            .lock()
+            .map_err(|_| LumError::Io("lock 오류".into()))?;
+        let mut spawning = state
+            .spawning
+            .lock()
+            .map_err(|_| LumError::Io("lock 오류".into()))?;
+        ptys.insert(
+            id.clone(),
+            PtyHandle {
+                write_tx,
+                resize_tx,
+            },
+        );
         spawning.remove(&id);
     }
 
@@ -318,7 +342,10 @@ pub async fn spawn_ssh_pty(
     rows: u16,
 ) -> Result<()> {
     {
-        let ptys = state.ptys.lock().map_err(|_| LumError::Io("lock 오류".into()))?;
+        let ptys = state
+            .ptys
+            .lock()
+            .map_err(|_| LumError::Io("lock 오류".into()))?;
         if ptys.contains_key(&id) {
             return Ok(());
         }
@@ -326,7 +353,12 @@ pub async fn spawn_ssh_pty(
 
     let pty_system = native_pty_system();
     let pair = pty_system
-        .openpty(PtySize { rows, cols, pixel_width: 0, pixel_height: 0 })
+        .openpty(PtySize {
+            rows,
+            cols,
+            pixel_width: 0,
+            pixel_height: 0,
+        })
         .map_err(|e| LumError::Io(format!("PTY 생성 실패: {}", e)))?;
 
     let mut cmd = CommandBuilder::new("ssh");
@@ -338,8 +370,10 @@ pub async fn spawn_ssh_pty(
         cmd.arg(key);
     }
     // 연결 타임아웃 10초
-    cmd.arg("-o"); cmd.arg("ConnectTimeout=10");
-    cmd.arg("-o"); cmd.arg("ServerAliveInterval=30");
+    cmd.arg("-o");
+    cmd.arg("ConnectTimeout=10");
+    cmd.arg("-o");
+    cmd.arg("ServerAliveInterval=30");
 
     #[cfg(not(windows))]
     {
@@ -347,13 +381,18 @@ pub async fn spawn_ssh_pty(
         cmd.env("COLORTERM", "truecolor");
     }
 
-    let _child = pair.slave
+    let _child = pair
+        .slave
         .spawn_command(cmd)
         .map_err(|e| LumError::Io(format!("SSH 실행 실패: {}", e)))?;
 
-    let mut writer = pair.master.take_writer()
+    let mut writer = pair
+        .master
+        .take_writer()
         .map_err(|e| LumError::Io(e.to_string()))?;
-    let mut reader = pair.master.try_clone_reader()
+    let mut reader = pair
+        .master
+        .try_clone_reader()
         .map_err(|e| LumError::Io(e.to_string()))?;
 
     let (write_tx, write_rx) = std::sync::mpsc::sync_channel::<Vec<u8>>(64);
@@ -361,14 +400,21 @@ pub async fn spawn_ssh_pty(
 
     std::thread::spawn(move || {
         for data in write_rx {
-            if writer.write_all(&data).is_err() { break; }
+            if writer.write_all(&data).is_err() {
+                break;
+            }
         }
     });
 
     let master = pair.master;
     std::thread::spawn(move || {
         for (r, c) in resize_rx {
-            let _ = master.resize(PtySize { rows: r, cols: c, pixel_width: 0, pixel_height: 0 });
+            let _ = master.resize(PtySize {
+                rows: r,
+                cols: c,
+                pixel_width: 0,
+                pixel_height: 0,
+            });
         }
     });
 
@@ -381,15 +427,30 @@ pub async fn spawn_ssh_pty(
                 Ok(0) | Err(_) => break,
                 Ok(n) => {
                     let data = String::from_utf8_lossy(&buf[..n]).to_string();
-                    let _ = app_r.emit("pty_data", PtyData { id: id_r.clone(), data });
+                    let _ = app_r.emit(
+                        "pty_data",
+                        PtyData {
+                            id: id_r.clone(),
+                            data,
+                        },
+                    );
                 }
             }
         }
         let _ = app_r.emit("pty_exit", id_r);
     });
 
-    let mut ptys = state.ptys.lock().map_err(|_| LumError::Io("lock 오류".into()))?;
-    ptys.insert(id, PtyHandle { write_tx, resize_tx });
+    let mut ptys = state
+        .ptys
+        .lock()
+        .map_err(|_| LumError::Io("lock 오류".into()))?;
+    ptys.insert(
+        id,
+        PtyHandle {
+            write_tx,
+            resize_tx,
+        },
+    );
     Ok(())
 }
 

@@ -3,22 +3,66 @@ use std::path::{Path, PathBuf};
 const MAX_CTX_CHARS: usize = 40_000;
 const FILE_CHUNK: usize = 8_000;
 const SKIP_DIRS: &[&str] = &[
-    "node_modules", ".git", "target", ".next", "dist", "build",
-    "__pycache__", ".venv", "vendor", ".cache", "coverage",
+    "node_modules",
+    ".git",
+    "target",
+    ".next",
+    "dist",
+    "build",
+    "__pycache__",
+    ".venv",
+    "vendor",
+    ".cache",
+    "coverage",
 ];
 const TEXT_EXTS: &[&str] = &[
-    "rs", "ts", "tsx", "js", "jsx", "mjs", "py", "go", "toml",
-    "json", "md", "txt", "yaml", "yml", "sh", "css", "scss",
-    "html", "sql", "c", "cpp", "h", "java", "rb", "swift", "kt",
-    "env", "gitignore", "dockerfile",
+    "rs",
+    "ts",
+    "tsx",
+    "js",
+    "jsx",
+    "mjs",
+    "py",
+    "go",
+    "toml",
+    "json",
+    "md",
+    "txt",
+    "yaml",
+    "yml",
+    "sh",
+    "css",
+    "scss",
+    "html",
+    "sql",
+    "c",
+    "cpp",
+    "h",
+    "java",
+    "rb",
+    "swift",
+    "kt",
+    "env",
+    "gitignore",
+    "dockerfile",
 ];
 
 /// 파일 하나를 buf에 추가
 fn append_file(path: &Path, buf: &mut String, total: &mut usize) {
-    if *total >= MAX_CTX_CHARS { return; }
-    let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("").to_lowercase();
-    if !TEXT_EXTS.contains(&ext.as_str()) && !ext.is_empty() { return; }
-    let Ok(content) = std::fs::read_to_string(path) else { return };
+    if *total >= MAX_CTX_CHARS {
+        return;
+    }
+    let ext = path
+        .extension()
+        .and_then(|e| e.to_str())
+        .unwrap_or("")
+        .to_lowercase();
+    if !TEXT_EXTS.contains(&ext.as_str()) && !ext.is_empty() {
+        return;
+    }
+    let Ok(content) = std::fs::read_to_string(path) else {
+        return;
+    };
     let header = format!("\n### {}\n```{}\n", path.display(), ext);
     let footer = "\n```\n";
     let available = MAX_CTX_CHARS.saturating_sub(*total + header.len() + footer.len());
@@ -26,26 +70,45 @@ fn append_file(path: &Path, buf: &mut String, total: &mut usize) {
     let truncated = snippet.chars().count() < content.chars().count();
     buf.push_str(&header);
     buf.push_str(&snippet);
-    if truncated { buf.push_str("\n... (truncated)"); }
+    if truncated {
+        buf.push_str("\n... (truncated)");
+    }
     buf.push_str(footer);
     *total += header.len() + snippet.len() + footer.len();
 }
 
 /// 디렉토리를 재귀 탐색하며 buf에 추가
 fn append_dir(dir: &Path, buf: &mut String, total: &mut usize) {
-    if *total >= MAX_CTX_CHARS { return; }
+    if *total >= MAX_CTX_CHARS {
+        return;
+    }
     let name = dir.file_name().and_then(|n| n.to_str()).unwrap_or("");
-    if SKIP_DIRS.contains(&name) { return; }
-    let Ok(entries) = std::fs::read_dir(dir) else { return };
-    let mut entries: Vec<_> = entries.flatten()
-        .filter(|e| !e.file_name().to_str().map(|s| s.starts_with('.')).unwrap_or(false))
+    if SKIP_DIRS.contains(&name) {
+        return;
+    }
+    let Ok(entries) = std::fs::read_dir(dir) else {
+        return;
+    };
+    let mut entries: Vec<_> = entries
+        .flatten()
+        .filter(|e| {
+            !e.file_name()
+                .to_str()
+                .map(|s| s.starts_with('.'))
+                .unwrap_or(false)
+        })
         .collect();
     entries.sort_by_key(|e| (e.path().is_dir(), e.file_name()));
     for entry in entries {
-        if *total >= MAX_CTX_CHARS { break; }
+        if *total >= MAX_CTX_CHARS {
+            break;
+        }
         let p = entry.path();
-        if p.is_dir() { append_dir(&p, buf, total); }
-        else { append_file(&p, buf, total); }
+        if p.is_dir() {
+            append_dir(&p, buf, total);
+        } else {
+            append_file(&p, buf, total);
+        }
     }
 }
 
@@ -56,7 +119,13 @@ fn run_git(cwd: &str, args: &[&str]) -> String {
         .args(args)
         .current_dir(cwd)
         .output()
-        .map(|o| if o.status.success() { String::from_utf8_lossy(&o.stdout).trim().to_string() } else { String::new() })
+        .map(|o| {
+            if o.status.success() {
+                String::from_utf8_lossy(&o.stdout).trim().to_string()
+            } else {
+                String::new()
+            }
+        })
         .unwrap_or_default()
 }
 
@@ -66,16 +135,24 @@ pub fn get_git_context(cwd: String) -> String {
     let mut parts: Vec<String> = Vec::new();
 
     let status = run_git(&cwd, &["status", "--short", "--branch"]);
-    if !status.is_empty() { parts.push(format!("$ git status\n{status}")); }
+    if !status.is_empty() {
+        parts.push(format!("$ git status\n{status}"));
+    }
 
     let staged = run_git(&cwd, &["diff", "--cached", "--stat"]);
-    if !staged.is_empty() { parts.push(format!("$ git diff --cached --stat\n{staged}")); }
+    if !staged.is_empty() {
+        parts.push(format!("$ git diff --cached --stat\n{staged}"));
+    }
 
     let unstaged = run_git(&cwd, &["diff", "--stat"]);
-    if !unstaged.is_empty() { parts.push(format!("$ git diff --stat\n{unstaged}")); }
+    if !unstaged.is_empty() {
+        parts.push(format!("$ git diff --stat\n{unstaged}"));
+    }
 
     let log = run_git(&cwd, &["log", "--oneline", "-7"]);
-    if !log.is_empty() { parts.push(format!("$ git log --oneline -7\n{log}")); }
+    if !log.is_empty() {
+        parts.push(format!("$ git log --oneline -7\n{log}"));
+    }
 
     parts.join("\n\n")
 }
@@ -84,7 +161,11 @@ pub fn get_git_context(cwd: String) -> String {
 #[tauri::command]
 pub fn get_staged_diff(cwd: String) -> String {
     let diff = run_git(&cwd, &["diff", "--cached"]);
-    let raw = if diff.is_empty() { run_git(&cwd, &["diff"]) } else { diff };
+    let raw = if diff.is_empty() {
+        run_git(&cwd, &["diff"])
+    } else {
+        diff
+    };
     raw.chars().take(8_000).collect()
 }
 
@@ -125,7 +206,10 @@ pub fn read_path_for_context(path: String, cwd: Option<String>) -> Result<String
     }
 
     if buf.trim().is_empty() {
-        buf = format!("{} — 읽을 수 있는 텍스트 파일이 없습니다.", resolved.display());
+        buf = format!(
+            "{} — 읽을 수 있는 텍스트 파일이 없습니다.",
+            resolved.display()
+        );
     }
 
     Ok(buf)
@@ -174,7 +258,10 @@ fn read_node_context(dir: &Path) -> Option<String> {
     Some(if scripts.is_empty() {
         format!("Node.js project \"{name}\"")
     } else {
-        format!("Node.js project \"{name}\" (scripts: {})", scripts.join(", "))
+        format!(
+            "Node.js project \"{name}\" (scripts: {})",
+            scripts.join(", ")
+        )
     })
 }
 
@@ -239,7 +326,9 @@ pub fn list_directory(path: String) -> Result<Vec<DirEntry>, String> {
 /// 상위 디렉토리 경로 반환 (파일 탐색기 "위로" 버튼용)
 #[tauri::command]
 pub fn parent_directory(path: String) -> Option<String> {
-    PathBuf::from(&path).parent().map(|p| p.to_string_lossy().into_owned())
+    PathBuf::from(&path)
+        .parent()
+        .map(|p| p.to_string_lossy().into_owned())
 }
 
 fn read_cargo_context(dir: &Path) -> Option<String> {

@@ -39,7 +39,10 @@ pub async fn check_for_update() -> Result<VersionInfo, String> {
         .await
         .map_err(|e| e.to_string())?;
 
-    let tag = resp["tag_name"].as_str().unwrap_or("").trim_start_matches('v');
+    let tag = resp["tag_name"]
+        .as_str()
+        .unwrap_or("")
+        .trim_start_matches('v');
     let release_url = resp["html_url"].as_str().unwrap_or("").to_string();
     let release_name = resp["name"].as_str().unwrap_or(tag).to_string();
 
@@ -93,7 +96,11 @@ pub async fn install_update(app: tauri::AppHandle) -> Result<(), String> {
 fn is_newer(latest: &str, current: &str) -> bool {
     let parse = |s: &str| -> (u32, u32, u32) {
         let mut it = s.splitn(3, '.').map(|p| p.parse::<u32>().unwrap_or(0));
-        (it.next().unwrap_or(0), it.next().unwrap_or(0), it.next().unwrap_or(0))
+        (
+            it.next().unwrap_or(0),
+            it.next().unwrap_or(0),
+            it.next().unwrap_or(0),
+        )
     };
     parse(latest) > parse(current)
 }

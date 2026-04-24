@@ -20,7 +20,7 @@ pub struct HardwareSpecs {
 // wgpu GPU 감지 — local-ai 피처 활성화 시
 #[cfg(feature = "local-ai")]
 async fn detect_gpu() -> (String, bool, String) {
-    use wgpu::{DeviceType, Instance, RequestAdapterOptions, PowerPreference};
+    use wgpu::{DeviceType, Instance, PowerPreference, RequestAdapterOptions};
     let instance = Instance::default();
     let adapter = instance
         .request_adapter(&RequestAdapterOptions {
@@ -72,7 +72,13 @@ pub fn get_gpu_vram_gb() -> Option<f32> {
     // 3. wmic (Windows 전용 폴백, AMD/Intel도 감지)
     #[cfg(windows)]
     if let Ok(out) = std::process::Command::new("wmic")
-        .args(["path", "Win32_VideoController", "get", "AdapterRAM", "/format:list"])
+        .args([
+            "path",
+            "Win32_VideoController",
+            "get",
+            "AdapterRAM",
+            "/format:list",
+        ])
         .output()
     {
         let s = String::from_utf8_lossy(&out.stdout);
@@ -131,7 +137,11 @@ pub fn get_vram_gb() -> Option<f32> {
 }
 
 /// RAM/VRAM + GPU 기반 xLLM EXL2 모델 추천
-fn recommend_model(total_memory_gb: f32, gpu_type: &str, gpu_vram_gb: Option<f32>) -> (&'static str, &'static str) {
+fn recommend_model(
+    total_memory_gb: f32,
+    gpu_type: &str,
+    gpu_vram_gb: Option<f32>,
+) -> (&'static str, &'static str) {
     // Windows discrete GPU: VRAM 기준 추천, Mac/기타: 통합 메모리(RAM) 기준
     let memory_gb = if gpu_type == "discrete" {
         gpu_vram_gb.unwrap_or(total_memory_gb)
@@ -207,7 +217,8 @@ pub async fn get_hardware_specs() -> Result<HardwareSpecs> {
 
     let (gpu_type, wgpu_supported, gpu_name) = detect_gpu().await;
     let gpu_vram_gb = get_gpu_vram_gb();
-    let (recommended_model, recommendation_reason) = recommend_model(total_memory_gb, &gpu_type, gpu_vram_gb);
+    let (recommended_model, recommendation_reason) =
+        recommend_model(total_memory_gb, &gpu_type, gpu_vram_gb);
     let recommended_engine = if wgpu_supported { "xllm" } else { "cpu" }.to_string();
 
     Ok(HardwareSpecs {

@@ -285,9 +285,9 @@ fn safe_path(cwd: &str, file: &str) -> Result<PathBuf> {
             let canonical_parent = parent.canonicalize().map_err(|e| {
                 LumError::Security(format!("부모 경로 해석 실패 ({}): {}", parent.display(), e))
             })?;
-            let file_name = target.file_name().ok_or_else(|| {
-                LumError::Security("파일명 추출 실패".into())
-            })?;
+            let file_name = target
+                .file_name()
+                .ok_or_else(|| LumError::Security("파일명 추출 실패".into()))?;
             canonical_parent.join(file_name)
         }
     };
@@ -479,10 +479,7 @@ bar
     #[test]
     fn extract_file_path_정상_케이스() {
         assert_eq!(extract_file_path("src/foo.rs"), Some("src/foo.rs".into()));
-        assert_eq!(
-            extract_file_path("`src/bar.ts`"),
-            Some("src/bar.ts".into())
-        );
+        assert_eq!(extract_file_path("`src/bar.ts`"), Some("src/bar.ts".into()));
         assert_eq!(extract_file_path("   src/a.py   "), Some("src/a.py".into()));
     }
 

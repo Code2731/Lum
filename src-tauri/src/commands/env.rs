@@ -61,7 +61,8 @@ const ENV_RULES: &[EnvRule] = &[
     EnvRule {
         file: ".ruby-version",
         runtime: "Ruby",
-        cmd: "rbenv install --skip-existing $(cat .ruby-version) && rbenv local $(cat .ruby-version)",
+        cmd:
+            "rbenv install --skip-existing $(cat .ruby-version) && rbenv local $(cat .ruby-version)",
         description: ".ruby-version 감지 — rbenv 버전 적용",
     },
     EnvRule {

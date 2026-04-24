@@ -38,9 +38,13 @@ pub fn run() {
         .manage(commands::ai::AiStreamCancel::default())
         .manage({
             #[cfg(feature = "local-ai")]
-            { local_ai_state }
+            {
+                local_ai_state
+            }
             #[cfg(not(feature = "local-ai"))]
-            { () }
+            {
+                ()
+            }
         })
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_updater::Builder::new().build())

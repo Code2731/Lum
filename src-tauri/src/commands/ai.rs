@@ -2,7 +2,10 @@ use crate::commands::config::{load_config, AppConfig};
 use crate::error::{LumError, Result};
 use futures_util::StreamExt;
 use serde::{Deserialize, Serialize};
-use std::sync::{Arc, atomic::{AtomicBool, Ordering}};
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc,
+};
 use tauri::{command, Emitter};
 
 const XLLM_TOKEN_EVENT: &str = "xllm_token";
@@ -50,7 +53,11 @@ fn xllm_body(config: &AppConfig, model: &str, prompt: &str, stream: bool) -> ser
     let is_long = prompt.len() > config.pd_threshold_chars.unwrap_or(8000) as usize;
 
     // ③ KV Cache — 긴 컨텍스트면 Q4 강제
-    let cache_mode = if is_long { "Q4" } else { config.cache_mode.as_deref().unwrap_or("Q8") };
+    let cache_mode = if is_long {
+        "Q4"
+    } else {
+        config.cache_mode.as_deref().unwrap_or("Q8")
+    };
 
     // max_tokens: OpenAI 표준 파라미터 — MLX-LM·TabbyAPI 모두 지원
     let max_tokens = config.max_seq_len.unwrap_or(4096).min(32768);
@@ -141,10 +148,12 @@ async fn call_xllm_stream(
         req = req.header("x-api-key", key);
     }
 
-    let response = req
-        .send()
-        .await
-        .map_err(|e| LumError::Network(format!("xLLM 서버에 연결할 수 없습니다 ({}): {}", base_url, e)))?;
+    let response = req.send().await.map_err(|e| {
+        LumError::Network(format!(
+            "xLLM 서버에 연결할 수 없습니다 ({}): {}",
+            base_url, e
+        ))
+    })?;
 
     if !response.status().is_success() {
         let status = response.status();
@@ -153,7 +162,11 @@ async fn call_xllm_stream(
             "xLLM 서버 오류 HTTP {} ({}): {}",
             status,
             base_url,
-            if body.is_empty() { "응답 없음".to_string() } else { body.chars().take(200).collect() }
+            if body.is_empty() {
+                "응답 없음".to_string()
+            } else {
+                body.chars().take(200).collect()
+            }
         )));
     }
 
@@ -169,7 +182,9 @@ async fn call_xllm_stream(
         line_buf.push_str(&String::from_utf8_lossy(&bytes));
 
         if line_buf.len() > SSE_MAX_LINE_BUF {
-            return Err(LumError::AiEngine("SSE 응답 버퍼 초과 — 서버 응답이 비정상입니다".to_string()));
+            return Err(LumError::AiEngine(
+                "SSE 응답 버퍼 초과 — 서버 응답이 비정상입니다".to_string(),
+            ));
         }
 
         while let Some(nl) = line_buf.find('\n') {
@@ -190,9 +205,15 @@ async fn call_xllm_stream(
                         }
                     }
                     // reasoning/reasoning_content 토큰 — show_reasoning 설정 따라 표시/숨김
-                    else if let Some(t) = delta["reasoning"].as_str().or_else(|| delta["reasoning_content"].as_str()) {
+                    else if let Some(t) = delta["reasoning"]
+                        .as_str()
+                        .or_else(|| delta["reasoning_content"].as_str())
+                    {
                         if !t.is_empty() {
-                            let show = load_config().ok().and_then(|c| c.show_reasoning).unwrap_or(true);
+                            let show = load_config()
+                                .ok()
+                                .and_then(|c| c.show_reasoning)
+                                .unwrap_or(true);
                             full_text.push_str(t);
                             if show {
                                 let _ = app.emit(XLLM_TOKEN_EVENT, t.to_string());
@@ -566,5 +587,7 @@ pub async fn explain_command(command: String, model: String) -> Result<String> {
             }
         }
     }
-    Err(LumError::AiEngine("AI 엔진을 사용할 수 없습니다. xLLM 또는 Gemini API 키를 설정하세요.".into()))
+    Err(LumError::AiEngine(
+        "AI 엔진을 사용할 수 없습니다. xLLM 또는 Gemini API 키를 설정하세요.".into(),
+    ))
 }

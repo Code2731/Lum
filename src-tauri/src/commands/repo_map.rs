@@ -158,7 +158,10 @@ fn parse_file(path: &Path, lang: Lang) -> Option<(Vec<Symbol>, Vec<String>)> {
                 continue;
             }
             let cap_name = capture_names[cap.index as usize];
-            let kind = cap_name.strip_prefix("def.").unwrap_or(cap_name).to_string();
+            let kind = cap_name
+                .strip_prefix("def.")
+                .unwrap_or(cap_name)
+                .to_string();
             defs.push(Symbol {
                 name: name.to_string(),
                 kind,
@@ -392,11 +395,7 @@ mod tests {
     #[test]
     fn parse_rust_파일_정의_추출() {
         let tmp = std::env::temp_dir().join("lum_test_repomap.rs");
-        std::fs::write(
-            &tmp,
-            "pub fn foo() {}\npub struct Bar;\npub trait Baz {}\n",
-        )
-        .unwrap();
+        std::fs::write(&tmp, "pub fn foo() {}\npub struct Bar;\npub trait Baz {}\n").unwrap();
         let result = parse_file(&tmp, Lang::Rust);
         let (defs, _refs) = result.unwrap();
         let kinds: Vec<&str> = defs.iter().map(|d| d.kind.as_str()).collect();
@@ -428,18 +427,24 @@ mod tests {
         let b: PathBuf = "b.rs".into();
 
         let mut defs = HashMap::new();
-        defs.insert(a.clone(), vec![Symbol {
-            name: "popular_fn".into(),
-            kind: "fn".into(),
-            file: a.clone(),
-            line: 1,
-        }]);
-        defs.insert(b.clone(), vec![Symbol {
-            name: "other_fn".into(),
-            kind: "fn".into(),
-            file: b.clone(),
-            line: 1,
-        }]);
+        defs.insert(
+            a.clone(),
+            vec![Symbol {
+                name: "popular_fn".into(),
+                kind: "fn".into(),
+                file: a.clone(),
+                line: 1,
+            }],
+        );
+        defs.insert(
+            b.clone(),
+            vec![Symbol {
+                name: "other_fn".into(),
+                kind: "fn".into(),
+                file: b.clone(),
+                line: 1,
+            }],
+        );
 
         let mut refs = HashMap::new();
         // b에서 a의 popular_fn을 참조
@@ -455,9 +460,15 @@ mod tests {
         let root = std::env::temp_dir();
         let file: PathBuf = root.join("foo.rs");
         let mut defs = HashMap::new();
-        defs.insert(file.clone(), vec![
-            Symbol { name: "my_fn".into(), kind: "fn".into(), file: file.clone(), line: 10 },
-        ]);
+        defs.insert(
+            file.clone(),
+            vec![Symbol {
+                name: "my_fn".into(),
+                kind: "fn".into(),
+                file: file.clone(),
+                line: 10,
+            }],
+        );
         let mut ranks = HashMap::new();
         ranks.insert(file.clone(), 0.5);
 
