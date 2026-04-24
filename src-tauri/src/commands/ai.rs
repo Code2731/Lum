@@ -48,8 +48,15 @@ async fn get_server_model_id(client: &reqwest::Client, base_url: &str) -> String
         .to_string()
 }
 
-/// 공통 요청 바디 생성 — PD Disaggregation / SSD / Sparse Attention / KV Cache
-fn xllm_body(config: &AppConfig, model: &str, prompt: &str, stream: bool) -> serde_json::Value {
+/// 공통 요청 바디 생성 — PD Disaggregation / SSD / Sparse Attention / KV Cache.
+/// images가 있으면 OpenAI vision 포맷으로 content 배열 구성 (data URI).
+fn xllm_body(
+    config: &AppConfig,
+    model: &str,
+    prompt: &str,
+    stream: bool,
+    images: &[String],
+) -> serde_json::Value {
     let is_long = prompt.len() > config.pd_threshold_chars.unwrap_or(8000) as usize;
 
     // ③ KV Cache — 긴 컨텍스트면 Q4 강제
@@ -62,9 +69,23 @@ fn xllm_body(config: &AppConfig, model: &str, prompt: &str, stream: bool) -> ser
     // max_tokens: OpenAI 표준 파라미터 — MLX-LM·TabbyAPI 모두 지원
     let max_tokens = config.max_seq_len.unwrap_or(4096).min(32768);
 
+    // 이미지 있으면 OpenAI vision 포맷 (content: Array), 없으면 단순 string
+    let content = if images.is_empty() {
+        serde_json::Value::String(prompt.to_string())
+    } else {
+        let mut parts = vec![serde_json::json!({ "type": "text", "text": prompt })];
+        for url in images {
+            parts.push(serde_json::json!({
+                "type": "image_url",
+                "image_url": { "url": url },
+            }));
+        }
+        serde_json::Value::Array(parts)
+    };
+
     let mut body = serde_json::json!({
         "model": model,
-        "messages": [{ "role": "user", "content": prompt }],
+        "messages": [{ "role": "user", "content": content }],
         "stream": stream,
         "max_tokens": max_tokens,
         "cache_mode": cache_mode,       // TabbyAPI 전용, MLX-LM은 무시
@@ -102,7 +123,7 @@ pub async fn call_xllm(client: &reqwest::Client, _model: &str, prompt: &str) -> 
 
     // 서버의 실제 로드된 모델 ID 사용 (MLX-LM·TabbyAPI 공통)
     let actual_model = get_server_model_id(client, &base_url).await;
-    let body = xllm_body(&config, &actual_model, prompt, false);
+    let body = xllm_body(&config, &actual_model, prompt, false, &[]);
 
     let mut req = client.post(&url).json(&body);
     if let Some(key) = config.xllm_api_key {
@@ -127,12 +148,14 @@ pub async fn call_xllm(client: &reqwest::Client, _model: &str, prompt: &str) -> 
         .ok_or_else(|| LumError::AiEngine(format!("xLLM 응답 파싱 실패: {}", res_json)))
 }
 
-/// ⑥ EPD 스트리밍 호출 — SSE 파싱 후 토큰마다 Tauri 이벤트 emit
+/// ⑥ EPD 스트리밍 호출 — SSE 파싱 후 토큰마다 Tauri 이벤트 emit.
+/// images: data URI 배열. 비어있지 않으면 OpenAI vision 포맷 content 배열로 전송.
 async fn call_xllm_stream(
     app: &tauri::AppHandle,
     client: &reqwest::Client,
     _model: &str,
     prompt: &str,
+    images: &[String],
     cancel: &Arc<AtomicBool>,
 ) -> Result<String> {
     let config = load_config()?;
@@ -141,7 +164,7 @@ async fn call_xllm_stream(
 
     // 서버의 실제 로드된 모델 ID 사용
     let actual_model = get_server_model_id(client, &base_url).await;
-    let body = xllm_body(&config, &actual_model, prompt, true);
+    let body = xllm_body(&config, &actual_model, prompt, true, images);
 
     let mut req = client.post(&url).json(&body);
     if let Some(key) = config.xllm_api_key {
@@ -241,7 +264,7 @@ mod tests {
     #[test]
     fn body_short_context_uses_q8_and_no_temperature() {
         let c = AppConfig::default();
-        let body = xllm_body(&c, "model", "hello", false);
+        let body = xllm_body(&c, "model", "hello", false, &[]);
         assert_eq!(body["cache_mode"], "Q8");
         assert!(body["temperature"].is_null());
         assert_eq!(body["stream"], false);
@@ -250,7 +273,7 @@ mod tests {
     #[test]
     fn body_long_context_forces_q4_and_low_temperature() {
         let c = config_with(|c| c.pd_threshold_chars = Some(5));
-        let body = xllm_body(&c, "model", "this is longer than 5", false);
+        let body = xllm_body(&c, "model", "this is longer than 5", false, &[]);
         assert_eq!(body["cache_mode"], "Q4");
         let temp = body["temperature"].as_f64().unwrap();
         assert!((temp - 0.3).abs() < 0.01);
@@ -264,7 +287,7 @@ mod tests {
             c.draft_model = Some("DeepSeek-1.3B".to_string());
             c.speculative_n_draft = Some(6);
         });
-        let body = xllm_body(&c, "model", "prompt", false);
+        let body = xllm_body(&c, "model", "prompt", false, &[]);
         assert_eq!(body["draft_model"], "DeepSeek-1.3B");
         assert_eq!(body["speculative_ngram"], true);
         assert_eq!(body["speculative_ngram_token_count"], 6);
@@ -273,14 +296,14 @@ mod tests {
     #[test]
     fn body_ssd_default_n_draft_is_5() {
         let c = config_with(|c| c.draft_model = Some("draft".to_string()));
-        let body = xllm_body(&c, "model", "prompt", false);
+        let body = xllm_body(&c, "model", "prompt", false, &[]);
         assert_eq!(body["speculative_ngram_token_count"], 5);
     }
 
     #[test]
     fn body_no_ssd_when_draft_model_absent() {
         let c = AppConfig::default();
-        let body = xllm_body(&c, "model", "prompt", false);
+        let body = xllm_body(&c, "model", "prompt", false, &[]);
         assert!(body["draft_model"].is_null());
         assert!(body["speculative_ngram"].is_null());
     }
@@ -291,7 +314,7 @@ mod tests {
             c.sparse_attention = Some(true);
             c.sparse_top_k = Some(32);
         });
-        let body = xllm_body(&c, "model", "prompt", false);
+        let body = xllm_body(&c, "model", "prompt", false, &[]);
         assert_eq!(body["attention_sink_size"], 4);
         assert_eq!(body["top_k_attn"], 32);
     }
@@ -299,22 +322,22 @@ mod tests {
     #[test]
     fn body_sparse_attention_default_top_k_is_64() {
         let c = config_with(|c| c.sparse_attention = Some(true));
-        let body = xllm_body(&c, "model", "prompt", false);
+        let body = xllm_body(&c, "model", "prompt", false, &[]);
         assert_eq!(body["top_k_attn"], 64);
     }
 
     #[test]
     fn body_sparse_attention_absent_when_disabled() {
         let c = AppConfig::default();
-        let body = xllm_body(&c, "model", "prompt", false);
+        let body = xllm_body(&c, "model", "prompt", false, &[]);
         assert!(body["attention_sink_size"].is_null());
     }
 
     #[test]
     fn body_stream_flag_respected() {
         let c = AppConfig::default();
-        assert_eq!(xllm_body(&c, "m", "p", false)["stream"], false);
-        assert_eq!(xllm_body(&c, "m", "p", true)["stream"], true);
+        assert_eq!(xllm_body(&c, "m", "p", false, &[])["stream"], false);
+        assert_eq!(xllm_body(&c, "m", "p", true, &[])["stream"], true);
     }
 }
 
@@ -462,6 +485,7 @@ pub async fn stream_ai_command(
     prompt: String,
     model: String,
     context: String,
+    images: Option<Vec<String>>,
     cancel_flag: tauri::State<'_, AiStreamCancel>,
 ) -> Result<String> {
     // 새 요청 시작 시 취소 플래그 초기화
@@ -473,13 +497,16 @@ pub async fn stream_ai_command(
         .map_err(|e| LumError::Network(e.to_string()))?;
 
     let full_prompt = format!("Context: {}\nRequest: {}", context, prompt);
+    let imgs = images.unwrap_or_default();
 
     if model.starts_with("gemini") {
-        let result = call_gemini(&client, &model, &full_prompt, None).await?;
+        // Gemini: 이미지 있으면 첫 번째만 전달 (call_gemini는 단일 이미지 inline 지원)
+        let single_image = imgs.first().map(|s| s.as_str());
+        let result = call_gemini(&client, &model, &full_prompt, single_image).await?;
         let _ = app.emit(XLLM_TOKEN_EVENT, result.clone());
         Ok(result)
     } else {
-        call_xllm_stream(&app, &client, &model, &full_prompt, &cancel_flag).await
+        call_xllm_stream(&app, &client, &model, &full_prompt, &imgs, &cancel_flag).await
     }
 }
 

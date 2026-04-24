@@ -181,6 +181,7 @@ pub fn run() {
             mcp::mcp_list_tools,
             mcp::mcp_call_tool,
             mcp::mcp_install_presets,
+            mcp::mcp_system_prompt,
             mcp::list_internal_tools
         ])
         .run(tauri::generate_context!())

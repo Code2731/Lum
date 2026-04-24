@@ -24,15 +24,23 @@ interface Props {
   onClose: () => void;
 }
 
+// 서버별 런타임 상태 (툴 목록·로딩·에러) — 3개 상태 객체를 하나로
+interface ServerRuntime {
+  tools?: McpTool[];
+  error?: string;
+  loading?: boolean;
+}
+
 const McpPanel: React.FC<Props> = ({ onClose }) => {
   const [servers, setServers] = useState<McpServerSpec[]>([]);
   const [loadingList, setLoadingList] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
-  const [tools, setTools] = useState<Record<string, McpTool[]>>({});
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [loadingTools, setLoadingTools] = useState<string | null>(null);
+  const [runtime, setRuntime] = useState<Record<string, ServerRuntime>>({});
   const [installing, setInstalling] = useState(false);
   const [addForm, setAddForm] = useState<McpServerSpec | null>(null);
+
+  const patchRuntime = (name: string, patch: Partial<ServerRuntime>) =>
+    setRuntime((prev) => ({ ...prev, [name]: { ...prev[name], ...patch } }));
 
   const loadServers = useCallback(async () => {
     setLoadingList(true);
@@ -55,7 +63,7 @@ const McpPanel: React.FC<Props> = ({ onClose }) => {
       await invoke("save_mcp_server", { spec });
       await loadServers();
     } catch (e) {
-      setErrors((prev) => ({ ...prev, [spec.name]: String(e) }));
+      patchRuntime(spec.name, { error: String(e) });
     }
   };
 
@@ -84,16 +92,13 @@ const McpPanel: React.FC<Props> = ({ onClose }) => {
       return;
     }
     setExpanded(name);
-    if (tools[name]) return; // 이미 로드됨
-    setLoadingTools(name);
-    setErrors((prev) => { const n = { ...prev }; delete n[name]; return n; });
+    if (runtime[name]?.tools) return; // 이미 로드됨
+    patchRuntime(name, { loading: true, error: undefined });
     try {
       const result = await invoke<{ tools: McpTool[] }>("mcp_list_tools", { serverName: name });
-      setTools((prev) => ({ ...prev, [name]: result.tools ?? [] }));
+      patchRuntime(name, { tools: result.tools ?? [], loading: false });
     } catch (e) {
-      setErrors((prev) => ({ ...prev, [name]: String(e).slice(0, 300) }));
-    } finally {
-      setLoadingTools(null);
+      patchRuntime(name, { error: String(e).slice(0, 300), loading: false });
     }
   };
 
@@ -152,8 +157,9 @@ const McpPanel: React.FC<Props> = ({ onClose }) => {
 
           {servers.map((s) => {
             const isExpanded = expanded === s.name;
-            const err = errors[s.name];
-            const serverTools = tools[s.name];
+            const rt = runtime[s.name] ?? {};
+            const err = rt.error;
+            const serverTools = rt.tools;
             return (
               <div key={s.name} className="rounded-lg border border-white/8 bg-white/[0.02] overflow-hidden">
                 <div className="flex items-center gap-2 px-3 py-2">
@@ -195,7 +201,7 @@ const McpPanel: React.FC<Props> = ({ onClose }) => {
                       {s.command} {s.args.join(" ")}
                     </div>
 
-                    {loadingTools === s.name && (
+                    {rt.loading && (
                       <div className="flex items-center gap-1.5 text-[11px] text-white/50">
                         <Loader2 size={11} className="animate-spin" /> 툴 목록 조회 중…
                       </div>

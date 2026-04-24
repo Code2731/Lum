@@ -4,6 +4,8 @@ import type { ChatMessage } from "../hooks/useAIChat";
 import { MessageBubble } from "./AIChatPanel";
 import EditBlockCard from "./EditBlockCard";
 import { parseEditBlocks } from "../utils/editBlockParser";
+import { parseToolCalls } from "../utils/toolCallParser";
+import ToolCallCard from "./ToolCallCard";
 
 interface Props {
   messages: ChatMessage[];
@@ -14,8 +16,10 @@ interface Props {
   cwd?: string;
   /** true면 부모 flex 컨테이너의 남은 공간을 전부 차지 (xterm 자리 대체) */
   fullHeight?: boolean;
-  /** 테스트 실패 로그를 AI 대화에 재주입 — 테스트 루프 */
-  onAskAIForFix?: (failureLog: string) => void;
+  /** 테스트 실패 로그·MCP 툴 결과를 AI 대화에 재주입 (이미지 첨부 가능) */
+  onAskAIForFix?: (text: string, images?: string[]) => void;
+  /** 비전 모드 활성 — ToolCallCard 결과 이미지를 AI에 전달할지 */
+  visionEnabled?: boolean;
 }
 
 /**
@@ -23,7 +27,7 @@ interface Props {
  * 전체 패널이 하나의 스크롤 컨테이너 — 헤더는 sticky로 상단 고정.
  * 빈 상태면 렌더 안 함. 사용자가 위로 스크롤하면 auto-scroll 중단.
  */
-const AIBlockStream: React.FC<Props> = ({ messages, streaming, error, onClear, onExecute, cwd, fullHeight, onAskAIForFix }) => {
+const AIBlockStream: React.FC<Props> = ({ messages, streaming, error, onClear, onExecute, cwd, fullHeight, onAskAIForFix, visionEnabled }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const pinnedToBottomRef = useRef(true);
 
@@ -80,16 +84,27 @@ const AIBlockStream: React.FC<Props> = ({ messages, streaming, error, onClear, o
 
       <div className="px-4 py-3 space-y-3">
         {messages.map((m) => {
-          const editBlocks =
-            m.role === "assistant" && cwd ? parseEditBlocks(m.content) : [];
-          if (editBlocks.length === 0) {
+          if (m.role !== "assistant") {
+            return <MessageBubble key={m.id} msg={m} onExecute={onExecute} compact={false} />;
+          }
+          const editBlocks = cwd ? parseEditBlocks(m.content) : [];
+          const toolCalls = parseToolCalls(m.content);
+          if (editBlocks.length === 0 && toolCalls.length === 0) {
             return <MessageBubble key={m.id} msg={m} onExecute={onExecute} compact={false} />;
           }
           return (
             <div key={m.id} className="space-y-2">
               <MessageBubble msg={m} onExecute={onExecute} compact={false} />
               {editBlocks.map((b) => (
-                <EditBlockCard key={`${m.id}-${b.index}`} block={b} cwd={cwd!} onAskAIForFix={onAskAIForFix} />
+                <EditBlockCard key={`edit-${m.id}-${b.index}`} block={b} cwd={cwd!} onAskAIForFix={onAskAIForFix} />
+              ))}
+              {toolCalls.map((c) => (
+                <ToolCallCard
+                  key={`tool-${m.id}-${c.index}`}
+                  call={c}
+                  onAskAIWithResult={onAskAIForFix}
+                  visionEnabled={visionEnabled}
+                />
               ))}
             </div>
           );

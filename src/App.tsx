@@ -81,9 +81,13 @@ const App: React.FC = () => {
 
   // Phase 72 — 추론 토큰 표시 전역 토글 (툴바 + XllmPanel 공통 상태)
   const [showReasoning, setShowReasoning] = useState(true);
+  const [visionEnabled, setVisionEnabled] = useState(false);
   useEffect(() => {
-    invoke<{ show_reasoning?: boolean }>("load_app_config")
-      .then((c) => setShowReasoning(c.show_reasoning ?? true))
+    invoke<{ show_reasoning?: boolean; vision_enabled?: boolean }>("load_app_config")
+      .then((c) => {
+        setShowReasoning(c.show_reasoning ?? true);
+        setVisionEnabled(c.vision_enabled ?? false);
+      })
       .catch(() => {});
   }, []);
   const toggleReasoning = useCallback(async () => {
@@ -308,9 +312,10 @@ const App: React.FC = () => {
   );
 
   // 자연어 입력 → AI 스트림에 전송 (AIBlockStream이 자동 표시됨)
+  // images: MCP 툴 결과의 base64 data URI 배열 (비전 모드 활성 시 전달)
   const handleAskAI = useCallback(
-    (question: string) => {
-      aiChat.sendMessage(question);
+    (question: string, images?: string[]) => {
+      aiChat.sendMessage(question, images);
     },
     [aiChat.sendMessage],
   );
@@ -852,6 +857,7 @@ const App: React.FC = () => {
                             aiStreaming={aiChat.streaming}
                             aiError={aiChat.error}
                             onClearAI={aiChat.clear}
+                            visionEnabled={visionEnabled}
                           />
                         </ErrorBoundary>
                       </PaneWrapper>
@@ -883,6 +889,7 @@ const App: React.FC = () => {
                             aiStreaming={aiChat.streaming}
                             aiError={aiChat.error}
                             onClearAI={aiChat.clear}
+                            visionEnabled={visionEnabled}
                           />
                         </ErrorBoundary>
                       </PaneWrapper>
@@ -908,6 +915,7 @@ const App: React.FC = () => {
                         aiStreaming={aiChat.streaming}
                         aiError={aiChat.error}
                         onClearAI={aiChat.clear}
+                        visionEnabled={visionEnabled}
                       />
                     </ErrorBoundary>
                   </div>

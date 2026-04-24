@@ -39,11 +39,12 @@ interface Props {
   onCwdChange?: (cwd: string) => void;
   onReady?: (write: (data: string) => void) => void;
   onAgentTrigger?: (task: string) => void;
-  onAskAI?: (question: string) => void;
+  onAskAI?: (question: string, images?: string[]) => void;
   aiMessages?: ChatMessage[];
   aiStreaming?: boolean;
   aiError?: string | null;
   onClearAI?: () => void;
+  visionEnabled?: boolean;
 }
 
 const IS_WINDOWS = navigator.userAgent.includes("Windows");
@@ -84,7 +85,7 @@ const PANE_PADDING_Y = 6;
 
 const DEFAULT_MODEL = "Qwen2.5-Coder-7B-Instruct-EXL2-4bpw";
 
-const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme, fontSize, fontFamily, onOutput, onCwdChange, onReady, onAgentTrigger, onAskAI, aiMessages, aiStreaming, aiError, onClearAI }) => {
+const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme, fontSize, fontFamily, onOutput, onCwdChange, onReady, onAgentTrigger, onAskAI, aiMessages, aiStreaming, aiError, onClearAI, visionEnabled }) => {
   const outerRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const termRef = useRef<Terminal | null>(null);
@@ -612,6 +613,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
         cwd={cwd}
         fullHeight
         onAskAIForFix={onAskAI}
+        visionEnabled={visionEnabled}
       />
 
       {/* Warp 입력바 — 입력 필드, 라우팅은 handleSubmit */}

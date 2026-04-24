@@ -120,17 +120,17 @@ export function useAIChat(model: string, getTerminalContext: () => string) {
   const [error, setError] = useState<string | null>(null);
 
   const sendMessage = useCallback(
-    async (text: string) => {
+    async (text: string, images?: string[]) => {
       if (streaming) {
         console.warn("[AI] sendMessage skipped — already streaming");
         return;
       }
-      console.log("[AI] sendMessage:", text, "model:", model);
+      console.log("[AI] sendMessage:", text, "model:", model, images?.length ? `· ${images.length}개 이미지` : "");
 
       const userMsg: ChatMessage = {
         id: crypto.randomUUID(),
         role: "user",
-        content: text,
+        content: images?.length ? `${text}\n\n(이미지 ${images.length}개 첨부됨)` : text,
         timestamp: Date.now(),
       };
 
@@ -142,7 +142,11 @@ export function useAIChat(model: string, getTerminalContext: () => string) {
       const termCtx = getTerminalContext();
       const addons = await buildContextAddons(text, termCtx);
       const editHint = CODE_EDIT_KEYWORDS.test(text) ? EDIT_FORMAT_INSTRUCTION : "";
-      const context = [editHint, ...addons, historyLines, termCtx].filter(Boolean).join("\n\n");
+      // 활성화된 MCP 서버의 도구 사용 지시 — 빈 문자열 반환이면 주입 안 됨
+      const mcpHint = await invoke<string>("mcp_system_prompt").catch(() => "");
+      const context = [mcpHint, editHint, ...addons, historyLines, termCtx]
+        .filter(Boolean)
+        .join("\n\n");
 
       const assistantId = crypto.randomUUID();
       setMessages((prev) => [
@@ -168,7 +172,12 @@ export function useAIChat(model: string, getTerminalContext: () => string) {
 
       try {
         console.log("[AI] invoking stream_ai_command, context len:", context.length);
-        await invoke("stream_ai_command", { prompt: text, model, context });
+        await invoke("stream_ai_command", {
+          prompt: text,
+          model,
+          context,
+          images: images && images.length > 0 ? images : null,
+        });
         console.log("[AI] stream_ai_command returned, tokens:", tokenCount);
       } catch (e) {
         console.error("[AI] stream_ai_command threw:", e);
