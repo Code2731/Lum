@@ -119,6 +119,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
   const [heavyMode, setHeavyMode] = useState(false);
   const [visionMode, setVisionMode] = useState(visionEnabled ?? false);
   const [reasoningMode, setReasoningMode] = useState(false);
+  const [terminalVisible, setTerminalVisible] = useState(false);
 
   const outerRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -566,6 +567,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
       case "empty":
         return;
       case "shell":
+        setTerminalVisible(true);
         invoke("write_to_pty", { id, data: route.command + "\r" }).catch(() => {});
         return;
       case "ai":
@@ -640,31 +642,52 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
         position: "relative",
       }}
     >
-      {/* xterm 출력 영역 — AI 대화 활성화 시 숨김 (DOM 유지로 PTY 연결 보존) */}
+      {/* xterm — DOM 항상 유지 (PTY 연결 보존), 터미널 모드일 때만 표시 */}
       <div
         style={{
-          flex: 1,
+          flex: terminalVisible && (!aiMessages || aiMessages.length === 0) ? 1 : 0,
           minHeight: 0,
-          padding: `${PANE_PADDING_Y}px ${PANE_PADDING_X}px 0`,
+          padding: terminalVisible && (!aiMessages || aiMessages.length === 0) ? `${PANE_PADDING_Y}px ${PANE_PADDING_X}px 0` : 0,
           position: "relative",
-          display: (aiMessages && aiMessages.length > 0) ? "none" : "block",
+          overflow: "hidden",
+          display: terminalVisible && (!aiMessages || aiMessages.length === 0) ? "block" : "none",
         }}
       >
         <div ref={containerRef} style={{ width: "100%", height: "100%" }} />
       </div>
 
-      {/* AI 답변 스트림 — 메시지 있을 때 전체 영역 차지 (xterm 대신) */}
-      <AIBlockStream
-        messages={aiMessages ?? []}
-        streaming={aiStreaming ?? false}
-        error={aiError ?? null}
-        onClear={onClearAI ?? (() => {})}
-        onExecute={(cmd) => invoke("write_to_pty", { id, data: cmd + "\r" }).catch(() => {})}
-        cwd={cwd}
-        fullHeight
-        onAskAIForFix={onAskAI}
-        visionEnabled={visionEnabled}
-      />
+      {/* AI 답변 스트림 — 메시지 있을 때 or 터미널 숨김일 때 표시 */}
+      <div style={{ flex: (!terminalVisible || (aiMessages && aiMessages.length > 0)) ? 1 : 0, minHeight: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+        {aiMessages && aiMessages.length > 0 ? (
+          <AIBlockStream
+            messages={aiMessages}
+            streaming={aiStreaming ?? false}
+            error={aiError ?? null}
+            onClear={onClearAI ?? (() => {})}
+            onExecute={(cmd) => invoke("write_to_pty", { id, data: cmd + "\r" }).catch(() => {})}
+            cwd={cwd}
+            fullHeight
+            onAskAIForFix={onAskAI}
+            visionEnabled={visionEnabled}
+          />
+        ) : !terminalVisible ? (
+          <div style={{
+            flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+            gap: 16, color: "rgba(255,255,255,0.18)", userSelect: "none",
+          }}>
+            <div style={{ fontSize: 36, opacity: 0.5 }}>✨</div>
+            <div style={{ textAlign: "center", lineHeight: 1.8 }}>
+              <div style={{ fontSize: 14, color: "rgba(255,255,255,0.35)", marginBottom: 6 }}>LUM AI 터미널</div>
+              <div style={{ fontSize: 12 }}>자연어로 질문하거나 명령어를 입력하세요</div>
+              <div style={{ fontSize: 11, marginTop: 8, opacity: 0.6 }}>
+                <span style={{ color: "#58a6ff" }}>#</span> AI 명령 제안 &nbsp;·&nbsp;
+                <span style={{ color: "#3fb950" }}>?</span> 명령어 설명 &nbsp;·&nbsp;
+                <span style={{ color: "#ff7b72" }}>{">>"}</span> 에이전트
+              </div>
+            </div>
+          </div>
+        ) : null}
+      </div>
 
       {/* Warp 입력바 — 입력 필드, 라우팅은 handleSubmit */}
       <WarpInputBar
@@ -687,6 +710,13 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
         background: xtermTheme?.background ?? "#0d1117",
         borderTop: "1px solid rgba(255,255,255,0.04)",
       }}>
+        <ModeButton
+          label="⬛ 터미널"
+          title="터미널 표시/숨김 (shell 명령 실행 시 자동 표시)"
+          active={terminalVisible}
+          activeColor="#e3b341"
+          onClick={() => setTerminalVisible(v => !v)}
+        />
         <ModeButton
           label="!!"
           title="Heavy Track — mistral.rs 30B 이상 (!! 접두사 자동)"
