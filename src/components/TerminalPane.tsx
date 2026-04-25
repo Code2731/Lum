@@ -128,6 +128,13 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
   const spawnedRef = useRef(false);
   const promptDecorationRef = useRef<IDecoration | null>(null);
 
+  const xtermThemeRef = useRef(xtermTheme);
+  xtermThemeRef.current = xtermTheme;
+  const fontSizeRef = useRef(fontSize);
+  fontSizeRef.current = fontSize;
+  const fontFamilyRef = useRef(fontFamily);
+  fontFamilyRef.current = fontFamily;
+
   const onOutputRef = useRef(onOutput);
   const onReadyRef = useRef(onReady);
   const onCwdChangeRef = useRef(onCwdChange);
@@ -197,9 +204,10 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
 
   useEffect(() => {
     const term = termRef.current;
+    const fit = fitAddonRef.current;
     if (!term) return;
-    const fallback = FONT_FAMILY;
-    term.options.fontFamily = fontFamily ? `"${fontFamily}", ${fallback}` : FONT_FAMILY;
+    term.options.fontFamily = fontFamily ? `"${fontFamily}", ${FONT_FAMILY}` : FONT_FAMILY;
+    try { fit?.fit(); } catch {}
   }, [fontFamily]);
 
   // Paste guard
@@ -357,15 +365,18 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     if (!container || spawnedRef.current) return;
     spawnedRef.current = true;
 
+    const initFontFamily = fontFamilyRef.current
+      ? `"${fontFamilyRef.current}", ${FONT_FAMILY}`
+      : FONT_FAMILY;
     const term = new Terminal({
-      fontFamily: FONT_FAMILY,
-      fontSize: 13,
+      fontFamily: initFontFamily,
+      fontSize: fontSizeRef.current ?? 13,
       lineHeight: 1.4,
       cursorBlink: true,
       cursorStyle: "bar",
       allowTransparency: false,
       scrollback: 5000,
-      theme: THEME,
+      theme: xtermThemeRef.current ?? THEME,
       cols: 80,
       rows: 24,
       // xterm 6.x — registerDecoration가 proposed API에 속해 명시적 허용 필요
@@ -621,7 +632,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
       style={{
         width: "100%",
         height: "100%",
-        backgroundColor: THEME.background,
+        backgroundColor: xtermTheme?.background ?? THEME.background,
         overflow: "hidden",
         display: "flex",
         flexDirection: "column",
@@ -673,7 +684,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
         alignItems: "center",
         gap: 6,
         padding: "4px 10px 5px",
-        background: "#0d1117",
+        background: xtermTheme?.background ?? "#0d1117",
         borderTop: "1px solid rgba(255,255,255,0.04)",
       }}>
         <ModeButton
