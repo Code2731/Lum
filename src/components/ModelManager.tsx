@@ -55,7 +55,10 @@ const MLX_MODELS: CuratedModel[] = [
   // ─── Qwen3.5 (2026년 최신 — Alibaba + 커뮤니티 증류) ───
   { category: "general",   repo_id: "mlx-community/Qwen3.5-4B-MLX-4bit",                              revision: "main", label: "Qwen3.5 4B",                  description: "최신 Alibaba — 2.5GB, 빠름",                      size_gb: 2.5, min_ram_gb: 6  },
   { category: "general",   repo_id: "mlx-community/Qwen3.5-9B-MLX-4bit",                              revision: "main", label: "Qwen3.5 9B (VL)",             description: "최신 Alibaba VL — 5.5GB, 비전+텍스트",             size_gb: 5.5, min_ram_gb: 12, badge: "★ 최신", capabilities: { vision: true } },
-  { category: "reasoning", repo_id: "mlx-community/Qwen3.5-27B-Claude-4.6-Opus-Distilled-MLX-4bit",  revision: "main", label: "Qwen3.5 27B (Claude 증류)",  description: "Claude 4.6 Opus 추론 증류 — 15GB",                 size_gb: 15,  min_ram_gb: 20, badge: "🧠 추천", capabilities: { reasoning: true } },
+  { category: "reasoning", repo_id: "mlx-community/Qwen3.5-27B-Claude-4.6-Opus-Distilled-MLX-4bit",      revision: "main", label: "Qwen3.5 27B (Opus 증류)",       description: "Claude 4.6 Opus 추론 증류 — 15GB",                 size_gb: 15,  min_ram_gb: 20, badge: "🧠 추천", capabilities: { reasoning: true } },
+  { category: "reasoning", repo_id: "mlx-community/Qwen3.5-27B-Claude-4.6-Opus-Distilled-MLX-8bit",      revision: "main", label: "Qwen3.5 27B 8bit (Opus 증류)",  description: "Opus 증류 고품질 8bit — 27GB",                      size_gb: 27,  min_ram_gb: 36, capabilities: { reasoning: true } },
+  { category: "reasoning", repo_id: "mlx-community/Qwen3.5-30B-A3B-Claude-4.6-Opus-Distilled-MLX-4bit",  revision: "main", label: "Qwen3.5 30B-A3B (Opus 증류)",   description: "MoE 30B 활성 3B — Opus 증류 — 17GB, 빠름",          size_gb: 17,  min_ram_gb: 24, badge: "🚀 MoE", capabilities: { reasoning: true } },
+  { category: "coding",    repo_id: "mlx-community/Qwen3.5-Coder-30B-A3B-Claude-4.6-Opus-Distilled-MLX-4bit", revision: "main", label: "Qwen3.5-Coder 30B-A3B (Opus 증류)", description: "코딩 특화 + Opus 증류 — 17GB",                  size_gb: 17,  min_ram_gb: 24, badge: "⚡ 코딩+추론", capabilities: { reasoning: true } },
 
   // ─── Qwen3 (2025 릴리즈) ───
   { category: "lightweight", repo_id: "mlx-community/Qwen3-0.6B-4bit",                               revision: "main", label: "Qwen3 0.6B",                  description: "초경량 — 0.4GB, 즉각 응답",                        size_gb: 0.4, min_ram_gb: 2  },
@@ -167,6 +170,14 @@ const CURATED_MODELS: CuratedModel[] = [
   { category: "general",     repo_id: "bartowski/Qwen3-32B-Instruct-exl2", revision: "3_5",  label: "Qwen3 32B (3.5bpw)", description: "최강 범용 경량 · ~16GB VRAM",            size_gb: 16.0, min_ram_gb: 20, capabilities: { reasoning: true } },
   { category: "general",     repo_id: "bartowski/Qwen3-32B-Instruct-exl2", revision: "5_0",  label: "Qwen3 32B (5bpw)",   description: "최강 범용 · ~22GB VRAM",                 size_gb: 22.0, min_ram_gb: 24, capabilities: { reasoning: true } },
   { category: "general",     repo_id: "bartowski/Qwen3-30B-A3B-Instruct-exl2", revision: "4_0", label: "Qwen3 30B MoE (A3B·4bpw)", description: "MoE 30B 활성 3B — 빠른 추론 · ~16GB", size_gb: 16.0, min_ram_gb: 20, capabilities: { reasoning: true } },
+
+  // ── Qwen3.5 Claude 4.6 Opus 증류 (2026 추론 특화) ────────────────
+  { category: "reasoning", repo_id: "bartowski/Qwen3.5-27B-Claude-4.6-Opus-Distilled-exl2",      revision: "4_0", label: "Qwen3.5 27B Opus 증류 (4bpw)",      description: "🧠 Claude Opus 추론 증류 · ~14GB VRAM",        size_gb: 14.0, min_ram_gb: 18, badge: "🧠 추천", capabilities: { reasoning: true } },
+  { category: "reasoning", repo_id: "bartowski/Qwen3.5-27B-Claude-4.6-Opus-Distilled-exl2",      revision: "5_0", label: "Qwen3.5 27B Opus 증류 (5bpw)",      description: "Opus 증류 균형 · ~17GB VRAM",                   size_gb: 17.0, min_ram_gb: 20, capabilities: { reasoning: true } },
+  { category: "reasoning", repo_id: "bartowski/Qwen3.5-27B-Claude-4.6-Opus-Distilled-exl2",      revision: "6_0", label: "Qwen3.5 27B Opus 증류 (6bpw)",      description: "Opus 증류 고품질 · ~21GB VRAM",                  size_gb: 21.0, min_ram_gb: 24, capabilities: { reasoning: true } },
+  { category: "reasoning", repo_id: "bartowski/Qwen3.5-30B-A3B-Claude-4.6-Opus-Distilled-exl2",  revision: "4_0", label: "Qwen3.5 30B-A3B Opus 증류 (4bpw)",  description: "🚀 MoE 30B 활성 3B + Opus 증류 · ~16GB",        size_gb: 16.0, min_ram_gb: 20, badge: "🚀 MoE", capabilities: { reasoning: true } },
+  { category: "reasoning", repo_id: "bartowski/Qwen3.5-30B-A3B-Claude-4.6-Opus-Distilled-exl2",  revision: "5_0", label: "Qwen3.5 30B-A3B Opus 증류 (5bpw)",  description: "MoE Opus 증류 고품질 · ~19GB",                  size_gb: 19.0, min_ram_gb: 24, capabilities: { reasoning: true } },
+  { category: "coding",    repo_id: "bartowski/Qwen3.5-Coder-30B-A3B-Claude-4.6-Opus-Distilled-exl2", revision: "4_0", label: "Qwen3.5-Coder 30B-A3B Opus 증류 (4bpw)", description: "⚡ 코딩 + Opus 추론 증류 MoE · ~16GB",        size_gb: 16.0, min_ram_gb: 20, badge: "⚡ 코딩+추론", capabilities: { reasoning: true } },
 
   // ── Gemma 3 (Google · bartowski) ─────────────────────────────────
   { category: "lightweight", repo_id: "bartowski/gemma-3-4b-it-exl2",  revision: "4_0", label: "Gemma 3 4B (4bpw)",   description: "Google 경량 최신 · ~2.5GB VRAM",   size_gb: 2.5, min_ram_gb: 4  },
