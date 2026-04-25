@@ -43,36 +43,39 @@ pub async fn install_mistral_rs(app: AppHandle) -> Result<String> {
         ));
     }
 
-    let _ = app.emit("mistral_rs_log", "mistral.rs 설치 시작 (CUDA 빌드)...");
+    // mistralrs-server는 crates.io에 없고 GitHub에서만 배포됨
+    const GIT_REPO: &str = "https://github.com/EricLBuehler/mistral.rs.git";
+    let _ = app.emit("mistral_rs_log", "mistral.rs 설치 시작 (GitHub · CUDA 빌드)...");
+    let _ = app.emit("mistral_rs_log", "⏳ 첫 설치는 5~15분 걸립니다. 인내심 갖고 기다려주세요.");
 
-    // 2. CUDA 빌드 시도 — stdout/stderr 캡처해서 실패 시 원인 노출
+    // 2. CUDA 빌드 시도
     let mut cuda_cmd = tokio::process::Command::new("cargo");
-    cuda_cmd.args(["install", "mistralrs-server", "--features", "cuda"]);
+    cuda_cmd.args(["install", "--git", GIT_REPO, "mistralrs-server", "--features", "cuda"]);
     no_window_tokio(&mut cuda_cmd);
     let cuda_out = cuda_cmd.output().await.map_err(|e| LumError::Io(e.to_string()))?;
 
     if cuda_out.status.success() {
-        let _ = app.emit("mistral_rs_log", "mistral.rs CUDA 빌드 완료");
+        let _ = app.emit("mistral_rs_log", "✅ CUDA 빌드 완료");
         return Ok("CUDA 빌드 설치 완료".into());
     }
 
     let cuda_err = String::from_utf8_lossy(&cuda_out.stderr);
-    let _ = app.emit("mistral_rs_log", format!("CUDA 빌드 실패 — CPU 빌드로 재시도: {}", cuda_err.lines().last().unwrap_or("")));
+    let cuda_tail: String = cuda_err.lines().rev().take(3).collect::<Vec<_>>().into_iter().rev().collect::<Vec<_>>().join(" / ");
+    let _ = app.emit("mistral_rs_log", format!("❌ CUDA 빌드 실패 — CPU 빌드로 재시도: {}", cuda_tail));
 
     // 3. CPU 빌드 폴백
     let mut cpu_cmd = tokio::process::Command::new("cargo");
-    cpu_cmd.args(["install", "mistralrs-server"]);
+    cpu_cmd.args(["install", "--git", GIT_REPO, "mistralrs-server"]);
     no_window_tokio(&mut cpu_cmd);
     let cpu_out = cpu_cmd.output().await.map_err(|e| LumError::Io(e.to_string()))?;
 
     if cpu_out.status.success() {
-        let _ = app.emit("mistral_rs_log", "mistral.rs CPU 빌드 완료");
+        let _ = app.emit("mistral_rs_log", "✅ CPU 빌드 완료 (CUDA 가속 미사용)");
         return Ok("CPU 빌드 설치 완료 (CUDA 가속 미사용)".into());
     }
 
     let cpu_err = String::from_utf8_lossy(&cpu_out.stderr);
-    // 마지막 5줄만 — cargo 에러는 보통 후반부에 핵심 메시지가 있음
-    let cpu_tail: String = cpu_err.lines().rev().take(5).collect::<Vec<_>>().into_iter().rev().collect::<Vec<_>>().join("\n");
+    let cpu_tail: String = cpu_err.lines().rev().take(8).collect::<Vec<_>>().into_iter().rev().collect::<Vec<_>>().join("\n");
     Err(LumError::AiEngine(format!(
         "CUDA·CPU 빌드 모두 실패. cargo 출력 (말미):\n{}",
         cpu_tail
