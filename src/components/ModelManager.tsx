@@ -125,62 +125,81 @@ const MLX_MODELS: CuratedModel[] = [
 ];
 
 // ── NVIDIA (EXL2 / TabbyAPI) ──────────────────────────────────────
-// min_ram_gb = 필요 VRAM(GB). 실제 존재하는 HuggingFace EXL2 repo만 포함.
-// ★ 상단 3개는 NVIDIA 10GB VRAM(RTX 3080 등)에 최적화된 추천 구성.
+// min_ram_gb = 필요 VRAM(GB). bartowski/lucyknada/DrNicefellow HF EXL2 레포.
+// 🥇 상단 3종 = RTX 3080(10GB) 최우선 추천
 const CURATED_MODELS: CuratedModel[] = [
-  // ── 🥇 10GB VRAM 최우선 추천 3종 ────────────────────────────────
-  // 1. 추론 — DeepSeek-R1-Distill-Qwen-7B: 사고 체인(CoT), 에러 분석 / 로직 추론 최강
+
+  // ── 🥇 10GB VRAM 추천 3종 ────────────────────────────────────────
   {
     category: "reasoning",
-    repo_id: "lucyknada/deepseek-ai_DeepSeek-R1-Distill-Qwen-7B-exl2",
-    revision: "6.0bpw",
-    label: "DeepSeek R1 7B (6bpw)",
-    description: "🥇 사고(CoT) — 에러 분석·로직 추론에 최강 · ~6.5GB VRAM",
-    size_gb: 6.5,
-    min_ram_gb: 8,
-    badge: "🧠 추론 최강",
+    repo_id: "bartowski/Qwen3-8B-Instruct-exl2",
+    revision: "4_5",
+    label: "Qwen3 8B (4.5bpw)",
+    description: "🥇 2025 최신 추론 SOTA — 사고 체인(CoT) · ~5.5GB VRAM",
+    size_gb: 5.5, min_ram_gb: 8, badge: "🧠 최신 추천",
+    capabilities: { reasoning: true },
   },
-  // 2. 코딩 — Qwen2.5-Coder-7B-Instruct: 자연어→CLI 변환 SOTA
   {
     category: "coding",
-    repo_id: "DrNicefellow/Qwen2.5-Coder-7B-Instruct-5.5bpw-exl2",
-    revision: "main",
-    label: "Qwen2.5-Coder 7B (5.5bpw)",
-    description: "🥇 코딩 SOTA — 자연어→CLI 즉각 변환, Warp 스타일 · ~6GB VRAM",
-    size_gb: 6.0,
-    min_ram_gb: 8,
-    badge: "⚡ 코딩 SOTA",
+    repo_id: "bartowski/Qwen3-8B-Instruct-exl2",
+    revision: "6_0",
+    label: "Qwen3 8B (6bpw)",
+    description: "🥇 코딩·지시 추종 — 고품질 · ~7GB VRAM",
+    size_gb: 7.0, min_ram_gb: 8, badge: "⚡ 코딩 SOTA",
+    capabilities: { reasoning: true },
   },
-  // 3. 한계 돌파 — Qwen2.5-Coder-14B 4bpw (DeepSeek-V2-Lite는 EXL2 미지원이라 대체)
   {
     category: "coding",
     repo_id: "bartowski/Qwen2.5-Coder-14B-Instruct-exl2",
     revision: "4_25",
     label: "Qwen2.5-Coder 14B (4.25bpw)",
-    description: "🥇 한계 돌파 — 14B 체급 프로젝트 맥락 이해, 10GB VRAM 한계 · ~9GB",
-    size_gb: 9.0,
-    min_ram_gb: 10,
-    badge: "🚀 한계 돌파",
+    description: "🥇 한계 돌파 — 14B 프로젝트 맥락 · ~9GB VRAM",
+    size_gb: 9.0, min_ram_gb: 10, badge: "🚀 한계 돌파",
   },
 
-  // ── 기타 코딩 옵션 ─────────────────────────────────────────────
-  { category: "coding",   repo_id: "DrNicefellow/Qwen2.5-Coder-7B-Instruct-4.0bpw-exl2",  revision: "main", label: "Qwen2.5-Coder 7B (4bpw)",  description: "코딩 경량 · ~4.5GB VRAM",     size_gb: 4.5,  min_ram_gb: 6  },
-  { category: "coding",   repo_id: "DrNicefellow/Qwen2.5-Coder-7B-Instruct-8.0bpw-h8-exl2", revision: "main", label: "Qwen2.5-Coder 7B (8bpw)", description: "코딩 고품질 · ~8.5GB VRAM", size_gb: 8.5,  min_ram_gb: 10 },
-  { category: "coding",   repo_id: "bartowski/Qwen2.5-Coder-14B-Instruct-exl2",            revision: "5_0",    label: "Qwen2.5-Coder 14B (5bpw)", description: "코딩 고품질 · ~10.5GB VRAM",  size_gb: 10.5, min_ram_gb: 12 },
-  { category: "coding",   repo_id: "bartowski/Qwen2.5-Coder-14B-Instruct-exl2",            revision: "6_5",    label: "Qwen2.5-Coder 14B (6.5bpw)", description: "코딩 최고품질 · ~13GB VRAM", size_gb: 13,   min_ram_gb: 16 },
-  { category: "coding",   repo_id: "bartowski/Qwen2.5-Coder-32B-Instruct-exl2",            revision: "4_25",   label: "Qwen2.5-Coder 32B (4.25bpw)", description: "최강 코딩 · ~18GB VRAM",    size_gb: 18,   min_ram_gb: 24 },
+  // ── Qwen3 (2025 최신) ────────────────────────────────────────────
+  { category: "lightweight", repo_id: "bartowski/Qwen3-4B-Instruct-exl2",  revision: "4_5",  label: "Qwen3 4B (4.5bpw)",  description: "경량 최신 · ~2.5GB VRAM",                size_gb: 2.5,  min_ram_gb: 4,  capabilities: { reasoning: true } },
+  { category: "general",     repo_id: "bartowski/Qwen3-4B-Instruct-exl2",  revision: "8_0",  label: "Qwen3 4B (8bpw)",    description: "경량 고품질 · ~4GB VRAM",                size_gb: 4.0,  min_ram_gb: 6,  capabilities: { reasoning: true } },
+  { category: "general",     repo_id: "bartowski/Qwen3-8B-Instruct-exl2",  revision: "3_5",  label: "Qwen3 8B (3.5bpw)",  description: "범용 경량 · ~4GB VRAM",                  size_gb: 4.0,  min_ram_gb: 6,  capabilities: { reasoning: true } },
+  { category: "general",     repo_id: "bartowski/Qwen3-8B-Instruct-exl2",  revision: "8_0",  label: "Qwen3 8B (8bpw)",    description: "범용 고품질 · ~9.5GB VRAM",              size_gb: 9.5,  min_ram_gb: 12, capabilities: { reasoning: true } },
+  { category: "general",     repo_id: "bartowski/Qwen3-14B-Instruct-exl2", revision: "4_0",  label: "Qwen3 14B (4bpw)",   description: "범용 고급 · ~8GB VRAM",                  size_gb: 8.0,  min_ram_gb: 10, capabilities: { reasoning: true } },
+  { category: "general",     repo_id: "bartowski/Qwen3-14B-Instruct-exl2", revision: "6_0",  label: "Qwen3 14B (6bpw)",   description: "범용 고품질 · ~12GB VRAM",               size_gb: 12.0, min_ram_gb: 14, capabilities: { reasoning: true } },
+  { category: "general",     repo_id: "bartowski/Qwen3-32B-Instruct-exl2", revision: "3_5",  label: "Qwen3 32B (3.5bpw)", description: "최강 범용 경량 · ~16GB VRAM",            size_gb: 16.0, min_ram_gb: 20, capabilities: { reasoning: true } },
+  { category: "general",     repo_id: "bartowski/Qwen3-32B-Instruct-exl2", revision: "5_0",  label: "Qwen3 32B (5bpw)",   description: "최강 범용 · ~22GB VRAM",                 size_gb: 22.0, min_ram_gb: 24, capabilities: { reasoning: true } },
+  { category: "general",     repo_id: "bartowski/Qwen3-30B-A3B-Instruct-exl2", revision: "4_0", label: "Qwen3 30B MoE (A3B·4bpw)", description: "MoE 30B 활성 3B — 빠른 추론 · ~16GB", size_gb: 16.0, min_ram_gb: 20, capabilities: { reasoning: true } },
 
-  // 범용 — Llama 3.1 (bullerwins)
-  { category: "general",  repo_id: "bullerwins/Meta-Llama-3.1-8B-Instruct-exl2_4.0bpw",    revision: "main",   label: "Llama 3.1 8B (4bpw)",      description: "범용 경량 · ~5GB VRAM",     size_gb: 5,    min_ram_gb: 6  },
-  { category: "general",  repo_id: "bullerwins/Meta-Llama-3.1-8B-Instruct-exl2_5.0bpw",    revision: "main",   label: "Llama 3.1 8B (5bpw)",      description: "범용 균형 · ~6GB VRAM",     size_gb: 6,    min_ram_gb: 8  },
-  { category: "general",  repo_id: "bullerwins/Meta-Llama-3.1-8B-Instruct-exl2_8.0bpw",    revision: "main",   label: "Llama 3.1 8B (8bpw)",      description: "범용 고품질 · ~9GB VRAM",   size_gb: 9,    min_ram_gb: 12 },
+  // ── Gemma 3 (Google · bartowski) ─────────────────────────────────
+  { category: "lightweight", repo_id: "bartowski/gemma-3-4b-it-exl2",  revision: "4_0", label: "Gemma 3 4B (4bpw)",   description: "Google 경량 최신 · ~2.5GB VRAM",   size_gb: 2.5, min_ram_gb: 4  },
+  { category: "lightweight", repo_id: "bartowski/gemma-3-4b-it-exl2",  revision: "8_0", label: "Gemma 3 4B (8bpw)",   description: "Google 경량 고품질 · ~4GB VRAM",   size_gb: 4.0, min_ram_gb: 6  },
+  { category: "general",     repo_id: "bartowski/gemma-3-12b-it-exl2", revision: "4_0", label: "Gemma 3 12B (4bpw)",  description: "Google 균형 · ~7GB VRAM",          size_gb: 7.0, min_ram_gb: 10 },
+  { category: "general",     repo_id: "bartowski/gemma-3-12b-it-exl2", revision: "6_0", label: "Gemma 3 12B (6bpw)",  description: "Google 균형 고품질 · ~10GB VRAM",  size_gb: 10.0, min_ram_gb: 12 },
+  { category: "general",     repo_id: "bartowski/gemma-3-27b-it-exl2", revision: "4_0", label: "Gemma 3 27B (4bpw)",  description: "Google 고급 · ~15GB VRAM",         size_gb: 15.0, min_ram_gb: 18 },
+  { category: "general",     repo_id: "bartowski/gemma-3-27b-it-exl2", revision: "5_0", label: "Gemma 3 27B (5bpw)",  description: "Google 고급 고품질 · ~18GB VRAM",  size_gb: 18.0, min_ram_gb: 24 },
 
-  // 추론 저bpw 옵션
-  { category: "reasoning",repo_id: "lucyknada/deepseek-ai_DeepSeek-R1-Distill-Qwen-7B-exl2", revision: "4.0bpw", label: "DeepSeek R1 7B (4bpw)",   description: "추론 경량 · ~4.5GB VRAM",   size_gb: 4.5,  min_ram_gb: 6  },
+  // ── DeepSeek R1 Distill (추론 특화) ──────────────────────────────
+  { category: "reasoning", repo_id: "bartowski/DeepSeek-R1-Distill-Qwen-7B-exl2",  revision: "4_0",  label: "DeepSeek R1 7B (4bpw)",  description: "추론·수학·코딩 · ~4.5GB VRAM",   size_gb: 4.5,  min_ram_gb: 6,  capabilities: { reasoning: true } },
+  { category: "reasoning", repo_id: "bartowski/DeepSeek-R1-Distill-Qwen-7B-exl2",  revision: "6_0",  label: "DeepSeek R1 7B (6bpw)",  description: "추론 고품질 · ~6.5GB VRAM",       size_gb: 6.5,  min_ram_gb: 8,  badge: "🧠 추론 최강", capabilities: { reasoning: true } },
+  { category: "reasoning", repo_id: "bartowski/DeepSeek-R1-Distill-Qwen-14B-exl2", revision: "4_0",  label: "DeepSeek R1 14B (4bpw)", description: "추론 중급 · ~8GB VRAM",           size_gb: 8.0,  min_ram_gb: 10, capabilities: { reasoning: true } },
+  { category: "reasoning", repo_id: "bartowski/DeepSeek-R1-Distill-Qwen-32B-exl2", revision: "3_5",  label: "DeepSeek R1 32B (3.5bpw)", description: "추론 최강 경량 · ~16GB VRAM",   size_gb: 16.0, min_ram_gb: 20, capabilities: { reasoning: true } },
+  { category: "reasoning", repo_id: "bartowski/DeepSeek-R1-Distill-Qwen-32B-exl2", revision: "5_0",  label: "DeepSeek R1 32B (5bpw)", description: "추론 최강 · ~22GB VRAM",          size_gb: 22.0, min_ram_gb: 24, capabilities: { reasoning: true } },
 
-  // 경량 — 3B
-  { category: "lightweight", repo_id: "lucyknada/Qwen_Qwen2.5-Coder-3B-Instruct-exl2",     revision: "4.0bpw", label: "Qwen2.5-Coder 3B (4bpw)",  description: "초경량 · ~2.5GB VRAM",       size_gb: 2.5,  min_ram_gb: 4  },
-  { category: "lightweight", repo_id: "lucyknada/Qwen_Qwen2.5-Coder-3B-Instruct-exl2",     revision: "6.0bpw", label: "Qwen2.5-Coder 3B (6bpw)",  description: "경량 · ~3GB VRAM",           size_gb: 3,    min_ram_gb: 5  },
+  // ── DeepSeek V3 (대형 MoE — 24GB+ 전용) ─────────────────────────
+  { category: "reasoning", repo_id: "bartowski/DeepSeek-V3-0324-exl2",              revision: "2_0",  label: "DeepSeek V3 0324 (2bpw)", description: "V3 최신판 초경량 · ~44GB, 멀티GPU", size_gb: 44.0, min_ram_gb: 48, capabilities: { reasoning: true } },
+
+  // ── Qwen2.5-Coder (코딩 안정판) ──────────────────────────────────
+  { category: "coding", repo_id: "DrNicefellow/Qwen2.5-Coder-7B-Instruct-4.0bpw-exl2",     revision: "main", label: "Qwen2.5-Coder 7B (4bpw)",    description: "코딩 안정판 경량 · ~4.5GB", size_gb: 4.5,  min_ram_gb: 6  },
+  { category: "coding", repo_id: "DrNicefellow/Qwen2.5-Coder-7B-Instruct-5.5bpw-exl2",     revision: "main", label: "Qwen2.5-Coder 7B (5.5bpw)",  description: "코딩 안정판 균형 · ~6GB",   size_gb: 6.0,  min_ram_gb: 8  },
+  { category: "coding", repo_id: "bartowski/Qwen2.5-Coder-14B-Instruct-exl2",               revision: "5_0",  label: "Qwen2.5-Coder 14B (5bpw)",   description: "코딩 고품질 · ~10.5GB",     size_gb: 10.5, min_ram_gb: 12 },
+  { category: "coding", repo_id: "bartowski/Qwen2.5-Coder-32B-Instruct-exl2",               revision: "4_25", label: "Qwen2.5-Coder 32B (4.25bpw)", description: "최강 코딩 · ~18GB",        size_gb: 18.0, min_ram_gb: 24 },
+
+  // ── Llama 3.x ─────────────────────────────────────────────────────
+  { category: "general", repo_id: "bartowski/Meta-Llama-3.1-8B-Instruct-exl2",              revision: "4_0",  label: "Llama 3.1 8B (4bpw)",  description: "범용 경량 · ~5GB VRAM",     size_gb: 5.0,  min_ram_gb: 6  },
+  { category: "general", repo_id: "bartowski/Meta-Llama-3.1-8B-Instruct-exl2",              revision: "6_0",  label: "Llama 3.1 8B (6bpw)",  description: "범용 균형 · ~7GB VRAM",     size_gb: 7.0,  min_ram_gb: 8  },
+  { category: "general", repo_id: "bartowski/Llama-3.3-70B-Instruct-exl2",                  revision: "3_0",  label: "Llama 3.3 70B (3bpw)", description: "범용 최강 · ~29GB VRAM",    size_gb: 29.0, min_ram_gb: 32 },
+
+  // ── 초경량 ────────────────────────────────────────────────────────
+  { category: "lightweight", repo_id: "bartowski/Qwen3-1.7B-Instruct-exl2",                 revision: "8_0",  label: "Qwen3 1.7B (8bpw)",    description: "초경량 최신 · ~1.7GB VRAM", size_gb: 1.7,  min_ram_gb: 3, capabilities: { reasoning: true } },
+  { category: "lightweight", repo_id: "lucyknada/Qwen_Qwen2.5-Coder-3B-Instruct-exl2",      revision: "6.0bpw", label: "Qwen2.5-Coder 3B (6bpw)", description: "코딩 초경량 · ~3GB VRAM", size_gb: 3.0, min_ram_gb: 4  },
 ];
 
 interface Props {
