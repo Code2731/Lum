@@ -512,20 +512,26 @@ pub async fn stream_ai_command(
             Some("fast")  => false,
             _             => route_engine(&prompt, &config) == Engine::MistralRs,
         };
-        let (base_url, api_key) = if use_heavy {
-            (config.mistral_rs_url(), None)
+
+        if use_heavy {
+            let heavy_url = config.mistral_rs_url();
+            // 1차 시도: mistral.rs
+            match call_compat_stream(&app, &client, &full_prompt, &imgs, &heavy_url, None, &cancel_flag).await {
+                Ok(s) => Ok(s),
+                Err(e) => {
+                    // 연결 실패면 TabbyAPI로 자동 폴백 + 사용자에게 토큰으로 안내
+                    let fallback_url = config.xllm_url();
+                    let notice = format!(
+                        "⚠ Heavy Track(mistral.rs {}) 연결 실패 — Fast Track(TabbyAPI)으로 자동 전환합니다.\n오류: {}\n\n",
+                        heavy_url, e
+                    );
+                    let _ = app.emit(XLLM_TOKEN_EVENT, notice);
+                    call_compat_stream(&app, &client, &full_prompt, &imgs, &fallback_url, config.xllm_api_key.clone(), &cancel_flag).await
+                }
+            }
         } else {
-            (config.xllm_url(), config.xllm_api_key.clone())
-        };
-        call_compat_stream(&app, &client, &full_prompt, &imgs, &base_url, api_key, &cancel_flag).await
-            .map_err(|e| {
-                if use_heavy {
-                    LumError::AiEngine(format!(
-                        "Heavy Track 실패 — mistral.rs 서버({})에 연결할 수 없습니다. XllmPanel에서 [시작] 버튼을 누르고 모델을 지정한 뒤 재시도하세요. 원본 오류: {}",
-                        base_url, e
-                    ))
-                } else { e }
-            })
+            call_compat_stream(&app, &client, &full_prompt, &imgs, &config.xllm_url(), config.xllm_api_key.clone(), &cancel_flag).await
+        }
     }
 }
 
