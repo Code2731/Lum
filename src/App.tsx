@@ -476,7 +476,9 @@ const App: React.FC = () => {
               <span title={specs.recommendation_reason}>
                 {specs.gpu_type === "discrete" && specs.gpu_vram_gb
                   ? `${specs.gpu_vram_gb}GB VRAM`
-                  : `${specs.total_memory_gb}GB RAM`}
+                  : specs.gpu_type === "integrated"
+                    ? `${specs.total_memory_gb}GB 통합메모리`
+                    : `${specs.total_memory_gb}GB RAM`}
                 {" · "}
                 <span className={xllmOnline ? "text-green-400" : "text-red-400"}>
                   {xllmOnline ? "xLLM ●" : "xLLM ○"}
