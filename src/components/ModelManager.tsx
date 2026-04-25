@@ -197,6 +197,18 @@ const CURATED_MODELS: CuratedModel[] = [
   { category: "general", repo_id: "bartowski/Meta-Llama-3.1-8B-Instruct-exl2",              revision: "6_0",  label: "Llama 3.1 8B (6bpw)",  description: "범용 균형 · ~7GB VRAM",     size_gb: 7.0,  min_ram_gb: 8  },
   { category: "general", repo_id: "bartowski/Llama-3.3-70B-Instruct-exl2",                  revision: "3_0",  label: "Llama 3.3 70B (3bpw)", description: "범용 최강 · ~29GB VRAM",    size_gb: 29.0, min_ram_gb: 32 },
 
+  // ── LG EXAONE (한국어 최적화 · bartowski EXL2) ───────────────────
+  { category: "general",     repo_id: "bartowski/EXAONE-3.5-2.4B-Instruct-exl2",  revision: "4_0", label: "EXAONE 3.5 2.4B (4bpw)", description: "LG 한국어 경량 · ~1.5GB VRAM",         size_gb: 1.5,  min_ram_gb: 3,  badge: "🇰🇷 한국어" },
+  { category: "general",     repo_id: "bartowski/EXAONE-3.5-2.4B-Instruct-exl2",  revision: "8_0", label: "EXAONE 3.5 2.4B (8bpw)", description: "LG 한국어 경량 고품질 · ~2.5GB VRAM",   size_gb: 2.5,  min_ram_gb: 4,  badge: "🇰🇷 한국어" },
+  { category: "general",     repo_id: "bartowski/EXAONE-3.5-7.8B-Instruct-exl2",  revision: "4_0", label: "EXAONE 3.5 7.8B (4bpw)", description: "LG 한국어 균형 · ~5GB VRAM",           size_gb: 5.0,  min_ram_gb: 6,  badge: "🇰🇷 한국어" },
+  { category: "general",     repo_id: "bartowski/EXAONE-3.5-7.8B-Instruct-exl2",  revision: "6_0", label: "EXAONE 3.5 7.8B (6bpw)", description: "LG 한국어 균형 고품질 · ~7GB VRAM",     size_gb: 7.0,  min_ram_gb: 8,  badge: "🇰🇷 한국어" },
+  { category: "general",     repo_id: "bartowski/EXAONE-3.5-32B-Instruct-exl2",   revision: "3_5", label: "EXAONE 3.5 32B (3.5bpw)", description: "LG 한국어 대형 · ~16GB VRAM",          size_gb: 16.0, min_ram_gb: 20, badge: "🇰🇷 한국어" },
+  { category: "general",     repo_id: "bartowski/EXAONE-3.5-32B-Instruct-exl2",   revision: "5_0", label: "EXAONE 3.5 32B (5bpw)",   description: "LG 한국어 대형 고품질 · ~22GB VRAM",   size_gb: 22.0, min_ram_gb: 24, badge: "🇰🇷 한국어" },
+  { category: "reasoning",   repo_id: "bartowski/EXAONE-Deep-2.4B-exl2",           revision: "4_0", label: "EXAONE Deep 2.4B (4bpw)", description: "LG 추론 특화 경량 · ~1.5GB VRAM",      size_gb: 1.5,  min_ram_gb: 3,  capabilities: { reasoning: true }, badge: "🇰🇷 한국어" },
+  { category: "reasoning",   repo_id: "bartowski/EXAONE-Deep-7.8B-exl2",           revision: "4_0", label: "EXAONE Deep 7.8B (4bpw)", description: "LG 추론 특화 · ~5GB VRAM",             size_gb: 5.0,  min_ram_gb: 6,  capabilities: { reasoning: true }, badge: "🇰🇷 한국어" },
+  { category: "reasoning",   repo_id: "bartowski/EXAONE-Deep-7.8B-exl2",           revision: "6_0", label: "EXAONE Deep 7.8B (6bpw)", description: "LG 추론 특화 고품질 · ~7GB VRAM",      size_gb: 7.0,  min_ram_gb: 8,  capabilities: { reasoning: true }, badge: "🇰🇷 한국어" },
+  { category: "reasoning",   repo_id: "bartowski/EXAONE-Deep-32B-exl2",            revision: "3_5", label: "EXAONE Deep 32B (3.5bpw)", description: "LG 추론 특화 대형 · ~16GB VRAM",      size_gb: 16.0, min_ram_gb: 20, capabilities: { reasoning: true }, badge: "🇰🇷 한국어" },
+
   // ── 초경량 ────────────────────────────────────────────────────────
   { category: "lightweight", repo_id: "bartowski/Qwen3-1.7B-Instruct-exl2",                 revision: "8_0",  label: "Qwen3 1.7B (8bpw)",    description: "초경량 최신 · ~1.7GB VRAM", size_gb: 1.7,  min_ram_gb: 3, capabilities: { reasoning: true } },
   { category: "lightweight", repo_id: "lucyknada/Qwen_Qwen2.5-Coder-3B-Instruct-exl2",      revision: "6.0bpw", label: "Qwen2.5-Coder 3B (6bpw)", description: "코딩 초경량 · ~3GB VRAM", size_gb: 3.0, min_ram_gb: 4  },
