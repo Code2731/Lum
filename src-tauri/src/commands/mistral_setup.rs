@@ -43,43 +43,68 @@ pub async fn install_mistral_rs(app: AppHandle) -> Result<String> {
         ));
     }
 
-    // mistralrs-server는 crates.io에 없고 GitHub에서만 배포됨
     const GIT_REPO: &str = "https://github.com/EricLBuehler/mistral.rs.git";
     let _ = app.emit("mistral_rs_log", "mistral.rs 설치 시작 (GitHub · CUDA 빌드)...");
-    let _ = app.emit("mistral_rs_log", "⏳ 첫 설치는 5~15분 걸립니다. 인내심 갖고 기다려주세요.");
+    let _ = app.emit("mistral_rs_log", "⏳ 첫 설치는 5~15분 걸립니다. cargo 출력을 실시간 표시합니다.");
 
-    // 2. CUDA 빌드 시도
-    let mut cuda_cmd = tokio::process::Command::new("cargo");
-    cuda_cmd.args(["install", "--git", GIT_REPO, "mistralrs-server", "--features", "cuda"]);
-    no_window_tokio(&mut cuda_cmd);
-    let cuda_out = cuda_cmd.output().await.map_err(|e| LumError::Io(e.to_string()))?;
-
-    if cuda_out.status.success() {
+    // 1차: CUDA 빌드 — 실시간 스트리밍
+    if run_cargo_install_streaming(&app, &["install", "--git", GIT_REPO, "mistralrs-server", "--features", "cuda"]).await? {
         let _ = app.emit("mistral_rs_log", "✅ CUDA 빌드 완료");
         return Ok("CUDA 빌드 설치 완료".into());
     }
+    let _ = app.emit("mistral_rs_log", "❌ CUDA 빌드 실패 — CPU 빌드로 재시도...");
 
-    let cuda_err = String::from_utf8_lossy(&cuda_out.stderr);
-    let cuda_tail: String = cuda_err.lines().rev().take(3).collect::<Vec<_>>().into_iter().rev().collect::<Vec<_>>().join(" / ");
-    let _ = app.emit("mistral_rs_log", format!("❌ CUDA 빌드 실패 — CPU 빌드로 재시도: {}", cuda_tail));
-
-    // 3. CPU 빌드 폴백
-    let mut cpu_cmd = tokio::process::Command::new("cargo");
-    cpu_cmd.args(["install", "--git", GIT_REPO, "mistralrs-server"]);
-    no_window_tokio(&mut cpu_cmd);
-    let cpu_out = cpu_cmd.output().await.map_err(|e| LumError::Io(e.to_string()))?;
-
-    if cpu_out.status.success() {
+    // 2차: CPU 빌드 폴백
+    if run_cargo_install_streaming(&app, &["install", "--git", GIT_REPO, "mistralrs-server"]).await? {
         let _ = app.emit("mistral_rs_log", "✅ CPU 빌드 완료 (CUDA 가속 미사용)");
         return Ok("CPU 빌드 설치 완료 (CUDA 가속 미사용)".into());
     }
 
-    let cpu_err = String::from_utf8_lossy(&cpu_out.stderr);
-    let cpu_tail: String = cpu_err.lines().rev().take(8).collect::<Vec<_>>().into_iter().rev().collect::<Vec<_>>().join("\n");
-    Err(LumError::AiEngine(format!(
-        "CUDA·CPU 빌드 모두 실패. cargo 출력 (말미):\n{}",
-        cpu_tail
-    )))
+    Err(LumError::AiEngine(
+        "CUDA·CPU 빌드 모두 실패. 'mistral.rs 설치 로그' 패널에서 cargo 출력을 확인하세요.".into()
+    ))
+}
+
+/// cargo install을 실행하며 stdout/stderr를 한 줄씩 'mistral_rs_log' 이벤트로 emit.
+/// 빌드 중에도 사용자가 진행 상황을 볼 수 있게 함. exit code success 여부 반환.
+async fn run_cargo_install_streaming(app: &AppHandle, args: &[&str]) -> Result<bool> {
+    use tokio::io::{AsyncBufReadExt, BufReader};
+    use std::process::Stdio;
+
+    let mut cmd = tokio::process::Command::new("cargo");
+    cmd.args(args)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
+    no_window_tokio(&mut cmd);
+    let mut child = cmd.spawn().map_err(|e| LumError::Io(e.to_string()))?;
+
+    let stdout = child.stdout.take();
+    let stderr = child.stderr.take();
+    let app_out = app.clone();
+    let app_err = app.clone();
+
+    let stdout_task = tokio::spawn(async move {
+        if let Some(s) = stdout {
+            let mut lines = BufReader::new(s).lines();
+            while let Ok(Some(line)) = lines.next_line().await {
+                let _ = app_out.emit("mistral_rs_log", line);
+            }
+        }
+    });
+    let stderr_task = tokio::spawn(async move {
+        if let Some(s) = stderr {
+            let mut lines = BufReader::new(s).lines();
+            while let Ok(Some(line)) = lines.next_line().await {
+                // cargo는 진행률을 stderr로 보냄 — 그대로 표시
+                let _ = app_err.emit("mistral_rs_log", line);
+            }
+        }
+    });
+
+    let status = child.wait().await.map_err(|e| LumError::Io(e.to_string()))?;
+    let _ = stdout_task.await;
+    let _ = stderr_task.await;
+    Ok(status.success())
 }
 
 /// mistral.rs 서버 시작

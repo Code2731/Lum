@@ -98,6 +98,8 @@ const XllmPanel: React.FC<Props> = ({ onClose }) => {
   // mistral.rs (Heavy Track) 상태
   const [mistralStatus, setMistralStatus] = useState<{ running: boolean; url: string; model: string | null } | null>(null);
   const [isMistralBusy, setIsMistralBusy] = useState<"install" | "start" | "stop" | null>(null);
+  const [mistralLog, setMistralLog] = useState<string[]>([]);
+  const mistralLogRef = useRef<HTMLDivElement>(null);
   const [isCheckingTabby, setIsCheckingTabby] = useState(false);
   const [isInstallingTabby, setIsInstallingTabby] = useState(false);
   const [isStartingTabby, setIsStartingTabby] = useState(false);
@@ -152,6 +154,23 @@ const XllmPanel: React.FC<Props> = ({ onClose }) => {
     return () => { unlisten.then((fn) => fn()); };
   }, []);
 
+  // mistral.rs 빌드 로그 — cargo stdout/stderr 한 줄씩 실시간 수신
+  useEffect(() => {
+    const unlisten = listen<string>("mistral_rs_log", (e) => {
+      setMistralLog((prev) => {
+        // 1000줄 초과 시 앞부분 삭제 (메모리 보호)
+        const next = [...prev, e.payload];
+        return next.length > 1000 ? next.slice(-800) : next;
+      });
+      // 다음 tick에 하단 스크롤
+      requestAnimationFrame(() => {
+        const el = mistralLogRef.current;
+        if (el) el.scrollTop = el.scrollHeight;
+      });
+    });
+    return () => { unlisten.then((fn) => fn()); };
+  }, []);
+
   // 모델 다운로드 진행률 수신
   useEffect(() => {
     const unlisten = listen<{ percent: number; done: boolean }>("mlx_download_progress", (e) => {
@@ -183,11 +202,11 @@ const XllmPanel: React.FC<Props> = ({ onClose }) => {
 
   const handleInstallMistral = useCallback(async () => {
     setIsMistralBusy("install");
+    setMistralLog([]); // 새 설치 시작 시 이전 로그 클리어
     try {
       const msg = await invoke<string>("install_mistral_rs");
       setStatusMsg(`✅ ${msg}`);
     } catch (e) {
-      // 백엔드 메시지는 이미 충분히 구체적 — 그대로 표시
       setStatusMsg(`❌ ${errMsg(e)}`);
     } finally {
       setIsMistralBusy(null);
@@ -1059,8 +1078,51 @@ const XllmPanel: React.FC<Props> = ({ onClose }) => {
                   )}
                 </div>
 
+                {/* 빌드 로그 패널 — 설치 진행 중 cargo 출력 표시 */}
+                {(isMistralBusy === "install" || mistralLog.length > 0) && (
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between text-[10px] text-white/40">
+                      <span>📋 빌드 로그 ({mistralLog.length}줄)</span>
+                      {mistralLog.length > 0 && (
+                        <button
+                          onClick={() => setMistralLog([])}
+                          className="text-white/30 hover:text-white/60 transition-colors text-[9px]"
+                        >
+                          지우기
+                        </button>
+                      )}
+                    </div>
+                    <div
+                      ref={mistralLogRef}
+                      className="bg-black/40 border border-white/10 rounded p-2 max-h-48 overflow-y-auto font-mono text-[10px] leading-tight"
+                    >
+                      {mistralLog.length === 0 && isMistralBusy === "install" ? (
+                        <div className="flex items-center gap-1.5 text-white/40">
+                          <Loader2 size={10} className="animate-spin" />
+                          <span>cargo install 시작 중...</span>
+                        </div>
+                      ) : (
+                        mistralLog.map((line, idx) => (
+                          <div
+                            key={idx}
+                            className={
+                              line.includes("error") || line.startsWith("❌") ? "text-red-400" :
+                              line.includes("warning") ? "text-yellow-400/70" :
+                              line.startsWith("✅") || line.includes("Compiling") || line.includes("Finished") ? "text-green-400/80" :
+                              "text-white/50"
+                            }
+                          >
+                            {line}
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 <p className="text-[10px] text-white/30">
                   Heavy 버튼 ON + 자연어 입력 또는 <code className="text-purple-400">!! 이 코드 전체 분석</code>
+                  {isMistralBusy === "install" && <span className="block mt-1 text-yellow-400/70">⏳ 첫 설치는 5~15분. cargo가 의존성 다운로드·컴파일 중입니다.</span>}
                 </p>
               </div>
             )}
