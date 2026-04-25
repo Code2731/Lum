@@ -51,12 +51,12 @@ pub async fn start_mistral_rs(app: AppHandle) -> Result<String> {
         .build()
         .map_err(|e| LumError::Network(e.to_string()))?;
 
-    let health_url = format!("http://127.0.0.1:{}/v1/models", MISTRAL_RS_PORT);
+    let config = load_config()?;
+    let base_url = config.mistral_rs_url();
+    let health_url = format!("{}/v1/models", base_url);
     if client.get(&health_url).send().await.is_ok() {
         return Ok("이미 실행 중".into());
     }
-
-    let config = load_config()?;
     let model = config
         .mistral_rs_model
         .clone()
@@ -95,7 +95,7 @@ pub async fn start_mistral_rs(app: AppHandle) -> Result<String> {
         tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
         if client.get(&health_url).send().await.is_ok() {
             let _ = app.emit("mistral_rs_log", "mistral.rs 서버 준비 완료");
-            return Ok(format!("http://127.0.0.1:{}", MISTRAL_RS_PORT));
+            return Ok(base_url);
         }
     }
 
@@ -114,17 +114,25 @@ pub fn stop_mistral_rs() -> Result<String> {
     Ok("mistral.rs 종료됨".into())
 }
 
-/// 현재 상태 조회 — 프로세스 핸들 존재 여부로 실행 중 판단
+/// 현재 상태 조회 — try_wait()으로 프로세스 생존 여부 확인
 #[command]
 pub fn check_mistral_rs_status() -> MistralRsStatus {
     let config = load_config().unwrap_or_default();
+    let url = config.mistral_rs_url();
     let running = MISTRAL_PROCESS
         .lock()
-        .map(|g| g.is_some())
+        .map(|mut g| {
+            if let Some(child) = g.as_mut() {
+                // exit status가 있으면 이미 종료됨
+                child.try_wait().ok().flatten().is_none()
+            } else {
+                false
+            }
+        })
         .unwrap_or(false);
     MistralRsStatus {
         running,
-        url: format!("http://127.0.0.1:{}", MISTRAL_RS_PORT),
+        url,
         model: config.mistral_rs_model,
     }
 }

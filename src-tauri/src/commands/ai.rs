@@ -232,12 +232,8 @@ async fn call_compat_stream(
                         .or_else(|| delta["reasoning_content"].as_str())
                     {
                         if !t.is_empty() {
-                            let show = load_config()
-                                .ok()
-                                .and_then(|c| c.show_reasoning)
-                                .unwrap_or(true);
                             full_text.push_str(t);
-                            if show {
+                            if config.show_reasoning.unwrap_or(true) {
                                 let _ = app.emit(XLLM_TOKEN_EVENT, t.to_string());
                             }
                         }

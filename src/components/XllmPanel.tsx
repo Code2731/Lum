@@ -182,6 +182,9 @@ const XllmPanel: React.FC<Props> = ({ onClose }) => {
         speculativeNDraft: config.speculative_n_draft ?? null,
         sparseAttention: config.sparse_attention ?? null,
         sparseTopK: config.sparse_top_k ?? null,
+        mistralRsEnabled: config.mistral_rs_enabled ?? null,
+        mistralRsUrl: config.mistral_rs_url ?? null,
+        mistralRsModel: config.mistral_rs_model ?? null,
       });
       setStatusMsg("설정 저장 완료");
     } catch (e) {
@@ -854,10 +857,9 @@ const XllmPanel: React.FC<Props> = ({ onClose }) => {
               <p className="text-[10px] text-yellow-400/60">다운로드된 모델이 없습니다 — 모델 관리자에서 먼저 다운로드하세요.</p>
             )}
           </section>
-        </div>
 
-        <section className="px-4 py-3 border-t border-white/5">
-            <h3 className="flex items-center gap-1.5 text-[11px] font-semibold text-white/40 uppercase tracking-wider mb-2">
+          <section className="space-y-2">
+            <h3 className="flex items-center gap-1.5 text-[11px] font-semibold text-white/40 uppercase tracking-wider">
               <GitFork size={9} /> Heavy Track (mistral.rs · 30B+)
             </h3>
             <label className="flex items-center gap-2 text-xs text-white/60 mb-2 cursor-pointer">
@@ -913,7 +915,8 @@ const XllmPanel: React.FC<Props> = ({ onClose }) => {
                 </p>
               </div>
             )}
-        </section>
+          </section>
+        </div>
 
         {/* 하단 — 상태 메시지 + 저장 버튼 */}
         <div className="flex items-center gap-3 px-4 py-3 border-t border-white/5 shrink-0">

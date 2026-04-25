@@ -195,6 +195,9 @@ pub fn save_xllm_settings(
     speculative_n_draft: Option<u32>,
     sparse_attention: Option<bool>,
     sparse_top_k: Option<u32>,
+    mistral_rs_enabled: Option<bool>,
+    mistral_rs_url: Option<String>,
+    mistral_rs_model: Option<String>,
 ) -> Result<()> {
     let mut config = load_config()?;
     config.xllm_base_url = server_url.filter(|s| !s.is_empty());
@@ -207,6 +210,9 @@ pub fn save_xllm_settings(
     config.speculative_n_draft = speculative_n_draft;
     config.sparse_attention = sparse_attention;
     config.sparse_top_k = sparse_top_k;
+    config.mistral_rs_enabled = mistral_rs_enabled;
+    config.mistral_rs_url = mistral_rs_url.filter(|s| !s.is_empty());
+    config.mistral_rs_model = mistral_rs_model.filter(|s| !s.is_empty());
     save_config(&config)
 }
 
