@@ -67,8 +67,10 @@ fn xllm_body(
         config.cache_mode.as_deref().unwrap_or("Q8")
     };
 
-    // max_tokens: OpenAI 표준 파라미터 — MLX-LM·TabbyAPI 모두 지원
-    let max_tokens = config.max_seq_len.unwrap_or(4096).min(32768);
+    // max_tokens = 출력 토큰 수 (전체 컨텍스트 창이 아님!).
+    // max_seq_len과 같게 두면 prompt + completion이 컨텍스트를 초과해 TabbyAPI가 abort함.
+    // 컨텍스트의 절반(2048~4096) 정도를 출력 한계로 사용.
+    let max_tokens = config.max_seq_len.unwrap_or(4096).saturating_div(2).max(512).min(8192);
 
     // 이미지 있으면 OpenAI vision 포맷 (content: Array), 없으면 단순 string
     let content = if images.is_empty() {

@@ -1,6 +1,8 @@
 use crate::commands::config::load_config;
 use crate::error::{LumError, Result};
+use futures_util::StreamExt;
 use serde::{Deserialize, Serialize};
+use tauri::{AppHandle, Emitter};
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct XllmModelInfo {
@@ -111,6 +113,7 @@ pub async fn get_xllm_model_info() -> Result<XllmModelInfo> {
 /// max_seq_len: 컨텍스트 창 크기 (Q4 KV cache에서는 32768도 가능)
 #[tauri::command]
 pub async fn switch_xllm_model(
+    app: AppHandle,
     model_name: String,
     cache_mode: Option<String>,
     max_seq_len: Option<u32>,
@@ -118,21 +121,16 @@ pub async fn switch_xllm_model(
     let config = load_config()?;
     let url = format!("{}/v1/model/load", config.xllm_url());
     let client = reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(120)) // 모델 로드는 최대 2분
+        .timeout(std::time::Duration::from_secs(300)) // 큰 모델은 3~5분 소요
         .build()
         .map_err(|e| LumError::Network(e.to_string()))?;
 
-    // TabbyAPI 모델 로드 요청 구성 (필드명: model_name, cache_mode, max_seq_len)
     let mut body = serde_json::json!({ "model_name": model_name });
-
-    // KV cache quantization 설정
     let cm = cache_mode
         .as_deref()
         .or(config.cache_mode.as_deref())
         .unwrap_or("Q8");
     body["cache_mode"] = serde_json::Value::String(cm.to_string());
-
-    // 최대 시퀀스 길이 — Q4 캐시면 더 긴 컨텍스트 허용
     let msl = max_seq_len.or(config.max_seq_len).unwrap_or(8192);
     body["max_seq_len"] = serde_json::Value::Number(msl.into());
 
@@ -144,24 +142,65 @@ pub async fn switch_xllm_model(
         req = req.header("x-admin-key", key);
     }
 
-    let resp = req
-        .send()
-        .await
-        .map_err(|e| LumError::Network(e.to_string()))?;
+    let resp = req.send().await.map_err(|e| LumError::Network(e.to_string()))?;
 
-    if resp.status().is_success() {
-        Ok(format!(
-            "모델 '{}' 로드 완료 (cache_mode={}, max_seq_len={})",
-            model_name, cm, msl
-        ))
-    } else {
+    if !resp.status().is_success() {
         let status = resp.status();
         let body_text = resp.text().await.unwrap_or_default();
-        Err(LumError::AiEngine(format!(
-            "모델 로드 실패 HTTP {}: {}",
-            status, body_text
-        )))
+        return Err(LumError::AiEngine(format!(
+            "모델 로드 실패 HTTP {}: {}", status, body_text
+        )));
     }
+
+    // SSE 스트림 파싱 — TabbyAPI는 진행률을 chunk로 보내고, 실패 시 {"error":...} 보냄
+    let mut stream = resp.bytes_stream();
+    let mut line_buf = String::new();
+    let mut last_module = 0u64;
+    let mut last_modules = 0u64;
+
+    while let Some(chunk) = stream.next().await {
+        let bytes = chunk.map_err(|e| LumError::Network(e.to_string()))?;
+        line_buf.push_str(&String::from_utf8_lossy(&bytes));
+
+        while let Some(nl) = line_buf.find('\n') {
+            let line = line_buf[..nl].trim().to_string();
+            line_buf.drain(..nl + 1);
+            let Some(data) = line.strip_prefix("data: ") else { continue };
+            let Ok(json) = serde_json::from_str::<serde_json::Value>(data) else { continue };
+
+            if let Some(err) = json.get("error") {
+                let msg = err.get("message").and_then(|m| m.as_str()).unwrap_or("알 수 없는 오류");
+                return Err(LumError::AiEngine(format!(
+                    "모델 '{}' 로드 실패: {}", model_name, msg.trim()
+                )));
+            }
+
+            if let (Some(m), Some(total)) = (
+                json.get("module").and_then(|v| v.as_u64()),
+                json.get("modules").and_then(|v| v.as_u64()),
+            ) {
+                last_module = m;
+                last_modules = total;
+                let _ = app.emit("xllm_load_progress", serde_json::json!({
+                    "model": model_name,
+                    "module": m,
+                    "modules": total,
+                    "percent": (m as f32 / total.max(1) as f32 * 100.0) as u32,
+                }));
+            }
+        }
+    }
+
+    if last_modules > 0 && last_module < last_modules {
+        return Err(LumError::AiEngine(format!(
+            "모델 로드가 중단됨 ({}/{})", last_module, last_modules
+        )));
+    }
+
+    Ok(format!(
+        "모델 '{}' 로드 완료 (cache_mode={}, max_seq_len={})",
+        model_name, cm, msl
+    ))
 }
 
 /// 현재 모델 언로드 (TabbyAPI POST /v1/model/unload)
