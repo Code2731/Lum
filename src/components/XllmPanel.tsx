@@ -171,6 +171,18 @@ const XllmPanel: React.FC<Props> = ({ onClose }) => {
       .finally(() => setIsLoadingInfo(false));
   }, []);
 
+  // TabbyAPI 상태 이벤트 — 모델 자동 로드 진행/완료/실패
+  useEffect(() => {
+    const unlisten = listen<{ stage: string; message: string; model?: string }>("tabby_status", (e) => {
+      setStatusMsg(e.payload.message);
+      if (e.payload.stage === "ready") {
+        invoke<TabbyApiStatus>("check_tabbyapi_status").then(setTabbyStatus).catch(() => {});
+        refreshModelInfo();
+      }
+    });
+    return () => { unlisten.then((fn) => fn()); };
+  }, [refreshModelInfo]);
+
   const handleSave = useCallback(async () => {
     setIsSaving(true);
     setStatusMsg(null);
@@ -219,13 +231,31 @@ const XllmPanel: React.FC<Props> = ({ onClose }) => {
         model: isAppleSilicon ? selectedMlxModel : null,
       });
       setStatusMsg(msg);
-      setTimeout(checkTabbyStatus, 2000);
+      // 30초 동안 1초 간격 폴링 — 서버가 떠오르면 바로 UI 갱신
+      let attempts = 0;
+      const poll = setInterval(async () => {
+        attempts += 1;
+        try {
+          const s = await invoke<TabbyApiStatus>("check_tabbyapi_status");
+          if (s.running) {
+            setTabbyStatus(s);
+            if (s.port) setConfig((c) => ({ ...c, xllm_base_url: `http://127.0.0.1:${s.port}` }));
+            refreshModelInfo();
+            clearInterval(poll);
+          } else if (attempts >= 30) {
+            clearInterval(poll);
+            setStatusMsg("서버가 30초 내에 응답하지 않습니다 — lum_tabby.log 확인");
+          }
+        } catch {
+          if (attempts >= 30) clearInterval(poll);
+        }
+      }, 1000);
     } catch (e) {
       setStatusMsg(`시작 실패: ${errMsg(e)}`);
     } finally {
       setIsStartingTabby(false);
     }
-  }, [recommendedPort, isAppleSilicon, selectedMlxModel, checkTabbyStatus]);
+  }, [recommendedPort, isAppleSilicon, selectedMlxModel, refreshModelInfo]);
 
   const handleStopTabby = useCallback(async () => {
     try {
