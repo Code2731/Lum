@@ -243,21 +243,27 @@ const ModelManager: React.FC<Props> = ({ onClose, recommendedModel: _recommended
   const [loadProgress, setLoadProgress] = useState<{ percent: number; done: boolean; error?: string } | null>(null);
   const [codingModel, setCodingModel] = useState<string | null>(null);
   const [docModel, setDocModel] = useState<string | null>(null);
+  const [mistralModel, setMistralModel] = useState<string | null>(null);
 
   const refreshRoles = useCallback(() => {
-    invoke<{ coding_model?: string; doc_model?: string }>("load_app_config")
-      .then((c) => { setCodingModel(c.coding_model ?? null); setDocModel(c.doc_model ?? null); })
+    invoke<{ coding_model?: string; doc_model?: string; mistral_rs_model?: string }>("load_app_config")
+      .then((c) => {
+        setCodingModel(c.coding_model ?? null);
+        setDocModel(c.doc_model ?? null);
+        setMistralModel(c.mistral_rs_model ?? null);
+      })
       .catch(() => {});
   }, []);
 
-  const assignRole = useCallback(async (role: "coding" | "doc", modelId: string) => {
+  const assignRole = useCallback(async (role: "coding" | "doc" | "heavy", modelId: string) => {
     try {
       // 전체 설정 로드 후 해당 역할만 변경 (다른 xLLM 설정 유지)
       const cfg = await invoke<Record<string, unknown>>("load_app_config");
-      const merged: Record<string, unknown> = {
-        ...cfg,
-        ...(role === "coding" ? { coding_model: modelId } : { doc_model: modelId }),
-      };
+      const patch: Record<string, unknown> =
+        role === "coding" ? { coding_model: modelId } :
+        role === "doc"    ? { doc_model: modelId } :
+                            { mistral_rs_model: modelId, mistral_rs_enabled: true };
+      const merged: Record<string, unknown> = { ...cfg, ...patch };
       await invoke("save_xllm_settings", {
         serverUrl: merged["xllm_base_url"] ?? null,
         cacheMode: merged["cache_mode"] ?? null,
@@ -269,10 +275,15 @@ const ModelManager: React.FC<Props> = ({ onClose, recommendedModel: _recommended
         speculativeNDraft: merged["speculative_n_draft"] ?? null,
         sparseAttention: merged["sparse_attention"] ?? null,
         sparseTopK: merged["sparse_top_k"] ?? null,
+        mistralRsEnabled: merged["mistral_rs_enabled"] ?? null,
+        mistralRsUrl: merged["mistral_rs_url"] ?? null,
+        mistralRsModel: merged["mistral_rs_model"] ?? null,
       });
       if (role === "coding") setCodingModel(modelId);
-      else setDocModel(modelId);
-      setLoadMsg(`✅ ${modelId} → ${role === "coding" ? "코딩" : "문서"} 역할로 지정`);
+      else if (role === "doc") setDocModel(modelId);
+      else setMistralModel(modelId);
+      const roleLabel = role === "coding" ? "코딩" : role === "doc" ? "문서" : "Heavy Track (mistral.rs)";
+      setLoadMsg(`✅ ${modelId} → ${roleLabel}`);
     } catch (e) {
       const raw = e as { message?: string } | string | null;
       const msg = typeof raw === "string" ? raw : (raw?.message ?? JSON.stringify(raw));
@@ -552,6 +563,7 @@ const ModelManager: React.FC<Props> = ({ onClose, recommendedModel: _recommended
                   const isBusy = loadingModel === m.id;
                   const isCoding = codingModel === m.id;
                   const isDoc = docModel === m.id;
+                  const isHeavy = mistralModel === m.id || mistralModel === m.path;
                   return (
                     <div
                       key={m.id}
@@ -573,6 +585,9 @@ const ModelManager: React.FC<Props> = ({ onClose, recommendedModel: _recommended
                           )}
                           {isDoc && (
                             <span className="shrink-0 text-[9px] px-1.5 py-0.5 bg-purple-400/15 text-purple-300 rounded-full">📄 문서</span>
+                          )}
+                          {isHeavy && (
+                            <span className="shrink-0 text-[9px] px-1.5 py-0.5 bg-pink-400/15 text-pink-300 rounded-full">🚀 Heavy</span>
                           )}
                         </div>
                         <div className="text-[10px] text-white/40 mt-0.5">
@@ -643,6 +658,18 @@ const ModelManager: React.FC<Props> = ({ onClose, recommendedModel: _recommended
                             }`}
                           >
                             📄 문서용으로 지정
+                          </button>
+                          <button
+                            onClick={() => assignRole("heavy", m.path ?? m.id)}
+                            disabled={isHeavy}
+                            title="!! 접두사로 호출 — mistral.rs Heavy Track에 로컬 경로 지정"
+                            className={`px-2 py-0.5 rounded text-[10px] transition-colors ${
+                              isHeavy
+                                ? "bg-pink-400/20 text-pink-300 cursor-default"
+                                : "bg-white/5 hover:bg-pink-400/10 text-white/50 hover:text-pink-300"
+                            }`}
+                          >
+                            🚀 Heavy 지정 (mistral.rs)
                           </button>
                         </div>
                       )}

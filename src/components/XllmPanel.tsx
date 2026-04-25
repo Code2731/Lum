@@ -34,6 +34,19 @@ interface AppConfig {
 type SafetyMode = "safe" | "balanced" | "max";
 const MODE_DEFAULTS: Record<SafetyMode, number> = { safe: 0.70, balanced: 0.80, max: 0.90 };
 
+// Heavy Track 추천 모델 프리셋 — mistral.rs는 HF ID로 직접 다운로드/로드
+const HEAVY_PRESETS: { label: string; id: string; size: string; tag: string }[] = [
+  { label: "DeepSeek R1 Distill 32B (추론)",    id: "deepseek-ai/DeepSeek-R1-Distill-Qwen-32B",      size: "~19GB", tag: "🧠 추론" },
+  { label: "Qwen2.5-Coder 32B (코딩)",          id: "Qwen/Qwen2.5-Coder-32B-Instruct",                size: "~19GB", tag: "⚡ 코딩" },
+  { label: "Qwen3 32B (범용 최신)",             id: "Qwen/Qwen3-32B-Instruct",                        size: "~19GB", tag: "🆕 범용" },
+  { label: "Qwen3 30B-A3B MoE (빠른 32B)",      id: "Qwen/Qwen3-30B-A3B-Instruct",                    size: "~17GB", tag: "🚀 MoE" },
+  { label: "EXAONE 3.5 32B (한국어)",           id: "LGAI-EXAONE/EXAONE-3.5-32B-Instruct",            size: "~19GB", tag: "🇰🇷 한국어" },
+  { label: "EXAONE Deep 32B (한국어 추론)",     id: "LGAI-EXAONE/EXAONE-Deep-32B",                    size: "~19GB", tag: "🇰🇷🧠" },
+  { label: "Mistral Small 24B",                 id: "mistralai/Mistral-Small-24B-Instruct-2501",      size: "~14GB", tag: "🇫🇷 균형" },
+  { label: "Gemma 3 27B",                       id: "google/gemma-3-27b-it",                          size: "~16GB", tag: "🤖 Google" },
+  { label: "Llama 3.3 70B (멀티GPU)",            id: "meta-llama/Llama-3.3-70B-Instruct",              size: "~40GB", tag: "🦙 Meta" },
+];
+
 interface ModelInfo {
   id: string;
   max_seq_len?: number;
@@ -874,12 +887,32 @@ const XllmPanel: React.FC<Props> = ({ onClose }) => {
             {config.mistral_rs_enabled && (
               <div className="space-y-2">
                 <div>
-                  <label className="text-[10px] text-white/40 block mb-1">모델 ID (HuggingFace)</label>
+                  <label className="text-[10px] text-white/40 block mb-1">추천 프리셋 (클릭 → 자동 입력)</label>
+                  <div className="grid grid-cols-1 gap-1 mb-2 max-h-40 overflow-y-auto pr-1">
+                    {HEAVY_PRESETS.map((p) => {
+                      const active = config.mistral_rs_model === p.id;
+                      return (
+                        <button
+                          key={p.id}
+                          onClick={() => setConfig((c) => ({ ...c, mistral_rs_model: p.id }))}
+                          className={`flex items-center justify-between gap-2 px-2 py-1.5 rounded text-[11px] text-left transition-colors border ${
+                            active
+                              ? "bg-purple-500/20 border-purple-400/40 text-purple-200"
+                              : "bg-white/3 border-white/8 text-white/60 hover:bg-white/8"
+                          }`}
+                        >
+                          <span className="truncate"><span className="opacity-70 mr-1">{p.tag}</span>{p.label}</span>
+                          <span className="text-[9px] text-white/30 shrink-0">{p.size}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <label className="text-[10px] text-white/40 block mb-1">모델 ID (HuggingFace 또는 로컬 경로)</label>
                   <input
                     value={config.mistral_rs_model ?? ""}
                     onChange={(e) => setConfig((c) => ({ ...c, mistral_rs_model: e.target.value }))}
                     placeholder="예: deepseek-ai/DeepSeek-R1-Distill-Qwen-32B"
-                    className="w-full bg-white/5 border border-white/10 rounded px-2 py-1 text-xs text-white/80 placeholder-white/20"
+                    className="w-full bg-white/5 border border-white/10 rounded px-2 py-1 text-xs text-white/80 placeholder-white/20 font-mono"
                   />
                 </div>
                 <div>
