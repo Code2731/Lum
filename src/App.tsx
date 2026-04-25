@@ -474,8 +474,9 @@ const App: React.FC = () => {
               <Loader2 size={10} className="animate-spin" />
             ) : specs ? (
               <span title={specs.recommendation_reason}>
-                {specs.total_memory_gb}GB ·{" "}
-                {specs.gpu_type === "discrete" ? "dGPU" : specs.gpu_type === "integrated" ? "iGPU" : "CPU"}
+                {specs.gpu_type === "discrete" && specs.gpu_vram_gb
+                  ? `${specs.gpu_vram_gb}GB VRAM`
+                  : `${specs.total_memory_gb}GB RAM`}
                 {" · "}
                 <span className={xllmOnline ? "text-green-400" : "text-red-400"}>
                   {xllmOnline ? "xLLM ●" : "xLLM ○"}
