@@ -613,27 +613,86 @@ pub async fn start_tabbyapi(
 
     // 3초 후 프로세스가 살아있는지 확인
     tokio::time::sleep(tokio::time::Duration::from_secs(3)).await;
-    match child.try_wait() {
-        Ok(Some(status)) => {
-            // 프로세스가 이미 종료됨 → 로그 읽어서 에러 반환
-            let log = std::fs::read_to_string(&log_path).unwrap_or_default();
-            let snippet: String = log
-                .lines()
-                .rev()
-                .take(8)
-                .collect::<Vec<_>>()
-                .into_iter()
-                .rev()
-                .collect::<Vec<_>>()
-                .join("\n");
-            return Err(LumError::AiEngine(format!(
-                "TabbyAPI 시작 직후 종료 (exit={status})\n{snippet}"
-            )));
-        }
-        _ => {}
+    if let Ok(Some(status)) = child.try_wait() {
+        let log = std::fs::read_to_string(&log_path).unwrap_or_default();
+        let snippet: String = log
+            .lines()
+            .rev()
+            .take(8)
+            .collect::<Vec<_>>()
+            .into_iter()
+            .rev()
+            .collect::<Vec<_>>()
+            .join("\n");
+        return Err(LumError::AiEngine(format!(
+            "TabbyAPI 시작 직후 종료 (exit={status})\n{snippet}"
+        )));
     }
 
-    Ok(format!("TabbyAPI 포트 {port} 시작됨 — 로그: lum_tabby.log"))
+    // 서버 health 폴링 + coding_model 자동 로드 (백그라운드)
+    let auto_load_app = app.clone();
+    tokio::spawn(async move {
+        use crate::commands::config::load_config;
+        let cfg = match load_config() { Ok(c) => c, Err(_) => return };
+        let Some(model_to_load) = cfg.coding_model.as_deref().filter(|s| !s.is_empty()).map(String::from) else {
+            let _ = auto_load_app.emit("tabby_status", serde_json::json!({
+                "stage": "ready",
+                "message": "TabbyAPI 시작됨 — 모델을 ModelManager에서 [사용]하세요"
+            }));
+            return;
+        };
+        let client = match reqwest::Client::builder().timeout(std::time::Duration::from_secs(5)).build() {
+            Ok(c) => c, Err(_) => return,
+        };
+        let health_url = format!("http://127.0.0.1:{port}/v1/models");
+        for _ in 0..20 {
+            tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+            let mut req = client.get(&health_url);
+            if let Some(k) = &cfg.xllm_api_key { req = req.header("x-api-key", k); }
+            if req.send().await.map(|r| r.status().is_success()).unwrap_or(false) { break; }
+        }
+        let _ = auto_load_app.emit("tabby_status", serde_json::json!({
+            "stage": "loading_model", "model": &model_to_load,
+            "message": format!("모델 로드 중: {model_to_load}")
+        }));
+        let load_url = format!("http://127.0.0.1:{port}/v1/model/load");
+        let body = serde_json::json!({
+            "model_name": model_to_load,
+            "cache_mode": cfg.cache_mode.as_deref().unwrap_or("Q8"),
+            "max_seq_len": cfg.max_seq_len.unwrap_or(8192),
+        });
+        let mut req = client.post(&load_url)
+            .timeout(std::time::Duration::from_secs(300))
+            .json(&body);
+        if let Some(k) = &cfg.xllm_api_key { req = req.header("x-api-key", k); }
+        if let Some(k) = &cfg.xllm_admin_key { req = req.header("x-admin-key", k); }
+        match req.send().await {
+            Ok(resp) if resp.status().is_success() => {
+                // SSE 끝까지 소비 (응답 닫혀야 다음 요청 가능)
+                let _ = resp.text().await;
+                let _ = auto_load_app.emit("tabby_status", serde_json::json!({
+                    "stage": "ready", "model": &model_to_load,
+                    "message": format!("모델 로드 완료: {model_to_load}")
+                }));
+            }
+            Ok(resp) => {
+                let s = resp.status();
+                let body = resp.text().await.unwrap_or_default();
+                let _ = auto_load_app.emit("tabby_status", serde_json::json!({
+                    "stage": "error",
+                    "message": format!("모델 로드 실패 HTTP {s}: {}", body.chars().take(200).collect::<String>())
+                }));
+            }
+            Err(e) => {
+                let _ = auto_load_app.emit("tabby_status", serde_json::json!({
+                    "stage": "error",
+                    "message": format!("모델 로드 요청 실패: {e}")
+                }));
+            }
+        }
+    });
+
+    Ok(format!("TabbyAPI 포트 {port} 시작됨 — 모델 자동 로드 중 (lum_tabby.log)"))
 }
 
 #[command]
