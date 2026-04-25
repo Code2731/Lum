@@ -185,9 +185,10 @@ const XllmPanel: React.FC<Props> = ({ onClose }) => {
     setIsMistralBusy("install");
     try {
       const msg = await invoke<string>("install_mistral_rs");
-      setStatusMsg(msg);
+      setStatusMsg(`✅ ${msg}`);
     } catch (e) {
-      setStatusMsg(`mistral.rs 설치 실패: ${errMsg(e)}`);
+      // 백엔드 메시지는 이미 충분히 구체적 — 그대로 표시
+      setStatusMsg(`❌ ${errMsg(e)}`);
     } finally {
       setIsMistralBusy(null);
       checkMistralStatus();
@@ -210,7 +211,7 @@ const XllmPanel: React.FC<Props> = ({ onClose }) => {
         } catch { if (attempts >= 30) clearInterval(poll); }
       }, 1000);
     } catch (e) {
-      setStatusMsg(`mistral.rs 시작 실패: ${errMsg(e)}`);
+      setStatusMsg(`❌ ${errMsg(e)}`);
     } finally {
       setIsMistralBusy(null);
     }
@@ -220,9 +221,9 @@ const XllmPanel: React.FC<Props> = ({ onClose }) => {
     setIsMistralBusy("stop");
     try {
       const msg = await invoke<string>("stop_mistral_rs");
-      setStatusMsg(msg);
+      setStatusMsg(`✅ ${msg}`);
     } catch (e) {
-      setStatusMsg(`mistral.rs 종료 실패: ${errMsg(e)}`);
+      setStatusMsg(`❌ ${errMsg(e)}`);
     } finally {
       setIsMistralBusy(null);
       checkMistralStatus();

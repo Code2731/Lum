@@ -13,6 +13,11 @@ fn no_window_std(cmd: &mut std::process::Command) {
 #[cfg(not(windows))]
 fn no_window_std(_cmd: &mut std::process::Command) {}
 
+#[cfg(windows)]
+fn no_window_tokio(cmd: &mut tokio::process::Command) { cmd.creation_flags(0x08000000); }
+#[cfg(not(windows))]
+fn no_window_tokio(_cmd: &mut tokio::process::Command) {}
+
 const MISTRAL_RS_PORT: u16 = 8080;
 
 static MISTRAL_PROCESS: Mutex<Option<std::process::Child>> = Mutex::new(None);
@@ -27,28 +32,51 @@ pub struct MistralRsStatus {
 /// mistral.rs 바이너리 설치 (cargo install mistralrs-server)
 #[command]
 pub async fn install_mistral_rs(app: AppHandle) -> Result<String> {
-    let _ = app.emit("mistral_rs_log", "mistral.rs 설치 시작 (CUDA 빌드)...");
-
-    let status = tokio::process::Command::new("cargo")
-        .args(["install", "mistralrs-server", "--features", "cuda"])
-        .status()
-        .await
-        .map_err(|e| LumError::Io(e.to_string()))?;
-
-    if !status.success() {
-        let _ = app.emit("mistral_rs_log", "CUDA 빌드 실패 — CPU 빌드로 재시도...");
-        let fallback = tokio::process::Command::new("cargo")
-            .args(["install", "mistralrs-server"])
-            .status()
-            .await
-            .map_err(|e| LumError::Io(e.to_string()))?;
-        if !fallback.success() {
-            return Err(LumError::AiEngine("mistral.rs 설치 실패".into()));
-        }
+    // 1. cargo 존재 확인 — Rust 툴체인 없으면 명확한 메시지
+    let cargo_check = tokio::process::Command::new("cargo")
+        .arg("--version")
+        .output()
+        .await;
+    if cargo_check.is_err() || !cargo_check.as_ref().map(|o| o.status.success()).unwrap_or(false) {
+        return Err(LumError::AiEngine(
+            "Rust 툴체인(cargo) 미설치. https://rustup.rs 에서 rustup-init.exe를 받아 설치 후 재시도하세요.".into()
+        ));
     }
 
-    let _ = app.emit("mistral_rs_log", "mistral.rs 설치 완료");
-    Ok("설치 완료".into())
+    let _ = app.emit("mistral_rs_log", "mistral.rs 설치 시작 (CUDA 빌드)...");
+
+    // 2. CUDA 빌드 시도 — stdout/stderr 캡처해서 실패 시 원인 노출
+    let mut cuda_cmd = tokio::process::Command::new("cargo");
+    cuda_cmd.args(["install", "mistralrs-server", "--features", "cuda"]);
+    no_window_tokio(&mut cuda_cmd);
+    let cuda_out = cuda_cmd.output().await.map_err(|e| LumError::Io(e.to_string()))?;
+
+    if cuda_out.status.success() {
+        let _ = app.emit("mistral_rs_log", "mistral.rs CUDA 빌드 완료");
+        return Ok("CUDA 빌드 설치 완료".into());
+    }
+
+    let cuda_err = String::from_utf8_lossy(&cuda_out.stderr);
+    let _ = app.emit("mistral_rs_log", format!("CUDA 빌드 실패 — CPU 빌드로 재시도: {}", cuda_err.lines().last().unwrap_or("")));
+
+    // 3. CPU 빌드 폴백
+    let mut cpu_cmd = tokio::process::Command::new("cargo");
+    cpu_cmd.args(["install", "mistralrs-server"]);
+    no_window_tokio(&mut cpu_cmd);
+    let cpu_out = cpu_cmd.output().await.map_err(|e| LumError::Io(e.to_string()))?;
+
+    if cpu_out.status.success() {
+        let _ = app.emit("mistral_rs_log", "mistral.rs CPU 빌드 완료");
+        return Ok("CPU 빌드 설치 완료 (CUDA 가속 미사용)".into());
+    }
+
+    let cpu_err = String::from_utf8_lossy(&cpu_out.stderr);
+    // 마지막 5줄만 — cargo 에러는 보통 후반부에 핵심 메시지가 있음
+    let cpu_tail: String = cpu_err.lines().rev().take(5).collect::<Vec<_>>().into_iter().rev().collect::<Vec<_>>().join("\n");
+    Err(LumError::AiEngine(format!(
+        "CUDA·CPU 빌드 모두 실패. cargo 출력 (말미):\n{}",
+        cpu_tail
+    )))
 }
 
 /// mistral.rs 서버 시작
