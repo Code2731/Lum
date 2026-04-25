@@ -44,8 +44,10 @@ fn detect_mlx_loaded_model() -> Option<String> {
 }
 
 /// 현재 로드된 모델 정보 조회.
-/// Apple Silicon(MLX-LM): ps 파서로 --model 인자 읽기 (가장 정확)
-/// 그 외: /v1/models 첫 엔트리 → /v1/model 폴백
+/// Apple Silicon(MLX-LM): ps 파서로 --model 인자 읽기
+/// TabbyAPI: /v1/model(단수) 먼저 — 실제 로드된 모델만 반환.
+///   /v1/models(복수)는 디렉토리의 모든 모델을 MRU 순으로 반환해 첫 엔트리가
+///   로드된 모델과 다른 문제가 있어 fallback으로만 사용.
 #[tauri::command]
 pub async fn get_xllm_model_info() -> Result<XllmModelInfo> {
     let config = load_config()?;
@@ -66,16 +68,26 @@ pub async fn get_xllm_model_info() -> Result<XllmModelInfo> {
         .build()
         .map_err(|e| LumError::Network(e.to_string()))?;
 
-    let models_url = format!("{}/v1/models", base_url);
-    let mut req = client.get(&models_url);
+    // 1차: /v1/model (단수) — 실제 로드된 모델만 반환
+    let model_url = format!("{}/v1/model", base_url);
+    let mut req = client.get(&model_url);
     if let Some(key) = &config.xllm_api_key {
         req = req.header("x-api-key", key);
     }
     if let Ok(resp) = req.send().await {
         if let Ok(json) = resp.json::<serde_json::Value>().await {
-            if let Some(first) = json["data"].as_array().and_then(|a| a.first()) {
+            if let Some(id) = json["id"].as_str() {
                 return Ok(XllmModelInfo {
-                    id: first["id"].as_str().unwrap_or("unknown").to_string(),
+                    id: id.to_string(),
+                    max_seq_len: json["parameters"]["max_seq_len"].as_u64().map(|v| v as u32),
+                    cache_mode: json["parameters"]["cache_mode"].as_str().map(|s| s.to_string()),
+                    rope_scale: json["parameters"]["rope_scale"].as_f64().map(|v| v as f32),
+                });
+            }
+            // detail: "No models are currently loaded." → unknown
+            if json.get("detail").is_some() {
+                return Ok(XllmModelInfo {
+                    id: "unknown".to_string(),
                     max_seq_len: None,
                     cache_mode: None,
                     rope_scale: None,
@@ -84,9 +96,9 @@ pub async fn get_xllm_model_info() -> Result<XllmModelInfo> {
         }
     }
 
-    // TabbyAPI 전용 /v1/model 폴백
-    let model_url = format!("{}/v1/model", base_url);
-    let mut req2 = client.get(&model_url);
+    // 2차 폴백: /v1/models 첫 엔트리 (mistral.rs/MLX 호환용 — TabbyAPI에선 부정확)
+    let models_url = format!("{}/v1/models", base_url);
+    let mut req2 = client.get(&models_url);
     if let Some(key) = &config.xllm_api_key {
         req2 = req2.header("x-api-key", key);
     }
@@ -98,14 +110,12 @@ pub async fn get_xllm_model_info() -> Result<XllmModelInfo> {
         .await
         .map_err(|e| LumError::AiEngine(e.to_string()))?;
 
-    Ok(XllmModelInfo {
-        id: res["id"].as_str().unwrap_or("unknown").to_string(),
-        max_seq_len: res["parameters"]["max_seq_len"].as_u64().map(|v| v as u32),
-        cache_mode: res["parameters"]["cache_mode"]
-            .as_str()
-            .map(|s| s.to_string()),
-        rope_scale: res["parameters"]["rope_scale"].as_f64().map(|v| v as f32),
-    })
+    let id = res["data"].as_array()
+        .and_then(|a| a.first())
+        .and_then(|f| f["id"].as_str())
+        .unwrap_or("unknown")
+        .to_string();
+    Ok(XllmModelInfo { id, max_seq_len: None, cache_mode: None, rope_scale: None })
 }
 
 /// ② 모델 전환 (TabbyAPI POST /v1/model/load)
