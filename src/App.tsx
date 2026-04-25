@@ -14,6 +14,7 @@ import { useCommandNotifier } from "./hooks/useCommandNotifier";
 import { useWorkspace } from "./hooks/useWorkspace";
 import { inferTabIcon } from "./utils/tabIcon";
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import {
   Zap, Cpu, Loader2, TerminalSquare, LayoutList, MousePointer2,
   Package, Database, Plus, X, Columns2, Rows2, SlidersHorizontal, ArrowUpCircle, GitCompareArrows, Palette,
@@ -66,18 +67,47 @@ const App: React.FC = () => {
   const { blocks: cmdBlocks, feedRaw } = useCommandBlocks();
   useCommandNotifier(cmdBlocks);
 
-  // TabbyAPI에 실제 로드된 모델 ID — 10초마다 폴링
+  // TabbyAPI 로드된 모델 ID + Heavy(mistral.rs) 모델 — 이벤트 기반 즉시 반영
   const [loadedModelId, setLoadedModelId] = useState<string | null>(null);
-  useEffect(() => {
-    const fetchLoaded = () => {
-      invoke<{ id: string }>("get_xllm_model_info")
-        .then((info) => { if (info?.id && info.id !== "unknown") setLoadedModelId(info.id); })
-        .catch(() => setLoadedModelId(null));
-    };
-    fetchLoaded();
-    const t = setInterval(fetchLoaded, 10000);
-    return () => clearInterval(t);
+  const [heavyModelId, setHeavyModelId] = useState<string | null>(null);
+  const [heavyEnabled, setHeavyEnabled] = useState(false);
+
+  const refreshLoadedModel = useCallback(() => {
+    invoke<{ id: string }>("get_xllm_model_info")
+      .then((info) => setLoadedModelId(info?.id && info.id !== "unknown" ? info.id : null))
+      .catch(() => setLoadedModelId(null));
   }, []);
+
+  const refreshHeavyConfig = useCallback(() => {
+    invoke<{ mistral_rs_enabled?: boolean; mistral_rs_model?: string }>("load_app_config")
+      .then((c) => {
+        setHeavyEnabled(c.mistral_rs_enabled ?? false);
+        setHeavyModelId(c.mistral_rs_model ?? null);
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    refreshLoadedModel();
+    refreshHeavyConfig();
+    // 폴링은 30초마다 안전망용으로만 (이벤트가 주된 갱신)
+    const t = setInterval(refreshLoadedModel, 30000);
+    return () => clearInterval(t);
+  }, [refreshLoadedModel, refreshHeavyConfig]);
+
+  // TabbyAPI 자동 로드 / 설정 저장 / 모델 전환 이벤트 → 즉시 갱신
+  useEffect(() => {
+    const a = listen<{ stage: string }>("tabby_status", (e: { payload: { stage: string } }) => {
+      if (e.payload.stage === "ready" || e.payload.stage === "error") refreshLoadedModel();
+    });
+    const b = listen<unknown>("xllm_load_progress", () => refreshLoadedModel());
+    const c = listen<unknown>("xllm_settings_saved", () => { refreshLoadedModel(); refreshHeavyConfig(); });
+    return () => {
+      a.then((f: () => void) => f());
+      b.then((f: () => void) => f());
+      c.then((f: () => void) => f());
+    };
+  }, [refreshLoadedModel, refreshHeavyConfig]);
 
   // Phase 72 — 추론 토큰 표시 전역 토글 (툴바 + XllmPanel 공통 상태)
   const [showReasoning, setShowReasoning] = useState(true);
@@ -504,19 +534,36 @@ const App: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2">
-          {(loadedModelId || specs) && (
-            <div
-              className="text-[10px] px-2 py-1 rounded bg-white/5 text-white/40 truncate max-w-[260px]"
-              title={loadedModelId ? "현재 로드된 모델" : specs?.recommendation_reason}
-            >
-              {/* 로드된 모델 우선 — 긴 로컬 경로는 마지막 구간만 표시 */}
-              {(() => {
-                const name = loadedModelId ?? specs?.recommended_model ?? "";
-                const m = name.match(/[^/\\]+$/);
-                return m ? m[0] : name;
-              })()}
-            </div>
-          )}
+          {(() => {
+            const shortName = (n?: string | null) => {
+              if (!n) return "";
+              const m = n.match(/[^/\\]+$/);
+              return m ? m[0] : n;
+            };
+            const fast = shortName(loadedModelId ?? specs?.recommended_model);
+            const heavy = shortName(heavyModelId);
+            if (!fast && !heavy) return null;
+            return (
+              <div className="flex items-center gap-1">
+                {fast && (
+                  <div
+                    className="text-[10px] px-2 py-1 rounded bg-blue-400/10 text-blue-300 truncate max-w-[200px]"
+                    title={loadedModelId ? `Fast (TabbyAPI): ${loadedModelId}` : specs?.recommendation_reason}
+                  >
+                    ⚡ {fast}
+                  </div>
+                )}
+                {heavyEnabled && heavy && (
+                  <div
+                    className="text-[10px] px-2 py-1 rounded bg-purple-400/10 text-purple-300 truncate max-w-[200px]"
+                    title={`Heavy Track (mistral.rs): ${heavyModelId}`}
+                  >
+                    🚀 {heavy}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
           <button
             aria-label="파일 탐색기 (Cmd+B)"
             title="파일 탐색기 (Cmd+B)"

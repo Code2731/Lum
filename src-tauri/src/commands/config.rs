@@ -185,6 +185,7 @@ pub fn save_capability_toggles(
 /// xLLM 최적화 설정 저장 (프론트엔드 → 파일)
 #[tauri::command]
 pub fn save_xllm_settings(
+    app: tauri::AppHandle,
     server_url: Option<String>,
     cache_mode: Option<String>,
     coding_model: Option<String>,
@@ -199,6 +200,7 @@ pub fn save_xllm_settings(
     mistral_rs_url: Option<String>,
     mistral_rs_model: Option<String>,
 ) -> Result<()> {
+    use tauri::Emitter;
     let mut config = load_config()?;
     config.xllm_base_url = server_url.filter(|s| !s.is_empty());
     config.cache_mode = cache_mode;
@@ -213,7 +215,9 @@ pub fn save_xllm_settings(
     config.mistral_rs_enabled = mistral_rs_enabled;
     config.mistral_rs_url = mistral_rs_url.filter(|s| !s.is_empty());
     config.mistral_rs_model = mistral_rs_model.filter(|s| !s.is_empty());
-    save_config(&config)
+    save_config(&config)?;
+    let _ = app.emit("xllm_settings_saved", ());
+    Ok(())
 }
 
 /// Quick Actions 저장

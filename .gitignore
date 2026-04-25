@@ -22,3 +22,14 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# 사용자 설정 파일 — HuggingFace 토큰·API 키 등 민감 정보 포함
+.lum_config.json
+.lum_session.json
+.lum_ssh_profiles.json
+.lum_mcp.json
+.lum_code_index.json
+.lum_quick_actions.json
+.env
+.env.local
+*.secret
