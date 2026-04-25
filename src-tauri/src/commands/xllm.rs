@@ -122,8 +122,8 @@ pub async fn switch_xllm_model(
         .build()
         .map_err(|e| LumError::Network(e.to_string()))?;
 
-    // TabbyAPI 모델 로드 요청 구성
-    let mut body = serde_json::json!({ "name": model_name });
+    // TabbyAPI 모델 로드 요청 구성 (필드명: model_name, cache_mode, max_seq_len)
+    let mut body = serde_json::json!({ "model_name": model_name });
 
     // KV cache quantization 설정
     let cm = cache_mode
@@ -137,6 +137,9 @@ pub async fn switch_xllm_model(
     body["max_seq_len"] = serde_json::Value::Number(msl.into());
 
     let mut req = client.post(&url).json(&body);
+    if let Some(key) = &config.xllm_api_key {
+        req = req.header("x-api-key", key);
+    }
     if let Some(key) = &config.xllm_admin_key {
         req = req.header("x-admin-key", key);
     }

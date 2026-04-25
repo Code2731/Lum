@@ -65,6 +65,14 @@ pub struct AppConfig {
     pub vision_enabled: Option<bool>,
     /// 추론(CoT) 토큰 UI 표시 — false면 <think>…</think> 블록 숨김
     pub show_reasoning: Option<bool>,
+
+    // ── Phase 78: Dual Engine (TabbyAPI + mistral.rs) ────────────────────────
+    /// mistral.rs 서버 활성화 여부
+    pub mistral_rs_enabled: Option<bool>,
+    /// mistral.rs 서버 주소 (기본값: http://127.0.0.1:8080)
+    pub mistral_rs_url: Option<String>,
+    /// mistral.rs Heavy Track 모델 경로 (HuggingFace ID 또는 로컬 경로)
+    pub mistral_rs_model: Option<String>,
 }
 
 impl AppConfig {
@@ -96,6 +104,12 @@ impl AppConfig {
         self.xllm_base_url
             .clone()
             .unwrap_or_else(|| XLLM_DEFAULT_URL.to_string())
+    }
+
+    pub fn mistral_rs_url(&self) -> String {
+        self.mistral_rs_url
+            .clone()
+            .unwrap_or_else(|| "http://127.0.0.1:8080".to_string())
     }
 }
 

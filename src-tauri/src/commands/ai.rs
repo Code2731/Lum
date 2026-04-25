@@ -1,4 +1,5 @@
 use crate::commands::config::{load_config, AppConfig};
+use crate::commands::router::{route_engine, Engine};
 use crate::error::{LumError, Result};
 use futures_util::StreamExt;
 use serde::{Deserialize, Serialize};
@@ -148,26 +149,24 @@ pub async fn call_xllm(client: &reqwest::Client, _model: &str, prompt: &str) -> 
         .ok_or_else(|| LumError::AiEngine(format!("xLLM 응답 파싱 실패: {}", res_json)))
 }
 
-/// ⑥ EPD 스트리밍 호출 — SSE 파싱 후 토큰마다 Tauri 이벤트 emit.
-/// images: data URI 배열. 비어있지 않으면 OpenAI vision 포맷 content 배열로 전송.
-async fn call_xllm_stream(
+/// OpenAI 호환 SSE 스트리밍 호출 — TabbyAPI · mistral.rs 공용
+/// api_key: x-api-key 헤더 (TabbyAPI 전용, mistral.rs는 None)
+async fn call_compat_stream(
     app: &tauri::AppHandle,
     client: &reqwest::Client,
-    _model: &str,
     prompt: &str,
     images: &[String],
+    base_url: &str,
+    api_key: Option<String>,
     cancel: &Arc<AtomicBool>,
 ) -> Result<String> {
     let config = load_config()?;
-    let base_url = config.xllm_url();
     let url = format!("{}/v1/chat/completions", base_url);
-
-    // 서버의 실제 로드된 모델 ID 사용
-    let actual_model = get_server_model_id(client, &base_url).await;
+    let actual_model = get_server_model_id(client, base_url).await;
     let body = xllm_body(&config, &actual_model, prompt, true, images);
 
     let mut req = client.post(&url).json(&body);
-    if let Some(key) = config.xllm_api_key {
+    if let Some(key) = api_key {
         req = req.header("x-api-key", key);
     }
 
@@ -506,7 +505,13 @@ pub async fn stream_ai_command(
         let _ = app.emit(XLLM_TOKEN_EVENT, result.clone());
         Ok(result)
     } else {
-        call_xllm_stream(&app, &client, &model, &full_prompt, &imgs, &cancel_flag).await
+        let config = load_config()?;
+        let (base_url, api_key) = if route_engine(&prompt, &config) == Engine::MistralRs {
+            (config.mistral_rs_url(), None)
+        } else {
+            (config.xllm_url(), config.xllm_api_key.clone())
+        };
+        call_compat_stream(&app, &client, &full_prompt, &imgs, &base_url, api_key, &cancel_flag).await
     }
 }
 

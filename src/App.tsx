@@ -199,9 +199,13 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    invoke<boolean>("check_xllm_status")
-      .then(setXllmOnline)
-      .catch(() => setXllmOnline(false));
+    const poll = () =>
+      invoke<boolean>("check_xllm_status")
+        .then(setXllmOnline)
+        .catch(() => setXllmOnline(false));
+    poll();
+    const id = setInterval(poll, 10_000);
+    return () => clearInterval(id);
   }, []);
 
   const recentCmds = useMemo(

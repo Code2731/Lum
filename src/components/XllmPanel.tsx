@@ -25,6 +25,10 @@ interface AppConfig {
   // Phase 72
   vision_enabled?: boolean;
   show_reasoning?: boolean;
+  // Phase 78: Dual Engine
+  mistral_rs_enabled?: boolean;
+  mistral_rs_url?: string;
+  mistral_rs_model?: string;
 }
 
 type SafetyMode = "safe" | "balanced" | "max";
@@ -851,6 +855,65 @@ const XllmPanel: React.FC<Props> = ({ onClose }) => {
             )}
           </section>
         </div>
+
+        <section className="px-4 py-3 border-t border-white/5">
+            <h3 className="flex items-center gap-1.5 text-[11px] font-semibold text-white/40 uppercase tracking-wider mb-2">
+              <GitFork size={9} /> Heavy Track (mistral.rs · 30B+)
+            </h3>
+            <label className="flex items-center gap-2 text-xs text-white/60 mb-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={config.mistral_rs_enabled ?? false}
+                onChange={(e) => setConfig((c) => ({ ...c, mistral_rs_enabled: e.target.checked }))}
+                className="accent-accent"
+              />
+              활성화 — <code className="text-purple-400">!!</code> 접두사로 Heavy Track 호출
+            </label>
+            {config.mistral_rs_enabled && (
+              <div className="space-y-2">
+                <div>
+                  <label className="text-[10px] text-white/40 block mb-1">모델 ID (HuggingFace)</label>
+                  <input
+                    value={config.mistral_rs_model ?? ""}
+                    onChange={(e) => setConfig((c) => ({ ...c, mistral_rs_model: e.target.value }))}
+                    placeholder="예: deepseek-ai/DeepSeek-R1-Distill-Qwen-32B"
+                    className="w-full bg-white/5 border border-white/10 rounded px-2 py-1 text-xs text-white/80 placeholder-white/20"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] text-white/40 block mb-1">서버 URL</label>
+                  <input
+                    value={config.mistral_rs_url ?? "http://127.0.0.1:8080"}
+                    onChange={(e) => setConfig((c) => ({ ...c, mistral_rs_url: e.target.value }))}
+                    className="w-full bg-white/5 border border-white/10 rounded px-2 py-1 text-xs text-white/80"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => invoke("install_mistral_rs").then(() => setStatusMsg("mistral.rs 설치 완료"))}
+                    className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded bg-white/5 hover:bg-white/10 text-white/60 text-xs transition-colors"
+                  >
+                    <Download size={10} /> 설치
+                  </button>
+                  <button
+                    onClick={() => invoke("start_mistral_rs").then(() => setStatusMsg("mistral.rs 시작됨"))}
+                    className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 text-xs transition-colors"
+                  >
+                    <Play size={10} /> 시작
+                  </button>
+                  <button
+                    onClick={() => invoke("stop_mistral_rs").then(() => setStatusMsg("mistral.rs 종료됨"))}
+                    className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded bg-white/5 hover:bg-white/10 text-white/60 text-xs transition-colors"
+                  >
+                    <Square size={10} /> 종료
+                  </button>
+                </div>
+                <p className="text-[10px] text-white/30">
+                  <code className="text-purple-400">!! 번역해줘</code> 또는 <code className="text-purple-400">!! 이 코드 전체 분석</code>
+                </p>
+              </div>
+            )}
+        </section>
 
         {/* 하단 — 상태 메시지 + 저장 버튼 */}
         <div className="flex items-center gap-3 px-4 py-3 border-t border-white/5 shrink-0">

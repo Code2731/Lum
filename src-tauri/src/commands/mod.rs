@@ -2,6 +2,8 @@ pub mod agent;
 pub mod ai;
 pub mod config;
 pub mod context;
+pub mod mistral_setup;
+pub mod router;
 pub mod edit_apply;
 pub mod env;
 pub mod git;

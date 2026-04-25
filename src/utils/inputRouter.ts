@@ -10,6 +10,7 @@ export type Route =
   | { type: "aiCmd"; prompt: string }     // "# ..." — 자연어 → 명령어 변환 (인라인 제안)
   | { type: "explain"; command: string }  // "? ..." — 명령어 설명
   | { type: "agent"; task: string }       // ">> ..." — 에이전트 태스크
+  | { type: "heavy"; prompt: string }     // "!! ..." — Heavy Track (mistral.rs 30B)
   | { type: "empty" };
 
 // cliSpecs.ts에 없지만 흔한 POSIX/개발 도구 — 자연어로 오인되면 안 되는 것들만
@@ -80,6 +81,9 @@ export function routeInput(raw: string): Route {
   if (!trimmed) return { type: "empty" };
 
   // 1. 명시적 prefix들 — 우선순위 최상
+  if (trimmed.startsWith("!!")) {
+    return { type: "heavy", prompt: trimmed.slice(2).trim() };
+  }
   if (trimmed.startsWith(">>")) {
     return { type: "agent", task: trimmed.replace(/^>>\s*/, "").trim() };
   }

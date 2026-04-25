@@ -173,6 +173,11 @@ pub fn run() {
             commands::tabbyapi_setup::start_tabbyapi,
             commands::tabbyapi_setup::stop_tabbyapi,
             commands::tabbyapi_setup::restart_with_model,
+            // Phase 78: mistral.rs Heavy Track
+            commands::mistral_setup::install_mistral_rs,
+            commands::mistral_setup::start_mistral_rs,
+            commands::mistral_setup::stop_mistral_rs,
+            commands::mistral_setup::check_mistral_rs_status,
             // MCP Tools (Phase 74 — 제대로 된 handshake + 서버 관리)
             mcp::list_mcp_servers,
             mcp::save_mcp_server,

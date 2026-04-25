@@ -9,14 +9,26 @@ pub struct TabbyApiStatus {
     pub install_dir: Option<String>,
 }
 
+/// 기존 config.yml에서 model_dir 값을 추출한다 (YAML 파서 없이 줄 단위 탐색).
+fn read_model_dir_from_config(server_dir: &std::path::Path) -> Option<String> {
+    let content = std::fs::read_to_string(server_dir.join("config.yml")).ok()?;
+    for line in content.lines() {
+        if let Some(val) = line.trim().strip_prefix("model_dir:") {
+            let val = val.trim();
+            if !val.is_empty() && !val.starts_with('#') {
+                return Some(val.to_string());
+            }
+        }
+    }
+    None
+}
+
 /// TabbyAPI config.yml 생성.
 ///
+/// - `model_dir`: 모델 폴더 절대 경로 (LUM config → 기존 config.yml → server_dir/models 순 우선)
 /// - `utilization`: 0.50 ~ 0.95 — VRAM 사용 상한 비율
 /// - `total_vram_gb`: 감지된 GPU VRAM (없으면 16GB 보수적 가정)
 /// - `max_seq_len`: None이면 VRAM 기반 자동 계산
-///
-/// `autosplit_reserve`는 "남겨둘 MB" 단위 — `(1 - utilization) * total_vram * 1024` 으로 환산.
-/// `max_seq_len` 자동 계산: VRAM cap으로 쓸 수 있는 GB × 4096 (대략 1GB당 4K 토큰, Q8 cache 기준).
 fn write_tabby_config(
     server_dir: &std::path::Path,
     port: u16,
@@ -24,6 +36,7 @@ fn write_tabby_config(
     total_vram_gb: Option<f32>,
     max_seq_len: Option<u32>,
     cache_mode: &str,
+    model_dir: &str,
 ) -> Result<()> {
     let vram = total_vram_gb.unwrap_or(16.0);
     let util = utilization.clamp(0.50, 0.95);
@@ -35,7 +48,7 @@ fn write_tabby_config(
     });
 
     let yaml = format!(
-        "network:\n  host: 127.0.0.1\n  port: {port}\n  disable_auth: true\n\nlogging:\n  log_prompt: false\n  log_generation_params: false\n  log_requests: false\n\nmodel:\n  model_dir: models\n  inline_model_loading: false\n  cache_mode: {cache_mode}\n  max_seq_len: {seq_len}\n  gpu_split_auto: true\n  autosplit_reserve: [{reserve_mb}]\n\ndeveloper:\n  unsafe_launch: false\n  disable_request_streaming: false\n",
+        "network:\n  host: 127.0.0.1\n  port: {port}\n  disable_auth: true\n\nlogging:\n  log_prompt: false\n  log_generation_params: false\n  log_requests: false\n\nmodel:\n  model_dir: {model_dir}\n  inline_model_loading: false\n  cache_mode: {cache_mode}\n  max_seq_len: {seq_len}\n  gpu_split_auto: true\n  autosplit_reserve: [{reserve_mb}]\n\ndeveloper:\n  unsafe_launch: false\n  disable_request_streaming: false\n",
     );
 
     let config_path = server_dir.join("config.yml");
@@ -170,7 +183,7 @@ fn is_intel_mac() -> bool {
 }
 
 /// 특정 포트에서 listening 중인 프로세스만 정확히 kill (다른 Python 앱 보호)
-fn kill_on_port(port: u16) {
+pub(crate) fn kill_on_port(port: u16) {
     #[cfg(windows)]
     {
         let needle = format!(":{}", port);
@@ -551,6 +564,14 @@ pub async fn start_tabbyapi(
         let total_vram = get_vram_gb();
         let cache_mode = cfg.cache_mode.as_deref().unwrap_or("Q8");
         let max_seq = cfg.max_seq_len;
+        // model_dir: LUM config → 기존 config.yml → server_dir/models 절대경로 순으로 결정
+        let model_dir = cfg
+            .xllm_models_dir
+            .as_deref()
+            .filter(|s| !s.is_empty())
+            .map(|s| s.to_string())
+            .or_else(|| read_model_dir_from_config(&server_dir))
+            .unwrap_or_else(|| server_dir.join("models").to_string_lossy().into_owned());
         if let Err(e) = write_tabby_config(
             &server_dir,
             port,
@@ -558,6 +579,7 @@ pub async fn start_tabbyapi(
             total_vram,
             max_seq,
             cache_mode,
+            &model_dir,
         ) {
             eprintln!("[lum] config.yml 쓰기 경고: {e} — 기본 설정으로 진행");
         }
@@ -577,6 +599,10 @@ pub async fn start_tabbyapi(
     let mut child = tokio::process::Command::new(&venv_python)
         .args([script, "--nowheel", "--port", &port.to_string()])
         .current_dir(&server_dir)
+        // Rich 라이브러리의 Windows 콘솔 API 사용 방지 — 콘솔 없는 환경에서 OSError: [Errno 22]로
+        // progress.stop()이 실패해 container = new_container가 미실행되는 버그 회피
+        .env("NO_COLOR", "1")
+        .env("PYTHONIOENCODING", "utf-8")
         .stdout(std::process::Stdio::null())
         .stderr(std::process::Stdio::from(log_file))
         .spawn()
@@ -680,12 +706,13 @@ mod tests {
         let tmp = std::env::temp_dir().join("lum_tabby_test");
         fs::create_dir_all(&tmp).unwrap();
 
-        write_tabby_config(&tmp, 5000, 0.80, Some(24.0), Some(16384), "Q8").unwrap();
+        write_tabby_config(&tmp, 5000, 0.80, Some(24.0), Some(16384), "Q8", "/custom/models").unwrap();
 
         let yaml = fs::read_to_string(tmp.join("config.yml")).unwrap();
         assert!(yaml.contains("port: 5000"));
         assert!(yaml.contains("cache_mode: Q8"));
         assert!(yaml.contains("max_seq_len: 16384"));
+        assert!(yaml.contains("model_dir: /custom/models"));
         // 24GB × 20% = 4.8GB → 4915 MB reserve (대략 4920 근방)
         assert!(
             yaml.contains("autosplit_reserve: [4915]")
@@ -696,12 +723,34 @@ mod tests {
     }
 
     #[test]
+    fn read_model_dir_from_config_기존값_추출() {
+        let tmp = std::env::temp_dir().join("lum_tabby_test_readdir");
+        fs::create_dir_all(&tmp).unwrap();
+
+        let yaml = "model:\n  model_dir: C:\\Users\\USER\\tabby\\models\n  cache_mode: Q8\n";
+        fs::write(tmp.join("config.yml"), yaml).unwrap();
+        let dir = read_model_dir_from_config(&tmp);
+        assert_eq!(dir.as_deref(), Some("C:\\Users\\USER\\tabby\\models"));
+
+        fs::remove_dir_all(&tmp).ok();
+    }
+
+    #[test]
+    fn read_model_dir_from_config_없으면_none() {
+        let tmp = std::env::temp_dir().join("lum_tabby_test_nodir");
+        fs::create_dir_all(&tmp).unwrap();
+        // config.yml 없음 → None
+        assert!(read_model_dir_from_config(&tmp).is_none());
+        fs::remove_dir_all(&tmp).ok();
+    }
+
+    #[test]
     fn write_tabby_config_vram_cap_clamped() {
         let tmp = std::env::temp_dir().join("lum_tabby_test_clamp");
         fs::create_dir_all(&tmp).unwrap();
 
         // 0.30(50% 미만)은 0.50으로 clamp → reserve = 10GB × 50% = 5120MB
-        write_tabby_config(&tmp, 5001, 0.30, Some(10.0), Some(8192), "Q4").unwrap();
+        write_tabby_config(&tmp, 5001, 0.30, Some(10.0), Some(8192), "Q4", "models").unwrap();
         let yaml = fs::read_to_string(tmp.join("config.yml")).unwrap();
         assert!(yaml.contains("autosplit_reserve: [5120]"));
 
@@ -714,7 +763,7 @@ mod tests {
         fs::create_dir_all(&tmp).unwrap();
 
         // 16GB × 80% = 12.8GB usable → seq_len = 12.8 × 4096 ≈ 52428 → clamp 32768
-        write_tabby_config(&tmp, 5002, 0.80, Some(16.0), None, "Q8").unwrap();
+        write_tabby_config(&tmp, 5002, 0.80, Some(16.0), None, "Q8", "models").unwrap();
         let yaml = fs::read_to_string(tmp.join("config.yml")).unwrap();
         assert!(yaml.contains("max_seq_len: 32768"));
 
