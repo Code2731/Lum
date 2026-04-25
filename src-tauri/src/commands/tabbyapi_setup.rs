@@ -1,6 +1,22 @@
 use crate::error::{LumError, Result};
 use tauri::{command, AppHandle, Emitter};
 
+/// Windows에서 새 콘솔 창 생성 방지 — CREATE_NO_WINDOW (0x08000000)
+/// tokio Command와 std Command 모두 적용 가능하도록 분리
+#[cfg(windows)]
+fn no_window_tokio(cmd: &mut tokio::process::Command) {
+    cmd.creation_flags(0x08000000);
+}
+#[cfg(windows)]
+fn no_window_std(cmd: &mut std::process::Command) {
+    use std::os::windows::process::CommandExt;
+    cmd.creation_flags(0x08000000);
+}
+#[cfg(not(windows))]
+fn no_window_tokio(_cmd: &mut tokio::process::Command) {}
+#[cfg(not(windows))]
+fn no_window_std(_cmd: &mut std::process::Command) {}
+
 #[derive(serde::Serialize, Clone)]
 pub struct TabbyApiStatus {
     pub installed: bool,
@@ -331,16 +347,10 @@ pub async fn install_tabbyapi(app: AppHandle) -> Result<String> {
     // NVIDIA/기타: TabbyAPI + ExLlamaV2
     if !server_dir.exists() {
         emit("📥 GitHub에서 TabbyAPI 클론 중...");
-        let status = tokio::process::Command::new("git")
-            .args([
-                "clone",
-                "--depth=1",
-                "https://github.com/theroyallab/tabbyAPI.git",
-                server_dir.to_str().unwrap_or("tabbyAPI"),
-            ])
-            .status()
-            .await
-            .map_err(|e| LumError::Io(format!("git 실행 실패: {e}")))?;
+        let mut git_cmd = tokio::process::Command::new("git");
+        git_cmd.args(["clone", "--depth=1", "https://github.com/theroyallab/tabbyAPI.git", server_dir.to_str().unwrap_or("tabbyAPI")]);
+        no_window_tokio(&mut git_cmd);
+        let status = git_cmd.status().await.map_err(|e| LumError::Io(format!("git 실행 실패: {e}")))?;
         if !status.success() {
             return Err(LumError::AiEngine(
                 "git clone 실패 — brew install git 후 재시도".into(),
@@ -355,11 +365,10 @@ pub async fn install_tabbyapi(app: AppHandle) -> Result<String> {
     let python = find_python();
     let venv_dir = server_dir.join(".venv");
     if !venv_dir.exists() {
-        let _ = tokio::process::Command::new(&python)
-            .args(["-m", "venv", ".venv"])
-            .current_dir(&server_dir)
-            .status()
-            .await;
+        let mut venv_cmd = tokio::process::Command::new(&python);
+        venv_cmd.args(["-m", "venv", ".venv"]).current_dir(&server_dir);
+        no_window_tokio(&mut venv_cmd);
+        let _ = venv_cmd.status().await;
     }
     let pip_path = venv_pip(&venv_dir);
     let pip = if pip_path.exists() {
@@ -370,12 +379,10 @@ pub async fn install_tabbyapi(app: AppHandle) -> Result<String> {
 
     // 1단계: 기본 패키지 먼저 (pydantic, fastapi 등) — 빈 venv에서 [cu12] 직접 시도는 실패함
     emit("📦 1/2 기본 패키지 설치 중... (수 분 소요)");
-    let out1 = tokio::process::Command::new(&pip)
-        .args(["install", "-e", "."])
-        .current_dir(&server_dir)
-        .output()
-        .await
-        .map_err(|e| LumError::Io(format!("pip 실행 실패: {e}")))?;
+    let mut pip1_cmd = tokio::process::Command::new(&pip);
+    pip1_cmd.args(["install", "-e", "."]).current_dir(&server_dir);
+    no_window_tokio(&mut pip1_cmd);
+    let out1 = pip1_cmd.output().await.map_err(|e| LumError::Io(format!("pip 실행 실패: {e}")))?;
 
     if !out1.status.success() {
         let stderr = String::from_utf8_lossy(&out1.stderr);
@@ -387,20 +394,17 @@ pub async fn install_tabbyapi(app: AppHandle) -> Result<String> {
     emit("✅ 기본 패키지 완료");
 
     // 2단계: NVIDIA GPU 감지 → pyproject.toml [cu12] extras 사용 (torch 2.9.0 + exllamav2 prebuilt wheels)
-    let has_nvidia = std::process::Command::new("nvidia-smi")
-        .output()
-        .map(|o| o.status.success())
-        .unwrap_or(false);
+    let mut nvcheck = std::process::Command::new("nvidia-smi");
+    no_window_std(&mut nvcheck);
+    let has_nvidia = nvcheck.output().map(|o| o.status.success()).unwrap_or(false);
 
     if has_nvidia {
         emit("🟢 NVIDIA GPU 감지 → torch 2.9.0+cu128 + ExLlamaV2/V3 + Flash-Attn 설치 중... (~3GB, 수 분 소요)");
         let extras_path = format!("{}[cu12]", server_dir.to_string_lossy());
-        let out2 = tokio::process::Command::new(&pip)
-            .args(["install", "-e", &extras_path])
-            .current_dir(&server_dir)
-            .output()
-            .await
-            .map_err(|e| LumError::Io(format!("cu12 extras 설치 실패: {e}")))?;
+        let mut pip2_cmd = tokio::process::Command::new(&pip);
+        pip2_cmd.args(["install", "-e", &extras_path]).current_dir(&server_dir);
+        no_window_tokio(&mut pip2_cmd);
+        let out2 = pip2_cmd.output().await.map_err(|e| LumError::Io(format!("cu12 extras 설치 실패: {e}")))?;
 
         if out2.status.success() {
             emit("✅ CUDA 의존성(torch/exllamav2/flash_attn) 설치 완료!");
@@ -546,10 +550,9 @@ pub async fn start_tabbyapi(
     // start_options.json 없으면 생성 (첫 실행 시 인터랙티브 프롬프트 방지)
     let opts_path = server_dir.join("start_options.json");
     if !opts_path.exists() {
-        let has_nvidia = std::process::Command::new("nvidia-smi")
-            .output()
-            .map(|o| o.status.success())
-            .unwrap_or(false);
+        let mut nvcheck2 = std::process::Command::new("nvidia-smi");
+        no_window_std(&mut nvcheck2);
+        let has_nvidia = nvcheck2.output().map(|o| o.status.success()).unwrap_or(false);
         let gpu_lib = if has_nvidia { "cu12" } else { "" };
         let opts = serde_json::json!({ "gpu_lib": gpu_lib, "first_run_done": true });
         let _ = std::fs::write(&opts_path, opts.to_string());
@@ -596,17 +599,17 @@ pub async fn start_tabbyapi(
     } else {
         "main.py"
     };
-    let mut child = tokio::process::Command::new(&venv_python)
+    let mut tabby_cmd = tokio::process::Command::new(&venv_python);
+    tabby_cmd
         .args([script, "--nowheel", "--port", &port.to_string()])
         .current_dir(&server_dir)
-        // Rich 라이브러리의 Windows 콘솔 API 사용 방지 — 콘솔 없는 환경에서 OSError: [Errno 22]로
-        // progress.stop()이 실패해 container = new_container가 미실행되는 버그 회피
+        // Rich 라이브러리의 Windows 콘솔 API 사용 방지
         .env("NO_COLOR", "1")
         .env("PYTHONIOENCODING", "utf-8")
         .stdout(std::process::Stdio::null())
-        .stderr(std::process::Stdio::from(log_file))
-        .spawn()
-        .map_err(|e| LumError::Io(format!("TabbyAPI 시작 실패: {e}")))?;
+        .stderr(std::process::Stdio::from(log_file));
+    no_window_tokio(&mut tabby_cmd);
+    let mut child = tabby_cmd.spawn().map_err(|e| LumError::Io(format!("TabbyAPI 시작 실패: {e}")))?;
 
     // 3초 후 프로세스가 살아있는지 확인
     tokio::time::sleep(tokio::time::Duration::from_secs(3)).await;

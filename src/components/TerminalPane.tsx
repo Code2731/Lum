@@ -85,7 +85,41 @@ const PANE_PADDING_Y = 6;
 
 const DEFAULT_MODEL = "Qwen2.5-Coder-7B-Instruct-EXL2-4bpw";
 
+interface ModeButtonProps {
+  label: string;
+  title: string;
+  active: boolean;
+  activeColor: string;
+  onClick: () => void;
+}
+const ModeButton: React.FC<ModeButtonProps> = ({ label, title, active, activeColor, onClick }) => (
+  <button
+    onClick={onClick}
+    title={title}
+    style={{
+      background: active ? `${activeColor}22` : "transparent",
+      border: `1px solid ${active ? activeColor + "66" : "rgba(255,255,255,0.08)"}`,
+      borderRadius: 4,
+      color: active ? activeColor : "rgba(255,255,255,0.28)",
+      fontSize: 11,
+      fontWeight: active ? 700 : 400,
+      padding: "1px 8px",
+      cursor: "pointer",
+      lineHeight: "18px",
+      transition: "all 120ms",
+      whiteSpace: "nowrap",
+    }}
+  >
+    {label}
+  </button>
+);
+
 const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme, fontSize, fontFamily, onOutput, onCwdChange, onReady, onAgentTrigger, onAskAI, aiMessages, aiStreaming, aiError, onClearAI, visionEnabled }) => {
+  // 입력 모드 토글 상태
+  const [heavyMode, setHeavyMode] = useState(false);
+  const [visionMode, setVisionMode] = useState(visionEnabled ?? false);
+  const [reasoningMode, setReasoningMode] = useState(false);
+
   const outerRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const termRef = useRef<Terminal | null>(null);
@@ -513,7 +547,9 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
 
   // 입력 라우팅: 기본=AI, 알려진 CLI=shell, !/@/#/?/>> = 명시적 오버라이드
   const handleSubmit = useCallback((rawInput: string) => {
-    const route = routeInput(rawInput);
+    // heavyMode면 !! 접두사 자동 삽입
+    const effective = heavyMode && !rawInput.trimStart().startsWith("!!") ? "!! " + rawInput : rawInput;
+    const route = routeInput(effective);
     clearAllOverlays();
     switch (route.type) {
       case "empty":
@@ -524,15 +560,18 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
       case "ai":
         if (route.question) onAskAIRef.current?.(route.question);
         return;
+      case "heavy":
+        // !! Heavy Track — AI에 전달 (mistral.rs 라우팅은 백엔드 router.rs에서)
+        if (route.prompt) onAskAIRef.current?.(route.prompt);
+        return;
       case "agent":
         if (route.task) onAgentTriggerRef.current?.(route.task);
         return;
       case "aiCmd":
       case "explain":
-        // # / ? 는 인라인 제안 흐름 — 제출 시엔 아무 것도 안 함 (Tab으로 수용)
         return;
     }
-  }, [id, clearAllOverlays]);
+  }, [id, heavyMode, clearAllOverlays]);
 
   const handleInterrupt = useCallback(() => {
     invoke("write_to_pty", { id, data: "\x03" }).catch(() => {});
@@ -625,7 +664,40 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
         onInterrupt={handleInterrupt}
         onTab={handleTab}
         onChange={handleInputChange}
+        heavyMode={heavyMode}
       />
+
+      {/* 입력 모드 버튼바 */}
+      <div style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 6,
+        padding: "4px 10px 5px",
+        background: "#0d1117",
+        borderTop: "1px solid rgba(255,255,255,0.04)",
+      }}>
+        <ModeButton
+          label="!!"
+          title="Heavy Track — mistral.rs 30B 이상 (!! 접두사 자동)"
+          active={heavyMode}
+          activeColor="#bc8cff"
+          onClick={() => setHeavyMode(h => !h)}
+        />
+        <ModeButton
+          label="👁 Vision"
+          title="비전 모드 — 이미지 첨부 활성화"
+          active={visionMode}
+          activeColor="#58a6ff"
+          onClick={() => setVisionMode(v => !v)}
+        />
+        <ModeButton
+          label="🧠 추론"
+          title="추론 체인 표시 — <think> 블록 보이기"
+          active={reasoningMode}
+          activeColor="#3fb950"
+          onClick={() => setReasoningMode(r => !r)}
+        />
+      </div>
 
       {ghostText && (
         <div

@@ -5,6 +5,14 @@ use serde::{Deserialize, Serialize};
 use std::sync::Mutex;
 use tauri::{command, AppHandle, Emitter};
 
+#[cfg(windows)]
+fn no_window_std(cmd: &mut std::process::Command) {
+    use std::os::windows::process::CommandExt;
+    cmd.creation_flags(0x08000000);
+}
+#[cfg(not(windows))]
+fn no_window_std(_cmd: &mut std::process::Command) {}
+
 const MISTRAL_RS_PORT: u16 = 8080;
 
 static MISTRAL_PROCESS: Mutex<Option<std::process::Child>> = Mutex::new(None);
@@ -73,20 +81,13 @@ pub async fn start_mistral_rs(app: AppHandle) -> Result<String> {
     let log_file = std::fs::File::create(&log_path).map_err(|e| LumError::Io(e.to_string()))?;
     let log_file2 = log_file.try_clone().map_err(|e| LumError::Io(e.to_string()))?;
 
-    let child = std::process::Command::new("mistralrs-server")
-        .args([
-            "--port",
-            &MISTRAL_RS_PORT.to_string(),
-            "plain",
-            "--model-id",
-            &model,
-            "--isq",
-            "Q4K",
-        ])
+    let mut mistral_cmd = std::process::Command::new("mistralrs-server");
+    mistral_cmd
+        .args(["--port", &MISTRAL_RS_PORT.to_string(), "plain", "--model-id", &model, "--isq", "Q4K"])
         .stdout(log_file)
-        .stderr(log_file2)
-        .spawn()
-        .map_err(|e| LumError::Io(e.to_string()))?;
+        .stderr(log_file2);
+    no_window_std(&mut mistral_cmd);
+    let child = mistral_cmd.spawn().map_err(|e| LumError::Io(e.to_string()))?;
 
     *MISTRAL_PROCESS.lock().unwrap() = Some(child);
 

@@ -15,10 +15,11 @@ interface Props {
   onInterrupt?: () => void;          // Ctrl+C
   onTab?: (buf: string) => boolean;  // 자동완성 — true면 기본 Tab 소비
   onChange?: (buf: string) => void;  // 입력 변화 — AI/explain 훅
+  heavyMode?: boolean;               // !! Heavy Track 모드 (상위에서 제어)
 }
 
 const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
-  ({ fontFamily, fontSize, onSubmit, onInterrupt, onTab, onChange }, ref) => {
+  ({ fontFamily, fontSize, onSubmit, onInterrupt, onTab, onChange, heavyMode = false }, ref) => {
     const [input, setInput] = useState("");
     const [isComposing, setIsComposing] = useState(false);
     const [isFocused, setIsFocused] = useState(false);
@@ -37,15 +38,18 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
     }, []);
 
     // 시각적 prompt char — 라우팅 로직은 상위에서
-    const isAgent   = input.startsWith(">>");
-    const isAICmd   = input.startsWith("# ");
-    const isExplain = input.startsWith("? ");
-    const isForceShell = input.startsWith("!");
+    const isHeavy      = input.trimStart().startsWith("!!");
+    const isAgent      = input.startsWith(">>");
+    const isAICmd      = input.startsWith("# ");
+    const isExplain    = input.startsWith("? ");
+    const isForceShell = input.startsWith("!") && !isHeavy;
     const isForceAI    = input.startsWith("@");
+    const activeHeavy  = heavyMode || isHeavy;
     // 첫 토큰에서 `ls` 등 shell 냄새 풍기면 $, 아니면 기본값을 "AI 모드"로 표시 (★)
     const firstTok = input.trimStart().split(/\s+/)[0] ?? "";
     const looksShell = /^[a-z][a-z0-9._-]*$/i.test(firstTok) && firstTok.length <= 20;
     const promptColor =
+      activeHeavy  ? "#bc8cff" :
       isAgent      ? "#ff7b72" :
       isAICmd      ? "#58a6ff" :
       isExplain    ? "#3fb950" :
@@ -54,6 +58,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
       input === "" ? "#58a6ff" :
       looksShell   ? "#3fb950" : "#58a6ff";
     const promptChar =
+      activeHeavy  ? "!!" :
       isAgent      ? ">>" :
       isAICmd      ? "#" :
       isExplain    ? "?" :
@@ -72,7 +77,9 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
           history.current.push(input);
           historyIdx.current = history.current.length;
         }
-        onSubmit(input);
+        const toSubmit =
+          heavyMode && !input.trimStart().startsWith("!!") ? "!! " + input : input;
+        onSubmit(toSubmit);
         setInput("");
         onChange?.("");
         return;
@@ -124,6 +131,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
     };
 
     const body =
+      isHeavy      ? input.trimStart().slice(2).trimStart() :
       isAgent      ? input.replace(/^>>\s?/, "") :
       isAICmd      ? input.slice(2) :
       isExplain    ? input.slice(2) :
@@ -222,6 +230,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
             }}
           />
         </div>
+
       </div>
     );
   },
