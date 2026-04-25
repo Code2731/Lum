@@ -120,12 +120,12 @@ export function useAIChat(model: string, getTerminalContext: () => string) {
   const [error, setError] = useState<string | null>(null);
 
   const sendMessage = useCallback(
-    async (text: string, images?: string[]) => {
+    async (text: string, images?: string[], engine?: "heavy" | "fast") => {
       if (streaming) {
         console.warn("[AI] sendMessage skipped — already streaming");
         return;
       }
-      console.log("[AI] sendMessage:", text, "model:", model, images?.length ? `· ${images.length}개 이미지` : "");
+      console.log("[AI] sendMessage:", text, "model:", model, "engine:", engine ?? "auto", images?.length ? `· ${images.length}개 이미지` : "");
 
       const userMsg: ChatMessage = {
         id: crypto.randomUUID(),
@@ -177,6 +177,7 @@ export function useAIChat(model: string, getTerminalContext: () => string) {
           model,
           context,
           images: images && images.length > 0 ? images : null,
+          engine: engine ?? null,
         });
         console.log("[AI] stream_ai_command returned, tokens:", tokenCount);
       } catch (e) {

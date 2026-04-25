@@ -318,8 +318,8 @@ const App: React.FC = () => {
   // 자연어 입력 → AI 스트림에 전송 (AIBlockStream이 자동 표시됨)
   // images: MCP 툴 결과의 base64 data URI 배열 (비전 모드 활성 시 전달)
   const handleAskAI = useCallback(
-    (question: string, images?: string[]) => {
-      aiChat.sendMessage(question, images);
+    (question: string, images?: string[], engine?: "heavy" | "fast") => {
+      aiChat.sendMessage(question, images, engine);
     },
     [aiChat.sendMessage],
   );

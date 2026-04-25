@@ -39,7 +39,7 @@ interface Props {
   onCwdChange?: (cwd: string) => void;
   onReady?: (write: (data: string) => void) => void;
   onAgentTrigger?: (task: string) => void;
-  onAskAI?: (question: string, images?: string[]) => void;
+  onAskAI?: (question: string, images?: string[], engine?: "heavy" | "fast") => void;
   aiMessages?: ChatMessage[];
   aiStreaming?: boolean;
   aiError?: string | null;
@@ -574,8 +574,8 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
         if (route.question) onAskAIRef.current?.(route.question);
         return;
       case "heavy":
-        // !! Heavy Track — AI에 전달 (mistral.rs 라우팅은 백엔드 router.rs에서)
-        if (route.prompt) onAskAIRef.current?.(route.prompt);
+        // !! Heavy Track — engine="heavy" 명시 전달 → 백엔드가 mistral.rs로 라우팅
+        if (route.prompt) onAskAIRef.current?.(route.prompt, undefined, "heavy");
         return;
       case "agent":
         if (route.task) onAgentTriggerRef.current?.(route.task);
