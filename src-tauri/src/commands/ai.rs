@@ -518,14 +518,16 @@ pub async fn stream_ai_command(
             // 1차 시도: mistral.rs
             match call_compat_stream(&app, &client, &full_prompt, &imgs, &heavy_url, None, &cancel_flag).await {
                 Ok(s) => Ok(s),
-                Err(e) => {
-                    // 연결 실패면 TabbyAPI로 자동 폴백 + 사용자에게 토큰으로 안내
+                Err(_) => {
+                    // 연결 실패면 TabbyAPI로 자동 폴백 — 짧은 알림만 표시
+                    // 상세 오류는 별도 'engine_fallback' 이벤트로 (UI에서 토스트 등)
+                    let _ = app.emit("engine_fallback", serde_json::json!({
+                        "from": "heavy",
+                        "to": "fast",
+                        "reason": "mistral.rs 미실행"
+                    }));
+                    let _ = app.emit(XLLM_TOKEN_EVENT, "💡 Fast로 응답 (Heavy 미실행)\n\n".to_string());
                     let fallback_url = config.xllm_url();
-                    let notice = format!(
-                        "⚠ Heavy Track(mistral.rs {}) 연결 실패 — Fast Track(TabbyAPI)으로 자동 전환합니다.\n오류: {}\n\n",
-                        heavy_url, e
-                    );
-                    let _ = app.emit(XLLM_TOKEN_EVENT, notice);
                     call_compat_stream(&app, &client, &full_prompt, &imgs, &fallback_url, config.xllm_api_key.clone(), &cancel_flag).await
                 }
             }
