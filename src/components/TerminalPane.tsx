@@ -718,7 +718,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
           onClick={() => setTerminalVisible(v => !v)}
         />
         <ModeButton
-          label="!!"
+          label="🚀 Heavy"
           title="Heavy Track — mistral.rs 30B 이상 (!! 접두사 자동)"
           active={heavyMode}
           activeColor="#bc8cff"
