@@ -95,6 +95,26 @@ const App: React.FC = () => {
     return () => clearInterval(t);
   }, [refreshLoadedModel, refreshHeavyConfig]);
 
+  // TabbyAPI 자동 시작 — 설치돼 있고 안 돌고 있으면 시작
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const cfg = await invoke<Record<string, unknown>>("load_app_config").catch(() => ({} as Record<string, unknown>));
+        if (cfg.xllm_auto_start === false) return; // 명시적 false만 차단 (기본은 true)
+        const status = await invoke<{ installed: boolean; running: boolean; port: number | null }>(
+          "check_tabbyapi_status"
+        );
+        if (cancelled || !status.installed || status.running) return;
+        const port = await invoke<number>("get_recommended_port").catch(() => 5000);
+        await invoke("start_tabbyapi", { port, model: null });
+      } catch (e) {
+        console.warn("[xllm] 자동 시작 실패:", e);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
   // TabbyAPI 자동 로드 / 설정 저장 / 모델 전환 이벤트 → 즉시 갱신
   useEffect(() => {
     const a = listen<{ stage: string }>("tabby_status", (e: { payload: { stage: string } }) => {
@@ -558,20 +578,27 @@ const App: React.FC = () => {
                 .replace(/-\d+\.\d+bpw$/i, "")
                 .replace(/-\d+_\d+$/i, "");
             };
-            const fast = shortName(loadedModelId ?? specs?.recommended_model);
+            // 모델 미로드 = loadedModelId가 null/unknown — 'Empty Model' 표시
+            const fastEmpty = !loadedModelId;
+            const fast = fastEmpty ? "Empty Model" : shortName(loadedModelId);
             const heavy = shortName(heavyModelId);
-            if (!fast && !heavy) return null;
             return (
               <div data-tauri-drag-region className="flex items-center gap-1 min-w-0 overflow-hidden">
-                {fast && (
-                  <div
-                    data-tauri-drag-region
-                    className="text-[10px] px-2 py-1 rounded bg-blue-400/10 text-blue-300 truncate max-w-[130px]"
-                    title={loadedModelId ? `Fast (TabbyAPI): ${loadedModelId}` : specs?.recommendation_reason}
-                  >
-                    ⚡ {fast}
-                  </div>
-                )}
+                <div
+                  data-tauri-drag-region
+                  className={`text-[10px] px-2 py-1 rounded truncate max-w-[130px] ${
+                    fastEmpty
+                      ? "bg-white/5 text-white/30 italic"
+                      : "bg-blue-400/10 text-blue-300"
+                  }`}
+                  title={
+                    fastEmpty
+                      ? "TabbyAPI에 로드된 모델이 없습니다 — XllmPanel에서 모델을 [사용]하세요"
+                      : `Fast (TabbyAPI): ${loadedModelId}`
+                  }
+                >
+                  {fastEmpty ? "○" : "⚡"} {fast}
+                </div>
                 {heavyEnabled && heavy && (
                   <div
                     data-tauri-drag-region

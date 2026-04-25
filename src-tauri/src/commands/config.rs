@@ -73,6 +73,9 @@ pub struct AppConfig {
     pub mistral_rs_url: Option<String>,
     /// mistral.rs Heavy Track 모델 경로 (HuggingFace ID 또는 로컬 경로)
     pub mistral_rs_model: Option<String>,
+
+    /// LUM 시작 시 TabbyAPI 자동 시작 (None/true=자동, false=수동)
+    pub xllm_auto_start: Option<bool>,
 }
 
 impl AppConfig {
