@@ -89,9 +89,9 @@ fn xllm_body(
         "messages": [{ "role": "user", "content": content }],
         "stream": stream,
         "max_tokens": max_tokens,
-        "cache_mode": cache_mode,       // TabbyAPI 전용, MLX-LM은 무시
         "stop": ["<|im_end|>", "<|endoftext|>", "<|im_start|>"],
     });
+    let _ = cache_mode; // 모델 로드 시 설정값 — per-request 파라미터 아님
 
     // ① PD Disaggregation — 긴 컨텍스트 decode 단계 안정화
     if is_long {
