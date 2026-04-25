@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import { Loader2, X, Sparkles } from "lucide-react";
 import type { ChatMessage } from "../hooks/useAIChat";
 import { MessageBubble } from "./AIChatPanel";
@@ -27,15 +27,57 @@ interface Props {
  * 전체 패널이 하나의 스크롤 컨테이너 — 헤더는 sticky로 상단 고정.
  * 빈 상태면 렌더 안 함. 사용자가 위로 스크롤하면 auto-scroll 중단.
  */
+const FONT_KEY = "lum.aiChatFontSize";
+const FONT_MIN = 10;
+const FONT_MAX = 24;
+const FONT_DEFAULT = 14;
+
 const AIBlockStream: React.FC<Props> = ({ messages, streaming, error, onClear, onExecute, cwd, fullHeight, onAskAIForFix, visionEnabled }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const pinnedToBottomRef = useRef(true);
+
+  // Ctrl/Cmd + 휠로 폰트 크기 조절 — localStorage에 영속
+  const [fontSize, setFontSize] = useState<number>(() => {
+    try {
+      const saved = parseInt(localStorage.getItem(FONT_KEY) ?? "", 10);
+      return Number.isFinite(saved) && saved >= FONT_MIN && saved <= FONT_MAX ? saved : FONT_DEFAULT;
+    } catch { return FONT_DEFAULT; }
+  });
 
   const handleScroll = () => {
     const el = scrollRef.current;
     if (!el) return;
     pinnedToBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 40;
   };
+
+  const handleWheel = useCallback((e: React.WheelEvent<HTMLDivElement>) => {
+    if (!(e.ctrlKey || e.metaKey)) return;
+    e.preventDefault();
+    setFontSize((s) => {
+      const next = e.deltaY < 0 ? s + 1 : s - 1;
+      const clamped = Math.max(FONT_MIN, Math.min(FONT_MAX, next));
+      try { localStorage.setItem(FONT_KEY, String(clamped)); } catch {}
+      return clamped;
+    });
+  }, []);
+
+  // React 17+에서 wheel은 passive default — preventDefault 위해 native listener로 추가 등록
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const onNative = (e: WheelEvent) => {
+      if (!(e.ctrlKey || e.metaKey)) return;
+      e.preventDefault();
+      setFontSize((s) => {
+        const next = e.deltaY < 0 ? s + 1 : s - 1;
+        const clamped = Math.max(FONT_MIN, Math.min(FONT_MAX, next));
+        try { localStorage.setItem(FONT_KEY, String(clamped)); } catch {}
+        return clamped;
+      });
+    };
+    el.addEventListener("wheel", onNative, { passive: false });
+    return () => el.removeEventListener("wheel", onNative);
+  }, []);
 
   useEffect(() => {
     const el = scrollRef.current;
@@ -50,6 +92,7 @@ const AIBlockStream: React.FC<Props> = ({ messages, streaming, error, onClear, o
       data-testid="ai-block-stream"
       ref={scrollRef}
       onScroll={handleScroll}
+      onWheel={handleWheel}
       style={{
         // fullHeight: 부모 flex의 남은 공간 전부 (xterm 대체)
         // 아니면 기존처럼 콘텐츠 크기 + maxHeight 60vh
@@ -60,6 +103,7 @@ const AIBlockStream: React.FC<Props> = ({ messages, streaming, error, onClear, o
         background: "#0d1117",
         borderTop: "1px solid rgba(88,166,255,0.2)",
         boxSizing: "border-box",
+        fontSize: `${fontSize}px`,
       }}
     >
       {/* 헤더 — sticky로 스크롤 시에도 상단 고정 */}
@@ -73,13 +117,25 @@ const AIBlockStream: React.FC<Props> = ({ messages, streaming, error, onClear, o
           <span className="text-white/25">· {messages.length}개 메시지</span>
           {streaming && <Loader2 size={12} className="animate-spin text-accent/70 ml-1" />}
         </div>
-        <button
-          onClick={onClear}
-          className="p-1 rounded text-white/30 hover:text-white/70 hover:bg-white/5 transition-colors"
-          title="대화 지우기"
-        >
-          <X size={14} />
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => {
+              setFontSize(FONT_DEFAULT);
+              try { localStorage.setItem(FONT_KEY, String(FONT_DEFAULT)); } catch {}
+            }}
+            className="text-[10px] px-1.5 py-0.5 rounded text-white/30 hover:text-white/70 hover:bg-white/5 transition-colors font-mono"
+            title="폰트 크기 초기화 (Ctrl+휠로 조절)"
+          >
+            {fontSize}px
+          </button>
+          <button
+            onClick={onClear}
+            className="p-1 rounded text-white/30 hover:text-white/70 hover:bg-white/5 transition-colors"
+            title="대화 지우기"
+          >
+            <X size={14} />
+          </button>
+        </div>
       </div>
 
       <div className="px-4 py-3 space-y-3">
