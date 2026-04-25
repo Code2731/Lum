@@ -69,7 +69,7 @@ pub fn get_gpu_vram_gb() -> Option<f32> {
             }
         }
     }
-    // 3. wmic (Windows 전용 폴백, AMD/Intel도 감지)
+    // 3. wmic (Windows 전용 폴백, AMD/Intel도 감지) — Windows 11 25H2부터 deprecated
     #[cfg(windows)]
     if let Ok(out) = std::process::Command::new("wmic")
         .args([
@@ -82,14 +82,35 @@ pub fn get_gpu_vram_gb() -> Option<f32> {
         .output()
     {
         let s = String::from_utf8_lossy(&out.stdout);
+        let mut max_bytes: u64 = 0;
         for line in s.lines() {
             if let Some(val) = line.trim().strip_prefix("AdapterRAM=") {
                 if let Ok(bytes) = val.trim().parse::<u64>() {
-                    if bytes > 0 {
-                        let gb = bytes as f32 / 1024.0 / 1024.0 / 1024.0;
-                        return Some((gb * 10.0).round() / 10.0);
-                    }
+                    if bytes > max_bytes { max_bytes = bytes; }
                 }
+            }
+        }
+        if max_bytes > 0 {
+            let gb = max_bytes as f32 / 1024.0 / 1024.0 / 1024.0;
+            return Some((gb * 10.0).round() / 10.0);
+        }
+    }
+    // 4. PowerShell Get-CimInstance (Windows 11 wmic 미설치 환경 폴백)
+    #[cfg(windows)]
+    if let Ok(out) = std::process::Command::new("powershell")
+        .args([
+            "-NoProfile",
+            "-NonInteractive",
+            "-Command",
+            "(Get-CimInstance Win32_VideoController | Where-Object {$_.AdapterRAM -gt 0} | Sort-Object AdapterRAM -Descending | Select-Object -First 1).AdapterRAM",
+        ])
+        .output()
+    {
+        let s = String::from_utf8_lossy(&out.stdout);
+        if let Ok(bytes) = s.trim().parse::<u64>() {
+            if bytes > 0 {
+                let gb = bytes as f32 / 1024.0 / 1024.0 / 1024.0;
+                return Some((gb * 10.0).round() / 10.0);
             }
         }
     }

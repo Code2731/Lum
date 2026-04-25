@@ -504,11 +504,19 @@ const App: React.FC = () => {
               <Loader2 size={10} className="animate-spin" />
             ) : specs ? (
               <span title={specs.recommendation_reason}>
-                {specs.gpu_type === "discrete" && specs.gpu_vram_gb
-                  ? `${specs.gpu_vram_gb}GB VRAM`
-                  : specs.gpu_type === "integrated"
-                    ? `${specs.total_memory_gb}GB 통합메모리`
-                    : `${specs.total_memory_gb}GB RAM`}
+                {(() => {
+                  // gpu_vram_gb는 NVML 감지가 성공하면 set됨 (local-ai 피처 무관)
+                  if (specs.gpu_vram_gb && specs.gpu_vram_gb > 0) {
+                    return `${specs.gpu_vram_gb}GB VRAM`;
+                  }
+                  // gpu_type === "integrated" → Apple Silicon 통합 메모리
+                  // wgpu(local-ai 피처) 없으면 "none" 반환되므로 navigator로 보강
+                  const isMac = typeof navigator !== "undefined" && /Mac/i.test(navigator.platform);
+                  if (specs.gpu_type === "integrated" || isMac) {
+                    return `${specs.total_memory_gb}GB 통합메모리`;
+                  }
+                  return `${specs.total_memory_gb}GB RAM`;
+                })()}
                 {" · "}
                 <span className={xllmOnline ? "text-green-400" : "text-red-400"}>
                   {xllmOnline ? "xLLM ●" : "xLLM ○"}
