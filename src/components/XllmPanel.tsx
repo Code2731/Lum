@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
+import { useModelCatalog } from "../hooks/useModelCatalog";
 import {
   SlidersHorizontal, Loader2, X, RefreshCw, ArrowLeftRight,
   Zap, Database, Cpu, CheckCircle2, GitFork, Sparkles,
@@ -34,24 +35,7 @@ interface AppConfig {
 type SafetyMode = "safe" | "balanced" | "max";
 const MODE_DEFAULTS: Record<SafetyMode, number> = { safe: 0.70, balanced: 0.80, max: 0.90 };
 
-// Heavy Track 추천 모델 프리셋 — mistral.rs는 HF ID로 직접 다운로드/로드
-const HEAVY_PRESETS: { label: string; id: string; size: string; tag: string }[] = [
-  // Claude 4.6 Opus 증류 (2026 최신)
-  { label: "Qwen3.5 27B Opus 증류 (추론)",       id: "Qwen/Qwen3.5-27B-Claude-4.6-Opus-Distilled",     size: "~16GB", tag: "🧠 Opus 증류" },
-  { label: "Qwen3.5 30B-A3B Opus 증류 (MoE)",   id: "Qwen/Qwen3.5-30B-A3B-Claude-4.6-Opus-Distilled", size: "~17GB", tag: "🚀 Opus MoE" },
-  { label: "Qwen3.5-Coder 30B-A3B Opus 증류",   id: "Qwen/Qwen3.5-Coder-30B-A3B-Claude-4.6-Opus-Distilled", size: "~17GB", tag: "⚡ 코딩+Opus" },
-  // 추론 / 코딩 / 범용
-  { label: "DeepSeek R1 Distill 32B (추론)",    id: "deepseek-ai/DeepSeek-R1-Distill-Qwen-32B",      size: "~19GB", tag: "🧠 추론" },
-  { label: "Qwen2.5-Coder 32B (코딩)",          id: "Qwen/Qwen2.5-Coder-32B-Instruct",                size: "~19GB", tag: "⚡ 코딩" },
-  { label: "Qwen3 32B (범용 최신)",             id: "Qwen/Qwen3-32B-Instruct",                        size: "~19GB", tag: "🆕 범용" },
-  { label: "Qwen3 30B-A3B MoE (빠른 32B)",      id: "Qwen/Qwen3-30B-A3B-Instruct",                    size: "~17GB", tag: "🚀 MoE" },
-  // 한국어 / 기타
-  { label: "EXAONE 3.5 32B (한국어)",           id: "LGAI-EXAONE/EXAONE-3.5-32B-Instruct",            size: "~19GB", tag: "🇰🇷 한국어" },
-  { label: "EXAONE Deep 32B (한국어 추론)",     id: "LGAI-EXAONE/EXAONE-Deep-32B",                    size: "~19GB", tag: "🇰🇷🧠" },
-  { label: "Mistral Small 24B",                 id: "mistralai/Mistral-Small-24B-Instruct-2501",      size: "~14GB", tag: "🇫🇷 균형" },
-  { label: "Gemma 3 27B",                       id: "google/gemma-3-27b-it",                          size: "~16GB", tag: "🤖 Google" },
-  { label: "Llama 3.3 70B (멀티GPU)",            id: "meta-llama/Llama-3.3-70B-Instruct",              size: "~40GB", tag: "🦙 Meta" },
-];
+// Heavy Track 프리셋은 public/models.json의 heavy_presets 배열에서 로드 (useModelCatalog 훅).
 
 interface ModelInfo {
   id: string;
@@ -99,6 +83,7 @@ function errMsg(e: unknown): string {
 }
 
 const XllmPanel: React.FC<Props> = ({ onClose }) => {
+  const { catalog } = useModelCatalog();
   const [config, setConfig] = useState<AppConfig>({});
   const [modelInfo, setModelInfo] = useState<ModelInfo | null>(null);
   const [switchTarget, setSwitchTarget] = useState("");
@@ -895,7 +880,7 @@ const XllmPanel: React.FC<Props> = ({ onClose }) => {
                 <div>
                   <label className="text-[10px] text-white/40 block mb-1">추천 프리셋 (클릭 → 자동 입력)</label>
                   <div className="grid grid-cols-1 gap-1 mb-2 max-h-40 overflow-y-auto pr-1">
-                    {HEAVY_PRESETS.map((p) => {
+                    {catalog.heavy_presets.map((p) => {
                       const active = config.mistral_rs_model === p.id;
                       return (
                         <button

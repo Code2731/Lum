@@ -23,23 +23,7 @@ interface DownloadProgress {
   _seenFiles?: string[];
 }
 
-type ModelCategory = "coding" | "general" | "reasoning" | "lightweight";
-
-interface CuratedModel {
-  repo_id: string;
-  revision: string;
-  label: string;
-  description: string;
-  size_gb: number;
-  min_ram_gb: number;
-  category: ModelCategory;
-  badge?: string;
-  /** 모델 고유 기능 — 켜고 끄는 건 XllmPanel의 전역 토글 */
-  capabilities?: {
-    vision?: boolean;     // 이미지 입력 지원 (VL·멀티모달)
-    reasoning?: boolean;  // chain-of-thought / think 토큰 생성
-  };
-}
+import { useModelCatalog, type ModelCategory, type CuratedModel } from "../hooks/useModelCatalog";
 
 const CATEGORY_META: Record<ModelCategory, { icon: string; label: string }> = {
   coding:     { icon: "💻", label: "코딩" },
@@ -49,181 +33,6 @@ const CATEGORY_META: Record<ModelCategory, { icon: string; label: string }> = {
 };
 
 // ── Apple Silicon (MLX) ───────────────────────────────────────────
-// mlx-community HuggingFace 레포에서 자동 다운로드.
-// 직접 입력란에 mlx-community/model-name 형식으로 다른 모델도 사용 가능.
-const MLX_MODELS: CuratedModel[] = [
-  // ─── Qwen3.5 (2026년 최신 — Alibaba + 커뮤니티 증류) ───
-  { category: "general",   repo_id: "mlx-community/Qwen3.5-4B-MLX-4bit",                              revision: "main", label: "Qwen3.5 4B",                  description: "최신 Alibaba — 2.5GB, 빠름",                      size_gb: 2.5, min_ram_gb: 6  },
-  { category: "general",   repo_id: "mlx-community/Qwen3.5-9B-MLX-4bit",                              revision: "main", label: "Qwen3.5 9B (VL)",             description: "최신 Alibaba VL — 5.5GB, 비전+텍스트",             size_gb: 5.5, min_ram_gb: 12, badge: "★ 최신", capabilities: { vision: true } },
-  { category: "reasoning", repo_id: "mlx-community/Qwen3.5-27B-Claude-4.6-Opus-Distilled-MLX-4bit",      revision: "main", label: "Qwen3.5 27B (Opus 증류)",       description: "Claude 4.6 Opus 추론 증류 — 15GB",                 size_gb: 15,  min_ram_gb: 20, badge: "🧠 추천", capabilities: { reasoning: true } },
-  { category: "reasoning", repo_id: "mlx-community/Qwen3.5-27B-Claude-4.6-Opus-Distilled-MLX-8bit",      revision: "main", label: "Qwen3.5 27B 8bit (Opus 증류)",  description: "Opus 증류 고품질 8bit — 27GB",                      size_gb: 27,  min_ram_gb: 36, capabilities: { reasoning: true } },
-  { category: "reasoning", repo_id: "mlx-community/Qwen3.5-30B-A3B-Claude-4.6-Opus-Distilled-MLX-4bit",  revision: "main", label: "Qwen3.5 30B-A3B (Opus 증류)",   description: "MoE 30B 활성 3B — Opus 증류 — 17GB, 빠름",          size_gb: 17,  min_ram_gb: 24, badge: "🚀 MoE", capabilities: { reasoning: true } },
-  { category: "coding",    repo_id: "mlx-community/Qwen3.5-Coder-30B-A3B-Claude-4.6-Opus-Distilled-MLX-4bit", revision: "main", label: "Qwen3.5-Coder 30B-A3B (Opus 증류)", description: "코딩 특화 + Opus 증류 — 17GB",                  size_gb: 17,  min_ram_gb: 24, badge: "⚡ 코딩+추론", capabilities: { reasoning: true } },
-
-  // ─── Qwen3 (2025 릴리즈) ───
-  { category: "lightweight", repo_id: "mlx-community/Qwen3-0.6B-4bit",                               revision: "main", label: "Qwen3 0.6B",                  description: "초경량 — 0.4GB, 즉각 응답",                        size_gb: 0.4, min_ram_gb: 2  },
-  { category: "lightweight", repo_id: "mlx-community/Qwen3-1.7B-4bit",                               revision: "main", label: "Qwen3 1.7B",                  description: "경량 — 1GB, 빠른 응답",                            size_gb: 1,   min_ram_gb: 3  },
-  { category: "general",   repo_id: "mlx-community/Qwen3-4B-4bit",                                   revision: "main", label: "Qwen3 4B",                    description: "범용 경량 — 2.5GB",                                size_gb: 2.5, min_ram_gb: 6  },
-  { category: "general",   repo_id: "mlx-community/Qwen3-8B-4bit",                                   revision: "main", label: "Qwen3 8B",                    description: "범용 기본 — 5GB",                                   size_gb: 5,   min_ram_gb: 10 },
-  { category: "general",   repo_id: "mlx-community/Qwen3-14B-4bit",                                  revision: "main", label: "Qwen3 14B",                   description: "범용 고품질 — 8.5GB",                               size_gb: 8.5, min_ram_gb: 16 },
-  { category: "general",   repo_id: "mlx-community/Qwen3-32B-4bit",                                  revision: "main", label: "Qwen3 32B",                   description: "범용 최강 — 19GB",                                  size_gb: 19,  min_ram_gb: 24 },
-  { category: "general",   repo_id: "mlx-community/Qwen3-30B-A3B-4bit",                              revision: "main", label: "Qwen3-30B MoE (A3B)",         description: "MoE 30B 활성 3B — 18GB, 빠른 추론",                size_gb: 18,  min_ram_gb: 24 },
-  { category: "coding",    repo_id: "mlx-community/Qwen3-Coder-30B-A3B-Instruct-4bit",               revision: "main", label: "Qwen3-Coder 30B (MoE)",       description: "최신 코딩 MoE — 18GB, 활성 3B",                     size_gb: 18,  min_ram_gb: 24, badge: "★ 추천" },
-
-  // ─── Qwen2.5 (레거시 하위 호환) ───
-  { category: "coding",  repo_id: "mlx-community/Qwen2.5-Coder-7B-Instruct-4bit",  revision: "main", label: "Qwen2.5-Coder 7B",  description: "코딩 안정판 — 4.5GB",                  size_gb: 4.5, min_ram_gb: 8  },
-  { category: "coding",  repo_id: "mlx-community/Qwen2.5-Coder-14B-Instruct-4bit", revision: "main", label: "Qwen2.5-Coder 14B", description: "코딩 안정판 — 8.5GB",                  size_gb: 8.5, min_ram_gb: 16 },
-  { category: "coding",  repo_id: "mlx-community/Qwen2.5-Coder-32B-Instruct-4bit", revision: "main", label: "Qwen2.5-Coder 32B", description: "코딩 안정판 — 19GB",                   size_gb: 19,  min_ram_gb: 24 },
-  { category: "general", repo_id: "mlx-community/Qwen2.5-7B-Instruct-4bit",        revision: "main", label: "Qwen2.5 7B",         description: "레거시 — 4.5GB",                      size_gb: 4.5, min_ram_gb: 8  },
-  { category: "general", repo_id: "mlx-community/Qwen2.5-14B-Instruct-4bit",       revision: "main", label: "Qwen2.5 14B",        description: "레거시 — 8.5GB",                      size_gb: 8.5, min_ram_gb: 16 },
-  { category: "general", repo_id: "mlx-community/Qwen2.5-32B-Instruct-4bit",       revision: "main", label: "Qwen2.5 32B",        description: "레거시 — 19GB",                       size_gb: 19,  min_ram_gb: 24 },
-  { category: "general", repo_id: "mlx-community/Qwen2.5-72B-Instruct-4bit",       revision: "main", label: "Qwen2.5 72B",        description: "레거시 — 38GB, Ultra 전용",           size_gb: 38,  min_ram_gb: 48 },
-
-  // 범용 — Llama
-  { category: "general", repo_id: "mlx-community/Llama-3.2-3B-Instruct-4bit",      revision: "main", label: "Llama 3.2 3B",       description: "초경량, 즉각 응답 — 2GB",            size_gb: 2,   min_ram_gb: 4  },
-  { category: "general", repo_id: "mlx-community/Meta-Llama-3.1-8B-Instruct-4bit", revision: "main", label: "Llama 3.1 8B",       description: "범용 균형 — 5GB",                    size_gb: 5,   min_ram_gb: 8  },
-  { category: "general", repo_id: "mlx-community/Llama-3.3-70B-Instruct-4bit",     revision: "main", label: "Llama 3.3 70B",      description: "범용 최강 — 38GB, Ultra 전용",       size_gb: 38,  min_ram_gb: 48 },
-
-  // 범용 — Gemma 4 (Google, 2026 최신) ★
-  { category: "lightweight", repo_id: "mlx-community/gemma-4-e2b-it-4bit",          revision: "main", label: "Gemma 4 E2B",        description: "Google Edge — 1.5GB, 모바일급 경량",  size_gb: 1.5, min_ram_gb: 4  },
-  { category: "general",   repo_id: "mlx-community/gemma-4-e4b-it-4bit",            revision: "main", label: "Gemma 4 E4B",        description: "Google Edge — 2.5GB, 빠른 응답",       size_gb: 2.5, min_ram_gb: 6  },
-  { category: "general",   repo_id: "mlx-community/gemma-4-26b-a4b-it-4bit",        revision: "main", label: "Gemma 4 26B (MoE A4B)", description: "Google MoE — 15GB, 활성 4B로 빠름",  size_gb: 15,  min_ram_gb: 20, badge: "★ 최신" },
-  { category: "general",   repo_id: "mlx-community/gemma-4-31b-it-4bit",            revision: "main", label: "Gemma 4 31B",        description: "Google 최신 — 18GB, 최고 품질",       size_gb: 18,  min_ram_gb: 24 },
-
-  // 범용 — Gemma 3 (Google, 레거시)
-  { category: "general", repo_id: "mlx-community/gemma-3-4b-it-4bit",              revision: "main", label: "Gemma 3 4B",         description: "Google 레거시 — 2.5GB",              size_gb: 2.5, min_ram_gb: 6  },
-  { category: "general", repo_id: "mlx-community/gemma-3-12b-it-4bit",             revision: "main", label: "Gemma 3 12B",        description: "Google 레거시 — 7GB",                 size_gb: 7,   min_ram_gb: 12 },
-  { category: "general", repo_id: "mlx-community/gemma-3-27b-it-4bit",             revision: "main", label: "Gemma 3 27B",        description: "Google 레거시 — 15GB",                size_gb: 15,  min_ram_gb: 20 },
-
-  // 범용 — LG EXAONE (한국어 최적화)
-  { category: "lightweight", repo_id: "mlx-community/exaone-4.0-1.2b-4bit",             revision: "main", label: "EXAONE 4.0 1.2B",     description: "LG 한국어 최신 — 0.8GB, 모바일급",   size_gb: 0.8, min_ram_gb: 2  },
-  { category: "general",   repo_id: "mlx-community/EXAONE-4.0-32B-4bit",                revision: "main", label: "EXAONE 4.0 32B",      description: "LG 한국어 최신 — 19GB, 한국어 SOTA", size_gb: 19,  min_ram_gb: 24, badge: "🇰🇷 한국어" },
-  { category: "general",   repo_id: "mlx-community/EXAONE-3.5-2.4B-Instruct-4bit",      revision: "main", label: "EXAONE 3.5 2.4B",     description: "LG 한국어 경량 — 1.5GB",              size_gb: 1.5, min_ram_gb: 4  },
-  { category: "general",   repo_id: "mlx-community/EXAONE-3.5-7.8B-Instruct-4bit",      revision: "main", label: "EXAONE 3.5 7.8B",     description: "LG 한국어 균형 — 4.5GB",              size_gb: 4.5, min_ram_gb: 8  },
-  { category: "general",   repo_id: "mlx-community/EXAONE-3.5-32B-Instruct-4bit",       revision: "main", label: "EXAONE 3.5 32B",      description: "LG 한국어 대형 — 19GB",               size_gb: 19,  min_ram_gb: 24 },
-  { category: "reasoning", repo_id: "mlx-community/EXAONE-Deep-2.4B-4bit",              revision: "main", label: "EXAONE Deep 2.4B",    description: "LG 추론 특화 경량 — 1.5GB",           size_gb: 1.5, min_ram_gb: 4,  capabilities: { reasoning: true } },
-  { category: "reasoning", repo_id: "mlx-community/EXAONE-Deep-7.8B-4bit",              revision: "main", label: "EXAONE Deep 7.8B",    description: "LG 추론 특화 — 4.5GB",                size_gb: 4.5, min_ram_gb: 8,  capabilities: { reasoning: true } },
-  { category: "reasoning", repo_id: "mlx-community/EXAONE-Deep-32B-4bit",               revision: "main", label: "EXAONE Deep 32B",     description: "LG 추론 특화 대형 — 19GB",            size_gb: 19,  min_ram_gb: 24, capabilities: { reasoning: true } },
-
-  // 범용 — Mistral
-  { category: "general", repo_id: "mlx-community/Mistral-7B-Instruct-v0.3-4bit",   revision: "main", label: "Mistral 7B",         description: "유럽 오픈소스 — 4.5GB",              size_gb: 4.5, min_ram_gb: 8  },
-
-  // 추론 특화 — DeepSeek R1 (Qwen 기반 distill)
-  { category: "reasoning", repo_id: "mlx-community/DeepSeek-R1-Distill-Qwen-7B-4bit",  revision: "main", label: "DeepSeek R1 7B",   description: "추론·수학·코딩 — 4.5GB",             size_gb: 4.5, min_ram_gb: 8,  capabilities: { reasoning: true } },
-  { category: "reasoning", repo_id: "mlx-community/DeepSeek-R1-Distill-Qwen-14B-4bit", revision: "main", label: "DeepSeek R1 14B",  description: "추론 고품질 — 8.5GB",                 size_gb: 8.5, min_ram_gb: 16, capabilities: { reasoning: true } },
-  { category: "reasoning", repo_id: "mlx-community/DeepSeek-R1-Distill-Qwen-32B-4bit", revision: "main", label: "DeepSeek R1 32B",  description: "추론 최강 — 19GB",                    size_gb: 19,  min_ram_gb: 24, capabilities: { reasoning: true } },
-  { category: "reasoning", repo_id: "mlx-community/DeepSeek-R1-Distill-Llama-70B-4bit",revision: "main", label: "DeepSeek R1 70B (Llama)", description: "추론 최대 — 40GB, M3/M4 Max+",  size_gb: 40,  min_ram_gb: 48, capabilities: { reasoning: true } },
-
-  // DeepSeek Coder V2 (MoE 16B active 2.4B — 빠른 추론)
-  { category: "coding",  repo_id: "mlx-community/DeepSeek-Coder-V2-Lite-Instruct-4bit-mlx", revision: "main", label: "DeepSeek-Coder V2 Lite (MoE)", description: "MoE 16B 활성 2.4B — 10GB, 코딩 고속", size_gb: 10,  min_ram_gb: 16, badge: "⚡ MoE" },
-
-  // DeepSeek Coder (원조 — 전통 dense)
-  { category: "lightweight", repo_id: "mlx-community/deepseek-coder-1.3b-instruct-mlx",          revision: "main", label: "DeepSeek-Coder 1.3B", description: "초경량 코딩 — 0.8GB, 자동완성 급",    size_gb: 0.8, min_ram_gb: 2  },
-  { category: "coding",      repo_id: "mlx-community/deepseek-coder-6.7b-instruct-hf-4bit-mlx",  revision: "main", label: "DeepSeek-Coder 6.7B", description: "코딩 기본 dense — 4GB",                size_gb: 4,   min_ram_gb: 8  },
-  { category: "coding",      repo_id: "mlx-community/deepseek-coder-33b-instruct-hf-4bit-mlx",   revision: "main", label: "DeepSeek-Coder 33B", description: "코딩 대형 dense — 18GB",               size_gb: 18,  min_ram_gb: 24 },
-
-  // 경량 특화
-  { category: "lightweight", repo_id: "mlx-community/phi-4-4bit",                  revision: "main", label: "Phi-4 14B",          description: "Microsoft — 8GB, 매우 효율적",       size_gb: 8,   min_ram_gb: 12 },
-  { category: "lightweight", repo_id: "mlx-community/Llama-3.2-1B-Instruct-4bit",  revision: "main", label: "Llama 3.2 1B",       description: "최소 사양 — 0.7GB, 즉각 응답",       size_gb: 0.7, min_ram_gb: 2  },
-];
-
-// ── NVIDIA (EXL2 / TabbyAPI) ──────────────────────────────────────
-// min_ram_gb = 필요 VRAM(GB). bartowski/lucyknada/DrNicefellow HF EXL2 레포.
-// 🥇 상단 3종 = RTX 3080(10GB) 최우선 추천
-const CURATED_MODELS: CuratedModel[] = [
-
-  // ── 🥇 10GB VRAM 추천 3종 ────────────────────────────────────────
-  {
-    category: "reasoning",
-    repo_id: "bartowski/Qwen3-8B-Instruct-exl2",
-    revision: "4_5",
-    label: "Qwen3 8B (4.5bpw)",
-    description: "🥇 2025 최신 추론 SOTA — 사고 체인(CoT) · ~5.5GB VRAM",
-    size_gb: 5.5, min_ram_gb: 8, badge: "🧠 최신 추천",
-    capabilities: { reasoning: true },
-  },
-  {
-    category: "coding",
-    repo_id: "bartowski/Qwen3-8B-Instruct-exl2",
-    revision: "6_0",
-    label: "Qwen3 8B (6bpw)",
-    description: "🥇 코딩·지시 추종 — 고품질 · ~7GB VRAM",
-    size_gb: 7.0, min_ram_gb: 8, badge: "⚡ 코딩 SOTA",
-    capabilities: { reasoning: true },
-  },
-  {
-    category: "coding",
-    repo_id: "bartowski/Qwen2.5-Coder-14B-Instruct-exl2",
-    revision: "4_25",
-    label: "Qwen2.5-Coder 14B (4.25bpw)",
-    description: "🥇 한계 돌파 — 14B 프로젝트 맥락 · ~9GB VRAM",
-    size_gb: 9.0, min_ram_gb: 10, badge: "🚀 한계 돌파",
-  },
-
-  // ── Qwen3 (2025 최신) ────────────────────────────────────────────
-  { category: "lightweight", repo_id: "bartowski/Qwen3-4B-Instruct-exl2",  revision: "4_5",  label: "Qwen3 4B (4.5bpw)",  description: "경량 최신 · ~2.5GB VRAM",                size_gb: 2.5,  min_ram_gb: 4,  capabilities: { reasoning: true } },
-  { category: "general",     repo_id: "bartowski/Qwen3-4B-Instruct-exl2",  revision: "8_0",  label: "Qwen3 4B (8bpw)",    description: "경량 고품질 · ~4GB VRAM",                size_gb: 4.0,  min_ram_gb: 6,  capabilities: { reasoning: true } },
-  { category: "general",     repo_id: "bartowski/Qwen3-8B-Instruct-exl2",  revision: "3_5",  label: "Qwen3 8B (3.5bpw)",  description: "범용 경량 · ~4GB VRAM",                  size_gb: 4.0,  min_ram_gb: 6,  capabilities: { reasoning: true } },
-  { category: "general",     repo_id: "bartowski/Qwen3-8B-Instruct-exl2",  revision: "8_0",  label: "Qwen3 8B (8bpw)",    description: "범용 고품질 · ~9.5GB VRAM",              size_gb: 9.5,  min_ram_gb: 12, capabilities: { reasoning: true } },
-  { category: "general",     repo_id: "bartowski/Qwen3-14B-Instruct-exl2", revision: "4_0",  label: "Qwen3 14B (4bpw)",   description: "범용 고급 · ~8GB VRAM",                  size_gb: 8.0,  min_ram_gb: 10, capabilities: { reasoning: true } },
-  { category: "general",     repo_id: "bartowski/Qwen3-14B-Instruct-exl2", revision: "6_0",  label: "Qwen3 14B (6bpw)",   description: "범용 고품질 · ~12GB VRAM",               size_gb: 12.0, min_ram_gb: 14, capabilities: { reasoning: true } },
-  { category: "general",     repo_id: "bartowski/Qwen3-32B-Instruct-exl2", revision: "3_5",  label: "Qwen3 32B (3.5bpw)", description: "최강 범용 경량 · ~16GB VRAM",            size_gb: 16.0, min_ram_gb: 20, capabilities: { reasoning: true } },
-  { category: "general",     repo_id: "bartowski/Qwen3-32B-Instruct-exl2", revision: "5_0",  label: "Qwen3 32B (5bpw)",   description: "최강 범용 · ~22GB VRAM",                 size_gb: 22.0, min_ram_gb: 24, capabilities: { reasoning: true } },
-  { category: "general",     repo_id: "bartowski/Qwen3-30B-A3B-Instruct-exl2", revision: "4_0", label: "Qwen3 30B MoE (A3B·4bpw)", description: "MoE 30B 활성 3B — 빠른 추론 · ~16GB", size_gb: 16.0, min_ram_gb: 20, capabilities: { reasoning: true } },
-
-  // ── Qwen3.5 Claude 4.6 Opus 증류 (2026 추론 특화) ────────────────
-  { category: "reasoning", repo_id: "bartowski/Qwen3.5-27B-Claude-4.6-Opus-Distilled-exl2",      revision: "4_0", label: "Qwen3.5 27B Opus 증류 (4bpw)",      description: "🧠 Claude Opus 추론 증류 · ~14GB VRAM",        size_gb: 14.0, min_ram_gb: 18, badge: "🧠 추천", capabilities: { reasoning: true } },
-  { category: "reasoning", repo_id: "bartowski/Qwen3.5-27B-Claude-4.6-Opus-Distilled-exl2",      revision: "5_0", label: "Qwen3.5 27B Opus 증류 (5bpw)",      description: "Opus 증류 균형 · ~17GB VRAM",                   size_gb: 17.0, min_ram_gb: 20, capabilities: { reasoning: true } },
-  { category: "reasoning", repo_id: "bartowski/Qwen3.5-27B-Claude-4.6-Opus-Distilled-exl2",      revision: "6_0", label: "Qwen3.5 27B Opus 증류 (6bpw)",      description: "Opus 증류 고품질 · ~21GB VRAM",                  size_gb: 21.0, min_ram_gb: 24, capabilities: { reasoning: true } },
-  { category: "reasoning", repo_id: "bartowski/Qwen3.5-30B-A3B-Claude-4.6-Opus-Distilled-exl2",  revision: "4_0", label: "Qwen3.5 30B-A3B Opus 증류 (4bpw)",  description: "🚀 MoE 30B 활성 3B + Opus 증류 · ~16GB",        size_gb: 16.0, min_ram_gb: 20, badge: "🚀 MoE", capabilities: { reasoning: true } },
-  { category: "reasoning", repo_id: "bartowski/Qwen3.5-30B-A3B-Claude-4.6-Opus-Distilled-exl2",  revision: "5_0", label: "Qwen3.5 30B-A3B Opus 증류 (5bpw)",  description: "MoE Opus 증류 고품질 · ~19GB",                  size_gb: 19.0, min_ram_gb: 24, capabilities: { reasoning: true } },
-  { category: "coding",    repo_id: "bartowski/Qwen3.5-Coder-30B-A3B-Claude-4.6-Opus-Distilled-exl2", revision: "4_0", label: "Qwen3.5-Coder 30B-A3B Opus 증류 (4bpw)", description: "⚡ 코딩 + Opus 추론 증류 MoE · ~16GB",        size_gb: 16.0, min_ram_gb: 20, badge: "⚡ 코딩+추론", capabilities: { reasoning: true } },
-
-  // ── Gemma 3 (Google · bartowski) ─────────────────────────────────
-  { category: "lightweight", repo_id: "bartowski/gemma-3-4b-it-exl2",  revision: "4_0", label: "Gemma 3 4B (4bpw)",   description: "Google 경량 최신 · ~2.5GB VRAM",   size_gb: 2.5, min_ram_gb: 4  },
-  { category: "lightweight", repo_id: "bartowski/gemma-3-4b-it-exl2",  revision: "8_0", label: "Gemma 3 4B (8bpw)",   description: "Google 경량 고품질 · ~4GB VRAM",   size_gb: 4.0, min_ram_gb: 6  },
-  { category: "general",     repo_id: "bartowski/gemma-3-12b-it-exl2", revision: "4_0", label: "Gemma 3 12B (4bpw)",  description: "Google 균형 · ~7GB VRAM",          size_gb: 7.0, min_ram_gb: 10 },
-  { category: "general",     repo_id: "bartowski/gemma-3-12b-it-exl2", revision: "6_0", label: "Gemma 3 12B (6bpw)",  description: "Google 균형 고품질 · ~10GB VRAM",  size_gb: 10.0, min_ram_gb: 12 },
-  { category: "general",     repo_id: "bartowski/gemma-3-27b-it-exl2", revision: "4_0", label: "Gemma 3 27B (4bpw)",  description: "Google 고급 · ~15GB VRAM",         size_gb: 15.0, min_ram_gb: 18 },
-  { category: "general",     repo_id: "bartowski/gemma-3-27b-it-exl2", revision: "5_0", label: "Gemma 3 27B (5bpw)",  description: "Google 고급 고품질 · ~18GB VRAM",  size_gb: 18.0, min_ram_gb: 24 },
-
-  // ── DeepSeek R1 Distill (추론 특화) ──────────────────────────────
-  { category: "reasoning", repo_id: "bartowski/DeepSeek-R1-Distill-Qwen-7B-exl2",  revision: "4_0",  label: "DeepSeek R1 7B (4bpw)",  description: "추론·수학·코딩 · ~4.5GB VRAM",   size_gb: 4.5,  min_ram_gb: 6,  capabilities: { reasoning: true } },
-  { category: "reasoning", repo_id: "bartowski/DeepSeek-R1-Distill-Qwen-7B-exl2",  revision: "6_0",  label: "DeepSeek R1 7B (6bpw)",  description: "추론 고품질 · ~6.5GB VRAM",       size_gb: 6.5,  min_ram_gb: 8,  badge: "🧠 추론 최강", capabilities: { reasoning: true } },
-  { category: "reasoning", repo_id: "bartowski/DeepSeek-R1-Distill-Qwen-14B-exl2", revision: "4_0",  label: "DeepSeek R1 14B (4bpw)", description: "추론 중급 · ~8GB VRAM",           size_gb: 8.0,  min_ram_gb: 10, capabilities: { reasoning: true } },
-  { category: "reasoning", repo_id: "bartowski/DeepSeek-R1-Distill-Qwen-32B-exl2", revision: "3_5",  label: "DeepSeek R1 32B (3.5bpw)", description: "추론 최강 경량 · ~16GB VRAM",   size_gb: 16.0, min_ram_gb: 20, capabilities: { reasoning: true } },
-  { category: "reasoning", repo_id: "bartowski/DeepSeek-R1-Distill-Qwen-32B-exl2", revision: "5_0",  label: "DeepSeek R1 32B (5bpw)", description: "추론 최강 · ~22GB VRAM",          size_gb: 22.0, min_ram_gb: 24, capabilities: { reasoning: true } },
-
-  // ── DeepSeek V3 (대형 MoE — 24GB+ 전용) ─────────────────────────
-  { category: "reasoning", repo_id: "bartowski/DeepSeek-V3-0324-exl2",              revision: "2_0",  label: "DeepSeek V3 0324 (2bpw)", description: "V3 최신판 초경량 · ~44GB, 멀티GPU", size_gb: 44.0, min_ram_gb: 48, capabilities: { reasoning: true } },
-
-  // ── Qwen2.5-Coder (코딩 안정판) ──────────────────────────────────
-  { category: "coding", repo_id: "DrNicefellow/Qwen2.5-Coder-7B-Instruct-4.0bpw-exl2",     revision: "main", label: "Qwen2.5-Coder 7B (4bpw)",    description: "코딩 안정판 경량 · ~4.5GB", size_gb: 4.5,  min_ram_gb: 6  },
-  { category: "coding", repo_id: "DrNicefellow/Qwen2.5-Coder-7B-Instruct-5.5bpw-exl2",     revision: "main", label: "Qwen2.5-Coder 7B (5.5bpw)",  description: "코딩 안정판 균형 · ~6GB",   size_gb: 6.0,  min_ram_gb: 8  },
-  { category: "coding", repo_id: "bartowski/Qwen2.5-Coder-14B-Instruct-exl2",               revision: "5_0",  label: "Qwen2.5-Coder 14B (5bpw)",   description: "코딩 고품질 · ~10.5GB",     size_gb: 10.5, min_ram_gb: 12 },
-  { category: "coding", repo_id: "bartowski/Qwen2.5-Coder-32B-Instruct-exl2",               revision: "4_25", label: "Qwen2.5-Coder 32B (4.25bpw)", description: "최강 코딩 · ~18GB",        size_gb: 18.0, min_ram_gb: 24 },
-
-  // ── Llama 3.x ─────────────────────────────────────────────────────
-  { category: "general", repo_id: "bartowski/Meta-Llama-3.1-8B-Instruct-exl2",              revision: "4_0",  label: "Llama 3.1 8B (4bpw)",  description: "범용 경량 · ~5GB VRAM",     size_gb: 5.0,  min_ram_gb: 6  },
-  { category: "general", repo_id: "bartowski/Meta-Llama-3.1-8B-Instruct-exl2",              revision: "6_0",  label: "Llama 3.1 8B (6bpw)",  description: "범용 균형 · ~7GB VRAM",     size_gb: 7.0,  min_ram_gb: 8  },
-  { category: "general", repo_id: "bartowski/Llama-3.3-70B-Instruct-exl2",                  revision: "3_0",  label: "Llama 3.3 70B (3bpw)", description: "범용 최강 · ~29GB VRAM",    size_gb: 29.0, min_ram_gb: 32 },
-
-  // ── LG EXAONE (한국어 최적화 · bartowski EXL2) ───────────────────
-  { category: "general",     repo_id: "bartowski/EXAONE-3.5-2.4B-Instruct-exl2",  revision: "4_0", label: "EXAONE 3.5 2.4B (4bpw)", description: "LG 한국어 경량 · ~1.5GB VRAM",         size_gb: 1.5,  min_ram_gb: 3,  badge: "🇰🇷 한국어" },
-  { category: "general",     repo_id: "bartowski/EXAONE-3.5-2.4B-Instruct-exl2",  revision: "8_0", label: "EXAONE 3.5 2.4B (8bpw)", description: "LG 한국어 경량 고품질 · ~2.5GB VRAM",   size_gb: 2.5,  min_ram_gb: 4,  badge: "🇰🇷 한국어" },
-  { category: "general",     repo_id: "bartowski/EXAONE-3.5-7.8B-Instruct-exl2",  revision: "4_0", label: "EXAONE 3.5 7.8B (4bpw)", description: "LG 한국어 균형 · ~5GB VRAM",           size_gb: 5.0,  min_ram_gb: 6,  badge: "🇰🇷 한국어" },
-  { category: "general",     repo_id: "bartowski/EXAONE-3.5-7.8B-Instruct-exl2",  revision: "6_0", label: "EXAONE 3.5 7.8B (6bpw)", description: "LG 한국어 균형 고품질 · ~7GB VRAM",     size_gb: 7.0,  min_ram_gb: 8,  badge: "🇰🇷 한국어" },
-  { category: "general",     repo_id: "bartowski/EXAONE-3.5-32B-Instruct-exl2",   revision: "3_5", label: "EXAONE 3.5 32B (3.5bpw)", description: "LG 한국어 대형 · ~16GB VRAM",          size_gb: 16.0, min_ram_gb: 20, badge: "🇰🇷 한국어" },
-  { category: "general",     repo_id: "bartowski/EXAONE-3.5-32B-Instruct-exl2",   revision: "5_0", label: "EXAONE 3.5 32B (5bpw)",   description: "LG 한국어 대형 고품질 · ~22GB VRAM",   size_gb: 22.0, min_ram_gb: 24, badge: "🇰🇷 한국어" },
-  { category: "reasoning",   repo_id: "bartowski/EXAONE-Deep-2.4B-exl2",           revision: "4_0", label: "EXAONE Deep 2.4B (4bpw)", description: "LG 추론 특화 경량 · ~1.5GB VRAM",      size_gb: 1.5,  min_ram_gb: 3,  capabilities: { reasoning: true }, badge: "🇰🇷 한국어" },
-  { category: "reasoning",   repo_id: "bartowski/EXAONE-Deep-7.8B-exl2",           revision: "4_0", label: "EXAONE Deep 7.8B (4bpw)", description: "LG 추론 특화 · ~5GB VRAM",             size_gb: 5.0,  min_ram_gb: 6,  capabilities: { reasoning: true }, badge: "🇰🇷 한국어" },
-  { category: "reasoning",   repo_id: "bartowski/EXAONE-Deep-7.8B-exl2",           revision: "6_0", label: "EXAONE Deep 7.8B (6bpw)", description: "LG 추론 특화 고품질 · ~7GB VRAM",      size_gb: 7.0,  min_ram_gb: 8,  capabilities: { reasoning: true }, badge: "🇰🇷 한국어" },
-  { category: "reasoning",   repo_id: "bartowski/EXAONE-Deep-32B-exl2",            revision: "3_5", label: "EXAONE Deep 32B (3.5bpw)", description: "LG 추론 특화 대형 · ~16GB VRAM",      size_gb: 16.0, min_ram_gb: 20, capabilities: { reasoning: true }, badge: "🇰🇷 한국어" },
-
-  // ── 초경량 ────────────────────────────────────────────────────────
-  { category: "lightweight", repo_id: "bartowski/Qwen3-1.7B-Instruct-exl2",                 revision: "8_0",  label: "Qwen3 1.7B (8bpw)",    description: "초경량 최신 · ~1.7GB VRAM", size_gb: 1.7,  min_ram_gb: 3, capabilities: { reasoning: true } },
-  { category: "lightweight", repo_id: "lucyknada/Qwen_Qwen2.5-Coder-3B-Instruct-exl2",      revision: "6.0bpw", label: "Qwen2.5-Coder 3B (6bpw)", description: "코딩 초경량 · ~3GB VRAM", size_gb: 3.0, min_ram_gb: 4  },
-];
 
 interface Props {
   onClose: () => void;
@@ -233,6 +42,7 @@ interface Props {
 }
 
 const ModelManager: React.FC<Props> = ({ onClose, recommendedModel: _recommendedModel, gpuVramGb, totalMemoryGb }) => {
+  const { catalog, loading: catalogLoading } = useModelCatalog();
   const [tab, setTab] = useState<"installed" | "download">("installed");
   const [localModels, setLocalModels] = useState<LocalModel[]>([]);
   const [downloading, setDownloading] = useState<Record<string, DownloadProgress>>({});
@@ -821,10 +631,18 @@ const ModelManager: React.FC<Props> = ({ onClose, recommendedModel: _recommended
                 </div>
               </div>
 
+              {catalogLoading && (
+                <div className="text-center text-white/40 text-xs py-4">📋 모델 카탈로그 로딩 중...</div>
+              )}
+              {!catalogLoading && (isAppleSilicon ? catalog.mlx : catalog.exl2).length === 0 && (
+                <div className="text-center text-white/40 text-xs py-4">
+                  ⚠ models.json 로드 실패 — public/models.json 파일을 확인하세요
+                </div>
+              )}
               {(() => {
                 // Mac: 통합 메모리(totalMemoryGb) 기준, Windows: GPU VRAM 기준
                 const availableGb = isAppleSilicon ? totalMemoryGb : gpuVramGb;
-                const list = (isAppleSilicon ? MLX_MODELS : CURATED_MODELS)
+                const list = (isAppleSilicon ? catalog.mlx : catalog.exl2)
                   .filter((m) => categoryFilter === "all" || m.category === categoryFilter);
                 // 정렬 우선순위: 호환(VRAM 맞음) > 비호환, 호환 내에선 badge 있는 추천 우선.
                 // 동순위 내에선 원본 배열 순서 유지(stable sort).
