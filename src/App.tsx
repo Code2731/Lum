@@ -496,9 +496,9 @@ const App: React.FC = () => {
         data-tauri-drag-region
         className="h-10 border-b border-white/5 flex items-center justify-between px-4 shrink-0 select-none gap-2 min-w-0"
       >
-        <div className="flex items-center gap-4 shrink-0">
+        <div data-tauri-drag-region className="flex items-center gap-4 shrink-0">
           <WindowControls />
-          <div className="flex items-center gap-1 text-[10px] text-white/40 shrink-0 whitespace-nowrap">
+          <div data-tauri-drag-region className="flex items-center gap-1 text-[10px] text-white/40 shrink-0 whitespace-nowrap">
             <Cpu size={10} />
             {specsLoading ? (
               <Loader2 size={10} className="animate-spin" />
@@ -541,7 +541,10 @@ const App: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 min-w-0">
+        {/* 드래그 가능한 spacer — 좌·우 사이의 빈 공간으로 창 이동 */}
+        <div data-tauri-drag-region className="flex-1 h-full" />
+
+        <div data-tauri-drag-region className="flex items-center gap-2 min-w-0">
           {(() => {
             // 모델명을 더 짧게 — 마지막 segment에서 흔한 suffix 제거
             const shortName = (n?: string | null) => {
@@ -559,9 +562,10 @@ const App: React.FC = () => {
             const heavy = shortName(heavyModelId);
             if (!fast && !heavy) return null;
             return (
-              <div className="flex items-center gap-1 min-w-0 overflow-hidden">
+              <div data-tauri-drag-region className="flex items-center gap-1 min-w-0 overflow-hidden">
                 {fast && (
                   <div
+                    data-tauri-drag-region
                     className="text-[10px] px-2 py-1 rounded bg-blue-400/10 text-blue-300 truncate max-w-[130px]"
                     title={loadedModelId ? `Fast (TabbyAPI): ${loadedModelId}` : specs?.recommendation_reason}
                   >
@@ -570,6 +574,7 @@ const App: React.FC = () => {
                 )}
                 {heavyEnabled && heavy && (
                   <div
+                    data-tauri-drag-region
                     className="text-[10px] px-2 py-1 rounded bg-purple-400/10 text-purple-300 truncate max-w-[130px]"
                     title={`Heavy Track (mistral.rs): ${heavyModelId}`}
                   >
