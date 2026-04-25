@@ -95,7 +95,27 @@ pub fn get_gpu_vram_gb() -> Option<f32> {
             return Some((gb * 10.0).round() / 10.0);
         }
     }
-    // 4. PowerShell Get-CimInstance (Windows 11 wmic 미설치 환경 폴백)
+    // 4. PowerShell registry — qwMemorySize는 REG_QWORD(64-bit)로 4GB 이상 정확.
+    //    wmic/Get-CimInstance의 AdapterRAM(32-bit DWORD)은 4GB 제한이 있어 RTX 3080 10GB가 4GB로 잘려나옴.
+    #[cfg(windows)]
+    if let Ok(out) = std::process::Command::new("powershell")
+        .args([
+            "-NoProfile",
+            "-NonInteractive",
+            "-Command",
+            "Get-ItemProperty 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Class\\{4d36e968-e325-11ce-bfc1-08002be10318}\\*' -Name 'HardwareInformation.qwMemorySize' -ErrorAction SilentlyContinue | ForEach-Object { $_.'HardwareInformation.qwMemorySize' } | Sort-Object -Descending | Select-Object -First 1",
+        ])
+        .output()
+    {
+        let s = String::from_utf8_lossy(&out.stdout);
+        if let Ok(bytes) = s.trim().parse::<u64>() {
+            if bytes > 0 {
+                let gb = bytes as f32 / 1024.0 / 1024.0 / 1024.0;
+                return Some((gb * 10.0).round() / 10.0);
+            }
+        }
+    }
+    // 5. PowerShell Get-CimInstance — 32-bit AdapterRAM 폴백 (wmic 미설치 환경)
     #[cfg(windows)]
     if let Ok(out) = std::process::Command::new("powershell")
         .args([

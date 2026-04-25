@@ -494,11 +494,11 @@ const App: React.FC = () => {
       {/* ── 헤더 ─────────────────────────────────────────────── */}
       <header
         data-tauri-drag-region
-        className="h-10 border-b border-white/5 flex items-center justify-between px-4 shrink-0 select-none"
+        className="h-10 border-b border-white/5 flex items-center justify-between px-4 shrink-0 select-none gap-2 min-w-0"
       >
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 shrink-0">
           <WindowControls />
-          <div className="flex items-center gap-1 text-[10px] text-white/40">
+          <div className="flex items-center gap-1 text-[10px] text-white/40 shrink-0 whitespace-nowrap">
             <Cpu size={10} />
             {specsLoading ? (
               <Loader2 size={10} className="animate-spin" />
@@ -541,21 +541,28 @@ const App: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 min-w-0">
           {(() => {
+            // 모델명을 더 짧게 — 마지막 segment에서 흔한 suffix 제거
             const shortName = (n?: string | null) => {
               if (!n) return "";
-              const m = n.match(/[^/\\]+$/);
-              return m ? m[0] : n;
+              const last = n.match(/[^/\\]+$/)?.[0] ?? n;
+              return last
+                .replace(/-Instruct$/i, "")
+                .replace(/-exl2$/i, "")
+                .replace(/-MLX-?\d*bit$/i, "")
+                .replace(/-\d+bit$/i, "")
+                .replace(/-\d+\.\d+bpw$/i, "")
+                .replace(/-\d+_\d+$/i, "");
             };
             const fast = shortName(loadedModelId ?? specs?.recommended_model);
             const heavy = shortName(heavyModelId);
             if (!fast && !heavy) return null;
             return (
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1 min-w-0 overflow-hidden">
                 {fast && (
                   <div
-                    className="text-[10px] px-2 py-1 rounded bg-blue-400/10 text-blue-300 truncate max-w-[200px]"
+                    className="text-[10px] px-2 py-1 rounded bg-blue-400/10 text-blue-300 truncate max-w-[130px]"
                     title={loadedModelId ? `Fast (TabbyAPI): ${loadedModelId}` : specs?.recommendation_reason}
                   >
                     ⚡ {fast}
@@ -563,7 +570,7 @@ const App: React.FC = () => {
                 )}
                 {heavyEnabled && heavy && (
                   <div
-                    className="text-[10px] px-2 py-1 rounded bg-purple-400/10 text-purple-300 truncate max-w-[200px]"
+                    className="text-[10px] px-2 py-1 rounded bg-purple-400/10 text-purple-300 truncate max-w-[130px]"
                     title={`Heavy Track (mistral.rs): ${heavyModelId}`}
                   >
                     🚀 {heavy}
