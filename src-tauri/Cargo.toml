@@ -9,6 +9,12 @@ edition = "2021"
 name = "tauri_app_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
+# Phase 82 — LUM 자체 도구를 MCP server로 노출하는 별도 binary.
+# 외부 LLM agent (CrewAI / Claude Desktop 등)가 stdio MCP로 LUM 기능 호출.
+[[bin]]
+name = "lum-mcp-server"
+path = "src/bin/mcp_server.rs"
+
 [features]
 # 기본 빌드: 로컬 AI 없이 경량 배포용
 default = []
