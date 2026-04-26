@@ -30,7 +30,16 @@ interface AppConfig {
   mistral_rs_enabled?: boolean;
   mistral_rs_url?: string;
   mistral_rs_model?: string;
+  mistral_rs_isq?: string; // "Q4K" | "Q5K" | "Q6K" | "Q8_0"
+  mistral_rs_gguf_file?: string; // GGUF 단일 파일명 — Some이면 mistral.rs를 gguf 서브커맨드로 시작
 }
+
+const MISTRAL_ISQ_MODES: { value: string; label: string; desc: string }[] = [
+  { value: "Q4K", label: "Q4K — 4-bit (기본)", desc: "VRAM 최저, 8B≈5GB. 균형형." },
+  { value: "Q5K", label: "Q5K — 5-bit", desc: "품질↑, 8B≈6.5GB." },
+  { value: "Q6K", label: "Q6K — 6-bit", desc: "고품질, 8B≈8GB. 10GB VRAM 빡빡." },
+  { value: "Q8_0", label: "Q8_0 — 8-bit", desc: "최고품질, 8B≈9GB. 10GB VRAM 한계." },
+];
 
 type SafetyMode = "safe" | "balanced" | "max";
 const MODE_DEFAULTS: Record<SafetyMode, number> = { safe: 0.70, balanced: 0.80, max: 0.90 };
@@ -279,6 +288,8 @@ const XllmPanel: React.FC<Props> = ({ onClose }) => {
         mistralRsEnabled: config.mistral_rs_enabled ?? null,
         mistralRsUrl: config.mistral_rs_url ?? null,
         mistralRsModel: config.mistral_rs_model ?? null,
+        mistralRsIsq: config.mistral_rs_isq ?? null,
+        mistralRsGgufFile: config.mistral_rs_gguf_file ?? null,
       });
       setStatusMsg("설정 저장 완료");
     } catch (e) {
@@ -1008,18 +1019,26 @@ const XllmPanel: React.FC<Props> = ({ onClose }) => {
                   <label className="text-[10px] text-white/40 block mb-1">추천 프리셋 (클릭 → 자동 입력)</label>
                   <div className="grid grid-cols-1 gap-1 mb-2 max-h-40 overflow-y-auto pr-1">
                     {catalog.heavy_presets.map((p) => {
-                      const active = config.mistral_rs_model === p.id;
+                      const active = config.mistral_rs_model === p.id && (config.mistral_rs_gguf_file ?? "") === (p.gguf_file ?? "");
+                      const isGguf = !!p.gguf_file;
                       return (
                         <button
-                          key={p.id}
-                          onClick={() => setConfig((c) => ({ ...c, mistral_rs_model: p.id }))}
+                          key={`${p.id}::${p.gguf_file ?? ""}`}
+                          onClick={() => setConfig((c) => ({
+                            ...c,
+                            mistral_rs_model: p.id,
+                            mistral_rs_gguf_file: p.gguf_file ?? "",
+                          }))}
                           className={`flex items-center justify-between gap-2 px-2 py-1.5 rounded text-[11px] text-left transition-colors border ${
                             active
                               ? "bg-purple-500/20 border-purple-400/40 text-purple-200"
                               : "bg-white/3 border-white/8 text-white/60 hover:bg-white/8"
                           }`}
                         >
-                          <span className="truncate"><span className="opacity-70 mr-1">{p.tag}</span>{p.label}</span>
+                          <span className="truncate">
+                            <span className="opacity-70 mr-1">{p.tag}</span>{p.label}
+                            {isGguf && <span className="opacity-50 ml-1">[GGUF]</span>}
+                          </span>
                           <span className="text-[9px] text-white/30 shrink-0">{p.size}</span>
                         </button>
                       );
@@ -1032,6 +1051,37 @@ const XllmPanel: React.FC<Props> = ({ onClose }) => {
                     placeholder="예: deepseek-ai/DeepSeek-R1-Distill-Qwen-32B"
                     className="w-full bg-white/5 border border-white/10 rounded px-2 py-1 text-xs text-white/80 placeholder-white/20 font-mono"
                   />
+                </div>
+
+                <div>
+                  <label className="text-[10px] text-white/40 block mb-1">GGUF 파일 (있으면 GGUF 모드, 비우면 BF16+ISQ)</label>
+                  <input
+                    value={config.mistral_rs_gguf_file ?? ""}
+                    onChange={(e) => setConfig((c) => ({ ...c, mistral_rs_gguf_file: e.target.value }))}
+                    placeholder="예: Qwen3-Coder-30B-A3B-Instruct-Q4_K_M.gguf (비우면 BF16)"
+                    className="w-full bg-white/5 border border-white/10 rounded px-2 py-1 text-xs text-white/80 placeholder-white/20 font-mono"
+                  />
+                </div>
+
+                <div className={config.mistral_rs_gguf_file ? "opacity-40 pointer-events-none" : ""}>
+                  <label className="text-[10px] text-white/40 block mb-1">
+                    ISQ 양자화 모드 — 품질 ↔ VRAM 트레이드오프
+                    {config.mistral_rs_gguf_file && <span className="ml-1 text-yellow-300/80">(GGUF 모드에선 무시됨)</span>}
+                  </label>
+                  <select
+                    value={config.mistral_rs_isq ?? "Q4K"}
+                    onChange={(e) => setConfig((c) => ({ ...c, mistral_rs_isq: e.target.value }))}
+                    className="w-full bg-white/5 border border-white/10 rounded px-2 py-1 text-xs text-white/80"
+                  >
+                    {MISTRAL_ISQ_MODES.map((m) => (
+                      <option key={m.value} value={m.value} className="bg-zinc-900">
+                        {m.label}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-[9px] text-white/40 mt-1">
+                    {MISTRAL_ISQ_MODES.find((m) => m.value === (config.mistral_rs_isq ?? "Q4K"))?.desc}
+                  </p>
                 </div>
 
                 <div>

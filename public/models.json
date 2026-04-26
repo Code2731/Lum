@@ -114,33 +114,28 @@
     { "category": "general", "repo_id": "bartowski/Meta-Llama-3.1-8B-Instruct-exl2", "revision": "6_0", "label": "Llama 3.1 8B (6bpw)",  "description": "범용 균형 · ~7GB VRAM",  "size_gb": 7.0,  "min_ram_gb": 8 },
     { "category": "general", "repo_id": "bartowski/Llama-3.3-70B-Instruct-exl2",     "revision": "3_0", "label": "Llama 3.3 70B (3bpw)", "description": "범용 최강 · ~29GB VRAM", "size_gb": 29.0, "min_ram_gb": 32 },
 
-    { "category": "general",   "repo_id": "bartowski/EXAONE-3.5-2.4B-Instruct-exl2", "revision": "4_0", "label": "EXAONE 3.5 2.4B (4bpw)",  "description": "LG 한국어 경량 · ~1.5GB VRAM",        "size_gb": 1.5,  "min_ram_gb": 3,  "badge": "🇰🇷 한국어" },
-    { "category": "general",   "repo_id": "bartowski/EXAONE-3.5-2.4B-Instruct-exl2", "revision": "8_0", "label": "EXAONE 3.5 2.4B (8bpw)",  "description": "LG 한국어 경량 고품질 · ~2.5GB VRAM", "size_gb": 2.5,  "min_ram_gb": 4,  "badge": "🇰🇷 한국어" },
-    { "category": "general",   "repo_id": "bartowski/EXAONE-3.5-7.8B-Instruct-exl2", "revision": "4_0", "label": "EXAONE 3.5 7.8B (4bpw)",  "description": "LG 한국어 균형 · ~5GB VRAM",          "size_gb": 5.0,  "min_ram_gb": 6,  "badge": "🇰🇷 한국어" },
-    { "category": "general",   "repo_id": "bartowski/EXAONE-3.5-7.8B-Instruct-exl2", "revision": "6_0", "label": "EXAONE 3.5 7.8B (6bpw)",  "description": "LG 한국어 균형 고품질 · ~7GB VRAM",   "size_gb": 7.0,  "min_ram_gb": 8,  "badge": "🇰🇷 한국어" },
-    { "category": "general",   "repo_id": "bartowski/EXAONE-3.5-32B-Instruct-exl2",  "revision": "3_5", "label": "EXAONE 3.5 32B (3.5bpw)", "description": "LG 한국어 대형 · ~16GB VRAM",         "size_gb": 16.0, "min_ram_gb": 20, "badge": "🇰🇷 한국어" },
-    { "category": "general",   "repo_id": "bartowski/EXAONE-3.5-32B-Instruct-exl2",  "revision": "5_0", "label": "EXAONE 3.5 32B (5bpw)",   "description": "LG 한국어 대형 고품질 · ~22GB VRAM",  "size_gb": 22.0, "min_ram_gb": 24, "badge": "🇰🇷 한국어" },
-    { "category": "reasoning", "repo_id": "bartowski/EXAONE-Deep-2.4B-exl2",         "revision": "4_0", "label": "EXAONE Deep 2.4B (4bpw)", "description": "LG 추론 특화 경량 · ~1.5GB VRAM",     "size_gb": 1.5,  "min_ram_gb": 3,  "capabilities": { "reasoning": true }, "badge": "🇰🇷 한국어" },
-    { "category": "reasoning", "repo_id": "bartowski/EXAONE-Deep-7.8B-exl2",         "revision": "4_0", "label": "EXAONE Deep 7.8B (4bpw)", "description": "LG 추론 특화 · ~5GB VRAM",            "size_gb": 5.0,  "min_ram_gb": 6,  "capabilities": { "reasoning": true }, "badge": "🇰🇷 한국어" },
-    { "category": "reasoning", "repo_id": "bartowski/EXAONE-Deep-7.8B-exl2",         "revision": "6_0", "label": "EXAONE Deep 7.8B (6bpw)", "description": "LG 추론 특화 고품질 · ~7GB VRAM",     "size_gb": 7.0,  "min_ram_gb": 8,  "capabilities": { "reasoning": true }, "badge": "🇰🇷 한국어" },
-    { "category": "reasoning", "repo_id": "bartowski/EXAONE-Deep-32B-exl2",          "revision": "3_5", "label": "EXAONE Deep 32B (3.5bpw)","description": "LG 추론 특화 대형 · ~16GB VRAM",     "size_gb": 16.0, "min_ram_gb": 20, "capabilities": { "reasoning": true }, "badge": "🇰🇷 한국어" },
+    { "category": "general",   "repo_id": "lucyknada/lucyknada_EXAONE-3.5-2.4B-Instruct-Llamafied-config-fixed-exl2", "revision": "6.0bpw", "label": "EXAONE 3.5 2.4B (6bpw)",  "description": "LG 한국어 경량 · ~2GB VRAM",          "size_gb": 2.0,  "min_ram_gb": 3,  "badge": "🇰🇷 한국어" },
+    { "category": "general",   "repo_id": "lucyknada/lucyknada_EXAONE-3.5-2.4B-Instruct-Llamafied-config-fixed-exl2", "revision": "8.0bpw", "label": "EXAONE 3.5 2.4B (8bpw)",  "description": "LG 한국어 경량 고품질 · ~2.5GB VRAM", "size_gb": 2.5,  "min_ram_gb": 4,  "badge": "🇰🇷 한국어" },
+    { "category": "general",   "repo_id": "lucyknada/lucyknada_EXAONE-3.5-7.8B-Instruct-Llamafied-config-fixed-exl2", "revision": "4.0bpw", "label": "EXAONE 3.5 7.8B (4bpw)",  "description": "LG 한국어 균형 · ~5GB VRAM",          "size_gb": 5.0,  "min_ram_gb": 6,  "badge": "🇰🇷 한국어" },
+    { "category": "general",   "repo_id": "lucyknada/lucyknada_EXAONE-3.5-7.8B-Instruct-Llamafied-config-fixed-exl2", "revision": "6.0bpw", "label": "EXAONE 3.5 7.8B (6bpw)",  "description": "LG 한국어 균형 고품질 · ~7GB VRAM",   "size_gb": 7.0,  "min_ram_gb": 8,  "badge": "🇰🇷 한국어" },
+    { "category": "general",   "repo_id": "lucyknada/lucyknada_EXAONE-3.5-32B-Instruct-Llamafied-config-fixed-exl2",  "revision": "3.0bpw", "label": "EXAONE 3.5 32B (3bpw)",   "description": "LG 한국어 대형 · ~14GB VRAM",         "size_gb": 14.0, "min_ram_gb": 20, "badge": "🇰🇷 한국어" },
+    { "category": "general",   "repo_id": "lucyknada/lucyknada_EXAONE-3.5-32B-Instruct-Llamafied-config-fixed-exl2",  "revision": "5.0bpw", "label": "EXAONE 3.5 32B (5bpw)",   "description": "LG 한국어 대형 고품질 · ~22GB VRAM",  "size_gb": 22.0, "min_ram_gb": 24, "badge": "🇰🇷 한국어" },
 
     { "category": "lightweight", "repo_id": "bartowski/Qwen3-1.7B-Instruct-exl2",            "revision": "8_0",   "label": "Qwen3 1.7B (8bpw)",     "description": "초경량 최신 · ~1.7GB VRAM", "size_gb": 1.7, "min_ram_gb": 3, "capabilities": { "reasoning": true } },
     { "category": "lightweight", "repo_id": "lucyknada/Qwen_Qwen2.5-Coder-3B-Instruct-exl2", "revision": "6.0bpw","label": "Qwen2.5-Coder 3B (6bpw)","description": "코딩 초경량 · ~3GB VRAM",   "size_gb": 3.0, "min_ram_gb": 4 }
   ],
 
   "heavy_presets": [
-    { "label": "Qwen3.5 27B Opus 증류 (추론)",       "id": "Qwen/Qwen3.5-27B-Claude-4.6-Opus-Distilled",          "size": "~16GB", "tag": "🧠 Opus 증류" },
-    { "label": "Qwen3.5 30B-A3B Opus 증류 (MoE)",    "id": "Qwen/Qwen3.5-30B-A3B-Claude-4.6-Opus-Distilled",      "size": "~17GB", "tag": "🚀 Opus MoE" },
-    { "label": "Qwen3.5-Coder 30B-A3B Opus 증류",    "id": "Qwen/Qwen3.5-Coder-30B-A3B-Claude-4.6-Opus-Distilled","size": "~17GB", "tag": "⚡ 코딩+Opus" },
-    { "label": "DeepSeek R1 Distill 32B (추론)",     "id": "deepseek-ai/DeepSeek-R1-Distill-Qwen-32B",            "size": "~19GB", "tag": "🧠 추론" },
-    { "label": "Qwen2.5-Coder 32B (코딩)",           "id": "Qwen/Qwen2.5-Coder-32B-Instruct",                      "size": "~19GB", "tag": "⚡ 코딩" },
-    { "label": "Qwen3 32B (범용 최신)",              "id": "Qwen/Qwen3-32B-Instruct",                              "size": "~19GB", "tag": "🆕 범용" },
-    { "label": "Qwen3 30B-A3B MoE (빠른 32B)",       "id": "Qwen/Qwen3-30B-A3B-Instruct",                          "size": "~17GB", "tag": "🚀 MoE" },
-    { "label": "EXAONE 3.5 32B (한국어)",            "id": "LGAI-EXAONE/EXAONE-3.5-32B-Instruct",                  "size": "~19GB", "tag": "🇰🇷 한국어" },
-    { "label": "EXAONE Deep 32B (한국어 추론)",      "id": "LGAI-EXAONE/EXAONE-Deep-32B",                          "size": "~19GB", "tag": "🇰🇷🧠" },
-    { "label": "Mistral Small 24B",                  "id": "mistralai/Mistral-Small-24B-Instruct-2501",            "size": "~14GB", "tag": "🇫🇷 균형" },
-    { "label": "Gemma 3 27B",                        "id": "google/gemma-3-27b-it",                                "size": "~16GB", "tag": "🤖 Google" },
-    { "label": "Llama 3.3 70B (멀티GPU)",            "id": "meta-llama/Llama-3.3-70B-Instruct",                    "size": "~40GB", "tag": "🦙 Meta" }
+    { "label": "Qwen3 8B (가벼움 · RTX 3080 안전)",  "id": "Qwen/Qwen3-8B",                                         "size": "~5GB",  "tag": "✓ 8B" },
+    { "label": "Qwen3.5 9B Opus 증류 (Claude distill)","id": "Jackrong/Qwen3.5-9B-Claude-4.6-Opus-Reasoning-Distilled-v2","size": "~5GB",  "tag": "🧠 Opus 증류" },
+    { "label": "Qwen2.5-Coder 14B (코딩)",           "id": "Qwen/Qwen2.5-Coder-14B-Instruct",                       "size": "~8GB",  "tag": "⚡ 코딩 14B" },
+    { "label": "Qwen3-Coder 30B-A3B MoE Q4_K_M (코딩, GGUF)",  "id": "unsloth/Qwen3-Coder-30B-A3B-Instruct-GGUF", "gguf_file": "Qwen3-Coder-30B-A3B-Instruct-Q4_K_M.gguf", "size": "~17GB", "tag": "🚀 MoE 코딩" },
+    { "label": "DeepSeek R1 Distill 32B (추론)",     "id": "deepseek-ai/DeepSeek-R1-Distill-Qwen-32B",              "size": "~19GB", "tag": "🧠 추론" },
+    { "label": "Qwen2.5-Coder 32B (코딩 거대)",      "id": "Qwen/Qwen2.5-Coder-32B-Instruct",                       "size": "~19GB", "tag": "⚡ 코딩 32B" },
+    { "label": "EXAONE 3.5 32B (한국어)",            "id": "LGAI-EXAONE/EXAONE-3.5-32B-Instruct",                   "size": "~19GB", "tag": "🇰🇷 한국어" },
+    { "label": "EXAONE Deep 32B (한국어 추론)",      "id": "LGAI-EXAONE/EXAONE-Deep-32B",                           "size": "~19GB", "tag": "🇰🇷🧠" },
+    { "label": "Mistral Small 24B",                  "id": "mistralai/Mistral-Small-24B-Instruct-2501",             "size": "~14GB", "tag": "🇫🇷 균형" },
+    { "label": "Gemma 3 27B",                        "id": "google/gemma-3-27b-it",                                 "size": "~16GB", "tag": "🤖 Google" },
+    { "label": "Llama 3.3 70B (멀티GPU)",            "id": "meta-llama/Llama-3.3-70B-Instruct",                     "size": "~40GB", "tag": "🦙 Meta" }
   ]
 }

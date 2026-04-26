@@ -235,6 +235,7 @@ const App: React.FC = () => {
   const [tabCtxMenu, setTabCtxMenu] = useState<{ tabId: string; x: number; y: number } | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("terminal");
   const [xllmOnline, setXllmOnline] = useState(false);
+  const [mistralOnline, setMistralOnline] = useState(false);
   const [aiInput, setAiInput] = useState("");
   const [showAiBar, setShowAiBar] = useState(false);
   const [dismissedBlockId, setDismissedBlockId] = useState<string | null>(null);
@@ -253,6 +254,17 @@ const App: React.FC = () => {
       invoke<boolean>("check_xllm_status")
         .then(setXllmOnline)
         .catch(() => setXllmOnline(false));
+    poll();
+    const id = setInterval(poll, 10_000);
+    return () => clearInterval(id);
+  }, []);
+
+  // mistral.rs(:8080) healthcheck — running 필드만 사용
+  useEffect(() => {
+    const poll = () =>
+      invoke<{ running: boolean }>("check_mistral_rs_status")
+        .then((s) => setMistralOnline(s.running))
+        .catch(() => setMistralOnline(false));
     poll();
     const id = setInterval(poll, 10_000);
     return () => clearInterval(id);
@@ -537,12 +549,23 @@ const App: React.FC = () => {
                   }
                   return `${specs.total_memory_gb}GB RAM`;
                 })()}
-                {" · "}
-                <span className={xllmOnline ? "text-green-400" : "text-red-400"}>
-                  {xllmOnline ? "xLLM ●" : "xLLM ○"}
-                </span>
               </span>
             ) : null}
+            {/* 엔진 상태 stack — xLLM(TabbyAPI)와 mistral.rs 둘 다 한눈에 */}
+            <div data-tauri-drag-region className="flex flex-col leading-tight ml-1 select-none">
+              <span
+                className={`text-[9px] ${xllmOnline ? "text-green-400" : "text-red-400/60"}`}
+                title={xllmOnline ? "TabbyAPI(:5000) 동작 중" : "TabbyAPI 미실행 — XllmPanel에서 [시작]"}
+              >
+                xLLM {xllmOnline ? "●" : "○"}
+              </span>
+              <span
+                className={`text-[9px] ${mistralOnline ? "text-green-400" : "text-red-400/60"}`}
+                title={mistralOnline ? "mistral.rs(:8080) 동작 중" : "mistral.rs 미실행 — XllmPanel Heavy 섹션에서 [실행]"}
+              >
+                mistral {mistralOnline ? "●" : "○"}
+              </span>
+            </div>
           </div>
 
           <div className="flex bg-white/5 p-0.5 rounded-md">

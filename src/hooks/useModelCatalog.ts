@@ -19,6 +19,8 @@ export interface HeavyPreset {
   id: string;
   size: string;
   tag: string;
+  /** GGUF 단일 파일명 — 있으면 mistral.rs를 `gguf` 서브커맨드로 시작 (양자화 단계 없음) */
+  gguf_file?: string;
 }
 
 export interface ModelCatalog {

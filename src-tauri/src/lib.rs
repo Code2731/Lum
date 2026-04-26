@@ -64,6 +64,7 @@ pub fn run() {
             commands::models::download_model,
             commands::models::delete_model,
             commands::models::cancel_download,
+            commands::models::check_repo_status,
             // AI Commands
             commands::agent::agent_plan,
             commands::agent::agent_observe,
@@ -178,6 +179,8 @@ pub fn run() {
             commands::mistral_setup::start_mistral_rs,
             commands::mistral_setup::stop_mistral_rs,
             commands::mistral_setup::check_mistral_rs_status,
+            commands::mistral_setup::download_mistral_model,
+            commands::mistral_setup::list_mistral_models,
             // MCP Tools (Phase 74 — 제대로 된 handshake + 서버 관리)
             mcp::list_mcp_servers,
             mcp::save_mcp_server,

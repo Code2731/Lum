@@ -73,6 +73,10 @@ pub struct AppConfig {
     pub mistral_rs_url: Option<String>,
     /// mistral.rs Heavy Track 모델 경로 (HuggingFace ID 또는 로컬 경로)
     pub mistral_rs_model: Option<String>,
+    /// mistral.rs ISQ(In-Situ Quantization) 모드 — Q4K(기본) | Q5K | Q6K | Q8_0
+    pub mistral_rs_isq: Option<String>,
+    /// GGUF 단일 파일명 — Some이면 mistral.rs를 `gguf` 서브커맨드로 시작, None이면 BF16+ISQ
+    pub mistral_rs_gguf_file: Option<String>,
 
     /// LUM 시작 시 TabbyAPI 자동 시작 (None/true=자동, false=수동)
     pub xllm_auto_start: Option<bool>,
@@ -122,7 +126,11 @@ fn config_path() -> std::path::PathBuf {
 
 pub fn load_config() -> Result<AppConfig> {
     match std::fs::read_to_string(config_path()) {
-        Ok(content) => serde_json::from_str(&content).map_err(|e| LumError::Config(e.to_string())),
+        Ok(content) => {
+            // Windows의 PowerShell Out-File 등이 박는 UTF-8 BOM 제거 — 없으면 그대로
+            let stripped = content.strip_prefix('\u{feff}').unwrap_or(&content);
+            serde_json::from_str(stripped).map_err(|e| LumError::Config(e.to_string()))
+        }
         Err(_) => Ok(AppConfig::default()),
     }
 }
@@ -202,6 +210,8 @@ pub fn save_xllm_settings(
     mistral_rs_enabled: Option<bool>,
     mistral_rs_url: Option<String>,
     mistral_rs_model: Option<String>,
+    mistral_rs_isq: Option<String>,
+    mistral_rs_gguf_file: Option<String>,
 ) -> Result<()> {
     use tauri::Emitter;
     let mut config = load_config()?;
@@ -218,6 +228,8 @@ pub fn save_xllm_settings(
     config.mistral_rs_enabled = mistral_rs_enabled;
     config.mistral_rs_url = mistral_rs_url.filter(|s| !s.is_empty());
     config.mistral_rs_model = mistral_rs_model.filter(|s| !s.is_empty());
+    config.mistral_rs_isq = mistral_rs_isq.filter(|s| !s.is_empty());
+    config.mistral_rs_gguf_file = mistral_rs_gguf_file.filter(|s| !s.is_empty());
     save_config(&config)?;
     let _ = app.emit("xllm_settings_saved", ());
     Ok(())
@@ -282,6 +294,18 @@ mod tests {
         cfg.safety_mode = Some("safe".into());
         cfg.vram_cap_override = Some(0.85);
         assert!((cfg.vram_utilization() - 0.85).abs() < 1e-6);
+    }
+
+    #[test]
+    fn load_config_strips_utf8_bom() {
+        // 직접 디스크에 안 쓰고 strip 로직만 검증 — load_config 핵심 부분 시뮬레이션
+        let content_with_bom = "\u{feff}{\"theme\":\"Solarized Dark\"}";
+        let stripped = content_with_bom
+            .strip_prefix('\u{feff}')
+            .unwrap_or(content_with_bom);
+        let cfg: AppConfig =
+            serde_json::from_str(stripped).expect("BOM 제거 후 파싱 성공해야 함");
+        assert_eq!(cfg.theme.as_deref(), Some("Solarized Dark"));
     }
 
     #[test]

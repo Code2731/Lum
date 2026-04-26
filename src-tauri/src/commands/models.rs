@@ -87,6 +87,76 @@ pub async fn list_local_models() -> Result<Vec<LocalModel>> {
     Ok(models)
 }
 
+#[derive(Debug, Deserialize)]
+pub struct RepoQuery {
+    pub repo_id: String,
+    pub revision: String,
+}
+
+#[derive(Debug, Serialize, Clone)]
+pub struct RepoStatus {
+    pub repo_id: String,
+    pub revision: String,
+    /// "alive" | "gated" | "dead" | "error"
+    pub status: String,
+    pub http_code: u16,
+}
+
+/// HF API에서 repo + revision 살아있는지 일괄 확인 — ModelManager 갱신 버튼용
+/// 병렬 5개 배치로 호출, hf_token 있으면 헤더 첨부.
+#[command]
+pub async fn check_repo_status(repos: Vec<RepoQuery>) -> Result<Vec<RepoStatus>> {
+    let token = load_config().ok().and_then(|c| c.hf_token);
+    let client = reqwest::Client::builder()
+        .connect_timeout(std::time::Duration::from_secs(10))
+        .timeout(std::time::Duration::from_secs(15))
+        .build()
+        .map_err(|e| LumError::Network(e.to_string()))?;
+
+    let token_arc = std::sync::Arc::new(token);
+    let client_arc = std::sync::Arc::new(client);
+
+    let results: Vec<RepoStatus> = futures_util::stream::iter(repos.into_iter())
+        .map(|q| {
+            let client = client_arc.clone();
+            let token = token_arc.clone();
+            async move {
+                let url = format!(
+                    "https://huggingface.co/api/models/{}/tree/{}",
+                    q.repo_id, q.revision
+                );
+                let mut req = client.get(&url);
+                if let Some(ref t) = *token {
+                    req = req.header("Authorization", format!("Bearer {}", t));
+                }
+                let (status, code) = match req.send().await {
+                    Ok(resp) => {
+                        let code = resp.status().as_u16();
+                        let label = match code {
+                            200 => "alive",
+                            401 | 403 => "gated",
+                            404 => "dead",
+                            _ => "error",
+                        };
+                        (label.to_string(), code)
+                    }
+                    Err(_) => ("error".to_string(), 0),
+                };
+                RepoStatus {
+                    repo_id: q.repo_id,
+                    revision: q.revision,
+                    status,
+                    http_code: code,
+                }
+            }
+        })
+        .buffer_unordered(5)
+        .collect()
+        .await;
+
+    Ok(results)
+}
+
 #[command]
 pub async fn delete_model(model_id: String) -> Result<()> {
     let dir = models_dir()?.join(&model_id);

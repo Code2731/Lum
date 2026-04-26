@@ -56,6 +56,11 @@ const ModelManager: React.FC<Props> = ({ onClose, recommendedModel: _recommended
   const tokenRef = useRef<HTMLInputElement>(null);
   const [customRepo, setCustomRepo] = useState("");
   const [customRevision, setCustomRevision] = useState("");
+  // Heavy(mistral.rs) 일반 HF 모델 다운로드 — repo만 받음 (revision=main)
+  const [mistralRepo, setMistralRepo] = useState("");
+  const [mistralLog, setMistralLog] = useState<string[]>([]);
+  const [mistralBusy, setMistralBusy] = useState(false);
+  const [mistralLocal, setMistralLocal] = useState<Array<{ repo_id: string; path: string; size_mb: number }>>([]);
   const [isAppleSilicon, setIsAppleSilicon] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState<ModelCategory | "all">("all");
   const [loadedModelId, setLoadedModelId] = useState<string | null>(null);
@@ -65,6 +70,14 @@ const ModelManager: React.FC<Props> = ({ onClose, recommendedModel: _recommended
   const [codingModel, setCodingModel] = useState<string | null>(null);
   const [docModel, setDocModel] = useState<string | null>(null);
   const [mistralModel, setMistralModel] = useState<string | null>(null);
+  // 갱신 버튼 — repo+revision 쌍별 HF API 살아있음 여부
+  type RepoState = "alive" | "gated" | "dead" | "error";
+  const [repoStatus, setRepoStatus] = useState<Record<string, RepoState>>({});
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [refreshMsg, setRefreshMsg] = useState<string | null>(null);
+
+  /** key 헬퍼 — repo + revision을 안전한 단일 키로 */
+  const repoKey = (repoId: string, revision: string) => `${repoId}@${revision}`;
 
   const refreshRoles = useCallback(() => {
     invoke<{ coding_model?: string; doc_model?: string; mistral_rs_model?: string }>("load_app_config")
@@ -75,6 +88,77 @@ const ModelManager: React.FC<Props> = ({ onClose, recommendedModel: _recommended
       })
       .catch(() => {});
   }, []);
+
+  /** mistral.rs 로컬 폴더 스캔 — 설치됨 탭 그룹 표시용 */
+  const refreshMistralLocal = useCallback(async () => {
+    try {
+      const list = await invoke<Array<{ repo_id: string; path: string; size_mb: number }>>("list_mistral_models");
+      setMistralLocal(list);
+    } catch {
+      setMistralLocal([]);
+    }
+  }, []);
+
+  /** HF 일반 모델을 mistral.rs용으로 다운로드 — `download_mistral_model` Tauri 커맨드.
+   *  ggufFile Some이면 GGUF 단일 파일만 받음 (~17GB 정도), 아니면 BF16 전체 받음 (수십 GB). */
+  const handleMistralDownload = useCallback(async (repoId: string, ggufFile?: string) => {
+    if (mistralBusy) return;
+    const id = repoId.trim();
+    if (!id) return;
+    setMistralBusy(true);
+    const kind = ggufFile ? `GGUF ${ggufFile}` : "BF16 전체";
+    setMistralLog((prev) => [...prev, `📥 다운로드 시작 (${kind}): ${id}`]);
+    try {
+      const path = await invoke<string>("download_mistral_model", {
+        repoId: id,
+        ggufFilename: ggufFile ?? null,
+      });
+      setMistralLog((prev) => [...prev, `✅ 완료: ${path}`]);
+      await refreshMistralLocal();
+    } catch (e) {
+      const raw = (e as { message?: string } | string | null);
+      const msg = typeof raw === "string" ? raw : raw?.message ?? String(e);
+      setMistralLog((prev) => [...prev, `❌ ${msg}`]);
+    } finally {
+      setMistralBusy(false);
+    }
+  }, [mistralBusy, refreshMistralLocal]);
+
+  /** HF API에서 현재 리스트의 모든 repo+revision 살아있음 여부 일괄 확인 */
+  const refreshRepoStatus = useCallback(async () => {
+    if (isRefreshing || catalogLoading) return;
+    const list = isAppleSilicon ? catalog.mlx : catalog.exl2;
+    const presets = catalog.heavy_presets;
+    if (list.length === 0 && presets.length === 0) return;
+    setIsRefreshing(true);
+    setRefreshMsg("HuggingFace API 조회 중...");
+    try {
+      const queries = [
+        ...list.map((m) => ({ repo_id: m.repo_id, revision: m.revision })),
+        // heavy_presets는 보통 main branch 기준
+        ...presets.map((p) => ({ repo_id: p.id, revision: "main" })),
+      ];
+      const results = await invoke<Array<{ repo_id: string; revision: string; status: RepoState; http_code: number }>>(
+        "check_repo_status",
+        { repos: queries }
+      );
+      const map: Record<string, RepoState> = {};
+      let alive = 0, gated = 0, dead = 0, err = 0;
+      for (const r of results) {
+        map[repoKey(r.repo_id, r.revision)] = r.status;
+        if (r.status === "alive") alive++;
+        else if (r.status === "gated") gated++;
+        else if (r.status === "dead") dead++;
+        else err++;
+      }
+      setRepoStatus(map);
+      setRefreshMsg(`✅ 살아있음 ${alive} · 🔒 게이트 ${gated} · ❌ 사라짐 ${dead}${err ? ` · ⚠ 오류 ${err}` : ""}`);
+    } catch (e) {
+      setRefreshMsg(`갱신 실패: ${(e as Error)?.message ?? e}`);
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [isRefreshing, catalogLoading, isAppleSilicon, catalog.mlx, catalog.exl2, catalog.heavy_presets]);
 
   const assignRole = useCallback(async (role: "coding" | "doc" | "heavy", modelId: string) => {
     try {
@@ -99,6 +183,8 @@ const ModelManager: React.FC<Props> = ({ onClose, recommendedModel: _recommended
         mistralRsEnabled: merged["mistral_rs_enabled"] ?? null,
         mistralRsUrl: merged["mistral_rs_url"] ?? null,
         mistralRsModel: merged["mistral_rs_model"] ?? null,
+        mistralRsIsq: merged["mistral_rs_isq"] ?? null,
+        mistralRsGgufFile: merged["mistral_rs_gguf_file"] ?? null,
       });
       if (role === "coding") setCodingModel(modelId);
       else if (role === "doc") setDocModel(modelId);
@@ -186,6 +272,15 @@ const ModelManager: React.FC<Props> = ({ onClose, recommendedModel: _recommended
     loadLocalModels();
     fetchLoaded();
     refreshRoles();
+    refreshMistralLocal();
+    // mistral.rs 다운로드 / 시작 / 빌드 로그 — 다운로드 패널에 인라인 표시
+    const unlistenMistralLog = listen<string>("mistral_rs_log", (e) => {
+      setMistralLog((prev) => {
+        const next = [...prev, e.payload];
+        // 너무 길어지면 자르기 — 최근 200줄만
+        return next.length > 200 ? next.slice(-200) : next;
+      });
+    });
 
     const unlisten = listen<DownloadProgress>("model_download_progress", (event) => {
       const p = event.payload;
@@ -222,8 +317,9 @@ const ModelManager: React.FC<Props> = ({ onClose, recommendedModel: _recommended
 
     return () => {
       unlisten.then((fn) => fn());
+      unlistenMistralLog.then((fn) => fn());
     };
-  }, [loadLocalModels]);
+  }, [loadLocalModels, refreshMistralLocal]);
 
   const startDownload = async (repoId: string, revision: string | null) => {
     if (downloading[repoId] || starting.has(repoId)) return;
@@ -526,12 +622,15 @@ const ModelManager: React.FC<Props> = ({ onClose, recommendedModel: _recommended
                 )}
               </div>
 
-              {/* 직접 입력 */}
+              {/* ⚡ EXL2 직접 입력 — TabbyAPI Fast Track */}
               <div className="p-3 bg-white/3 rounded-lg border border-white/8 mb-1 space-y-2">
-                <p className="text-[10px] text-white/40 font-medium">직접 입력 (HuggingFace 레포)</p>
+                <div className="flex items-center justify-between">
+                  <p className="text-[10px] text-white/50 font-medium">⚡ EXL2 직접 입력 — TabbyAPI Fast Track</p>
+                  <span className="text-[9px] text-white/30">→ ~/tabby/models/</span>
+                </div>
                 <input
                   type="text"
-                  placeholder="author/model-name  예) turboderp/Qwen2.5-Coder-7B-Instruct-exl2"
+                  placeholder="author/model-name (EXL2 양자화)  예) bartowski/Qwen2.5-Coder-7B-Instruct-exl2"
                   value={customRepo}
                   onChange={(e) => setCustomRepo(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleCustomDownload()}
@@ -576,12 +675,99 @@ const ModelManager: React.FC<Props> = ({ onClose, recommendedModel: _recommended
                 )}
               </div>
 
+              {/* 🚀 HuggingFace 일반 모델 — mistral.rs Heavy Track */}
+              <div className="p-3 bg-purple-500/5 rounded-lg border border-purple-400/20 mb-1 space-y-2">
+                <div className="flex items-center justify-between">
+                  <p className="text-[10px] text-purple-300 font-medium">🚀 HuggingFace 일반 모델 — mistral.rs Heavy Track</p>
+                  <span className="text-[9px] text-white/30">→ ~/.lum_mistral_models/</span>
+                </div>
+                <p className="text-[9px] text-white/40">
+                  EXL2 양자화 안 된 BF16 원본도 OK. mistral.rs가 ISQ로 즉석 양자화. (예: <code>Qwen/Qwen3-8B</code>)
+                </p>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="author/model-name  예) Qwen/Qwen3-8B"
+                    value={mistralRepo}
+                    onChange={(e) => setMistralRepo(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleMistralDownload(mistralRepo)}
+                    className="flex-1 bg-white/5 border border-white/10 rounded px-3 py-1.5 text-xs outline-none focus:border-purple-400/50 font-mono"
+                  />
+                  <button
+                    onClick={() => handleMistralDownload(mistralRepo)}
+                    disabled={!mistralRepo.trim() || mistralBusy}
+                    className="flex items-center gap-1 px-3 py-1.5 rounded bg-purple-500/20 hover:bg-purple-500/30 text-xs text-purple-300 transition-colors disabled:opacity-40"
+                  >
+                    <Download size={11} />
+                    {mistralBusy ? "받는 중…" : "받기"}
+                  </button>
+                </div>
+
+                {/* Heavy 추천 프리셋 */}
+                {catalog.heavy_presets.length > 0 && (
+                  <div>
+                    <p className="text-[9px] text-white/40 mb-1">추천 프리셋 (클릭 → 받기):</p>
+                    <div className="flex flex-wrap gap-1">
+                      {catalog.heavy_presets.map((p) => {
+                        const s = repoStatus[repoKey(p.id, "main")];
+                        const isDead = s === "dead";
+                        const installed = mistralLocal.some((m) => m.repo_id === p.id);
+                        const isGguf = !!p.gguf_file;
+                        return (
+                          <button
+                            key={`${p.id}::${p.gguf_file ?? ""}`}
+                            onClick={() => { setMistralRepo(p.id); handleMistralDownload(p.id, p.gguf_file); }}
+                            disabled={mistralBusy || isDead}
+                            title={isDead ? "리포지토리 404 — 다운로드 불가" : `${p.id}${p.gguf_file ? ` / ${p.gguf_file}` : ""} (${p.size})`}
+                            className={`text-[10px] px-2 py-0.5 rounded transition-colors disabled:opacity-30 ${
+                              installed ? "bg-emerald-500/15 text-emerald-300 border border-emerald-400/25" :
+                              isDead ? "bg-red-500/10 text-red-300/70 border border-red-400/20 line-through" :
+                              s === "alive" ? "bg-purple-500/15 text-purple-200 border border-purple-400/25" :
+                              "bg-white/5 text-white/60 border border-white/10 hover:bg-purple-500/15"
+                            }`}
+                          >
+                            <span className="opacity-70 mr-1">{p.tag}</span>{p.label}
+                            <span className="opacity-50 ml-1">· {p.size}</span>
+                            {isGguf && <span className="opacity-60 ml-1">[GGUF]</span>}
+                            {installed && <span className="ml-1">✓</span>}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* 다운로드 로그 패널 */}
+                {(mistralBusy || mistralLog.length > 0) && (
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between text-[10px] text-white/40">
+                      <span>📋 mistral.rs 로그 ({mistralLog.length}줄)</span>
+                      {mistralLog.length > 0 && (
+                        <button
+                          onClick={() => setMistralLog([])}
+                          className="text-white/30 hover:text-white/60 transition-colors text-[9px]"
+                        >
+                          지우기
+                        </button>
+                      )}
+                    </div>
+                    <div className="bg-black/40 border border-purple-400/15 rounded p-2 max-h-32 overflow-y-auto font-mono text-[10px] leading-tight">
+                      {mistralLog.map((line, idx) => (
+                        <div key={idx} className={line.startsWith("❌") ? "text-red-400" : line.startsWith("✅") ? "text-emerald-400" : line.startsWith("📥") ? "text-purple-300" : "text-white/60"}>
+                          {line}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
               {/* 플랫폼 + 카테고리 필터 */}
               <div className="space-y-2 mb-1">
                 <div className="flex items-center justify-between gap-2">
                   <p className="text-[10px] text-white/30">
-                    {isAppleSilicon ? "🍎 Apple Silicon (MLX)" : "⚡ NVIDIA (EXL2)"}
-                    &nbsp;— 추천 목록. 더 많은 모델은 →
+                    {isAppleSilicon ? "🍎 Apple Silicon (MLX)" : "⚡ NVIDIA (EXL2) — TabbyAPI Fast Track"}
+                    &nbsp;추천 목록. 더 많은 모델은 →
                   </p>
                   <div className="flex items-center gap-1.5 shrink-0">
                     {isAppleSilicon && (
@@ -612,8 +798,19 @@ const ModelManager: React.FC<Props> = ({ onClose, recommendedModel: _recommended
                       <ExternalLink size={9} />
                       전체 검색
                     </button>
+                    <button
+                      onClick={refreshRepoStatus}
+                      disabled={isRefreshing || catalogLoading}
+                      className="flex items-center gap-1 text-[10px] text-cyan-400/70 hover:text-cyan-400 transition-colors disabled:opacity-40"
+                      title="각 모델의 HF 리포지토리가 살아있는지 일괄 확인"
+                    >
+                      {isRefreshing ? "🔄 조회 중..." : "🔄 갱신"}
+                    </button>
                   </div>
                 </div>
+                {refreshMsg && (
+                  <div className="text-[10px] text-white/50 px-1">{refreshMsg}</div>
+                )}
                 <div className="flex gap-1 flex-wrap">
                   {([["all", "전체"], ...Object.entries(CATEGORY_META).map(([k, v]) => [k, `${v.icon} ${v.label}`])] as [string, string][]).map(([key, label]) => (
                     <button
@@ -696,6 +893,30 @@ const ModelManager: React.FC<Props> = ({ onClose, recommendedModel: _recommended
                                 {memLabel} 부족
                               </span>
                             )}
+                            {(() => {
+                              const s = repoStatus[repoKey(m.repo_id, m.revision)];
+                              if (s === "alive") return (
+                                <span title="HF API 200 — 다운로드 가능" className="text-[9px] px-1.5 py-0.5 bg-emerald-500/15 text-emerald-300/80 rounded-full whitespace-nowrap">
+                                  ✓ 살아있음
+                                </span>
+                              );
+                              if (s === "gated") return (
+                                <span title="HF API 401/403 — 인증 토큰 필요 (gated 모델)" className="text-[9px] px-1.5 py-0.5 bg-yellow-500/15 text-yellow-300/80 rounded-full whitespace-nowrap">
+                                  🔒 게이트
+                                </span>
+                              );
+                              if (s === "dead") return (
+                                <span title="HF API 404 — 리포지토리 또는 revision 없음" className="text-[9px] px-1.5 py-0.5 bg-red-500/15 text-red-300/80 rounded-full whitespace-nowrap">
+                                  ❌ 사라짐
+                                </span>
+                              );
+                              if (s === "error") return (
+                                <span title="HF API 응답 비정상 (네트워크/rate-limit 등)" className="text-[9px] px-1.5 py-0.5 bg-white/10 text-white/40 rounded-full whitespace-nowrap">
+                                  ⚠ 오류
+                                </span>
+                              );
+                              return null;
+                            })()}
                           </div>
                           <div className="text-[10px] text-white/40 mt-0.5">{m.description}</div>
                           <div className="flex items-center gap-3 mt-1 text-[10px] text-white/30">
@@ -716,16 +937,21 @@ const ModelManager: React.FC<Props> = ({ onClose, recommendedModel: _recommended
                             <XCircle size={11} />
                             취소
                           </button>
-                        ) : (
-                          <button
-                            onClick={() => handleDownload(m)}
-                            disabled={isStarting}
-                            className="shrink-0 flex items-center gap-1 px-2.5 py-1.5 rounded bg-white/10 hover:bg-accent/20 text-xs transition-colors disabled:opacity-50"
-                          >
-                            <Download size={11} />
-                            {isStarting ? "연결 중…" : "받기"}
-                          </button>
-                        )}
+                        ) : (() => {
+                          const s = repoStatus[repoKey(m.repo_id, m.revision)];
+                          const isDead = s === "dead";
+                          return (
+                            <button
+                              onClick={() => handleDownload(m)}
+                              disabled={isStarting || isDead}
+                              title={isDead ? "리포지토리 404 — 다운로드 불가 (모델 ID/revision이 사라짐)" : undefined}
+                              className="shrink-0 flex items-center gap-1 px-2.5 py-1.5 rounded bg-white/10 hover:bg-accent/20 text-xs transition-colors disabled:opacity-50"
+                            >
+                              <Download size={11} />
+                              {isStarting ? "연결 중…" : isDead ? "사라짐" : "받기"}
+                            </button>
+                          );
+                        })()}
                       </div>
 
                       {prog && (
