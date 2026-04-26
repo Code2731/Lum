@@ -47,15 +47,15 @@ pub async fn install_mistral_rs(app: AppHandle) -> Result<String> {
     let _ = app.emit("mistral_rs_log", "mistral.rs 설치 시작 (GitHub · CUDA 빌드)...");
     let _ = app.emit("mistral_rs_log", "⏳ 첫 설치는 5~15분 걸립니다. cargo 출력을 실시간 표시합니다.");
 
-    // 1차: CUDA 빌드 — 실시간 스트리밍
-    if run_cargo_install_streaming(&app, &["install", "--git", GIT_REPO, "mistralrs-server", "--features", "cuda"]).await? {
+    // 1차: CUDA 빌드 — --force로 기존 바이너리 강제 재빌드
+    if run_cargo_install_streaming(&app, &["install", "--force", "--git", GIT_REPO, "mistralrs-server", "--features", "cuda"]).await? {
         let _ = app.emit("mistral_rs_log", "✅ CUDA 빌드 완료");
         return Ok("CUDA 빌드 설치 완료".into());
     }
     let _ = app.emit("mistral_rs_log", "❌ CUDA 빌드 실패 — CPU 빌드로 재시도...");
 
     // 2차: CPU 빌드 폴백
-    if run_cargo_install_streaming(&app, &["install", "--git", GIT_REPO, "mistralrs-server"]).await? {
+    if run_cargo_install_streaming(&app, &["install", "--force", "--git", GIT_REPO, "mistralrs-server"]).await? {
         let _ = app.emit("mistral_rs_log", "✅ CPU 빌드 완료 (CUDA 가속 미사용)");
         return Ok("CPU 빌드 설치 완료 (CUDA 가속 미사용)".into());
     }
