@@ -1097,10 +1097,10 @@ const XllmPanel: React.FC<Props> = ({ onClose }) => {
                     value={config.mistral_rs_device_layers ?? ""}
                     onChange={(e) => {
                       const v = e.target.value.trim();
-                      setConfig((c) => ({
-                        ...c,
-                        mistral_rs_device_layers: v === "" ? undefined : Number(v),
-                      }));
+                      // Number("abc") === NaN — type=number에 직접 입력 외 paste 등으로 NaN 방지
+                      const n = Number(v);
+                      const next = v === "" || Number.isNaN(n) ? undefined : Math.max(0, Math.floor(n));
+                      setConfig((c) => ({ ...c, mistral_rs_device_layers: next }));
                     }}
                     className="w-full bg-white/5 border border-white/10 rounded px-2 py-1 text-xs text-white/80 placeholder-white/20 font-mono"
                   />

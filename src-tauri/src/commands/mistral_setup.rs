@@ -281,7 +281,7 @@ fn build_mistral_args<'a>(
 ) -> Vec<&'a str> {
     let mut args: Vec<&str> = vec!["--port", port];
 
-    // Phase 83: 글로벌 계층화 옵션 — pa-ctxt-len이 최우선이라 max_seq_len 일치시켜 KV 낭비 제거
+    // 글로벌 계층화 옵션 — 서브커맨드(plain/gguf) 앞에 와야 함
     if let Some(v) = layering.pa_ctxt_len {
         args.extend(["--pa-ctxt-len", v]);
     }
@@ -515,10 +515,7 @@ pub async fn start_mistral_rs(app: AppHandle) -> Result<String> {
     let log_file = std::fs::File::create(&log_path).map_err(|e| LumError::Io(e.to_string()))?;
     let log_file2 = log_file.try_clone().map_err(|e| LumError::Io(e.to_string()))?;
 
-    // Phase 83 — DRAM/VRAM 계층화 옵션 자동 구성:
-    // - pa_ctxt_len: max_seq_len과 일치시켜 KV cache 메모리 낭비 제거
-    // - pa_gpu_mem_usage: safety_mode 연동 (safe 0.70 / balanced 0.80 / max 0.90 / override)
-    // - device_layers: config.mistral_rs_device_layers Some이면 -n으로 override, None이면 mistral.rs auto
+    // vram_utilization()은 0.50~0.95로 clamp — NaN/오버플로 불가, format!도 항상 안전.
     let pa_usage = format!("{:.2}", config.vram_utilization());
     let device_layers_str = config.mistral_rs_device_layers.map(|n| n.to_string());
     let layering = MistralLayeringOpts {
