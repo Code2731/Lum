@@ -259,19 +259,22 @@ mod tests {
     }
 
     #[test]
-    fn body_short_context_uses_q8_and_no_temperature() {
+    fn body_short_context_no_cache_mode_no_temperature() {
+        // 회귀 가드 — cache_mode는 모델 로드 시점 옵션. 추론 body에 넣으면 TabbyAPI가
+        // "Chat completion aborted"로 거부함. 짧은 컨텍스트엔 temperature도 안 박혀야 함.
         let c = AppConfig::default();
         let body = xllm_body(&c, "model", "hello", false, &[]);
-        assert_eq!(body["cache_mode"], "Q8");
+        assert!(body["cache_mode"].is_null(), "cache_mode가 body에 들어가면 TabbyAPI 거부");
         assert!(body["temperature"].is_null());
         assert_eq!(body["stream"], false);
     }
 
     #[test]
-    fn body_long_context_forces_q4_and_low_temperature() {
+    fn body_long_context_low_temperature_no_cache_mode() {
+        // 긴 컨텍스트엔 PD 모드용 temperature/top_p가 박히지만, cache_mode는 여전히 부재해야 함.
         let c = config_with(|c| c.pd_threshold_chars = Some(5));
         let body = xllm_body(&c, "model", "this is longer than 5", false, &[]);
-        assert_eq!(body["cache_mode"], "Q4");
+        assert!(body["cache_mode"].is_null());
         let temp = body["temperature"].as_f64().unwrap();
         assert!((temp - 0.3).abs() < 0.01);
         let top_p = body["top_p"].as_f64().unwrap();

@@ -9,6 +9,7 @@ import "@xterm/xterm/css/xterm.css";
 import { findCompletion } from "../utils/ghostText";
 import { parseOsc7 } from "../utils/tabIcon";
 import { checkPasteDanger } from "../utils/pasteGuard";
+import { classifyTerminalKey } from "../utils/terminalKeys";
 import { parseCommandLines } from "../utils/smartPaste";
 import PasteGuardModal from "./PasteGuardModal";
 import SmartPasteModal from "./SmartPasteModal";
@@ -393,14 +394,37 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     fitAddonRef.current = fitAddon;
     searchAddonRef.current = searchAddon;
 
-    // Cmd+F / Ctrl+F — 검색창 열기
+    // 키 분기 로직은 classifyTerminalKey로 분리됨 (terminalKeys.ts) — 단위 테스트 가능.
+    // 여기선 동작만 수행: copy/paste/search/passthrough.
     term.attachCustomKeyEventHandler((e) => {
-      const mod = e.metaKey || e.ctrlKey;
-      if (mod && e.key === "f" && e.type === "keydown") {
-        openSearch();
-        return false;
+      const action = classifyTerminalKey(e, term.getSelection());
+      switch (action.kind) {
+        case "search":
+          openSearch();
+          return false;
+        case "copy":
+          navigator.clipboard.writeText(action.selection).catch(() => {});
+          term.clearSelection();
+          return false; // xterm 기본 SIGINT 막음
+        case "paste":
+          navigator.clipboard.readText().then((text) => {
+            if (!text) return;
+            const danger = checkPasteDanger(text);
+            if (danger) {
+              setPasteGuard({ match: danger, text });
+              return;
+            }
+            const lines = parseCommandLines(text);
+            if (lines.length >= 2) {
+              setSmartPaste({ lines, rawText: text });
+              return;
+            }
+            writeToPtyRef.current(text);
+          }).catch(() => {});
+          return false;
+        case "passthrough":
+          return true;
       }
-      return true;
     });
 
     const doInitialFit = () => {

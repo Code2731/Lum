@@ -29,6 +29,15 @@ fn safe_model_dirname(repo_id: &str) -> String {
     repo_id.replace('/', "--")
 }
 
+/// safe_name(`org--repo`)에서 repo_id(`org/repo`)로 역변환.
+/// 첫 "--"만 "/"로 — 모델명 안의 -- 패턴은 보존.
+fn repo_id_from_safe(safe: &str) -> String {
+    match safe.find("--") {
+        Some(idx) => format!("{}/{}", &safe[..idx], &safe[idx + 2..]),
+        None => safe.to_string(),
+    }
+}
+
 /// 모델 로컬 캐시 경로 — `<home>/.lum_mistral_models/<safe>`
 fn model_local_path(repo_id: &str) -> std::path::PathBuf {
     crate::platform::home_dir()
@@ -247,6 +256,42 @@ fn validate_isq(isq: &str) -> &str {
     }
 }
 
+/// mistralrs-server CLI args 빌더 — GGUF/BF16 분기 결정.
+/// inline로 빌드하면 회귀 시 디버깅 매우 어려움 (mistralrs-server가 모호한 에러로 끝남)
+/// → 순수 함수로 분리해서 단위 테스트 가능하게.
+fn build_mistral_args<'a>(
+    port: &'a str,
+    isq: &'a str,
+    max_seq_len: &'a str,
+    local_path: &'a str,
+    gguf_filename: Option<&'a str>,
+) -> Vec<&'a str> {
+    match gguf_filename {
+        Some(filename) => vec![
+            "--port",
+            port,
+            "gguf",
+            "--quantized-model-id",
+            local_path,
+            "--quantized-filename",
+            filename,
+            "--max-seq-len",
+            max_seq_len,
+        ],
+        None => vec![
+            "--port",
+            port,
+            "--isq",
+            isq,
+            "plain",
+            "--model-id",
+            local_path,
+            "--max-seq-len",
+            max_seq_len,
+        ],
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct MistralRsStatus {
     pub running: bool,
@@ -290,11 +335,7 @@ pub async fn list_mistral_models() -> Result<Vec<MistralLocalModel>> {
                 .unwrap_or_default()
                 .to_string_lossy()
                 .to_string();
-            // safe_name 역변환: 첫 "--"만 "/"로. 그 뒤는 그대로 (모델명 안의 - 보존).
-            let repo_id = match safe.find("--") {
-                Some(idx) => format!("{}/{}", &safe[..idx], &safe[idx + 2..]),
-                None => safe.clone(),
-            };
+            let repo_id = repo_id_from_safe(&safe);
             let size_bytes: u64 = std::fs::read_dir(&p)
                 .map(|rd2| {
                     rd2.flatten()
@@ -448,35 +489,14 @@ pub async fn start_mistral_rs(app: AppHandle) -> Result<String> {
     let log_file2 = log_file.try_clone().map_err(|e| LumError::Io(e.to_string()))?;
 
     let mut mistral_cmd = std::process::Command::new("mistralrs-server");
-    // v0.8 CLI: --port는 글로벌, GGUF/Plain은 서브커맨드별 옵션 분기
-    if let Some(filename) = &gguf_filename {
-        // GGUF: --quantized-model-id <local_path> --quantized-filename <file>
-        mistral_cmd.args([
-            "--port",
-            &port_str,
-            "gguf",
-            "--quantized-model-id",
-            &local_path_str,
-            "--quantized-filename",
-            filename,
-            "--max-seq-len",
-            &max_seq_len,
-        ]);
-    } else {
-        // BF16 + ISQ
-        mistral_cmd.args([
-            "--port",
-            &port_str,
-            "--isq",
-            &isq,
-            "plain",
-            "--model-id",
-            &local_path_str,
-            "--max-seq-len",
-            &max_seq_len,
-        ]);
-    }
-    mistral_cmd.stdout(log_file).stderr(log_file2);
+    let args = build_mistral_args(
+        &port_str,
+        &isq,
+        &max_seq_len,
+        &local_path_str,
+        gguf_filename.as_deref(),
+    );
+    mistral_cmd.args(args).stdout(log_file).stderr(log_file2);
 
     // CUDA Toolkit DLL 검색 경로 명시 추가 — Windows에서 cudart64_12.dll 등을 찾기 위함
     #[cfg(windows)]
@@ -606,6 +626,109 @@ mod tests {
         std::fs::write(dir.join("model.safetensors"), b"").unwrap();
         assert!(model_present(&dir), "모두 있으면 true");
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn repo_id_from_safe_round_trip() {
+        assert_eq!(repo_id_from_safe("Qwen--Qwen3-8B"), "Qwen/Qwen3-8B");
+        // safe_dirname을 통과한 후 다시 역변환 — 항상 동일해야 함
+        assert_eq!(
+            repo_id_from_safe(&safe_model_dirname("Qwen/Qwen3-8B")),
+            "Qwen/Qwen3-8B"
+        );
+        // 첫 "--"만 변환 — 그 뒤 모델명 안의 - 또는 -- 보존
+        assert_eq!(repo_id_from_safe("a--b-c"), "a/b-c");
+        // "--" 없으면 그대로
+        assert_eq!(repo_id_from_safe("noslash"), "noslash");
+    }
+
+    #[test]
+    fn gguf_file_present_basic() {
+        let dir = std::env::temp_dir().join(format!("lum_test_gguf_{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        assert!(!gguf_file_present(&dir, "model.gguf"), "파일 없으면 false");
+        std::fs::write(dir.join("model.gguf"), b"").unwrap();
+        assert!(gguf_file_present(&dir, "model.gguf"), "파일 있으면 true");
+        // 다른 이름의 GGUF는 다른 검사
+        assert!(!gguf_file_present(&dir, "other.gguf"));
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn any_model_present_recognizes_bf16_or_gguf() {
+        let dir = std::env::temp_dir().join(format!("lum_test_any_{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+
+        // 빈 폴더 — false
+        assert!(!any_model_present(&dir));
+
+        // GGUF만 있어도 true (BF16 필수 파일 없어도)
+        std::fs::write(dir.join("Qwen3-Coder-30B-A3B-Instruct-Q4_K_M.gguf"), b"").unwrap();
+        assert!(any_model_present(&dir), "GGUF 파일 있으면 인식");
+
+        // GGUF 지우고 BF16 셋 채우면 다시 true
+        std::fs::remove_file(dir.join("Qwen3-Coder-30B-A3B-Instruct-Q4_K_M.gguf")).unwrap();
+        std::fs::write(dir.join("config.json"), "{}").unwrap();
+        std::fs::write(dir.join("tokenizer.json"), "{}").unwrap();
+        std::fs::write(dir.join("model.safetensors"), b"").unwrap();
+        assert!(any_model_present(&dir), "BF16 셋 갖추면 인식");
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn build_mistral_args_bf16_uses_plain_with_isq() {
+        let args = build_mistral_args("8080", "Q4K", "4096", "C:/local/model", None);
+        // 핵심 회귀 가드: BF16은 plain 서브커맨드 + --model-id + --isq 글로벌 위치
+        assert_eq!(args[0], "--port");
+        assert_eq!(args[1], "8080");
+        assert_eq!(args[2], "--isq", "ISQ는 plain 서브커맨드 *앞* (글로벌 옵션)");
+        assert_eq!(args[3], "Q4K");
+        assert_eq!(args[4], "plain");
+        assert_eq!(args[5], "--model-id");
+        assert_eq!(args[6], "C:/local/model");
+        assert_eq!(args[7], "--max-seq-len");
+        assert_eq!(args[8], "4096");
+        assert!(!args.contains(&"gguf"), "BF16엔 gguf 서브커맨드 안 들어감");
+    }
+
+    #[test]
+    fn build_mistral_args_gguf_uses_quantized_options_no_isq() {
+        let args = build_mistral_args(
+            "8080",
+            "Q4K",
+            "4096",
+            "C:/local/model",
+            Some("Qwen3-Coder-30B-A3B-Instruct-Q4_K_M.gguf"),
+        );
+        assert_eq!(args[0], "--port");
+        assert_eq!(args[1], "8080");
+        assert_eq!(args[2], "gguf", "GGUF는 gguf 서브커맨드 직행");
+        assert_eq!(args[3], "--quantized-model-id");
+        assert_eq!(args[4], "C:/local/model");
+        assert_eq!(args[5], "--quantized-filename");
+        assert_eq!(args[6], "Qwen3-Coder-30B-A3B-Instruct-Q4_K_M.gguf");
+        assert!(
+            !args.contains(&"--isq"),
+            "GGUF는 이미 양자화돼있어 --isq 박으면 mistralrs-server 거부"
+        );
+        assert!(!args.contains(&"plain"));
+        assert!(!args.contains(&"--model-id"));
+    }
+
+    #[test]
+    fn model_local_path_uses_safe_dirname() {
+        // 경로 안에 safe_name이 들어있어야 함 — safe_dirname 결과와 끝부분 일치
+        let p = model_local_path("Qwen/Qwen3-8B");
+        assert!(p.ends_with("Qwen--Qwen3-8B"));
+        assert!(p.ends_with(safe_model_dirname("Qwen/Qwen3-8B")));
+        // 부모 폴더는 항상 .lum_mistral_models
+        assert_eq!(
+            p.parent().unwrap().file_name().unwrap(),
+            ".lum_mistral_models"
+        );
     }
 
     #[test]

@@ -93,6 +93,17 @@ pub struct RepoQuery {
     pub revision: String,
 }
 
+/// HF API HTTP 코드 → ModelManager에 표시할 status 라벨 매핑.
+/// 인라인 match로 두면 401/403의 "gated" 의미 구분이 사라지기 쉬움 → 별도 함수로 회귀 가드.
+fn classify_repo_http_code(code: u16) -> &'static str {
+    match code {
+        200 => "alive",
+        401 | 403 => "gated", // gated 모델 — HF 토큰 입력하면 받을 수 있음
+        404 => "dead",        // 리포지토리/revision 없음
+        _ => "error",
+    }
+}
+
 #[derive(Debug, Serialize, Clone)]
 pub struct RepoStatus {
     pub repo_id: String,
@@ -132,13 +143,7 @@ pub async fn check_repo_status(repos: Vec<RepoQuery>) -> Result<Vec<RepoStatus>>
                 let (status, code) = match req.send().await {
                     Ok(resp) => {
                         let code = resp.status().as_u16();
-                        let label = match code {
-                            200 => "alive",
-                            401 | 403 => "gated",
-                            404 => "dead",
-                            _ => "error",
-                        };
-                        (label.to_string(), code)
+                        (classify_repo_http_code(code).to_string(), code)
                     }
                     Err(_) => ("error".to_string(), 0),
                 };
@@ -379,4 +384,38 @@ pub async fn download_model(
     cleanup(&cancel_map);
     emit_done(false);
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn classify_repo_http_code_alive_200() {
+        assert_eq!(classify_repo_http_code(200), "alive");
+    }
+
+    #[test]
+    fn classify_repo_http_code_gated_401_and_403() {
+        // 401/403은 둘 다 gated — HF 토큰 입력하면 받을 수 있는 상태.
+        // 만약 둘 중 하나만 분기되면 사용자에게 잘못된 안내 (사라짐 vs 게이트).
+        assert_eq!(classify_repo_http_code(401), "gated");
+        assert_eq!(classify_repo_http_code(403), "gated");
+    }
+
+    #[test]
+    fn classify_repo_http_code_dead_404() {
+        // 오늘 EXAONE bartowski 라인 6개가 모두 401이 아닌 404였으면 sin gated 안내됐을 것.
+        // bartowski는 401(gated)이라 토큰 안내했고, 진짜 404는 가짜 ID 케이스 (사라짐).
+        assert_eq!(classify_repo_http_code(404), "dead");
+    }
+
+    #[test]
+    fn classify_repo_http_code_other_falls_back_to_error() {
+        // 5xx, 429 (rate limit), 그 외 모두 "error" — 사용자에게 재시도 권장
+        assert_eq!(classify_repo_http_code(500), "error");
+        assert_eq!(classify_repo_http_code(503), "error");
+        assert_eq!(classify_repo_http_code(429), "error");
+        assert_eq!(classify_repo_http_code(0), "error");
+    }
 }
