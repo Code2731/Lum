@@ -32,6 +32,7 @@ interface AppConfig {
   mistral_rs_model?: string;
   mistral_rs_isq?: string; // "Q4K" | "Q5K" | "Q6K" | "Q8_0"
   mistral_rs_gguf_file?: string; // GGUF 단일 파일명 — Some이면 mistral.rs를 gguf 서브커맨드로 시작
+  mistral_rs_device_layers?: number; // Phase 83: GPU layer 수 수동 override (None이면 mistral.rs auto)
 }
 
 const MISTRAL_ISQ_MODES: { value: string; label: string; desc: string }[] = [
@@ -290,6 +291,7 @@ const XllmPanel: React.FC<Props> = ({ onClose }) => {
         mistralRsModel: config.mistral_rs_model ?? null,
         mistralRsIsq: config.mistral_rs_isq ?? null,
         mistralRsGgufFile: config.mistral_rs_gguf_file ?? null,
+        mistralRsDeviceLayers: config.mistral_rs_device_layers ?? null,
       });
       setStatusMsg("설정 저장 완료");
     } catch (e) {
@@ -1081,6 +1083,29 @@ const XllmPanel: React.FC<Props> = ({ onClose }) => {
                   </select>
                   <p className="text-[9px] text-white/40 mt-1">
                     {MISTRAL_ISQ_MODES.find((m) => m.value === (config.mistral_rs_isq ?? "Q4K"))?.desc}
+                  </p>
+                </div>
+
+                <div>
+                  <label className="text-[10px] text-white/40 block mb-1">
+                    GPU 레이어 수 (수동 override) — 비우면 mistral.rs auto device mapping
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    placeholder="예: 24 (10GB VRAM에 30B 모델 부분 offload)"
+                    value={config.mistral_rs_device_layers ?? ""}
+                    onChange={(e) => {
+                      const v = e.target.value.trim();
+                      setConfig((c) => ({
+                        ...c,
+                        mistral_rs_device_layers: v === "" ? undefined : Number(v),
+                      }));
+                    }}
+                    className="w-full bg-white/5 border border-white/10 rounded px-2 py-1 text-xs text-white/80 placeholder-white/20 font-mono"
+                  />
+                  <p className="text-[9px] text-white/40 mt-1">
+                    OOM 디버깅 또는 30B+ 모델 SSD/RAM offload 강제 시만 설정. 일반적으로 비워두는 게 좋음.
                   </p>
                 </div>
 

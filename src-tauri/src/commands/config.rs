@@ -77,6 +77,9 @@ pub struct AppConfig {
     pub mistral_rs_isq: Option<String>,
     /// GGUF 단일 파일명 — Some이면 mistral.rs를 `gguf` 서브커맨드로 시작, None이면 BF16+ISQ
     pub mistral_rs_gguf_file: Option<String>,
+    /// Phase 83 — GPU에 올릴 transformer layer 수. None이면 mistral.rs auto device mapping.
+    /// 30B+ 모델 OOM 디버깅 시 수동 override 용도 (보통 auto가 잘 동작).
+    pub mistral_rs_device_layers: Option<u32>,
 
     /// LUM 시작 시 TabbyAPI 자동 시작 (None/true=자동, false=수동)
     pub xllm_auto_start: Option<bool>,
@@ -212,6 +215,7 @@ pub fn save_xllm_settings(
     mistral_rs_model: Option<String>,
     mistral_rs_isq: Option<String>,
     mistral_rs_gguf_file: Option<String>,
+    mistral_rs_device_layers: Option<u32>,
 ) -> Result<()> {
     use tauri::Emitter;
     let mut config = load_config()?;
@@ -230,6 +234,7 @@ pub fn save_xllm_settings(
     config.mistral_rs_model = mistral_rs_model.filter(|s| !s.is_empty());
     config.mistral_rs_isq = mistral_rs_isq.filter(|s| !s.is_empty());
     config.mistral_rs_gguf_file = mistral_rs_gguf_file.filter(|s| !s.is_empty());
+    config.mistral_rs_device_layers = mistral_rs_device_layers;
     save_config(&config)?;
     let _ = app.emit("xllm_settings_saved", ());
     Ok(())

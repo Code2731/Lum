@@ -256,7 +256,19 @@ fn validate_isq(isq: &str) -> &str {
     }
 }
 
-/// mistralrs-server CLI args 빌더 — GGUF/BF16 분기 결정.
+/// Phase 83 — DRAM/VRAM 계층화 옵션.
+/// mistral.rs가 noting auto device mapping을 잘 하므로 우리는 *추가 힌트*만 줌:
+/// - `pa_gpu_mem_usage`: PagedAttention KV cache 메모리 비율 (safety_mode 연동, 0.50~0.95)
+/// - `device_layers`: 사용자가 명시한 GPU 레이어 수. None이면 mistral.rs auto.
+/// - `pa_ctxt_len`: PagedAttention 컨텍스트 길이 — 보통 max_seq_len과 일치시켜
+///   KV cache 메모리 낭비 제거. mistral.rs는 이게 가장 우선 (--pa-ctxt-len > --pa-gpu-mem-usage > --pa-gpu-mem).
+pub struct MistralLayeringOpts<'a> {
+    pub pa_gpu_mem_usage: Option<&'a str>,
+    pub device_layers: Option<&'a str>,
+    pub pa_ctxt_len: Option<&'a str>,
+}
+
+/// mistralrs-server CLI args 빌더 — GGUF/BF16 분기 + DRAM/VRAM 계층화 옵션 자동 주입.
 /// inline로 빌드하면 회귀 시 디버깅 매우 어려움 (mistralrs-server가 모호한 에러로 끝남)
 /// → 순수 함수로 분리해서 단위 테스트 가능하게.
 fn build_mistral_args<'a>(
@@ -265,31 +277,46 @@ fn build_mistral_args<'a>(
     max_seq_len: &'a str,
     local_path: &'a str,
     gguf_filename: Option<&'a str>,
+    layering: &MistralLayeringOpts<'a>,
 ) -> Vec<&'a str> {
-    match gguf_filename {
-        Some(filename) => vec![
-            "--port",
-            port,
-            "gguf",
-            "--quantized-model-id",
-            local_path,
-            "--quantized-filename",
-            filename,
-            "--max-seq-len",
-            max_seq_len,
-        ],
-        None => vec![
-            "--port",
-            port,
-            "--isq",
-            isq,
-            "plain",
-            "--model-id",
-            local_path,
-            "--max-seq-len",
-            max_seq_len,
-        ],
+    let mut args: Vec<&str> = vec!["--port", port];
+
+    // Phase 83: 글로벌 계층화 옵션 — pa-ctxt-len이 최우선이라 max_seq_len 일치시켜 KV 낭비 제거
+    if let Some(v) = layering.pa_ctxt_len {
+        args.extend(["--pa-ctxt-len", v]);
     }
+    if let Some(v) = layering.pa_gpu_mem_usage {
+        args.extend(["--pa-gpu-mem-usage", v]);
+    }
+    if let Some(v) = layering.device_layers {
+        args.extend(["-n", v]);
+    }
+
+    match gguf_filename {
+        Some(filename) => {
+            args.extend([
+                "gguf",
+                "--quantized-model-id",
+                local_path,
+                "--quantized-filename",
+                filename,
+                "--max-seq-len",
+                max_seq_len,
+            ]);
+        }
+        None => {
+            args.extend([
+                "--isq",
+                isq,
+                "plain",
+                "--model-id",
+                local_path,
+                "--max-seq-len",
+                max_seq_len,
+            ]);
+        }
+    }
+    args
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -488,6 +515,18 @@ pub async fn start_mistral_rs(app: AppHandle) -> Result<String> {
     let log_file = std::fs::File::create(&log_path).map_err(|e| LumError::Io(e.to_string()))?;
     let log_file2 = log_file.try_clone().map_err(|e| LumError::Io(e.to_string()))?;
 
+    // Phase 83 — DRAM/VRAM 계층화 옵션 자동 구성:
+    // - pa_ctxt_len: max_seq_len과 일치시켜 KV cache 메모리 낭비 제거
+    // - pa_gpu_mem_usage: safety_mode 연동 (safe 0.70 / balanced 0.80 / max 0.90 / override)
+    // - device_layers: config.mistral_rs_device_layers Some이면 -n으로 override, None이면 mistral.rs auto
+    let pa_usage = format!("{:.2}", config.vram_utilization());
+    let device_layers_str = config.mistral_rs_device_layers.map(|n| n.to_string());
+    let layering = MistralLayeringOpts {
+        pa_ctxt_len: Some(&max_seq_len),
+        pa_gpu_mem_usage: Some(&pa_usage),
+        device_layers: device_layers_str.as_deref(),
+    };
+
     let mut mistral_cmd = std::process::Command::new("mistralrs-server");
     let args = build_mistral_args(
         &port_str,
@@ -495,6 +534,7 @@ pub async fn start_mistral_rs(app: AppHandle) -> Result<String> {
         &max_seq_len,
         &local_path_str,
         gguf_filename.as_deref(),
+        &layering,
     );
     mistral_cmd.args(args).stdout(log_file).stderr(log_file2);
 
@@ -678,9 +718,25 @@ mod tests {
         let _ = std::fs::remove_dir_all(&dir);
     }
 
+    /// 테스트용 — 모든 layering 옵션 비활성 (구버전 동작과 동일)
+    fn no_layering<'a>() -> MistralLayeringOpts<'a> {
+        MistralLayeringOpts {
+            pa_ctxt_len: None,
+            pa_gpu_mem_usage: None,
+            device_layers: None,
+        }
+    }
+
     #[test]
     fn build_mistral_args_bf16_uses_plain_with_isq() {
-        let args = build_mistral_args("8080", "Q4K", "4096", "C:/local/model", None);
+        let args = build_mistral_args(
+            "8080",
+            "Q4K",
+            "4096",
+            "C:/local/model",
+            None,
+            &no_layering(),
+        );
         // 핵심 회귀 가드: BF16은 plain 서브커맨드 + --model-id + --isq 글로벌 위치
         assert_eq!(args[0], "--port");
         assert_eq!(args[1], "8080");
@@ -702,6 +758,7 @@ mod tests {
             "4096",
             "C:/local/model",
             Some("Qwen3-Coder-30B-A3B-Instruct-Q4_K_M.gguf"),
+            &no_layering(),
         );
         assert_eq!(args[0], "--port");
         assert_eq!(args[1], "8080");
@@ -716,6 +773,57 @@ mod tests {
         );
         assert!(!args.contains(&"plain"));
         assert!(!args.contains(&"--model-id"));
+    }
+
+    #[test]
+    fn build_mistral_args_layering_pa_ctxt_len_first() {
+        // pa-ctxt-len이 mistral.rs 우선순위 최상 — 글로벌 옵션이라 서브커맨드 *앞*에 와야 함
+        let layering = MistralLayeringOpts {
+            pa_ctxt_len: Some("4096"),
+            pa_gpu_mem_usage: Some("0.80"),
+            device_layers: None,
+        };
+        let args = build_mistral_args("8080", "Q4K", "4096", "/m", None, &layering);
+        let pa_idx = args.iter().position(|s| *s == "--pa-ctxt-len").unwrap();
+        let plain_idx = args.iter().position(|s| *s == "plain").unwrap();
+        assert!(pa_idx < plain_idx, "pa-ctxt-len이 plain 서브커맨드보다 앞");
+        assert_eq!(args[pa_idx + 1], "4096");
+        assert!(args.contains(&"--pa-gpu-mem-usage"));
+        assert!(!args.contains(&"-n"), "device_layers None이면 -n 안 들어감");
+    }
+
+    #[test]
+    fn build_mistral_args_layering_device_layers_override() {
+        let layering = MistralLayeringOpts {
+            pa_ctxt_len: None,
+            pa_gpu_mem_usage: None,
+            device_layers: Some("24"),
+        };
+        let args = build_mistral_args("8080", "Q4K", "4096", "/m", None, &layering);
+        let n_idx = args.iter().position(|s| *s == "-n").unwrap();
+        assert_eq!(args[n_idx + 1], "24");
+    }
+
+    #[test]
+    fn build_mistral_args_layering_works_with_gguf() {
+        // GGUF 분기에서도 글로벌 layering 옵션이 정상 주입돼야 함
+        let layering = MistralLayeringOpts {
+            pa_ctxt_len: Some("4096"),
+            pa_gpu_mem_usage: Some("0.70"),
+            device_layers: Some("32"),
+        };
+        let args = build_mistral_args(
+            "8080",
+            "Q4K",
+            "4096",
+            "/m",
+            Some("model.gguf"),
+            &layering,
+        );
+        let pa_idx = args.iter().position(|s| *s == "--pa-ctxt-len").unwrap();
+        let gguf_idx = args.iter().position(|s| *s == "gguf").unwrap();
+        assert!(pa_idx < gguf_idx, "글로벌 옵션은 gguf 서브커맨드 *앞*");
+        assert!(args.contains(&"-n"));
     }
 
     #[test]

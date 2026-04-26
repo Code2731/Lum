@@ -185,6 +185,7 @@ const ModelManager: React.FC<Props> = ({ onClose, recommendedModel: _recommended
         mistralRsModel: merged["mistral_rs_model"] ?? null,
         mistralRsIsq: merged["mistral_rs_isq"] ?? null,
         mistralRsGgufFile: merged["mistral_rs_gguf_file"] ?? null,
+        mistralRsDeviceLayers: merged["mistral_rs_device_layers"] ?? null,
       });
       if (role === "coding") setCodingModel(modelId);
       else if (role === "doc") setDocModel(modelId);
