@@ -142,21 +142,56 @@ pub async fn start_mistral_rs(app: AppHandle) -> Result<String> {
         .args(["--port", &MISTRAL_RS_PORT.to_string(), "plain", "--model-id", &model, "--isq", "Q4K"])
         .stdout(log_file)
         .stderr(log_file2);
+
+    // CUDA Toolkit DLL 검색 경로 명시 추가 — Windows에서 cudart64_12.dll 등을 찾기 위함
+    #[cfg(windows)]
+    {
+        let cuda_bin = "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.6\\bin";
+        if std::path::Path::new(cuda_bin).exists() {
+            let cur_path = std::env::var("PATH").unwrap_or_default();
+            mistral_cmd.env("PATH", format!("{};{}", cuda_bin, cur_path));
+        }
+    }
+
     no_window_std(&mut mistral_cmd);
     let child = mistral_cmd.spawn().map_err(|e| LumError::Io(e.to_string()))?;
 
     *MISTRAL_PROCESS.lock().unwrap() = Some(child);
 
-    // 최대 15초 대기 — 공유 client 재사용
-    for _ in 0..15 {
+    // 모델 로드는 첫 실행 시 다운로드 + 가중치 로드로 길게 걸림
+    // 5분(300초) 폴링 — 1초 간격으로 health 확인, 진행 상황 emit
+    let max_attempts = 300u32;
+    for i in 0..max_attempts {
         tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
         if client.get(&health_url).send().await.is_ok() {
-            let _ = app.emit("mistral_rs_log", "mistral.rs 서버 준비 완료");
+            let _ = app.emit("mistral_rs_log", "✅ mistral.rs 서버 준비 완료");
             return Ok(base_url);
+        }
+        // 30초마다 진행 상황 알림
+        if i > 0 && i % 30 == 0 {
+            let _ = app.emit(
+                "mistral_rs_log",
+                format!("⏳ {}초 경과 — 모델 로드 중 (lum_mistral.log 확인)...", i)
+            );
+        }
+        // 자식 프로세스가 죽었는지 확인
+        if let Ok(mut guard) = MISTRAL_PROCESS.lock() {
+            if let Some(child) = guard.as_mut() {
+                if let Ok(Some(status)) = child.try_wait() {
+                    let log_tail = std::fs::read_to_string(&log_path)
+                        .ok()
+                        .map(|s| s.lines().rev().take(15).collect::<Vec<_>>().into_iter().rev().collect::<Vec<_>>().join("\n"))
+                        .unwrap_or_default();
+                    return Err(LumError::AiEngine(format!(
+                        "mistral.rs 프로세스 종료 (exit={}). 로그 말미:\n{}",
+                        status, log_tail
+                    )));
+                }
+            }
         }
     }
 
-    Err(LumError::AiEngine("mistral.rs 시작 타임아웃 (15초)".into()))
+    Err(LumError::AiEngine(format!("mistral.rs 시작 타임아웃 ({}초). lum_mistral.log를 확인하세요.", max_attempts)))
 }
 
 /// mistral.rs 서버 종료
