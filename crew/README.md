@@ -50,12 +50,17 @@ CrewAI multi-agent 통합 검증 끝에 도출된 규칙:
 | `first_crew.py` | Fast | 단일 에이전트 hello world |
 | `dual_engine_crew.py` | Fast×3 | 3-agent sequential 협업 (Planner→Coder→Reviewer) |
 | `heavy_single_demo.py` | Heavy | Heavy 단발 호출 — 시간 복잡도 분석 |
+| `lum_mcp_crew.py` | Fast | LUM-MCP × CrewAI — `lum-mcp-server.exe` stdio 연결 + 7개 도구 자동 호출 (Phase 82c) |
 
 새 crew 추가 시 `from lum_llm import make_llm` 한 줄로 두 엔진에 즉시 접속.
 
 ## 다음 단계
 
-- [ ] LUM-MCP-server (Phase 81) — LUM 자체 도구(repo_map / edit_apply / run_tests / git_diff)를
-      MCP server로 노출 → CrewAI agent가 tool_calling으로 실제 코드 수정 가능
+- [x] **LUM-MCP-server (Phase 82a/b/c)** — `src-tauri/src/bin/mcp_server.rs` 별도 binary로
+      LUM 자체 도구 7개(read_file / read_file_lines / list_directory / git_diff /
+      apply_edit_block / get_repo_map / run_tests) stdio MCP 노출. `lum_mcp_crew.py`에서
+      MCPServerAdapter로 spawn해 CrewAI Agent에 자동 노출 — *진짜 자율 코딩의 토대*.
+- [ ] **AOS Shared Context Server (Phase 83)** — 중앙 집중형 컨텍스트 서버 + 우선순위
+      스케줄러 (Rust 네이티브). 여러 에이전트의 RAG 중복 제거 + 토큰/메모리 절감.
 - [ ] CrewAI YAML 패턴(`@CrewBase` + `config/agents.yaml` + `config/tasks.yaml`) — 3개 이상의
       crew가 생기면 imperative 대신 declarative로 전환
