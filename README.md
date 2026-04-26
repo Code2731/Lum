@@ -55,6 +55,13 @@ LUM (Local Universal Machine) is a **real terminal emulator** that runs your act
 | **Smart Paste** | Detects multi-line clipboard content → dialog to run all at once, step-by-step, or paste as raw text. |
 | **Right-click Context Menu** | Right-click any selected terminal text → copy, run as command, AI explain, web search, or open file/URL. |
 | **System Monitor** | `Cmd+Shift+M` — live CPU & memory gauges + top-6 processes by CPU and RAM, 2-second auto-refresh. |
+| **Dual Engine (Fast + Heavy)** | TabbyAPI Fast Track for 7~14B EXL2 (12~16 tok/s) + mistral.rs Heavy Track for BF16 ISQ or GGUF MoE (30B+ models). Status indicator in title bar (`xLLM ●` / `mistral ●`). |
+| **LUM-MCP-server (Rust native)** | Standalone `lum-mcp-server.exe` exposes 7 LUM tools (read_file / list_directory / git_diff / apply_edit_block / get_repo_map / run_tests / read_file_lines) via stdio MCP. CrewAI / Claude Desktop / any MCP client can drive LUM directly. |
+| **DRAM/VRAM Tiering** | Auto-injected PagedAttention (`--pa-ctxt-len` + `--pa-gpu-mem-usage` linked to safety_mode 70/80/90%) makes 30B+ models practical on 10GB VRAM. |
+| **Edit Block Engine** | SEARCH/REPLACE patches with exact-match + fuzzy whitespace fallback. AI proposes edits → user approves on the EditBlockCard → applied with diff preview. |
+| **Repo Map (tree-sitter + PageRank)** | Token-budget-bounded codebase summary by symbol importance. Used as automatic AI context for refactoring tasks. |
+| **Test Feedback Loop** | Auto-detect project test runner (cargo / pytest / npm / go) → run → on failure, AI proposes a fix → re-run loop. |
+| **GPU Safety Mode** | `safe` (70% VRAM) / `balanced` (80%) / `max` (90%) with manual override slider. Auto-writes TabbyAPI `config.yml` and feeds mistral.rs via `--pa-gpu-mem-usage`. |
 
 ### Architecture
 
@@ -79,10 +86,11 @@ write_to_pty ──► SyncSender ──► Writer thread ──► PTY master �
 
 ### Tech Stack
 
-- **Rust** — Tauri v2, portable-pty, reqwest, libp2p, sysinfo, serde
+- **Rust** — Tauri v2, portable-pty, reqwest, libp2p, sysinfo, serde, tree-sitter (Rust/TS/JS/Python), petgraph (PageRank), nvml-wrapper (NVIDIA VRAM)
 - **Frontend** — React 19, TypeScript, Tailwind CSS v4, xterm.js, react-resizable-panels, react-virtuoso
-- **AI** — xLLM / TabbyAPI (EXL2 models), Gemini API (fallback)
-- **Testing** — Vitest (unit), Playwright (E2E smoke tests)
+- **AI engines** — TabbyAPI / ExLlamaV2 (EXL2 Fast Track) + mistral.rs (BF16 ISQ / GGUF Heavy Track) + Gemini API (cloud fallback)
+- **Agent ecosystem** — `lum-mcp-server.exe` (Rust native stdio MCP) + `crew/` (CrewAI dual engine workspace, separate Python project)
+- **Testing** — Vitest (unit), Playwright (E2E smoke tests), `cargo test` (Rust 99 tests)
 
 ### Getting Started
 
@@ -166,6 +174,13 @@ LUM(Local Universal Machine)은 **실제 셸을 실행하는 터미널 에뮬레
 | **스마트 붙여넣기** | 멀티라인 클립보드 자동 감지 → 한 번에 실행 / 단계별 실행 / 텍스트 그대로 붙여넣기 선택 다이얼로그. |
 | **우클릭 컨텍스트 메뉴** | 터미널 텍스트 선택 후 우클릭 → 복사 / 명령어 실행 / AI 설명 / 웹 검색 / 파일·URL 열기. |
 | **시스템 모니터** | `Cmd+Shift+M` — CPU·메모리 게이지 + CPU/메모리 상위 프로세스 6개, 2초마다 자동 갱신. |
+| **듀얼 엔진 (Fast + Heavy)** | TabbyAPI Fast Track (7~14B EXL2, 12~16 tok/s) + mistral.rs Heavy Track (BF16 ISQ 또는 GGUF MoE, 30B+). 타이틀 바에 `xLLM ●` / `mistral ●` 상태 표시. |
+| **LUM-MCP-server (Rust 네이티브)** | 별도 `lum-mcp-server.exe`가 LUM 도구 7개(read_file / list_directory / git_diff / apply_edit_block / get_repo_map / run_tests / read_file_lines)를 stdio MCP로 노출. CrewAI / Claude Desktop / 모든 MCP 클라이언트가 LUM을 직접 제어 가능. |
+| **DRAM/VRAM 계층화** | PagedAttention 자동 주입 (`--pa-ctxt-len` + safety_mode 70/80/90% 연동 `--pa-gpu-mem-usage`)으로 RTX 3080 10GB에 30B+ 모델 실용화. |
+| **편집 블록 엔진** | SEARCH/REPLACE 패치 (exact match + fuzzy whitespace 폴백). AI 제안 → EditBlockCard에서 사용자 승인 → diff 미리보기 후 적용. |
+| **레포 맵 (tree-sitter + PageRank)** | 토큰 예산 기반 코드베이스 요약 (symbol 중요도순). 리팩토링 작업의 AI 자동 컨텍스트. |
+| **테스트 피드백 루프** | 프로젝트 테스트 러너 자동 감지 (cargo / pytest / npm / go) → 실행 → 실패 시 AI 수정 제안 → 재실행 루프. |
+| **GPU 안전 모드** | `safe` (70% VRAM) / `balanced` (80%) / `max` (90%) + 수동 슬라이더. TabbyAPI `config.yml` 자동 작성 + mistral.rs `--pa-gpu-mem-usage` 연동. |
 
 ### 시작하기
 
@@ -187,7 +202,7 @@ npm run tauri dev
 ### 개발 로드맵
 
 <details>
-<summary>Phase 23 ~ 55 전체 완료 목록 보기</summary>
+<summary>Phase 23 ~ 83 전체 완료 목록 보기</summary>
 
 - [x] Phase 23: Real PTY Terminal (portable-pty + xterm.js)
 - [x] Phase 24: Cross-Platform Polish
@@ -228,6 +243,23 @@ npm run tauri dev
 - [x] Phase 60: Smart Paste (멀티라인 붙여넣기 감지 → 한 번에 실행 / 단계별 실행 / 텍스트 붙여넣기 선택 다이얼로그)
 - [x] Phase 61: Right-click Context Menu (선택 텍스트 우클릭 → 복사 / 명령어 실행 / AI 설명 / 웹 검색 / 파일·URL 열기)
 - [x] Phase 62: System Monitor (Cmd+Shift+M — CPU/메모리 게이지, 상위 프로세스, 2초 폴링)
+- [x] Phase 63: Apple Silicon MLX-LM 전환 (aarch64 분기 자동 적용)
+- [x] Phase 64: AI Chat 코드베이스 인식 (cwd / git / 최근 파일 자동 컨텍스트)
+- [x] Phase 65~66: Model Manager 확장 (MLX/EXL2 카테고리 필터, NVIDIA 전용 기능 ⚠ 배지)
+- [x] Phase 67: Windows 크로스플랫폼 완전 지원 (TabbyAPI venv .venv\Scripts\, nvidia-smi VRAM 감지, 14B EXL2 추천)
+- [x] Phase 68: File Explorer + Welcome Hints (Cmd+B 토글, OS별 open 분기)
+- [x] Phase 69: Warp 스타일 UX 전면 개편 (WarpInputBar 자연어 기본 + 셸 fast-path + AI 인라인 스트림)
+- [x] Phase 70: Repo Map + SEARCH/REPLACE Edit Engine (tree-sitter + petgraph PageRank, fuzzy fallback, EditBlockCard)
+- [x] Phase 71: GPU 안전 모드 (safe 70% / balanced 80% / max 90% + 슬라이더 override, NVML 정확 VRAM)
+- [x] Phase 72: 모델 capability 토글 (vision / reasoning, `<think>` 체인 UI 숨김)
+- [x] Phase 73: 테스트 피드백 루프 (test_runner 자동 감지 + 실패 시 AI 자가 수정)
+- [x] Phase 74~77: MCP 클라이언트 + 도구 통합 + 비전 모델 이미지 전달
+- [x] Phase 78~79: mistral.rs 진짜 통합 (Windows hf-hub 0.4.3 panic 우회) + Dual Engine UX 정합화 (다운로드 분리·갱신 버튼·상태 표시)
+- [x] Phase 80: TDD 회귀 가드 (build_mistral_args / classify_repo_http_code 등 4개 헬퍼 추출) + 터미널 Ctrl+C/V
+- [x] Phase 81: CrewAI 통합 + Heavy 한계 발견 (`crew/` 별도 Python, lum_llm.py 공통 헬퍼, lessons learned: thinking 모델은 multi-agent 부적합)
+- [x] Phase 82a/b: LUM-MCP-server (Rust 네이티브 stdio JSON-RPC, 7개 도구 노출, Cargo `[[bin]]`로 분리)
+- [x] Phase 82c: CrewAI ↔ lum-mcp 통합 (MCPServerAdapter + StdioServerParameters, 7개 도구 BaseTool 자동 변환)
+- [x] Phase 83: DRAM/VRAM 계층화 자동화 (mistral.rs `--pa-ctxt-len`/`--pa-gpu-mem-usage`/`-n` 자동 주입, safety_mode 연동, 30B+ 실용화)
 
 </details>
 
