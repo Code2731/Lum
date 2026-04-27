@@ -1,15 +1,11 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { listen } from "@tauri-apps/api/event";
-import { useModelCatalog } from "../hooks/useModelCatalog";
 import {
   SlidersHorizontal, Loader2, X, RefreshCw,
-  Zap, Cpu, GitFork, Sparkles,
-  Download, Play, Square,
+  Zap, Cpu, Sparkles,
 } from "lucide-react";
 
 interface AppConfig {
-  xllm_base_url?: string;
   cache_mode?: string;
   coding_model?: string;
   doc_model?: string;
@@ -24,26 +20,10 @@ interface AppConfig {
   // Phase 72
   vision_enabled?: boolean;
   show_reasoning?: boolean;
-  // Phase 78: Dual Engine
-  mistral_rs_enabled?: boolean;
-  mistral_rs_url?: string;
-  mistral_rs_model?: string;
-  mistral_rs_isq?: string; // "Q4K" | "Q5K" | "Q6K" | "Q8_0"
-  mistral_rs_gguf_file?: string; // GGUF 단일 파일명 — Some이면 mistral.rs를 gguf 서브커맨드로 시작
-  mistral_rs_device_layers?: number; // Phase 83: GPU layer 수 수동 override (None이면 mistral.rs auto)
 }
-
-const MISTRAL_ISQ_MODES: { value: string; label: string; desc: string }[] = [
-  { value: "Q4K", label: "Q4K — 4-bit (기본)", desc: "VRAM 최저, 8B≈5GB. 균형형." },
-  { value: "Q5K", label: "Q5K — 5-bit", desc: "품질↑, 8B≈6.5GB." },
-  { value: "Q6K", label: "Q6K — 6-bit", desc: "고품질, 8B≈8GB. 10GB VRAM 빡빡." },
-  { value: "Q8_0", label: "Q8_0 — 8-bit", desc: "최고품질, 8B≈9GB. 10GB VRAM 한계." },
-];
 
 type SafetyMode = "safe" | "balanced" | "max";
 const MODE_DEFAULTS: Record<SafetyMode, number> = { safe: 0.70, balanced: 0.80, max: 0.90 };
-
-// Heavy Track 프리셋은 public/models.json의 heavy_presets 배열에서 로드 (useModelCatalog 훅).
 
 interface ModelInfo {
   id: string;
@@ -56,48 +36,16 @@ interface Props {
   onClose: () => void;
 }
 
-function errMsg(e: unknown): string {
-  if (!e) return "알 수 없는 오류";
-  if (typeof e === "string") return e;
-  const obj = e as Record<string, unknown>;
-  return (obj.message as string) ?? JSON.stringify(e);
-}
-
 const XllmPanel: React.FC<Props> = ({ onClose }) => {
-  const { catalog } = useModelCatalog();
   const [config, setConfig] = useState<AppConfig>({});
   const [modelInfo, setModelInfo] = useState<ModelInfo | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [statusMsg, setStatusMsg] = useState<string | null>(null);
   const [isLoadingInfo, setIsLoadingInfo] = useState(false);
 
-  // mistral.rs 상태
-  const [mistralStatus, setMistralStatus] = useState<{ running: boolean; url: string; model: string | null } | null>(null);
-  const [isMistralBusy, setIsMistralBusy] = useState<"install" | "start" | "stop" | null>(null);
-  const [mistralLog, setMistralLog] = useState<string[]>([]);
-  const mistralLogRef = useRef<HTMLDivElement>(null);
-
   useEffect(() => {
     invoke<AppConfig>("load_app_config").then(setConfig).catch(() => {});
     refreshModelInfo();
-    checkMistralStatus();
-  }, []);
-
-  // mistral.rs 빌드 로그 — cargo stdout/stderr 한 줄씩 실시간 수신
-  useEffect(() => {
-    const unlisten = listen<string>("mistral_rs_log", (e) => {
-      setMistralLog((prev) => {
-        // 1000줄 초과 시 앞부분 삭제 (메모리 보호)
-        const next = [...prev, e.payload];
-        return next.length > 1000 ? next.slice(-800) : next;
-      });
-      // 다음 tick에 하단 스크롤
-      requestAnimationFrame(() => {
-        const el = mistralLogRef.current;
-        if (el) el.scrollTop = el.scrollHeight;
-      });
-    });
-    return () => { unlisten.then((fn) => fn()); };
   }, []);
 
   const refreshModelInfo = useCallback(() => {
@@ -108,67 +56,12 @@ const XllmPanel: React.FC<Props> = ({ onClose }) => {
       .finally(() => setIsLoadingInfo(false));
   }, []);
 
-  const checkMistralStatus = useCallback(() => {
-    invoke<{ running: boolean; url: string; model: string | null }>("check_mistral_rs_status")
-      .then(setMistralStatus)
-      .catch(() => setMistralStatus({ running: false, url: "http://127.0.0.1:8080", model: null }));
-  }, []);
-
-  const handleInstallMistral = useCallback(async () => {
-    setIsMistralBusy("install");
-    setMistralLog([]); // 새 설치 시작 시 이전 로그 클리어
-    try {
-      const msg = await invoke<string>("install_mistral_rs");
-      setStatusMsg(`✅ ${msg}`);
-    } catch (e) {
-      setStatusMsg(`❌ ${errMsg(e)}`);
-    } finally {
-      setIsMistralBusy(null);
-      checkMistralStatus();
-    }
-  }, [checkMistralStatus]);
-
-  const handleStartMistral = useCallback(async () => {
-    setIsMistralBusy("start");
-    try {
-      const msg = await invoke<string>("start_mistral_rs");
-      setStatusMsg(msg);
-      // 시작 폴링 — 30초까지 1초 간격
-      let attempts = 0;
-      const poll = setInterval(async () => {
-        attempts += 1;
-        try {
-          const s = await invoke<{ running: boolean; url: string; model: string | null }>("check_mistral_rs_status");
-          setMistralStatus(s);
-          if (s.running || attempts >= 30) clearInterval(poll);
-        } catch { if (attempts >= 30) clearInterval(poll); }
-      }, 1000);
-    } catch (e) {
-      setStatusMsg(`❌ ${errMsg(e)}`);
-    } finally {
-      setIsMistralBusy(null);
-    }
-  }, []);
-
-  const handleStopMistral = useCallback(async () => {
-    setIsMistralBusy("stop");
-    try {
-      const msg = await invoke<string>("stop_mistral_rs");
-      setStatusMsg(`✅ ${msg}`);
-    } catch (e) {
-      setStatusMsg(`❌ ${errMsg(e)}`);
-    } finally {
-      setIsMistralBusy(null);
-      checkMistralStatus();
-    }
-  }, [checkMistralStatus]);
-
   const handleSave = useCallback(async () => {
     setIsSaving(true);
     setStatusMsg(null);
     try {
       await invoke("save_xllm_settings", {
-        serverUrl: config.xllm_base_url ?? null,
+        serverUrl: null, // deprecated — embedded mistralrs로 통합됨
         cacheMode: config.cache_mode ?? null,
         codingModel: config.coding_model ?? null,
         docModel: config.doc_model ?? null,
@@ -176,12 +69,12 @@ const XllmPanel: React.FC<Props> = ({ onClose }) => {
         maxSeqLen: config.max_seq_len ?? null,
         draftModel: config.draft_model ?? null,
         speculativeNDraft: config.speculative_n_draft ?? null,
-        mistralRsEnabled: config.mistral_rs_enabled ?? null,
-        mistralRsUrl: config.mistral_rs_url ?? null,
-        mistralRsModel: config.mistral_rs_model ?? null,
-        mistralRsIsq: config.mistral_rs_isq ?? null,
-        mistralRsGgufFile: config.mistral_rs_gguf_file ?? null,
-        mistralRsDeviceLayers: config.mistral_rs_device_layers ?? null,
+        mistralRsEnabled: null,
+        mistralRsUrl: null,
+        mistralRsModel: null,
+        mistralRsIsq: null,
+        mistralRsGgufFile: null,
+        mistralRsDeviceLayers: null,
       });
       setStatusMsg("설정 저장 완료");
     } catch (e) {
@@ -380,227 +273,10 @@ const XllmPanel: React.FC<Props> = ({ onClose }) => {
             )}
           </section>
 
-          <section className="space-y-2">
-            <div className="flex items-center justify-between">
-              <h3 className="flex items-center gap-1.5 text-[11px] font-semibold text-white/40 uppercase tracking-wider">
-                <GitFork size={9} /> mistral.rs (단일 추론 엔진)
-              </h3>
-              <button onClick={checkMistralStatus} className="text-white/30 hover:text-white/60 transition-colors" title="새로고침">
-                <RefreshCw size={10} />
-              </button>
-            </div>
+          {/* Phase 85b-6: mistralrs-server.exe Heavy Track UI 제거됨.
+              모든 추론은 임베디드 mistralrs(LUM 프로세스 내부)로. 아래가 메인. */}
 
-            <label className="flex items-center gap-2 text-xs text-white/60 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={config.mistral_rs_enabled ?? false}
-                onChange={(e) => setConfig((c) => ({ ...c, mistral_rs_enabled: e.target.checked }))}
-                className="accent-accent"
-              />
-              활성화 — Heavy 버튼 또는 <code className="text-purple-400">!!</code> 접두사로 호출
-            </label>
-
-            {config.mistral_rs_enabled && (
-              <div className="bg-white/3 border border-white/8 rounded-lg p-3 space-y-3">
-                {/* 상태 표시 — TabbyAPI와 동일한 스타일 */}
-                <div className="flex items-center gap-2">
-                  {mistralStatus === null ? (
-                    <><Loader2 size={11} className="animate-spin text-white/30" /><span className="text-[11px] text-white/40">확인 중...</span></>
-                  ) : mistralStatus.running ? (
-                    <><span className="w-2 h-2 rounded-full bg-purple-400 shrink-0" /><span className="text-[11px] text-purple-300 font-medium">실행 중 ({mistralStatus.url})</span></>
-                  ) : (
-                    <><span className="w-2 h-2 rounded-full bg-yellow-400 shrink-0" /><span className="text-[11px] text-yellow-400 font-medium">미실행 — [시작]을 눌러 띄우세요</span></>
-                  )}
-                </div>
-
-                {/* 추천 프리셋 */}
-                <div>
-                  <label className="text-[10px] text-white/40 block mb-1">추천 프리셋 (클릭 → 자동 입력)</label>
-                  <div className="grid grid-cols-1 gap-1 mb-2 max-h-40 overflow-y-auto pr-1">
-                    {catalog.heavy_presets.map((p) => {
-                      const active = config.mistral_rs_model === p.id && (config.mistral_rs_gguf_file ?? "") === (p.gguf_file ?? "");
-                      const isGguf = !!p.gguf_file;
-                      return (
-                        <button
-                          key={`${p.id}::${p.gguf_file ?? ""}`}
-                          onClick={() => setConfig((c) => ({
-                            ...c,
-                            mistral_rs_model: p.id,
-                            mistral_rs_gguf_file: p.gguf_file ?? "",
-                          }))}
-                          className={`flex items-center justify-between gap-2 px-2 py-1.5 rounded text-[11px] text-left transition-colors border ${
-                            active
-                              ? "bg-purple-500/20 border-purple-400/40 text-purple-200"
-                              : "bg-white/3 border-white/8 text-white/60 hover:bg-white/8"
-                          }`}
-                        >
-                          <span className="truncate">
-                            <span className="opacity-70 mr-1">{p.tag}</span>{p.label}
-                            {isGguf && <span className="opacity-50 ml-1">[GGUF]</span>}
-                          </span>
-                          <span className="text-[9px] text-white/30 shrink-0">{p.size}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                  <label className="text-[10px] text-white/40 block mb-1">모델 ID (HuggingFace 또는 로컬 경로)</label>
-                  <input
-                    value={config.mistral_rs_model ?? ""}
-                    onChange={(e) => setConfig((c) => ({ ...c, mistral_rs_model: e.target.value }))}
-                    placeholder="예: deepseek-ai/DeepSeek-R1-Distill-Qwen-32B"
-                    className="w-full bg-white/5 border border-white/10 rounded px-2 py-1 text-xs text-white/80 placeholder-white/20 font-mono"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-[10px] text-white/40 block mb-1">GGUF 파일 (있으면 GGUF 모드, 비우면 BF16+ISQ)</label>
-                  <input
-                    value={config.mistral_rs_gguf_file ?? ""}
-                    onChange={(e) => setConfig((c) => ({ ...c, mistral_rs_gguf_file: e.target.value }))}
-                    placeholder="예: Qwen3-Coder-30B-A3B-Instruct-Q4_K_M.gguf (비우면 BF16)"
-                    className="w-full bg-white/5 border border-white/10 rounded px-2 py-1 text-xs text-white/80 placeholder-white/20 font-mono"
-                  />
-                </div>
-
-                <div className={config.mistral_rs_gguf_file ? "opacity-40 pointer-events-none" : ""}>
-                  <label className="text-[10px] text-white/40 block mb-1">
-                    ISQ 양자화 모드 — 품질 ↔ VRAM 트레이드오프
-                    {config.mistral_rs_gguf_file && <span className="ml-1 text-yellow-300/80">(GGUF 모드에선 무시됨)</span>}
-                  </label>
-                  <select
-                    value={config.mistral_rs_isq ?? "Q4K"}
-                    onChange={(e) => setConfig((c) => ({ ...c, mistral_rs_isq: e.target.value }))}
-                    className="w-full bg-white/5 border border-white/10 rounded px-2 py-1 text-xs text-white/80"
-                  >
-                    {MISTRAL_ISQ_MODES.map((m) => (
-                      <option key={m.value} value={m.value} className="bg-zinc-900">
-                        {m.label}
-                      </option>
-                    ))}
-                  </select>
-                  <p className="text-[9px] text-white/40 mt-1">
-                    {MISTRAL_ISQ_MODES.find((m) => m.value === (config.mistral_rs_isq ?? "Q4K"))?.desc}
-                  </p>
-                </div>
-
-                <div>
-                  <label className="text-[10px] text-white/40 block mb-1">
-                    GPU 레이어 수 (수동 override) — 비우면 mistral.rs auto device mapping
-                  </label>
-                  <input
-                    type="number"
-                    min={0}
-                    placeholder="예: 24 (10GB VRAM에 30B 모델 부분 offload)"
-                    value={config.mistral_rs_device_layers ?? ""}
-                    onChange={(e) => {
-                      const v = e.target.value.trim();
-                      // Number("abc") === NaN — type=number에 직접 입력 외 paste 등으로 NaN 방지
-                      const n = Number(v);
-                      const next = v === "" || Number.isNaN(n) ? undefined : Math.max(0, Math.floor(n));
-                      setConfig((c) => ({ ...c, mistral_rs_device_layers: next }));
-                    }}
-                    className="w-full bg-white/5 border border-white/10 rounded px-2 py-1 text-xs text-white/80 placeholder-white/20 font-mono"
-                  />
-                  <p className="text-[9px] text-white/40 mt-1">
-                    OOM 디버깅 또는 30B+ 모델 SSD/RAM offload 강제 시만 설정. 일반적으로 비워두는 게 좋음.
-                  </p>
-                </div>
-
-                <div>
-                  <label className="text-[10px] text-white/40 block mb-1">서버 URL</label>
-                  <input
-                    value={config.mistral_rs_url ?? "http://127.0.0.1:8080"}
-                    onChange={(e) => setConfig((c) => ({ ...c, mistral_rs_url: e.target.value }))}
-                    className="w-full bg-white/5 border border-white/10 rounded px-2 py-1 text-xs text-white/80"
-                  />
-                </div>
-
-                {/* 버튼 — 상태에 따라 conditional 표시 (TabbyAPI 패턴) */}
-                <div className="flex gap-2">
-                  {!mistralStatus?.running && (
-                    <button
-                      onClick={handleInstallMistral}
-                      disabled={isMistralBusy !== null}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-accent/80 hover:bg-accent text-white text-[11px] rounded font-medium disabled:opacity-50 transition-colors"
-                    >
-                      {isMistralBusy === "install" ? <Loader2 size={10} className="animate-spin" /> : <Download size={10} />}
-                      설치
-                    </button>
-                  )}
-                  {!mistralStatus?.running && (
-                    <button
-                      onClick={handleStartMistral}
-                      disabled={isMistralBusy !== null || !config.mistral_rs_model}
-                      title={!config.mistral_rs_model ? "먼저 모델을 지정하세요" : "mistral.rs 시작"}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-600/70 hover:bg-purple-600 text-white text-[11px] rounded font-medium disabled:opacity-40 transition-colors"
-                    >
-                      {isMistralBusy === "start" ? <Loader2 size={10} className="animate-spin" /> : <Play size={10} />}
-                      실행
-                    </button>
-                  )}
-                  {mistralStatus?.running && (
-                    <button
-                      onClick={handleStopMistral}
-                      disabled={isMistralBusy !== null}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-red-600/60 hover:bg-red-600 text-white text-[11px] rounded font-medium disabled:opacity-50 transition-colors"
-                    >
-                      {isMistralBusy === "stop" ? <Loader2 size={10} className="animate-spin" /> : <Square size={10} />}
-                      중지
-                    </button>
-                  )}
-                </div>
-
-                {/* 빌드 로그 패널 — 설치 진행 중 cargo 출력 표시 */}
-                {(isMistralBusy === "install" || mistralLog.length > 0) && (
-                  <div className="space-y-1">
-                    <div className="flex items-center justify-between text-[10px] text-white/40">
-                      <span>📋 빌드 로그 ({mistralLog.length}줄)</span>
-                      {mistralLog.length > 0 && (
-                        <button
-                          onClick={() => setMistralLog([])}
-                          className="text-white/30 hover:text-white/60 transition-colors text-[9px]"
-                        >
-                          지우기
-                        </button>
-                      )}
-                    </div>
-                    <div
-                      ref={mistralLogRef}
-                      className="bg-black/40 border border-white/10 rounded p-2 max-h-48 overflow-y-auto font-mono text-[10px] leading-tight"
-                    >
-                      {mistralLog.length === 0 && isMistralBusy === "install" ? (
-                        <div className="flex items-center gap-1.5 text-white/40">
-                          <Loader2 size={10} className="animate-spin" />
-                          <span>cargo install 시작 중...</span>
-                        </div>
-                      ) : (
-                        mistralLog.map((line, idx) => (
-                          <div
-                            key={idx}
-                            className={
-                              line.includes("error") || line.startsWith("❌") ? "text-red-400" :
-                              line.includes("warning") ? "text-yellow-400/70" :
-                              line.startsWith("✅") || line.includes("Compiling") || line.includes("Finished") ? "text-green-400/80" :
-                              "text-white/50"
-                            }
-                          >
-                            {line}
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                <p className="text-[10px] text-white/30">
-                  Heavy 버튼 ON + 자연어 입력 또는 <code className="text-purple-400">!! 이 코드 전체 분석</code>
-                  {isMistralBusy === "install" && <span className="block mt-1 text-yellow-400/70">⏳ 첫 설치는 5~15분. cargo가 의존성 다운로드·컴파일 중입니다.</span>}
-                </p>
-              </div>
-            )}
-          </section>
-
-          {/* Phase 85b — 임베디드 추론 디버그 (subprocess 없이 LUM 프로세스 안에서 직접) */}
+          {/* Phase 85b — 임베디드 mistralrs (subprocess 없이 LUM 안에서 직접 추론) */}
           <EmbeddedInferenceDebug />
         </div>
 
