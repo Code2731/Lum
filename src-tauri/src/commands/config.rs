@@ -105,11 +105,11 @@ pub struct QuickAction {
 }
 
 impl AppConfig {
-    /// xLLM 서버 기본 URL 반환 (설정 없으면 로컬 기본값)
+    /// 추론 서버 URL — Phase 85a: TabbyAPI 제거 후 모든 추론은 mistral.rs로 통일.
+    /// 호출부 변경 최소화를 위해 함수명은 유지(xllm_url) 하되 내부적으로 mistral.rs URL을 반환.
+    /// `xllm_base_url` 필드는 deprecated — 다음 commit에서 정리.
     pub fn xllm_url(&self) -> String {
-        self.xllm_base_url
-            .clone()
-            .unwrap_or_else(|| XLLM_DEFAULT_URL.to_string())
+        self.mistral_rs_url()
     }
 
     pub fn mistral_rs_url(&self) -> String {
