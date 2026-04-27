@@ -599,6 +599,9 @@ const XllmPanel: React.FC<Props> = ({ onClose }) => {
               </div>
             )}
           </section>
+
+          {/* Phase 85b — 임베디드 추론 디버그 (subprocess 없이 LUM 프로세스 안에서 직접) */}
+          <EmbeddedInferenceDebug />
         </div>
 
         {/* 하단 — 상태 메시지 + 저장 버튼 */}
@@ -617,6 +620,121 @@ const XllmPanel: React.FC<Props> = ({ onClose }) => {
         </div>
       </div>
     </div>
+  );
+};
+
+// ── Phase 85b — 임베디드 추론 디버그 컴포넌트 ──────────────────────────
+// embedded-ai feature 빌드일 때만 의미 있음. 비활성 빌드는 stub 에러 반환.
+const EmbeddedInferenceDebug: React.FC = () => {
+  const [modelDir, setModelDir] = useState("");
+  const [ggufFile, setGgufFile] = useState("");
+  const [prompt, setPrompt] = useState("");
+  const [response, setResponse] = useState<string | null>(null);
+  const [busy, setBusy] = useState<"load" | "infer" | null>(null);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    invoke<boolean>("embed_status").then(setLoaded).catch(() => {});
+  }, []);
+
+  const onLoad = async () => {
+    if (!modelDir.trim() || !ggufFile.trim()) {
+      setResponse("❌ model_dir + gguf_file 모두 입력");
+      return;
+    }
+    setBusy("load");
+    setResponse(null);
+    try {
+      const r = await invoke<string>("embed_load_gguf", {
+        modelDir: modelDir.trim(),
+        ggufFile: ggufFile.trim(),
+      });
+      setResponse(`✅ ${r}`);
+      setLoaded(true);
+    } catch (e) {
+      setResponse(`❌ ${typeof e === "string" ? e : JSON.stringify(e)}`);
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const onInfer = async () => {
+    if (!prompt.trim()) return;
+    setBusy("infer");
+    setResponse(null);
+    try {
+      const r = await invoke<string>("embed_infer", { prompt: prompt.trim() });
+      setResponse(r);
+    } catch (e) {
+      setResponse(`❌ ${typeof e === "string" ? e : JSON.stringify(e)}`);
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  return (
+    <section className="space-y-2 border border-purple-400/20 rounded-lg p-3 bg-purple-400/5">
+      <h3 className="flex items-center gap-1.5 text-[11px] font-semibold text-purple-300/90 uppercase tracking-wider">
+        🧪 임베디드 추론 (Phase 85b — embedded-ai feature)
+        <span className={`ml-auto text-[9px] font-mono ${loaded ? "text-green-400" : "text-white/40"}`}>
+          {loaded ? "● 로드됨" : "○ 미로드"}
+        </span>
+      </h3>
+      <p className="text-[10px] text-white/40 leading-relaxed">
+        mistralrs-server.exe spawn 없이 LUM 프로세스 안에서 직접 추론. <code className="font-mono text-white/55">npm run tauri:dev:cuda</code>로
+        빌드해야 동작. 비활성 빌드는 stub 에러 반환.
+      </p>
+
+      <div className="space-y-1">
+        <span className="text-[10px] text-white/35">모델 폴더 (절대 경로)</span>
+        <input
+          className="w-full bg-white/5 border border-white/10 rounded px-2.5 py-1.5 text-[11px] font-mono outline-none focus:border-purple-400/50 transition-colors"
+          placeholder="C:\Users\USER\.lum_mistral_models\unsloth--Qwen3-Coder-30B-A3B-Instruct-GGUF"
+          value={modelDir}
+          onChange={(e) => setModelDir(e.target.value)}
+        />
+      </div>
+      <div className="space-y-1">
+        <span className="text-[10px] text-white/35">GGUF 파일명</span>
+        <input
+          className="w-full bg-white/5 border border-white/10 rounded px-2.5 py-1.5 text-[11px] font-mono outline-none focus:border-purple-400/50 transition-colors"
+          placeholder="Qwen3-Coder-30B-A3B-Instruct-Q2_K.gguf"
+          value={ggufFile}
+          onChange={(e) => setGgufFile(e.target.value)}
+        />
+      </div>
+      <button
+        onClick={onLoad}
+        disabled={busy !== null || !modelDir.trim() || !ggufFile.trim()}
+        className="w-full px-3 py-1.5 rounded bg-purple-500/20 hover:bg-purple-500/30 border border-purple-400/30 text-[11px] text-purple-200 disabled:opacity-40 transition-colors"
+      >
+        {busy === "load" ? "로드 중... (수십초~분)" : "🚀 임베디드 로드"}
+      </button>
+
+      <div className="space-y-1 pt-1">
+        <span className="text-[10px] text-white/35">프롬프트</span>
+        <textarea
+          rows={2}
+          className="w-full bg-white/5 border border-white/10 rounded px-2.5 py-1.5 text-[11px] font-mono outline-none focus:border-purple-400/50 transition-colors resize-none"
+          placeholder="Hello, world!"
+          value={prompt}
+          onChange={(e) => setPrompt(e.target.value)}
+        />
+      </div>
+      <button
+        onClick={onInfer}
+        disabled={busy !== null || !prompt.trim() || !loaded}
+        className="w-full px-3 py-1.5 rounded bg-purple-500/20 hover:bg-purple-500/30 border border-purple-400/30 text-[11px] text-purple-200 disabled:opacity-40 transition-colors"
+      >
+        {busy === "infer" ? "추론 중..." : "💬 임베디드 추론"}
+      </button>
+
+      {response && (
+        <div className="bg-black/30 border border-white/5 rounded p-2 text-[11px] font-mono text-white/80 max-h-48 overflow-y-auto whitespace-pre-wrap">
+          {response}
+        </div>
+      )}
+    </section>
   );
 };
 
