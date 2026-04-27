@@ -3,8 +3,8 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { useModelCatalog } from "../hooks/useModelCatalog";
 import {
-  SlidersHorizontal, Loader2, X, RefreshCw, ArrowLeftRight,
-  Zap, Database, Cpu, CheckCircle2, GitFork, Sparkles,
+  SlidersHorizontal, Loader2, X, RefreshCw,
+  Zap, Cpu, GitFork, Sparkles,
   Download, Play, Square,
 } from "lucide-react";
 
@@ -52,26 +52,6 @@ interface ModelInfo {
   rope_scale?: number;
 }
 
-type CacheMode = "Q4" | "Q8" | "FP16";
-
-const CACHE_MODES: { value: CacheMode; label: string; desc: string }[] = [
-  {
-    value: "Q4",
-    label: "Q4 — 4-bit",
-    desc: "최대 압축. 36GB RAM에서 32K+ 컨텍스트 처리 가능. PD Disaggregation 최적.",
-  },
-  {
-    value: "Q8",
-    label: "Q8 — 8-bit",
-    desc: "균형. 긴 대화(16K~)에서 속도/품질 타협점. 기본 권장값.",
-  },
-  {
-    value: "FP16",
-    label: "FP16 — 16-bit",
-    desc: "무압축. 단문 응답, 정밀도 우선. 컨텍스트 짧을 때만 사용.",
-  },
-];
-
 interface Props {
   onClose: () => void;
 }
@@ -87,33 +67,18 @@ const XllmPanel: React.FC<Props> = ({ onClose }) => {
   const { catalog } = useModelCatalog();
   const [config, setConfig] = useState<AppConfig>({});
   const [modelInfo, setModelInfo] = useState<ModelInfo | null>(null);
-  const [switchTarget, setSwitchTarget] = useState("");
-  const [isSwitching, setIsSwitching] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [statusMsg, setStatusMsg] = useState<string | null>(null);
   const [isLoadingInfo, setIsLoadingInfo] = useState(false);
-  const switchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // mistral.rs (Heavy Track) 상태
+  // mistral.rs 상태
   const [mistralStatus, setMistralStatus] = useState<{ running: boolean; url: string; model: string | null } | null>(null);
   const [isMistralBusy, setIsMistralBusy] = useState<"install" | "start" | "stop" | null>(null);
   const [mistralLog, setMistralLog] = useState<string[]>([]);
   const mistralLogRef = useRef<HTMLDivElement>(null);
-  const [localModels, setLocalModels] = useState<{ id: string; size_mb: number }[]>([]);
-  // Phase 85a-3: TabbyAPI 제거 후 isAppleSilicon은 사용 안 됨이지만 *기존 섹션
-  // (cache_mode/role/SSD)*이 isAppleSilicon 분기에 의존 — 항상 false 고정으로
-  // NVIDIA path만 렌더. 해당 섹션들의 진짜 정리는 다음 리팩토링.
-  const isAppleSilicon = false;
-
-  useEffect(() => {
-    return () => { if (switchTimerRef.current) clearTimeout(switchTimerRef.current); };
-  }, []);
 
   useEffect(() => {
     invoke<AppConfig>("load_app_config").then(setConfig).catch(() => {});
-    invoke<{ id: string; size_mb: number }[]>("list_local_models")
-      .then((m) => setLocalModels(m.filter((x) => x.size_mb > 0)))
-      .catch(() => {});
     refreshModelInfo();
     checkMistralStatus();
   }, []);
@@ -226,26 +191,6 @@ const XllmPanel: React.FC<Props> = ({ onClose }) => {
     }
   }, [config]);
 
-  const handleSwitch = useCallback(async () => {
-    if (!switchTarget.trim()) return;
-    setIsSwitching(true);
-    setStatusMsg(null);
-    try {
-      const msg = await invoke<string>("switch_xllm_model", {
-        modelName: switchTarget.trim(),
-        cacheMode: config.cache_mode ?? null,
-        maxSeqLen: config.max_seq_len ?? null,
-      });
-      setStatusMsg(msg);
-      setSwitchTarget("");
-      switchTimerRef.current = setTimeout(refreshModelInfo, 1000);
-    } catch (e) {
-      setStatusMsg(`전환 실패: ${errMsg(e)}`);
-    } finally {
-      setIsSwitching(false);
-    }
-  }, [switchTarget, config, refreshModelInfo]);
-
   return (
     <div
       className="fixed inset-0 z-50 flex items-start justify-center pt-16 bg-black/50 backdrop-blur-sm"
@@ -265,28 +210,6 @@ const XllmPanel: React.FC<Props> = ({ onClose }) => {
 
           {/* Phase 85a-3: TabbyAPI UI 섹션 제거됨. 추론 엔진은 mistral.rs 단일.
               아래 mistral.rs Heavy Track 섹션이 메인 시작/중지 UI. */}
-
-          {/* 서버 URL */}
-          <section className="space-y-1.5">
-            <label className="text-[10px] text-white/40 uppercase tracking-wider">
-              AI 서버 주소
-            </label>
-            <input
-              className="w-full bg-white/5 border border-white/10 rounded px-2.5 py-1.5 text-[12px] font-mono outline-none focus:border-accent/50 transition-colors"
-              placeholder="http://127.0.0.1:5000"
-              value={config.xllm_base_url ?? ""}
-              onChange={(e) => setConfig((c) => ({ ...c, xllm_base_url: e.target.value }))}
-            />
-            <p className="text-[10px] text-white/25 leading-relaxed">
-              MLX-LM(Apple): <span className="font-mono text-white/35">:5000</span>
-              &nbsp;·&nbsp;
-              TabbyAPI(NVIDIA): <span className="font-mono text-white/35">:5000</span>
-              &nbsp;·&nbsp;
-              LM Studio: <span className="font-mono text-white/35">:1234</span>
-              &nbsp;·&nbsp;
-              Ollama: <span className="font-mono text-white/35">:11434</span>
-            </p>
-          </section>
 
           {/* Phase 71: GPU 안전 모드 + VRAM Cap */}
           <section className="space-y-2">
@@ -457,247 +380,10 @@ const XllmPanel: React.FC<Props> = ({ onClose }) => {
             )}
           </section>
 
-          {/* Max Tokens (모든 플랫폼 동작) */}
-          <section className="space-y-2">
-            <label className="text-[10px] text-white/40 uppercase tracking-wider flex items-center gap-1.5">
-              <Cpu size={9} /> Max Tokens (응답 최대 길이)
-              <span className="ml-auto text-[9px] text-green-400/70 font-normal normal-case">✅ MLX-LM + TabbyAPI</span>
-            </label>
-            <div className="flex items-center gap-3">
-              <input
-                type="number"
-                className="w-32 bg-white/5 border border-white/10 rounded px-2.5 py-1.5 text-[12px] font-mono outline-none focus:border-accent/50 transition-colors"
-                value={config.max_seq_len ?? 4096}
-                min={512}
-                max={32768}
-                step={512}
-                onChange={(e) =>
-                  setConfig((c) => ({ ...c, max_seq_len: parseInt(e.target.value) || 4096 }))
-                }
-              />
-              <span className="text-[11px] text-white/35">
-                {isAppleSilicon ? "36GB → 8192~16384 권장" : "Q4 캐시 + 36GB → 32768 이상도 가능"}
-              </span>
-            </div>
-          </section>
-
-          {/* ① PD 임계값 (긴 컨텍스트 온도 조절 — MLX-LM 동작) */}
-          <section className="space-y-2">
-            <label className="text-[10px] text-white/40 uppercase tracking-wider flex items-center gap-1.5">
-              <Zap size={9} /> ① 긴 컨텍스트 자동 최적화
-              <span className="ml-auto text-[9px] text-green-400/70 font-normal normal-case">✅ MLX-LM + TabbyAPI</span>
-            </label>
-            <div className="flex items-center gap-3">
-              <input
-                type="number"
-                className="w-32 bg-white/5 border border-white/10 rounded px-2.5 py-1.5 text-[12px] font-mono outline-none focus:border-accent/50 transition-colors"
-                value={config.pd_threshold_chars ?? 8000}
-                min={2000}
-                max={32000}
-                step={1000}
-                onChange={(e) =>
-                  setConfig((c) => ({ ...c, pd_threshold_chars: parseInt(e.target.value) || 8000 }))
-                }
-              />
-              <span className="text-[11px] text-white/35">
-                chars 초과 시 temperature 0.3 자동 전환
-              </span>
-            </div>
-          </section>
-
-          {/* ③ KV Cache — NVIDIA 전용 */}
-          <section className="space-y-2">
-            <label className="text-[10px] text-white/40 uppercase tracking-wider flex items-center gap-1.5">
-              <Database size={9} /> ③ KV Cache Quantization
-              {isAppleSilicon
-                ? <span className="ml-auto text-[9px] text-yellow-400/70 font-normal normal-case">⚠ TabbyAPI(NVIDIA) 전용</span>
-                : <span className="ml-auto text-[9px] text-green-400/70 font-normal normal-case">✅ TabbyAPI</span>}
-            </label>
-            {isAppleSilicon ? (
-              <p className="text-[10px] text-white/25 bg-yellow-400/5 border border-yellow-400/10 rounded px-2.5 py-2">
-                MLX-LM은 KV Cache 양자화를 API 파라미터로 지원하지 않습니다.
-                MLX는 자체적으로 Metal 가속 캐시를 사용합니다.
-              </p>
-            ) : (
-              <div className="space-y-1.5">
-                {CACHE_MODES.map(({ value, label, desc }) => (
-                  <button
-                    key={value}
-                    onClick={() => setConfig((c) => ({ ...c, cache_mode: value }))}
-                    className={`w-full text-left px-3 py-2 rounded-lg border transition-colors ${
-                      config.cache_mode === value || (!config.cache_mode && value === "Q8")
-                        ? "border-accent/40 bg-accent/8"
-                        : "border-white/5 bg-white/2 hover:border-white/15"
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      {(config.cache_mode === value || (!config.cache_mode && value === "Q8")) && (
-                        <CheckCircle2 size={11} className="text-accent shrink-0" />
-                      )}
-                      <span className="text-[11px] font-mono text-white/80">{label}</span>
-                    </div>
-                    <p className="text-[10px] text-white/35 mt-0.5 ml-[19px]">{desc}</p>
-                  </button>
-                ))}
-              </div>
-            )}
-          </section>
-
-          {/* ② 모델 역할 분리 — NVIDIA 전용 */}
-          <section className="space-y-2">
-            <label className="text-[10px] text-white/40 uppercase tracking-wider flex items-center gap-1.5">
-              <ArrowLeftRight size={9} /> ② 모델 역할 분리 (Elastic Scheduling)
-              {isAppleSilicon
-                ? <span className="ml-auto text-[9px] text-yellow-400/70 font-normal normal-case">⚠ TabbyAPI(NVIDIA) 전용</span>
-                : <span className="ml-auto text-[9px] text-green-400/70 font-normal normal-case">✅ TabbyAPI</span>}
-            </label>
-            {isAppleSilicon ? (
-              <p className="text-[10px] text-white/25 bg-yellow-400/5 border border-yellow-400/10 rounded px-2.5 py-2">
-                MLX-LM은 서버에 모델 1개만 로드합니다. 역할별 모델 분리는 TabbyAPI(NVIDIA)에서만 동작합니다.
-              </p>
-            ) : (
-              <div className="space-y-2">
-                {localModels.length === 0 && (
-                  <p className="text-[10px] text-yellow-400/70 bg-yellow-400/5 border border-yellow-400/10 rounded px-2.5 py-1.5">
-                    ⚠ 다운로드된 모델이 없습니다. 모델 관리자에서 먼저 모델을 다운로드하세요.
-                  </p>
-                )}
-                <div className="space-y-1">
-                  <span className="text-[10px] text-white/30">코딩 모델 (generate_ai_command, git commit)</span>
-                  <select
-                    className="w-full bg-white/5 border border-white/10 rounded px-2.5 py-1.5 text-[12px] font-mono outline-none focus:border-accent/50 transition-colors disabled:opacity-50"
-                    value={config.coding_model ?? ""}
-                    onChange={(e) => setConfig((c) => ({ ...c, coding_model: e.target.value || undefined }))}
-                    disabled={localModels.length === 0}
-                  >
-                    <option value="">(기본 모델 사용)</option>
-                    {localModels.map((m) => (
-                      <option key={`c-${m.id}`} value={m.id}>{m.id}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="space-y-1">
-                  <span className="text-[10px] text-white/30">문서화 모델 (analyze_error, 요약)</span>
-                  <select
-                    className="w-full bg-white/5 border border-white/10 rounded px-2.5 py-1.5 text-[12px] font-mono outline-none focus:border-accent/50 transition-colors disabled:opacity-50"
-                    value={config.doc_model ?? ""}
-                    onChange={(e) => setConfig((c) => ({ ...c, doc_model: e.target.value || undefined }))}
-                    disabled={localModels.length === 0}
-                  >
-                    <option value="">(기본 모델 사용)</option>
-                    {localModels.map((m) => (
-                      <option key={`d-${m.id}`} value={m.id}>{m.id}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-            )}
-          </section>
-
-          {/* ④ SSD — Apple: 서버 시작 옵션 / NVIDIA: 요청 파라미터 */}
-          <section className="space-y-2">
-            <label className="text-[10px] text-white/40 uppercase tracking-wider flex items-center gap-1.5">
-              <GitFork size={9} /> ④ SSD — Speculative Decoding
-              {isAppleSilicon
-                ? <span className="ml-auto text-[9px] text-yellow-400/70 font-normal normal-case">⚠ 서버 시작 시 적용</span>
-                : <span className="ml-auto text-[9px] text-green-400/70 font-normal normal-case">✅ TabbyAPI</span>}
-            </label>
-            <p className="text-[10px] text-white/25 -mt-1">
-              소형 드래프트 모델이 다음 토큰을 미리 추측 → 1.5~2× 속도 향상
-            </p>
-            {isAppleSilicon ? (
-              <p className="text-[10px] text-white/25 bg-yellow-400/5 border border-yellow-400/10 rounded px-2.5 py-2">
-                MLX-LM의 Speculative Decoding은 서버 시작 시 <code className="font-mono text-white/40">--draft-model</code> 플래그로만 설정 가능합니다.
-                현재 MLX-LM은 API 요청 단위 드래프트 모델 지정을 지원하지 않습니다.
-              </p>
-            ) : (
-              <div className="space-y-2">
-                <div className="space-y-1">
-                  <span className="text-[10px] text-white/30">드래프트 모델</span>
-                  <div className="flex gap-1.5">
-                    <select
-                      className="flex-1 bg-white/5 border border-white/10 rounded px-2.5 py-1.5 text-[12px] font-mono outline-none focus:border-accent/50 transition-colors disabled:opacity-50"
-                      value={config.draft_model ?? ""}
-                      onChange={(e) => setConfig((c) => ({ ...c, draft_model: e.target.value || undefined }))}
-                      disabled={localModels.length === 0}
-                    >
-                      <option value="">(사용 안 함)</option>
-                      {localModels.map((m) => (
-                        <option key={`draft-${m.id}`} value={m.id}>{m.id}</option>
-                      ))}
-                    </select>
-                    {/* 사용자가 native dropdown의 (사용 안 함) 옵션을 못 찾는 케이스 대비 명시 끄기. */}
-                    <button
-                      type="button"
-                      onClick={() => setConfig((c) => ({ ...c, draft_model: undefined }))}
-                      disabled={!config.draft_model}
-                      className="shrink-0 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 hover:border-red-500/40 rounded px-2.5 py-1.5 text-[11px] text-red-300 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                      title="SSD 비활성화 — 드래프트 모델 해제"
-                    >
-                      ✕ 끄기
-                    </button>
-                  </div>
-                  {localModels.length === 0 && (
-                    <p className="text-[10px] text-yellow-400/60">다운로드된 모델이 없습니다.</p>
-                  )}
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-[10px] text-white/30 shrink-0">드래프트 토큰 수</span>
-                  <input
-                    type="number"
-                    className="w-20 bg-white/5 border border-white/10 rounded px-2.5 py-1.5 text-[12px] font-mono outline-none focus:border-accent/50 transition-colors"
-                    value={config.speculative_n_draft ?? 5}
-                    min={1}
-                    max={16}
-                    onChange={(e) =>
-                      setConfig((c) => ({ ...c, speculative_n_draft: parseInt(e.target.value) || 5 }))
-                    }
-                  />
-                  <span className="text-[11px] text-white/25">권장 4–8</span>
-                </div>
-                <p className="text-[10px] text-white/25 bg-green-400/5 border border-green-400/10 rounded px-2.5 py-1.5">
-                  드래프트 모델은 <code className="font-mono text-white/40">config.yml</code>에 기록되므로 적용하려면
-                  TabbyAPI를 [중지] 후 [시작]으로 재시작해야 합니다.
-                </p>
-              </div>
-            )}
-          </section>
-
-          {/* 모델 전환 */}
-          <section className="space-y-2">
-            <label className="text-[10px] text-white/40 uppercase tracking-wider">
-              모델 전환 (Fast Role Reversal)
-            </label>
-            <div className="flex gap-2">
-              <select
-                className="flex-1 bg-white/5 border border-white/10 rounded px-2.5 py-1.5 text-[12px] font-mono outline-none focus:border-accent/50 transition-colors disabled:opacity-50"
-                value={switchTarget}
-                onChange={(e) => setSwitchTarget(e.target.value)}
-                disabled={localModels.length === 0}
-              >
-                <option value="">(전환할 모델 선택)</option>
-                {localModels.map((m) => (
-                  <option key={`sw-${m.id}`} value={m.id}>{m.id}</option>
-                ))}
-              </select>
-              <button
-                onClick={handleSwitch}
-                disabled={isSwitching || !switchTarget.trim()}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-accent/20 text-accent hover:bg-accent/30 disabled:opacity-40 disabled:cursor-not-allowed transition-colors text-xs shrink-0"
-              >
-                {isSwitching ? <Loader2 size={11} className="animate-spin" /> : <ArrowLeftRight size={11} />}
-                전환
-              </button>
-            </div>
-            {localModels.length === 0 && (
-              <p className="text-[10px] text-yellow-400/60">다운로드된 모델이 없습니다 — 모델 관리자에서 먼저 다운로드하세요.</p>
-            )}
-          </section>
-
           <section className="space-y-2">
             <div className="flex items-center justify-between">
               <h3 className="flex items-center gap-1.5 text-[11px] font-semibold text-white/40 uppercase tracking-wider">
-                <GitFork size={9} /> Heavy Track 상태 (mistral.rs · 30B+)
+                <GitFork size={9} /> mistral.rs (단일 추론 엔진)
               </h3>
               <button onClick={checkMistralStatus} className="text-white/30 hover:text-white/60 transition-colors" title="새로고침">
                 <RefreshCw size={10} />
