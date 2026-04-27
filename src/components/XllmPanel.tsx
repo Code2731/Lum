@@ -5,7 +5,7 @@ import { useModelCatalog } from "../hooks/useModelCatalog";
 import {
   SlidersHorizontal, Loader2, X, RefreshCw, ArrowLeftRight,
   Zap, Database, Cpu, CheckCircle2, GitFork, Sparkles,
-  Download, Play, Square, AlertTriangle,
+  Download, Play, Square,
 } from "lucide-react";
 
 interface AppConfig {
@@ -52,13 +52,6 @@ interface ModelInfo {
   rope_scale?: number;
 }
 
-interface TabbyApiStatus {
-  installed: boolean;
-  running: boolean;
-  port: number | null;
-  version: string | null;
-}
-
 type CacheMode = "Q4" | "Q8" | "FP16";
 
 const CACHE_MODES: { value: CacheMode; label: string; desc: string }[] = [
@@ -101,65 +94,28 @@ const XllmPanel: React.FC<Props> = ({ onClose }) => {
   const [isLoadingInfo, setIsLoadingInfo] = useState(false);
   const switchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // TabbyAPI / MLX-LM 상태
-  const [tabbyStatus, setTabbyStatus] = useState<TabbyApiStatus | null>(null);
   // mistral.rs (Heavy Track) 상태
   const [mistralStatus, setMistralStatus] = useState<{ running: boolean; url: string; model: string | null } | null>(null);
   const [isMistralBusy, setIsMistralBusy] = useState<"install" | "start" | "stop" | null>(null);
   const [mistralLog, setMistralLog] = useState<string[]>([]);
   const mistralLogRef = useRef<HTMLDivElement>(null);
-  const [isCheckingTabby, setIsCheckingTabby] = useState(false);
-  const [isInstallingTabby, setIsInstallingTabby] = useState(false);
-  const [isStartingTabby, setIsStartingTabby] = useState(false);
-  const [installLog, setInstallLog] = useState<string | null>(null);
-  const [recommendedPort, setRecommendedPort] = useState(5001);
-  const [dlProgress, setDlProgress] = useState<{ percent: number; done: boolean } | null>(null);
-  const [isAppleSilicon, setIsAppleSilicon] = useState(false);
-  const [isIntelMac, setIsIntelMac] = useState(false);
-  const [selectedMlxModel, setSelectedMlxModel] = useState("mlx-community/Qwen2.5-Coder-7B-Instruct-4bit");
   const [localModels, setLocalModels] = useState<{ id: string; size_mb: number }[]>([]);
+  // Phase 85a-3: TabbyAPI 제거 후 isAppleSilicon은 사용 안 됨이지만 *기존 섹션
+  // (cache_mode/role/SSD)*이 isAppleSilicon 분기에 의존 — 항상 false 고정으로
+  // NVIDIA path만 렌더. 해당 섹션들의 진짜 정리는 다음 리팩토링.
+  const isAppleSilicon = false;
 
   useEffect(() => {
     return () => { if (switchTimerRef.current) clearTimeout(switchTimerRef.current); };
   }, []);
 
-  const checkTabbyStatus = useCallback(() => {
-    setIsCheckingTabby(true);
-    invoke<TabbyApiStatus>("check_tabbyapi_status")
-      .then((s) => {
-        setTabbyStatus(s);
-        if (s.running && s.port) {
-          setConfig((c) => ({ ...c, xllm_base_url: `http://127.0.0.1:${s.port}` }));
-          // 서버 실행 중이면 모델 정보도 갱신
-          refreshModelInfo();
-        }
-      })
-      .catch(() => setTabbyStatus({ installed: false, running: false, port: null, version: null }))
-      .finally(() => setIsCheckingTabby(false));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   useEffect(() => {
     invoke<AppConfig>("load_app_config").then(setConfig).catch(() => {});
-    invoke<string>("get_platform_arch").then((a) => {
-      setIsAppleSilicon(a === "aarch64");
-      setIsIntelMac(a === "intel-mac");
-    }).catch(() => {});
     invoke<{ id: string; size_mb: number }[]>("list_local_models")
       .then((m) => setLocalModels(m.filter((x) => x.size_mb > 0)))
       .catch(() => {});
     refreshModelInfo();
-    checkTabbyStatus();
     checkMistralStatus();
-    invoke<number>("get_recommended_port").then(setRecommendedPort).catch(() => {});
-  }, []);
-
-  // 설치 진행 로그 수신
-  useEffect(() => {
-    const unlisten = listen<string>("tabbyapi_install_progress", (e) => {
-      setInstallLog(e.payload);
-    });
-    return () => { unlisten.then((fn) => fn()); };
   }, []);
 
   // mistral.rs 빌드 로그 — cargo stdout/stderr 한 줄씩 실시간 수신
@@ -178,21 +134,6 @@ const XllmPanel: React.FC<Props> = ({ onClose }) => {
     });
     return () => { unlisten.then((fn) => fn()); };
   }, []);
-
-  // 모델 다운로드 진행률 수신
-  useEffect(() => {
-    const unlisten = listen<{ percent: number; done: boolean }>("mlx_download_progress", (e) => {
-      setDlProgress(e.payload);
-      if (e.payload.done) {
-        setTimeout(() => {
-          setDlProgress(null);
-          checkTabbyStatus();
-          refreshModelInfo();
-        }, 2000);
-      }
-    });
-    return () => { unlisten.then((fn) => fn()); };
-  }, [checkTabbyStatus]);
 
   const refreshModelInfo = useCallback(() => {
     setIsLoadingInfo(true);
@@ -257,18 +198,6 @@ const XllmPanel: React.FC<Props> = ({ onClose }) => {
     }
   }, [checkMistralStatus]);
 
-  // TabbyAPI 상태 이벤트 — 모델 자동 로드 진행/완료/실패
-  useEffect(() => {
-    const unlisten = listen<{ stage: string; message: string; model?: string }>("tabby_status", (e) => {
-      setStatusMsg(e.payload.message);
-      if (e.payload.stage === "ready") {
-        invoke<TabbyApiStatus>("check_tabbyapi_status").then(setTabbyStatus).catch(() => {});
-        refreshModelInfo();
-      }
-    });
-    return () => { unlisten.then((fn) => fn()); };
-  }, [refreshModelInfo]);
-
   const handleSave = useCallback(async () => {
     setIsSaving(true);
     setStatusMsg(null);
@@ -296,63 +225,6 @@ const XllmPanel: React.FC<Props> = ({ onClose }) => {
       setIsSaving(false);
     }
   }, [config]);
-
-  const handleInstallTabby = useCallback(async () => {
-    setIsInstallingTabby(true);
-    setInstallLog("설치 중...");
-    try {
-      await invoke("install_tabbyapi");
-      checkTabbyStatus();
-    } catch (e) {
-      setInstallLog(`❌ ${errMsg(e)}`);
-    } finally {
-      setIsInstallingTabby(false);
-    }
-  }, [checkTabbyStatus]);
-
-  const handleStartTabby = useCallback(async () => {
-    setIsStartingTabby(true);
-    try {
-      const msg = await invoke<string>("start_tabbyapi", {
-        port: recommendedPort,
-        model: isAppleSilicon ? selectedMlxModel : null,
-      });
-      setStatusMsg(msg);
-      // 30초 동안 1초 간격 폴링 — 서버가 떠오르면 바로 UI 갱신
-      let attempts = 0;
-      const poll = setInterval(async () => {
-        attempts += 1;
-        try {
-          const s = await invoke<TabbyApiStatus>("check_tabbyapi_status");
-          if (s.running) {
-            setTabbyStatus(s);
-            if (s.port) setConfig((c) => ({ ...c, xllm_base_url: `http://127.0.0.1:${s.port}` }));
-            refreshModelInfo();
-            clearInterval(poll);
-          } else if (attempts >= 30) {
-            clearInterval(poll);
-            setStatusMsg("서버가 30초 내에 응답하지 않습니다 — lum_tabby.log 확인");
-          }
-        } catch {
-          if (attempts >= 30) clearInterval(poll);
-        }
-      }, 1000);
-    } catch (e) {
-      setStatusMsg(`시작 실패: ${errMsg(e)}`);
-    } finally {
-      setIsStartingTabby(false);
-    }
-  }, [recommendedPort, isAppleSilicon, selectedMlxModel, refreshModelInfo]);
-
-  const handleStopTabby = useCallback(async () => {
-    try {
-      const msg = await invoke<string>("stop_tabbyapi");
-      setStatusMsg(msg);
-      setTimeout(checkTabbyStatus, 1000);
-    } catch (e) {
-      setStatusMsg(`중지 실패: ${errMsg(e)}`);
-    }
-  }, [checkTabbyStatus]);
 
   const handleSwitch = useCallback(async () => {
     if (!switchTarget.trim()) return;
@@ -391,125 +263,8 @@ const XllmPanel: React.FC<Props> = ({ onClose }) => {
 
         <div className="flex-1 overflow-y-auto p-4 space-y-5">
 
-          {/* ── TabbyAPI 상태 ───────────────────────────────────── */}
-          <section className="space-y-2">
-            <div className="flex items-center justify-between">
-              <label className="text-[10px] text-white/40 uppercase tracking-wider flex items-center gap-1.5">
-                <Zap size={9} /> TabbyAPI 상태
-              </label>
-              <button onClick={checkTabbyStatus} className="text-white/30 hover:text-white/60 transition-colors" title="새로고침">
-                <RefreshCw size={10} className={isCheckingTabby ? "animate-spin" : ""} />
-              </button>
-            </div>
-
-            <div className="bg-white/3 border border-white/8 rounded-lg p-3 space-y-3">
-              {/* 상태 표시 */}
-              <div className="flex items-center gap-2">
-                {tabbyStatus === null || isCheckingTabby ? (
-                  <><Loader2 size={11} className="animate-spin text-white/30" /><span className="text-[11px] text-white/40">확인 중...</span></>
-                ) : tabbyStatus.running ? (
-                  <><span className="w-2 h-2 rounded-full bg-green-400 shrink-0" /><span className="text-[11px] text-green-400 font-medium">실행 중 (포트 {tabbyStatus.port})</span></>
-                ) : tabbyStatus.installed ? (
-                  <><span className="w-2 h-2 rounded-full bg-yellow-400 shrink-0" /><span className="text-[11px] text-yellow-400 font-medium">설치됨 — 미실행</span></>
-                ) : (
-                  <><span className="w-2 h-2 rounded-full bg-red-400 shrink-0" /><span className="text-[11px] text-red-400 font-medium">미설치</span></>
-                )}
-              </div>
-
-              {/* Apple Silicon 모델 선택 */}
-              {isAppleSilicon && tabbyStatus?.installed && !tabbyStatus.running && (
-                <div className="space-y-1">
-                  <span className="text-[10px] text-white/35">로드할 모델 선택</span>
-                  <select
-                    value={selectedMlxModel}
-                    onChange={(e) => setSelectedMlxModel(e.target.value)}
-                    className="w-full bg-white/5 border border-white/10 rounded px-2 py-1.5 text-[11px] outline-none focus:border-accent/50 transition-colors"
-                  >
-                    <option value="mlx-community/Qwen2.5-Coder-7B-Instruct-4bit">Qwen2.5-Coder 7B — 4.5GB (빠름)</option>
-                    <option value="mlx-community/Qwen2.5-Coder-14B-Instruct-4bit">Qwen2.5-Coder 14B — 8.5GB (균형)</option>
-                    <option value="mlx-community/Qwen2.5-Coder-32B-Instruct-4bit">Qwen2.5-Coder 32B — 19GB ★ 36GB 추천</option>
-                    <option value="mlx-community/Llama-3.3-70B-Instruct-4bit">Llama 3.3 70B — 38GB (Ultra 전용)</option>
-                  </select>
-                </div>
-              )}
-
-              {/* Intel Mac 안내 — 설치/실행 불가 */}
-              {isIntelMac && (
-                <div className="px-3 py-2 rounded bg-yellow-400/5 border border-yellow-400/15 text-[11px] text-yellow-300/80">
-                  ⚠ Intel Mac은 로컬 AI 서버(MLX / CUDA)를 지원하지 않습니다. 설정에서 <b>Gemini API</b> 키를 입력해 클라우드 폴백을 사용하세요.
-                </div>
-              )}
-
-              {/* 버튼 */}
-              {!isIntelMac && tabbyStatus && !isCheckingTabby && (
-                <div className="flex gap-2">
-                  {!tabbyStatus.installed && (
-                    <button
-                      onClick={handleInstallTabby}
-                      disabled={isInstallingTabby}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-accent/80 hover:bg-accent text-white text-[11px] rounded font-medium disabled:opacity-50 transition-colors"
-                    >
-                      {isInstallingTabby ? <Loader2 size={10} className="animate-spin" /> : <Download size={10} />}
-                      로컬 AI 서버 설치
-                    </button>
-                  )}
-                  {tabbyStatus.installed && !tabbyStatus.running && (
-                    <button
-                      onClick={handleStartTabby}
-                      disabled={isStartingTabby}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600/70 hover:bg-green-600 text-white text-[11px] rounded font-medium disabled:opacity-50 transition-colors"
-                    >
-                      {isStartingTabby ? <Loader2 size={10} className="animate-spin" /> : <Play size={10} />}
-                      실행 (포트 {recommendedPort})
-                    </button>
-                  )}
-                  {tabbyStatus.running && (
-                    <button
-                      onClick={handleStopTabby}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-red-600/60 hover:bg-red-600 text-white text-[11px] rounded font-medium transition-colors"
-                    >
-                      <Square size={10} />
-                      중지
-                    </button>
-                  )}
-                </div>
-              )}
-
-              {/* 포트 충돌 경고 */}
-              {recommendedPort !== 5000 && !tabbyStatus?.running && (
-                <p className="text-[10px] text-yellow-400/70 flex items-center gap-1">
-                  <AlertTriangle size={9} />
-                  포트 5000이 사용 중 (AirPlay 등) — 포트 {recommendedPort}로 실행됩니다
-                </p>
-              )}
-
-              {/* 모델 다운로드 프로그레스 바 */}
-              {dlProgress && !dlProgress.done && (
-                <div className="space-y-1">
-                  <div className="flex items-center justify-between text-[10px] text-white/50">
-                    <span>모델 다운로드 중...</span>
-                    <span>{dlProgress.percent}%</span>
-                  </div>
-                  <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-accent rounded-full transition-all duration-300"
-                      style={{ width: `${dlProgress.percent}%` }}
-                    />
-                  </div>
-                </div>
-              )}
-              {dlProgress?.done && (
-                <p className="text-[10px] text-green-400 font-medium">✅ 모델 로드 완료 — AI 사용 가능!</p>
-              )}
-
-              {/* 설치 로그 */}
-              {installLog && !dlProgress && (
-                <p className={`text-[10px] leading-relaxed ${installLog.startsWith("❌") ? "text-red-400" : "text-white/50"}`}>
-                  {installLog}
-                </p>
-              )}
-            </div>
-          </section>
+          {/* Phase 85a-3: TabbyAPI UI 섹션 제거됨. 추론 엔진은 mistral.rs 단일.
+              아래 mistral.rs Heavy Track 섹션이 메인 시작/중지 UI. */}
 
           {/* 서버 URL */}
           <section className="space-y-1.5">

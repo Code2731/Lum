@@ -61,7 +61,9 @@ const ModelManager: React.FC<Props> = ({ onClose, recommendedModel: _recommended
   const [mistralLog, setMistralLog] = useState<string[]>([]);
   const [mistralBusy, setMistralBusy] = useState(false);
   const [mistralLocal, setMistralLocal] = useState<Array<{ repo_id: string; path: string; size_mb: number }>>([]);
-  const [isAppleSilicon, setIsAppleSilicon] = useState(false);
+  // Phase 85a-3: TabbyAPI 제거 후 mistral.rs 단일 엔진 — Apple/NVIDIA 분기 제거.
+  // 기존 isAppleSilicon 의존 UI는 항상 NVIDIA path로 렌더 (다음 리팩토링에서 정리).
+  const isAppleSilicon = false;
   const [categoryFilter, setCategoryFilter] = useState<ModelCategory | "all">("all");
   const [loadedModelId, setLoadedModelId] = useState<string | null>(null);
   const [loadingModel, setLoadingModel] = useState<string | null>(null);
@@ -218,22 +220,16 @@ const ModelManager: React.FC<Props> = ({ onClose, recommendedModel: _recommended
     return () => { unlisten.then((fn) => fn()); };
   }, [fetchLoaded]);
 
-  const useModel = useCallback(async (modelId: string, modelPath?: string) => {
+  const useModel = useCallback(async (modelId: string, _modelPath?: string) => {
+    // Phase 85a-3: TabbyAPI 제거 후 mistral.rs 단일 엔진 — Apple/NVIDIA 분기 제거.
+    // mistral.rs 모델 전환은 별도 mistral_setup 흐름.
     setLoadingModel(modelId);
     setLoadMsg(null);
     setLoadProgress({ percent: 0, done: false });
     try {
-      if (isAppleSilicon) {
-        // MLX-LM은 동적 모델 전환 미지원 — 로컬 경로로 서버 재시작
-        // port:0 → 백엔드에서 실행 중인 포트 자동 감지 (하드코딩 5000 제거)
-        const target = modelPath ?? modelId.replace("--", "/");
-        await invoke("restart_with_model", { port: 0, model: target });
-        // 진행률은 아래 progress 이벤트 리스너가 관리
-      } else {
-        const msg = await invoke<string>("switch_xllm_model", { modelName: modelId, cacheMode: null, maxSeqLen: null });
-        setLoadMsg(`✅ ${msg}`);
-        setLoadProgress(null);
-      }
+      const msg = await invoke<string>("switch_xllm_model", { modelName: modelId, cacheMode: null, maxSeqLen: null });
+      setLoadMsg(`✅ ${msg}`);
+      setLoadProgress(null);
       fetchLoaded();
     } catch (e) {
       const raw = e as { message?: string } | string | null;
@@ -243,7 +239,7 @@ const ModelManager: React.FC<Props> = ({ onClose, recommendedModel: _recommended
     } finally {
       setLoadingModel(null);
     }
-  }, [isAppleSilicon, fetchLoaded]);
+  }, [fetchLoaded]);
 
   const loadLocalModels = useCallback(async () => {
     try {
@@ -263,7 +259,6 @@ const ModelManager: React.FC<Props> = ({ onClose, recommendedModel: _recommended
   }, []);
 
   useEffect(() => {
-    invoke<string>("get_platform_arch").then((a) => setIsAppleSilicon(a === "aarch64")).catch(() => {});
     // 저장된 HF 토큰 불러오기
     invoke<{ hf_token?: string }>("load_app_config")
       .then((c) => { if (c.hf_token) setHfToken(c.hf_token); })
