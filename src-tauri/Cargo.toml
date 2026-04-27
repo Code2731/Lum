@@ -22,6 +22,9 @@ path = "src/bin/mcp_server.rs"
 default = []
 # GPU 기반 로컬 추론 인프라 (burn/wgpu/tokenizers — 개발/실험용)
 local-ai = ["dep:burn", "dep:burn-wgpu", "dep:wgpu", "dep:tokenizers", "dep:hf-hub", "dep:safetensors", "dep:half", "dep:bytemuck"]
+# Phase 85b — mistralrs-core를 LUM 프로세스 안에 직접 임베딩 (subprocess spawn 제거).
+# CUDA toolchain 12.x + 첫 빌드 5~15분. 활성화: cargo build --features embedded-ai
+embedded-ai = ["dep:mistralrs-core"]
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
@@ -57,10 +60,6 @@ tree-sitter-javascript = "0.23"
 tree-sitter-python = "0.23"
 petgraph = "0.6"
 
-# Phase 71 — NVIDIA GPU 정확 VRAM (NVML). Windows/Linux 전용 — macOS는 sysinfo(통합 메모리).
-[target.'cfg(not(target_os = "macos"))'.dependencies]
-nvml-wrapper = "0.10"
-
 # local-ai 피처일 때만 컴파일 (기본 배포에서 제외 → 바이너리 ~150MB 절감)
 burn     = { version = "0.16.0", features = ["wgpu"], optional = true }
 burn-wgpu = { version = "0.16.0", optional = true }
@@ -70,3 +69,11 @@ hf-hub   = { version = "0.3", optional = true }
 safetensors = { version = "0.7.0", optional = true }
 half = { version = "2.7.1", optional = true }
 bytemuck = { version = "1.25.0", features = ["derive"], optional = true }
+
+# Phase 85b — mistralrs-core 내장 (optional, embedded-ai feature 활성화 시만).
+# Windows/Linux: CUDA features. macOS는 별도 흐름(현재 미적용).
+mistralrs-core = { version = "0.8.1", features = ["cuda"], optional = true }
+
+# Phase 71 — NVIDIA GPU 정확 VRAM (NVML). Windows/Linux 전용 — macOS는 sysinfo(통합 메모리).
+[target.'cfg(not(target_os = "macos"))'.dependencies]
+nvml-wrapper = "0.10"
