@@ -54,3 +54,5 @@ pub async fn infer_once(prompt: &str) -> Result<String, String> {
         .unwrap_or_default();
     Ok(text)
 }
+
+// Tauri command 노출은 commands::embed 모듈의 facade에서. 여기는 순수 라이브러리.
