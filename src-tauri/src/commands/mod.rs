@@ -3,6 +3,8 @@ pub mod ai;
 pub mod config;
 pub mod context;
 pub mod mistral_setup;
+#[cfg(feature = "embedded-ai")]
+pub mod mistralrs_inline;
 pub mod router;
 pub mod edit_apply;
 pub mod env;
