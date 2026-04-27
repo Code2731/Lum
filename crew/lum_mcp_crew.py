@@ -37,12 +37,8 @@ server_params = StdioServerParameters(
 fast = make_llm("fast", temperature=TEMP_CODE)
 
 USER_REQUEST = (
-    f"LUM 프로젝트 루트는 '{LUM_PROJECT_ROOT}'다.\n\n"
-    "다음 작업을 도구를 사용해 수행:\n"
-    "1. list_directory로 'src-tauri/src/commands' 폴더의 파일 목록 확인\n"
-    "2. git_diff(cwd=루트)로 현재 unstaged 변경 사항 조회\n"
-    "3. 위 결과를 종합해 한국어로 짧게 요약 (3~5줄)\n\n"
-    "각 단계마다 적절한 도구를 직접 호출할 것."
+    f"`{LUM_PROJECT_ROOT}` 폴더의 파일 목록을 list_directory 도구로 조회하고, "
+    "결과 그대로 한국어 한 줄로 요약. 코드 작성 금지, 도구 호출만."
 )
 
 if __name__ == "__main__":
@@ -59,7 +55,10 @@ if __name__ == "__main__":
             goal="LUM-MCP 도구로 파일·디렉토리·git을 직접 조회하고 결과를 요약",
             backstory=(
                 "LUM 프로젝트의 자체 도구(read_file / list_directory / git_diff 등)에 "
-                "stdio MCP로 직접 접근하는 분석 에이전트. 추측하지 않고 도구 호출로 검증."
+                "stdio MCP로 직접 접근하는 분석 에이전트. "
+                "절대 규칙: Python 코드를 작성하지 않는다. import 하지 않는다. "
+                "오직 제공된 tool을 함수 호출(function calling)로 직접 부른다. "
+                "도구 결과를 받기 전에는 어떤 답도 추측하지 않는다."
             ),
             llm=fast,
             tools=list(tools),
