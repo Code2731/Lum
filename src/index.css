@@ -8,6 +8,8 @@
   --border: rgba(255, 255, 255, 0.1);
   background-color: var(--terminal-dark);
   color: white;
+  /* OS native <option> 드롭다운을 다크 모드로 그리도록 강제 — 흰 배경에 흰 글씨 회피 */
+  color-scheme: dark;
 }
 
 body {

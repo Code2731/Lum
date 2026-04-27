@@ -45,6 +45,8 @@ fn read_model_dir_from_config(server_dir: &std::path::Path) -> Option<String> {
 /// - `utilization`: 0.50 ~ 0.95 — VRAM 사용 상한 비율
 /// - `total_vram_gb`: 감지된 GPU VRAM (없으면 16GB 보수적 가정)
 /// - `max_seq_len`: None이면 VRAM 기반 자동 계산
+/// - `model_name`: Phase 84 — TabbyAPI는 시작 시 model_name이 명시돼야 draft 자동 로드를
+///   활성화한다. None이면 시작 시 모델 미로드 + LUM이 별도 inline API로 로드 (구 흐름).
 /// - `draft_model`: Phase 84 — Speculative Decoding 드래프트 모델 폴더 이름.
 ///   `model_dir` 안에 같은 토크나이저의 작은 모델 폴더가 있어야 동작.
 fn write_tabby_config(
@@ -55,6 +57,7 @@ fn write_tabby_config(
     max_seq_len: Option<u32>,
     cache_mode: &str,
     model_dir: &str,
+    model_name: Option<&str>,
     draft_model: Option<&str>,
 ) -> Result<()> {
     let vram = total_vram_gb.unwrap_or(16.0);
@@ -66,6 +69,13 @@ fn write_tabby_config(
         ((usable * 4096.0) as u32).clamp(4096, 32768)
     });
 
+    // model_name 라인: Some이고 비어있지 않을 때만 추가. TabbyAPI는 model_name이 있어야
+    // 시작 시 자동 로드 + draft 자동 활성화. 없으면 inline API로 로드해야 함(SSD 무효).
+    let model_name_yaml = match model_name.map(str::trim).filter(|s| !s.is_empty()) {
+        Some(name) => format!("  model_name: {name}\n"),
+        None => String::new(),
+    };
+
     // draft_model 섹션: Some이고 비어있지 않을 때만 추가. ExLlamaV2가 메인과 같은
     // 토크나이저인지 자체 검증하므로 LUM은 폴더명만 전달.
     let draft_yaml = match draft_model.map(str::trim).filter(|s| !s.is_empty()) {
@@ -76,7 +86,7 @@ fn write_tabby_config(
     };
 
     let yaml = format!(
-        "network:\n  host: 127.0.0.1\n  port: {port}\n  disable_auth: true\n\nlogging:\n  log_prompt: false\n  log_generation_params: false\n  log_requests: false\n\nmodel:\n  model_dir: {model_dir}\n  inline_model_loading: false\n  cache_mode: {cache_mode}\n  max_seq_len: {seq_len}\n  gpu_split_auto: true\n  autosplit_reserve: [{reserve_mb}]\n{draft_yaml}\ndeveloper:\n  unsafe_launch: false\n  disable_request_streaming: false\n",
+        "network:\n  host: 127.0.0.1\n  port: {port}\n  disable_auth: true\n\nlogging:\n  log_prompt: false\n  log_generation_params: false\n  log_requests: false\n\nmodel:\n  model_dir: {model_dir}\n{model_name_yaml}  inline_model_loading: false\n  cache_mode: {cache_mode}\n  max_seq_len: {seq_len}\n  gpu_split_auto: true\n  autosplit_reserve: [{reserve_mb}]\n{draft_yaml}\ndeveloper:\n  unsafe_launch: false\n  disable_request_streaming: false\n",
     );
 
     let config_path = server_dir.join("config.yml");
@@ -601,6 +611,8 @@ pub async fn start_tabbyapi(
                 }
                 exists
             });
+        // Phase 84 — TabbyAPI는 model_name이 config.yml에 있어야 시작 시 draft 자동 활성화.
+        let main_model_name = cfg.coding_model.as_deref().filter(|s| !s.is_empty());
         if let Err(e) = write_tabby_config(
             &server_dir,
             port,
@@ -609,6 +621,7 @@ pub async fn start_tabbyapi(
             max_seq,
             cache_mode,
             &model_dir,
+            main_model_name,
             draft_model,
         ) {
             eprintln!("[lum] config.yml 쓰기 경고: {e} — 기본 설정으로 진행");
@@ -683,11 +696,40 @@ pub async fn start_tabbyapi(
             "message": format!("모델 로드 중: {model_to_load}")
         }));
         let load_url = format!("http://127.0.0.1:{port}/v1/model/load");
-        let body = serde_json::json!({
+        // Phase 84 — TabbyAPI는 inline 로드 시 config.yml의 draft 섹션을 무시하고
+        // API body의 draft_model_name만 본다. config.yml과 별개로 여기서도 같은
+        // 검증 후 함께 전송 (모델 폴더 부재면 SSD 비활성).
+        let model_dir_for_draft = cfg
+            .xllm_models_dir
+            .as_deref()
+            .filter(|s| !s.is_empty())
+            .map(String::from)
+            .or_else(|| {
+                dirs::home_dir().and_then(|h| {
+                    let d = if cfg!(target_arch = "aarch64") { h.join(".lum_mlx") } else { h.join("tabbyAPI") };
+                    read_model_dir_from_config(&d)
+                })
+            });
+        let draft_to_load = cfg
+            .draft_model
+            .as_deref()
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .filter(|name| {
+                model_dir_for_draft
+                    .as_ref()
+                    .map(|d| std::path::Path::new(d).join(name).is_dir())
+                    .unwrap_or(false)
+            });
+        let mut body = serde_json::json!({
             "model_name": model_to_load,
             "cache_mode": cfg.cache_mode.as_deref().unwrap_or("Q8"),
             "max_seq_len": cfg.max_seq_len.unwrap_or(8192),
         });
+        if let Some(draft_name) = draft_to_load {
+            body["draft_model_name"] = serde_json::Value::String(draft_name.to_string());
+            body["draft_cache_mode"] = serde_json::Value::String("FP16".to_string());
+        }
         let mut req = client.post(&load_url)
             .timeout(std::time::Duration::from_secs(300))
             .json(&body);
@@ -795,7 +837,7 @@ mod tests {
         let tmp = std::env::temp_dir().join("lum_tabby_test");
         fs::create_dir_all(&tmp).unwrap();
 
-        write_tabby_config(&tmp, 5000, 0.80, Some(24.0), Some(16384), "Q8", "/custom/models", None).unwrap();
+        write_tabby_config(&tmp, 5000, 0.80, Some(24.0), Some(16384), "Q8", "/custom/models", None, None).unwrap();
 
         let yaml = fs::read_to_string(tmp.join("config.yml")).unwrap();
         assert!(yaml.contains("port: 5000"));
@@ -841,7 +883,7 @@ mod tests {
         fs::create_dir_all(&tmp).unwrap();
 
         // 0.30(50% 미만)은 0.50으로 clamp → reserve = 10GB × 50% = 5120MB
-        write_tabby_config(&tmp, 5001, 0.30, Some(10.0), Some(8192), "Q4", "models", None).unwrap();
+        write_tabby_config(&tmp, 5001, 0.30, Some(10.0), Some(8192), "Q4", "models", None, None).unwrap();
         let yaml = fs::read_to_string(tmp.join("config.yml")).unwrap();
         assert!(yaml.contains("autosplit_reserve: [5120]"));
 
@@ -854,7 +896,7 @@ mod tests {
         fs::create_dir_all(&tmp).unwrap();
 
         // 16GB × 80% = 12.8GB usable → seq_len = 12.8 × 4096 ≈ 52428 → clamp 32768
-        write_tabby_config(&tmp, 5002, 0.80, Some(16.0), None, "Q8", "models", None).unwrap();
+        write_tabby_config(&tmp, 5002, 0.80, Some(16.0), None, "Q8", "models", None, None).unwrap();
         let yaml = fs::read_to_string(tmp.join("config.yml")).unwrap();
         assert!(yaml.contains("max_seq_len: 32768"));
 
@@ -870,7 +912,7 @@ mod tests {
 
         write_tabby_config(
             &tmp, 5003, 0.80, Some(10.0), Some(4096), "Q8",
-            "/x/models", Some("Qwen2.5-Coder-1.5B-exl2"),
+            "/x/models", None, Some("Qwen2.5-Coder-1.5B-exl2"),
         ).unwrap();
         let yaml = fs::read_to_string(tmp.join("config.yml")).unwrap();
         assert!(yaml.contains("draft_model:"));
@@ -881,10 +923,34 @@ mod tests {
         // 빈 문자열은 비활성과 동일
         write_tabby_config(
             &tmp, 5004, 0.80, Some(10.0), Some(4096), "Q8",
-            "/x/models", Some("   "),
+            "/x/models", None, Some("   "),
         ).unwrap();
         let yaml = fs::read_to_string(tmp.join("config.yml")).unwrap();
         assert!(!yaml.contains("draft_model:"));
+
+        fs::remove_dir_all(&tmp).ok();
+    }
+
+    // Phase 84 — model_name이 Some이면 model 섹션에 라인 추가, None이면 부재.
+    // TabbyAPI는 model_name이 있어야 시작 시 draft 자동 활성화 가능.
+    #[test]
+    fn write_tabby_config_main_model_name_section() {
+        let tmp = std::env::temp_dir().join("lum_tabby_test_mname");
+        fs::create_dir_all(&tmp).unwrap();
+
+        write_tabby_config(
+            &tmp, 5005, 0.80, Some(10.0), Some(4096), "Q8",
+            "/x/models", Some("Qwen2.5-Coder-7B"), None,
+        ).unwrap();
+        let yaml = fs::read_to_string(tmp.join("config.yml")).unwrap();
+        assert!(yaml.contains("model_name: Qwen2.5-Coder-7B"));
+
+        write_tabby_config(
+            &tmp, 5006, 0.80, Some(10.0), Some(4096), "Q8",
+            "/x/models", None, None,
+        ).unwrap();
+        let yaml = fs::read_to_string(tmp.join("config.yml")).unwrap();
+        assert!(!yaml.contains("model_name:"));
 
         fs::remove_dir_all(&tmp).ok();
     }
