@@ -95,35 +95,12 @@ const App: React.FC = () => {
     return () => clearInterval(t);
   }, [refreshLoadedModel, refreshHeavyConfig]);
 
-  // TabbyAPI 자동 시작 — 설치돼 있고 안 돌고 있으면 시작
+  // Phase 85a-2: TabbyAPI 제거됨. mistral.rs는 사용자가 XllmPanel에서 명시적으로 [실행].
+  // 설정 저장 / 모델 전환 이벤트만 유지.
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const cfg = await invoke<Record<string, unknown>>("load_app_config").catch(() => ({} as Record<string, unknown>));
-        if (cfg.xllm_auto_start === false) return; // 명시적 false만 차단 (기본은 true)
-        const status = await invoke<{ installed: boolean; running: boolean; port: number | null }>(
-          "check_tabbyapi_status"
-        );
-        if (cancelled || !status.installed || status.running) return;
-        const port = await invoke<number>("get_recommended_port").catch(() => 5000);
-        await invoke("start_tabbyapi", { port, model: null });
-      } catch (e) {
-        console.warn("[xllm] 자동 시작 실패:", e);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, []);
-
-  // TabbyAPI 자동 로드 / 설정 저장 / 모델 전환 이벤트 → 즉시 갱신
-  useEffect(() => {
-    const a = listen<{ stage: string }>("tabby_status", (e: { payload: { stage: string } }) => {
-      if (e.payload.stage === "ready" || e.payload.stage === "error") refreshLoadedModel();
-    });
     const b = listen<unknown>("xllm_load_progress", () => refreshLoadedModel());
     const c = listen<unknown>("xllm_settings_saved", () => { refreshLoadedModel(); refreshHeavyConfig(); });
     return () => {
-      a.then((f: () => void) => f());
       b.then((f: () => void) => f());
       c.then((f: () => void) => f());
     };

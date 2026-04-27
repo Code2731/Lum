@@ -166,14 +166,6 @@ pub fn run() {
             commands::scripts::delete_script,
             // System Monitor
             commands::sysmon::get_system_stats,
-            // TabbyAPI / MLX-LM 설치·실행 관리
-            commands::tabbyapi_setup::get_platform_arch,
-            commands::tabbyapi_setup::check_tabbyapi_status,
-            commands::tabbyapi_setup::get_recommended_port,
-            commands::tabbyapi_setup::install_tabbyapi,
-            commands::tabbyapi_setup::start_tabbyapi,
-            commands::tabbyapi_setup::stop_tabbyapi,
-            commands::tabbyapi_setup::restart_with_model,
             // Phase 78: mistral.rs Heavy Track
             commands::mistral_setup::install_mistral_rs,
             commands::mistral_setup::start_mistral_rs,

@@ -1,5 +1,4 @@
 use crate::commands::config::load_config;
-use crate::commands::tabbyapi_setup::kill_on_port;
 use crate::error::{LumError, Result};
 use serde::{Deserialize, Serialize};
 use std::sync::Mutex;
@@ -17,6 +16,42 @@ fn no_window_std(_cmd: &mut std::process::Command) {}
 fn no_window_tokio(cmd: &mut tokio::process::Command) { cmd.creation_flags(0x08000000); }
 #[cfg(not(windows))]
 fn no_window_tokio(_cmd: &mut tokio::process::Command) {}
+
+/// 특정 포트에서 listening 중인 프로세스만 정확히 kill (다른 Python 앱 보호).
+/// Phase 85a-2에서 tabbyapi_setup.rs 제거되어 inline으로 이동.
+fn kill_on_port(port: u16) {
+    #[cfg(windows)]
+    {
+        let needle = format!(":{}", port);
+        if let Ok(out) = std::process::Command::new("netstat")
+            .args(["-ano", "-p", "TCP"])
+            .output()
+        {
+            let text = String::from_utf8_lossy(&out.stdout);
+            for line in text.lines() {
+                if line.contains(&needle) && line.contains("LISTENING") {
+                    if let Some(pid) = line.split_whitespace().last() {
+                        let _ = std::process::Command::new("taskkill")
+                            .args(["/F", "/PID", pid])
+                            .status();
+                    }
+                }
+            }
+        }
+    }
+    #[cfg(not(windows))]
+    {
+        if let Ok(out) = std::process::Command::new("lsof")
+            .args(["-ti", &format!(":{}", port), "-s", "TCP:LISTEN"])
+            .output()
+        {
+            let text = String::from_utf8_lossy(&out.stdout);
+            for pid in text.lines().map(|l| l.trim()).filter(|l| !l.is_empty()) {
+                let _ = std::process::Command::new("kill").args(["-9", pid]).status();
+            }
+        }
+    }
+}
 
 const MISTRAL_RS_PORT: u16 = 8080;
 const MISTRAL_RS_MAX_SEQ_LEN: u32 = 4096;
