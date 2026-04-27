@@ -260,6 +260,7 @@ npm run tauri dev
 - [x] Phase 82a/b: LUM-MCP-server (Rust 네이티브 stdio JSON-RPC, 7개 도구 노출, Cargo `[[bin]]`로 분리)
 - [x] Phase 82c: CrewAI ↔ lum-mcp 통합 (MCPServerAdapter + StdioServerParameters, 7개 도구 BaseTool 자동 변환)
 - [x] Phase 83: DRAM/VRAM 계층화 자동화 (mistral.rs `--pa-ctxt-len`/`--pa-gpu-mem-usage`/`-n` 자동 주입, safety_mode 연동, 30B+ 실용화)
+- [x] Phase 84: SSD (Speculative Decoding) 서버 사이드 통합 (TabbyAPI `config.yml`에 `draft_model:` 섹션 자동 주입, 폴더 검증 후 활성/비활성 결정, Phase 37 body 인자가 진짜 동작; Cargo `default-run = "tauri-app"` 회귀 fix)
 
 </details>
 

@@ -4,6 +4,8 @@ version = "0.3.0"
 description = "A Tauri App"
 authors = ["you"]
 edition = "2021"
+# Phase 82 binary 추가 후 cargo run이 모호해짐 — Tauri 본체를 기본으로 명시.
+default-run = "tauri-app"
 
 [lib]
 name = "tauri_app_lib"

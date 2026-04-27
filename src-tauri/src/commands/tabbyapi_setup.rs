@@ -45,6 +45,8 @@ fn read_model_dir_from_config(server_dir: &std::path::Path) -> Option<String> {
 /// - `utilization`: 0.50 ~ 0.95 — VRAM 사용 상한 비율
 /// - `total_vram_gb`: 감지된 GPU VRAM (없으면 16GB 보수적 가정)
 /// - `max_seq_len`: None이면 VRAM 기반 자동 계산
+/// - `draft_model`: Phase 84 — Speculative Decoding 드래프트 모델 폴더 이름.
+///   `model_dir` 안에 같은 토크나이저의 작은 모델 폴더가 있어야 동작.
 fn write_tabby_config(
     server_dir: &std::path::Path,
     port: u16,
@@ -53,6 +55,7 @@ fn write_tabby_config(
     max_seq_len: Option<u32>,
     cache_mode: &str,
     model_dir: &str,
+    draft_model: Option<&str>,
 ) -> Result<()> {
     let vram = total_vram_gb.unwrap_or(16.0);
     let util = utilization.clamp(0.50, 0.95);
@@ -63,8 +66,17 @@ fn write_tabby_config(
         ((usable * 4096.0) as u32).clamp(4096, 32768)
     });
 
+    // draft_model 섹션: Some이고 비어있지 않을 때만 추가. ExLlamaV2가 메인과 같은
+    // 토크나이저인지 자체 검증하므로 LUM은 폴더명만 전달.
+    let draft_yaml = match draft_model.map(str::trim).filter(|s| !s.is_empty()) {
+        Some(name) => format!(
+            "\ndraft_model:\n  draft_model_dir: {model_dir}\n  draft_model_name: {name}\n  draft_cache_mode: FP16\n"
+        ),
+        None => String::new(),
+    };
+
     let yaml = format!(
-        "network:\n  host: 127.0.0.1\n  port: {port}\n  disable_auth: true\n\nlogging:\n  log_prompt: false\n  log_generation_params: false\n  log_requests: false\n\nmodel:\n  model_dir: {model_dir}\n  inline_model_loading: false\n  cache_mode: {cache_mode}\n  max_seq_len: {seq_len}\n  gpu_split_auto: true\n  autosplit_reserve: [{reserve_mb}]\n\ndeveloper:\n  unsafe_launch: false\n  disable_request_streaming: false\n",
+        "network:\n  host: 127.0.0.1\n  port: {port}\n  disable_auth: true\n\nlogging:\n  log_prompt: false\n  log_generation_params: false\n  log_requests: false\n\nmodel:\n  model_dir: {model_dir}\n  inline_model_loading: false\n  cache_mode: {cache_mode}\n  max_seq_len: {seq_len}\n  gpu_split_auto: true\n  autosplit_reserve: [{reserve_mb}]\n{draft_yaml}\ndeveloper:\n  unsafe_launch: false\n  disable_request_streaming: false\n",
     );
 
     let config_path = server_dir.join("config.yml");
@@ -575,6 +587,20 @@ pub async fn start_tabbyapi(
             .map(|s| s.to_string())
             .or_else(|| read_model_dir_from_config(&server_dir))
             .unwrap_or_else(|| server_dir.join("models").to_string_lossy().into_owned());
+        // Phase 84 — draft 모델 폴더 존재 검증. 폴더 없으면 SSD 비활성으로 안전하게 계속 진행
+        // (사용자가 모델 다운로드 전에 이름만 입력한 경우 OOM 대신 명확한 안내).
+        let draft_model = cfg
+            .draft_model
+            .as_deref()
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .filter(|name| {
+                let exists = std::path::Path::new(&model_dir).join(name).is_dir();
+                if !exists {
+                    eprintln!("[lum] draft 모델 폴더 없음 → SSD 비활성: {model_dir}/{name}");
+                }
+                exists
+            });
         if let Err(e) = write_tabby_config(
             &server_dir,
             port,
@@ -583,6 +609,7 @@ pub async fn start_tabbyapi(
             max_seq,
             cache_mode,
             &model_dir,
+            draft_model,
         ) {
             eprintln!("[lum] config.yml 쓰기 경고: {e} — 기본 설정으로 진행");
         }
@@ -768,7 +795,7 @@ mod tests {
         let tmp = std::env::temp_dir().join("lum_tabby_test");
         fs::create_dir_all(&tmp).unwrap();
 
-        write_tabby_config(&tmp, 5000, 0.80, Some(24.0), Some(16384), "Q8", "/custom/models").unwrap();
+        write_tabby_config(&tmp, 5000, 0.80, Some(24.0), Some(16384), "Q8", "/custom/models", None).unwrap();
 
         let yaml = fs::read_to_string(tmp.join("config.yml")).unwrap();
         assert!(yaml.contains("port: 5000"));
@@ -780,6 +807,8 @@ mod tests {
             yaml.contains("autosplit_reserve: [4915]")
                 || yaml.contains("autosplit_reserve: [4916]")
         );
+        // draft None일 때 draft_model 섹션 부재
+        assert!(!yaml.contains("draft_model:"));
 
         fs::remove_dir_all(&tmp).ok();
     }
@@ -812,7 +841,7 @@ mod tests {
         fs::create_dir_all(&tmp).unwrap();
 
         // 0.30(50% 미만)은 0.50으로 clamp → reserve = 10GB × 50% = 5120MB
-        write_tabby_config(&tmp, 5001, 0.30, Some(10.0), Some(8192), "Q4", "models").unwrap();
+        write_tabby_config(&tmp, 5001, 0.30, Some(10.0), Some(8192), "Q4", "models", None).unwrap();
         let yaml = fs::read_to_string(tmp.join("config.yml")).unwrap();
         assert!(yaml.contains("autosplit_reserve: [5120]"));
 
@@ -825,9 +854,37 @@ mod tests {
         fs::create_dir_all(&tmp).unwrap();
 
         // 16GB × 80% = 12.8GB usable → seq_len = 12.8 × 4096 ≈ 52428 → clamp 32768
-        write_tabby_config(&tmp, 5002, 0.80, Some(16.0), None, "Q8", "models").unwrap();
+        write_tabby_config(&tmp, 5002, 0.80, Some(16.0), None, "Q8", "models", None).unwrap();
         let yaml = fs::read_to_string(tmp.join("config.yml")).unwrap();
         assert!(yaml.contains("max_seq_len: 32768"));
+
+        fs::remove_dir_all(&tmp).ok();
+    }
+
+    // Phase 84 — draft_model이 Some이면 yaml에 draft_model 섹션이 추가되고
+    // None/빈 문자열이면 섹션 부재.
+    #[test]
+    fn write_tabby_config_draft_model_section() {
+        let tmp = std::env::temp_dir().join("lum_tabby_test_draft");
+        fs::create_dir_all(&tmp).unwrap();
+
+        write_tabby_config(
+            &tmp, 5003, 0.80, Some(10.0), Some(4096), "Q8",
+            "/x/models", Some("Qwen2.5-Coder-1.5B-exl2"),
+        ).unwrap();
+        let yaml = fs::read_to_string(tmp.join("config.yml")).unwrap();
+        assert!(yaml.contains("draft_model:"));
+        assert!(yaml.contains("draft_model_dir: /x/models"));
+        assert!(yaml.contains("draft_model_name: Qwen2.5-Coder-1.5B-exl2"));
+        assert!(yaml.contains("draft_cache_mode: FP16"));
+
+        // 빈 문자열은 비활성과 동일
+        write_tabby_config(
+            &tmp, 5004, 0.80, Some(10.0), Some(4096), "Q8",
+            "/x/models", Some("   "),
+        ).unwrap();
+        let yaml = fs::read_to_string(tmp.join("config.yml")).unwrap();
+        assert!(!yaml.contains("draft_model:"));
 
         fs::remove_dir_all(&tmp).ok();
     }

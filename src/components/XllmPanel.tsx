@@ -892,6 +892,10 @@ const XllmPanel: React.FC<Props> = ({ onClose }) => {
                   />
                   <span className="text-[11px] text-white/25">권장 4–8</span>
                 </div>
+                <p className="text-[10px] text-white/25 bg-green-400/5 border border-green-400/10 rounded px-2.5 py-1.5">
+                  드래프트 모델은 <code className="font-mono text-white/40">config.yml</code>에 기록되므로 적용하려면
+                  TabbyAPI를 [중지] 후 [시작]으로 재시작해야 합니다.
+                </p>
               </div>
             )}
           </section>
