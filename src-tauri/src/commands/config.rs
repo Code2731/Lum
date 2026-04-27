@@ -38,15 +38,11 @@ pub struct AppConfig {
     /// 모델 로드 시 최대 시퀀스 길이 (기본 8192)
     pub max_seq_len: Option<u32>,
 
-    // ── Phase 37: SSD / Sparse Attention / EPD ──────────────────────────────
+    // ── Phase 37: SSD / EPD ─────────────────────────────────────────────────
     /// ④ SSD 드래프트 모델명 (예: DeepSeek-Coder-1.3B-Instruct-EXL2)
     pub draft_model: Option<String>,
     /// ④ SSD 드래프트 토큰 수 (기본 5) — 클수록 빠르지만 적중률 의존
     pub speculative_n_draft: Option<u32>,
-    /// ⑤ Dynamic Sparse Attention 활성화
-    pub sparse_attention: Option<bool>,
-    /// ⑤ Sparse Attention top-k 헤드 수 (기본 64)
-    pub sparse_top_k: Option<u32>,
     /// 온보딩 완료 여부 — false면 첫 실행 마법사 표시
     pub onboarding_completed: Option<bool>,
     /// Quick Actions — 즐겨찾기 커맨드 목록
@@ -208,8 +204,6 @@ pub fn save_xllm_settings(
     max_seq_len: Option<u32>,
     draft_model: Option<String>,
     speculative_n_draft: Option<u32>,
-    sparse_attention: Option<bool>,
-    sparse_top_k: Option<u32>,
     mistral_rs_enabled: Option<bool>,
     mistral_rs_url: Option<String>,
     mistral_rs_model: Option<String>,
@@ -227,8 +221,6 @@ pub fn save_xllm_settings(
     config.max_seq_len = max_seq_len;
     config.draft_model = draft_model;
     config.speculative_n_draft = speculative_n_draft;
-    config.sparse_attention = sparse_attention;
-    config.sparse_top_k = sparse_top_k;
     config.mistral_rs_enabled = mistral_rs_enabled;
     config.mistral_rs_url = mistral_rs_url.filter(|s| !s.is_empty());
     config.mistral_rs_model = mistral_rs_model.filter(|s| !s.is_empty());

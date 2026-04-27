@@ -178,8 +178,6 @@ const ModelManager: React.FC<Props> = ({ onClose, recommendedModel: _recommended
         maxSeqLen: merged["max_seq_len"] ?? null,
         draftModel: merged["draft_model"] ?? null,
         speculativeNDraft: merged["speculative_n_draft"] ?? null,
-        sparseAttention: merged["sparse_attention"] ?? null,
-        sparseTopK: merged["sparse_top_k"] ?? null,
         mistralRsEnabled: merged["mistral_rs_enabled"] ?? null,
         mistralRsUrl: merged["mistral_rs_url"] ?? null,
         mistralRsModel: merged["mistral_rs_model"] ?? null,

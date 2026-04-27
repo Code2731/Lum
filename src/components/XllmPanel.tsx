@@ -18,8 +18,6 @@ interface AppConfig {
   xllm_admin_key?: string;
   draft_model?: string;
   speculative_n_draft?: number;
-  sparse_attention?: boolean;
-  sparse_top_k?: number;
   // Phase 71
   safety_mode?: string;       // "safe" | "balanced" | "max"
   vram_cap_override?: number; // 0.50 ~ 0.95
@@ -284,8 +282,6 @@ const XllmPanel: React.FC<Props> = ({ onClose }) => {
         maxSeqLen: config.max_seq_len ?? null,
         draftModel: config.draft_model ?? null,
         speculativeNDraft: config.speculative_n_draft ?? null,
-        sparseAttention: config.sparse_attention ?? null,
-        sparseTopK: config.sparse_top_k ?? null,
         mistralRsEnabled: config.mistral_rs_enabled ?? null,
         mistralRsUrl: config.mistral_rs_url ?? null,
         mistralRsModel: config.mistral_rs_model ?? null,
@@ -909,62 +905,6 @@ const XllmPanel: React.FC<Props> = ({ onClose }) => {
                   TabbyAPI를 [중지] 후 [시작]으로 재시작해야 합니다.
                 </p>
               </div>
-            )}
-          </section>
-
-          {/* ⑤ Dynamic Sparse Attention — NVIDIA 전용 */}
-          <section className="space-y-2">
-            <label className="text-[10px] text-white/40 uppercase tracking-wider flex items-center gap-1.5">
-              <Sparkles size={9} /> ⑤ Dynamic Sparse Attention
-              {isAppleSilicon
-                ? <span className="ml-auto text-[9px] text-yellow-400/70 font-normal normal-case">⚠ TabbyAPI(NVIDIA) 전용</span>
-                : <span className="ml-auto text-[9px] text-green-400/70 font-normal normal-case">✅ TabbyAPI</span>}
-            </label>
-            {isAppleSilicon ? (
-              <p className="text-[10px] text-white/25 bg-yellow-400/5 border border-yellow-400/10 rounded px-2.5 py-2">
-                MLX-LM은 Dynamic Sparse Attention을 지원하지 않습니다.
-                긴 컨텍스트는 Apple Metal의 Flash Attention으로 처리됩니다.
-              </p>
-            ) : (
-              <>
-                <p className="text-[10px] text-white/25 -mt-1">
-                  긴 컨텍스트에서 중요 토큰만 선택 집중 → VRAM 10GB에서 128K+ 컨텍스트 안정 처리
-                </p>
-                <div className="flex items-center justify-between">
-                  <span className="text-[11px] text-white/50">활성화</span>
-                  <button
-                    onClick={() => setConfig((c) => ({ ...c, sparse_attention: !c.sparse_attention }))}
-                    className={`relative w-10 h-5 rounded-full transition-colors ${
-                      config.sparse_attention ? "bg-accent" : "bg-white/15"
-                    }`}
-                  >
-                    <span
-                      className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${
-                        config.sparse_attention ? "translate-x-5" : "translate-x-0.5"
-                      }`}
-                    />
-                  </button>
-                </div>
-                {config.sparse_attention && (
-                  <div className="flex items-center gap-3">
-                    <span className="text-[10px] text-white/30 shrink-0">Top-K 헤드</span>
-                    <input
-                      type="number"
-                      className="w-20 bg-white/5 border border-white/10 rounded px-2.5 py-1.5 text-[12px] font-mono outline-none focus:border-accent/50 transition-colors"
-                      value={config.sparse_top_k ?? 64}
-                      min={16}
-                      max={256}
-                      step={16}
-                      onChange={(e) =>
-                        setConfig((c) => ({ ...c, sparse_top_k: parseInt(e.target.value) || 64 }))
-                      }
-                    />
-                    <span className="text-[11px] text-white/25">
-                      낮을수록 메모리 절감, 높을수록 정확도 향상
-                    </span>
-                  </div>
-                )}
-              </>
             )}
           </section>
 

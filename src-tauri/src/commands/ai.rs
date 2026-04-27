@@ -109,12 +109,6 @@ fn xllm_body(
             (config.speculative_n_draft.unwrap_or(5) as u64).into();
     }
 
-    // ⑤ Dynamic Sparse Attention — 활성화 시 attention sink + top-k 헤드 제한
-    if config.sparse_attention.unwrap_or(false) {
-        body["attention_sink_size"] = 4u64.into();
-        body["top_k_attn"] = (config.sparse_top_k.unwrap_or(64) as u64).into();
-    }
-
     body
 }
 
@@ -306,31 +300,6 @@ mod tests {
         let body = xllm_body(&c, "model", "prompt", false, &[]);
         assert!(body["draft_model"].is_null());
         assert!(body["speculative_ngram"].is_null());
-    }
-
-    #[test]
-    fn body_sparse_attention_params_injected_when_enabled() {
-        let c = config_with(|c| {
-            c.sparse_attention = Some(true);
-            c.sparse_top_k = Some(32);
-        });
-        let body = xllm_body(&c, "model", "prompt", false, &[]);
-        assert_eq!(body["attention_sink_size"], 4);
-        assert_eq!(body["top_k_attn"], 32);
-    }
-
-    #[test]
-    fn body_sparse_attention_default_top_k_is_64() {
-        let c = config_with(|c| c.sparse_attention = Some(true));
-        let body = xllm_body(&c, "model", "prompt", false, &[]);
-        assert_eq!(body["top_k_attn"], 64);
-    }
-
-    #[test]
-    fn body_sparse_attention_absent_when_disabled() {
-        let c = AppConfig::default();
-        let body = xllm_body(&c, "model", "prompt", false, &[]);
-        assert!(body["attention_sink_size"].is_null());
     }
 
     #[test]
