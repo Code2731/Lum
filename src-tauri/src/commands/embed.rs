@@ -4,6 +4,59 @@
 //! 활성 시 `mistralrs_inline` 진짜 구현 호출, 비활성 시 stub 에러 반환.
 //! lib.rs의 invoke_handler가 cfg 분기 없이 항상 같은 entry로 등록 가능.
 
+use serde::Serialize;
+
+#[derive(Serialize)]
+pub struct EmbedCandidate {
+    /// 절대 경로 (load 시 model_dir로 사용)
+    pub folder: String,
+    /// 폴더 이름만 (UI 표시용)
+    pub folder_label: String,
+    /// 그 폴더 안의 .gguf 파일 목록 (정렬됨)
+    pub gguf_files: Vec<String>,
+}
+
+/// `~/.lum_mistral_models/` 안의 모델 폴더 + GGUF 파일 후보 목록 반환.
+/// embedded-ai feature 무관하게 항상 동작 — 후보 스캔은 cfg 가드 없음.
+#[tauri::command]
+pub fn list_embed_candidates() -> Vec<EmbedCandidate> {
+    let Some(home) = dirs::home_dir() else { return vec![]; };
+    let root = home.join(".lum_mistral_models");
+    let Ok(entries) = std::fs::read_dir(&root) else { return vec![]; };
+
+    let mut out = Vec::<EmbedCandidate>::new();
+    for entry in entries.flatten() {
+        let Ok(ft) = entry.file_type() else { continue };
+        if !ft.is_dir() { continue }
+        let folder = entry.path();
+        let label = entry.file_name().to_string_lossy().into_owned();
+
+        let mut ggufs: Vec<String> = std::fs::read_dir(&folder)
+            .ok()
+            .into_iter()
+            .flatten()
+            .flatten()
+            .filter_map(|e| {
+                let p = e.path();
+                if p.is_file() && p.extension().is_some_and(|x| x.eq_ignore_ascii_case("gguf")) {
+                    p.file_name().map(|n| n.to_string_lossy().into_owned())
+                } else { None }
+            })
+            .collect();
+        ggufs.sort();
+
+        if !ggufs.is_empty() {
+            out.push(EmbedCandidate {
+                folder: folder.to_string_lossy().into_owned(),
+                folder_label: label,
+                gguf_files: ggufs,
+            });
+        }
+    }
+    out.sort_by(|a, b| a.folder_label.cmp(&b.folder_label));
+    out
+}
+
 const DISABLED_MSG: &str =
     "embedded-ai feature 비활성 — scripts/cargo-check-cuda.bat 또는 npm run tauri:dev:cuda";
 

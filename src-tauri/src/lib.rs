@@ -177,6 +177,7 @@ pub fn run() {
             commands::embed::embed_load_gguf,
             commands::embed::embed_status,
             commands::embed::embed_infer,
+            commands::embed::list_embed_candidates,
             // MCP Tools (Phase 74 — 제대로 된 handshake + 서버 관리)
             mcp::list_mcp_servers,
             mcp::save_mcp_server,

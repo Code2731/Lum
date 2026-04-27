@@ -625,7 +625,14 @@ const XllmPanel: React.FC<Props> = ({ onClose }) => {
 
 // ── Phase 85b — 임베디드 추론 디버그 컴포넌트 ──────────────────────────
 // embedded-ai feature 빌드일 때만 의미 있음. 비활성 빌드는 stub 에러 반환.
+interface EmbedCandidate {
+  folder: string;
+  folder_label: string;
+  gguf_files: string[];
+}
+
 const EmbeddedInferenceDebug: React.FC = () => {
+  const [candidates, setCandidates] = useState<EmbedCandidate[]>([]);
   const [modelDir, setModelDir] = useState("");
   const [ggufFile, setGgufFile] = useState("");
   const [prompt, setPrompt] = useState("");
@@ -635,7 +642,20 @@ const EmbeddedInferenceDebug: React.FC = () => {
 
   useEffect(() => {
     invoke<boolean>("embed_status").then(setLoaded).catch(() => {});
+    invoke<EmbedCandidate[]>("list_embed_candidates")
+      .then((list) => {
+        setCandidates(list);
+        // 후보 1개면 자동 선택
+        if (list.length === 1) {
+          setModelDir(list[0].folder);
+          if (list[0].gguf_files.length === 1) setGgufFile(list[0].gguf_files[0]);
+        }
+      })
+      .catch(() => {});
   }, []);
+
+  const currentFolder = candidates.find((c) => c.folder === modelDir);
+  const fileOptions = currentFolder?.gguf_files ?? [];
 
   const onLoad = async () => {
     if (!modelDir.trim() || !ggufFile.trim()) {
@@ -686,23 +706,46 @@ const EmbeddedInferenceDebug: React.FC = () => {
       </p>
 
       <div className="space-y-1">
-        <span className="text-[10px] text-white/35">모델 폴더 (절대 경로)</span>
-        <input
+        <span className="text-[10px] text-white/35">
+          모델 폴더 ({candidates.length}개 — ~/.lum_mistral_models/)
+        </span>
+        <select
           className="w-full bg-white/5 border border-white/10 rounded px-2.5 py-1.5 text-[11px] font-mono outline-none focus:border-purple-400/50 transition-colors"
-          placeholder="C:\Users\USER\.lum_mistral_models\unsloth--Qwen3-Coder-30B-A3B-Instruct-GGUF"
           value={modelDir}
-          onChange={(e) => setModelDir(e.target.value)}
-        />
+          onChange={(e) => {
+            setModelDir(e.target.value);
+            // 폴더 바뀌면 그 폴더의 GGUF 1개면 자동 선택, 아니면 비움
+            const c = candidates.find((x) => x.folder === e.target.value);
+            setGgufFile(c?.gguf_files.length === 1 ? c.gguf_files[0] : "");
+          }}
+        >
+          <option value="">(폴더 선택)</option>
+          {candidates.map((c) => (
+            <option key={c.folder} value={c.folder}>{c.folder_label}</option>
+          ))}
+        </select>
       </div>
       <div className="space-y-1">
-        <span className="text-[10px] text-white/35">GGUF 파일명</span>
-        <input
-          className="w-full bg-white/5 border border-white/10 rounded px-2.5 py-1.5 text-[11px] font-mono outline-none focus:border-purple-400/50 transition-colors"
-          placeholder="Qwen3-Coder-30B-A3B-Instruct-Q2_K.gguf"
+        <span className="text-[10px] text-white/35">
+          GGUF 파일 ({fileOptions.length}개)
+        </span>
+        <select
+          className="w-full bg-white/5 border border-white/10 rounded px-2.5 py-1.5 text-[11px] font-mono outline-none focus:border-purple-400/50 transition-colors disabled:opacity-50"
           value={ggufFile}
           onChange={(e) => setGgufFile(e.target.value)}
-        />
+          disabled={fileOptions.length === 0}
+        >
+          <option value="">{fileOptions.length === 0 ? "(폴더 먼저 선택)" : "(파일 선택)"}</option>
+          {fileOptions.map((f) => (
+            <option key={f} value={f}>{f}</option>
+          ))}
+        </select>
       </div>
+      {candidates.length === 0 && (
+        <p className="text-[10px] text-yellow-400/60">
+          ~/.lum_mistral_models/ 안에 GGUF 모델 폴더가 없습니다. 모델을 다운로드하세요.
+        </p>
+      )}
       <button
         onClick={onLoad}
         disabled={busy !== null || !modelDir.trim() || !ggufFile.trim()}
