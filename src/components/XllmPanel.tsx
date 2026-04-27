@@ -863,17 +863,29 @@ const XllmPanel: React.FC<Props> = ({ onClose }) => {
               <div className="space-y-2">
                 <div className="space-y-1">
                   <span className="text-[10px] text-white/30">드래프트 모델</span>
-                  <select
-                    className="w-full bg-white/5 border border-white/10 rounded px-2.5 py-1.5 text-[12px] font-mono outline-none focus:border-accent/50 transition-colors disabled:opacity-50"
-                    value={config.draft_model ?? ""}
-                    onChange={(e) => setConfig((c) => ({ ...c, draft_model: e.target.value || undefined }))}
-                    disabled={localModels.length === 0}
-                  >
-                    <option value="">(사용 안 함)</option>
-                    {localModels.map((m) => (
-                      <option key={`draft-${m.id}`} value={m.id}>{m.id}</option>
-                    ))}
-                  </select>
+                  <div className="flex gap-1.5">
+                    <select
+                      className="flex-1 bg-white/5 border border-white/10 rounded px-2.5 py-1.5 text-[12px] font-mono outline-none focus:border-accent/50 transition-colors disabled:opacity-50"
+                      value={config.draft_model ?? ""}
+                      onChange={(e) => setConfig((c) => ({ ...c, draft_model: e.target.value || undefined }))}
+                      disabled={localModels.length === 0}
+                    >
+                      <option value="">(사용 안 함)</option>
+                      {localModels.map((m) => (
+                        <option key={`draft-${m.id}`} value={m.id}>{m.id}</option>
+                      ))}
+                    </select>
+                    {/* 사용자가 native dropdown의 (사용 안 함) 옵션을 못 찾는 케이스 대비 명시 끄기. */}
+                    <button
+                      type="button"
+                      onClick={() => setConfig((c) => ({ ...c, draft_model: undefined }))}
+                      disabled={!config.draft_model}
+                      className="shrink-0 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 hover:border-red-500/40 rounded px-2.5 py-1.5 text-[11px] text-red-300 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                      title="SSD 비활성화 — 드래프트 모델 해제"
+                    >
+                      ✕ 끄기
+                    </button>
+                  </div>
                   {localModels.length === 0 && (
                     <p className="text-[10px] text-yellow-400/60">다운로드된 모델이 없습니다.</p>
                   )}

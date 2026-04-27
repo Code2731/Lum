@@ -122,7 +122,8 @@
     { "category": "general",   "repo_id": "lucyknada/lucyknada_EXAONE-3.5-32B-Instruct-Llamafied-config-fixed-exl2",  "revision": "5.0bpw", "label": "EXAONE 3.5 32B (5bpw)",   "description": "LG 한국어 대형 고품질 · ~22GB VRAM",  "size_gb": 22.0, "min_ram_gb": 24, "badge": "🇰🇷 한국어" },
 
     { "category": "lightweight", "repo_id": "bartowski/Qwen3-1.7B-Instruct-exl2",            "revision": "8_0",   "label": "Qwen3 1.7B (8bpw)",     "description": "초경량 최신 · ~1.7GB VRAM", "size_gb": 1.7, "min_ram_gb": 3, "capabilities": { "reasoning": true } },
-    { "category": "lightweight", "repo_id": "lucyknada/Qwen_Qwen2.5-Coder-3B-Instruct-exl2", "revision": "6.0bpw","label": "Qwen2.5-Coder 3B (6bpw)","description": "코딩 초경량 · ~3GB VRAM",   "size_gb": 3.0, "min_ram_gb": 4 }
+    { "category": "lightweight", "repo_id": "lucyknada/Qwen_Qwen2.5-Coder-3B-Instruct-exl2", "revision": "6.0bpw","label": "Qwen2.5-Coder 3B (6bpw)","description": "코딩 초경량 · ~3GB VRAM",   "size_gb": 3.0, "min_ram_gb": 4 },
+    { "category": "lightweight", "repo_id": "lucyknada/Qwen_Qwen2.5-Coder-1.5B-Instruct-exl2", "revision": "6.0bpw","label": "Qwen2.5-Coder 1.5B (6bpw, SSD draft용)","description": "✓ 7B SSD draft 추천 · ~1.2GB VRAM, 10GB GPU에서도 안전", "size_gb": 1.2, "min_ram_gb": 2, "badge": "✓ SSD draft" }
   ],
 
   "heavy_presets": [

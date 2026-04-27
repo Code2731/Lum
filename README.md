@@ -261,6 +261,7 @@ npm run tauri dev
 - [x] Phase 82c: CrewAI ↔ lum-mcp 통합 (MCPServerAdapter + StdioServerParameters, 7개 도구 BaseTool 자동 변환)
 - [x] Phase 83: DRAM/VRAM 계층화 자동화 (mistral.rs `--pa-ctxt-len`/`--pa-gpu-mem-usage`/`-n` 자동 주입, safety_mode 연동, 30B+ 실용화)
 - [x] Phase 84: SSD (Speculative Decoding) 서버 사이드 통합 (TabbyAPI `config.yml`에 `draft_model:` 섹션 자동 주입, 폴더 검증 후 활성/비활성 결정, Phase 37 body 인자가 진짜 동작; Cargo `default-run = "tauri-app"` 회귀 fix)
+- [x] Phase 84b: SSD 동작 검증 + UI 정리 (`config.yml` `model:` 섹션에 `model_name:` 자동 주입이 진짜 활성화 키, native `<select>` 다크모드 fix, [✕ 끄기] 명시 버튼; RTX 3080 10GB 검증: 7B+3B = 1.59 T/s VRAM swap, 7B+1.5B = 48.99 T/s — SSD 효과는 하드웨어×모델 페어에 강하게 의존; `lucyknada/Qwen_Qwen2.5-Coder-1.5B-Instruct-exl2` ModelManager 추가)
 
 </details>
 
