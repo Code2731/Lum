@@ -114,6 +114,17 @@ fn xllm_body(
 
 /// xLLM 단일 응답 호출 (기존 호환)
 pub async fn call_xllm(client: &reqwest::Client, _model: &str, prompt: &str) -> Result<String> {
+    // Phase 85b-5a: 임베디드 mistralrs가 로드돼있으면 우선 사용 — subprocess + HTTP 우회.
+    // 비활성 빌드 또는 미로드 시 기존 reqwest path로 폴백.
+    #[cfg(feature = "embedded-ai")]
+    {
+        if crate::commands::mistralrs_inline::current_engine().is_some() {
+            return crate::commands::mistralrs_inline::infer_once(prompt)
+                .await
+                .map_err(|e| LumError::AiEngine(format!("embedded inference failed: {e}")));
+        }
+    }
+
     let config = load_config()?;
     let base_url = config.xllm_url();
     let url = format!("{}/v1/chat/completions", base_url);
