@@ -33,3 +33,6 @@ dist-ssr
 .env
 .env.local
 *.secret
+
+# Claude Code 로컬 설정 (settings.local.json 등) — 사용자 환경 전용
+.claude/
