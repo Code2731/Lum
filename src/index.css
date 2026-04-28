@@ -1,11 +1,35 @@
 @import "tailwindcss";
+@import "tw-animate-css";
 
 :root {
+  /* LUM 기존 토큰 — 유지 */
   --terminal-dark: #0d1117;
   --terminal-black: #010409;
   --accent: #58a6ff;
   --dim: #8b949e;
   --border: rgba(255, 255, 255, 0.1);
+
+  /* shadcn/ui 토큰 — 기존 LUM 색상에 매핑 (다크 only) */
+  --background: #0d1117;
+  --foreground: #ffffff;
+  --card: #0d1117;
+  --card-foreground: #ffffff;
+  --popover: #161b22;
+  --popover-foreground: #ffffff;
+  --primary: #58a6ff;
+  --primary-foreground: #010409;
+  --secondary: rgba(255, 255, 255, 0.05);
+  --secondary-foreground: #ffffff;
+  --muted: rgba(255, 255, 255, 0.03);
+  --muted-foreground: #8b949e;
+  --accent-bg: rgba(255, 255, 255, 0.05);
+  --accent-fg: #ffffff;
+  --destructive: #f85149;
+  --destructive-foreground: #ffffff;
+  --input: rgba(255, 255, 255, 0.1);
+  --ring: #58a6ff;
+  --radius: 0.5rem;
+
   background-color: var(--terminal-dark);
   color: white;
   /* OS native <option> 드롭다운을 다크 모드로 그리도록 강제 — 흰 배경에 흰 글씨 회피 */
@@ -19,12 +43,38 @@ body {
   overflow: hidden;
 }
 
-/* Tailwind 커스텀 유틸리티 */
+/* Tailwind v4 — LUM 토큰 + shadcn 토큰 모두 utility class로 노출 */
 @theme {
   --color-terminal-dark: var(--terminal-dark);
   --color-terminal-black: var(--terminal-black);
   --color-accent: var(--accent);
   --color-dim: var(--dim);
+
+  /* shadcn 색상 — `bg-background`, `text-foreground`, `border-border` 등으로 사용 */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent-bg: var(--accent-bg);
+  --color-accent-fg: var(--accent-fg);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
 }
 
 /* Infinite Canvas Node Styles */
