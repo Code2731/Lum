@@ -4,7 +4,8 @@
 //! `embedded-ai` feature 활성화 시만 컴파일됨 (CUDA toolchain + MSVC 필요).
 #![cfg(feature = "embedded-ai")]
 
-use mistralrs::{GgufModelBuilder, Model, TextMessageRole, TextMessages};
+use mistralrs::{GgufModelBuilder, Model, ResponseOk, TextMessageRole, TextMessages};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, OnceLock};
 use tauri::{AppHandle, Emitter};
 use tokio::sync::Mutex;
@@ -78,6 +79,65 @@ pub async fn infer_once(prompt: &str) -> Result<String, String> {
         .first()
         .and_then(|c| c.message.content.clone())
         .unwrap_or_default())
+}
+
+/// 토큰별 스트리밍 추론. delta.content와 delta.reasoning_content를 즉시 emit.
+/// `event_name`으로 구분 — main AI 흐름은 "xllm_token" (HTTP path와 통일),
+/// 디버그 패널은 "embed_token" 등 별도 이벤트 사용해 cross-talk 방지.
+/// `cancel`이 true가 되면 stream을 drop해 추론 중단.
+pub async fn infer_stream(
+    app: &AppHandle,
+    prompt: &str,
+    cancel: &Arc<AtomicBool>,
+    show_reasoning: bool,
+    event_name: &str,
+) -> Result<String, String> {
+    let model = {
+        engine_mutex()
+            .lock()
+            .await
+            .as_ref()
+            .map(|s| s.model.clone())
+            .ok_or_else(|| "엔진 미로드 — 먼저 로드 필요".to_string())?
+    };
+    let messages = TextMessages::new().add_message(TextMessageRole::User, prompt);
+    let mut stream = model
+        .stream_chat_request(messages)
+        .await
+        .map_err(|e| format!("스트림 시작 실패: {e}"))?;
+    let mut full = String::new();
+    while let Some(resp) = stream.next().await {
+        if cancel.load(Ordering::Relaxed) {
+            // stream을 drop하면 mistralrs receiver가 닫혀 추론 중단
+            break;
+        }
+        match resp.as_result() {
+            Ok(ResponseOk::Chunk(chunk)) => {
+                let Some(choice) = chunk.choices.first() else { continue; };
+                if let Some(content) = &choice.delta.content {
+                    if !content.is_empty() {
+                        full.push_str(content);
+                        let _ = app.emit(event_name, content.clone());
+                    }
+                }
+                if show_reasoning {
+                    if let Some(reasoning) = &choice.delta.reasoning_content {
+                        if !reasoning.is_empty() {
+                            full.push_str(reasoning);
+                            let _ = app.emit(event_name, reasoning.clone());
+                        }
+                    }
+                }
+                if choice.finish_reason.is_some() {
+                    break;
+                }
+            }
+            Ok(ResponseOk::Done(_)) => break,
+            Ok(_) => {}
+            Err(e) => return Err(format!("스트림 에러: {e}")),
+        }
+    }
+    Ok(full)
 }
 
 // Tauri command 노출은 commands::embed 모듈의 facade에서. 여기는 순수 라이브러리.

@@ -118,7 +118,7 @@ pub fn embed_loaded_info() -> Option<String> {
     }
 }
 
-/// 단일 추론 호출.
+/// 단일 추론 호출 (블로킹 — 풀 응답 받아서 반환).
 #[tauri::command]
 pub async fn embed_infer(prompt: String) -> Result<String, String> {
     #[cfg(feature = "embedded-ai")]
@@ -128,6 +128,35 @@ pub async fn embed_infer(prompt: String) -> Result<String, String> {
     #[cfg(not(feature = "embedded-ai"))]
     {
         let _ = prompt;
+        Err(DISABLED_MSG.to_string())
+    }
+}
+
+/// 토큰별 스트리밍 추론 — `embed_token` 이벤트로 토큰 emit, 풀 응답을 반환값으로.
+/// XllmPanel 디버그 패널 전용 (main AI 흐름의 `xllm_token`과 cross-talk 방지).
+/// `cancel_ai_stream`을 호출하면 추론 중단.
+#[tauri::command]
+pub async fn embed_infer_stream(
+    app: tauri::AppHandle,
+    prompt: String,
+    cancel_flag: tauri::State<'_, crate::commands::ai::AiStreamCancel>,
+) -> Result<String, String> {
+    #[cfg(feature = "embedded-ai")]
+    {
+        use std::sync::atomic::Ordering;
+        cancel_flag.store(false, Ordering::Relaxed);
+        crate::commands::mistralrs_inline::infer_stream(
+            &app,
+            &prompt,
+            &cancel_flag,
+            true,
+            "embed_token",
+        )
+        .await
+    }
+    #[cfg(not(feature = "embedded-ai"))]
+    {
+        let _ = (app, prompt, cancel_flag);
         Err(DISABLED_MSG.to_string())
     }
 }

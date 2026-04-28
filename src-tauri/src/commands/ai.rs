@@ -135,6 +135,47 @@ async fn try_embedded_inference(_prompt: &str, _images: &[String]) -> Option<Res
     None
 }
 
+/// 임베디드 mistralrs가 로드돼있으면 토큰별 스트리밍 추론. `xllm_token` 이벤트로 emit.
+/// `cancel`이 true가 되면 stream drop으로 추론 중단.
+/// 이미지 입력 또는 미로드 시 `None` 반환 → 호출부에서 HTTP 폴백.
+#[cfg(feature = "embedded-ai")]
+async fn try_embedded_inference_stream(
+    app: &tauri::AppHandle,
+    prompt: &str,
+    images: &[String],
+    cancel: &Arc<AtomicBool>,
+    show_reasoning: bool,
+) -> Option<Result<String>> {
+    if !images.is_empty() {
+        return None;
+    }
+    if crate::commands::mistralrs_inline::loaded_key().is_none() {
+        return None;
+    }
+    Some(
+        crate::commands::mistralrs_inline::infer_stream(
+            app,
+            prompt,
+            cancel,
+            show_reasoning,
+            XLLM_TOKEN_EVENT,
+        )
+        .await
+        .map_err(|e| LumError::AiEngine(format!("embedded streaming failed: {e}"))),
+    )
+}
+
+#[cfg(not(feature = "embedded-ai"))]
+async fn try_embedded_inference_stream(
+    _app: &tauri::AppHandle,
+    _prompt: &str,
+    _images: &[String],
+    _cancel: &Arc<AtomicBool>,
+    _show_reasoning: bool,
+) -> Option<Result<String>> {
+    None
+}
+
 /// xLLM 단일 응답 호출 (기존 호환). 임베디드 GGUF 우선, 미로드면 HTTP 폴백.
 pub async fn call_xllm(client: &reqwest::Client, _model: &str, prompt: &str) -> Result<String> {
     if let Some(result) = try_embedded_inference(prompt, &[]).await {
@@ -524,14 +565,14 @@ pub async fn stream_ai_command(
         Ok(result)
     } else {
         let _ = engine;
-        // 임베디드 GGUF 로드돼있으면 in-process 추론 — 단일 토큰 이벤트로 emit.
-        // 실시간 토큰 스트리밍은 Phase A에서 mistralrs stream API 도입 시 추가.
-        if let Some(result) = try_embedded_inference(&full_prompt, &imgs).await {
-            let text = result?;
-            let _ = app.emit(XLLM_TOKEN_EVENT, text.clone());
-            return Ok(text);
-        }
         let config = load_config()?;
+        // 임베디드 GGUF 로드돼있으면 토큰별 스트리밍 — HTTP 우회.
+        let show_reasoning = config.show_reasoning.unwrap_or(true);
+        if let Some(result) =
+            try_embedded_inference_stream(&app, &full_prompt, &imgs, &cancel_flag, show_reasoning).await
+        {
+            return result;
+        }
         call_compat_stream(&app, &client, &full_prompt, &imgs, &config.xllm_url(), config.xllm_api_key.clone(), &cancel_flag).await
     }
 }

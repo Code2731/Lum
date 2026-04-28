@@ -363,15 +363,24 @@ const EmbeddedInferenceDebug: React.FC = () => {
   const onInfer = async () => {
     if (!prompt.trim()) return;
     setBusy("infer");
-    setResponse(null);
+    setResponse("");
+    let accumulated = "";
+    const unlisten = await listen<string>("embed_token", (e) => {
+      accumulated += e.payload;
+      setResponse(accumulated);
+    });
     try {
-      const r = await invoke<string>("embed_infer", { prompt: prompt.trim() });
-      setResponse(r);
+      await invoke<string>("embed_infer_stream", { prompt: prompt.trim() });
     } catch (e) {
       setResponse(`❌ ${typeof e === "string" ? e : JSON.stringify(e)}`);
     } finally {
+      unlisten();
       setBusy(null);
     }
+  };
+
+  const onCancelInfer = async () => {
+    try { await invoke("cancel_ai_stream"); } catch { }
   };
 
   const loadedFilename = loadedKey ? shortPath(loadedKey) : null;
@@ -466,13 +475,24 @@ const EmbeddedInferenceDebug: React.FC = () => {
           onChange={(e) => setPrompt(e.target.value)}
         />
       </div>
-      <button
-        onClick={onInfer}
-        disabled={busy !== null || !prompt.trim() || !loadedKey}
-        className="w-full px-3 py-1.5 rounded bg-purple-500/20 hover:bg-purple-500/30 border border-purple-400/30 text-[11px] text-purple-200 disabled:opacity-40 transition-colors"
-      >
-        {busy === "infer" ? "추론 중..." : "💬 임베디드 추론"}
-      </button>
+      <div className="flex gap-1.5">
+        <button
+          onClick={onInfer}
+          disabled={busy !== null || !prompt.trim() || !loadedKey}
+          className="flex-1 px-3 py-1.5 rounded bg-purple-500/20 hover:bg-purple-500/30 border border-purple-400/30 text-[11px] text-purple-200 disabled:opacity-40 transition-colors"
+        >
+          {busy === "infer" ? "🔴 토큰 스트림 중..." : "💬 임베디드 추론 (스트리밍)"}
+        </button>
+        {busy === "infer" && (
+          <button
+            onClick={onCancelInfer}
+            className="px-3 py-1.5 rounded bg-red-500/15 hover:bg-red-500/25 border border-red-400/20 text-[11px] text-red-300 transition-colors"
+            title="추론 중단"
+          >
+            ⛔ 중단
+          </button>
+        )}
+      </div>
 
       {response && (
         <div className="bg-black/30 border border-white/5 rounded p-2 text-[11px] font-mono text-white/80 max-h-48 overflow-y-auto whitespace-pre-wrap">
