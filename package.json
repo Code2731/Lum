@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "tauri": "tauri",
     "tauri:dev:cuda": "scripts\\tauri-dev-cuda.bat",
+    "tauri:dev:metal": "tauri dev --features embedded-ai",
     "test": "vitest run",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "format": "prettier --write \"src/**/*.{ts,tsx,css,json}\""

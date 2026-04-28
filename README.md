@@ -99,7 +99,10 @@ write_to_pty ──► SyncSender ──► Writer thread ──► PTY master �
 
 - [Rust](https://www.rust-lang.org/tools/install) (stable)
 - [Node.js](https://nodejs.org/) 20+
-- **Optional for embedded GGUF inference**: NVIDIA GPU + [CUDA Toolkit 12.x](https://developer.nvidia.com/cuda-downloads) + MSVC (Windows) — required only when building with `--features embedded-ai`
+- **Optional for embedded GGUF inference** (depends on platform):
+  - **Windows/Linux**: NVIDIA GPU + [CUDA Toolkit 12.x](https://developer.nvidia.com/cuda-downloads) + MSVC (Windows) — mistralrs CUDA backend
+  - **macOS Apple Silicon (M1/M2/M3)**: Xcode (Metal SDK 포함) — mistralrs Metal backend
+  - **macOS Intel / GPU 없음**: Gemini API 클라우드 폴백 권장
 
 **Run in development**
 
@@ -107,15 +110,16 @@ write_to_pty ──► SyncSender ──► Writer thread ──► PTY master �
 git clone https://github.com/Code2731/Lum.git
 cd Lum
 npm install
-npm run tauri dev                       # plain terminal, no on-device AI
-npm run tauri:dev:cuda                  # with embedded mistralrs GGUF inference (Windows)
+npm run tauri dev                       # plain terminal, no on-device AI (모든 OS)
+npm run tauri:dev:cuda                  # Windows/Linux + NVIDIA: embedded mistralrs CUDA
+npm run tauri:dev:metal                 # macOS Apple Silicon: embedded mistralrs Metal
 ```
 
 **Production build**
 
 ```bash
 npm run tauri build                                # lightweight (no on-device inference)
-npm run tauri build -- --features embedded-ai     # full build with embedded mistralrs GGUF
+npm run tauri build -- --features embedded-ai     # full build — Cargo가 OS에 맞춰 CUDA/Metal 자동 선택
 ```
 
 ### AI Setup (optional)
@@ -194,7 +198,10 @@ LUM(Local Universal Machine)은 **실제 셸을 실행하는 터미널 에뮬레
 
 - [Rust](https://www.rust-lang.org/tools/install) (stable)
 - [Node.js](https://nodejs.org/) 20+
-- **임베디드 GGUF 추론용 (선택)**: NVIDIA GPU + [CUDA Toolkit 12.x](https://developer.nvidia.com/cuda-downloads) + MSVC (Windows)
+- **임베디드 GGUF 추론용 (플랫폼별)**:
+  - **Windows/Linux**: NVIDIA GPU + [CUDA Toolkit 12.x](https://developer.nvidia.com/cuda-downloads) + MSVC (Windows) — mistralrs CUDA 백엔드
+  - **macOS Apple Silicon (M1/M2/M3)**: Xcode (Metal SDK 포함) — mistralrs Metal 백엔드
+  - **macOS Intel / GPU 없음**: Gemini API 클라우드 폴백 권장
 
 **개발 모드**
 
@@ -202,15 +209,16 @@ LUM(Local Universal Machine)은 **실제 셸을 실행하는 터미널 에뮬레
 git clone https://github.com/Code2731/Lum.git
 cd Lum
 npm install
-npm run tauri dev               # 평범한 터미널 (on-device AI 없음)
-npm run tauri:dev:cuda          # 임베디드 mistralrs GGUF 추론 포함 (Windows)
+npm run tauri dev               # 평범한 터미널 (모든 OS, on-device AI 없음)
+npm run tauri:dev:cuda          # Windows/Linux + NVIDIA: 임베디드 mistralrs CUDA
+npm run tauri:dev:metal         # macOS Apple Silicon: 임베디드 mistralrs Metal
 ```
 
 **프로덕션 빌드**
 
 ```bash
 npm run tauri build                                # 경량 (on-device 추론 없음)
-npm run tauri build -- --features embedded-ai     # 임베디드 mistralrs 포함
+npm run tauri build -- --features embedded-ai     # OS별 CUDA/Metal 자동 선택
 ```
 
 **AI 기능 활성화 (선택)**

@@ -23,8 +23,9 @@ default = []
 # GPU 기반 로컬 추론 인프라 (burn/wgpu/tokenizers — 개발/실험용)
 local-ai = ["dep:burn", "dep:burn-wgpu", "dep:wgpu", "dep:tokenizers", "dep:hf-hub", "dep:safetensors", "dep:half", "dep:bytemuck"]
 # Phase 85b — mistralrs(high-level wrapper)를 LUM 프로세스 안에 직접 임베딩.
-# subprocess spawn 제거. CUDA toolchain 12.x + MSVC + 첫 빌드 5~15분.
-# 활성화: scripts\cargo-check-cuda.bat 또는 npm run tauri:dev:cuda
+# Phase 102 — Windows/Linux는 CUDA, macOS는 Metal 백엔드 자동 선택 (target_os 분기).
+# 첫 빌드 5~15분. Windows: CUDA toolchain 12.x + MSVC. macOS: Xcode (Metal SDK 포함).
+# 활성화: scripts\cargo-check-cuda.bat 또는 npm run tauri:dev:cuda (Windows) / npm run tauri:dev:metal (macOS)
 embedded-ai = ["dep:mistralrs"]
 
 [build-dependencies]
@@ -71,10 +72,12 @@ safetensors = { version = "0.7.0", optional = true }
 half = { version = "2.7.1", optional = true }
 bytemuck = { version = "1.25.0", features = ["derive"], optional = true }
 
-# Phase 85b — mistralrs (high-level) 내장 (optional, embedded-ai feature 활성화 시만).
-# mistralrs-core를 transitive로 가져옴. Windows/Linux: CUDA features.
-mistralrs = { version = "0.8.1", features = ["cuda"], optional = true }
-
-# Phase 71 — NVIDIA GPU 정확 VRAM (NVML). Windows/Linux 전용 — macOS는 sysinfo(통합 메모리).
+# Phase 71/85b/102 — Windows/Linux: NVIDIA NVML 정확 VRAM + mistralrs CUDA 백엔드.
 [target.'cfg(not(target_os = "macos"))'.dependencies]
 nvml-wrapper = "0.10"
+mistralrs = { version = "0.8.1", features = ["cuda"], optional = true }
+
+# Phase 102 — macOS Apple Silicon: mistralrs Metal 백엔드 (M1/M2/M3 GPU + 통합 메모리).
+# Intel Mac은 Metal 미지원이라 사실상 Apple Silicon 전용 — Intel Mac은 Gemini 클라우드 폴백.
+[target.'cfg(target_os = "macos")'.dependencies]
+mistralrs = { version = "0.8.1", features = ["metal"], optional = true }
