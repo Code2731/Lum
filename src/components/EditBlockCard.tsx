@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Check, X, FileCode, Loader2, AlertTriangle } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
+import { IconButton } from "@/components/ui/icon-button";
 import type { EditBlock } from "../utils/editBlockParser";
 import TestResultCard from "./TestResultCard";
 
@@ -18,22 +19,16 @@ function renderActions(status: Status, onApply: () => void, onReject: () => void
     case "pending":
       return (
         <>
-          <button
-            onClick={onApply}
-            className="flex items-center gap-1 px-2 py-0.5 rounded bg-green-500/15 hover:bg-green-500/25 text-green-400 text-[11px] transition-colors"
-            title="파일에 변경 적용"
-          >
+          <IconButton tooltip="파일에 변경 적용" onClick={onApply}
+            className="flex items-center gap-1 px-2 py-0.5 rounded bg-green-500/15 hover:bg-green-500/25 text-green-400 text-[11px] transition-colors">
             <Check size={11} />
             적용
-          </button>
-          <button
-            onClick={onReject}
-            className="flex items-center gap-1 px-2 py-0.5 rounded text-white/40 hover:text-white/70 hover:bg-white/5 text-[11px] transition-colors"
-            title="건너뛰기"
-          >
+          </IconButton>
+          <IconButton tooltip="건너뛰기" onClick={onReject}
+            className="flex items-center gap-1 px-2 py-0.5 rounded text-white/40 hover:text-white/70 hover:bg-white/5 text-[11px] transition-colors">
             <X size={11} />
             거부
-          </button>
+          </IconButton>
         </>
       );
     case "applying":

@@ -1,5 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { Group as PanelGroup, Panel, Separator as PanelResizeHandle } from "react-resizable-panels";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { useTerminalBlocks } from "./hooks/useTerminalBlocks";
 import { useAIProcessing } from "./hooks/useAIProcessing";
 import { useHardwareSpecs } from "./hooks/useHardwareSpecs";
@@ -498,6 +499,7 @@ const App: React.FC = () => {
   }, [restoreTabs]);
 
   return (
+    <TooltipProvider delayDuration={300} skipDelayDuration={150}>
     <div className="app-root bg-terminal-dark text-white h-screen overflow-hidden flex flex-col">
       <ResizeHandles />
       {/* ── 헤더 ─────────────────────────────────────────────── */}
@@ -1264,6 +1266,7 @@ const App: React.FC = () => {
         />
       )}
     </div>
+    </TooltipProvider>
   );
 };
 

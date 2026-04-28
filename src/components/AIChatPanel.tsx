@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState, useCallback } from "react";
 import ReactMarkdown from "react-markdown";
 import { Bot, User, Trash2, X, Loader2, Send, Play, StopCircle } from "lucide-react";
+import { IconButton } from "@/components/ui/icon-button";
 import type { ChatMessage } from "../hooks/useAIChat";
 
 interface Props {
@@ -43,13 +44,10 @@ const AIChatPanel: React.FC<Props> = ({ messages, streaming, error, onSend, onCa
         <Bot size={13} className="text-accent shrink-0" />
         <span className="text-[11px] font-semibold text-white/80 flex-1">AI Chat</span>
         {messages.length > 0 && (
-          <button
-            onClick={onClear}
-            className="text-white/25 hover:text-white/60 transition-colors p-0.5 rounded"
-            title="대화 초기화"
-          >
+          <IconButton tooltip="대화 초기화" onClick={onClear}
+            className="text-white/25 hover:text-white/60 transition-colors p-0.5 rounded">
             <Trash2 size={11} />
-          </button>
+          </IconButton>
         )}
         <button
           onClick={onClose}
@@ -114,13 +112,10 @@ const AIChatPanel: React.FC<Props> = ({ messages, streaming, error, onSend, onCa
             style={{ fieldSizing: "content" } as React.CSSProperties}
           />
           {streaming ? (
-            <button
-              onClick={onCancel}
-              className="shrink-0 p-1 rounded text-red-400 hover:text-red-300 transition-colors"
-              title="응답 중단"
-            >
+            <IconButton tooltip="응답 중단" onClick={onCancel}
+              className="shrink-0 p-1 rounded text-red-400 hover:text-red-300 transition-colors">
               <StopCircle size={13} />
-            </button>
+            </IconButton>
           ) : (
             <button
               onClick={handleSubmit}

@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
+import { IconButton } from "@/components/ui/icon-button";
 
 interface McpServerSpec {
   name: string;
@@ -127,13 +128,10 @@ const McpPanel: React.FC<Props> = ({ onClose }) => {
             <DialogTitle className="text-[13px] font-semibold text-white/90">MCP 서버</DialogTitle>
             <span className="text-[10px] text-white/30">· Model Context Protocol</span>
           </div>
-          <button
-            onClick={loadServers}
-            className="p-1 rounded text-white/30 hover:text-white/70 hover:bg-white/5 mr-8"
-            title="새로고침"
-          >
+          <IconButton tooltip="새로고침" onClick={loadServers}
+            className="p-1 rounded text-white/30 hover:text-white/70 hover:bg-white/5 mr-8">
             <RefreshCw size={12} className={loadingList ? "animate-spin" : ""} />
-          </button>
+          </IconButton>
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
@@ -181,13 +179,10 @@ const McpPanel: React.FC<Props> = ({ onClose }) => {
                     />
                     <span className="text-[10px] text-white/40">{s.enabled ? "활성" : "꺼짐"}</span>
                   </label>
-                  <button
-                    onClick={() => removeServer(s.name)}
-                    className="p-1 rounded text-white/30 hover:text-red-400 hover:bg-red-500/10"
-                    title="제거"
-                  >
+                  <IconButton tooltip="제거" onClick={() => removeServer(s.name)}
+                    className="p-1 rounded text-white/30 hover:text-red-400 hover:bg-red-500/10">
                     <Trash2 size={11} />
-                  </button>
+                  </IconButton>
                 </div>
 
                 {isExpanded && (

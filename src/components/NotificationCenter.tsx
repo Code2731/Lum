@@ -1,5 +1,6 @@
 import React, { useRef, useEffect } from "react";
 import { Bell, Terminal, Bot, Wrench, Layers, X, CheckCheck, Trash2 } from "lucide-react";
+import { IconButton } from "@/components/ui/icon-button";
 import type { AppNotification, NotifType } from "../hooks/useNotificationCenter";
 
 interface Props {
@@ -60,22 +61,16 @@ const NotificationCenter: React.FC<Props> = ({
         <Bell size={12} className="text-accent shrink-0" />
         <span className="text-[11px] font-semibold text-white/80 flex-1">알림 센터</span>
         {unreadCount > 0 && (
-          <button
-            onClick={onMarkAllRead}
-            className="text-white/30 hover:text-accent transition-colors p-0.5 rounded"
-            title="모두 읽음"
-          >
+          <IconButton tooltip="모두 읽음" onClick={onMarkAllRead}
+            className="text-white/30 hover:text-accent transition-colors p-0.5 rounded">
             <CheckCheck size={11} />
-          </button>
+          </IconButton>
         )}
         {notifications.length > 0 && (
-          <button
-            onClick={onClear}
-            className="text-white/30 hover:text-red-400 transition-colors p-0.5 rounded"
-            title="전체 삭제"
-          >
+          <IconButton tooltip="전체 삭제" onClick={onClear}
+            className="text-white/30 hover:text-red-400 transition-colors p-0.5 rounded">
             <Trash2 size={11} />
-          </button>
+          </IconButton>
         )}
         <button
           onClick={onClose}

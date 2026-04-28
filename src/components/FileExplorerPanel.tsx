@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { ChevronRight, Folder, FolderOpen, File, ArrowUp, RefreshCw, Home, X } from "lucide-react";
+import { IconButton } from "@/components/ui/icon-button";
 
 interface DirEntry {
   name: string;
@@ -80,34 +81,22 @@ export default function FileExplorerPanel({ cwd, onClose, onCdTo, onOpenFile }: 
       </div>
 
       <div className="flex items-center gap-1 px-2 py-1.5 border-b border-white/5">
-        <button
-          onClick={goUp}
-          className="p-1 rounded hover:bg-white/10 text-white/50 hover:text-white/80"
-          title="상위 폴더"
-        >
+        <IconButton tooltip="상위 폴더" onClick={goUp}
+          className="p-1 rounded hover:bg-white/10 text-white/50 hover:text-white/80">
           <ArrowUp size={12} />
-        </button>
-        <button
-          onClick={() => load("~")}
-          className="p-1 rounded hover:bg-white/10 text-white/50 hover:text-white/80"
-          title="홈"
-        >
+        </IconButton>
+        <IconButton tooltip="홈" onClick={() => load("~")}
+          className="p-1 rounded hover:bg-white/10 text-white/50 hover:text-white/80">
           <Home size={12} />
-        </button>
-        <button
-          onClick={() => load(currentPath)}
-          className="p-1 rounded hover:bg-white/10 text-white/50 hover:text-white/80"
-          title="새로고침"
-        >
+        </IconButton>
+        <IconButton tooltip="새로고침" onClick={() => load(currentPath)}
+          className="p-1 rounded hover:bg-white/10 text-white/50 hover:text-white/80">
           <RefreshCw size={11} />
-        </button>
-        <button
-          onClick={() => onCdTo(currentPath)}
-          className="ml-auto px-2 py-0.5 rounded bg-accent/15 hover:bg-accent/25 text-accent text-[10px]"
-          title="터미널을 이 폴더로 이동"
-        >
+        </IconButton>
+        <IconButton tooltip="터미널을 이 폴더로 이동" onClick={() => onCdTo(currentPath)}
+          className="ml-auto px-2 py-0.5 rounded bg-accent/15 hover:bg-accent/25 text-accent text-[10px]">
           여기로 cd
-        </button>
+        </IconButton>
       </div>
 
       <div className="px-3 py-1.5 text-[10px] text-white/40 font-mono truncate border-b border-white/5" title={currentPath}>
