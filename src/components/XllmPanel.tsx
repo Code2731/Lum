@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { IconButton } from "@/components/ui/icon-button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { shortPath } from "../utils";
 
 interface AppConfig {
@@ -349,34 +350,40 @@ const EmbeddedInferenceDebug: React.FC = () => {
 
       <div className="space-y-1">
         <span className="text-[10px] text-white/35">모델 폴더 ({candidates.length}개)</span>
-        <select
-          className="w-full bg-white/5 border border-white/10 rounded px-2.5 py-1.5 text-[11px] font-mono outline-none focus:border-purple-400/50 transition-colors"
+        <Select
           value={modelDir}
-          onChange={(e) => {
-            setModelDir(e.target.value);
-            const c = candidates.find((x) => x.folder === e.target.value);
+          onValueChange={(v) => {
+            setModelDir(v);
+            const c = candidates.find((x) => x.folder === v);
             setGgufFile(c?.gguf_files.length === 1 ? c.gguf_files[0] : "");
           }}
         >
-          <option value="">(폴더 선택)</option>
-          {candidates.map((c) => (
-            <option key={c.folder} value={c.folder}>{c.folder_label}</option>
-          ))}
-        </select>
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="(폴더 선택)" />
+          </SelectTrigger>
+          <SelectContent>
+            {candidates.map((c) => (
+              <SelectItem key={c.folder} value={c.folder}>{c.folder_label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
       <div className="space-y-1">
         <span className="text-[10px] text-white/35">GGUF 파일 ({fileOptions.length}개)</span>
-        <select
-          className="w-full bg-white/5 border border-white/10 rounded px-2.5 py-1.5 text-[11px] font-mono outline-none focus:border-purple-400/50 transition-colors disabled:opacity-50"
+        <Select
           value={ggufFile}
-          onChange={(e) => setGgufFile(e.target.value)}
+          onValueChange={setGgufFile}
           disabled={fileOptions.length === 0}
         >
-          <option value="">{fileOptions.length === 0 ? "(폴더 먼저 선택)" : "(파일 선택)"}</option>
-          {fileOptions.map((f) => (
-            <option key={f} value={f}>{f}</option>
-          ))}
-        </select>
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder={fileOptions.length === 0 ? "(폴더 먼저 선택)" : "(파일 선택)"} />
+          </SelectTrigger>
+          <SelectContent>
+            {fileOptions.map((f) => (
+              <SelectItem key={f} value={f}>{f}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
       {candidates.length === 0 && (
         <p className="text-[10px] text-yellow-400/60">

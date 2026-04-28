@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Plus, Trash2, ChevronUp, ChevronDown, Zap } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { IconButton } from "@/components/ui/icon-button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { QuickAction } from "../hooks/useQuickActions";
 
 interface Props {
@@ -90,18 +91,22 @@ const QuickActionsEditor: React.FC<Props> = ({
               />
 
               {/* 단축키 */}
-              <select
-                value={a.shortcut ?? ""}
-                onChange={e => onUpdate(a.id, { shortcut: e.target.value ? Number(e.target.value) : undefined })}
-                className="w-16 shrink-0 bg-white/5 border border-white/8 rounded px-1.5 py-1 text-xs outline-none focus:border-accent/50 transition-colors appearance-none text-center"
+              <Select
+                value={a.shortcut != null ? String(a.shortcut) : ""}
+                onValueChange={v => onUpdate(a.id, { shortcut: v ? Number(v) : undefined })}
               >
-                <option value="">없음</option>
-                {[1,2,3,4,5,6,7,8,9].map(n => (
-                  <option key={n} value={n} disabled={usedShortcuts.has(n) && a.shortcut !== n}>
-                    ⌘{n}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger className="w-16 shrink-0 py-1 text-xs justify-center">
+                  <SelectValue placeholder="없음" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">없음</SelectItem>
+                  {[1,2,3,4,5,6,7,8,9].map(n => (
+                    <SelectItem key={n} value={String(n)} disabled={usedShortcuts.has(n) && a.shortcut !== n}>
+                      ⌘{n}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
 
               {/* 삭제 */}
               <IconButton
@@ -137,17 +142,21 @@ const QuickActionsEditor: React.FC<Props> = ({
               placeholder="실행할 커맨드 (예: npm run dev)"
               className="flex-1 bg-white/5 border border-white/8 rounded px-2 py-1.5 text-xs font-mono outline-none focus:border-accent/50 transition-colors"
             />
-            <select
-              value={newShortcut ?? ""}
-              onChange={e => setNewShortcut(e.target.value ? Number(e.target.value) : undefined)}
-              className="w-16 shrink-0 bg-white/5 border border-white/8 rounded px-1.5 py-1.5 text-xs outline-none focus:border-accent/50 transition-colors appearance-none text-center"
+            <Select
+              value={newShortcut != null ? String(newShortcut) : ""}
+              onValueChange={v => setNewShortcut(v ? Number(v) : undefined)}
             >
-              {SHORTCUT_OPTIONS.map(o => (
-                <option key={String(o.value)} value={o.value ?? ""} disabled={o.value != null && usedShortcuts.has(o.value)}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger className="w-16 shrink-0 py-1.5 text-xs justify-center">
+                <SelectValue placeholder="없음" />
+              </SelectTrigger>
+              <SelectContent>
+                {SHORTCUT_OPTIONS.map(o => (
+                  <SelectItem key={String(o.value)} value={o.value != null ? String(o.value) : ""} disabled={o.value != null && usedShortcuts.has(o.value)}>
+                    {o.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <button
               onClick={handleAdd}
               disabled={!newLabel.trim() || !newCmd.trim()}
