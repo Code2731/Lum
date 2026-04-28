@@ -1298,6 +1298,7 @@ checksum = "6bd9895436c1ba5dc1037a19935d084b838db066ff4e15ef7dded020b7c12a4a"
 dependencies = [
  "byteorder",
  "candle-kernels",
+ "candle-metal-kernels",
  "candle-ug",
  "cudarc 0.19.4",
  "float8",
@@ -1307,6 +1308,8 @@ dependencies = [
  "memmap2 0.9.10",
  "num-traits",
  "num_cpus",
+ "objc2-foundation",
+ "objc2-metal",
  "rand 0.9.4",
  "rand_distr 0.5.1",
  "rayon",
@@ -1327,15 +1330,32 @@ dependencies = [
 ]
 
 [[package]]
+name = "candle-metal-kernels"
+version = "0.10.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4b6b5a4cae6b4e1ab0efcee4dc05272d11b374a3d1ba121b3a961e36be54ab60"
+dependencies = [
+ "half",
+ "objc2 0.6.4",
+ "objc2-foundation",
+ "objc2-metal",
+ "once_cell",
+ "thiserror 2.0.18",
+ "tracing",
+]
+
+[[package]]
 name = "candle-nn"
 version = "0.10.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a9317a09d6530b758990ed7f625ac69ff43653bc9ee28b0464644ad1169ada87"
 dependencies = [
  "candle-core 0.10.2",
+ "candle-metal-kernels",
  "half",
  "libc",
  "num-traits",
+ "objc2-metal",
  "rayon",
  "safetensors 0.7.0",
  "serde",
@@ -1350,6 +1370,7 @@ checksum = "ca0fc3167cbc99c8ec1be618cb620aa21dca95038f118c3579a79370e3dc5f77"
 dependencies = [
  "ug 0.5.0",
  "ug-cuda",
+ "ug-metal",
 ]
 
 [[package]]
@@ -6584,6 +6605,7 @@ dependencies = [
  "bytemuck",
  "bytemuck_derive",
  "candle-core 0.10.2",
+ "candle-metal-kernels",
  "candle-nn",
  "cfgrammar",
  "chrono",
@@ -6619,6 +6641,8 @@ dependencies = [
  "mistralrs-quant",
  "mistralrs-vision",
  "num-traits",
+ "objc",
+ "objc2-metal",
  "openai-harmony",
  "ordered-float",
  "parking_lot",
@@ -6704,9 +6728,13 @@ checksum = "6e53ddf1537426997b46abdadbe6ca8a7ce7668004ed2b7cf00115016558bae8"
 dependencies = [
  "anyhow",
  "candle-core 0.10.2",
+ "candle-metal-kernels",
  "cudaforge",
+ "dispatch2",
  "float8",
  "half",
+ "objc2-foundation",
+ "objc2-metal",
  "thiserror 2.0.18",
 ]
 
@@ -6718,13 +6746,17 @@ checksum = "980715493d252e9aaf0779c4c101576d67ef4dd9812bfd77a54987f6f17526f4"
 dependencies = [
  "byteorder",
  "candle-core 0.10.2",
+ "candle-metal-kernels",
  "candle-nn",
  "cudaforge",
+ "dispatch2",
  "float8",
  "half",
  "hf-hub 0.4.3",
  "lazy_static",
  "memmap2 0.9.10",
+ "objc2-foundation",
+ "objc2-metal",
  "paste",
  "rayon",
  "regex",
@@ -7454,6 +7486,20 @@ dependencies = [
  "bitflags 2.11.0",
  "objc2 0.6.4",
  "objc2-core-foundation",
+]
+
+[[package]]
+name = "objc2-metal"
+version = "0.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a0125f776a10d00af4152d74616409f0d4a2053a6f57fa5b7d6aa2854ac04794"
+dependencies = [
+ "bitflags 2.11.0",
+ "block2 0.6.2",
+ "dispatch2",
+ "objc2 0.6.4",
+ "objc2-core-foundation",
+ "objc2-foundation",
 ]
 
 [[package]]
@@ -12028,6 +12074,20 @@ checksum = "9f0a1fa748f26166778c33b8498255ebb7c6bffb472bcc0a72839e07ebb1d9b5"
 dependencies = [
  "cudarc 0.17.8",
  "half",
+ "serde",
+ "thiserror 1.0.69",
+ "ug 0.5.0",
+]
+
+[[package]]
+name = "ug-metal"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9f7adf545a99a086d362efc739e7cf4317c18cbeda22706000fd434d70ea3d95"
+dependencies = [
+ "half",
+ "metal",
+ "objc",
  "serde",
  "thiserror 1.0.69",
  "ug 0.5.0",

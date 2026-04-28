@@ -78,16 +78,19 @@ pub async fn embed_load_gguf(
     }
 }
 
-/// 로드된 모델을 Drop해 VRAM을 해제.
+/// 로드된 모델을 Drop해 VRAM을 해제. 헤더/툴바 즉시 갱신용 이벤트도 emit.
 #[tauri::command]
-pub async fn embed_unload() -> Result<(), String> {
+pub async fn embed_unload(app: tauri::AppHandle) -> Result<(), String> {
     #[cfg(feature = "embedded-ai")]
     {
+        use tauri::Emitter;
         crate::commands::mistralrs_inline::unload_model().await;
+        let _ = app.emit("embed_load_progress", "🗑 모델 언로드");
         Ok(())
     }
     #[cfg(not(feature = "embedded-ai"))]
     {
+        let _ = app;
         Err(DISABLED_MSG.to_string())
     }
 }

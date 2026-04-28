@@ -1,6 +1,7 @@
 import React, { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { Group as PanelGroup, Panel, Separator as PanelResizeHandle } from "react-resizable-panels";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { shortPath } from "./utils";
 import { useTerminalBlocks } from "./hooks/useTerminalBlocks";
 import { useAIProcessing } from "./hooks/useAIProcessing";
 import { useHardwareSpecs } from "./hooks/useHardwareSpecs";
@@ -68,15 +69,24 @@ const App: React.FC = () => {
   const { blocks: cmdBlocks, feedRaw } = useCommandBlocks();
   useCommandNotifier(cmdBlocks);
 
-  // TabbyAPI 로드된 모델 ID + Heavy(mistral.rs) 모델 — 이벤트 기반 즉시 반영
+  // 임베디드 mistralrs 모델 (Phase 85b/88/92 통합) — 헤더/툴바 표시용
   const [loadedModelId, setLoadedModelId] = useState<string | null>(null);
   const [heavyModelId, setHeavyModelId] = useState<string | null>(null);
   const [heavyEnabled, setHeavyEnabled] = useState(false);
 
-  const refreshLoadedModel = useCallback(() => {
-    invoke<{ id: string }>("get_xllm_model_info")
-      .then((info) => setLoadedModelId(info?.id && info.id !== "unknown" ? info.id : null))
-      .catch(() => setLoadedModelId(null));
+  // 임베디드 모델 우선 — embed_loaded_info는 "{dir}/{file}" 반환, 파일명만 추출.
+  // 미로드 시 외부 OpenAI 호환 서버(Gemini/원격 mistralrs) model id 폴백.
+  const refreshLoadedModel = useCallback(async () => {
+    try {
+      const key = await invoke<string | null>("embed_loaded_info");
+      if (key) { setLoadedModelId(shortPath(key)); return; }
+    } catch {}
+    try {
+      const info = await invoke<{ id: string }>("get_xllm_model_info");
+      setLoadedModelId(info?.id && info.id !== "unknown" ? info.id : null);
+    } catch {
+      setLoadedModelId(null);
+    }
   }, []);
 
   const refreshHeavyConfig = useCallback(() => {
@@ -96,14 +106,13 @@ const App: React.FC = () => {
     return () => clearInterval(t);
   }, [refreshLoadedModel, refreshHeavyConfig]);
 
-  // Phase 85a-2: TabbyAPI 제거됨. mistral.rs는 사용자가 XllmPanel에서 명시적으로 [실행].
-  // 설정 저장 / 모델 전환 이벤트만 유지.
+  // 임베디드 모델 로드/언로드 이벤트(Phase 89) + 설정 저장 시 즉시 갱신.
   useEffect(() => {
-    const b = listen<unknown>("xllm_load_progress", () => refreshLoadedModel());
-    const c = listen<unknown>("xllm_settings_saved", () => { refreshLoadedModel(); refreshHeavyConfig(); });
+    const a = listen<unknown>("embed_load_progress", () => refreshLoadedModel());
+    const b = listen<unknown>("xllm_settings_saved", () => { refreshLoadedModel(); refreshHeavyConfig(); });
     return () => {
+      a.then((f: () => void) => f());
       b.then((f: () => void) => f());
-      c.then((f: () => void) => f());
     };
   }, [refreshLoadedModel, refreshHeavyConfig]);
 
@@ -212,8 +221,6 @@ const App: React.FC = () => {
   const [showSshModal, setShowSshModal] = useState(false);
   const [tabCtxMenu, setTabCtxMenu] = useState<{ tabId: string; x: number; y: number } | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("terminal");
-  const [xllmOnline, setXllmOnline] = useState(false);
-  const [mistralOnline, setMistralOnline] = useState(false);
   const [aiInput, setAiInput] = useState("");
   const [showAiBar, setShowAiBar] = useState(false);
   const [dismissedBlockId, setDismissedBlockId] = useState<string | null>(null);
@@ -227,26 +234,6 @@ const App: React.FC = () => {
       .catch(() => {});
   }, []);
 
-  useEffect(() => {
-    const poll = () =>
-      invoke<boolean>("check_xllm_status")
-        .then(setXllmOnline)
-        .catch(() => setXllmOnline(false));
-    poll();
-    const id = setInterval(poll, 10_000);
-    return () => clearInterval(id);
-  }, []);
-
-  // mistral.rs(:8080) healthcheck — running 필드만 사용
-  useEffect(() => {
-    const poll = () =>
-      invoke<{ running: boolean }>("check_mistral_rs_status")
-        .then((s) => setMistralOnline(s.running))
-        .catch(() => setMistralOnline(false));
-    poll();
-    const id = setInterval(poll, 10_000);
-    return () => clearInterval(id);
-  }, []);
 
   const recentCmds = useMemo(
     () => cmdBlocks.filter(b => b.command.trim()).map(b => b.command).slice(-20).reverse(),
@@ -530,21 +517,6 @@ const App: React.FC = () => {
                 })()}
               </span>
             ) : null}
-            {/* 엔진 상태 stack — xLLM(TabbyAPI)와 mistral.rs 둘 다 한눈에 */}
-            <div data-tauri-drag-region className="flex flex-col leading-tight ml-1 select-none">
-              <span
-                className={`text-[9px] ${xllmOnline ? "text-green-400" : "text-red-400/60"}`}
-                title={xllmOnline ? "TabbyAPI(:5000) 동작 중" : "TabbyAPI 미실행 — XllmPanel에서 [시작]"}
-              >
-                xLLM {xllmOnline ? "●" : "○"}
-              </span>
-              <span
-                className={`text-[9px] ${mistralOnline ? "text-green-400" : "text-red-400/60"}`}
-                title={mistralOnline ? "mistral.rs(:8080) 동작 중" : "mistral.rs 미실행 — XllmPanel Heavy 섹션에서 [실행]"}
-              >
-                mistral {mistralOnline ? "●" : "○"}
-              </span>
-            </div>
           </div>
 
           <div className="flex bg-white/5 p-0.5 rounded-md">
@@ -961,6 +933,8 @@ const App: React.FC = () => {
                             aiError={aiChat.error}
                             onClearAI={aiChat.clear}
                             visionEnabled={visionEnabled}
+                            showReasoning={showReasoning}
+                            onToggleReasoning={toggleReasoning}
                           />
                         </ErrorBoundary>
                       </PaneWrapper>
@@ -993,6 +967,8 @@ const App: React.FC = () => {
                             aiError={aiChat.error}
                             onClearAI={aiChat.clear}
                             visionEnabled={visionEnabled}
+                            showReasoning={showReasoning}
+                            onToggleReasoning={toggleReasoning}
                           />
                         </ErrorBoundary>
                       </PaneWrapper>
@@ -1019,6 +995,8 @@ const App: React.FC = () => {
                         aiError={aiChat.error}
                         onClearAI={aiChat.clear}
                         visionEnabled={visionEnabled}
+                        showReasoning={showReasoning}
+                        onToggleReasoning={toggleReasoning}
                       />
                     </ErrorBoundary>
                   </div>

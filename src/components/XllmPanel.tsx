@@ -2,8 +2,8 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import {
-  SlidersHorizontal, Loader2, RefreshCw,
-  Zap, Cpu, Sparkles,
+  SlidersHorizontal, Loader2,
+  Zap, Sparkles,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { IconButton } from "@/components/ui/icon-button";
@@ -24,34 +24,17 @@ interface AppConfig {
 type SafetyMode = "safe" | "balanced" | "max";
 const MODE_DEFAULTS: Record<SafetyMode, number> = { safe: 0.70, balanced: 0.80, max: 0.90 };
 
-interface ModelInfo {
-  id: string;
-  max_seq_len?: number;
-  rope_scale?: number;
-}
-
 interface Props {
   onClose: () => void;
 }
 
 const XllmPanel: React.FC<Props> = ({ onClose }) => {
   const [config, setConfig] = useState<AppConfig>({});
-  const [modelInfo, setModelInfo] = useState<ModelInfo | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [statusMsg, setStatusMsg] = useState<string | null>(null);
-  const [isLoadingInfo, setIsLoadingInfo] = useState(false);
 
   useEffect(() => {
     invoke<AppConfig>("load_app_config").then(setConfig).catch(() => {});
-    refreshModelInfo();
-  }, []);
-
-  const refreshModelInfo = useCallback(() => {
-    setIsLoadingInfo(true);
-    invoke<ModelInfo>("get_xllm_model_info")
-      .then(setModelInfo)
-      .catch(() => setModelInfo(null))
-      .finally(() => setIsLoadingInfo(false));
   }, []);
 
   const vramCapPct = Math.round(
@@ -216,35 +199,6 @@ const XllmPanel: React.FC<Props> = ({ onClose }) => {
             <p className="text-[10px] text-white/30 leading-relaxed">
               끄면 추론 모델의 <code className="px-1 bg-white/5 rounded text-[9px]">&lt;think&gt;</code> 체인이 UI에 안 보이고 최종 답만 표시됩니다.
             </p>
-          </section>
-
-          {/* 현재 모델 상태 */}
-          <section className="space-y-2">
-            <div className="flex items-center justify-between">
-              <label className="text-[10px] text-white/40 uppercase tracking-wider flex items-center gap-1.5">
-                <Cpu size={9} /> 현재 로드된 모델
-              </label>
-              <IconButton
-                tooltip="새로고침"
-                onClick={refreshModelInfo}
-                className="text-white/30 hover:text-white/70 transition-colors"
-              >
-                {isLoadingInfo
-                  ? <Loader2 size={11} className="animate-spin" />
-                  : <RefreshCw size={11} />}
-              </IconButton>
-            </div>
-            {modelInfo ? (
-              <div className="bg-white/3 border border-white/5 rounded-lg px-3 py-2 font-mono text-[11px] space-y-0.5">
-                <div className="text-white/80 truncate">{modelInfo.id}</div>
-                <div className="text-white/35 flex gap-4">
-                  {modelInfo.max_seq_len && <span>seq_len: {modelInfo.max_seq_len.toLocaleString()}</span>}
-                  {modelInfo.rope_scale && <span>rope: ×{modelInfo.rope_scale.toFixed(1)}</span>}
-                </div>
-              </div>
-            ) : (
-              <p className="text-[11px] text-white/25 italic">xLLM 서버 미연결</p>
-            )}
           </section>
 
           <EmbeddedInferenceDebug />

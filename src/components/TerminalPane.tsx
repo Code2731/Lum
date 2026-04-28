@@ -47,6 +47,8 @@ interface Props {
   aiError?: string | null;
   onClearAI?: () => void;
   visionEnabled?: boolean;
+  showReasoning?: boolean;
+  onToggleReasoning?: () => void;
 }
 
 const IS_WINDOWS = navigator.userAgent.includes("Windows");
@@ -116,11 +118,9 @@ const ModeButton: React.FC<ModeButtonProps> = ({ label, title, active, activeCol
   </IconButton>
 );
 
-const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme, fontSize, fontFamily, onOutput, onCwdChange, onReady, onAgentTrigger, onAskAI, aiMessages, aiStreaming, aiError, onClearAI, visionEnabled }) => {
-  // 입력 모드 토글 상태
-  const [heavyMode, setHeavyMode] = useState(false);
+const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme, fontSize, fontFamily, onOutput, onCwdChange, onReady, onAgentTrigger, onAskAI, aiMessages, aiStreaming, aiError, onClearAI, visionEnabled, showReasoning, onToggleReasoning }) => {
+  // 입력 모드 토글 상태 — Heavy(Phase 85b 제거)는 dead, reasoning은 App.tsx props 통해 글로벌 상태 연동
   const [visionMode, setVisionMode] = useState(visionEnabled ?? false);
-  const [reasoningMode, setReasoningMode] = useState(false);
   const [terminalVisible, setTerminalVisible] = useState(false);
 
   const outerRef = useRef<HTMLDivElement>(null);
@@ -584,9 +584,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
 
   // 입력 라우팅: 기본=AI, 알려진 CLI=shell, !/@/#/?/>> = 명시적 오버라이드
   const handleSubmit = useCallback((rawInput: string) => {
-    // heavyMode면 !! 접두사 자동 삽입
-    const effective = heavyMode && !rawInput.trimStart().startsWith("!!") ? "!! " + rawInput : rawInput;
-    const route = routeInput(effective);
+    const route = routeInput(rawInput);
     clearAllOverlays();
     switch (route.type) {
       case "empty":
@@ -609,7 +607,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
       case "explain":
         return;
     }
-  }, [id, heavyMode, clearAllOverlays]);
+  }, [id, clearAllOverlays]);
 
   const handleInterrupt = useCallback(() => {
     invoke("write_to_pty", { id, data: "\x03" }).catch(() => {});
@@ -723,7 +721,6 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
         onInterrupt={handleInterrupt}
         onTab={handleTab}
         onChange={handleInputChange}
-        heavyMode={heavyMode}
       />
 
       {/* 입력 모드 버튼바 */}
@@ -743,13 +740,6 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
           onClick={() => setTerminalVisible(v => !v)}
         />
         <ModeButton
-          label="🚀 Heavy"
-          title="Heavy Track — mistral.rs 30B 이상 (!! 접두사 자동)"
-          active={heavyMode}
-          activeColor="#bc8cff"
-          onClick={() => setHeavyMode(h => !h)}
-        />
-        <ModeButton
           label="👁 Vision"
           title="비전 모드 — 이미지 첨부 활성화"
           active={visionMode}
@@ -758,10 +748,10 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
         />
         <ModeButton
           label="🧠 추론"
-          title="추론 체인 표시 — <think> 블록 보이기"
-          active={reasoningMode}
+          title="추론 체인 표시 — <think> 블록 보이기 (전역 설정 토글)"
+          active={!!showReasoning}
           activeColor="#3fb950"
-          onClick={() => setReasoningMode(r => !r)}
+          onClick={() => onToggleReasoning?.()}
         />
       </div>
 
