@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { X, Cpu, Play, Loader2, CheckCircle, AlertCircle } from "lucide-react";
+import { Cpu, Play, Loader2, CheckCircle, AlertCircle } from "lucide-react";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 
 interface Props {
   onClose: () => void;
@@ -67,18 +68,13 @@ export default function LocalAIPanel({ onClose }: Props) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div className="w-[580px] max-h-[85vh] bg-[#1a1a2e] border border-white/10 rounded-xl shadow-2xl flex flex-col overflow-hidden">
+    <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="sm:max-w-[580px] max-h-[85vh] flex flex-col gap-0 p-0 overflow-hidden border-white/10 rounded-xl bg-[#1a1a2e]">
 
         {/* 헤더 */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-white/8">
-          <div className="flex items-center gap-2">
-            <Cpu size={14} className="text-accent" />
-            <span className="text-[13px] font-semibold text-white/90">로컬 AI 추론 (burn + wgpu)</span>
-          </div>
-          <button onClick={onClose} className="p-1 rounded hover:bg-white/10 text-white/40 hover:text-white transition-colors">
-            <X size={14} />
-          </button>
+        <div className="flex items-center gap-2 px-4 py-3 border-b border-white/8">
+          <Cpu size={14} className="text-accent" />
+          <DialogTitle className="text-[13px] font-semibold text-white/90">로컬 AI 추론 (burn + wgpu)</DialogTitle>
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-5">
@@ -205,7 +201,7 @@ export default function LocalAIPanel({ onClose }: Props) {
           )}
 
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

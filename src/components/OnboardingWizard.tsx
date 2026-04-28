@@ -6,6 +6,7 @@ import {
   Zap, Cpu, Package, CheckCircle2, Loader2,
   ChevronRight, RefreshCw, Download, TerminalSquare, Shield, Gauge, Rocket,
 } from "lucide-react";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 
 interface DownloadProgress {
   file: string;
@@ -117,8 +118,13 @@ const OnboardingWizard: React.FC<Props> = ({ onComplete }) => {
       : null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
-      <div className="w-full max-w-lg mx-4 bg-[#0d1117] border border-white/10 rounded-2xl shadow-2xl overflow-hidden">
+    <Dialog open onOpenChange={() => {}}>
+      <DialogContent
+        className="sm:max-w-lg gap-0 p-0 overflow-hidden border-white/10 rounded-2xl [&>button]:hidden"
+        onPointerDownOutside={(e) => e.preventDefault()}
+        onEscapeKeyDown={(e) => e.preventDefault()}
+      >
+        <DialogTitle className="sr-only">LUM 온보딩</DialogTitle>
         {/* 진행 바 */}
         <div className="flex items-center gap-1.5 px-6 pt-5">
           {STEPS.map((_, i) => (
@@ -401,8 +407,8 @@ const OnboardingWizard: React.FC<Props> = ({ onComplete }) => {
             </div>
           )}
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 };
 

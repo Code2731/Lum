@@ -1,4 +1,5 @@
-import { Sparkles, X, Hash, HelpCircle, Search, GitBranch, FolderTree, Command } from "lucide-react";
+import { Sparkles, Hash, HelpCircle, Search, GitBranch, FolderTree, Command } from "lucide-react";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 
 interface Props {
   onClose: () => void;
@@ -15,16 +16,11 @@ const HINTS = [
 
 export default function WelcomeHints({ onClose }: Props) {
   return (
-    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div className="w-[460px] bg-[#141824] border border-white/10 rounded-xl shadow-2xl overflow-hidden">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-white/8">
-          <div className="flex items-center gap-2">
-            <Sparkles size={14} className="text-accent" />
-            <span className="text-[13px] font-semibold text-white/90">LUM — AI 터미널 힌트</span>
-          </div>
-          <button onClick={onClose} className="p-1 rounded hover:bg-white/10 text-white/40">
-            <X size={13} />
-          </button>
+    <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="sm:max-w-[460px] gap-0 p-0 overflow-hidden border-white/10 rounded-xl bg-[#141824]">
+        <div className="flex items-center gap-2 px-4 py-3 border-b border-white/8">
+          <Sparkles size={14} className="text-accent" />
+          <DialogTitle className="text-[13px] font-semibold text-white/90">LUM — AI 터미널 힌트</DialogTitle>
         </div>
 
         <div className="px-4 py-4 space-y-2">
@@ -54,7 +50,7 @@ export default function WelcomeHints({ onClose }: Props) {
             시작하기
           </button>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

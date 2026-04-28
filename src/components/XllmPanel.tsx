@@ -2,9 +2,10 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import {
-  SlidersHorizontal, Loader2, X, RefreshCw,
+  SlidersHorizontal, Loader2, RefreshCw,
   Zap, Cpu, Sparkles,
 } from "lucide-react";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { shortPath } from "../utils";
 
 interface AppConfig {
@@ -78,18 +79,12 @@ const XllmPanel: React.FC<Props> = ({ onClose }) => {
   }, [config]);
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-start justify-center pt-16 bg-black/50 backdrop-blur-sm"
-      onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
-    >
-      <div className="w-full max-w-lg mx-4 bg-[#0d1117] border border-white/10 rounded-xl shadow-2xl overflow-hidden max-h-[80vh] flex flex-col">
+    <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="sm:max-w-lg top-[12%] translate-y-0 max-h-[80vh] flex flex-col gap-0 p-0 overflow-hidden border-white/10 rounded-xl">
         {/* 헤더 */}
         <div className="flex items-center gap-2 px-4 py-3 border-b border-white/5 shrink-0">
           <SlidersHorizontal size={13} className="text-accent shrink-0" />
-          <span className="text-xs font-semibold">xLLM 실전 최적화 설정</span>
-          <button onClick={onClose} className="ml-auto text-white/30 hover:text-white/70 transition-colors">
-            <X size={13} />
-          </button>
+          <DialogTitle className="text-xs font-semibold">xLLM 실전 최적화 설정</DialogTitle>
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-5">
@@ -268,8 +263,8 @@ const XllmPanel: React.FC<Props> = ({ onClose }) => {
             설정 저장
           </button>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 };
 

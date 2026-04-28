@@ -2,7 +2,8 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { Download, Trash2, X, HardDrive, ExternalLink } from "lucide-react";
+import { Download, Trash2, HardDrive, ExternalLink, X } from "lucide-react";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { shortPath } from "../utils";
 
 interface MistralLocalModel {
@@ -208,17 +209,12 @@ const ModelManager: React.FC<Props> = ({ onClose }) => {
     mb >= 1024 ? `${(mb / 1024).toFixed(1)} GB` : `${mb.toFixed(0)} MB`;
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-      <div className="bg-[#0f1117] border border-white/10 rounded-xl w-[600px] max-h-[80vh] flex flex-col shadow-2xl">
+    <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="sm:max-w-[600px] max-h-[80vh] flex flex-col gap-0 p-0 overflow-hidden border-white/10 rounded-xl bg-[#0f1117]">
         {/* 헤더 */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-white/5">
-          <div className="flex items-center gap-2">
-            <HardDrive size={16} className="text-accent" />
-            <span className="text-sm font-semibold">모델 관리</span>
-          </div>
-          <button onClick={onClose} className="text-white/40 hover:text-white transition-colors">
-            <X size={16} />
-          </button>
+        <div className="flex items-center gap-2 px-5 py-4 border-b border-white/5">
+          <HardDrive size={16} className="text-accent" />
+          <DialogTitle className="text-sm font-semibold">모델 관리</DialogTitle>
         </div>
 
         {/* 탭 */}
@@ -495,8 +491,8 @@ const ModelManager: React.FC<Props> = ({ onClose }) => {
             </>
           )}
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 };
 
