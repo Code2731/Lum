@@ -1,9 +1,10 @@
 import React, { useState, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import {
-  GitCompareArrows, X, Loader2, ChevronDown, ChevronRight,
+  GitCompareArrows, Loader2, ChevronDown, ChevronRight,
   AlertTriangle, CheckCircle2, AlertCircle, RefreshCw,
 } from "lucide-react";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 
 interface FileDiffReview {
   path: string;
@@ -65,12 +66,12 @@ const DiffReviewPanel: React.FC<Props> = ({ model, repoPat = "", onClose }) => {
     : null;
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
-      <div className="bg-[#0d1117] border border-white/10 rounded-2xl w-[640px] max-h-[80vh] flex flex-col shadow-2xl overflow-hidden">
+    <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="sm:max-w-[640px] max-h-[80vh] flex flex-col gap-0 p-0 overflow-hidden border-white/10 rounded-2xl">
         {/* Header */}
         <div className="flex items-center gap-2.5 px-5 py-4 border-b border-white/8 shrink-0">
           <GitCompareArrows size={15} className="text-accent" />
-          <span className="text-sm font-semibold">AI Diff Reviewer</span>
+          <DialogTitle className="text-sm font-semibold">AI Diff Reviewer</DialogTitle>
           <div className="flex ml-3 gap-1">
             {(["staged", "unstaged"] as const).map(mode => (
               <button
@@ -93,9 +94,6 @@ const DiffReviewPanel: React.FC<Props> = ({ model, repoPat = "", onClose }) => {
           >
             {loading ? <Loader2 size={11} className="animate-spin" /> : <RefreshCw size={11} />}
             분석
-          </button>
-          <button onClick={onClose} className="ml-2 text-white/30 hover:text-white/70 transition-colors">
-            <X size={14} />
           </button>
         </div>
 
@@ -182,8 +180,8 @@ const DiffReviewPanel: React.FC<Props> = ({ model, repoPat = "", onClose }) => {
             </>
           )}
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 };
 

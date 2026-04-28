@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { Palette, X, Type, Check } from "lucide-react";
+import { Palette, Type, Check } from "lucide-react";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { THEMES, FONT_FAMILIES, type TerminalAppearance } from "../hooks/useTerminalTheme";
 
 interface Props {
@@ -14,15 +15,12 @@ const ThemePanel: React.FC<Props> = ({ appearance, onSave, onClose }) => {
   const apply = () => { onSave(local); onClose(); };
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
-      <div className="bg-[#0d1117] border border-white/10 rounded-2xl w-[500px] flex flex-col shadow-2xl overflow-hidden">
+    <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="sm:max-w-[500px] gap-0 p-0 overflow-hidden border-white/10 rounded-2xl">
         {/* Header */}
         <div className="flex items-center gap-2.5 px-5 py-4 border-b border-white/8">
           <Palette size={15} className="text-accent" />
-          <span className="text-sm font-semibold">터미널 테마 설정</span>
-          <button onClick={onClose} className="ml-auto text-white/30 hover:text-white/70 transition-colors">
-            <X size={14} />
-          </button>
+          <DialogTitle className="text-sm font-semibold">터미널 테마 설정</DialogTitle>
         </div>
 
         <div className="px-5 py-4 space-y-5">
@@ -139,8 +137,8 @@ const ThemePanel: React.FC<Props> = ({ appearance, onSave, onClose }) => {
             적용
           </button>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 };
 

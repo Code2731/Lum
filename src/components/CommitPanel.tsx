@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { GitCommit, Loader2, Copy, Play, X, FolderOpen } from "lucide-react";
+import { GitCommit, Loader2, Copy, Play, FolderOpen } from "lucide-react";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 
 interface Props {
   model: string;
@@ -58,21 +59,12 @@ const CommitPanel: React.FC<Props> = ({ model, onExecute, onClose }) => {
   }, [message, onExecute, onClose]);
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-start justify-center pt-20 bg-black/50 backdrop-blur-sm"
-      onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
-    >
-      <div className="w-full max-w-xl mx-4 bg-[#0d1117] border border-white/10 rounded-xl shadow-2xl overflow-hidden">
+    <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="sm:max-w-xl top-[20%] translate-y-0 gap-0 p-0 overflow-hidden border-white/10 rounded-xl">
         {/* 헤더 */}
         <div className="flex items-center gap-2 px-4 py-3 border-b border-white/5">
           <GitCommit size={13} className="text-accent shrink-0" />
-          <span className="text-xs font-semibold">AI 커밋 메시지 생성</span>
-          <button
-            onClick={onClose}
-            className="ml-auto text-white/30 hover:text-white/70 transition-colors"
-          >
-            <X size={13} />
-          </button>
+          <DialogTitle className="text-xs font-semibold">AI 커밋 메시지 생성</DialogTitle>
         </div>
 
         <div className="p-4 space-y-3">
@@ -149,8 +141,8 @@ const CommitPanel: React.FC<Props> = ({ model, onExecute, onClose }) => {
             </div>
           )}
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 };
 
