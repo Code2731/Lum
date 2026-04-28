@@ -251,6 +251,28 @@ pub async fn download_mistral_model(
     Ok(path.to_string_lossy().to_string())
 }
 
+/// `~/.lum_mistral_models/<safe>` 폴더 통째 삭제. 경로 traversal 방지를 위해
+/// `safe_name`이 단일 폴더명(슬래시·.. 미포함)인지 검증 후 그 *디렉터리 한정*으로 제거.
+#[command]
+pub async fn delete_mistral_model(safe_name: String) -> Result<()> {
+    if safe_name.is_empty()
+        || safe_name.contains('/')
+        || safe_name.contains('\\')
+        || safe_name.contains("..")
+    {
+        return Err(LumError::AiEngine(format!(
+            "잘못된 모델 폴더명: {safe_name}"
+        )));
+    }
+    let dir = crate::platform::home_dir()
+        .join(".lum_mistral_models")
+        .join(&safe_name);
+    if dir.exists() {
+        std::fs::remove_dir_all(&dir).map_err(|e| LumError::Io(e.to_string()))?;
+    }
+    Ok(())
+}
+
 /// 사용자가 mistral.rs용으로 받은 모델 목록 — `~/.lum_mistral_models/<safe>` 폴더 스캔.
 /// safe_name → repo_id 역변환 ("Qwen--Qwen3-8B" → "Qwen/Qwen3-8B").
 #[command]

@@ -1146,12 +1146,7 @@ const App: React.FC = () => {
       </main>
 
       {showModelManager && (
-        <ModelManager
-          onClose={() => setShowModelManager(false)}
-          recommendedModel={specs?.recommended_model}
-          gpuVramGb={specs?.gpu_vram_gb}
-          totalMemoryGb={specs?.total_memory_gb}
-        />
+        <ModelManager onClose={() => setShowModelManager(false)} />
       )}
 
       {showHistorySearch && (
