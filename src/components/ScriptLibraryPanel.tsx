@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { BookOpen, Play, Trash2, X, Plus, Terminal } from "lucide-react";
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete";
 import type { Script } from "../hooks/useScriptLibrary";
 
 interface Props {
@@ -19,7 +20,6 @@ const ScriptLibraryPanel: React.FC<Props> = ({
   const [newName, setNewName] = useState("");
   const [newDesc, setNewDesc] = useState("");
   const [newCmds, setNewCmds] = useState("");
-  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => { onLoad(); }, [onLoad]);
@@ -135,39 +135,26 @@ const ScriptLibraryPanel: React.FC<Props> = ({
                 </p>
               </div>
               <div className="flex items-center gap-1 shrink-0">
-                {deleteConfirm === sc.id ? (
-                  <>
-                    <button
-                      onClick={() => setDeleteConfirm(null)}
-                      className="text-[10px] text-white/40 hover:text-white/60 px-1.5 py-0.5 rounded transition-colors"
-                    >
-                      취소
-                    </button>
-                    <button
-                      onClick={() => { onDelete(sc.id); setDeleteConfirm(null); }}
-                      className="text-[10px] text-red-400 hover:text-red-300 px-1.5 py-0.5 rounded bg-red-400/10 transition-colors"
-                    >
-                      삭제
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <button
-                      onClick={() => setDeleteConfirm(sc.id)}
-                      className="text-white/20 hover:text-red-400 transition-colors p-0.5 rounded"
-                      title="삭제"
-                    >
-                      <Trash2 size={10} />
-                    </button>
-                    <button
-                      onClick={() => onRun(sc.commands)}
-                      className="flex items-center gap-1 px-2 py-0.5 text-[10px] rounded bg-accent/15 text-accent hover:bg-accent/25 transition-colors font-medium"
-                    >
-                      <Play size={9} />
-                      실행
-                    </button>
-                  </>
-                )}
+                <ConfirmDeleteDialog
+                  itemName={sc.name}
+                  itemType="스크립트"
+                  description={`${sc.commands.length}개 명령어가 함께 삭제됩니다.`}
+                  onConfirm={() => onDelete(sc.id)}
+                >
+                  <button
+                    className="text-white/20 hover:text-red-400 transition-colors p-0.5 rounded"
+                    title="삭제"
+                  >
+                    <Trash2 size={10} />
+                  </button>
+                </ConfirmDeleteDialog>
+                <button
+                  onClick={() => onRun(sc.commands)}
+                  className="flex items-center gap-1 px-2 py-0.5 text-[10px] rounded bg-accent/15 text-accent hover:bg-accent/25 transition-colors font-medium"
+                >
+                  <Play size={9} />
+                  실행
+                </button>
               </div>
             </div>
             {/* 커맨드 미리보기 */}

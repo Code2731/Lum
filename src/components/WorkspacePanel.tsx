@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Layers, Save, Trash2, FolderOpen, TerminalSquare, Clock } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete";
 import type { Workspace, WorkspaceTab } from "../hooks/useWorkspace";
 import { shortPath } from "../utils";
 
@@ -26,7 +27,6 @@ const WorkspacePanel: React.FC<Props> = ({
 }) => {
   const [saveName, setSaveName] = useState("");
   const [saving, setSaving] = useState(false);
-  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
   const handleSave = async () => {
     const name = saveName.trim() || `워크스페이스 ${new Date().toLocaleDateString("ko-KR")}`;
@@ -35,7 +35,7 @@ const WorkspacePanel: React.FC<Props> = ({
   };
 
   return (
-    <Dialog open onOpenChange={(o) => { if (!o) { setDeleteConfirm(null); onClose(); } }}>
+    <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
       <DialogContent className="sm:max-w-[580px] max-h-[80vh] flex flex-col gap-0 p-0 overflow-hidden border-white/10 rounded-2xl">
         {/* Header */}
         <div className="flex items-center gap-2.5 px-5 py-4 border-b border-white/8 shrink-0">
@@ -100,37 +100,24 @@ const WorkspacePanel: React.FC<Props> = ({
                     <span className="text-[10px] text-white/20 ml-1">탭 {ws.tabs.length}개</span>
                   </div>
                 </div>
-                {deleteConfirm === ws.id ? (
-                  <div className="flex gap-1.5">
-                    <button
-                      onClick={() => { onDelete(ws.id); setDeleteConfirm(null); }}
-                      className="text-[10px] px-2 py-0.5 rounded bg-red-400/15 text-red-400 hover:bg-red-400/25 transition-colors"
-                    >
-                      삭제
-                    </button>
-                    <button
-                      onClick={() => setDeleteConfirm(null)}
-                      className="text-[10px] px-2 py-0.5 rounded bg-white/5 text-white/40 hover:bg-white/10 transition-colors"
-                    >
-                      취소
-                    </button>
-                  </div>
-                ) : (
-                  <div className="flex gap-1">
-                    <button
-                      onClick={() => { onRestore(ws); onClose(); }}
-                      className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-accent/15 text-accent hover:bg-accent/25 transition-colors text-[10px] font-medium"
-                    >
-                      <FolderOpen size={10} /> 불러오기
-                    </button>
-                    <button
-                      onClick={() => setDeleteConfirm(ws.id)}
-                      className="p-1 rounded text-white/20 hover:text-red-400 transition-colors"
-                    >
+                <div className="flex gap-1">
+                  <button
+                    onClick={() => { onRestore(ws); onClose(); }}
+                    className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-accent/15 text-accent hover:bg-accent/25 transition-colors text-[10px] font-medium"
+                  >
+                    <FolderOpen size={10} /> 불러오기
+                  </button>
+                  <ConfirmDeleteDialog
+                    itemName={ws.name}
+                    itemType="워크스페이스"
+                    description={`탭 ${ws.tabs.length}개가 함께 삭제됩니다.`}
+                    onConfirm={() => onDelete(ws.id)}
+                  >
+                    <button className="p-1 rounded text-white/20 hover:text-red-400 transition-colors">
                       <Trash2 size={11} />
                     </button>
-                  </div>
-                )}
+                  </ConfirmDeleteDialog>
+                </div>
               </div>
               {/* 탭 미리보기 */}
               <div className="flex gap-1 px-4 pb-2.5 flex-wrap">

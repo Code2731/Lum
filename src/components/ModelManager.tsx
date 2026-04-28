@@ -4,6 +4,7 @@ import { listen } from "@tauri-apps/api/event";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { Download, Trash2, HardDrive, ExternalLink, X } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete";
 import { shortPath } from "../utils";
 
 interface MistralLocalModel {
@@ -36,9 +37,8 @@ const ModelManager: React.FC<Props> = ({ onClose }) => {
   const [codingModel, setCodingModel] = useState<string | null>(null);
   const [docModel, setDocModel] = useState<string | null>(null);
   const [loadMsg, setLoadMsg] = useState<string | null>(null);
-  // 삭제 확정 다이얼로그 상태 — safe_name 기준
+  // 삭제 진행 중 — safe_name 기준 (확인 모달은 ConfirmDeleteDialog가 자체 관리)
   const [deleting, setDeleting] = useState<string | null>(null);
-  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   // 갱신 버튼 — heavy_presets repo 살아있음 여부
   type RepoState = "alive" | "gated" | "dead" | "error";
   const [repoStatus, setRepoStatus] = useState<Record<string, RepoState>>({});
@@ -180,7 +180,6 @@ const ModelManager: React.FC<Props> = ({ onClose }) => {
       setLoadMsg(`❌ 삭제 실패: ${msg}`);
     } finally {
       setDeleting(null);
-      setDeleteConfirm(null);
     }
   }, [refreshMistralLocal]);
 
@@ -272,33 +271,20 @@ const ModelManager: React.FC<Props> = ({ onClose }) => {
                           </div>
                         </div>
                         <div className="flex items-center gap-1.5 shrink-0">
-                          {deleteConfirm === safeName ? (
-                            <>
-                              <span className="text-[10px] text-red-400">삭제?</span>
-                              <button
-                                onClick={() => handleDeleteMistral(m.path)}
-                                disabled={deleting === safeName}
-                                className="px-2 py-1 rounded bg-red-500/80 hover:bg-red-500 text-white text-[10px] font-medium disabled:opacity-50 transition-colors"
-                              >
-                                {deleting === safeName ? "삭제 중..." : "확인"}
-                              </button>
-                              <button
-                                onClick={() => setDeleteConfirm(null)}
-                                className="px-2 py-1 rounded bg-white/10 hover:bg-white/20 text-white/60 text-[10px] transition-colors"
-                              >
-                                취소
-                              </button>
-                            </>
-                          ) : (
+                          <ConfirmDeleteDialog
+                            itemName={m.repo_id}
+                            itemType="모델"
+                            description={`~/.lum_mistral_models/${safeName}/ 폴더(${formatMb(m.size_mb)})가 영구 삭제됩니다.`}
+                            onConfirm={() => handleDeleteMistral(m.path)}
+                          >
                             <button
-                              onClick={() => setDeleteConfirm(safeName)}
                               disabled={deleting === safeName}
                               className="p-1.5 rounded text-white/30 hover:text-red-400 hover:bg-red-400/10 transition-colors disabled:opacity-50"
-                              title={`~/.lum_mistral_models/${safeName}/ 폴더 삭제`}
+                              title="모델 삭제"
                             >
                               <Trash2 size={13} />
                             </button>
-                          )}
+                          </ConfirmDeleteDialog>
                         </div>
                       </div>
 
