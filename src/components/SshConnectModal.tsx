@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
-import { X, Server, User, Key, Lock, Bookmark, Trash2 } from "lucide-react";
+import { Server, User, Key, Lock, Bookmark, Trash2 } from "lucide-react";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import type { SshProfile } from "../hooks/useTabManager";
 import { useSshProfiles, type SshProfileEntry } from "../hooks/useSshProfiles";
 
@@ -53,17 +54,11 @@ const SshConnectModal: React.FC<Props> = ({ onConnect, onClose }) => {
   };
 
   return (
-    <div
-      className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50"
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
-    >
-      <div className="bg-[#0d1117] border border-white/10 rounded-2xl w-[440px] shadow-2xl overflow-hidden">
+    <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="sm:max-w-[440px] gap-0 p-0 overflow-hidden border-white/10 rounded-2xl">
         <div className="flex items-center gap-2.5 px-5 py-4 border-b border-white/8">
           <Lock size={14} className="text-accent" />
-          <span className="text-sm font-semibold">SSH 연결</span>
-          <button onClick={onClose} className="ml-auto text-white/30 hover:text-white/70 transition-colors">
-            <X size={14} />
-          </button>
+          <DialogTitle className="text-sm font-semibold">SSH 연결</DialogTitle>
         </div>
 
         {profiles.length > 0 && (
@@ -211,8 +206,8 @@ const SshConnectModal: React.FC<Props> = ({ onConnect, onClose }) => {
             연결
           </button>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 };
 

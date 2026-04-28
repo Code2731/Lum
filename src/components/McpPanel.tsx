@@ -1,9 +1,11 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import {
-  X, Plus, Plug, PlugZap, Trash2, RefreshCw, Download, Play,
+  Plus, Plug, PlugZap, Trash2, RefreshCw, Download, Play,
   ChevronDown, ChevronRight, Loader2, AlertTriangle, CheckCircle2,
 } from "lucide-react";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Switch } from "@/components/ui/switch";
 
 interface McpServerSpec {
   name: string;
@@ -115,28 +117,23 @@ const McpPanel: React.FC<Props> = ({ onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div className="w-[640px] max-h-[85vh] bg-[#1a1a2e] border border-white/10 rounded-xl shadow-2xl flex flex-col overflow-hidden">
+    <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="sm:max-w-[640px] max-h-[85vh] flex flex-col gap-0 p-0 overflow-hidden border-white/10 rounded-xl bg-[#1a1a2e]">
 
         {/* 헤더 */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-white/8">
           <div className="flex items-center gap-2">
             <PlugZap size={14} className="text-accent" />
-            <span className="text-[13px] font-semibold text-white/90">MCP 서버</span>
+            <DialogTitle className="text-[13px] font-semibold text-white/90">MCP 서버</DialogTitle>
             <span className="text-[10px] text-white/30">· Model Context Protocol</span>
           </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={loadServers}
-              className="p-1 rounded text-white/30 hover:text-white/70 hover:bg-white/5"
-              title="새로고침"
-            >
-              <RefreshCw size={12} className={loadingList ? "animate-spin" : ""} />
-            </button>
-            <button onClick={onClose} className="p-1 rounded hover:bg-white/10 text-white/40 hover:text-white">
-              <X size={14} />
-            </button>
-          </div>
+          <button
+            onClick={loadServers}
+            className="p-1 rounded text-white/30 hover:text-white/70 hover:bg-white/5 mr-8"
+            title="새로고침"
+          >
+            <RefreshCw size={12} className={loadingList ? "animate-spin" : ""} />
+          </button>
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
@@ -176,12 +173,11 @@ const McpPanel: React.FC<Props> = ({ onClose }) => {
                       <span className="text-[10px] text-white/30 ml-1 truncate">· {s.description}</span>
                     )}
                   </button>
-                  <label className="flex items-center gap-1 cursor-pointer">
-                    <input
-                      type="checkbox"
+                  <label className="flex items-center gap-1.5 cursor-pointer">
+                    <Switch
                       checked={s.enabled}
-                      onChange={() => toggleEnabled(s)}
-                      className="w-3.5 h-3.5 accent-accent cursor-pointer"
+                      onCheckedChange={() => toggleEnabled(s)}
+                      className="scale-75"
                     />
                     <span className="text-[10px] text-white/40">{s.enabled ? "활성" : "꺼짐"}</span>
                   </label>
@@ -308,8 +304,8 @@ const McpPanel: React.FC<Props> = ({ onClose }) => {
             <b>Phase 74</b>: 서버 등록 + 툴 조회만 동작. AI 자동 호출은 이후 Phase에서 통합 예정.
           </p>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 };
 

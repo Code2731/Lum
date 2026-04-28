@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { X, Plus, Trash2, ChevronUp, ChevronDown, Zap } from "lucide-react";
+import { Plus, Trash2, ChevronUp, ChevronDown, Zap } from "lucide-react";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import type { QuickAction } from "../hooks/useQuickActions";
 
 interface Props {
@@ -34,15 +35,12 @@ const QuickActionsEditor: React.FC<Props> = ({
   const usedShortcuts = new Set(actions.map(a => a.shortcut).filter(Boolean));
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
-      <div className="bg-[#0d1117] border border-white/10 rounded-2xl w-[560px] max-h-[80vh] flex flex-col shadow-2xl overflow-hidden">
+    <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="sm:max-w-[560px] max-h-[80vh] flex flex-col gap-0 p-0 overflow-hidden border-white/10 rounded-2xl">
         {/* Header */}
         <div className="flex items-center gap-2.5 px-5 py-4 border-b border-white/8 shrink-0">
           <Zap size={14} className="text-accent" />
-          <span className="text-sm font-semibold">Quick Actions 편집</span>
-          <button onClick={onClose} className="ml-auto text-white/30 hover:text-white/70 transition-colors">
-            <X size={14} />
-          </button>
+          <DialogTitle className="text-sm font-semibold">Quick Actions 편집</DialogTitle>
         </div>
 
         {/* 액션 목록 */}
@@ -153,8 +151,8 @@ const QuickActionsEditor: React.FC<Props> = ({
             </button>
           </div>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 };
 
