@@ -111,17 +111,34 @@ fn xllm_body(
     body
 }
 
-/// xLLM 단일 응답 호출 (기존 호환)
+/// 임베디드 mistralrs가 로드돼있고 이미지 입력이 없으면 in-process 추론 시도.
+/// `Some(result)` = 임베디드 사용 (성공/실패 무관 — 폴백 안 함), `None` = HTTP 폴백 필요.
+/// 이미지가 있으면 GGUF 텍스트 모델로 처리 불가하므로 무조건 폴백.
+/// `xllm_body`와 동일하게 `images: &[String]` 받음 — 호출부 변환 불필요.
+#[cfg(feature = "embedded-ai")]
+async fn try_embedded_inference(prompt: &str, images: &[String]) -> Option<Result<String>> {
+    if !images.is_empty() {
+        return None;
+    }
+    if crate::commands::mistralrs_inline::loaded_key().is_none() {
+        return None;
+    }
+    Some(
+        crate::commands::mistralrs_inline::infer_once(prompt)
+            .await
+            .map_err(|e| LumError::AiEngine(format!("embedded inference failed: {e}"))),
+    )
+}
+
+#[cfg(not(feature = "embedded-ai"))]
+async fn try_embedded_inference(_prompt: &str, _images: &[String]) -> Option<Result<String>> {
+    None
+}
+
+/// xLLM 단일 응답 호출 (기존 호환). 임베디드 GGUF 우선, 미로드면 HTTP 폴백.
 pub async fn call_xllm(client: &reqwest::Client, _model: &str, prompt: &str) -> Result<String> {
-    // Phase 85b-5a: 임베디드 mistralrs가 로드돼있으면 우선 사용 — subprocess + HTTP 우회.
-    // 비활성 빌드 또는 미로드 시 기존 reqwest path로 폴백.
-    #[cfg(feature = "embedded-ai")]
-    {
-        if crate::commands::mistralrs_inline::current_engine().is_some() {
-            return crate::commands::mistralrs_inline::infer_once(prompt)
-                .await
-                .map_err(|e| LumError::AiEngine(format!("embedded inference failed: {e}")));
-        }
+    if let Some(result) = try_embedded_inference(prompt, &[]).await {
+        return result;
     }
 
     let config = load_config()?;
@@ -318,6 +335,25 @@ mod tests {
         assert_eq!(xllm_body(&c, "m", "p", false, &[])["stream"], false);
         assert_eq!(xllm_body(&c, "m", "p", true, &[])["stream"], true);
     }
+
+    #[tokio::test]
+    async fn try_embedded_inference_skips_when_images_present() {
+        // 이미지 있으면 feature 활성/비활성 무관 항상 None — GGUF 텍스트 모델 처리 불가.
+        // 회귀 가드: 라우팅이 실수로 이미지를 임베디드에 보내면 모델이 텍스트만 보고 답해
+        // 사용자 요청과 무관한 응답이 나옴.
+        let imgs = vec!["data:image/png;base64,xxx".to_string()];
+        let r = try_embedded_inference("hello", &imgs).await;
+        assert!(r.is_none(), "이미지 있으면 임베디드 라우팅 스킵 후 HTTP/Gemini 폴백");
+    }
+
+    #[cfg(not(feature = "embedded-ai"))]
+    #[tokio::test]
+    async fn try_embedded_inference_none_without_feature() {
+        // 비활성 빌드: 항상 None — embedded-ai 코드는 단 한 줄도 실행되지 않음.
+        assert!(try_embedded_inference("hello", &[]).await.is_none());
+        let imgs = vec!["img".to_string()];
+        assert!(try_embedded_inference("hello", &imgs).await.is_none());
+    }
 }
 
 /// xLLM 서버 상태 확인 — /v1/models 엔드포인트로 핑
@@ -487,8 +523,14 @@ pub async fn stream_ai_command(
         let _ = app.emit(XLLM_TOKEN_EVENT, result.clone());
         Ok(result)
     } else {
-        // Phase 85b — Heavy/Fast 라우팅 제거. 임베디드 mistralrs 또는 폴백 reqwest 단일 path.
-        let _ = engine; // engine 파라미터 deprecated — 호환성 유지용으로만 받음.
+        let _ = engine;
+        // 임베디드 GGUF 로드돼있으면 in-process 추론 — 단일 토큰 이벤트로 emit.
+        // 실시간 토큰 스트리밍은 Phase A에서 mistralrs stream API 도입 시 추가.
+        if let Some(result) = try_embedded_inference(&full_prompt, &imgs).await {
+            let text = result?;
+            let _ = app.emit(XLLM_TOKEN_EVENT, text.clone());
+            return Ok(text);
+        }
         let config = load_config()?;
         call_compat_stream(&app, &client, &full_prompt, &imgs, &config.xllm_url(), config.xllm_api_key.clone(), &cancel_flag).await
     }
