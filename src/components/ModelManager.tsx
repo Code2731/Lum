@@ -3,6 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { Download, Trash2, X, HardDrive, ExternalLink } from "lucide-react";
+import { shortPath } from "../utils";
 
 interface MistralLocalModel {
   repo_id: string;
@@ -14,13 +15,6 @@ import { useModelCatalog } from "../hooks/useModelCatalog";
 
 interface Props {
   onClose: () => void;
-}
-
-/** path("…/.lum_mistral_models/Qwen--Qwen3-8B") → "Qwen--Qwen3-8B" */
-function safeNameFromPath(p: string): string {
-  const norm = p.replace(/\\/g, "/").replace(/\/+$/, "");
-  const idx = norm.lastIndexOf("/");
-  return idx >= 0 ? norm.slice(idx + 1) : norm;
 }
 
 const ModelManager: React.FC<Props> = ({ onClose }) => {
@@ -49,15 +43,6 @@ const ModelManager: React.FC<Props> = ({ onClose }) => {
   const [refreshMsg, setRefreshMsg] = useState<string | null>(null);
 
   const repoKey = (repoId: string, revision: string) => `${repoId}@${revision}`;
-
-  const refreshRoles = useCallback(() => {
-    invoke<{ coding_model?: string; doc_model?: string }>("load_app_config")
-      .then((c) => {
-        setCodingModel(c.coding_model ?? null);
-        setDocModel(c.doc_model ?? null);
-      })
-      .catch(() => {});
-  }, []);
 
   /** mistral.rs 로컬 폴더 스캔 — 설치된 모델 탭의 데이터 소스 */
   const refreshMistralLocal = useCallback(async () => {
@@ -171,8 +156,8 @@ const ModelManager: React.FC<Props> = ({ onClose }) => {
   }, []);
 
   const handleDeleteMistral = useCallback(async (path: string) => {
-    const safeName = safeNameFromPath(path);
-    if (!safeName) return;
+    const safeName = shortPath(path);
+    if (!safeName || safeName === "~") return;
     setDeleting(safeName);
     try {
       await invoke("delete_mistral_model", { safeName });
@@ -188,10 +173,13 @@ const ModelManager: React.FC<Props> = ({ onClose }) => {
   }, [refreshMistralLocal]);
 
   useEffect(() => {
-    invoke<{ hf_token?: string }>("load_app_config")
-      .then((c) => { if (c.hf_token) setHfToken(c.hf_token); })
+    invoke<{ hf_token?: string; coding_model?: string; doc_model?: string }>("load_app_config")
+      .then((c) => {
+        if (c.hf_token) setHfToken(c.hf_token);
+        setCodingModel(c.coding_model ?? null);
+        setDocModel(c.doc_model ?? null);
+      })
       .catch(() => {});
-    refreshRoles();
     refreshMistralLocal();
     // mistral.rs 다운로드/캐시 로그 — 200줄 cap
     const unlistenMistralLog = listen<string>("mistral_rs_log", (e) => {
@@ -203,7 +191,7 @@ const ModelManager: React.FC<Props> = ({ onClose }) => {
     return () => {
       unlistenMistralLog.then((fn) => fn());
     };
-  }, [refreshMistralLocal, refreshRoles]);
+  }, [refreshMistralLocal]);
 
   const formatMb = (mb: number) =>
     mb >= 1024 ? `${(mb / 1024).toFixed(1)} GB` : `${mb.toFixed(0)} MB`;
@@ -252,7 +240,7 @@ const ModelManager: React.FC<Props> = ({ onClose }) => {
                 )}
 
                 {mistralLocal.map((m) => {
-                  const safeName = safeNameFromPath(m.path);
+                  const safeName = shortPath(m.path);
                   const isCoding = codingModel === m.repo_id || codingModel === m.path;
                   const isDoc = docModel === m.repo_id || docModel === m.path;
 

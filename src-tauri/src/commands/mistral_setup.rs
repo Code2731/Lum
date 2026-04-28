@@ -6,14 +6,6 @@ use crate::error::{LumError, Result};
 use serde::Serialize;
 use tauri::{command, AppHandle, Emitter};
 
-#[cfg(windows)]
-fn no_window_tokio(cmd: &mut tokio::process::Command) {
-    use std::os::windows::process::CommandExt;
-    cmd.creation_flags(0x08000000);
-}
-#[cfg(not(windows))]
-fn no_window_tokio(_cmd: &mut tokio::process::Command) {}
-
 /// HF repo ID(`org/repo`)를 로컬 폴더명으로 변환 (`org--repo`)
 fn safe_model_dirname(repo_id: &str) -> String {
     repo_id.replace('/', "--")
@@ -75,91 +67,100 @@ fn any_model_present(path: &std::path::Path) -> bool {
     false
 }
 
-/// huggingface CLI(`hf`) 위치 탐색 — TabbyAPI venv 우선, 없으면 PATH
-fn find_hf_cli() -> Option<std::path::PathBuf> {
-    let home = crate::platform::home_dir();
-    #[cfg(windows)]
-    let venv = home
-        .join("tabbyAPI")
-        .join(".venv")
-        .join("Scripts")
-        .join("hf.exe");
-    #[cfg(not(windows))]
-    let venv = home.join("tabbyAPI").join(".venv").join("bin").join("hf");
-    if venv.exists() {
-        return Some(venv);
+/// HF에서 단일 파일을 스트리밍 다운로드. 5% 단위로 mistral_rs_log에 진행률 emit.
+async fn hf_download_file(
+    app: &AppHandle,
+    repo_id: &str,
+    filename: &str,
+    dest: &std::path::Path,
+    token: Option<&str>,
+) -> Result<()> {
+    use futures_util::StreamExt;
+    use tokio::io::AsyncWriteExt;
+
+    let url = format!("https://huggingface.co/{repo_id}/resolve/main/{filename}");
+    let client = reqwest::Client::new();
+    let mut req = client.get(&url);
+    if let Some(t) = token {
+        if !t.is_empty() {
+            req = req.bearer_auth(t);
+        }
     }
-    let bin_name = if cfg!(windows) { "hf.exe" } else { "hf" };
-    if let Ok(path_var) = std::env::var("PATH") {
-        let sep = if cfg!(windows) { ';' } else { ':' };
-        for p in path_var.split(sep) {
-            let f = std::path::Path::new(p).join(bin_name);
-            if f.exists() {
-                return Some(f);
+    let resp = req.send().await.map_err(|e| LumError::AiEngine(e.to_string()))?;
+    let status = resp.status();
+    if status == reqwest::StatusCode::UNAUTHORIZED || status == reqwest::StatusCode::FORBIDDEN {
+        return Err(LumError::AiEngine(format!(
+            "인증 오류 ({status}): HuggingFace 토큰을 설정하세요."
+        )));
+    }
+    if !status.is_success() {
+        return Err(LumError::AiEngine(format!(
+            "다운로드 실패 HTTP {status}: {url}"
+        )));
+    }
+
+    let total = resp.content_length();
+    let mut downloaded: u64 = 0;
+    let mut last_pct: u64 = 0;
+    let mut file = tokio::fs::File::create(dest)
+        .await
+        .map_err(|e| LumError::Io(e.to_string()))?;
+    let mut stream = resp.bytes_stream();
+
+    while let Some(chunk) = stream.next().await {
+        let chunk = chunk.map_err(|e| LumError::AiEngine(e.to_string()))?;
+        downloaded += chunk.len() as u64;
+        file.write_all(&chunk)
+            .await
+            .map_err(|e| LumError::Io(e.to_string()))?;
+        if let Some(t) = total {
+            let pct = downloaded * 100 / t;
+            if pct >= last_pct + 5 {
+                last_pct = pct;
+                let dl_gb = downloaded as f64 / 1_073_741_824.0;
+                let tot_gb = t as f64 / 1_073_741_824.0;
+                let _ = app.emit(
+                    "mistral_rs_log",
+                    format!("📥 {filename}: {dl_gb:.2}/{tot_gb:.2} GB ({pct}%)"),
+                );
             }
         }
     }
-    None
+    file.flush().await.map_err(|e| LumError::Io(e.to_string()))?;
+    Ok(())
 }
 
-/// `hf download <repo> [filename] --local-dir <path>` 를 실행하며 stdout/stderr를 mistral_rs_log로 라인 스트리밍.
-/// gguf_filename Some이면 해당 파일 한 개만, None이면 전체 repo 다운로드.
-async fn run_hf_download_streaming(
-    app: &AppHandle,
-    hf_cli: &std::path::Path,
-    repo_id: &str,
-    local_dir: &std::path::Path,
-    hf_token: Option<&str>,
-    gguf_filename: Option<&str>,
-) -> Result<bool> {
-    use std::process::Stdio;
-    use tokio::io::{AsyncBufReadExt, BufReader};
-
-    let mut cmd = tokio::process::Command::new(hf_cli);
-    if let Some(filename) = gguf_filename {
-        // hf download <repo> <filename> --local-dir <dir> — 단일 파일만
-        cmd.args(["download", repo_id, filename, "--local-dir"])
-            .arg(local_dir);
-    } else {
-        cmd.args(["download", repo_id, "--local-dir"])
-            .arg(local_dir);
-    }
-    cmd.stdout(Stdio::piped()).stderr(Stdio::piped());
-    if let Some(t) = hf_token {
+/// HF API에서 repo 파일 목록 조회 — BF16 전체 다운로드 시 사용.
+async fn hf_list_repo_files(repo_id: &str, token: Option<&str>) -> Result<Vec<String>> {
+    let url = format!("https://huggingface.co/api/models/{repo_id}");
+    let client = reqwest::Client::new();
+    let mut req = client.get(&url);
+    if let Some(t) = token {
         if !t.is_empty() {
-            cmd.env("HF_TOKEN", t);
+            req = req.bearer_auth(t);
         }
     }
-    no_window_tokio(&mut cmd);
-    let mut child = cmd
-        .spawn()
-        .map_err(|e| LumError::Io(format!("hf 실행 실패: {e}")))?;
-
-    let stdout = child.stdout.take();
-    let stderr = child.stderr.take();
-    let app_out = app.clone();
-    let app_err = app.clone();
-    let so = tokio::spawn(async move {
-        if let Some(s) = stdout {
-            let mut lines = BufReader::new(s).lines();
-            while let Ok(Some(line)) = lines.next_line().await {
-                let _ = app_out.emit("mistral_rs_log", line);
-            }
-        }
-    });
-    let se = tokio::spawn(async move {
-        if let Some(s) = stderr {
-            let mut lines = BufReader::new(s).lines();
-            while let Ok(Some(line)) = lines.next_line().await {
-                let _ = app_err.emit("mistral_rs_log", line);
-            }
-        }
-    });
-
-    let status = child.wait().await.map_err(|e| LumError::Io(e.to_string()))?;
-    let _ = so.await;
-    let _ = se.await;
-    Ok(status.success())
+    let resp = req.send().await.map_err(|e| LumError::AiEngine(e.to_string()))?;
+    if !resp.status().is_success() {
+        return Err(LumError::AiEngine(format!(
+            "HF API 오류 {}: {}",
+            resp.status(),
+            repo_id
+        )));
+    }
+    let json: serde_json::Value = resp
+        .json()
+        .await
+        .map_err(|e| LumError::AiEngine(e.to_string()))?;
+    let files = json["siblings"]
+        .as_array()
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|s| s["rfilename"].as_str().map(String::from))
+                .collect()
+        })
+        .unwrap_or_default();
+    Ok(files)
 }
 
 /// 모델이 로컬에 없으면 받고, 있으면 즉시 경로 반환.
@@ -209,21 +210,29 @@ async fn ensure_model_local(
             local.display()
         ),
     );
-    let hf_cli = find_hf_cli().ok_or_else(|| {
-        LumError::AiEngine(
-            "huggingface CLI(hf) 미설치. TabbyAPI 설치 또는 'pip install huggingface_hub' 후 재시도하세요.".into(),
-        )
-    })?;
     std::fs::create_dir_all(&local).map_err(|e| LumError::Io(e.to_string()))?;
     let cfg = load_config().unwrap_or_default();
-    let token = cfg.hf_token.as_deref();
-    let ok = run_hf_download_streaming(app, &hf_cli, repo_id_or_path, &local, token, gguf_filename)
-        .await?;
-    if !ok {
-        return Err(LumError::AiEngine(format!(
-            "모델 다운로드 실패: {repo_id_or_path}. 위 로그를 확인하세요."
-        )));
+    let token = cfg.hf_token.clone();
+    let token_ref = token.as_deref();
+
+    if let Some(filename) = gguf_filename {
+        // GGUF 단일 파일 다운로드
+        let dest = local.join(filename);
+        hf_download_file(app, repo_id_or_path, filename, &dest, token_ref).await?;
+    } else {
+        // BF16 전체 repo: 파일 목록 조회 후 순차 다운로드
+        let _ = app.emit("mistral_rs_log", "📋 파일 목록 조회 중...");
+        let files = hf_list_repo_files(repo_id_or_path, token_ref).await?;
+        let _ = app.emit("mistral_rs_log", format!("📋 파일 {}개 다운로드 시작", files.len()));
+        for file in &files {
+            let dest = local.join(file);
+            if let Some(parent) = dest.parent() {
+                std::fs::create_dir_all(parent).map_err(|e| LumError::Io(e.to_string()))?;
+            }
+            hf_download_file(app, repo_id_or_path, file, &dest, token_ref).await?;
+        }
     }
+
     let ok2 = match gguf_filename {
         Some(f) => gguf_file_present(&local, f),
         None => model_present(&local),
