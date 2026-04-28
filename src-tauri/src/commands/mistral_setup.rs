@@ -2,8 +2,13 @@
 //! (임베디드 mistralrs로 통합) — 이 파일은 *모델 자산 관리*만 담당.
 
 use crate::commands::config::load_config;
+use crate::commands::models::DownloadCancelMap;
 use crate::error::{LumError, Result};
 use serde::Serialize;
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc,
+};
 use tauri::{command, AppHandle, Emitter};
 
 /// HF repo ID(`org/repo`)를 로컬 폴더명으로 변환 (`org--repo`)
@@ -67,13 +72,15 @@ fn any_model_present(path: &std::path::Path) -> bool {
     false
 }
 
-/// HF에서 단일 파일을 스트리밍 다운로드. 5% 단위로 mistral_rs_log에 진행률 emit.
+/// HF에서 단일 파일을 스트리밍 다운로드. 5% 단위 진행률 emit, 취소 플래그 폴링.
+/// 취소 시 부분 파일 삭제 후 Err 반환.
 async fn hf_download_file(
     app: &AppHandle,
     repo_id: &str,
     filename: &str,
     dest: &std::path::Path,
     token: Option<&str>,
+    cancel: &Arc<AtomicBool>,
 ) -> Result<()> {
     use futures_util::StreamExt;
     use tokio::io::AsyncWriteExt;
@@ -108,6 +115,11 @@ async fn hf_download_file(
     let mut stream = resp.bytes_stream();
 
     while let Some(chunk) = stream.next().await {
+        if cancel.load(Ordering::Relaxed) {
+            drop(file);
+            let _ = tokio::fs::remove_file(dest).await;
+            return Err(LumError::AiEngine("⛔ 다운로드 취소됨".into()));
+        }
         let chunk = chunk.map_err(|e| LumError::AiEngine(e.to_string()))?;
         downloaded += chunk.len() as u64;
         file.write_all(&chunk)
@@ -169,6 +181,7 @@ async fn ensure_model_local(
     app: &AppHandle,
     repo_id_or_path: &str,
     gguf_filename: Option<&str>,
+    cancel: &Arc<AtomicBool>,
 ) -> Result<std::path::PathBuf> {
     // ModelManager 설치됨 탭의 [🚀 Heavy 지정]은 m.path(절대 경로)를 mistral_rs_model에 저장.
     // 이미 받아둔 로컬 모델이므로 hf 다운로드를 거치면 안 됨 — 경로 그대로 반환.
@@ -218,7 +231,7 @@ async fn ensure_model_local(
     if let Some(filename) = gguf_filename {
         // GGUF 단일 파일 다운로드
         let dest = local.join(filename);
-        hf_download_file(app, repo_id_or_path, filename, &dest, token_ref).await?;
+        hf_download_file(app, repo_id_or_path, filename, &dest, token_ref, cancel).await?;
     } else {
         // BF16 전체 repo: 파일 목록 조회 후 순차 다운로드
         let _ = app.emit("mistral_rs_log", "📋 파일 목록 조회 중...");
@@ -229,7 +242,7 @@ async fn ensure_model_local(
             if let Some(parent) = dest.parent() {
                 std::fs::create_dir_all(parent).map_err(|e| LumError::Io(e.to_string()))?;
             }
-            hf_download_file(app, repo_id_or_path, file, &dest, token_ref).await?;
+            hf_download_file(app, repo_id_or_path, file, &dest, token_ref, cancel).await?;
         }
     }
 
@@ -255,9 +268,34 @@ pub async fn download_mistral_model(
     app: AppHandle,
     repo_id: String,
     gguf_filename: Option<String>,
+    cancel_map: tauri::State<'_, DownloadCancelMap>,
 ) -> Result<String> {
-    let path = ensure_model_local(&app, &repo_id, gguf_filename.as_deref()).await?;
+    let cancel_flag = Arc::new(AtomicBool::new(false));
+    {
+        let mut map = cancel_map.lock().unwrap();
+        map.insert(repo_id.clone(), cancel_flag.clone());
+    }
+    let result = ensure_model_local(&app, &repo_id, gguf_filename.as_deref(), &cancel_flag).await;
+    {
+        let mut map = cancel_map.lock().unwrap();
+        map.remove(&repo_id);
+    }
+    let path = result?;
     Ok(path.to_string_lossy().to_string())
+}
+
+/// 진행 중인 mistral 모델 다운로드를 취소. repo_id로 취소 플래그 설정.
+#[command]
+pub async fn cancel_mistral_download(
+    repo_id: String,
+    cancel_map: tauri::State<'_, DownloadCancelMap>,
+) -> Result<()> {
+    if let Ok(map) = cancel_map.lock() {
+        if let Some(flag) = map.get(&repo_id) {
+            flag.store(true, Ordering::Relaxed);
+        }
+    }
+    Ok(())
 }
 
 /// `~/.lum_mistral_models/<safe>` 폴더 통째 삭제. 경로 traversal 방지를 위해

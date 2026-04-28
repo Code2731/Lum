@@ -168,6 +168,7 @@ pub fn run() {
             commands::sysmon::get_system_stats,
             // 모델 다운로드/스캔 (~/.lum_mistral_models/) — 임베디드용으로도 동일하게 사용
             commands::mistral_setup::download_mistral_model,
+            commands::mistral_setup::cancel_mistral_download,
             commands::mistral_setup::list_mistral_models,
             commands::mistral_setup::delete_mistral_model,
             // Phase 85b — embedded mistralrs (subprocess 없이 LUM 프로세스 안에서 직접 추론)

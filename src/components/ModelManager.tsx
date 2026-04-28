@@ -28,7 +28,9 @@ const ModelManager: React.FC<Props> = ({ onClose }) => {
   // Heavy(mistral.rs) 다운로드 — 사용자 직접 입력 + 추천 프리셋
   const [mistralRepo, setMistralRepo] = useState("");
   const [mistralLog, setMistralLog] = useState<string[]>([]);
-  const [mistralBusy, setMistralBusy] = useState(false);
+  // null = 대기 중, string = 현재 다운로드 중인 repo_id
+  const [activeDownloadRepo, setActiveDownloadRepo] = useState<string | null>(null);
+  const mistralBusy = activeDownloadRepo !== null;
   // 역할 지정 — coding/doc은 config에 저장(향후 HTTP 폴백 시 사용), heavy는 85b 이후 dead
   const [codingModel, setCodingModel] = useState<string | null>(null);
   const [docModel, setDocModel] = useState<string | null>(null);
@@ -60,7 +62,7 @@ const ModelManager: React.FC<Props> = ({ onClose }) => {
     if (mistralBusy) return;
     const id = repoId.trim();
     if (!id) return;
-    setMistralBusy(true);
+    setActiveDownloadRepo(id);
     const kind = ggufFile ? `GGUF ${ggufFile}` : "BF16 전체";
     setMistralLog((prev) => [...prev, `📥 다운로드 시작 (${kind}): ${id}`]);
     try {
@@ -74,7 +76,6 @@ const ModelManager: React.FC<Props> = ({ onClose }) => {
       const raw = (e as { message?: string } | string | null);
       const msg = typeof raw === "string" ? raw : raw?.message ?? String(e);
       setMistralLog((prev) => [...prev, `❌ ${msg}`]);
-      // 인증 에러 — 토큰 입력 강조
       if (msg.includes("401") || msg.includes("403") || msg.includes("인증")) {
         setShowToken(true);
         setTokenHighlight(true);
@@ -84,9 +85,19 @@ const ModelManager: React.FC<Props> = ({ onClose }) => {
         }, 300);
       }
     } finally {
-      setMistralBusy(false);
+      setActiveDownloadRepo(null);
     }
   }, [mistralBusy, refreshMistralLocal]);
+
+  const handleCancelDownload = useCallback(async () => {
+    if (!activeDownloadRepo) return;
+    try {
+      await invoke("cancel_mistral_download", { repoId: activeDownloadRepo });
+      setMistralLog((prev) => [...prev, "⛔ 취소 요청 전송..."]);
+    } catch {
+      // 무시
+    }
+  }, [activeDownloadRepo]);
 
   /** heavy_presets repo 일괄 살아있음 검사 */
   const refreshRepoStatus = useCallback(async () => {
@@ -370,14 +381,25 @@ const ModelManager: React.FC<Props> = ({ onClose }) => {
                     onKeyDown={(e) => e.key === "Enter" && handleMistralDownload(mistralRepo)}
                     className="flex-1 bg-white/5 border border-white/10 rounded px-3 py-1.5 text-xs outline-none focus:border-purple-400/50 font-mono"
                   />
-                  <button
-                    onClick={() => handleMistralDownload(mistralRepo)}
-                    disabled={!mistralRepo.trim() || mistralBusy}
-                    className="flex items-center gap-1 px-3 py-1.5 rounded bg-purple-500/20 hover:bg-purple-500/30 text-xs text-purple-300 transition-colors disabled:opacity-40"
-                  >
-                    <Download size={11} />
-                    {mistralBusy ? "받는 중…" : "받기"}
-                  </button>
+                  {mistralBusy ? (
+                    <button
+                      onClick={handleCancelDownload}
+                      className="flex items-center gap-1 px-3 py-1.5 rounded bg-red-500/20 hover:bg-red-500/30 text-xs text-red-300 transition-colors"
+                      title="다운로드 취소"
+                    >
+                      <X size={11} />
+                      취소
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => handleMistralDownload(mistralRepo)}
+                      disabled={!mistralRepo.trim()}
+                      className="flex items-center gap-1 px-3 py-1.5 rounded bg-purple-500/20 hover:bg-purple-500/30 text-xs text-purple-300 transition-colors disabled:opacity-40"
+                    >
+                      <Download size={11} />
+                      받기
+                    </button>
+                  )}
                 </div>
 
                 {/* 추천 프리셋 */}
@@ -403,23 +425,30 @@ const ModelManager: React.FC<Props> = ({ onClose }) => {
                         const isDead = s === "dead";
                         const installed = mistralLocal.some((m) => m.repo_id === p.id);
                         const isGguf = !!p.gguf_file;
+                        const isThisDownloading = activeDownloadRepo === p.id;
                         return (
                           <button
                             key={`${p.id}::${p.gguf_file ?? ""}`}
-                            onClick={() => { setMistralRepo(p.id); handleMistralDownload(p.id, p.gguf_file); }}
-                            disabled={mistralBusy || isDead}
-                            title={isDead ? "리포지토리 404 — 다운로드 불가" : `${p.id}${p.gguf_file ? ` / ${p.gguf_file}` : ""} (${p.size})`}
+                            onClick={() => {
+                              if (isThisDownloading) { handleCancelDownload(); return; }
+                              setMistralRepo(p.id);
+                              handleMistralDownload(p.id, p.gguf_file);
+                            }}
+                            disabled={!isThisDownloading && (mistralBusy || isDead)}
+                            title={isDead ? "리포지토리 404 — 다운로드 불가" : isThisDownloading ? "클릭하여 취소" : `${p.id}${p.gguf_file ? ` / ${p.gguf_file}` : ""} (${p.size})`}
                             className={`text-[10px] px-2 py-0.5 rounded transition-colors disabled:opacity-30 ${
+                              isThisDownloading ? "bg-red-500/20 text-red-300 border border-red-400/30 animate-pulse" :
                               installed ? "bg-emerald-500/15 text-emerald-300 border border-emerald-400/25" :
                               isDead ? "bg-red-500/10 text-red-300/70 border border-red-400/20 line-through" :
                               s === "alive" ? "bg-purple-500/15 text-purple-200 border border-purple-400/25" :
                               "bg-white/5 text-white/60 border border-white/10 hover:bg-purple-500/15"
                             }`}
                           >
+                            {isThisDownloading && <span className="mr-1">⛔</span>}
                             <span className="opacity-70 mr-1">{p.tag}</span>{p.label}
                             <span className="opacity-50 ml-1">· {p.size}</span>
                             {isGguf && <span className="opacity-60 ml-1">[GGUF]</span>}
-                            {installed && <span className="ml-1">✓</span>}
+                            {installed && !isThisDownloading && <span className="ml-1">✓</span>}
                           </button>
                         );
                       })}
