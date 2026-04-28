@@ -1,9 +1,11 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import {
   SlidersHorizontal, Loader2, X, RefreshCw,
   Zap, Cpu, Sparkles,
 } from "lucide-react";
+import { shortPath } from "../utils";
 
 interface AppConfig {
   coding_model?: string;
@@ -49,6 +51,10 @@ const XllmPanel: React.FC<Props> = ({ onClose }) => {
       .catch(() => setModelInfo(null))
       .finally(() => setIsLoadingInfo(false));
   }, []);
+
+  const vramCapPct = Math.round(
+    (config.vram_cap_override ?? MODE_DEFAULTS[(config.safety_mode as SafetyMode) ?? "balanced"]) * 100
+  );
 
   const handleSave = useCallback(async () => {
     setIsSaving(true);
@@ -122,24 +128,14 @@ const XllmPanel: React.FC<Props> = ({ onClose }) => {
             <div className="bg-white/3 border border-white/5 rounded-lg p-2.5 space-y-1.5">
               <div className="flex items-center justify-between text-[10px]">
                 <span className="text-white/40">VRAM Cap 오버라이드</span>
-                <span className="font-mono text-white/70">
-                  {Math.round(
-                    (config.vram_cap_override
-                      ?? MODE_DEFAULTS[(config.safety_mode as SafetyMode) ?? "balanced"]
-                    ) * 100,
-                  )}%
-                </span>
+                <span className="font-mono text-white/70">{vramCapPct}%</span>
               </div>
               <input
                 type="range"
                 min={50}
                 max={95}
                 step={1}
-                value={Math.round(
-                  (config.vram_cap_override
-                    ?? MODE_DEFAULTS[(config.safety_mode as SafetyMode) ?? "balanced"]
-                  ) * 100,
-                )}
+                value={vramCapPct}
                 onChange={async (e) => {
                   const pct = Number(e.target.value);
                   const cap = pct / 100;
@@ -151,7 +147,7 @@ const XllmPanel: React.FC<Props> = ({ onClose }) => {
               <div className="flex justify-between text-[9px] text-white/25 font-mono">
                 <span>50%</span><span>95%</span>
               </div>
-              {config.vram_cap_override !== undefined && config.vram_cap_override !== null && (
+              {config.vram_cap_override !== undefined && (
                 <button
                   onClick={async () => {
                     setConfig((c) => ({ ...c, vram_cap_override: undefined }));
@@ -291,8 +287,10 @@ const EmbeddedInferenceDebug: React.FC = () => {
   const [prompt, setPrompt] = useState("");
   const [response, setResponse] = useState<string | null>(null);
   const [busy, setBusy] = useState<"load" | "unload" | "infer" | null>(null);
-  // 현재 VRAM에 올라온 모델 키 ("…/<dir>/<file>") — null이면 미로드
   const [loadedKey, setLoadedKey] = useState<string | null>(null);
+  const [loadElapsed, setLoadElapsed] = useState(0);
+  const [loadStage, setLoadStage] = useState<string | null>(null);
+  const loadTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const refreshLoadedKey = useCallback(() => {
     invoke<string | null>("embed_loaded_info").then(setLoadedKey).catch(() => setLoadedKey(null));
@@ -309,6 +307,8 @@ const EmbeddedInferenceDebug: React.FC = () => {
         }
       })
       .catch(() => {});
+    const unlisten = listen<string>("embed_load_progress", (e) => setLoadStage(e.payload));
+    return () => { unlisten.then((f) => f()); };
   }, [refreshLoadedKey]);
 
   const currentFolder = candidates.find((c) => c.folder === modelDir);
@@ -325,6 +325,11 @@ const EmbeddedInferenceDebug: React.FC = () => {
     }
     setBusy("load");
     setResponse(null);
+    setLoadStage(null);
+    const startMs = Date.now();
+    loadTimerRef.current = setInterval(() => {
+      setLoadElapsed(Math.floor((Date.now() - startMs) / 1000));
+    }, 1000);
     try {
       const r = await invoke<string>("embed_load_gguf", {
         modelDir: modelDir.trim(),
@@ -335,6 +340,8 @@ const EmbeddedInferenceDebug: React.FC = () => {
     } catch (e) {
       setResponse(`❌ ${typeof e === "string" ? e : JSON.stringify(e)}`);
     } finally {
+      if (loadTimerRef.current) { clearInterval(loadTimerRef.current); loadTimerRef.current = null; }
+      setLoadElapsed(0);
       setBusy(null);
     }
   };
@@ -345,7 +352,7 @@ const EmbeddedInferenceDebug: React.FC = () => {
     try {
       await invoke("embed_unload");
       setResponse("🗑 모델 언로드 완료 (VRAM 해제)");
-      setLoadedKey(null);
+      refreshLoadedKey();
     } catch (e) {
       setResponse(`❌ ${typeof e === "string" ? e : JSON.stringify(e)}`);
     } finally {
@@ -367,7 +374,7 @@ const EmbeddedInferenceDebug: React.FC = () => {
     }
   };
 
-  const loadedFilename = loadedKey ? loadedKey.split("/").pop() : null;
+  const loadedFilename = loadedKey ? shortPath(loadedKey) : null;
 
   return (
     <section className="space-y-2 border border-purple-400/20 rounded-lg p-3 bg-purple-400/5">
@@ -427,7 +434,7 @@ const EmbeddedInferenceDebug: React.FC = () => {
           className="flex-1 px-3 py-1.5 rounded bg-purple-500/20 hover:bg-purple-500/30 border border-purple-400/30 text-[11px] text-purple-200 disabled:opacity-40 transition-colors"
         >
           {busy === "load"
-            ? "로드 중... (수십초~분)"
+            ? `🔄 로드 중... ${loadElapsed}초`
             : isSameModel
               ? "✅ 로드됨 (재로드)"
               : loadedKey
@@ -445,6 +452,9 @@ const EmbeddedInferenceDebug: React.FC = () => {
           </button>
         )}
       </div>
+      {busy === "load" && loadStage && (
+        <p className="text-[10px] font-mono text-purple-300/60 truncate">{loadStage}</p>
+      )}
 
       <div className="space-y-1 pt-1">
         <span className="text-[10px] text-white/35">프롬프트</span>

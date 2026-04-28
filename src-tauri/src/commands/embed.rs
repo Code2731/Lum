@@ -63,16 +63,17 @@ const DISABLED_MSG: &str =
 /// GGUF 모델 로드. 이미 같은 파일이면 스킵, 다른 모델이면 VRAM 해제 후 핫스왑.
 #[tauri::command]
 pub async fn embed_load_gguf(
+    app: tauri::AppHandle,
     model_dir: String,
     gguf_file: String,
 ) -> Result<String, String> {
     #[cfg(feature = "embedded-ai")]
     {
-        crate::commands::mistralrs_inline::load_model(&model_dir, &gguf_file).await
+        crate::commands::mistralrs_inline::load_model(&app, &model_dir, &gguf_file).await
     }
     #[cfg(not(feature = "embedded-ai"))]
     {
-        let _ = (model_dir, gguf_file);
+        let _ = (app, model_dir, gguf_file);
         Err(DISABLED_MSG.to_string())
     }
 }

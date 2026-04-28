@@ -229,11 +229,9 @@ async fn ensure_model_local(
     let token_ref = token.as_deref();
 
     if let Some(filename) = gguf_filename {
-        // GGUF 단일 파일 다운로드
         let dest = local.join(filename);
         hf_download_file(app, repo_id_or_path, filename, &dest, token_ref, cancel).await?;
     } else {
-        // BF16 전체 repo: 파일 목록 조회 후 순차 다운로드
         let _ = app.emit("mistral_rs_log", "📋 파일 목록 조회 중...");
         let files = hf_list_repo_files(repo_id_or_path, token_ref).await?;
         let _ = app.emit("mistral_rs_log", format!("📋 파일 {}개 다운로드 시작", files.len()));
@@ -290,10 +288,8 @@ pub async fn cancel_mistral_download(
     repo_id: String,
     cancel_map: tauri::State<'_, DownloadCancelMap>,
 ) -> Result<()> {
-    if let Ok(map) = cancel_map.lock() {
-        if let Some(flag) = map.get(&repo_id) {
-            flag.store(true, Ordering::Relaxed);
-        }
+    if let Some(flag) = cancel_map.lock().unwrap().get(&repo_id) {
+        flag.store(true, Ordering::Relaxed);
     }
     Ok(())
 }

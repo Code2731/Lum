@@ -6,6 +6,7 @@
 
 use mistralrs::{GgufModelBuilder, Model, TextMessageRole, TextMessages};
 use std::sync::{Arc, OnceLock};
+use tauri::{AppHandle, Emitter};
 use tokio::sync::Mutex;
 
 struct LoadedState {
@@ -22,19 +23,24 @@ fn engine_mutex() -> &'static Mutex<Option<LoadedState>> {
 
 /// GGUF 모델을 로드. 이미 같은 모델이 올라와 있으면 스킵.
 /// 다른 모델이 로드돼있으면 VRAM을 해제한 뒤 새 모델 로드 (핫스왑).
-pub async fn load_model(model_dir: &str, gguf_filename: &str) -> Result<String, String> {
+/// 로드 진행 상황을 `embed_load_progress` 이벤트로 emit (UI 진행 표시용).
+pub async fn load_model(app: &AppHandle, model_dir: &str, gguf_filename: &str) -> Result<String, String> {
     let key = format!("{model_dir}/{gguf_filename}");
     let mut guard = engine_mutex().lock().await;
     if guard.as_ref().is_some_and(|s| s.key == key) {
         return Ok(format!("이미 로드됨: {gguf_filename}"));
     }
-    // 이전 모델 Drop → VRAM 해제
     *guard = None;
+    let _ = app.emit("embed_load_progress", format!("🔄 {gguf_filename} GGUF 파싱 + 레이어 로드 중..."));
     let model = GgufModelBuilder::new(model_dir.to_string(), vec![gguf_filename.to_string()])
         .build()
         .await
-        .map_err(|e| format!("mistralrs GGUF 로드 실패: {e}"))?;
+        .map_err(|e| {
+            let _ = app.emit("embed_load_progress", format!("❌ 로드 실패: {e}"));
+            format!("mistralrs GGUF 로드 실패: {e}")
+        })?;
     *guard = Some(LoadedState { model: Arc::new(model), key: key.clone() });
+    let _ = app.emit("embed_load_progress", format!("✅ {gguf_filename} 로드 완료"));
     Ok(format!("로드 완료: {gguf_filename}"))
 }
 
@@ -54,12 +60,14 @@ pub fn loaded_key() -> Option<String> {
 
 /// 단일 user 메시지로 chat completion 요청 → 응답 텍스트 반환.
 pub async fn infer_once(prompt: &str) -> Result<String, String> {
-    let model = engine_mutex()
-        .lock()
-        .await
-        .as_ref()
-        .map(|s| s.model.clone())
-        .ok_or_else(|| "엔진 미로드 — 먼저 로드 필요".to_string())?;
+    let model = {
+        engine_mutex()
+            .lock()
+            .await
+            .as_ref()
+            .map(|s| s.model.clone())
+            .ok_or_else(|| "엔진 미로드 — 먼저 로드 필요".to_string())?
+    }; // 락 즉시 해제 — 긴 추론 중 loaded_key() UI 폴링 차단 방지
     let messages = TextMessages::new().add_message(TextMessageRole::User, prompt);
     let resp = model
         .send_chat_request(messages)
