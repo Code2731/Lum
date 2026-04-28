@@ -23,7 +23,7 @@
 
 ### What is LUM?
 
-LUM (Local Universal Machine) is a **real terminal emulator** that runs your actual shell — not a chat UI. Built on [Tauri v2](https://tauri.app), it integrates a local AI engine ([xLLM / TabbyAPI](https://github.com/theroyallab/tabbyAPI)) directly into the terminal workflow. Zero cloud calls, zero API fees, full privacy.
+LUM (Local Universal Machine) is a **real terminal emulator** that runs your actual shell — not a chat UI. Built on [Tauri v2](https://tauri.app), it embeds [mistral.rs](https://github.com/EricLBuehler/mistral.rs) GGUF inference **directly inside the LUM process** — no subprocess, no HTTP server, no Python toolchain. Zero cloud calls, zero API fees, full privacy.
 
 > Think of it as Warp Terminal, but fully open-source and running 100% on your own hardware.
 
@@ -46,22 +46,23 @@ LUM (Local Universal Machine) is a **real terminal emulator** that runs your act
 | **Session Persistence** | Tab layout and split state auto-saved and restored on restart. |
 | **Terminal Themes** | 5 built-in themes (Dracula, Tokyo Night, One Dark, Solarized, GitHub Dark) + font controls. |
 | **Quick Actions Bar** | Pin favorite commands; launch with `Cmd+1–9`. |
-| **Hardware-Aware AI** | Auto-detects RAM and GPU → recommends the best EXL2 model for your machine. |
+| **Hardware-Aware AI** | Auto-detects RAM and GPU → recommends the best GGUF model for your machine. |
 | **Auto Update** | Background version check; one-click download and install via `tauri-plugin-updater`. |
-| **xLLM Optimization** | PD Disaggregation, Elastic Scheduling, KV Cache Q4/Q8/FP16, Speculative Decoding, Sparse Attention, EPD Streaming. |
+| **Embedded GGUF Inference** | mistral.rs runs **in-process** (no subprocess, no HTTP). Real-time token streaming, mid-generation cancel, model hot-swap without app restart. |
+| **Model Load Progress** | Elapsed-time counter + stage messages (`embed_load_progress` events) during 30s+ GGUF loading. |
 | **Smart Env Auto-Loader** | Detects `.nvmrc`, `pyproject.toml`, `Pipfile`, `package.json`, etc. on `cd` → slide-up toast with one-click install commands. |
 | **Script Library** | Save agent task runs as reusable scripts. Browse, run, and delete from a side panel (`Cmd+Shift+L`). |
 | **Notification Center** | Aggregates long-running command completions, agent task results, healing triggers, and env detections in one bell-icon panel. |
 | **Smart Paste** | Detects multi-line clipboard content → dialog to run all at once, step-by-step, or paste as raw text. |
 | **Right-click Context Menu** | Right-click any selected terminal text → copy, run as command, AI explain, web search, or open file/URL. |
 | **System Monitor** | `Cmd+Shift+M` — live CPU & memory gauges + top-6 processes by CPU and RAM, 2-second auto-refresh. |
-| **Dual Engine (Fast + Heavy)** | TabbyAPI Fast Track for 7~14B EXL2 (12~16 tok/s) + mistral.rs Heavy Track for BF16 ISQ or GGUF MoE (30B+ models). Status indicator in title bar (`xLLM ●` / `mistral ●`). |
 | **LUM-MCP-server (Rust native)** | Standalone `lum-mcp-server.exe` exposes 7 LUM tools (read_file / list_directory / git_diff / apply_edit_block / get_repo_map / run_tests / read_file_lines) via stdio MCP. CrewAI / Claude Desktop / any MCP client can drive LUM directly. |
 | **DRAM/VRAM Tiering** | Auto-injected PagedAttention (`--pa-ctxt-len` + `--pa-gpu-mem-usage` linked to safety_mode 70/80/90%) makes 30B+ models practical on 10GB VRAM. |
 | **Edit Block Engine** | SEARCH/REPLACE patches with exact-match + fuzzy whitespace fallback. AI proposes edits → user approves on the EditBlockCard → applied with diff preview. |
 | **Repo Map (tree-sitter + PageRank)** | Token-budget-bounded codebase summary by symbol importance. Used as automatic AI context for refactoring tasks. |
 | **Test Feedback Loop** | Auto-detect project test runner (cargo / pytest / npm / go) → run → on failure, AI proposes a fix → re-run loop. |
-| **GPU Safety Mode** | `safe` (70% VRAM) / `balanced` (80%) / `max` (90%) with manual override slider. Auto-writes TabbyAPI `config.yml` and feeds mistral.rs via `--pa-gpu-mem-usage`. |
+| **GPU Safety Mode** | `safe` (70% VRAM) / `balanced` (80%) / `max` (90%) with manual override slider. Feeds mistralrs PagedAttention via `--pa-gpu-mem-usage`. |
+| **shadcn/ui Foundation** | Tailwind v4 + Radix primitives + `cn()` helper. Button + Dialog components ready; theme tokens mapped to LUM dark palette. |
 
 ### Architecture
 
@@ -79,26 +80,26 @@ write_to_pty ──► SyncSender ──► Writer thread ──► PTY master �
                                           xterm.js.write() ──► Screen
 ```
 
-- **Backend** — Rust + Tauri v2. Channel-based PTY (writer / reader threads separated). AI commands proxied to local xLLM server.
-- **Frontend** — React 19 + TypeScript + Tailwind CSS v4. xterm.js for rendering. Hooks for every major feature.
-- **AI Layer** — xLLM (TabbyAPI / ExLlamaV2) as primary; Gemini API as optional cloud fallback.
+- **Backend** — Rust + Tauri v2. Channel-based PTY (writer / reader threads separated). AI routes to embedded mistralrs when a GGUF is loaded; otherwise to optional HTTP/Gemini fallback.
+- **Frontend** — React 19 + TypeScript + Tailwind CSS v4 + shadcn/ui. xterm.js for rendering. Hooks for every major feature.
+- **AI Layer** — mistral.rs **embedded GGUF** (in-process, `embedded-ai` Cargo feature) as primary; Gemini API as optional cloud fallback.
 - **Local-AI Feature Flag** — `burn` / `wgpu` / `tokenizers` excluded from default build (~150 MB smaller binary).
 
 ### Tech Stack
 
 - **Rust** — Tauri v2, portable-pty, reqwest, libp2p, sysinfo, serde, tree-sitter (Rust/TS/JS/Python), petgraph (PageRank), nvml-wrapper (NVIDIA VRAM)
-- **Frontend** — React 19, TypeScript, Tailwind CSS v4, xterm.js, react-resizable-panels, react-virtuoso
-- **AI engines** — TabbyAPI / ExLlamaV2 (EXL2 Fast Track) + mistral.rs (BF16 ISQ / GGUF Heavy Track) + Gemini API (cloud fallback)
-- **Agent ecosystem** — `lum-mcp-server.exe` (Rust native stdio MCP) + `crew/` (CrewAI dual engine workspace, separate Python project)
-- **Testing** — Vitest (unit), Playwright (E2E smoke tests), `cargo test` (Rust 99 tests)
+- **Frontend** — React 19, TypeScript, Tailwind CSS v4, shadcn/ui (Radix + cva), xterm.js, react-resizable-panels, react-virtuoso
+- **AI engines** — mistral.rs 0.8.1 embedded GGUF (in-process, CUDA, hot-swap, real-time streaming) + Gemini API (cloud fallback)
+- **Agent ecosystem** — `lum-mcp-server.exe` (Rust native stdio MCP, 7 tools) + `crew/` (CrewAI workspace, separate Python project)
+- **Testing** — Vitest (TS 131 tests), Playwright (E2E smoke), `cargo test` (Rust 74+ tests)
 
 ### Getting Started
 
 **Prerequisites**
 
-- [Rust](https://www.rust-lang.org/tools/install)
+- [Rust](https://www.rust-lang.org/tools/install) (stable)
 - [Node.js](https://nodejs.org/) 20+
-- [TabbyAPI](https://github.com/theroyallab/tabbyAPI) *(optional — for local AI features)*
+- **Optional for embedded GGUF inference**: NVIDIA GPU + [CUDA Toolkit 12.x](https://developer.nvidia.com/cuda-downloads) + MSVC (Windows) — required only when building with `--features embedded-ai`
 
 **Run in development**
 
@@ -106,25 +107,29 @@ write_to_pty ──► SyncSender ──► Writer thread ──► PTY master �
 git clone https://github.com/Code2731/Lum.git
 cd Lum
 npm install
-npm run tauri dev
+npm run tauri dev                       # plain terminal, no on-device AI
+npm run tauri:dev:cuda                  # with embedded mistralrs GGUF inference (Windows)
 ```
 
 **Production build**
 
 ```bash
-npm run tauri build                             # lightweight (no on-device inference)
-npm run tauri build -- --features local-ai      # full build with wgpu inference
+npm run tauri build                                # lightweight (no on-device inference)
+npm run tauri build -- --features embedded-ai     # full build with embedded mistralrs GGUF
 ```
 
 ### AI Setup (optional)
 
-LUM works as a plain terminal with no AI server. To enable AI features:
+LUM works as a plain terminal with no AI server. To enable embedded local AI:
 
-1. Install and start [TabbyAPI](https://github.com/theroyallab/tabbyAPI) (default: `http://127.0.0.1:5000`)
-2. On first launch, the Onboarding Wizard detects your hardware and recommends a model
-3. Download the recommended EXL2 model from the built-in Model Manager
+1. Build/run with `--features embedded-ai` (requires CUDA + MSVC)
+2. **Model Manager** tab → search HuggingFace → download a GGUF (saved to `~/.lum_mistral_models/<repo>/`)
+3. Open the **xLLM Settings** panel → 🧪 *Embedded Inference* section → select model folder + `.gguf` file → click *Load*
+4. After load, every AI flow (`?` explain · `#` generate · `>>` agent · AI Chat sidebar · git commit message · diff review) automatically uses the embedded model — zero network calls
 
-> No TabbyAPI? Set `GEMINI_API_KEY` in your environment for cloud-based AI fallback.
+**Hot-swap**: Pick a different folder/file → click *Load* again → previous model VRAM released, new one loaded without restarting LUM.
+
+**No GPU / no CUDA?** Set `GEMINI_API_KEY` in your environment — LUM falls back to Gemini cloud automatically.
 
 ### Platform Support
 
@@ -142,7 +147,7 @@ LUM works as a plain terminal with no AI server. To enable AI features:
 
 ### LUM이란?
 
-LUM(Local Universal Machine)은 **실제 셸을 실행하는 터미널 에뮬레이터**입니다 — 채팅 UI가 아닙니다. [Tauri v2](https://tauri.app) 위에 구축되었으며, 로컬 AI 엔진([xLLM / TabbyAPI](https://github.com/theroyallab/tabbyAPI))을 터미널 워크플로우에 직접 통합합니다. 클라우드 호출 없음, API 비용 없음, 완전한 개인정보 보호.
+LUM(Local Universal Machine)은 **실제 셸을 실행하는 터미널 에뮬레이터**입니다 — 채팅 UI가 아닙니다. [Tauri v2](https://tauri.app) 위에 구축되었으며, [mistral.rs](https://github.com/EricLBuehler/mistral.rs) GGUF 추론을 **LUM 프로세스 안에 직접 임베딩**합니다 — subprocess 없음, HTTP 서버 없음, Python 툴체인 없음. 클라우드 호출 없음, API 비용 없음, 완전한 개인정보 보호.
 
 > Warp Terminal과 비슷하지만, 완전한 오픈소스이며 100% 사용자 하드웨어에서 동작합니다.
 
@@ -165,44 +170,64 @@ LUM(Local Universal Machine)은 **실제 셸을 실행하는 터미널 에뮬레
 | **세션 영속성** | 탭 레이아웃·분할 상태 자동 저장 → 재시작 시 복원. |
 | **터미널 테마** | 5개 내장 테마(Dracula, Tokyo Night, One Dark, Solarized, GitHub Dark) + 폰트 컨트롤. |
 | **퀵 액션 바** | 자주 쓰는 명령어 고정; `Cmd+1~9`로 즉시 실행. |
-| **하드웨어 인식 AI** | RAM·GPU 자동 감지 → 최적화된 EXL2 모델 추천. |
+| **하드웨어 인식 AI** | RAM·GPU 자동 감지 → 최적화된 GGUF 모델 추천. |
 | **자동 업데이트** | 백그라운드 버전 확인; 원클릭 다운로드·설치. |
-| **xLLM 최적화** | PD Disaggregation, Elastic Scheduling, KV Cache Q4/Q8/FP16, Speculative Decoding, Sparse Attention, EPD Streaming. |
+| **임베디드 GGUF 추론** | mistral.rs를 **LUM 프로세스 내부**에서 직접 실행 — subprocess·HTTP 서버 없음. 토큰별 실시간 스트리밍 + 추론 중 즉시 중단 + 앱 재시작 없이 모델 핫스왑. |
+| **모델 로드 진행 표시** | 30s+ 걸리는 GGUF 로드 중 경과 초 카운터 + 단계 메시지 (`embed_load_progress` 이벤트) 실시간 표시. |
 | **스마트 환경 자동 로더** | `cd` 시 `.nvmrc`, `pyproject.toml`, `Pipfile`, `package.json` 등 감지 → 설치 명령어 슬라이드업 토스트. |
 | **스크립트 라이브러리** | 에이전트 태스크를 재사용 스크립트로 저장·실행 (`Cmd+Shift+L`). |
 | **알림 센터** | 장시간 명령어·에이전트·AI 치유·환경 감지 이벤트를 벨 아이콘 패널에 통합. |
 | **스마트 붙여넣기** | 멀티라인 클립보드 자동 감지 → 한 번에 실행 / 단계별 실행 / 텍스트 그대로 붙여넣기 선택 다이얼로그. |
 | **우클릭 컨텍스트 메뉴** | 터미널 텍스트 선택 후 우클릭 → 복사 / 명령어 실행 / AI 설명 / 웹 검색 / 파일·URL 열기. |
 | **시스템 모니터** | `Cmd+Shift+M` — CPU·메모리 게이지 + CPU/메모리 상위 프로세스 6개, 2초마다 자동 갱신. |
-| **듀얼 엔진 (Fast + Heavy)** | TabbyAPI Fast Track (7~14B EXL2, 12~16 tok/s) + mistral.rs Heavy Track (BF16 ISQ 또는 GGUF MoE, 30B+). 타이틀 바에 `xLLM ●` / `mistral ●` 상태 표시. |
 | **LUM-MCP-server (Rust 네이티브)** | 별도 `lum-mcp-server.exe`가 LUM 도구 7개(read_file / list_directory / git_diff / apply_edit_block / get_repo_map / run_tests / read_file_lines)를 stdio MCP로 노출. CrewAI / Claude Desktop / 모든 MCP 클라이언트가 LUM을 직접 제어 가능. |
 | **DRAM/VRAM 계층화** | PagedAttention 자동 주입 (`--pa-ctxt-len` + safety_mode 70/80/90% 연동 `--pa-gpu-mem-usage`)으로 RTX 3080 10GB에 30B+ 모델 실용화. |
 | **편집 블록 엔진** | SEARCH/REPLACE 패치 (exact match + fuzzy whitespace 폴백). AI 제안 → EditBlockCard에서 사용자 승인 → diff 미리보기 후 적용. |
 | **레포 맵 (tree-sitter + PageRank)** | 토큰 예산 기반 코드베이스 요약 (symbol 중요도순). 리팩토링 작업의 AI 자동 컨텍스트. |
 | **테스트 피드백 루프** | 프로젝트 테스트 러너 자동 감지 (cargo / pytest / npm / go) → 실행 → 실패 시 AI 수정 제안 → 재실행 루프. |
-| **GPU 안전 모드** | `safe` (70% VRAM) / `balanced` (80%) / `max` (90%) + 수동 슬라이더. TabbyAPI `config.yml` 자동 작성 + mistral.rs `--pa-gpu-mem-usage` 연동. |
+| **GPU 안전 모드** | `safe` (70% VRAM) / `balanced` (80%) / `max` (90%) + 수동 슬라이더. mistralrs PagedAttention `--pa-gpu-mem-usage` 자동 연동. |
+| **shadcn/ui 토대** | Tailwind v4 + Radix primitives + `cn()` 헬퍼. Button + Dialog 컴포넌트 즉시 사용 가능; 테마 토큰을 LUM 다크 팔레트에 매핑. |
 
 ### 시작하기
+
+**필수**
+
+- [Rust](https://www.rust-lang.org/tools/install) (stable)
+- [Node.js](https://nodejs.org/) 20+
+- **임베디드 GGUF 추론용 (선택)**: NVIDIA GPU + [CUDA Toolkit 12.x](https://developer.nvidia.com/cuda-downloads) + MSVC (Windows)
+
+**개발 모드**
 
 ```bash
 git clone https://github.com/Code2731/Lum.git
 cd Lum
 npm install
-npm run tauri dev
+npm run tauri dev               # 평범한 터미널 (on-device AI 없음)
+npm run tauri:dev:cuda          # 임베디드 mistralrs GGUF 추론 포함 (Windows)
+```
+
+**프로덕션 빌드**
+
+```bash
+npm run tauri build                                # 경량 (on-device 추론 없음)
+npm run tauri build -- --features embedded-ai     # 임베디드 mistralrs 포함
 ```
 
 **AI 기능 활성화 (선택)**
 
-1. [TabbyAPI](https://github.com/theroyallab/tabbyAPI) 설치 후 실행 (기본 포트: `5000`)
-2. 앱 첫 실행 시 온보딩 마법사가 하드웨어를 자동 분석하고 최적 모델 추천
-3. 내장 모델 매니저에서 추천 EXL2 모델 다운로드
+1. `--features embedded-ai`로 빌드/실행 (CUDA + MSVC 필요)
+2. **모델 매니저** 탭 → HuggingFace 검색 → GGUF 다운로드 (`~/.lum_mistral_models/<repo>/`에 저장)
+3. **xLLM 설정** 패널 → 🧪 *임베디드 추론* 섹션 → 모델 폴더 + `.gguf` 파일 선택 → *로드*
+4. 로드 후 모든 AI 흐름(`?` 설명 · `#` 명령어 생성 · `>>` 에이전트 · AI Chat 사이드바 · git 커밋 메시지 · diff 리뷰)이 자동으로 임베디드 모델 사용 — 네트워크 호출 0
 
-> TabbyAPI 없이도 터미널로 사용 가능합니다. 클라우드 AI는 환경변수에 `GEMINI_API_KEY`를 설정하세요.
+**핫스왑**: 다른 폴더/파일 선택 → *로드* 다시 클릭 → 이전 모델 VRAM 해제 + 새 모델 로드, 앱 재시작 불필요.
+
+**GPU 또는 CUDA 없음?** 환경변수에 `GEMINI_API_KEY` 설정 → LUM이 자동으로 Gemini 클라우드 폴백.
 
 ### 개발 로드맵
 
 <details>
-<summary>Phase 23 ~ 83 전체 완료 목록 보기</summary>
+<summary>Phase 23 ~ 92 전체 완료 목록 보기</summary>
 
 - [x] Phase 23: Real PTY Terminal (portable-pty + xterm.js)
 - [x] Phase 24: Cross-Platform Polish
@@ -266,7 +291,15 @@ npm run tauri dev
 - [x] Phase 85d: ModelManager UI dead branch 통째 정리 (987줄 → 352줄, −64%) — EXL2 직접 입력(TabbyAPI Fast Track) 섹션 + EXL2 카탈로그 list + Apple Silicon 분기 + MLX 카탈로그 + MLX-LM 진행률 + `useModel`/`switch_xllm_model`(TabbyAPI 시절 스위치) + 죽은 props 통째 제거. 설치된 모델 탭 데이터 소스 `list_local_models`(~/tabby/models, 빈 화면) → `list_mistral_models`(~/.lum_mistral_models, 실제 데이터)로 스왑. 신규 `delete_mistral_model` Tauri 커맨드(path traversal 방지). Rust 72 + TS 131 테스트 회귀 0.
 - [x] Phase 85c: 죽은 자산 정리 (~33GB 회수 — 30B-A3B GGUF panic 모델 + ~/tabby/ EXL2 4개 + tabbyAPI venv 삭제, 임베디드 검증 7B GGUF만 유지); 부수 효과로 hf CLI 의존 깨짐 → 다음 phase에 hf-hub Rust crate 통합 후보
 - [x] Phase 85b: mistralrs LUM 프로세스 임베딩 (subprocess 0 / HTTP 0) — GgufModelBuilder 직접 호출, `commands/embed.rs` cfg 분기 facade, 모델 폴더/파일 자동 드롭다운, `call_xllm()` 임베디드 우선 분기, mistralrs-server.exe spawn 코드 + Heavy/Fast 라우팅 통째 제거; CUDA + MSVC env wrapper(`scripts/tauri-dev-cuda.bat`); 검증: 7B Q4_K_M GGUF로 `?` 입력 → 한국어 응답 (Phase 83b candle MoE panic은 dense 모델에 영향 없음); 누적 ~-3000줄 net
-- [x] Phase 85a: TabbyAPI 통째 제거 (AI Agent 시연 부적합 — CrewAI tool_calls 미지원·시작 멈춤 등 검증 후 mistral.rs 단일 엔진 통일; 3 commits / ~1200줄 net 삭제 / `tabbyapi_setup.rs` 957줄 + invoke_handler 7개 + UI 11 state·4 useCallback·3 listener 정리; 잔여 deprecated UI + mistralrs-core 임베딩은 Phase 85b) (`config.yml` `model:` 섹션에 `model_name:` 자동 주입이 진짜 활성화 키, native `<select>` 다크모드 fix, [✕ 끄기] 명시 버튼; RTX 3080 10GB 검증: 7B+3B = 1.59 T/s VRAM swap, 7B+1.5B = 48.99 T/s — SSD 효과는 하드웨어×모델 페어에 강하게 의존; `lucyknada/Qwen_Qwen2.5-Coder-1.5B-Instruct-exl2` ModelManager 추가)
+- [x] Phase 85a: TabbyAPI 통째 제거 (AI Agent 시연 부적합 — CrewAI tool_calls 미지원·시작 멈춤 등 검증 후 mistral.rs 단일 엔진 통일; 3 commits / ~1200줄 net 삭제 / `tabbyapi_setup.rs` 957줄 + invoke_handler 7개 + UI 11 state·4 useCallback·3 listener 정리; 잔여 deprecated UI + mistralrs-core 임베딩은 Phase 85b)
+- [x] Phase 85e: XllmPanel.tsx dead field 정리 (cache_mode/draft_model/speculative_n_draft TabbyAPI SSD 흔적 제거)
+- [x] Phase 86: reqwest 기반 순수 Rust HF 다운로더 (외부 hf CLI 의존 제거 — `hf_download_file` 5% 단위 진행률 emit, `hf_list_repo_files` HF API `/api/models/{repo}` 조회)
+- [x] Phase 87: mistral 모델 다운로드 취소 지원 (`AtomicBool` 청크 루프 폴링, ModelManager [다운로드↔취소] 토글 + 프리셋 카드 펄스 애니)
+- [x] Phase 88: 임베디드 AI 모델 핫스왑 (앱 재시작 없이 모델 교체 — `OnceCell<Arc<Model>>` → `OnceLock<Mutex<Option<LoadedState>>>` 전환, `unload_model()` VRAM 명시 해제, `loaded_key()` UI 폴링)
+- [x] Phase 89: 모델 로드 진행 표시 (`embed_load_progress` 이벤트 + 경과 초 카운터, `XllmPanel` 동적 버튼 레이블 `"🔄 로드 중... 34초"`)
+- [x] Phase 90: 메인 AI 백엔드 임베디드 라우팅 통합 (`current_engine()` 죽은 참조 fix, `try_embedded_inference` cfg-gated 헬퍼, `?` explain · `#` generate · `>>` agent · git · diff 분석 + WarpInputBar 스트리밍 + AI Chat 모두 임베디드 자동 사용)
+- [x] Phase 91: shadcn/ui 토대 셋업 (Tailwind v4 + Radix Dialog + cva Button, 경로 별칭 `@/`, theme 토큰 LUM 다크 팔레트 매핑, tw-animate-css 통합)
+- [x] Phase 92: 임베디드 모델 실시간 토큰 스트리밍 + 추론 cancel (mistralrs `Stream<'_>` API 활용, `infer_stream(app, prompt, cancel, show_reasoning, event_name)`, `embed_token` 이벤트로 cross-talk 방지, [⛔ 중단] 버튼 + cancel_ai_stream 통합)
 
 </details>
 

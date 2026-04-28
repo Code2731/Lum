@@ -111,16 +111,20 @@ fn xllm_body(
     body
 }
 
+/// 임베디드 GGUF가 이 요청을 처리할 수 있는지 — 로드 상태 + 이미지 미입력.
+/// 이미지가 있으면 GGUF 텍스트 모델로 vision 처리 불가 → HTTP 폴백.
+/// non-feature 빌드는 `try_embedded_inference*` 스텁이 직접 None을 반환하므로
+/// 이 헬퍼 자체를 컴파일 안 함 (dead_code 회피).
+#[cfg(feature = "embedded-ai")]
+fn embedded_can_serve(images: &[String]) -> bool {
+    images.is_empty() && crate::commands::mistralrs_inline::loaded_key().is_some()
+}
+
 /// 임베디드 mistralrs가 로드돼있고 이미지 입력이 없으면 in-process 추론 시도.
 /// `Some(result)` = 임베디드 사용 (성공/실패 무관 — 폴백 안 함), `None` = HTTP 폴백 필요.
-/// 이미지가 있으면 GGUF 텍스트 모델로 처리 불가하므로 무조건 폴백.
-/// `xllm_body`와 동일하게 `images: &[String]` 받음 — 호출부 변환 불필요.
 #[cfg(feature = "embedded-ai")]
 async fn try_embedded_inference(prompt: &str, images: &[String]) -> Option<Result<String>> {
-    if !images.is_empty() {
-        return None;
-    }
-    if crate::commands::mistralrs_inline::loaded_key().is_none() {
+    if !embedded_can_serve(images) {
         return None;
     }
     Some(
@@ -137,7 +141,6 @@ async fn try_embedded_inference(_prompt: &str, _images: &[String]) -> Option<Res
 
 /// 임베디드 mistralrs가 로드돼있으면 토큰별 스트리밍 추론. `xllm_token` 이벤트로 emit.
 /// `cancel`이 true가 되면 stream drop으로 추론 중단.
-/// 이미지 입력 또는 미로드 시 `None` 반환 → 호출부에서 HTTP 폴백.
 #[cfg(feature = "embedded-ai")]
 async fn try_embedded_inference_stream(
     app: &tauri::AppHandle,
@@ -146,10 +149,7 @@ async fn try_embedded_inference_stream(
     cancel: &Arc<AtomicBool>,
     show_reasoning: bool,
 ) -> Option<Result<String>> {
-    if !images.is_empty() {
-        return None;
-    }
-    if crate::commands::mistralrs_inline::loaded_key().is_none() {
+    if !embedded_can_serve(images) {
         return None;
     }
     Some(

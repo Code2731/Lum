@@ -363,11 +363,9 @@ const EmbeddedInferenceDebug: React.FC = () => {
   const onInfer = async () => {
     if (!prompt.trim()) return;
     setBusy("infer");
-    setResponse("");
-    let accumulated = "";
+    setResponse(null);
     const unlisten = await listen<string>("embed_token", (e) => {
-      accumulated += e.payload;
-      setResponse(accumulated);
+      setResponse((prev) => (prev ?? "") + e.payload);
     });
     try {
       await invoke<string>("embed_infer_stream", { prompt: prompt.trim() });

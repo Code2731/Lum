@@ -59,16 +59,20 @@ pub fn loaded_key() -> Option<String> {
         .and_then(|g| g.as_ref().map(|s| s.key.clone()))
 }
 
+/// 현재 로드된 모델의 Arc 클론. 락은 함수 종료 시 즉시 해제 — 긴 추론 중
+/// `loaded_key()` UI 폴링 차단 방지. 미로드면 명확한 한국어 에러.
+async fn current_model() -> Result<Arc<Model>, String> {
+    engine_mutex()
+        .lock()
+        .await
+        .as_ref()
+        .map(|s| s.model.clone())
+        .ok_or_else(|| "엔진 미로드 — 먼저 로드 필요".to_string())
+}
+
 /// 단일 user 메시지로 chat completion 요청 → 응답 텍스트 반환.
 pub async fn infer_once(prompt: &str) -> Result<String, String> {
-    let model = {
-        engine_mutex()
-            .lock()
-            .await
-            .as_ref()
-            .map(|s| s.model.clone())
-            .ok_or_else(|| "엔진 미로드 — 먼저 로드 필요".to_string())?
-    }; // 락 즉시 해제 — 긴 추론 중 loaded_key() UI 폴링 차단 방지
+    let model = current_model().await?;
     let messages = TextMessages::new().add_message(TextMessageRole::User, prompt);
     let resp = model
         .send_chat_request(messages)
@@ -92,14 +96,7 @@ pub async fn infer_stream(
     show_reasoning: bool,
     event_name: &str,
 ) -> Result<String, String> {
-    let model = {
-        engine_mutex()
-            .lock()
-            .await
-            .as_ref()
-            .map(|s| s.model.clone())
-            .ok_or_else(|| "엔진 미로드 — 먼저 로드 필요".to_string())?
-    };
+    let model = current_model().await?;
     let messages = TextMessages::new().add_message(TextMessageRole::User, prompt);
     let mut stream = model
         .stream_chat_request(messages)
