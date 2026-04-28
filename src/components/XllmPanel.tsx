@@ -6,18 +6,13 @@ import {
 } from "lucide-react";
 
 interface AppConfig {
-  cache_mode?: string;
   coding_model?: string;
   doc_model?: string;
   pd_threshold_chars?: number;
   max_seq_len?: number;
   xllm_admin_key?: string;
-  draft_model?: string;
-  speculative_n_draft?: number;
-  // Phase 71
-  safety_mode?: string;       // "safe" | "balanced" | "max"
-  vram_cap_override?: number; // 0.50 ~ 0.95
-  // Phase 72
+  safety_mode?: string;
+  vram_cap_override?: number;
   vision_enabled?: boolean;
   show_reasoning?: boolean;
 }
@@ -28,7 +23,6 @@ const MODE_DEFAULTS: Record<SafetyMode, number> = { safe: 0.70, balanced: 0.80, 
 interface ModelInfo {
   id: string;
   max_seq_len?: number;
-  cache_mode?: string;
   rope_scale?: number;
 }
 
@@ -61,20 +55,13 @@ const XllmPanel: React.FC<Props> = ({ onClose }) => {
     setStatusMsg(null);
     try {
       await invoke("save_xllm_settings", {
-        serverUrl: null, // deprecated — embedded mistralrs로 통합됨
-        cacheMode: config.cache_mode ?? null,
+        cacheMode: null,
         codingModel: config.coding_model ?? null,
         docModel: config.doc_model ?? null,
         pdThresholdChars: config.pd_threshold_chars ?? null,
         maxSeqLen: config.max_seq_len ?? null,
-        draftModel: config.draft_model ?? null,
-        speculativeNDraft: config.speculative_n_draft ?? null,
-        mistralRsEnabled: null,
-        mistralRsUrl: null,
-        mistralRsModel: null,
-        mistralRsIsq: null,
-        mistralRsGgufFile: null,
-        mistralRsDeviceLayers: null,
+        draftModel: null,
+        speculativeNDraft: null,
       });
       setStatusMsg("설정 저장 완료");
     } catch (e) {
@@ -101,14 +88,10 @@ const XllmPanel: React.FC<Props> = ({ onClose }) => {
 
         <div className="flex-1 overflow-y-auto p-4 space-y-5">
 
-          {/* Phase 85a-3: TabbyAPI UI 섹션 제거됨. 추론 엔진은 mistral.rs 단일.
-              아래 mistral.rs Heavy Track 섹션이 메인 시작/중지 UI. */}
-
-          {/* Phase 71: GPU 안전 모드 + VRAM Cap */}
+          {/* GPU 안전 모드 + VRAM Cap */}
           <section className="space-y-2">
             <label className="text-[10px] text-white/40 uppercase tracking-wider flex items-center gap-1.5">
               <Zap size={9} /> GPU VRAM 안전 모드
-              <span className="ml-auto text-[9px] text-green-400/70 font-normal normal-case">TabbyAPI autosplit_reserve</span>
             </label>
             <div className="flex gap-1.5">
               {(["safe", "balanced", "max"] as SafetyMode[]).map((m) => {
@@ -264,7 +247,6 @@ const XllmPanel: React.FC<Props> = ({ onClose }) => {
                 <div className="text-white/80 truncate">{modelInfo.id}</div>
                 <div className="text-white/35 flex gap-4">
                   {modelInfo.max_seq_len && <span>seq_len: {modelInfo.max_seq_len.toLocaleString()}</span>}
-                  {modelInfo.cache_mode && <span>cache: {modelInfo.cache_mode}</span>}
                   {modelInfo.rope_scale && <span>rope: ×{modelInfo.rope_scale.toFixed(1)}</span>}
                 </div>
               </div>
@@ -273,10 +255,6 @@ const XllmPanel: React.FC<Props> = ({ onClose }) => {
             )}
           </section>
 
-          {/* Phase 85b-6: mistralrs-server.exe Heavy Track UI 제거됨.
-              모든 추론은 임베디드 mistralrs(LUM 프로세스 내부)로. 아래가 메인. */}
-
-          {/* Phase 85b — 임베디드 mistralrs (subprocess 없이 LUM 안에서 직접 추론) */}
           <EmbeddedInferenceDebug />
         </div>
 
