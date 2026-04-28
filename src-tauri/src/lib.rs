@@ -173,7 +173,9 @@ pub fn run() {
             commands::mistral_setup::delete_mistral_model,
             // Phase 85b — embedded mistralrs (subprocess 없이 LUM 프로세스 안에서 직접 추론)
             commands::embed::embed_load_gguf,
+            commands::embed::embed_unload,
             commands::embed::embed_status,
+            commands::embed::embed_loaded_info,
             commands::embed::embed_infer,
             commands::embed::list_embed_candidates,
             // MCP Tools (Phase 74 — 제대로 된 handshake + 서버 관리)

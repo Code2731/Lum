@@ -1,58 +1,75 @@
 //! Phase 85b — mistralrs를 LUM 프로세스 안에 직접 임베딩.
+//! Phase 88 — OnceCell → Mutex<Option<LoadedState>> 교체로 모델 핫스왑 지원.
 //!
 //! `embedded-ai` feature 활성화 시만 컴파일됨 (CUDA toolchain + MSVC 필요).
-//! 별도 mistralrs-server.exe spawn 제거 → 좀비 프로세스 0 + 통신 오버헤드 0.
-//! GGUF / BF16 모델을 직접 로드해 단일 추론 또는 streaming 응답 반환.
 #![cfg(feature = "embedded-ai")]
 
 use mistralrs::{GgufModelBuilder, Model, TextMessageRole, TextMessages};
-use std::sync::Arc;
-use tokio::sync::OnceCell;
+use std::sync::{Arc, OnceLock};
+use tokio::sync::Mutex;
 
-/// LUM 프로세스에 한 번 로드된 임베디드 추론 엔진.
-/// 모델 로드 비용(VRAM 할당 + 가중치 디코딩)이 크므로 OnceCell로 단 1회 로드.
-static ENGINE: OnceCell<Arc<Model>> = OnceCell::const_new();
+struct LoadedState {
+    model: Arc<Model>,
+    /// `"<model_dir>/<gguf_filename>"` — 동일 모델 재로드 스킵 판단용
+    key: String,
+}
 
-/// GGUF 모델을 로드하고 전역 ENGINE에 보관. 이미 로드돼있으면 즉시 반환.
-/// `model_dir`: GGUF 파일이 들어있는 폴더 절대 경로 (예: ~/.lum_mistral_models/<safe>)
-/// `gguf_filename`: 폴더 안의 .gguf 파일 이름 (예: "Qwen3-Coder-30B-A3B-Q4_K_M.gguf")
-pub async fn ensure_loaded(
-    model_dir: &str,
-    gguf_filename: &str,
-) -> Result<Arc<Model>, String> {
-    if let Some(m) = ENGINE.get() {
-        return Ok(m.clone());
+static ENGINE: OnceLock<Mutex<Option<LoadedState>>> = OnceLock::new();
+
+fn engine_mutex() -> &'static Mutex<Option<LoadedState>> {
+    ENGINE.get_or_init(|| Mutex::new(None))
+}
+
+/// GGUF 모델을 로드. 이미 같은 모델이 올라와 있으면 스킵.
+/// 다른 모델이 로드돼있으면 VRAM을 해제한 뒤 새 모델 로드 (핫스왑).
+pub async fn load_model(model_dir: &str, gguf_filename: &str) -> Result<String, String> {
+    let key = format!("{model_dir}/{gguf_filename}");
+    let mut guard = engine_mutex().lock().await;
+    if guard.as_ref().is_some_and(|s| s.key == key) {
+        return Ok(format!("이미 로드됨: {gguf_filename}"));
     }
+    // 이전 모델 Drop → VRAM 해제
+    *guard = None;
     let model = GgufModelBuilder::new(model_dir.to_string(), vec![gguf_filename.to_string()])
         .build()
         .await
         .map_err(|e| format!("mistralrs GGUF 로드 실패: {e}"))?;
-    let arc = Arc::new(model);
-    let _ = ENGINE.set(arc.clone());
-    Ok(arc)
+    *guard = Some(LoadedState { model: Arc::new(model), key: key.clone() });
+    Ok(format!("로드 완료: {gguf_filename}"))
 }
 
-/// 현재 로드된 엔진 반환. 미로드 상태면 None.
-pub fn current_engine() -> Option<Arc<Model>> {
-    ENGINE.get().cloned()
+/// 로드된 모델을 Drop해 VRAM을 해제.
+pub async fn unload_model() {
+    *engine_mutex().lock().await = None;
+}
+
+/// 현재 로드된 모델 키 반환 (`"<dir>/<file>"`). 미로드면 None.
+/// try_lock 실패(로딩 중) 시에도 None 반환 — UI 폴링용.
+pub fn loaded_key() -> Option<String> {
+    engine_mutex()
+        .try_lock()
+        .ok()
+        .and_then(|g| g.as_ref().map(|s| s.key.clone()))
 }
 
 /// 단일 user 메시지로 chat completion 요청 → 응답 텍스트 반환.
-/// 스트리밍 없는 단순 동기 추론용. ai.rs의 streaming path는 별도.
 pub async fn infer_once(prompt: &str) -> Result<String, String> {
-    let model = current_engine()
-        .ok_or_else(|| "엔진 미로드 — 먼저 ensure_loaded 호출 필요".to_string())?;
+    let model = engine_mutex()
+        .lock()
+        .await
+        .as_ref()
+        .map(|s| s.model.clone())
+        .ok_or_else(|| "엔진 미로드 — 먼저 로드 필요".to_string())?;
     let messages = TextMessages::new().add_message(TextMessageRole::User, prompt);
     let resp = model
         .send_chat_request(messages)
         .await
         .map_err(|e| format!("추론 실패: {e}"))?;
-    let text = resp
+    Ok(resp
         .choices
         .first()
         .and_then(|c| c.message.content.clone())
-        .unwrap_or_default();
-    Ok(text)
+        .unwrap_or_default())
 }
 
 // Tauri command 노출은 commands::embed 모듈의 facade에서. 여기는 순수 라이브러리.

@@ -277,8 +277,7 @@ const XllmPanel: React.FC<Props> = ({ onClose }) => {
   );
 };
 
-// ── Phase 85b — 임베디드 추론 디버그 컴포넌트 ──────────────────────────
-// embedded-ai feature 빌드일 때만 의미 있음. 비활성 빌드는 stub 에러 반환.
+// ── Phase 85b / Phase 88 — 임베디드 추론 (모델 핫스왑 지원) ──────────────
 interface EmbedCandidate {
   folder: string;
   folder_label: string;
@@ -291,29 +290,37 @@ const EmbeddedInferenceDebug: React.FC = () => {
   const [ggufFile, setGgufFile] = useState("");
   const [prompt, setPrompt] = useState("");
   const [response, setResponse] = useState<string | null>(null);
-  const [busy, setBusy] = useState<"load" | "infer" | null>(null);
-  const [loaded, setLoaded] = useState(false);
+  const [busy, setBusy] = useState<"load" | "unload" | "infer" | null>(null);
+  // 현재 VRAM에 올라온 모델 키 ("…/<dir>/<file>") — null이면 미로드
+  const [loadedKey, setLoadedKey] = useState<string | null>(null);
+
+  const refreshLoadedKey = useCallback(() => {
+    invoke<string | null>("embed_loaded_info").then(setLoadedKey).catch(() => setLoadedKey(null));
+  }, []);
 
   useEffect(() => {
-    invoke<boolean>("embed_status").then(setLoaded).catch(() => {});
+    refreshLoadedKey();
     invoke<EmbedCandidate[]>("list_embed_candidates")
       .then((list) => {
         setCandidates(list);
-        // 후보 1개면 자동 선택
         if (list.length === 1) {
           setModelDir(list[0].folder);
           if (list[0].gguf_files.length === 1) setGgufFile(list[0].gguf_files[0]);
         }
       })
       .catch(() => {});
-  }, []);
+  }, [refreshLoadedKey]);
 
   const currentFolder = candidates.find((c) => c.folder === modelDir);
   const fileOptions = currentFolder?.gguf_files ?? [];
 
+  // 선택된 모델이 현재 로드된 모델과 동일한지
+  const selectedKey = modelDir && ggufFile ? `${modelDir}/${ggufFile}` : null;
+  const isSameModel = !!loadedKey && loadedKey === selectedKey;
+
   const onLoad = async () => {
     if (!modelDir.trim() || !ggufFile.trim()) {
-      setResponse("❌ model_dir + gguf_file 모두 입력");
+      setResponse("❌ 모델 폴더와 GGUF 파일을 선택하세요");
       return;
     }
     setBusy("load");
@@ -324,7 +331,21 @@ const EmbeddedInferenceDebug: React.FC = () => {
         ggufFile: ggufFile.trim(),
       });
       setResponse(`✅ ${r}`);
-      setLoaded(true);
+      refreshLoadedKey();
+    } catch (e) {
+      setResponse(`❌ ${typeof e === "string" ? e : JSON.stringify(e)}`);
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const onUnload = async () => {
+    setBusy("unload");
+    setResponse(null);
+    try {
+      await invoke("embed_unload");
+      setResponse("🗑 모델 언로드 완료 (VRAM 해제)");
+      setLoadedKey(null);
     } catch (e) {
       setResponse(`❌ ${typeof e === "string" ? e : JSON.stringify(e)}`);
     } finally {
@@ -346,29 +367,29 @@ const EmbeddedInferenceDebug: React.FC = () => {
     }
   };
 
+  const loadedFilename = loadedKey ? loadedKey.split("/").pop() : null;
+
   return (
     <section className="space-y-2 border border-purple-400/20 rounded-lg p-3 bg-purple-400/5">
       <h3 className="flex items-center gap-1.5 text-[11px] font-semibold text-purple-300/90 uppercase tracking-wider">
-        🧪 임베디드 추론 (Phase 85b — embedded-ai feature)
-        <span className={`ml-auto text-[9px] font-mono ${loaded ? "text-green-400" : "text-white/40"}`}>
-          {loaded ? "● 로드됨" : "○ 미로드"}
+        🧪 임베디드 추론
+        <span className={`ml-auto text-[9px] font-mono truncate max-w-[180px] ${loadedKey ? "text-green-400" : "text-white/40"}`}
+          title={loadedKey ?? undefined}>
+          {loadedKey ? `● ${loadedFilename}` : "○ 미로드"}
         </span>
       </h3>
       <p className="text-[10px] text-white/40 leading-relaxed">
-        mistralrs-server.exe spawn 없이 LUM 프로세스 안에서 직접 추론. <code className="font-mono text-white/55">npm run tauri:dev:cuda</code>로
-        빌드해야 동작. 비활성 빌드는 stub 에러 반환.
+        <code className="font-mono text-white/55">npm run tauri:dev:cuda</code> 빌드 전용.
+        다른 모델 선택 후 로드하면 VRAM 교체(핫스왑).
       </p>
 
       <div className="space-y-1">
-        <span className="text-[10px] text-white/35">
-          모델 폴더 ({candidates.length}개 — ~/.lum_mistral_models/)
-        </span>
+        <span className="text-[10px] text-white/35">모델 폴더 ({candidates.length}개)</span>
         <select
           className="w-full bg-white/5 border border-white/10 rounded px-2.5 py-1.5 text-[11px] font-mono outline-none focus:border-purple-400/50 transition-colors"
           value={modelDir}
           onChange={(e) => {
             setModelDir(e.target.value);
-            // 폴더 바뀌면 그 폴더의 GGUF 1개면 자동 선택, 아니면 비움
             const c = candidates.find((x) => x.folder === e.target.value);
             setGgufFile(c?.gguf_files.length === 1 ? c.gguf_files[0] : "");
           }}
@@ -380,9 +401,7 @@ const EmbeddedInferenceDebug: React.FC = () => {
         </select>
       </div>
       <div className="space-y-1">
-        <span className="text-[10px] text-white/35">
-          GGUF 파일 ({fileOptions.length}개)
-        </span>
+        <span className="text-[10px] text-white/35">GGUF 파일 ({fileOptions.length}개)</span>
         <select
           className="w-full bg-white/5 border border-white/10 rounded px-2.5 py-1.5 text-[11px] font-mono outline-none focus:border-purple-400/50 transition-colors disabled:opacity-50"
           value={ggufFile}
@@ -397,16 +416,35 @@ const EmbeddedInferenceDebug: React.FC = () => {
       </div>
       {candidates.length === 0 && (
         <p className="text-[10px] text-yellow-400/60">
-          ~/.lum_mistral_models/ 안에 GGUF 모델 폴더가 없습니다. 모델을 다운로드하세요.
+          ~/.lum_mistral_models/ 에 GGUF 모델이 없습니다. 모델 관리 탭에서 다운로드하세요.
         </p>
       )}
-      <button
-        onClick={onLoad}
-        disabled={busy !== null || !modelDir.trim() || !ggufFile.trim()}
-        className="w-full px-3 py-1.5 rounded bg-purple-500/20 hover:bg-purple-500/30 border border-purple-400/30 text-[11px] text-purple-200 disabled:opacity-40 transition-colors"
-      >
-        {busy === "load" ? "로드 중... (수십초~분)" : "🚀 임베디드 로드"}
-      </button>
+
+      <div className="flex gap-1.5">
+        <button
+          onClick={onLoad}
+          disabled={busy !== null || !modelDir.trim() || !ggufFile.trim()}
+          className="flex-1 px-3 py-1.5 rounded bg-purple-500/20 hover:bg-purple-500/30 border border-purple-400/30 text-[11px] text-purple-200 disabled:opacity-40 transition-colors"
+        >
+          {busy === "load"
+            ? "로드 중... (수십초~분)"
+            : isSameModel
+              ? "✅ 로드됨 (재로드)"
+              : loadedKey
+                ? "🔄 모델 교체 (핫스왑)"
+                : "🚀 임베디드 로드"}
+        </button>
+        {loadedKey && (
+          <button
+            onClick={onUnload}
+            disabled={busy !== null}
+            className="px-3 py-1.5 rounded bg-red-500/15 hover:bg-red-500/25 border border-red-400/20 text-[11px] text-red-300 disabled:opacity-40 transition-colors"
+            title="VRAM에서 모델 해제"
+          >
+            {busy === "unload" ? "해제 중..." : "🗑 언로드"}
+          </button>
+        )}
+      </div>
 
       <div className="space-y-1 pt-1">
         <span className="text-[10px] text-white/35">프롬프트</span>
@@ -420,7 +458,7 @@ const EmbeddedInferenceDebug: React.FC = () => {
       </div>
       <button
         onClick={onInfer}
-        disabled={busy !== null || !prompt.trim() || !loaded}
+        disabled={busy !== null || !prompt.trim() || !loadedKey}
         className="w-full px-3 py-1.5 rounded bg-purple-500/20 hover:bg-purple-500/30 border border-purple-400/30 text-[11px] text-purple-200 disabled:opacity-40 transition-colors"
       >
         {busy === "infer" ? "추론 중..." : "💬 임베디드 추론"}

@@ -60,7 +60,7 @@ pub fn list_embed_candidates() -> Vec<EmbedCandidate> {
 const DISABLED_MSG: &str =
     "embedded-ai feature 비활성 — scripts/cargo-check-cuda.bat 또는 npm run tauri:dev:cuda";
 
-/// 프론트엔드에서 GGUF 모델 로드 트리거. 첫 호출은 수십 초~분 (VRAM 할당 + 디코딩).
+/// GGUF 모델 로드. 이미 같은 파일이면 스킵, 다른 모델이면 VRAM 해제 후 핫스왑.
 #[tauri::command]
 pub async fn embed_load_gguf(
     model_dir: String,
@@ -68,8 +68,7 @@ pub async fn embed_load_gguf(
 ) -> Result<String, String> {
     #[cfg(feature = "embedded-ai")]
     {
-        crate::commands::mistralrs_inline::ensure_loaded(&model_dir, &gguf_file).await?;
-        Ok(format!("loaded: {model_dir}/{gguf_file}"))
+        crate::commands::mistralrs_inline::load_model(&model_dir, &gguf_file).await
     }
     #[cfg(not(feature = "embedded-ai"))]
     {
@@ -78,12 +77,26 @@ pub async fn embed_load_gguf(
     }
 }
 
-/// 모델이 메모리에 로드돼있는지 빠르게 확인 (UI 상태 표시용).
+/// 로드된 모델을 Drop해 VRAM을 해제.
+#[tauri::command]
+pub async fn embed_unload() -> Result<(), String> {
+    #[cfg(feature = "embedded-ai")]
+    {
+        crate::commands::mistralrs_inline::unload_model().await;
+        Ok(())
+    }
+    #[cfg(not(feature = "embedded-ai"))]
+    {
+        Err(DISABLED_MSG.to_string())
+    }
+}
+
+/// 모델 로드 여부 (UI 상태 표시용).
 #[tauri::command]
 pub fn embed_status() -> bool {
     #[cfg(feature = "embedded-ai")]
     {
-        crate::commands::mistralrs_inline::current_engine().is_some()
+        crate::commands::mistralrs_inline::loaded_key().is_some()
     }
     #[cfg(not(feature = "embedded-ai"))]
     {
@@ -91,7 +104,20 @@ pub fn embed_status() -> bool {
     }
 }
 
-/// 단일 추론 호출. mistralrs-server.exe HTTP 우회.
+/// 현재 로드된 모델 키 반환 — UI에서 로드된 모델 이름 표시용.
+#[tauri::command]
+pub fn embed_loaded_info() -> Option<String> {
+    #[cfg(feature = "embedded-ai")]
+    {
+        crate::commands::mistralrs_inline::loaded_key()
+    }
+    #[cfg(not(feature = "embedded-ai"))]
+    {
+        None
+    }
+}
+
+/// 단일 추론 호출.
 #[tauri::command]
 pub async fn embed_infer(prompt: String) -> Result<String, String> {
     #[cfg(feature = "embedded-ai")]
