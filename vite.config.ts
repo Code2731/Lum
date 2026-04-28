@@ -17,7 +17,7 @@ export default defineConfig(async () => ({
   test: {
     globals: true,
     environment: "jsdom",
-    setupFiles: "./src/test/setup.ts",
+    setupFiles: "./src/test/setup.tsx",
     exclude: ["**/node_modules/**", "**/e2e/**"],
   },
   server: {

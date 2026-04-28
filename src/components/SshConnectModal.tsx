@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Server, User, Key, Lock, Bookmark, Trash2 } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete";
 import type { SshProfile } from "../hooks/useTabManager";
 import { useSshProfiles, type SshProfileEntry } from "../hooks/useSshProfiles";
 
@@ -79,14 +80,21 @@ const SshConnectModal: React.FC<Props> = ({ onConnect, onClose }) => {
                   <span className="text-[10px] text-white/30 font-mono truncate">
                     {p.username}@{p.host}:{p.port}
                   </span>
-                  <button
-                    type="button"
-                    onClick={(e) => { e.stopPropagation(); remove(p.id); }}
-                    className="opacity-0 group-hover:opacity-100 text-white/30 hover:text-red-400 transition-all ml-1 shrink-0"
-                    title="프로필 삭제"
+                  <ConfirmDeleteDialog
+                    itemName={p.label}
+                    itemType="SSH 프로필"
+                    description={`${p.username}@${p.host}:${p.port}`}
+                    onConfirm={() => remove(p.id)}
                   >
-                    <Trash2 size={11} />
-                  </button>
+                    <button
+                      type="button"
+                      onClick={(e) => e.stopPropagation()}
+                      className="opacity-0 group-hover:opacity-100 text-white/30 hover:text-red-400 transition-all ml-1 shrink-0"
+                      title="프로필 삭제"
+                    >
+                      <Trash2 size={11} />
+                    </button>
+                  </ConfirmDeleteDialog>
                 </div>
               ))}
             </div>

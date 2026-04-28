@@ -6,6 +6,7 @@ import EditBlockCard from "./EditBlockCard";
 import { parseEditBlocks } from "../utils/editBlockParser";
 import { parseToolCalls } from "../utils/toolCallParser";
 import ToolCallCard from "./ToolCallCard";
+import { IconButton } from "@/components/ui/icon-button";
 
 interface Props {
   messages: ChatMessage[];
@@ -118,23 +119,23 @@ const AIBlockStream: React.FC<Props> = ({ messages, streaming, error, onClear, o
           {streaming && <Loader2 size={12} className="animate-spin text-accent/70 ml-1" />}
         </div>
         <div className="flex items-center gap-1">
-          <button
+          <IconButton
+            tooltip="폰트 크기 초기화 (Ctrl+휠로 조절)"
             onClick={() => {
               setFontSize(FONT_DEFAULT);
               try { localStorage.setItem(FONT_KEY, String(FONT_DEFAULT)); } catch {}
             }}
             className="text-[10px] px-1.5 py-0.5 rounded text-white/30 hover:text-white/70 hover:bg-white/5 transition-colors font-mono"
-            title="폰트 크기 초기화 (Ctrl+휠로 조절)"
           >
             {fontSize}px
-          </button>
-          <button
+          </IconButton>
+          <IconButton
+            tooltip="대화 지우기"
             onClick={onClear}
             className="p-1 rounded text-white/30 hover:text-white/70 hover:bg-white/5 transition-colors"
-            title="대화 지우기"
           >
             <X size={14} />
-          </button>
+          </IconButton>
         </div>
       </div>
 

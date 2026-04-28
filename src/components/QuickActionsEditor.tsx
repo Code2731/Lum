@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Plus, Trash2, ChevronUp, ChevronDown, Zap } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { IconButton } from "@/components/ui/icon-button";
 import type { QuickAction } from "../hooks/useQuickActions";
 
 interface Props {
@@ -103,12 +104,17 @@ const QuickActionsEditor: React.FC<Props> = ({
               </select>
 
               {/* 삭제 */}
-              <button
+              <IconButton
+                tooltip="삭제"
+                confirm={{
+                  title: "Quick Action 삭제",
+                  description: <><span className="font-medium text-white/85">"{a.label}"</span> 액션이 삭제됩니다.</>,
+                }}
                 onClick={() => onDelete(a.id)}
                 className="p-1 rounded text-white/20 hover:text-red-400 transition-colors"
               >
                 <Trash2 size={12} />
-              </button>
+              </IconButton>
             </div>
           ))}
         </div>

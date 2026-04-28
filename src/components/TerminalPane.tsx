@@ -22,6 +22,7 @@ import { openUrl } from "@tauri-apps/plugin-opener";
 import type { XtermTheme } from "../hooks/useTerminalTheme";
 import type { DangerMatch } from "../utils/pasteGuard";
 import type { SshProfile } from "../hooks/useTabManager";
+import { IconButton } from "@/components/ui/icon-button";
 
 interface PtyData {
   id: string;
@@ -94,9 +95,9 @@ interface ModeButtonProps {
   onClick: () => void;
 }
 const ModeButton: React.FC<ModeButtonProps> = ({ label, title, active, activeColor, onClick }) => (
-  <button
+  <IconButton
+    tooltip={title}
     onClick={onClick}
-    title={title}
     style={{
       background: active ? `${activeColor}22` : "transparent",
       border: `1px solid ${active ? activeColor + "66" : "rgba(255,255,255,0.08)"}`,
@@ -112,7 +113,7 @@ const ModeButton: React.FC<ModeButtonProps> = ({ label, title, active, activeCol
     }}
   >
     {label}
-  </button>
+  </IconButton>
 );
 
 const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme, fontSize, fontFamily, onOutput, onCwdChange, onReady, onAgentTrigger, onAskAI, aiMessages, aiStreaming, aiError, onClearAI, visionEnabled }) => {
@@ -907,9 +908,9 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
             }}
           />
           {/* 대소문자 */}
-          <button
+          <IconButton
+            tooltip="대소문자 구분"
             onClick={() => setSearchCase(v => !v)}
-            title="대소문자 구분"
             style={{
               background: searchCase ? "rgba(88,166,255,0.2)" : "transparent",
               border: "1px solid " + (searchCase ? "rgba(88,166,255,0.5)" : "rgba(255,255,255,0.1)"),
@@ -922,11 +923,11 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
             }}
           >
             Aa
-          </button>
+          </IconButton>
           {/* 정규식 */}
-          <button
+          <IconButton
+            tooltip="정규식"
             onClick={() => setSearchRegex(v => !v)}
-            title="정규식"
             style={{
               background: searchRegex ? "rgba(88,166,255,0.2)" : "transparent",
               border: "1px solid " + (searchRegex ? "rgba(88,166,255,0.5)" : "rgba(255,255,255,0.1)"),
@@ -939,10 +940,10 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
             }}
           >
             .*
-          </button>
+          </IconButton>
           {/* 이전/다음 */}
-          <button onClick={() => doSearch(searchQuery, false)} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.4)", cursor: "pointer", fontSize: 14, padding: "0 2px" }} title="이전 (Shift+Enter)">‹</button>
-          <button onClick={() => doSearch(searchQuery, true)}  style={{ background: "none", border: "none", color: "rgba(255,255,255,0.4)", cursor: "pointer", fontSize: 14, padding: "0 2px" }} title="다음 (Enter)">›</button>
+          <IconButton tooltip="이전 (Shift+Enter)" onClick={() => doSearch(searchQuery, false)} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.4)", cursor: "pointer", fontSize: 14, padding: "0 2px" }}>‹</IconButton>
+          <IconButton tooltip="다음 (Enter)" onClick={() => doSearch(searchQuery, true)} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.4)", cursor: "pointer", fontSize: 14, padding: "0 2px" }}>›</IconButton>
           <button onClick={closeSearch} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.25)", cursor: "pointer", fontSize: 12, padding: "0 2px" }}>✕</button>
         </div>
       )}

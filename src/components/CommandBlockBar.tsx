@@ -1,5 +1,6 @@
 import React, { useCallback } from "react";
 import { CheckCircle2, XCircle, Copy, X } from "lucide-react";
+import { IconButton } from "@/components/ui/icon-button";
 import type { CommandBlock } from "../hooks/useCommandBlocks";
 
 interface Props {
@@ -28,13 +29,13 @@ const CommandBlockBar: React.FC<Props> = ({ block, onDismiss }) => {
         <span className="text-white/25">$ </span>
         {block.command || "…"}
       </span>
-      <button
+      <IconButton
+        tooltip="출력 복사"
         onClick={handleCopy}
-        title="출력 복사"
         className="p-1 rounded text-white/30 hover:text-white/70 hover:bg-white/10 transition-colors shrink-0"
       >
         <Copy size={11} />
-      </button>
+      </IconButton>
       <button
         onClick={onDismiss}
         aria-label="닫기"

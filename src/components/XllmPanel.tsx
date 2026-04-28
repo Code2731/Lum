@@ -6,6 +6,7 @@ import {
   Zap, Cpu, Sparkles,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { IconButton } from "@/components/ui/icon-button";
 import { shortPath } from "../utils";
 
 interface AppConfig {
@@ -223,15 +224,15 @@ const XllmPanel: React.FC<Props> = ({ onClose }) => {
               <label className="text-[10px] text-white/40 uppercase tracking-wider flex items-center gap-1.5">
                 <Cpu size={9} /> 현재 로드된 모델
               </label>
-              <button
+              <IconButton
+                tooltip="새로고침"
                 onClick={refreshModelInfo}
                 className="text-white/30 hover:text-white/70 transition-colors"
-                title="새로고침"
               >
                 {isLoadingInfo
                   ? <Loader2 size={11} className="animate-spin" />
                   : <RefreshCw size={11} />}
-              </button>
+              </IconButton>
             </div>
             {modelInfo ? (
               <div className="bg-white/3 border border-white/5 rounded-lg px-3 py-2 font-mono text-[11px] space-y-0.5">
@@ -444,14 +445,14 @@ const EmbeddedInferenceDebug: React.FC = () => {
                 : "🚀 임베디드 로드"}
         </button>
         {loadedKey && (
-          <button
+          <IconButton
+            tooltip="VRAM에서 모델 해제"
             onClick={onUnload}
             disabled={busy !== null}
             className="px-3 py-1.5 rounded bg-red-500/15 hover:bg-red-500/25 border border-red-400/20 text-[11px] text-red-300 disabled:opacity-40 transition-colors"
-            title="VRAM에서 모델 해제"
           >
             {busy === "unload" ? "해제 중..." : "🗑 언로드"}
-          </button>
+          </IconButton>
         )}
       </div>
       {busy === "load" && loadStage && (
@@ -477,13 +478,13 @@ const EmbeddedInferenceDebug: React.FC = () => {
           {busy === "infer" ? "🔴 토큰 스트림 중..." : "💬 임베디드 추론 (스트리밍)"}
         </button>
         {busy === "infer" && (
-          <button
+          <IconButton
+            tooltip="추론 중단"
             onClick={onCancelInfer}
             className="px-3 py-1.5 rounded bg-red-500/15 hover:bg-red-500/25 border border-red-400/20 text-[11px] text-red-300 transition-colors"
-            title="추론 중단"
           >
             ⛔ 중단
-          </button>
+          </IconButton>
         )}
       </div>
 

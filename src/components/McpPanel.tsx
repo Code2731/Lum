@@ -179,8 +179,16 @@ const McpPanel: React.FC<Props> = ({ onClose }) => {
                     />
                     <span className="text-[10px] text-white/40">{s.enabled ? "활성" : "꺼짐"}</span>
                   </label>
-                  <IconButton tooltip="제거" onClick={() => removeServer(s.name)}
-                    className="p-1 rounded text-white/30 hover:text-red-400 hover:bg-red-500/10">
+                  <IconButton
+                    tooltip="제거"
+                    confirm={{
+                      title: "MCP 서버 제거",
+                      description: <><span className="font-medium text-white/85">"{s.name}"</span> 서버 설정이 삭제됩니다. 실행 중이면 중단됩니다.</>,
+                      confirmLabel: "제거",
+                    }}
+                    onClick={() => removeServer(s.name)}
+                    className="p-1 rounded text-white/30 hover:text-red-400 hover:bg-red-500/10"
+                  >
                     <Trash2 size={11} />
                   </IconButton>
                 </div>

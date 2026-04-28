@@ -67,8 +67,15 @@ const NotificationCenter: React.FC<Props> = ({
           </IconButton>
         )}
         {notifications.length > 0 && (
-          <IconButton tooltip="전체 삭제" onClick={onClear}
-            className="text-white/30 hover:text-red-400 transition-colors p-0.5 rounded">
+          <IconButton
+            tooltip="전체 삭제"
+            confirm={{
+              title: "알림 전체 삭제",
+              description: `${notifications.length}개 알림이 모두 삭제됩니다.`,
+            }}
+            onClick={onClear}
+            className="text-white/30 hover:text-red-400 transition-colors p-0.5 rounded"
+          >
             <Trash2 size={11} />
           </IconButton>
         )}

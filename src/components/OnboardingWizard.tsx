@@ -7,6 +7,7 @@ import {
   ChevronRight, RefreshCw, Download, TerminalSquare, Shield, Gauge, Rocket,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { IconButton } from "@/components/ui/icon-button";
 
 interface DownloadProgress {
   file: string;
@@ -286,15 +287,15 @@ const OnboardingWizard: React.FC<Props> = ({ onComplete }) => {
                 }`}>
                   {xllmOnline === null ? "확인 중…" : xllmOnline ? "TabbyAPI 연결됨" : "TabbyAPI 미연결"}
                 </span>
-                <button
+                <IconButton
+                  tooltip="재확인"
                   onClick={recheckServer}
                   className="ml-auto text-white/25 hover:text-white/60 transition-colors"
-                  title="재확인"
                 >
                   {isCheckingServer
                     ? <Loader2 size={11} className="animate-spin" />
                     : <RefreshCw size={11} />}
-                </button>
+                </IconButton>
               </div>
 
               {xllmOnline === false && (

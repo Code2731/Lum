@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { Play, CheckCircle2, XCircle, Loader2, Clock, RefreshCw, Send } from "lucide-react";
+import { IconButton } from "@/components/ui/icon-button";
 
 interface TestCommand {
   command: string;
@@ -132,13 +133,13 @@ const TestResultCard: React.FC<Props> = ({ cwd, autoDetect = true, onAskAIForFix
           </span>
         )}
         {result && (
-          <button
+          <IconButton
+            tooltip="다시 실행"
             onClick={runTest}
             className="flex items-center gap-1 px-2 py-0.5 rounded text-white/40 hover:text-white/70 hover:bg-white/5 text-[11px] transition-colors"
-            title="다시 실행"
           >
             <RefreshCw size={10} />
-          </button>
+          </IconButton>
         )}
       </div>
 

@@ -69,7 +69,7 @@ describe("AIBlockStream", () => {
         onExecute={vi.fn()}
       />,
     );
-    fireEvent.click(screen.getByTitle("대화 지우기"));
+    fireEvent.click(screen.getByLabelText("대화 지우기"));
     expect(onClear).toHaveBeenCalled();
   });
 

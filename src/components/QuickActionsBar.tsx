@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Plus, Settings2, Zap } from "lucide-react";
+import { IconButton } from "@/components/ui/icon-button";
 import type { QuickAction } from "../hooks/useQuickActions";
 import QuickActionsEditor from "./QuickActionsEditor";
 
@@ -42,16 +43,16 @@ const QuickActionsBar: React.FC<Props> = ({
           </button>
         ))}
 
-        <button
+        <IconButton
+          tooltip="Quick Actions 편집"
           onClick={() => setShowEditor(true)}
-          title="Quick Actions 편집"
           className="ml-auto p-1 rounded text-white/20 hover:text-white/60 hover:bg-white/5 transition-colors shrink-0"
         >
           {actions.length === 0
             ? <Plus size={11} />
             : <Settings2 size={11} />
           }
-        </button>
+        </IconButton>
       </div>
 
       {showEditor && (

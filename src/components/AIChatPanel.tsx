@@ -44,8 +44,16 @@ const AIChatPanel: React.FC<Props> = ({ messages, streaming, error, onSend, onCa
         <Bot size={13} className="text-accent shrink-0" />
         <span className="text-[11px] font-semibold text-white/80 flex-1">AI Chat</span>
         {messages.length > 0 && (
-          <IconButton tooltip="대화 초기화" onClick={onClear}
-            className="text-white/25 hover:text-white/60 transition-colors p-0.5 rounded">
+          <IconButton
+            tooltip="대화 초기화"
+            confirm={{
+              title: "대화 초기화",
+              description: `현재 대화의 메시지 ${messages.length}개가 모두 지워집니다.`,
+              confirmLabel: "초기화",
+            }}
+            onClick={onClear}
+            className="text-white/25 hover:text-white/60 transition-colors p-0.5 rounded"
+          >
             <Trash2 size={11} />
           </IconButton>
         )}
@@ -152,18 +160,18 @@ export const ExecCodeBlock: React.FC<{ code: string; lang: string; onExecute: (c
       <pre className="p-2 pr-16 rounded-md bg-white/5 border border-white/8 overflow-x-auto text-[10px] font-mono text-white/60">
         <code>{code}</code>
       </pre>
-      <button
+      <IconButton
+        tooltip="터미널에서 실행"
         onClick={handleRun}
         className={`absolute top-1.5 right-1.5 flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-medium transition-colors ${
           ran
             ? "bg-green-500/20 text-green-400"
             : "bg-white/8 hover:bg-accent/20 text-white/40 hover:text-accent"
         }`}
-        title="터미널에서 실행"
       >
         <Play size={8} />
         {ran ? "전송됨" : "실행"}
-      </button>
+      </IconButton>
       {lang && <span className="absolute bottom-1.5 right-1.5 text-[8px] text-white/20 font-mono">{lang}</span>}
     </div>
   );

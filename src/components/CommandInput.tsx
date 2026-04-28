@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { Zap, Mic, MicOff } from "lucide-react";
+import { IconButton } from "@/components/ui/icon-button";
 import Editor from "react-simple-code-editor";
 import { invoke } from "@tauri-apps/api/core";
 import Prism from "prismjs";
@@ -195,13 +196,13 @@ const CommandInput = ({
 
       <div className={`editor-box ${isAI ? "editor-box-ai" : ""} ${isRecording ? "recording" : ""}`}>
         <div className="editor-header">
-          <button 
+          <IconButton
+            tooltip="Voice Command"
             className={`mic-btn ${isRecording ? "active" : ""}`}
             onClick={handleMicClick}
-            title="Voice Command"
           >
             {isRecording ? <Mic size={14} /> : <MicOff size={14} />}
-          </button>
+          </IconButton>
           <span className="editor-path">{shortPath(context.cwd)}</span>
           {context.git_branch && (
             <>

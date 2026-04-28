@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { BookOpen, Play, Trash2, X, Plus, Terminal } from "lucide-react";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete";
+import { IconButton } from "@/components/ui/icon-button";
 import type { Script } from "../hooks/useScriptLibrary";
 
 interface Props {
@@ -46,13 +47,13 @@ const ScriptLibraryPanel: React.FC<Props> = ({
       <div className="flex items-center gap-2 px-3 py-2 border-b border-white/5 shrink-0">
         <BookOpen size={13} className="text-accent shrink-0" />
         <span className="text-[11px] font-semibold text-white/80 flex-1">스크립트 라이브러리</span>
-        <button
+        <IconButton
+          tooltip="새 스크립트 추가"
           onClick={() => setCreating((v) => !v)}
           className={`text-white/30 hover:text-accent transition-colors p-0.5 rounded ${creating ? "text-accent" : ""}`}
-          title="새 스크립트 추가"
         >
           <Plus size={12} />
-        </button>
+        </IconButton>
         <button
           onClick={onClose}
           className="text-white/25 hover:text-white/60 transition-colors p-0.5 rounded"

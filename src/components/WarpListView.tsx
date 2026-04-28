@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { CheckCircle2, XCircle, Clock, ChevronDown, ChevronRight, Copy, TerminalSquare } from "lucide-react";
+import { IconButton } from "@/components/ui/icon-button";
 import { tokenizeShell, TOKEN_COLORS } from "../utils/shellSyntax";
 import type { CommandBlock } from "../hooks/useCommandBlocks";
 
@@ -87,22 +88,22 @@ const WarpListView: React.FC<Props> = ({ blocks, onExecute }) => {
                 </span>
               )}
 
-              <button
+              <IconButton
+                tooltip="명령어 복사"
                 onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(b.command).catch(() => {}); }}
                 className="opacity-0 group-hover:opacity-100 p-0.5 rounded text-white/30 hover:text-white/70 transition-all shrink-0"
-                title="명령어 복사"
               >
                 <Copy size={9} />
-              </button>
+              </IconButton>
 
               {onExecute && b.command && (
-                <button
+                <IconButton
+                  tooltip="다시 실행"
                   onClick={(e) => { e.stopPropagation(); onExecute(b.command + "\r"); }}
                   className="opacity-0 group-hover:opacity-100 p-0.5 rounded text-white/30 hover:text-accent transition-all shrink-0"
-                  title="다시 실행"
                 >
                   <TerminalSquare size={9} />
-                </button>
+                </IconButton>
               )}
 
               {hasOutput && (
@@ -118,13 +119,13 @@ const WarpListView: React.FC<Props> = ({ blocks, onExecute }) => {
                 <pre className="px-3 py-2 text-[10px] font-mono text-white/40 whitespace-pre-wrap max-h-52 overflow-y-auto leading-relaxed bg-[#0d1117]">
                   {b.output.trim()}
                 </pre>
-                <button
+                <IconButton
+                  tooltip="출력 복사"
                   onClick={() => navigator.clipboard.writeText(b.output.trim()).catch(() => {})}
                   className="absolute top-2 right-2 p-1 rounded text-white/20 hover:text-white/60 hover:bg-white/5 transition-colors"
-                  title="출력 복사"
                 >
                   <Copy size={9} />
-                </button>
+                </IconButton>
               </div>
             )}
           </div>
