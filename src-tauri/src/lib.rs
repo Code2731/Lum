@@ -166,11 +166,7 @@ pub fn run() {
             commands::scripts::delete_script,
             // System Monitor
             commands::sysmon::get_system_stats,
-            // Phase 78: mistral.rs Heavy Track
-            commands::mistral_setup::install_mistral_rs,
-            commands::mistral_setup::start_mistral_rs,
-            commands::mistral_setup::stop_mistral_rs,
-            commands::mistral_setup::check_mistral_rs_status,
+            // 모델 다운로드/스캔 (~/.lum_mistral_models/) — 임베디드용으로도 동일하게 사용
             commands::mistral_setup::download_mistral_model,
             commands::mistral_setup::list_mistral_models,
             // Phase 85b — embedded mistralrs (subprocess 없이 LUM 프로세스 안에서 직접 추론)

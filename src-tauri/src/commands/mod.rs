@@ -6,7 +6,6 @@ pub mod embed;
 pub mod mistral_setup;
 #[cfg(feature = "embedded-ai")]
 pub mod mistralrs_inline;
-pub mod router;
 pub mod edit_apply;
 pub mod env;
 pub mod git;

@@ -62,22 +62,12 @@ pub struct AppConfig {
     /// 추론(CoT) 토큰 UI 표시 — false면 <think>…</think> 블록 숨김
     pub show_reasoning: Option<bool>,
 
-    // ── Phase 78: Dual Engine (TabbyAPI + mistral.rs) ────────────────────────
-    /// mistral.rs 서버 활성화 여부
-    pub mistral_rs_enabled: Option<bool>,
-    /// mistral.rs 서버 주소 (기본값: http://127.0.0.1:8080)
-    pub mistral_rs_url: Option<String>,
-    /// mistral.rs Heavy Track 모델 경로 (HuggingFace ID 또는 로컬 경로)
-    pub mistral_rs_model: Option<String>,
-    /// mistral.rs ISQ(In-Situ Quantization) 모드 — Q4K(기본) | Q5K | Q6K | Q8_0
-    pub mistral_rs_isq: Option<String>,
-    /// GGUF 단일 파일명 — Some이면 mistral.rs를 `gguf` 서브커맨드로 시작, None이면 BF16+ISQ
-    pub mistral_rs_gguf_file: Option<String>,
-    /// Phase 83 — GPU에 올릴 transformer layer 수. None이면 mistral.rs auto device mapping.
-    /// 30B+ 모델 OOM 디버깅 시 수동 override 용도 (보통 auto가 잘 동작).
-    pub mistral_rs_device_layers: Option<u32>,
+    // Phase 85b — mistralrs는 LUM 프로세스 안에 임베딩됨. server.exe 관련 필드
+    // (mistral_rs_enabled / url / model / isq / gguf_file / device_layers) 모두 제거.
+    // 사용자 ~/.lum_config.json에 잔여 키가 있어도 serde가 unknown field를 무시하므로
+    // 마이그레이션 안전.
 
-    /// LUM 시작 시 TabbyAPI 자동 시작 (None/true=자동, false=수동)
+    /// 사용 안 됨 (deprecated). xllm_auto_start 자체가 TabbyAPI 자동 시작용이었음.
     pub xllm_auto_start: Option<bool>,
 }
 
@@ -105,18 +95,14 @@ pub struct QuickAction {
 }
 
 impl AppConfig {
-    /// 추론 서버 URL — Phase 85a: TabbyAPI 제거 후 모든 추론은 mistral.rs로 통일.
-    /// 호출부 변경 최소화를 위해 함수명은 유지(xllm_url) 하되 내부적으로 mistral.rs URL을 반환.
-    /// `xllm_base_url` 필드는 deprecated — 다음 commit에서 정리.
+    /// 추론 서버 URL — Phase 85b 임베디드 mistralrs 전환 후 *폴백 path 전용*.
+    /// 임베디드 모델 미로드 시에만 reqwest가 이 URL을 사용. 임베디드만 쓰는 환경에서는 dead.
     pub fn xllm_url(&self) -> String {
-        self.mistral_rs_url()
+        "http://127.0.0.1:8080".to_string()
     }
 
-    pub fn mistral_rs_url(&self) -> String {
-        self.mistral_rs_url
-            .clone()
-            .unwrap_or_else(|| "http://127.0.0.1:8080".to_string())
-    }
+    /// 호환성용 alias — call site 정리 후 제거 예정.
+    pub fn mistral_rs_url(&self) -> String { self.xllm_url() }
 }
 
 fn config_path() -> std::path::PathBuf {
@@ -196,7 +182,6 @@ pub fn save_capability_toggles(
 #[tauri::command]
 pub fn save_xllm_settings(
     app: tauri::AppHandle,
-    server_url: Option<String>,
     cache_mode: Option<String>,
     coding_model: Option<String>,
     doc_model: Option<String>,
@@ -204,16 +189,9 @@ pub fn save_xllm_settings(
     max_seq_len: Option<u32>,
     draft_model: Option<String>,
     speculative_n_draft: Option<u32>,
-    mistral_rs_enabled: Option<bool>,
-    mistral_rs_url: Option<String>,
-    mistral_rs_model: Option<String>,
-    mistral_rs_isq: Option<String>,
-    mistral_rs_gguf_file: Option<String>,
-    mistral_rs_device_layers: Option<u32>,
 ) -> Result<()> {
     use tauri::Emitter;
     let mut config = load_config()?;
-    config.xllm_base_url = server_url.filter(|s| !s.is_empty());
     config.cache_mode = cache_mode;
     config.coding_model = coding_model;
     config.doc_model = doc_model;
@@ -221,12 +199,6 @@ pub fn save_xllm_settings(
     config.max_seq_len = max_seq_len;
     config.draft_model = draft_model;
     config.speculative_n_draft = speculative_n_draft;
-    config.mistral_rs_enabled = mistral_rs_enabled;
-    config.mistral_rs_url = mistral_rs_url.filter(|s| !s.is_empty());
-    config.mistral_rs_model = mistral_rs_model.filter(|s| !s.is_empty());
-    config.mistral_rs_isq = mistral_rs_isq.filter(|s| !s.is_empty());
-    config.mistral_rs_gguf_file = mistral_rs_gguf_file.filter(|s| !s.is_empty());
-    config.mistral_rs_device_layers = mistral_rs_device_layers;
     save_config(&config)?;
     let _ = app.emit("xllm_settings_saved", ());
     Ok(())

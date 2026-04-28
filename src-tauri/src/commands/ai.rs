@@ -1,5 +1,4 @@
 use crate::commands::config::{load_config, AppConfig};
-use crate::commands::router::{route_engine, Engine};
 use crate::error::{LumError, Result};
 use futures_util::StreamExt;
 use serde::{Deserialize, Serialize};
@@ -488,35 +487,10 @@ pub async fn stream_ai_command(
         let _ = app.emit(XLLM_TOKEN_EVENT, result.clone());
         Ok(result)
     } else {
+        // Phase 85b — Heavy/Fast 라우팅 제거. 임베디드 mistralrs 또는 폴백 reqwest 단일 path.
+        let _ = engine; // engine 파라미터 deprecated — 호환성 유지용으로만 받음.
         let config = load_config()?;
-        // 엔진 결정: 명시적 engine="heavy" > prompt의 "!!" > config.mistral_rs_enabled
-        let use_heavy = match engine.as_deref() {
-            Some("heavy") => config.mistral_rs_enabled.unwrap_or(false),
-            Some("fast")  => false,
-            _             => route_engine(&prompt, &config) == Engine::MistralRs,
-        };
-
-        if use_heavy {
-            let heavy_url = config.mistral_rs_url();
-            // 1차 시도: mistral.rs
-            match call_compat_stream(&app, &client, &full_prompt, &imgs, &heavy_url, None, &cancel_flag).await {
-                Ok(s) => Ok(s),
-                Err(_) => {
-                    // 연결 실패면 TabbyAPI로 자동 폴백 — 짧은 알림만 표시
-                    // 상세 오류는 별도 'engine_fallback' 이벤트로 (UI에서 토스트 등)
-                    let _ = app.emit("engine_fallback", serde_json::json!({
-                        "from": "heavy",
-                        "to": "fast",
-                        "reason": "mistral.rs 미실행"
-                    }));
-                    let _ = app.emit(XLLM_TOKEN_EVENT, "💡 Fast로 응답 (Heavy 미실행)\n\n".to_string());
-                    let fallback_url = config.xllm_url();
-                    call_compat_stream(&app, &client, &full_prompt, &imgs, &fallback_url, config.xllm_api_key.clone(), &cancel_flag).await
-                }
-            }
-        } else {
-            call_compat_stream(&app, &client, &full_prompt, &imgs, &config.xllm_url(), config.xllm_api_key.clone(), &cancel_flag).await
-        }
+        call_compat_stream(&app, &client, &full_prompt, &imgs, &config.xllm_url(), config.xllm_api_key.clone(), &cancel_flag).await
     }
 }
 
