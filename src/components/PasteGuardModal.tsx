@@ -1,5 +1,13 @@
 import React from "react";
-import { AlertTriangle, ShieldAlert, X } from "lucide-react";
+import { AlertTriangle, ShieldAlert } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import type { DangerMatch } from "../utils/pasteGuard";
 
 interface Props {
@@ -10,25 +18,24 @@ interface Props {
 
 const PasteGuardModal: React.FC<Props> = ({ match, onConfirm, onCancel }) => {
   const isDanger = match.level === "danger";
+  const Icon = isDanger ? ShieldAlert : AlertTriangle;
+  const tone = isDanger
+    ? { title: "text-red-300", icon: "text-red-400", border: "border-red-500/20", bg: "bg-red-500/5", reasonBorder: "border-red-500/15", btn: "bg-red-500/15 hover:bg-red-500/25 text-red-400" }
+    : { title: "text-yellow-300", icon: "text-yellow-400", border: "border-yellow-500/20", bg: "bg-yellow-500/5", reasonBorder: "border-yellow-500/15", btn: "bg-yellow-500/15 hover:bg-yellow-500/25 text-yellow-400" };
 
   return (
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50">
-      <div className="bg-[#0d1117] border border-white/10 rounded-2xl w-[480px] shadow-2xl overflow-hidden">
-        <div className={`flex items-center gap-2.5 px-5 py-4 border-b ${isDanger ? "border-red-500/20 bg-red-500/5" : "border-yellow-500/20 bg-yellow-500/5"}`}>
-          {isDanger
-            ? <ShieldAlert size={15} className="text-red-400 shrink-0" />
-            : <AlertTriangle size={15} className="text-yellow-400 shrink-0" />}
-          <span className={`text-sm font-semibold ${isDanger ? "text-red-300" : "text-yellow-300"}`}>
+    <Dialog open onOpenChange={(open) => { if (!open) onCancel(); }}>
+      <DialogContent className="sm:max-w-[480px] gap-0 p-0 overflow-hidden border-white/10">
+        <div className={cn("flex items-center gap-2.5 px-5 py-4 border-b", tone.border, tone.bg)}>
+          <Icon size={15} className={cn("shrink-0", tone.icon)} />
+          <DialogTitle className={cn("text-sm font-semibold", tone.title)}>
             {isDanger ? "위험한 커맨드 감지" : "주의 필요"}
-          </span>
-          <button onClick={onCancel} className="ml-auto text-white/30 hover:text-white/70 transition-colors">
-            <X size={14} />
-          </button>
+          </DialogTitle>
         </div>
 
         <div className="px-5 py-4 space-y-3">
-          <div className={`p-3 rounded-xl border ${isDanger ? "border-red-500/15 bg-red-500/5" : "border-yellow-500/15 bg-yellow-500/5"}`}>
-            <span className={`text-xs font-medium ${isDanger ? "text-red-400" : "text-yellow-400"}`}>
+          <div className={cn("p-3 rounded-xl border", tone.reasonBorder, tone.bg)}>
+            <span className={cn("text-xs font-medium", tone.icon)}>
               {match.reason}
             </span>
           </div>
@@ -38,31 +45,28 @@ const PasteGuardModal: React.FC<Props> = ({ match, onConfirm, onCancel }) => {
               {match.pattern}{match.pattern.length >= 80 ? "…" : ""}
             </pre>
           </div>
-          <p className="text-[11px] text-white/35">
+          <DialogDescription className="text-[11px] text-white/35">
             이 커맨드를 그대로 실행하시겠습니까?
-          </p>
+          </DialogDescription>
         </div>
 
         <div className="flex gap-2 px-5 pb-5">
-          <button
+          <Button
+            variant="ghost"
             onClick={onCancel}
-            className="flex-1 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-white/60 hover:text-white text-xs font-medium transition-colors"
+            className="flex-1 bg-white/5 hover:bg-white/10 text-white/60 hover:text-white text-xs"
           >
             취소
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={onConfirm}
-            className={`flex-1 py-2 rounded-xl text-xs font-medium transition-colors ${
-              isDanger
-                ? "bg-red-500/15 hover:bg-red-500/25 text-red-400"
-                : "bg-yellow-500/15 hover:bg-yellow-500/25 text-yellow-400"
-            }`}
+            className={cn("flex-1 text-xs", tone.btn)}
           >
             그래도 실행
-          </button>
+          </Button>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 };
 
