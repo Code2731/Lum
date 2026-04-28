@@ -90,19 +90,17 @@ const QuickActionsEditor: React.FC<Props> = ({
                 placeholder="실행할 커맨드"
               />
 
-              {/* 단축키 */}
               <Select
                 value={a.shortcut != null ? String(a.shortcut) : ""}
-                onValueChange={v => onUpdate(a.id, { shortcut: v ? Number(v) : undefined })}
+                onValueChange={v => onUpdate(a.id, { shortcut: v !== "" ? Number(v) : undefined })}
               >
                 <SelectTrigger className="w-16 shrink-0 py-1 text-xs justify-center">
-                  <SelectValue placeholder="없음" />
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">없음</SelectItem>
-                  {[1,2,3,4,5,6,7,8,9].map(n => (
-                    <SelectItem key={n} value={String(n)} disabled={usedShortcuts.has(n) && a.shortcut !== n}>
-                      ⌘{n}
+                  {SHORTCUT_OPTIONS.map(o => (
+                    <SelectItem key={String(o.value)} value={o.value != null ? String(o.value) : ""} disabled={o.value != null && usedShortcuts.has(o.value) && a.shortcut !== o.value}>
+                      {o.label}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -144,10 +142,10 @@ const QuickActionsEditor: React.FC<Props> = ({
             />
             <Select
               value={newShortcut != null ? String(newShortcut) : ""}
-              onValueChange={v => setNewShortcut(v ? Number(v) : undefined)}
+              onValueChange={v => setNewShortcut(v !== "" ? Number(v) : undefined)}
             >
               <SelectTrigger className="w-16 shrink-0 py-1.5 text-xs justify-center">
-                <SelectValue placeholder="없음" />
+                <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 {SHORTCUT_OPTIONS.map(o => (
