@@ -4,7 +4,7 @@
 //! `embedded-ai` feature 활성화 시만 컴파일됨 (CUDA toolchain + MSVC 필요).
 #![cfg(feature = "embedded-ai")]
 
-use mistralrs::{GgufLoraModelBuilder, GgufModelBuilder, IsqType, Model, TextModelBuilder, ResponseOk, TextMessageRole, TextMessages};
+use mistralrs::{GgufLoraModelBuilder, GgufModelBuilder, IsqBits, IsqSetting, Model, TextModelBuilder, ResponseOk, TextMessageRole, TextMessages};
 use mistralrs_core::Ordering as LoraOrdering;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, OnceLock};
@@ -179,13 +179,13 @@ pub async fn load_model_with_lora(
     Ok(format!("LoRA 로드 완료: {gguf_filename}"))
 }
 
-/// BF16 safetensors 모델을 즉석 양자화(ISQ)해서 로드.
-/// GGUF 없이 HuggingFace BF16 원본을 그대로 쓸 수 있음.
-/// BF16 메모리에 올린 뒤 ISQ 변환 → 수분 소요, RAM 여유 필요.
+/// BF16 safetensors 모델을 ISQ 양자화해서 로드.
+/// `IsqSetting::Auto(bits)` — 플랫폼 최적 자동 선택 (CUDA: Q*K, Metal: AFQ*).
+/// `IsqSetting::Specific(ty)` — 명시적 타입 지정.
 pub async fn load_model_normal(
     app: &AppHandle,
     model_path: &str,
-    isq: IsqType,
+    isq: IsqSetting,
 ) -> Result<String, String> {
     let key = format!("{model_path}+isq:{isq:?}");
     let mut guard = engine_mutex().lock().await;
@@ -194,8 +194,12 @@ pub async fn load_model_normal(
     }
     *guard = None;
     let _ = app.emit("embed_load_progress", format!("🔄 {model_path} BF16→ISQ {isq:?} 변환 로드 중 (RAM 여유 필요)..."));
-    let model = TextModelBuilder::new(model_path.to_string())
-        .with_isq(isq)
+    let base = TextModelBuilder::new(model_path.to_string());
+    let builder = match isq {
+        IsqSetting::Auto(bits) => base.with_auto_isq(bits),
+        IsqSetting::Specific(ty) => base.with_isq(ty),
+    };
+    let model = builder
         .build()
         .await
         .map_err(|e| {

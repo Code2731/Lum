@@ -174,8 +174,39 @@ pub async fn embed_load_lora(
     }
 }
 
+/// ISQ 타입 문자열 파싱.
+/// "Auto4" 등 Auto 접두사 → `IsqSetting::Auto(IsqBits)` (플랫폼 최적 자동 선택).
+/// "Q4K" 등 → `IsqSetting::Specific(IsqType)`.
+#[cfg(feature = "embedded-ai")]
+fn parse_isq_setting(s: &str) -> Result<mistralrs::IsqSetting, String> {
+    use mistralrs::{IsqBits, IsqSetting, IsqType};
+    match s {
+        // Auto — 플랫폼 최적 (CUDA: Q*K, Metal: AFQ*)
+        "Auto2" => Ok(IsqSetting::Auto(IsqBits::Two)),
+        "Auto3" => Ok(IsqSetting::Auto(IsqBits::Three)),
+        "Auto4" => Ok(IsqSetting::Auto(IsqBits::Four)),
+        "Auto5" => Ok(IsqSetting::Auto(IsqBits::Five)),
+        "Auto6" => Ok(IsqSetting::Auto(IsqBits::Six)),
+        "Auto8" => Ok(IsqSetting::Auto(IsqBits::Eight)),
+        // GGUF 호환 Q*K
+        "Q2K"                 => Ok(IsqSetting::Specific(IsqType::Q2K)),
+        "Q3K"                 => Ok(IsqSetting::Specific(IsqType::Q3K)),
+        "Q4_0"                => Ok(IsqSetting::Specific(IsqType::Q4_0)),
+        "Q4K" | "Q4_K_M"     => Ok(IsqSetting::Specific(IsqType::Q4K)),
+        "Q5_0"                => Ok(IsqSetting::Specific(IsqType::Q5_0)),
+        "Q5K" | "Q5_K_M"     => Ok(IsqSetting::Specific(IsqType::Q5K)),
+        "Q6K" | "Q6_K"       => Ok(IsqSetting::Specific(IsqType::Q6K)),
+        "Q8_0"                => Ok(IsqSetting::Specific(IsqType::Q8_0)),
+        "Q8K"                 => Ok(IsqSetting::Specific(IsqType::Q8K)),
+        // HyperQuant — GGUF Q4보다 정밀
+        "HQQ4"                => Ok(IsqSetting::Specific(IsqType::HQQ4)),
+        "HQQ8"                => Ok(IsqSetting::Specific(IsqType::HQQ8)),
+        other => Err(format!("알 수 없는 ISQ 타입: {other}")),
+    }
+}
+
 /// BF16 safetensors 폴더를 ISQ 양자화해서 로드.
-/// `isq_type`: "Q4K" | "Q5K" | "Q6K" | "Q8_0"
+/// `isq_type`: "Auto4" | "Q4K" | "Q5K" | "Q6K" | "Q8_0" | "HQQ4" | "HQQ8" 등
 #[tauri::command]
 pub async fn embed_load_normal(
     app: tauri::AppHandle,
@@ -184,14 +215,7 @@ pub async fn embed_load_normal(
 ) -> Result<String, String> {
     #[cfg(feature = "embedded-ai")]
     {
-        use mistralrs::IsqType;
-        let isq = match isq_type.as_str() {
-            "Q4K" | "Q4_K_M" => IsqType::Q4K,
-            "Q5K" | "Q5_K_M" => IsqType::Q5K,
-            "Q6K" | "Q6_K"   => IsqType::Q6K,
-            "Q8_0"            => IsqType::Q8_0,
-            other => return Err(format!("알 수 없는 ISQ 타입: {other}")),
-        };
+        let isq = parse_isq_setting(&isq_type)?;
         crate::commands::mistralrs_inline::load_model_normal(&app, &model_path, isq).await
     }
     #[cfg(not(feature = "embedded-ai"))]

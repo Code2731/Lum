@@ -217,6 +217,7 @@ const XllmPanel: React.FC<Props> = ({ onClose }) => {
 // ── Ollama 백엔드 섹션 ──────────────────────────────────────────────────────
 
 const OllamaSection: React.FC = () => {
+  const [enabled, setEnabled] = useState(false);
   const [url, setUrl] = useState("http://localhost:11434");
   const [model, setModel] = useState("");
   const [models, setModels] = useState<string[]>([]);
@@ -228,14 +229,19 @@ const OllamaSection: React.FC = () => {
   useEffect(() => {
     invoke<AppConfig>("load_app_config").then((c) => {
       if (c.ollama_base_url) setUrl(c.ollama_base_url);
-      if (c.ollama_model) setModel(c.ollama_model);
+      if (c.ollama_model) {
+        setModel(c.ollama_model);
+        setEnabled(true);
+      }
+      if (c.ollama_base_url || c.ollama_model) {
+        checkStatus();
+      }
     }).catch(() => {});
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const checkStatus = useCallback(async () => {
     setChecking(true);
     setStatus("unknown");
-    setModels([]);
     try {
       const ok = await invoke<boolean>("check_ollama_status");
       setStatus(ok ? "online" : "offline");
@@ -256,15 +262,15 @@ const OllamaSection: React.FC = () => {
     try {
       await invoke("save_ollama_settings", {
         baseUrl: url.trim() || null,
-        model: model.trim() || null,
+        model: enabled ? (model.trim() || null) : null,
       });
-      setMsg("저장 완료");
+      setMsg(enabled ? "저장 완료 — Ollama 활성" : "비활성화됨 (embedded / xLLM 폴백)");
     } catch (e) {
       setMsg(`저장 실패: ${e}`);
     } finally {
       setSaving(false);
     }
-  }, [url, model]);
+  }, [url, model, enabled]);
 
   const statusColor =
     status === "online" ? "text-green-400" : status === "offline" ? "text-red-400" : "text-white/40";
@@ -272,73 +278,91 @@ const OllamaSection: React.FC = () => {
     status === "online" ? "● 온라인" : status === "offline" ? "○ 오프라인" : "○ 미확인";
 
   return (
-    <section className="space-y-2 border border-orange-400/20 rounded-lg p-3 bg-orange-400/5">
-      <h3 className="flex items-center gap-1.5 text-[11px] font-semibold text-orange-300/90 uppercase tracking-wider">
-        🦙 Ollama 백엔드
-        <span className={`ml-auto text-[9px] font-mono ${statusColor}`}>{statusLabel}</span>
-      </h3>
+    <section className={`space-y-2 border rounded-lg p-3 transition-colors ${enabled ? "border-orange-400/20 bg-orange-400/5" : "border-white/5 bg-white/2"}`}>
+      <div className="flex items-center gap-2">
+        <h3 className="flex items-center gap-1.5 text-[11px] font-semibold text-orange-300/90 uppercase tracking-wider flex-1">
+          🦙 Ollama 백엔드
+          {enabled && <span className={`text-[9px] font-mono ${statusColor}`}>{statusLabel}</span>}
+        </h3>
+        <Switch
+          checked={enabled}
+          onCheckedChange={async (v) => {
+            setEnabled(v);
+            // 즉시 저장 — 토글 하나로 on/off
+            try {
+              await invoke("save_ollama_settings", {
+                baseUrl: url.trim() || null,
+                model: v ? (model.trim() || null) : null,
+              });
+            } catch {}
+          }}
+          className="scale-75"
+        />
+      </div>
       <p className="text-[10px] text-white/40 leading-relaxed">
-        로컬 Ollama가 실행 중이면 embedded 미로드 시 자동 폴백. xLLM보다 우선.
+        {enabled ? "embedded 미로드 시 자동 폴백. xLLM보다 우선." : "꺼짐 — embedded / xLLM / Gemini 순으로 폴백."}
       </p>
 
-      <div className="space-y-1">
-        <span className="text-[10px] text-white/35">서버 URL</span>
-        <div className="flex gap-1.5">
-          <Input
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-            placeholder="http://localhost:11434"
-            className="flex-1 font-mono text-[11px] focus:border-orange-400/40"
-          />
-          <button
-            onClick={checkStatus}
-            disabled={checking}
-            className="px-2.5 py-1 rounded border border-orange-400/30 bg-orange-500/10 hover:bg-orange-500/20 text-[11px] text-orange-200 disabled:opacity-40 transition-colors whitespace-nowrap"
-          >
-            {checking ? "확인 중..." : "연결 확인"}
-          </button>
+      {enabled && (<>
+        <div className="space-y-1">
+          <span className="text-[10px] text-white/35">서버 URL</span>
+          <div className="flex gap-1.5">
+            <Input
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              placeholder="http://localhost:11434"
+              className="flex-1 font-mono text-[11px] focus:border-orange-400/40"
+            />
+            <button
+              onClick={checkStatus}
+              disabled={checking}
+              className="px-2.5 py-1 rounded border border-orange-400/30 bg-orange-500/10 hover:bg-orange-500/20 text-[11px] text-orange-200 disabled:opacity-40 transition-colors whitespace-nowrap"
+            >
+              {checking ? "확인 중..." : "연결 확인"}
+            </button>
+          </div>
         </div>
-      </div>
 
-      <div className="space-y-1">
-        <span className="text-[10px] text-white/35">모델</span>
-        {models.length > 0 ? (
-          <Select value={model} onValueChange={setModel}>
+        <div className="space-y-1">
+          <span className="text-[10px] text-white/35">모델</span>
+          <Select value={model} onValueChange={setModel} disabled={checking}>
             <SelectTrigger className="w-full">
-              <SelectValue placeholder="(모델 선택)" />
+              <SelectValue placeholder={checking ? "목록 조회 중..." : status === "unknown" ? "연결 확인 후 선택" : status === "offline" ? "서버 오프라인" : "(모델 선택)"} />
             </SelectTrigger>
             <SelectContent>
+              {model && !models.includes(model) && (
+                <SelectItem value={model}>{model} (저장됨)</SelectItem>
+              )}
               {models.map((m) => (
                 <SelectItem key={m} value={m}>{m}</SelectItem>
               ))}
+              {models.length === 0 && !model && (
+                <SelectItem value="__empty__" disabled>
+                  {status === "offline" ? "서버에 연결할 수 없습니다" : "연결 확인을 눌러주세요"}
+                </SelectItem>
+              )}
             </SelectContent>
           </Select>
-        ) : (
-          <Input
-            value={model}
-            onChange={(e) => setModel(e.target.value)}
-            placeholder="예: llama3.2:3b, qwen2.5-coder:7b"
-            className="font-mono text-[11px] focus:border-orange-400/40"
-          />
-        )}
-        {status === "offline" && (
-          <p className="text-[10px] text-red-400/80">
-            Ollama 서버 미응답 — <code className="text-[9px]">ollama serve</code> 실행 후 재확인
-          </p>
-        )}
-      </div>
+          {status === "offline" && (
+            <p className="text-[10px] text-red-400/80">
+              Ollama 서버 미응답 — <code className="text-[9px]">ollama serve</code> 실행 후 재확인
+            </p>
+          )}
+        </div>
 
-      <div className="flex items-center gap-2">
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          className="flex items-center gap-1.5 px-3 py-1 rounded bg-orange-500/15 hover:bg-orange-500/25 border border-orange-400/25 text-[11px] text-orange-200 disabled:opacity-40 transition-colors"
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="flex items-center gap-1.5 px-3 py-1 rounded bg-orange-500/15 hover:bg-orange-500/25 border border-orange-400/25 text-[11px] text-orange-200 disabled:opacity-40 transition-colors"
         >
           {saving ? <Loader2 size={10} className="animate-spin" /> : null}
           저장
         </button>
         {msg && <span className="text-[10px] text-white/50">{msg}</span>}
-      </div>
+        </div>
+      </>)}
+      {msg && !enabled && <span className="text-[10px] text-white/50">{msg}</span>}
     </section>
   );
 };
@@ -364,7 +388,7 @@ const EmbeddedInferenceDebug: React.FC = () => {
   const [loraCandidates, setLoraCandidates] = useState<LoraCandidate[]>([]);
   const [modelDir, setModelDir] = useState("");
   const [ggufFile, setGgufFile] = useState("");
-  const [isqType, setIsqType] = useState("Q4K");
+  const [isqType, setIsqType] = useState("Auto4");
   const [loraPath, setLoraPath] = useState("");
   const [prompt, setPrompt] = useState("");
   const [response, setResponse] = useState<string | null>(null);
@@ -582,13 +606,24 @@ const EmbeddedInferenceDebug: React.FC = () => {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="Q4K">Q4K — 권장 · ~5GB/7B</SelectItem>
-              <SelectItem value="Q5K">Q5K — 균형 · ~6GB/7B</SelectItem>
-              <SelectItem value="Q6K">Q6K — 고품질 · ~7GB/7B</SelectItem>
-              <SelectItem value="Q8_0">Q8_0 — 최고품질 · ~8GB/7B</SelectItem>
+              {/* Auto — 플랫폼 최적 자동 선택 */}
+              <SelectItem value="Auto4">⚡ Auto 4비트 — CUDA:Q4K / Metal:AFQ4 (권장)</SelectItem>
+              <SelectItem value="Auto5">⚡ Auto 5비트 — Q5K (균형)</SelectItem>
+              <SelectItem value="Auto6">⚡ Auto 6비트 — CUDA:Q6K / Metal:AFQ6</SelectItem>
+              <SelectItem value="Auto8">⚡ Auto 8비트 — CUDA:Q8_0 / Metal:AFQ8</SelectItem>
+              {/* GGUF 호환 Q*K */}
+              <SelectItem value="Q2K">Q2K — 극경량 ~3GB/7B</SelectItem>
+              <SelectItem value="Q3K">Q3K — 경량 ~4GB/7B</SelectItem>
+              <SelectItem value="Q4K">Q4K — ~5GB/7B</SelectItem>
+              <SelectItem value="Q5K">Q5K — ~6GB/7B</SelectItem>
+              <SelectItem value="Q6K">Q6K — ~7GB/7B</SelectItem>
+              <SelectItem value="Q8_0">Q8_0 — ~8GB/7B</SelectItem>
+              {/* HyperQuant — GGUF Q4보다 정밀 */}
+              <SelectItem value="HQQ4">HQQ4 — 4비트 고정밀 (CUDA)</SelectItem>
+              <SelectItem value="HQQ8">HQQ8 — 8비트 고정밀 (CUDA)</SelectItem>
             </SelectContent>
           </Select>
-          <p className="text-[10px] text-white/30">BF16 원본 → 즉석 양자화. GGUF 로드보다 수분 더 소요.</p>
+          <p className="text-[10px] text-white/30">BF16 원본 → ISQ 즉석 양자화. Auto = 플랫폼 최적 자동 선택 (CUDA: Q*K, Metal: AFQ*).</p>
         </div>
       )}
 
