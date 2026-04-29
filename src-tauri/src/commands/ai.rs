@@ -583,6 +583,8 @@ pub async fn stream_ai_command(
     images: Option<Vec<String>>,
     // engine: 명시적 엔진 — "heavy" = mistral.rs 강제, "fast"/None = TabbyAPI
     engine: Option<String>,
+    // active_file: 현재 편집 파일 경로 — 지정 시 파일 내용 + RAG 스니펫 자동 주입
+    active_file: Option<String>,
     cancel_flag: tauri::State<'_, AiStreamCancel>,
 ) -> Result<String> {
     cancel_flag.store(false, Ordering::Relaxed);
@@ -594,7 +596,21 @@ pub async fn stream_ai_command(
 
     // prompt에 남아있는 `!!` 접두사 제거 (Heavy 라우팅 신호로만 사용)
     let cleaned_prompt = prompt.trim_start_matches("!!").trim_start().to_string();
-    let full_prompt = format!("Context: {}\nRequest: {}", context, cleaned_prompt);
+
+    // active_file 있으면 파일 내용 + RAG 스니펫 주입
+    let rag_ctx = if let Some(ref file) = active_file {
+        crate::commands::rag::rag_context_for_file(file.clone(), cleaned_prompt.clone(), Some(5))
+            .await
+            .unwrap_or_default()
+    } else {
+        String::new()
+    };
+
+    let full_prompt = if rag_ctx.is_empty() {
+        format!("Context: {}\nRequest: {}", context, cleaned_prompt)
+    } else {
+        format!("Context: {}\n\n{}\nRequest: {}", context, rag_ctx, cleaned_prompt)
+    };
     let imgs = images.unwrap_or_default();
 
     if model.starts_with("gemini") {

@@ -57,6 +57,47 @@ pub async fn embed(
     parsed.data.into_iter().next().map(|d| d.embedding)
 }
 
+/// Ollama /api/embeddings 호출 — nomic-embed-text 등 전용 모델 또는 채팅 모델 사용
+async fn embed_ollama(
+    client: &reqwest::Client,
+    base_url: &str,
+    model: &str,
+    text: &str,
+) -> Option<Vec<f32>> {
+    #[derive(Serialize)]
+    struct OllamaReq<'a> { model: &'a str, prompt: &'a str }
+    #[derive(Deserialize)]
+    struct OllamaRes { embedding: Vec<f32> }
+
+    client
+        .post(format!("{base_url}/api/embeddings"))
+        .timeout(Duration::from_secs(30))
+        .json(&OllamaReq { model, prompt: text })
+        .send()
+        .await
+        .ok()?
+        .json::<OllamaRes>()
+        .await
+        .ok()
+        .map(|r| r.embedding)
+}
+
+/// 자동 임베딩 백엔드 선택 — Ollama 설정 시 Ollama, 아니면 xLLM /v1/embeddings
+pub async fn embed_auto(client: &reqwest::Client, xllm_model: &str, text: &str) -> Option<Vec<f32>> {
+    if let Ok(cfg) = load_config() {
+        if let Some(m) = cfg.ollama_model.as_ref().filter(|s| !s.is_empty()) {
+            let base_url = cfg.ollama_url();
+            if let Some(v) = embed_ollama(client, &base_url, m, text).await {
+                return Some(v);
+            }
+        }
+    }
+    let base_url = load_config()
+        .map(|c| c.xllm_url())
+        .unwrap_or_else(|_| "http://127.0.0.1:5000".to_string());
+    embed(client, &base_url, xllm_model, text).await
+}
+
 fn chunk_text(text: &str) -> Vec<String> {
     let chars: Vec<char> = text.chars().collect();
     let mut chunks = Vec::new();
@@ -83,9 +124,6 @@ fn rag_client() -> reqwest::Client {
 #[tauri::command]
 pub async fn index_project(root_path: String, model: String) -> Result<IndexResult, String> {
     let client = rag_client();
-    let base_url = load_config()
-        .map(|c| c.xllm_url())
-        .unwrap_or_else(|_| "http://127.0.0.1:5000".to_string());
     let timestamp = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .map_err(|e| format!("시스템 시간 오류: {}", e))?
@@ -141,7 +179,7 @@ pub async fn index_project(root_path: String, model: String) -> Result<IndexResu
     // 모든 청크를 병렬로 임베딩
     let futures: Vec<_> = contents
         .iter()
-        .map(|c| embed(&client, &base_url, &model, c))
+        .map(|c| embed_auto(&client, &model, c))
         .collect();
     let embeddings = join_all(futures).await;
 
@@ -178,12 +216,9 @@ pub async fn search_codebase(
     limit: usize,
 ) -> Result<Vec<SearchResult>, String> {
     let client = rag_client();
-    let base_url = load_config()
-        .map(|c| c.xllm_url())
-        .unwrap_or_else(|_| "http://127.0.0.1:5000".to_string());
-    let embedding = embed(&client, &base_url, &model, &query)
+    let embedding = embed_auto(&client, &model, &query)
         .await
-        .ok_or("임베딩 생성 실패 — xLLM 서버 상태를 확인하세요.")?;
+        .ok_or("임베딩 생성 실패 — Ollama 또는 xLLM 서버 상태를 확인하세요.")?;
 
     let memory = SemanticMemory::load();
     let mut scored: Vec<SearchResult> = memory
@@ -204,10 +239,66 @@ pub async fn search_codebase(
 #[tauri::command]
 pub async fn generate_embedding(text: String, model: String) -> Result<Vec<f32>, String> {
     let client = rag_client();
-    let base_url = load_config()
-        .map(|c| c.xllm_url())
-        .unwrap_or_else(|_| "http://127.0.0.1:5000".to_string());
-    embed(&client, &base_url, &model, &text)
+    embed_auto(&client, &model, &text)
         .await
-        .ok_or("임베딩 생성 실패 — xLLM 서버 상태를 확인하세요.".to_string())
+        .ok_or("임베딩 생성 실패 — Ollama 또는 xLLM 서버 상태를 확인하세요.".to_string())
+}
+
+/// 내부 RAG 검색 — embed_auto 기반, 임베딩 불가 시 빈 벡터 반환
+async fn search_with_client(client: &reqwest::Client, query: &str, limit: usize) -> Vec<SearchResult> {
+    let Some(embedding) = embed_auto(client, "default", query).await else {
+        return vec![];
+    };
+    let memory = crate::memory::SemanticMemory::load();
+    let mut scored: Vec<SearchResult> = memory
+        .entries
+        .iter()
+        .map(|e| SearchResult {
+            content: e.content.clone(),
+            score: crate::memory::cosine_similarity(&embedding, &e.embedding),
+        })
+        .filter(|r| r.score > 0.5)
+        .collect();
+    scored.sort_by(|a, b| b.score.total_cmp(&a.score));
+    scored.truncate(limit);
+    scored
+}
+
+/// 현재 파일 내용 + RAG 스니펫을 합쳐 AI 프롬프트 컨텍스트 반환.
+/// 임베딩 서버 미구성 시 파일 내용만 반환하며, 에러는 반환하지 않음(빈 문자열 폴백).
+#[tauri::command]
+pub async fn rag_context_for_file(
+    file_path: String,
+    query: String,
+    limit: Option<usize>,
+) -> Result<String, String> {
+    let client = rag_client();
+    let lim = limit.unwrap_or(5).max(1).min(10);
+
+    let file_content = std::fs::read_to_string(&file_path)
+        .map(|s| {
+            let chars: Vec<char> = s.chars().collect();
+            if chars.len() > 3000 {
+                let t: String = chars[..3000].iter().collect();
+                format!("{}\n... (이하 생략)", t)
+            } else {
+                s
+            }
+        })
+        .unwrap_or_default();
+
+    let snippets = search_with_client(&client, &query, lim).await;
+
+    let mut ctx = String::new();
+    if !file_content.is_empty() {
+        ctx.push_str(&format!("=== 현재 파일: {} ===\n{}\n\n", file_path, file_content));
+    }
+    if !snippets.is_empty() {
+        ctx.push_str("=== 관련 코드 스니펫 (RAG) ===\n");
+        for s in snippets {
+            ctx.push_str(&format!("{}\n---\n", s.content));
+        }
+        ctx.push('\n');
+    }
+    Ok(ctx)
 }

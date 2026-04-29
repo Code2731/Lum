@@ -148,6 +148,11 @@ export function useAIChat(model: string, getTerminalContext: () => string) {
         .filter(Boolean)
         .join("\n\n");
 
+      // RAG Librarian: 프롬프트에서 첫 번째 파일 경로 추출 → active_file로 전달
+      const cwd = extractCwd(termCtx);
+      const { paths } = extractPaths(text, cwd);
+      const activeFile = paths.length > 0 ? paths[0] : null;
+
       const assistantId = crypto.randomUUID();
       setMessages((prev) => [
         ...prev,
@@ -178,6 +183,7 @@ export function useAIChat(model: string, getTerminalContext: () => string) {
           context,
           images: images && images.length > 0 ? images : null,
           engine: engine ?? null,
+          activeFile,
         });
         console.log("[AI] stream_ai_command returned, tokens:", tokenCount);
       } catch (e) {

@@ -117,6 +117,7 @@ pub fn run() {
             commands::rag::index_project,
             commands::rag::search_codebase,
             commands::rag::generate_embedding,
+            commands::rag::rag_context_for_file,
             // History (Semantic Search)
             commands::history::add_history_entry,
             commands::history::search_history,
