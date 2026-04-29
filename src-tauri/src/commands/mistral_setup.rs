@@ -25,11 +25,18 @@ fn repo_id_from_safe(safe: &str) -> String {
     }
 }
 
-/// 모델 로컬 캐시 경로 — `<home>/.lum_mistral_models/<safe>`
+/// 설정에서 모델 저장 루트 디렉토리 반환 — `model_download_dir` 설정 우선, 없으면 `~/.lum_mistral_models`
+pub fn model_root_dir() -> std::path::PathBuf {
+    load_config()
+        .ok()
+        .and_then(|c| c.model_download_dir)
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|| crate::platform::home_dir().join(".lum_mistral_models"))
+}
+
+/// 모델 로컬 캐시 경로 — `<model_root>/<safe>`
 fn model_local_path(repo_id: &str) -> std::path::PathBuf {
-    crate::platform::home_dir()
-        .join(".lum_mistral_models")
-        .join(safe_model_dirname(repo_id))
+    model_root_dir().join(safe_model_dirname(repo_id))
 }
 
 /// BF16 모델 필수 파일 모두 있으면 true — config.json + tokenizer.json + safetensors(단일 또는 shard)
@@ -307,20 +314,18 @@ pub async fn delete_mistral_model(safe_name: String) -> Result<()> {
             "잘못된 모델 폴더명: {safe_name}"
         )));
     }
-    let dir = crate::platform::home_dir()
-        .join(".lum_mistral_models")
-        .join(&safe_name);
+    let dir = model_root_dir().join(&safe_name);
     if dir.exists() {
         std::fs::remove_dir_all(&dir).map_err(|e| LumError::Io(e.to_string()))?;
     }
     Ok(())
 }
 
-/// 사용자가 mistral.rs용으로 받은 모델 목록 — `~/.lum_mistral_models/<safe>` 폴더 스캔.
+/// 사용자가 mistral.rs용으로 받은 모델 목록 — 설정된 저장 경로 폴더 스캔.
 /// safe_name → repo_id 역변환 ("Qwen--Qwen3-8B" → "Qwen/Qwen3-8B").
 #[command]
 pub async fn list_mistral_models() -> Result<Vec<MistralLocalModel>> {
-    let dir = crate::platform::home_dir().join(".lum_mistral_models");
+    let dir = model_root_dir();
     if !dir.exists() {
         return Ok(vec![]);
     }

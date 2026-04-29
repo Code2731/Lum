@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
+import { Input } from "@/components/ui/input";
 import { IconButton } from "@/components/ui/icon-button";
 
 interface McpServerSpec {
@@ -247,30 +248,18 @@ const McpPanel: React.FC<Props> = ({ onClose }) => {
           {addForm ? (
             <div className="p-3 rounded-lg border border-accent/30 bg-accent/5 space-y-2">
               <div className="text-[12px] font-medium text-accent">새 서버 추가</div>
-              <input
-                placeholder="서버 이름 (고유)"
-                value={addForm.name}
+              <Input placeholder="서버 이름 (고유)" value={addForm.name}
                 onChange={(e) => setAddForm({ ...addForm, name: e.target.value })}
-                className="w-full bg-white/5 border border-white/10 rounded px-2 py-1 text-[11px] font-mono"
-              />
-              <input
-                placeholder="command (예: npx)"
-                value={addForm.command}
+                className="text-[11px] font-mono" />
+              <Input placeholder="command (예: npx)" value={addForm.command}
                 onChange={(e) => setAddForm({ ...addForm, command: e.target.value })}
-                className="w-full bg-white/5 border border-white/10 rounded px-2 py-1 text-[11px] font-mono"
-              />
-              <input
-                placeholder="args (공백 구분)"
-                value={addForm.args.join(" ")}
+                className="text-[11px] font-mono" />
+              <Input placeholder="args (공백 구분)" value={addForm.args.join(" ")}
                 onChange={(e) => setAddForm({ ...addForm, args: e.target.value.split(/\s+/).filter(Boolean) })}
-                className="w-full bg-white/5 border border-white/10 rounded px-2 py-1 text-[11px] font-mono"
-              />
-              <input
-                placeholder="설명 (선택)"
-                value={addForm.description ?? ""}
+                className="text-[11px] font-mono" />
+              <Input placeholder="설명 (선택)" value={addForm.description ?? ""}
                 onChange={(e) => setAddForm({ ...addForm, description: e.target.value })}
-                className="w-full bg-white/5 border border-white/10 rounded px-2 py-1 text-[11px]"
-              />
+                className="text-[11px]" />
               <div className="flex justify-end gap-2">
                 <button
                   onClick={() => setAddForm(null)}

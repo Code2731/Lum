@@ -1,6 +1,7 @@
 pub mod agent;
 pub mod ai;
 pub mod config;
+pub mod file_dialog;
 pub mod context;
 pub mod embed;
 pub mod mistral_setup;

@@ -49,6 +49,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
             // Hardware
             commands::hardware::get_hardware_specs,
@@ -130,6 +131,10 @@ pub fn run() {
             commands::config::save_vram_cap_override,
             // Phase 72: capability 토글
             commands::config::save_capability_toggles,
+            // Phase 105: 모델 저장 경로 설정
+            commands::config::save_model_download_dir,
+            commands::file_dialog::pick_gguf_file,
+            commands::file_dialog::pick_model_dir,
             // Phase 73: 테스트 피드백 루프
             commands::test_runner::detect_project_tests,
             commands::test_runner::run_tests,
@@ -173,12 +178,14 @@ pub fn run() {
             commands::mistral_setup::delete_mistral_model,
             // Phase 85b — embedded mistralrs (subprocess 없이 LUM 프로세스 안에서 직접 추론)
             commands::embed::embed_load_gguf,
+            commands::embed::embed_load_lora,
             commands::embed::embed_unload,
             commands::embed::embed_status,
             commands::embed::embed_loaded_info,
             commands::embed::embed_infer,
             commands::embed::embed_infer_stream,
             commands::embed::list_embed_candidates,
+            commands::embed::list_lora_candidates,
             // MCP Tools (Phase 74 — 제대로 된 handshake + 서버 관리)
             mcp::list_mcp_servers,
             mcp::save_mcp_server,

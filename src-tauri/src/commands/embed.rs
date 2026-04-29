@@ -8,20 +8,22 @@ use serde::Serialize;
 
 #[derive(Serialize)]
 pub struct EmbedCandidate {
-    /// 절대 경로 (load 시 model_dir로 사용)
     pub folder: String,
-    /// 폴더 이름만 (UI 표시용)
     pub folder_label: String,
-    /// 그 폴더 안의 .gguf 파일 목록 (정렬됨)
     pub gguf_files: Vec<String>,
 }
 
-/// `~/.lum_mistral_models/` 안의 모델 폴더 + GGUF 파일 후보 목록 반환.
+#[derive(Serialize)]
+pub struct LoraCandidate {
+    pub folder: String,
+    pub folder_label: String,
+}
+
+/// 모델 저장 루트 디렉토리 안의 모델 폴더 + GGUF 파일 후보 목록 반환.
 /// embedded-ai feature 무관하게 항상 동작 — 후보 스캔은 cfg 가드 없음.
 #[tauri::command]
 pub fn list_embed_candidates() -> Vec<EmbedCandidate> {
-    let Some(home) = dirs::home_dir() else { return vec![]; };
-    let root = home.join(".lum_mistral_models");
+    let root = crate::commands::mistral_setup::model_root_dir();
     let Ok(entries) = std::fs::read_dir(&root) else { return vec![]; };
 
     let mut out = Vec::<EmbedCandidate>::new();
@@ -53,6 +55,29 @@ pub fn list_embed_candidates() -> Vec<EmbedCandidate> {
             });
         }
     }
+    out.sort_by(|a, b| a.folder_label.cmp(&b.folder_label));
+    out
+}
+
+/// 모델 저장 루트 안의 LoRA 어댑터 폴더 목록 반환.
+/// `adapter_config.json` 존재 여부로 표준 HuggingFace LoRA 어댑터 감지.
+#[tauri::command]
+pub fn list_lora_candidates() -> Vec<LoraCandidate> {
+    let root = crate::commands::mistral_setup::model_root_dir();
+    let Ok(entries) = std::fs::read_dir(&root) else { return vec![]; };
+
+    let mut out: Vec<LoraCandidate> = entries
+        .flatten()
+        .filter_map(|entry| {
+            let ft = entry.file_type().ok()?;
+            if !ft.is_dir() { return None; }
+            let folder = entry.path();
+            folder.join("adapter_config.json").exists().then(|| LoraCandidate {
+                folder: folder.to_string_lossy().into_owned(),
+                folder_label: entry.file_name().to_string_lossy().into_owned(),
+            })
+        })
+        .collect();
     out.sort_by(|a, b| a.folder_label.cmp(&b.folder_label));
     out
 }
@@ -118,6 +143,25 @@ pub fn embed_loaded_info() -> Option<String> {
     #[cfg(not(feature = "embedded-ai"))]
     {
         None
+    }
+}
+
+/// GGUF 베이스 + LoRA 어댑터 로드. `lora_adapter` = HF repo ID 또는 로컬 경로.
+#[tauri::command]
+pub async fn embed_load_lora(
+    app: tauri::AppHandle,
+    model_dir: String,
+    gguf_file: String,
+    lora_adapter: String,
+) -> Result<String, String> {
+    #[cfg(feature = "embedded-ai")]
+    {
+        crate::commands::mistralrs_inline::load_model_with_lora(&app, &model_dir, &gguf_file, &lora_adapter).await
+    }
+    #[cfg(not(feature = "embedded-ai"))]
+    {
+        let _ = (app, model_dir, gguf_file, lora_adapter);
+        Err(DISABLED_MSG.to_string())
     }
 }
 

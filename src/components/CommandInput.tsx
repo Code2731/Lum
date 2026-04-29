@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { Zap, Mic, MicOff } from "lucide-react";
 import { IconButton } from "@/components/ui/icon-button";
+import { shortPath } from "../utils";
 import Editor from "react-simple-code-editor";
 import { invoke } from "@tauri-apps/api/core";
 import Prism from "prismjs";
@@ -62,11 +63,6 @@ const CommandInput = ({
     }
     return "";
   }, [value, history, isAI]);
-
-  const shortPath = (p: string) => {
-    const parts = p.replace(/\\/g, "/").split("/");
-    return parts[parts.length - 1] || "~";
-  };
 
   const submit = () => {
     const trimmed = value.trim();

@@ -21,8 +21,6 @@ pub struct AppConfig {
     /// Gemini API 키 — 클라우드 폴백용 (선택)
     pub gemini_api_key: Option<String>,
     pub p2p_enabled: Option<bool>,
-    /// xLLM 모델 저장 디렉토리 (기본값: ~/tabby/models)
-    pub xllm_models_dir: Option<String>,
     /// TabbyAPI Admin 키 (모델 관리 API용)
     pub xllm_admin_key: Option<String>,
 
@@ -62,13 +60,8 @@ pub struct AppConfig {
     /// 추론(CoT) 토큰 UI 표시 — false면 <think>…</think> 블록 숨김
     pub show_reasoning: Option<bool>,
 
-    // Phase 85b — mistralrs는 LUM 프로세스 안에 임베딩됨. server.exe 관련 필드
-    // (mistral_rs_enabled / url / model / isq / gguf_file / device_layers) 모두 제거.
-    // 사용자 ~/.lum_config.json에 잔여 키가 있어도 serde가 unknown field를 무시하므로
-    // 마이그레이션 안전.
-
-    /// 사용 안 됨 (deprecated). xllm_auto_start 자체가 TabbyAPI 자동 시작용이었음.
-    pub xllm_auto_start: Option<bool>,
+    /// 모델 다운로드 저장 경로 — None이면 기본값 `~/.lum_mistral_models` 사용
+    pub model_download_dir: Option<String>,
 }
 
 impl AppConfig {
@@ -163,6 +156,14 @@ pub fn save_safety_mode(mode: String) -> Result<()> {
 pub fn save_vram_cap_override(cap: Option<f32>) -> Result<()> {
     let mut config = load_config()?;
     config.vram_cap_override = cap.map(|c| c.clamp(0.50, 0.95));
+    save_config(&config)
+}
+
+/// 모델 다운로드 저장 경로 변경 — None이면 기본 `~/.lum_mistral_models` 복원
+#[tauri::command]
+pub fn save_model_download_dir(dir: Option<String>) -> Result<()> {
+    let mut config = load_config()?;
+    config.model_download_dir = dir;
     save_config(&config)
 }
 

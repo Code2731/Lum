@@ -3,12 +3,16 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import {
   SlidersHorizontal, Loader2,
-  Zap, Sparkles,
+  Zap, Sparkles, FolderOpen,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { IconButton } from "@/components/ui/icon-button";
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { shortPath } from "../utils";
+import { Slider } from "@/components/ui/slider";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import { shortPath, parsePathComponents, parseLoadedKey } from "../utils";
 
 interface AppConfig {
   coding_model?: string;
@@ -110,19 +114,16 @@ const XllmPanel: React.FC<Props> = ({ onClose }) => {
                 <span className="text-white/40">VRAM Cap 오버라이드</span>
                 <span className="font-mono text-white/70">{vramCapPct}%</span>
               </div>
-              <input
-                type="range"
+              <Slider
                 min={50}
                 max={95}
                 step={1}
-                value={vramCapPct}
-                onChange={async (e) => {
-                  const pct = Number(e.target.value);
+                value={[vramCapPct]}
+                onValueChange={async ([pct]) => {
                   const cap = pct / 100;
                   setConfig((c) => ({ ...c, vram_cap_override: cap }));
                   try { await invoke("save_vram_cap_override", { cap }); } catch {}
                 }}
-                className="w-full h-1 accent-accent cursor-pointer"
               />
               <div className="flex justify-between text-[9px] text-white/25 font-mono">
                 <span>50%</span><span>95%</span>
@@ -157,20 +158,13 @@ const XllmPanel: React.FC<Props> = ({ onClose }) => {
                 <span className="text-[11px] text-purple-300/90">👁 비전 (이미지 입력)</span>
                 <span className="text-[9px] text-white/30">Qwen3.5-VL, Gemma VL 등</span>
               </div>
-              <input
-                type="checkbox"
+              <Switch
                 checked={config.vision_enabled ?? false}
-                onChange={async (e) => {
-                  const v = e.target.checked;
+                onCheckedChange={async (v) => {
                   setConfig((c) => ({ ...c, vision_enabled: v }));
-                  try {
-                    await invoke("save_capability_toggles", {
-                      visionEnabled: v,
-                      showReasoning: config.show_reasoning ?? true,
-                    });
-                  } catch {}
+                  try { await invoke("save_capability_toggles", { visionEnabled: v, showReasoning: config.show_reasoning ?? true }); } catch {}
                 }}
-                className="w-3.5 h-3.5 accent-accent cursor-pointer"
+                className="scale-75"
               />
             </label>
 
@@ -180,20 +174,13 @@ const XllmPanel: React.FC<Props> = ({ onClose }) => {
                 <span className="text-[11px] text-cyan-300/90">🧠 추론 토큰 표시</span>
                 <span className="text-[9px] text-white/30">DeepSeek R1, EXAONE Deep 등</span>
               </div>
-              <input
-                type="checkbox"
+              <Switch
                 checked={config.show_reasoning ?? true}
-                onChange={async (e) => {
-                  const v = e.target.checked;
+                onCheckedChange={async (v) => {
                   setConfig((c) => ({ ...c, show_reasoning: v }));
-                  try {
-                    await invoke("save_capability_toggles", {
-                      visionEnabled: config.vision_enabled ?? false,
-                      showReasoning: v,
-                    });
-                  } catch {}
+                  try { await invoke("save_capability_toggles", { visionEnabled: config.vision_enabled ?? false, showReasoning: v }); } catch {}
                 }}
-                className="w-3.5 h-3.5 accent-accent cursor-pointer"
+                className="scale-75"
               />
             </label>
 
@@ -231,10 +218,20 @@ interface EmbedCandidate {
   gguf_files: string[];
 }
 
+interface LoraCandidate {
+  folder: string;
+  folder_label: string;
+}
+
+const LORA_NONE = "__none__";
+const LORA_MANUAL = "__manual__";
+
 const EmbeddedInferenceDebug: React.FC = () => {
   const [candidates, setCandidates] = useState<EmbedCandidate[]>([]);
+  const [loraCandidates, setLoraCandidates] = useState<LoraCandidate[]>([]);
   const [modelDir, setModelDir] = useState("");
   const [ggufFile, setGgufFile] = useState("");
+  const [loraPath, setLoraPath] = useState("");
   const [prompt, setPrompt] = useState("");
   const [response, setResponse] = useState<string | null>(null);
   const [busy, setBusy] = useState<"load" | "unload" | "infer" | null>(null);
@@ -258,15 +255,31 @@ const EmbeddedInferenceDebug: React.FC = () => {
         }
       })
       .catch(() => {});
+    invoke<LoraCandidate[]>("list_lora_candidates").then(setLoraCandidates).catch(() => {});
     const unlisten = listen<string>("embed_load_progress", (e) => setLoadStage(e.payload));
     return () => { unlisten.then((f) => f()); };
   }, [refreshLoadedKey]);
 
   const currentFolder = candidates.find((c) => c.folder === modelDir);
   const fileOptions = currentFolder?.gguf_files ?? [];
+  const loraTrimmed = loraPath.trim();
 
-  // 선택된 모델이 현재 로드된 모델과 동일한지
-  const selectedKey = modelDir && ggufFile ? `${modelDir}/${ggufFile}` : null;
+  const { base: baseLoadedKey, lora: loraLoadedPath } = loadedKey
+    ? parseLoadedKey(loadedKey)
+    : { base: "", lora: "" };
+  const loadedFilename = baseLoadedKey ? shortPath(baseLoadedKey) : null;
+  const loadedLoraName = loraLoadedPath ? shortPath(loraLoadedPath) : null;
+
+  // LoRA Select 파생값: 스캔된 폴더 선택 / 직접 입력 / 없음
+  const loraSelectValue = loraTrimmed === ""
+    ? LORA_NONE
+    : loraCandidates.some((c) => c.folder === loraTrimmed)
+      ? loraTrimmed
+      : LORA_MANUAL;
+
+  const selectedKey = modelDir && ggufFile
+    ? loraTrimmed ? `${modelDir}/${ggufFile}+lora:${loraTrimmed}` : `${modelDir}/${ggufFile}`
+    : null;
   const isSameModel = !!loadedKey && loadedKey === selectedKey;
 
   const onLoad = async () => {
@@ -282,10 +295,16 @@ const EmbeddedInferenceDebug: React.FC = () => {
       setLoadElapsed(Math.floor((Date.now() - startMs) / 1000));
     }, 1000);
     try {
-      const r = await invoke<string>("embed_load_gguf", {
-        modelDir: modelDir.trim(),
-        ggufFile: ggufFile.trim(),
-      });
+      const r = loraTrimmed
+        ? await invoke<string>("embed_load_lora", {
+            modelDir: modelDir.trim(),
+            ggufFile: ggufFile.trim(),
+            loraAdapter: loraTrimmed,
+          })
+        : await invoke<string>("embed_load_gguf", {
+            modelDir: modelDir.trim(),
+            ggufFile: ggufFile.trim(),
+          });
       setResponse(`✅ ${r}`);
       refreshLoadedKey();
     } catch (e) {
@@ -332,15 +351,15 @@ const EmbeddedInferenceDebug: React.FC = () => {
     try { await invoke("cancel_ai_stream"); } catch { }
   };
 
-  const loadedFilename = loadedKey ? shortPath(loadedKey) : null;
+  const isStandardDir = candidates.some((c) => c.folder === modelDir);
 
   return (
     <section className="space-y-2 border border-purple-400/20 rounded-lg p-3 bg-purple-400/5">
       <h3 className="flex items-center gap-1.5 text-[11px] font-semibold text-purple-300/90 uppercase tracking-wider">
         🧪 임베디드 추론
-        <span className={`ml-auto text-[9px] font-mono truncate max-w-[180px] ${loadedKey ? "text-green-400" : "text-white/40"}`}
+        <span className={`ml-auto text-[9px] font-mono truncate max-w-[220px] ${loadedKey ? "text-green-400" : "text-white/40"}`}
           title={loadedKey ?? undefined}>
-          {loadedKey ? `● ${loadedFilename}` : "○ 미로드"}
+          {loadedKey ? `● ${loadedFilename}${loadedLoraName ? ` +L:${loadedLoraName}` : ""}` : "○ 미로드"}
         </span>
       </h3>
       <p className="text-[10px] text-white/40 leading-relaxed">
@@ -348,46 +367,102 @@ const EmbeddedInferenceDebug: React.FC = () => {
         다른 모델 선택 후 로드하면 VRAM 교체(핫스왑).
       </p>
 
+      {/* 파일 직접 선택 */}
+      <button
+        onClick={async () => {
+          const picked = await invoke<string | null>("pick_gguf_file");
+          if (!picked) return;
+          const { dir, file } = parsePathComponents(picked);
+          setModelDir(dir);
+          setGgufFile(file);
+        }}
+        className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded border border-purple-400/30 bg-purple-500/10 hover:bg-purple-500/20 text-[11px] text-purple-200 transition-colors"
+      >
+        <FolderOpen size={12} /> 📂 GGUF 파일 직접 선택 (임의 경로)
+      </button>
+
+      {/* 스캔된 후보 목록 */}
+      {candidates.length > 0 && (
+        <>
+          <div className="space-y-1">
+            <span className="text-[10px] text-white/35">저장 경로 모델 ({candidates.length}개)</span>
+            <Select
+              value={isStandardDir ? modelDir : ""}
+              onValueChange={(v) => {
+                setModelDir(v);
+                const c = candidates.find((x) => x.folder === v);
+                setGgufFile(c?.gguf_files.length === 1 ? c.gguf_files[0] : "");
+              }}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="(폴더 선택)" />
+              </SelectTrigger>
+              <SelectContent>
+                {candidates.map((c) => (
+                  <SelectItem key={c.folder} value={c.folder}>{c.folder_label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          {fileOptions.length > 0 && (
+            <div className="space-y-1">
+              <span className="text-[10px] text-white/35">GGUF 파일</span>
+              <Select value={ggufFile} onValueChange={setGgufFile}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="(파일 선택)" />
+                </SelectTrigger>
+                <SelectContent>
+                  {fileOptions.map((f) => (
+                    <SelectItem key={f} value={f}>{f}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* LoRA 어댑터 (선택) */}
       <div className="space-y-1">
-        <span className="text-[10px] text-white/35">모델 폴더 ({candidates.length}개)</span>
+        <span className="text-[10px] text-white/35">LoRA 어댑터 <span className="text-white/25">(선택)</span></span>
         <Select
-          value={modelDir}
+          value={loraSelectValue}
           onValueChange={(v) => {
-            setModelDir(v);
-            const c = candidates.find((x) => x.folder === v);
-            setGgufFile(c?.gguf_files.length === 1 ? c.gguf_files[0] : "");
+            if (v === LORA_NONE || v === LORA_MANUAL) setLoraPath("");
+            else setLoraPath(v);
           }}
         >
           <SelectTrigger className="w-full">
-            <SelectValue placeholder="(폴더 선택)" />
+            <SelectValue placeholder="(없음)" />
           </SelectTrigger>
           <SelectContent>
-            {candidates.map((c) => (
+            <SelectItem value={LORA_NONE}>(없음)</SelectItem>
+            {loraCandidates.map((c) => (
               <SelectItem key={c.folder} value={c.folder}>{c.folder_label}</SelectItem>
             ))}
+            <SelectItem value={LORA_MANUAL}>✏️ HF repo ID 또는 경로 직접 입력</SelectItem>
           </SelectContent>
         </Select>
+        {loraSelectValue === LORA_MANUAL && (
+          <Input
+            value={loraPath}
+            onChange={(e) => setLoraPath(e.target.value)}
+            placeholder="예: username/lora-adapter 또는 C:\models\lora"
+            className="font-mono text-[11px] focus:border-purple-400/40"
+          />
+        )}
       </div>
-      <div className="space-y-1">
-        <span className="text-[10px] text-white/35">GGUF 파일 ({fileOptions.length}개)</span>
-        <Select
-          value={ggufFile}
-          onValueChange={setGgufFile}
-          disabled={fileOptions.length === 0}
-        >
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder={fileOptions.length === 0 ? "(폴더 먼저 선택)" : "(파일 선택)"} />
-          </SelectTrigger>
-          <SelectContent>
-            {fileOptions.map((f) => (
-              <SelectItem key={f} value={f}>{f}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+
+      {/* 직접 선택된 경로 표시 */}
+      {modelDir && !isStandardDir && (
+        <p className="text-[10px] font-mono text-purple-300/70 truncate" title={`${modelDir}/${ggufFile}`}>
+          📂 {ggufFile || "(파일 미선택)"}
+        </p>
+      )}
+
       {candidates.length === 0 && (
-        <p className="text-[10px] text-yellow-400/60">
-          ~/.lum_mistral_models/ 에 GGUF 모델이 없습니다. 모델 관리 탭에서 다운로드하세요.
+        <p className="text-[10px] text-white/40">
+          저장 경로에 GGUF 없음. 위 버튼으로 임의 경로 선택 또는 모델 관리 탭에서 다운로드.
         </p>
       )}
 
@@ -402,8 +477,8 @@ const EmbeddedInferenceDebug: React.FC = () => {
             : isSameModel
               ? "✅ 로드됨 (재로드)"
               : loadedKey
-                ? "🔄 모델 교체 (핫스왑)"
-                : "🚀 임베디드 로드"}
+                ? `🔄 교체 (핫스왑)${loraTrimmed ? " + LoRA" : ""}`
+                : `🚀 임베디드 로드${loraTrimmed ? " + LoRA" : ""}`}
         </button>
         {loadedKey && (
           <IconButton
@@ -422,9 +497,9 @@ const EmbeddedInferenceDebug: React.FC = () => {
 
       <div className="space-y-1 pt-1">
         <span className="text-[10px] text-white/35">프롬프트</span>
-        <textarea
+        <Textarea
           rows={2}
-          className="w-full bg-white/5 border border-white/10 rounded px-2.5 py-1.5 text-[11px] font-mono outline-none focus:border-purple-400/50 transition-colors resize-none"
+          className="text-[11px] font-mono focus:border-purple-400/50"
           placeholder="Hello, world!"
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}

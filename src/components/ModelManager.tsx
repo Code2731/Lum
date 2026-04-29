@@ -2,10 +2,11 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { Download, Trash2, HardDrive, ExternalLink, X } from "lucide-react";
+import { Download, Trash2, HardDrive, ExternalLink, X, FolderOpen } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete";
 import { IconButton } from "@/components/ui/icon-button";
+import { Input } from "@/components/ui/input";
 import { shortPath } from "../utils";
 
 interface MistralLocalModel {
@@ -45,6 +46,8 @@ const ModelManager: React.FC<Props> = ({ onClose }) => {
   const [repoStatus, setRepoStatus] = useState<Record<string, RepoState>>({});
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [refreshMsg, setRefreshMsg] = useState<string | null>(null);
+  // 모델 저장 경로
+  const [modelDownloadDir, setModelDownloadDir] = useState<string | null>(null);
 
   const repoKey = (repoId: string, revision: string) => `${repoId}@${revision}`;
 
@@ -168,6 +171,12 @@ const ModelManager: React.FC<Props> = ({ onClose }) => {
     }
   }, []);
 
+  const handleSaveDownloadDir = useCallback(async (dir: string | null) => {
+    setModelDownloadDir(dir);
+    await invoke("save_model_download_dir", { dir });
+    await refreshMistralLocal();
+  }, [refreshMistralLocal]);
+
   const handleDeleteMistral = useCallback(async (path: string) => {
     const safeName = shortPath(path);
     if (!safeName || safeName === "~") return;
@@ -185,11 +194,12 @@ const ModelManager: React.FC<Props> = ({ onClose }) => {
   }, [refreshMistralLocal]);
 
   useEffect(() => {
-    invoke<{ hf_token?: string; coding_model?: string; doc_model?: string }>("load_app_config")
+    invoke<{ hf_token?: string; coding_model?: string; doc_model?: string; model_download_dir?: string }>("load_app_config")
       .then((c) => {
         if (c.hf_token) setHfToken(c.hf_token);
         setCodingModel(c.coding_model ?? null);
         setDocModel(c.doc_model ?? null);
+        setModelDownloadDir(c.model_download_dir ?? null);
       })
       .catch(() => {});
     refreshMistralLocal();
@@ -330,39 +340,63 @@ const ModelManager: React.FC<Props> = ({ onClose }) => {
                   {showToken ? "▾" : "▸"} 게이티드/비공개 모델 (HuggingFace 토큰 필요)
                 </button>
                 {showToken && (
-                  <input
+                  <Input
                     ref={tokenRef}
                     type="password"
                     placeholder="hf_xxxxxxxx…"
                     value={hfToken}
                     onChange={(e) => setHfToken(e.target.value)}
                     onBlur={(e) => saveToken(e.target.value)}
-                    className={`mt-1.5 w-full bg-white/5 border rounded px-3 py-1.5 text-xs outline-none transition-colors ${
-                      tokenHighlight
-                        ? "border-yellow-400/60 ring-1 ring-yellow-400/30"
-                        : "border-white/10 focus:border-accent/50"
-                    }`}
+                    className={`mt-1.5 ${tokenHighlight ? "border-yellow-400/60 ring-1 ring-yellow-400/30" : ""}`}
                   />
                 )}
+              </div>
+
+              {/* 📁 모델 저장 경로 설정 */}
+              <div className="p-2.5 bg-white/3 rounded-lg border border-white/8 space-y-1.5">
+                <p className="text-[10px] text-white/50 font-medium">📁 모델 저장 경로</p>
+                <div className="flex items-center gap-1.5">
+                  <span className="flex-1 text-[10px] font-mono text-white/60 truncate" title={modelDownloadDir ?? undefined}>
+                    {modelDownloadDir ?? "~/.lum_mistral_models (기본값)"}
+                  </span>
+                  <button
+                    onClick={async () => {
+                      const picked = await invoke<string | null>("pick_model_dir");
+                      if (picked) await handleSaveDownloadDir(picked);
+                    }}
+                    className="flex items-center gap-1 px-2 py-1 rounded bg-white/5 hover:bg-white/10 border border-white/10 text-[10px] text-white/60 hover:text-white/80 transition-colors shrink-0"
+                  >
+                    <FolderOpen size={10} /> 변경
+                  </button>
+                  {modelDownloadDir && (
+                    <button
+                      onClick={() => handleSaveDownloadDir(null)}
+                      className="px-2 py-1 rounded bg-white/5 hover:bg-white/10 border border-white/10 text-[10px] text-white/40 hover:text-white/60 transition-colors shrink-0"
+                    >
+                      기본값
+                    </button>
+                  )}
+                </div>
               </div>
 
               {/* 🚀 HuggingFace 모델 — mistral.rs용 (BF16 + GGUF) */}
               <div className="p-3 bg-purple-500/5 rounded-lg border border-purple-400/20 mb-1 space-y-2">
                 <div className="flex items-center justify-between">
                   <p className="text-[10px] text-purple-300 font-medium">🚀 HuggingFace 모델 (mistral.rs)</p>
-                  <span className="text-[9px] text-white/30">→ ~/.lum_mistral_models/</span>
+                  <span className="text-[9px] text-white/30 font-mono truncate max-w-[180px]" title={modelDownloadDir ?? undefined}>
+                    → {modelDownloadDir ? shortPath(modelDownloadDir) : "~/.lum_mistral_models/"}
+                  </span>
                 </div>
                 <p className="text-[9px] text-white/40">
                   BF16 원본·GGUF 양자화 모두 OK. mistral.rs가 ISQ로 즉석 양자화. (예: <code>Qwen/Qwen3-8B</code>)
                 </p>
                 <div className="flex gap-2">
-                  <input
-                    type="text"
+                  <Input
                     placeholder="author/model-name  예) Qwen/Qwen3-8B"
                     value={mistralRepo}
                     onChange={(e) => setMistralRepo(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && handleMistralDownload(mistralRepo)}
-                    className="flex-1 bg-white/5 border border-white/10 rounded px-3 py-1.5 text-xs outline-none focus:border-purple-400/50 font-mono"
+                    className="flex-1 focus:border-purple-400/50 font-mono"
                   />
                   {mistralBusy ? (
                     <IconButton

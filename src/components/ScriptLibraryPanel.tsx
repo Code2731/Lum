@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { BookOpen, Play, Trash2, X, Plus, Terminal } from "lucide-react";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete";
 import { IconButton } from "@/components/ui/icon-button";
+import { Textarea } from "@/components/ui/textarea";
 import type { Script } from "../hooks/useScriptLibrary";
 
 interface Props {
@@ -79,8 +80,8 @@ const ScriptLibraryPanel: React.FC<Props> = ({
             value={newDesc}
             onChange={e => setNewDesc(e.target.value)}
           />
-          <textarea
-            className="w-full bg-white/5 border border-white/8 rounded px-2 py-1 text-[10px] font-mono text-white/60 placeholder-white/20 outline-none focus:border-accent/40 resize-none"
+          <Textarea
+            className="px-2 py-1 text-[10px] font-mono text-white/60 focus:border-accent/40"
             placeholder={"명령어를 줄마다 입력\ngit pull\nnpm install\nnpm run build"}
             rows={4}
             value={newCmds}

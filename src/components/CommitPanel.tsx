@@ -2,6 +2,7 @@ import React, { useState, useCallback, useRef, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { GitCommit, Loader2, Copy, Play, FolderOpen } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 
 interface Props {
   model: string;
@@ -116,8 +117,8 @@ const CommitPanel: React.FC<Props> = ({ model, onExecute, onClose }) => {
               <label className="text-[10px] text-white/40 uppercase tracking-wider">
                 AI 생성 메시지
               </label>
-              <textarea
-                className="w-full bg-white/5 border border-white/10 rounded px-3 py-2 text-[12px] font-mono outline-none focus:border-accent/50 resize-none transition-colors"
+              <Textarea
+                className="px-3 py-2 font-mono focus:border-accent/50"
                 rows={Math.min(message.split("\n").length + 2, 10)}
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}

@@ -4,7 +4,8 @@
 //! `embedded-ai` feature 활성화 시만 컴파일됨 (CUDA toolchain + MSVC 필요).
 #![cfg(feature = "embedded-ai")]
 
-use mistralrs::{GgufModelBuilder, Model, ResponseOk, TextMessageRole, TextMessages};
+use mistralrs::{GgufLoraModelBuilder, GgufModelBuilder, Model, ResponseOk, TextMessageRole, TextMessages};
+use mistralrs_core::Ordering as LoraOrdering;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, OnceLock};
 use tauri::{AppHandle, Emitter};
@@ -137,4 +138,72 @@ pub async fn infer_stream(
     Ok(full)
 }
 
+fn resolve_lora_ordering(lora_adapter: &str, gguf_filename: &str) -> Result<LoraOrdering, String> {
+    let ordering_path = std::path::Path::new(lora_adapter).join("ordering.json");
+    match std::fs::read_to_string(&ordering_path) {
+        Ok(content) => serde_json::from_str(&content).map_err(|e| format!("ordering.json 파싱 실패: {e}")),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(LoraOrdering {
+            adapters: None,
+            layers: None,
+            base_model_id: gguf_filename.to_string(),
+            preload_adapters: None,
+        }),
+        Err(e) => Err(format!("ordering.json 읽기 실패: {e}")),
+    }
+}
+
+pub async fn load_model_with_lora(
+    app: &AppHandle,
+    model_dir: &str,
+    gguf_filename: &str,
+    lora_adapter: &str,
+) -> Result<String, String> {
+    let key = format!("{model_dir}/{gguf_filename}+lora:{lora_adapter}");
+    let mut guard = engine_mutex().lock().await;
+    if guard.as_ref().is_some_and(|s| s.key == key) {
+        return Ok(format!("이미 로드됨: {} + LoRA", gguf_filename));
+    }
+    *guard = None;
+    let ordering = resolve_lora_ordering(lora_adapter, gguf_filename)?;
+    let _ = app.emit("embed_load_progress", format!("🔄 {gguf_filename} + LoRA 어댑터 로드 중..."));
+    let gguf_base = GgufModelBuilder::new(model_dir.to_string(), vec![gguf_filename.to_string()]);
+    let model = GgufLoraModelBuilder::from_gguf_model_builder(gguf_base, lora_adapter, ordering)
+        .build()
+        .await
+        .map_err(|e| {
+            let _ = app.emit("embed_load_progress", format!("❌ LoRA 로드 실패: {e}"));
+            format!("LoRA 로드 실패: {e}")
+        })?;
+    *guard = Some(LoadedState { model: Arc::new(model), key: key.clone() });
+    let _ = app.emit("embed_load_progress", format!("✅ {gguf_filename} + LoRA 로드 완료"));
+    Ok(format!("LoRA 로드 완료: {gguf_filename}"))
+}
+
 // Tauri command 노출은 commands::embed 모듈의 facade에서. 여기는 순수 라이브러리.
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn resolve_lora_ordering_fallback_when_no_json() {
+        let o = resolve_lora_ordering("nonexistent_adapter_path_xyz", "model.gguf").unwrap();
+        assert_eq!(o.base_model_id, "model.gguf");
+        assert!(o.adapters.is_none());
+        assert!(o.layers.is_none());
+        assert!(o.preload_adapters.is_none());
+    }
+
+    #[test]
+    fn resolve_lora_ordering_parses_valid_json() {
+        use std::io::Write;
+        let dir = std::env::temp_dir().join("lum_test_lora_ordering");
+        std::fs::create_dir_all(&dir).unwrap();
+        let json = r#"{"base_model_id":"llama3-base","order":["coder"],"layers":null,"preload_adapters":null}"#;
+        std::fs::write(dir.join("ordering.json"), json).unwrap();
+        let o = resolve_lora_ordering(dir.to_str().unwrap(), "any.gguf").unwrap();
+        assert_eq!(o.base_model_id, "llama3-base");
+        assert_eq!(o.adapters, Some(vec!["coder".to_string()]));
+        std::fs::remove_dir_all(&dir).ok();
+    }
+}

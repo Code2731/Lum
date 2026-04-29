@@ -3,6 +3,7 @@ import { Plus, Trash2, ChevronUp, ChevronDown, Zap } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { IconButton } from "@/components/ui/icon-button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import type { QuickAction } from "../hooks/useQuickActions";
 
 interface Props {
@@ -74,21 +75,10 @@ const QuickActionsEditor: React.FC<Props> = ({
                 </button>
               </div>
 
-              {/* 레이블 */}
-              <input
-                value={a.label}
-                onChange={e => onUpdate(a.id, { label: e.target.value })}
-                className="w-24 shrink-0 bg-white/5 border border-white/8 rounded px-2 py-1 text-xs outline-none focus:border-accent/50 transition-colors"
-                placeholder="이름"
-              />
-
-              {/* 커맨드 */}
-              <input
-                value={a.command}
-                onChange={e => onUpdate(a.id, { command: e.target.value })}
-                className="flex-1 bg-white/5 border border-white/8 rounded px-2 py-1 text-xs font-mono outline-none focus:border-accent/50 transition-colors"
-                placeholder="실행할 커맨드"
-              />
+              <Input value={a.label} onChange={e => onUpdate(a.id, { label: e.target.value })}
+                placeholder="이름" className="w-24 shrink-0 px-2 py-1" />
+              <Input value={a.command} onChange={e => onUpdate(a.id, { command: e.target.value })}
+                placeholder="실행할 커맨드" className="flex-1 px-2 py-1 font-mono" />
 
               <Select
                 value={a.shortcut != null ? String(a.shortcut) : ""}
@@ -126,20 +116,12 @@ const QuickActionsEditor: React.FC<Props> = ({
         <div className="px-5 py-4 border-t border-white/8 shrink-0">
           <p className="text-[10px] text-white/30 mb-2">새 액션 추가</p>
           <div className="flex items-center gap-2">
-            <input
-              value={newLabel}
-              onChange={e => setNewLabel(e.target.value)}
+            <Input value={newLabel} onChange={e => setNewLabel(e.target.value)}
               onKeyDown={e => e.key === "Enter" && handleAdd()}
-              placeholder="이름"
-              className="w-24 shrink-0 bg-white/5 border border-white/8 rounded px-2 py-1.5 text-xs outline-none focus:border-accent/50 transition-colors"
-            />
-            <input
-              value={newCmd}
-              onChange={e => setNewCmd(e.target.value)}
+              placeholder="이름" className="w-24 shrink-0 px-2" />
+            <Input value={newCmd} onChange={e => setNewCmd(e.target.value)}
               onKeyDown={e => e.key === "Enter" && handleAdd()}
-              placeholder="실행할 커맨드 (예: npm run dev)"
-              className="flex-1 bg-white/5 border border-white/8 rounded px-2 py-1.5 text-xs font-mono outline-none focus:border-accent/50 transition-colors"
-            />
+              placeholder="실행할 커맨드 (예: npm run dev)" className="flex-1 px-2 font-mono" />
             <Select
               value={newShortcut != null ? String(newShortcut) : ""}
               onValueChange={v => setNewShortcut(v !== "" ? Number(v) : undefined)}

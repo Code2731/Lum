@@ -37,13 +37,7 @@ struct HfFileEntry {
 }
 
 fn models_dir() -> Result<PathBuf> {
-    let config = load_config()?;
-    let dir = if let Some(d) = config.xllm_models_dir {
-        PathBuf::from(d)
-    } else {
-        platform::default_models_dir()
-    };
-    Ok(dir)
+    Ok(platform::default_models_dir())
 }
 
 fn dir_size_mb(path: &PathBuf) -> f64 {

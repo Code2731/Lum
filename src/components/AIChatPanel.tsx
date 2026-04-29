@@ -2,6 +2,7 @@ import React, { useRef, useEffect, useState, useCallback } from "react";
 import ReactMarkdown from "react-markdown";
 import { Bot, User, Trash2, X, Loader2, Send, Play, StopCircle } from "lucide-react";
 import { IconButton } from "@/components/ui/icon-button";
+import { Textarea } from "@/components/ui/textarea";
 import type { ChatMessage } from "../hooks/useAIChat";
 
 interface Props {
@@ -109,14 +110,14 @@ const AIChatPanel: React.FC<Props> = ({ messages, streaming, error, onSend, onCa
       {/* 입력 영역 */}
       <div className="shrink-0 border-t border-white/5 p-2">
         <div className="flex items-end gap-1.5 bg-white/5 rounded-lg border border-white/8 px-2.5 py-1.5">
-          <textarea
+          <Textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             disabled={streaming}
             rows={1}
             placeholder="질문하세요… (Enter 전송 · Shift+Enter 줄바꿈)"
-            className="flex-1 bg-transparent border-none outline-none resize-none text-[11px] text-white/80 placeholder-white/20 leading-relaxed max-h-24 disabled:opacity-40"
+            className="flex-1 bg-transparent border-none px-0 py-0 text-[11px] text-white/80 placeholder-white/20 leading-relaxed max-h-24 disabled:opacity-40"
             style={{ fieldSizing: "content" } as React.CSSProperties}
           />
           {streaming ? (

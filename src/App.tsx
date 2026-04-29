@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, useEffect, useMemo } from "react";
+import React, { useState, useRef, useCallback, useEffect, useMemo, lazy, Suspense } from "react";
 import { Group as PanelGroup, Panel, Separator as PanelResizeHandle } from "react-resizable-panels";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { shortPath } from "./utils";
@@ -23,7 +23,6 @@ import {
   GitBranch, Container, Layers, Lock, BookOpen, Bell, Activity, FolderTree, Brain, PlugZap,
 } from "lucide-react";
 import SshConnectModal from "./components/SshConnectModal";
-import AgentPanel from "./components/AgentPanel";
 import { useAgentLoop } from "./hooks/useAgentLoop";
 import { useAIChat } from "./hooks/useAIChat";
 import { useEnvAutoDetector } from "./hooks/useEnvAutoDetector";
@@ -36,15 +35,11 @@ import NotificationCenter from "./components/NotificationCenter";
 import type { SshProfile } from "./hooks/useTabManager";
 import InfiniteCanvas from "./components/layout/InfiniteCanvas";
 import TerminalPane from "./components/TerminalPane";
-import ModelManager from "./components/ModelManager";
 import HealingPanel from "./components/HealingPanel";
 import RagPanel from "./components/RagPanel";
 import CommandBlockBar from "./components/CommandBlockBar";
 import HistorySearch from "./components/HistorySearch";
 import CommitPanel from "./components/CommitPanel";
-import XllmPanel from "./components/XllmPanel";
-import OnboardingWizard from "./components/OnboardingWizard";
-import DiffReviewPanel from "./components/DiffReviewPanel";
 import ThemePanel from "./components/ThemePanel";
 import QuickActionsBar from "./components/QuickActionsBar";
 import WorkspacePanel from "./components/WorkspacePanel";
@@ -52,13 +47,18 @@ import CommandPalette from "./components/CommandPalette";
 import TabContextMenu from "./components/TabContextMenu";
 import ResizeHandles from "./components/ResizeHandles";
 import WindowControls from "./components/WindowControls";
-import LocalAIPanel from "./components/LocalAIPanel";
-import McpPanel from "./components/McpPanel";
 import WarpListView from "./components/WarpListView";
 import FileExplorerPanel from "./components/FileExplorerPanel";
 import WelcomeHints from "./components/WelcomeHints";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { TAB_COLORS } from "./hooks/useTabManager";
+
+const AgentPanel = lazy(() => import("./components/AgentPanel"));
+const ModelManager = lazy(() => import("./components/ModelManager"));
+const XllmPanel = lazy(() => import("./components/XllmPanel"));
+const OnboardingWizard = lazy(() => import("./components/OnboardingWizard"));
+const DiffReviewPanel = lazy(() => import("./components/DiffReviewPanel"));
+const McpPanel = lazy(() => import("./components/McpPanel"));
 
 type ViewMode = "terminal" | "canvas" | "list";
 
@@ -162,6 +162,12 @@ const App: React.FC = () => {
     showDiffReview, setShowDiffReview,
     showThemePanel, setShowThemePanel,
     showWorkspace, setShowWorkspace,
+    showScriptPanel, setShowScriptPanel,
+    showSysmon, setShowSysmon,
+    showNotifCenter, setShowNotifCenter,
+    showMcpPanel, setShowMcpPanel,
+    showPalette, setShowPalette,
+    showSshModal, setShowSshModal,
     closeOverlays,
   } = usePanelVisibility();
 
@@ -179,18 +185,10 @@ const App: React.FC = () => {
 
   // 스크립트 라이브러리
   const scriptLib = useScriptLibrary(activePaneIdRef, ptyWriteRefs);
-  const [showScriptPanel, setShowScriptPanel] = useState(false);
-  const [showSysmon, setShowSysmon] = useState(false);
 
   // 알림 센터
   const notifCenter = useNotificationCenter();
-  const [showNotifCenter, setShowNotifCenter] = useState(false);
 
-  // 로컬 AI 패널
-  const [showLocalAI, setShowLocalAI] = useState(false);
-  const [showMcpPanel, setShowMcpPanel] = useState(false);
-
-  // AI 채팅 사이드패널
   // 파일 탐색기 사이드바 (기본 열림)
   const [showFileExplorer, setShowFileExplorer] = useState(() => {
     try { return localStorage.getItem("lum.fileExplorer") !== "0"; } catch { return true; }
@@ -217,8 +215,6 @@ const App: React.FC = () => {
   // 탭 더블클릭 rename 상태
   const [renamingTabId, setRenamingTabId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
-  const [showPalette, setShowPalette] = useState(false);
-  const [showSshModal, setShowSshModal] = useState(false);
   const [tabCtxMenu, setTabCtxMenu] = useState<{ tabId: string; x: number; y: number } | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("terminal");
   const [aiInput, setAiInput] = useState("");
@@ -429,11 +425,6 @@ const App: React.FC = () => {
       if (mod && e.shiftKey && e.key === "r") { e.preventDefault(); setShowDiffReview(true); }
       if (mod && e.shiftKey && e.key === "l") { e.preventDefault(); setShowScriptPanel(v => { if (!v) scriptLib.loadScripts(); return !v; }); }
       if (mod && e.shiftKey && e.key === "m") { e.preventDefault(); setShowSysmon(v => !v); }
-      // 개발자 전용 — 로컬 AI(burn/wgpu) 실험 패널. 기본 빌드에선 커맨드 미등록 상태.
-      if (mod && e.shiftKey && e.altKey && e.key.toLowerCase() === "l") {
-        e.preventDefault();
-        setShowLocalAI(v => !v);
-      }
       if (mod && e.key === ",") { e.preventDefault(); setShowThemePanel(true); }
       if (mod && e.shiftKey && e.key === "q") { e.preventDefault(); setShowQuickBar(v => !v); }
       if (mod && e.shiftKey && (e.key === "s" || e.key === "o")) { e.preventDefault(); setShowWorkspace(true); loadWorkspaces(); }
@@ -449,7 +440,6 @@ const App: React.FC = () => {
       }
       if (e.key === "Escape") {
         setShowAiBar(false);
-        setShowPalette(false);
         setTabCtxMenu(null);
         closeOverlays();
       }
@@ -620,8 +610,6 @@ const App: React.FC = () => {
           >
             <Database size={13} />
           </button>
-          {/* 로컬 AI (burn/wgpu) 버튼 제거 — 미완성 실험 인프라.
-              접근은 개발자 단축키 Cmd+Shift+Opt+L로만 */}
           <button
             aria-label="xLLM 최적화 설정"
             onClick={() => setShowXllmPanel(true)}
@@ -1030,25 +1018,27 @@ const App: React.FC = () => {
             {/* ── 에이전트 패널 (>> 태스크) ─────────────── */}
             {agentLoop.state.status !== "idle" && (
               <div className="absolute bottom-16 right-4 z-30">
-                <AgentPanel
-                  state={agentLoop.state}
-                  onApprove={() => {
-                    const write = ptyWriteRefs.current.get(activePaneIdRef.current);
-                    if (write) {
-                      agentLoop.approve(
-                        agentLoop.state.plan,
-                        agentLoop.state.task,
-                        (cmd) => write(cmd),
-                      );
-                    }
-                  }}
-                  onCancel={agentLoop.cancel}
-                  onClose={agentLoop.reset}
-                  onSaveScript={(cmds) => {
-                    scriptLib.saveScript(agentLoop.state.task || "에이전트 태스크", "", cmds);
-                    setShowScriptPanel(true);
-                  }}
-                />
+                <Suspense fallback={null}>
+                  <AgentPanel
+                    state={agentLoop.state}
+                    onApprove={() => {
+                      const write = ptyWriteRefs.current.get(activePaneIdRef.current);
+                      if (write) {
+                        agentLoop.approve(
+                          agentLoop.state.plan,
+                          agentLoop.state.task,
+                          (cmd) => write(cmd),
+                        );
+                      }
+                    }}
+                    onCancel={agentLoop.cancel}
+                    onClose={agentLoop.reset}
+                    onSaveScript={(cmds) => {
+                      scriptLib.saveScript(agentLoop.state.task || "에이전트 태스크", "", cmds);
+                      setShowScriptPanel(true);
+                    }}
+                  />
+                </Suspense>
               </div>
             )}
           </div>
@@ -1126,7 +1116,9 @@ const App: React.FC = () => {
       </main>
 
       {showModelManager && (
-        <ModelManager onClose={() => setShowModelManager(false)} />
+        <Suspense fallback={null}>
+          <ModelManager onClose={() => setShowModelManager(false)} />
+        </Suspense>
       )}
 
       {showHistorySearch && (
@@ -1148,30 +1140,30 @@ const App: React.FC = () => {
       )}
 
       {showXllmPanel && (
-        <ErrorBoundary label="xLLM">
-          <XllmPanel onClose={() => setShowXllmPanel(false)} />
-        </ErrorBoundary>
-      )}
-
-      {showLocalAI && (
-        <ErrorBoundary label="로컬 AI">
-          <LocalAIPanel onClose={() => setShowLocalAI(false)} />
-        </ErrorBoundary>
+        <Suspense fallback={null}>
+          <ErrorBoundary label="xLLM">
+            <XllmPanel onClose={() => setShowXllmPanel(false)} />
+          </ErrorBoundary>
+        </Suspense>
       )}
 
       {showMcpPanel && (
-        <ErrorBoundary label="MCP">
-          <McpPanel onClose={() => setShowMcpPanel(false)} />
-        </ErrorBoundary>
+        <Suspense fallback={null}>
+          <ErrorBoundary label="MCP">
+            <McpPanel onClose={() => setShowMcpPanel(false)} />
+          </ErrorBoundary>
+        </Suspense>
       )}
 
       {showDiffReview && (
-        <ErrorBoundary label="Diff 리뷰">
-          <DiffReviewPanel
-            model={selectedModel}
-            onClose={() => setShowDiffReview(false)}
-          />
-        </ErrorBoundary>
+        <Suspense fallback={null}>
+          <ErrorBoundary label="Diff 리뷰">
+            <DiffReviewPanel
+              model={selectedModel}
+              onClose={() => setShowDiffReview(false)}
+            />
+          </ErrorBoundary>
+        </Suspense>
       )}
 
       {showThemePanel && (
@@ -1196,7 +1188,9 @@ const App: React.FC = () => {
       )}
 
       {showOnboarding && (
-        <OnboardingWizard onComplete={() => setShowOnboarding(false)} />
+        <Suspense fallback={null}>
+          <OnboardingWizard onComplete={() => setShowOnboarding(false)} />
+        </Suspense>
       )}
 
       {showPalette && (

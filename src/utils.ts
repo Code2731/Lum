@@ -1,15 +1,22 @@
-/**
- * 파일 경로에서 마지막 디렉토리/파일명만 추출
- */
+export const parsePathComponents = (p: string): { dir: string; file: string } => {
+  const sep = p.includes("\\") ? "\\" : "/";
+  const idx = p.lastIndexOf(sep);
+  return { dir: p.slice(0, idx), file: p.slice(idx + 1) };
+};
+
 export const shortPath = (p: string): string => {
   if (!p) return "~";
   const parts = p.replace(/\\/g, "/").split("/");
   return parts.filter(Boolean).pop() || "~";
 };
 
-/**
- * 두 벡터 간의 코사인 유사도 계산
- */
+export const parseLoadedKey = (key: string): { base: string; lora: string } => {
+  const idx = key.indexOf("+lora:");
+  return idx >= 0
+    ? { base: key.slice(0, idx), lora: key.slice(idx + 6) }
+    : { base: key, lora: "" };
+};
+
 export const cosineSimilarity = (a: number[], b: number[]): number => {
   if (!a || !b || a.length !== b.length || a.length === 0) return 0;
 

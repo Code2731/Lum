@@ -14,6 +14,26 @@ export default defineConfig(async () => ({
     },
   },
   clearScreen: false,
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          "vendor-xterm": ["@xterm/xterm", "@xterm/addon-fit", "@xterm/addon-search"],
+          "vendor-markdown": ["react-markdown"],
+          "vendor-radix": [
+            "@radix-ui/react-dialog",
+            "@radix-ui/react-select",
+            "@radix-ui/react-switch",
+            "@radix-ui/react-slider",
+            "@radix-ui/react-tooltip",
+            "@radix-ui/react-label",
+            "@radix-ui/react-slot",
+            "@radix-ui/react-alert-dialog",
+          ],
+        },
+      },
+    },
+  },
   test: {
     globals: true,
     environment: "jsdom",

@@ -9,6 +9,12 @@ export function usePanelVisibility() {
   const [showDiffReview, setShowDiffReview] = useState(false);
   const [showThemePanel, setShowThemePanel] = useState(false);
   const [showWorkspace, setShowWorkspace] = useState(false);
+  const [showScriptPanel, setShowScriptPanel] = useState(false);
+  const [showSysmon, setShowSysmon] = useState(false);
+  const [showNotifCenter, setShowNotifCenter] = useState(false);
+  const [showMcpPanel, setShowMcpPanel] = useState(false);
+  const [showPalette, setShowPalette] = useState(false);
+  const [showSshModal, setShowSshModal] = useState(false);
 
   const closeOverlays = useCallback(() => {
     setShowHistorySearch(false);
@@ -17,6 +23,7 @@ export function usePanelVisibility() {
     setShowDiffReview(false);
     setShowThemePanel(false);
     setShowWorkspace(false);
+    setShowPalette(false);
   }, []);
 
   return {
@@ -28,6 +35,12 @@ export function usePanelVisibility() {
     showDiffReview, setShowDiffReview,
     showThemePanel, setShowThemePanel,
     showWorkspace, setShowWorkspace,
+    showScriptPanel, setShowScriptPanel,
+    showSysmon, setShowSysmon,
+    showNotifCenter, setShowNotifCenter,
+    showMcpPanel, setShowMcpPanel,
+    showPalette, setShowPalette,
+    showSshModal, setShowSshModal,
     closeOverlays,
   };
 }

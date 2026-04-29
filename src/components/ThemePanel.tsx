@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Palette, Type, Check } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Slider } from "@/components/ui/slider";
 import { THEMES, FONT_FAMILIES, type TerminalAppearance } from "../hooks/useTerminalTheme";
 
 interface Props {
@@ -68,14 +69,12 @@ const ThemePanel: React.FC<Props> = ({ appearance, onSave, onClose }) => {
               </p>
               <span className="text-xs font-mono text-accent">{local.fontSize}px</span>
             </div>
-            <input
-              type="range"
+            <Slider
               min={10}
               max={20}
               step={1}
-              value={local.fontSize}
-              onChange={e => setLocal(l => ({ ...l, fontSize: Number(e.target.value) }))}
-              className="w-full accent-[#58a6ff]"
+              value={[local.fontSize]}
+              onValueChange={([v]) => setLocal(l => ({ ...l, fontSize: v }))}
             />
             <div className="flex justify-between text-[10px] text-white/20 mt-0.5">
               <span>10px</span><span>20px</span>
