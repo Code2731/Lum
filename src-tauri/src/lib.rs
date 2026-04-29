@@ -69,6 +69,8 @@ pub fn run() {
             // AI Commands
             commands::agent::agent_plan,
             commands::agent::agent_observe,
+            commands::react_agent::react_agent_run,
+            commands::react_agent::react_agent_cancel,
             // Phase 70: Repo Map + Edit Apply
             commands::repo_map::get_repo_map,
             commands::edit_apply::apply_edit_block,
@@ -178,6 +180,7 @@ pub fn run() {
             commands::mistral_setup::delete_mistral_model,
             // Phase 85b — embedded mistralrs (subprocess 없이 LUM 프로세스 안에서 직접 추론)
             commands::embed::embed_load_gguf,
+            commands::embed::embed_load_normal,
             commands::embed::embed_load_lora,
             commands::embed::embed_unload,
             commands::embed::embed_status,

@@ -331,7 +331,7 @@ pub async fn get_repo_map(cwd: String, token_budget: Option<usize>) -> Result<St
         .map_err(|e| crate::error::LumError::Io(format!("repo_map join 실패: {}", e)))?
 }
 
-fn build_repo_map(cwd: &str, budget: usize) -> Result<String> {
+pub fn build_repo_map(cwd: &str, budget: usize) -> Result<String> {
     let root = PathBuf::from(cwd);
 
     let mut defs_by_file: HashMap<PathBuf, Vec<Symbol>> = HashMap::new();

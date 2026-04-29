@@ -23,7 +23,7 @@ import {
   GitBranch, Container, Layers, Lock, BookOpen, Bell, Activity, FolderTree, Brain, PlugZap,
 } from "lucide-react";
 import SshConnectModal from "./components/SshConnectModal";
-import { useAgentLoop } from "./hooks/useAgentLoop";
+import { useReactAgent } from "./hooks/useReactAgent";
 import { useAIChat } from "./hooks/useAIChat";
 import { useEnvAutoDetector } from "./hooks/useEnvAutoDetector";
 import EnvSuggestionToast from "./components/EnvSuggestionToast";
@@ -53,7 +53,7 @@ import WelcomeHints from "./components/WelcomeHints";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { TAB_COLORS } from "./hooks/useTabManager";
 
-const AgentPanel = lazy(() => import("./components/AgentPanel"));
+const ReactAgentPanel = lazy(() => import("./components/ReactAgentPanel"));
 const ModelManager = lazy(() => import("./components/ModelManager"));
 const XllmPanel = lazy(() => import("./components/XllmPanel"));
 const OnboardingWizard = lazy(() => import("./components/OnboardingWizard"));
@@ -177,8 +177,8 @@ const App: React.FC = () => {
 
   const { updateInfo, installing, progress, installError, installUpdate, dismissUpdate } = useUpdateCheck();
 
-  // 에이전트 루프 (>> 프리픽스 태스크)
-  const agentLoop = useAgentLoop(selectedModel);
+  // ReAct 에이전트 (>> 프리픽스 태스크)
+  const reactAgent = useReactAgent();
 
   // 환경 파일 자동 감지
   const envDetector = useEnvAutoDetector(activePaneIdRef, ptyWriteRefs);
@@ -262,27 +262,27 @@ const App: React.FC = () => {
     }
   }, [cmdBlocks, selectedModel]); // notifCenter.addNotification은 안정된 useCallback이므로 deps 불필요
 
-  // 에이전트 태스크 완료 알림 — status 전환 시점에 task/message 최신값 사용
-  const agentStatusRef = useRef(agentLoop.state.status);
+  // ReAct 에이전트 태스크 완료 알림 — status 전환 시점에 goal 최신값 사용
+  const agentStatusRef = useRef(reactAgent.state.status);
   useEffect(() => {
     const prev = agentStatusRef.current;
-    const { status, task, message } = agentLoop.state;
+    const { status, goal } = reactAgent.state;
     agentStatusRef.current = status;
     if (prev === status) return;
     if (status === "done") {
       notifCenter.addNotification({
         type: "agent",
         title: "에이전트 태스크 완료",
-        body: task || "태스크가 완료되었습니다.",
+        body: goal || "태스크가 완료되었습니다.",
       });
-    } else if (status === "failed") {
+    } else if (status === "error") {
       notifCenter.addNotification({
         type: "agent",
         title: "에이전트 태스크 실패",
-        body: message || task || "태스크 실행 중 오류가 발생했습니다.",
+        body: goal || "태스크 실행 중 오류가 발생했습니다.",
       });
     }
-  }, [agentLoop.state]);
+  }, [reactAgent.state]);
 
   // AI 자가 치유 감지 알림
   const healingNotifiedRef = useRef<string | null>(null);
@@ -316,26 +316,18 @@ const App: React.FC = () => {
       if (paneId !== activePaneIdRef.current) return;
       feedRaw(data);
       detectError(data);
-      agentLoop.feedOutput(data);
     },
-    [activePaneIdRef, feedRaw, detectError, agentLoop.feedOutput],
+    [activePaneIdRef, feedRaw, detectError],
   );
 
-  // 에이전트 태스크 시작 핸들러 (activeTabIdRef 통해 선언 순서 문제 회피)
+  // ReAct 에이전트 태스크 시작 핸들러
   const handleAgentTrigger = useCallback(
-    async (task: string) => {
+    (task: string) => {
       const currentTab = tabs.find((t) => t.id === activeTabIdRef.current);
       const cwd = currentTab?.cwd ?? "";
-      const [projectCtx, repoMap] = await Promise.all([
-        invoke<string>("get_project_context", { cwd }).catch(() => ""),
-        invoke<string>("get_repo_map", { cwd, tokenBudget: 2048 }).catch(() => ""),
-      ]);
-      const context = [projectCtx, repoMap ? `\n[Repo Map]\n${repoMap}` : ""]
-        .filter(Boolean)
-        .join("\n");
-      agentLoop.startTask(task, context);
+      reactAgent.start(task, cwd);
     },
-    [agentLoop.startTask, tabs, activeTabIdRef],
+    [reactAgent.start, tabs, activeTabIdRef],
   );
 
   // 자연어 입력 → AI 스트림에 전송 (AIBlockStream이 자동 표시됨)
@@ -1015,28 +1007,14 @@ const App: React.FC = () => {
                 onDismiss={envDetector.dismiss}
               />
             )}
-            {/* ── 에이전트 패널 (>> 태스크) ─────────────── */}
-            {agentLoop.state.status !== "idle" && (
+            {/* ── ReAct 에이전트 패널 (>> 태스크) ─────────── */}
+            {reactAgent.state.status !== "idle" && (
               <div className="absolute bottom-16 right-4 z-30">
                 <Suspense fallback={null}>
-                  <AgentPanel
-                    state={agentLoop.state}
-                    onApprove={() => {
-                      const write = ptyWriteRefs.current.get(activePaneIdRef.current);
-                      if (write) {
-                        agentLoop.approve(
-                          agentLoop.state.plan,
-                          agentLoop.state.task,
-                          (cmd) => write(cmd),
-                        );
-                      }
-                    }}
-                    onCancel={agentLoop.cancel}
-                    onClose={agentLoop.reset}
-                    onSaveScript={(cmds) => {
-                      scriptLib.saveScript(agentLoop.state.task || "에이전트 태스크", "", cmds);
-                      setShowScriptPanel(true);
-                    }}
+                  <ReactAgentPanel
+                    state={reactAgent.state}
+                    onCancel={reactAgent.cancel}
+                    onClose={reactAgent.reset}
                   />
                 </Suspense>
               </div>

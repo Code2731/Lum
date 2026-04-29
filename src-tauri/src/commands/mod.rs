@@ -1,4 +1,5 @@
 pub mod agent;
+pub mod react_agent;
 pub mod ai;
 pub mod config;
 pub mod file_dialog;
