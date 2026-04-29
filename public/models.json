@@ -127,20 +127,18 @@
   ],
 
   "heavy_presets": [
-    { "label": "Qwen3 8B (가벼움 · RTX 3080 안전)",  "id": "Qwen/Qwen3-8B",                                         "size": "~5GB",  "tag": "✓ 8B" },
-    { "label": "Qwen3.5 9B Opus 증류 (Claude distill)","id": "Jackrong/Qwen3.5-9B-Claude-4.6-Opus-Reasoning-Distilled-v2","size": "~5GB",  "tag": "🧠 Opus 증류" },
-    { "label": "Qwen2.5-Coder 14B (코딩)",           "id": "Qwen/Qwen2.5-Coder-14B-Instruct",                       "size": "~8GB",  "tag": "⚡ 코딩 14B" },
-    { "label": "Qwen3-Coder 30B-A3B MoE Q4_K_M (코딩, GGUF)",  "id": "unsloth/Qwen3-Coder-30B-A3B-Instruct-GGUF", "gguf_file": "Qwen3-Coder-30B-A3B-Instruct-Q4_K_M.gguf", "size": "~17GB", "tag": "🚀 MoE 코딩" },
-    { "label": "DeepSeek R1 Distill 32B (추론)",     "id": "deepseek-ai/DeepSeek-R1-Distill-Qwen-32B",              "size": "~19GB", "tag": "🧠 추론" },
-    { "label": "Qwen2.5-Coder 32B (코딩 거대)",      "id": "Qwen/Qwen2.5-Coder-32B-Instruct",                       "size": "~19GB", "tag": "⚡ 코딩 32B" },
-    { "label": "EXAONE 3.5 32B (한국어)",            "id": "LGAI-EXAONE/EXAONE-3.5-32B-Instruct",                   "size": "~19GB", "tag": "🇰🇷 한국어" },
-    { "label": "EXAONE Deep 32B (한국어 추론)",      "id": "LGAI-EXAONE/EXAONE-Deep-32B",                           "size": "~19GB", "tag": "🇰🇷🧠" },
-    { "label": "Mistral Small 24B",                  "id": "mistralai/Mistral-Small-24B-Instruct-2501",             "size": "~14GB", "tag": "🇫🇷 균형" },
-    { "label": "Gemma 3 27B",                        "id": "google/gemma-3-27b-it",                                 "size": "~16GB", "tag": "🤖 Google" },
-    { "label": "Llama 3.3 70B (멀티GPU)",            "id": "meta-llama/Llama-3.3-70B-Instruct",                     "size": "~40GB", "tag": "🦙 Meta" },
-
-    { "label": "EEVE Korean 10.8B (102K 확장 어휘)", "id": "yanolja/EEVE-Korean-Instruct-10.8B-v1.0",               "size": "~22GB", "tag": "🇰🇷⚡ 토큰 최적화" },
-    { "label": "Llama-3.1 Korean Bllossom 8B",       "id": "Bllossom/llama-3.1-Korean-Bllossom-8B",                 "size": "~16GB", "tag": "🇰🇷 한국어" },
+    { "label": "Qwen3 4B (초경량 · 4GB VRAM)",       "id": "Qwen/Qwen3-4B",                                         "size": "~8GB",  "tag": "✓ 경량" },
+    { "label": "Qwen3 8B (균형 · RTX 3080)",          "id": "Qwen/Qwen3-8B",                                         "size": "~16GB", "tag": "✓ 추천" },
+    { "label": "Qwen3 14B (고품질)",                  "id": "Qwen/Qwen3-14B",                                        "size": "~28GB", "tag": "✓ 14B" },
+    { "label": "Qwen3 32B (최강)",                    "id": "Qwen/Qwen3-32B",                                        "size": "~65GB", "tag": "✓ 32B" },
+    { "label": "Qwen2.5-Coder 14B (코딩)",           "id": "Qwen/Qwen2.5-Coder-14B-Instruct",                       "size": "~28GB", "tag": "⚡ 코딩 14B" },
+    { "label": "Qwen3-Coder 30B-A3B MoE Q4_K_M (코딩, GGUF)", "id": "unsloth/Qwen3-Coder-30B-A3B-Instruct-GGUF",   "gguf_file": "Qwen3-Coder-30B-A3B-Instruct-Q4_K_M.gguf", "size": "~17GB", "tag": "🚀 MoE 코딩 GGUF" },
+    { "label": "Qwen2.5-Coder 32B (코딩 거대)",      "id": "Qwen/Qwen2.5-Coder-32B-Instruct",                       "size": "~65GB", "tag": "⚡ 코딩 32B" },
+    { "label": "DeepSeek R1 Distill 7B (추론 경량)",  "id": "deepseek-ai/DeepSeek-R1-Distill-Qwen-7B",               "size": "~14GB", "tag": "🧠 추론 7B" },
+    { "label": "DeepSeek R1 Distill 32B (추론)",     "id": "deepseek-ai/DeepSeek-R1-Distill-Qwen-32B",              "size": "~65GB", "tag": "🧠 추론 32B" },
+    { "label": "Mistral Small 24B",                  "id": "mistralai/Mistral-Small-24B-Instruct-2501",             "size": "~46GB", "tag": "🇫🇷 균형" },
+    { "label": "Llama 3.3 70B (멀티GPU)",            "id": "meta-llama/Llama-3.3-70B-Instruct",                     "size": "~141GB","tag": "🔒🦙 Meta" },
+    { "label": "EEVE Korean 10.8B (102K 확장 어휘)", "id": "yanolja/YanoljaNEXT-EEVE-Instruct-10.8B",               "size": "~22GB", "tag": "🇰🇷⚡ 토큰 최적화" },
     { "label": "Llama-3.2 Korean Bllossom 3B (경량)", "id": "Bllossom/llama-3.2-Korean-Bllossom-3B",                "size": "~6GB",  "tag": "🇰🇷 경량" }
   ]
 }

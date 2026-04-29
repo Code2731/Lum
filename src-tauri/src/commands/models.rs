@@ -85,6 +85,8 @@ pub async fn list_local_models() -> Result<Vec<LocalModel>> {
 pub struct RepoQuery {
     pub repo_id: String,
     pub revision: String,
+    /// GGUF 단일 파일 프리셋이면 Some(파일명) — BF16 리포는 None (config.json 체크)
+    pub gguf_file: Option<String>,
 }
 
 /// HF API HTTP 코드 → ModelManager에 표시할 status 라벨 매핑.
@@ -107,8 +109,9 @@ pub struct RepoStatus {
     pub http_code: u16,
 }
 
-/// HF API에서 repo + revision 살아있는지 일괄 확인 — ModelManager 갱신 버튼용
-/// 병렬 5개 배치로 호출, hf_token 있으면 헤더 첨부.
+/// HF repo + revision 실제 다운로드 가능 여부 확인 — ModelManager 갱신 버튼용.
+/// `/api/models/{}/tree/{}` 는 게이트 모델도 200을 반환 → 실제 파일(config.json) HEAD로
+/// 다운로드 가능 여부를 정확히 판별. 병렬 5개 배치, hf_token 있으면 헤더 첨부.
 #[command]
 pub async fn check_repo_status(repos: Vec<RepoQuery>) -> Result<Vec<RepoStatus>> {
     let token = load_config().ok().and_then(|c| c.hf_token);
@@ -126,11 +129,14 @@ pub async fn check_repo_status(repos: Vec<RepoQuery>) -> Result<Vec<RepoStatus>>
             let client = client_arc.clone();
             let token = token_arc.clone();
             async move {
+                // 실제 파일 HEAD — 게이트 모델 정확 판별.
+                // GGUF 프리셋은 gguf_file 사용, BF16은 config.json
+                let check_file = q.gguf_file.as_deref().unwrap_or("config.json");
                 let url = format!(
-                    "https://huggingface.co/api/models/{}/tree/{}",
-                    q.repo_id, q.revision
+                    "https://huggingface.co/{}/resolve/{}/{}",
+                    q.repo_id, q.revision, check_file
                 );
-                let mut req = client.get(&url);
+                let mut req = client.head(&url);
                 if let Some(ref t) = *token {
                     req = req.header("Authorization", format!("Bearer {}", t));
                 }

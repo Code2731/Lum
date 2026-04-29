@@ -36,7 +36,8 @@ cd src-tauri && cargo test   # Rust 단위 테스트 실행
 ### Backend (`src-tauri/src/`)
 - **PTY 관리** (`lib.rs`): `HashMap`으로 탭/팬별 독립 PTY 세션.
 - **임베디드 AI** (`commands/mistralrs_inline.rs`): mistralrs 0.8.1 GGUF 인프로세스 추론. `OnceLock<Mutex<Option<LoadedState>>>` 핫스왑. LoRA 어댑터 지원 (`embed_load_lora`).
-- **AI 라우팅** (`commands/ai.rs`): 임베디드 우선 → Gemini 폴백. `stream_ai_command` / `call_xllm`.
+- **AI 라우팅** (`commands/ai.rs`): embedded → Ollama → xLLM HTTP → Gemini. `stream_ai_command` / `call_xllm` / `call_ai`.
+- **Ollama** (`commands/ollama.rs`): NDJSON 스트리밍 `/api/chat`. `ollama_base_url` + `ollama_model` config. `check_ollama_status` / `list_ollama_models`.
 - **RAG** (`commands/rag.rs`): `index_project` / `search_codebase` — 소스코드 청킹 + 임베딩 벡터 검색.
 - **MCP** (`commands/mcp.rs`): stdio JSON-RPC, `~/.lum_mcp.json` 영속. 서버별 inner Mutex 동시성.
 - **lum-mcp-server** (`src/bin/lum-mcp-server.rs`): 독립 실행 MCP 서버 바이너리 — 외부 LLM agent가 LUM 도구 직접 호출.
@@ -75,18 +76,20 @@ cd src-tauri && cargo test   # Rust 단위 테스트 실행
 - mistralrs MoE 모델은 partial offload 미지원 (candle 한계) — dense 모델만 사용.
 - SSD(Speculative Decoding): draft 모델은 메인의 1/5 이하 크기여야 가속 효과 있음.
 
-## 현재 상태 요약 (Phase 112 기준)
+## 현재 상태 요약 (Phase 113 기준)
 
 | 영역 | 상태 |
 |------|------|
 | PTY 터미널 | 멀티탭 + 스플릿 팬, OSC 133, SSH |
 | AI 추론 | mistralrs GGUF 임베딩 + LoRA 어댑터 핫스왑 |
 | AI 스트리밍 | `xllm_token` 이벤트, cancel 지원 |
+| AI 라우팅 | embedded → Ollama → xLLM HTTP → Gemini |
+| Ollama | NDJSON 스트리밍, `/api/chat`, 모델 목록, XllmPanel UI |
 | shadcn/ui | Button/Dialog/AlertDialog/Command/Input/Label/Switch/Tooltip/Textarea/Slider/Select |
 | MCP | stdio 프로토콜, lum-mcp-server 바이너리, CrewAI 연동 |
 | RAG | index_project / search_codebase / semantic history |
 | 모델 관리 | `~/.lum_mistral_models/`, GGUF 파일 피커, 저장 경로 지정 |
 | 플랫폼 | Windows (CUDA/NVML), macOS (Metal), Linux (CUDA) |
-| 테스트 | Rust 101/0, TS Vitest 131/131, Playwright E2E 5개 |
+| 테스트 | Rust 103/0, TS Vitest 131/131, Playwright E2E 5개 |
 
 > 상세 Phase 히스토리는 `git log` 참조.

@@ -39,18 +39,21 @@ fn model_local_path(repo_id: &str) -> std::path::PathBuf {
     model_root_dir().join(safe_model_dirname(repo_id))
 }
 
-/// BF16 모델 필수 파일 모두 있으면 true — config.json + tokenizer.json + safetensors(단일 또는 shard)
+/// BF16 모델 필수 파일 모두 있으면 true.
+/// config.json 필수 + tokenizer.json or tokenizer_config.json 중 하나 + 임의 .safetensors 파일.
 fn model_present(path: &std::path::Path) -> bool {
-    if !path.join("config.json").exists() || !path.join("tokenizer.json").exists() {
+    if !path.join("config.json").exists() {
         return false;
     }
-    if path.join("model.safetensors").exists() {
-        return true;
+    // tokenizer.json 또는 tokenizer_config.json 중 하나만 있으면 OK
+    if !path.join("tokenizer.json").exists() && !path.join("tokenizer_config.json").exists() {
+        return false;
     }
+    // 이름 무관하게 .safetensors 파일 하나라도 있으면 OK
     if let Ok(rd) = std::fs::read_dir(path) {
         for e in rd.flatten() {
             let n = e.file_name().to_string_lossy().to_string();
-            if n.starts_with("model-") && n.ends_with(".safetensors") {
+            if n.ends_with(".safetensors") {
                 return true;
             }
         }

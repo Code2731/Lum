@@ -76,11 +76,11 @@ tauri-plugin-dialog = "2.7.0"
 # Phase 71/85b/102 — Windows/Linux: NVIDIA NVML 정확 VRAM + mistralrs CUDA 백엔드.
 [target.'cfg(not(target_os = "macos"))'.dependencies]
 nvml-wrapper = "0.10"
-mistralrs = { version = "0.8.1", features = ["cuda"], optional = true }
-mistralrs-core = { version = "0.8.1", optional = true }
+mistralrs = { git = "https://github.com/EricLBuehler/mistral.rs", branch = "master", features = ["cuda"], optional = true }
+mistralrs-core = { git = "https://github.com/EricLBuehler/mistral.rs", branch = "master", optional = true }
 
 # Phase 102 — macOS Apple Silicon: mistralrs Metal 백엔드 (M1/M2/M3 GPU + 통합 메모리).
 # Intel Mac은 Metal 미지원이라 사실상 Apple Silicon 전용 — Intel Mac은 Gemini 클라우드 폴백.
 [target.'cfg(target_os = "macos")'.dependencies]
-mistralrs = { version = "0.8.1", features = ["metal"], optional = true }
-mistralrs-core = { version = "0.8.1", optional = true }
+mistralrs = { git = "https://github.com/EricLBuehler/mistral.rs", branch = "master", features = ["metal"], optional = true }
+mistralrs-core = { git = "https://github.com/EricLBuehler/mistral.rs", branch = "master", optional = true }

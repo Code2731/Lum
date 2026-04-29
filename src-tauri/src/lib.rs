@@ -83,6 +83,10 @@ pub fn run() {
             commands::ai::verify_vision_goal,
             commands::ai::check_xllm_status,
             commands::ai::list_xllm_models,
+            // Ollama 백엔드 (선택)
+            commands::ollama::check_ollama_status,
+            commands::ollama::list_ollama_models,
+            commands::config::save_ollama_settings,
             // Terminal Commands
             commands::terminal::spawn_pty,
             commands::terminal::write_to_pty,

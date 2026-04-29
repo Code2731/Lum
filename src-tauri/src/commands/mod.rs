@@ -14,6 +14,7 @@ pub mod git;
 pub mod hardware;
 pub mod history;
 pub mod models;
+pub mod ollama;
 pub mod project;
 pub mod rag;
 pub mod repo_map;

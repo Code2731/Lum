@@ -176,9 +176,48 @@ async fn try_embedded_inference_stream(
     None
 }
 
-/// xLLM 단일 응답 호출 (기존 호환). 임베디드 GGUF 우선, 미로드면 HTTP 폴백.
+/// Ollama가 설정돼있으면 단일 응답 — 미설정이면 None (HTTP 폴백 계속 진행).
+async fn try_ollama_once(prompt: &str) -> Option<Result<String>> {
+    let config = load_config().ok()?;
+    let model = config.ollama_model.as_ref().filter(|s| !s.is_empty())?.clone();
+    let base_url = config.ollama_url();
+    Some(crate::commands::ollama::ollama_once(prompt, &model, &base_url).await)
+}
+
+/// Ollama가 설정돼있으면 스트리밍 추론 — 미설정이면 None.
+async fn try_ollama_stream(
+    app: &tauri::AppHandle,
+    prompt: &str,
+    cancel: &Arc<AtomicBool>,
+) -> Option<Result<String>> {
+    let config = load_config().ok()?;
+    let model = config.ollama_model.as_ref().filter(|s| !s.is_empty())?.clone();
+    let base_url = config.ollama_url();
+    Some(crate::commands::ollama::ollama_stream(app, prompt, &model, &base_url, cancel).await)
+}
+
+/// 단일 응답 호출. embedded → Ollama → (gemini-* 모델이면 Gemini, 아니면 xLLM HTTP) 순서.
+/// ReAct Agent 등 비스트리밍 멀티턴 루프에서 사용.
+pub async fn call_ai(client: &reqwest::Client, model: &str, prompt: &str) -> Result<String> {
+    if let Some(result) = try_embedded_inference(prompt, &[]).await {
+        return result;
+    }
+    if let Some(result) = try_ollama_once(prompt).await {
+        return result;
+    }
+    if model.starts_with("gemini") {
+        call_gemini(client, model, prompt, None).await
+    } else {
+        call_xllm(client, model, prompt).await
+    }
+}
+
+/// xLLM 단일 응답 호출 (기존 호환). embedded → Ollama → xLLM HTTP.
 pub async fn call_xllm(client: &reqwest::Client, _model: &str, prompt: &str) -> Result<String> {
     if let Some(result) = try_embedded_inference(prompt, &[]).await {
+        return result;
+    }
+    if let Some(result) = try_ollama_once(prompt).await {
         return result;
     }
 
@@ -571,6 +610,10 @@ pub async fn stream_ai_command(
         if let Some(result) =
             try_embedded_inference_stream(&app, &full_prompt, &imgs, &cancel_flag, show_reasoning).await
         {
+            return result;
+        }
+        // Ollama 설정돼있으면 NDJSON 스트리밍 — xLLM 우회.
+        if let Some(result) = try_ollama_stream(&app, &full_prompt, &cancel_flag).await {
             return result;
         }
         call_compat_stream(&app, &client, &full_prompt, &imgs, &config.xllm_url(), config.xllm_api_key.clone(), &cancel_flag).await

@@ -112,7 +112,7 @@ const ModelManager: React.FC<Props> = ({ onClose }) => {
     setIsRefreshing(true);
     setRefreshMsg("HuggingFace API 조회 중...");
     try {
-      const queries = presets.map((p) => ({ repo_id: p.id, revision: "main" }));
+      const queries = presets.map((p) => ({ repo_id: p.id, revision: "main", gguf_file: p.gguf_file ?? null }));
       const results = await invoke<Array<{ repo_id: string; revision: string; status: RepoState; http_code: number }>>(
         "check_repo_status",
         { repos: queries }

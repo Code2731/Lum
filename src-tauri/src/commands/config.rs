@@ -62,6 +62,12 @@ pub struct AppConfig {
 
     /// 모델 다운로드 저장 경로 — None이면 기본값 `~/.lum_mistral_models` 사용
     pub model_download_dir: Option<String>,
+
+    // ── Ollama 백엔드 (선택) ────────────────────────────────────────────────
+    /// Ollama 서버 주소 (기본값: http://localhost:11434)
+    pub ollama_base_url: Option<String>,
+    /// Ollama에서 사용할 모델명 (예: "llama3.2:3b", "qwen2.5-coder:7b")
+    pub ollama_model: Option<String>,
 }
 
 impl AppConfig {
@@ -96,6 +102,14 @@ impl AppConfig {
 
     /// 호환성용 alias — call site 정리 후 제거 예정.
     pub fn mistral_rs_url(&self) -> String { self.xllm_url() }
+
+    /// Ollama 서버 URL — None이면 기본값 http://localhost:11434
+    pub fn ollama_url(&self) -> String {
+        self.ollama_base_url
+            .clone()
+            .filter(|s| !s.is_empty())
+            .unwrap_or_else(|| "http://localhost:11434".to_string())
+    }
 }
 
 fn config_path() -> std::path::PathBuf {
@@ -218,6 +232,15 @@ pub fn save_quick_actions(actions: Vec<QuickAction>) -> Result<()> {
 pub fn save_hf_token(token: String) -> Result<()> {
     let mut config = load_config()?;
     config.hf_token = if token.is_empty() { None } else { Some(token) };
+    save_config(&config)
+}
+
+/// Ollama 서버 URL + 모델 저장
+#[tauri::command]
+pub fn save_ollama_settings(base_url: Option<String>, model: Option<String>) -> Result<()> {
+    let mut config = load_config()?;
+    config.ollama_base_url = base_url.filter(|s| !s.is_empty());
+    config.ollama_model = model.filter(|s| !s.is_empty());
     save_config(&config)
 }
 

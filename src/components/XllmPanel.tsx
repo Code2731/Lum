@@ -24,6 +24,8 @@ interface AppConfig {
   vram_cap_override?: number;
   vision_enabled?: boolean;
   show_reasoning?: boolean;
+  ollama_base_url?: string;
+  ollama_model?: string;
 }
 
 type SafetyMode = "safe" | "balanced" | "max";
@@ -189,6 +191,7 @@ const XllmPanel: React.FC<Props> = ({ onClose }) => {
             </p>
           </section>
 
+          <OllamaSection />
           <EmbeddedInferenceDebug />
         </div>
 
@@ -208,6 +211,135 @@ const XllmPanel: React.FC<Props> = ({ onClose }) => {
         </div>
       </DialogContent>
     </Dialog>
+  );
+};
+
+// ── Ollama 백엔드 섹션 ──────────────────────────────────────────────────────
+
+const OllamaSection: React.FC = () => {
+  const [url, setUrl] = useState("http://localhost:11434");
+  const [model, setModel] = useState("");
+  const [models, setModels] = useState<string[]>([]);
+  const [status, setStatus] = useState<"unknown" | "online" | "offline">("unknown");
+  const [checking, setChecking] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    invoke<AppConfig>("load_app_config").then((c) => {
+      if (c.ollama_base_url) setUrl(c.ollama_base_url);
+      if (c.ollama_model) setModel(c.ollama_model);
+    }).catch(() => {});
+  }, []);
+
+  const checkStatus = useCallback(async () => {
+    setChecking(true);
+    setStatus("unknown");
+    setModels([]);
+    try {
+      const ok = await invoke<boolean>("check_ollama_status");
+      setStatus(ok ? "online" : "offline");
+      if (ok) {
+        const list = await invoke<string[]>("list_ollama_models").catch(() => []);
+        setModels(list);
+      }
+    } catch {
+      setStatus("offline");
+    } finally {
+      setChecking(false);
+    }
+  }, []);
+
+  const handleSave = useCallback(async () => {
+    setSaving(true);
+    setMsg(null);
+    try {
+      await invoke("save_ollama_settings", {
+        baseUrl: url.trim() || null,
+        model: model.trim() || null,
+      });
+      setMsg("저장 완료");
+    } catch (e) {
+      setMsg(`저장 실패: ${e}`);
+    } finally {
+      setSaving(false);
+    }
+  }, [url, model]);
+
+  const statusColor =
+    status === "online" ? "text-green-400" : status === "offline" ? "text-red-400" : "text-white/40";
+  const statusLabel =
+    status === "online" ? "● 온라인" : status === "offline" ? "○ 오프라인" : "○ 미확인";
+
+  return (
+    <section className="space-y-2 border border-orange-400/20 rounded-lg p-3 bg-orange-400/5">
+      <h3 className="flex items-center gap-1.5 text-[11px] font-semibold text-orange-300/90 uppercase tracking-wider">
+        🦙 Ollama 백엔드
+        <span className={`ml-auto text-[9px] font-mono ${statusColor}`}>{statusLabel}</span>
+      </h3>
+      <p className="text-[10px] text-white/40 leading-relaxed">
+        로컬 Ollama가 실행 중이면 embedded 미로드 시 자동 폴백. xLLM보다 우선.
+      </p>
+
+      <div className="space-y-1">
+        <span className="text-[10px] text-white/35">서버 URL</span>
+        <div className="flex gap-1.5">
+          <Input
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            placeholder="http://localhost:11434"
+            className="flex-1 font-mono text-[11px] focus:border-orange-400/40"
+          />
+          <button
+            onClick={checkStatus}
+            disabled={checking}
+            className="px-2.5 py-1 rounded border border-orange-400/30 bg-orange-500/10 hover:bg-orange-500/20 text-[11px] text-orange-200 disabled:opacity-40 transition-colors whitespace-nowrap"
+          >
+            {checking ? "확인 중..." : "연결 확인"}
+          </button>
+        </div>
+      </div>
+
+      <div className="space-y-1">
+        <span className="text-[10px] text-white/35">모델</span>
+        {models.length > 0 ? (
+          <Select value={model} onValueChange={setModel}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="(모델 선택)" />
+            </SelectTrigger>
+            <SelectContent>
+              {models.map((m) => (
+                <SelectItem key={m} value={m}>{m}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        ) : (
+          <Input
+            value={model}
+            onChange={(e) => setModel(e.target.value)}
+            placeholder="예: llama3.2:3b, qwen2.5-coder:7b"
+            className="font-mono text-[11px] focus:border-orange-400/40"
+          />
+        )}
+        {status === "offline" && (
+          <p className="text-[10px] text-red-400/80">
+            Ollama 서버 미응답 — <code className="text-[9px]">ollama serve</code> 실행 후 재확인
+          </p>
+        )}
+      </div>
+
+      <div className="flex items-center gap-2">
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          className="flex items-center gap-1.5 px-3 py-1 rounded bg-orange-500/15 hover:bg-orange-500/25 border border-orange-400/25 text-[11px] text-orange-200 disabled:opacity-40 transition-colors"
+        >
+          {saving ? <Loader2 size={10} className="animate-spin" /> : null}
+          저장
+        </button>
+        {msg && <span className="text-[10px] text-white/50">{msg}</span>}
+      </div>
+    </section>
   );
 };
 

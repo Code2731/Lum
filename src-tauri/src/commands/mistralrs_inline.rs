@@ -4,7 +4,7 @@
 //! `embedded-ai` feature 활성화 시만 컴파일됨 (CUDA toolchain + MSVC 필요).
 #![cfg(feature = "embedded-ai")]
 
-use mistralrs::{GgufLoraModelBuilder, GgufModelBuilder, IsqType, Model, NormalModelBuilder, ResponseOk, TextMessageRole, TextMessages};
+use mistralrs::{GgufLoraModelBuilder, GgufModelBuilder, IsqType, Model, TextModelBuilder, ResponseOk, TextMessageRole, TextMessages};
 use mistralrs_core::Ordering as LoraOrdering;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, OnceLock};
@@ -194,7 +194,7 @@ pub async fn load_model_normal(
     }
     *guard = None;
     let _ = app.emit("embed_load_progress", format!("🔄 {model_path} BF16→ISQ {isq:?} 변환 로드 중 (RAM 여유 필요)..."));
-    let model = NormalModelBuilder::new(model_path.to_string())
+    let model = TextModelBuilder::new(model_path.to_string())
         .with_isq(isq)
         .build()
         .await

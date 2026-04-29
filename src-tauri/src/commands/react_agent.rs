@@ -53,17 +53,26 @@ fn emit_event(app: &AppHandle, kind: &str, content: impl Into<String>, tool: Opt
 // ─── 시스템 프롬프트 ───────────────────────────────────────────────────────────
 
 fn system_prompt() -> &'static str {
-    r#"당신은 터미널 에이전트입니다. 주어진 목표를 달성하기 위해 도구를 사용합니다.
+    r#"당신은 Windows 터미널 에이전트입니다. 주어진 목표를 달성하기 위해 도구를 사용합니다.
+
+운영체제: Windows (cmd.exe 명령어 사용)
 
 사용 가능한 도구:
-- shell({"cmd": "명령어"}) — 셸 명령어 실행 (stdout+stderr 반환)
+- shell({"cmd": "명령어"}) — cmd /C 명령어 실행 (stdout+stderr 반환)
 - read_file({"path": "파일경로"}) — 파일 내용 읽기
 - list_dir({"path": "경로"}) — 디렉토리 목록
 - get_repo_map({"cwd": "경로"}) — 코드베이스 구조 요약
-- git_diff({"cwd": "경로"}) — git diff 조회 (unstaged)
+- git_diff({"cwd": "경로"}) — git diff 조회
 - run_tests({"cwd": "경로"}) — 테스트 자동 감지 후 실행
 
-응답 형식:
+Windows 유용한 명령어 예시:
+- 드라이브 용량: shell({"cmd": "wmic logicaldisk get Caption,FreeSpace,Size"})
+- 특정 드라이브: shell({"cmd": "dir H:\\"})
+- 현재 디렉토리: shell({"cmd": "cd"})
+- 프로세스 목록: shell({"cmd": "tasklist"})
+- 환경변수: shell({"cmd": "set"})
+
+응답 형식 (반드시 준수):
 THOUGHT: <현재 상황 분석 및 다음 행동 이유>
 ACTION: 도구명({"param": "값"})
 
@@ -73,8 +82,9 @@ ANSWER: <사용자에게 전달할 최종 답변>
 
 규칙:
 - ACTION과 ANSWER 중 하나만 출력 (둘 다 출력 금지)
-- THOUGHT는 항상 ACTION/ANSWER 앞에
-- 모든 경로는 절대 경로 또는 cwd 기준 상대 경로
+- THOUGHT는 항상 ACTION/ANSWER 앞에 위치
+- 이전 OBSERVATION으로 충분한 정보를 얻었으면 즉시 ANSWER 출력
+- 동일 도구를 같은 인수로 2회 이상 호출 금지
 - 불필요한 도구 호출 최소화
 - 한국어로 응답"#
 }
@@ -280,12 +290,20 @@ pub async fn react_agent_run(
     cwd: String,
 ) -> Result<()> {
     cancel_flag().store(false, Ordering::Relaxed);
+
+    // CWD 폴백 — 빈 문자열이면 현재 프로세스 작업 디렉토리 사용
+    let effective_cwd = if cwd.is_empty() {
+        std::env::current_dir()
+            .map(|p| p.to_string_lossy().into_owned())
+            .unwrap_or_else(|_| "C:\\".to_string())
+    } else {
+        cwd.clone()
+    };
+
     emit_event(&app, "status", format!("목표: {goal}"), None, Some(0));
 
-    // 대화 히스토리: system + 누적 user/assistant 메시지
-    // call_xllm은 단일 프롬프트만 받으므로 전체 대화를 하나의 프롬프트로 합침
     let mut conversation = format!(
-        "{}\n\n목표: {goal}\n\nCWD: {cwd}",
+        "{}\n\n목표: {goal}\n\nCWD: {effective_cwd}",
         system_prompt()
     );
 
@@ -293,6 +311,9 @@ pub async fn react_agent_run(
         .timeout(std::time::Duration::from_secs(120))
         .build()
         .map_err(|e| LumError::Network(e.to_string()))?;
+
+    // 루프 방지: 최근 액션 히스토리 (tool+args 조합)
+    let mut recent_actions: Vec<String> = Vec::new();
 
     for step in 0..MAX_STEPS {
         if cancel_flag().load(Ordering::Relaxed) {
@@ -302,7 +323,7 @@ pub async fn react_agent_run(
 
         emit_event(&app, "status", format!("단계 {} / {MAX_STEPS}", step + 1), None, Some(step + 1));
 
-        // LLM 호출
+        // 로컬 전용 — embedded GGUF 우선, 미로드면 xLLM HTTP (127.0.0.1:8080)
         let response = match call_xllm(&client, "", &conversation).await {
             Ok(r) => r,
             Err(e) => {
@@ -330,22 +351,40 @@ pub async fn react_agent_run(
             return Ok(());
         };
 
+        // 동일 액션 반복 감지 → ANSWER 강제 요청
+        let action_key = format!("{}:{}", action.tool, action.args);
+        let repeat_count = recent_actions.iter().filter(|a| *a == &action_key).count();
+        if repeat_count >= 2 {
+            let force_prompt = format!(
+                "{conversation}\n\n{response}\n\n[시스템]: 동일한 도구를 같은 인수로 반복 호출하고 있습니다. 지금까지 수집된 정보를 바탕으로 즉시 ANSWER를 출력하세요."
+            );
+            if let Ok(final_resp) = call_xllm(&client, "", &force_prompt).await {
+                let answer = parse_answer(&final_resp)
+                    .unwrap_or_else(|| final_resp.trim().to_string());
+                emit_event(&app, "answer", &answer, None, Some(step + 1));
+            }
+            return Ok(());
+        }
+        recent_actions.push(action_key);
+
         // ACTION 이벤트 emit
-        let action_desc = format!(
-            "{tool}({args})",
-            tool = action.tool,
-            args = action.args
-        );
+        let action_desc = format!("{}({})", action.tool, action.args);
         emit_event(&app, "action", &action_desc, Some(&action.tool), Some(step + 1));
 
         // 도구 실행
-        let observation = run_tool(&action.tool, &action.args, &cwd).await;
+        let observation = run_tool(&action.tool, &action.args, &effective_cwd).await;
         emit_event(&app, "observation", &observation, None, Some(step + 1));
 
-        // 대화 히스토리 업데이트
-        conversation = format!(
-            "{conversation}\n\n{response}\n\nOBSERVATION: {observation}"
-        );
+        // 대화 히스토리 업데이트 (최근 6턴만 유지해 컨텍스트 폭발 방지)
+        let turn = format!("\n\n{response}\n\nOBSERVATION: {observation}");
+        conversation.push_str(&turn);
+
+        // 시스템 프롬프트 + 목표 제외 이전 턴이 6개 초과 시 앞부분 제거
+        let turns: Vec<&str> = conversation.split("\n\nTHOUGHT:").collect();
+        if turns.len() > 7 {
+            let kept = turns[turns.len() - 6..].join("\n\nTHOUGHT:");
+            conversation = format!("{}\n\nTHOUGHT:{}", turns[0], kept);
+        }
     }
 
     // 최대 단계 초과
