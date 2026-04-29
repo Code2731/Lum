@@ -216,6 +216,7 @@ interface EmbedCandidate {
   folder: string;
   folder_label: string;
   gguf_files: string[];
+  has_safetensors: boolean;
 }
 
 interface LoraCandidate {
@@ -231,6 +232,7 @@ const EmbeddedInferenceDebug: React.FC = () => {
   const [loraCandidates, setLoraCandidates] = useState<LoraCandidate[]>([]);
   const [modelDir, setModelDir] = useState("");
   const [ggufFile, setGgufFile] = useState("");
+  const [isqType, setIsqType] = useState("Q4K");
   const [loraPath, setLoraPath] = useState("");
   const [prompt, setPrompt] = useState("");
   const [response, setResponse] = useState<string | null>(null);
@@ -262,11 +264,13 @@ const EmbeddedInferenceDebug: React.FC = () => {
 
   const currentFolder = candidates.find((c) => c.folder === modelDir);
   const fileOptions = currentFolder?.gguf_files ?? [];
+  // GGUF 없고 safetensors 있는 폴더 → BF16+ISQ 모드
+  const isSafetensorsMode = !!(currentFolder?.has_safetensors && fileOptions.length === 0);
   const loraTrimmed = loraPath.trim();
 
-  const { base: baseLoadedKey, lora: loraLoadedPath } = loadedKey
+  const { base: baseLoadedKey, lora: loraLoadedPath, isq: isqLoaded } = loadedKey
     ? parseLoadedKey(loadedKey)
-    : { base: "", lora: "" };
+    : { base: "", lora: "", isq: "" };
   const loadedFilename = baseLoadedKey ? shortPath(baseLoadedKey) : null;
   const loadedLoraName = loraLoadedPath ? shortPath(loraLoadedPath) : null;
 
@@ -277,14 +281,22 @@ const EmbeddedInferenceDebug: React.FC = () => {
       ? loraTrimmed
       : LORA_MANUAL;
 
-  const selectedKey = modelDir && ggufFile
-    ? loraTrimmed ? `${modelDir}/${ggufFile}+lora:${loraTrimmed}` : `${modelDir}/${ggufFile}`
+  const selectedKey = modelDir
+    ? isSafetensorsMode
+      ? `${modelDir}+isq:${isqType}`
+      : ggufFile
+        ? loraTrimmed ? `${modelDir}/${ggufFile}+lora:${loraTrimmed}` : `${modelDir}/${ggufFile}`
+        : null
     : null;
   const isSameModel = !!loadedKey && loadedKey === selectedKey;
 
   const onLoad = async () => {
-    if (!modelDir.trim() || !ggufFile.trim()) {
-      setResponse("❌ 모델 폴더와 GGUF 파일을 선택하세요");
+    if (!modelDir.trim()) {
+      setResponse("❌ 모델 폴더를 선택하세요");
+      return;
+    }
+    if (!isSafetensorsMode && !ggufFile.trim()) {
+      setResponse("❌ GGUF 파일을 선택하세요");
       return;
     }
     setBusy("load");
@@ -295,16 +307,21 @@ const EmbeddedInferenceDebug: React.FC = () => {
       setLoadElapsed(Math.floor((Date.now() - startMs) / 1000));
     }, 1000);
     try {
-      const r = loraTrimmed
-        ? await invoke<string>("embed_load_lora", {
-            modelDir: modelDir.trim(),
-            ggufFile: ggufFile.trim(),
-            loraAdapter: loraTrimmed,
+      const r = isSafetensorsMode
+        ? await invoke<string>("embed_load_normal", {
+            modelPath: modelDir.trim(),
+            isqType,
           })
-        : await invoke<string>("embed_load_gguf", {
-            modelDir: modelDir.trim(),
-            ggufFile: ggufFile.trim(),
-          });
+        : loraTrimmed
+          ? await invoke<string>("embed_load_lora", {
+              modelDir: modelDir.trim(),
+              ggufFile: ggufFile.trim(),
+              loraAdapter: loraTrimmed,
+            })
+          : await invoke<string>("embed_load_gguf", {
+              modelDir: modelDir.trim(),
+              ggufFile: ggufFile.trim(),
+            });
       setResponse(`✅ ${r}`);
       refreshLoadedKey();
     } catch (e) {
@@ -359,7 +376,9 @@ const EmbeddedInferenceDebug: React.FC = () => {
         🧪 임베디드 추론
         <span className={`ml-auto text-[9px] font-mono truncate max-w-[220px] ${loadedKey ? "text-green-400" : "text-white/40"}`}
           title={loadedKey ?? undefined}>
-          {loadedKey ? `● ${loadedFilename}${loadedLoraName ? ` +L:${loadedLoraName}` : ""}` : "○ 미로드"}
+          {loadedKey
+            ? `● ${loadedFilename}${loadedLoraName ? ` +L:${loadedLoraName}` : ""}${isqLoaded ? ` [${isqLoaded}]` : ""}`
+            : "○ 미로드"}
         </span>
       </h3>
       <p className="text-[10px] text-white/40 leading-relaxed">
@@ -422,6 +441,25 @@ const EmbeddedInferenceDebug: React.FC = () => {
         </>
       )}
 
+      {/* ISQ 양자화 타입 — safetensors(BF16) 모드일 때만 표시 */}
+      {isSafetensorsMode && (
+        <div className="space-y-1">
+          <span className="text-[10px] text-white/35">ISQ 양자화 타입</span>
+          <Select value={isqType} onValueChange={setIsqType}>
+            <SelectTrigger className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="Q4K">Q4K — 권장 · ~5GB/7B</SelectItem>
+              <SelectItem value="Q5K">Q5K — 균형 · ~6GB/7B</SelectItem>
+              <SelectItem value="Q6K">Q6K — 고품질 · ~7GB/7B</SelectItem>
+              <SelectItem value="Q8_0">Q8_0 — 최고품질 · ~8GB/7B</SelectItem>
+            </SelectContent>
+          </Select>
+          <p className="text-[10px] text-white/30">BF16 원본 → 즉석 양자화. GGUF 로드보다 수분 더 소요.</p>
+        </div>
+      )}
+
       {/* LoRA 어댑터 (선택) */}
       <div className="space-y-1">
         <span className="text-[10px] text-white/35">LoRA 어댑터 <span className="text-white/25">(선택)</span></span>
@@ -469,7 +507,7 @@ const EmbeddedInferenceDebug: React.FC = () => {
       <div className="flex gap-1.5">
         <button
           onClick={onLoad}
-          disabled={busy !== null || !modelDir.trim() || !ggufFile.trim()}
+          disabled={busy !== null || !modelDir.trim() || (!isSafetensorsMode && !ggufFile.trim())}
           className="flex-1 px-3 py-1.5 rounded bg-purple-500/20 hover:bg-purple-500/30 border border-purple-400/30 text-[11px] text-purple-200 disabled:opacity-40 transition-colors"
         >
           {busy === "load"

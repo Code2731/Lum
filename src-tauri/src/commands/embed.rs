@@ -11,6 +11,8 @@ pub struct EmbedCandidate {
     pub folder: String,
     pub folder_label: String,
     pub gguf_files: Vec<String>,
+    /// config.json + *.safetensors 존재 → BF16 ISQ 로드 가능
+    pub has_safetensors: bool,
 }
 
 #[derive(Serialize)]
@@ -19,8 +21,9 @@ pub struct LoraCandidate {
     pub folder_label: String,
 }
 
-/// 모델 저장 루트 디렉토리 안의 모델 폴더 + GGUF 파일 후보 목록 반환.
-/// embedded-ai feature 무관하게 항상 동작 — 후보 스캔은 cfg 가드 없음.
+/// 모델 저장 루트 디렉토리 안의 모델 폴더 목록 반환.
+/// GGUF 파일이 있으면 `gguf_files`, BF16 safetensors 폴더면 `has_safetensors = true`.
+/// embedded-ai feature 무관하게 항상 동작.
 #[tauri::command]
 pub fn list_embed_candidates() -> Vec<EmbedCandidate> {
     let root = crate::commands::mistral_setup::model_root_dir();
@@ -33,25 +36,31 @@ pub fn list_embed_candidates() -> Vec<EmbedCandidate> {
         let folder = entry.path();
         let label = entry.file_name().to_string_lossy().into_owned();
 
-        let mut ggufs: Vec<String> = std::fs::read_dir(&folder)
-            .ok()
-            .into_iter()
-            .flatten()
-            .flatten()
-            .filter_map(|e| {
-                let p = e.path();
-                if p.is_file() && p.extension().is_some_and(|x| x.eq_ignore_ascii_case("gguf")) {
-                    p.file_name().map(|n| n.to_string_lossy().into_owned())
-                } else { None }
-            })
-            .collect();
+        let mut ggufs: Vec<String> = Vec::new();
+        let mut has_safetensors = false;
+        let has_config = folder.join("config.json").exists();
+
+        for fe in std::fs::read_dir(&folder).ok().into_iter().flatten().flatten() {
+            let p = fe.path();
+            if !p.is_file() { continue }
+            if p.extension().is_some_and(|x| x.eq_ignore_ascii_case("gguf")) {
+                if let Some(n) = p.file_name() { ggufs.push(n.to_string_lossy().into_owned()); }
+            } else if has_config && p.extension().is_some_and(|x| x.eq_ignore_ascii_case("safetensors")) {
+                has_safetensors = true;
+            }
+        }
+        // 샤딩된 safetensors도 감지 (model.safetensors.index.json)
+        if has_config && folder.join("model.safetensors.index.json").exists() {
+            has_safetensors = true;
+        }
         ggufs.sort();
 
-        if !ggufs.is_empty() {
+        if !ggufs.is_empty() || has_safetensors {
             out.push(EmbedCandidate {
                 folder: folder.to_string_lossy().into_owned(),
                 folder_label: label,
                 gguf_files: ggufs,
+                has_safetensors,
             });
         }
     }
@@ -161,6 +170,33 @@ pub async fn embed_load_lora(
     #[cfg(not(feature = "embedded-ai"))]
     {
         let _ = (app, model_dir, gguf_file, lora_adapter);
+        Err(DISABLED_MSG.to_string())
+    }
+}
+
+/// BF16 safetensors 폴더를 ISQ 양자화해서 로드.
+/// `isq_type`: "Q4K" | "Q5K" | "Q6K" | "Q8_0"
+#[tauri::command]
+pub async fn embed_load_normal(
+    app: tauri::AppHandle,
+    model_path: String,
+    isq_type: String,
+) -> Result<String, String> {
+    #[cfg(feature = "embedded-ai")]
+    {
+        use mistralrs::IsqType;
+        let isq = match isq_type.as_str() {
+            "Q4K" | "Q4_K_M" => IsqType::Q4K,
+            "Q5K" | "Q5_K_M" => IsqType::Q5K,
+            "Q6K" | "Q6_K"   => IsqType::Q6K,
+            "Q8_0"            => IsqType::Q8_0,
+            other => return Err(format!("알 수 없는 ISQ 타입: {other}")),
+        };
+        crate::commands::mistralrs_inline::load_model_normal(&app, &model_path, isq).await
+    }
+    #[cfg(not(feature = "embedded-ai"))]
+    {
+        let _ = (app, model_path, isq_type);
         Err(DISABLED_MSG.to_string())
     }
 }

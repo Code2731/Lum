@@ -10,11 +10,16 @@ export const shortPath = (p: string): string => {
   return parts.filter(Boolean).pop() || "~";
 };
 
-export const parseLoadedKey = (key: string): { base: string; lora: string } => {
-  const idx = key.indexOf("+lora:");
-  return idx >= 0
-    ? { base: key.slice(0, idx), lora: key.slice(idx + 6) }
-    : { base: key, lora: "" };
+export const parseLoadedKey = (key: string): { base: string; lora: string; isq: string } => {
+  if (key.includes("+lora:")) {
+    const idx = key.indexOf("+lora:");
+    return { base: key.slice(0, idx), lora: key.slice(idx + 6), isq: "" };
+  }
+  if (key.includes("+isq:")) {
+    const idx = key.indexOf("+isq:");
+    return { base: key.slice(0, idx), lora: "", isq: key.slice(idx + 5) };
+  }
+  return { base: key, lora: "", isq: "" };
 };
 
 export const cosineSimilarity = (a: number[], b: number[]): number => {

@@ -419,6 +419,20 @@ const ModelManager: React.FC<Props> = ({ onClose }) => {
                   )}
                 </div>
 
+                {/* 한국어 토큰 효율 안내 */}
+                <details className="group">
+                  <summary className="cursor-pointer text-[10px] text-yellow-400/60 hover:text-yellow-400/90 transition-colors list-none flex items-center gap-1">
+                    <span className="group-open:rotate-90 transition-transform inline-block">▸</span>
+                    🇰🇷 한국어 토큰 효율 — 모델 고르는 법
+                  </summary>
+                  <div className="mt-1.5 p-2.5 bg-yellow-400/5 border border-yellow-400/15 rounded-lg space-y-1.5 text-[10px] text-white/60 leading-relaxed">
+                    <p><span className="text-yellow-300/80 font-medium">tokenizer.json 확인:</span> "안녕하세요"처럼 한국어 단어가 합쳐진 토큰이 많을수록 같은 문장에 토큰을 적게 씀 → 빠르고 저렴.</p>
+                    <p><span className="text-yellow-300/80 font-medium">SentencePiece 우위:</span> 최근 연구에서 SentencePiece 기반 한국어 서브워드가 BPE보다 효율적. EXAONE·EEVE·Bllossom 계열이 대표.</p>
+                    <p><span className="text-yellow-300/80 font-medium">EEVE-Korean 10.8B:</span> 기본 Llama 어휘(32K) → 102K로 확장. 한국어 토큰 수 약 <span className="text-emerald-400/80">30~40% 절감</span>. 아래 프리셋 <code className="bg-white/10 px-1 rounded">🇰🇷⚡ 토큰 최적화</code> 참고.</p>
+                    <p><span className="text-yellow-300/80 font-medium">크기 주의:</span> BF16 원본 다운로드 후 mistral.rs가 ISQ 양자화. RAM 여유 있을 때 사용 권장.</p>
+                  </div>
+                </details>
+
                 {/* 추천 프리셋 */}
                 {catalog.heavy_presets.length > 0 && (
                   <div>

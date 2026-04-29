@@ -137,6 +137,10 @@
     { "label": "EXAONE Deep 32B (한국어 추론)",      "id": "LGAI-EXAONE/EXAONE-Deep-32B",                           "size": "~19GB", "tag": "🇰🇷🧠" },
     { "label": "Mistral Small 24B",                  "id": "mistralai/Mistral-Small-24B-Instruct-2501",             "size": "~14GB", "tag": "🇫🇷 균형" },
     { "label": "Gemma 3 27B",                        "id": "google/gemma-3-27b-it",                                 "size": "~16GB", "tag": "🤖 Google" },
-    { "label": "Llama 3.3 70B (멀티GPU)",            "id": "meta-llama/Llama-3.3-70B-Instruct",                     "size": "~40GB", "tag": "🦙 Meta" }
+    { "label": "Llama 3.3 70B (멀티GPU)",            "id": "meta-llama/Llama-3.3-70B-Instruct",                     "size": "~40GB", "tag": "🦙 Meta" },
+
+    { "label": "EEVE Korean 10.8B (102K 확장 어휘)", "id": "yanolja/EEVE-Korean-Instruct-10.8B-v1.0",               "size": "~22GB", "tag": "🇰🇷⚡ 토큰 최적화" },
+    { "label": "Llama-3.1 Korean Bllossom 8B",       "id": "Bllossom/llama-3.1-Korean-Bllossom-8B",                 "size": "~16GB", "tag": "🇰🇷 한국어" },
+    { "label": "Llama-3.2 Korean Bllossom 3B (경량)", "id": "Bllossom/llama-3.2-Korean-Bllossom-3B",                "size": "~6GB",  "tag": "🇰🇷 경량" }
   ]
 }

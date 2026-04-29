@@ -4,7 +4,7 @@
 //! `embedded-ai` feature 활성화 시만 컴파일됨 (CUDA toolchain + MSVC 필요).
 #![cfg(feature = "embedded-ai")]
 
-use mistralrs::{GgufLoraModelBuilder, GgufModelBuilder, Model, ResponseOk, TextMessageRole, TextMessages};
+use mistralrs::{GgufLoraModelBuilder, GgufModelBuilder, IsqType, Model, NormalModelBuilder, ResponseOk, TextMessageRole, TextMessages};
 use mistralrs_core::Ordering as LoraOrdering;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, OnceLock};
@@ -177,6 +177,34 @@ pub async fn load_model_with_lora(
     *guard = Some(LoadedState { model: Arc::new(model), key: key.clone() });
     let _ = app.emit("embed_load_progress", format!("✅ {gguf_filename} + LoRA 로드 완료"));
     Ok(format!("LoRA 로드 완료: {gguf_filename}"))
+}
+
+/// BF16 safetensors 모델을 즉석 양자화(ISQ)해서 로드.
+/// GGUF 없이 HuggingFace BF16 원본을 그대로 쓸 수 있음.
+/// BF16 메모리에 올린 뒤 ISQ 변환 → 수분 소요, RAM 여유 필요.
+pub async fn load_model_normal(
+    app: &AppHandle,
+    model_path: &str,
+    isq: IsqType,
+) -> Result<String, String> {
+    let key = format!("{model_path}+isq:{isq:?}");
+    let mut guard = engine_mutex().lock().await;
+    if guard.as_ref().is_some_and(|s| s.key == key) {
+        return Ok(format!("이미 로드됨: {model_path}"));
+    }
+    *guard = None;
+    let _ = app.emit("embed_load_progress", format!("🔄 {model_path} BF16→ISQ {isq:?} 변환 로드 중 (RAM 여유 필요)..."));
+    let model = NormalModelBuilder::new(model_path.to_string())
+        .with_isq(isq)
+        .build()
+        .await
+        .map_err(|e| {
+            let _ = app.emit("embed_load_progress", format!("❌ 로드 실패: {e}"));
+            format!("BF16 ISQ 로드 실패: {e}")
+        })?;
+    *guard = Some(LoadedState { model: Arc::new(model), key: key.clone() });
+    let _ = app.emit("embed_load_progress", format!("✅ ISQ {isq:?} 로드 완료: {model_path}"));
+    Ok(format!("로드 완료: {model_path} (ISQ {isq:?})"))
 }
 
 // Tauri command 노출은 commands::embed 모듈의 facade에서. 여기는 순수 라이브러리.
