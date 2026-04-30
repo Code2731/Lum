@@ -109,11 +109,37 @@ export function useAutoHealing(
     }
   }, [analyzeError, selectedModel]);
 
+  // Phase 117 — 결정을 dataset에 기록. 실패는 무시 (학습 데이터 수집은 best-effort).
+  const recordDecision = useCallback(
+    (decision: "approve" | "reject", appliedCommand?: string) => {
+      if (!healingError || !healingResult) return;
+      invoke("record_healing_decision", {
+        model: selectedModel,
+        error: healingError,
+        analysis: healingResult.analysis ?? "",
+        suggestion: healingResult.suggestion ?? "",
+        safetyLevel: healingResult.safetyLevel,
+        decision,
+        appliedCommand: appliedCommand ?? null,
+      }).catch(() => {});
+    },
+    [healingError, healingResult, selectedModel],
+  );
+
   const handleExecute = useCallback((cmd: string) => {
+    recordDecision("approve", cmd);
     ptyWriteRefs.current.get(activePaneIdRef.current)?.(cmd + "\n");
     setHealingError(null);
     setHealingResult(null);
-  }, [activePaneIdRef, ptyWriteRefs]);
+  }, [activePaneIdRef, ptyWriteRefs, recordDecision]);
+
+  const clearHealing = useCallback(() => {
+    // 분석 결과가 있는 상태에서 dismiss = reject 신호.
+    // analyze 전에 닫는 건 데이터 가치가 없으므로 기록하지 않음.
+    if (healingResult) recordDecision("reject");
+    setHealingError(null);
+    setHealingResult(null);
+  }, [healingResult, recordDecision]);
 
   return {
     healingError,
@@ -123,6 +149,6 @@ export function useAutoHealing(
     detectError,
     handleAnalyze,
     handleExecute,
-    clearHealing: () => { setHealingError(null); setHealingResult(null); },
+    clearHealing,
   };
 }

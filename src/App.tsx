@@ -22,7 +22,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import {
   Zap, Cpu, Loader2, TerminalSquare, LayoutList, MousePointer2,
   Package, Database, Plus, X, Columns2, Rows2, SlidersHorizontal, ArrowUpCircle, GitCompareArrows, Palette,
-  GitBranch, Container, Layers, Lock, BookOpen, Bell, Activity, FolderTree, Brain, PlugZap, Users,
+  GitBranch, Container, Layers, Lock, BookOpen, Bell, Activity, FolderTree, Brain, PlugZap, Users, Sparkles,
 } from "lucide-react";
 import SshConnectModal from "./components/SshConnectModal";
 import { useReactAgent } from "./hooks/useReactAgent";
@@ -65,6 +65,7 @@ const OnboardingWizard = lazy(() => import("./components/OnboardingWizard"));
 const DiffReviewPanel = lazy(() => import("./components/DiffReviewPanel"));
 const McpPanel = lazy(() => import("./components/McpPanel"));
 const SquadPanel = lazy(() => import("./components/SquadPanel"));
+const HealingDatasetPanel = lazy(() => import("./components/HealingDatasetPanel"));
 
 type ViewMode = "terminal" | "canvas" | "list";
 
@@ -175,6 +176,7 @@ const App: React.FC = () => {
     showPalette, setShowPalette,
     showSshModal, setShowSshModal,
     showSquadPanel, setShowSquadPanel,
+    showHealingDataset, setShowHealingDataset,
     closeOverlays,
   } = usePanelVisibility();
 
@@ -656,6 +658,14 @@ const App: React.FC = () => {
             onClick={() => { setShowSquadPanel(v => !v); if (!showSquadPanel) squadStore.load(); }}
           >
             <Users size={14} />
+          </ToolbarIconButton>
+          <ToolbarIconButton
+            label="Auto-Heal 학습 데이터셋"
+            tone="cyan"
+            active={showHealingDataset}
+            onClick={() => setShowHealingDataset(v => !v)}
+          >
+            <Sparkles size={14} />
           </ToolbarIconButton>
           <ToolbarIconButton
             label="RAG 코드 검색"
@@ -1230,6 +1240,14 @@ const App: React.FC = () => {
         <Suspense fallback={null}>
           <ErrorBoundary label="MCP">
             <McpPanel onClose={() => setShowMcpPanel(false)} />
+          </ErrorBoundary>
+        </Suspense>
+      )}
+
+      {showHealingDataset && (
+        <Suspense fallback={null}>
+          <ErrorBoundary label="Auto-Heal 데이터셋">
+            <HealingDatasetPanel onClose={() => setShowHealingDataset(false)} />
           </ErrorBoundary>
         </Suspense>
       )}

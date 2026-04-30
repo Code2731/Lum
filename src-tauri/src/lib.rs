@@ -185,6 +185,11 @@ pub fn run() {
             commands::squad::squad_list,
             commands::squad::squad_create,
             commands::squad::squad_remove,
+            // Phase 117 — Auto-Heal 학습 데이터셋
+            commands::healing_dataset::record_healing_decision,
+            commands::healing_dataset::list_healing_dataset,
+            commands::healing_dataset::clear_healing_dataset,
+            commands::healing_dataset::export_healing_dataset,
             // Workspace
             commands::workspace::save_workspace,
             commands::workspace::list_workspaces,

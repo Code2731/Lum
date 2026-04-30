@@ -12,6 +12,7 @@ pub mod edit_apply;
 pub mod env;
 pub mod git;
 pub mod hardware;
+pub mod healing_dataset;
 pub mod history;
 pub mod models;
 pub mod ollama;
