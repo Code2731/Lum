@@ -15,6 +15,15 @@ use crate::commands::terminal::TerminalState;
 use crate::mcp::McpState;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
+use tauri::{Emitter, Manager};
+use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
+
+// Phase 115 — Quake Mode 단축키 modifiers. macOS=Cmd+Shift, 그 외=Ctrl+Shift.
+// 백틱(`) 대신 Space — 셸에서 백틱이 자주 쓰여 충돌 회피.
+#[cfg(target_os = "macos")]
+const QUAKE_MODS: Modifiers = Modifiers::META.union(Modifiers::SHIFT);
+#[cfg(not(target_os = "macos"))]
+const QUAKE_MODS: Modifiers = Modifiers::CONTROL.union(Modifiers::SHIFT);
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -50,6 +59,30 @@ pub fn run() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_global_shortcut::Builder::new().build())
+        .setup(|app| {
+            // Phase 115 — Quake Mode: 글로벌 단축키로 윈도우 toggle + AI 바 자동 포커스.
+            let quake = Shortcut::new(Some(QUAKE_MODS), Code::Space);
+            let handle = app.handle().clone();
+            app.global_shortcut().on_shortcut(quake, move |_app, _scut, event| {
+                if event.state() != ShortcutState::Pressed {
+                    return;
+                }
+                let Some(window) = handle.get_webview_window("main") else { return; };
+                let visible = window.is_visible().unwrap_or(false);
+                let focused = window.is_focused().unwrap_or(false);
+                if visible && focused {
+                    let _ = window.hide();
+                } else {
+                    let _ = window.show();
+                    let _ = window.unminimize();
+                    let _ = window.set_focus();
+                    // 프론트가 AI 바를 열고 입력에 포커스
+                    let _ = handle.emit("quake_invoked", ());
+                }
+            })?;
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             // Hardware
             commands::hardware::get_hardware_specs,

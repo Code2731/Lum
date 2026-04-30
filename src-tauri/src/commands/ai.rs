@@ -11,6 +11,68 @@ use tauri::{command, Emitter};
 const XLLM_TOKEN_EVENT: &str = "xllm_token";
 const SSE_MAX_LINE_BUF: usize = 64 * 1024;
 
+// Phase 115 — Privacy Ledger 이벤트 이름. 프론트 usePrivacyLedger 훅이 구독.
+const AI_ROUTE_EVENT: &str = "ai_route_event";
+
+/// Phase 115 — 단일 AI 호출의 라우팅 결과. 백엔드명 + 외부 네트워크 여부 + latency.
+/// 프론트는 이 이벤트들을 누적해 "100% on-device" 배지/통계를 산출.
+#[derive(Debug, Serialize, Clone)]
+pub struct AiRouteEvent {
+    pub backend: &'static str, // "embedded" | "ollama" | "xllm" | "gemini"
+    pub online: bool,          // true = 외부 네트워크로 나감 (LAN 포함 아님)
+    pub model: Option<String>,
+    pub prompt_chars: usize,
+    pub latency_ms: u64,
+    pub ts_ms: u64, // unix epoch ms
+}
+
+/// loopback(127.x / localhost / ::1)이면 false, 그 외 호스트면 true.
+/// MVP — LAN(192.168.x 등)은 "online"으로 분류해 보수적으로 표시.
+fn is_remote_url(url: &str) -> bool {
+    let lower = url.to_lowercase();
+    !(lower.contains("://localhost")
+        || lower.contains("://127.")
+        || lower.contains("://0.0.0.0")
+        || lower.contains("://[::1]"))
+}
+
+fn now_ms() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_millis() as u64)
+        .unwrap_or(0)
+}
+
+fn emit_route(
+    app: &tauri::AppHandle,
+    backend: &'static str,
+    online: bool,
+    model: Option<String>,
+    prompt_chars: usize,
+    latency_ms: u64,
+) {
+    let _ = app.emit(
+        AI_ROUTE_EVENT,
+        AiRouteEvent {
+            backend,
+            online,
+            model,
+            prompt_chars,
+            latency_ms,
+            ts_ms: now_ms(),
+        },
+    );
+}
+
+#[cfg(feature = "embedded-ai")]
+fn embedded_loaded_key() -> Option<String> {
+    crate::commands::mistralrs_inline::loaded_key()
+}
+#[cfg(not(feature = "embedded-ai"))]
+fn embedded_loaded_key() -> Option<String> {
+    None
+}
+
 pub type AiStreamCancel = Arc<AtomicBool>;
 
 const GEMINI_BASE_URL: &str = "https://generativelanguage.googleapis.com/v1beta/models";
@@ -434,6 +496,25 @@ mod tests {
         let imgs = vec!["img".to_string()];
         assert!(try_embedded_inference("hello", &imgs).await.is_none());
     }
+
+    // Phase 115 — Privacy Ledger 분류 가드.
+    // 회귀: loopback 변형은 모두 offline, 외부 호스트는 online.
+    #[test]
+    fn is_remote_url_classifies_loopback_as_offline() {
+        assert!(!is_remote_url("http://localhost:11434"));
+        assert!(!is_remote_url("http://127.0.0.1:8080"));
+        assert!(!is_remote_url("http://127.5.5.1:1234"));
+        assert!(!is_remote_url("http://0.0.0.0:5000"));
+        assert!(!is_remote_url("http://[::1]:8080"));
+        assert!(!is_remote_url("HTTPS://LOCALHOST:1234")); // 대소문자 무관
+    }
+
+    #[test]
+    fn is_remote_url_classifies_external_as_online() {
+        assert!(is_remote_url("https://api.example.com/v1"));
+        assert!(is_remote_url("http://192.168.1.5:11434")); // LAN도 보수적으로 online
+        assert!(is_remote_url("https://generativelanguage.googleapis.com/v1beta"));
+    }
 }
 
 /// xLLM 서버 상태 확인 — /v1/models 엔드포인트로 핑
@@ -613,9 +694,21 @@ pub async fn stream_ai_command(
     };
     let imgs = images.unwrap_or_default();
 
+    // Phase 115 — Privacy Ledger 계측: prompt 크기 + 시작 시각 기록 후 분기별 emit.
+    let prompt_chars = full_prompt.chars().count();
+    let started = std::time::Instant::now();
+
     if model.starts_with("gemini") {
         let single_image = imgs.first().map(|s| s.as_str());
         let result = call_gemini(&client, &model, &full_prompt, single_image).await?;
+        emit_route(
+            &app,
+            "gemini",
+            true,
+            Some(model.clone()),
+            prompt_chars,
+            started.elapsed().as_millis() as u64,
+        );
         let _ = app.emit(XLLM_TOKEN_EVENT, result.clone());
         Ok(result)
     } else {
@@ -626,13 +719,46 @@ pub async fn stream_ai_command(
         if let Some(result) =
             try_embedded_inference_stream(&app, &full_prompt, &imgs, &cancel_flag, show_reasoning).await
         {
+            if result.is_ok() {
+                emit_route(
+                    &app,
+                    "embedded",
+                    false,
+                    embedded_loaded_key(),
+                    prompt_chars,
+                    started.elapsed().as_millis() as u64,
+                );
+            }
             return result;
         }
         // Ollama 설정돼있으면 NDJSON 스트리밍 — xLLM 우회.
         if let Some(result) = try_ollama_stream(&app, &full_prompt, &cancel_flag).await {
+            if result.is_ok() {
+                let ollama_url = config.ollama_url();
+                emit_route(
+                    &app,
+                    "ollama",
+                    is_remote_url(&ollama_url),
+                    config.ollama_model.clone(),
+                    prompt_chars,
+                    started.elapsed().as_millis() as u64,
+                );
+            }
             return result;
         }
-        call_compat_stream(&app, &client, &full_prompt, &imgs, &config.xllm_url(), config.xllm_api_key.clone(), &cancel_flag).await
+        let xllm_url = config.xllm_url();
+        let result = call_compat_stream(&app, &client, &full_prompt, &imgs, &xllm_url, config.xllm_api_key.clone(), &cancel_flag).await;
+        if result.is_ok() {
+            emit_route(
+                &app,
+                "xllm",
+                is_remote_url(&xllm_url),
+                None,
+                prompt_chars,
+                started.elapsed().as_millis() as u64,
+            );
+        }
+        result
     }
 }
 

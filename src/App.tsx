@@ -34,6 +34,8 @@ import ScriptLibraryPanel from "./components/ScriptLibraryPanel";
 import SystemMonitorPanel from "./components/SystemMonitorPanel";
 import { useNotificationCenter } from "./hooks/useNotificationCenter";
 import NotificationCenter from "./components/NotificationCenter";
+import { usePrivacyLedger } from "./hooks/usePrivacyLedger";
+import PrivacyLedgerBadge from "./components/PrivacyLedgerBadge";
 import type { SshProfile } from "./hooks/useTabManager";
 import InfiniteCanvas from "./components/layout/InfiniteCanvas";
 import TerminalPane from "./components/TerminalPane";
@@ -191,6 +193,9 @@ const App: React.FC = () => {
   // 알림 센터
   const notifCenter = useNotificationCenter();
 
+  // Phase 115 — Privacy Ledger (세션 단위 AI 라우팅 가시화)
+  const privacyLedger = usePrivacyLedger();
+
   // 파일 탐색기 사이드바 (기본 열림)
   const [showFileExplorer, setShowFileExplorer] = useState(() => {
     try { return localStorage.getItem("lum.fileExplorer") !== "0"; } catch { return true; }
@@ -230,6 +235,17 @@ const App: React.FC = () => {
     invoke<boolean>("check_onboarding_complete")
       .then((done) => { if (!done) setShowOnboarding(true); })
       .catch(() => {});
+  }, []);
+
+  // Phase 115 — Quake Mode: 글로벌 단축키로 깨어났을 때 AI 바를 즉시 열고 포커스.
+  // 백엔드(lib.rs setup)가 윈도우 show + focus 처리, 프론트는 입력 UX 담당.
+  useEffect(() => {
+    const unlisten = listen<unknown>("quake_invoked", () => {
+      setShowAiBar(true);
+      // 윈도우 포커스 직후 input ref가 mount될 시간 필요
+      setTimeout(() => aiInputRef.current?.focus(), 80);
+    });
+    return () => { unlisten.then((f) => f()); };
   }, []);
 
 
@@ -570,6 +586,14 @@ const App: React.FC = () => {
               </div>
             );
           })()}
+
+          {/* Phase 115 — Privacy Ledger 배지 */}
+          <PrivacyLedgerBadge
+            state={privacyLedger.state}
+            isAllOnDevice={privacyLedger.isAllOnDevice}
+            onReset={privacyLedger.reset}
+          />
+          <ToolbarSeparator />
 
           {/* 그룹 1 — 워크스페이스 / 탐색 */}
           <ToolbarIconButton

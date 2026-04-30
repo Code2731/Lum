@@ -34,9 +34,9 @@ cd src-tauri && cargo test   # Rust 단위 테스트 실행
 **Tauri v2 앱** — Rust 백엔드 + React/TypeScript 프론트엔드. 커스텀 타이틀바 (decorations: false).
 
 ### Backend (`src-tauri/src/`)
-- **PTY 관리** (`lib.rs`): `HashMap`으로 탭/팬별 독립 PTY 세션.
+- **PTY 관리** (`lib.rs`): `HashMap`으로 탭/팬별 독립 PTY 세션. Phase 115 — `tauri-plugin-global-shortcut` 등록 + Quake Mode 단축키 핸들러(`Cmd/Ctrl+Shift+Space` → 윈도우 toggle + `quake_invoked` emit).
 - **임베디드 AI** (`commands/mistralrs_inline.rs`): mistralrs 0.8.1 GGUF 인프로세스 추론. `OnceLock<Mutex<Option<LoadedState>>>` 핫스왑. LoRA 어댑터 지원 (`embed_load_lora`).
-- **AI 라우팅** (`commands/ai.rs`): embedded → Ollama → xLLM HTTP → Gemini. `stream_ai_command` / `call_xllm` / `call_ai`. `active_file` 파라미터로 RAG 컨텍스트 자동 주입.
+- **AI 라우팅** (`commands/ai.rs`): embedded → Ollama → xLLM HTTP → Gemini. `stream_ai_command` / `call_xllm` / `call_ai`. `active_file` 파라미터로 RAG 컨텍스트 자동 주입. Phase 115 — `stream_ai_command` 4분기마다 `ai_route_event` emit (Privacy Ledger 데이터 소스).
 - **Ollama** (`commands/ollama.rs`): NDJSON 스트리밍 `/api/chat`. `ollama_base_url` + `ollama_model` config. `check_ollama_status` / `list_ollama_models`.
 - **RAG** (`commands/rag.rs`): `index_project` / `search_codebase` / `rag_context_for_file` — 소스코드 청킹 + 임베딩 벡터 검색. `embed_auto`: Ollama → xLLM 폴백 자동 선택.
 - **MCP** (`commands/mcp.rs`): stdio JSON-RPC, `~/.lum_mcp.json` 영속. 서버별 inner Mutex 동시성.
@@ -53,7 +53,9 @@ cd src-tauri && cargo test   # Rust 단위 테스트 실행
   - `useUpdateCheck` — GitHub Releases API 버전 비교 + `tauri-plugin-updater` 기반 업데이트
   - `useCommandBlocks` — OSC 133 파싱, 커맨드 블록 히스토리
   - `useSshProfiles` — SSH 프로필 저장/불러오기 (`~/.lum_ssh_profiles.json`)
+  - `usePrivacyLedger` (Phase 115) — `ai_route_event` 누적 → 백엔드별 호출 통계 + on-device 여부
 - **shadcn/ui** (`src/components/ui/`): Button, Dialog, AlertDialog, Command (cmdk), Input, Label, Switch, Tooltip, Textarea, Slider, Select, **ToolbarIconButton** — 모든 모달/폼 컴포넌트가 Radix 기반.
+- **PrivacyLedgerBadge** (Phase 115, `src/components/PrivacyLedgerBadge.tsx`): 헤더 좌상단 배지 — `100% On-Device` / `Cloud N%` 표시, 클릭 시 백엔드별 호출수·평균 latency·최근 호출 popover.
 - **ToolbarIconButton** (`src/components/ui/toolbar-icon-button.tsx`): 헤더 툴바 전용 — Tooltip + kbd 단축키 힌트 + `aria-pressed` active state + badge dot + `tone` variant(accent/cyan). `ToolbarSeparator`로 그룹 구분.
 - **WarpInputBar** (`src/components/WarpInputBar.tsx`): 입력 라우팅 — `!`=shell강제 / `@`=AI강제 / `#`=AI명령어제안 / `?`=설명 / `>>`=에이전트 / 기본=inputRouter 자동 판별.
 - **AIBlockStream** (`src/components/AIBlockStream.tsx`): 인라인 마크다운 스트림 렌더. EditBlockCard(SEARCH/REPLACE) + ToolCallCard(MCP) + TestResultCard 체인.
@@ -77,4 +79,6 @@ cd src-tauri && cargo test   # Rust 단위 테스트 실행
 - mistralrs MoE 모델은 partial offload 미지원 (candle 한계) — dense 모델만 사용.
 - SSD(Speculative Decoding): draft 모델은 메인의 1/5 이하 크기여야 가속 효과 있음.
 - **UI 디자인 시스템 (Phase 78)**: 헤더 툴바는 `ToolbarIconButton` + `ToolbarSeparator`로 그룹화(파일/AI/시스템). 모든 모달은 shadcn `Dialog` 사용 — 자체 백드롭 금지. 타이포 magic-pixel(`text-[10/11px]`) 대신 Tailwind 토큰(`text-xs`/`text-sm` + `font-medium`/`font-semibold`) 사용. 패널·배너 진입/이탈은 framer-motion `AnimatePresence` + `motion.div`. 모든 인터랙티브 요소에 `focus-visible:ring-1 focus-visible:ring-ring`. 토글 버튼은 `aria-pressed` 필수.
+- **Privacy Ledger (Phase 115)**: AI 라우팅을 가시화. `stream_ai_command` 분기마다 `ai_route_event { backend, online, model, prompt_chars, latency_ms, ts_ms }` emit. loopback URL은 offline, 그 외는 online으로 분류 (LAN도 보수적으로 online). 비스트리밍 경로(`call_xllm`/ReAct/git)는 향후 페이즈에서 확장.
+- **Quake Mode (Phase 115)**: `tauri-plugin-global-shortcut`. macOS=`Cmd+Shift+Space`, 그 외=`Ctrl+Shift+Space`. 가시+포커스면 hide, 아니면 show+focus+`quake_invoked` emit → 프론트가 AI 바 자동 오픈.
 
