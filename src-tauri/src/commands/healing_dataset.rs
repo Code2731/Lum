@@ -21,7 +21,7 @@ pub struct HealingRecord {
     pub error: String,
     pub analysis: String,
     pub suggestion: String,
-    pub safety_level: String, // "Safe" | "Caution" | "Risk" | "Blocked"
+    pub safety_level: String, // "Safe" | "Warning" | "Dangerous" | "Blocked"
     pub decision: String,     // "approve" | "reject"
     /// approve 시 실제 PTY로 보낸 명령 (사용자가 편집했을 수 있음). reject면 None.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -73,12 +73,11 @@ pub fn record_healing_decision(
 
 #[tauri::command]
 pub fn list_healing_dataset() -> Result<Vec<HealingRecord>> {
-    let path = dataset_path();
-    if !path.exists() {
-        return Ok(Vec::new());
-    }
-    let content = std::fs::read_to_string(&path)
-        .map_err(|e| LumError::Io(format!("dataset 읽기 실패: {e}")))?;
+    let content = match std::fs::read_to_string(dataset_path()) {
+        Ok(s) => s,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(Vec::new()),
+        Err(e) => return Err(LumError::Io(format!("dataset 읽기 실패: {e}"))),
+    };
     let mut out = Vec::new();
     for line in content.lines() {
         let trimmed = line.trim();
@@ -95,11 +94,11 @@ pub fn list_healing_dataset() -> Result<Vec<HealingRecord>> {
 
 #[tauri::command]
 pub fn clear_healing_dataset() -> Result<()> {
-    let path = dataset_path();
-    if path.exists() {
-        std::fs::remove_file(&path).map_err(|e| LumError::Io(e.to_string()))?;
+    match std::fs::remove_file(dataset_path()) {
+        Ok(()) => Ok(()),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
+        Err(e) => Err(LumError::Io(e.to_string())),
     }
-    Ok(())
 }
 
 const CHATML_SYSTEM: &str = "당신은 터미널 자동 치유 어시스턴트입니다. 주어진 에러에 대해 안전한 수정 명령을 한 줄로 제안하고, 그 이유를 간단히 설명하세요.";

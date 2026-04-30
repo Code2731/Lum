@@ -7,6 +7,9 @@ import { invoke } from "@tauri-apps/api/core";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete";
 import { Button } from "@/components/ui/button";
+import { fmtShortDate } from "../utils";
+
+type SafetyLevel = "Safe" | "Warning" | "Dangerous" | "Blocked";
 
 interface HealingRecord {
   ts_ms: number;
@@ -14,7 +17,7 @@ interface HealingRecord {
   error: string;
   analysis: string;
   suggestion: string;
-  safety_level: string;
+  safety_level: SafetyLevel;
   decision: "approve" | "reject";
   applied_command?: string | null;
 }
@@ -23,16 +26,10 @@ interface Props {
   onClose: () => void;
 }
 
-function fmtTime(ts: number): string {
-  return new Date(ts).toLocaleString("ko-KR", {
-    month: "short", day: "numeric", hour: "2-digit", minute: "2-digit",
-  });
-}
-
-const SAFETY_TONE: Record<string, string> = {
+const SAFETY_TONE: Record<SafetyLevel, string> = {
   Safe: "text-emerald-300 bg-emerald-400/10",
-  Caution: "text-amber-300 bg-amber-400/10",
-  Risk: "text-rose-300 bg-rose-400/10",
+  Warning: "text-amber-300 bg-amber-400/10",
+  Dangerous: "text-rose-300 bg-rose-400/10",
   Blocked: "text-rose-400 bg-rose-500/15",
 };
 
@@ -47,7 +44,6 @@ const HealingDatasetPanel: React.FC<Props> = ({ onClose }) => {
     setError(null);
     try {
       const rows = await invoke<HealingRecord[]>("list_healing_dataset");
-      // 최신부터
       rows.sort((a, b) => b.ts_ms - a.ts_ms);
       setRecords(rows);
     } catch (e) {
@@ -159,10 +155,10 @@ const HealingDatasetPanel: React.FC<Props> = ({ onClose }) => {
                   <XIcon size={11} className="text-rose-300 shrink-0" />
                 )}
                 <span className="truncate flex-1 text-white/85 font-mono">{r.suggestion || "(빈 제안)"}</span>
-                <span className={`text-[10px] px-1.5 py-0.5 rounded ${SAFETY_TONE[r.safety_level] ?? "text-white/40 bg-white/5"}`}>
+                <span className={`text-[10px] px-1.5 py-0.5 rounded ${SAFETY_TONE[r.safety_level]}`}>
                   {r.safety_level}
                 </span>
-                <span className="text-[10px] text-white/30 tabular-nums shrink-0">{fmtTime(r.ts_ms)}</span>
+                <span className="text-[10px] text-white/30 tabular-nums shrink-0">{fmtShortDate(r.ts_ms, "ms")}</span>
               </summary>
               <div className="px-3 pb-2.5 pt-0.5 space-y-1.5 text-[11px] border-t border-white/5">
                 <div>

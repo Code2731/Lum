@@ -39,51 +39,57 @@ function avg(total: number, count: number): string {
   return `${Math.round(total / count)}`;
 }
 
+type LedgerTone = "neutral" | "ondevice" | "mixed" | "cloudHeavy";
+
+const TONE_CLASS: Record<LedgerTone, string> = {
+  neutral: "bg-white/5 text-white/40 border-white/10",
+  ondevice: "bg-emerald-400/10 text-emerald-300 border-emerald-400/30",
+  mixed: "bg-amber-300/10 text-amber-200 border-amber-300/30",
+  cloudHeavy: "bg-rose-400/10 text-rose-300 border-rose-400/30",
+};
+
+function classify(state: LedgerState, isAllOnDevice: boolean): {
+  tone: LedgerTone; label: string; tooltip: string;
+} {
+  if (state.total === 0) {
+    return {
+      tone: "neutral",
+      label: "AI 호출 없음",
+      tooltip: "이번 세션에 AI 호출이 아직 없습니다 — 클릭으로 패널 열기",
+    };
+  }
+  if (isAllOnDevice) {
+    return {
+      tone: "ondevice",
+      label: "100% On-Device",
+      tooltip: "이번 세션의 모든 AI 호출이 로컬에서 처리됐습니다",
+    };
+  }
+  const ratio = state.onlineCalls / state.total;
+  return {
+    tone: ratio >= 0.5 ? "cloudHeavy" : "mixed",
+    label: `Cloud ${Math.round(ratio * 100)}%`,
+    tooltip: `클라우드 호출 ${state.onlineCalls}/${state.total}건 — 클릭으로 상세보기`,
+  };
+}
+
 const PrivacyLedgerBadge: React.FC<Props> = ({ state, isAllOnDevice, onReset }) => {
   const [open, setOpen] = useState(false);
   const popRef = useRef<HTMLDivElement>(null);
-  const closeRef = useRef(() => setOpen(false));
-  closeRef.current = () => setOpen(false);
 
   useEffect(() => {
     if (!open) return;
     const handler = (e: MouseEvent) => {
       if (popRef.current && !popRef.current.contains(e.target as Node)) {
-        closeRef.current();
+        setOpen(false);
       }
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, [open]);
 
-  const onlineRatio = state.total === 0 ? 0 : state.onlineCalls / state.total;
-  const tone = state.total === 0
-    ? "neutral"
-    : isAllOnDevice
-      ? "ondevice"
-      : onlineRatio >= 0.5
-        ? "cloudHeavy"
-        : "mixed";
-
-  const toneClasses: Record<string, string> = {
-    neutral: "bg-white/5 text-white/40 border-white/10",
-    ondevice: "bg-emerald-400/10 text-emerald-300 border-emerald-400/30",
-    mixed: "bg-amber-300/10 text-amber-200 border-amber-300/30",
-    cloudHeavy: "bg-rose-400/10 text-rose-300 border-rose-400/30",
-  };
-
+  const { tone, label, tooltip: tooltipText } = classify(state, isAllOnDevice);
   const Icon = tone === "ondevice" || tone === "neutral" ? ShieldCheck : Cloud;
-  const label = state.total === 0
-    ? "AI 호출 없음"
-    : isAllOnDevice
-      ? "100% On-Device"
-      : `Cloud ${Math.round(onlineRatio * 100)}%`;
-
-  const tooltipText = state.total === 0
-    ? "이번 세션에 AI 호출이 아직 없습니다 — 클릭으로 패널 열기"
-    : isAllOnDevice
-      ? "이번 세션의 모든 AI 호출이 로컬에서 처리됐습니다"
-      : `클라우드 호출 ${state.onlineCalls}/${state.total}건 — 클릭으로 상세보기`;
 
   return (
     <div className="relative">
@@ -97,7 +103,7 @@ const PrivacyLedgerBadge: React.FC<Props> = ({ state, isAllOnDevice, onReset }) 
             className={cn(
               "inline-flex items-center gap-1.5 h-7 px-2 rounded-md border text-xs font-medium transition-colors",
               "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
-              toneClasses[tone],
+              TONE_CLASS[tone],
             )}
           >
             <Icon size={12} />

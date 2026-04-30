@@ -87,18 +87,18 @@ fn run_git(args: &[&str], cwd: &std::path::Path) -> Result<String, String> {
     Ok(String::from_utf8_lossy(&out.stdout).trim().to_string())
 }
 
-fn detect_repo_root(cwd: &str) -> Result<PathBuf, String> {
+/// 한 번의 git rev-parse로 repo root + 현재 브랜치를 동시에 조회.
+fn detect_repo_root_and_branch(cwd: &str) -> Result<(PathBuf, String), String> {
     let cwd_path = if cwd.trim().is_empty() {
         platform::home_dir()
     } else {
         PathBuf::from(cwd)
     };
-    let root = run_git(&["rev-parse", "--show-toplevel"], &cwd_path)?;
-    Ok(PathBuf::from(root))
-}
-
-fn detect_current_branch(repo: &std::path::Path) -> Result<String, String> {
-    run_git(&["rev-parse", "--abbrev-ref", "HEAD"], repo)
+    let out = run_git(&["rev-parse", "--show-toplevel", "--abbrev-ref", "HEAD"], &cwd_path)?;
+    let mut lines = out.lines();
+    let root = lines.next().ok_or_else(|| "git rev-parse 결과가 비었습니다".to_string())?;
+    let branch = lines.next().ok_or_else(|| "현재 브랜치를 알 수 없습니다".to_string())?;
+    Ok((PathBuf::from(root), branch.to_string()))
 }
 
 #[tauri::command]
@@ -119,10 +119,10 @@ pub fn squad_create(
         return Err("task 설명이 비어있습니다".to_string());
     }
 
-    let repo = detect_repo_root(&cwd)?;
+    let (repo, current_branch) = detect_repo_root_and_branch(&cwd)?;
     let base = match base_branch {
         Some(b) if !b.trim().is_empty() => b.trim().to_string(),
-        _ => detect_current_branch(&repo)?,
+        _ => current_branch,
     };
 
     let now = unix_now();
@@ -159,13 +159,13 @@ pub fn squad_create(
 /// squad 제거 — git worktree remove + 브랜치 삭제. 변경사항은 잃을 수 있으므로 force.
 #[tauri::command]
 pub fn squad_remove(id: String) -> Result<(), String> {
-    let store = load_store();
-    let squad = store
+    let mut store = load_store();
+    let idx = store
         .squads
         .iter()
-        .find(|s| s.id == id)
-        .ok_or_else(|| format!("squad를 찾을 수 없습니다: {}", id))?
-        .clone();
+        .position(|s| s.id == id)
+        .ok_or_else(|| format!("squad를 찾을 수 없습니다: {}", id))?;
+    let squad = store.squads.remove(idx);
 
     let repo = PathBuf::from(&squad.repo_root);
     // worktree remove 실패는 경고만 — 디렉터리가 이미 사라졌을 수 있음.
@@ -175,8 +175,6 @@ pub fn squad_remove(id: String) -> Result<(), String> {
     // 디렉터리가 남아있으면 정리.
     let _ = std::fs::remove_dir_all(&squad.worktree_path);
 
-    let mut store = load_store();
-    store.squads.retain(|s| s.id != id);
     save_store(&store)?;
     Ok(())
 }
@@ -207,10 +205,11 @@ mod tests {
     }
 
     #[test]
-    fn slugify_korean_dropped() {
-        // is_alphanumeric은 유니코드 알파벳을 허용하지만, 일관성을 위해 한글도 살림.
+    fn slugify_preserves_korean_alphanumerics() {
+        // is_alphanumeric은 유니코드 알파벳을 허용 — 한글도 슬러그에 살아남는다.
         // 회귀 가드: 향후 ascii-only로 바꾸면 이 케이스도 같이 변경.
         let s = slugify("로그인 버그 수정");
         assert!(!s.is_empty());
+        assert!(s.contains("로그인"));
     }
 }

@@ -22,6 +22,17 @@ export const parseLoadedKey = (key: string): { base: string; lora: string; isq: 
   return { base: key, lora: "", isq: "" };
 };
 
+/** ko-KR 짧은 날짜시간 — workspace/squad/healing 패널 공용. unit으로 초/밀리초 자동 처리. */
+export const fmtShortDate = (ts: number, unit: "s" | "ms" = "s"): string => {
+  const ms = unit === "s" ? ts * 1000 : ts;
+  return new Date(ms).toLocaleString("ko-KR", {
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
+
 export const cosineSimilarity = (a: number[], b: number[]): number => {
   if (!a || !b || a.length !== b.length || a.length === 0) return 0;
 

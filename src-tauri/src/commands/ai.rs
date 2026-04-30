@@ -694,8 +694,9 @@ pub async fn stream_ai_command(
     };
     let imgs = images.unwrap_or_default();
 
-    // Phase 115 — Privacy Ledger 계측: prompt 크기 + 시작 시각 기록 후 분기별 emit.
-    let prompt_chars = full_prompt.chars().count();
+    // Phase 115 — Privacy Ledger 계측: prompt 크기(byte) + 시작 시각 기록 후 분기별 emit.
+    // chars().count()는 RAG 주입된 10~100KB 프롬프트에서 O(n) — 분석용 통계엔 byte len으로 충분.
+    let prompt_chars = full_prompt.len();
     let started = std::time::Instant::now();
 
     if model.starts_with("gemini") {

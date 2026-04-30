@@ -9,7 +9,7 @@ import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { Squad } from "../hooks/useSquads";
-import { shortPath } from "../utils";
+import { shortPath, fmtShortDate } from "../utils";
 
 interface Props {
   squads: Squad[];
@@ -20,16 +20,6 @@ interface Props {
   onRemove: (id: string) => Promise<void>;
   onOpenInTab: (squad: Squad) => void;
   onClose: () => void;
-}
-
-function fmtDate(ts: number): string {
-  const d = new Date(ts * 1000);
-  return d.toLocaleDateString("ko-KR", {
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
 }
 
 const SquadPanel: React.FC<Props> = ({
@@ -130,16 +120,14 @@ const SquadPanel: React.FC<Props> = ({
                 className="group flex items-center gap-3 px-3 py-2 rounded-lg bg-white/3 border border-white/7 hover:bg-white/5 transition-colors"
               >
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 text-xs text-white/85 font-medium truncate">
-                    <span className="truncate">{s.task}</span>
-                  </div>
+                  <div className="text-xs text-white/85 font-medium truncate">{s.task}</div>
                   <div className="flex items-center gap-2 mt-0.5 text-[10px] text-white/35">
                     <GitBranch size={9} />
                     <span className="font-mono truncate">{s.branch}</span>
                     <span>·</span>
                     <span className="font-mono truncate" title={s.worktree_path}>{shortPath(s.worktree_path)}</span>
                     <span>·</span>
-                    <span>{fmtDate(s.created_at)}</span>
+                    <span>{fmtShortDate(s.created_at, "s")}</span>
                   </div>
                 </div>
 
