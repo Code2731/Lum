@@ -22,11 +22,11 @@ const CommandBlockBar: React.FC<Props> = ({ block, onDismiss }) => {
       ) : (
         <XCircle size={12} className="text-red-400 shrink-0" />
       )}
-      <span className={`text-[10px] font-mono shrink-0 tabular-nums ${success ? "text-green-400" : "text-red-400"}`}>
+      <span className={`text-xs font-mono font-medium shrink-0 tabular-nums ${success ? "text-green-400" : "text-red-400"}`}>
         {success ? "exit 0" : `exit ${block.exitCode ?? "?"}`}
       </span>
-      <span className="font-mono text-[11px] text-white/50 truncate flex-1 min-w-0">
-        <span className="text-white/25">$ </span>
+      <span className="font-mono text-xs text-white/55 truncate flex-1 min-w-0">
+        <span className="text-white/30">$ </span>
         {block.command || "…"}
       </span>
       <IconButton

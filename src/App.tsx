@@ -1,6 +1,7 @@
 import React, { useState, useRef, useCallback, useEffect, useMemo, lazy, Suspense } from "react";
 import { Group as PanelGroup, Panel, Separator as PanelResizeHandle } from "react-resizable-panels";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { ToolbarIconButton, ToolbarSeparator } from "@/components/ui/toolbar-icon-button";
 import { shortPath } from "./utils";
 import { useTerminalBlocks } from "./hooks/useTerminalBlocks";
 import { useAIProcessing } from "./hooks/useAIProcessing";
@@ -17,6 +18,7 @@ import { useWorkspace } from "./hooks/useWorkspace";
 import { inferTabIcon } from "./utils/tabIcon";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
+import { AnimatePresence, motion } from "framer-motion";
 import {
   Zap, Cpu, Loader2, TerminalSquare, LayoutList, MousePointer2,
   Package, Database, Plus, X, Columns2, Rows2, SlidersHorizontal, ArrowUpCircle, GitCompareArrows, Palette,
@@ -478,10 +480,10 @@ const App: React.FC = () => {
       >
         <div data-tauri-drag-region className="flex items-center gap-4 shrink-0">
           <WindowControls />
-          <div data-tauri-drag-region className="flex items-center gap-1 text-[10px] text-white/40 shrink-0 whitespace-nowrap">
-            <Cpu size={10} />
+          <div data-tauri-drag-region className="flex items-center gap-1.5 text-xs text-white/45 font-medium shrink-0 whitespace-nowrap">
+            <Cpu size={12} />
             {specsLoading ? (
-              <Loader2 size={10} className="animate-spin" />
+              <Loader2 size={12} className="animate-spin" />
             ) : specs ? (
               <span title={specs.recommendation_reason}>
                 {(() => {
@@ -506,9 +508,10 @@ const App: React.FC = () => {
               <button
                 key={mode}
                 aria-label={label}
+                aria-pressed={viewMode === mode}
                 onClick={() => setViewMode(mode)}
-                className={`p-1 rounded transition-colors ${
-                  viewMode === mode ? "bg-white/15 text-white" : "text-white/40 hover:text-white/70"
+                className={`p-1 rounded transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring ${
+                  viewMode === mode ? "bg-white/15 text-white" : "text-white/45 hover:text-white/75"
                 }`}
               >
                 {icon}
@@ -520,7 +523,7 @@ const App: React.FC = () => {
         {/* 드래그 가능한 spacer — 좌·우 사이의 빈 공간으로 창 이동 */}
         <div data-tauri-drag-region className="flex-1 h-full" />
 
-        <div data-tauri-drag-region className="flex items-center gap-2 min-w-0">
+        <div data-tauri-drag-region className="flex items-center gap-1 min-w-0">
           {(() => {
             // 모델명을 더 짧게 — 마지막 segment에서 흔한 suffix 제거
             const shortName = (n?: string | null) => {
@@ -539,10 +542,10 @@ const App: React.FC = () => {
             const fast = fastEmpty ? "Empty Model" : shortName(loadedModelId);
             const heavy = shortName(heavyModelId);
             return (
-              <div data-tauri-drag-region className="flex items-center gap-1 min-w-0 overflow-hidden">
+              <div data-tauri-drag-region className="flex items-center gap-1 min-w-0 overflow-hidden mr-1">
                 <div
                   data-tauri-drag-region
-                  className={`text-[10px] px-2 py-1 rounded truncate max-w-[130px] ${
+                  className={`text-xs px-2 py-1 rounded-md truncate max-w-[140px] ${
                     fastEmpty
                       ? "bg-white/5 text-white/30 italic"
                       : "bg-blue-400/10 text-blue-300"
@@ -558,7 +561,7 @@ const App: React.FC = () => {
                 {heavyEnabled && heavy && (
                   <div
                     data-tauri-drag-region
-                    className="text-[10px] px-2 py-1 rounded bg-purple-400/10 text-purple-300 truncate max-w-[130px]"
+                    className="text-xs px-2 py-1 rounded-md bg-purple-400/10 text-purple-300 truncate max-w-[140px]"
                     title={`Heavy Track (mistral.rs): ${heavyModelId}`}
                   >
                     🚀 {heavy}
@@ -567,130 +570,155 @@ const App: React.FC = () => {
               </div>
             );
           })()}
-          <button
-            aria-label="파일 탐색기 (Cmd+B)"
-            title="파일 탐색기 (Cmd+B)"
+
+          {/* 그룹 1 — 워크스페이스 / 탐색 */}
+          <ToolbarIconButton
+            label="파일 탐색기"
+            shortcut="⌘B"
+            active={showFileExplorer}
             onClick={() => setShowFileExplorer(v => {
               const next = !v;
               try { localStorage.setItem("lum.fileExplorer", next ? "1" : "0"); } catch {}
               return next;
             })}
-            className={`p-1.5 rounded transition-colors ${showFileExplorer ? "text-accent bg-accent/10" : "text-white/40 hover:text-white hover:bg-white/10"}`}
           >
-            <FolderTree size={13} />
-          </button>
-          <button
-            aria-label={`추론 토큰 표시 ${showReasoning ? "켜짐" : "꺼짐"} — 클릭 시 토글`}
-            title={`🧠 추론 토큰 ${showReasoning ? "표시 중 (ON)" : "숨김 (OFF)"} — DeepSeek R1·EXAONE Deep 등`}
-            onClick={toggleReasoning}
-            className={`p-1.5 rounded transition-colors ${showReasoning ? "text-cyan-300 bg-cyan-400/10" : "text-white/30 hover:text-white/60 hover:bg-white/10"}`}
-          >
-            <Brain size={13} />
-          </button>
-          <button
-            aria-label="MCP 서버 (툴 확장)"
-            title="MCP 서버 관리 — Filesystem·Playwright·Git 등"
-            onClick={() => setShowMcpPanel(v => !v)}
-            className={`p-1.5 rounded transition-colors ${showMcpPanel ? "text-accent bg-accent/10" : "text-white/40 hover:text-white hover:bg-white/10"}`}
-          >
-            <PlugZap size={13} />
-          </button>
-          <button
-            aria-label="RAG 코드 검색"
-            onClick={() => setShowRagPanel((v) => !v)}
-            className={`p-1.5 rounded transition-colors ${showRagPanel ? "text-accent bg-accent/10" : "text-white/40 hover:text-white hover:bg-white/10"}`}
-          >
-            <Database size={13} />
-          </button>
-          <button
-            aria-label="xLLM 최적화 설정"
-            onClick={() => setShowXllmPanel(true)}
-            className="p-1.5 rounded text-white/40 hover:text-white hover:bg-white/10 transition-colors"
-          >
-            <SlidersHorizontal size={13} />
-          </button>
-          <button
-            aria-label="워크스페이스 (Cmd+Shift+S)"
+            <FolderTree size={14} />
+          </ToolbarIconButton>
+          <ToolbarIconButton
+            label="워크스페이스"
+            shortcut="⌘⇧S"
+            active={showWorkspace}
             onClick={() => { setShowWorkspace(true); loadWorkspaces(); }}
-            className={`p-1.5 rounded transition-colors ${showWorkspace ? "text-accent bg-accent/10" : "text-white/40 hover:text-white hover:bg-white/10"}`}
           >
-            <Layers size={13} />
-          </button>
-          <button
-            aria-label="AI Diff Reviewer (Cmd+Shift+R)"
-            onClick={() => setShowDiffReview(true)}
-            className={`p-1.5 rounded transition-colors ${showDiffReview ? "text-accent bg-accent/10" : "text-white/40 hover:text-white hover:bg-white/10"}`}
-          >
-            <GitCompareArrows size={13} />
-          </button>
-          <button
-            aria-label="터미널 테마 설정 (Cmd+,)"
-            onClick={() => setShowThemePanel(true)}
-            className={`p-1.5 rounded transition-colors ${showThemePanel ? "text-accent bg-accent/10" : "text-white/40 hover:text-white hover:bg-white/10"}`}
-          >
-            <Palette size={13} />
-          </button>
-          <button
-            aria-label="스크립트 라이브러리 (Cmd+Shift+L)"
+            <Layers size={14} />
+          </ToolbarIconButton>
+          <ToolbarIconButton
+            label="스크립트 라이브러리"
+            shortcut="⌘⇧L"
+            active={showScriptPanel}
             onClick={() => { setShowScriptPanel(v => { if (!v) scriptLib.loadScripts(); return !v; }); }}
-            className={`p-1.5 rounded transition-colors ${showScriptPanel ? "text-accent bg-accent/10" : "text-white/40 hover:text-white hover:bg-white/10"}`}
           >
-            <BookOpen size={13} />
-          </button>
-          <button
-            aria-label="시스템 모니터 (Cmd+Shift+M)"
-            title="시스템 모니터 (Cmd+Shift+M)"
-            onClick={() => setShowSysmon(v => !v)}
-            className={`p-1.5 rounded transition-colors ${showSysmon ? "text-accent bg-accent/10" : "text-white/40 hover:text-white hover:bg-white/10"}`}
+            <BookOpen size={14} />
+          </ToolbarIconButton>
+
+          <ToolbarSeparator />
+
+          {/* 그룹 2 — AI / 모델 */}
+          <ToolbarIconButton
+            label={`추론 토큰 ${showReasoning ? "표시 중" : "숨김"}`}
+            tone="cyan"
+            active={showReasoning}
+            onClick={toggleReasoning}
           >
-            <Activity size={13} />
-          </button>
-          {/* 알림 센터 */}
-          <div className="relative">
-            <button
-              aria-label="알림 센터"
-              onClick={() => { setShowNotifCenter(v => !v); if (!showNotifCenter) notifCenter.markAllRead(); }}
-              className={`p-1.5 rounded transition-colors ${showNotifCenter ? "text-accent bg-accent/10" : "text-white/40 hover:text-white hover:bg-white/10"}`}
-            >
-              <Bell size={13} />
-              {notifCenter.unreadCount > 0 && (
-                <span className="absolute top-0.5 right-0.5 w-2 h-2 rounded-full bg-red-500 text-[8px] flex items-center justify-center pointer-events-none" />
-              )}
-            </button>
-            {showNotifCenter && (
-              <NotificationCenter
-                notifications={notifCenter.notifications}
-                unreadCount={notifCenter.unreadCount}
-                onMarkAllRead={notifCenter.markAllRead}
-                onDismiss={notifCenter.dismiss}
-                onClear={notifCenter.clear}
-                onClose={() => setShowNotifCenter(false)}
-              />
-            )}
-          </div>
-          <button
-            aria-label="모델 관리"
-            title="모델 관리 (HuggingFace 다운로드)"
+            <Brain size={14} />
+          </ToolbarIconButton>
+          <ToolbarIconButton
+            label="MCP 서버"
+            active={showMcpPanel}
+            onClick={() => setShowMcpPanel(v => !v)}
+          >
+            <PlugZap size={14} />
+          </ToolbarIconButton>
+          <ToolbarIconButton
+            label="RAG 코드 검색"
+            active={showRagPanel}
+            onClick={() => setShowRagPanel(v => !v)}
+          >
+            <Database size={14} />
+          </ToolbarIconButton>
+          <ToolbarIconButton
+            label="모델 관리"
             onClick={() => setShowModelManager(true)}
-            className="p-1.5 rounded text-white/40 hover:text-white hover:bg-white/10 transition-colors"
           >
-            <Package size={13} />
-          </button>
+            <Package size={14} />
+          </ToolbarIconButton>
+          <ToolbarIconButton
+            label="xLLM 최적화 설정"
+            onClick={() => setShowXllmPanel(true)}
+          >
+            <SlidersHorizontal size={14} />
+          </ToolbarIconButton>
+
+          <ToolbarSeparator />
+
+          {/* 그룹 3 — 도구 / 알림 */}
+          <ToolbarIconButton
+            label="AI Diff 리뷰"
+            shortcut="⌘⇧R"
+            active={showDiffReview}
+            onClick={() => setShowDiffReview(true)}
+          >
+            <GitCompareArrows size={14} />
+          </ToolbarIconButton>
+          <ToolbarIconButton
+            label="시스템 모니터"
+            shortcut="⌘⇧M"
+            active={showSysmon}
+            onClick={() => setShowSysmon(v => !v)}
+          >
+            <Activity size={14} />
+          </ToolbarIconButton>
+          <ToolbarIconButton
+            label="터미널 테마"
+            shortcut="⌘,"
+            active={showThemePanel}
+            onClick={() => setShowThemePanel(true)}
+          >
+            <Palette size={14} />
+          </ToolbarIconButton>
+          <div className="relative">
+            <ToolbarIconButton
+              label="알림 센터"
+              active={showNotifCenter}
+              badge={notifCenter.unreadCount > 0}
+              onClick={() => { setShowNotifCenter(v => !v); if (!showNotifCenter) notifCenter.markAllRead(); }}
+            >
+              <Bell size={14} />
+            </ToolbarIconButton>
+            <AnimatePresence>
+            {showNotifCenter && (
+              <motion.div
+                key="notif-center"
+                initial={{ opacity: 0, scale: 0.96, y: -4 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.96, y: -4 }}
+                transition={{ duration: 0.15, ease: "easeOut" }}
+                style={{ transformOrigin: "top right" }}
+              >
+                <NotificationCenter
+                  notifications={notifCenter.notifications}
+                  unreadCount={notifCenter.unreadCount}
+                  onMarkAllRead={notifCenter.markAllRead}
+                  onDismiss={notifCenter.dismiss}
+                  onClear={notifCenter.clear}
+                  onClose={() => setShowNotifCenter(false)}
+                />
+              </motion.div>
+            )}
+            </AnimatePresence>
+          </div>
         </div>
       </header>
 
       {/* ── 업데이트 배너 ───────────────────────────────────────── */}
+      <AnimatePresence>
       {updateInfo && (
-        <div className="flex flex-col gap-1 px-4 py-1.5 bg-accent/10 border-b border-accent/20 shrink-0">
-          <div className="flex items-center gap-2 text-[11px]">
-            <ArrowUpCircle size={12} className="text-accent shrink-0" />
-            <span className="text-white/70">
+        <motion.div
+          key="update-banner"
+          initial={{ height: 0, opacity: 0 }}
+          animate={{ height: "auto", opacity: 1 }}
+          exit={{ height: 0, opacity: 0 }}
+          transition={{ duration: 0.2, ease: "easeOut" }}
+          className="flex flex-col gap-1 px-4 py-1.5 bg-accent/10 border-b border-accent/20 shrink-0 overflow-hidden">
+          <div className="flex items-center gap-2 text-xs">
+            <ArrowUpCircle size={13} className="text-accent shrink-0" />
+            <span className="text-white/75">
               새 버전 <span className="text-accent font-semibold">v{updateInfo.latest}</span> 출시 — {updateInfo.releaseName}
             </span>
             {!installing && (
               <button
                 onClick={installUpdate}
-                className="ml-1 text-accent hover:text-accent/80 font-medium underline underline-offset-2 transition-colors"
+                className="ml-1 text-accent hover:text-accent/80 font-medium underline underline-offset-2 transition-colors rounded focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring focus-visible:px-1"
               >
                 지금 설치
               </button>
@@ -704,14 +732,14 @@ const App: React.FC = () => {
             <button
               onClick={dismissUpdate}
               disabled={installing}
-              className="ml-auto text-white/30 hover:text-white/60 disabled:opacity-30 transition-colors"
+              className="ml-auto p-1 rounded text-white/40 hover:text-white/70 disabled:opacity-30 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               aria-label="알림 닫기"
             >
-              <X size={11} />
+              <X size={12} />
             </button>
           </div>
           {installing && progress && progress.total > 0 && (
-            <div className="flex items-center gap-2 text-[10px] text-white/40 pb-0.5">
+            <div className="flex items-center gap-2 text-xs text-white/50 pb-0.5">
               <div className="flex-1 h-1 bg-white/10 rounded-full overflow-hidden">
                 <div
                   className="h-full bg-accent rounded-full transition-all duration-150"
@@ -723,8 +751,9 @@ const App: React.FC = () => {
               </span>
             </div>
           )}
-        </div>
+        </motion.div>
       )}
+      </AnimatePresence>
 
       {/* ── 탭 바 ─────────────────────────────────────────────── */}
       {viewMode === "terminal" && (
@@ -741,10 +770,10 @@ const App: React.FC = () => {
                 e.preventDefault();
                 setTabCtxMenu({ tabId: tab.id, x: e.clientX, y: e.clientY });
               }}
-              className={`relative flex items-center gap-1.5 px-3 py-1.5 text-[11px] border-r border-white/5 whitespace-nowrap transition-colors group cursor-pointer ${
+              className={`relative flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border-r border-white/5 whitespace-nowrap transition-colors group cursor-pointer ${
                 tab.id === activeTabId
                   ? "bg-[#161b22] text-white"
-                  : "text-white/40 hover:text-white/70 hover:bg-white/3"
+                  : "text-white/45 hover:text-white/75 hover:bg-white/3"
               }`}
               style={tab.color ? { borderBottom: `2px solid ${TAB_COLORS[tab.color]}` } : undefined}
             >
@@ -756,7 +785,7 @@ const App: React.FC = () => {
               )}
               <TabIconComponent icon={tab.icon} />
               {tab.group && (
-                <span className="text-[9px] text-white/25 font-medium">[{tab.group}]</span>
+                <span className="text-[10px] uppercase tracking-wider text-white/35 font-semibold">{tab.group}</span>
               )}
               {renamingTabId === tab.id ? (
                 <input
@@ -770,23 +799,23 @@ const App: React.FC = () => {
                     e.stopPropagation();
                   }}
                   onClick={e => e.stopPropagation()}
-                  className="w-20 bg-transparent border-b border-accent/60 outline-none text-white text-[11px]"
+                  className="w-24 bg-transparent border-b border-accent/60 outline-none text-white text-xs"
                 />
               ) : (
                 <>
-                  {tab.sshProfile && <Lock size={9} className="text-cyan-400 shrink-0" />}
+                  {tab.sshProfile && <Lock size={11} className="text-cyan-400 shrink-0" />}
                   {tab.title}
                 </>
               )}
               {tabs.length > 1 && renamingTabId !== tab.id && (
-                <span
-                  role="button"
+                <button
+                  type="button"
                   onClick={(e) => closeTabWithReset(tab.id, e)}
-                  className="ml-0.5 opacity-0 group-hover:opacity-100 hover:text-white transition-opacity rounded p-0.5 hover:bg-white/10"
+                  className="ml-0.5 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 hover:text-white transition-opacity rounded p-0.5 hover:bg-white/10 focus-visible:bg-white/10 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                   aria-label={`${tab.title} 닫기`}
                 >
-                  <X size={9} />
-                </span>
+                  <X size={11} />
+                </button>
               )}
             </div>
           ))}
@@ -794,43 +823,45 @@ const App: React.FC = () => {
             onClick={addTabWithReset}
             aria-label="새 탭 (Cmd+T)"
             title="새 탭 (Cmd+T)"
-            className="px-2 py-1.5 text-white/30 hover:text-white/70 hover:bg-white/5 transition-colors shrink-0"
+            className="px-2 py-1.5 text-white/35 hover:text-white/75 hover:bg-white/5 transition-colors shrink-0 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring focus-visible:bg-white/5"
           >
-            <Plus size={12} />
+            <Plus size={13} />
           </button>
           <button
             onClick={() => setShowSshModal(true)}
             aria-label="SSH 연결 (Cmd+Shift+H)"
             title="SSH 연결 (Cmd+Shift+H)"
-            className="px-2 py-1.5 text-white/30 hover:text-white/70 hover:bg-white/5 transition-colors shrink-0"
+            className="px-2 py-1.5 text-white/35 hover:text-white/75 hover:bg-white/5 transition-colors shrink-0 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring focus-visible:bg-white/5"
           >
-            <Lock size={12} />
+            <Lock size={13} />
           </button>
 
           <div className="ml-auto flex items-center gap-0.5 px-2 shrink-0">
             <button
               onClick={() => toggleSplit("h")}
               aria-label="수평 분할 (Cmd+Shift+D)"
+              aria-pressed={activeTab?.splitDir === "h"}
               title="수평 분할 (Cmd+Shift+D)"
-              className={`p-1.5 rounded transition-colors ${
+              className={`p-1.5 rounded-md transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring ${
                 activeTab?.splitDir === "h"
                   ? "text-accent bg-accent/10"
-                  : "text-white/30 hover:text-white/70 hover:bg-white/5"
+                  : "text-white/35 hover:text-white/75 hover:bg-white/5"
               }`}
             >
-              <Columns2 size={12} />
+              <Columns2 size={13} />
             </button>
             <button
               onClick={() => toggleSplit("v")}
               aria-label="수직 분할 (Cmd+Shift+E)"
+              aria-pressed={activeTab?.splitDir === "v"}
               title="수직 분할 (Cmd+Shift+E)"
-              className={`p-1.5 rounded transition-colors ${
+              className={`p-1.5 rounded-md transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring ${
                 activeTab?.splitDir === "v"
                   ? "text-accent bg-accent/10"
-                  : "text-white/30 hover:text-white/70 hover:bg-white/5"
+                  : "text-white/35 hover:text-white/75 hover:bg-white/5"
               }`}
             >
-              <Rows2 size={12} />
+              <Rows2 size={13} />
             </button>
           </div>
         </div>
@@ -1036,16 +1067,31 @@ const App: React.FC = () => {
           )}
         </div>
 
+        <AnimatePresence initial={false}>
         {showRagPanel && (
-          <div className="w-80 border-l border-white/5 shrink-0 overflow-hidden">
+          <motion.div
+            key="rag-panel"
+            initial={{ width: 0, opacity: 0 }}
+            animate={{ width: 320, opacity: 1 }}
+            exit={{ width: 0, opacity: 0 }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+            className="border-l border-white/5 shrink-0 overflow-hidden"
+          >
             <ErrorBoundary label="RAG">
               <RagPanel model={selectedModel} onClose={() => setShowRagPanel(false)} />
             </ErrorBoundary>
-          </div>
+          </motion.div>
         )}
 
         {showScriptPanel && (
-          <div className="w-72 border-l border-white/5 shrink-0 overflow-hidden">
+          <motion.div
+            key="script-panel"
+            initial={{ width: 0, opacity: 0 }}
+            animate={{ width: 288, opacity: 1 }}
+            exit={{ width: 0, opacity: 0 }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+            className="border-l border-white/5 shrink-0 overflow-hidden"
+          >
             <ErrorBoundary label="스크립트 라이브러리">
               <ScriptLibraryPanel
                 scripts={scriptLib.scripts}
@@ -1057,21 +1103,37 @@ const App: React.FC = () => {
                 onClose={() => setShowScriptPanel(false)}
               />
             </ErrorBoundary>
-          </div>
+          </motion.div>
         )}
 
         {showSysmon && (
-          <div className="w-64 border-l border-white/5 shrink-0 overflow-hidden">
+          <motion.div
+            key="sysmon-panel"
+            initial={{ width: 0, opacity: 0 }}
+            animate={{ width: 256, opacity: 1 }}
+            exit={{ width: 0, opacity: 0 }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+            className="border-l border-white/5 shrink-0 overflow-hidden"
+          >
             <ErrorBoundary label="시스템 모니터">
               <SystemMonitorPanel onClose={() => setShowSysmon(false)} />
             </ErrorBoundary>
-          </div>
+          </motion.div>
         )}
+        </AnimatePresence>
 
+        <AnimatePresence>
         {showAiBar && (
-          <div className="absolute inset-x-0 bottom-0 p-4 bg-gradient-to-t from-terminal-dark/95 to-transparent pointer-events-none">
+          <motion.div
+            key="ai-bar"
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 20, opacity: 0 }}
+            transition={{ duration: 0.18, ease: "easeOut" }}
+            className="absolute inset-x-0 bottom-0 p-4 bg-gradient-to-t from-terminal-dark/95 to-transparent pointer-events-none"
+          >
             <div className="pointer-events-auto">
-              <div className="flex items-center gap-2 bg-white/8 border border-white/10 rounded-lg px-3 py-2 backdrop-blur-sm">
+              <div className="flex items-center gap-2 bg-white/8 border border-white/10 rounded-lg px-3 py-2 backdrop-blur-sm shadow-lg">
                 <Zap size={13} className="text-accent shrink-0" />
                 <input
                   ref={aiInputRef}
@@ -1087,10 +1149,11 @@ const App: React.FC = () => {
                 />
                 {isProcessing && <Loader2 size={12} className="animate-spin text-white/40 shrink-0" />}
               </div>
-              <p className="text-[9px] text-white/20 text-center mt-1">Cmd+K 로 닫기</p>
+              <p className="text-[10px] text-white/30 text-center mt-1.5 tracking-wide">⌘K 로 닫기</p>
             </div>
-          </div>
+          </motion.div>
         )}
+        </AnimatePresence>
       </main>
 
       {showModelManager && (
@@ -1242,12 +1305,12 @@ const PaneWrapper: React.FC<PaneWrapperProps> = ({ paneId, activePaneId, onFocus
 const TabIconComponent: React.FC<{ icon?: string }> = ({ icon }) => {
   const cls = "shrink-0";
   switch (icon) {
-    case "git":     return <GitBranch size={10} className={cls} />;
-    case "node":    return <Package size={10} className={cls} />;
-    case "rust":    return <Zap size={10} className={cls} />;
-    case "python":  return <Cpu size={10} className={cls} />;
-    case "docker":  return <Container size={10} className={cls} />;
-    default:        return <TerminalSquare size={10} className={cls} />;
+    case "git":     return <GitBranch size={12} className={cls} />;
+    case "node":    return <Package size={12} className={cls} />;
+    case "rust":    return <Zap size={12} className={cls} />;
+    case "python":  return <Cpu size={12} className={cls} />;
+    case "docker":  return <Container size={12} className={cls} />;
+    default:        return <TerminalSquare size={12} className={cls} />;
   }
 };
 

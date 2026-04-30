@@ -125,7 +125,7 @@ const AIBlockStream: React.FC<Props> = ({ messages, streaming, error, onClear, o
               setFontSize(FONT_DEFAULT);
               try { localStorage.setItem(FONT_KEY, String(FONT_DEFAULT)); } catch {}
             }}
-            className="text-[10px] px-1.5 py-0.5 rounded text-white/30 hover:text-white/70 hover:bg-white/5 transition-colors font-mono"
+            className="text-xs px-2 py-1 rounded text-white/40 hover:text-white/80 hover:bg-white/5 transition-colors font-mono tabular-nums"
           >
             {fontSize}px
           </IconButton>

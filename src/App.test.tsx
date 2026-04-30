@@ -83,6 +83,7 @@ describe("App (LUM 터미널)", () => {
 
   it("스크립트 라이브러리 버튼이 툴바에 있어야 함", () => {
     render(<App />);
-    expect(screen.getByLabelText("스크립트 라이브러리 (Cmd+Shift+L)")).toBeInTheDocument();
+    // 툴바 그룹화 이후: aria-label은 기능 이름만, 단축키는 Tooltip kbd로 분리
+    expect(screen.getByLabelText("스크립트 라이브러리")).toBeInTheDocument();
   });
 });
