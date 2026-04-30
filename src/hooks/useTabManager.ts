@@ -102,12 +102,15 @@ export function useTabManager(onTabChange?: () => void) {
     };
   }, [tabs, activeTabId]);
 
-  const addTab = useCallback(() => {
+  const addTab = useCallback((opts?: { cwd?: string; title?: string }): string => {
     const tab = makeTab();
+    if (opts?.cwd) tab.cwd = opts.cwd;
+    if (opts?.title) tab.title = opts.title;
     setTabs((prev) => [...prev, tab]);
     setActiveTabId(tab.id);
     setActivePaneId(tab.id);
     onTabChange?.();
+    return tab.id;
   }, [onTabChange]);
 
   const createSshTab = useCallback((profile: SshProfile): string => {

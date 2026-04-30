@@ -181,6 +181,10 @@ pub fn run() {
             // Session Persistence
             commands::session::save_session,
             commands::session::load_session,
+            // Phase 116 — Worktree Squad
+            commands::squad::squad_list,
+            commands::squad::squad_create,
+            commands::squad::squad_remove,
             // Workspace
             commands::workspace::save_workspace,
             commands::workspace::list_workspaces,

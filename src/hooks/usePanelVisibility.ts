@@ -15,6 +15,7 @@ export function usePanelVisibility() {
   const [showMcpPanel, setShowMcpPanel] = useState(false);
   const [showPalette, setShowPalette] = useState(false);
   const [showSshModal, setShowSshModal] = useState(false);
+  const [showSquadPanel, setShowSquadPanel] = useState(false);
 
   const closeOverlays = useCallback(() => {
     setShowHistorySearch(false);
@@ -24,6 +25,7 @@ export function usePanelVisibility() {
     setShowThemePanel(false);
     setShowWorkspace(false);
     setShowPalette(false);
+    setShowSquadPanel(false);
   }, []);
 
   return {
@@ -41,6 +43,7 @@ export function usePanelVisibility() {
     showMcpPanel, setShowMcpPanel,
     showPalette, setShowPalette,
     showSshModal, setShowSshModal,
+    showSquadPanel, setShowSquadPanel,
     closeOverlays,
   };
 }

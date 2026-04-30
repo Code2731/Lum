@@ -20,6 +20,7 @@ pub mod rag;
 pub mod repo_map;
 pub mod scripts;
 pub mod session;
+pub mod squad;
 pub mod ssh_profiles;
 pub mod sysmon;
 pub mod terminal;

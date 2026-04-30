@@ -22,7 +22,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import {
   Zap, Cpu, Loader2, TerminalSquare, LayoutList, MousePointer2,
   Package, Database, Plus, X, Columns2, Rows2, SlidersHorizontal, ArrowUpCircle, GitCompareArrows, Palette,
-  GitBranch, Container, Layers, Lock, BookOpen, Bell, Activity, FolderTree, Brain, PlugZap,
+  GitBranch, Container, Layers, Lock, BookOpen, Bell, Activity, FolderTree, Brain, PlugZap, Users,
 } from "lucide-react";
 import SshConnectModal from "./components/SshConnectModal";
 import { useReactAgent } from "./hooks/useReactAgent";
@@ -36,6 +36,7 @@ import { useNotificationCenter } from "./hooks/useNotificationCenter";
 import NotificationCenter from "./components/NotificationCenter";
 import { usePrivacyLedger } from "./hooks/usePrivacyLedger";
 import PrivacyLedgerBadge from "./components/PrivacyLedgerBadge";
+import { useSquads } from "./hooks/useSquads";
 import type { SshProfile } from "./hooks/useTabManager";
 import InfiniteCanvas from "./components/layout/InfiniteCanvas";
 import TerminalPane from "./components/TerminalPane";
@@ -63,6 +64,7 @@ const XllmPanel = lazy(() => import("./components/XllmPanel"));
 const OnboardingWizard = lazy(() => import("./components/OnboardingWizard"));
 const DiffReviewPanel = lazy(() => import("./components/DiffReviewPanel"));
 const McpPanel = lazy(() => import("./components/McpPanel"));
+const SquadPanel = lazy(() => import("./components/SquadPanel"));
 
 type ViewMode = "terminal" | "canvas" | "list";
 
@@ -172,6 +174,7 @@ const App: React.FC = () => {
     showMcpPanel, setShowMcpPanel,
     showPalette, setShowPalette,
     showSshModal, setShowSshModal,
+    showSquadPanel, setShowSquadPanel,
     closeOverlays,
   } = usePanelVisibility();
 
@@ -195,6 +198,9 @@ const App: React.FC = () => {
 
   // Phase 115 — Privacy Ledger (세션 단위 AI 라우팅 가시화)
   const privacyLedger = usePrivacyLedger();
+
+  // Phase 116 — Worktree Squad
+  const squadStore = useSquads();
 
   // 파일 탐색기 사이드바 (기본 열림)
   const [showFileExplorer, setShowFileExplorer] = useState(() => {
@@ -642,6 +648,14 @@ const App: React.FC = () => {
             onClick={() => setShowMcpPanel(v => !v)}
           >
             <PlugZap size={14} />
+          </ToolbarIconButton>
+          <ToolbarIconButton
+            label="Worktree Squad"
+            active={showSquadPanel}
+            badge={squadStore.squads.length > 0}
+            onClick={() => { setShowSquadPanel(v => !v); if (!showSquadPanel) squadStore.load(); }}
+          >
+            <Users size={14} />
           </ToolbarIconButton>
           <ToolbarIconButton
             label="RAG 코드 검색"
@@ -1216,6 +1230,30 @@ const App: React.FC = () => {
         <Suspense fallback={null}>
           <ErrorBoundary label="MCP">
             <McpPanel onClose={() => setShowMcpPanel(false)} />
+          </ErrorBoundary>
+        </Suspense>
+      )}
+
+      {showSquadPanel && (
+        <Suspense fallback={null}>
+          <ErrorBoundary label="Squad">
+            <SquadPanel
+              squads={squadStore.squads}
+              loading={squadStore.loading}
+              error={squadStore.error}
+              currentCwd={tabs.find((t) => t.id === activeTabId)?.cwd ?? ""}
+              onCreate={async (task, baseBranch) => {
+                const cwd = tabs.find((t) => t.id === activeTabIdRef.current)?.cwd ?? "";
+                return squadStore.create(task, cwd, baseBranch);
+              }}
+              onRemove={squadStore.remove}
+              onOpenInTab={(squad) => {
+                resetHealing();
+                addTab({ cwd: squad.worktree_path, title: `🛡 ${squad.task.slice(0, 18)}` });
+                setShowSquadPanel(false);
+              }}
+              onClose={() => setShowSquadPanel(false)}
+            />
           </ErrorBoundary>
         </Suspense>
       )}

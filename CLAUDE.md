@@ -40,6 +40,7 @@ cd src-tauri && cargo test   # Rust 단위 테스트 실행
 - **Ollama** (`commands/ollama.rs`): NDJSON 스트리밍 `/api/chat`. `ollama_base_url` + `ollama_model` config. `check_ollama_status` / `list_ollama_models`.
 - **RAG** (`commands/rag.rs`): `index_project` / `search_codebase` / `rag_context_for_file` — 소스코드 청킹 + 임베딩 벡터 검색. `embed_auto`: Ollama → xLLM 폴백 자동 선택.
 - **MCP** (`commands/mcp.rs`): stdio JSON-RPC, `~/.lum_mcp.json` 영속. 서버별 inner Mutex 동시성.
+- **Worktree Squad** (Phase 116, `commands/squad.rs`): `squad_create / squad_list / squad_remove`. `~/.lum_squads/<id>` worktree + `lum-squad/<id>` 브랜치. 영속 `~/.lum_squads.json`. mistralrs 단일 인스턴스 공유 — N개 squad ReAct 직렬 실행 (다중 인스턴스는 향후).
 - **lum-mcp-server** (`src/bin/lum-mcp-server.rs`): 독립 실행 MCP 서버 바이너리 — 외부 LLM agent가 LUM 도구 직접 호출.
 - **Cargo features**: `embedded-ai` — mistralrs 포함 (기본 빌드 제외, ~150MB 절감). Platform별 조건: Windows/Linux = CUDA, macOS = Metal.
 - **주요 커맨드**: `spawn_pty`, `write_to_pty`, `stream_ai_command`, `generate_embedding`, `embed_load_gguf`, `embed_load_lora`, `embed_unload`, `load_config`, `save_config`, `index_project`, `search_codebase`, `rag_context_for_file`, `pick_gguf_file`, `pick_model_dir`.
@@ -54,6 +55,7 @@ cd src-tauri && cargo test   # Rust 단위 테스트 실행
   - `useCommandBlocks` — OSC 133 파싱, 커맨드 블록 히스토리
   - `useSshProfiles` — SSH 프로필 저장/불러오기 (`~/.lum_ssh_profiles.json`)
   - `usePrivacyLedger` (Phase 115) — `ai_route_event` 누적 → 백엔드별 호출 통계 + on-device 여부
+  - `useSquads` (Phase 116) — Worktree Squad CRUD 래퍼 + 새 탭에서 worktree 열기
 - **shadcn/ui** (`src/components/ui/`): Button, Dialog, AlertDialog, Command (cmdk), Input, Label, Switch, Tooltip, Textarea, Slider, Select, **ToolbarIconButton** — 모든 모달/폼 컴포넌트가 Radix 기반.
 - **PrivacyLedgerBadge** (Phase 115, `src/components/PrivacyLedgerBadge.tsx`): 헤더 좌상단 배지 — `100% On-Device` / `Cloud N%` 표시, 클릭 시 백엔드별 호출수·평균 latency·최근 호출 popover.
 - **ToolbarIconButton** (`src/components/ui/toolbar-icon-button.tsx`): 헤더 툴바 전용 — Tooltip + kbd 단축키 힌트 + `aria-pressed` active state + badge dot + `tone` variant(accent/cyan). `ToolbarSeparator`로 그룹 구분.
@@ -61,7 +63,7 @@ cd src-tauri && cargo test   # Rust 단위 테스트 실행
 - **AIBlockStream** (`src/components/AIBlockStream.tsx`): 인라인 마크다운 스트림 렌더. EditBlockCard(SEARCH/REPLACE) + ToolCallCard(MCP) + TestResultCard 체인.
 - **ErrorBoundary** (`src/components/ErrorBoundary.tsx`): 터미널·패널 크래시 격리.
 - **E2E 테스트** (`e2e/`): Playwright 스모크 테스트 5개. `e2e/setup/tauri-mock.ts`.
-- **영속성**: `.lum_session.json`, `.lum_config.json`, `.lum_code_index.json`, `.lum_ssh_profiles.json`, `.lum_mcp.json`.
+- **영속성**: `.lum_session.json`, `.lum_config.json`, `.lum_code_index.json`, `.lum_ssh_profiles.json`, `.lum_mcp.json`, `.lum_squads.json`.
 
 ## Tech Stack
 
@@ -81,4 +83,5 @@ cd src-tauri && cargo test   # Rust 단위 테스트 실행
 - **UI 디자인 시스템 (Phase 78)**: 헤더 툴바는 `ToolbarIconButton` + `ToolbarSeparator`로 그룹화(파일/AI/시스템). 모든 모달은 shadcn `Dialog` 사용 — 자체 백드롭 금지. 타이포 magic-pixel(`text-[10/11px]`) 대신 Tailwind 토큰(`text-xs`/`text-sm` + `font-medium`/`font-semibold`) 사용. 패널·배너 진입/이탈은 framer-motion `AnimatePresence` + `motion.div`. 모든 인터랙티브 요소에 `focus-visible:ring-1 focus-visible:ring-ring`. 토글 버튼은 `aria-pressed` 필수.
 - **Privacy Ledger (Phase 115)**: AI 라우팅을 가시화. `stream_ai_command` 분기마다 `ai_route_event { backend, online, model, prompt_chars, latency_ms, ts_ms }` emit. loopback URL은 offline, 그 외는 online으로 분류 (LAN도 보수적으로 online). 비스트리밍 경로(`call_xllm`/ReAct/git)는 향후 페이즈에서 확장.
 - **Quake Mode (Phase 115)**: `tauri-plugin-global-shortcut`. macOS=`Cmd+Shift+Space`, 그 외=`Ctrl+Shift+Space`. 가시+포커스면 hide, 아니면 show+focus+`quake_invoked` emit → 프론트가 AI 바 자동 오픈.
+- **Worktree Squad (Phase 116)**: `git worktree add ~/.lum_squads/<id> -b lum-squad/<id> <base>`. `addTab({cwd, title})` 옵션으로 새 탭이 worktree에서 PTY 시작. squad 제거는 `worktree remove --force` + `branch -D` 후 디렉터리 정리.
 
