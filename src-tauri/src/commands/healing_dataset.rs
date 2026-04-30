@@ -101,6 +101,41 @@ pub fn clear_healing_dataset() -> Result<()> {
     }
 }
 
+/// Phase 118 — 단순 한 번에 read+rewrite. JSONL append-only 파일을 부분 삭제하려면
+/// 어차피 전체를 읽어 필터링 후 다시 써야 함.
+fn rewrite_records(records: &[HealingRecord]) -> Result<()> {
+    use std::io::BufWriter;
+    let f = std::fs::File::create(dataset_path())
+        .map_err(|e| LumError::Io(format!("dataset 재기록 실패: {e}")))?;
+    let mut w = BufWriter::new(f);
+    for rec in records {
+        let line = serde_json::to_string(rec).map_err(|e| LumError::Io(e.to_string()))?;
+        writeln!(w, "{line}").map_err(|e| LumError::Io(e.to_string()))?;
+    }
+    Ok(())
+}
+
+/// 지정 ts_ms들과 일치하는 record 삭제. 반환: 실제 삭제된 개수.
+pub fn forget_by_ts(ts_targets: &[u64]) -> Result<usize> {
+    let records = list_healing_dataset()?;
+    let before = records.len();
+    let target_set: std::collections::HashSet<u64> = ts_targets.iter().copied().collect();
+    let kept: Vec<HealingRecord> = records.into_iter().filter(|r| !target_set.contains(&r.ts_ms)).collect();
+    let removed = before - kept.len();
+    rewrite_records(&kept)?;
+    Ok(removed)
+}
+
+/// 지정 ts_ms 이전 record 삭제.
+pub fn forget_before(ts_ms: u64) -> Result<usize> {
+    let records = list_healing_dataset()?;
+    let before = records.len();
+    let kept: Vec<HealingRecord> = records.into_iter().filter(|r| r.ts_ms >= ts_ms).collect();
+    let removed = before - kept.len();
+    rewrite_records(&kept)?;
+    Ok(removed)
+}
+
 const CHATML_SYSTEM: &str = "당신은 터미널 자동 치유 어시스턴트입니다. 주어진 에러에 대해 안전한 수정 명령을 한 줄로 제안하고, 그 이유를 간단히 설명하세요.";
 
 /// 단일 record를 ChatML messages 배열로 변환. approve만 학습용으로 적합.

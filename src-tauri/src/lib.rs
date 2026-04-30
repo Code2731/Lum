@@ -190,6 +190,11 @@ pub fn run() {
             commands::healing_dataset::list_healing_dataset,
             commands::healing_dataset::clear_healing_dataset,
             commands::healing_dataset::export_healing_dataset,
+            // Phase 118 — Persistent Memory Vault (history/healing/memory 통합 검색)
+            commands::recall::recall_search,
+            commands::recall::recall_forget,
+            commands::recall::recall_forget_before,
+            commands::recall::recall_stats,
             // Workspace
             commands::workspace::save_workspace,
             commands::workspace::list_workspaces,

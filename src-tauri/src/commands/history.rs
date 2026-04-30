@@ -129,3 +129,33 @@ pub fn get_recent_history(limit: usize) -> Vec<HistoryEntry> {
         .cloned()
         .collect()
 }
+
+/// Phase 118 — recall에서 import. 임베딩 포함 전체 entry 반환.
+pub async fn search_history_raw() -> Vec<HistoryEntry> {
+    load().entries
+}
+
+/// Phase 118 — id 매칭으로 일괄 삭제. 반환: 삭제된 개수.
+pub fn forget_by_ids(ids: &[String]) -> usize {
+    let mut store = load();
+    let before = store.entries.len();
+    let id_set: std::collections::HashSet<&str> = ids.iter().map(|s| s.as_str()).collect();
+    store.entries.retain(|e| !id_set.contains(e.id.as_str()));
+    let removed = before - store.entries.len();
+    if removed > 0 {
+        save(&store);
+    }
+    removed
+}
+
+/// Phase 118 — 지정 timestamp(초) 이전 항목 삭제.
+pub fn forget_before(ts_s: u64) -> usize {
+    let mut store = load();
+    let before = store.entries.len();
+    store.entries.retain(|e| e.timestamp >= ts_s);
+    let removed = before - store.entries.len();
+    if removed > 0 {
+        save(&store);
+    }
+    removed
+}

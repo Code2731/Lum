@@ -18,6 +18,7 @@ pub mod models;
 pub mod ollama;
 pub mod project;
 pub mod rag;
+pub mod recall;
 pub mod repo_map;
 pub mod scripts;
 pub mod session;

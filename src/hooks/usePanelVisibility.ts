@@ -17,6 +17,7 @@ export function usePanelVisibility() {
   const [showSshModal, setShowSshModal] = useState(false);
   const [showSquadPanel, setShowSquadPanel] = useState(false);
   const [showHealingDataset, setShowHealingDataset] = useState(false);
+  const [showRecall, setShowRecall] = useState(false);
 
   const closeOverlays = useCallback(() => {
     setShowHistorySearch(false);
@@ -28,6 +29,7 @@ export function usePanelVisibility() {
     setShowPalette(false);
     setShowSquadPanel(false);
     setShowHealingDataset(false);
+    setShowRecall(false);
   }, []);
 
   return {
@@ -47,6 +49,7 @@ export function usePanelVisibility() {
     showSshModal, setShowSshModal,
     showSquadPanel, setShowSquadPanel,
     showHealingDataset, setShowHealingDataset,
+    showRecall, setShowRecall,
     closeOverlays,
   };
 }
