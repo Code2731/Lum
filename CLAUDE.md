@@ -8,7 +8,6 @@ LUM (Local Universal Machine) — Warp 스타일 블록 기반 AI 터미널 에�
 - **AI 백엔드**: mistralrs 0.8.1 (LUM 프로세스에 직접 임베딩, subprocess/HTTP 없음) + Gemini Cloud API 폴백
 - **목표**: 비용 제로, 개인정보 보호. Ollama/TabbyAPI 불필요.
 - **모델 저장**: `~/.lum_mistral_models/<safe_name>/` (GGUF 또는 BF16)
-- **R&D 로드맵**: [R_AND_D_ITEMS.md](./R_AND_D_ITEMS.md)를 참고하여 차세대 기능(GraphRAG, P2P, Auto-tuning) 연구 진행.
 
 ## Build & Dev Commands
 

@@ -36,3 +36,6 @@ dist-ssr
 
 # Claude Code 로컬 설정 (settings.local.json 등) — 사용자 환경 전용
 .claude/
+
+# 내부 R&D 로드맵 — 미공개 전략 문서
+R_AND_D_ITEMS.md
