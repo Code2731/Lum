@@ -39,7 +39,13 @@ LUM (Local Universal Machine) is a **real terminal emulator** that runs your act
 | **Semantic History** | `Ctrl+R` — embedding-based search across your entire command history. |
 | **AI Commit Message** | `Cmd+Shift+G` — analyzes `git diff --cached` and generates a Conventional Commit message. |
 | **AI Diff Reviewer** | `Cmd+Shift+R` — reviews staged changes and annotates each file as safe / caution / risk. |
-| **AI Self-Healing** | Detects errors in terminal output → analyzes cause → suggests a fix with a safety badge. |
+| **AI Self-Healing** | Detects errors in terminal output → analyzes cause → suggests a fix with a safety badge. Approve/reject decisions feed the local learning loop. |
+| **Self-Learning Loop** | Approved healing fixes → ChatML export → in-app LoRA fine-tune (mlx-lm/axolotl) → auto hot-swap into the running model. Rejections also tagged with "why it failed". 100% on-device. |
+| **Persistent Memory Vault** | Unified semantic search across history / healing / memory sources. Time-windowed queries (today/week/month) + GDPR-style "right to forget". Cloud terminals can't keep permanent memory; LUM does. |
+| **Worktree Squad** | Spawn isolated git worktrees + branches for parallel agent tasks (`~/.lum_squads/<id>` + `lum-squad/<id>`). Open each in a new tab without touching your main worktree. |
+| **Privacy Ledger** | Header badge shows `100% On-Device` vs `Cloud N%` per AI call. Click for backend-by-backend stats — every inference call accounted for. |
+| **Quake Mode** | Global hotkey `Cmd/Ctrl+Shift+Space` toggles the window from anywhere; auto-focuses the AI bar on show. |
+| **MCP-augmented Agent** | The `>>` ReAct agent dynamically picks up tools from any enabled MCP server (filesystem / playwright / git / your own). Single `mcp({"server", "tool", "arguments"})` action surface. |
 | **Split Panes** | Horizontal/vertical split with `Cmd+Shift+D/E`. Each pane has its own PTY session. |
 | **Multi-Tab** | `Cmd+T` to open, `Cmd+W` to close, double-click to rename. |
 | **SSH Profiles** | Connect to remote hosts via SSH; profiles saved to `~/.lum_ssh_profiles.json`. |
@@ -56,8 +62,8 @@ LUM (Local Universal Machine) is a **real terminal emulator** that runs your act
 | **Smart Paste** | Detects multi-line clipboard content → dialog to run all at once, step-by-step, or paste as raw text. |
 | **Right-click Context Menu** | Right-click any selected terminal text → copy, run as command, AI explain, web search, or open file/URL. |
 | **System Monitor** | `Cmd+Shift+M` — live CPU & memory gauges + top-6 processes by CPU and RAM, 2-second auto-refresh. |
-| **LUM-MCP-server (Rust native)** | Standalone `lum-mcp-server.exe` exposes 7 LUM tools (read_file / list_directory / git_diff / apply_edit_block / get_repo_map / run_tests / read_file_lines) via stdio MCP. CrewAI / Claude Desktop / any MCP client can drive LUM directly. |
-| **DRAM/VRAM Tiering** | Auto-injected PagedAttention (`--pa-ctxt-len` + `--pa-gpu-mem-usage` linked to safety_mode 70/80/90%) makes 30B+ models practical on 10GB VRAM. |
+| **LUM-MCP-server (Rust native)** | Standalone `lum-mcp-server` binary exposes 7 LUM tools (read_file / list_directory / git_diff / apply_edit_block / get_repo_map / run_tests / read_file_lines) via stdio MCP. CrewAI / Claude Desktop / any MCP client can drive LUM directly. |
+| **DRAM/VRAM Tiering** | Auto-injected PagedAttention (`--pa-ctxt-len` + `--pa-gpu-mem-usage` linked to safety_mode 70/80/90%) makes 30B+ models practical on modest VRAM. |
 | **Edit Block Engine** | SEARCH/REPLACE patches with exact-match + fuzzy whitespace fallback. AI proposes edits → user approves on the EditBlockCard → applied with diff preview. |
 | **Repo Map (tree-sitter + PageRank)** | Token-budget-bounded codebase summary by symbol importance. Used as automatic AI context for refactoring tasks. |
 | **Test Feedback Loop** | Auto-detect project test runner (cargo / pytest / npm / go) → run → on failure, AI proposes a fix → re-run loop. |
@@ -90,8 +96,8 @@ write_to_pty ──► SyncSender ──► Writer thread ──► PTY master �
 - **Rust** — Tauri v2, portable-pty, reqwest, libp2p, sysinfo, serde, tree-sitter (Rust/TS/JS/Python), petgraph (PageRank), nvml-wrapper (NVIDIA VRAM)
 - **Frontend** — React 19, TypeScript, Tailwind CSS v4, shadcn/ui (Radix + cva), xterm.js, react-resizable-panels, react-virtuoso
 - **AI engines** — mistral.rs 0.8.1 embedded GGUF (in-process, CUDA, hot-swap, real-time streaming) + Gemini API (cloud fallback)
-- **Agent ecosystem** — `lum-mcp-server.exe` (Rust native stdio MCP, 7 tools) + `crew/` (CrewAI workspace, separate Python project)
-- **Testing** — Vitest (TS 131 tests), Playwright (E2E smoke), `cargo test` (Rust 74+ tests)
+- **Agent ecosystem** — `lum-mcp-server` (Rust native stdio MCP, 7 tools — usable from CrewAI / Claude Desktop / any MCP client) + `crew/` (CrewAI workspace, separate Python project)
+- **Testing** — Vitest (TS 131 tests), Playwright (E2E smoke), `cargo test` (Rust 125+ tests)
 
 ### Getting Started
 
@@ -167,7 +173,13 @@ LUM(Local Universal Machine)은 **실제 셸을 실행하는 터미널 에뮬레
 | **의미 기반 히스토리** | `Ctrl+R` — 임베딩 기반 자연어 명령어 히스토리 검색. |
 | **AI 커밋 메시지** | `Cmd+Shift+G` — `git diff --cached` 분석 후 Conventional Commit 자동 생성. |
 | **AI Diff 리뷰어** | `Cmd+Shift+R` — 스테이지된 변경사항을 파일별 safe / caution / risk로 분석. |
-| **AI 자가 치유** | 터미널 에러 자동 감지 → 원인 분석 → 안전도 배지와 함께 수정 명령어 제안. |
+| **AI 자가 치유** | 터미널 에러 자동 감지 → 원인 분석 → 안전도 배지와 함께 수정 명령어 제안. 승인/거부 결정이 로컬 학습 루프의 입력. |
+| **자가 학습 루프** | 승인된 치유 → ChatML export → 인앱 LoRA 파인튜닝(mlx-lm/axolotl) → 학습 완료 시 모델 자동 hot-swap. 거부도 "왜 잘못됐는지" 태깅. 100% 온디바이스 — 클라우드 제품은 데이터 보관정책상 불가. |
+| **영구 메모리 Vault** | history / healing / memory 3소스를 단일 시맨틱 검색으로 통합. 시간 필터(오늘/1주/1달) + GDPR-style "잊혀질 권리". |
+| **Worktree Squad** | 병렬 에이전트 작업을 격리된 git worktree + 브랜치(`~/.lum_squads/<id>` + `lum-squad/<id>`)로 spawn. 각 squad를 새 탭에서 열 수 있음 — 메인 워킹트리는 안 건드림. |
+| **Privacy Ledger** | 헤더 배지에 `100% On-Device` 또는 `Cloud N%` 표시. 클릭 시 백엔드별 호출 통계·평균 latency·최근 호출 popover. |
+| **Quake 모드** | 전역 단축키 `Cmd/Ctrl+Shift+Space`로 창 토글 + AI 바 자동 포커스. 어디서든 즉시 호출. |
+| **MCP-augmented Agent** | `>>` ReAct 에이전트가 활성 MCP 서버(filesystem / playwright / git / 사용자 정의)의 도구를 동적으로 가져와 호출. 단일 `mcp({"server", "tool", "arguments"})` 액션. |
 | **스플릿 팬** | `Cmd+Shift+D/E`로 수평/수직 분할. 각 팬은 독립 PTY 세션. |
 | **멀티 탭** | `Cmd+T` 새 탭, `Cmd+W` 닫기, 더블클릭으로 이름 변경. |
 | **SSH 프로필** | SSH 원격 연결 및 프로필 저장(`~/.lum_ssh_profiles.json`). |
@@ -184,8 +196,8 @@ LUM(Local Universal Machine)은 **실제 셸을 실행하는 터미널 에뮬레
 | **스마트 붙여넣기** | 멀티라인 클립보드 자동 감지 → 한 번에 실행 / 단계별 실행 / 텍스트 그대로 붙여넣기 선택 다이얼로그. |
 | **우클릭 컨텍스트 메뉴** | 터미널 텍스트 선택 후 우클릭 → 복사 / 명령어 실행 / AI 설명 / 웹 검색 / 파일·URL 열기. |
 | **시스템 모니터** | `Cmd+Shift+M` — CPU·메모리 게이지 + CPU/메모리 상위 프로세스 6개, 2초마다 자동 갱신. |
-| **LUM-MCP-server (Rust 네이티브)** | 별도 `lum-mcp-server.exe`가 LUM 도구 7개(read_file / list_directory / git_diff / apply_edit_block / get_repo_map / run_tests / read_file_lines)를 stdio MCP로 노출. CrewAI / Claude Desktop / 모든 MCP 클라이언트가 LUM을 직접 제어 가능. |
-| **DRAM/VRAM 계층화** | PagedAttention 자동 주입 (`--pa-ctxt-len` + safety_mode 70/80/90% 연동 `--pa-gpu-mem-usage`)으로 RTX 3080 10GB에 30B+ 모델 실용화. |
+| **LUM-MCP-server (Rust 네이티브)** | 별도 `lum-mcp-server` 바이너리가 LUM 도구 7개(read_file / list_directory / git_diff / apply_edit_block / get_repo_map / run_tests / read_file_lines)를 stdio MCP로 노출. CrewAI / Claude Desktop / 모든 MCP 클라이언트가 LUM을 직접 제어 가능. |
+| **DRAM/VRAM 계층화** | PagedAttention 자동 주입 (`--pa-ctxt-len` + safety_mode 70/80/90% 연동 `--pa-gpu-mem-usage`)으로 modest VRAM 환경에 30B+ 모델 실용화. |
 | **편집 블록 엔진** | SEARCH/REPLACE 패치 (exact match + fuzzy whitespace 폴백). AI 제안 → EditBlockCard에서 사용자 승인 → diff 미리보기 후 적용. |
 | **레포 맵 (tree-sitter + PageRank)** | 토큰 예산 기반 코드베이스 요약 (symbol 중요도순). 리팩토링 작업의 AI 자동 컨텍스트. |
 | **테스트 피드백 루프** | 프로젝트 테스트 러너 자동 감지 (cargo / pytest / npm / go) → 실행 → 실패 시 AI 수정 제안 → 재실행 루프. |
@@ -233,6 +245,19 @@ npm run tauri build -- --features embedded-ai     # OS별 CUDA/Metal 자동 선�
 **GPU 또는 CUDA 없음?** 환경변수에 `GEMINI_API_KEY` 설정 → LUM이 자동으로 Gemini 클라우드 폴백.
 
 ### 개발 로드맵
+
+#### 최근 모트 (Phase 115 ~ 122)
+
+| Phase | 변경 | 영향 |
+|-------|------|------|
+| **115** | Privacy Ledger + Quake Mode | AI 호출별 backend·on-device 비율 가시화. 전역 단축키로 어디서든 호출 |
+| **116** | Worktree Squad | 병렬 에이전트 작업을 격리된 git worktree + 브랜치로 spawn |
+| **117** | Auto-Heal 학습 데이터셋 | 사용자 승인/거부 결정을 JSONL append-only로 영속, ChatML export 지원 |
+| **118** | Persistent Memory Vault | history / healing / memory 통합 시맨틱 검색 + GDPR-style 잊혀질 권리 |
+| **119** | LoRA Forge | 인앱 mlx-lm/axolotl 서브프로세스 오케스트레이션 — 본인 데이터로 본인 모델 fine-tune |
+| **120** | Auto-Learning Loop | approve threshold 도달 시 자동 학습 트리거 + 호환 어댑터 자동 hot-swap |
+| **121** | UI 정리 + 안정화 + MCP↔ReAct | 툴바 16→8+8 토글, mistralrs 학습 timeout, ReAct에 MCP 도구 동적 주입 |
+| **122** | Active Learning v2 | reject 시 LLM이 "왜 잘못된 제안인지" 1줄 분석 → DPO 데이터 소스 |
 
 <details>
 <summary>Phase 23 ~ 92 전체 완료 목록 보기</summary>
