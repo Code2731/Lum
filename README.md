@@ -46,6 +46,7 @@ LUM (Local Universal Machine) is a **real terminal emulator** that runs your act
 | **Privacy Ledger** | Header badge shows `100% On-Device` vs `Cloud N%` per AI call. Click for backend-by-backend stats — every inference call accounted for. |
 | **Quake Mode** | Global hotkey `Cmd/Ctrl+Shift+Space` toggles the window from anywhere; auto-focuses the AI bar on show. |
 | **MCP-augmented Agent** | The `>>` ReAct agent dynamically picks up tools from any enabled MCP server (filesystem / playwright / git / your own). Single `mcp({"server", "tool", "arguments"})` action surface. |
+| **Code Editing Agent** | `>>` ReAct now writes code via `write_file` / `apply_patch` (rejects 0/2+ matches — forces self-correction) / `delete_file`. CWD-bounded SafePath guard (`.git`/`node_modules`/`target`/`.lum_*` denied). Every change auto-backed up to `~/.lum_react_backup/` — finish line shows risk-classified change list (Low test files / Med source / High build manifests) + one-click "Undo all" via `react_agent_undo`. |
 | **Split Panes** | Horizontal/vertical split with `Cmd+Shift+D/E`. Each pane has its own PTY session. |
 | **Multi-Tab** | `Cmd+T` to open, `Cmd+W` to close, double-click to rename. |
 | **SSH Profiles** | Connect to remote hosts via SSH; profiles saved to `~/.lum_ssh_profiles.json`. |
@@ -180,6 +181,7 @@ LUM(Local Universal Machine)은 **실제 셸을 실행하는 터미널 에뮬레
 | **Privacy Ledger** | 헤더 배지에 `100% On-Device` 또는 `Cloud N%` 표시. 클릭 시 백엔드별 호출 통계·평균 latency·최근 호출 popover. |
 | **Quake 모드** | 전역 단축키 `Cmd/Ctrl+Shift+Space`로 창 토글 + AI 바 자동 포커스. 어디서든 즉시 호출. |
 | **MCP-augmented Agent** | `>>` ReAct 에이전트가 활성 MCP 서버(filesystem / playwright / git / 사용자 정의)의 도구를 동적으로 가져와 호출. 단일 `mcp({"server", "tool", "arguments"})` 액션. |
+| **코딩 에이전트** | `>>` ReAct가 이제 `write_file` / `apply_patch`(0건/2건+ 매칭 거부 — LLM 자가 복구 강제) / `delete_file`로 코드 직접 수정. CWD 경계 SafePath 가드(`.git`/`node_modules`/`target`/`.lum_*` 거부). 변경마다 `~/.lum_react_backup/`에 자동 백업 → 완료 시 위험도 분류 변경 파일 목록(Low 테스트 / Med 소스 / High 빌드 매니페스트) + 원클릭 "전체 되돌리기"(`react_agent_undo`). |
 | **스플릿 팬** | `Cmd+Shift+D/E`로 수평/수직 분할. 각 팬은 독립 PTY 세션. |
 | **멀티 탭** | `Cmd+T` 새 탭, `Cmd+W` 닫기, 더블클릭으로 이름 변경. |
 | **SSH 프로필** | SSH 원격 연결 및 프로필 저장(`~/.lum_ssh_profiles.json`). |
@@ -246,7 +248,7 @@ npm run tauri build -- --features embedded-ai     # OS별 CUDA/Metal 자동 선�
 
 ### 개발 로드맵
 
-#### 최근 모트 (Phase 115 ~ 122)
+#### 최근 모트 (Phase 115 ~ 123)
 
 | Phase | 변경 | 영향 |
 |-------|------|------|
@@ -258,6 +260,7 @@ npm run tauri build -- --features embedded-ai     # OS별 CUDA/Metal 자동 선�
 | **120** | Auto-Learning Loop | approve threshold 도달 시 자동 학습 트리거 + 호환 어댑터 자동 hot-swap |
 | **121** | UI 정리 + 안정화 + MCP↔ReAct | 툴바 16→8+8 토글, mistralrs 학습 timeout, ReAct에 MCP 도구 동적 주입 |
 | **122** | Active Learning v2 | reject 시 LLM이 "왜 잘못된 제안인지" 1줄 분석 → DPO 데이터 소스 |
+| **123** | Code Editing Agent (1차/2차/3차) | ReAct에 `write_file`/`apply_patch`/`delete_file` + SafePath 가드 + 자동 백업/되돌리기(`react_agent_undo`) + 위험도 분류 사후 승인 UI(Low/Med/High 배지). 클라우드 코딩 에이전트 격차 ~70% 회수 |
 
 <details>
 <summary>Phase 23 ~ 92 전체 완료 목록 보기</summary>
