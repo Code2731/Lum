@@ -70,6 +70,15 @@ fn find_server_spec(name: &str) -> Result<McpServerSpec, String> {
         .ok_or_else(|| format!("등록되지 않은 서버: {}", name))
 }
 
+/// Phase 121: ReAct 에이전트 등 외부 모듈이 활성 서버 목록을 조회.
+pub fn list_enabled_servers() -> Vec<McpServerSpec> {
+    load_config()
+        .servers
+        .into_iter()
+        .filter(|s| s.enabled)
+        .collect()
+}
+
 // ─── 런타임 상태 ─────────────────────────────────────────────────────────────
 
 pub struct McpProcess {

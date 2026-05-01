@@ -128,14 +128,30 @@ const App: React.FC = () => {
   // Phase 72 — 추론 토큰 표시 전역 토글 (툴바 + XllmPanel 공통 상태)
   const [showReasoning, setShowReasoning] = useState(true);
   const [visionEnabled, setVisionEnabled] = useState(false);
+  // Phase 121: 툴바 고급 기능 표시 모드 (기본 false — "더보기" 팝오버에 숨김).
+  const [toolbarShowAdvanced, setToolbarShowAdvanced] = useState(false);
+  const [showAdvancedOverflow, setShowAdvancedOverflow] = useState(false);
   useEffect(() => {
-    invoke<{ show_reasoning?: boolean; vision_enabled?: boolean }>("load_app_config")
+    invoke<{
+      show_reasoning?: boolean;
+      vision_enabled?: boolean;
+      toolbar_show_advanced?: boolean;
+    }>("load_app_config")
       .then((c) => {
         setShowReasoning(c.show_reasoning ?? true);
         setVisionEnabled(c.vision_enabled ?? false);
+        setToolbarShowAdvanced(c.toolbar_show_advanced ?? false);
       })
       .catch(() => {});
   }, []);
+  const toggleToolbarAdvanced = useCallback(async () => {
+    const next = !toolbarShowAdvanced;
+    setToolbarShowAdvanced(next);
+    if (next) setShowAdvancedOverflow(false);
+    try {
+      await invoke("save_toolbar_show_advanced", { show: next });
+    } catch { /* noop */ }
+  }, [toolbarShowAdvanced]);
   const toggleReasoning = useCallback(async () => {
     const next = !showReasoning;
     setShowReasoning(next);
@@ -639,7 +655,7 @@ const App: React.FC = () => {
 
           <ToolbarSeparator />
 
-          {/* 그룹 2 — AI / 모델 */}
+          {/* 그룹 2 기본 — 매일 쓰는 AI/모델 액션 */}
           <ToolbarIconButton
             label={`추론 토큰 ${showReasoning ? "표시 중" : "숨김"}`}
             tone="cyan"
@@ -649,65 +665,151 @@ const App: React.FC = () => {
             <Brain size={14} />
           </ToolbarIconButton>
           <ToolbarIconButton
-            label="MCP 서버"
-            active={showMcpPanel}
-            onClick={() => setShowMcpPanel(v => !v)}
-          >
-            <PlugZap size={14} />
-          </ToolbarIconButton>
-          <ToolbarIconButton
-            label="Worktree Squad"
-            active={showSquadPanel}
-            badge={squadStore.squads.length > 0}
-            onClick={() => { setShowSquadPanel(v => !v); if (!showSquadPanel) squadStore.load(); }}
-          >
-            <Users size={14} />
-          </ToolbarIconButton>
-          <ToolbarIconButton
-            label="Auto-Heal 학습 데이터셋"
-            tone="cyan"
-            active={showHealingDataset}
-            onClick={() => setShowHealingDataset(v => !v)}
-          >
-            <Sparkles size={14} />
-          </ToolbarIconButton>
-          <ToolbarIconButton
-            label="메모리 검색 (history/healing/memory)"
-            tone="cyan"
-            active={showRecall}
-            onClick={() => setShowRecall(v => !v)}
-          >
-            <Library size={14} />
-          </ToolbarIconButton>
-          <ToolbarIconButton
-            label="LoRA Forge — 내 데이터로 모델 학습"
-            tone="cyan"
-            active={showLoraForge}
-            onClick={() => setShowLoraForge(v => !v)}
-          >
-            <Hammer size={14} />
-          </ToolbarIconButton>
-          <ToolbarIconButton
-            label="RAG 코드 검색"
-            active={showRagPanel}
-            onClick={() => setShowRagPanel(v => !v)}
-          >
-            <Database size={14} />
-          </ToolbarIconButton>
-          <ToolbarIconButton
             label="모델 관리"
             onClick={() => setShowModelManager(true)}
           >
             <Package size={14} />
           </ToolbarIconButton>
-          <ToolbarIconButton
-            label="xLLM 최적화 설정"
-            onClick={() => setShowXllmPanel(true)}
-          >
-            <SlidersHorizontal size={14} />
-          </ToolbarIconButton>
 
           <ToolbarSeparator />
+
+          {/* 그룹 2 고급 — toolbar_show_advanced=true면 인라인, 아니면 "더보기" 팝오버 */}
+          {toolbarShowAdvanced && (
+            <>
+              <ToolbarIconButton
+                label="MCP 서버"
+                active={showMcpPanel}
+                onClick={() => setShowMcpPanel(v => !v)}
+              >
+                <PlugZap size={14} />
+              </ToolbarIconButton>
+              <ToolbarIconButton
+                label="Worktree Squad"
+                active={showSquadPanel}
+                badge={squadStore.squads.length > 0}
+                onClick={() => { setShowSquadPanel(v => !v); if (!showSquadPanel) squadStore.load(); }}
+              >
+                <Users size={14} />
+              </ToolbarIconButton>
+              <ToolbarIconButton
+                label="Auto-Heal 학습 데이터셋"
+                tone="cyan"
+                active={showHealingDataset}
+                onClick={() => setShowHealingDataset(v => !v)}
+              >
+                <Sparkles size={14} />
+              </ToolbarIconButton>
+              <ToolbarIconButton
+                label="메모리 검색 (history/healing/memory)"
+                tone="cyan"
+                active={showRecall}
+                onClick={() => setShowRecall(v => !v)}
+              >
+                <Library size={14} />
+              </ToolbarIconButton>
+              <ToolbarIconButton
+                label="LoRA Forge — 내 데이터로 모델 학습"
+                tone="cyan"
+                active={showLoraForge}
+                onClick={() => setShowLoraForge(v => !v)}
+              >
+                <Hammer size={14} />
+              </ToolbarIconButton>
+              <ToolbarIconButton
+                label="RAG 코드 검색"
+                active={showRagPanel}
+                onClick={() => setShowRagPanel(v => !v)}
+              >
+                <Database size={14} />
+              </ToolbarIconButton>
+              <ToolbarIconButton
+                label="xLLM 최적화 설정"
+                onClick={() => setShowXllmPanel(true)}
+              >
+                <SlidersHorizontal size={14} />
+              </ToolbarIconButton>
+              <ToolbarSeparator />
+            </>
+          )}
+
+          {!toolbarShowAdvanced && (
+            <div className="relative">
+              <ToolbarIconButton
+                label="고급 기능 (MCP / Squad / Healing / Recall / LoRA / RAG / xLLM)"
+                active={showAdvancedOverflow}
+                badge={squadStore.squads.length > 0}
+                onClick={() => setShowAdvancedOverflow(v => !v)}
+              >
+                <SlidersHorizontal size={14} />
+              </ToolbarIconButton>
+              <AnimatePresence>
+                {showAdvancedOverflow && (
+                  <motion.div
+                    key="advanced-overflow"
+                    initial={{ opacity: 0, scale: 0.96, y: -4 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.96, y: -4 }}
+                    transition={{ duration: 0.15, ease: "easeOut" }}
+                    style={{ transformOrigin: "top right" }}
+                    className="absolute right-0 top-full mt-1.5 z-50 w-64 rounded-xl border border-white/10 bg-[#0d1117]/95 backdrop-blur-md shadow-xl p-2 space-y-0.5"
+                  >
+                    <AdvancedRow
+                      icon={<PlugZap size={13} />}
+                      label="MCP 서버"
+                      onClick={() => { setShowAdvancedOverflow(false); setShowMcpPanel(true); }}
+                    />
+                    <AdvancedRow
+                      icon={<Users size={13} />}
+                      label="Worktree Squad"
+                      badge={squadStore.squads.length > 0}
+                      onClick={() => { setShowAdvancedOverflow(false); setShowSquadPanel(true); squadStore.load(); }}
+                    />
+                    <AdvancedRow
+                      icon={<Sparkles size={13} className="text-cyan-300" />}
+                      label="Auto-Heal 학습 데이터셋"
+                      onClick={() => { setShowAdvancedOverflow(false); setShowHealingDataset(true); }}
+                    />
+                    <AdvancedRow
+                      icon={<Library size={13} className="text-cyan-300" />}
+                      label="메모리 검색"
+                      onClick={() => { setShowAdvancedOverflow(false); setShowRecall(true); }}
+                    />
+                    <AdvancedRow
+                      icon={<Hammer size={13} className="text-cyan-300" />}
+                      label="LoRA Forge"
+                      onClick={() => { setShowAdvancedOverflow(false); setShowLoraForge(true); }}
+                    />
+                    <AdvancedRow
+                      icon={<Database size={13} />}
+                      label="RAG 코드 검색"
+                      onClick={() => { setShowAdvancedOverflow(false); setShowRagPanel(true); }}
+                    />
+                    <AdvancedRow
+                      icon={<SlidersHorizontal size={13} />}
+                      label="xLLM 설정"
+                      onClick={() => { setShowAdvancedOverflow(false); setShowXllmPanel(true); }}
+                    />
+                    <div className="h-px bg-white/8 my-1" />
+                    <button
+                      type="button"
+                      onClick={() => { toggleToolbarAdvanced(); setShowAdvancedOverflow(false); }}
+                      className="w-full text-left px-2 py-1.5 rounded text-[10.5px] text-white/55 hover:text-white/85 hover:bg-white/5 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                    >
+                      툴바에 항상 표시 (고급 기능 펼치기)
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          )}
+          {toolbarShowAdvanced && (
+            <ToolbarIconButton
+              label="고급 기능 접기"
+              onClick={toggleToolbarAdvanced}
+            >
+              <X size={14} />
+            </ToolbarIconButton>
+          )}
 
           {/* 그룹 3 — 도구 / 알림 */}
           <ToolbarIconButton
@@ -1449,5 +1551,23 @@ const TabIconComponent: React.FC<{ icon?: string }> = ({ icon }) => {
     default:        return <TerminalSquare size={12} className={cls} />;
   }
 };
+
+// Phase 121 — 툴바 "더보기" 팝오버용 단순 행. 주력 ToolbarIconButton과 분리해 popover 안 텍스트 형식 유지.
+const AdvancedRow: React.FC<{
+  icon: React.ReactNode;
+  label: string;
+  badge?: boolean;
+  onClick: () => void;
+}> = ({ icon, label, badge, onClick }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    className="w-full flex items-center gap-2 px-2 py-1.5 rounded text-[11px] text-white/75 hover:text-white hover:bg-white/5 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+  >
+    <span className="shrink-0 text-white/50">{icon}</span>
+    <span className="flex-1 text-left">{label}</span>
+    {badge && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" aria-hidden="true" />}
+  </button>
+);
 
 export default App;

@@ -86,6 +86,12 @@ pub struct AppConfig {
     pub auto_lora_lr: Option<f32>,
     /// 학습 완료 시 호환되면 즉시 hot-swap. 기본 true (활성화 됐을 때만 의미).
     pub auto_lora_auto_load: Option<bool>,
+    /// 자동 학습 timeout(초). 기본 14400 (4시간). 이 시간 초과 시 child kill + Failed.
+    pub auto_lora_timeout_secs: Option<u64>,
+
+    // ── Phase 121: 툴바 표시 모드 ─────────────────────────────────────────
+    /// 고급 기능 버튼을 툴바에 직접 노출. false면 "더보기" 팝오버에 숨김. 기본 false.
+    pub toolbar_show_advanced: Option<bool>,
 }
 
 impl AppConfig {
@@ -314,6 +320,14 @@ pub fn save_auto_lora_settings(
     if auto_load.is_some() {
         config.auto_lora_auto_load = auto_load;
     }
+    save_config(&config)
+}
+
+/// Phase 121: 툴바 고급 모드 토글 영속.
+#[tauri::command]
+pub fn save_toolbar_show_advanced(show: bool) -> Result<()> {
+    let mut config = load_config()?;
+    config.toolbar_show_advanced = Some(show);
     save_config(&config)
 }
 

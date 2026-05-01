@@ -205,6 +205,8 @@ pub fn run() {
             // Phase 120 — 자동 학습 루프 (Auto-Learn)
             commands::lora_forge::lora_forge_auto_status,
             commands::config::save_auto_lora_settings,
+            // Phase 121 — UI 정리 (툴바 기본/고급 모드)
+            commands::config::save_toolbar_show_advanced,
             // Workspace
             commands::workspace::save_workspace,
             commands::workspace::list_workspaces,

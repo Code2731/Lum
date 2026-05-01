@@ -102,14 +102,24 @@ fn cancels() -> &'static Cancels {
     C.get_or_init(|| Cancels(Mutex::new(HashMap::new())))
 }
 
+/// 패닉으로 poison된 락도 회복 — Mutex가 보호하는 데이터는 단순 HashMap 뿐이라
+/// 부분 갱신으로 인한 invariant 깨짐 위험 없음.
+fn lock_cancels() -> std::sync::MutexGuard<'static, HashMap<String, oneshot::Sender<()>>> {
+    cancels().0.lock().unwrap_or_else(|p| p.into_inner())
+}
+
 struct LogBuffers(Mutex<HashMap<String, VecDeque<String>>>);
 fn logs() -> &'static LogBuffers {
     static L: OnceLock<LogBuffers> = OnceLock::new();
     L.get_or_init(|| LogBuffers(Mutex::new(HashMap::new())))
 }
 
+fn lock_logs() -> std::sync::MutexGuard<'static, HashMap<String, VecDeque<String>>> {
+    logs().0.lock().unwrap_or_else(|p| p.into_inner())
+}
+
 fn push_log_line(run_id: &str, line: &str) {
-    let mut map = logs().0.lock().unwrap();
+    let mut map = lock_logs();
     let buf = map.entry(run_id.to_string()).or_default();
     buf.push_back(line.to_string());
     while buf.len() > MAX_LOG_TAIL {
@@ -118,10 +128,7 @@ fn push_log_line(run_id: &str, line: &str) {
 }
 
 fn drain_log(run_id: &str) -> Vec<String> {
-    logs()
-        .0
-        .lock()
-        .unwrap()
+    lock_logs()
         .remove(run_id)
         .map(|d| d.into_iter().collect())
         .unwrap_or_default()
@@ -405,33 +412,51 @@ fn spawn_training(app: AppHandle, run: ForgeRun, auto_mode: Option<AutoMode>) ->
         .ok_or_else(|| LumError::Io("stderr 캡처 실패".into()))?;
 
     let (cancel_tx, cancel_rx) = oneshot::channel::<()>();
-    cancels().0.lock().unwrap().insert(run.id.clone(), cancel_tx);
+    lock_cancels().insert(run.id.clone(), cancel_tx);
 
     // stdout/stderr 두 스트림 모두 줄단위로 push_log + emit. 학습 도구 대부분이 진행률을 stderr에 출력.
     spawn_stream_reader(app.clone(), run.id.clone(), "stdout", stdout);
     spawn_stream_reader(app.clone(), run.id.clone(), "stderr", stderr);
 
-    // 메인 감시 — wait vs cancel race.
+    // Phase 121: 학습 timeout — 폭주한 학습이 영원히 GPU를 점유하는 사고 방지.
+    // config.auto_lora_timeout_secs (기본 4시간). user-initiated run에도 동일 적용.
+    let timeout_secs = crate::commands::config::load_config()
+        .ok()
+        .and_then(|c| c.auto_lora_timeout_secs)
+        .unwrap_or(4 * 60 * 60);
+
+    // 메인 감시 — wait vs cancel vs timeout race.
     let app_w = app;
     let id_w = run.id;
     tokio::spawn(async move {
         let cancelled;
+        let timed_out;
         let exit_code;
         tokio::select! {
             res = child.wait() => {
                 cancelled = false;
+                timed_out = false;
                 exit_code = res.ok().and_then(|s| s.code());
             }
             _ = cancel_rx => {
                 cancelled = true;
+                timed_out = false;
+                let _ = child.start_kill();
+                let _ = child.wait().await;
+                exit_code = None;
+            }
+            _ = tokio::time::sleep(std::time::Duration::from_secs(timeout_secs)) => {
+                cancelled = false;
+                timed_out = true;
+                push_log_line(&id_w, &format!("⏱ timeout {timeout_secs}s 초과 — 프로세스 종료"));
                 let _ = child.start_kill();
                 let _ = child.wait().await;
                 exit_code = None;
             }
         }
-        cancels().0.lock().unwrap().remove(&id_w);
+        lock_cancels().remove(&id_w);
 
-        let final_status = if cancelled {
+        let final_status = if cancelled || timed_out {
             ForgeStatus::Cancelled
         } else if matches!(exit_code, Some(0)) {
             ForgeStatus::Completed
@@ -568,7 +593,7 @@ fn finalize_run(run_id: &str, status: ForgeStatus, exit_code: Option<i32>) {
 
 #[tauri::command]
 pub fn lora_forge_cancel(run_id: String) -> Result<bool> {
-    let tx = cancels().0.lock().unwrap().remove(&run_id);
+    let tx = lock_cancels().remove(&run_id);
     Ok(tx.map(|t| t.send(()).is_ok()).unwrap_or(false))
 }
 
@@ -580,7 +605,7 @@ pub fn lora_forge_list() -> Result<Vec<ForgeRun>> {
 #[tauri::command]
 pub fn lora_forge_remove(run_id: String) -> Result<()> {
     // 실행 중이면 먼저 취소.
-    if let Some(tx) = cancels().0.lock().unwrap().remove(&run_id) {
+    if let Some(tx) = lock_cancels().remove(&run_id) {
         let _ = tx.send(());
     }
     let mut store = load_store();
@@ -616,7 +641,7 @@ fn current_unlearned_count(cursor_ms: u64) -> u32 {
 }
 
 fn any_running() -> bool {
-    !cancels().0.lock().unwrap().is_empty()
+    !lock_cancels().is_empty()
 }
 
 #[tauri::command]

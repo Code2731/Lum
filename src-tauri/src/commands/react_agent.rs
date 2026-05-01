@@ -12,7 +12,7 @@ use serde::Serialize;
 use std::path::Path;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, OnceLock};
-use tauri::{command, AppHandle, Emitter};
+use tauri::{command, AppHandle, Emitter, Manager};
 use tokio::process::Command as TokioCommand;
 
 const REACT_EVENT: &str = "react_event";
@@ -52,27 +52,17 @@ fn emit_event(app: &AppHandle, kind: &str, content: impl Into<String>, tool: Opt
 
 // ─── 시스템 프롬프트 ───────────────────────────────────────────────────────────
 
-fn system_prompt() -> &'static str {
-    r#"당신은 Windows 터미널 에이전트입니다. 주어진 목표를 달성하기 위해 도구를 사용합니다.
+const BASE_PROMPT: &str = r#"당신은 터미널 에이전트입니다. 주어진 목표를 달성하기 위해 도구를 사용합니다.
 
-운영체제: Windows (cmd.exe 명령어 사용)
-
-사용 가능한 도구:
-- shell({"cmd": "명령어"}) — cmd /C 명령어 실행 (stdout+stderr 반환)
+내장 도구:
+- shell({"cmd": "명령어"}) — Windows=cmd /C, 그 외=sh -c (stdout+stderr 반환)
 - read_file({"path": "파일경로"}) — 파일 내용 읽기
 - list_dir({"path": "경로"}) — 디렉토리 목록
 - get_repo_map({"cwd": "경로"}) — 코드베이스 구조 요약
 - git_diff({"cwd": "경로"}) — git diff 조회
-- run_tests({"cwd": "경로"}) — 테스트 자동 감지 후 실행
+- run_tests({"cwd": "경로"}) — 테스트 자동 감지 후 실행"#;
 
-Windows 유용한 명령어 예시:
-- 드라이브 용량: shell({"cmd": "wmic logicaldisk get Caption,FreeSpace,Size"})
-- 특정 드라이브: shell({"cmd": "dir H:\\"})
-- 현재 디렉토리: shell({"cmd": "cd"})
-- 프로세스 목록: shell({"cmd": "tasklist"})
-- 환경변수: shell({"cmd": "set"})
-
-응답 형식 (반드시 준수):
+const PROMPT_TAIL: &str = r#"응답 형식 (반드시 준수):
 THOUGHT: <현재 상황 분석 및 다음 행동 이유>
 ACTION: 도구명({"param": "값"})
 
@@ -86,7 +76,64 @@ ANSWER: <사용자에게 전달할 최종 답변>
 - 이전 OBSERVATION으로 충분한 정보를 얻었으면 즉시 ANSWER 출력
 - 동일 도구를 같은 인수로 2회 이상 호출 금지
 - 불필요한 도구 호출 최소화
-- 한국어로 응답"#
+- 한국어로 응답"#;
+
+/// Phase 121: 활성 MCP 서버/도구 목록을 동적으로 시스템 프롬프트에 주입.
+/// mcp_tools가 비었으면 MCP 섹션 자체를 생략 — 토큰 낭비 방지.
+fn build_system_prompt(mcp_tools: &[McpToolEntry]) -> String {
+    let mut s = String::from(BASE_PROMPT);
+    if !mcp_tools.is_empty() {
+        s.push_str("\n\nMCP 도구 (외부 서버):\n");
+        s.push_str("- mcp({\"server\": \"이름\", \"tool\": \"도구\", \"arguments\": {...}}) — MCP 서버의 도구 호출\n");
+        s.push_str("\n사용 가능한 MCP 도구:\n");
+        for t in mcp_tools {
+            let desc = if t.description.is_empty() {
+                String::new()
+            } else {
+                format!(" — {}", t.description)
+            };
+            s.push_str(&format!("- {}/{}{}\n", t.server, t.tool, desc));
+        }
+    }
+    s.push_str("\n\n");
+    s.push_str(PROMPT_TAIL);
+    s
+}
+
+#[derive(Clone)]
+struct McpToolEntry {
+    server: String,
+    tool: String,
+    description: String,
+}
+
+/// 활성 MCP 서버 각각에 tools/list를 호출해 평탄한 (server, tool, desc) 리스트로 모음.
+/// 실패한 서버는 조용히 skip — 한 서버 다운으로 에이전트 시작이 막히면 안 됨.
+async fn enumerate_mcp_tools(state: &tauri::State<'_, crate::mcp::McpState>) -> Vec<McpToolEntry> {
+    let servers = crate::mcp::list_enabled_servers();
+    let mut out = Vec::new();
+    for spec in servers {
+        let result = crate::mcp::mcp_list_tools(spec.name.clone(), state.clone()).await;
+        let Ok(value) = result else { continue };
+        let Some(tools) = value.get("tools").and_then(|t| t.as_array()) else { continue };
+        for t in tools {
+            let Some(name) = t.get("name").and_then(|n| n.as_str()) else { continue };
+            // description은 길 수 있으니 80자로 trim — 시스템 프롬프트 토큰 보호.
+            let description = t.get("description").and_then(|d| d.as_str()).unwrap_or("");
+            let trimmed = if description.chars().count() > 80 {
+                let cut: String = description.chars().take(80).collect();
+                format!("{cut}…")
+            } else {
+                description.to_string()
+            };
+            out.push(McpToolEntry {
+                server: spec.name.clone(),
+                tool: name.to_string(),
+                description: trimmed,
+            });
+        }
+    }
+    out
 }
 
 // ─── 도구 파싱 ────────────────────────────────────────────────────────────────
@@ -129,7 +176,12 @@ fn parse_answer(text: &str) -> Option<String> {
 
 // ─── 도구 실행 ────────────────────────────────────────────────────────────────
 
-async fn run_tool(tool: &str, args: &serde_json::Value, cwd: &str) -> String {
+async fn run_tool(
+    app: &AppHandle,
+    tool: &str,
+    args: &serde_json::Value,
+    cwd: &str,
+) -> String {
     match tool {
         "shell" => {
             let cmd = args["cmd"].as_str().unwrap_or("").to_string();
@@ -164,7 +216,26 @@ async fn run_tool(tool: &str, args: &serde_json::Value, cwd: &str) -> String {
             let test_cwd = args["cwd"].as_str().unwrap_or(cwd).to_string();
             run_tests_tool(&test_cwd).await
         }
+        "mcp" => run_mcp_tool(app, args).await,
         _ => format!("알 수 없는 도구: {tool}"),
+    }
+}
+
+/// Phase 121: MCP 서버 도구 호출. mcp({"server", "tool", "arguments"}).
+async fn run_mcp_tool(app: &AppHandle, args: &serde_json::Value) -> String {
+    let server = args["server"].as_str().unwrap_or("").trim().to_string();
+    let tool = args["tool"].as_str().unwrap_or("").trim().to_string();
+    if server.is_empty() || tool.is_empty() {
+        return "오류: mcp는 server + tool 파라미터 모두 필요".to_string();
+    }
+    let arguments = args.get("arguments").cloned().unwrap_or(serde_json::json!({}));
+    let state: tauri::State<'_, crate::mcp::McpState> = app.state();
+    match crate::mcp::mcp_call_tool(server, tool, arguments, state).await {
+        Ok(v) => {
+            let pretty = serde_json::to_string_pretty(&v).unwrap_or_else(|_| v.to_string());
+            truncate(&pretty)
+        }
+        Err(e) => format!("MCP 호출 실패: {e}"),
     }
 }
 
@@ -302,9 +373,21 @@ pub async fn react_agent_run(
 
     emit_event(&app, "status", format!("목표: {goal}"), None, Some(0));
 
+    // Phase 121: 활성 MCP 서버의 도구를 동적으로 시스템 프롬프트에 주입.
+    let mcp_state: tauri::State<'_, crate::mcp::McpState> = app.state();
+    let mcp_tools = enumerate_mcp_tools(&mcp_state).await;
+    if !mcp_tools.is_empty() {
+        emit_event(
+            &app,
+            "status",
+            format!("MCP 도구 {}개 로드", mcp_tools.len()),
+            None,
+            Some(0),
+        );
+    }
     let mut conversation = format!(
         "{}\n\n목표: {goal}\n\nCWD: {effective_cwd}",
-        system_prompt()
+        build_system_prompt(&mcp_tools)
     );
 
     let client = reqwest::Client::builder()
@@ -372,7 +455,7 @@ pub async fn react_agent_run(
         emit_event(&app, "action", &action_desc, Some(&action.tool), Some(step + 1));
 
         // 도구 실행
-        let observation = run_tool(&action.tool, &action.args, &effective_cwd).await;
+        let observation = run_tool(&app, &action.tool, &action.args, &effective_cwd).await;
         emit_event(&app, "observation", &observation, None, Some(step + 1));
 
         // 대화 히스토리 업데이트 (최근 6턴만 유지해 컨텍스트 폭발 방지)
@@ -447,5 +530,51 @@ mod tests {
     fn truncate_짧으면_그대로() {
         let short = "hello";
         assert_eq!(truncate(short), short);
+    }
+
+    #[test]
+    fn build_prompt_omits_mcp_section_when_empty() {
+        let s = build_system_prompt(&[]);
+        assert!(!s.contains("MCP 도구"));
+        assert!(s.contains("내장 도구"));
+        assert!(s.contains("ANSWER:"));
+    }
+
+    #[test]
+    fn build_prompt_includes_mcp_tool_listing() {
+        let tools = vec![
+            McpToolEntry {
+                server: "playwright".into(),
+                tool: "screenshot".into(),
+                description: "브라우저 스크린샷".into(),
+            },
+            McpToolEntry {
+                server: "git".into(),
+                tool: "log".into(),
+                description: String::new(),
+            },
+        ];
+        let s = build_system_prompt(&tools);
+        assert!(s.contains("MCP 도구"));
+        assert!(s.contains("playwright/screenshot"));
+        assert!(s.contains("브라우저 스크린샷"));
+        assert!(s.contains("git/log"));
+        // mcp 도구 호출 형식 안내가 들어가야 함
+        assert!(s.contains("\"server\""));
+        assert!(s.contains("\"tool\""));
+    }
+
+    #[test]
+    fn parse_action_handles_mcp_tool() {
+        let text = r#"THOUGHT: 스크린샷 찍자
+ACTION: mcp({"server": "playwright", "tool": "screenshot", "arguments": {"url": "https://example.com"}})"#;
+        let action = parse_action(text).unwrap();
+        assert_eq!(action.tool, "mcp");
+        assert_eq!(action.args["server"].as_str(), Some("playwright"));
+        assert_eq!(action.args["tool"].as_str(), Some("screenshot"));
+        assert_eq!(
+            action.args["arguments"]["url"].as_str(),
+            Some("https://example.com")
+        );
     }
 }
