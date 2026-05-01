@@ -1216,6 +1216,9 @@ const App: React.FC = () => {
                     state={reactAgent.state}
                     onCancel={reactAgent.cancel}
                     onClose={reactAgent.reset}
+                    onUndo={() => {
+                      reactAgent.undo().catch(() => {});
+                    }}
                   />
                 </Suspense>
               </div>

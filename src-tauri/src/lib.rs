@@ -104,6 +104,8 @@ pub fn run() {
             commands::agent::agent_observe,
             commands::react_agent::react_agent_run,
             commands::react_agent::react_agent_cancel,
+            commands::react_agent::react_agent_undo,
+            commands::react_agent::react_agent_changes,
             // Phase 70: Repo Map + Edit Apply
             commands::repo_map::get_repo_map,
             commands::edit_apply::apply_edit_block,

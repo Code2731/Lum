@@ -11,13 +11,24 @@ import {
   Zap,
   Eye,
   Terminal,
+  FilePlus,
+  FileEdit,
+  FileX,
+  Undo2,
 } from "lucide-react";
-import type { ReactAgentState, ReactStep } from "../hooks/useReactAgent";
+import type {
+  ReactAgentState,
+  ReactStep,
+  ChangeInfo,
+  ChangeRisk,
+  ChangeKind,
+} from "../hooks/useReactAgent";
 
 interface Props {
   state: ReactAgentState;
   onCancel: () => void;
   onClose: () => void;
+  onUndo: () => void;
 }
 
 const KIND_ICON: Record<ReactStep["kind"], React.ReactNode> = {
@@ -27,6 +38,8 @@ const KIND_ICON: Record<ReactStep["kind"], React.ReactNode> = {
   answer: <CheckCircle2 size={10} className="text-green-400 shrink-0 mt-0.5" />,
   error: <XCircle size={10} className="text-red-400 shrink-0 mt-0.5" />,
   status: <Terminal size={10} className="text-white/30 shrink-0 mt-0.5" />,
+  // file_change는 단계 목록엔 직접 표시 안 함 — 변경 파일 섹션에서 종합 표시.
+  file_change: <FileEdit size={10} className="text-cyan-400 shrink-0 mt-0.5" />,
 };
 
 const KIND_COLOR: Record<ReactStep["kind"], string> = {
@@ -36,9 +49,47 @@ const KIND_COLOR: Record<ReactStep["kind"], string> = {
   answer: "text-green-300",
   error: "text-red-400",
   status: "text-white/30",
+  file_change: "text-cyan-300/80",
+};
+
+const RISK_BADGE: Record<ChangeRisk, { label: string; bg: string; fg: string; border: string }> = {
+  low: {
+    label: "Low",
+    bg: "bg-green-500/10",
+    fg: "text-green-300",
+    border: "border-green-500/20",
+  },
+  medium: {
+    label: "Med",
+    bg: "bg-yellow-500/10",
+    fg: "text-yellow-300",
+    border: "border-yellow-500/20",
+  },
+  high: {
+    label: "High",
+    bg: "bg-red-500/10",
+    fg: "text-red-300",
+    border: "border-red-500/20",
+  },
+};
+
+const KIND_ICON_FILE: Record<ChangeKind, React.ReactNode> = {
+  created: <FilePlus size={11} className="text-green-400 shrink-0" />,
+  modified: <FileEdit size={11} className="text-cyan-400 shrink-0" />,
+  deleted: <FileX size={11} className="text-red-400 shrink-0" />,
+};
+
+const KIND_LABEL_FILE: Record<ChangeKind, string> = {
+  created: "신규",
+  modified: "수정",
+  deleted: "삭제",
 };
 
 const StepRow: React.FC<{ step: ReactStep; idx: number }> = ({ step }) => {
+  // file_change는 단계 목록에서 숨김 — 변경 파일 섹션에서 종합 표시.
+  if (step.kind === "file_change") {
+    return null;
+  }
   if (step.kind === "status") {
     return (
       <div className="flex items-center gap-1.5 py-0.5 px-1">
@@ -67,6 +118,36 @@ const StepRow: React.FC<{ step: ReactStep; idx: number }> = ({ step }) => {
   );
 };
 
+const ChangeRow: React.FC<{ change: ChangeInfo }> = ({ change }) => {
+  const risk = RISK_BADGE[change.risk];
+  return (
+    <div className="flex items-center gap-2 py-1 px-1.5 rounded bg-white/2 hover:bg-white/4 transition-colors">
+      {KIND_ICON_FILE[change.kind]}
+      <span className="text-[10px] text-white/40 font-medium shrink-0 w-7">
+        {KIND_LABEL_FILE[change.kind]}
+      </span>
+      <span
+        className={`text-[9px] font-mono px-1.5 py-0.5 rounded border ${risk.bg} ${risk.fg} ${risk.border} shrink-0`}
+        title={
+          change.risk === "high"
+            ? "빌드/설정 파일 — 신중 검토 필요"
+            : change.risk === "low"
+              ? "테스트 파일 — 검토 가벼움"
+              : "일반 소스 — 검토 권장"
+        }
+      >
+        {risk.label}
+      </span>
+      <span
+        className="text-[11px] font-mono text-white/70 truncate flex-1 min-w-0"
+        title={change.path}
+      >
+        {change.rel_path}
+      </span>
+    </div>
+  );
+};
+
 const STATUS_LABEL: Record<ReactAgentState["status"], string> = {
   idle: "대기",
   running: "실행 중...",
@@ -75,11 +156,15 @@ const STATUS_LABEL: Record<ReactAgentState["status"], string> = {
   cancelled: "취소됨",
 };
 
-const ReactAgentPanel: React.FC<Props> = ({ state, onCancel, onClose }) => {
+const ReactAgentPanel: React.FC<Props> = ({ state, onCancel, onClose, onUndo }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
-  const { status, goal, steps } = state;
+  const { status, goal, steps, changes, undoing, undoReport } = state;
   const isActive = status === "running";
   const currentStep = steps.filter(s => s.kind === "status").length;
+  const hasChanges = changes.length > 0;
+  const highRiskCount = changes.filter((c) => c.risk === "high").length;
+  const showUndoButton =
+    hasChanges && (status === "done" || status === "error" || status === "cancelled");
 
   // 새 단계 추가 시 자동 스크롤
   useEffect(() => {
@@ -120,7 +205,21 @@ const ReactAgentPanel: React.FC<Props> = ({ state, onCancel, onClose }) => {
         </span>
         {isActive && currentStep > 0 && (
           <span className="text-[10px] text-white/30 ml-auto">
-            {currentStep} / 15 단계
+            {currentStep} / 25 단계
+          </span>
+        )}
+        {!isActive && hasChanges && (
+          <span
+            className={`text-[10px] ml-auto font-medium ${
+              highRiskCount > 0 ? "text-red-300" : "text-white/50"
+            }`}
+            title={
+              highRiskCount > 0
+                ? `${highRiskCount}건의 빌드/설정 파일 변경 — 검토 권장`
+                : `${changes.length}개 파일 변경됨`
+            }
+          >
+            변경 {changes.length}{highRiskCount > 0 ? ` · High ${highRiskCount}` : ""}
           </span>
         )}
       </div>
@@ -144,6 +243,49 @@ const ReactAgentPanel: React.FC<Props> = ({ state, onCancel, onClose }) => {
         )}
       </div>
 
+      {/* ── 변경 파일 섹션 ──────────────────────────────────────────────── */}
+      {hasChanges && (
+        <div className="shrink-0 border-t border-white/5 bg-white/2 max-h-[180px] overflow-y-auto">
+          <div className="sticky top-0 flex items-center gap-1.5 px-3 py-1.5 bg-white/3 border-b border-white/5">
+            <FileEdit size={10} className="text-cyan-400" />
+            <span className="text-[10px] font-semibold text-white/60">
+              변경 파일 ({changes.length})
+            </span>
+            {highRiskCount > 0 && (
+              <span className="text-[9px] text-red-300 font-medium ml-1">
+                · High {highRiskCount}
+              </span>
+            )}
+          </div>
+          <div className="p-1.5 space-y-0.5">
+            {changes.map((c) => (
+              <ChangeRow key={c.path} change={c} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── undo 결과 리포트 ──────────────────────────── */}
+      {undoReport && (
+        <div className="shrink-0 border-t border-white/5 px-3 py-2 bg-white/2 text-[10px] space-y-0.5">
+          {undoReport.restored.length > 0 && (
+            <div className="text-green-300/80">
+              복원 {undoReport.restored.length}개
+            </div>
+          )}
+          {undoReport.removed.length > 0 && (
+            <div className="text-cyan-300/80">
+              삭제 {undoReport.removed.length}개 (신규 파일)
+            </div>
+          )}
+          {undoReport.errors.length > 0 && (
+            <div className="text-red-300/80">
+              오류 {undoReport.errors.length}건: {undoReport.errors[0]}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* ── 액션 버튼 ─────────────────────────────────────── */}
       <div className="shrink-0 border-t border-white/5 px-3 py-2.5 flex items-center justify-end gap-2">
         {isActive && (
@@ -153,6 +295,21 @@ const ReactAgentPanel: React.FC<Props> = ({ state, onCancel, onClose }) => {
           >
             <Square size={11} />
             중단
+          </button>
+        )}
+        {showUndoButton && (
+          <button
+            onClick={onUndo}
+            disabled={undoing}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] rounded-md bg-amber-500/10 text-amber-300 hover:bg-amber-500/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            title="이번 ReAct run의 모든 파일 변경을 되돌림"
+          >
+            {undoing ? (
+              <Loader2 size={11} className="animate-spin" />
+            ) : (
+              <Undo2 size={11} />
+            )}
+            {undoing ? "되돌리는 중..." : "변경 되돌리기"}
           </button>
         )}
         {(status === "done" || status === "error" || status === "cancelled") && (
