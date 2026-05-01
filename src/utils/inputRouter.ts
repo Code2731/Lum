@@ -62,15 +62,8 @@ export function isKnownShellCommand(token: string): boolean {
 }
 
 /**
- * 코딩 의도 감지 (Phase 124) — "동사 ≥ 1 AND 명사 ≥ 1" 결정적 매칭.
- * 매치 시 자연어 입력을 자동으로 ReAct 에이전트로 라우팅.
- *
- * 보수적 디자인:
- * - false positive 회피 우선 — 모호하면 ai(챗) 폴백
- * - 명시적 prefix(`>>`)는 항상 우선
- * - 단독 키워드("리팩터링해")는 안 잡음 — 다음 페이즈에서 강한 동사 셋 별도 도입
- *
- * 안전망 (Phase 123 2차/3차): 잘못 잡혀도 자동 백업 + 원클릭 undo + 위험도 분류로 1초 복구.
+ * 코딩 의도 감지 — "동사 ≥ 1 AND 명사 ≥ 1" 결정적 매칭. 매치 시 자연어 입력을
+ * 자동으로 ReAct 에이전트로 라우팅. 모호하면 ai(챗) 폴백 — false positive 회피 우선.
  */
 const CODING_VERBS_KO = [
   "수정", "추가", "구현", "고쳐", "고치", "리팩터", "리팩토링", "삭제",
@@ -89,19 +82,25 @@ const CODING_NOUNS_EN = [
   "hook", "test", "type", "code", "error",
 ];
 
+// 정규식은 module 로드 시 1회 컴파일 — 매 routeInput 호출마다 24개 RegExp 재생성 회피.
+// 동사: \bverb\b (활용형 added/adding 미잡음 — 보수적). 명사: \bnoun s?\b (단/복수).
+const CODING_VERB_RE_EN = CODING_VERBS_EN.map((v) => new RegExp(`\\b${v}\\b`));
+const CODING_NOUN_RE_EN = CODING_NOUNS_EN.map((n) => new RegExp(`\\b${n}s?\\b`));
+
+/** 한국어는 활용 다양해 substring, 영어는 word boundary regex 병렬 매처. */
+function matchAny(text: string, lower: string, koList: string[], enRegexes: RegExp[]): boolean {
+  return (
+    koList.some((w) => text.includes(w)) ||
+    enRegexes.some((re) => re.test(lower))
+  );
+}
+
 export function detectCodingIntent(text: string): boolean {
   if (!text) return false;
   const lower = text.toLowerCase();
-  const hasVerb =
-    CODING_VERBS_KO.some((v) => text.includes(v)) ||
-    CODING_VERBS_EN.some((v) => new RegExp(`\\b${v}\\b`).test(lower));
+  const hasVerb = matchAny(text, lower, CODING_VERBS_KO, CODING_VERB_RE_EN);
   if (!hasVerb) return false;
-  // 영어 명사는 단수/복수 모두 매칭 — `\bnoun(s)?\b`. "tests"/"files"/"functions" 같은
-  // 흔한 plural 케이스를 위해. 동사는 활용형이 다양해(added/adding/adds) word boundary 그대로 둠.
-  const hasNoun =
-    CODING_NOUNS_KO.some((n) => text.includes(n)) ||
-    CODING_NOUNS_EN.some((n) => new RegExp(`\\b${n}s?\\b`).test(lower));
-  return hasNoun;
+  return matchAny(text, lower, CODING_NOUNS_KO, CODING_NOUN_RE_EN);
 }
 
 /** 입력 전체가 shell 특수문자로 시작하는지 (path, pipe, redirect 등) */

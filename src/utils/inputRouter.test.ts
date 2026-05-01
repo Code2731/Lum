@@ -124,105 +124,35 @@ describe("routeInput — 기본: 자연어=AI, CLI 감지 시 shell", () => {
     });
   });
 
-  // ─── Phase 124 — 자연어 코딩 의도 자동 라우팅 ─────────────────────────────
-  describe("자연어 코딩 의도 → agent (Phase 124)", () => {
-    describe("한국어 — 동사 + 명사 매칭", () => {
-      it("'add 함수 추가해줘' → agent", () => {
-        expect(routeInput("utils.ts에 add 함수 추가해줘")).toEqual({
-          type: "agent",
-          task: "utils.ts에 add 함수 추가해줘",
-        });
-      });
-      it("'버그 고쳐줘' → agent", () => {
-        expect(routeInput("로그인 버그 고쳐줘")).toEqual({
-          type: "agent",
-          task: "로그인 버그 고쳐줘",
-        });
-      });
-      it("'테스트 작성' → agent", () => {
-        expect(routeInput("이 함수에 테스트 작성")).toEqual({
-          type: "agent",
-          task: "이 함수에 테스트 작성",
-        });
-      });
-      it("'컴포넌트 리팩터링' → agent", () => {
-        expect(routeInput("Button 컴포넌트 리팩터링해")).toEqual({
-          type: "agent",
-          task: "Button 컴포넌트 리팩터링해",
-        });
-      });
-      it("'코드 수정해' → agent", () => {
-        expect(routeInput("이 코드 수정해줘")).toEqual({
-          type: "agent",
-          task: "이 코드 수정해줘",
-        });
-      });
+  // ─── 자연어 코딩 의도 자동 라우팅 ─────────────────────────────────────────
+  describe("자연어 코딩 의도 → agent", () => {
+    const agentCases = [
+      // 한국어 — 동사 + 명사
+      "utils.ts에 add 함수 추가해줘",
+      "로그인 버그 고쳐줘",
+      "이 함수에 테스트 작성",
+      "Button 컴포넌트 리팩터링해",
+      "이 코드 수정해줘",
+      // 영어 — 동사 + 명사 (단/복수 포함)
+      "add a function to compute sum",
+      "fix the bug in login flow",
+      "refactor this module to use hooks",
+      "write tests for the parser",
+      "rename the class from Foo to Bar",
+    ];
+    it.each(agentCases)("'%s' → agent", (input) => {
+      expect(routeInput(input)).toEqual({ type: "agent", task: input });
     });
 
-    describe("영어 — 동사 + 명사 매칭", () => {
-      it("'add a function' → agent", () => {
-        expect(routeInput("add a function to compute sum")).toEqual({
-          type: "agent",
-          task: "add a function to compute sum",
-        });
-      });
-      it("'fix the bug' → agent", () => {
-        expect(routeInput("fix the bug in login flow")).toEqual({
-          type: "agent",
-          task: "fix the bug in login flow",
-        });
-      });
-      it("'refactor this module' → agent", () => {
-        expect(routeInput("refactor this module to use hooks")).toEqual({
-          type: "agent",
-          task: "refactor this module to use hooks",
-        });
-      });
-      it("'write tests' → agent", () => {
-        expect(routeInput("write tests for the parser")).toEqual({
-          type: "agent",
-          task: "write tests for the parser",
-        });
-      });
-      it("'rename the class' → agent", () => {
-        expect(routeInput("rename the class from Foo to Bar")).toEqual({
-          type: "agent",
-          task: "rename the class from Foo to Bar",
-        });
-      });
-    });
-
-    describe("음성 케이스 — 단순 질문은 ai로 유지", () => {
-      it("'이 코드 어떻게 동작해?' → ai (동사 없음)", () => {
-        expect(routeInput("이 코드 어떻게 동작해?")).toEqual({
-          type: "ai",
-          question: "이 코드 어떻게 동작해?",
-        });
-      });
-      it("'함수 설명해줘' → ai (코딩 동사 없음)", () => {
-        expect(routeInput("이 함수 설명해줘")).toEqual({
-          type: "ai",
-          question: "이 함수 설명해줘",
-        });
-      });
-      it("'how do I rebase' → ai (명사 없음)", () => {
-        expect(routeInput("how do I rebase onto main?")).toEqual({
-          type: "ai",
-          question: "how do I rebase onto main?",
-        });
-      });
-      it("'what is a closure' → ai (코딩 동사 없음)", () => {
-        expect(routeInput("what is a closure")).toEqual({
-          type: "ai",
-          question: "what is a closure",
-        });
-      });
-      it("순수 질문 — 동사·명사 모두 없음 → ai", () => {
-        expect(routeInput("오늘 날씨 어때")).toEqual({
-          type: "ai",
-          question: "오늘 날씨 어때",
-        });
-      });
+    const aiCases = [
+      "이 코드 어떻게 동작해?",   // 명사 ✓ 동사 ✗ → ai
+      "이 함수 설명해줘",         // 명사 ✓ 코딩 동사 ✗
+      "how do I rebase onto main?", // 동사·명사 ✗
+      "what is a closure",        // 코딩 동사·명사 ✗
+      "오늘 날씨 어때",            // 둘 다 ✗
+    ];
+    it.each(aiCases)("'%s' → ai (코딩 의도 미매치)", (input) => {
+      expect(routeInput(input)).toEqual({ type: "ai", question: input });
     });
 
     describe("우선순위 — 명시적 prefix 우선", () => {
