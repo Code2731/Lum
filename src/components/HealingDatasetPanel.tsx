@@ -20,6 +20,8 @@ interface HealingRecord {
   safety_level: SafetyLevel;
   decision: "approve" | "reject";
   applied_command?: string | null;
+  /** Phase 122 — reject 시 "왜 잘못된 제안인지" LLM이 한 줄 분석 */
+  failure_reason?: string | null;
 }
 
 interface Props {
@@ -175,6 +177,12 @@ const HealingDatasetPanel: React.FC<Props> = ({ onClose }) => {
                   <div>
                     <span className="text-white/35">실제 실행:</span>
                     <pre className="mt-0.5 text-emerald-200 font-mono whitespace-pre-wrap text-[10.5px] bg-emerald-500/5 rounded px-2 py-1.5">{r.applied_command}</pre>
+                  </div>
+                )}
+                {r.decision === "reject" && r.failure_reason && (
+                  <div className="flex items-start gap-1.5 text-[11px] text-amber-200 bg-amber-500/10 border border-amber-400/25 rounded px-2 py-1.5">
+                    <span className="text-amber-300 font-medium shrink-0">거부 사유:</span>
+                    <span className="leading-relaxed">{r.failure_reason}</span>
                   </div>
                 )}
                 <div className="flex items-center gap-2 text-[10px] text-white/30">

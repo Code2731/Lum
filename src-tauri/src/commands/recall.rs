@@ -55,7 +55,17 @@ fn healing_to_entry(h: &HealingRecord, score: f32) -> RecallEntry {
     } else {
         h.error.lines().next().unwrap_or(&h.error).chars().take(80).collect()
     };
-    let snippet = format!("Error: {}\nSuggestion: {}", h.error.trim(), h.suggestion.trim());
+    // Phase 122: reject + failure_reason이 있으면 snippet에 "Why rejected: ..."를 추가해
+    // 검색 결과만 봐도 거부 사유가 보이게.
+    let snippet = match (&h.decision, &h.failure_reason) {
+        (decision, Some(reason)) if decision == "reject" && !reason.trim().is_empty() => format!(
+            "Error: {}\nSuggestion: {}\nWhy rejected: {}",
+            h.error.trim(),
+            h.suggestion.trim(),
+            reason.trim(),
+        ),
+        _ => format!("Error: {}\nSuggestion: {}", h.error.trim(), h.suggestion.trim()),
+    };
     RecallEntry {
         id: format!("healing:{}", h.ts_ms),
         source: "healing".into(),
@@ -68,6 +78,7 @@ fn healing_to_entry(h: &HealingRecord, score: f32) -> RecallEntry {
             "safety_level": h.safety_level,
             "model": h.model,
             "applied_command": h.applied_command,
+            "failure_reason": h.failure_reason,
         }),
     }
 }
