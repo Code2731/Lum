@@ -101,5 +101,5 @@ export function useRecall(model: string) {
     }
   }, [loadStats]);
 
-  return { results, stats, loading, error, search, forget, forgetBefore, loadStats };
+  return { results, stats, loading, error, search, forget, forgetBefore };
 }

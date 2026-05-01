@@ -131,7 +131,7 @@ pub fn get_recent_history(limit: usize) -> Vec<HistoryEntry> {
 }
 
 /// Phase 118 — recall에서 import. 임베딩 포함 전체 entry 반환.
-pub async fn search_history_raw() -> Vec<HistoryEntry> {
+pub fn search_history_raw() -> Vec<HistoryEntry> {
     load().entries
 }
 

@@ -26,6 +26,10 @@ pub struct HealingRecord {
     /// approve 시 실제 PTY로 보낸 명령 (사용자가 편집했을 수 있음). reject면 None.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub applied_command: Option<String>,
+    /// Phase 118 — recall.rs cosine 검색용. record 시점 1회 embed_auto.
+    /// 빈 벡터면 embed 실패(Ollama 부재 등) — recall이 옛 데이터 폴백 경로로 처리.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub embedding: Vec<f32>,
 }
 
 fn now_ms() -> u64 {
@@ -35,9 +39,10 @@ fn now_ms() -> u64 {
         .unwrap_or(0)
 }
 
-/// 결정 기록을 JSONL append. 파일이 없으면 생성.
+/// 결정 기록을 JSONL append. 파일이 없으면 생성. record 시점에 embedding 계산해
+/// 저장 — 이후 recall_search가 순수 cosine으로 검색 가능 (네트워크 0회).
 #[tauri::command]
-pub fn record_healing_decision(
+pub async fn record_healing_decision(
     model: String,
     error: String,
     analysis: String,
@@ -51,6 +56,22 @@ pub fn record_healing_decision(
             "decision은 approve|reject만 허용 — 받은 값: {decision}"
         )));
     }
+
+    // best-effort: embed 실패해도 record는 저장. 옛 데이터 폴백 경로가 recall에서 처리.
+    let embedding = {
+        let client = reqwest::Client::builder()
+            .timeout(std::time::Duration::from_secs(10))
+            .build()
+            .ok();
+        let text = format!("{} {}", error.trim(), suggestion.trim());
+        match client {
+            Some(c) if !text.trim().is_empty() => {
+                crate::commands::rag::embed_auto(&c, &model, &text).await.unwrap_or_default()
+            }
+            _ => Vec::new(),
+        }
+    };
+
     let rec = HealingRecord {
         ts_ms: now_ms(),
         model,
@@ -60,6 +81,7 @@ pub fn record_healing_decision(
         safety_level,
         decision,
         applied_command,
+        embedding,
     };
     let line = serde_json::to_string(&rec).map_err(|e| LumError::Io(e.to_string()))?;
     let mut f = OpenOptions::new()
@@ -227,6 +249,7 @@ mod tests {
             } else {
                 None
             },
+            embedding: Vec::new(),
         }
     }
 

@@ -107,7 +107,7 @@ pub async fn recall_search(
     };
 
     if allowed.contains("history") {
-        let entries = search_history_raw().await;
+        let entries = search_history_raw();
         for h in entries.iter() {
             let ts_ms = h.timestamp.saturating_mul(1000);
             if !in_window(ts_ms) || h.embedding.is_empty() {
@@ -144,19 +144,30 @@ pub async fn recall_search(
 
     if allowed.contains("healing") {
         let records = list_healing_dataset().unwrap_or_default();
-        // healing은 record마다 즉석 임베딩 — N>200이면 사용자에 알리는 게 맞지만 MVP는 그대로 진행.
+        // 새 record는 저장된 embedding 사용(네트워크 0회). 옛 record는 즉석 embed 폴백 —
+        // embedder가 한 번 실패하면 이후 폴백 모두 skip해 timeout 누적 회피.
+        let mut fallback_failed = false;
         for h in records.iter() {
             if !in_window(h.ts_ms) {
                 continue;
             }
-            let text = format!("{} {}", h.error.trim(), h.suggestion.trim());
-            if text.trim().is_empty() {
+            let score = if !h.embedding.is_empty() {
+                cosine_similarity(&q_emb, &h.embedding)
+            } else if fallback_failed {
                 continue;
-            }
-            let Some(emb) = embed_auto(&client, &model, &text).await else {
-                continue;
+            } else {
+                let text = format!("{} {}", h.error.trim(), h.suggestion.trim());
+                if text.trim().is_empty() {
+                    continue;
+                }
+                match embed_auto(&client, &model, &text).await {
+                    Some(emb) => cosine_similarity(&q_emb, &emb),
+                    None => {
+                        fallback_failed = true;
+                        continue;
+                    }
+                }
             };
-            let score = cosine_similarity(&q_emb, &emb);
             if score > SCORE_THRESHOLD {
                 hits.push(healing_to_entry(h, score));
             }
@@ -200,11 +211,7 @@ pub fn recall_forget(ids: Vec<String>) -> Result<usize> {
         removed += crate::commands::healing_dataset::forget_by_ts(&healing_keys)?;
     }
     if !memory_keys.is_empty() {
-        let mut mem = SemanticMemory::load();
-        let before = mem.entries.len();
-        mem.entries.retain(|e| !memory_keys.contains(&e.timestamp));
-        removed += before - mem.entries.len();
-        mem.save().map_err(LumError::Io)?;
+        removed += crate::memory::forget_by_ts(&memory_keys).map_err(LumError::Io)?;
     }
 
     Ok(removed)
@@ -222,13 +229,7 @@ pub struct ForgetBeforeReport {
 pub fn recall_forget_before(ts_ms: u64) -> Result<ForgetBeforeReport> {
     let history = crate::commands::history::forget_before(ts_ms / 1000);
     let healing = crate::commands::healing_dataset::forget_before(ts_ms)?;
-
-    let mut mem = SemanticMemory::load();
-    let before = mem.entries.len();
-    mem.entries.retain(|e| e.timestamp.saturating_mul(1000) >= ts_ms);
-    let memory = before - mem.entries.len();
-    mem.save().map_err(LumError::Io)?;
-
+    let memory = crate::memory::forget_before(ts_ms / 1000).map_err(LumError::Io)?;
     Ok(ForgetBeforeReport { history, healing, memory })
 }
 
@@ -250,7 +251,7 @@ pub struct SourceStats {
 
 #[tauri::command]
 pub async fn recall_stats() -> Result<RecallStats> {
-    let history_entries = search_history_raw().await;
+    let history_entries = search_history_raw();
     let history = stats_from_iter(history_entries.iter().map(|e| e.timestamp.saturating_mul(1000)));
 
     let healing_records = list_healing_dataset().unwrap_or_default();

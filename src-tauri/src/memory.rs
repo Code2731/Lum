@@ -65,6 +65,31 @@ pub async fn add_to_memory(content: String, embedding: Vec<f32>) -> Result<(), S
     memory.save()
 }
 
+/// Phase 118 — recall에서 호출. timestamp(s) 일치하는 entry들 일괄 삭제.
+pub fn forget_by_ts(timestamps: &[u64]) -> Result<usize, String> {
+    let mut mem = SemanticMemory::load();
+    let before = mem.entries.len();
+    let target_set: std::collections::HashSet<u64> = timestamps.iter().copied().collect();
+    mem.entries.retain(|e| !target_set.contains(&e.timestamp));
+    let removed = before - mem.entries.len();
+    if removed > 0 {
+        mem.save()?;
+    }
+    Ok(removed)
+}
+
+/// Phase 118 — 지정 ts(초) 이전 entry 일괄 삭제.
+pub fn forget_before(ts_s: u64) -> Result<usize, String> {
+    let mut mem = SemanticMemory::load();
+    let before = mem.entries.len();
+    mem.entries.retain(|e| e.timestamp >= ts_s);
+    let removed = before - mem.entries.len();
+    if removed > 0 {
+        mem.save()?;
+    }
+    Ok(removed)
+}
+
 #[tauri::command]
 pub async fn search_memory(query_embedding: Vec<f32>, limit: usize) -> Result<Vec<String>, String> {
     let memory = SemanticMemory::load();

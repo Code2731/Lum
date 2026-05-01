@@ -2,7 +2,7 @@
 // history(명령) / healing(자동치유) / memory(일반)을 단일 임베딩 검색 facade로 묶음.
 // "지난 달 docker 빌드 실패 어떻게 고쳤지?" 같은 시간+의미 결합 쿼리 지원.
 
-import React, { useCallback, useState, useMemo } from "react";
+import React, { useCallback, useState } from "react";
 import {
   Library, Search, Loader2, Trash2, Wrench, TerminalSquare, BrainCircuit, ArrowUpRight, Clock,
 } from "lucide-react";
@@ -34,7 +34,7 @@ const TIME_RANGES: { label: string; sinceFromNow: number | null }[] = [
 ];
 
 const RecallPanel: React.FC<Props> = ({ model, onInjectToChat, onClose }) => {
-  const recall = useRecall(model);
+  const { results, stats, loading, error, search, forget, forgetBefore } = useRecall(model);
   const [query, setQuery] = useState("");
   const [sourceFilter, setSourceFilter] = useState<Set<RecallSource>>(new Set());
   const [timeIdx, setTimeIdx] = useState(0);
@@ -43,11 +43,11 @@ const RecallPanel: React.FC<Props> = ({ model, onInjectToChat, onClose }) => {
     if (!query.trim()) return;
     const range = TIME_RANGES[timeIdx];
     const sinceMs = range.sinceFromNow ? Date.now() - range.sinceFromNow : undefined;
-    recall.search(query, {
+    search(query, {
       sources: Array.from(sourceFilter),
       sinceMs,
     });
-  }, [query, sourceFilter, timeIdx, recall]);
+  }, [query, sourceFilter, timeIdx, search]);
 
   const toggleSource = (src: RecallSource) => {
     setSourceFilter((prev) => {
@@ -58,10 +58,9 @@ const RecallPanel: React.FC<Props> = ({ model, onInjectToChat, onClose }) => {
     });
   };
 
-  const totalEntries = useMemo(() => {
-    if (!recall.stats) return 0;
-    return recall.stats.history.count + recall.stats.healing.count + recall.stats.memory.count;
-  }, [recall.stats]);
+  const totalEntries = stats
+    ? stats.history.count + stats.healing.count + stats.memory.count
+    : 0;
 
   return (
     <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
@@ -70,7 +69,7 @@ const RecallPanel: React.FC<Props> = ({ model, onInjectToChat, onClose }) => {
           <Library size={15} className="text-accent" />
           <DialogTitle className="text-sm font-semibold">메모리 검색</DialogTitle>
           <span className="text-[10px] text-white/35 ml-1">로컬 영구 저장 — 클라우드 전송 없음</span>
-          {recall.stats && (
+          {stats && (
             <span className="ml-auto text-[10px] text-white/40 tabular-nums">총 {totalEntries.toLocaleString()}건</span>
           )}
         </div>
@@ -89,11 +88,11 @@ const RecallPanel: React.FC<Props> = ({ model, onInjectToChat, onClose }) => {
             />
             <Button
               onClick={submit}
-              disabled={recall.loading || !query.trim()}
+              disabled={loading || !query.trim()}
               size="sm"
               className="h-8 shrink-0"
             >
-              {recall.loading ? <Loader2 size={12} className="animate-spin" /> : "검색"}
+              {loading ? <Loader2 size={12} className="animate-spin" /> : "검색"}
             </Button>
           </div>
 
@@ -102,7 +101,7 @@ const RecallPanel: React.FC<Props> = ({ model, onInjectToChat, onClose }) => {
             {(Object.keys(SOURCE_META) as RecallSource[]).map((src) => {
               const active = sourceFilter.has(src);
               const meta = SOURCE_META[src];
-              const count = recall.stats?.[src].count ?? 0;
+              const count = stats?.[src].count ?? 0;
               return (
                 <button
                   key={src}
@@ -146,15 +145,15 @@ const RecallPanel: React.FC<Props> = ({ model, onInjectToChat, onClose }) => {
           </div>
         </div>
 
-        {recall.error && (
+        {error && (
           <div className="px-5 py-2 text-[11px] text-rose-300 bg-rose-500/10 border-b border-rose-400/20 shrink-0">
-            {recall.error}
+            {error}
           </div>
         )}
 
         {/* 결과 리스트 */}
         <div className="flex-1 overflow-y-auto px-5 py-3 min-h-0 space-y-1.5">
-          {recall.results.length === 0 && !recall.loading && (
+          {results.length === 0 && !loading && (
             <div className="text-center py-12 text-xs text-white/35 space-y-1.5">
               <Library size={20} className="mx-auto text-white/20" />
               <p>{query.trim() ? "결과 없음" : "쿼리를 입력하세요"}</p>
@@ -163,27 +162,27 @@ const RecallPanel: React.FC<Props> = ({ model, onInjectToChat, onClose }) => {
               )}
             </div>
           )}
-          {recall.results.map((r) => (
+          {results.map((r) => (
             <RecallRow
               key={r.id}
               entry={r}
-              onForget={() => recall.forget([r.id])}
+              onForget={() => forget([r.id])}
               onInject={onInjectToChat ? () => onInjectToChat(r.snippet) : undefined}
             />
           ))}
         </div>
 
         {/* 잊혀질 권리 풋터 */}
-        {recall.stats && totalEntries > 0 && (
+        {stats && totalEntries > 0 && (
           <div className="px-5 py-2.5 border-t border-white/8 shrink-0 flex items-center justify-between text-[10px] text-white/40">
             <span>오래된 데이터를 잊을 수 있습니다 (GDPR-style 잊혀질 권리)</span>
             <ConfirmDeleteDialog
               itemName="1달 이전 데이터"
               itemType="메모리"
-              description={`history/healing/memory 모든 소스에서 30일 이상 된 항목이 영구 삭제됩니다. 되돌릴 수 없습니다.`}
+              description="history/healing/memory 모든 소스에서 30일 이상 된 항목이 영구 삭제됩니다. 되돌릴 수 없습니다."
               onConfirm={async () => {
                 const before = Date.now() - 30 * 24 * 60 * 60 * 1000;
-                await recall.forgetBefore(before);
+                await forgetBefore(before);
               }}
             >
               <button
