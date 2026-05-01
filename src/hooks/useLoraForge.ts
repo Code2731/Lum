@@ -1,7 +1,7 @@
 // Phase 119 — LoRA Forge 훅. 백엔드 commands::lora_forge 1:1 매핑.
 // 라이브 진행률은 `lora_forge_progress` / `lora_forge_status` 이벤트 구독.
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 
@@ -98,8 +98,6 @@ export function useLoraForge() {
   const [error, setError] = useState<string | null>(null);
   // run_id → 누적 라이브 로그(라인). 진행 중인 run의 UI 출력에만 사용.
   const [liveLogs, setLiveLogs] = useState<Record<string, string[]>>({});
-  const liveLogsRef = useRef(liveLogs);
-  liveLogsRef.current = liveLogs;
 
   const reload = useCallback(async () => {
     setError(null);
@@ -130,9 +128,7 @@ export function useLoraForge() {
   }, []);
 
   useEffect(() => {
-    reload();
-    refreshRuntimes();
-    refreshAutoStatus();
+    Promise.all([reload(), refreshRuntimes(), refreshAutoStatus()]);
   }, [reload, refreshRuntimes, refreshAutoStatus]);
 
   // 이벤트 구독.

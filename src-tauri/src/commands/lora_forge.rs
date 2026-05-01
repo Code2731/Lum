@@ -20,6 +20,12 @@ use tokio::sync::oneshot;
 
 const MAX_LOG_TAIL: usize = 80;
 
+const SUPPORTED_RUNTIMES: &[&str] = &["mlx-lm", "axolotl"];
+
+pub fn is_supported_runtime(rt: &str) -> bool {
+    SUPPORTED_RUNTIMES.contains(&rt)
+}
+
 fn runs_dir() -> PathBuf {
     platform::home_dir().join(".lum_lora_runs")
 }
@@ -185,10 +191,11 @@ fn validate_opts(opts: &ForgeOptions) -> Result<()> {
     if opts.task.trim().is_empty() {
         return Err(LumError::Io("task 설명이 비어있습니다".into()));
     }
-    if opts.runtime != "mlx-lm" && opts.runtime != "axolotl" {
+    if !is_supported_runtime(&opts.runtime) {
         return Err(LumError::Io(format!(
-            "지원하지 않는 runtime: {} (mlx-lm | axolotl)",
-            opts.runtime
+            "지원하지 않는 runtime: {} ({})",
+            opts.runtime,
+            SUPPORTED_RUNTIMES.join(" | "),
         )));
     }
     if opts.base_model.trim().is_empty() {
@@ -221,13 +228,13 @@ struct AutoMode {
 
 #[tauri::command]
 pub async fn lora_forge_start(app: AppHandle, opts: ForgeOptions) -> Result<ForgeRun> {
-    start_internal(app, opts, false, None).await
+    start_internal(app, opts, None).await
 }
 
+/// auto_mode가 Some이면 자동 학습으로 spawn된 run.
 async fn start_internal(
     app: AppHandle,
     opts: ForgeOptions,
-    is_auto: bool,
     auto_mode: Option<AutoMode>,
 ) -> Result<ForgeRun> {
     validate_opts(&opts)?;
@@ -275,7 +282,7 @@ async fn start_internal(
         status: ForgeStatus::Running,
         exit_code: None,
         log_tail: Vec::new(),
-        auto: is_auto,
+        auto: auto_mode.is_some(),
     };
 
     // 영속(상위에 insert) — UI가 즉시 새 run을 표시.
@@ -400,42 +407,9 @@ fn spawn_training(app: AppHandle, run: ForgeRun, auto_mode: Option<AutoMode>) ->
     let (cancel_tx, cancel_rx) = oneshot::channel::<()>();
     cancels().0.lock().unwrap().insert(run.id.clone(), cancel_tx);
 
-    // stdout 스트림.
-    let app_o = app.clone();
-    let id_o = run.id.clone();
-    tokio::spawn(async move {
-        let mut reader = BufReader::new(stdout).lines();
-        while let Ok(Some(line)) = reader.next_line().await {
-            push_log_line(&id_o, &line);
-            let _ = app_o.emit(
-                "lora_forge_progress",
-                serde_json::json!({
-                    "run_id": id_o,
-                    "stream": "stdout",
-                    "line": line,
-                    "ts_ms": now_ms(),
-                }),
-            );
-        }
-    });
-    // stderr 스트림 — 학습 도구 대부분이 진행률을 stderr에 출력.
-    let app_e = app.clone();
-    let id_e = run.id.clone();
-    tokio::spawn(async move {
-        let mut reader = BufReader::new(stderr).lines();
-        while let Ok(Some(line)) = reader.next_line().await {
-            push_log_line(&id_e, &line);
-            let _ = app_e.emit(
-                "lora_forge_progress",
-                serde_json::json!({
-                    "run_id": id_e,
-                    "stream": "stderr",
-                    "line": line,
-                    "ts_ms": now_ms(),
-                }),
-            );
-        }
-    });
+    // stdout/stderr 두 스트림 모두 줄단위로 push_log + emit. 학습 도구 대부분이 진행률을 stderr에 출력.
+    spawn_stream_reader(app.clone(), run.id.clone(), "stdout", stdout);
+    spawn_stream_reader(app.clone(), run.id.clone(), "stderr", stderr);
 
     // 메인 감시 — wait vs cancel race.
     let app_w = app;
@@ -506,10 +480,8 @@ async fn try_auto_hot_swap(app: &AppHandle, run_id: &str) {
     let adapter_cfg = std::path::Path::new(&run.output_dir).join("adapter_config.json");
     let compatible = adapter_cfg.exists();
 
-    // 2) 현재 로드된 모델 키. 미로드면 swap 불가.
-    let loaded_key = crate::commands::embed::embed_loaded_info();
-    let Some(key) = loaded_key else {
-        let _ = app.emit("lora_forge_auto_event", serde_json::json!({
+    let Some(key) = crate::commands::embed::embed_loaded_info() else {
+        emit_auto_event(app, serde_json::json!({
             "phase": "skipped",
             "reason": "추론 모델 미로드 — hot-swap 건너뜀",
             "run_id": run_id,
@@ -519,7 +491,7 @@ async fn try_auto_hot_swap(app: &AppHandle, run_id: &str) {
     };
 
     if !compatible {
-        let _ = app.emit("lora_forge_auto_event", serde_json::json!({
+        emit_auto_event(app, serde_json::json!({
             "phase": "skipped",
             "reason": "adapter_config.json 없음 — mlx-lm 어댑터는 mistralrs와 형식이 달라 변환 필요",
             "run_id": run_id,
@@ -528,7 +500,7 @@ async fn try_auto_hot_swap(app: &AppHandle, run_id: &str) {
         return;
     }
 
-    // 3) loaded_key는 "{model_dir}/{gguf_filename}" 포맷. parent + file_name으로 분리.
+    // loaded_key는 "{model_dir}/{gguf_filename}" 포맷 (mistralrs_inline::load_model 참고).
     let path = std::path::PathBuf::from(&key);
     let (Some(parent), Some(file)) = (path.parent(), path.file_name()) else { return; };
     let model_dir = parent.to_string_lossy().to_string();
@@ -540,23 +512,46 @@ async fn try_auto_hot_swap(app: &AppHandle, run_id: &str) {
         gguf_file,
         run.output_dir.clone(),
     ).await {
-        Ok(msg) => {
-            let _ = app.emit("lora_forge_auto_event", serde_json::json!({
-                "phase": "hot_swapped",
-                "run_id": run_id,
-                "message": msg,
-                "ts_ms": now_ms(),
-            }));
-        }
-        Err(e) => {
-            let _ = app.emit("lora_forge_auto_event", serde_json::json!({
-                "phase": "hot_swap_failed",
-                "run_id": run_id,
-                "error": e,
-                "ts_ms": now_ms(),
-            }));
-        }
+        Ok(msg) => emit_auto_event(app, serde_json::json!({
+            "phase": "hot_swapped",
+            "run_id": run_id,
+            "message": msg,
+            "ts_ms": now_ms(),
+        })),
+        Err(e) => emit_auto_event(app, serde_json::json!({
+            "phase": "hot_swap_failed",
+            "run_id": run_id,
+            "error": e,
+            "ts_ms": now_ms(),
+        })),
     }
+}
+
+fn spawn_stream_reader<R: tokio::io::AsyncRead + Unpin + Send + 'static>(
+    app: AppHandle,
+    run_id: String,
+    stream: &'static str,
+    reader: R,
+) {
+    tokio::spawn(async move {
+        let mut lines = BufReader::new(reader).lines();
+        while let Ok(Some(line)) = lines.next_line().await {
+            push_log_line(&run_id, &line);
+            let _ = app.emit(
+                "lora_forge_progress",
+                serde_json::json!({
+                    "run_id": run_id,
+                    "stream": stream,
+                    "line": line,
+                    "ts_ms": now_ms(),
+                }),
+            );
+        }
+    });
+}
+
+fn emit_auto_event(app: &AppHandle, payload: serde_json::Value) {
+    let _ = app.emit("lora_forge_auto_event", payload);
 }
 
 fn finalize_run(run_id: &str, status: ForgeStatus, exit_code: Option<i32>) {
@@ -713,36 +708,23 @@ pub async fn maybe_auto_train(app: AppHandle) {
     let auto_load = cfg.auto_lora_auto_load.unwrap_or(true);
     let mode = AutoMode { cursor_candidate_ms, auto_load };
 
-    let _ = app.emit(
-        "lora_forge_auto_event",
-        serde_json::json!({
-            "phase": "starting",
-            "unlearned_count": unlearned,
-            "ts_ms": cursor_candidate_ms,
-        }),
-    );
+    emit_auto_event(&app, serde_json::json!({
+        "phase": "starting",
+        "unlearned_count": unlearned,
+        "ts_ms": cursor_candidate_ms,
+    }));
 
-    match start_internal(app.clone(), opts, true, Some(mode)).await {
-        Ok(run) => {
-            let _ = app.emit(
-                "lora_forge_auto_event",
-                serde_json::json!({
-                    "phase": "spawned",
-                    "run_id": run.id,
-                    "ts_ms": now_ms(),
-                }),
-            );
-        }
-        Err(e) => {
-            let _ = app.emit(
-                "lora_forge_auto_event",
-                serde_json::json!({
-                    "phase": "error",
-                    "error": e.to_string(),
-                    "ts_ms": now_ms(),
-                }),
-            );
-        }
+    match start_internal(app.clone(), opts, Some(mode)).await {
+        Ok(run) => emit_auto_event(&app, serde_json::json!({
+            "phase": "spawned",
+            "run_id": run.id,
+            "ts_ms": now_ms(),
+        })),
+        Err(e) => emit_auto_event(&app, serde_json::json!({
+            "phase": "error",
+            "error": e.to_string(),
+            "ts_ms": now_ms(),
+        })),
     }
 }
 

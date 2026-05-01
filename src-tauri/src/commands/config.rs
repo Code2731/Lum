@@ -285,7 +285,7 @@ pub fn save_auto_lora_settings(
         config.auto_lora_threshold = Some(t);
     }
     if let Some(rt) = runtime {
-        if rt != "mlx-lm" && rt != "axolotl" {
+        if !crate::commands::lora_forge::is_supported_runtime(&rt) {
             return Err(LumError::Config(format!("지원하지 않는 runtime: {rt}")));
         }
         config.auto_lora_runtime = Some(rt);
