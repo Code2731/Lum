@@ -41,8 +41,10 @@ fn now_ms() -> u64 {
 
 /// 결정 기록을 JSONL append. 파일이 없으면 생성. record 시점에 embedding 계산해
 /// 저장 — 이후 recall_search가 순수 cosine으로 검색 가능 (네트워크 0회).
+/// Phase 120: approve 시 자동 학습 루프 트리거(fire-and-forget).
 #[tauri::command]
 pub async fn record_healing_decision(
+    app: tauri::AppHandle,
     model: String,
     error: String,
     analysis: String,
@@ -79,7 +81,7 @@ pub async fn record_healing_decision(
         analysis,
         suggestion,
         safety_level,
-        decision,
+        decision: decision.clone(),
         applied_command,
         embedding,
     };
@@ -90,6 +92,13 @@ pub async fn record_healing_decision(
         .open(dataset_path())
         .map_err(|e| LumError::Io(format!("dataset 파일 열기 실패: {e}")))?;
     writeln!(f, "{line}").map_err(|e| LumError::Io(e.to_string()))?;
+
+    // Phase 120: approve 시 자동 학습 루프 트리거. fire-and-forget — 호출자 영향 없음.
+    if decision == "approve" {
+        tokio::spawn(async move {
+            crate::commands::lora_forge::maybe_auto_train(app).await;
+        });
+    }
     Ok(())
 }
 

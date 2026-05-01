@@ -22,6 +22,39 @@ export interface ForgeRun {
   status: ForgeStatus;
   exit_code: number | null;
   log_tail: string[];
+  /** Phase 120: 자동 학습으로 트리거된 run인지 */
+  auto?: boolean;
+}
+
+export interface AutoTrainStatus {
+  enabled: boolean;
+  threshold: number;
+  unlearned_count: number;
+  cursor_ms: number;
+  running: boolean;
+  /** 트리거 안 되는 이유. null이면 트리거 가능 */
+  blocked_reason: string | null;
+}
+
+export interface AutoSettings {
+  enabled?: boolean;
+  threshold?: number;
+  runtime?: "mlx-lm" | "axolotl";
+  baseModel?: string | null;
+  iters?: number;
+  rank?: number;
+  lr?: number;
+  autoLoad?: boolean;
+}
+
+export interface AutoEvent {
+  phase: "starting" | "spawned" | "error" | "skipped" | "hot_swapped" | "hot_swap_failed";
+  run_id?: string;
+  unlearned_count?: number;
+  message?: string;
+  error?: string;
+  reason?: string;
+  ts_ms: number;
 }
 
 export interface RuntimeStatus {
@@ -55,10 +88,13 @@ interface StatusEvent {
 }
 
 const LIVE_LOG_CAP = 200;
+const AUTO_EVENT_CAP = 20;
 
 export function useLoraForge() {
   const [runs, setRuns] = useState<ForgeRun[]>([]);
   const [runtimes, setRuntimes] = useState<RuntimeStatus | null>(null);
+  const [autoStatus, setAutoStatus] = useState<AutoTrainStatus | null>(null);
+  const [autoEvents, setAutoEvents] = useState<AutoEvent[]>([]);
   const [error, setError] = useState<string | null>(null);
   // run_id → 누적 라이브 로그(라인). 진행 중인 run의 UI 출력에만 사용.
   const [liveLogs, setLiveLogs] = useState<Record<string, string[]>>({});
@@ -84,10 +120,20 @@ export function useLoraForge() {
     }
   }, []);
 
+  const refreshAutoStatus = useCallback(async () => {
+    try {
+      const s = await invoke<AutoTrainStatus>("lora_forge_auto_status");
+      setAutoStatus(s);
+    } catch (e) {
+      setError(String(e));
+    }
+  }, []);
+
   useEffect(() => {
     reload();
     refreshRuntimes();
-  }, [reload, refreshRuntimes]);
+    refreshAutoStatus();
+  }, [reload, refreshRuntimes, refreshAutoStatus]);
 
   // 이벤트 구독.
   useEffect(() => {
@@ -105,12 +151,22 @@ export function useLoraForge() {
     listen<StatusEvent>("lora_forge_status", () => {
       // 상태 전이 — 영속 store에서 다시 로드.
       reload();
+      refreshAutoStatus();
+    }).then((u) => unsubs.push(u));
+
+    listen<AutoEvent>("lora_forge_auto_event", (e) => {
+      setAutoEvents((prev) => {
+        const next = prev.length >= AUTO_EVENT_CAP ? prev.slice(prev.length - AUTO_EVENT_CAP + 1) : prev.slice();
+        next.push(e.payload);
+        return next;
+      });
+      refreshAutoStatus();
     }).then((u) => unsubs.push(u));
 
     return () => {
       unsubs.forEach((u) => u());
     };
-  }, [reload]);
+  }, [reload, refreshAutoStatus]);
 
   const start = useCallback(
     async (opts: ForgeStartOpts): Promise<ForgeRun> => {
@@ -175,16 +231,49 @@ export function useLoraForge() {
     }
   }, []);
 
+  const saveAutoSettings = useCallback(
+    async (s: AutoSettings) => {
+      setError(null);
+      try {
+        await invoke("save_auto_lora_settings", {
+          enabled: s.enabled ?? null,
+          threshold: s.threshold ?? null,
+          runtime: s.runtime ?? null,
+          baseModel: s.baseModel ?? null,
+          iters: s.iters ?? null,
+          rank: s.rank ?? null,
+          lr: s.lr ?? null,
+          autoLoad: s.autoLoad ?? null,
+        });
+        refreshAutoStatus();
+      } catch (e) {
+        const msg = String(e);
+        setError(msg);
+        throw new Error(msg);
+      }
+    },
+    [refreshAutoStatus],
+  );
+
+  const dismissAutoEvent = useCallback((tsMs: number) => {
+    setAutoEvents((prev) => prev.filter((e) => e.ts_ms !== tsMs));
+  }, []);
+
   return {
     runs,
     runtimes,
+    autoStatus,
+    autoEvents,
     liveLogs,
     error,
     start,
     cancel,
     remove,
     canLoad,
+    saveAutoSettings,
+    dismissAutoEvent,
     reload,
     refreshRuntimes,
+    refreshAutoStatus,
   };
 }

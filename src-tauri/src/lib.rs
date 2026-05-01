@@ -202,6 +202,9 @@ pub fn run() {
             commands::lora_forge::lora_forge_list,
             commands::lora_forge::lora_forge_remove,
             commands::lora_forge::lora_forge_can_load,
+            // Phase 120 — 자동 학습 루프 (Auto-Learn)
+            commands::lora_forge::lora_forge_auto_status,
+            commands::config::save_auto_lora_settings,
             // Workspace
             commands::workspace::save_workspace,
             commands::workspace::list_workspaces,

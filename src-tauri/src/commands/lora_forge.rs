@@ -61,11 +61,18 @@ pub struct ForgeRun {
     pub exit_code: Option<i32>,
     /// 마지막 N줄. 진행 중에는 빈 배열 — 라이브 로그는 이벤트로 stream, finalize 시 채움.
     pub log_tail: Vec<String>,
+    /// Phase 120: 자동 학습으로 시작된 run인지. UI에서 배지로 구분.
+    #[serde(default)]
+    pub auto: bool,
 }
 
 #[derive(Serialize, Deserialize, Default)]
 struct ForgeStore {
     runs: Vec<ForgeRun>,
+    /// Phase 120: 마지막 성공한 자동 학습이 학습한 데이터 cutoff(ms).
+    /// 이 ts_ms보다 큰 approve record만 미학습으로 카운트.
+    #[serde(default)]
+    auto_train_cursor_ms: u64,
 }
 
 fn load_store() -> ForgeStore {
@@ -203,8 +210,26 @@ fn make_run_id() -> String {
     format!("lora-{}", now_ms())
 }
 
+/// 자동 학습용 후처리 옵션. user-initiated run은 None.
+#[derive(Clone, Default)]
+struct AutoMode {
+    /// 학습 성공 시 이 cursor로 auto_train_cursor_ms 갱신.
+    cursor_candidate_ms: u64,
+    /// 호환되면 학습 성공 시 embed_load_lora 자동 호출.
+    auto_load: bool,
+}
+
 #[tauri::command]
 pub async fn lora_forge_start(app: AppHandle, opts: ForgeOptions) -> Result<ForgeRun> {
+    start_internal(app, opts, false, None).await
+}
+
+async fn start_internal(
+    app: AppHandle,
+    opts: ForgeOptions,
+    is_auto: bool,
+    auto_mode: Option<AutoMode>,
+) -> Result<ForgeRun> {
     validate_opts(&opts)?;
 
     // 데이터셋 경로 결정 — 명시되지 않으면 healing chatml을 자동 export.
@@ -250,6 +275,7 @@ pub async fn lora_forge_start(app: AppHandle, opts: ForgeOptions) -> Result<Forg
         status: ForgeStatus::Running,
         exit_code: None,
         log_tail: Vec::new(),
+        auto: is_auto,
     };
 
     // 영속(상위에 insert) — UI가 즉시 새 run을 표시.
@@ -257,7 +283,7 @@ pub async fn lora_forge_start(app: AppHandle, opts: ForgeOptions) -> Result<Forg
     store.runs.insert(0, run.clone());
     save_store(&store)?;
 
-    spawn_training(app, run.clone())?;
+    spawn_training(app, run.clone(), auto_mode)?;
     Ok(run)
 }
 
@@ -356,7 +382,7 @@ saves_per_epoch: 1
     )
 }
 
-fn spawn_training(app: AppHandle, run: ForgeRun) -> Result<()> {
+fn spawn_training(app: AppHandle, run: ForgeRun, auto_mode: Option<AutoMode>) -> Result<()> {
     let mut cmd = build_command(&run)?;
     let mut child = cmd
         .spawn()
@@ -449,9 +475,88 @@ fn spawn_training(app: AppHandle, run: ForgeRun) -> Result<()> {
                 "ts_ms": now_ms(),
             }),
         );
+
+        // Phase 120: 자동 학습 후처리. 성공 시 cursor 갱신 + (호환되면) hot-swap.
+        if let Some(mode) = auto_mode {
+            if matches!(final_status, ForgeStatus::Completed) {
+                advance_auto_cursor(mode.cursor_candidate_ms);
+                if mode.auto_load {
+                    try_auto_hot_swap(&app_w, &id_w).await;
+                }
+            }
+        }
     });
 
     Ok(())
+}
+
+fn advance_auto_cursor(candidate_ms: u64) {
+    let mut store = load_store();
+    if candidate_ms > store.auto_train_cursor_ms {
+        store.auto_train_cursor_ms = candidate_ms;
+        let _ = save_store(&store);
+    }
+}
+
+/// 학습 완료된 run을 현재 로드된 모델 위에 LoRA로 hot-swap. 호환 안 되면 알림만.
+async fn try_auto_hot_swap(app: &AppHandle, run_id: &str) {
+    // 1) run 호환 검사 — adapter_config.json 존재 여부.
+    let store = load_store();
+    let Some(run) = store.runs.iter().find(|r| r.id == run_id).cloned() else { return; };
+    let adapter_cfg = std::path::Path::new(&run.output_dir).join("adapter_config.json");
+    let compatible = adapter_cfg.exists();
+
+    // 2) 현재 로드된 모델 키. 미로드면 swap 불가.
+    let loaded_key = crate::commands::embed::embed_loaded_info();
+    let Some(key) = loaded_key else {
+        let _ = app.emit("lora_forge_auto_event", serde_json::json!({
+            "phase": "skipped",
+            "reason": "추론 모델 미로드 — hot-swap 건너뜀",
+            "run_id": run_id,
+            "ts_ms": now_ms(),
+        }));
+        return;
+    };
+
+    if !compatible {
+        let _ = app.emit("lora_forge_auto_event", serde_json::json!({
+            "phase": "skipped",
+            "reason": "adapter_config.json 없음 — mlx-lm 어댑터는 mistralrs와 형식이 달라 변환 필요",
+            "run_id": run_id,
+            "ts_ms": now_ms(),
+        }));
+        return;
+    }
+
+    // 3) loaded_key는 "{model_dir}/{gguf_filename}" 포맷. parent + file_name으로 분리.
+    let path = std::path::PathBuf::from(&key);
+    let (Some(parent), Some(file)) = (path.parent(), path.file_name()) else { return; };
+    let model_dir = parent.to_string_lossy().to_string();
+    let gguf_file = file.to_string_lossy().to_string();
+
+    match crate::commands::embed::embed_load_lora(
+        app.clone(),
+        model_dir,
+        gguf_file,
+        run.output_dir.clone(),
+    ).await {
+        Ok(msg) => {
+            let _ = app.emit("lora_forge_auto_event", serde_json::json!({
+                "phase": "hot_swapped",
+                "run_id": run_id,
+                "message": msg,
+                "ts_ms": now_ms(),
+            }));
+        }
+        Err(e) => {
+            let _ = app.emit("lora_forge_auto_event", serde_json::json!({
+                "phase": "hot_swap_failed",
+                "run_id": run_id,
+                "error": e,
+                "ts_ms": now_ms(),
+            }));
+        }
+    }
 }
 
 fn finalize_run(run_id: &str, status: ForgeStatus, exit_code: Option<i32>) {
@@ -492,6 +597,153 @@ pub fn lora_forge_remove(run_id: String) -> Result<()> {
     save_store(&store)?;
     let _ = std::fs::remove_dir_all(runs_dir().join(&run_id));
     Ok(())
+}
+
+// ── Phase 120: 자동 학습 루프 ─────────────────────────────────────────
+
+#[derive(Serialize)]
+pub struct AutoTrainStatus {
+    pub enabled: bool,
+    pub threshold: u32,
+    pub unlearned_count: u32,
+    pub cursor_ms: u64,
+    pub running: bool,
+    /// 베이스 모델 미설정 등 트리거 안 되는 이유. 충족 시 None.
+    pub blocked_reason: Option<String>,
+}
+
+fn current_unlearned_count(cursor_ms: u64) -> u32 {
+    crate::commands::healing_dataset::list_healing_dataset()
+        .unwrap_or_default()
+        .into_iter()
+        .filter(|r| r.decision == "approve" && r.ts_ms > cursor_ms)
+        .count() as u32
+}
+
+fn any_running() -> bool {
+    !cancels().0.lock().unwrap().is_empty()
+}
+
+#[tauri::command]
+pub fn lora_forge_auto_status() -> Result<AutoTrainStatus> {
+    let cfg = crate::commands::config::load_config().unwrap_or_default();
+    let enabled = cfg.auto_lora_enabled.unwrap_or(false);
+    let threshold = cfg.auto_lora_threshold.unwrap_or(25);
+    let cursor_ms = load_store().auto_train_cursor_ms;
+    let unlearned_count = current_unlearned_count(cursor_ms);
+    let running = any_running();
+    let blocked_reason = blocked_reason(enabled, threshold, unlearned_count, running, &cfg);
+    Ok(AutoTrainStatus {
+        enabled,
+        threshold,
+        unlearned_count,
+        cursor_ms,
+        running,
+        blocked_reason,
+    })
+}
+
+fn blocked_reason(
+    enabled: bool,
+    threshold: u32,
+    unlearned: u32,
+    running: bool,
+    cfg: &crate::commands::config::AppConfig,
+) -> Option<String> {
+    if !enabled {
+        return Some("자동 학습이 비활성화돼있습니다".into());
+    }
+    if running {
+        return Some("이미 다른 학습이 진행 중".into());
+    }
+    if cfg.auto_lora_base_model.as_deref().map(str::trim).unwrap_or("").is_empty() {
+        return Some("베이스 모델을 설정해주세요".into());
+    }
+    if unlearned < threshold {
+        return Some(format!("아직 {} / {} (미학습 approve)", unlearned, threshold));
+    }
+    None
+}
+
+fn build_auto_options(
+    cfg: &crate::commands::config::AppConfig,
+    unlearned: u32,
+) -> Option<ForgeOptions> {
+    let enabled = cfg.auto_lora_enabled.unwrap_or(false);
+    let threshold = cfg.auto_lora_threshold.unwrap_or(25);
+    if !enabled || unlearned < threshold {
+        return None;
+    }
+    let base_model = cfg
+        .auto_lora_base_model
+        .as_ref()
+        .map(|s| s.trim())
+        .filter(|s| !s.is_empty())?
+        .to_string();
+    let runtime = cfg
+        .auto_lora_runtime
+        .clone()
+        .filter(|s| s == "mlx-lm" || s == "axolotl")
+        .unwrap_or_else(|| "mlx-lm".to_string());
+    Some(ForgeOptions {
+        task: format!("auto: healing approve {unlearned}건 누적"),
+        runtime,
+        base_model,
+        dataset_path: None,
+        iters: cfg.auto_lora_iters.unwrap_or(200),
+        lora_rank: cfg.auto_lora_rank.unwrap_or(8),
+        learning_rate: cfg.auto_lora_lr.unwrap_or(1e-5),
+    })
+}
+
+/// approve 시 호출. fire-and-forget. 자동 학습이 활성화돼있고 threshold 도달 시 spawn.
+/// 동시 실행 가드: 이미 다른 run이 진행 중이면 skip.
+pub async fn maybe_auto_train(app: AppHandle) {
+    if any_running() {
+        return;
+    }
+    let cfg = crate::commands::config::load_config().unwrap_or_default();
+    let cursor_ms = load_store().auto_train_cursor_ms;
+    let unlearned = current_unlearned_count(cursor_ms);
+    let Some(opts) = build_auto_options(&cfg, unlearned) else {
+        return;
+    };
+
+    let cursor_candidate_ms = now_ms();
+    let auto_load = cfg.auto_lora_auto_load.unwrap_or(true);
+    let mode = AutoMode { cursor_candidate_ms, auto_load };
+
+    let _ = app.emit(
+        "lora_forge_auto_event",
+        serde_json::json!({
+            "phase": "starting",
+            "unlearned_count": unlearned,
+            "ts_ms": cursor_candidate_ms,
+        }),
+    );
+
+    match start_internal(app.clone(), opts, true, Some(mode)).await {
+        Ok(run) => {
+            let _ = app.emit(
+                "lora_forge_auto_event",
+                serde_json::json!({
+                    "phase": "spawned",
+                    "run_id": run.id,
+                    "ts_ms": now_ms(),
+                }),
+            );
+        }
+        Err(e) => {
+            let _ = app.emit(
+                "lora_forge_auto_event",
+                serde_json::json!({
+                    "phase": "error",
+                    "error": e.to_string(),
+                    "ts_ms": now_ms(),
+                }),
+            );
+        }
+    }
 }
 
 /// 출력 디렉터리에 `adapter_config.json`이 있으면 mistralrs LoRA 로더와 호환.
@@ -601,6 +853,7 @@ mod tests {
             status: ForgeStatus::Running,
             exit_code: None,
             log_tail: Vec::new(),
+            auto: false,
         };
         let y = build_axolotl_yaml(&run);
         assert!(y.contains("/abs/data.jsonl"));
@@ -641,11 +894,96 @@ mod tests {
             status: ForgeStatus::Completed,
             exit_code: Some(0),
             log_tail: vec!["a".into()],
+            auto: true,
         };
         let j = serde_json::to_string(&r).unwrap();
         let back: ForgeRun = serde_json::from_str(&j).unwrap();
         assert_eq!(back.status, ForgeStatus::Completed);
         assert_eq!(back.exit_code, Some(0));
         assert!(j.contains("\"completed\""));
+    }
+
+    fn auto_cfg() -> crate::commands::config::AppConfig {
+        let mut c = crate::commands::config::AppConfig::default();
+        c.auto_lora_enabled = Some(true);
+        c.auto_lora_threshold = Some(25);
+        c.auto_lora_base_model = Some("Qwen/X".into());
+        c
+    }
+
+    #[test]
+    fn build_auto_options_disabled_returns_none() {
+        let mut c = auto_cfg();
+        c.auto_lora_enabled = Some(false);
+        assert!(build_auto_options(&c, 100).is_none());
+    }
+
+    #[test]
+    fn build_auto_options_below_threshold_returns_none() {
+        let c = auto_cfg();
+        assert!(build_auto_options(&c, 24).is_none());
+    }
+
+    #[test]
+    fn build_auto_options_no_base_returns_none() {
+        let mut c = auto_cfg();
+        c.auto_lora_base_model = None;
+        assert!(build_auto_options(&c, 100).is_none());
+        c.auto_lora_base_model = Some("   ".into());
+        assert!(build_auto_options(&c, 100).is_none());
+    }
+
+    #[test]
+    fn build_auto_options_picks_defaults_when_unset() {
+        let c = auto_cfg();
+        let o = build_auto_options(&c, 30).unwrap();
+        assert_eq!(o.runtime, "mlx-lm");
+        assert_eq!(o.iters, 200);
+        assert_eq!(o.lora_rank, 8);
+        assert!(o.task.contains("30건"));
+        assert!(o.dataset_path.is_none(), "자동 학습은 dataset 자동 export 사용");
+    }
+
+    #[test]
+    fn build_auto_options_invalid_runtime_falls_back_to_mlx() {
+        let mut c = auto_cfg();
+        c.auto_lora_runtime = Some("qlora".into());
+        let o = build_auto_options(&c, 30).unwrap();
+        assert_eq!(o.runtime, "mlx-lm");
+    }
+
+    #[test]
+    fn blocked_reason_disabled() {
+        let c = auto_cfg();
+        let r = blocked_reason(false, 25, 50, false, &c);
+        assert!(r.unwrap().contains("비활성"));
+    }
+
+    #[test]
+    fn blocked_reason_running() {
+        let c = auto_cfg();
+        let r = blocked_reason(true, 25, 50, true, &c);
+        assert!(r.unwrap().contains("진행 중"));
+    }
+
+    #[test]
+    fn blocked_reason_below_threshold() {
+        let c = auto_cfg();
+        let r = blocked_reason(true, 25, 10, false, &c);
+        assert!(r.unwrap().contains("10 / 25"));
+    }
+
+    #[test]
+    fn blocked_reason_no_base() {
+        let mut c = auto_cfg();
+        c.auto_lora_base_model = None;
+        let r = blocked_reason(true, 25, 100, false, &c);
+        assert!(r.unwrap().contains("베이스"));
+    }
+
+    #[test]
+    fn blocked_reason_all_clear_returns_none() {
+        let c = auto_cfg();
+        assert!(blocked_reason(true, 25, 100, false, &c).is_none());
     }
 }

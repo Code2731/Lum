@@ -68,6 +68,24 @@ pub struct AppConfig {
     pub ollama_base_url: Option<String>,
     /// Ollama에서 사용할 모델명 (예: "llama3.2:3b", "qwen2.5-coder:7b")
     pub ollama_model: Option<String>,
+
+    // ── Phase 120: 자동 LoRA 학습 루프 (Auto-Learn) ───────────────────────
+    /// 자동 학습 활성화. opt-in — 기본 false.
+    pub auto_lora_enabled: Option<bool>,
+    /// 미학습 approve 카운트가 이 값 도달 시 자동 트리거. 기본 25.
+    pub auto_lora_threshold: Option<u32>,
+    /// 자동 학습 런타임 — "mlx-lm" 또는 "axolotl". 기본 "mlx-lm".
+    pub auto_lora_runtime: Option<String>,
+    /// 자동 학습 베이스 모델(HF id 또는 로컬 경로).
+    pub auto_lora_base_model: Option<String>,
+    /// 자동 학습 iters (기본 200).
+    pub auto_lora_iters: Option<u32>,
+    /// 자동 학습 LoRA rank (기본 8).
+    pub auto_lora_rank: Option<u32>,
+    /// 자동 학습 learning rate (기본 1e-5).
+    pub auto_lora_lr: Option<f32>,
+    /// 학습 완료 시 호환되면 즉시 hot-swap. 기본 true (활성화 됐을 때만 의미).
+    pub auto_lora_auto_load: Option<bool>,
 }
 
 impl AppConfig {
@@ -241,6 +259,61 @@ pub fn save_ollama_settings(base_url: Option<String>, model: Option<String>) -> 
     let mut config = load_config()?;
     config.ollama_base_url = base_url.filter(|s| !s.is_empty());
     config.ollama_model = model.filter(|s| !s.is_empty());
+    save_config(&config)
+}
+
+/// Phase 120: 자동 학습 설정 저장. None인 필드는 그대로 유지(부분 갱신).
+#[tauri::command]
+pub fn save_auto_lora_settings(
+    enabled: Option<bool>,
+    threshold: Option<u32>,
+    runtime: Option<String>,
+    base_model: Option<String>,
+    iters: Option<u32>,
+    rank: Option<u32>,
+    lr: Option<f32>,
+    auto_load: Option<bool>,
+) -> Result<()> {
+    let mut config = load_config()?;
+    if enabled.is_some() {
+        config.auto_lora_enabled = enabled;
+    }
+    if let Some(t) = threshold {
+        if !(1..=10_000).contains(&t) {
+            return Err(LumError::Config("threshold는 1..=10000".into()));
+        }
+        config.auto_lora_threshold = Some(t);
+    }
+    if let Some(rt) = runtime {
+        if rt != "mlx-lm" && rt != "axolotl" {
+            return Err(LumError::Config(format!("지원하지 않는 runtime: {rt}")));
+        }
+        config.auto_lora_runtime = Some(rt);
+    }
+    if base_model.is_some() {
+        config.auto_lora_base_model = base_model.filter(|s| !s.trim().is_empty());
+    }
+    if let Some(i) = iters {
+        if !(1..=10_000).contains(&i) {
+            return Err(LumError::Config("iters는 1..=10000".into()));
+        }
+        config.auto_lora_iters = Some(i);
+    }
+    if let Some(r) = rank {
+        if !(2..=64).contains(&r) {
+            return Err(LumError::Config("rank는 2..=64".into()));
+        }
+        config.auto_lora_rank = Some(r);
+    }
+    if let Some(l) = lr {
+        if !(l.is_finite() && l > 0.0 && l < 1.0) {
+            return Err(LumError::Config("lr은 (0,1) 유한값".into()));
+        }
+        config.auto_lora_lr = Some(l);
+    }
+    if auto_load.is_some() {
+        config.auto_lora_auto_load = auto_load;
+    }
     save_config(&config)
 }
 
