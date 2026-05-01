@@ -18,6 +18,7 @@ export function usePanelVisibility() {
   const [showSquadPanel, setShowSquadPanel] = useState(false);
   const [showHealingDataset, setShowHealingDataset] = useState(false);
   const [showRecall, setShowRecall] = useState(false);
+  const [showLoraForge, setShowLoraForge] = useState(false);
 
   const closeOverlays = useCallback(() => {
     setShowHistorySearch(false);
@@ -30,6 +31,7 @@ export function usePanelVisibility() {
     setShowSquadPanel(false);
     setShowHealingDataset(false);
     setShowRecall(false);
+    setShowLoraForge(false);
   }, []);
 
   return {
@@ -50,6 +52,7 @@ export function usePanelVisibility() {
     showSquadPanel, setShowSquadPanel,
     showHealingDataset, setShowHealingDataset,
     showRecall, setShowRecall,
+    showLoraForge, setShowLoraForge,
     closeOverlays,
   };
 }

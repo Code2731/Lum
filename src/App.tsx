@@ -22,7 +22,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import {
   Zap, Cpu, Loader2, TerminalSquare, LayoutList, MousePointer2,
   Package, Database, Plus, X, Columns2, Rows2, SlidersHorizontal, ArrowUpCircle, GitCompareArrows, Palette,
-  GitBranch, Container, Layers, Lock, BookOpen, Bell, Activity, FolderTree, Brain, PlugZap, Users, Sparkles, Library,
+  GitBranch, Container, Layers, Lock, BookOpen, Bell, Activity, FolderTree, Brain, PlugZap, Users, Sparkles, Library, Hammer,
 } from "lucide-react";
 import SshConnectModal from "./components/SshConnectModal";
 import { useReactAgent } from "./hooks/useReactAgent";
@@ -67,6 +67,7 @@ const McpPanel = lazy(() => import("./components/McpPanel"));
 const SquadPanel = lazy(() => import("./components/SquadPanel"));
 const HealingDatasetPanel = lazy(() => import("./components/HealingDatasetPanel"));
 const RecallPanel = lazy(() => import("./components/RecallPanel"));
+const LoraForgePanel = lazy(() => import("./components/LoraForgePanel"));
 
 type ViewMode = "terminal" | "canvas" | "list";
 
@@ -179,6 +180,7 @@ const App: React.FC = () => {
     showSquadPanel, setShowSquadPanel,
     showHealingDataset, setShowHealingDataset,
     showRecall, setShowRecall,
+    showLoraForge, setShowLoraForge,
     closeOverlays,
   } = usePanelVisibility();
 
@@ -676,6 +678,14 @@ const App: React.FC = () => {
             onClick={() => setShowRecall(v => !v)}
           >
             <Library size={14} />
+          </ToolbarIconButton>
+          <ToolbarIconButton
+            label="LoRA Forge — 내 데이터로 모델 학습"
+            tone="cyan"
+            active={showLoraForge}
+            onClick={() => setShowLoraForge(v => !v)}
+          >
+            <Hammer size={14} />
           </ToolbarIconButton>
           <ToolbarIconButton
             label="RAG 코드 검색"
@@ -1269,6 +1279,30 @@ const App: React.FC = () => {
               model={selectedModel}
               onInjectToChat={(text) => { aiChat.sendMessage(`다음 과거 컨텍스트를 참고해서 답해줘:\n\n${text}`); setShowRecall(false); }}
               onClose={() => setShowRecall(false)}
+            />
+          </ErrorBoundary>
+        </Suspense>
+      )}
+
+      {showLoraForge && (
+        <Suspense fallback={null}>
+          <ErrorBoundary label="LoRA Forge">
+            <LoraForgePanel
+              onLoadAdapter={(run) => {
+                aiChat.sendMessage(
+                  `이 LoRA 어댑터를 추론 모델에 적용해줘. 출력 디렉터리: ${run.output_dir}`,
+                );
+                setShowLoraForge(false);
+              }}
+              onRevealPath={async (path) => {
+                try {
+                  const { openPath } = await import("@tauri-apps/plugin-opener");
+                  await openPath(path);
+                } catch {
+                  /* noop */
+                }
+              }}
+              onClose={() => setShowLoraForge(false)}
             />
           </ErrorBoundary>
         </Suspense>

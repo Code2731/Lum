@@ -195,6 +195,13 @@ pub fn run() {
             commands::recall::recall_forget,
             commands::recall::recall_forget_before,
             commands::recall::recall_stats,
+            // Phase 119 — LoRA Forge (인앱 로컬 파인튜닝)
+            commands::lora_forge::lora_forge_runtimes,
+            commands::lora_forge::lora_forge_start,
+            commands::lora_forge::lora_forge_cancel,
+            commands::lora_forge::lora_forge_list,
+            commands::lora_forge::lora_forge_remove,
+            commands::lora_forge::lora_forge_can_load,
             // Workspace
             commands::workspace::save_workspace,
             commands::workspace::list_workspaces,

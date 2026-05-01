@@ -43,6 +43,7 @@ cd src-tauri && cargo test   # Rust 단위 테스트 실행
 - **Worktree Squad** (Phase 116, `commands/squad.rs`): `squad_create / squad_list / squad_remove`. `~/.lum_squads/<id>` worktree + `lum-squad/<id>` 브랜치. 영속 `~/.lum_squads.json`. mistralrs 단일 인스턴스 공유 — N개 squad ReAct 직렬 실행 (다중 인스턴스는 향후).
 - **Healing Dataset** (Phase 117, `commands/healing_dataset.rs`): `record_healing_decision / list_healing_dataset / export_healing_dataset / clear_healing_dataset`. `useAutoHealing.handleExecute`=approve, `clearHealing` w/ result=reject. JSONL append-only `~/.lum_healing_dataset.jsonl`. ChatML export(approve only)는 `~/.lum_healing_export.chatml.jsonl` — `mlx-lm lora` / `axolotl`로 로컬 LoRA fine-tune 직접 가능.
 - **Persistent Memory Vault** (Phase 118, `commands/recall.rs`): history(명령) / healing(자동치유) / memory(일반) 3소스를 단일 시맨틱 검색 facade로 묶음. `recall_search(query, sources?, since_ms?, until_ms?)` — 쿼리 임베딩(embed_auto) + 소스별 cosine. `recall_forget(ids)` 단건/`recall_forget_before(ts_ms)` 시간기준 일괄 삭제(GDPR-style). `recall_stats` UI 메타정보. healing은 record당 즉석 임베딩 — 200건+ 시 캐싱 follow-up. 클라우드 제품은 데이터 보관정책상 영구 메모리 불가 — LUM의 가장 강한 모트 중 하나.
+- **LoRA Forge** (Phase 119, `commands/lora_forge.rs`): Phase 117(수집)→118(검색)→119(학습) 루프의 마지막 고리. 사용자 healing 데이터셋으로 본인 모델을 직접 fine-tune. 외부 CLI(`mlx_lm`/`axolotl`)를 서브프로세스로 호출 — LUM은 오케스트레이션만. `lora_forge_runtimes`(Python `import` 검사로 감지) / `lora_forge_start(opts)`(미명시 dataset은 chatml 자동 export → spawn) / `lora_forge_cancel(run_id)`(`oneshot::Sender`로 kill 신호) / `lora_forge_list` / `lora_forge_remove` / `lora_forge_can_load`(adapter_config.json 존재 시 mistralrs 호환). 영속 `~/.lum_lora_runs.json` + `~/.lum_lora_runs/<id>/`. 진행률은 `lora_forge_progress {run_id, stream, line}` 이벤트로 라이브 emit, 완료 시 `lora_forge_status` + log_tail 영속. 클라우드 제품은 사용자 데이터로 학습 못 함 — Phase 119가 가장 강한 모트.
 - **lum-mcp-server** (`src/bin/lum-mcp-server.rs`): 독립 실행 MCP 서버 바이너리 — 외부 LLM agent가 LUM 도구 직접 호출.
 - **Cargo features**: `embedded-ai` — mistralrs 포함 (기본 빌드 제외, ~150MB 절감). Platform별 조건: Windows/Linux = CUDA, macOS = Metal.
 - **주요 커맨드**: `spawn_pty`, `write_to_pty`, `stream_ai_command`, `generate_embedding`, `embed_load_gguf`, `embed_load_lora`, `embed_unload`, `load_config`, `save_config`, `index_project`, `search_codebase`, `rag_context_for_file`, `pick_gguf_file`, `pick_model_dir`.
@@ -59,6 +60,7 @@ cd src-tauri && cargo test   # Rust 단위 테스트 실행
   - `usePrivacyLedger` (Phase 115) — `ai_route_event` 누적 → 백엔드별 호출 통계 + on-device 여부
   - `useSquads` (Phase 116) — Worktree Squad CRUD 래퍼 + 새 탭에서 worktree 열기
   - `useRecall` (Phase 118) — recall_search/forget/stats 래퍼 + AI 챗 주입 콜백
+  - `useLoraForge` (Phase 119) — lora_forge_* 래퍼 + 라이브 로그 버퍼(`liveLogs[run_id]`, 200줄 cap) + 이벤트 구독
 - **shadcn/ui** (`src/components/ui/`): Button, Dialog, AlertDialog, Command (cmdk), Input, Label, Switch, Tooltip, Textarea, Slider, Select, **ToolbarIconButton** — 모든 모달/폼 컴포넌트가 Radix 기반.
 - **PrivacyLedgerBadge** (Phase 115, `src/components/PrivacyLedgerBadge.tsx`): 헤더 좌상단 배지 — `100% On-Device` / `Cloud N%` 표시, 클릭 시 백엔드별 호출수·평균 latency·최근 호출 popover.
 - **ToolbarIconButton** (`src/components/ui/toolbar-icon-button.tsx`): 헤더 툴바 전용 — Tooltip + kbd 단축키 힌트 + `aria-pressed` active state + badge dot + `tone` variant(accent/cyan). `ToolbarSeparator`로 그룹 구분.
@@ -66,7 +68,7 @@ cd src-tauri && cargo test   # Rust 단위 테스트 실행
 - **AIBlockStream** (`src/components/AIBlockStream.tsx`): 인라인 마크다운 스트림 렌더. EditBlockCard(SEARCH/REPLACE) + ToolCallCard(MCP) + TestResultCard 체인.
 - **ErrorBoundary** (`src/components/ErrorBoundary.tsx`): 터미널·패널 크래시 격리.
 - **E2E 테스트** (`e2e/`): Playwright 스모크 테스트 5개. `e2e/setup/tauri-mock.ts`.
-- **영속성**: `.lum_session.json`, `.lum_config.json`, `.lum_code_index.json`, `.lum_ssh_profiles.json`, `.lum_mcp.json`, `.lum_squads.json`, `.lum_healing_dataset.jsonl`.
+- **영속성**: `.lum_session.json`, `.lum_config.json`, `.lum_code_index.json`, `.lum_ssh_profiles.json`, `.lum_mcp.json`, `.lum_squads.json`, `.lum_healing_dataset.jsonl`, `.lum_lora_runs.json` + `.lum_lora_runs/<id>/`.
 
 ## Tech Stack
 
@@ -89,4 +91,5 @@ cd src-tauri && cargo test   # Rust 단위 테스트 실행
 - **Worktree Squad (Phase 116)**: `git worktree add ~/.lum_squads/<id> -b lum-squad/<id> <base>`. `addTab({cwd, title})` 옵션으로 새 탭이 worktree에서 PTY 시작. squad 제거는 `worktree remove --force` + `branch -D` 후 디렉터리 정리.
 - **Healing 학습 루프 (Phase 117)**: `useAutoHealing`이 승인/거부 결정마다 `record_healing_decision`. dataset은 append-only JSONL, ChatML export 시 approve만 포함. LUM은 데이터 수집 + 변환만 — 실제 LoRA 학습은 외부 도구(`mlx-lm lora`, `axolotl`)에 위임 (가벼운 핵심 + 학습 인프라 선택의 자유).
 - **Persistent Memory Vault (Phase 118)**: 3소스 ID 형식 `<source>:<key>` (history/healing/memory). 쿼리 임베딩 1번 + 각 record 임베딩과 cosine. healing은 record 임베딩 미저장 → 검색 시 즉석 embed_auto. 점수 임계 0.25 (history.rs와 통일). "잊혀질 권리" 액션은 `recall_forget` (단건 ids) / `recall_forget_before` (ts_ms 이전 일괄).
+- **LoRA Forge (Phase 119)**: 외부 CLI를 서브프로세스로 orchestrate — LUM은 학습 엔진을 번들링하지 않음(가벼운 핵심 + 사용자가 학습 도구 선택의 자유). 런타임 감지는 `python3 -c "import mlx_lm"` / `import axolotl` (Python 모듈 임포트 가능 여부, `which` 보다 정확). spawn 시 stdout/stderr 줄단위로 `lora_forge_progress` emit + 메모리 ring buffer(80줄) → finalize 시 영속 `log_tail`로 flush. 취소는 `tokio::sync::oneshot` + `child.start_kill()`. mlx-lm 어댑터는 mistralrs LoRA 로더와 형식이 달라 직접 로드 불가(별도 변환 필요) — `lora_forge_can_load`가 `adapter_config.json` 존재 검사로 호환성 판정. axolotl은 `chat_template: chatml`로 healing export와 직접 호환되는 yaml을 자동 생성.
 
