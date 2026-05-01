@@ -61,6 +61,49 @@ export function isKnownShellCommand(token: string): boolean {
   return false;
 }
 
+/**
+ * 코딩 의도 감지 (Phase 124) — "동사 ≥ 1 AND 명사 ≥ 1" 결정적 매칭.
+ * 매치 시 자연어 입력을 자동으로 ReAct 에이전트로 라우팅.
+ *
+ * 보수적 디자인:
+ * - false positive 회피 우선 — 모호하면 ai(챗) 폴백
+ * - 명시적 prefix(`>>`)는 항상 우선
+ * - 단독 키워드("리팩터링해")는 안 잡음 — 다음 페이즈에서 강한 동사 셋 별도 도입
+ *
+ * 안전망 (Phase 123 2차/3차): 잘못 잡혀도 자동 백업 + 원클릭 undo + 위험도 분류로 1초 복구.
+ */
+const CODING_VERBS_KO = [
+  "수정", "추가", "구현", "고쳐", "고치", "리팩터", "리팩토링", "삭제",
+  "작성", "변경", "바꿔", "만들어", "리네임", "재구성", "갱신", "업데이트",
+];
+const CODING_VERBS_EN = [
+  "fix", "add", "implement", "create", "refactor", "modify",
+  "delete", "remove", "write", "change", "rename", "update",
+];
+const CODING_NOUNS_KO = [
+  "함수", "파일", "클래스", "메서드", "버그", "모듈", "컴포넌트",
+  "훅", "테스트", "타입", "코드", "에러", "오류",
+];
+const CODING_NOUNS_EN = [
+  "function", "file", "class", "method", "bug", "module", "component",
+  "hook", "test", "type", "code", "error",
+];
+
+export function detectCodingIntent(text: string): boolean {
+  if (!text) return false;
+  const lower = text.toLowerCase();
+  const hasVerb =
+    CODING_VERBS_KO.some((v) => text.includes(v)) ||
+    CODING_VERBS_EN.some((v) => new RegExp(`\\b${v}\\b`).test(lower));
+  if (!hasVerb) return false;
+  // 영어 명사는 단수/복수 모두 매칭 — `\bnoun(s)?\b`. "tests"/"files"/"functions" 같은
+  // 흔한 plural 케이스를 위해. 동사는 활용형이 다양해(added/adding/adds) word boundary 그대로 둠.
+  const hasNoun =
+    CODING_NOUNS_KO.some((n) => text.includes(n)) ||
+    CODING_NOUNS_EN.some((n) => new RegExp(`\\b${n}s?\\b`).test(lower));
+  return hasNoun;
+}
+
 /** 입력 전체가 shell 특수문자로 시작하는지 (path, pipe, redirect 등) */
 function startsWithShellPrefix(trimmed: string): boolean {
   if (!trimmed) return false;
@@ -114,6 +157,11 @@ export function routeInput(raw: string): Route {
     return { type: "shell", command: trimmed };
   }
 
-  // 5. 그 외 전부 AI (기본값)
+  // 5. (Phase 124) 자연어이지만 코딩 의도 감지 → 자동 agent 라우팅
+  if (detectCodingIntent(trimmed)) {
+    return { type: "agent", task: trimmed };
+  }
+
+  // 6. 그 외 전부 AI (기본값 — 단순 질문/대화)
   return { type: "ai", question: trimmed };
 }
