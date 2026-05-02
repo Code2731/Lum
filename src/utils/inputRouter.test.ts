@@ -179,6 +179,81 @@ describe("routeInput — 기본: 자연어=AI, CLI 감지 시 shell", () => {
     });
   });
 
+  // ─── 백엔드 강제 prefix (Phase 125) ───────────────────────────────────────
+  describe("@<backend> prefix — AI 백엔드 강제", () => {
+    it("@local 코딩 의도 → agent + backend=local", () => {
+      expect(routeInput("@local utils.ts에 add 함수 추가해줘")).toEqual({
+        type: "agent",
+        task: "utils.ts에 add 함수 추가해줘",
+        backend: "local",
+      });
+    });
+
+    it("@embedded는 @local과 동일 alias", () => {
+      expect(routeInput("@embedded 코드 수정해줘")).toEqual({
+        type: "agent",
+        task: "코드 수정해줘",
+        backend: "local",
+      });
+    });
+
+    it("@ollama 일반 질문 → ai + backend=ollama", () => {
+      expect(routeInput("@ollama 이 코드 어떻게 동작해?")).toEqual({
+        type: "ai",
+        question: "이 코드 어떻게 동작해?",
+        backend: "ollama",
+      });
+    });
+
+    it("@gemini 코딩 의도 → agent + backend=gemini", () => {
+      expect(routeInput("@gemini fix the bug in login flow")).toEqual({
+        type: "agent",
+        task: "fix the bug in login flow",
+        backend: "gemini",
+      });
+    });
+
+    it("@xllm 일반 질문 → ai + backend=xllm", () => {
+      expect(routeInput("@xllm what is a closure?")).toEqual({
+        type: "ai",
+        question: "what is a closure?",
+        backend: "xllm",
+      });
+    });
+
+    it("@cloud는 @gemini의 alias", () => {
+      expect(routeInput("@cloud explain this")).toEqual({
+        type: "ai",
+        question: "explain this",
+        backend: "gemini",
+      });
+    });
+
+    it("@local만 단독 입력 → 빈 ai (백엔드만 토글)", () => {
+      expect(routeInput("@local")).toEqual({
+        type: "ai",
+        question: "",
+        backend: "local",
+      });
+    });
+
+    it("backend 키워드 아닌 @ → 기존 강제 AI (backend 없음)", () => {
+      // `ls`는 backend 키워드가 아님 → 기존 동작 유지 (강제 AI 챗).
+      expect(routeInput("@ls 왜 에러나는지 알려줘")).toEqual({
+        type: "ai",
+        question: "ls 왜 에러나는지 알려줘",
+      });
+    });
+
+    it("대소문자 무관 — @LOCAL → backend=local", () => {
+      expect(routeInput("@LOCAL hello")).toEqual({
+        type: "ai",
+        question: "hello",
+        backend: "local",
+      });
+    });
+  });
+
   describe("detectCodingIntent — 단위", () => {
     it("동사+명사 모두 매칭 → true", () => {
       expect(detectCodingIntent("함수 추가")).toBe(true);

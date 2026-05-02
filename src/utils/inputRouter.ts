@@ -4,14 +4,45 @@ import { getSpec } from "../data/cliSpecs";
  * 사용자 입력을 의미에 따라 라우팅한다.
  * 기본값은 자연어 → AI. 토큰 첫 단어가 알려진 CLI면 shell 직행.
  */
+
+/**
+ * AI 백엔드 강제 선택. 자원이 다른 백엔드들(임베디드 GPU vs 외부 서버 vs 클라우드)은
+ * 공존하므로, 사용자가 작업별로 골라 쓸 수 있게 prefix 또는 UI에서 backend 명시.
+ * undefined면 기본 라우팅(embedded → ollama → xllm → gemini fallback) 유지.
+ */
+export type AiBackend = "local" | "ollama" | "xllm" | "gemini";
+
 export type Route =
   | { type: "shell"; command: string }
-  | { type: "ai"; question: string }
+  | { type: "ai"; question: string; backend?: AiBackend }
   | { type: "aiCmd"; prompt: string }     // "# ..." — 자연어 → 명령어 변환 (인라인 제안)
   | { type: "explain"; command: string }  // "? ..." — 명령어 설명
-  | { type: "agent"; task: string }       // ">> ..." — 에이전트 태스크
+  | { type: "agent"; task: string; backend?: AiBackend }   // ">> ..." — 에이전트 태스크
   | { type: "heavy"; prompt: string }     // "!! ..." — Heavy Track (mistral.rs 30B)
   | { type: "empty" };
+
+/** @local·@embedded → "local" 등 — alias 흡수. 첫 토큰이 키워드 아니면 null. */
+const BACKEND_KEYWORDS: Record<string, AiBackend> = {
+  local: "local",
+  embedded: "local",
+  ollama: "ollama",
+  xllm: "xllm",
+  gemini: "gemini",
+  cloud: "gemini",
+};
+
+/**
+ * `@<backend> <rest>` 형태에서 backend 추출. 첫 토큰이 backend 키워드면 `{backend, rest}`,
+ * 아니면 null (호출자가 기존 `@` 동작=강제 AI 챗으로 폴백).
+ */
+function parseBackendPrefix(stripped: string): { backend: AiBackend; rest: string } | null {
+  const space = stripped.indexOf(" ");
+  const firstToken = (space === -1 ? stripped : stripped.slice(0, space)).toLowerCase();
+  const backend = BACKEND_KEYWORDS[firstToken];
+  if (!backend) return null;
+  const rest = space === -1 ? "" : stripped.slice(space + 1).trim();
+  return { backend, rest };
+}
 
 // cliSpecs.ts에 없지만 흔한 POSIX/개발 도구 — 자연어로 오인되면 안 되는 것들만
 const EXTRA_SHELL_TOOLS = new Set([
@@ -136,13 +167,26 @@ export function routeInput(raw: string): Route {
     return { type: "explain", command: trimmed.slice(2).trim() };
   }
 
-  // 2. override: `!` → 강제 shell, `@` → 강제 AI
+  // 2. override: `!` → 강제 shell, `@` → 강제 AI / `@<backend>` → 백엔드 강제
   if (trimmed.startsWith("!")) {
     const stripped = trimmed.slice(1).trimStart();
     return { type: "shell", command: stripped };
   }
   if (trimmed.startsWith("@")) {
-    return { type: "ai", question: trimmed.slice(1).trimStart() };
+    const stripped = trimmed.slice(1).trimStart();
+    // `@local <text>` 같이 첫 토큰이 backend 키워드면 backend 강제 + 텍스트는 의도 분류.
+    // 그 외(`@ls 어떻게...`)는 기존 동작 유지 — 단순 강제 AI 챗.
+    const backendPrefix = parseBackendPrefix(stripped);
+    if (backendPrefix) {
+      const { backend, rest } = backendPrefix;
+      if (!rest) return { type: "ai", question: "", backend };
+      // backend 명시했더라도 코딩 의도 있으면 agent로 (둘 다 backend 필드 받음).
+      if (detectCodingIntent(rest)) {
+        return { type: "agent", task: rest, backend };
+      }
+      return { type: "ai", question: rest, backend };
+    }
+    return { type: "ai", question: stripped };
   }
 
   // 3. shell 특수문자 시작 → shell
