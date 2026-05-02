@@ -5,6 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Project Overview
 
 LUM (Local Universal Machine) — Warp 스타일 블록 기반 AI 터미널 에뮬레이터.
+- **UI Review**: [UI_REVIEW.md](./src/UI_REVIEW.md) 참조.
 - **AI 백엔드**: mistralrs 0.8.1 (LUM 프로세스에 직접 임베딩, subprocess/HTTP 없음) + Gemini Cloud API 폴백
 - **목표**: 비용 제로, 개인정보 보호. Ollama/TabbyAPI 불필요.
 - **모델 저장**: `~/.lum_mistral_models/<safe_name>/` (GGUF 또는 BF16)
@@ -83,7 +84,7 @@ cd src-tauri && cargo test   # Rust 단위 테스트 실행
 - **Rust**: Tauri v2, portable-pty, mistralrs 0.8.1, mistralrs-core 0.8.1, tauri-plugin-updater, tauri-plugin-dialog, tauri-plugin-opener, ignore, reqwest, futures-util, nvml-wrapper (Windows/Linux)
 - **Frontend**: React 19, TypeScript, Tailwind CSS v4, shadcn/ui (Radix), cmdk, framer-motion, Vitest, Playwright, react-markdown, react-resizable-panels, react-virtuoso, PrismJS
 - **AI**: mistralrs 임베디드 GGUF/LoRA + Gemini Cloud API 폴백
-- **Python 에이전트** (`crew/`): CrewAI + lum-mcp-server stdio 연동, Fast(임베딩) 멀티에이전트 전용
+- **외부 MCP 클라이언트 연동**: `lum-mcp-server` 바이너리(stdio MCP, 7개 도구) — Claude Desktop / CrewAI 등 외부 agent가 LUM 도구 호출 가능 (LUM 본체는 Python 의존성 없음)
 
 ## Key Conventions
 

@@ -1,7 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect, useMemo, lazy, Suspense } from "react";
 import { Group as PanelGroup, Panel, Separator as PanelResizeHandle } from "react-resizable-panels";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { ToolbarIconButton, ToolbarSeparator } from "@/components/ui/toolbar-icon-button";
 import { shortPath } from "./utils";
 import { useTerminalBlocks } from "./hooks/useTerminalBlocks";
 import { useAIProcessing } from "./hooks/useAIProcessing";
@@ -20,11 +19,10 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { AnimatePresence, motion } from "framer-motion";
 import {
-  Zap, Cpu, Loader2, TerminalSquare, LayoutList, MousePointer2,
-  Package, Database, Plus, X, Columns2, Rows2, SlidersHorizontal, ArrowUpCircle, GitCompareArrows, Palette,
-  GitBranch, Container, Layers, Lock, BookOpen, Bell, Activity, FolderTree, Brain, PlugZap, Users, Sparkles, Library, Hammer,
+  Zap, Cpu, Loader2, TerminalSquare,
+  Package, Plus, X, Columns2, Rows2, ArrowUpCircle,
+  GitBranch, Container, Lock,
 } from "lucide-react";
-import SshConnectModal from "./components/SshConnectModal";
 import { useReactAgent } from "./hooks/useReactAgent";
 import { useAIChat } from "./hooks/useAIChat";
 import { useEnvAutoDetector } from "./hooks/useEnvAutoDetector";
@@ -33,9 +31,7 @@ import { useScriptLibrary } from "./hooks/useScriptLibrary";
 import ScriptLibraryPanel from "./components/ScriptLibraryPanel";
 import SystemMonitorPanel from "./components/SystemMonitorPanel";
 import { useNotificationCenter } from "./hooks/useNotificationCenter";
-import NotificationCenter from "./components/NotificationCenter";
 import { usePrivacyLedger } from "./hooks/usePrivacyLedger";
-import PrivacyLedgerBadge from "./components/PrivacyLedgerBadge";
 import { useSquads } from "./hooks/useSquads";
 import type { SshProfile } from "./hooks/useTabManager";
 import InfiniteCanvas from "./components/layout/InfiniteCanvas";
@@ -43,31 +39,16 @@ import TerminalPane from "./components/TerminalPane";
 import HealingPanel from "./components/HealingPanel";
 import RagPanel from "./components/RagPanel";
 import CommandBlockBar from "./components/CommandBlockBar";
-import HistorySearch from "./components/HistorySearch";
-import CommitPanel from "./components/CommitPanel";
-import ThemePanel from "./components/ThemePanel";
 import QuickActionsBar from "./components/QuickActionsBar";
-import WorkspacePanel from "./components/WorkspacePanel";
-import CommandPalette from "./components/CommandPalette";
-import TabContextMenu from "./components/TabContextMenu";
 import ResizeHandles from "./components/ResizeHandles";
-import WindowControls from "./components/WindowControls";
 import WarpListView from "./components/WarpListView";
 import FileExplorerPanel from "./components/FileExplorerPanel";
-import WelcomeHints from "./components/WelcomeHints";
+import AppHeader from "./components/AppHeader";
+import AppOverlays from "./components/AppOverlays";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { TAB_COLORS } from "./hooks/useTabManager";
 
 const ReactAgentPanel = lazy(() => import("./components/ReactAgentPanel"));
-const ModelManager = lazy(() => import("./components/ModelManager"));
-const XllmPanel = lazy(() => import("./components/XllmPanel"));
-const OnboardingWizard = lazy(() => import("./components/OnboardingWizard"));
-const DiffReviewPanel = lazy(() => import("./components/DiffReviewPanel"));
-const McpPanel = lazy(() => import("./components/McpPanel"));
-const SquadPanel = lazy(() => import("./components/SquadPanel"));
-const HealingDatasetPanel = lazy(() => import("./components/HealingDatasetPanel"));
-const RecallPanel = lazy(() => import("./components/RecallPanel"));
-const LoraForgePanel = lazy(() => import("./components/LoraForgePanel"));
 
 type ViewMode = "terminal" | "canvas" | "list";
 
@@ -131,16 +112,48 @@ const App: React.FC = () => {
   // Phase 121: 툴바 고급 기능 표시 모드 (기본 false — "더보기" 팝오버에 숨김).
   const [toolbarShowAdvanced, setToolbarShowAdvanced] = useState(false);
   const [showAdvancedOverflow, setShowAdvancedOverflow] = useState(false);
+  // Phase 126: 사용자가 클릭한 "신규" 기능 ID 누적. 미클릭 항목엔 NEW 라벨.
+  const [seenAdvancedFeatures, setSeenAdvancedFeatures] = useState<string[]>([]);
   useEffect(() => {
     invoke<{
       show_reasoning?: boolean;
       vision_enabled?: boolean;
       toolbar_show_advanced?: boolean;
+      ui_show_file_explorer?: boolean;
+      ui_hints_shown?: boolean;
+      ui_seen_advanced_features?: string[];
     }>("load_app_config")
-      .then((c) => {
+      .then(async (c) => {
         setShowReasoning(c.show_reasoning ?? true);
         setVisionEnabled(c.vision_enabled ?? false);
         setToolbarShowAdvanced(c.toolbar_show_advanced ?? false);
+        setSeenAdvancedFeatures(c.ui_seen_advanced_features ?? []);
+
+        // Phase 126 — UI 환경설정 통합. config가 있으면 그 값, 없으면 localStorage에서 1회 마이그레이션.
+        const migrate: { showFileExplorer?: boolean; hintsShown?: boolean } = {};
+        if (c.ui_show_file_explorer != null) {
+          setShowFileExplorer(c.ui_show_file_explorer);
+        } else {
+          try {
+            const raw = localStorage.getItem("lum.fileExplorer");
+            if (raw != null) migrate.showFileExplorer = raw !== "0";
+          } catch { /* noop */ }
+        }
+        if (c.ui_hints_shown != null) {
+          setShowWelcome(!c.ui_hints_shown);
+        } else {
+          try {
+            const raw = localStorage.getItem("lum.hintsShown");
+            if (raw != null) migrate.hintsShown = raw === "1";
+          } catch { /* noop */ }
+        }
+        if (Object.keys(migrate).length > 0) {
+          try {
+            await invoke("save_ui_preferences", migrate);
+            try { localStorage.removeItem("lum.fileExplorer"); } catch { /* noop */ }
+            try { localStorage.removeItem("lum.hintsShown"); } catch { /* noop */ }
+          } catch { /* noop */ }
+        }
       })
       .catch(() => {});
   }, []);
@@ -152,6 +165,10 @@ const App: React.FC = () => {
       await invoke("save_toolbar_show_advanced", { show: next });
     } catch { /* noop */ }
   }, [toolbarShowAdvanced]);
+  const handleMarkAdvancedSeen = useCallback((id: string) => {
+    setSeenAdvancedFeatures((prev) => (prev.includes(id) ? prev : [...prev, id]));
+    invoke("mark_advanced_feature_seen", { featureId: id }).catch(() => {});
+  }, []);
   const toggleReasoning = useCallback(async () => {
     const next = !showReasoning;
     setShowReasoning(next);
@@ -178,27 +195,21 @@ const App: React.FC = () => {
     resetHealing, detectError, handleAnalyze, handleExecute, clearHealing,
   } = useAutoHealing(selectedModel, activePaneIdRef, ptyWriteRefs, analyzeError);
 
+  const panels = usePanelVisibility();
+  // panels 번들의 일부만 App.tsx 내부에서 직접 참조 — 나머지는 AppHeader/AppOverlays가 panels.<name> 으로 사용.
   const {
-    showModelManager, setShowModelManager,
     showRagPanel, setShowRagPanel,
-    showHistorySearch, setShowHistorySearch,
-    showCommitPanel, setShowCommitPanel,
-    showXllmPanel, setShowXllmPanel,
-    showDiffReview, setShowDiffReview,
-    showThemePanel, setShowThemePanel,
-    showWorkspace, setShowWorkspace,
+    setShowHistorySearch,
+    setShowCommitPanel,
+    setShowDiffReview,
+    setShowThemePanel,
+    setShowWorkspace,
     showScriptPanel, setShowScriptPanel,
     showSysmon, setShowSysmon,
-    showNotifCenter, setShowNotifCenter,
-    showMcpPanel, setShowMcpPanel,
-    showPalette, setShowPalette,
-    showSshModal, setShowSshModal,
-    showSquadPanel, setShowSquadPanel,
-    showHealingDataset, setShowHealingDataset,
-    showRecall, setShowRecall,
-    showLoraForge, setShowLoraForge,
+    setShowPalette,
+    setShowSshModal,
     closeOverlays,
-  } = usePanelVisibility();
+  } = panels;
 
   const { appearance, saveAppearance, xtermTheme } = useTerminalTheme();
   const { actions: quickActions, addAction, updateAction, deleteAction, moveAction } = useQuickActions();
@@ -440,7 +451,7 @@ const App: React.FC = () => {
         e.preventDefault();
         setShowFileExplorer(v => {
           const next = !v;
-          try { localStorage.setItem("lum.fileExplorer", next ? "1" : "0"); } catch {}
+          invoke("save_ui_preferences", { showFileExplorer: next }).catch(() => {});
           return next;
         });
       }
@@ -489,12 +500,6 @@ const App: React.FC = () => {
     };
   }, [addTabWithReset, closeTabWithReset, toggleSplit, closeOverlays, activeTabIdRef, setShowCommitPanel, setShowHistorySearch, setShowDiffReview, setShowThemePanel, quickActions, ptyWriteRefs, activePaneIdRef, setShowWorkspace, loadWorkspaces, setShowPalette]);
 
-  const VIEW_BUTTONS: { mode: ViewMode; icon: React.ReactNode; label: string }[] = [
-    { mode: "terminal", icon: <TerminalSquare size={14} />, label: "터미널" },
-    { mode: "list", icon: <LayoutList size={14} />, label: "리스트" },
-    { mode: "canvas", icon: <MousePointer2 size={14} />, label: "캔버스" },
-  ];
-
   const activeTab = tabs.find((t) => t.id === activeTabId);
   const lastCmdBlock = cmdBlocks[cmdBlocks.length - 1] ?? null;
   const showBlockBar = lastCmdBlock !== null && lastCmdBlock.id !== dismissedBlockId && !healingError;
@@ -518,357 +523,31 @@ const App: React.FC = () => {
     <div className="app-root bg-terminal-dark text-white h-screen overflow-hidden flex flex-col">
       <ResizeHandles />
       {/* ── 헤더 ─────────────────────────────────────────────── */}
-      <header
-        data-tauri-drag-region
-        className="h-10 border-b border-white/5 flex items-center justify-between px-4 shrink-0 select-none gap-2 min-w-0"
-      >
-        <div data-tauri-drag-region className="flex items-center gap-4 shrink-0">
-          <WindowControls />
-          <div data-tauri-drag-region className="flex items-center gap-1.5 text-xs text-white/45 font-medium shrink-0 whitespace-nowrap">
-            <Cpu size={12} />
-            {specsLoading ? (
-              <Loader2 size={12} className="animate-spin" />
-            ) : specs ? (
-              <span title={specs.recommendation_reason}>
-                {(() => {
-                  // gpu_vram_gb는 NVML 감지가 성공하면 set됨 (local-ai 피처 무관)
-                  if (specs.gpu_vram_gb && specs.gpu_vram_gb > 0) {
-                    return `${specs.gpu_vram_gb}GB VRAM`;
-                  }
-                  // gpu_type === "integrated" → Apple Silicon 통합 메모리
-                  // wgpu(local-ai 피처) 없으면 "none" 반환되므로 navigator로 보강
-                  const isMac = typeof navigator !== "undefined" && /Mac/i.test(navigator.platform);
-                  if (specs.gpu_type === "integrated" || isMac) {
-                    return `${specs.total_memory_gb}GB 통합메모리`;
-                  }
-                  return `${specs.total_memory_gb}GB RAM`;
-                })()}
-              </span>
-            ) : null}
-          </div>
-
-          <div className="flex bg-white/5 p-0.5 rounded-md">
-            {VIEW_BUTTONS.map(({ mode, icon, label }) => (
-              <button
-                key={mode}
-                aria-label={label}
-                aria-pressed={viewMode === mode}
-                onClick={() => setViewMode(mode)}
-                className={`p-1 rounded transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring ${
-                  viewMode === mode ? "bg-white/15 text-white" : "text-white/45 hover:text-white/75"
-                }`}
-              >
-                {icon}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* 드래그 가능한 spacer — 좌·우 사이의 빈 공간으로 창 이동 */}
-        <div data-tauri-drag-region className="flex-1 h-full" />
-
-        <div data-tauri-drag-region className="flex items-center gap-1 min-w-0">
-          {(() => {
-            // 모델명을 더 짧게 — 마지막 segment에서 흔한 suffix 제거
-            const shortName = (n?: string | null) => {
-              if (!n) return "";
-              const last = n.match(/[^/\\]+$/)?.[0] ?? n;
-              return last
-                .replace(/-Instruct$/i, "")
-                .replace(/-exl2$/i, "")
-                .replace(/-MLX-?\d*bit$/i, "")
-                .replace(/-\d+bit$/i, "")
-                .replace(/-\d+\.\d+bpw$/i, "")
-                .replace(/-\d+_\d+$/i, "");
-            };
-            // 모델 미로드 = loadedModelId가 null/unknown — 'Empty Model' 표시
-            const fastEmpty = !loadedModelId;
-            const fast = fastEmpty ? "Empty Model" : shortName(loadedModelId);
-            const heavy = shortName(heavyModelId);
-            return (
-              <div data-tauri-drag-region className="flex items-center gap-1 min-w-0 overflow-hidden mr-1">
-                <div
-                  data-tauri-drag-region
-                  className={`text-xs px-2 py-1 rounded-md truncate max-w-[140px] ${
-                    fastEmpty
-                      ? "bg-white/5 text-white/30 italic"
-                      : "bg-blue-400/10 text-blue-300"
-                  }`}
-                  title={
-                    fastEmpty
-                      ? "TabbyAPI에 로드된 모델이 없습니다 — XllmPanel에서 모델을 [사용]하세요"
-                      : `Fast (TabbyAPI): ${loadedModelId}`
-                  }
-                >
-                  {fastEmpty ? "○" : "⚡"} {fast}
-                </div>
-                {heavyEnabled && heavy && (
-                  <div
-                    data-tauri-drag-region
-                    className="text-xs px-2 py-1 rounded-md bg-purple-400/10 text-purple-300 truncate max-w-[140px]"
-                    title={`Heavy Track (mistral.rs): ${heavyModelId}`}
-                  >
-                    🚀 {heavy}
-                  </div>
-                )}
-              </div>
-            );
-          })()}
-
-          {/* Phase 115 — Privacy Ledger 배지 */}
-          <PrivacyLedgerBadge
-            state={privacyLedger.state}
-            isAllOnDevice={privacyLedger.isAllOnDevice}
-            onReset={privacyLedger.reset}
-          />
-          <ToolbarSeparator />
-
-          {/* 그룹 1 — 워크스페이스 / 탐색 */}
-          <ToolbarIconButton
-            label="파일 탐색기"
-            shortcut="⌘B"
-            active={showFileExplorer}
-            onClick={() => setShowFileExplorer(v => {
-              const next = !v;
-              try { localStorage.setItem("lum.fileExplorer", next ? "1" : "0"); } catch {}
-              return next;
-            })}
-          >
-            <FolderTree size={14} />
-          </ToolbarIconButton>
-          <ToolbarIconButton
-            label="워크스페이스"
-            shortcut="⌘⇧S"
-            active={showWorkspace}
-            onClick={() => { setShowWorkspace(true); loadWorkspaces(); }}
-          >
-            <Layers size={14} />
-          </ToolbarIconButton>
-          <ToolbarIconButton
-            label="스크립트 라이브러리"
-            shortcut="⌘⇧L"
-            active={showScriptPanel}
-            onClick={() => { setShowScriptPanel(v => { if (!v) scriptLib.loadScripts(); return !v; }); }}
-          >
-            <BookOpen size={14} />
-          </ToolbarIconButton>
-
-          <ToolbarSeparator />
-
-          {/* 그룹 2 기본 — 매일 쓰는 AI/모델 액션 */}
-          <ToolbarIconButton
-            label={`추론 토큰 ${showReasoning ? "표시 중" : "숨김"}`}
-            tone="cyan"
-            active={showReasoning}
-            onClick={toggleReasoning}
-          >
-            <Brain size={14} />
-          </ToolbarIconButton>
-          <ToolbarIconButton
-            label="모델 관리"
-            onClick={() => setShowModelManager(true)}
-          >
-            <Package size={14} />
-          </ToolbarIconButton>
-
-          <ToolbarSeparator />
-
-          {/* 그룹 2 고급 — toolbar_show_advanced=true면 인라인, 아니면 "더보기" 팝오버 */}
-          {toolbarShowAdvanced && (
-            <>
-              <ToolbarIconButton
-                label="MCP 서버"
-                active={showMcpPanel}
-                onClick={() => setShowMcpPanel(v => !v)}
-              >
-                <PlugZap size={14} />
-              </ToolbarIconButton>
-              <ToolbarIconButton
-                label="Worktree Squad"
-                active={showSquadPanel}
-                badge={squadStore.squads.length > 0}
-                onClick={() => { setShowSquadPanel(v => !v); if (!showSquadPanel) squadStore.load(); }}
-              >
-                <Users size={14} />
-              </ToolbarIconButton>
-              <ToolbarIconButton
-                label="Auto-Heal 학습 데이터셋"
-                tone="cyan"
-                active={showHealingDataset}
-                onClick={() => setShowHealingDataset(v => !v)}
-              >
-                <Sparkles size={14} />
-              </ToolbarIconButton>
-              <ToolbarIconButton
-                label="메모리 검색 (history/healing/memory)"
-                tone="cyan"
-                active={showRecall}
-                onClick={() => setShowRecall(v => !v)}
-              >
-                <Library size={14} />
-              </ToolbarIconButton>
-              <ToolbarIconButton
-                label="LoRA Forge — 내 데이터로 모델 학습"
-                tone="cyan"
-                active={showLoraForge}
-                onClick={() => setShowLoraForge(v => !v)}
-              >
-                <Hammer size={14} />
-              </ToolbarIconButton>
-              <ToolbarIconButton
-                label="RAG 코드 검색"
-                active={showRagPanel}
-                onClick={() => setShowRagPanel(v => !v)}
-              >
-                <Database size={14} />
-              </ToolbarIconButton>
-              <ToolbarIconButton
-                label="xLLM 최적화 설정"
-                onClick={() => setShowXllmPanel(true)}
-              >
-                <SlidersHorizontal size={14} />
-              </ToolbarIconButton>
-              <ToolbarSeparator />
-            </>
-          )}
-
-          {!toolbarShowAdvanced && (
-            <div className="relative">
-              <ToolbarIconButton
-                label="고급 기능 (MCP / Squad / Healing / Recall / LoRA / RAG / xLLM)"
-                active={showAdvancedOverflow}
-                badge={squadStore.squads.length > 0}
-                onClick={() => setShowAdvancedOverflow(v => !v)}
-              >
-                <SlidersHorizontal size={14} />
-              </ToolbarIconButton>
-              <AnimatePresence>
-                {showAdvancedOverflow && (
-                  <motion.div
-                    key="advanced-overflow"
-                    initial={{ opacity: 0, scale: 0.96, y: -4 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.96, y: -4 }}
-                    transition={{ duration: 0.15, ease: "easeOut" }}
-                    style={{ transformOrigin: "top right" }}
-                    className="absolute right-0 top-full mt-1.5 z-50 w-64 rounded-xl border border-white/10 bg-[#0d1117]/95 backdrop-blur-md shadow-xl p-2 space-y-0.5"
-                  >
-                    <AdvancedRow
-                      icon={<PlugZap size={13} />}
-                      label="MCP 서버"
-                      onClick={() => { setShowAdvancedOverflow(false); setShowMcpPanel(true); }}
-                    />
-                    <AdvancedRow
-                      icon={<Users size={13} />}
-                      label="Worktree Squad"
-                      badge={squadStore.squads.length > 0}
-                      onClick={() => { setShowAdvancedOverflow(false); setShowSquadPanel(true); squadStore.load(); }}
-                    />
-                    <AdvancedRow
-                      icon={<Sparkles size={13} className="text-cyan-300" />}
-                      label="Auto-Heal 학습 데이터셋"
-                      onClick={() => { setShowAdvancedOverflow(false); setShowHealingDataset(true); }}
-                    />
-                    <AdvancedRow
-                      icon={<Library size={13} className="text-cyan-300" />}
-                      label="메모리 검색"
-                      onClick={() => { setShowAdvancedOverflow(false); setShowRecall(true); }}
-                    />
-                    <AdvancedRow
-                      icon={<Hammer size={13} className="text-cyan-300" />}
-                      label="LoRA Forge"
-                      onClick={() => { setShowAdvancedOverflow(false); setShowLoraForge(true); }}
-                    />
-                    <AdvancedRow
-                      icon={<Database size={13} />}
-                      label="RAG 코드 검색"
-                      onClick={() => { setShowAdvancedOverflow(false); setShowRagPanel(true); }}
-                    />
-                    <AdvancedRow
-                      icon={<SlidersHorizontal size={13} />}
-                      label="xLLM 설정"
-                      onClick={() => { setShowAdvancedOverflow(false); setShowXllmPanel(true); }}
-                    />
-                    <div className="h-px bg-white/8 my-1" />
-                    <button
-                      type="button"
-                      onClick={() => { toggleToolbarAdvanced(); setShowAdvancedOverflow(false); }}
-                      className="w-full text-left px-2 py-1.5 rounded text-[10.5px] text-white/55 hover:text-white/85 hover:bg-white/5 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                    >
-                      툴바에 항상 표시 (고급 기능 펼치기)
-                    </button>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          )}
-          {toolbarShowAdvanced && (
-            <ToolbarIconButton
-              label="고급 기능 접기"
-              onClick={toggleToolbarAdvanced}
-            >
-              <X size={14} />
-            </ToolbarIconButton>
-          )}
-
-          {/* 그룹 3 — 도구 / 알림 */}
-          <ToolbarIconButton
-            label="AI Diff 리뷰"
-            shortcut="⌘⇧R"
-            active={showDiffReview}
-            onClick={() => setShowDiffReview(true)}
-          >
-            <GitCompareArrows size={14} />
-          </ToolbarIconButton>
-          <ToolbarIconButton
-            label="시스템 모니터"
-            shortcut="⌘⇧M"
-            active={showSysmon}
-            onClick={() => setShowSysmon(v => !v)}
-          >
-            <Activity size={14} />
-          </ToolbarIconButton>
-          <ToolbarIconButton
-            label="터미널 테마"
-            shortcut="⌘,"
-            active={showThemePanel}
-            onClick={() => setShowThemePanel(true)}
-          >
-            <Palette size={14} />
-          </ToolbarIconButton>
-          <div className="relative">
-            <ToolbarIconButton
-              label="알림 센터"
-              active={showNotifCenter}
-              badge={notifCenter.unreadCount > 0}
-              onClick={() => { setShowNotifCenter(v => !v); if (!showNotifCenter) notifCenter.markAllRead(); }}
-            >
-              <Bell size={14} />
-            </ToolbarIconButton>
-            <AnimatePresence>
-            {showNotifCenter && (
-              <motion.div
-                key="notif-center"
-                initial={{ opacity: 0, scale: 0.96, y: -4 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.96, y: -4 }}
-                transition={{ duration: 0.15, ease: "easeOut" }}
-                style={{ transformOrigin: "top right" }}
-              >
-                <NotificationCenter
-                  notifications={notifCenter.notifications}
-                  unreadCount={notifCenter.unreadCount}
-                  onMarkAllRead={notifCenter.markAllRead}
-                  onDismiss={notifCenter.dismiss}
-                  onClear={notifCenter.clear}
-                  onClose={() => setShowNotifCenter(false)}
-                />
-              </motion.div>
-            )}
-            </AnimatePresence>
-          </div>
-        </div>
-      </header>
+      <AppHeader
+        specs={specs}
+        specsLoading={specsLoading}
+        viewMode={viewMode}
+        setViewMode={setViewMode}
+        loadedModelId={loadedModelId}
+        heavyModelId={heavyModelId}
+        heavyEnabled={heavyEnabled}
+        privacyLedger={privacyLedger}
+        squadStore={squadStore}
+        notifCenter={notifCenter}
+        scriptLib={scriptLib}
+        panels={panels}
+        showFileExplorer={showFileExplorer}
+        setShowFileExplorer={setShowFileExplorer}
+        showReasoning={showReasoning}
+        toggleReasoning={toggleReasoning}
+        toolbarShowAdvanced={toolbarShowAdvanced}
+        toggleToolbarAdvanced={toggleToolbarAdvanced}
+        showAdvancedOverflow={showAdvancedOverflow}
+        setShowAdvancedOverflow={setShowAdvancedOverflow}
+        loadWorkspaces={loadWorkspaces}
+        seenAdvancedFeatures={seenAdvancedFeatures}
+        onMarkAdvancedSeen={handleMarkAdvancedSeen}
+      />
 
       {/* ── 업데이트 배너 ───────────────────────────────────────── */}
       <AnimatePresence>
@@ -1060,7 +739,7 @@ const App: React.FC = () => {
               cwd={tabs.find((t) => t.id === activeTabId)?.cwd || ""}
               onClose={() => {
                 setShowFileExplorer(false);
-                try { localStorage.setItem("lum.fileExplorer", "0"); } catch {}
+                invoke("save_ui_preferences", { showFileExplorer: false }).catch(() => {});
               }}
               onCdTo={(p) => {
                 const write = ptyWriteRefs.current.get(activePaneIdRef.current);
@@ -1329,196 +1008,42 @@ const App: React.FC = () => {
         </AnimatePresence>
       </main>
 
-      {showModelManager && (
-        <Suspense fallback={null}>
-          <ModelManager onClose={() => setShowModelManager(false)} />
-        </Suspense>
-      )}
-
-      {showHistorySearch && (
-        <HistorySearch
-          model={selectedModel}
-          onSelect={handleHistorySelect}
-          onClose={() => setShowHistorySearch(false)}
-        />
-      )}
-
-      {showCommitPanel && (
-        <ErrorBoundary label="커밋">
-          <CommitPanel
-            model={selectedModel}
-            onExecute={handleCommitExecute}
-            onClose={() => setShowCommitPanel(false)}
-          />
-        </ErrorBoundary>
-      )}
-
-      {showXllmPanel && (
-        <Suspense fallback={null}>
-          <ErrorBoundary label="xLLM">
-            <XllmPanel onClose={() => setShowXllmPanel(false)} />
-          </ErrorBoundary>
-        </Suspense>
-      )}
-
-      {showMcpPanel && (
-        <Suspense fallback={null}>
-          <ErrorBoundary label="MCP">
-            <McpPanel onClose={() => setShowMcpPanel(false)} />
-          </ErrorBoundary>
-        </Suspense>
-      )}
-
-      {showHealingDataset && (
-        <Suspense fallback={null}>
-          <ErrorBoundary label="Auto-Heal 데이터셋">
-            <HealingDatasetPanel onClose={() => setShowHealingDataset(false)} />
-          </ErrorBoundary>
-        </Suspense>
-      )}
-
-      {showRecall && (
-        <Suspense fallback={null}>
-          <ErrorBoundary label="메모리 검색">
-            <RecallPanel
-              model={selectedModel}
-              onInjectToChat={(text) => { aiChat.sendMessage(`다음 과거 컨텍스트를 참고해서 답해줘:\n\n${text}`); setShowRecall(false); }}
-              onClose={() => setShowRecall(false)}
-            />
-          </ErrorBoundary>
-        </Suspense>
-      )}
-
-      {showLoraForge && (
-        <Suspense fallback={null}>
-          <ErrorBoundary label="LoRA Forge">
-            <LoraForgePanel
-              onLoadAdapter={(run) => {
-                aiChat.sendMessage(
-                  `이 LoRA 어댑터를 추론 모델에 적용해줘. 출력 디렉터리: ${run.output_dir}`,
-                );
-                setShowLoraForge(false);
-              }}
-              onRevealPath={async (path) => {
-                try {
-                  const { openPath } = await import("@tauri-apps/plugin-opener");
-                  await openPath(path);
-                } catch {
-                  /* noop */
-                }
-              }}
-              onClose={() => setShowLoraForge(false)}
-            />
-          </ErrorBoundary>
-        </Suspense>
-      )}
-
-      {showSquadPanel && (
-        <Suspense fallback={null}>
-          <ErrorBoundary label="Squad">
-            <SquadPanel
-              squads={squadStore.squads}
-              loading={squadStore.loading}
-              error={squadStore.error}
-              currentCwd={tabs.find((t) => t.id === activeTabId)?.cwd ?? ""}
-              onCreate={async (task, baseBranch) => {
-                const cwd = tabs.find((t) => t.id === activeTabIdRef.current)?.cwd ?? "";
-                return squadStore.create(task, cwd, baseBranch);
-              }}
-              onRemove={squadStore.remove}
-              onOpenInTab={(squad) => {
-                resetHealing();
-                addTab({ cwd: squad.worktree_path, title: `🛡 ${squad.task.slice(0, 18)}` });
-                setShowSquadPanel(false);
-              }}
-              onClose={() => setShowSquadPanel(false)}
-            />
-          </ErrorBoundary>
-        </Suspense>
-      )}
-
-      {showDiffReview && (
-        <Suspense fallback={null}>
-          <ErrorBoundary label="Diff 리뷰">
-            <DiffReviewPanel
-              model={selectedModel}
-              onClose={() => setShowDiffReview(false)}
-            />
-          </ErrorBoundary>
-        </Suspense>
-      )}
-
-      {showThemePanel && (
-        <ThemePanel
-          appearance={appearance}
-          onSave={saveAppearance}
-          onClose={() => setShowThemePanel(false)}
-        />
-      )}
-
-      {showWorkspace && (
-        <WorkspacePanel
-          currentTabs={wsTabs}
-          activeTabId={activeTabId}
-          workspaces={workspaces}
-          loading={wsLoading}
-          onSave={async name => { await saveWorkspace(name, wsTabs, activeTabId); }}
-          onRestore={handleRestoreWorkspace}
-          onDelete={deleteWorkspace}
-          onClose={() => setShowWorkspace(false)}
-        />
-      )}
-
-      {showOnboarding && (
-        <Suspense fallback={null}>
-          <OnboardingWizard onComplete={() => setShowOnboarding(false)} />
-        </Suspense>
-      )}
-
-      {showPalette && (
-        <CommandPalette
-          tabs={tabs}
-          activeTabId={activeTabId}
-          workspaces={workspaces}
-          quickActions={quickActions}
-          recentHistory={recentCmds}
-          onSwitchTab={switchTabWithReset}
-          onRestoreWorkspace={handleRestoreWorkspace}
-          onRunAction={cmd => {
-            ptyWriteRefs.current.get(activePaneIdRef.current)?.(cmd + "\r");
-          }}
-          onClose={() => setShowPalette(false)}
-        />
-      )}
-
-      {tabCtxMenu && (
-        <TabContextMenu
-          tabId={tabCtxMenu.tabId}
-          currentColor={contextTab?.color}
-          currentGroup={contextTab?.group}
-          x={tabCtxMenu.x}
-          y={tabCtxMenu.y}
-          onSetColor={updateTabColor}
-          onSetGroup={updateTabGroup}
-          onClose={() => setTabCtxMenu(null)}
-        />
-      )}
-
-      {showSshModal && (
-        <SshConnectModal
-          onConnect={handleSshConnect}
-          onClose={() => setShowSshModal(false)}
-        />
-      )}
-
-      {showWelcome && (
-        <WelcomeHints
-          onClose={() => {
-            setShowWelcome(false);
-            try { localStorage.setItem("lum.hintsShown", "1"); } catch {}
-          }}
-        />
-      )}
+      <AppOverlays
+        panels={panels}
+        selectedModel={selectedModel}
+        aiChat={aiChat}
+        squadStore={squadStore}
+        resetHealing={resetHealing}
+        addTab={addTab}
+        tabs={tabs}
+        activeTabId={activeTabId}
+        activeTabIdRef={activeTabIdRef}
+        appearance={appearance}
+        saveAppearance={saveAppearance}
+        workspaces={workspaces}
+        wsTabs={wsTabs}
+        wsLoading={wsLoading}
+        saveWorkspace={saveWorkspace}
+        deleteWorkspace={deleteWorkspace}
+        handleRestoreWorkspace={handleRestoreWorkspace}
+        quickActions={quickActions}
+        recentCmds={recentCmds}
+        switchTabWithReset={switchTabWithReset}
+        ptyWriteRefs={ptyWriteRefs}
+        activePaneIdRef={activePaneIdRef}
+        handleHistorySelect={handleHistorySelect}
+        handleCommitExecute={handleCommitExecute}
+        tabCtxMenu={tabCtxMenu}
+        setTabCtxMenu={setTabCtxMenu}
+        contextTab={contextTab}
+        updateTabColor={updateTabColor}
+        updateTabGroup={updateTabGroup}
+        handleSshConnect={handleSshConnect}
+        showWelcome={showWelcome}
+        setShowWelcome={setShowWelcome}
+        showOnboarding={showOnboarding}
+        setShowOnboarding={setShowOnboarding}
+      />
     </div>
     </TooltipProvider>
   );
@@ -1554,23 +1079,5 @@ const TabIconComponent: React.FC<{ icon?: string }> = ({ icon }) => {
     default:        return <TerminalSquare size={12} className={cls} />;
   }
 };
-
-// Phase 121 — 툴바 "더보기" 팝오버용 단순 행. 주력 ToolbarIconButton과 분리해 popover 안 텍스트 형식 유지.
-const AdvancedRow: React.FC<{
-  icon: React.ReactNode;
-  label: string;
-  badge?: boolean;
-  onClick: () => void;
-}> = ({ icon, label, badge, onClick }) => (
-  <button
-    type="button"
-    onClick={onClick}
-    className="w-full flex items-center gap-2 px-2 py-1.5 rounded text-[11px] text-white/75 hover:text-white hover:bg-white/5 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-  >
-    <span className="shrink-0 text-white/50">{icon}</span>
-    <span className="flex-1 text-left">{label}</span>
-    {badge && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" aria-hidden="true" />}
-  </button>
-);
 
 export default App;

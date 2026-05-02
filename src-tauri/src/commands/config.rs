@@ -92,6 +92,16 @@ pub struct AppConfig {
     // ── Phase 121: 툴바 표시 모드 ─────────────────────────────────────────
     /// 고급 기능 버튼을 툴바에 직접 노출. false면 "더보기" 팝오버에 숨김. 기본 false.
     pub toolbar_show_advanced: Option<bool>,
+
+    // ── Phase 126: UI 환경설정 통합 (localStorage → config) ───────────────
+    /// 파일 탐색기 사이드바 가시성. 기본 true (열림).
+    pub ui_show_file_explorer: Option<bool>,
+    /// Welcome 힌트를 이미 본 적 있는지. true면 더 이상 표시 안 함. 기본 false.
+    pub ui_hints_shown: Option<bool>,
+    /// AI 채팅 패널 폰트 크기(px, 10~24). 기본 14.
+    pub ui_ai_chat_font_size: Option<u32>,
+    /// 사용자가 클릭한 적 있는 "신규" 기능 ID 목록. 미클릭 항목엔 dot 배지 표시.
+    pub ui_seen_advanced_features: Option<Vec<String>>,
 }
 
 impl AppConfig {
@@ -328,6 +338,45 @@ pub fn save_auto_lora_settings(
 pub fn save_toolbar_show_advanced(show: bool) -> Result<()> {
     let mut config = load_config()?;
     config.toolbar_show_advanced = Some(show);
+    save_config(&config)
+}
+
+/// Phase 126: 사용자가 "신규" 기능 ID를 클릭하면 dot 배지 제거 — 누적 dedup 저장.
+#[tauri::command]
+pub fn mark_advanced_feature_seen(feature_id: String) -> Result<()> {
+    let id = feature_id.trim();
+    if id.is_empty() {
+        return Err(LumError::Config("feature_id 비어있음".into()));
+    }
+    let mut config = load_config()?;
+    let mut seen = config.ui_seen_advanced_features.unwrap_or_default();
+    if !seen.iter().any(|s| s == id) {
+        seen.push(id.to_string());
+    }
+    config.ui_seen_advanced_features = Some(seen);
+    save_config(&config)
+}
+
+/// Phase 126: UI 환경설정(파일탐색기/힌트/AI폰트) 부분 갱신. None인 필드는 유지.
+#[tauri::command]
+pub fn save_ui_preferences(
+    show_file_explorer: Option<bool>,
+    hints_shown: Option<bool>,
+    ai_chat_font_size: Option<u32>,
+) -> Result<()> {
+    let mut config = load_config()?;
+    if show_file_explorer.is_some() {
+        config.ui_show_file_explorer = show_file_explorer;
+    }
+    if hints_shown.is_some() {
+        config.ui_hints_shown = hints_shown;
+    }
+    if let Some(size) = ai_chat_font_size {
+        if !(8..=32).contains(&size) {
+            return Err(LumError::Config("font_size는 8..=32".into()));
+        }
+        config.ui_ai_chat_font_size = Some(size);
+    }
     save_config(&config)
 }
 

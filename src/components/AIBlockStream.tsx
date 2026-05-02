@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import { Loader2, X, Sparkles } from "lucide-react";
+import { invoke } from "@tauri-apps/api/core";
 import type { ChatMessage } from "../hooks/useAIChat";
 import { MessageBubble } from "./AIChatPanel";
 import EditBlockCard from "./EditBlockCard";
@@ -33,17 +34,43 @@ const FONT_MIN = 10;
 const FONT_MAX = 24;
 const FONT_DEFAULT = 14;
 
+// Phase 126: invoke로 fontSize 영속. 실패해도 silent — UI는 메모리 상태로 동작.
+const persistFontSize = (size: number) => {
+  invoke("save_ui_preferences", { aiChatFontSize: size }).catch(() => {});
+};
+
 const AIBlockStream: React.FC<Props> = ({ messages, streaming, error, onClear, onExecute, cwd, fullHeight, onAskAIForFix, visionEnabled }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const pinnedToBottomRef = useRef(true);
 
-  // Ctrl/Cmd + 휠로 폰트 크기 조절 — localStorage에 영속
+  // Ctrl/Cmd + 휠로 폰트 크기 조절. 초기값은 localStorage(마이그레이션 전 사용자) → mount 후 config가 덮어씀.
   const [fontSize, setFontSize] = useState<number>(() => {
     try {
       const saved = parseInt(localStorage.getItem(FONT_KEY) ?? "", 10);
       return Number.isFinite(saved) && saved >= FONT_MIN && saved <= FONT_MAX ? saved : FONT_DEFAULT;
     } catch { return FONT_DEFAULT; }
   });
+
+  // Phase 126 — config에서 fontSize 로드 + localStorage 1회 마이그레이션.
+  useEffect(() => {
+    invoke<{ ui_ai_chat_font_size?: number }>("load_app_config")
+      .then(async (c) => {
+        if (typeof c.ui_ai_chat_font_size === "number") {
+          const clamped = Math.max(FONT_MIN, Math.min(FONT_MAX, c.ui_ai_chat_font_size));
+          setFontSize(clamped);
+          return;
+        }
+        // config 미설정 — localStorage에 값 있으면 한 번 옮기고 키 제거.
+        try {
+          const raw = parseInt(localStorage.getItem(FONT_KEY) ?? "", 10);
+          if (Number.isFinite(raw) && raw >= FONT_MIN && raw <= FONT_MAX) {
+            await invoke("save_ui_preferences", { aiChatFontSize: raw });
+            try { localStorage.removeItem(FONT_KEY); } catch { /* noop */ }
+          }
+        } catch { /* noop */ }
+      })
+      .catch(() => {});
+  }, []);
 
   const handleScroll = () => {
     const el = scrollRef.current;
@@ -57,7 +84,7 @@ const AIBlockStream: React.FC<Props> = ({ messages, streaming, error, onClear, o
     setFontSize((s) => {
       const next = e.deltaY < 0 ? s + 1 : s - 1;
       const clamped = Math.max(FONT_MIN, Math.min(FONT_MAX, next));
-      try { localStorage.setItem(FONT_KEY, String(clamped)); } catch {}
+      persistFontSize(clamped);
       return clamped;
     });
   }, []);
@@ -72,7 +99,7 @@ const AIBlockStream: React.FC<Props> = ({ messages, streaming, error, onClear, o
       setFontSize((s) => {
         const next = e.deltaY < 0 ? s + 1 : s - 1;
         const clamped = Math.max(FONT_MIN, Math.min(FONT_MAX, next));
-        try { localStorage.setItem(FONT_KEY, String(clamped)); } catch {}
+        persistFontSize(clamped);
         return clamped;
       });
     };
@@ -123,7 +150,7 @@ const AIBlockStream: React.FC<Props> = ({ messages, streaming, error, onClear, o
             tooltip="폰트 크기 초기화 (Ctrl+휠로 조절)"
             onClick={() => {
               setFontSize(FONT_DEFAULT);
-              try { localStorage.setItem(FONT_KEY, String(FONT_DEFAULT)); } catch {}
+              persistFontSize(FONT_DEFAULT);
             }}
             className="text-xs px-2 py-1 rounded text-white/40 hover:text-white/80 hover:bg-white/5 transition-colors font-mono tabular-nums"
           >

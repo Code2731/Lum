@@ -99,7 +99,7 @@ write_to_pty ──► SyncSender ──► Writer thread ──► PTY master �
 - **Rust** — Tauri v2, portable-pty, reqwest, libp2p, sysinfo, serde, tree-sitter (Rust/TS/JS/Python), petgraph (PageRank), nvml-wrapper (NVIDIA VRAM)
 - **Frontend** — React 19, TypeScript, Tailwind CSS v4, shadcn/ui (Radix + cva), xterm.js, react-resizable-panels, react-virtuoso
 - **AI engines** — mistral.rs 0.8.1 embedded GGUF (in-process, CUDA, hot-swap, real-time streaming) + Gemini API (cloud fallback)
-- **Agent ecosystem** — `lum-mcp-server` (Rust native stdio MCP, 7 tools — usable from CrewAI / Claude Desktop / any MCP client) + `crew/` (CrewAI workspace, separate Python project)
+- **Agent ecosystem** — `lum-mcp-server` (Rust native stdio MCP, 7 tools — usable from external MCP clients such as Claude Desktop, CrewAI, or any custom agent)
 - **Testing** — Vitest (TS 131 tests), Playwright (E2E smoke), `cargo test` (Rust 125+ tests)
 
 ### Getting Started
@@ -268,7 +268,7 @@ npm run tauri build -- --features embedded-ai     # OS별 CUDA/Metal 자동 선�
 
 ### 개발 로드맵
 
-#### 최근 모트 (Phase 115 ~ 125)
+#### 최근 모트 (Phase 115 ~ 126)
 
 | Phase | 변경 | 영향 |
 |-------|------|------|
@@ -283,6 +283,7 @@ npm run tauri build -- --features embedded-ai     # OS별 CUDA/Metal 자동 선�
 | **123** | Code Editing Agent (1차/2차/3차) | ReAct에 `write_file`/`apply_patch`/`delete_file` + SafePath 가드 + 자동 백업/되돌리기(`react_agent_undo`) + 위험도 분류 사후 승인 UI(Low/Med/High 배지). 클라우드 코딩 에이전트 격차 ~70% 회수 |
 | **124** | 자연어 바이브코딩 라우팅 | `inputRouter`에 동사+명사 결정적 의도 감지 — `>>` prefix 없이 자연어로 "X 추가해줘" 치면 자동 ReAct 발동. Phase 123 안전망이 오분류를 흡수해 Warp 수준 UX 달성 |
 | **125-1** | Multi-Backend prefix | AI 백엔드 공존 인정 — `@local`/`@ollama`/`@xllm`/`@gemini` prefix로 작업별 backend 강제. 자원 다른 백엔드들을 unload 강제 없이 혼합 사용. 2~3차에 Rust forwarding + UI chip + 자동 정책 |
+| **126** | UX 일원화 + 코드베이스 정리 | (1) localStorage 3개(파일탐색기·힌트·AI폰트) → `.lum_config.json` 단일 소스(머신간 동기화 가능). (2) `App.tsx` 1576→1083줄 분해 — `AppHeader`(헤더/툴바/Privacy Ledger 480줄) + `AppOverlays`(13개 모달 일괄 310줄) 추출. (3) Advanced 팝오버 미클릭 신기능에 amber "NEW" 라벨 + `ui_seen_advanced_features` 영속. (4) **`crew/` 제거** — Python CrewAI는 LUM 본체와 미연결 stale 코드였음. 모트 메시지를 "임베디드 추론 + LoRA 학습 루프"로 명확화 |
 
 <details>
 <summary>Phase 23 ~ 92 전체 완료 목록 보기</summary>

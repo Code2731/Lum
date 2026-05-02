@@ -209,6 +209,9 @@ pub fn run() {
             commands::config::save_auto_lora_settings,
             // Phase 121 — UI 정리 (툴바 기본/고급 모드)
             commands::config::save_toolbar_show_advanced,
+            // Phase 126 — UI 환경설정 통합 + 신규 배지
+            commands::config::save_ui_preferences,
+            commands::config::mark_advanced_feature_seen,
             // Workspace
             commands::workspace::save_workspace,
             commands::workspace::list_workspaces,
