@@ -48,6 +48,7 @@ LUM (Local Universal Machine) is a **real terminal emulator** that runs your act
 | **MCP-augmented Agent** | The `>>` ReAct agent dynamically picks up tools from any enabled MCP server (filesystem / playwright / git / your own). Single `mcp({"server", "tool", "arguments"})` action surface. |
 | **Code Editing Agent** | `>>` ReAct now writes code via `write_file` / `apply_patch` (rejects 0/2+ matches — forces self-correction) / `delete_file`. CWD-bounded SafePath guard (`.git`/`node_modules`/`target`/`.lum_*` denied). Every change auto-backed up to `~/.lum_react_backup/` — finish line shows risk-classified change list (Low test files / Med source / High build manifests) + one-click "Undo all" via `react_agent_undo`. |
 | **Natural-Language Coding (No Prefix)** | Just type `"add an add() function and tests"` — verb+noun keyword router (KO/EN, ~24 verbs × ~24 nouns) auto-detects coding intent and routes to the ReAct agent. Explicit prefixes (`>>`/`!`/`@`) and shell commands always win. Misclassification recovered in 1s via auto-backup + undo. |
+| **Multi-Backend Routing** | AI backends (embedded mistral.rs / Ollama / xLLM HTTP / Gemini) **coexist** — they use different resources. `@local` / `@ollama` / `@xllm` / `@gemini` prefix forces a specific backend per task — mix freely (e.g. `@gemini` for long-context analysis, `@local` for fast function edits). No prefix → automatic fallback chain. |
 | **Split Panes** | Horizontal/vertical split with `Cmd+Shift+D/E`. Each pane has its own PTY session. |
 | **Multi-Tab** | `Cmd+T` to open, `Cmd+W` to close, double-click to rename. |
 | **SSH Profiles** | Connect to remote hosts via SSH; profiles saved to `~/.lum_ssh_profiles.json`. |
@@ -114,13 +115,21 @@ write_to_pty ──► SyncSender ──► Writer thread ──► PTY master �
 
 **Run in development**
 
+> **Default mode = embedded mistral.rs in-process.** `npm run tauri dev` (no flags) is a *fallback*
+> for environments without a GPU/CUDA toolchain — it skips mistralrs and falls back to external
+> backends (Ollama / xLLM HTTP / Gemini) only.
+
 ```bash
 git clone https://github.com/Code2731/Lum.git
 cd Lum
 npm install
-npm run tauri dev                       # plain terminal, no on-device AI (모든 OS)
-npm run tauri:dev:cuda                  # Windows/Linux + NVIDIA: embedded mistralrs CUDA
-npm run tauri:dev:metal                 # macOS Apple Silicon: embedded mistralrs Metal
+
+# ── PRIMARY mode: embedded mistral.rs in-process ────────────────────────────
+npm run tauri:dev:cuda                  # Windows/Linux + NVIDIA: mistralrs CUDA
+npm run tauri:dev:metal                 # macOS Apple Silicon: mistralrs Metal
+
+# ── FALLBACK mode: lightweight (no embedded inference, ~150MB smaller binary)
+npm run tauri dev                       # external LLM backends only (no on-device AI)
 ```
 
 **Production build**
@@ -184,6 +193,7 @@ LUM(Local Universal Machine)은 **실제 셸을 실행하는 터미널 에뮬레
 | **MCP-augmented Agent** | `>>` ReAct 에이전트가 활성 MCP 서버(filesystem / playwright / git / 사용자 정의)의 도구를 동적으로 가져와 호출. 단일 `mcp({"server", "tool", "arguments"})` 액션. |
 | **코딩 에이전트** | `>>` ReAct가 이제 `write_file` / `apply_patch`(0건/2건+ 매칭 거부 — LLM 자가 복구 강제) / `delete_file`로 코드 직접 수정. CWD 경계 SafePath 가드(`.git`/`node_modules`/`target`/`.lum_*` 거부). 변경마다 `~/.lum_react_backup/`에 자동 백업 → 완료 시 위험도 분류 변경 파일 목록(Low 테스트 / Med 소스 / High 빌드 매니페스트) + 원클릭 "전체 되돌리기"(`react_agent_undo`). |
 | **자연어 바이브코딩 (Prefix 불필요)** | `"utils.ts에 add 함수 추가해줘"` 그냥 입력 → 동사+명사 키워드 라우터(한/영, 24동사 × 24명사)가 코딩 의도 자동 감지 → ReAct 자동 발동. 명시적 prefix(`>>`/`!`/`@`)와 셸 명령은 항상 우선. 오분류 시 자동 백업 + undo로 1초 복구. |
+| **Multi-Backend 라우팅** | AI 백엔드(임베디드 mistral.rs / Ollama / xLLM HTTP / Gemini)는 자원이 다르므로 **공존**. `@local` / `@ollama` / `@xllm` / `@gemini` prefix로 작업별 backend 강제 — `@gemini 큰 컨텍스트 분석`, `@local 빠른 함수 추가` 같이 혼합 사용. 백엔드 미지정 시 자동 fallback chain. |
 | **스플릿 팬** | `Cmd+Shift+D/E`로 수평/수직 분할. 각 팬은 독립 PTY 세션. |
 | **멀티 탭** | `Cmd+T` 새 탭, `Cmd+W` 닫기, 더블클릭으로 이름 변경. |
 | **SSH 프로필** | SSH 원격 연결 및 프로필 저장(`~/.lum_ssh_profiles.json`). |
@@ -221,13 +231,21 @@ LUM(Local Universal Machine)은 **실제 셸을 실행하는 터미널 에뮬레
 
 **개발 모드**
 
+> **기본 모드 = 임베디드 mistral.rs in-process.** `npm run tauri dev`(인자 없음)는 *폴백* —
+> GPU/CUDA toolchain 없는 환경용으로, mistralrs를 빌드에서 제외하고 외부 백엔드(Ollama /
+> xLLM HTTP / Gemini)만 사용합니다.
+
 ```bash
 git clone https://github.com/Code2731/Lum.git
 cd Lum
 npm install
-npm run tauri dev               # 평범한 터미널 (모든 OS, on-device AI 없음)
-npm run tauri:dev:cuda          # Windows/Linux + NVIDIA: 임베디드 mistralrs CUDA
-npm run tauri:dev:metal         # macOS Apple Silicon: 임베디드 mistralrs Metal
+
+# ── 정상 모드: 임베디드 mistral.rs in-process ───────────────────────────────
+npm run tauri:dev:cuda          # Windows/Linux + NVIDIA: mistralrs CUDA
+npm run tauri:dev:metal         # macOS Apple Silicon: mistralrs Metal
+
+# ── 폴백 모드: 경량 (임베디드 추론 X, 바이너리 ~150MB 작음)
+npm run tauri dev               # 외부 LLM 백엔드만 (on-device AI 없음)
 ```
 
 **프로덕션 빌드**
@@ -250,7 +268,7 @@ npm run tauri build -- --features embedded-ai     # OS별 CUDA/Metal 자동 선�
 
 ### 개발 로드맵
 
-#### 최근 모트 (Phase 115 ~ 124)
+#### 최근 모트 (Phase 115 ~ 125)
 
 | Phase | 변경 | 영향 |
 |-------|------|------|
@@ -264,6 +282,7 @@ npm run tauri build -- --features embedded-ai     # OS별 CUDA/Metal 자동 선�
 | **122** | Active Learning v2 | reject 시 LLM이 "왜 잘못된 제안인지" 1줄 분석 → DPO 데이터 소스 |
 | **123** | Code Editing Agent (1차/2차/3차) | ReAct에 `write_file`/`apply_patch`/`delete_file` + SafePath 가드 + 자동 백업/되돌리기(`react_agent_undo`) + 위험도 분류 사후 승인 UI(Low/Med/High 배지). 클라우드 코딩 에이전트 격차 ~70% 회수 |
 | **124** | 자연어 바이브코딩 라우팅 | `inputRouter`에 동사+명사 결정적 의도 감지 — `>>` prefix 없이 자연어로 "X 추가해줘" 치면 자동 ReAct 발동. Phase 123 안전망이 오분류를 흡수해 Warp 수준 UX 달성 |
+| **125-1** | Multi-Backend prefix | AI 백엔드 공존 인정 — `@local`/`@ollama`/`@xllm`/`@gemini` prefix로 작업별 backend 강제. 자원 다른 백엔드들을 unload 강제 없이 혼합 사용. 2~3차에 Rust forwarding + UI chip + 자동 정책 |
 
 <details>
 <summary>Phase 23 ~ 92 전체 완료 목록 보기</summary>
