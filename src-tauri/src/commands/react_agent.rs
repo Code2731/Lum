@@ -106,8 +106,9 @@ ANSWER: <사용자에게 전달할 최종 답변>
 - 신규 디렉터리 필요 시 shell로 mkdir 먼저, 그 다음 write_file"#;
 
 /// Phase 121: 활성 MCP 서버/도구 목록을 동적으로 시스템 프롬프트에 주입.
-/// mcp_tools가 비었으면 MCP 섹션 자체를 생략 — 토큰 낭비 방지.
-fn build_system_prompt(mcp_tools: &[McpToolEntry]) -> String {
+/// Phase 127: 자연어 goal과 매칭된 Skill markdown도 함께 주입.
+/// mcp_tools/skills 비었으면 해당 섹션 생략 — 토큰 낭비 방지.
+fn build_system_prompt(mcp_tools: &[McpToolEntry], skills: &[crate::commands::skills::Skill]) -> String {
     let mut s = String::from(BASE_PROMPT);
     if !mcp_tools.is_empty() {
         s.push_str("\n\nMCP 도구 (외부 서버):\n");
@@ -120,6 +121,12 @@ fn build_system_prompt(mcp_tools: &[McpToolEntry]) -> String {
                 format!(" — {}", t.description)
             };
             s.push_str(&format!("- {}/{}{}\n", t.server, t.tool, desc));
+        }
+    }
+    if !skills.is_empty() {
+        s.push_str("\n\n관련 Skill (사용자 저장 절차 — 따를 수 있으면 따르되 상황에 맞게 적응):\n");
+        for sk in skills {
+            s.push_str(&format!("\n### {}\n{}\n{}\n", sk.name, sk.description, sk.body.trim()));
         }
     }
     s.push_str("\n\n");
@@ -915,9 +922,20 @@ pub async fn react_agent_run(
             Some(0),
         );
     }
+    // Phase 127: 자연어 goal과 매칭된 사용자 저장 Skill을 시스템 프롬프트에 주입.
+    let skills = crate::commands::skills::find_relevant_skills(&goal, 3);
+    if !skills.is_empty() {
+        emit_event(
+            &app,
+            "status",
+            format!("Skill {}개 매칭", skills.len()),
+            None,
+            Some(0),
+        );
+    }
     let mut conversation = format!(
         "{}\n\n목표: {goal}\n\nCWD: {effective_cwd}",
-        build_system_prompt(&mcp_tools)
+        build_system_prompt(&mcp_tools, &skills)
     );
 
     let client = reqwest::Client::builder()
@@ -1071,8 +1089,9 @@ mod tests {
 
     #[test]
     fn build_prompt_omits_mcp_section_when_empty() {
-        let s = build_system_prompt(&[]);
+        let s = build_system_prompt(&[], &[]);
         assert!(!s.contains("MCP 도구"));
+        assert!(!s.contains("관련 Skill"));
         // 라벨에 의존하지 않고 베이스 도구 자체가 들어가는지로 검사 — 향후 라벨 리네임에 강함.
         assert!(s.contains("shell"));
         assert!(s.contains("read_file"));
@@ -1093,7 +1112,7 @@ mod tests {
                 description: String::new(),
             },
         ];
-        let s = build_system_prompt(&tools);
+        let s = build_system_prompt(&tools, &[]);
         assert!(s.contains("MCP 도구"));
         assert!(s.contains("playwright/screenshot"));
         assert!(s.contains("브라우저 스크린샷"));
@@ -1331,12 +1350,30 @@ ACTION: write_file({"path": "src/new.rs", "content": "pub fn x() {}", "overwrite
 
     #[test]
     fn build_prompt_includes_write_tools() {
-        let s = build_system_prompt(&[]);
+        let s = build_system_prompt(&[], &[]);
         assert!(s.contains("write_file"));
         assert!(s.contains("apply_patch"));
         assert!(s.contains("delete_file"));
         // 안전 가드 안내가 시스템 프롬프트에 들어가야 함
         assert!(s.contains(".git") || s.contains("CWD 내부"));
+    }
+
+    #[test]
+    fn build_prompt_includes_skill_section() {
+        let skills = vec![crate::commands::skills::Skill {
+            id: "test".into(),
+            name: "Git rebase 정리".into(),
+            description: "복잡한 rebase 충돌 해결".into(),
+            triggers: vec![],
+            body: "1. git status 확인\n2. 충돌 파일 수정\n3. git rebase --continue".into(),
+            created_ms: 0,
+            last_used_ms: None,
+            success_count: 0,
+        }];
+        let s = build_system_prompt(&[], &skills);
+        assert!(s.contains("관련 Skill"));
+        assert!(s.contains("Git rebase 정리"));
+        assert!(s.contains("git rebase --continue"));
     }
 
     // ─── 실전 시나리오 통합 검증 ──────────────────────────────────────────────

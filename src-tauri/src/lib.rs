@@ -212,6 +212,12 @@ pub fn run() {
             // Phase 126 — UI 환경설정 통합 + 신규 배지
             commands::config::save_ui_preferences,
             commands::config::mark_advanced_feature_seen,
+            // Phase 127 — Skills 시스템 (자연어 → 사용자 저장 절차 자동 매칭)
+            commands::skills::skill_list,
+            commands::skills::skill_save,
+            commands::skills::skill_delete,
+            commands::skills::skill_record_use,
+            commands::skills::skill_search,
             // Workspace
             commands::workspace::save_workspace,
             commands::workspace::list_workspaces,

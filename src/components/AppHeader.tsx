@@ -8,7 +8,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import {
   Cpu, Loader2, TerminalSquare, LayoutList, MousePointer2,
   Package, Database, X, SlidersHorizontal, GitCompareArrows, Palette,
-  BookOpen, Bell, Activity, FolderTree, Brain, PlugZap, Users, Sparkles, Library, Hammer, Layers,
+  BookOpen, Bell, Activity, FolderTree, Brain, PlugZap, Users, Sparkles, Library, Hammer, Layers, BookMarked,
 } from "lucide-react";
 import { ToolbarIconButton, ToolbarSeparator } from "@/components/ui/toolbar-icon-button";
 import WindowControls from "./WindowControls";
@@ -31,7 +31,8 @@ const VIEW_BUTTONS: { mode: ViewMode; icon: React.ReactNode; label: string }[] =
 
 // Phase 126 — Advanced 팝오버 안에서 "신규" 배지를 띄울 기능 ID 목록.
 // 사용자가 클릭하면 영구 dismiss(→ ui_seen_advanced_features 누적). 새 페이즈 출시 시 추가/회전.
-export const NEW_ADVANCED_FEATURES = ["healing", "recall", "lora"] as const;
+// Phase 127: Skills 추가.
+export const NEW_ADVANCED_FEATURES = ["skills", "healing", "recall", "lora"] as const;
 export type NewFeatureId = typeof NEW_ADVANCED_FEATURES[number];
 
 interface Props {
@@ -101,6 +102,7 @@ const AppHeader: React.FC<Props> = ({
     showHealingDataset, setShowHealingDataset,
     showRecall, setShowRecall,
     showLoraForge, setShowLoraForge,
+    showSkills, setShowSkills,
   } = panels;
 
   // 모델명 짧게 — 마지막 segment에서 흔한 suffix 제거
@@ -293,6 +295,14 @@ const AppHeader: React.FC<Props> = ({
               <Hammer size={14} />
             </ToolbarIconButton>
             <ToolbarIconButton
+              label="Skills — 절차 라이브러리"
+              tone="cyan"
+              active={showSkills}
+              onClick={() => setShowSkills(v => !v)}
+            >
+              <BookMarked size={14} />
+            </ToolbarIconButton>
+            <ToolbarIconButton
               label="RAG 코드 검색"
               active={showRagPanel}
               onClick={() => setShowRagPanel(v => !v)}
@@ -358,6 +368,12 @@ const AppHeader: React.FC<Props> = ({
                     label="LoRA Forge"
                     isNew={isNew("lora")}
                     onClick={() => { onMarkAdvancedSeen("lora"); setShowAdvancedOverflow(false); setShowLoraForge(true); }}
+                  />
+                  <AdvancedRow
+                    icon={<BookMarked size={13} className="text-cyan-300" />}
+                    label="Skills — 절차 라이브러리"
+                    isNew={isNew("skills")}
+                    onClick={() => { onMarkAdvancedSeen("skills"); setShowAdvancedOverflow(false); setShowSkills(true); }}
                   />
                   <AdvancedRow
                     icon={<Database size={13} />}

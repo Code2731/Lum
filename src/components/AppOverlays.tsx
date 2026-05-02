@@ -31,6 +31,7 @@ const SquadPanel = lazy(() => import("./SquadPanel"));
 const HealingDatasetPanel = lazy(() => import("./HealingDatasetPanel"));
 const RecallPanel = lazy(() => import("./RecallPanel"));
 const LoraForgePanel = lazy(() => import("./LoraForgePanel"));
+const SkillsPanel = lazy(() => import("./SkillsPanel"));
 
 void ReactAgentPanel; // App.tsx에서 직접 lazy import — 여기선 미사용이지만 모듈 사이드이펙트 통일
 
@@ -103,6 +104,7 @@ const AppOverlays: React.FC<Props> = ({
     showHealingDataset, setShowHealingDataset,
     showRecall, setShowRecall,
     showLoraForge, setShowLoraForge,
+    showSkills, setShowSkills,
     showSquadPanel, setShowSquadPanel,
     showDiffReview, setShowDiffReview,
     showThemePanel, setShowThemePanel,
@@ -169,6 +171,14 @@ const AppOverlays: React.FC<Props> = ({
               onInjectToChat={(text) => { aiChat.sendMessage(`다음 과거 컨텍스트를 참고해서 답해줘:\n\n${text}`); setShowRecall(false); }}
               onClose={() => setShowRecall(false)}
             />
+          </ErrorBoundary>
+        </Suspense>
+      )}
+
+      {showSkills && (
+        <Suspense fallback={null}>
+          <ErrorBoundary label="Skills">
+            <SkillsPanel onClose={() => setShowSkills(false)} />
           </ErrorBoundary>
         </Suspense>
       )}

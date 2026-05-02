@@ -23,6 +23,7 @@ pub mod recall;
 pub mod repo_map;
 pub mod scripts;
 pub mod session;
+pub mod skills;
 pub mod squad;
 pub mod ssh_profiles;
 pub mod sysmon;
