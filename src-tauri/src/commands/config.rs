@@ -283,6 +283,16 @@ pub fn save_ollama_settings(base_url: Option<String>, model: Option<String>) -> 
     save_config(&config)
 }
 
+/// Phase 128: xLLM(OpenAI 호환) 서버 URL만 단독 갱신. None/빈 문자열이면 제거(기본값 8080 폴백).
+#[tauri::command]
+pub fn save_xllm_base_url(base_url: Option<String>) -> Result<()> {
+    let mut config = load_config()?;
+    config.xllm_base_url = base_url
+        .map(|s| s.trim().trim_end_matches('/').to_string())
+        .filter(|s| !s.is_empty());
+    save_config(&config)
+}
+
 /// Phase 120: 자동 학습 설정 저장. None인 필드는 그대로 유지(부분 갱신).
 #[tauri::command]
 pub fn save_auto_lora_settings(

@@ -14,6 +14,7 @@ pub mod git;
 pub mod hardware;
 pub mod healing_dataset;
 pub mod history;
+pub mod lan_discovery;
 pub mod lora_forge;
 pub mod models;
 pub mod ollama;

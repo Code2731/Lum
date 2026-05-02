@@ -218,6 +218,9 @@ pub fn run() {
             commands::skills::skill_delete,
             commands::skills::skill_record_use,
             commands::skills::skill_search,
+            // Phase 128 — LAN LLM Discovery + xLLM URL 단독 갱신
+            commands::lan_discovery::discover_lan_llm_servers,
+            commands::config::save_xllm_base_url,
             // Workspace
             commands::workspace::save_workspace,
             commands::workspace::list_workspaces,

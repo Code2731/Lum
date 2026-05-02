@@ -3,7 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import {
   SlidersHorizontal, Loader2,
-  Zap, Sparkles, FolderOpen,
+  Zap, Sparkles, FolderOpen, Wifi, RefreshCw, Check,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { IconButton } from "@/components/ui/icon-button";
@@ -192,6 +192,7 @@ const XllmPanel: React.FC<Props> = ({ onClose }) => {
           </section>
 
           <OllamaSection />
+          <LanDiscoverySection />
           <EmbeddedInferenceDebug />
         </div>
 
@@ -382,6 +383,147 @@ interface LoraCandidate {
 
 const LORA_NONE = "__none__";
 const LORA_MANUAL = "__manual__";
+
+// ── Phase 128: LAN LLM Discovery ──────────────────────────────────────────
+type ServerKind = "ollama" | "open_ai_compat";
+
+interface DiscoveredServer {
+  ip: string;
+  port: number;
+  kind: ServerKind;
+  url: string;
+  models: string[];
+  latency_ms: number;
+}
+
+const KIND_LABEL: Record<ServerKind, string> = {
+  ollama: "Ollama",
+  open_ai_compat: "OpenAI 호환",
+};
+
+const KIND_TONE: Record<ServerKind, string> = {
+  ollama: "text-orange-300 bg-orange-400/10 border-orange-400/25",
+  open_ai_compat: "text-blue-300 bg-blue-400/10 border-blue-400/25",
+};
+
+const LanDiscoverySection: React.FC = () => {
+  const [results, setResults] = useState<DiscoveredServer[]>([]);
+  const [scanning, setScanning] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [appliedKey, setAppliedKey] = useState<string | null>(null);
+
+  const scan = useCallback(async () => {
+    setScanning(true);
+    setError(null);
+    setAppliedKey(null);
+    try {
+      const list = await invoke<DiscoveredServer[]>("discover_lan_llm_servers");
+      setResults(list);
+    } catch (e) {
+      setError(String(e));
+    } finally {
+      setScanning(false);
+    }
+  }, []);
+
+  const apply = useCallback(async (s: DiscoveredServer) => {
+    setError(null);
+    try {
+      if (s.kind === "ollama") {
+        await invoke("save_ollama_settings", {
+          baseUrl: s.url,
+          model: s.models[0] ?? null,
+        });
+      } else {
+        await invoke("save_xllm_base_url", { baseUrl: s.url });
+      }
+      setAppliedKey(`${s.ip}:${s.port}`);
+    } catch (e) {
+      setError(String(e));
+    }
+  }, []);
+
+  return (
+    <section className="space-y-2 border border-cyan-400/20 rounded-lg p-3 bg-cyan-400/5">
+      <div className="flex items-center justify-between gap-2">
+        <label className="text-[10px] text-cyan-200/85 uppercase tracking-wider flex items-center gap-1.5">
+          <Wifi size={10} /> LAN LLM 서버 검색
+          <span className="ml-1 text-[9px] text-white/30 font-normal normal-case">/24 스캔 + 시그니처 분류</span>
+        </label>
+        <button
+          onClick={scan}
+          disabled={scanning}
+          className="flex items-center gap-1.5 px-2.5 py-1 rounded border border-cyan-400/30 bg-cyan-500/10 hover:bg-cyan-500/20 text-[11px] text-cyan-100 disabled:opacity-40 transition-colors"
+        >
+          {scanning ? <Loader2 size={11} className="animate-spin" /> : <RefreshCw size={11} />}
+          {scanning ? "스캔 중…" : "검색"}
+        </button>
+      </div>
+
+      {error && (
+        <div className="text-[10.5px] text-rose-300 bg-rose-500/10 border border-rose-400/20 rounded px-2.5 py-1.5">
+          {error}
+        </div>
+      )}
+
+      {!scanning && results.length === 0 && !error && (
+        <p className="text-[10.5px] text-white/35 leading-relaxed">
+          버튼 클릭 시 같은 서브넷의 알려진 포트(11434/1234/8080/8081/5000)를 동시에 probe합니다.
+          1~3초 소요. 사용자 트리거만 — 자동 스캔 안 함.
+        </p>
+      )}
+
+      {results.length > 0 && (
+        <div className="space-y-1.5">
+          {results.map((s) => {
+            const key = `${s.ip}:${s.port}`;
+            const applied = appliedKey === key;
+            return (
+              <div
+                key={key}
+                className={`rounded-lg border px-2.5 py-2 transition-colors ${
+                  applied ? "border-emerald-400/40 bg-emerald-500/10" : "border-white/8 bg-white/3 hover:bg-white/5"
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <span className={`text-[9px] px-1.5 py-0.5 rounded border tabular-nums ${KIND_TONE[s.kind]}`}>
+                    {KIND_LABEL[s.kind]}
+                  </span>
+                  <span className="font-mono text-[11px] text-white/85 truncate flex-1">{s.url}</span>
+                  <span className="text-[9.5px] text-white/35 tabular-nums shrink-0">{s.latency_ms}ms</span>
+                  <button
+                    onClick={() => apply(s)}
+                    disabled={applied}
+                    title="이 서버를 backend로 사용"
+                    className={`flex items-center gap-1 px-2 py-0.5 rounded text-[10px] transition-colors ${
+                      applied
+                        ? "text-emerald-300 bg-emerald-500/15 border border-emerald-400/30"
+                        : "text-white/75 bg-white/5 hover:bg-white/10 border border-white/10"
+                    }`}
+                  >
+                    {applied ? <><Check size={10} /> 적용됨</> : "사용"}
+                  </button>
+                </div>
+                {s.models.length > 0 && (
+                  <div className="mt-1 flex flex-wrap gap-1">
+                    {s.models.slice(0, 6).map((m, i) => (
+                      <span key={i} className="text-[9.5px] px-1.5 py-0.5 rounded bg-white/5 text-white/55 font-mono">
+                        {m}
+                      </span>
+                    ))}
+                    {s.models.length > 6 && (
+                      <span className="text-[9.5px] text-white/30">+{s.models.length - 6}개 더</span>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </section>
+  );
+};
 
 const EmbeddedInferenceDebug: React.FC = () => {
   const [candidates, setCandidates] = useState<EmbedCandidate[]>([]);

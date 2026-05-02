@@ -268,7 +268,7 @@ npm run tauri build -- --features embedded-ai     # OS별 CUDA/Metal 자동 선�
 
 ### 개발 로드맵
 
-#### 최근 모트 (Phase 115 ~ 127)
+#### 최근 모트 (Phase 115 ~ 128)
 
 | Phase | 변경 | 영향 |
 |-------|------|------|
@@ -285,6 +285,7 @@ npm run tauri build -- --features embedded-ai     # OS별 CUDA/Metal 자동 선�
 | **125-1** | Multi-Backend prefix | AI 백엔드 공존 인정 — `@local`/`@ollama`/`@xllm`/`@gemini` prefix로 작업별 backend 강제. 자원 다른 백엔드들을 unload 강제 없이 혼합 사용. 2~3차에 Rust forwarding + UI chip + 자동 정책 |
 | **126** | UX 일원화 + 코드베이스 정리 | (1) localStorage 3개(파일탐색기·힌트·AI폰트) → `.lum_config.json` 단일 소스(머신간 동기화 가능). (2) `App.tsx` 1576→1083줄 분해 — `AppHeader`(헤더/툴바/Privacy Ledger 480줄) + `AppOverlays`(13개 모달 일괄 310줄) 추출. (3) Advanced 팝오버 미클릭 신기능에 amber "NEW" 라벨 + `ui_seen_advanced_features` 영속. (4) **`crew/` 제거** — Python CrewAI는 LUM 본체와 미연결 stale 코드였음. 모트 메시지를 "임베디드 추론 + LoRA 학습 루프"로 명확화 |
 | **127** | Skills 시스템 (자연어 → 사용자 절차 자동 호출) | "한 번 푼 문제는 두 번 풀지 않는다." 사용자가 markdown 절차를 저장 → 다음 ReAct 호출 시 goal 단어와 트리거/이름/설명 키워드 overlap top-3을 시스템 프롬프트에 자동 주입(`find_relevant_skills`). 저장: `~/.lum_skills.json`. 명령: `skill_list/save/delete/search/record_use`. UI: `SkillsPanel` (이름/설명/트리거/markdown body 편집) — Advanced popover에 NEW 배지. Hermes Agent의 agentskills.io와 결이 같음 — LoRA(weight)는 즉시 재사용 안 되지만 skill(prompt-level memo)은 즉시 효과. 두 시스템 직교 |
+| **128** | LAN LLM Discovery | 로컬 네트워크의 Ollama / LM Studio / mlx_lm.server / TabbyAPI / llama.cpp 서버를 한 번 클릭으로 검색. `/24` 서브넷 × 5개 알려진 포트(11434/1234/8080/8081/5000)를 `buffer_unordered(200)`로 1~3초 안에 동시 probe → TCP open된 곳만 HTTP fingerprint(`/api/tags` 또는 `/v1/models`) → JSON 모양으로 종류 분류. 결과 카드에 "사용" 버튼 → `ollama_base_url` 또는 `xllm_base_url` 즉시 저장. 자동 스캔 안 함(사내망 IDS 회피). XllmPanel에 새 섹션 |
 
 <details>
 <summary>Phase 23 ~ 92 전체 완료 목록 보기</summary>
