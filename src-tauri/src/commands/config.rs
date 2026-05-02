@@ -128,10 +128,15 @@ pub struct QuickAction {
 }
 
 impl AppConfig {
-    /// 추론 서버 URL — Phase 85b 임베디드 mistralrs 전환 후 *폴백 path 전용*.
-    /// 임베디드 모델 미로드 시에만 reqwest가 이 URL을 사용. 임베디드만 쓰는 환경에서는 dead.
+    /// 추론 서버 URL — 임베디드 모델 미로드 시 또는 macOS에서 mlx-lm 외부 서버를 쓸 때 사용.
+    /// xllm_base_url config가 있으면 그 값, 없으면 기본 127.0.0.1:8080 (mlx-lm/TabbyAPI 관행 포트).
     pub fn xllm_url(&self) -> String {
-        "http://127.0.0.1:8080".to_string()
+        self.xllm_base_url
+            .as_deref()
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .map(|s| s.trim_end_matches('/').to_string())
+            .unwrap_or_else(|| "http://127.0.0.1:8080".to_string())
     }
 
     /// 호환성용 alias — call site 정리 후 제거 예정.

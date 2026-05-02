@@ -15,8 +15,10 @@ LUM (Local Universal Machine) — Warp 스타일 블록 기반 AI 터미널 에�
 ```bash
 npm install                          # 프론트엔드 의존성 설치
 npm run tauri dev                    # 개발 모드 (Rust + Vite HMR, CPU 추론)
-npm run tauri:dev:metal              # macOS Apple Silicon Metal 백엔드
+npm run tauri:dev:metal              # macOS Apple Silicon Metal 백엔드 (Xcode Metal Toolchain 필요: xcodebuild -downloadComponent MetalToolchain)
 scripts/tauri-dev-cuda.bat           # Windows CUDA 백엔드 (MSVC env 자동 설정)
+# Metal Toolchain 없는 macOS는 mlx_lm.server를 외부에서 띄우면 LUM이 xLLM 폴백으로 자동 호출.
+# 예: pip install mlx-lm; mlx_lm.server --model mlx-community/Qwen2.5-Coder-7B-Instruct-4bit --port 8080
 npm run tauri build                  # 프로덕션 빌드
 npm run tauri build -- --features embedded-ai  # 임베디드 AI 추론 포함 빌드
 ```
@@ -84,7 +86,7 @@ cd src-tauri && cargo test   # Rust 단위 테스트 실행
 
 - **Rust**: Tauri v2, portable-pty, mistralrs 0.8.1, mistralrs-core 0.8.1, tauri-plugin-updater, tauri-plugin-dialog, tauri-plugin-opener, ignore, reqwest, futures-util, nvml-wrapper (Windows/Linux)
 - **Frontend**: React 19, TypeScript, Tailwind CSS v4, shadcn/ui (Radix), cmdk, framer-motion, Vitest, Playwright, react-markdown, react-resizable-panels, react-virtuoso, PrismJS
-- **AI**: mistralrs 임베디드 GGUF/LoRA + Gemini Cloud API 폴백
+- **AI**: mistralrs 임베디드 GGUF/LoRA (Metal Toolchain 필요한 macOS 환경) + 외부 MLX-LM/Ollama OpenAI 호환 서버(`xllm_base_url` config) + Gemini Cloud API 폴백. macOS에서 Metal Toolchain 없으면 `mlx_lm.server --model <id> --port 8080` 실행 → LUM이 자동 호출.
 - **외부 MCP 클라이언트 연동**: `lum-mcp-server` 바이너리(stdio MCP, 7개 도구) — Claude Desktop / CrewAI 등 외부 agent가 LUM 도구 호출 가능 (LUM 본체는 Python 의존성 없음)
 
 ## Key Conventions

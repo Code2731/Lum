@@ -91,6 +91,11 @@ pub fn list_lora_candidates() -> Vec<LoraCandidate> {
     out
 }
 
+// 플랫폼별로 권장 dev 명령이 다름 — macOS=metal, Windows/Linux=cuda.
+#[cfg(target_os = "macos")]
+const DISABLED_MSG: &str =
+    "embedded-ai feature 비활성 — npm run tauri:dev:metal (macOS Apple Silicon)";
+#[cfg(not(target_os = "macos"))]
 const DISABLED_MSG: &str =
     "embedded-ai feature 비활성 — scripts/cargo-check-cuda.bat 또는 npm run tauri:dev:cuda";
 
