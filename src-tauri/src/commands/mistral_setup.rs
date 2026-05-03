@@ -103,7 +103,10 @@ async fn hf_download_file(
             req = req.bearer_auth(t);
         }
     }
-    let resp = req.send().await.map_err(|e| LumError::AiEngine(e.to_string()))?;
+    let resp = req
+        .send()
+        .await
+        .map_err(|e| LumError::AiEngine(e.to_string()))?;
     let status = resp.status();
     if status == reqwest::StatusCode::UNAUTHORIZED || status == reqwest::StatusCode::FORBIDDEN {
         return Err(LumError::AiEngine(format!(
@@ -148,7 +151,9 @@ async fn hf_download_file(
             }
         }
     }
-    file.flush().await.map_err(|e| LumError::Io(e.to_string()))?;
+    file.flush()
+        .await
+        .map_err(|e| LumError::Io(e.to_string()))?;
     Ok(())
 }
 
@@ -162,7 +167,10 @@ async fn hf_list_repo_files(repo_id: &str, token: Option<&str>) -> Result<Vec<St
             req = req.bearer_auth(t);
         }
     }
-    let resp = req.send().await.map_err(|e| LumError::AiEngine(e.to_string()))?;
+    let resp = req
+        .send()
+        .await
+        .map_err(|e| LumError::AiEngine(e.to_string()))?;
     if !resp.status().is_success() {
         return Err(LumError::AiEngine(format!(
             "HF API 오류 {}: {}",
@@ -244,7 +252,10 @@ async fn ensure_model_local(
     } else {
         let _ = app.emit("mistral_rs_log", "📋 파일 목록 조회 중...");
         let files = hf_list_repo_files(repo_id_or_path, token_ref).await?;
-        let _ = app.emit("mistral_rs_log", format!("📋 파일 {}개 다운로드 시작", files.len()));
+        let _ = app.emit(
+            "mistral_rs_log",
+            format!("📋 파일 {}개 다운로드 시작", files.len()),
+        );
         for file in &files {
             let dest = local.join(file);
             if let Some(parent) = dest.parent() {
@@ -266,7 +277,6 @@ async fn ensure_model_local(
     let _ = app.emit("mistral_rs_log", "✅ 모델 다운로드 완료");
     Ok(local)
 }
-
 
 /// HF repo를 mistral.rs용 로컬 폴더(`~/.lum_mistral_models/<safe>`)에 다운로드.
 /// gguf_filename Some이면 해당 단일 GGUF 파일만 받고, None이면 BF16 전체 다운로드.

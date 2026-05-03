@@ -129,13 +129,17 @@ describe("routeInput — 기본: 자연어=AI, CLI 감지 시 shell", () => {
     const agentCases = [
       // 한국어 — 동사 + 명사
       "utils.ts에 add 함수 추가해줘",
+      "함수 추가해",
       "로그인 버그 고쳐줘",
       "이 함수에 테스트 작성",
       "Button 컴포넌트 리팩터링해",
+      "리팩터링하자",
       "이 코드 수정해줘",
       // 영어 — 동사 + 명사 (단/복수 포함)
       "add a function to compute sum",
+      "added a function in auth module",
       "fix the bug in login flow",
+      "fix this bug",
       "refactor this module to use hooks",
       "write tests for the parser",
       "rename the class from Foo to Bar",
@@ -259,8 +263,8 @@ describe("routeInput — 기본: 자연어=AI, CLI 감지 시 shell", () => {
       expect(detectCodingIntent("함수 추가")).toBe(true);
       expect(detectCodingIntent("fix the bug")).toBe(true);
     });
-    it("동사만 → false", () => {
-      expect(detectCodingIntent("리팩터링해")).toBe(false);
+    it("동사만 → false (단, 리팩터링은 코딩 문맥으로 true)", () => {
+      expect(detectCodingIntent("리팩터링해")).toBe(true);
       expect(detectCodingIntent("just fix it")).toBe(false);
     });
     it("명사만 → false", () => {
@@ -271,15 +275,20 @@ describe("routeInput — 기본: 자연어=AI, CLI 감지 시 shell", () => {
       expect(detectCodingIntent("")).toBe(false);
     });
     it("영어 동사는 word boundary 적용 — 'added' 같은 활용형도 매칭", () => {
-      // "add"는 \\badd\\b — "added"는 add 매칭 안 됨 (word boundary). 보수적.
-      expect(detectCodingIntent("added function works")).toBe(false);
-      // 단어 그대로 "add a function" 형태에서만 매칭.
+      // Phase 130-B: add(s|ed|ing) 활용형 지원.
+      expect(detectCodingIntent("added function works")).toBe(true);
       expect(detectCodingIntent("add a function")).toBe(true);
+      expect(detectCodingIntent("adding tests for parser")).toBe(true);
     });
     it("한글은 부분 매칭 — 한글은 활용 형태가 다양해 substring으로 충분", () => {
-      // "추가해줘", "추가했어", "추가하면" 모두 "추가"를 포함.
+      // Phase 130-B: 활용형 fallback(추가해/추가하자/추가한다/추가하면/추가해줘) 보강.
       expect(detectCodingIntent("함수를 추가해줘")).toBe(true);
+      expect(detectCodingIntent("리팩터링하자")).toBe(true);
       expect(detectCodingIntent("함수 추가했어")).toBe(true);
+    });
+    it("음성 케이스 보존 — 설명형 질문은 false", () => {
+      expect(detectCodingIntent("함수 설명해줘")).toBe(false);
+      expect(detectCodingIntent("explain this function")).toBe(false);
     });
   });
 });

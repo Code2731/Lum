@@ -22,15 +22,21 @@ const EMPTY_DRAFT: SkillDraft = {
   name: "",
   description: "",
   triggers: [],
-  body: "",
+  when_to_use: "",
+  quick_reference: "",
+  procedure: "",
+  pitfalls: "",
+  verification: "",
 };
 
 const SkillsPanel: React.FC<Props> = ({ onClose }) => {
-  const { skills, loading, error, save, remove } = useSkills();
+  const { skills, loading, error, save, remove, importFromUrl } = useSkills();
   const [editingId, setEditingId] = useState<string | "new" | null>(null);
   const [draft, setDraft] = useState<SkillDraft>(EMPTY_DRAFT);
   const [saving, setSaving] = useState(false);
+  const [importing, setImporting] = useState(false);
   const [filter, setFilter] = useState("");
+  const [importUrl, setImportUrl] = useState("");
   const [saveError, setSaveError] = useState<string | null>(null);
 
   const startEdit = useCallback((s: Skill) => {
@@ -40,7 +46,11 @@ const SkillsPanel: React.FC<Props> = ({ onClose }) => {
       name: s.name,
       description: s.description,
       triggers: s.triggers,
-      body: s.body,
+      when_to_use: s.when_to_use ?? "",
+      quick_reference: s.quick_reference ?? "",
+      procedure: s.procedure,
+      pitfalls: s.pitfalls ?? "",
+      verification: s.verification ?? "",
     });
     setSaveError(null);
   }, []);
@@ -82,9 +92,31 @@ const SkillsPanel: React.FC<Props> = ({ onClose }) => {
       s.name.toLowerCase().includes(q) ||
       s.description.toLowerCase().includes(q) ||
       s.triggers.some((t) => t.toLowerCase().includes(q)) ||
-      s.body.toLowerCase().includes(q)
+      s.procedure.toLowerCase().includes(q) ||
+      (s.when_to_use ?? "").toLowerCase().includes(q) ||
+      (s.quick_reference ?? "").toLowerCase().includes(q) ||
+      (s.pitfalls ?? "").toLowerCase().includes(q) ||
+      (s.verification ?? "").toLowerCase().includes(q)
     );
   }, [skills, filter]);
+
+  const handleImportUrl = useCallback(async () => {
+    const url = importUrl.trim();
+    if (!url) {
+      setSaveError("URL을 입력하세요.");
+      return;
+    }
+    setImporting(true);
+    setSaveError(null);
+    try {
+      await importFromUrl(url);
+      setImportUrl("");
+    } catch (e) {
+      setSaveError(String(e));
+    } finally {
+      setImporting(false);
+    }
+  }, [importFromUrl, importUrl]);
 
   const isEditing = editingId !== null;
 
@@ -113,6 +145,20 @@ const SkillsPanel: React.FC<Props> = ({ onClose }) => {
             </span>
             <Button size="sm" className="h-7 gap-1.5 text-xs" onClick={startNew}>
               <Plus size={12} /> 새 Skill
+            </Button>
+          </div>
+        )}
+
+        {!isEditing && (
+          <div className="px-5 py-2.5 border-b border-white/8 shrink-0 flex items-center gap-2">
+            <Input
+              value={importUrl}
+              onChange={(e) => setImportUrl(e.target.value)}
+              placeholder="SKILL.md URL (예: https://.../SKILL.md)"
+              className="h-7 text-xs font-mono"
+            />
+            <Button size="sm" variant="outline" className="h-7 text-xs" onClick={handleImportUrl} disabled={importing}>
+              {importing ? "가져오는 중…" : "URL 가져오기"}
             </Button>
           </div>
         )}
@@ -274,11 +320,49 @@ const SkillEditor: React.FC<{
       <div>
         <label className="text-[11px] text-white/55 mb-1 block">절차 (Markdown)</label>
         <Textarea
-          value={draft.body}
-          onChange={(e) => setDraft((d) => ({ ...d, body: e.target.value }))}
+          value={draft.procedure}
+          onChange={(e) => setDraft((d) => ({ ...d, procedure: e.target.value }))}
           placeholder={`1. git status로 충돌 파일 목록 확인\n2. 각 파일 수정 후 git add\n3. git rebase --continue\n4. 다음 충돌 반복`}
           className="text-xs font-mono leading-relaxed min-h-[180px]"
         />
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div>
+          <label className="text-[11px] text-white/55 mb-1 block">When to Use</label>
+          <Textarea
+            value={draft.when_to_use ?? ""}
+            onChange={(e) => setDraft((d) => ({ ...d, when_to_use: e.target.value }))}
+            placeholder="언제 이 스킬을 쓰는지"
+            className="text-xs leading-relaxed min-h-[88px]"
+          />
+        </div>
+        <div>
+          <label className="text-[11px] text-white/55 mb-1 block">Quick Reference</label>
+          <Textarea
+            value={draft.quick_reference ?? ""}
+            onChange={(e) => setDraft((d) => ({ ...d, quick_reference: e.target.value }))}
+            placeholder="핵심 커맨드/요약"
+            className="text-xs leading-relaxed min-h-[88px]"
+          />
+        </div>
+        <div>
+          <label className="text-[11px] text-white/55 mb-1 block">Pitfalls</label>
+          <Textarea
+            value={draft.pitfalls ?? ""}
+            onChange={(e) => setDraft((d) => ({ ...d, pitfalls: e.target.value }))}
+            placeholder="자주 하는 실수"
+            className="text-xs leading-relaxed min-h-[88px]"
+          />
+        </div>
+        <div>
+          <label className="text-[11px] text-white/55 mb-1 block">Verification</label>
+          <Textarea
+            value={draft.verification ?? ""}
+            onChange={(e) => setDraft((d) => ({ ...d, verification: e.target.value }))}
+            placeholder="완료 검증 방법"
+            className="text-xs leading-relaxed min-h-[88px]"
+          />
+        </div>
       </div>
       {error && (
         <div className="text-[11px] text-rose-300 bg-rose-500/10 border border-rose-400/20 rounded px-2.5 py-1.5">

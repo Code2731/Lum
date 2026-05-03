@@ -20,12 +20,12 @@ fn squads_dir() -> PathBuf {
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Squad {
-    pub id: String,             // <slug>-<timestamp>
-    pub task: String,           // 사용자가 입력한 원문
-    pub worktree_path: String,  // ~/.lum_squads/<id>
-    pub branch: String,         // lum-squad/<id>
-    pub base_branch: String,    // 분기점 브랜치 (예: "main")
-    pub repo_root: String,      // 부모 repo 절대경로
+    pub id: String,            // <slug>-<timestamp>
+    pub task: String,          // 사용자가 입력한 원문
+    pub worktree_path: String, // ~/.lum_squads/<id>
+    pub branch: String,        // lum-squad/<id>
+    pub base_branch: String,   // 분기점 브랜치 (예: "main")
+    pub repo_root: String,     // 부모 repo 절대경로
     pub created_at: u64,
 }
 
@@ -94,10 +94,17 @@ fn detect_repo_root_and_branch(cwd: &str) -> Result<(PathBuf, String), String> {
     } else {
         PathBuf::from(cwd)
     };
-    let out = run_git(&["rev-parse", "--show-toplevel", "--abbrev-ref", "HEAD"], &cwd_path)?;
+    let out = run_git(
+        &["rev-parse", "--show-toplevel", "--abbrev-ref", "HEAD"],
+        &cwd_path,
+    )?;
     let mut lines = out.lines();
-    let root = lines.next().ok_or_else(|| "git rev-parse 결과가 비었습니다".to_string())?;
-    let branch = lines.next().ok_or_else(|| "현재 브랜치를 알 수 없습니다".to_string())?;
+    let root = lines
+        .next()
+        .ok_or_else(|| "git rev-parse 결과가 비었습니다".to_string())?;
+    let branch = lines
+        .next()
+        .ok_or_else(|| "현재 브랜치를 알 수 없습니다".to_string())?;
     Ok((PathBuf::from(root), branch.to_string()))
 }
 
@@ -133,7 +140,10 @@ pub fn squad_create(
     std::fs::create_dir_all(squads_dir()).map_err(|e| format!("squads 디렉터리 생성 실패: {e}"))?;
     let worktree_path = squads_dir().join(&id);
     if worktree_path.exists() {
-        return Err(format!("worktree 경로가 이미 존재합니다: {}", worktree_path.display()));
+        return Err(format!(
+            "worktree 경로가 이미 존재합니다: {}",
+            worktree_path.display()
+        ));
     }
 
     let wt_str = worktree_path.to_string_lossy().to_string();
@@ -169,7 +179,10 @@ pub fn squad_remove(id: String) -> Result<(), String> {
 
     let repo = PathBuf::from(&squad.repo_root);
     // worktree remove 실패는 경고만 — 디렉터리가 이미 사라졌을 수 있음.
-    let _ = run_git(&["worktree", "remove", "--force", &squad.worktree_path], &repo);
+    let _ = run_git(
+        &["worktree", "remove", "--force", &squad.worktree_path],
+        &repo,
+    );
     // 브랜치 삭제 — 다른 worktree에서 체크아웃 중이면 실패할 수 있음.
     let _ = run_git(&["branch", "-D", &squad.branch], &repo);
     // 디렉터리가 남아있으면 정리.
@@ -195,7 +208,10 @@ mod tests {
 
     #[test]
     fn slugify_drops_non_alphanumeric() {
-        assert_eq!(slugify("feat: Phase 116!! 🚀 squad"), "feat-phase-116-squad");
+        assert_eq!(
+            slugify("feat: Phase 116!! 🚀 squad"),
+            "feat-phase-116-squad"
+        );
     }
 
     #[test]

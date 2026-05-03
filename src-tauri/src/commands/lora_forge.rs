@@ -165,12 +165,16 @@ pub struct RuntimeStatus {
 
 #[tauri::command]
 pub async fn lora_forge_runtimes() -> RuntimeStatus {
-    let (mlx, axo) = tokio::join!(detect_python_module("mlx_lm"), detect_python_module("axolotl"));
+    let (mlx, axo) = tokio::join!(
+        detect_python_module("mlx_lm"),
+        detect_python_module("axolotl")
+    );
     let hint = match (mlx, axo) {
         (true, _) => "mlx_lm 감지됨 (Apple Silicon 권장)".to_string(),
         (false, true) => "axolotl 감지됨 (CUDA)".to_string(),
         (false, false) => {
-            "학습 런타임 미설치 — pip install mlx-lm  (macOS) 또는  pip install axolotl  (CUDA)".to_string()
+            "학습 런타임 미설치 — pip install mlx-lm  (macOS) 또는  pip install axolotl  (CUDA)"
+                .to_string()
         }
     };
     RuntimeStatus {
@@ -215,7 +219,9 @@ fn validate_opts(opts: &ForgeOptions) -> Result<()> {
         return Err(LumError::Io("lora_rank는 2..=64 범위여야 합니다".into()));
     }
     if !(opts.learning_rate.is_finite() && opts.learning_rate > 0.0 && opts.learning_rate < 1.0) {
-        return Err(LumError::Io("learning_rate는 (0, 1) 범위 유한값이어야 합니다".into()));
+        return Err(LumError::Io(
+            "learning_rate는 (0, 1) 범위 유한값이어야 합니다".into(),
+        ));
     }
     Ok(())
 }
@@ -247,7 +253,12 @@ async fn start_internal(
     validate_opts(&opts)?;
 
     // 데이터셋 경로 결정 — 명시되지 않으면 healing chatml을 자동 export.
-    let dataset_path = match opts.dataset_path.as_ref().map(|s| s.trim()).filter(|s| !s.is_empty()) {
+    let dataset_path = match opts
+        .dataset_path
+        .as_ref()
+        .map(|s| s.trim())
+        .filter(|s| !s.is_empty())
+    {
         Some(p) => PathBuf::from(p),
         None => {
             let (count, path_str) =
@@ -269,7 +280,8 @@ async fn start_internal(
     }
 
     let id = make_run_id();
-    std::fs::create_dir_all(runs_dir()).map_err(|e| LumError::Io(format!("runs 디렉터리 생성 실패: {e}")))?;
+    std::fs::create_dir_all(runs_dir())
+        .map_err(|e| LumError::Io(format!("runs 디렉터리 생성 실패: {e}")))?;
     let output_dir = runs_dir().join(&id);
     std::fs::create_dir_all(&output_dir)
         .map_err(|e| LumError::Io(format!("output_dir 생성 실패: {e}")))?;
@@ -334,7 +346,9 @@ fn build_command(run: &ForgeRun) -> Result<TokioCommand> {
         }
         other => return Err(LumError::Io(format!("지원하지 않는 runtime: {other}"))),
     }
-    cmd.stdout(Stdio::piped()).stderr(Stdio::piped()).kill_on_drop(true);
+    cmd.stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .kill_on_drop(true);
     Ok(cmd)
 }
 
@@ -501,33 +515,43 @@ fn advance_auto_cursor(candidate_ms: u64) {
 async fn try_auto_hot_swap(app: &AppHandle, run_id: &str) {
     // 1) run 호환 검사 — adapter_config.json 존재 여부.
     let store = load_store();
-    let Some(run) = store.runs.iter().find(|r| r.id == run_id).cloned() else { return; };
+    let Some(run) = store.runs.iter().find(|r| r.id == run_id).cloned() else {
+        return;
+    };
     let adapter_cfg = std::path::Path::new(&run.output_dir).join("adapter_config.json");
     let compatible = adapter_cfg.exists();
 
     let Some(key) = crate::commands::embed::embed_loaded_info() else {
-        emit_auto_event(app, serde_json::json!({
-            "phase": "skipped",
-            "reason": "추론 모델 미로드 — hot-swap 건너뜀",
-            "run_id": run_id,
-            "ts_ms": now_ms(),
-        }));
+        emit_auto_event(
+            app,
+            serde_json::json!({
+                "phase": "skipped",
+                "reason": "추론 모델 미로드 — hot-swap 건너뜀",
+                "run_id": run_id,
+                "ts_ms": now_ms(),
+            }),
+        );
         return;
     };
 
     if !compatible {
-        emit_auto_event(app, serde_json::json!({
-            "phase": "skipped",
-            "reason": "adapter_config.json 없음 — mlx-lm 어댑터는 mistralrs와 형식이 달라 변환 필요",
-            "run_id": run_id,
-            "ts_ms": now_ms(),
-        }));
+        emit_auto_event(
+            app,
+            serde_json::json!({
+                "phase": "skipped",
+                "reason": "adapter_config.json 없음 — mlx-lm 어댑터는 mistralrs와 형식이 달라 변환 필요",
+                "run_id": run_id,
+                "ts_ms": now_ms(),
+            }),
+        );
         return;
     }
 
     // loaded_key는 "{model_dir}/{gguf_filename}" 포맷 (mistralrs_inline::load_model 참고).
     let path = std::path::PathBuf::from(&key);
-    let (Some(parent), Some(file)) = (path.parent(), path.file_name()) else { return; };
+    let (Some(parent), Some(file)) = (path.parent(), path.file_name()) else {
+        return;
+    };
     let model_dir = parent.to_string_lossy().to_string();
     let gguf_file = file.to_string_lossy().to_string();
 
@@ -536,19 +560,27 @@ async fn try_auto_hot_swap(app: &AppHandle, run_id: &str) {
         model_dir,
         gguf_file,
         run.output_dir.clone(),
-    ).await {
-        Ok(msg) => emit_auto_event(app, serde_json::json!({
-            "phase": "hot_swapped",
-            "run_id": run_id,
-            "message": msg,
-            "ts_ms": now_ms(),
-        })),
-        Err(e) => emit_auto_event(app, serde_json::json!({
-            "phase": "hot_swap_failed",
-            "run_id": run_id,
-            "error": e,
-            "ts_ms": now_ms(),
-        })),
+    )
+    .await
+    {
+        Ok(msg) => emit_auto_event(
+            app,
+            serde_json::json!({
+                "phase": "hot_swapped",
+                "run_id": run_id,
+                "message": msg,
+                "ts_ms": now_ms(),
+            }),
+        ),
+        Err(e) => emit_auto_event(
+            app,
+            serde_json::json!({
+                "phase": "hot_swap_failed",
+                "run_id": run_id,
+                "error": e,
+                "ts_ms": now_ms(),
+            }),
+        ),
     }
 }
 
@@ -676,11 +708,20 @@ fn blocked_reason(
     if running {
         return Some("이미 다른 학습이 진행 중".into());
     }
-    if cfg.auto_lora_base_model.as_deref().map(str::trim).unwrap_or("").is_empty() {
+    if cfg
+        .auto_lora_base_model
+        .as_deref()
+        .map(str::trim)
+        .unwrap_or("")
+        .is_empty()
+    {
         return Some("베이스 모델을 설정해주세요".into());
     }
     if unlearned < threshold {
-        return Some(format!("아직 {} / {} (미학습 approve)", unlearned, threshold));
+        return Some(format!(
+            "아직 {} / {} (미학습 approve)",
+            unlearned, threshold
+        ));
     }
     None
 }
@@ -731,25 +772,37 @@ pub async fn maybe_auto_train(app: AppHandle) {
 
     let cursor_candidate_ms = now_ms();
     let auto_load = cfg.auto_lora_auto_load.unwrap_or(true);
-    let mode = AutoMode { cursor_candidate_ms, auto_load };
+    let mode = AutoMode {
+        cursor_candidate_ms,
+        auto_load,
+    };
 
-    emit_auto_event(&app, serde_json::json!({
-        "phase": "starting",
-        "unlearned_count": unlearned,
-        "ts_ms": cursor_candidate_ms,
-    }));
+    emit_auto_event(
+        &app,
+        serde_json::json!({
+            "phase": "starting",
+            "unlearned_count": unlearned,
+            "ts_ms": cursor_candidate_ms,
+        }),
+    );
 
     match start_internal(app.clone(), opts, Some(mode)).await {
-        Ok(run) => emit_auto_event(&app, serde_json::json!({
-            "phase": "spawned",
-            "run_id": run.id,
-            "ts_ms": now_ms(),
-        })),
-        Err(e) => emit_auto_event(&app, serde_json::json!({
-            "phase": "error",
-            "error": e.to_string(),
-            "ts_ms": now_ms(),
-        })),
+        Ok(run) => emit_auto_event(
+            &app,
+            serde_json::json!({
+                "phase": "spawned",
+                "run_id": run.id,
+                "ts_ms": now_ms(),
+            }),
+        ),
+        Err(e) => emit_auto_event(
+            &app,
+            serde_json::json!({
+                "phase": "error",
+                "error": e.to_string(),
+                "ts_ms": now_ms(),
+            }),
+        ),
     }
 }
 
@@ -948,7 +1001,10 @@ mod tests {
         assert_eq!(o.iters, 200);
         assert_eq!(o.lora_rank, 8);
         assert!(o.task.contains("30건"));
-        assert!(o.dataset_path.is_none(), "자동 학습은 dataset 자동 export 사용");
+        assert!(
+            o.dataset_path.is_none(),
+            "자동 학습은 dataset 자동 export 사용"
+        );
     }
 
     #[test]

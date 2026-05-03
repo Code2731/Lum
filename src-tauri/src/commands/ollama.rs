@@ -83,9 +83,7 @@ pub async fn ollama_stream(
         .json(&body)
         .send()
         .await
-        .map_err(|e| {
-            LumError::Network(format!("Ollama 연결 실패 ({}): {}", base_url, e))
-        })?;
+        .map_err(|e| LumError::Network(format!("Ollama 연결 실패 ({}): {}", base_url, e)))?;
 
     if !response.status().is_success() {
         let status = response.status();

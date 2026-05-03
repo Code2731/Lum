@@ -61,7 +61,10 @@ async fn analyze_failure_reason(model: &str, error: &str, suggestion: &str) -> O
     let result = tokio::time::timeout(
         std::time::Duration::from_secs(8),
         crate::commands::ai::call_xllm(&client, model, &prompt),
-    ).await.ok()?.ok()?;
+    )
+    .await
+    .ok()?
+    .ok()?;
     let trimmed = result.trim();
     if trimmed.is_empty() {
         return None;
@@ -116,7 +119,9 @@ pub async fn record_healing_decision(
     let embedding_fut = async {
         match client.as_ref() {
             Some(c) if !embed_text.trim().is_empty() => {
-                crate::commands::rag::embed_auto(c, &model, &embed_text).await.unwrap_or_default()
+                crate::commands::rag::embed_auto(c, &model, &embed_text)
+                    .await
+                    .unwrap_or_default()
             }
             _ => Vec::new(),
         }
@@ -208,7 +213,10 @@ pub fn forget_by_ts(ts_targets: &[u64]) -> Result<usize> {
     let records = list_healing_dataset()?;
     let before = records.len();
     let target_set: std::collections::HashSet<u64> = ts_targets.iter().copied().collect();
-    let kept: Vec<HealingRecord> = records.into_iter().filter(|r| !target_set.contains(&r.ts_ms)).collect();
+    let kept: Vec<HealingRecord> = records
+        .into_iter()
+        .filter(|r| !target_set.contains(&r.ts_ms))
+        .collect();
     let removed = before - kept.len();
     rewrite_records(&kept)?;
     Ok(removed)
@@ -347,10 +355,14 @@ mod tests {
         let s = serde_json::to_string(&rec).unwrap();
         let back: HealingRecord = serde_json::from_str(&s).unwrap();
         assert_eq!(back.decision, "reject");
-        assert!(back.applied_command.is_none(),
-            "reject 케이스는 skip_serializing_if 로 applied_command 필드 자체가 빠져야 함");
-        assert!(back.failure_reason.is_none(),
-            "failure_reason도 None이면 skip_serializing_if로 직렬화에서 제외");
+        assert!(
+            back.applied_command.is_none(),
+            "reject 케이스는 skip_serializing_if 로 applied_command 필드 자체가 빠져야 함"
+        );
+        assert!(
+            back.failure_reason.is_none(),
+            "failure_reason도 None이면 skip_serializing_if로 직렬화에서 제외"
+        );
     }
 
     #[test]
@@ -360,7 +372,10 @@ mod tests {
         let s = serde_json::to_string(&rec).unwrap();
         assert!(s.contains("failure_reason"));
         let back: HealingRecord = serde_json::from_str(&s).unwrap();
-        assert_eq!(back.failure_reason.as_deref(), Some("pip 대신 ensurepip은 패키지 설치가 아니라 부트스트랩"));
+        assert_eq!(
+            back.failure_reason.as_deref(),
+            Some("pip 대신 ensurepip은 패키지 설치가 아니라 부트스트랩")
+        );
     }
 
     #[test]

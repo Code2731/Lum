@@ -22,6 +22,7 @@ const REACT_EVENT: &str = "react_event";
 const MAX_STEPS: usize = 25;
 // 도구 결과 문자 제한 — LLM 컨텍스트 보호
 const TOOL_OUTPUT_LIMIT: usize = 4000;
+const REFLEXION_TIMEOUT_SECS: u64 = 8;
 
 // cwd 외부 또는 이 디렉터리 안에 떨어지는 경로는 모두 거부.
 // 사용자가 명시적 절대경로를 입력해도 거부 — LLM 환각으로 시스템 파일이 변경되는 사고 방지.
@@ -57,13 +58,22 @@ pub struct ReactEvent {
     pub step: Option<usize>,
 }
 
-fn emit_event(app: &AppHandle, kind: &str, content: impl Into<String>, tool: Option<&str>, step: Option<usize>) {
-    let _ = app.emit(REACT_EVENT, ReactEvent {
-        kind: kind.to_string(),
-        content: content.into(),
-        tool: tool.map(|t| t.to_string()),
-        step,
-    });
+fn emit_event(
+    app: &AppHandle,
+    kind: &str,
+    content: impl Into<String>,
+    tool: Option<&str>,
+    step: Option<usize>,
+) {
+    let _ = app.emit(
+        REACT_EVENT,
+        ReactEvent {
+            kind: kind.to_string(),
+            content: content.into(),
+            tool: tool.map(|t| t.to_string()),
+            step,
+        },
+    );
 }
 
 // ─── 시스템 프롬프트 ───────────────────────────────────────────────────────────
@@ -82,6 +92,13 @@ const BASE_PROMPT: &str = r#"당신은 터미널 코딩 에이전트입니다. �
 - write_file({"path": "...", "content": "...", "overwrite": false}) — 신규 파일 생성. 기존 파일은 overwrite=true 명시 필요.
 - apply_patch({"path": "...", "search": "...", "replace": "..."}) — 단일 SEARCH/REPLACE. search는 파일 내 정확히 1회 매칭되어야 함 (앞뒤 컨텍스트 충분히 포함).
 - delete_file({"path": "..."}) — 파일 삭제."#;
+
+const DESKTOP_PROMPT: &str = r#"
+데스크톱 제어 도구 (설정에서 활성화된 경우에만 동작):
+- screenshot({}) — 현재 화면 PNG 캡처(base64). UI 상태 확인용.
+- click({"x": 100, "y": 200, "button": "left"}) — 화면 절대좌표 클릭 (button: left/right/middle, 생략 시 left)
+- type({"text": "입력할 텍스트"}) — 키보드 텍스트 입력
+- key_combo({"modifier": "cmd", "key": "k"}) — 단축키 조합 입력 (modifier: cmd/ctrl/alt/shift)"#;
 
 const PROMPT_TAIL: &str = r#"응답 형식 (반드시 준수):
 THOUGHT: <현재 상황 분석 및 다음 행동 이유>
@@ -108,8 +125,12 @@ ANSWER: <사용자에게 전달할 최종 답변>
 /// Phase 121: 활성 MCP 서버/도구 목록을 동적으로 시스템 프롬프트에 주입.
 /// Phase 127: 자연어 goal과 매칭된 Skill markdown도 함께 주입.
 /// mcp_tools/skills 비었으면 해당 섹션 생략 — 토큰 낭비 방지.
-fn build_system_prompt(mcp_tools: &[McpToolEntry], skills: &[crate::commands::skills::Skill]) -> String {
+fn build_system_prompt(
+    mcp_tools: &[McpToolEntry],
+    skills: &[crate::commands::skills::Skill],
+) -> String {
     let mut s = String::from(BASE_PROMPT);
+    s.push_str(DESKTOP_PROMPT);
     if !mcp_tools.is_empty() {
         s.push_str("\n\nMCP 도구 (외부 서버):\n");
         s.push_str("- mcp({\"server\": \"이름\", \"tool\": \"도구\", \"arguments\": {...}}) — MCP 서버의 도구 호출\n");
@@ -126,7 +147,12 @@ fn build_system_prompt(mcp_tools: &[McpToolEntry], skills: &[crate::commands::sk
     if !skills.is_empty() {
         s.push_str("\n\n관련 Skill (사용자 저장 절차 — 따를 수 있으면 따르되 상황에 맞게 적응):\n");
         for sk in skills {
-            s.push_str(&format!("\n### {}\n{}\n{}\n", sk.name, sk.description, sk.body.trim()));
+            s.push_str(&format!(
+                "\n### {}\n{}\n{}\n",
+                sk.name,
+                sk.description,
+                crate::commands::skills::skill_prompt_markdown(sk)
+            ));
         }
     }
     s.push_str("\n\n");
@@ -205,7 +231,9 @@ struct ParsedAction {
 
 /// LLM 출력에서 ACTION: tool({...}) 형식 파싱
 fn parse_action(text: &str) -> Option<ParsedAction> {
-    let line = text.lines().find(|l| l.trim_start().starts_with("ACTION:"))?;
+    let line = text
+        .lines()
+        .find(|l| l.trim_start().starts_with("ACTION:"))?;
     let rest = line.trim_start().trim_start_matches("ACTION:").trim();
 
     // tool_name({...}) 형식
@@ -223,7 +251,12 @@ fn parse_action(text: &str) -> Option<ParsedAction> {
 fn parse_thought(text: &str) -> String {
     text.lines()
         .find(|l| l.trim_start().starts_with("THOUGHT:"))
-        .map(|l| l.trim_start().trim_start_matches("THOUGHT:").trim().to_string())
+        .map(|l| {
+            l.trim_start()
+                .trim_start_matches("THOUGHT:")
+                .trim()
+                .to_string()
+        })
         .unwrap_or_default()
 }
 
@@ -234,6 +267,43 @@ fn parse_answer(text: &str) -> Option<String> {
     Some(text[idx + 7..].trim().to_string())
 }
 
+fn reflexion_needs_retry(text: &str) -> bool {
+    let lower = text.to_lowercase();
+    lower.contains("fail")
+        || lower.contains("risk high")
+        || lower.contains("risk_high")
+        || lower.contains("high risk")
+        || lower.contains("실패")
+        || lower.contains("회귀 위험 높")
+}
+
+async fn run_reflexion(
+    client: &reqwest::Client,
+    conversation: &str,
+    goal: &str,
+    candidate_answer: Option<&str>,
+) -> Option<String> {
+    let candidate = candidate_answer.unwrap_or("최종 답변 미도출(단계 상한 도달)");
+    let prompt = format!(
+        "{conversation}\n\n[시스템-Reflexion]\n목표: {goal}\n현재 결론 후보: {candidate}\n지금까지의 과정으로 목표 달성 여부와 회귀 위험을 60자 이내 한 줄로 평가하세요.\n형식: ok: ... 또는 fail: ... 또는 risk_high: ..."
+    );
+    let fut = call_xllm(client, "", &prompt);
+    match tokio::time::timeout(std::time::Duration::from_secs(REFLEXION_TIMEOUT_SECS), fut).await {
+        Ok(Ok(resp)) => {
+            let line = resp
+                .lines()
+                .find(|l| !l.trim().is_empty())
+                .unwrap_or(resp.trim());
+            if line.trim().is_empty() {
+                None
+            } else {
+                Some(line.trim().to_string())
+            }
+        }
+        _ => None,
+    }
+}
+
 // ─── 도구 실행 ────────────────────────────────────────────────────────────────
 
 async fn run_tool(
@@ -241,6 +311,7 @@ async fn run_tool(
     tool: &str,
     args: &serde_json::Value,
     cwd: &str,
+    desktop_tools_enabled: bool,
 ) -> String {
     let result = match tool {
         "shell" => {
@@ -279,6 +350,9 @@ async fn run_tool(
         "write_file" => write_file_tool(args, cwd),
         "apply_patch" => apply_patch_tool(args, cwd),
         "delete_file" => delete_file_tool(args, cwd),
+        "screenshot" | "click" | "type" | "key_combo" => {
+            run_desktop_tool(tool, args, desktop_tools_enabled).await
+        }
         "mcp" => run_mcp_tool(app, args).await,
         _ => format!("알 수 없는 도구: {tool}"),
     };
@@ -296,6 +370,134 @@ async fn run_tool(
     result
 }
 
+#[cfg(test)]
+#[derive(Default)]
+struct DesktopToolMock {
+    screenshot: Option<std::result::Result<String, String>>,
+    click: Option<std::result::Result<(), String>>,
+    typing: Option<std::result::Result<(), String>>,
+    key_combo: Option<std::result::Result<(), String>>,
+}
+
+#[cfg(test)]
+static DESKTOP_TOOL_MOCK: OnceLock<Mutex<DesktopToolMock>> = OnceLock::new();
+
+#[cfg(test)]
+fn desktop_tool_mock_lock() -> &'static Mutex<DesktopToolMock> {
+    DESKTOP_TOOL_MOCK.get_or_init(|| Mutex::new(DesktopToolMock::default()))
+}
+
+#[cfg(test)]
+fn set_desktop_tool_mock(mock: DesktopToolMock) {
+    *desktop_tool_mock_lock().lock().unwrap() = mock;
+}
+
+#[cfg(test)]
+fn clear_desktop_tool_mock() {
+    *desktop_tool_mock_lock().lock().unwrap() = DesktopToolMock::default();
+}
+
+async fn desktop_capture_screen() -> std::result::Result<String, String> {
+    #[cfg(test)]
+    {
+        let mut guard = desktop_tool_mock_lock().lock().unwrap();
+        if let Some(v) = guard.screenshot.take() {
+            return v;
+        }
+    }
+    crate::desktop::capture_screen().await
+}
+
+fn desktop_simulate_click(x: i32, y: i32, button: String) -> std::result::Result<(), String> {
+    #[cfg(test)]
+    {
+        let mut guard = desktop_tool_mock_lock().lock().unwrap();
+        if let Some(v) = guard.click.take() {
+            return v;
+        }
+    }
+    crate::desktop::simulate_click(x, y, button)
+}
+
+fn desktop_simulate_typing(text: String) -> std::result::Result<(), String> {
+    #[cfg(test)]
+    {
+        let mut guard = desktop_tool_mock_lock().lock().unwrap();
+        if let Some(v) = guard.typing.take() {
+            return v;
+        }
+    }
+    crate::desktop::simulate_keyboard(crate::desktop::KeyboardAction { text, enter: false })
+}
+
+fn desktop_simulate_key_combo(modifier: String, key: String) -> std::result::Result<(), String> {
+    #[cfg(test)]
+    {
+        let mut guard = desktop_tool_mock_lock().lock().unwrap();
+        if let Some(v) = guard.key_combo.take() {
+            return v;
+        }
+    }
+    crate::desktop::simulate_key_combo(modifier, key)
+}
+
+async fn run_desktop_tool(tool: &str, args: &serde_json::Value, enabled: bool) -> String {
+    if !enabled {
+        return "데스크톱 제어가 비활성화되어 있습니다. 설정에서 활성화하세요.".to_string();
+    }
+
+    match tool {
+        "screenshot" => match desktop_capture_screen().await {
+            Ok(image_base64) => truncate(&image_base64),
+            Err(e) => format!("스크린샷 실패: {e}"),
+        },
+        "click" => {
+            let x = args["x"].as_i64().unwrap_or(i64::MIN);
+            let y = args["y"].as_i64().unwrap_or(i64::MIN);
+            if x == i64::MIN || y == i64::MIN {
+                return "오류: click은 x, y 좌표가 필요합니다".to_string();
+            }
+            let Ok(x_i32) = i32::try_from(x) else {
+                return format!("오류: x 좌표 범위를 벗어났습니다 ({x})");
+            };
+            let Ok(y_i32) = i32::try_from(y) else {
+                return format!("오류: y 좌표 범위를 벗어났습니다 ({y})");
+            };
+            let button = args["button"]
+                .as_str()
+                .unwrap_or("left")
+                .trim()
+                .to_lowercase();
+            match desktop_simulate_click(x_i32, y_i32, button.clone()) {
+                Ok(()) => format!("클릭 성공: ({x}, {y}, {button})"),
+                Err(e) => format!("클릭 실패: {e}"),
+            }
+        }
+        "type" => {
+            let text = args["text"].as_str().unwrap_or("").to_string();
+            if text.is_empty() {
+                return "오류: type은 text 파라미터가 필요합니다".to_string();
+            }
+            match desktop_simulate_typing(text.clone()) {
+                Ok(()) => format!("입력 성공: {} chars", text.chars().count()),
+                Err(e) => format!("입력 실패: {e}"),
+            }
+        }
+        "key_combo" => {
+            let modifier = args["modifier"].as_str().unwrap_or("").trim().to_string();
+            let key = args["key"].as_str().unwrap_or("").trim().to_string();
+            if modifier.is_empty() || key.is_empty() {
+                return "오류: key_combo는 modifier와 key 파라미터가 필요합니다".to_string();
+            }
+            match desktop_simulate_key_combo(modifier.clone(), key.clone()) {
+                Ok(()) => format!("단축키 성공: {modifier}+{key}"),
+                Err(e) => format!("단축키 실패: {e}"),
+            }
+        }
+        _ => format!("알 수 없는 데스크톱 도구: {tool}"),
+    }
+}
+
 /// Phase 121: MCP 서버 도구 호출. mcp({"server", "tool", "arguments"}).
 async fn run_mcp_tool(app: &AppHandle, args: &serde_json::Value) -> String {
     let server = args["server"].as_str().unwrap_or("").trim().to_string();
@@ -303,7 +505,10 @@ async fn run_mcp_tool(app: &AppHandle, args: &serde_json::Value) -> String {
     if server.is_empty() || tool.is_empty() {
         return "오류: mcp는 server + tool 파라미터 모두 필요".to_string();
     }
-    let arguments = args.get("arguments").cloned().unwrap_or(serde_json::json!({}));
+    let arguments = args
+        .get("arguments")
+        .cloned()
+        .unwrap_or(serde_json::json!({}));
     let state: tauri::State<'_, crate::mcp::McpState> = app.state();
     match crate::mcp::mcp_call_tool(server, tool, arguments, state).await {
         Ok(v) => {
@@ -365,7 +570,11 @@ fn list_dir_tool(path: &str, cwd: &str) -> String {
                 .map(|e| {
                     let name = e.file_name().to_string_lossy().into_owned();
                     let is_dir = e.file_type().map(|ft| ft.is_dir()).unwrap_or(false);
-                    if is_dir { format!("{name}/") } else { name }
+                    if is_dir {
+                        format!("{name}/")
+                    } else {
+                        name
+                    }
                 })
                 .collect();
             lines.sort();
@@ -384,7 +593,11 @@ async fn run_git_diff(cwd: &str) -> String {
     match result {
         Ok(output) => {
             let diff = String::from_utf8_lossy(&output.stdout).to_string();
-            if diff.trim().is_empty() { "변경사항 없음".to_string() } else { truncate(&diff) }
+            if diff.trim().is_empty() {
+                "변경사항 없음".to_string()
+            } else {
+                truncate(&diff)
+            }
         }
         Err(e) => format!("git diff 실패: {e}"),
     }
@@ -413,7 +626,10 @@ async fn run_tests_tool(cwd: &str) -> String {
             let stdout = String::from_utf8_lossy(&output.stdout);
             let stderr = String::from_utf8_lossy(&output.stderr);
             let code = output.status.code().unwrap_or(-1);
-            truncate(&format!("[{}: {}] (exit {})\n{}{}", test_cmd.project_type, test_cmd.command, code, stdout, stderr))
+            truncate(&format!(
+                "[{}: {}] (exit {})\n{}{}",
+                test_cmd.project_type, test_cmd.command, code, stdout, stderr
+            ))
         }
         Err(e) => format!("테스트 실행 실패: {e}"),
     }
@@ -423,7 +639,11 @@ fn truncate(s: &str) -> String {
     if s.len() <= TOOL_OUTPUT_LIMIT {
         s.to_string()
     } else {
-        format!("{}…({}자 생략)", &s[..TOOL_OUTPUT_LIMIT], s.len() - TOOL_OUTPUT_LIMIT)
+        format!(
+            "{}…({}자 생략)",
+            &s[..TOOL_OUTPUT_LIMIT],
+            s.len() - TOOL_OUTPUT_LIMIT
+        )
     }
 }
 
@@ -557,16 +777,22 @@ fn track_pre_write(abs_path: &Path) {
     }
     if abs_path.exists() {
         // cwd 외부면 백업 skip — SafePath가 막아주므로 정상 흐름에선 도달 안 함.
-        let Ok(rel) = abs_path.strip_prefix(&backup.cwd) else { return };
+        let Ok(rel) = abs_path.strip_prefix(&backup.cwd) else {
+            return;
+        };
         let dst = backup.backup_dir.join(rel);
         if let Some(parent) = dst.parent() {
             let _ = std::fs::create_dir_all(parent);
         }
         if std::fs::copy(abs_path, &dst).is_ok() {
-            backup.entries.insert(abs_path.to_path_buf(), BackupEntry::Original);
+            backup
+                .entries
+                .insert(abs_path.to_path_buf(), BackupEntry::Original);
         }
     } else {
-        backup.entries.insert(abs_path.to_path_buf(), BackupEntry::Created);
+        backup
+            .entries
+            .insert(abs_path.to_path_buf(), BackupEntry::Created);
     }
 }
 
@@ -634,10 +860,8 @@ pub fn classify_change_risk(rel_path: &str) -> ChangeRisk {
     }
     // 빌드/CI 디렉터리 — 어떤 파일이든 신중.
     // contains는 sub-dir(예: src/scripts/foo) 잡고, prefix는 root 직속(scripts/foo) 잡음.
-    const HIGH_DIRS_CONTAINS: &[&str] =
-        &["/scripts/", "/.github/", "/.gitlab/", "/ci/"];
-    const HIGH_DIRS_PREFIX: &[&str] =
-        &["scripts/", ".github/", ".gitlab/", "ci/"];
+    const HIGH_DIRS_CONTAINS: &[&str] = &["/scripts/", "/.github/", "/.gitlab/", "/ci/"];
+    const HIGH_DIRS_PREFIX: &[&str] = &["scripts/", ".github/", ".gitlab/", "ci/"];
     if HIGH_DIRS_CONTAINS.iter().any(|d| norm.contains(d))
         || HIGH_DIRS_PREFIX.iter().any(|p| norm.starts_with(p))
     {
@@ -743,10 +967,9 @@ fn restore_react_backup() -> std::result::Result<UndoReport, String> {
                 let rel = match abs.strip_prefix(&backup.cwd) {
                     Ok(r) => r,
                     Err(_) => {
-                        report.errors.push(format!(
-                            "{}: cwd 경계 외 — 복원 skip",
-                            abs.display()
-                        ));
+                        report
+                            .errors
+                            .push(format!("{}: cwd 경계 외 — 복원 skip", abs.display()));
                         continue;
                     }
                 };
@@ -796,11 +1019,7 @@ fn write_file_tool(args: &serde_json::Value, cwd: &str) -> String {
 
     track_pre_write(&abs);
     match std::fs::write(&abs, &content) {
-        Ok(()) => format!(
-            "쓰기 성공: {} ({} bytes)",
-            abs.display(),
-            content.len()
-        ),
+        Ok(()) => format!("쓰기 성공: {} ({} bytes)", abs.display(), content.len()),
         Err(e) => format!("쓰기 실패: {e}"),
     }
 }
@@ -889,11 +1108,7 @@ fn delete_file_tool(args: &serde_json::Value, cwd: &str) -> String {
 // ─── 메인 ReAct 루프 ─────────────────────────────────────────────────────────
 
 #[command]
-pub async fn react_agent_run(
-    app: AppHandle,
-    goal: String,
-    cwd: String,
-) -> Result<()> {
+pub async fn react_agent_run(app: AppHandle, goal: String, cwd: String) -> Result<()> {
     cancel_flag().store(false, Ordering::Relaxed);
 
     // CWD 폴백 — 빈 문자열이면 현재 프로세스 작업 디렉토리 사용
@@ -923,7 +1138,7 @@ pub async fn react_agent_run(
         );
     }
     // Phase 127: 자연어 goal과 매칭된 사용자 저장 Skill을 시스템 프롬프트에 주입.
-    let skills = crate::commands::skills::find_relevant_skills(&goal, 3);
+    let skills = crate::commands::skills::find_relevant_skills(&goal, 3).await;
     if !skills.is_empty() {
         emit_event(
             &app,
@@ -937,90 +1152,218 @@ pub async fn react_agent_run(
         "{}\n\n목표: {goal}\n\nCWD: {effective_cwd}",
         build_system_prompt(&mcp_tools, &skills)
     );
+    // 사용자 명시 opt-in 토글. 기본 false — 활성화 전에는 ReAct가 화면/입력 제어 불가.
+    let desktop_tools_enabled = crate::commands::config::load_config()
+        .ok()
+        .and_then(|c| c.react_desktop_tools_enabled)
+        .unwrap_or(false);
 
     let client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(120))
         .build()
         .map_err(|e| LumError::Network(e.to_string()))?;
 
+    // Phase 133: Reflexion 1턴 자기검토. 기본 true(설정 미존재 시).
+    let reflexion_enabled = crate::commands::config::load_config()
+        .ok()
+        .and_then(|c| c.react_reflexion_enabled)
+        .unwrap_or(true);
+
     // 루프 방지: 최근 액션 히스토리 (tool+args 조합)
     let mut recent_actions: Vec<String> = Vec::new();
+    let mut step = 0usize;
+    let mut max_steps = MAX_STEPS;
+    let mut extra_turn_granted = false;
 
-    for step in 0..MAX_STEPS {
-        if cancel_flag().load(Ordering::Relaxed) {
-            emit_event(&app, "status", "취소됨", None, Some(step));
-            return Ok(());
-        }
-
-        emit_event(&app, "status", format!("단계 {} / {MAX_STEPS}", step + 1), None, Some(step + 1));
-
-        // 로컬 전용 — embedded GGUF 우선, 미로드면 xLLM HTTP (127.0.0.1:8080)
-        let response = match call_xllm(&client, "", &conversation).await {
-            Ok(r) => r,
-            Err(e) => {
-                emit_event(&app, "error", format!("LLM 오류: {e}"), None, None);
-                return Err(e);
+    'main: loop {
+        while step < max_steps {
+            if cancel_flag().load(Ordering::Relaxed) {
+                emit_event(&app, "status", "취소됨", None, Some(step));
+                return Ok(());
             }
-        };
 
-        // THOUGHT 추출 → emit
-        let thought = parse_thought(&response);
-        if !thought.is_empty() {
-            emit_event(&app, "thought", &thought, None, Some(step + 1));
-        }
-
-        // ANSWER 확인 — 완료
-        if let Some(answer) = parse_answer(&response) {
-            emit_event(&app, "answer", &answer, None, Some(step + 1));
-            return Ok(());
-        }
-
-        // ACTION 파싱 → 도구 실행
-        let Some(action) = parse_action(&response) else {
-            // 파싱 실패 — 응답 전체를 ANSWER로 취급
-            emit_event(&app, "answer", response.trim(), None, Some(step + 1));
-            return Ok(());
-        };
-
-        // 동일 액션 반복 감지 → ANSWER 강제 요청
-        let action_key = format!("{}:{}", action.tool, action.args);
-        let repeat_count = recent_actions.iter().filter(|a| *a == &action_key).count();
-        if repeat_count >= 2 {
-            let force_prompt = format!(
-                "{conversation}\n\n{response}\n\n[시스템]: 동일한 도구를 같은 인수로 반복 호출하고 있습니다. 지금까지 수집된 정보를 바탕으로 즉시 ANSWER를 출력하세요."
+            emit_event(
+                &app,
+                "status",
+                format!("단계 {} / {}", step + 1, max_steps),
+                None,
+                Some(step + 1),
             );
-            if let Ok(final_resp) = call_xllm(&client, "", &force_prompt).await {
-                let answer = parse_answer(&final_resp)
-                    .unwrap_or_else(|| final_resp.trim().to_string());
-                emit_event(&app, "answer", &answer, None, Some(step + 1));
+
+            // 로컬 전용 — embedded GGUF 우선, 미로드면 xLLM HTTP (127.0.0.1:8080)
+            let response = match call_xllm(&client, "", &conversation).await {
+                Ok(r) => r,
+                Err(e) => {
+                    emit_event(&app, "error", format!("LLM 오류: {e}"), None, None);
+                    return Err(e);
+                }
+            };
+
+            // THOUGHT 추출 → emit
+            let thought = parse_thought(&response);
+            if !thought.is_empty() {
+                emit_event(&app, "thought", &thought, None, Some(step + 1));
             }
-            return Ok(());
+
+            // ANSWER 확인 — 완료 직전 reflexion 1회.
+            if let Some(answer) = parse_answer(&response) {
+                if reflexion_enabled {
+                    if let Some(reflect) =
+                        run_reflexion(&client, &conversation, &goal, Some(&answer)).await
+                    {
+                        emit_event(
+                            &app,
+                            "status",
+                            format!("Reflexion: {}", reflect),
+                            None,
+                            Some(step + 1),
+                        );
+                        if reflexion_needs_retry(&reflect) && !extra_turn_granted {
+                            extra_turn_granted = true;
+                            max_steps = MAX_STEPS + 1;
+                            conversation.push_str(&format!(
+                                "\n\n{response}\n\nREFLECTION: {reflect}\n\n[시스템]: 반성 결과를 반영해 필요하면 추가 도구 실행 후 최종 ANSWER를 다시 출력하세요."
+                            ));
+                            emit_event(
+                                &app,
+                                "status",
+                                "Reflexion 결과로 추가 1턴 허용",
+                                None,
+                                Some(step + 1),
+                            );
+                            step += 1;
+                            continue;
+                        }
+                    }
+                }
+                emit_event(&app, "answer", &answer, None, Some(step + 1));
+                return Ok(());
+            }
+
+            // ACTION 파싱 → 도구 실행
+            let Some(action) = parse_action(&response) else {
+                // 파싱 실패 — 응답 전체를 ANSWER로 취급(반성 1회 후 종료 가능)
+                let candidate = response.trim();
+                if reflexion_enabled {
+                    if let Some(reflect) =
+                        run_reflexion(&client, &conversation, &goal, Some(candidate)).await
+                    {
+                        emit_event(
+                            &app,
+                            "status",
+                            format!("Reflexion: {}", reflect),
+                            None,
+                            Some(step + 1),
+                        );
+                        if reflexion_needs_retry(&reflect) && !extra_turn_granted {
+                            extra_turn_granted = true;
+                            max_steps = MAX_STEPS + 1;
+                            conversation.push_str(&format!(
+                                "\n\n{response}\n\nREFLECTION: {reflect}\n\n[시스템]: 반성 결과를 반영해 최종 ANSWER를 다시 출력하세요."
+                            ));
+                            emit_event(
+                                &app,
+                                "status",
+                                "Reflexion 결과로 추가 1턴 허용",
+                                None,
+                                Some(step + 1),
+                            );
+                            step += 1;
+                            continue;
+                        }
+                    }
+                }
+                emit_event(&app, "answer", candidate, None, Some(step + 1));
+                return Ok(());
+            };
+
+            // 동일 액션 반복 감지 → ANSWER 강제 요청
+            let action_key = format!("{}:{}", action.tool, action.args);
+            let repeat_count = recent_actions.iter().filter(|a| *a == &action_key).count();
+            if repeat_count >= 2 {
+                let force_prompt = format!(
+                    "{conversation}\n\n{response}\n\n[시스템]: 동일한 도구를 같은 인수로 반복 호출하고 있습니다. 지금까지 수집된 정보를 바탕으로 즉시 ANSWER를 출력하세요."
+                );
+                if let Ok(final_resp) = call_xllm(&client, "", &force_prompt).await {
+                    let answer =
+                        parse_answer(&final_resp).unwrap_or_else(|| final_resp.trim().to_string());
+                    emit_event(&app, "answer", &answer, None, Some(step + 1));
+                }
+                return Ok(());
+            }
+            recent_actions.push(action_key);
+
+            // ACTION 이벤트 emit
+            let action_desc = format!("{}({})", action.tool, action.args);
+            emit_event(
+                &app,
+                "action",
+                &action_desc,
+                Some(&action.tool),
+                Some(step + 1),
+            );
+
+            // 도구 실행
+            let observation = run_tool(
+                &app,
+                &action.tool,
+                &action.args,
+                &effective_cwd,
+                desktop_tools_enabled,
+            )
+            .await;
+            emit_event(&app, "observation", &observation, None, Some(step + 1));
+
+            // 대화 히스토리 업데이트 (최근 6턴만 유지해 컨텍스트 폭발 방지)
+            let turn = format!("\n\n{response}\n\nOBSERVATION: {observation}");
+            conversation.push_str(&turn);
+
+            // 시스템 프롬프트 + 목표 제외 이전 턴이 6개 초과 시 앞부분 제거
+            let turns: Vec<&str> = conversation.split("\n\nTHOUGHT:").collect();
+            if turns.len() > 7 {
+                let kept = turns[turns.len() - 6..].join("\n\nTHOUGHT:");
+                conversation = format!("{}\n\nTHOUGHT:{}", turns[0], kept);
+            }
+            step += 1;
         }
-        recent_actions.push(action_key);
 
-        // ACTION 이벤트 emit
-        let action_desc = format!("{}({})", action.tool, action.args);
-        emit_event(&app, "action", &action_desc, Some(&action.tool), Some(step + 1));
-
-        // 도구 실행
-        let observation = run_tool(&app, &action.tool, &action.args, &effective_cwd).await;
-        emit_event(&app, "observation", &observation, None, Some(step + 1));
-
-        // 대화 히스토리 업데이트 (최근 6턴만 유지해 컨텍스트 폭발 방지)
-        let turn = format!("\n\n{response}\n\nOBSERVATION: {observation}");
-        conversation.push_str(&turn);
-
-        // 시스템 프롬프트 + 목표 제외 이전 턴이 6개 초과 시 앞부분 제거
-        let turns: Vec<&str> = conversation.split("\n\nTHOUGHT:").collect();
-        if turns.len() > 7 {
-            let kept = turns[turns.len() - 6..].join("\n\nTHOUGHT:");
-            conversation = format!("{}\n\nTHOUGHT:{}", turns[0], kept);
+        // 최대 단계 초과 — reflexion에서 위험 감지되면 딱 1턴 추가 허용.
+        if reflexion_enabled && !extra_turn_granted {
+            if let Some(reflect) = run_reflexion(&client, &conversation, &goal, None).await {
+                emit_event(
+                    &app,
+                    "status",
+                    format!("Reflexion: {}", reflect),
+                    None,
+                    Some(step),
+                );
+                if reflexion_needs_retry(&reflect) {
+                    extra_turn_granted = true;
+                    max_steps = MAX_STEPS + 1;
+                    conversation.push_str(&format!(
+                        "\n\nREFLECTION: {reflect}\n\n[시스템]: 목표 미달/회귀 위험 지적이 있습니다. 한 턴만 더 실행해 개선하세요."
+                    ));
+                    emit_event(
+                        &app,
+                        "status",
+                        "Reflexion 결과로 추가 1턴 허용",
+                        None,
+                        Some(step),
+                    );
+                    continue 'main;
+                }
+            }
         }
+
+        emit_event(
+            &app,
+            "answer",
+            "최대 단계에 도달했습니다. 현재까지의 정보를 바탕으로 결론을 내립니다.",
+            None,
+            Some(step),
+        );
+        return Ok(());
     }
-
-    // 최대 단계 초과
-    emit_event(&app, "answer", "최대 단계에 도달했습니다. 현재까지의 정보를 바탕으로 결론을 내립니다.", None, Some(MAX_STEPS));
-    Ok(())
 }
 
 #[command]
@@ -1058,13 +1401,24 @@ mod tests {
     #[test]
     fn parse_answer_추출() {
         let text = "THOUGHT: 완료\nANSWER: 총 5개의 파일이 있습니다.";
-        assert_eq!(parse_answer(text).as_deref(), Some("총 5개의 파일이 있습니다."));
+        assert_eq!(
+            parse_answer(text).as_deref(),
+            Some("총 5개의 파일이 있습니다.")
+        );
     }
 
     #[test]
     fn parse_answer_없으면_none() {
         let text = "THOUGHT: 계속\nACTION: shell({\"cmd\": \"ls\"})";
         assert!(parse_answer(text).is_none());
+    }
+
+    #[test]
+    fn reflexion_retry_판정() {
+        assert!(reflexion_needs_retry("fail: 목표 미달"));
+        assert!(reflexion_needs_retry("risk_high: 회귀 위험 높음"));
+        assert!(reflexion_needs_retry("high risk detected"));
+        assert!(!reflexion_needs_retry("ok: 문제 없음"));
     }
 
     #[test]
@@ -1136,6 +1490,52 @@ ACTION: mcp({"server": "playwright", "tool": "screenshot", "arguments": {"url": 
         );
     }
 
+    #[tokio::test]
+    async fn desktop_tools_토글_off면_호출_거부() {
+        for tool in ["screenshot", "click", "type", "key_combo"] {
+            let args = match tool {
+                "click" => serde_json::json!({"x": 10, "y": 20}),
+                "type" => serde_json::json!({"text": "hello"}),
+                "key_combo" => serde_json::json!({"modifier": "cmd", "key": "k"}),
+                _ => serde_json::json!({}),
+            };
+            let out = run_desktop_tool(tool, &args, false).await;
+            assert!(
+                out.contains("비활성화"),
+                "tool={tool} 일 때 비활성 거부 메시지 필요: {out}"
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn desktop_tools_토글_on_호출_성공() {
+        set_desktop_tool_mock(DesktopToolMock {
+            screenshot: Some(Ok("A".repeat(TOOL_OUTPUT_LIMIT + 30))),
+            click: Some(Ok(())),
+            typing: Some(Ok(())),
+            key_combo: Some(Ok(())),
+        });
+
+        let screenshot = run_desktop_tool("screenshot", &serde_json::json!({}), true).await;
+        assert!(
+            screenshot.contains("생략"),
+            "base64 결과는 truncate되어야 함: {screenshot}"
+        );
+        let click = run_desktop_tool("click", &serde_json::json!({"x": 100, "y": 200}), true).await;
+        assert!(click.contains("클릭 성공"), "{click}");
+        let typing = run_desktop_tool("type", &serde_json::json!({"text": "테스트"}), true).await;
+        assert!(typing.contains("입력 성공"), "{typing}");
+        let combo = run_desktop_tool(
+            "key_combo",
+            &serde_json::json!({"modifier": "cmd", "key": "k"}),
+            true,
+        )
+        .await;
+        assert!(combo.contains("단축키 성공"), "{combo}");
+
+        clear_desktop_tool_mock();
+    }
+
     // ─── 코드 편집 도구 회귀 가드 ─────────────────────────────────────────────
 
     /// 테스트 종료 시 자동 정리되는 임시 디렉터리. tempfile crate를 추가하지 않기 위해 직접 구현.
@@ -1151,9 +1551,7 @@ ACTION: mcp({"server": "playwright", "tool": "screenshot", "arguments": {"url": 
     impl TempDir {
         fn new(label: &str) -> Self {
             // poison 회복 — 다른 테스트가 panic해도 락 사용 가능.
-            let lock = BACKUP_TEST_LOCK
-                .lock()
-                .unwrap_or_else(|e| e.into_inner());
+            let lock = BACKUP_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
             let nano = std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
                 .unwrap()
@@ -1183,7 +1581,11 @@ ACTION: mcp({"server": "playwright", "tool": "screenshot", "arguments": {"url": 
     fn validate_safe_path_거부_cwd_외부_절대경로() {
         let td = TempDir::new("safe1");
         // /tmp 또는 C:\ 같이 cwd 밖의 절대경로 — 부모 canonicalize는 성공해도 prefix 검사에서 막혀야 함.
-        let outside = if cfg!(windows) { "C:\\Windows\\System32\\evil.txt" } else { "/etc/evil.txt" };
+        let outside = if cfg!(windows) {
+            "C:\\Windows\\System32\\evil.txt"
+        } else {
+            "/etc/evil.txt"
+        };
         let r = validate_safe_path(outside, &td.cwd());
         assert!(r.is_err(), "cwd 외부 절대경로는 거부되어야 함: {:?}", r);
     }
@@ -1241,9 +1643,15 @@ ACTION: mcp({"server": "playwright", "tool": "screenshot", "arguments": {"url": 
         std::fs::write(td.path().join("a.txt"), "old").unwrap();
         let args = serde_json::json!({"path": "a.txt", "content": "new"});
         let out = write_file_tool(&args, &td.cwd());
-        assert!(out.contains("이미 존재") || out.contains("overwrite"), "{out}");
+        assert!(
+            out.contains("이미 존재") || out.contains("overwrite"),
+            "{out}"
+        );
         // 파일은 변경되지 않아야 함
-        assert_eq!(std::fs::read_to_string(td.path().join("a.txt")).unwrap(), "old");
+        assert_eq!(
+            std::fs::read_to_string(td.path().join("a.txt")).unwrap(),
+            "old"
+        );
     }
 
     #[test]
@@ -1253,13 +1661,20 @@ ACTION: mcp({"server": "playwright", "tool": "screenshot", "arguments": {"url": 
         let args = serde_json::json!({"path": "a.txt", "content": "new", "overwrite": true});
         let out = write_file_tool(&args, &td.cwd());
         assert!(out.contains("쓰기 성공"), "{out}");
-        assert_eq!(std::fs::read_to_string(td.path().join("a.txt")).unwrap(), "new");
+        assert_eq!(
+            std::fs::read_to_string(td.path().join("a.txt")).unwrap(),
+            "new"
+        );
     }
 
     #[test]
     fn apply_patch_정상_1회_매칭() {
         let td = TempDir::new("ap1");
-        std::fs::write(td.path().join("a.rs"), "fn add(a: i32, b: i32) -> i32 { a + b }").unwrap();
+        std::fs::write(
+            td.path().join("a.rs"),
+            "fn add(a: i32, b: i32) -> i32 { a + b }",
+        )
+        .unwrap();
         let args = serde_json::json!({
             "path": "a.rs",
             "search": "a + b",
@@ -1298,7 +1713,9 @@ ACTION: mcp({"server": "playwright", "tool": "screenshot", "arguments": {"url": 
         let out = apply_patch_tool(&args, &td.cwd());
         assert!(out.contains("매칭됩니다"), "{out}");
         // 원본 보존
-        assert!(std::fs::read_to_string(td.path().join("a.rs")).unwrap().contains("let x = 1;"));
+        assert!(std::fs::read_to_string(td.path().join("a.rs"))
+            .unwrap()
+            .contains("let x = 1;"));
     }
 
     #[test]
@@ -1307,7 +1724,10 @@ ACTION: mcp({"server": "playwright", "tool": "screenshot", "arguments": {"url": 
         std::fs::write(td.path().join("a.rs"), "fn x() {}").unwrap();
         let args = serde_json::json!({"path": "a.rs", "search": "x", "replace": "x"});
         let out = apply_patch_tool(&args, &td.cwd());
-        assert!(out.contains("동일") || out.contains("변경사항 없음"), "{out}");
+        assert!(
+            out.contains("동일") || out.contains("변경사항 없음"),
+            "{out}"
+        );
     }
 
     #[test]
@@ -1325,7 +1745,10 @@ ACTION: mcp({"server": "playwright", "tool": "screenshot", "arguments": {"url": 
         let td = TempDir::new("df2");
         let args = serde_json::json!({"path": "nope.txt"});
         let out = delete_file_tool(&args, &td.cwd());
-        assert!(out.contains("존재하지 않") || out.contains("부모 디렉터리"), "{out}");
+        assert!(
+            out.contains("존재하지 않") || out.contains("부모 디렉터리"),
+            "{out}"
+        );
     }
 
     #[test]
@@ -1354,6 +1777,9 @@ ACTION: write_file({"path": "src/new.rs", "content": "pub fn x() {}", "overwrite
         assert!(s.contains("write_file"));
         assert!(s.contains("apply_patch"));
         assert!(s.contains("delete_file"));
+        assert!(s.contains("screenshot"));
+        assert!(s.contains("click"));
+        assert!(s.contains("key_combo"));
         // 안전 가드 안내가 시스템 프롬프트에 들어가야 함
         assert!(s.contains(".git") || s.contains("CWD 내부"));
     }
@@ -1365,7 +1791,12 @@ ACTION: write_file({"path": "src/new.rs", "content": "pub fn x() {}", "overwrite
             name: "Git rebase 정리".into(),
             description: "복잡한 rebase 충돌 해결".into(),
             triggers: vec![],
-            body: "1. git status 확인\n2. 충돌 파일 수정\n3. git rebase --continue".into(),
+            when_to_use: Some("충돌 나는 rebase 작업".into()),
+            quick_reference: None,
+            procedure: "1. git status 확인\n2. 충돌 파일 수정\n3. git rebase --continue".into(),
+            pitfalls: None,
+            verification: None,
+            description_embedding: None,
             created_ms: 0,
             last_used_ms: None,
             success_count: 0,
@@ -1430,7 +1861,10 @@ ACTION: write_file({"path": "src/new.rs", "content": "pub fn x() {}", "overwrite
         );
         assert!(fail.contains("찾지 못했습니다"), "1차 거부 실패: {fail}");
         // 거부됐으면 파일 변경 없어야 함
-        assert_eq!(std::fs::read_to_string(td.path().join("greet.rs")).unwrap(), initial);
+        assert_eq!(
+            std::fs::read_to_string(td.path().join("greet.rs")).unwrap(),
+            initial
+        );
 
         // 2차 시도: 정확한 search — 성공해야 함
         let ok = apply_patch_tool(
@@ -1465,7 +1899,10 @@ ACTION: write_file({"path": "src/new.rs", "content": "pub fn x() {}", "overwrite
             &td.cwd(),
         );
         assert!(amb.contains("매칭됩니다"), "모호성 거부 실패: {amb}");
-        assert_eq!(std::fs::read_to_string(td.path().join("vars.rs")).unwrap(), initial);
+        assert_eq!(
+            std::fs::read_to_string(td.path().join("vars.rs")).unwrap(),
+            initial
+        );
 
         // 2차: "count = 0;" — 1건만 매칭
         let ok = apply_patch_tool(
@@ -1479,7 +1916,10 @@ ACTION: write_file({"path": "src/new.rs", "content": "pub fn x() {}", "overwrite
         assert!(ok.contains("패치 적용 성공"), "1건 매칭 실패: {ok}");
         let final_content = std::fs::read_to_string(td.path().join("vars.rs")).unwrap();
         assert!(final_content.contains("count = 10;"), "count 변경 안 됨");
-        assert!(final_content.contains("total = 0;"), "total은 그대로여야 함");
+        assert!(
+            final_content.contains("total = 0;"),
+            "total은 그대로여야 함"
+        );
     }
 
     /// 시나리오 4: "안전 가드 5종 일괄 검증" — LLM이 환각해도 시스템 파일 안 건드림.
@@ -1492,7 +1932,11 @@ ACTION: write_file({"path": "src/new.rs", "content": "pub fn x() {}", "overwrite
 
         let attacks = vec![
             // 1) cwd 외부 절대경로
-            if cfg!(windows) { "C:\\Windows\\evil.txt" } else { "/etc/evil.txt" },
+            if cfg!(windows) {
+                "C:\\Windows\\evil.txt"
+            } else {
+                "/etc/evil.txt"
+            },
             // 2) traversal
             "../../../escape.txt",
             // 3) .git 침입
@@ -1531,7 +1975,10 @@ ACTION: write_file({"path": "src/new.rs", "content": "pub fn x() {}", "overwrite
                 })
                 .unwrap_or(false)
         }
-        assert!(!search_pwned(td.path()), "어떤 공격도 PWNED 흔적을 남겨선 안 됨");
+        assert!(
+            !search_pwned(td.path()),
+            "어떤 공격도 PWNED 흔적을 남겨선 안 됨"
+        );
     }
 
     /// 시나리오 5: "함수 리팩터링 멀티스텝" — write → apply_patch ×2 → delete → 최종 검증.
@@ -1579,8 +2026,7 @@ ACTION: write_file({"path": "src/new.rs", "content": "pub fn x() {}", "overwrite
         // Step 5: 최종 상태 검증
         let final_content = std::fs::read_to_string(td.path().join("calc.rs")).unwrap();
         assert_eq!(
-            final_content,
-            "pub fn calc(x: i32, factor: i32) -> i32 {\n    x * factor\n}\n",
+            final_content, "pub fn calc(x: i32, factor: i32) -> i32 {\n    x * factor\n}\n",
             "리팩터링 최종 결과가 기대와 다름:\n{final_content}"
         );
     }
@@ -1613,7 +2059,7 @@ ACTION: write_file({"path": "src/new.rs", "content": "pub fn x() {}", "overwrite
     #[derive(Debug, PartialEq)]
     enum SimEvent {
         Thought(String),
-        Action(String),     // "tool(args)"
+        Action(String), // "tool(args)"
         Observation(String),
         Answer(String),
         ForcedAnswerOnRepeat,
@@ -1689,28 +2135,47 @@ ACTION: write_file({"path": "src/new.rs", "content": "pub fn x() {}", "overwrite
 
             if let Some(answer) = parse_answer(response) {
                 events.push(SimEvent::Answer(answer));
-                return SimResult { events, consumed_responses: consumed, finished: true };
+                return SimResult {
+                    events,
+                    consumed_responses: consumed,
+                    finished: true,
+                };
             }
 
             let Some(action) = parse_action(response) else {
                 events.push(SimEvent::Answer(response.trim().to_string()));
-                return SimResult { events, consumed_responses: consumed, finished: true };
+                return SimResult {
+                    events,
+                    consumed_responses: consumed,
+                    finished: true,
+                };
             };
 
             let action_key = format!("{}:{}", action.tool, action.args);
             let repeats = recent_actions.iter().filter(|a| *a == &action_key).count();
             if repeats >= 2 {
                 events.push(SimEvent::ForcedAnswerOnRepeat);
-                return SimResult { events, consumed_responses: consumed, finished: true };
+                return SimResult {
+                    events,
+                    consumed_responses: consumed,
+                    finished: true,
+                };
             }
             recent_actions.push(action_key);
 
-            events.push(SimEvent::Action(format!("{}({})", action.tool, action.args)));
+            events.push(SimEvent::Action(format!(
+                "{}({})",
+                action.tool, action.args
+            )));
             let observation = sim_dispatch(&action.tool, &action.args, cwd);
             events.push(SimEvent::Observation(observation));
         }
 
-        SimResult { events, consumed_responses: consumed, finished: false }
+        SimResult {
+            events,
+            consumed_responses: consumed,
+            finished: false,
+        }
     }
 
     /// e2e 시나리오 A: "신규 함수 작성 → 검증 → ANSWER".
@@ -1743,7 +2208,11 @@ ANSWER: utils.rs에 add(a, b) 함수를 작성했습니다."#,
         assert!(actions[2].starts_with("read_file"));
         // 마지막 read_file의 OBSERVATION에 add 함수 본문이 들어있어야 함
         let obs = r.observations();
-        assert!(obs[2].contains("pub fn add"), "read_file observation: {}", obs[2]);
+        assert!(
+            obs[2].contains("pub fn add"),
+            "read_file observation: {}",
+            obs[2]
+        );
         // ANSWER 도달
         assert!(r.answer().unwrap().contains("add"));
         // 실제 파일 시스템 확인
@@ -1759,7 +2228,8 @@ ANSWER: utils.rs에 add(a, b) 함수를 작성했습니다."#,
         std::fs::write(
             td.path().join("greet.rs"),
             "pub fn greet(name: &str) -> String {\n    format!(\"Hello, {}\", name)\n}\n",
-        ).unwrap();
+        )
+        .unwrap();
 
         let llm_script = vec![
             // 1차 시도 — 잘못된 search
@@ -1777,7 +2247,11 @@ ANSWER: greet 함수의 인사말을 한국어로 변경했습니다."#,
         assert!(r.finished);
         let obs = r.observations();
         // 1차 OBSERVATION은 자가 복구 힌트를 포함해야 함
-        assert!(obs[0].contains("찾지 못했습니다"), "1차 오류 메시지: {}", obs[0]);
+        assert!(
+            obs[0].contains("찾지 못했습니다"),
+            "1차 오류 메시지: {}",
+            obs[0]
+        );
         assert!(obs[0].contains("다시 시도"), "재시도 힌트 누락: {}", obs[0]);
         // 2차 OBSERVATION은 성공
         assert!(obs[1].contains("패치 적용 성공"), "2차 성공: {}", obs[1]);
@@ -1803,7 +2277,9 @@ ACTION: read_file({"path": "a.rs"})"#;
         // 3번째 호출에서 ForcedAnswerOnRepeat로 종료해야 함 (recent_actions에 2회 누적된 후 3회째)
         assert!(r.finished);
         assert!(
-            r.events.iter().any(|e| matches!(e, SimEvent::ForcedAnswerOnRepeat)),
+            r.events
+                .iter()
+                .any(|e| matches!(e, SimEvent::ForcedAnswerOnRepeat)),
             "강제 종료 이벤트 누락: {:?}",
             r.events
         );
@@ -1819,7 +2295,8 @@ ACTION: read_file({"path": "a.rs"})"#;
         std::fs::write(
             td.path().join("calc.rs"),
             "pub fn calc(x: i32) -> i32 {\n    x * 2\n}\n",
-        ).unwrap();
+        )
+        .unwrap();
 
         let llm_script = vec![
             r#"THOUGHT: 현재 코드 확인
@@ -1898,7 +2375,10 @@ ANSWER: 2 + 2는 4입니다."#,
         let report = restore_react_backup().unwrap();
         assert_eq!(report.removed.len(), 1);
         assert!(report.errors.is_empty());
-        assert!(!td.path().join("new.txt").exists(), "신규 파일이 undo로 삭제돼야 함");
+        assert!(
+            !td.path().join("new.txt").exists(),
+            "신규 파일이 undo로 삭제돼야 함"
+        );
 
         cleanup_backup_state();
     }
@@ -1914,7 +2394,10 @@ ANSWER: 2 + 2는 4입니다."#,
             &td.cwd(),
         );
         assert!(r.contains("쓰기 성공"));
-        assert_eq!(std::fs::read_to_string(td.path().join("a.rs")).unwrap(), "수정된 내용");
+        assert_eq!(
+            std::fs::read_to_string(td.path().join("a.rs")).unwrap(),
+            "수정된 내용"
+        );
 
         let report = restore_react_backup().unwrap();
         assert_eq!(report.restored.len(), 1);
@@ -1967,7 +2450,10 @@ ANSWER: 2 + 2는 4입니다."#,
             &serde_json::json!({"path": "a.rs", "search": "v2", "replace": "v3"}),
             &td.cwd(),
         );
-        assert_eq!(std::fs::read_to_string(td.path().join("a.rs")).unwrap(), "v3");
+        assert_eq!(
+            std::fs::read_to_string(td.path().join("a.rs")).unwrap(),
+            "v3"
+        );
 
         let report = restore_react_backup().unwrap();
         assert_eq!(report.restored.len(), 1, "한 파일만 추적되어야 함");
@@ -2002,19 +2488,32 @@ ANSWER: 2 + 2는 4입니다."#,
 
         // 변경 적용 확인
         assert!(td.path().join("fresh.rs").exists());
-        assert_eq!(std::fs::read_to_string(td.path().join("kept.rs")).unwrap(), "수정값");
+        assert_eq!(
+            std::fs::read_to_string(td.path().join("kept.rs")).unwrap(),
+            "수정값"
+        );
         assert!(!td.path().join("doomed.rs").exists());
 
         // undo
         let report = restore_react_backup().unwrap();
         assert_eq!(report.removed.len(), 1, "fresh.rs만 삭제 (Created)");
-        assert_eq!(report.restored.len(), 2, "kept.rs + doomed.rs 복원 (Original)");
+        assert_eq!(
+            report.restored.len(),
+            2,
+            "kept.rs + doomed.rs 복원 (Original)"
+        );
         assert!(report.errors.is_empty());
 
         // 최종 상태 — 모두 원래대로
         assert!(!td.path().join("fresh.rs").exists());
-        assert_eq!(std::fs::read_to_string(td.path().join("kept.rs")).unwrap(), "원래값");
-        assert_eq!(std::fs::read_to_string(td.path().join("doomed.rs")).unwrap(), "삭제 예정");
+        assert_eq!(
+            std::fs::read_to_string(td.path().join("kept.rs")).unwrap(),
+            "원래값"
+        );
+        assert_eq!(
+            std::fs::read_to_string(td.path().join("doomed.rs")).unwrap(),
+            "삭제 예정"
+        );
 
         cleanup_backup_state();
     }
@@ -2047,7 +2546,10 @@ ANSWER: 2 + 2는 4입니다."#,
             &serde_json::json!({"path": "a.txt", "content": "x"}),
             &td.cwd(),
         );
-        assert!(r.contains("쓰기 성공"), "백업 미활성이라도 도구는 정상 작동");
+        assert!(
+            r.contains("쓰기 성공"),
+            "백업 미활성이라도 도구는 정상 작동"
+        );
         assert!(td.path().join("a.txt").exists());
 
         let undo = restore_react_backup();
@@ -2057,9 +2559,7 @@ ANSWER: 2 + 2는 4입니다."#,
     #[test]
     fn 백업_list_tracked_changes_미활성이면_빈_벡터() {
         // TempDir 안 만드는 테스트 — 명시적 락. poison 회복 처리.
-        let _g = BACKUP_TEST_LOCK
-            .lock()
-            .unwrap_or_else(|e| e.into_inner());
+        let _g = BACKUP_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         cleanup_backup_state();
         assert!(list_tracked_changes().is_empty(), "백업 미활성 시 빈 벡터");
     }
@@ -2120,7 +2620,10 @@ ANSWER: 2 + 2는 4입니다."#,
     #[test]
     fn 위험도_high_빌드_ci_디렉터리() {
         assert_eq!(classify_change_risk("scripts/build.sh"), ChangeRisk::High);
-        assert_eq!(classify_change_risk(".github/workflows/ci.yml"), ChangeRisk::High);
+        assert_eq!(
+            classify_change_risk(".github/workflows/ci.yml"),
+            ChangeRisk::High
+        );
         assert_eq!(classify_change_risk("ci/deploy.sh"), ChangeRisk::High);
     }
 
@@ -2170,18 +2673,12 @@ ANSWER: 2 + 2는 4입니다."#,
     #[test]
     fn 위험도_windows_백슬래시_정규화() {
         // 입력이 백슬래시여도 슬래시와 동일 분류 — Windows 호환.
-        assert_eq!(
-            classify_change_risk("scripts\\build.bat"),
-            ChangeRisk::High
-        );
+        assert_eq!(classify_change_risk("scripts\\build.bat"), ChangeRisk::High);
         assert_eq!(
             classify_change_risk("src\\components\\Button.test.tsx"),
             ChangeRisk::Low
         );
-        assert_eq!(
-            classify_change_risk("src\\lib.rs"),
-            ChangeRisk::Medium
-        );
+        assert_eq!(classify_change_risk("src\\lib.rs"), ChangeRisk::Medium);
     }
 
     #[test]
@@ -2193,9 +2690,7 @@ ANSWER: 2 + 2는 4입니다."#,
 
     #[test]
     fn react_agent_changes_백업_미활성이면_빈_벡터() {
-        let _g = BACKUP_TEST_LOCK
-            .lock()
-            .unwrap_or_else(|e| e.into_inner());
+        let _g = BACKUP_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         cleanup_backup_state();
         assert!(react_agent_changes().is_empty());
     }
@@ -2281,7 +2776,11 @@ ANSWER: 2 + 2는 4입니다."#,
 
         // rel_path는 슬래시로 정규화돼있어야 — 프론트에서 OS 무관하게 표시.
         for c in &changes {
-            assert!(!c.rel_path.contains('\\'), "rel_path에 백슬래시: {}", c.rel_path);
+            assert!(
+                !c.rel_path.contains('\\'),
+                "rel_path에 백슬래시: {}",
+                c.rel_path
+            );
         }
 
         cleanup_backup_state();

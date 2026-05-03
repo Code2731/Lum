@@ -28,11 +28,11 @@ const CONCURRENCY: usize = 200;
 // 알려진 LLM 추론 서버 디폴트 포트. 너무 늘리면 스캔 시간 ↑ + 오탐 ↑.
 // 새 후보 추가 시 1) 사용 빈도, 2) 시그니처가 명확한지(랜덤 HTTP 서버랑 안 헷갈림) 검토.
 const PROBE_PORTS: &[(u16, ServerKind)] = &[
-    (11434, ServerKind::Ollama),         // Ollama
-    (1234, ServerKind::OpenAiCompat),    // LM Studio
-    (8080, ServerKind::OpenAiCompat),    // mlx_lm.server, llama.cpp
-    (8081, ServerKind::OpenAiCompat),    // llama.cpp 변형
-    (5000, ServerKind::OpenAiCompat),    // TabbyAPI
+    (11434, ServerKind::Ollama),      // Ollama
+    (1234, ServerKind::OpenAiCompat), // LM Studio
+    (8080, ServerKind::OpenAiCompat), // mlx_lm.server, llama.cpp
+    (8081, ServerKind::OpenAiCompat), // llama.cpp 변형
+    (5000, ServerKind::OpenAiCompat), // TabbyAPI
 ];
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
@@ -141,8 +141,9 @@ fn extract_models(json: &serde_json::Value, kind: ServerKind) -> Option<Vec<Stri
 /// LAN /24 + 자기 자신(localhost) 풀 스캔. 결과는 latency 오름차순 정렬.
 #[tauri::command]
 pub async fn discover_lan_llm_servers() -> Result<Vec<DiscoveredServer>> {
-    let (own_ip, prefix) = detect_local_subnet()
-        .ok_or_else(|| LumError::Network("LAN IPv4 주소를 감지할 수 없습니다 (이더넷/Wi-Fi 연결 확인)".into()))?;
+    let (own_ip, prefix) = detect_local_subnet().ok_or_else(|| {
+        LumError::Network("LAN IPv4 주소를 감지할 수 없습니다 (이더넷/Wi-Fi 연결 확인)".into())
+    })?;
 
     // 타깃 빌드: subnet 1..=254 + 자기 자신은 127.0.0.1로 따로(원격 IP 자기 자신 probe는 무의미)
     let mut targets: Vec<(Ipv4Addr, u16, ServerKind)> = Vec::with_capacity(255 * PROBE_PORTS.len());

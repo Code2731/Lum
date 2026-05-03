@@ -102,6 +102,13 @@ pub struct AppConfig {
     pub ui_ai_chat_font_size: Option<u32>,
     /// 사용자가 클릭한 적 있는 "신규" 기능 ID 목록. 미클릭 항목엔 dot 배지 표시.
     pub ui_seen_advanced_features: Option<Vec<String>>,
+
+    // ── Phase 130-A: ReAct 데스크톱 제어 도구 안전 토글 ────────────────────
+    /// true면 ReAct의 screenshot/click/type/key_combo 도구 허용. 기본 false (opt-in).
+    pub react_desktop_tools_enabled: Option<bool>,
+    // ── Phase 133: ReAct Reflexion 1턴 자기검토 토글 ────────────────────────
+    /// true면 최종 직전/상한 도달 시 자기검토 1회 수행. 기본 true.
+    pub react_reflexion_enabled: Option<bool>,
 }
 
 impl AppConfig {
@@ -140,7 +147,9 @@ impl AppConfig {
     }
 
     /// 호환성용 alias — call site 정리 후 제거 예정.
-    pub fn mistral_rs_url(&self) -> String { self.xllm_url() }
+    pub fn mistral_rs_url(&self) -> String {
+        self.xllm_url()
+    }
 
     /// Ollama 서버 URL — None이면 기본값 http://localhost:11434
     pub fn ollama_url(&self) -> String {
@@ -395,6 +404,22 @@ pub fn save_ui_preferences(
     save_config(&config)
 }
 
+/// Phase 130-A: ReAct 데스크톱 도구 활성화 토글 저장.
+#[tauri::command]
+pub fn save_react_desktop_tools_enabled(enabled: bool) -> Result<()> {
+    let mut config = load_config()?;
+    config.react_desktop_tools_enabled = Some(enabled);
+    save_config(&config)
+}
+
+/// Phase 133: ReAct Reflexion(자기검토) 활성화 토글 저장.
+#[tauri::command]
+pub fn save_react_reflexion_enabled(enabled: bool) -> Result<()> {
+    let mut config = load_config()?;
+    config.react_reflexion_enabled = Some(enabled);
+    save_config(&config)
+}
+
 /// 터미널 테마/폰트 설정 저장
 #[tauri::command]
 pub fn save_terminal_appearance(
@@ -447,8 +472,7 @@ mod tests {
         let stripped = content_with_bom
             .strip_prefix('\u{feff}')
             .unwrap_or(content_with_bom);
-        let cfg: AppConfig =
-            serde_json::from_str(stripped).expect("BOM 제거 후 파싱 성공해야 함");
+        let cfg: AppConfig = serde_json::from_str(stripped).expect("BOM 제거 후 파싱 성공해야 함");
         assert_eq!(cfg.theme.as_deref(), Some("Solarized Dark"));
     }
 

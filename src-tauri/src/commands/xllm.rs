@@ -80,7 +80,9 @@ pub async fn get_xllm_model_info() -> Result<XllmModelInfo> {
                 return Ok(XllmModelInfo {
                     id: id.to_string(),
                     max_seq_len: json["parameters"]["max_seq_len"].as_u64().map(|v| v as u32),
-                    cache_mode: json["parameters"]["cache_mode"].as_str().map(|s| s.to_string()),
+                    cache_mode: json["parameters"]["cache_mode"]
+                        .as_str()
+                        .map(|s| s.to_string()),
                     rope_scale: json["parameters"]["rope_scale"].as_f64().map(|v| v as f32),
                 });
             }
@@ -110,12 +112,18 @@ pub async fn get_xllm_model_info() -> Result<XllmModelInfo> {
         .await
         .map_err(|e| LumError::AiEngine(e.to_string()))?;
 
-    let id = res["data"].as_array()
+    let id = res["data"]
+        .as_array()
         .and_then(|a| a.first())
         .and_then(|f| f["id"].as_str())
         .unwrap_or("unknown")
         .to_string();
-    Ok(XllmModelInfo { id, max_seq_len: None, cache_mode: None, rope_scale: None })
+    Ok(XllmModelInfo {
+        id,
+        max_seq_len: None,
+        cache_mode: None,
+        rope_scale: None,
+    })
 }
 
 /// ② 모델 전환 (TabbyAPI POST /v1/model/load)
@@ -152,13 +160,17 @@ pub async fn switch_xllm_model(
         req = req.header("x-admin-key", key);
     }
 
-    let resp = req.send().await.map_err(|e| LumError::Network(e.to_string()))?;
+    let resp = req
+        .send()
+        .await
+        .map_err(|e| LumError::Network(e.to_string()))?;
 
     if !resp.status().is_success() {
         let status = resp.status();
         let body_text = resp.text().await.unwrap_or_default();
         return Err(LumError::AiEngine(format!(
-            "모델 로드 실패 HTTP {}: {}", status, body_text
+            "모델 로드 실패 HTTP {}: {}",
+            status, body_text
         )));
     }
 
@@ -175,13 +187,22 @@ pub async fn switch_xllm_model(
         while let Some(nl) = line_buf.find('\n') {
             let line = line_buf[..nl].trim().to_string();
             line_buf.drain(..nl + 1);
-            let Some(data) = line.strip_prefix("data: ") else { continue };
-            let Ok(json) = serde_json::from_str::<serde_json::Value>(data) else { continue };
+            let Some(data) = line.strip_prefix("data: ") else {
+                continue;
+            };
+            let Ok(json) = serde_json::from_str::<serde_json::Value>(data) else {
+                continue;
+            };
 
             if let Some(err) = json.get("error") {
-                let msg = err.get("message").and_then(|m| m.as_str()).unwrap_or("알 수 없는 오류");
+                let msg = err
+                    .get("message")
+                    .and_then(|m| m.as_str())
+                    .unwrap_or("알 수 없는 오류");
                 return Err(LumError::AiEngine(format!(
-                    "모델 '{}' 로드 실패: {}", model_name, msg.trim()
+                    "모델 '{}' 로드 실패: {}",
+                    model_name,
+                    msg.trim()
                 )));
             }
 
@@ -191,19 +212,23 @@ pub async fn switch_xllm_model(
             ) {
                 last_module = m;
                 last_modules = total;
-                let _ = app.emit("xllm_load_progress", serde_json::json!({
-                    "model": model_name,
-                    "module": m,
-                    "modules": total,
-                    "percent": (m as f32 / total.max(1) as f32 * 100.0) as u32,
-                }));
+                let _ = app.emit(
+                    "xllm_load_progress",
+                    serde_json::json!({
+                        "model": model_name,
+                        "module": m,
+                        "modules": total,
+                        "percent": (m as f32 / total.max(1) as f32 * 100.0) as u32,
+                    }),
+                );
             }
         }
     }
 
     if last_modules > 0 && last_module < last_modules {
         return Err(LumError::AiEngine(format!(
-            "모델 로드가 중단됨 ({}/{})", last_module, last_modules
+            "모델 로드가 중단됨 ({}/{})",
+            last_module, last_modules
         )));
     }
 

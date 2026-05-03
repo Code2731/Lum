@@ -27,12 +27,16 @@ pub struct LoraCandidate {
 #[tauri::command]
 pub fn list_embed_candidates() -> Vec<EmbedCandidate> {
     let root = crate::commands::mistral_setup::model_root_dir();
-    let Ok(entries) = std::fs::read_dir(&root) else { return vec![]; };
+    let Ok(entries) = std::fs::read_dir(&root) else {
+        return vec![];
+    };
 
     let mut out = Vec::<EmbedCandidate>::new();
     for entry in entries.flatten() {
         let Ok(ft) = entry.file_type() else { continue };
-        if !ft.is_dir() { continue }
+        if !ft.is_dir() {
+            continue;
+        }
         let folder = entry.path();
         let label = entry.file_name().to_string_lossy().into_owned();
 
@@ -40,12 +44,26 @@ pub fn list_embed_candidates() -> Vec<EmbedCandidate> {
         let mut has_safetensors = false;
         let has_config = folder.join("config.json").exists();
 
-        for fe in std::fs::read_dir(&folder).ok().into_iter().flatten().flatten() {
+        for fe in std::fs::read_dir(&folder)
+            .ok()
+            .into_iter()
+            .flatten()
+            .flatten()
+        {
             let p = fe.path();
-            if !p.is_file() { continue }
-            if p.extension().is_some_and(|x| x.eq_ignore_ascii_case("gguf")) {
-                if let Some(n) = p.file_name() { ggufs.push(n.to_string_lossy().into_owned()); }
-            } else if has_config && p.extension().is_some_and(|x| x.eq_ignore_ascii_case("safetensors")) {
+            if !p.is_file() {
+                continue;
+            }
+            if p.extension()
+                .is_some_and(|x| x.eq_ignore_ascii_case("gguf"))
+            {
+                if let Some(n) = p.file_name() {
+                    ggufs.push(n.to_string_lossy().into_owned());
+                }
+            } else if has_config
+                && p.extension()
+                    .is_some_and(|x| x.eq_ignore_ascii_case("safetensors"))
+            {
                 has_safetensors = true;
             }
         }
@@ -73,18 +91,25 @@ pub fn list_embed_candidates() -> Vec<EmbedCandidate> {
 #[tauri::command]
 pub fn list_lora_candidates() -> Vec<LoraCandidate> {
     let root = crate::commands::mistral_setup::model_root_dir();
-    let Ok(entries) = std::fs::read_dir(&root) else { return vec![]; };
+    let Ok(entries) = std::fs::read_dir(&root) else {
+        return vec![];
+    };
 
     let mut out: Vec<LoraCandidate> = entries
         .flatten()
         .filter_map(|entry| {
             let ft = entry.file_type().ok()?;
-            if !ft.is_dir() { return None; }
+            if !ft.is_dir() {
+                return None;
+            }
             let folder = entry.path();
-            folder.join("adapter_config.json").exists().then(|| LoraCandidate {
-                folder: folder.to_string_lossy().into_owned(),
-                folder_label: entry.file_name().to_string_lossy().into_owned(),
-            })
+            folder
+                .join("adapter_config.json")
+                .exists()
+                .then(|| LoraCandidate {
+                    folder: folder.to_string_lossy().into_owned(),
+                    folder_label: entry.file_name().to_string_lossy().into_owned(),
+                })
         })
         .collect();
     out.sort_by(|a, b| a.folder_label.cmp(&b.folder_label));
@@ -170,7 +195,13 @@ pub async fn embed_load_lora(
 ) -> Result<String, String> {
     #[cfg(feature = "embedded-ai")]
     {
-        crate::commands::mistralrs_inline::load_model_with_lora(&app, &model_dir, &gguf_file, &lora_adapter).await
+        crate::commands::mistralrs_inline::load_model_with_lora(
+            &app,
+            &model_dir,
+            &gguf_file,
+            &lora_adapter,
+        )
+        .await
     }
     #[cfg(not(feature = "embedded-ai"))]
     {
@@ -194,18 +225,18 @@ fn parse_isq_setting(s: &str) -> Result<mistralrs::IsqSetting, String> {
         "Auto6" => Ok(IsqSetting::Auto(IsqBits::Six)),
         "Auto8" => Ok(IsqSetting::Auto(IsqBits::Eight)),
         // GGUF 호환 Q*K
-        "Q2K"                 => Ok(IsqSetting::Specific(IsqType::Q2K)),
-        "Q3K"                 => Ok(IsqSetting::Specific(IsqType::Q3K)),
-        "Q4_0"                => Ok(IsqSetting::Specific(IsqType::Q4_0)),
-        "Q4K" | "Q4_K_M"     => Ok(IsqSetting::Specific(IsqType::Q4K)),
-        "Q5_0"                => Ok(IsqSetting::Specific(IsqType::Q5_0)),
-        "Q5K" | "Q5_K_M"     => Ok(IsqSetting::Specific(IsqType::Q5K)),
-        "Q6K" | "Q6_K"       => Ok(IsqSetting::Specific(IsqType::Q6K)),
-        "Q8_0"                => Ok(IsqSetting::Specific(IsqType::Q8_0)),
-        "Q8K"                 => Ok(IsqSetting::Specific(IsqType::Q8K)),
+        "Q2K" => Ok(IsqSetting::Specific(IsqType::Q2K)),
+        "Q3K" => Ok(IsqSetting::Specific(IsqType::Q3K)),
+        "Q4_0" => Ok(IsqSetting::Specific(IsqType::Q4_0)),
+        "Q4K" | "Q4_K_M" => Ok(IsqSetting::Specific(IsqType::Q4K)),
+        "Q5_0" => Ok(IsqSetting::Specific(IsqType::Q5_0)),
+        "Q5K" | "Q5_K_M" => Ok(IsqSetting::Specific(IsqType::Q5K)),
+        "Q6K" | "Q6_K" => Ok(IsqSetting::Specific(IsqType::Q6K)),
+        "Q8_0" => Ok(IsqSetting::Specific(IsqType::Q8_0)),
+        "Q8K" => Ok(IsqSetting::Specific(IsqType::Q8K)),
         // HyperQuant — GGUF Q4보다 정밀
-        "HQQ4"                => Ok(IsqSetting::Specific(IsqType::HQQ4)),
-        "HQQ8"                => Ok(IsqSetting::Specific(IsqType::HQQ8)),
+        "HQQ4" => Ok(IsqSetting::Specific(IsqType::HQQ4)),
+        "HQQ8" => Ok(IsqSetting::Specific(IsqType::HQQ8)),
         other => Err(format!("알 수 없는 ISQ 타입: {other}")),
     }
 }

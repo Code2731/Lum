@@ -86,7 +86,9 @@ pub fn get_gpu_vram_gb() -> Option<f32> {
         for line in s.lines() {
             if let Some(val) = line.trim().strip_prefix("AdapterRAM=") {
                 if let Ok(bytes) = val.trim().parse::<u64>() {
-                    if bytes > max_bytes { max_bytes = bytes; }
+                    if bytes > max_bytes {
+                        max_bytes = bytes;
+                    }
                 }
             }
         }

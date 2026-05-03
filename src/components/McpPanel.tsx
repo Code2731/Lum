@@ -24,6 +24,23 @@ interface McpTool {
   inputSchema?: unknown;
 }
 
+interface McpRecommendedServer {
+  name: string;
+  title: string;
+  command: string;
+  args: string[];
+  description: string;
+  env_required: string[];
+  env_optional: string[];
+  note?: string;
+}
+
+interface McpInstallRecommendedResult {
+  installed: McpServerSpec;
+  tool_count: number;
+  tools_preview: string[];
+}
+
 interface Props {
   onClose: () => void;
 }
@@ -41,6 +58,8 @@ const McpPanel: React.FC<Props> = ({ onClose }) => {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [runtime, setRuntime] = useState<Record<string, ServerRuntime>>({});
   const [installing, setInstalling] = useState(false);
+  const [recommended, setRecommended] = useState<McpRecommendedServer[]>([]);
+  const [installingRecommended, setInstallingRecommended] = useState<string | null>(null);
   const [addForm, setAddForm] = useState<McpServerSpec | null>(null);
 
   const patchRuntime = (name: string, patch: Partial<ServerRuntime>) =>
@@ -61,6 +80,12 @@ const McpPanel: React.FC<Props> = ({ onClose }) => {
   useEffect(() => {
     loadServers();
   }, [loadServers]);
+
+  useEffect(() => {
+    invoke<McpRecommendedServer[]>("mcp_recommended_servers")
+      .then(setRecommended)
+      .catch((e) => console.error("[MCP] recommended failed:", e));
+  }, []);
 
   const saveServer = async (spec: McpServerSpec) => {
     try {
@@ -118,6 +143,36 @@ const McpPanel: React.FC<Props> = ({ onClose }) => {
     }
   };
 
+  const installRecommended = async (rec: McpRecommendedServer) => {
+    const env: Record<string, string> = {};
+    for (const key of rec.env_required) {
+      const value = window.prompt(`${rec.title} 설치에 필요한 ${key} 값을 입력하세요:`, "");
+      if (value === null) return; // 사용자가 취소
+      if (!value.trim()) {
+        alert(`${key} 값이 비어있습니다.`);
+        return;
+      }
+      env[key] = value.trim();
+    }
+    setInstallingRecommended(rec.name);
+    try {
+      const result = await invoke<McpInstallRecommendedResult>("mcp_install_recommended", {
+        name: rec.name,
+        env,
+      });
+      await loadServers();
+      setExpanded(rec.name);
+      patchRuntime(rec.name, { tools: result.tools_preview.map((name) => ({ name })) });
+      alert(
+        `${rec.title} 설치 완료\n- tools: ${result.tool_count}개\n- preview: ${result.tools_preview.join(", ")}`
+      );
+    } catch (e) {
+      alert(`설치 실패 (${rec.title}): ${String(e)}`);
+    } finally {
+      setInstallingRecommended(null);
+    }
+  };
+
   return (
     <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
       <DialogContent className="sm:max-w-[640px] max-h-[85vh] flex flex-col gap-0 p-0 overflow-hidden border-white/10 rounded-xl bg-[#1a1a2e]">
@@ -136,6 +191,62 @@ const McpPanel: React.FC<Props> = ({ onClose }) => {
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
+
+          {recommended.length > 0 && (
+            <div className="p-3 rounded-lg border border-white/8 bg-white/[0.02] space-y-2.5">
+              <div className="flex items-center justify-between">
+                <div className="text-[11px] text-white/70 font-medium">추천 서버 (원클릭 설치)</div>
+                <span className="text-[10px] text-white/35">{recommended.length}개</span>
+              </div>
+              <div className="space-y-1.5">
+                {recommended.map((rec) => {
+                  const installed = servers.some((s) => s.name === rec.name);
+                  const busy = installingRecommended === rec.name;
+                  return (
+                    <div
+                      key={rec.name}
+                      className="rounded border border-white/8 bg-black/20 px-2.5 py-2"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="min-w-0">
+                          <div className="text-[11px] text-white/85 font-medium">
+                            {rec.title}
+                            <span className="ml-1 text-[10px] text-white/35 font-mono">({rec.name})</span>
+                          </div>
+                          <div className="text-[10px] text-white/45 truncate">
+                            {rec.description}
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => installRecommended(rec)}
+                          disabled={busy}
+                          className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-accent/20 hover:bg-accent/30 text-accent text-[10px] disabled:opacity-50"
+                        >
+                          {busy ? <Loader2 size={10} className="animate-spin" /> : <Download size={10} />}
+                          {installed ? "재설치" : "설치"}
+                        </button>
+                      </div>
+                      <div className="mt-1 text-[9px] text-white/30 font-mono break-all">
+                        {rec.command} {rec.args.join(" ")}
+                      </div>
+                      {(rec.env_required.length > 0 || rec.env_optional.length > 0) && (
+                        <div className="mt-1 text-[9px] text-amber-300/80">
+                          env: [
+                          {rec.env_required.map((k) => `${k}*`).join(", ")}
+                          {rec.env_required.length > 0 && rec.env_optional.length > 0 ? ", " : ""}
+                          {rec.env_optional.join(", ")}
+                          ]
+                        </div>
+                      )}
+                      {rec.note && (
+                        <div className="mt-1 text-[9px] text-white/35">{rec.note}</div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {servers.length === 0 && !loadingList && (
             <div className="p-4 bg-white/3 border border-white/5 rounded-lg text-center space-y-2">

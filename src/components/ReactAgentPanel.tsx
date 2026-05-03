@@ -1,4 +1,5 @@
 import React, { useRef, useEffect } from "react";
+import { invoke } from "@tauri-apps/api/core";
 import {
   Bot,
   Loader2,
@@ -158,6 +159,7 @@ const STATUS_LABEL: Record<ReactAgentState["status"], string> = {
 
 const ReactAgentPanel: React.FC<Props> = ({ state, onCancel, onClose, onUndo }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [desktopToolsEnabled, setDesktopToolsEnabled] = React.useState(false);
   const { status, goal, steps, changes, undoing, undoReport } = state;
   const isActive = status === "running";
   const currentStep = steps.filter(s => s.kind === "status").length;
@@ -172,6 +174,24 @@ const ReactAgentPanel: React.FC<Props> = ({ state, onCancel, onClose, onUndo }) 
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [steps.length]);
+
+  // ReAct 데스크톱 제어 도구는 opt-in 기본값(false). 패널 열 때 현재 설정 동기화.
+  useEffect(() => {
+    invoke<{ react_desktop_tools_enabled?: boolean }>("load_app_config")
+      .then((cfg) => setDesktopToolsEnabled(Boolean(cfg.react_desktop_tools_enabled)))
+      .catch(() => {});
+  }, []);
+
+  const toggleDesktopTools = async () => {
+    const next = !desktopToolsEnabled;
+    setDesktopToolsEnabled(next);
+    try {
+      await invoke("save_react_desktop_tools_enabled", { enabled: next });
+    } catch {
+      // 저장 실패면 UI 롤백 — 실제 설정과 표시 불일치 방지.
+      setDesktopToolsEnabled(!next);
+    }
+  };
 
   return (
     <div className="w-[540px] max-h-[80vh] flex flex-col bg-[#161b22] border border-white/10 rounded-xl shadow-2xl overflow-hidden">
@@ -222,6 +242,17 @@ const ReactAgentPanel: React.FC<Props> = ({ state, onCancel, onClose, onUndo }) 
             변경 {changes.length}{highRiskCount > 0 ? ` · High ${highRiskCount}` : ""}
           </span>
         )}
+        <button
+          onClick={toggleDesktopTools}
+          className={`ml-2 px-2 py-0.5 rounded border text-[9px] font-medium transition-colors ${
+            desktopToolsEnabled
+              ? "border-cyan-500/30 bg-cyan-500/10 text-cyan-300 hover:bg-cyan-500/20"
+              : "border-white/10 bg-white/5 text-white/40 hover:bg-white/10"
+          }`}
+          title="ReAct 데스크톱 도구(screenshot/click/type/key_combo) 활성화"
+        >
+          Desktop {desktopToolsEnabled ? "ON" : "OFF"}
+        </button>
       </div>
 
       {/* ── 단계 목록 (스크롤) ───────────────────────────── */}

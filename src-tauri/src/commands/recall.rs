@@ -39,7 +39,14 @@ fn history_to_entry(h: &HistoryEntry, score: f32) -> RecallEntry {
         id: format!("history:{}", h.id),
         source: "history".into(),
         ts_ms: h.timestamp.saturating_mul(1000),
-        title: h.command.lines().next().unwrap_or(&h.command).chars().take(80).collect(),
+        title: h
+            .command
+            .lines()
+            .next()
+            .unwrap_or(&h.command)
+            .chars()
+            .take(80)
+            .collect(),
         snippet: h.command.clone(),
         score,
         metadata: serde_json::json!({
@@ -53,7 +60,13 @@ fn healing_to_entry(h: &HealingRecord, score: f32) -> RecallEntry {
     let title = if !h.suggestion.is_empty() {
         h.suggestion.chars().take(80).collect()
     } else {
-        h.error.lines().next().unwrap_or(&h.error).chars().take(80).collect()
+        h.error
+            .lines()
+            .next()
+            .unwrap_or(&h.error)
+            .chars()
+            .take(80)
+            .collect()
     };
     // Phase 122: reject + failure_reason이 있으면 snippet에 "Why rejected: ..."를 추가해
     // 검색 결과만 봐도 거부 사유가 보이게.
@@ -64,7 +77,11 @@ fn healing_to_entry(h: &HealingRecord, score: f32) -> RecallEntry {
             h.suggestion.trim(),
             reason.trim(),
         ),
-        _ => format!("Error: {}\nSuggestion: {}", h.error.trim(), h.suggestion.trim()),
+        _ => format!(
+            "Error: {}\nSuggestion: {}",
+            h.error.trim(),
+            h.suggestion.trim()
+        ),
     };
     RecallEntry {
         id: format!("healing:{}", h.ts_ms),
@@ -100,7 +117,10 @@ pub async fn recall_search(
     }
     let allowed: std::collections::HashSet<String> = match sources {
         Some(v) if !v.is_empty() => v.into_iter().collect(),
-        _ => ["history", "healing", "memory"].iter().map(|s| s.to_string()).collect(),
+        _ => ["history", "healing", "memory"]
+            .iter()
+            .map(|s| s.to_string())
+            .collect(),
     };
 
     let client = reqwest::Client::builder()
@@ -108,9 +128,9 @@ pub async fn recall_search(
         .build()
         .map_err(|e| LumError::Network(e.to_string()))?;
 
-    let q_emb = embed_auto(&client, &model, trimmed)
-        .await
-        .ok_or_else(|| LumError::AiEngine("쿼리 임베딩 실패 — Ollama/xLLM 연결을 확인하세요".into()))?;
+    let q_emb = embed_auto(&client, &model, trimmed).await.ok_or_else(|| {
+        LumError::AiEngine("쿼리 임베딩 실패 — Ollama/xLLM 연결을 확인하세요".into())
+    })?;
 
     let mut hits: Vec<RecallEntry> = Vec::new();
     let in_window = |ts_ms: u64| -> bool {
@@ -144,7 +164,14 @@ pub async fn recall_search(
                     id: format!("memory:{}", e.timestamp),
                     source: "memory".into(),
                     ts_ms,
-                    title: e.content.lines().next().unwrap_or(&e.content).chars().take(80).collect(),
+                    title: e
+                        .content
+                        .lines()
+                        .next()
+                        .unwrap_or(&e.content)
+                        .chars()
+                        .take(80)
+                        .collect(),
                     snippet: e.content.clone(),
                     score,
                     metadata: serde_json::Value::Null,
@@ -241,7 +268,11 @@ pub fn recall_forget_before(ts_ms: u64) -> Result<ForgetBeforeReport> {
     let history = crate::commands::history::forget_before(ts_ms / 1000);
     let healing = crate::commands::healing_dataset::forget_before(ts_ms)?;
     let memory = crate::memory::forget_before(ts_ms / 1000).map_err(LumError::Io)?;
-    Ok(ForgetBeforeReport { history, healing, memory })
+    Ok(ForgetBeforeReport {
+        history,
+        healing,
+        memory,
+    })
 }
 
 /// 각 소스 entry 개수 + 가장 오래된/최근 ts_ms — UI 메타정보용.
@@ -263,7 +294,11 @@ pub struct SourceStats {
 #[tauri::command]
 pub async fn recall_stats() -> Result<RecallStats> {
     let history_entries = search_history_raw();
-    let history = stats_from_iter(history_entries.iter().map(|e| e.timestamp.saturating_mul(1000)));
+    let history = stats_from_iter(
+        history_entries
+            .iter()
+            .map(|e| e.timestamp.saturating_mul(1000)),
+    );
 
     let healing_records = list_healing_dataset().unwrap_or_default();
     let healing = stats_from_iter(healing_records.iter().map(|r| r.ts_ms));
@@ -295,7 +330,11 @@ fn stats_from_iter(iter: impl Iterator<Item = u64>) -> SourceStats {
     if count == 0 {
         SourceStats::default()
     } else {
-        SourceStats { count, oldest_ms: oldest, newest_ms: newest }
+        SourceStats {
+            count,
+            oldest_ms: oldest,
+            newest_ms: newest,
+        }
     }
 }
 

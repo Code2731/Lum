@@ -64,23 +64,26 @@ pub fn run() {
             // Phase 115 — Quake Mode: 글로벌 단축키로 윈도우 toggle + AI 바 자동 포커스.
             let quake = Shortcut::new(Some(QUAKE_MODS), Code::Space);
             let handle = app.handle().clone();
-            app.global_shortcut().on_shortcut(quake, move |_app, _scut, event| {
-                if event.state() != ShortcutState::Pressed {
-                    return;
-                }
-                let Some(window) = handle.get_webview_window("main") else { return; };
-                let visible = window.is_visible().unwrap_or(false);
-                let focused = window.is_focused().unwrap_or(false);
-                if visible && focused {
-                    let _ = window.hide();
-                } else {
-                    let _ = window.show();
-                    let _ = window.unminimize();
-                    let _ = window.set_focus();
-                    // 프론트가 AI 바를 열고 입력에 포커스
-                    let _ = handle.emit("quake_invoked", ());
-                }
-            })?;
+            app.global_shortcut()
+                .on_shortcut(quake, move |_app, _scut, event| {
+                    if event.state() != ShortcutState::Pressed {
+                        return;
+                    }
+                    let Some(window) = handle.get_webview_window("main") else {
+                        return;
+                    };
+                    let visible = window.is_visible().unwrap_or(false);
+                    let focused = window.is_focused().unwrap_or(false);
+                    if visible && focused {
+                        let _ = window.hide();
+                    } else {
+                        let _ = window.show();
+                        let _ = window.unminimize();
+                        let _ = window.set_focus();
+                        // 프론트가 AI 바를 열고 입력에 포커스
+                        let _ = handle.emit("quake_invoked", ());
+                    }
+                })?;
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -212,12 +215,17 @@ pub fn run() {
             // Phase 126 — UI 환경설정 통합 + 신규 배지
             commands::config::save_ui_preferences,
             commands::config::mark_advanced_feature_seen,
+            // Phase 130-A — ReAct 데스크톱 도구 opt-in 토글
+            commands::config::save_react_desktop_tools_enabled,
+            // Phase 133 — ReAct Reflexion 토글
+            commands::config::save_react_reflexion_enabled,
             // Phase 127 — Skills 시스템 (자연어 → 사용자 저장 절차 자동 매칭)
             commands::skills::skill_list,
             commands::skills::skill_save,
             commands::skills::skill_delete,
             commands::skills::skill_record_use,
             commands::skills::skill_search,
+            commands::skills::skill_import_url,
             // Phase 128 — LAN LLM Discovery + xLLM URL 단독 갱신
             commands::lan_discovery::discover_lan_llm_servers,
             commands::config::save_xllm_base_url,
@@ -274,6 +282,8 @@ pub fn run() {
             mcp::mcp_stop_server,
             mcp::mcp_list_tools,
             mcp::mcp_call_tool,
+            mcp::mcp_recommended_servers,
+            mcp::mcp_install_recommended,
             mcp::mcp_install_presets,
             mcp::mcp_system_prompt,
             mcp::list_internal_tools

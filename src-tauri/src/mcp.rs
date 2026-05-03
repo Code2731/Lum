@@ -19,6 +19,7 @@ const CONFIG_FILE: &str = ".lum_mcp.json";
 const MCP_PROTOCOL_VERSION: &str = "2024-11-05";
 const HANDSHAKE_TIMEOUT_MS: u64 = 5000;
 const CALL_TIMEOUT_MS: u64 = 30000;
+const INSTALL_VERIFY_TIMEOUT_MS: u64 = 45000;
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
@@ -34,6 +35,29 @@ pub struct McpServerSpec {
     pub enabled: bool,
     #[serde(default)]
     pub description: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct McpRecommendedServer {
+    pub name: String,
+    pub title: String,
+    pub command: String,
+    pub args: Vec<String>,
+    pub description: String,
+    #[serde(default)]
+    pub env_required: Vec<String>,
+    #[serde(default)]
+    pub env_optional: Vec<String>,
+    #[serde(default)]
+    pub note: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct McpInstallRecommendedResult {
+    pub installed: McpServerSpec,
+    pub tool_count: usize,
+    #[serde(default)]
+    pub tools_preview: Vec<String>,
 }
 
 fn default_true() -> bool {
@@ -77,6 +101,114 @@ pub fn list_enabled_servers() -> Vec<McpServerSpec> {
         .into_iter()
         .filter(|s| s.enabled)
         .collect()
+}
+
+fn command_exists(command: &str) -> bool {
+    Command::new(command)
+        .arg("--version")
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status()
+        .is_ok()
+}
+
+fn recommended_servers_catalog() -> Vec<McpRecommendedServer> {
+    let home = platform::home_dir().to_string_lossy().to_string();
+    vec![
+        McpRecommendedServer {
+            name: "github".into(),
+            title: "GitHub".into(),
+            command: "npx".into(),
+            args: vec!["-y".into(), "@modelcontextprotocol/server-github".into()],
+            description: "GitHub 이슈/PR/리포지토리 작업".into(),
+            env_required: vec!["GITHUB_PERSONAL_ACCESS_TOKEN".into()],
+            env_optional: vec!["GITHUB_HOST".into()],
+            note: Some("비공개 저장소 접근은 PAT(repo scope) 필요".into()),
+        },
+        McpRecommendedServer {
+            name: "filesystem".into(),
+            title: "Filesystem".into(),
+            command: "npx".into(),
+            args: vec![
+                "-y".into(),
+                "@modelcontextprotocol/server-filesystem".into(),
+                home.clone(),
+            ],
+            description: "로컬 파일 시스템 읽기/쓰기".into(),
+            env_required: vec![],
+            env_optional: vec![],
+            note: Some("기본 허용 경로: 홈 디렉터리".into()),
+        },
+        McpRecommendedServer {
+            name: "git".into(),
+            title: "Git".into(),
+            command: "uvx".into(),
+            args: vec!["mcp-server-git".into(), "--repository".into(), home.clone()],
+            description: "Git 상태/로그/브랜치/변경 조회".into(),
+            env_required: vec![],
+            env_optional: vec![],
+            note: Some("기본 대상 저장소: 홈 디렉터리".into()),
+        },
+        McpRecommendedServer {
+            name: "context7".into(),
+            title: "Context7".into(),
+            command: "npx".into(),
+            args: vec!["-y".into(), "@upstash/context7-mcp".into()],
+            description: "최신 라이브러리 문서 검색".into(),
+            env_required: vec![],
+            env_optional: vec!["CONTEXT7_API_KEY".into()],
+            note: Some("API 키 없이도 동작하지만 rate limit이 낮음".into()),
+        },
+        McpRecommendedServer {
+            name: "playwright".into(),
+            title: "Playwright".into(),
+            command: "npx".into(),
+            args: vec!["@playwright/mcp@latest".into()],
+            description: "브라우저 자동화/스크린샷/DOM 상호작용".into(),
+            env_required: vec![],
+            env_optional: vec![],
+            note: Some("Node.js 18+ 필요".into()),
+        },
+        McpRecommendedServer {
+            name: "postgres".into(),
+            title: "Postgres".into(),
+            command: "uvx".into(),
+            args: vec![
+                "postgres-mcp-server".into(),
+                "postgresql://localhost/postgres".into(),
+            ],
+            description: "PostgreSQL 스키마/쿼리 조회".into(),
+            env_required: vec!["DATABASE_URL".into()],
+            env_optional: vec![],
+            note: Some("DATABASE_URL 예: postgresql://user:pass@host:5432/db".into()),
+        },
+        McpRecommendedServer {
+            name: "fetch".into(),
+            title: "Fetch".into(),
+            command: "uvx".into(),
+            args: vec!["mcp-server-fetch".into()],
+            description: "웹 페이지 fetch 후 markdown 추출".into(),
+            env_required: vec![],
+            env_optional: vec![],
+            note: Some("내부망 URL 접근 가능 — 신뢰 도메인에서만 사용 권장".into()),
+        },
+    ]
+}
+
+fn find_recommended_server(name: &str) -> Option<McpRecommendedServer> {
+    recommended_servers_catalog()
+        .into_iter()
+        .find(|s| s.name == name)
+}
+
+fn validate_required_env(required: &[String], env: &HashMap<String, String>) -> Result<(), String> {
+    for key in required {
+        let ok = env.get(key).map(|v| !v.trim().is_empty()).unwrap_or(false);
+        if !ok {
+            return Err(format!("필수 환경 변수가 비어있습니다: {}", key));
+        }
+    }
+    Ok(())
 }
 
 // ─── 런타임 상태 ─────────────────────────────────────────────────────────────
@@ -330,6 +462,96 @@ pub async fn mcp_call_tool(
     rpc_request(&mut proc, "tools/call", params, CALL_TIMEOUT_MS)
 }
 
+/// Phase 131: 원클릭 설치 가능한 추천 MCP 서버 목록.
+#[tauri::command]
+pub fn mcp_recommended_servers() -> Vec<McpRecommendedServer> {
+    recommended_servers_catalog()
+}
+
+/// Phase 131: 추천 서버 1개 설치(설정 저장 + 즉시 enable + tools/list 핸드셰이크 검증).
+/// env는 토큰/연결문자열 같은 사용자 입력값을 전달.
+#[tauri::command]
+pub async fn mcp_install_recommended(
+    name: String,
+    env: Option<HashMap<String, String>>,
+    state: tauri::State<'_, McpState>,
+) -> Result<McpInstallRecommendedResult, String> {
+    let rec =
+        find_recommended_server(&name).ok_or_else(|| format!("알 수 없는 추천 서버: {}", name))?;
+
+    if !command_exists(&rec.command) {
+        return Err(format!(
+            "실행 파일을 찾을 수 없습니다: {} (PATH를 확인하세요)",
+            rec.command
+        ));
+    }
+
+    let provided_env = env.unwrap_or_default();
+    validate_required_env(&rec.env_required, &provided_env)?;
+    let clean_env: HashMap<String, String> = provided_env
+        .into_iter()
+        .filter_map(|(k, v)| {
+            let key = k.trim().to_string();
+            let val = v.trim().to_string();
+            if key.is_empty() || val.is_empty() {
+                None
+            } else {
+                Some((key, val))
+            }
+        })
+        .collect();
+
+    let spec = McpServerSpec {
+        name: rec.name.clone(),
+        command: rec.command.clone(),
+        args: rec.args.clone(),
+        env: clean_env,
+        enabled: true,
+        description: Some(rec.description.clone()),
+    };
+
+    let mut cfg = load_config();
+    if let Some(idx) = cfg.servers.iter().position(|s| s.name == spec.name) {
+        cfg.servers[idx] = spec.clone();
+    } else {
+        cfg.servers.push(spec.clone());
+    }
+    save_config(&cfg)?;
+
+    // 이미 떠 있는 동일 서버가 있으면 새 설정으로 재기동되게 먼저 정리.
+    stop_server_by_name(&state, &spec.name);
+
+    let arc = acquire_server(&state, &spec)?;
+    let mut proc = arc.lock().map_err(|_| "process lock 오류".to_string())?;
+    let tools = rpc_request(
+        &mut proc,
+        "tools/list",
+        json!({}),
+        INSTALL_VERIFY_TIMEOUT_MS,
+    )?;
+    let tool_list = tools
+        .get("tools")
+        .and_then(|v| v.as_array())
+        .cloned()
+        .unwrap_or_default();
+    if tool_list.is_empty() {
+        return Err("서버는 시작됐지만 tools/list 결과가 비어있습니다.".into());
+    }
+
+    let tools_preview = tool_list
+        .iter()
+        .filter_map(|t| t.get("name").and_then(|n| n.as_str()))
+        .take(5)
+        .map(|s| s.to_string())
+        .collect::<Vec<_>>();
+
+    Ok(McpInstallRecommendedResult {
+        installed: spec,
+        tool_count: tool_list.len(),
+        tools_preview,
+    })
+}
+
 /// 공식 MCP 서버들을 기본 비활성으로 등록
 #[tauri::command]
 pub fn mcp_install_presets() -> Result<Vec<McpServerSpec>, String> {
@@ -489,5 +711,26 @@ mod tests {
     fn match_response_empty_line_returns_none() {
         assert!(match_response("", 7).is_none());
         assert!(match_response("not json", 7).is_none());
+    }
+
+    #[test]
+    fn recommended_servers_7개_노출() {
+        let list = mcp_recommended_servers();
+        assert_eq!(list.len(), 7);
+        assert!(list.iter().any(|s| s.name == "github"));
+        assert!(list.iter().any(|s| s.name == "filesystem"));
+        assert!(list.iter().any(|s| s.name == "git"));
+        assert!(list.iter().any(|s| s.name == "context7"));
+        assert!(list.iter().any(|s| s.name == "playwright"));
+        assert!(list.iter().any(|s| s.name == "postgres"));
+        assert!(list.iter().any(|s| s.name == "fetch"));
+    }
+
+    #[test]
+    fn validate_required_env_필수키_누락이면_err() {
+        let required = vec!["GITHUB_PERSONAL_ACCESS_TOKEN".to_string()];
+        let env = HashMap::new();
+        let err = validate_required_env(&required, &env).unwrap_err();
+        assert!(err.contains("GITHUB_PERSONAL_ACCESS_TOKEN"));
     }
 }

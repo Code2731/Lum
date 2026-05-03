@@ -8,13 +8,20 @@ export interface Skill {
   name: string;
   description: string;
   triggers: string[];
-  body: string;
+  when_to_use?: string | null;
+  quick_reference?: string | null;
+  procedure: string;
+  pitfalls?: string | null;
+  verification?: string | null;
   created_ms: number;
   last_used_ms?: number | null;
   success_count: number;
 }
 
-export type SkillDraft = Omit<Skill, "id" | "created_ms" | "last_used_ms" | "success_count"> & {
+export type SkillDraft = Omit<
+  Skill,
+  "id" | "created_ms" | "last_used_ms" | "success_count"
+> & {
   id?: string;
 };
 
@@ -44,7 +51,11 @@ export function useSkills() {
       name: draft.name,
       description: draft.description,
       triggers: draft.triggers,
-      body: draft.body,
+      when_to_use: draft.when_to_use ?? null,
+      quick_reference: draft.quick_reference ?? null,
+      procedure: draft.procedure,
+      pitfalls: draft.pitfalls ?? null,
+      verification: draft.verification ?? null,
       created_ms: 0,
       last_used_ms: null,
       success_count: 0,
@@ -64,5 +75,11 @@ export function useSkills() {
     return await invoke<Skill[]>("skill_search", { query, limit });
   }, []);
 
-  return { skills, loading, error, reload, save, remove, search };
+  const importFromUrl = useCallback(async (url: string): Promise<Skill> => {
+    const imported = await invoke<Skill>("skill_import_url", { url });
+    await reload();
+    return imported;
+  }, [reload]);
+
+  return { skills, loading, error, reload, save, remove, search, importFromUrl };
 }

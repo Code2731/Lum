@@ -131,7 +131,12 @@ fn xllm_body(
     // max_tokens = 출력 토큰 수 (전체 컨텍스트 창이 아님!).
     // max_seq_len과 같게 두면 prompt + completion이 컨텍스트를 초과해 TabbyAPI가 abort함.
     // 컨텍스트의 절반(2048~4096) 정도를 출력 한계로 사용.
-    let max_tokens = config.max_seq_len.unwrap_or(4096).saturating_div(2).max(512).min(8192);
+    let max_tokens = config
+        .max_seq_len
+        .unwrap_or(4096)
+        .saturating_div(2)
+        .max(512)
+        .min(8192);
 
     // 이미지 있으면 OpenAI vision 포맷 (content: Array), 없으면 단순 string
     let content = if images.is_empty() {
@@ -241,7 +246,11 @@ async fn try_embedded_inference_stream(
 /// Ollama가 설정돼있으면 단일 응답 — 미설정이면 None (HTTP 폴백 계속 진행).
 async fn try_ollama_once(prompt: &str) -> Option<Result<String>> {
     let config = load_config().ok()?;
-    let model = config.ollama_model.as_ref().filter(|s| !s.is_empty())?.clone();
+    let model = config
+        .ollama_model
+        .as_ref()
+        .filter(|s| !s.is_empty())?
+        .clone();
     let base_url = config.ollama_url();
     Some(crate::commands::ollama::ollama_once(prompt, &model, &base_url).await)
 }
@@ -253,7 +262,11 @@ async fn try_ollama_stream(
     cancel: &Arc<AtomicBool>,
 ) -> Option<Result<String>> {
     let config = load_config().ok()?;
-    let model = config.ollama_model.as_ref().filter(|s| !s.is_empty())?.clone();
+    let model = config
+        .ollama_model
+        .as_ref()
+        .filter(|s| !s.is_empty())?
+        .clone();
     let base_url = config.ollama_url();
     Some(crate::commands::ollama::ollama_stream(app, prompt, &model, &base_url, cancel).await)
 }
@@ -427,7 +440,10 @@ mod tests {
         // "Chat completion aborted"로 거부함. 짧은 컨텍스트엔 temperature도 안 박혀야 함.
         let c = AppConfig::default();
         let body = xllm_body(&c, "model", "hello", false, &[]);
-        assert!(body["cache_mode"].is_null(), "cache_mode가 body에 들어가면 TabbyAPI 거부");
+        assert!(
+            body["cache_mode"].is_null(),
+            "cache_mode가 body에 들어가면 TabbyAPI 거부"
+        );
         assert!(body["temperature"].is_null());
         assert_eq!(body["stream"], false);
     }
@@ -485,7 +501,10 @@ mod tests {
         // 사용자 요청과 무관한 응답이 나옴.
         let imgs = vec!["data:image/png;base64,xxx".to_string()];
         let r = try_embedded_inference("hello", &imgs).await;
-        assert!(r.is_none(), "이미지 있으면 임베디드 라우팅 스킵 후 HTTP/Gemini 폴백");
+        assert!(
+            r.is_none(),
+            "이미지 있으면 임베디드 라우팅 스킵 후 HTTP/Gemini 폴백"
+        );
     }
 
     #[cfg(not(feature = "embedded-ai"))]
@@ -513,7 +532,9 @@ mod tests {
     fn is_remote_url_classifies_external_as_online() {
         assert!(is_remote_url("https://api.example.com/v1"));
         assert!(is_remote_url("http://192.168.1.5:11434")); // LAN도 보수적으로 online
-        assert!(is_remote_url("https://generativelanguage.googleapis.com/v1beta"));
+        assert!(is_remote_url(
+            "https://generativelanguage.googleapis.com/v1beta"
+        ));
     }
 }
 
@@ -690,7 +711,10 @@ pub async fn stream_ai_command(
     let full_prompt = if rag_ctx.is_empty() {
         format!("Context: {}\nRequest: {}", context, cleaned_prompt)
     } else {
-        format!("Context: {}\n\n{}\nRequest: {}", context, rag_ctx, cleaned_prompt)
+        format!(
+            "Context: {}\n\n{}\nRequest: {}",
+            context, rag_ctx, cleaned_prompt
+        )
     };
     let imgs = images.unwrap_or_default();
 
@@ -718,7 +742,8 @@ pub async fn stream_ai_command(
         // 임베디드 GGUF 로드돼있으면 토큰별 스트리밍 — HTTP 우회.
         let show_reasoning = config.show_reasoning.unwrap_or(true);
         if let Some(result) =
-            try_embedded_inference_stream(&app, &full_prompt, &imgs, &cancel_flag, show_reasoning).await
+            try_embedded_inference_stream(&app, &full_prompt, &imgs, &cancel_flag, show_reasoning)
+                .await
         {
             if result.is_ok() {
                 emit_route(
@@ -748,7 +773,16 @@ pub async fn stream_ai_command(
             return result;
         }
         let xllm_url = config.xllm_url();
-        let result = call_compat_stream(&app, &client, &full_prompt, &imgs, &xllm_url, config.xllm_api_key.clone(), &cancel_flag).await;
+        let result = call_compat_stream(
+            &app,
+            &client,
+            &full_prompt,
+            &imgs,
+            &xllm_url,
+            config.xllm_api_key.clone(),
+            &cancel_flag,
+        )
+        .await;
         if result.is_ok() {
             emit_route(
                 &app,

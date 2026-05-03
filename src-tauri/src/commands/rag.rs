@@ -65,14 +65,22 @@ async fn embed_ollama(
     text: &str,
 ) -> Option<Vec<f32>> {
     #[derive(Serialize)]
-    struct OllamaReq<'a> { model: &'a str, prompt: &'a str }
+    struct OllamaReq<'a> {
+        model: &'a str,
+        prompt: &'a str,
+    }
     #[derive(Deserialize)]
-    struct OllamaRes { embedding: Vec<f32> }
+    struct OllamaRes {
+        embedding: Vec<f32>,
+    }
 
     client
         .post(format!("{base_url}/api/embeddings"))
         .timeout(Duration::from_secs(30))
-        .json(&OllamaReq { model, prompt: text })
+        .json(&OllamaReq {
+            model,
+            prompt: text,
+        })
         .send()
         .await
         .ok()?
@@ -83,7 +91,11 @@ async fn embed_ollama(
 }
 
 /// 자동 임베딩 백엔드 선택 — Ollama 설정 시 Ollama, 아니면 xLLM /v1/embeddings
-pub async fn embed_auto(client: &reqwest::Client, xllm_model: &str, text: &str) -> Option<Vec<f32>> {
+pub async fn embed_auto(
+    client: &reqwest::Client,
+    xllm_model: &str,
+    text: &str,
+) -> Option<Vec<f32>> {
     if let Ok(cfg) = load_config() {
         if let Some(m) = cfg.ollama_model.as_ref().filter(|s| !s.is_empty()) {
             let base_url = cfg.ollama_url();
@@ -245,7 +257,11 @@ pub async fn generate_embedding(text: String, model: String) -> Result<Vec<f32>,
 }
 
 /// 내부 RAG 검색 — embed_auto 기반, 임베딩 불가 시 빈 벡터 반환
-async fn search_with_client(client: &reqwest::Client, query: &str, limit: usize) -> Vec<SearchResult> {
+async fn search_with_client(
+    client: &reqwest::Client,
+    query: &str,
+    limit: usize,
+) -> Vec<SearchResult> {
     let Some(embedding) = embed_auto(client, "default", query).await else {
         return vec![];
     };
@@ -291,7 +307,10 @@ pub async fn rag_context_for_file(
 
     let mut ctx = String::new();
     if !file_content.is_empty() {
-        ctx.push_str(&format!("=== 현재 파일: {} ===\n{}\n\n", file_path, file_content));
+        ctx.push_str(&format!(
+            "=== 현재 파일: {} ===\n{}\n\n",
+            file_path, file_content
+        ));
     }
     if !snippets.is_empty() {
         ctx.push_str("=== 관련 코드 스니펫 (RAG) ===\n");

@@ -4,7 +4,10 @@
 //! `embedded-ai` feature 활성화 시만 컴파일됨 (CUDA toolchain + MSVC 필요).
 #![cfg(feature = "embedded-ai")]
 
-use mistralrs::{GgufLoraModelBuilder, GgufModelBuilder, IsqBits, IsqSetting, Model, TextModelBuilder, ResponseOk, TextMessageRole, TextMessages};
+use mistralrs::{
+    GgufLoraModelBuilder, GgufModelBuilder, IsqBits, IsqSetting, Model, ResponseOk,
+    TextMessageRole, TextMessages, TextModelBuilder,
+};
 use mistralrs_core::Ordering as LoraOrdering;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, OnceLock};
@@ -26,14 +29,21 @@ fn engine_mutex() -> &'static Mutex<Option<LoadedState>> {
 /// GGUF 모델을 로드. 이미 같은 모델이 올라와 있으면 스킵.
 /// 다른 모델이 로드돼있으면 VRAM을 해제한 뒤 새 모델 로드 (핫스왑).
 /// 로드 진행 상황을 `embed_load_progress` 이벤트로 emit (UI 진행 표시용).
-pub async fn load_model(app: &AppHandle, model_dir: &str, gguf_filename: &str) -> Result<String, String> {
+pub async fn load_model(
+    app: &AppHandle,
+    model_dir: &str,
+    gguf_filename: &str,
+) -> Result<String, String> {
     let key = format!("{model_dir}/{gguf_filename}");
     let mut guard = engine_mutex().lock().await;
     if guard.as_ref().is_some_and(|s| s.key == key) {
         return Ok(format!("이미 로드됨: {gguf_filename}"));
     }
     *guard = None;
-    let _ = app.emit("embed_load_progress", format!("🔄 {gguf_filename} GGUF 파싱 + 레이어 로드 중..."));
+    let _ = app.emit(
+        "embed_load_progress",
+        format!("🔄 {gguf_filename} GGUF 파싱 + 레이어 로드 중..."),
+    );
     let model = GgufModelBuilder::new(model_dir.to_string(), vec![gguf_filename.to_string()])
         .build()
         .await
@@ -41,8 +51,14 @@ pub async fn load_model(app: &AppHandle, model_dir: &str, gguf_filename: &str) -
             let _ = app.emit("embed_load_progress", format!("❌ 로드 실패: {e}"));
             format!("mistralrs GGUF 로드 실패: {e}")
         })?;
-    *guard = Some(LoadedState { model: Arc::new(model), key: key.clone() });
-    let _ = app.emit("embed_load_progress", format!("✅ {gguf_filename} 로드 완료"));
+    *guard = Some(LoadedState {
+        model: Arc::new(model),
+        key: key.clone(),
+    });
+    let _ = app.emit(
+        "embed_load_progress",
+        format!("✅ {gguf_filename} 로드 완료"),
+    );
     Ok(format!("로드 완료: {gguf_filename}"))
 }
 
@@ -111,7 +127,9 @@ pub async fn infer_stream(
         }
         match resp.as_result() {
             Ok(ResponseOk::Chunk(chunk)) => {
-                let Some(choice) = chunk.choices.first() else { continue; };
+                let Some(choice) = chunk.choices.first() else {
+                    continue;
+                };
                 if let Some(content) = &choice.delta.content {
                     if !content.is_empty() {
                         full.push_str(content);
@@ -141,7 +159,9 @@ pub async fn infer_stream(
 fn resolve_lora_ordering(lora_adapter: &str, gguf_filename: &str) -> Result<LoraOrdering, String> {
     let ordering_path = std::path::Path::new(lora_adapter).join("ordering.json");
     match std::fs::read_to_string(&ordering_path) {
-        Ok(content) => serde_json::from_str(&content).map_err(|e| format!("ordering.json 파싱 실패: {e}")),
+        Ok(content) => {
+            serde_json::from_str(&content).map_err(|e| format!("ordering.json 파싱 실패: {e}"))
+        }
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(LoraOrdering {
             adapters: None,
             layers: None,
@@ -165,7 +185,10 @@ pub async fn load_model_with_lora(
     }
     *guard = None;
     let ordering = resolve_lora_ordering(lora_adapter, gguf_filename)?;
-    let _ = app.emit("embed_load_progress", format!("🔄 {gguf_filename} + LoRA 어댑터 로드 중..."));
+    let _ = app.emit(
+        "embed_load_progress",
+        format!("🔄 {gguf_filename} + LoRA 어댑터 로드 중..."),
+    );
     let gguf_base = GgufModelBuilder::new(model_dir.to_string(), vec![gguf_filename.to_string()]);
     let model = GgufLoraModelBuilder::from_gguf_model_builder(gguf_base, lora_adapter, ordering)
         .build()
@@ -174,8 +197,14 @@ pub async fn load_model_with_lora(
             let _ = app.emit("embed_load_progress", format!("❌ LoRA 로드 실패: {e}"));
             format!("LoRA 로드 실패: {e}")
         })?;
-    *guard = Some(LoadedState { model: Arc::new(model), key: key.clone() });
-    let _ = app.emit("embed_load_progress", format!("✅ {gguf_filename} + LoRA 로드 완료"));
+    *guard = Some(LoadedState {
+        model: Arc::new(model),
+        key: key.clone(),
+    });
+    let _ = app.emit(
+        "embed_load_progress",
+        format!("✅ {gguf_filename} + LoRA 로드 완료"),
+    );
     Ok(format!("LoRA 로드 완료: {gguf_filename}"))
 }
 
@@ -193,21 +222,27 @@ pub async fn load_model_normal(
         return Ok(format!("이미 로드됨: {model_path}"));
     }
     *guard = None;
-    let _ = app.emit("embed_load_progress", format!("🔄 {model_path} BF16→ISQ {isq:?} 변환 로드 중 (RAM 여유 필요)..."));
+    let _ = app.emit(
+        "embed_load_progress",
+        format!("🔄 {model_path} BF16→ISQ {isq:?} 변환 로드 중 (RAM 여유 필요)..."),
+    );
     let base = TextModelBuilder::new(model_path.to_string());
     let builder = match isq {
         IsqSetting::Auto(bits) => base.with_auto_isq(bits),
         IsqSetting::Specific(ty) => base.with_isq(ty),
     };
-    let model = builder
-        .build()
-        .await
-        .map_err(|e| {
-            let _ = app.emit("embed_load_progress", format!("❌ 로드 실패: {e}"));
-            format!("BF16 ISQ 로드 실패: {e}")
-        })?;
-    *guard = Some(LoadedState { model: Arc::new(model), key: key.clone() });
-    let _ = app.emit("embed_load_progress", format!("✅ ISQ {isq:?} 로드 완료: {model_path}"));
+    let model = builder.build().await.map_err(|e| {
+        let _ = app.emit("embed_load_progress", format!("❌ 로드 실패: {e}"));
+        format!("BF16 ISQ 로드 실패: {e}")
+    })?;
+    *guard = Some(LoadedState {
+        model: Arc::new(model),
+        key: key.clone(),
+    });
+    let _ = app.emit(
+        "embed_load_progress",
+        format!("✅ ISQ {isq:?} 로드 완료: {model_path}"),
+    );
     Ok(format!("로드 완료: {model_path} (ISQ {isq:?})"))
 }
 
