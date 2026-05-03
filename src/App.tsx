@@ -387,6 +387,15 @@ const App: React.FC = () => {
     [reactAgent.start, tabs, activeTabIdRef],
   );
 
+  const handleAgentRunAct = useCallback(
+    (toolWhitelist: string[] | null) => {
+      const { goal, cwd, planId } = reactAgent.state;
+      if (!goal) return;
+      reactAgent.runAct(goal, cwd, planId, toolWhitelist).catch(() => {});
+    },
+    [reactAgent],
+  );
+
   // 자연어 입력 → AI 스트림에 전송 (AIBlockStream이 자동 표시됨)
   // images: MCP 툴 결과의 base64 data URI 배열 (비전 모드 활성 시 전달)
   const handleAskAI = useCallback(
@@ -895,6 +904,7 @@ const App: React.FC = () => {
                     state={reactAgent.state}
                     onCancel={reactAgent.cancel}
                     onClose={reactAgent.reset}
+                    onRunAct={handleAgentRunAct}
                     onUndo={() => {
                       reactAgent.undo().catch(() => {});
                     }}

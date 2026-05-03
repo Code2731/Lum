@@ -219,6 +219,8 @@ pub fn run() {
             commands::config::save_react_desktop_tools_enabled,
             // Phase 133 — ReAct Reflexion 토글
             commands::config::save_react_reflexion_enabled,
+            // Phase 129 — ReAct Plan/Act 도구 화이트리스트
+            commands::config::save_react_tool_whitelist,
             // Phase 127 — Skills 시스템 (자연어 → 사용자 저장 절차 자동 매칭)
             commands::skills::skill_list,
             commands::skills::skill_save,

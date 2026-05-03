@@ -10,7 +10,7 @@ use crate::commands::test_runner::detect_test_command;
 use crate::error::{LumError, Result};
 use crate::platform;
 use serde::Serialize;
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
@@ -231,6 +231,24 @@ struct ParsedAction {
     args: serde_json::Value,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum ReactMode {
+    Plan,
+    Act,
+}
+
+fn parse_mode(mode: Option<String>) -> ReactMode {
+    match mode
+        .as_deref()
+        .map(str::trim)
+        .map(str::to_ascii_lowercase)
+        .as_deref()
+    {
+        Some("plan") => ReactMode::Plan,
+        _ => ReactMode::Act,
+    }
+}
+
 /// LLM 출력에서 ACTION: tool({...}) 형식 파싱
 fn parse_action(text: &str) -> Option<ParsedAction> {
     let line = text
@@ -314,7 +332,18 @@ async fn run_tool(
     args: &serde_json::Value,
     cwd: &str,
     desktop_tools_enabled: bool,
+    mode: ReactMode,
+    tool_whitelist: Option<&HashSet<String>>,
 ) -> String {
+    // Phase 129: Plan 모드에서는 읽기/분석만 허용 — 쓰기 도구와 shell 실행은 차단.
+    if is_plan_blocked_tool(mode, tool) {
+        return format!("Plan 모드 차단: {tool} 도구는 승인 후 Act 모드에서만 실행됩니다.");
+    }
+    // Phase 129: Act 모드 + whitelist가 있으면 목록 외 도구 차단.
+    if !is_whitelisted_in_act(mode, tool, tool_whitelist) {
+        return format!("Act 모드 차단: '{tool}' 도구는 승인된 화이트리스트에 없습니다.");
+    }
+
     let result = match tool {
         "shell" => {
             let cmd = args["cmd"].as_str().unwrap_or("").to_string();
@@ -372,6 +401,21 @@ async fn run_tool(
     }
 
     result
+}
+
+fn is_plan_blocked_tool(mode: ReactMode, tool: &str) -> bool {
+    mode == ReactMode::Plan
+        && matches!(tool, "shell" | "write_file" | "apply_patch" | "delete_file")
+}
+
+fn is_whitelisted_in_act(mode: ReactMode, tool: &str, whitelist: Option<&HashSet<String>>) -> bool {
+    if mode != ReactMode::Act {
+        return true;
+    }
+    match whitelist {
+        Some(set) => set.contains(tool),
+        None => true,
+    }
 }
 
 #[cfg(test)]
@@ -1312,8 +1356,16 @@ fn delete_file_tool(args: &serde_json::Value, cwd: &str) -> String {
 // ─── 메인 ReAct 루프 ─────────────────────────────────────────────────────────
 
 #[command]
-pub async fn react_agent_run(app: AppHandle, goal: String, cwd: String) -> Result<()> {
+pub async fn react_agent_run(
+    app: AppHandle,
+    goal: String,
+    cwd: String,
+    mode: Option<String>,
+    tool_whitelist: Option<Vec<String>>,
+    plan_id: Option<String>,
+) -> Result<()> {
     cancel_flag().store(false, Ordering::Relaxed);
+    let react_mode = parse_mode(mode);
 
     // CWD 폴백 — 빈 문자열이면 현재 프로세스 작업 디렉토리 사용
     let effective_cwd = if cwd.is_empty() {
@@ -1327,7 +1379,21 @@ pub async fn react_agent_run(app: AppHandle, goal: String, cwd: String) -> Resul
     // run 시작 직전 백업 dir 초기화. 실패해도 도구는 정상 작동(undo만 불가).
     init_react_backup(&effective_cwd);
 
-    emit_event(&app, "status", format!("목표: {goal}"), None, Some(0));
+    let mode_label = if react_mode == ReactMode::Plan {
+        "plan"
+    } else {
+        "act"
+    };
+    emit_event(
+        &app,
+        "status",
+        format!("목표: {goal} (mode={mode_label})"),
+        None,
+        Some(0),
+    );
+    if let Some(pid) = plan_id.as_deref().filter(|s| !s.trim().is_empty()) {
+        emit_event(&app, "status", format!("plan_id={pid}"), None, Some(0));
+    }
 
     // Phase 121: 활성 MCP 서버의 도구를 동적으로 시스템 프롬프트에 주입.
     let mcp_state: tauri::State<'_, crate::mcp::McpState> = app.state();
@@ -1361,6 +1427,27 @@ pub async fn react_agent_run(app: AppHandle, goal: String, cwd: String) -> Resul
         .ok()
         .and_then(|c| c.react_desktop_tools_enabled)
         .unwrap_or(false);
+    let config_tool_whitelist = crate::commands::config::load_config()
+        .ok()
+        .and_then(|c| c.react_tool_whitelist);
+    let effective_whitelist = tool_whitelist.or(config_tool_whitelist);
+    let whitelist_set = effective_whitelist.as_ref().map(|list| {
+        list.iter()
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty())
+            .collect::<HashSet<String>>()
+    });
+    if react_mode == ReactMode::Act {
+        if let Some(set) = whitelist_set.as_ref() {
+            emit_event(
+                &app,
+                "status",
+                format!("Act whitelist {}개 적용", set.len()),
+                None,
+                Some(0),
+            );
+        }
+    }
 
     let client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(120))
@@ -1514,6 +1601,8 @@ pub async fn react_agent_run(app: AppHandle, goal: String, cwd: String) -> Resul
                 &action.args,
                 &effective_cwd,
                 desktop_tools_enabled,
+                react_mode,
+                whitelist_set.as_ref(),
             )
             .await;
             emit_event(&app, "observation", &observation, None, Some(step + 1));
@@ -1623,6 +1712,31 @@ mod tests {
         assert!(reflexion_needs_retry("risk_high: 회귀 위험 높음"));
         assert!(reflexion_needs_retry("high risk detected"));
         assert!(!reflexion_needs_retry("ok: 문제 없음"));
+    }
+
+    #[test]
+    fn phase129_plan_mode_차단_도구() {
+        assert!(is_plan_blocked_tool(ReactMode::Plan, "shell"));
+        assert!(is_plan_blocked_tool(ReactMode::Plan, "write_file"));
+        assert!(is_plan_blocked_tool(ReactMode::Plan, "apply_patch"));
+        assert!(is_plan_blocked_tool(ReactMode::Plan, "delete_file"));
+        assert!(!is_plan_blocked_tool(ReactMode::Plan, "read_file"));
+        assert!(!is_plan_blocked_tool(ReactMode::Act, "shell"));
+    }
+
+    #[test]
+    fn phase129_whitelist_적용() {
+        let mut wl = HashSet::new();
+        wl.insert("read_file".to_string());
+        wl.insert("list_dir".to_string());
+        assert!(is_whitelisted_in_act(
+            ReactMode::Act,
+            "read_file",
+            Some(&wl)
+        ));
+        assert!(!is_whitelisted_in_act(ReactMode::Act, "shell", Some(&wl)));
+        assert!(is_whitelisted_in_act(ReactMode::Plan, "shell", Some(&wl)));
+        assert!(is_whitelisted_in_act(ReactMode::Act, "shell", None));
     }
 
     #[test]

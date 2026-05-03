@@ -109,6 +109,9 @@ pub struct AppConfig {
     // ── Phase 133: ReAct Reflexion 1턴 자기검토 토글 ────────────────────────
     /// true면 최종 직전/상한 도달 시 자기검토 1회 수행. 기본 true.
     pub react_reflexion_enabled: Option<bool>,
+    // ── Phase 129: ReAct 도구 화이트리스트 ───────────────────────────────────
+    /// Act 모드에서 자동 승인할 도구 목록. None이면 수동 승인 흐름(런타임 전달 whitelist 우선).
+    pub react_tool_whitelist: Option<Vec<String>>,
 }
 
 impl AppConfig {
@@ -417,6 +420,19 @@ pub fn save_react_desktop_tools_enabled(enabled: bool) -> Result<()> {
 pub fn save_react_reflexion_enabled(enabled: bool) -> Result<()> {
     let mut config = load_config()?;
     config.react_reflexion_enabled = Some(enabled);
+    save_config(&config)
+}
+
+/// Phase 129: ReAct 도구 화이트리스트 저장.
+#[tauri::command]
+pub fn save_react_tool_whitelist(whitelist: Vec<String>) -> Result<()> {
+    let mut config = load_config()?;
+    let list: Vec<String> = whitelist
+        .into_iter()
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
+        .collect();
+    config.react_tool_whitelist = if list.is_empty() { None } else { Some(list) };
     save_config(&config)
 }
 

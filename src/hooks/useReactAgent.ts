@@ -18,6 +18,7 @@ export interface ReactStep {
 }
 
 export type ReactStatus = "idle" | "running" | "done" | "error" | "cancelled";
+export type ReactMode = "plan" | "act";
 
 // 백엔드 ChangeRisk와 매칭 — serde rename_all = "lowercase".
 export type ChangeRisk = "low" | "medium" | "high";
@@ -38,7 +39,11 @@ export interface UndoReport {
 
 export interface ReactAgentState {
   status: ReactStatus;
+  mode: ReactMode;
   goal: string;
+  cwd: string;
+  planId: string | null;
+  plannedTools: string[];
   steps: ReactStep[];
   answer: string;
   changes: ChangeInfo[];
@@ -60,7 +65,11 @@ function sameChanges(a: ChangeInfo[], b: ChangeInfo[]): boolean {
 export function useReactAgent() {
   const [state, setState] = useState<ReactAgentState>({
     status: "idle",
+    mode: "plan",
     goal: "",
+    cwd: "",
+    planId: null,
+    plannedTools: [],
     steps: [],
     answer: "",
     changes: [],
@@ -83,15 +92,25 @@ export function useReactAgent() {
     }
   }, []);
 
-  const start = useCallback(
-    async (goal: string, cwd: string) => {
+  const runInternal = useCallback(
+    async (
+      goal: string,
+      cwd: string,
+      mode: ReactMode,
+      toolWhitelist?: string[] | null,
+      planId?: string | null,
+    ) => {
       // 이전 리스너 정리
       unlistenRef.current?.();
       unlistenRef.current = null;
 
       setState({
         status: "running",
+        mode,
         goal,
+        cwd,
+        planId: planId ?? null,
+        plannedTools: [],
         steps: [],
         answer: "",
         changes: [],
@@ -118,6 +137,14 @@ export function useReactAgent() {
               steps: [...prev.steps, step],
             };
           }
+          if (step.kind === "action" && step.tool && prev.mode === "plan") {
+            const has = prev.plannedTools.includes(step.tool);
+            return {
+              ...prev,
+              steps: [...prev.steps, step],
+              plannedTools: has ? prev.plannedTools : [...prev.plannedTools, step.tool],
+            };
+          }
           return { ...prev, steps: [...prev.steps, step] };
         });
         // file_change 이벤트는 백엔드 changes 동기화 트리거.
@@ -128,7 +155,13 @@ export function useReactAgent() {
       unlistenRef.current = unlisten;
 
       try {
-        await invoke("react_agent_run", { goal, cwd });
+        await invoke("react_agent_run", {
+          goal,
+          cwd,
+          mode,
+          toolWhitelist: toolWhitelist ?? null,
+          planId: planId ?? null,
+        });
         setState((prev) =>
           prev.status === "running" ? { ...prev, status: "done" } : prev
         );
@@ -149,6 +182,33 @@ export function useReactAgent() {
       }
     },
     [refreshChanges]
+  );
+
+  const runPlan = useCallback(
+    async (goal: string, cwd: string) => {
+      const pid = `plan-${Date.now()}`;
+      await runInternal(goal, cwd, "plan", null, pid);
+    },
+    [runInternal],
+  );
+
+  const runAct = useCallback(
+    async (
+      goal: string,
+      cwd: string,
+      planId?: string | null,
+      toolWhitelist?: string[] | null,
+    ) => {
+      await runInternal(goal, cwd, "act", toolWhitelist, planId ?? null);
+    },
+    [runInternal],
+  );
+
+  const start = useCallback(
+    async (goal: string, cwd: string) => {
+      await runPlan(goal, cwd);
+    },
+    [runPlan],
   );
 
   const cancel = useCallback(() => {
@@ -186,7 +246,11 @@ export function useReactAgent() {
     unlistenRef.current = null;
     setState({
       status: "idle",
+      mode: "plan",
       goal: "",
+      cwd: "",
+      planId: null,
+      plannedTools: [],
       steps: [],
       answer: "",
       changes: [],
@@ -195,5 +259,5 @@ export function useReactAgent() {
     });
   }, []);
 
-  return { state, start, cancel, reset, undo };
+  return { state, start, runPlan, runAct, cancel, reset, undo };
 }

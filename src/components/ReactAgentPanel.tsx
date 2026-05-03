@@ -30,6 +30,7 @@ interface Props {
   onCancel: () => void;
   onClose: () => void;
   onUndo: () => void;
+  onRunAct: (toolWhitelist: string[] | null) => void;
 }
 
 const KIND_ICON: Record<ReactStep["kind"], React.ReactNode> = {
@@ -157,11 +158,13 @@ const STATUS_LABEL: Record<ReactAgentState["status"], string> = {
   cancelled: "취소됨",
 };
 
-const ReactAgentPanel: React.FC<Props> = ({ state, onCancel, onClose, onUndo }) => {
+const ReactAgentPanel: React.FC<Props> = ({ state, onCancel, onClose, onUndo, onRunAct }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [desktopToolsEnabled, setDesktopToolsEnabled] = React.useState(false);
+  const [autoApprovePlanTools, setAutoApprovePlanTools] = React.useState(false);
   const { status, goal, steps, changes, undoing, undoReport } = state;
   const isActive = status === "running";
+  const isPlanDone = status === "done" && state.mode === "plan";
   const currentStep = steps.filter(s => s.kind === "status").length;
   const hasChanges = changes.length > 0;
   const highRiskCount = changes.filter((c) => c.risk === "high").length;
@@ -274,6 +277,22 @@ const ReactAgentPanel: React.FC<Props> = ({ state, onCancel, onClose, onUndo }) 
         )}
       </div>
 
+      {isPlanDone && state.plannedTools.length > 0 && (
+        <div className="shrink-0 border-t border-white/5 bg-cyan-500/5 px-3 py-2">
+          <div className="text-[10px] text-cyan-200/80 mb-1">Plan에서 제안된 도구</div>
+          <div className="flex flex-wrap gap-1">
+            {state.plannedTools.map((tool) => (
+              <span
+                key={tool}
+                className="px-1.5 py-0.5 rounded border border-cyan-400/20 bg-cyan-500/10 text-[10px] text-cyan-200/90 font-mono"
+              >
+                {tool}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* ── 변경 파일 섹션 ──────────────────────────────────────────────── */}
       {hasChanges && (
         <div className="shrink-0 border-t border-white/5 bg-white/2 max-h-[180px] overflow-y-auto">
@@ -319,6 +338,12 @@ const ReactAgentPanel: React.FC<Props> = ({ state, onCancel, onClose, onUndo }) 
 
       {/* ── 액션 버튼 ─────────────────────────────────────── */}
       <div className="shrink-0 border-t border-white/5 px-3 py-2.5 flex items-center justify-end gap-2">
+        {isPlanDone && (
+          <div className="mr-auto flex items-center gap-2 text-[10px] text-white/55">
+            <span className="text-cyan-300/80 font-medium">Plan 완료</span>
+            <span className="text-white/35">도구 {state.plannedTools.length}개</span>
+          </div>
+        )}
         {isActive && (
           <button
             onClick={onCancel}
@@ -342,6 +367,35 @@ const ReactAgentPanel: React.FC<Props> = ({ state, onCancel, onClose, onUndo }) 
             )}
             {undoing ? "되돌리는 중..." : "변경 되돌리기"}
           </button>
+        )}
+        {isPlanDone && (
+          <>
+            <label className="flex items-center gap-1.5 px-2 py-1 rounded border border-white/10 bg-white/5 text-[10px] text-white/65">
+              <input
+                type="checkbox"
+                checked={autoApprovePlanTools}
+                onChange={(e) => setAutoApprovePlanTools(e.target.checked)}
+                className="accent-cyan-500"
+              />
+              이 도구들 자동 승인
+            </label>
+            <button
+              onClick={async () => {
+                const wl = autoApprovePlanTools ? state.plannedTools : null;
+                if (autoApprovePlanTools) {
+                  try {
+                    await invoke("save_react_tool_whitelist", { whitelist: state.plannedTools });
+                  } catch {
+                    // 저장 실패해도 이번 실행은 진행.
+                  }
+                }
+                onRunAct(wl);
+              }}
+              className="px-3 py-1.5 text-[11px] rounded-md bg-cyan-500/15 text-cyan-300 hover:bg-cyan-500/25 transition-colors"
+            >
+              실행
+            </button>
+          </>
         )}
         {(status === "done" || status === "error" || status === "cancelled") && (
           <button
