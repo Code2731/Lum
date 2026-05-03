@@ -1,31 +1,57 @@
 @echo off
-title LUM Terminal - Dev
+setlocal
+title LUM Launcher
 
-:: Ollama 실행 여부 확인 (이미 실행 중이면 스킵)
+:: Ollama 실행 여부 확인
 curl -s --max-time 2 http://localhost:11434/api/tags >nul 2>&1
 if %errorlevel% neq 0 (
-    echo [LUM] Ollama 시작 중...
-
-    :: 설치 경로 순서대로 탐색
-    set "OLLAMA_EXE="
-    if exist "%LOCALAPPDATA%\Programs\Ollama\ollama.exe" (
-        set "OLLAMA_EXE=%LOCALAPPDATA%\Programs\Ollama\ollama.exe"
-    ) else if exist "%ProgramFiles%\Ollama\ollama.exe" (
-        set "OLLAMA_EXE=%ProgramFiles%\Ollama\ollama.exe"
-    ) else (
-        :: PATH에 ollama 명령이 있는지 확인
-        where ollama >nul 2>&1
-        if %errorlevel% equ 0 set "OLLAMA_EXE=ollama"
-    )
-
-    if defined OLLAMA_EXE (
-        start "" "%OLLAMA_EXE%" serve
-        timeout /t 3 /nobreak >nul
-    ) else (
-        echo [LUM] Ollama 실행 파일을 찾을 수 없습니다. https://ollama.com 에서 설치하세요.
-    )
+    echo [LUM] Ollama 시작 시도 중...
+    start "" ollama serve
+    timeout /t 2 /nobreak >nul
 )
 
-echo [LUM] Tauri 개발 서버 시작...
-cd /d "%~dp0"
+:MENU
+cls
+echo ==========================================
+echo       LUM Project Launcher
+echo ==========================================
+echo  1. Run Standard Dev (Default)
+echo  2. Run with Embedded AI (CUDA/GPU)
+echo  3. Clean and Run Standard
+echo  4. Clean and Run with AI (CUDA)
+echo  5. Exit
+echo ==========================================
+set /p choice="Select option (1-5): "
+
+if "%choice%"=="1" goto DEV
+if "%choice%"=="2" goto AI_DEV
+if "%choice%"=="3" goto CLEAN_DEV
+if "%choice%"=="4" goto CLEAN_AI_DEV
+if "%choice%"=="5" exit
+goto MENU
+
+:DEV
+echo [LUM] Starting Standard Dev...
 npm run tauri dev
+pause
+goto MENU
+
+:AI_DEV
+echo [LUM] Starting Dev with Embedded AI (CUDA)...
+npm run tauri:dev:cuda
+pause
+goto MENU
+
+:CLEAN_DEV
+echo [LUM] Cleaning and Starting Standard...
+cd src-tauri && cargo clean && cd ..
+npm run tauri dev
+pause
+goto MENU
+
+:CLEAN_AI_DEV
+echo [LUM] Cleaning and Starting AI Dev (CUDA)...
+cd src-tauri && cargo clean && cd ..
+npm run tauri:dev:cuda
+pause
+goto MENU
