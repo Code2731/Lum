@@ -10,7 +10,7 @@ use crate::commands::test_runner::detect_test_command;
 use crate::error::{LumError, Result};
 use crate::platform;
 use serde::Serialize;
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
@@ -87,6 +87,8 @@ const BASE_PROMPT: &str = r#"당신은 터미널 코딩 에이전트입니다. �
 - get_repo_map({"cwd": "경로"}) — 코드베이스 구조 요약
 - git_diff({"cwd": "경로"}) — git diff 조회
 - run_tests({"cwd": "경로"}) — 테스트 자동 감지 후 실행
+- query_healing({"query": "질문", "limit": 5, "since_days": 30}) — 자동치유(healing) 기록만 시맨틱 검색
+- analyze_failure_reasons({"since_days": 30, "limit": 5}) — reject 거부 사유 빈도 Top-N 요약
 
 쓰기 도구 (CWD 내부 + 안전 경로만 허용 — .git/node_modules/target/dist/.lum_* 거부):
 - write_file({"path": "...", "content": "...", "overwrite": false}) — 신규 파일 생성. 기존 파일은 overwrite=true 명시 필요.
@@ -347,6 +349,8 @@ async fn run_tool(
             let test_cwd = args["cwd"].as_str().unwrap_or(cwd).to_string();
             run_tests_tool(&test_cwd).await
         }
+        "query_healing" => run_query_healing_tool(args).await,
+        "analyze_failure_reasons" => run_analyze_failure_reasons_tool(args),
         "write_file" => write_file_tool(args, cwd),
         "apply_patch" => apply_patch_tool(args, cwd),
         "delete_file" => delete_file_tool(args, cwd),
@@ -517,6 +521,206 @@ async fn run_mcp_tool(app: &AppHandle, args: &serde_json::Value) -> String {
         }
         Err(e) => format!("MCP 호출 실패: {e}"),
     }
+}
+
+fn now_ms() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_millis() as u64)
+        .unwrap_or(0)
+}
+
+#[cfg(test)]
+#[derive(Default)]
+struct HealingToolMock {
+    recall_result: Option<std::result::Result<Vec<crate::commands::recall::RecallEntry>, String>>,
+    records_result:
+        Option<std::result::Result<Vec<crate::commands::healing_dataset::HealingRecord>, String>>,
+}
+
+#[cfg(test)]
+static HEALING_TOOL_MOCK: OnceLock<Mutex<HealingToolMock>> = OnceLock::new();
+
+#[cfg(test)]
+fn healing_tool_mock_lock() -> &'static Mutex<HealingToolMock> {
+    HEALING_TOOL_MOCK.get_or_init(|| Mutex::new(HealingToolMock::default()))
+}
+
+#[cfg(test)]
+fn set_healing_tool_mock(mock: HealingToolMock) {
+    *healing_tool_mock_lock().lock().unwrap() = mock;
+}
+
+#[cfg(test)]
+fn clear_healing_tool_mock() {
+    *healing_tool_mock_lock().lock().unwrap() = HealingToolMock::default();
+}
+
+async fn recall_search_healing(
+    query: String,
+    since_ms: Option<u64>,
+    limit: usize,
+) -> std::result::Result<Vec<crate::commands::recall::RecallEntry>, String> {
+    #[cfg(test)]
+    {
+        let mut guard = healing_tool_mock_lock().lock().unwrap();
+        if let Some(v) = guard.recall_result.take() {
+            return v;
+        }
+    }
+
+    crate::commands::recall::recall_search(
+        query,
+        Some(vec!["healing".to_string()]),
+        since_ms,
+        None,
+        String::new(),
+        limit,
+    )
+    .await
+    .map_err(|e| e.to_string())
+}
+
+fn list_healing_records(
+) -> std::result::Result<Vec<crate::commands::healing_dataset::HealingRecord>, String> {
+    #[cfg(test)]
+    {
+        let mut guard = healing_tool_mock_lock().lock().unwrap();
+        if let Some(v) = guard.records_result.take() {
+            return v;
+        }
+    }
+    crate::commands::healing_dataset::list_healing_dataset().map_err(|e| e.to_string())
+}
+
+async fn run_query_healing_tool(args: &serde_json::Value) -> String {
+    let query = args["query"].as_str().unwrap_or("").trim().to_string();
+    if query.is_empty() {
+        return "오류: query_healing은 query 파라미터가 필요합니다".to_string();
+    }
+    let limit = args["limit"]
+        .as_u64()
+        .and_then(|v| usize::try_from(v).ok())
+        .unwrap_or(5)
+        .clamp(1, 20);
+    let since_days = args["since_days"].as_u64();
+    let since_ms = since_days.map(|d| now_ms().saturating_sub(d.saturating_mul(86_400_000)));
+
+    match recall_search_healing(query.clone(), since_ms, limit).await {
+        Ok(entries) => {
+            if entries.is_empty() {
+                return format!("healing 검색 결과가 없습니다: \"{query}\"");
+            }
+            let mut out = Vec::new();
+            out.push(format!(
+                "healing 검색 결과 {}건 (query=\"{}\")",
+                entries.len(),
+                query
+            ));
+            for (idx, e) in entries.iter().enumerate() {
+                let decision = e
+                    .metadata
+                    .get("decision")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("unknown");
+                let reason = e
+                    .metadata
+                    .get("failure_reason")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("");
+                out.push(format!(
+                    "{}. [{}] score={:.3} ts_ms={}",
+                    idx + 1,
+                    decision,
+                    e.score,
+                    e.ts_ms
+                ));
+                out.push(format!("   - {}", e.title));
+                if !reason.trim().is_empty() {
+                    out.push(format!("   - 거부 사유: {}", reason.trim()));
+                }
+            }
+            truncate(&out.join("\n"))
+        }
+        Err(e) => format!("healing 검색 실패: {e}"),
+    }
+}
+
+fn run_analyze_failure_reasons_tool(args: &serde_json::Value) -> String {
+    let since_days = args["since_days"].as_u64().unwrap_or(30);
+    let limit = args["limit"]
+        .as_u64()
+        .and_then(|v| usize::try_from(v).ok())
+        .unwrap_or(5)
+        .clamp(1, 20);
+    let cutoff_ms = if since_days == 0 {
+        None
+    } else {
+        Some(now_ms().saturating_sub(since_days.saturating_mul(86_400_000)))
+    };
+
+    let records = match list_healing_records() {
+        Ok(v) => v,
+        Err(e) => return format!("healing 데이터 로드 실패: {e}"),
+    };
+    let mut freq: BTreeMap<String, usize> = BTreeMap::new();
+    let mut total_reject = 0usize;
+    for r in records {
+        if r.decision != "reject" {
+            continue;
+        }
+        if let Some(cutoff) = cutoff_ms {
+            if r.ts_ms < cutoff {
+                continue;
+            }
+        }
+        total_reject += 1;
+        let Some(reason) = r.failure_reason else {
+            continue;
+        };
+        let key = reason.trim();
+        if key.is_empty() {
+            continue;
+        }
+        *freq.entry(key.to_string()).or_insert(0) += 1;
+    }
+
+    if total_reject == 0 {
+        return if since_days == 0 {
+            "reject 기록이 없습니다.".to_string()
+        } else {
+            format!("최근 {since_days}일 내 reject 기록이 없습니다.")
+        };
+    }
+    if freq.is_empty() {
+        return format!(
+            "reject 기록 {total_reject}건은 있으나 failure_reason이 비어 있어 요약할 수 없습니다."
+        );
+    }
+
+    let mut ranked: Vec<(String, usize)> = freq.into_iter().collect();
+    ranked.sort_by(|a, b| b.1.cmp(&a.1).then_with(|| a.0.cmp(&b.0)));
+    ranked.truncate(limit);
+
+    let mut lines = Vec::new();
+    if since_days == 0 {
+        lines.push(format!(
+            "reject 사유 빈도 Top {} (전체 기간, reject {}건)",
+            ranked.len(),
+            total_reject
+        ));
+    } else {
+        lines.push(format!(
+            "reject 사유 빈도 Top {} (최근 {}일, reject {}건)",
+            ranked.len(),
+            since_days,
+            total_reject
+        ));
+    }
+    for (idx, (reason, cnt)) in ranked.iter().enumerate() {
+        lines.push(format!("{}. {}회 — {}", idx + 1, cnt, reason));
+    }
+    truncate(&lines.join("\n"))
 }
 
 async fn run_shell(cmd: &str, cwd: &str) -> String {
@@ -1534,6 +1738,91 @@ ACTION: mcp({"server": "playwright", "tool": "screenshot", "arguments": {"url": 
         assert!(combo.contains("단축키 성공"), "{combo}");
 
         clear_desktop_tool_mock();
+    }
+
+    #[tokio::test]
+    async fn query_healing_결과_요약_성공() {
+        set_healing_tool_mock(HealingToolMock {
+            recall_result: Some(Ok(vec![crate::commands::recall::RecallEntry {
+                id: "healing:1".into(),
+                source: "healing".into(),
+                ts_ms: 1,
+                title: "pip install 오류".into(),
+                snippet: "Error: ...".into(),
+                score: 0.91,
+                metadata: serde_json::json!({
+                    "decision": "reject",
+                    "failure_reason": "pip 설치 대신 ensurepip은 부적절"
+                }),
+            }])),
+            records_result: None,
+        });
+        let out = run_query_healing_tool(&serde_json::json!({"query": "pip", "limit": 3})).await;
+        assert!(out.contains("healing 검색 결과 1건"), "{out}");
+        assert!(out.contains("거부 사유"), "{out}");
+        clear_healing_tool_mock();
+    }
+
+    #[test]
+    fn analyze_failure_reasons_top5_요약() {
+        let records = vec![
+            crate::commands::healing_dataset::HealingRecord {
+                ts_ms: 10,
+                model: "m".into(),
+                error: "e1".into(),
+                analysis: String::new(),
+                suggestion: "s1".into(),
+                safety_level: "Warning".into(),
+                decision: "reject".into(),
+                applied_command: None,
+                embedding: Vec::new(),
+                failure_reason: Some("권한 없는 rm 제안".into()),
+            },
+            crate::commands::healing_dataset::HealingRecord {
+                ts_ms: 11,
+                model: "m".into(),
+                error: "e2".into(),
+                analysis: String::new(),
+                suggestion: "s2".into(),
+                safety_level: "Warning".into(),
+                decision: "reject".into(),
+                applied_command: None,
+                embedding: Vec::new(),
+                failure_reason: Some("권한 없는 rm 제안".into()),
+            },
+            crate::commands::healing_dataset::HealingRecord {
+                ts_ms: 12,
+                model: "m".into(),
+                error: "e3".into(),
+                analysis: String::new(),
+                suggestion: "s3".into(),
+                safety_level: "Warning".into(),
+                decision: "reject".into(),
+                applied_command: None,
+                embedding: Vec::new(),
+                failure_reason: Some("존재하지 않는 패키지 설치".into()),
+            },
+        ];
+        set_healing_tool_mock(HealingToolMock {
+            recall_result: None,
+            records_result: Some(Ok(records)),
+        });
+        let out =
+            run_analyze_failure_reasons_tool(&serde_json::json!({"since_days": 0, "limit": 5}));
+        assert!(out.contains("Top 2"), "{out}");
+        assert!(out.contains("2회 — 권한 없는 rm 제안"), "{out}");
+        clear_healing_tool_mock();
+    }
+
+    #[test]
+    fn analyze_failure_reasons_빈_데이터() {
+        set_healing_tool_mock(HealingToolMock {
+            recall_result: None,
+            records_result: Some(Ok(Vec::new())),
+        });
+        let out = run_analyze_failure_reasons_tool(&serde_json::json!({"since_days": 7}));
+        assert!(out.contains("reject 기록이 없습니다"), "{out}");
+        clear_healing_tool_mock();
     }
 
     // ─── 코드 편집 도구 회귀 가드 ─────────────────────────────────────────────

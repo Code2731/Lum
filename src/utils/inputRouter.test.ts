@@ -159,6 +159,15 @@ describe("routeInput — 기본: 자연어=AI, CLI 감지 시 shell", () => {
       expect(routeInput(input)).toEqual({ type: "ai", question: input });
     });
 
+    it.each([
+      "최근 거부 케이스 3개 보여줘",
+      "실패 패턴 요약해줘",
+      "내가 거부한 자동치유 제안 보여줘",
+      "show my rejected healing cases",
+    ])("healing 조회 의도 '%s' → agent", (input) => {
+      expect(routeInput(input)).toEqual({ type: "agent", task: input });
+    });
+
     describe("우선순위 — 명시적 prefix 우선", () => {
       it("@ override는 코딩 의도 있어도 ai로", () => {
         // "@ 코드 추가해" — 코딩 의도지만 사용자가 명시적으로 ai 요청.

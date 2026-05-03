@@ -119,12 +119,17 @@ const CODING_NOUNS_EN = [
 ];
 const CODING_CONTEXT_KO = ["버그", "에러", "오류", "테스트", "함수", "파일", "리팩터링"];
 const CODING_CONTEXT_EN = ["bug", "error", "test", "function", "file", "refactor"];
+const HEALING_INTENT_KO = ["거부 케이스", "실패 패턴", "내가 거부한", "거부한 케이스"];
+const HEALING_INTENT_EN = ["rejected", "rejection", "failure pattern", "rejected case"];
 
 // 정규식은 module 로드 시 1회 컴파일 — 매 routeInput 호출마다 RegExp 재생성 회피.
 // 영어 동사 활용형(s/ed/ing) + 명사 복수형(s?) 지원.
 const CODING_VERB_RE_EN = CODING_VERBS_EN.map((v) => new RegExp(`\\b${v}(s|ed|ing)?\\b`));
 const CODING_NOUN_RE_EN = CODING_NOUNS_EN.map((n) => new RegExp(`\\b${n}s?\\b`));
 const CODING_CONTEXT_RE_EN = CODING_CONTEXT_EN.map((w) => new RegExp(`\\b${w}s?\\b`));
+const HEALING_INTENT_RE_EN = HEALING_INTENT_EN.map(
+  (w) => new RegExp(`\\b${w.replace(/\s+/g, "\\s+")}\\b`),
+);
 
 /** 한국어는 활용 다양해 substring, 영어는 word boundary regex 병렬 매처. */
 function matchAny(text: string, lower: string, koList: string[], enRegexes: RegExp[]): boolean {
@@ -149,6 +154,16 @@ export function detectCodingIntent(text: string): boolean {
   // 컨텍스트 단독으로는 트리거되지 않도록 동사가 있을 때만 가산.
   if (hasVerb && hasContext) score += 0.3;
   return score >= 0.6;
+}
+
+/** Phase 134 — Healing 조회 의도 감지. 코딩 의도와 무관해도 agent로 라우팅. */
+function detectHealingIntent(text: string): boolean {
+  if (!text) return false;
+  const lower = text.toLowerCase();
+  return (
+    HEALING_INTENT_KO.some((w) => text.includes(w))
+    || HEALING_INTENT_RE_EN.some((re) => re.test(lower))
+  );
 }
 
 /** 입력 전체가 shell 특수문자로 시작하는지 (path, pipe, redirect 등) */
@@ -218,10 +233,15 @@ export function routeInput(raw: string): Route {
   }
 
   // 5. (Phase 124) 자연어이지만 코딩 의도 감지 → 자동 agent 라우팅
+  if (detectHealingIntent(trimmed)) {
+    return { type: "agent", task: trimmed };
+  }
+
+  // 6. (Phase 124) 자연어이지만 코딩 의도 감지 → 자동 agent 라우팅
   if (detectCodingIntent(trimmed)) {
     return { type: "agent", task: trimmed };
   }
 
-  // 6. 그 외 전부 AI (기본값 — 단순 질문/대화)
+  // 7. 그 외 전부 AI (기본값 — 단순 질문/대화)
   return { type: "ai", question: trimmed };
 }
