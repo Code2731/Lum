@@ -98,6 +98,7 @@ export function useReactAgent() {
       cwd: string,
       mode: ReactMode,
       toolWhitelist?: string[] | null,
+      applyConfigWhitelist?: boolean,
       planId?: string | null,
     ) => {
       // 이전 리스너 정리
@@ -160,6 +161,7 @@ export function useReactAgent() {
           cwd,
           mode,
           toolWhitelist: toolWhitelist ?? null,
+          applyConfigWhitelist: applyConfigWhitelist ?? true,
           planId: planId ?? null,
         });
         setState((prev) =>
@@ -187,7 +189,7 @@ export function useReactAgent() {
   const runPlan = useCallback(
     async (goal: string, cwd: string) => {
       const pid = `plan-${Date.now()}`;
-      await runInternal(goal, cwd, "plan", null, pid);
+      await runInternal(goal, cwd, "plan", null, false, pid);
     },
     [runInternal],
   );
@@ -198,8 +200,16 @@ export function useReactAgent() {
       cwd: string,
       planId?: string | null,
       toolWhitelist?: string[] | null,
+      applyConfigWhitelist?: boolean,
     ) => {
-      await runInternal(goal, cwd, "act", toolWhitelist, planId ?? null);
+      await runInternal(
+        goal,
+        cwd,
+        "act",
+        toolWhitelist,
+        applyConfigWhitelist ?? true,
+        planId ?? null,
+      );
     },
     [runInternal],
   );

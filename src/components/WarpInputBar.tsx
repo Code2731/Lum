@@ -1,4 +1,6 @@
 import React, { useEffect, useImperativeHandle, useRef, useState, forwardRef } from "react";
+import { Mic, MicOff } from "lucide-react";
+import { invoke } from "@tauri-apps/api/core";
 import { tokenizeShell, TOKEN_COLORS } from "../utils/shellSyntax";
 
 export interface WarpInputBarHandle {
@@ -15,13 +17,16 @@ interface Props {
   onInterrupt?: () => void;          // Ctrl+C
   onTab?: (buf: string) => boolean;  // 자동완성 — true면 기본 Tab 소비
   onChange?: (buf: string) => void;  // 입력 변화 — AI/explain 훅
+  voiceEnabled?: boolean;            // 음성 입력 토글 표시 여부 (기본 true)
 }
 
 const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
-  ({ fontFamily, fontSize, onSubmit, onInterrupt, onTab, onChange }, ref) => {
+  ({ fontFamily, fontSize, onSubmit, onInterrupt, onTab, onChange, voiceEnabled = true }, ref) => {
     const [input, setInput] = useState("");
     const [isComposing, setIsComposing] = useState(false);
     const [isFocused, setIsFocused] = useState(false);
+    const [isRecording, setIsRecording] = useState(false);
+    const [voiceBusy, setVoiceBusy] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
     const history = useRef<string[]>([]);
     const historyIdx = useRef<number>(-1);
@@ -127,6 +132,35 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
       onChange?.(v);
     };
 
+    const injectTranscript = (text: string) => {
+      const t = text.trim();
+      if (!t) return;
+      const joined = input.trim() ? `${input} ${t}` : t;
+      setInput(joined);
+      onChange?.(joined);
+      inputRef.current?.focus();
+    };
+
+    const handleMicToggle = async () => {
+      if (voiceBusy) return;
+      setVoiceBusy(true);
+      try {
+        if (isRecording) {
+          setIsRecording(false);
+          const transcript = await invoke<string>("stop_voice_recording");
+          injectTranscript(transcript ?? "");
+        } else {
+          await invoke("start_voice_recording");
+          setIsRecording(true);
+        }
+      } catch {
+        // 음성 기능은 best-effort. 실패 시 녹음 상태만 안전하게 복구.
+        setIsRecording(false);
+      } finally {
+        setVoiceBusy(false);
+      }
+    };
+
     const body =
       isHeavy      ? input.trimStart().slice(2).trimStart() :
       isAgent      ? input.replace(/^>>\s?/, "") :
@@ -164,6 +198,32 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
         <span style={{ color: promptColor, fontFamily, fontSize, opacity: 0.85, flexShrink: 0 }}>
           {promptChar}
         </span>
+
+        {voiceEnabled && (
+          <button
+            type="button"
+            onClick={handleMicToggle}
+            disabled={voiceBusy}
+            aria-label={isRecording ? "음성 녹음 중지" : "음성 녹음 시작"}
+            title={isRecording ? "음성 녹음 중지" : "음성 녹음 시작"}
+            style={{
+              width: 24,
+              height: 24,
+              borderRadius: 6,
+              border: "1px solid rgba(255,255,255,0.12)",
+              background: isRecording ? "rgba(248,81,73,0.18)" : "rgba(255,255,255,0.04)",
+              color: isRecording ? "#ff7b72" : "rgba(255,255,255,0.72)",
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0,
+              cursor: voiceBusy ? "wait" : "pointer",
+              opacity: voiceBusy ? 0.55 : 1,
+            }}
+          >
+            {isRecording ? <Mic size={12} /> : <MicOff size={12} />}
+          </button>
+        )}
 
         {/* 입력 영역: 실제 input은 투명, 컬러 오버레이로 syntax highlight */}
         <div style={{ position: "relative", flex: 1, height: "100%", display: "flex", alignItems: "center" }}>

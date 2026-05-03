@@ -391,7 +391,9 @@ const App: React.FC = () => {
     (toolWhitelist: string[] | null) => {
       const { goal, cwd, planId } = reactAgent.state;
       if (!goal) return;
-      reactAgent.runAct(goal, cwd, planId, toolWhitelist).catch(() => {});
+      reactAgent
+        .runAct(goal, cwd, planId, toolWhitelist, Boolean(toolWhitelist))
+        .catch(() => {});
     },
     [reactAgent],
   );

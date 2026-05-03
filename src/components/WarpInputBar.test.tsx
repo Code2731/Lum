@@ -1,7 +1,13 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, fireEvent, act } from "@testing-library/react";
 import { createRef } from "react";
 import WarpInputBar, { type WarpInputBarHandle } from "./WarpInputBar";
+
+const invokeMock = vi.fn();
+
+vi.mock("@tauri-apps/api/core", () => ({
+  invoke: (cmd: string, args?: unknown) => invokeMock(cmd, args),
+}));
 
 function setup(overrides: Partial<React.ComponentProps<typeof WarpInputBar>> = {}) {
   const onSubmit = vi.fn();
@@ -26,6 +32,11 @@ function setup(overrides: Partial<React.ComponentProps<typeof WarpInputBar>> = {
 }
 
 describe("WarpInputBar — dumb input, 라우팅은 상위에서", () => {
+  beforeEach(() => {
+    invokeMock.mockReset();
+    invokeMock.mockResolvedValue(undefined);
+  });
+
   it("Enter → onSubmit(input 원본) 호출, 입력 비워짐", () => {
     const { input, onSubmit } = setup();
     fireEvent.change(input, { target: { value: "ls -la" } });
@@ -108,5 +119,28 @@ describe("WarpInputBar — dumb input, 라우팅은 상위에서", () => {
     act(() => { ref.current?.setValue("git status"); });
     expect(input).toHaveValue("git status");
     expect(onChange).toHaveBeenCalledWith("git status");
+  });
+
+  it("마이크 버튼: 시작→중지 시 STT 텍스트 주입", async () => {
+    invokeMock.mockImplementation(async (cmd: string) => {
+      if (cmd === "start_voice_recording") return;
+      if (cmd === "stop_voice_recording") return "git status";
+      return;
+    });
+    const { getByLabelText, input, onChange } = setup();
+
+    const startBtn = getByLabelText("음성 녹음 시작");
+    await act(async () => {
+      fireEvent.click(startBtn);
+    });
+    expect(invokeMock).toHaveBeenCalledWith("start_voice_recording", undefined);
+
+    const stopBtn = getByLabelText("음성 녹음 중지");
+    await act(async () => {
+      fireEvent.click(stopBtn);
+    });
+    expect(invokeMock).toHaveBeenCalledWith("stop_voice_recording", undefined);
+    expect(input).toHaveValue("git status");
+    expect(onChange).toHaveBeenLastCalledWith("git status");
   });
 });

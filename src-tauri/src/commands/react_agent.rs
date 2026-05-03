@@ -1362,6 +1362,7 @@ pub async fn react_agent_run(
     cwd: String,
     mode: Option<String>,
     tool_whitelist: Option<Vec<String>>,
+    apply_config_whitelist: Option<bool>,
     plan_id: Option<String>,
 ) -> Result<()> {
     cancel_flag().store(false, Ordering::Relaxed);
@@ -1430,7 +1431,12 @@ pub async fn react_agent_run(
     let config_tool_whitelist = crate::commands::config::load_config()
         .ok()
         .and_then(|c| c.react_tool_whitelist);
-    let effective_whitelist = tool_whitelist.or(config_tool_whitelist);
+    let use_config_whitelist = apply_config_whitelist.unwrap_or(true);
+    let effective_whitelist = match tool_whitelist {
+        Some(v) => Some(v),
+        None if use_config_whitelist => config_tool_whitelist,
+        None => None,
+    };
     let whitelist_set = effective_whitelist.as_ref().map(|list| {
         list.iter()
             .map(|s| s.trim().to_string())
