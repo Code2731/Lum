@@ -53,6 +53,7 @@ describe("CommandInput Component", () => {
   };
 
   beforeEach(() => {
+    mockSubmit.mockReset();
     invokeMock.mockReset();
     voiceListeners.splice(0, voiceListeners.length);
     voiceStateListeners.splice(0, voiceStateListeners.length);
@@ -129,5 +130,51 @@ describe("CommandInput Component", () => {
       cb?.({ payload: true });
     });
     expect(micButton).toHaveClass("active");
+  });
+
+  it("마이크 시작 실패 시 사용자 친화 오류를 표시해야 함", async () => {
+    invokeMock.mockImplementation(async (cmd: string) => {
+      if (cmd === "voice_recording_status") return false;
+      if (cmd === "start_voice_recording") throw new Error("mic permission denied");
+      return undefined;
+    });
+    render(<CommandInput {...defaultProps} />);
+    const micButton = screen.getByLabelText("Voice Command");
+    await act(async () => {
+      fireEvent.click(micButton);
+    });
+    expect(await screen.findByRole("alert")).toHaveTextContent("마이크 권한이 거부되었습니다.");
+    expect(micButton).not.toHaveClass("active");
+  });
+
+  it("음성 처리 중에는 마이크 연타를 무시해야 함", async () => {
+    let resolveStart: (() => void) | null = null;
+    invokeMock.mockImplementation((cmd: string) => {
+      if (cmd === "voice_recording_status") return Promise.resolve(false);
+      if (cmd === "start_voice_recording") {
+        return new Promise<void>((resolve) => {
+          resolveStart = resolve;
+        });
+      }
+      return Promise.resolve(undefined);
+    });
+    render(<CommandInput {...defaultProps} />);
+    const micButton = screen.getByLabelText("Voice Command");
+    await act(async () => {
+      fireEvent.click(micButton);
+    });
+    await act(async () => {
+      fireEvent.click(micButton);
+    });
+
+    const startCalls = invokeMock.mock.calls.filter(([cmd]) => cmd === "start_voice_recording");
+    expect(startCalls).toHaveLength(1);
+    expect(micButton).toBeDisabled();
+
+    await act(async () => {
+      resolveStart?.();
+      await Promise.resolve();
+    });
+    expect(micButton).not.toBeDisabled();
   });
 });

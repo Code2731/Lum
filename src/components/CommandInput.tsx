@@ -25,6 +25,8 @@ const CommandInput = ({
 }: Props) => {
   const [value, setValue] = useState("");
   const [isRecording, setIsRecording] = useState(false);
+  const [voiceBusy, setVoiceBusy] = useState(false);
+  const [voiceError, setVoiceError] = useState<string | null>(null);
   const lastTranscriptRef = useRef<string>("");
   const lastTranscriptTsRef = useRef<number>(0);
 
@@ -50,6 +52,7 @@ const CommandInput = ({
     listen<string>("voice_transcript", (event) => {
       injectTranscript(event.payload ?? "");
       setIsRecording(false);
+      setVoiceError(null);
     })
       .then((off) => {
         unlistenTranscript = off;
@@ -57,6 +60,9 @@ const CommandInput = ({
       .catch(() => {});
     listen<boolean>("voice_recording_state", (event) => {
       setIsRecording(Boolean(event.payload));
+      if (event.payload) {
+        setVoiceError(null);
+      }
     })
       .then((off) => {
         unlistenState = off;
@@ -69,22 +75,26 @@ const CommandInput = ({
   }, []);
 
   const handleMicClick = async () => {
-    if (isRecording) {
-      setIsRecording(false);
-      try {
+    if (voiceBusy) return;
+    setVoiceBusy(true);
+    try {
+      if (isRecording) {
+        setIsRecording(false);
         const text = await invoke<string>("stop_voice_recording");
         if (text) injectTranscript(text);
-      } catch (e) {
-        console.error("Transcription failed:", parseVoiceError(e));
-      }
-    } else {
-      setIsRecording(true);
-      try {
+        setVoiceError(null);
+      } else {
+        setIsRecording(true);
         await invoke("start_voice_recording");
-      } catch (e) {
-        console.error("Failed to start recording:", parseVoiceError(e));
-        setIsRecording(false);
+        setVoiceError(null);
       }
+    } catch (e) {
+      const message = parseVoiceError(e);
+      console.error("Voice command failed:", message);
+      setVoiceError(message);
+      setIsRecording(false);
+    } finally {
+      setVoiceBusy(false);
     }
   };
   const [history, setHistory] = useState<string[]>([]);
@@ -240,6 +250,7 @@ const CommandInput = ({
             tooltip="Voice Command"
             className={`mic-btn ${isRecording ? "active" : ""}`}
             onClick={handleMicClick}
+            disabled={voiceBusy}
           >
             {isRecording ? <Mic size={14} /> : <MicOff size={14} />}
           </IconButton>
@@ -265,6 +276,27 @@ const CommandInput = ({
             </span>
           )}
         </div>
+        {voiceError && (
+          <div
+            role="alert"
+            style={{
+              margin: "0 10px 6px 10px",
+              padding: "4px 8px",
+              borderRadius: 6,
+              fontSize: 11,
+              lineHeight: 1.3,
+              color: "#ff7b72",
+              background: "rgba(248,81,73,0.12)",
+              border: "1px solid rgba(248,81,73,0.25)",
+              whiteSpace: "nowrap",
+              textOverflow: "ellipsis",
+              overflow: "hidden",
+            }}
+            title={voiceError}
+          >
+            음성 입력 오류: {voiceError}
+          </div>
+        )}
 
         <div className="editor-input-row">
           <span className="editor-prompt">
