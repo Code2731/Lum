@@ -1,14 +1,13 @@
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo } from "react";
 import { Zap, Mic, MicOff } from "lucide-react";
 import { IconButton } from "@/components/ui/icon-button";
 import { shortPath } from "../utils";
 import Editor from "react-simple-code-editor";
 import { invoke } from "@tauri-apps/api/core";
-import { listen } from "@tauri-apps/api/event";
 import Prism from "prismjs";
 import "prismjs/components/prism-bash";
 import "prismjs/themes/prism-tomorrow.css";
-import { parseVoiceError } from "../utils/voiceError";
+import { useVoiceInput } from "../hooks/useVoiceInput";
 
 interface Props {
   onCommandSubmit: (cmd: string, type: "shell" | "ai") => void;
@@ -24,79 +23,16 @@ const CommandInput = ({
   context,
 }: Props) => {
   const [value, setValue] = useState("");
-  const [isRecording, setIsRecording] = useState(false);
-  const [voiceBusy, setVoiceBusy] = useState(false);
-  const [voiceError, setVoiceError] = useState<string | null>(null);
-  const lastTranscriptRef = useRef<string>("");
-  const lastTranscriptTsRef = useRef<number>(0);
 
   const injectTranscript = (text: string) => {
     const t = text.trim();
     if (!t) return;
-    const now = Date.now();
-    if (t === lastTranscriptRef.current && now - lastTranscriptTsRef.current < 500) {
-      return;
-    }
-    lastTranscriptRef.current = t;
-    lastTranscriptTsRef.current = now;
     setValue((prev) => (prev.trim() ? `${prev} ${t}` : t));
   };
 
-  useEffect(() => {
-    invoke<boolean>("voice_recording_status")
-      .then((on) => setIsRecording(Boolean(on)))
-      .catch(() => {});
-
-    let unlistenTranscript: (() => void) | null = null;
-    let unlistenState: (() => void) | null = null;
-    listen<string>("voice_transcript", (event) => {
-      injectTranscript(event.payload ?? "");
-      setIsRecording(false);
-      setVoiceError(null);
-    })
-      .then((off) => {
-        unlistenTranscript = off;
-      })
-      .catch(() => {});
-    listen<boolean>("voice_recording_state", (event) => {
-      setIsRecording(Boolean(event.payload));
-      if (event.payload) {
-        setVoiceError(null);
-      }
-    })
-      .then((off) => {
-        unlistenState = off;
-      })
-      .catch(() => {});
-    return () => {
-      unlistenTranscript?.();
-      unlistenState?.();
-    };
-  }, []);
-
-  const handleMicClick = async () => {
-    if (voiceBusy) return;
-    setVoiceBusy(true);
-    try {
-      if (isRecording) {
-        setIsRecording(false);
-        const text = await invoke<string>("stop_voice_recording");
-        if (text) injectTranscript(text);
-        setVoiceError(null);
-      } else {
-        setIsRecording(true);
-        await invoke("start_voice_recording");
-        setVoiceError(null);
-      }
-    } catch (e) {
-      const message = parseVoiceError(e);
-      console.error("Voice command failed:", message);
-      setVoiceError(message);
-      setIsRecording(false);
-    } finally {
-      setVoiceBusy(false);
-    }
-  };
+  const { isRecording, voiceBusy, voiceError, handleMicToggle } = useVoiceInput({
+    onTranscript: injectTranscript,
+  });
   const [history, setHistory] = useState<string[]>([]);
   const [historyIdx, setHistoryIdx] = useState(-1);
 
@@ -249,7 +185,7 @@ const CommandInput = ({
           <IconButton
             tooltip="Voice Command"
             className={`mic-btn ${isRecording ? "active" : ""}`}
-            onClick={handleMicClick}
+            onClick={handleMicToggle}
             disabled={voiceBusy}
           >
             {isRecording ? <Mic size={14} /> : <MicOff size={14} />}

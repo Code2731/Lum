@@ -1,9 +1,7 @@
 import React, { useEffect, useImperativeHandle, useRef, useState, forwardRef } from "react";
 import { Mic, MicOff } from "lucide-react";
-import { invoke } from "@tauri-apps/api/core";
-import { listen } from "@tauri-apps/api/event";
 import { tokenizeShell, TOKEN_COLORS } from "../utils/shellSyntax";
-import { parseVoiceError } from "../utils/voiceError";
+import { useVoiceInput } from "../hooks/useVoiceInput";
 
 export interface WarpInputBarHandle {
   focus: () => void;
@@ -27,13 +25,9 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
     const [input, setInput] = useState("");
     const [isComposing, setIsComposing] = useState(false);
     const [isFocused, setIsFocused] = useState(false);
-    const [isRecording, setIsRecording] = useState(false);
-    const [voiceBusy, setVoiceBusy] = useState(false);
-    const [voiceError, setVoiceError] = useState<string | null>(null);
     const inputRef = useRef<HTMLInputElement>(null);
     const history = useRef<string[]>([]);
     const historyIdx = useRef<number>(-1);
-    const lastInjectedRef = useRef<{ text: string; ts: number } | null>(null);
     const onChangeRef = useRef(onChange);
 
     useEffect(() => {
@@ -49,14 +43,6 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
     useEffect(() => {
       inputRef.current?.focus();
     }, []);
-
-    // 백엔드 녹음 상태와 버튼 상태 동기화 (패널 재마운트/리렌더 안전성).
-    useEffect(() => {
-      if (!voiceEnabled) return;
-      invoke<boolean>("voice_recording_status")
-        .then((on) => setIsRecording(Boolean(on)))
-        .catch(() => {});
-    }, [voiceEnabled]);
 
     // 시각적 prompt char — 라우팅 로직은 상위에서
     const isHeavy      = input.trimStart().startsWith("!!");
@@ -152,12 +138,6 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
     const injectTranscript = (text: string) => {
       const t = text.trim();
       if (!t) return;
-      const now = Date.now();
-      const last = lastInjectedRef.current;
-      if (last && last.text === t && now - last.ts < 500) {
-        return;
-      }
-      lastInjectedRef.current = { text: t, ts: now };
       setInput((prev) => {
         const joined = prev.trim() ? `${prev} ${t}` : t;
         onChangeRef.current?.(joined);
@@ -166,54 +146,10 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
       inputRef.current?.focus();
     };
 
-    const handleMicToggle = async () => {
-      if (voiceBusy) return;
-      setVoiceBusy(true);
-      try {
-        if (isRecording) {
-          setIsRecording(false);
-          const transcript = await invoke<string>("stop_voice_recording");
-          injectTranscript(transcript ?? "");
-          setVoiceError(null);
-        } else {
-          await invoke("start_voice_recording");
-          setIsRecording(true);
-          setVoiceError(null);
-        }
-      } catch (e) {
-        // 음성 기능은 best-effort. 실패 시 녹음 상태만 안전하게 복구.
-        setIsRecording(false);
-        setVoiceError(parseVoiceError(e));
-      } finally {
-        setVoiceBusy(false);
-      }
-    };
-
-    // 백엔드가 stop 시 emit하는 전사 이벤트를 입력바에 즉시 반영.
-    useEffect(() => {
-      if (!voiceEnabled) return;
-      let unlistenTranscript: (() => void) | null = null;
-      let unlistenState: (() => void) | null = null;
-      listen<string>("voice_transcript", (event) => {
-        injectTranscript(event.payload ?? "");
-        setVoiceError(null);
-      })
-        .then((off) => {
-          unlistenTranscript = off;
-        })
-        .catch(() => {});
-      listen<boolean>("voice_recording_state", (event) => {
-        setIsRecording(Boolean(event.payload));
-      })
-        .then((off) => {
-          unlistenState = off;
-        })
-        .catch(() => {});
-      return () => {
-        unlistenTranscript?.();
-        unlistenState?.();
-      };
-    }, [voiceEnabled]);
+    const { isRecording, voiceBusy, voiceError, handleMicToggle } = useVoiceInput({
+      enabled: voiceEnabled,
+      onTranscript: injectTranscript,
+    });
 
     const body =
       isHeavy      ? input.trimStart().slice(2).trimStart() :
