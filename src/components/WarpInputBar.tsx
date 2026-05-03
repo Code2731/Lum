@@ -3,6 +3,7 @@ import { Mic, MicOff } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { tokenizeShell, TOKEN_COLORS } from "../utils/shellSyntax";
+import { parseVoiceError } from "../utils/voiceError";
 
 export interface WarpInputBarHandle {
   focus: () => void;
@@ -182,7 +183,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
       } catch (e) {
         // 음성 기능은 best-effort. 실패 시 녹음 상태만 안전하게 복구.
         setIsRecording(false);
-        setVoiceError(String(e));
+        setVoiceError(parseVoiceError(e));
       } finally {
         setVoiceBusy(false);
       }
@@ -191,17 +192,26 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
     // 백엔드가 stop 시 emit하는 전사 이벤트를 입력바에 즉시 반영.
     useEffect(() => {
       if (!voiceEnabled) return;
-      let unlisten: (() => void) | null = null;
+      let unlistenTranscript: (() => void) | null = null;
+      let unlistenState: (() => void) | null = null;
       listen<string>("voice_transcript", (event) => {
         injectTranscript(event.payload ?? "");
         setVoiceError(null);
       })
         .then((off) => {
-          unlisten = off;
+          unlistenTranscript = off;
+        })
+        .catch(() => {});
+      listen<boolean>("voice_recording_state", (event) => {
+        setIsRecording(Boolean(event.payload));
+      })
+        .then((off) => {
+          unlistenState = off;
         })
         .catch(() => {});
       return () => {
-        unlisten?.();
+        unlistenTranscript?.();
+        unlistenState?.();
       };
     }, [voiceEnabled]);
 

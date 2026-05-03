@@ -8,6 +8,7 @@ import { listen } from "@tauri-apps/api/event";
 import Prism from "prismjs";
 import "prismjs/components/prism-bash";
 import "prismjs/themes/prism-tomorrow.css";
+import { parseVoiceError } from "../utils/voiceError";
 
 interface Props {
   onCommandSubmit: (cmd: string, type: "shell" | "ai") => void;
@@ -40,17 +41,30 @@ const CommandInput = ({
   };
 
   useEffect(() => {
-    let unlisten: (() => void) | null = null;
+    invoke<boolean>("voice_recording_status")
+      .then((on) => setIsRecording(Boolean(on)))
+      .catch(() => {});
+
+    let unlistenTranscript: (() => void) | null = null;
+    let unlistenState: (() => void) | null = null;
     listen<string>("voice_transcript", (event) => {
       injectTranscript(event.payload ?? "");
       setIsRecording(false);
     })
       .then((off) => {
-        unlisten = off;
+        unlistenTranscript = off;
+      })
+      .catch(() => {});
+    listen<boolean>("voice_recording_state", (event) => {
+      setIsRecording(Boolean(event.payload));
+    })
+      .then((off) => {
+        unlistenState = off;
       })
       .catch(() => {});
     return () => {
-      unlisten?.();
+      unlistenTranscript?.();
+      unlistenState?.();
     };
   }, []);
 
@@ -61,14 +75,14 @@ const CommandInput = ({
         const text = await invoke<string>("stop_voice_recording");
         if (text) injectTranscript(text);
       } catch (e) {
-        console.error("Transcription failed:", e);
+        console.error("Transcription failed:", parseVoiceError(e));
       }
     } else {
       setIsRecording(true);
       try {
         await invoke("start_voice_recording");
       } catch (e) {
-        console.error("Failed to start recording:", e);
+        console.error("Failed to start recording:", parseVoiceError(e));
         setIsRecording(false);
       }
     }

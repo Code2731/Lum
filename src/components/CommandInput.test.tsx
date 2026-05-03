@@ -4,15 +4,19 @@ import CommandInput from "./CommandInput";
 
 const invokeMock = vi.fn();
 const voiceListeners: Array<(event: { payload: string }) => void> = [];
+const voiceStateListeners: Array<(event: { payload: boolean }) => void> = [];
 
 vi.mock("@tauri-apps/api/core", () => ({
   invoke: (cmd: string, args?: unknown) => invokeMock(cmd, args),
 }));
 
 vi.mock("@tauri-apps/api/event", () => ({
-  listen: vi.fn(async (event: string, cb: (event: { payload: string }) => void) => {
+  listen: vi.fn(async (event: string, cb: (event: { payload: unknown }) => void) => {
     if (event === "voice_transcript") {
-      voiceListeners.push(cb);
+      voiceListeners.push(cb as (event: { payload: string }) => void);
+    }
+    if (event === "voice_recording_state") {
+      voiceStateListeners.push(cb as (event: { payload: boolean }) => void);
     }
     return () => {};
   }),
@@ -47,6 +51,16 @@ describe("CommandInput Component", () => {
     xllmOnline: true,
     context: { cwd: "/Users/test", git_branch: "main" },
   };
+
+  beforeEach(() => {
+    invokeMock.mockReset();
+    voiceListeners.splice(0, voiceListeners.length);
+    voiceStateListeners.splice(0, voiceStateListeners.length);
+    invokeMock.mockImplementation(async (cmd: string) => {
+      if (cmd === "voice_recording_status") return false;
+      return undefined;
+    });
+  });
 
   it("기본적으로 셸 모드로 렌더링되어야 함", () => {
     render(<CommandInput {...defaultProps} />);
@@ -96,5 +110,24 @@ describe("CommandInput Component", () => {
       cb?.({ payload: "npm test" });
     });
     expect(input).toHaveValue("npm test");
+  });
+
+  it("마운트 시 voice_recording_status를 조회해야 함", () => {
+    render(<CommandInput {...defaultProps} />);
+    expect(invokeMock).toHaveBeenCalledWith("voice_recording_status", undefined);
+  });
+
+  it("voice_recording_state 이벤트 수신 시 녹음 상태가 동기화되어야 함", async () => {
+    render(<CommandInput {...defaultProps} />);
+    const micButton = screen.getByLabelText("Voice Command");
+    expect(micButton).toBeInTheDocument();
+    await act(async () => {
+      await Promise.resolve();
+    });
+    await act(async () => {
+      const cb = voiceStateListeners[voiceStateListeners.length - 1];
+      cb?.({ payload: true });
+    });
+    expect(micButton).toHaveClass("active");
   });
 });

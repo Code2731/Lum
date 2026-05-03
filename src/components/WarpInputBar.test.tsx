@@ -5,19 +5,25 @@ import WarpInputBar, { type WarpInputBarHandle } from "./WarpInputBar";
 
 const invokeMock = vi.fn();
 const voiceListeners: Array<(event: { payload: string }) => void> = [];
+const voiceStateListeners: Array<(event: { payload: boolean }) => void> = [];
 
 vi.mock("@tauri-apps/api/core", () => ({
   invoke: (cmd: string, args?: unknown) => invokeMock(cmd, args),
 }));
 
 vi.mock("@tauri-apps/api/event", () => ({
-  listen: vi.fn(async (event: string, cb: (event: { payload: string }) => void) => {
+  listen: vi.fn(async (event: string, cb: (event: { payload: unknown }) => void) => {
     if (event === "voice_transcript") {
-      voiceListeners.push(cb);
+      voiceListeners.push(cb as (event: { payload: string }) => void);
+    }
+    if (event === "voice_recording_state") {
+      voiceStateListeners.push(cb as (event: { payload: boolean }) => void);
     }
     return () => {
-      const idx = voiceListeners.indexOf(cb);
+      const idx = voiceListeners.indexOf(cb as (event: { payload: string }) => void);
       if (idx >= 0) voiceListeners.splice(idx, 1);
+      const sidx = voiceStateListeners.indexOf(cb as (event: { payload: boolean }) => void);
+      if (sidx >= 0) voiceStateListeners.splice(sidx, 1);
     };
   }),
 }));
@@ -48,6 +54,7 @@ describe("WarpInputBar — dumb input, 라우팅은 상위에서", () => {
   beforeEach(() => {
     invokeMock.mockReset();
     voiceListeners.splice(0, voiceListeners.length);
+    voiceStateListeners.splice(0, voiceStateListeners.length);
     invokeMock.mockImplementation(async (cmd: string) => {
       if (cmd === "voice_recording_status") return false;
       return undefined;
@@ -172,6 +179,7 @@ describe("WarpInputBar — dumb input, 라우팅은 상위에서", () => {
       fireEvent.click(startBtn);
     });
     expect(await findByText(/음성 입력 오류:/)).toBeInTheDocument();
+    expect(await findByText(/마이크 권한이 거부되었습니다\./)).toBeInTheDocument();
     // 실패 후에도 시작 상태여야 함(녹음중 아님).
     expect(getByLabelText("음성 녹음 시작")).toBeInTheDocument();
   });
@@ -189,5 +197,18 @@ describe("WarpInputBar — dumb input, 라우팅은 상위에서", () => {
     });
     expect(input).toHaveValue("cargo test");
     expect(onChange).toHaveBeenLastCalledWith("cargo test");
+  });
+
+  it("voice_recording_state 이벤트 수신 시 마이크 라벨 동기화", async () => {
+    const { getByLabelText } = setup();
+    expect(getByLabelText("음성 녹음 시작")).toBeInTheDocument();
+    await act(async () => {
+      await Promise.resolve();
+    });
+    await act(async () => {
+      const cb = voiceStateListeners[voiceStateListeners.length - 1];
+      cb?.({ payload: true });
+    });
+    expect(getByLabelText("음성 녹음 중지")).toBeInTheDocument();
   });
 });
