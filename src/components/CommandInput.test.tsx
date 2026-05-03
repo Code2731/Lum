@@ -1,6 +1,22 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, act } from "@testing-library/react";
 import CommandInput from "./CommandInput";
+
+const invokeMock = vi.fn();
+const voiceListeners: Array<(event: { payload: string }) => void> = [];
+
+vi.mock("@tauri-apps/api/core", () => ({
+  invoke: (cmd: string, args?: unknown) => invokeMock(cmd, args),
+}));
+
+vi.mock("@tauri-apps/api/event", () => ({
+  listen: vi.fn(async (event: string, cb: (event: { payload: string }) => void) => {
+    if (event === "voice_transcript") {
+      voiceListeners.push(cb);
+    }
+    return () => {};
+  }),
+}));
 
 // react-simple-code-editor는 내부적으로 복잡한 DOM을 가지므로,
 // 테스트 환경에서는 단순 textarea로 모킹하여 핵심 인터랙션만 검증합니다.
@@ -70,5 +86,15 @@ describe("CommandInput Component", () => {
     fireEvent.keyDown(input, { key: "Enter", code: "Enter" });
 
     expect(mockSubmit).toHaveBeenCalledWith("파일 찾아줘", "ai");
+  });
+
+  it("voice_transcript 이벤트 수신 시 입력창에 반영되어야 함", () => {
+    render(<CommandInput {...defaultProps} />);
+    const input = screen.getByTestId("mock-editor");
+    const cb = voiceListeners[voiceListeners.length - 1];
+    act(() => {
+      cb?.({ payload: "npm test" });
+    });
+    expect(input).toHaveValue("npm test");
   });
 });

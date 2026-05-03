@@ -4,9 +4,22 @@ import { createRef } from "react";
 import WarpInputBar, { type WarpInputBarHandle } from "./WarpInputBar";
 
 const invokeMock = vi.fn();
+const voiceListeners: Array<(event: { payload: string }) => void> = [];
 
 vi.mock("@tauri-apps/api/core", () => ({
   invoke: (cmd: string, args?: unknown) => invokeMock(cmd, args),
+}));
+
+vi.mock("@tauri-apps/api/event", () => ({
+  listen: vi.fn(async (event: string, cb: (event: { payload: string }) => void) => {
+    if (event === "voice_transcript") {
+      voiceListeners.push(cb);
+    }
+    return () => {
+      const idx = voiceListeners.indexOf(cb);
+      if (idx >= 0) voiceListeners.splice(idx, 1);
+    };
+  }),
 }));
 
 function setup(overrides: Partial<React.ComponentProps<typeof WarpInputBar>> = {}) {
@@ -34,7 +47,11 @@ function setup(overrides: Partial<React.ComponentProps<typeof WarpInputBar>> = {
 describe("WarpInputBar — dumb input, 라우팅은 상위에서", () => {
   beforeEach(() => {
     invokeMock.mockReset();
-    invokeMock.mockResolvedValue(undefined);
+    voiceListeners.splice(0, voiceListeners.length);
+    invokeMock.mockImplementation(async (cmd: string) => {
+      if (cmd === "voice_recording_status") return false;
+      return undefined;
+    });
   });
 
   it("Enter → onSubmit(input 원본) 호출, 입력 비워짐", () => {
@@ -142,5 +159,35 @@ describe("WarpInputBar — dumb input, 라우팅은 상위에서", () => {
     expect(invokeMock).toHaveBeenCalledWith("stop_voice_recording", undefined);
     expect(input).toHaveValue("git status");
     expect(onChange).toHaveBeenLastCalledWith("git status");
+  });
+
+  it("마이크 시작 실패 시 오류 배지 표시", async () => {
+    invokeMock.mockImplementation(async (cmd: string) => {
+      if (cmd === "start_voice_recording") throw new Error("mic permission denied");
+      return;
+    });
+    const { getByLabelText, findByText } = setup();
+    const startBtn = getByLabelText("음성 녹음 시작");
+    await act(async () => {
+      fireEvent.click(startBtn);
+    });
+    expect(await findByText(/음성 입력 오류:/)).toBeInTheDocument();
+    // 실패 후에도 시작 상태여야 함(녹음중 아님).
+    expect(getByLabelText("음성 녹음 시작")).toBeInTheDocument();
+  });
+
+  it("마운트 시 voice_recording_status 조회", async () => {
+    setup();
+    expect(invokeMock).toHaveBeenCalledWith("voice_recording_status", undefined);
+  });
+
+  it("voice_transcript 이벤트 수신 시 입력창에 주입", async () => {
+    const { input, onChange } = setup();
+    await act(async () => {
+      const cb = voiceListeners[voiceListeners.length - 1];
+      cb?.({ payload: "cargo test" });
+    });
+    expect(input).toHaveValue("cargo test");
+    expect(onChange).toHaveBeenLastCalledWith("cargo test");
   });
 });

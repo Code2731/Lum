@@ -1,9 +1,10 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { Zap, Mic, MicOff } from "lucide-react";
 import { IconButton } from "@/components/ui/icon-button";
 import { shortPath } from "../utils";
 import Editor from "react-simple-code-editor";
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import Prism from "prismjs";
 import "prismjs/components/prism-bash";
 import "prismjs/themes/prism-tomorrow.css";
@@ -23,13 +24,42 @@ const CommandInput = ({
 }: Props) => {
   const [value, setValue] = useState("");
   const [isRecording, setIsRecording] = useState(false);
+  const lastTranscriptRef = useRef<string>("");
+  const lastTranscriptTsRef = useRef<number>(0);
+
+  const injectTranscript = (text: string) => {
+    const t = text.trim();
+    if (!t) return;
+    const now = Date.now();
+    if (t === lastTranscriptRef.current && now - lastTranscriptTsRef.current < 500) {
+      return;
+    }
+    lastTranscriptRef.current = t;
+    lastTranscriptTsRef.current = now;
+    setValue((prev) => (prev.trim() ? `${prev} ${t}` : t));
+  };
+
+  useEffect(() => {
+    let unlisten: (() => void) | null = null;
+    listen<string>("voice_transcript", (event) => {
+      injectTranscript(event.payload ?? "");
+      setIsRecording(false);
+    })
+      .then((off) => {
+        unlisten = off;
+      })
+      .catch(() => {});
+    return () => {
+      unlisten?.();
+    };
+  }, []);
 
   const handleMicClick = async () => {
     if (isRecording) {
       setIsRecording(false);
       try {
         const text = await invoke<string>("stop_voice_recording");
-        if (text) setValue(text);
+        if (text) injectTranscript(text);
       } catch (e) {
         console.error("Transcription failed:", e);
       }
