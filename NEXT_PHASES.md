@@ -1,10 +1,31 @@
 # LUM — 다음 페이즈 고도화 전략 (Phase 129~136)
 
 작성일: 2026-05-04
+사후 감사: 2026-05-04 (대부분 이미 구현 완료 상태였음 — 아래 §0.5 참조)
 대상 실행자: Codex (또는 후속 Claude 세션)
 선행: Phase 128 (LAN LLM Discovery, `958f05b`) 까지 완료, working tree clean.
 
 이 문서는 **2주~1달 내 실행 가능한 단기 전략**입니다. 장기 비전은 `R_AND_D_ITEMS.md` 참조.
+
+> **⚠️ 작성 당시 내부 코드 감사가 부족했음**. 2026-05-04 사후 감사 결과 §0.5에 정리. Phase 129~134는 사실상 모두 done 또는 동등 기능 구현. 새 작업은 §0.5의 ❌ TODO 항목만 의미 있음.
+
+---
+
+## 0.5. 사후 감사 — 페이즈별 실제 구현 상태 (2026-05-04)
+
+| Phase | 명세 | 실제 코드 상태 | 인용 |
+|---|---|---|---|
+| 129 Plan/Act + auto-approve | 4-5일 명세 | ✅ **DONE** | `react_agent.rs:236` `ReactMode` enum, `:241` `parse_mode`, `:408` `is_plan_blocked_tool`, `:413` `is_whitelisted_in_act`. config.rs:114 `react_tool_whitelist`, :428 `save_react_tool_whitelist`. 프론트 `useReactAgent.ts:189-219` `runPlan/runAct/start`, `ReactAgentPanel.tsx:387` 화이트리스트 저장 UI. |
+| 130-A desktop 노출 | 1.5일 명세 | ✅ **DONE** | `react_agent.rs:99` `DESKTOP_PROMPT`, `:386-388` 4도구 라우팅, `:494-548` `run_desktop_tool` enabled gate. config.rs:108 `react_desktop_tools_enabled`, :412 save 커맨드. `ReactAgentPanel.tsx:183-192` 토글 UI. 회귀 가드 4도구 × off/on. |
+| 130-B 의도 감지 강화 | 1.5일 명세 | ✅ **DONE** | `inputRouter.ts:142-156` `detectCodingIntent` 가중치 스코어 (0.5 verb + 0.5 noun + 0.3 context, threshold 0.6). 영어 활용형 regex `\b{verb}(s\|ed\|ing)?\b`, 한국어 어미 `CODING_VERB_KO_SUFFIX_FORMS`. |
+| 131 MCP 원클릭 번들 | 3-4일 명세 | ✅ **DONE** | `mcp.rs:115` `recommended_servers_catalog`, `:467` `mcp_recommended_servers`, `:474` `mcp_install_recommended`. lib.rs:288-289 등록. `McpPanel.tsx:85` 추천 카드 UI. 회귀 가드 `:717` `recommended_servers_7개_노출`. |
+| 132 SKILL.md 표준 | 3일 명세 | ✅ **DONE** | `skills.rs:38-42` `when_to_use/quick_reference/procedure/pitfalls/verification` 5섹션, `:193` `split_frontmatter`, `:246` `parse_frontmatter_yaml`, `:295` 헤더 alias 매핑. |
+| 133 Reflexion 1턴 | 1주 명세 | ✅ **DONE** | `react_agent.rs:301` `run_reflexion`, `:1545` config 토글, `:1588/:1625/:1710` 통합. config.rs:111 `react_reflexion_enabled`. |
+| 134 Healing 자연어 | 3-4일 명세 | ✅ **DONE** | `react_agent.rs:381` `query_healing` + `analyze_failure_reasons` 도구. `inputRouter.ts:122-130,160-167,236` `HEALING_INTENT_KO/EN` + `detectHealingIntent` + 라우팅. `HealingDatasetPanel.tsx:182-186` reject 카드 amber `failure_reason` 노출. |
+| 135 Voice 입력 | 1~1.5주 명세 (cpal+whisper-rs) | 🟡 **PARTIAL** | `audio.rs:83-179` 외부 whisper(LUM_VOICE_STOP_CMD/`~/.lum_whisper/last_transcript.txt`) 호출. 임베디드 cpal+whisper-rs는 미구현 — 디자인이 외부 위임으로 의도적으로 갈라짐(가벼운 핵심 + 사용자가 STT 도구 선택). 명세대로 가려면 신규 페이즈 필요. |
+| 136 Magentic 2-ledger | 2-3주 명세 | ❌ **TODO** | `commands/orchestrator.rs` 부재. ReAct 단일 루프 그대로. |
+
+**결론**: NEXT_PHASES.md(자연어 표면)는 작성 당시 거의 다 done이었음. 외부 리서치는 정확했지만 내부 감사 부족 — Codex 핸드오프 가치는 **136(Magentic) + 135 임베디드 STT** 두 항목뿐. 나머지는 **이미 done이므로 새로 구현 금지**. Code Intelligence 축은 `NEXT_PHASES_CODE_INTEL.md` 별도 문서 참조 — 그쪽이 실제 미완 항목 다수.
 
 ---
 
@@ -41,7 +62,7 @@
 
 ---
 
-## 2. Phase 129 — Plan/Act 분리 + 도구 단위 auto-approve (4-5일)
+## 2. Phase 129 — Plan/Act 분리 + 도구 단위 auto-approve (4-5일) ✅ DONE
 
 **근거**: Cline 3.x가 사실상 표준화한 패턴. Phase 123 3차의 사후 위험도 분류 + Phase 123 2차의 자동 백업이 이미 있어서 절반은 done.
 
@@ -70,7 +91,7 @@
 
 ---
 
-## 3. Phase 130 — desktop 도구 노출 + 코딩 의도 감지 강화 (2-3일)
+## 3. Phase 130 — desktop 도구 노출 + 코딩 의도 감지 강화 (2-3일) ✅ DONE (130-A + 130-B 모두)
 
 **근거**: 가장 ROI 높은 페이즈 — 1시간짜리 desktop 노출이 즉시 UI 자동화 활성화.
 
@@ -114,7 +135,7 @@
 
 ---
 
-## 4. Phase 131 — MCP 원클릭 번들 (3-4일)
+## 4. Phase 131 — MCP 원클릭 번들 (3-4일) ✅ DONE
 
 **근거**: MCP 12k+ 서버 생태계인데 현재 LUM은 사용자가 `~/.lum_mcp.json` 직접 편집. 진입 장벽이 큼.
 
@@ -145,7 +166,7 @@
 
 ---
 
-## 5. Phase 132 — agentskills.io 표준 호환 SKILL.md (3일)
+## 5. Phase 132 — agentskills.io 표준 호환 SKILL.md (3일) ✅ DONE
 
 **근거**: 현재 Phase 127 Skills는 자유 markdown — Hermes Agent의 agentskills.io 표준과 메커니즘은 같지만 형식 비호환. 표준 호환 시 Hermes/Claude Code 스킬 hub를 그대로 import 가능.
 
@@ -187,7 +208,7 @@
 
 ---
 
-## 6. Phase 133 — Reflexion 1턴 self-critique (1주)
+## 6. Phase 133 — Reflexion 1턴 self-critique (1주) ✅ DONE
 
 **근거**: ReAct 마지막에 "goal 달성? 회귀 위험?" 자기검토 1회. HumanEval +11pp 보고된 표준 기법. Phase 122 `failure_reason` 인프라 그대로 재사용.
 
@@ -208,7 +229,7 @@
 
 ---
 
-## 7. Phase 134 — Healing 자연어 surface (3-4일)
+## 7. Phase 134 — Healing 자연어 surface (3-4일) ✅ DONE
 
 **근거**: Phase 122 `failure_reason` 필드는 저장되지만 UI에 노출 0. Phase 118 recall_search는 healing을 검색하지만 수동. "내 거부 케이스 보여줘" 같은 자연어로 직접 호출 가능해야 LUM 학습 데이터를 사용자가 큐레이션할 수 있음 — 진짜 LUM 모트.
 
@@ -228,7 +249,7 @@
 
 ---
 
-## 8. Phase 135 — Voice 입력 (chunk 기반) (1~1.5주)
+## 8. Phase 135 — Voice 입력 (chunk 기반) (1~1.5주) 🟡 PARTIAL — 외부 whisper 호출만 구현, 임베디드 cpal+whisper-rs 미구현 (디자인 의도적 분기)
 
 **근거**: 2026-03 Anthropic·OpenAI 코딩 agent voice mode 출하. LUM은 `audio.rs:1-10` stub만 있음.
 
@@ -252,7 +273,7 @@
 
 ---
 
-## 9. Phase 136 — Magentic식 2-ledger Orchestrator (2-3주, 큰 투자)
+## 9. Phase 136 — Magentic식 2-ledger Orchestrator (2-3주, 큰 투자) ❌ TODO
 
 **근거**: 단일 ReAct는 long-horizon (20+ 단계) 작업에서 stuck-loop 발생. Magentic-One의 outer(task ledger) + inner(progress ledger) 패턴이 2026 표준.
 
