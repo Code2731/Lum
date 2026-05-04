@@ -89,6 +89,7 @@ const BASE_PROMPT: &str = r#"당신은 터미널 코딩 에이전트입니다. �
 - run_tests({"cwd": "경로"}) — 테스트 자동 감지 후 실행
 - query_healing({"query": "질문", "limit": 5, "since_days": 30}) — 자동치유(healing) 기록만 시맨틱 검색
 - analyze_failure_reasons({"since_days": 30, "limit": 5}) — reject 거부 사유 빈도 Top-N 요약
+- query_codebase({"query": "질문", "limit": 5}) — 인덱싱된 코드베이스 시맨틱 검색 (top-K 청크). grep과 달리 의미 매칭 — "auth 관련 함수 찾아" 같은 자연어 질의에 사용. 인덱스 비어있으면 안내 메시지가 반환되며, 그 경우 사용자에게 RAG 색인을 먼저 권장.
 
 쓰기 도구 (CWD 내부 + 안전 경로만 허용 — .git/node_modules/target/dist/.lum_* 거부):
 - write_file({"path": "...", "content": "...", "overwrite": false}) — 신규 파일 생성. 기존 파일은 overwrite=true 명시 필요.
@@ -380,6 +381,7 @@ async fn run_tool(
         }
         "query_healing" => run_query_healing_tool(args).await,
         "analyze_failure_reasons" => run_analyze_failure_reasons_tool(args),
+        "query_codebase" => run_query_codebase_tool(args).await,
         "write_file" => write_file_tool(args, cwd),
         "apply_patch" => apply_patch_tool(args, cwd),
         "delete_file" => delete_file_tool(args, cwd),
@@ -635,6 +637,83 @@ fn list_healing_records(
         }
     }
     crate::commands::healing_dataset::list_healing_dataset().map_err(|e| e.to_string())
+}
+
+// ─── Phase 137-B: query_codebase 의미 검색 도구 ────────────────────────────────
+
+#[cfg(test)]
+#[derive(Default)]
+struct CodebaseToolMock {
+    search_result: Option<std::result::Result<Vec<crate::commands::rag::SearchResult>, String>>,
+}
+
+#[cfg(test)]
+static CODEBASE_TOOL_MOCK: OnceLock<Mutex<CodebaseToolMock>> = OnceLock::new();
+
+#[cfg(test)]
+fn codebase_tool_mock_lock() -> &'static Mutex<CodebaseToolMock> {
+    CODEBASE_TOOL_MOCK.get_or_init(|| Mutex::new(CodebaseToolMock::default()))
+}
+
+#[cfg(test)]
+fn set_codebase_tool_mock(mock: CodebaseToolMock) {
+    *codebase_tool_mock_lock().lock().unwrap() = mock;
+}
+
+#[cfg(test)]
+fn clear_codebase_tool_mock() {
+    *codebase_tool_mock_lock().lock().unwrap() = CodebaseToolMock::default();
+}
+
+async fn search_codebase_internal(
+    query: String,
+    limit: usize,
+) -> std::result::Result<Vec<crate::commands::rag::SearchResult>, String> {
+    #[cfg(test)]
+    {
+        let mut guard = codebase_tool_mock_lock().lock().unwrap();
+        if let Some(v) = guard.search_result.take() {
+            return v;
+        }
+    }
+    // model="default"는 rag::search_with_client과 동일 — embed_auto가 ollama 우선,
+    // xLLM 폴백 시 "default"는 placeholder로 받아들임.
+    crate::commands::rag::search_codebase(query, "default".to_string(), limit).await
+}
+
+async fn run_query_codebase_tool(args: &serde_json::Value) -> String {
+    let query = args["query"].as_str().unwrap_or("").trim().to_string();
+    if query.is_empty() {
+        return "오류: query_codebase는 query 파라미터가 필요합니다".to_string();
+    }
+    let limit = args["limit"]
+        .as_u64()
+        .and_then(|v| usize::try_from(v).ok())
+        .unwrap_or(5)
+        .clamp(1, 20);
+
+    match search_codebase_internal(query.clone(), limit).await {
+        Ok(results) => {
+            if results.is_empty() {
+                return format!(
+                    "코드베이스 검색 결과 0건 (query=\"{query}\"). 인덱스가 비어있을 수 있습니다 — 사용자에게 RAG 색인(index_project)을 먼저 실행하도록 안내하세요."
+                );
+            }
+            let mut out = Vec::new();
+            out.push(format!(
+                "코드베이스 검색 결과 {}건 (query=\"{}\")",
+                results.len(),
+                query
+            ));
+            for (idx, r) in results.iter().enumerate() {
+                out.push(format!("{}. score={:.3}", idx + 1, r.score));
+                out.push(r.content.clone());
+                out.push("---".to_string());
+            }
+            truncate(&out.join("\n"))
+        }
+        Err(e) => format!("코드베이스 검색 실패: {e}"),
+    }
 }
 
 async fn run_query_healing_tool(args: &serde_json::Value) -> String {
@@ -1860,8 +1939,13 @@ ACTION: mcp({"server": "playwright", "tool": "screenshot", "arguments": {"url": 
         clear_desktop_tool_mock();
     }
 
+    // HealingToolMock도 글로벌 state — 3개 테스트가 mock을 공유해 병렬 실행 시 race.
+    // Phase 137-B 테스트 추가로 스케줄링이 변하며 race가 더 자주 표면화됨 → 직렬 lock.
+    static HEALING_TEST_LOCK: Mutex<()> = Mutex::new(());
+
     #[tokio::test]
     async fn query_healing_결과_요약_성공() {
+        let _g = HEALING_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         set_healing_tool_mock(HealingToolMock {
             recall_result: Some(Ok(vec![crate::commands::recall::RecallEntry {
                 id: "healing:1".into(),
@@ -1885,6 +1969,7 @@ ACTION: mcp({"server": "playwright", "tool": "screenshot", "arguments": {"url": 
 
     #[test]
     fn analyze_failure_reasons_top5_요약() {
+        let _g = HEALING_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         let records = vec![
             crate::commands::healing_dataset::HealingRecord {
                 ts_ms: 10,
@@ -1936,6 +2021,7 @@ ACTION: mcp({"server": "playwright", "tool": "screenshot", "arguments": {"url": 
 
     #[test]
     fn analyze_failure_reasons_빈_데이터() {
+        let _g = HEALING_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         set_healing_tool_mock(HealingToolMock {
             recall_result: None,
             records_result: Some(Ok(Vec::new())),
@@ -1943,6 +2029,75 @@ ACTION: mcp({"server": "playwright", "tool": "screenshot", "arguments": {"url": 
         let out = run_analyze_failure_reasons_tool(&serde_json::json!({"since_days": 7}));
         assert!(out.contains("reject 기록이 없습니다"), "{out}");
         clear_healing_tool_mock();
+    }
+
+    // ─── Phase 137-B: query_codebase 회귀 가드 ──────────────────────────────
+    // CODEBASE_TOOL_MOCK은 글로벌 state라 멀티스레드 테스트에서 mock이 서로 소비됨 →
+    // CODEBASE_TEST_LOCK으로 직렬화. 다른 단위 테스트는 mock 안 쓰므로 영향 없음.
+    static CODEBASE_TEST_LOCK: Mutex<()> = Mutex::new(());
+
+    #[tokio::test]
+    async fn phase137b_query_codebase_도구_등록_및_결과_요약() {
+        let _g = CODEBASE_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        // 시스템 프롬프트에 query_codebase 항목이 노출되는지 + LLM이 호출했을 때
+        // run_tool match → run_query_codebase_tool로 라우팅되어 결과를 요약 반환하는지.
+        let prompt = build_system_prompt(&[], &[]);
+        assert!(prompt.contains("query_codebase"), "프롬프트에 도구 미등록: {prompt}");
+
+        set_codebase_tool_mock(CodebaseToolMock {
+            search_result: Some(Ok(vec![
+                crate::commands::rag::SearchResult {
+                    content: "[src/auth.rs]\nfn verify_token(t: &str) -> bool { ... }".into(),
+                    score: 0.92,
+                },
+                crate::commands::rag::SearchResult {
+                    content: "[src/login.rs]\nfn login(user: &str, pw: &str) { ... }".into(),
+                    score: 0.81,
+                },
+            ])),
+        });
+        let out =
+            run_query_codebase_tool(&serde_json::json!({"query": "auth 함수", "limit": 5})).await;
+        assert!(out.contains("검색 결과 2건"), "{out}");
+        assert!(out.contains("score=0.920"), "{out}");
+        assert!(out.contains("verify_token"), "{out}");
+        clear_codebase_tool_mock();
+    }
+
+    #[tokio::test]
+    async fn phase137b_query_codebase_결과_truncation() {
+        let _g = CODEBASE_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        // 도구 결과는 TOOL_OUTPUT_LIMIT(4000자) 초과 시 잘려야 함 — LLM 컨텍스트 보호.
+        set_codebase_tool_mock(CodebaseToolMock {
+            search_result: Some(Ok(vec![crate::commands::rag::SearchResult {
+                content: "[src/big.rs]\n".to_string() + &"x".repeat(TOOL_OUTPUT_LIMIT + 200),
+                score: 0.5,
+            }])),
+        });
+        let out = run_query_codebase_tool(&serde_json::json!({"query": "big"})).await;
+        assert!(out.contains("생략"), "결과 truncation 미적용: {out}");
+        assert!(out.len() < TOOL_OUTPUT_LIMIT + 100, "truncate 후에도 너무 김: {}", out.len());
+        clear_codebase_tool_mock();
+    }
+
+    #[tokio::test]
+    async fn phase137b_query_codebase_빈_인덱스_안내() {
+        let _g = CODEBASE_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        // 인덱스 미생성/비어있는 경우 — 사용자에게 색인 실행을 안내.
+        set_codebase_tool_mock(CodebaseToolMock {
+            search_result: Some(Ok(Vec::new())),
+        });
+        let out = run_query_codebase_tool(&serde_json::json!({"query": "anything"})).await;
+        assert!(out.contains("0건"), "{out}");
+        assert!(out.contains("index_project"), "색인 안내 누락: {out}");
+        clear_codebase_tool_mock();
+    }
+
+    #[tokio::test]
+    async fn phase137b_query_codebase_query_누락_거부() {
+        let _g = CODEBASE_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        let out = run_query_codebase_tool(&serde_json::json!({})).await;
+        assert!(out.contains("query 파라미터"), "{out}");
     }
 
     // ─── 코드 편집 도구 회귀 가드 ─────────────────────────────────────────────
