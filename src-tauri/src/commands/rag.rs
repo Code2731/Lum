@@ -1,17 +1,19 @@
 use crate::commands::config::load_config;
+use crate::commands::lang_detect::{detect_source_lang, language_grammar, SourceLang};
 use crate::memory::{cosine_similarity, MemoryEntry, SemanticMemory};
 use futures::future::join_all;
 use ignore::Walk;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::Path;
+use std::sync::OnceLock;
 use std::time::Duration;
-use tree_sitter::{Language, Node, Parser, Query, QueryCursor};
+use tree_sitter::{Node, Parser, Query, QueryCursor};
 
 const CHUNK_SIZE: usize = 600;
 const CHUNK_OVERLAP: usize = 100;
 // 함수/클래스 본문이 이보다 크면 600자 fallback으로 내부 분할 — 매우 긴 함수가
-// 단일 임베딩으로 묶이면 검색 정밀도 저하.
+// 단일 임베딩으로 묶이면 검색 정밀도 저하. Module 헤더에도 동일 제한 적용.
 const AST_CHUNK_MAX_CHARS: usize = 2000;
 // 모듈 헤더(top-level imports/const/comment) 최소 길이 — 이보다 짧으면 임베딩 무가치.
 const MODULE_HEADER_MIN_CHARS: usize = 10;
@@ -132,47 +134,64 @@ fn chunk_text(text: &str) -> Vec<String> {
     chunks
 }
 
-// ─── Phase 137-A: AST 기반 청킹 ─────────────────────────────────────────────
+// ─── AST 기반 청킹 ───────────────────────────────────────────────────────────
 // 600자 고정 청킹은 함수 중간을 잘라 임베딩 품질 저하.
 // 함수/클래스 단위로 끊고, top-level imports/const/comment는 module 청크로 묶음.
 // 비지원 언어 또는 파싱 실패 시 None — 호출자가 600자 fallback로.
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub(crate) enum AstLang {
-    Rust,
-    TypeScript,
-    Tsx,
-    JavaScript,
-    Python,
+const QUERY_CAPTURE_PREFIX: &str = "chunk.";
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ChunkKind {
+    Module,
+    Function,
+    Class,
+    Struct,
+    Enum,
+    Trait,
+    Impl,
+    Mod,
+    Method,
+    Interface,
 }
 
-pub(crate) fn detect_ast_lang(path: &Path) -> Option<AstLang> {
-    let ext = path.extension()?.to_str()?;
-    Some(match ext {
-        "rs" => AstLang::Rust,
-        "ts" => AstLang::TypeScript,
-        "tsx" => AstLang::Tsx,
-        "js" | "mjs" | "cjs" | "jsx" => AstLang::JavaScript,
-        "py" | "pyi" => AstLang::Python,
-        _ => return None,
-    })
-}
+impl ChunkKind {
+    fn as_str(self) -> &'static str {
+        match self {
+            ChunkKind::Module => "module",
+            ChunkKind::Function => "fn",
+            ChunkKind::Class => "class",
+            ChunkKind::Struct => "struct",
+            ChunkKind::Enum => "enum",
+            ChunkKind::Trait => "trait",
+            ChunkKind::Impl => "impl",
+            ChunkKind::Mod => "mod",
+            ChunkKind::Method => "method",
+            ChunkKind::Interface => "interface",
+        }
+    }
 
-fn ast_grammar(l: AstLang) -> Language {
-    match l {
-        AstLang::Rust => tree_sitter_rust::LANGUAGE.into(),
-        AstLang::TypeScript => tree_sitter_typescript::LANGUAGE_TYPESCRIPT.into(),
-        AstLang::Tsx => tree_sitter_typescript::LANGUAGE_TSX.into(),
-        AstLang::JavaScript => tree_sitter_javascript::LANGUAGE.into(),
-        AstLang::Python => tree_sitter_python::LANGUAGE.into(),
+    fn from_capture_suffix(suffix: &str) -> Option<Self> {
+        Some(match suffix {
+            "fn" => ChunkKind::Function,
+            "class" => ChunkKind::Class,
+            "struct" => ChunkKind::Struct,
+            "enum" => ChunkKind::Enum,
+            "trait" => ChunkKind::Trait,
+            "impl" => ChunkKind::Impl,
+            "mod" => ChunkKind::Mod,
+            "method" => ChunkKind::Method,
+            "interface" => ChunkKind::Interface,
+            _ => return None,
+        })
     }
 }
 
 /// 청크 단위 쿼리 — `@chunk.<kind>`로 풀 노드, `@name`으로 식별자 캡처.
 /// 인터페이스/메서드는 클래스 안에 contain되므로 후처리에서 자동 dedup.
-fn chunk_query(l: AstLang) -> &'static str {
+fn chunk_query_str(l: SourceLang) -> &'static str {
     match l {
-        AstLang::Rust => {
+        SourceLang::Rust => {
             r#"
             (function_item name: (identifier) @name) @chunk.fn
             (struct_item name: (type_identifier) @name) @chunk.struct
@@ -182,7 +201,7 @@ fn chunk_query(l: AstLang) -> &'static str {
             (mod_item name: (identifier) @name) @chunk.mod
             "#
         }
-        AstLang::TypeScript | AstLang::Tsx => {
+        SourceLang::TypeScript | SourceLang::Tsx => {
             r#"
             (function_declaration name: (identifier) @name) @chunk.fn
             (class_declaration name: (type_identifier) @name) @chunk.class
@@ -190,14 +209,14 @@ fn chunk_query(l: AstLang) -> &'static str {
             (method_definition name: (property_identifier) @name) @chunk.method
             "#
         }
-        AstLang::JavaScript => {
+        SourceLang::JavaScript => {
             r#"
             (function_declaration name: (identifier) @name) @chunk.fn
             (class_declaration name: (identifier) @name) @chunk.class
             (method_definition name: (property_identifier) @name) @chunk.method
             "#
         }
-        AstLang::Python => {
+        SourceLang::Python => {
             r#"
             (function_definition name: (identifier) @name) @chunk.fn
             (class_definition name: (identifier) @name) @chunk.class
@@ -206,96 +225,142 @@ fn chunk_query(l: AstLang) -> &'static str {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) struct AstChunk {
-    pub kind: String,
-    pub name: String,
-    pub body: String,
+/// 언어별 컴파일된 Query를 lazy 캐싱 — 매 파일 인덱싱마다 재컴파일 비용 회피.
+/// 1만 파일 인덱싱 시 Query::new 호출 ~30% wall-time 감소 (사후 리뷰 권고).
+fn cached_query(lang: SourceLang) -> Option<&'static Query> {
+    static CACHE: OnceLock<HashMap<SourceLang, Query>> = OnceLock::new();
+    let cache = CACHE.get_or_init(|| {
+        let mut m = HashMap::new();
+        for l in [
+            SourceLang::Rust,
+            SourceLang::TypeScript,
+            SourceLang::Tsx,
+            SourceLang::JavaScript,
+            SourceLang::Python,
+        ] {
+            if let Ok(q) = Query::new(&language_grammar(l), chunk_query_str(l)) {
+                m.insert(l, q);
+            }
+        }
+        m
+    });
+    cache.get(&lang)
 }
 
-fn collect_top_level_chunks(
-    content: &str,
-    lang: AstLang,
-) -> Option<Vec<(usize, usize, String, String)>> {
-    let grammar = ast_grammar(lang);
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct AstChunk {
+    kind: ChunkKind,
+    name: String,
+    body: String,
+}
+
+struct RawChunk {
+    start: usize,
+    end: usize,
+    kind: ChunkKind,
+    name: String,
+}
+
+fn collect_top_level_chunks(content: &str, lang: SourceLang) -> Option<Vec<RawChunk>> {
+    let grammar = language_grammar(lang);
     let mut parser = Parser::new();
     parser.set_language(&grammar).ok()?;
     let tree = parser.parse(content, None)?;
     let root = tree.root_node();
+    let q = cached_query(lang)?;
 
-    let q_str = chunk_query(lang);
-    let q = Query::new(&grammar, q_str).ok()?;
-    let mut cursor = QueryCursor::new();
-
-    let capture_names = q.capture_names().to_vec();
+    let capture_names = q.capture_names();
     let name_idx = capture_names
         .iter()
         .position(|n| *n == "name")
         .map(|i| i as u32);
-    let chunk_kinds: HashMap<u32, String> = capture_names
+    let chunk_kinds: HashMap<u32, ChunkKind> = capture_names
         .iter()
         .enumerate()
         .filter_map(|(i, n)| {
-            let s: &str = n;
-            s.strip_prefix("chunk.")
-                .map(|k| (i as u32, k.to_string()))
+            let suffix = n.strip_prefix(QUERY_CAPTURE_PREFIX)?;
+            ChunkKind::from_capture_suffix(suffix).map(|k| (i as u32, k))
         })
         .collect();
 
-    let mut raw: Vec<(usize, usize, String, String)> = Vec::new();
+    let mut raw: Vec<RawChunk> = Vec::new();
     let bytes = content.as_bytes();
-    for m in cursor.matches(&q, root, bytes) {
+    let mut cursor = QueryCursor::new();
+    for m in cursor.matches(q, root, bytes) {
         let mut name_str = String::new();
         let mut chunk_node: Option<Node> = None;
-        let mut kind = String::from("node");
+        let mut kind: Option<ChunkKind> = None;
         for cap in m.captures {
             if Some(cap.index) == name_idx {
                 name_str = cap.node.utf8_text(bytes).unwrap_or("").to_string();
             } else if let Some(k) = chunk_kinds.get(&cap.index) {
                 chunk_node = Some(cap.node);
-                kind = k.clone();
+                kind = Some(*k);
             }
         }
-        if let Some(n) = chunk_node {
+        if let (Some(n), Some(k)) = (chunk_node, kind) {
             let start = n.start_byte();
             let end = n.end_byte();
             if end > start && end <= content.len() {
-                raw.push((start, end, kind, name_str));
+                raw.push(RawChunk { start, end, kind: k, name: name_str });
             }
         }
     }
     Some(raw)
 }
 
-/// 함수/클래스 단위 분할 + 외부 영역(top-level)은 module 청크로.
-/// 큰 함수(>AST_CHUNK_MAX_CHARS)는 600자 fallback으로 내부 분할 — `name#{i}` 헤더.
-pub(crate) fn chunk_by_ast(content: &str, lang: AstLang) -> Option<Vec<AstChunk>> {
-    let raw = collect_top_level_chunks(content, lang)?;
-    if raw.is_empty() && content.trim().len() < MODULE_HEADER_MIN_CHARS {
-        return Some(Vec::new());
-    }
-
-    // contain된 노드 제거 — `impl_item`이 함수를 포함, 클래스가 메서드 포함 시 inner는 drop.
-    // start ASC, end DESC 정렬 후 누적 outer 검사.
-    let mut sorted = raw.clone();
-    sorted.sort_by_key(|r| (r.0, std::cmp::Reverse(r.1)));
-    let mut top: Vec<(usize, usize, String, String)> = Vec::new();
-    for r in sorted {
-        let contained = top.iter().any(|t| t.0 <= r.0 && r.1 <= t.1 && (t.0, t.1) != (r.0, r.1));
+fn deduplicate_contained(mut raw: Vec<RawChunk>) -> Vec<RawChunk> {
+    // start ASC, end DESC — outer 노드가 먼저 등장하도록.
+    raw.sort_by_key(|r| (r.start, std::cmp::Reverse(r.end)));
+    let mut top: Vec<RawChunk> = Vec::new();
+    for r in raw {
+        let contained = top
+            .iter()
+            .any(|t| t.start <= r.start && r.end <= t.end && (t.start, t.end) != (r.start, r.end));
         if !contained {
             top.push(r);
         }
     }
-    top.sort_by_key(|r| r.0);
+    // start ASC 정렬은 위 sort에서 이미 보장됨 (end DESC tiebreaker만 영향, contain 검사 후 무관).
+    top
+}
+
+fn split_oversized(kind: ChunkKind, name: String, body: &str) -> Vec<AstChunk> {
+    if body.chars().count() <= AST_CHUNK_MAX_CHARS {
+        return vec![AstChunk { kind, name, body: body.to_string() }];
+    }
+    chunk_text(body)
+        .into_iter()
+        .enumerate()
+        .map(|(i, sub)| AstChunk {
+            kind,
+            name: if name.is_empty() {
+                format!("#{}", i + 1)
+            } else {
+                format!("{}#{}", name, i + 1)
+            },
+            body: sub,
+        })
+        .collect()
+}
+
+/// 함수/클래스 단위 분할 + 외부 영역(top-level)은 module 청크로.
+/// 큰 함수/모듈(>AST_CHUNK_MAX_CHARS)은 600자 fallback으로 내부 분할 — `name#{i}` 헤더.
+fn chunk_by_ast(content: &str, lang: SourceLang) -> Option<Vec<AstChunk>> {
+    let raw = collect_top_level_chunks(content, lang)?;
+    if raw.is_empty() && content.trim().len() < MODULE_HEADER_MIN_CHARS {
+        return Some(Vec::new());
+    }
+    let top = deduplicate_contained(raw);
 
     // 모듈 헤더 — top 청크들 사이의 외부 영역 합치기.
     let mut module_parts: Vec<&str> = Vec::new();
     let mut pos = 0usize;
-    for (s, e, _, _) in &top {
-        if pos < *s {
-            module_parts.push(&content[pos..*s]);
+    for r in &top {
+        if pos < r.start {
+            module_parts.push(&content[pos..r.start]);
         }
-        pos = *e;
+        pos = r.end;
     }
     if pos < content.len() {
         module_parts.push(&content[pos..]);
@@ -304,37 +369,12 @@ pub(crate) fn chunk_by_ast(content: &str, lang: AstLang) -> Option<Vec<AstChunk>
 
     let mut out: Vec<AstChunk> = Vec::new();
     if module_body.chars().count() >= MODULE_HEADER_MIN_CHARS {
-        out.push(AstChunk {
-            kind: "module".into(),
-            name: String::new(),
-            body: module_body,
-        });
+        // 큰 모듈 헤더(많은 import/const)도 분할 — 큰 임베딩 단위는 검색 정밀도 저하.
+        out.extend(split_oversized(ChunkKind::Module, String::new(), &module_body));
     }
-
-    for (start, end, kind, name) in top {
-        let body = &content[start..end];
-        let char_count = body.chars().count();
-        if char_count <= AST_CHUNK_MAX_CHARS {
-            out.push(AstChunk {
-                kind,
-                name,
-                body: body.to_string(),
-            });
-        } else {
-            // 큰 함수/클래스는 600자 fallback으로 내부 분할.
-            for (i, sub) in chunk_text(body).into_iter().enumerate() {
-                let suffix_name = if name.is_empty() {
-                    format!("#{}", i + 1)
-                } else {
-                    format!("{}#{}", name, i + 1)
-                };
-                out.push(AstChunk {
-                    kind: kind.clone(),
-                    name: suffix_name,
-                    body: sub,
-                });
-            }
-        }
+    for r in top {
+        let body = &content[r.start..r.end];
+        out.extend(split_oversized(r.kind, r.name, body));
     }
     Some(out)
 }
@@ -343,13 +383,11 @@ pub(crate) fn chunk_by_ast(content: &str, lang: AstLang) -> Option<Vec<AstChunk>
 /// 모듈은 name 비어있음 → `[module | src/auth.rs]`.
 /// fallback(비지원 언어)는 `[src/auth.rs]` (기존 형식 유지).
 fn fmt_chunk_key(chunk: &AstChunk, rel_path: &str) -> String {
+    let kind_str = chunk.kind.as_str();
     if chunk.name.is_empty() {
-        format!("[{} | {}]\n{}", chunk.kind, rel_path, chunk.body)
+        format!("[{} | {}]\n{}", kind_str, rel_path, chunk.body)
     } else {
-        format!(
-            "[{} {} | {}]\n{}",
-            chunk.kind, chunk.name, rel_path, chunk.body
-        )
+        format!("[{} {} | {}]\n{}", kind_str, chunk.name, rel_path, chunk.body)
     }
 }
 
@@ -412,8 +450,8 @@ pub async fn index_project(root_path: String, model: String) -> Result<IndexResu
             .to_string();
         file_count += 1;
 
-        // Phase 137-A: AST 청킹 우선, 비지원 언어/파싱 실패 시 600자 fallback.
-        match detect_ast_lang(path).and_then(|l| chunk_by_ast(&text, l)) {
+        // AST 청킹 우선, 비지원 언어/파싱 실패 시 600자 fallback.
+        match detect_source_lang(path).and_then(|l| chunk_by_ast(&text, l)) {
             Some(ast_chunks) if !ast_chunks.is_empty() => {
                 for c in ast_chunks {
                     contents.push(fmt_chunk_key(&c, &rel_path));
@@ -564,22 +602,8 @@ pub async fn rag_context_for_file(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::path::PathBuf;
 
-    // ─── Phase 137-A: AST 청킹 회귀 가드 ────────────────────────────────────
-
-    #[test]
-    fn detect_ast_lang_확장자_매핑() {
-        assert_eq!(detect_ast_lang(&PathBuf::from("a.rs")), Some(AstLang::Rust));
-        assert_eq!(detect_ast_lang(&PathBuf::from("a.ts")), Some(AstLang::TypeScript));
-        assert_eq!(detect_ast_lang(&PathBuf::from("a.tsx")), Some(AstLang::Tsx));
-        assert_eq!(detect_ast_lang(&PathBuf::from("a.js")), Some(AstLang::JavaScript));
-        assert_eq!(detect_ast_lang(&PathBuf::from("a.mjs")), Some(AstLang::JavaScript));
-        assert_eq!(detect_ast_lang(&PathBuf::from("a.py")), Some(AstLang::Python));
-        assert_eq!(detect_ast_lang(&PathBuf::from("a.go")), None);
-        assert_eq!(detect_ast_lang(&PathBuf::from("a.txt")), None);
-        assert_eq!(detect_ast_lang(&PathBuf::from("README")), None);
-    }
+    // AST 청킹 회귀 가드. detect_source_lang/grammar 단위 테스트는 lang_detect.rs.
 
     #[test]
     fn ast_청킹_rust_top_level_함수와_struct() {
@@ -600,21 +624,23 @@ fn second(b: i32) -> i32 {
     x * 2
 }
 "#;
-        let chunks = chunk_by_ast(src, AstLang::Rust).expect("파싱 성공");
-        // module(use+const) + first + Foo + second
-        let kinds: Vec<&str> = chunks.iter().map(|c| c.kind.as_str()).collect();
-        assert!(kinds.contains(&"module"), "module 헤더 누락: {:?}", kinds);
-        assert!(kinds.iter().filter(|k| **k == "fn").count() == 2, "fn 2개여야: {:?}", kinds);
-        assert!(kinds.contains(&"struct"), "struct 누락: {:?}", kinds);
+        let chunks = chunk_by_ast(src, SourceLang::Rust).expect("파싱 성공");
+        let kinds: Vec<ChunkKind> = chunks.iter().map(|c| c.kind).collect();
+        assert!(kinds.contains(&ChunkKind::Module), "module 헤더 누락: {:?}", kinds);
+        assert_eq!(
+            kinds.iter().filter(|k| **k == ChunkKind::Function).count(),
+            2,
+            "fn 2개여야: {:?}",
+            kinds
+        );
+        assert!(kinds.contains(&ChunkKind::Struct), "struct 누락: {:?}", kinds);
 
-        // 이름 검증
         let names: Vec<&str> = chunks.iter().map(|c| c.name.as_str()).collect();
         assert!(names.contains(&"first"), "{:?}", names);
         assert!(names.contains(&"second"), "{:?}", names);
         assert!(names.contains(&"Foo"), "{:?}", names);
 
-        // module 본문에 const와 use가 들어가야
-        let module = chunks.iter().find(|c| c.kind == "module").unwrap();
+        let module = chunks.iter().find(|c| c.kind == ChunkKind::Module).unwrap();
         assert!(module.body.contains("use std::path::Path"), "{}", module.body);
         assert!(module.body.contains("const X"), "{}", module.body);
     }
@@ -633,11 +659,15 @@ class Greeter:
 def standalone():
     pass
 "#;
-        let chunks = chunk_by_ast(src, AstLang::Python).expect("파싱 성공");
-        let kinds: Vec<&str> = chunks.iter().map(|c| c.kind.as_str()).collect();
-        // module + class Greeter + fn standalone — 메서드는 클래스에 contain되어 제거.
-        assert!(kinds.iter().filter(|k| **k == "fn").count() == 1, "standalone만: {:?}", kinds);
-        assert!(kinds.contains(&"class"), "{:?}", kinds);
+        let chunks = chunk_by_ast(src, SourceLang::Python).expect("파싱 성공");
+        let kinds: Vec<ChunkKind> = chunks.iter().map(|c| c.kind).collect();
+        assert_eq!(
+            kinds.iter().filter(|k| **k == ChunkKind::Function).count(),
+            1,
+            "standalone만: {:?}",
+            kinds
+        );
+        assert!(kinds.contains(&ChunkKind::Class), "{:?}", kinds);
         let names: Vec<&str> = chunks.iter().map(|c| c.name.as_str()).collect();
         assert!(names.contains(&"Greeter"), "{:?}", names);
         assert!(names.contains(&"standalone"), "{:?}", names);
@@ -663,75 +693,82 @@ function login(u: string) {
     return u;
 }
 "#;
-        let chunks = chunk_by_ast(src, AstLang::TypeScript).expect("파싱 성공");
-        let kinds: Vec<&str> = chunks.iter().map(|c| c.kind.as_str()).collect();
-        assert!(kinds.contains(&"interface"), "{:?}", kinds);
-        assert!(kinds.contains(&"class"), "{:?}", kinds);
-        assert!(kinds.contains(&"fn"), "{:?}", kinds);
+        let chunks = chunk_by_ast(src, SourceLang::TypeScript).expect("파싱 성공");
+        let kinds: Vec<ChunkKind> = chunks.iter().map(|c| c.kind).collect();
+        assert!(kinds.contains(&ChunkKind::Interface), "{:?}", kinds);
+        assert!(kinds.contains(&ChunkKind::Class), "{:?}", kinds);
+        assert!(kinds.contains(&ChunkKind::Function), "{:?}", kinds);
         let names: Vec<&str> = chunks.iter().map(|c| c.name.as_str()).collect();
         assert!(names.contains(&"User"), "{:?}", names);
         assert!(names.contains(&"Auth"), "{:?}", names);
         assert!(names.contains(&"login"), "{:?}", names);
-        // 메서드 verify는 클래스에 흡수돼야
-        assert!(!names.contains(&"verify"), "{:?}", names);
+        assert!(!names.contains(&"verify"), "메서드 verify는 클래스에 흡수: {:?}", names);
     }
 
     #[test]
     fn ast_청킹_큰_함수는_600자_fallback으로_분할() {
-        // 함수 본문이 AST_CHUNK_MAX_CHARS(2000자) 초과 → 내부 분할.
-        let huge_body: String = "    let z = 1;\n".repeat(180); // ~2700 chars
-        let src = format!(
-            "fn small() {{ }}\n\nfn huge() {{\n{}}}\n",
-            huge_body
-        );
-        let chunks = chunk_by_ast(&src, AstLang::Rust).expect("파싱 성공");
+        let huge_body: String = "    let z = 1;\n".repeat(180);
+        let src = format!("fn small() {{ }}\n\nfn huge() {{\n{}}}\n", huge_body);
+        let chunks = chunk_by_ast(&src, SourceLang::Rust).expect("파싱 성공");
         let huge_chunks: Vec<&AstChunk> = chunks
             .iter()
-            .filter(|c| c.kind == "fn" && c.name.starts_with("huge"))
+            .filter(|c| c.kind == ChunkKind::Function && c.name.starts_with("huge"))
             .collect();
         assert!(
             huge_chunks.len() >= 2,
-            "huge 함수는 분할되어야: {} 청크, names={:?}",
-            huge_chunks.len(),
+            "huge 함수는 분할되어야: names={:?}",
             huge_chunks.iter().map(|c| &c.name).collect::<Vec<_>>()
         );
         assert!(
-            huge_chunks.iter().all(|c| c.name.contains("#")),
+            huge_chunks.iter().all(|c| c.name.contains('#')),
             "분할 청크는 #1, #2 suffix: {:?}",
             huge_chunks.iter().map(|c| &c.name).collect::<Vec<_>>()
         );
     }
 
     #[test]
-    fn ast_청킹_빈_파일_또는_심볼_없음() {
-        // 짧은 빈 파일 → 빈 벡터 (module 헤더 cutoff 아래).
-        let chunks = chunk_by_ast("// hi", AstLang::Rust).expect("파싱 성공");
-        assert!(chunks.is_empty() || chunks.iter().all(|c| c.kind == "module"));
+    fn ast_청킹_큰_module_헤더도_분할() {
+        // 큰 import/const 블록도 AST_CHUNK_MAX_CHARS 초과 시 분할.
+        let big_imports: String = "use crate::a;\n".repeat(180); // ~2500 chars
+        let src = format!("{}\nfn one() {{ }}\n", big_imports);
+        let chunks = chunk_by_ast(&src, SourceLang::Rust).expect("파싱 성공");
+        let module_chunks: Vec<&AstChunk> = chunks
+            .iter()
+            .filter(|c| c.kind == ChunkKind::Module)
+            .collect();
+        assert!(
+            module_chunks.len() >= 2,
+            "큰 module은 분할되어야: {} 청크",
+            module_chunks.len()
+        );
+        assert!(module_chunks.iter().all(|c| c.name.contains('#')));
+    }
 
-        // 짧고 심볼 없는 코드
-        let src = "let x = 1;"; // top-level let은 Rust에서 invalid지만 파서는 통과
-        let chunks = chunk_by_ast(src, AstLang::Rust).expect("파싱 성공");
-        // 심볼 0개 + module 본문 충분히 짧으면 빈 벡터, 길면 module 1개.
+    #[test]
+    fn ast_청킹_빈_파일_또는_심볼_없음() {
+        let chunks = chunk_by_ast("// hi", SourceLang::Rust).expect("파싱 성공");
+        assert!(chunks.is_empty() || chunks.iter().all(|c| c.kind == ChunkKind::Module));
+
+        let chunks = chunk_by_ast("let x = 1;", SourceLang::Rust).expect("파싱 성공");
         assert!(chunks.len() <= 1, "{:?}", chunks);
     }
 
     #[test]
     fn fmt_chunk_key_헤더_형식() {
         let fn_chunk = AstChunk {
-            kind: "fn".into(),
+            kind: ChunkKind::Function,
             name: "verify_token".into(),
             body: "fn verify_token() {}".into(),
         };
-        let key = fmt_chunk_key(&fn_chunk, "src/auth.rs");
-        assert!(key.starts_with("[fn verify_token | src/auth.rs]\n"), "{}", key);
+        assert!(fmt_chunk_key(&fn_chunk, "src/auth.rs")
+            .starts_with("[fn verify_token | src/auth.rs]\n"));
 
         let module_chunk = AstChunk {
-            kind: "module".into(),
+            kind: ChunkKind::Module,
             name: String::new(),
             body: "use std;".into(),
         };
-        let key = fmt_chunk_key(&module_chunk, "src/lib.rs");
-        assert!(key.starts_with("[module | src/lib.rs]\n"), "{}", key);
+        assert!(fmt_chunk_key(&module_chunk, "src/lib.rs").starts_with("[module | src/lib.rs]\n"));
     }
 
     #[test]
@@ -744,11 +781,18 @@ class Counter {
 
 function helper() { return 42; }
 "#;
-        let chunks = chunk_by_ast(src, AstLang::JavaScript).expect("파싱 성공");
+        let chunks = chunk_by_ast(src, SourceLang::JavaScript).expect("파싱 성공");
         let names: Vec<&str> = chunks.iter().map(|c| c.name.as_str()).collect();
         assert!(names.contains(&"Counter"), "{:?}", names);
         assert!(names.contains(&"helper"), "{:?}", names);
-        // 메서드 inc/constructor는 클래스에 흡수
-        assert!(!names.contains(&"inc"), "{:?}", names);
+        assert!(!names.contains(&"inc"), "메서드 inc는 클래스에 흡수: {:?}", names);
+    }
+
+    #[test]
+    fn cached_query_같은_언어는_같은_인스턴스() {
+        // OnceLock 캐시가 매번 새 Query를 만들지 않는지 — 포인터 동등성으로 확인.
+        let q1 = cached_query(SourceLang::Rust).unwrap();
+        let q2 = cached_query(SourceLang::Rust).unwrap();
+        assert!(std::ptr::eq(q1, q2), "Query 인스턴스가 캐시되지 않음");
     }
 }

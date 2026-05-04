@@ -11,6 +11,7 @@ pub mod hardware;
 pub mod healing_dataset;
 pub mod history;
 pub mod lan_discovery;
+pub mod lang_detect;
 pub mod lora_forge;
 pub mod mistral_setup;
 #[cfg(feature = "embedded-ai")]

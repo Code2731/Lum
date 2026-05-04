@@ -6,45 +6,25 @@
 //
 // 지원 언어: Rust, TypeScript/TSX, JavaScript, Python (2026년 기준 가장 흔한 4종)
 
+use crate::commands::lang_detect::{detect_source_lang, language_grammar, SourceLang};
 use crate::error::Result;
 use ignore::WalkBuilder;
 use petgraph::graph::{DiGraph, NodeIndex};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use tauri::command;
-use tree_sitter::{Language, Node, Parser, Query, QueryCursor};
+use tree_sitter::{Node, Parser, Query, QueryCursor};
 
-// ─── 언어 감지 ────────────────────────────────────────────────────────────────
-
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
-enum Lang {
-    Rust,
-    TypeScript,
-    Tsx,
-    JavaScript,
-    Python,
-}
+// 언어 감지/grammar는 lang_detect 공용 모듈로 통합 (Phase 137-A 사후 정리).
+// Lang 별칭은 기존 호출자 호환을 위해 유지.
+type Lang = SourceLang;
 
 fn detect_lang(path: &Path) -> Option<Lang> {
-    let ext = path.extension()?.to_str()?;
-    Some(match ext {
-        "rs" => Lang::Rust,
-        "ts" => Lang::TypeScript,
-        "tsx" => Lang::Tsx,
-        "js" | "mjs" | "cjs" | "jsx" => Lang::JavaScript,
-        "py" | "pyi" => Lang::Python,
-        _ => return None,
-    })
+    detect_source_lang(path)
 }
 
-fn lang_grammar(l: Lang) -> Language {
-    match l {
-        Lang::Rust => tree_sitter_rust::LANGUAGE.into(),
-        Lang::TypeScript => tree_sitter_typescript::LANGUAGE_TYPESCRIPT.into(),
-        Lang::Tsx => tree_sitter_typescript::LANGUAGE_TSX.into(),
-        Lang::JavaScript => tree_sitter_javascript::LANGUAGE.into(),
-        Lang::Python => tree_sitter_python::LANGUAGE.into(),
-    }
+fn lang_grammar(l: Lang) -> tree_sitter::Language {
+    language_grammar(l)
 }
 
 /// 언어별 정의 쿼리 — (def 이름 노드, def 종류 이름)
