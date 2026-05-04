@@ -197,7 +197,7 @@ fn chunk_query_str(l: SourceLang) -> &'static str {
             (struct_item name: (type_identifier) @name) @chunk.struct
             (enum_item name: (type_identifier) @name) @chunk.enum
             (trait_item name: (type_identifier) @name) @chunk.trait
-            (impl_item) @chunk.impl
+            (impl_item type: (_) @name) @chunk.impl
             (mod_item name: (identifier) @name) @chunk.mod
             "#
         }
@@ -440,15 +440,23 @@ pub async fn index_project(root_path: String, model: String) -> Result<IndexResu
         let Ok(text) = std::fs::read_to_string(path) else {
             continue;
         };
-        if text.len() < 10 {
+        if text.chars().count() < 10 {
             continue;
         }
         let rel_path = path
             .strip_prefix(&root_path)
             .unwrap_or(path)
             .to_string_lossy()
-            .to_string();
+            .replace('\\', "/");
         file_count += 1;
+
+        // 대용량 파일 — AST 파싱 OOM 방지, 600자 fallback으로만.
+        if text.len() > 500_000 {
+            for chunk in chunk_text(&text) {
+                contents.push(format!("[{}]\n{}", rel_path, chunk));
+            }
+            continue;
+        }
 
         // AST 청킹 우선, 비지원 언어/파싱 실패 시 600자 fallback.
         match detect_source_lang(path).and_then(|l| chunk_by_ast(&text, l)) {
@@ -794,5 +802,46 @@ function helper() { return 42; }
         let q1 = cached_query(SourceLang::Rust).unwrap();
         let q2 = cached_query(SourceLang::Rust).unwrap();
         assert!(std::ptr::eq(q1, q2), "Query 인스턴스가 캐시되지 않음");
+    }
+
+    #[test]
+    fn ast_청킹_utf8_본문_분할_유효성() {
+        // 본문에 멀티바이트 UTF-8 포함 — chunk_text가 char 기준 분할이므로 byte 경계 깨짐 없어야.
+        let comment: String = "한국어코드설명주석".repeat(60); // ~3240 chars
+        let src = format!("fn korean_fn() {{\n    // {}\n}}\n", comment);
+        let chunks = chunk_by_ast(&src, SourceLang::Rust).expect("파싱 성공");
+        assert!(!chunks.is_empty());
+        for c in &chunks {
+            assert!(
+                std::str::from_utf8(c.body.as_bytes()).is_ok(),
+                "UTF-8 유효성 깨짐"
+            );
+        }
+    }
+
+    #[test]
+    fn ast_청킹_중첩_함수는_외부에_흡수() {
+        let src = r#"
+def outer():
+    def inner():
+        pass
+    return inner()
+
+def top():
+    pass
+"#;
+        let chunks = chunk_by_ast(src, SourceLang::Python).expect("파싱 성공");
+        let names: Vec<&str> = chunks.iter().map(|c| c.name.as_str()).collect();
+        assert!(names.contains(&"outer"), "{:?}", names);
+        assert!(names.contains(&"top"), "{:?}", names);
+        assert!(!names.contains(&"inner"), "중첩 inner는 outer에 흡수되어야: {:?}", names);
+    }
+
+    #[test]
+    fn ast_청킹_문법_오류_파일_패닉_없음() {
+        // tree-sitter 에러 복구 — 잘못된 문법도 패닉 없이 처리해야.
+        let bad_src = "fn broken( { let x = ; }\nfn ok() { 42 }\n";
+        let result = chunk_by_ast(bad_src, SourceLang::Rust);
+        let _ = result; // Some 또는 None — 패닉만 없으면 OK.
     }
 }
