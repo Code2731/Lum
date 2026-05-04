@@ -195,6 +195,11 @@ pub async fn stop_voice_recording(app: tauri::AppHandle) -> Result<String, Strin
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::Mutex;
+
+    // voice_state + 환경변수(LUM_VOICE_*)는 글로벌 — 병렬 시 race.
+    // 모든 audio 테스트를 직렬화.
+    static AUDIO_TEST_LOCK: Mutex<()> = Mutex::new(());
 
     fn reset_state() {
         if let Ok(mut s) = voice_state_lock().lock() {
@@ -205,6 +210,7 @@ mod tests {
 
     #[tokio::test]
     async fn double_start_거부() {
+        let _g = AUDIO_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         reset_state();
         std::env::remove_var("LUM_VOICE_START_CMD");
         let r1 = start_voice_recording_inner().await;
@@ -219,6 +225,7 @@ mod tests {
 
     #[tokio::test]
     async fn stop_without_start_거부() {
+        let _g = AUDIO_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         reset_state();
         let r = stop_voice_recording_inner().await;
         assert!(
@@ -229,6 +236,7 @@ mod tests {
 
     #[test]
     fn voice_recording_status_상태_반영() {
+        let _g = AUDIO_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         reset_state();
         assert_eq!(voice_recording_status().ok(), Some(false));
         if let Ok(mut s) = voice_state_lock().lock() {
@@ -240,6 +248,7 @@ mod tests {
 
     #[test]
     fn read_transcript_file_정상_반환_후_삭제() {
+        let _g = AUDIO_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         let base = std::env::temp_dir().join(format!(
             "lum_voice_test_{}_{}",
             std::process::id(),
@@ -256,6 +265,7 @@ mod tests {
 
     #[tokio::test]
     async fn stop_transcript_missing_코드_반환() {
+        let _g = AUDIO_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         reset_state();
         std::env::remove_var("LUM_VOICE_STOP_CMD");
         let path = transcript_file_path();

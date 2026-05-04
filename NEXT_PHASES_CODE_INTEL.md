@@ -9,7 +9,7 @@
 
 | Phase | 상태 | 비고 |
 |---|---|---|
-| 137-A AST 청킹 | ❌ TODO | `rag.rs:113` `chunk_text` 여전히 600자 고정 |
+| 137-A AST 청킹 | ✅ **DONE** | `rag.rs` `chunk_by_ast` + module 헤더 + 큰 함수 fallback 분할 + 회귀 가드 8건 |
 | 137-B query_codebase | ✅ **DONE** (`06723a9`) | ReAct 도구 + 빈 인덱스 안내 + 회귀 가드 4건 |
 | 137-C 증분 인덱싱 | ❌ TODO | mtime 추적 0 |
 | 138 BM25 + RRF | ❌ TODO | tantivy 의존성 0 |
@@ -58,7 +58,7 @@
 
 ---
 
-## 2. Phase 137 — AST 기반 청킹 + ReAct semantic 검색 도구 (1주) — 137-B ✅ DONE / 137-A·C ❌ TODO
+## 2. Phase 137 — AST 기반 청킹 + ReAct semantic 검색 도구 (1주) — 137-A ✅ + 137-B ✅ DONE / 137-C ❌ TODO
 
 **근거**: 가장 ROI 높은 묶음. 기존 tree-sitter를 `rag.rs`에 끌어와 600자 고정 청킹을 함수/클래스 경계로 교체 + ReAct가 의미 검색을 직접 호출.
 
