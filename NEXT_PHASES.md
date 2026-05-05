@@ -23,7 +23,7 @@
 | 133 Reflexion 1턴 | 1주 명세 | ✅ **DONE** | `react_agent.rs:301` `run_reflexion`, `:1545` config 토글, `:1588/:1625/:1710` 통합. config.rs:111 `react_reflexion_enabled`. |
 | 134 Healing 자연어 | 3-4일 명세 | ✅ **DONE** | `react_agent.rs:381` `query_healing` + `analyze_failure_reasons` 도구. `inputRouter.ts:122-130,160-167,236` `HEALING_INTENT_KO/EN` + `detectHealingIntent` + 라우팅. `HealingDatasetPanel.tsx:182-186` reject 카드 amber `failure_reason` 노출. |
 | 135 Voice 입력 | 1~1.5주 명세 (cpal+whisper-rs) | 🟡 **PARTIAL** | `audio.rs:83-179` 외부 whisper(LUM_VOICE_STOP_CMD/`~/.lum_whisper/last_transcript.txt`) 호출. 임베디드 cpal+whisper-rs는 미구현 — 디자인이 외부 위임으로 의도적으로 갈라짐(가벼운 핵심 + 사용자가 STT 도구 선택). 명세대로 가려면 신규 페이즈 필요. |
-| 136 Magentic 2-ledger | 2-3주 명세 | ❌ **TODO** | `commands/orchestrator.rs` 부재. ReAct 단일 루프 그대로. |
+| 136 Magentic 2-ledger | 2-3주 명세 | 🟡 **PARTIAL (136-A)** | `ProgressLedger` in `react_agent.rs` — action_counts/key_facts/stuck_total. L1(첫반복: 힌트주입+계속) / L2(3회+: 강제ANSWER). outer TaskLedger loop/orchestrator.rs는 미구현. |
 
 **결론**: NEXT_PHASES.md(자연어 표면)는 작성 당시 거의 다 done이었음. 외부 리서치는 정확했지만 내부 감사 부족 — Codex 핸드오프 가치는 **136(Magentic) + 135 임베디드 STT** 두 항목뿐. 나머지는 **이미 done이므로 새로 구현 금지**. Code Intelligence 축은 `NEXT_PHASES_CODE_INTEL.md` 별도 문서 참조 — 그쪽이 실제 미완 항목 다수.
 

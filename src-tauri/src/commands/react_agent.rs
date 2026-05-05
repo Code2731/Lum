@@ -37,6 +37,79 @@ const FORBIDDEN_PREFIXES: &[&str] = &[
     ".lum_mistral_models",
 ];
 
+// ─── Phase 136 — Progress Ledger (Magentic-style stuck 감지) ─────────────────
+// 단일 ReAct 루프 안에서 반복 패턴을 추적 + 단계적 회복 전략 주입.
+// L1: 첫 반복 → 힌트 주입 후 계속 (다른 접근 유도)
+// L2: 세 번째 이상 반복 → 지금까지 수집한 사실 + 즉시 ANSWER 강제
+
+struct ProgressLedger {
+    /// action_key → 호출 횟수
+    action_counts: HashMap<String, usize>,
+    /// 관찰 결과에서 추출한 핵심 사실 (최대 8개)
+    key_facts: Vec<String>,
+    /// 이번 run 총 stuck 이벤트 수
+    stuck_total: usize,
+}
+
+impl ProgressLedger {
+    fn new() -> Self {
+        Self { action_counts: HashMap::new(), key_facts: Vec::new(), stuck_total: 0 }
+    }
+
+    /// action_key를 기록하고 현재 호출 횟수를 반환.
+    fn record(&mut self, action_key: &str) -> usize {
+        let c = self.action_counts.entry(action_key.to_string()).or_insert(0);
+        *c += 1;
+        *c
+    }
+
+    /// 도구 실행 결과에서 첫 줄을 key_fact로 흡수 (최대 8개, 120자 cap).
+    fn absorb_observation(&mut self, tool: &str, obs: &str) {
+        if self.key_facts.len() >= 8 {
+            return;
+        }
+        let first = obs.lines().next().unwrap_or("").trim();
+        if first.len() < 5 {
+            return;
+        }
+        let fact = format!("[{}] {}", tool, &first[..first.len().min(120)]);
+        if !self.key_facts.contains(&fact) {
+            self.key_facts.push(fact);
+        }
+    }
+
+    fn facts_str(&self) -> String {
+        if self.key_facts.is_empty() {
+            "없음".to_string()
+        } else {
+            self.key_facts
+                .iter()
+                .map(|f| format!("  - {f}"))
+                .collect::<Vec<_>>()
+                .join("\n")
+        }
+    }
+
+    /// L1 회복 메시지 — 첫 반복. 힌트 주입 후 계속.
+    fn recovery_l1(&self, action_key: &str) -> String {
+        format!(
+            "⚠ `{action_key}`를 이미 실행했습니다. 다른 도구·경로·인수를 사용하세요.\n\
+             현재까지 수집된 정보:\n{}",
+            self.facts_str()
+        )
+    }
+
+    /// L2 회복 메시지 — 반복 3회 이상. 즉시 ANSWER 강제.
+    fn recovery_l2(&self) -> String {
+        format!(
+            "⚠ 반복 패턴이 {}회 감지됐습니다. 목표를 재검토하거나 지금 당장 ANSWER를 출력하세요.\n\
+             지금까지 파악된 사실:\n{}",
+            self.stuck_total,
+            self.facts_str()
+        )
+    }
+}
+
 // ─── 취소 플래그 ──────────────────────────────────────────────────────────────
 
 static CANCEL_FLAG: OnceLock<Arc<AtomicBool>> = OnceLock::new();
@@ -1622,8 +1695,8 @@ pub async fn react_agent_run(
         .and_then(|c| c.react_reflexion_enabled)
         .unwrap_or(true);
 
-    // 루프 방지: 최근 액션 히스토리 (tool+args 조합)
-    let mut recent_actions: Vec<String> = Vec::new();
+    // Phase 136 — Progress Ledger 초기화
+    let mut ledger = ProgressLedger::new();
     let mut step = 0usize;
     let mut max_steps = MAX_STEPS;
     let mut extra_turn_granted = false;
@@ -1730,21 +1803,40 @@ pub async fn react_agent_run(
                 return Ok(());
             };
 
-            // 동일 액션 반복 감지 → ANSWER 강제 요청
+            // Phase 136 — Progress Ledger: 반복 감지 + 단계적 회복
             let action_key = format!("{}:{}", action.tool, action.args);
-            let repeat_count = recent_actions.iter().filter(|a| *a == &action_key).count();
+            let repeat_count = ledger.record(&action_key);
+
             if repeat_count >= 2 {
-                let force_prompt = format!(
-                    "{conversation}\n\n{response}\n\n[시스템]: 동일한 도구를 같은 인수로 반복 호출하고 있습니다. 지금까지 수집된 정보를 바탕으로 즉시 ANSWER를 출력하세요."
+                ledger.stuck_total += 1;
+                emit_event(
+                    &app,
+                    "status",
+                    format!("반복 감지 ({}회): {}", ledger.stuck_total, &action_key[..action_key.len().min(60)]),
+                    None,
+                    Some(step + 1),
                 );
-                if let Ok(final_resp) = call_xllm(&client, "", &force_prompt).await {
-                    let answer =
-                        parse_answer(&final_resp).unwrap_or_else(|| final_resp.trim().to_string());
-                    emit_event(&app, "answer", &answer, None, Some(step + 1));
+
+                if ledger.stuck_total >= 3 {
+                    // L2: 강제 최종 답변
+                    let force_prompt = format!(
+                        "{conversation}\n\n{response}\n\n[시스템]: {}\n즉시 ANSWER를 출력하세요.",
+                        ledger.recovery_l2()
+                    );
+                    if let Ok(final_resp) = call_xllm(&client, "", &force_prompt).await {
+                        let answer = parse_answer(&final_resp)
+                            .unwrap_or_else(|| final_resp.trim().to_string());
+                        emit_event(&app, "answer", &answer, None, Some(step + 1));
+                    }
+                    return Ok(());
                 }
-                return Ok(());
+
+                // L1: 회복 힌트 주입 후 계속 (다른 접근 유도)
+                let recovery = ledger.recovery_l1(&action_key);
+                conversation.push_str(&format!("\n\n{response}\n\nOBSERVATION: {recovery}"));
+                step += 1;
+                continue;
             }
-            recent_actions.push(action_key);
 
             // ACTION 이벤트 emit
             let action_desc = format!("{}({})", action.tool, action.args);
@@ -1768,6 +1860,8 @@ pub async fn react_agent_run(
             )
             .await;
             emit_event(&app, "observation", &observation, None, Some(step + 1));
+            // Phase 136 — 관찰 결과를 Progress Ledger에 기록
+            ledger.absorb_observation(&action.tool, &observation);
 
             // 대화 히스토리 업데이트 (최근 6턴만 유지해 컨텍스트 폭발 방지)
             let turn = format!("\n\n{response}\n\nOBSERVATION: {observation}");
@@ -3449,5 +3543,68 @@ ANSWER: 2 + 2는 4입니다."#,
         let r = simulate_react_loop(&script, &td.cwd());
         assert!(!r.finished, "ANSWER 없으므로 미완료 종료");
         assert_eq!(r.consumed_responses, MAX_STEPS, "MAX_STEPS에서 멈춰야 함");
+    }
+
+    // ─── Phase 136 — ProgressLedger 회귀 가드 ─────────────────────────────────
+
+    #[test]
+    fn progress_ledger_record_횟수_증가() {
+        let mut l = ProgressLedger::new();
+        assert_eq!(l.record("shell:ls"), 1);
+        assert_eq!(l.record("shell:ls"), 2);
+        assert_eq!(l.record("shell:ls"), 3);
+        assert_eq!(l.record("read_file:a.rs"), 1); // 다른 키는 독립
+    }
+
+    #[test]
+    fn progress_ledger_absorb_observation_첫_줄만() {
+        let mut l = ProgressLedger::new();
+        l.absorb_observation("shell", "line1\nline2\nline3");
+        assert_eq!(l.key_facts.len(), 1);
+        assert!(l.key_facts[0].contains("line1"), "{:?}", l.key_facts[0]);
+        assert!(!l.key_facts[0].contains("line2"), "첫 줄만");
+    }
+
+    #[test]
+    fn progress_ledger_absorb_최대_8개() {
+        let mut l = ProgressLedger::new();
+        for i in 0..15 {
+            l.absorb_observation("tool", &format!("fact {i} result data"));
+        }
+        assert_eq!(l.key_facts.len(), 8, "최대 8개 제한");
+    }
+
+    #[test]
+    fn progress_ledger_absorb_짧은_관찰_무시() {
+        let mut l = ProgressLedger::new();
+        l.absorb_observation("shell", "ok"); // < 5자
+        assert!(l.key_facts.is_empty(), "짧은 관찰은 무시");
+    }
+
+    #[test]
+    fn progress_ledger_recovery_l1_action_키_포함() {
+        let mut l = ProgressLedger::new();
+        l.record("shell:ls -la");
+        l.record("shell:ls -la");
+        let msg = l.recovery_l1("shell:ls -la");
+        assert!(msg.contains("shell:ls -la"), "{msg}");
+    }
+
+    #[test]
+    fn progress_ledger_recovery_l2_stuck_total_포함() {
+        let mut l = ProgressLedger::new();
+        l.stuck_total = 4;
+        l.key_facts.push("[shell] error: file not found".into());
+        let msg = l.recovery_l2();
+        assert!(msg.contains("4"), "stuck_total 반영: {msg}");
+        assert!(msg.contains("error: file not found"), "facts 반영: {msg}");
+    }
+
+    #[test]
+    fn progress_ledger_중복_fact_미추가() {
+        let mut l = ProgressLedger::new();
+        l.absorb_observation("shell", "identical output line here");
+        l.absorb_observation("shell", "identical output line here");
+        assert_eq!(l.key_facts.len(), 1, "중복 사실은 한 번만");
     }
 }
