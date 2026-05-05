@@ -44,13 +44,6 @@ pub struct IndexResult {
 
 // ─── 증분 인덱싱 ──────────────────────────────────────────────────────────────
 
-fn file_mtime_secs(path: &Path) -> Option<u64> {
-    path.metadata().ok()?
-        .modified().ok()?
-        .duration_since(std::time::UNIX_EPOCH).ok()
-        .map(|d| d.as_secs())
-}
-
 struct FileDiff {
     unchanged: Vec<String>,
     changed: Vec<String>,
@@ -450,9 +443,8 @@ pub async fn index_project(root_path: String, model: String) -> Result<IndexResu
         .map_err(|e| format!("시스템 시간 오류: {}", e))?
         .as_secs();
 
-    // ─── Phase 1: 디스크 파일 목록 + mtime 수집 ──────────────────────────────
+    // 디스크 파일 목록 + mtime 수집
     let mut disk_files: HashMap<String, u64> = HashMap::new();
-    let mut disk_paths: HashMap<String, std::path::PathBuf> = HashMap::new();
 
     for entry in Walk::new(Path::new(&root_path))
         .filter_map(|e| e.ok())
@@ -485,12 +477,18 @@ pub async fn index_project(root_path: String, model: String) -> Result<IndexResu
             .unwrap_or(path)
             .to_string_lossy()
             .replace('\\', "/");
-        let mtime = file_mtime_secs(path).unwrap_or(0);
-        disk_files.insert(rel_path.clone(), mtime);
-        disk_paths.insert(rel_path, path.to_path_buf());
+        // DirEntry 캐시 메타데이터 재사용 — path.metadata() 호출 시 별도 stat() 발생.
+        let mtime = entry
+            .metadata()
+            .ok()
+            .and_then(|m| m.modified().ok())
+            .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+            .map(|d| d.as_secs())
+            .unwrap_or(0);
+        disk_files.insert(rel_path, mtime);
     }
 
-    // ─── Phase 2: 증분 diff ───────────────────────────────────────────────────
+    // 증분 diff
     let mut memory = SemanticMemory::load();
     let diff = diff_files(&disk_files, &memory.file_mtimes);
     let skipped = diff.unchanged.len();
@@ -512,31 +510,28 @@ pub async fn index_project(root_path: String, model: String) -> Result<IndexResu
         memory.file_mtimes.remove(rel_path);
     }
 
-    // ─── Phase 3: 변경·신규 파일 청킹 ────────────────────────────────────────
+    // 변경·신규 파일 청킹 — (chunk_content, rel_path) 쌍으로 수집
     let to_process: Vec<String> = diff.changed.into_iter().chain(diff.added).collect();
-    let mut contents: Vec<String> = Vec::new();
-    let mut content_files: Vec<String> = Vec::new();
-    // 청크가 하나라도 생성된 파일 집합 (청크 없는 파일은 mtime만 갱신)
-    let mut files_with_chunks: HashSet<String> = HashSet::new();
+    let mut chunk_pairs: Vec<(String, String)> = Vec::new();
 
     for rel_path in &to_process {
-        let Some(path) = disk_paths.get(rel_path) else { continue };
-        let Ok(text) = std::fs::read_to_string(path) else { continue };
+        let path = std::path::Path::new(&root_path).join(rel_path);
+        let Ok(text) = std::fs::read_to_string(&path) else { continue };
         if text.chars().count() < 10 {
-            // 너무 짧은 파일 — 청크 없이 mtime만 갱신.
+            // 청크 없는 짧은 파일 — mtime만 갱신.
             if let Some(&mtime) = disk_files.get(rel_path) {
                 memory.file_mtimes.insert(rel_path.clone(), mtime);
             }
             continue;
         }
 
-        let chunks: Vec<String> = if text.len() > 500_000 {
+        let file_chunks: Vec<String> = if text.len() > 500_000 {
             chunk_text(&text)
                 .into_iter()
                 .map(|c| format!("[{}]\n{}", rel_path, c))
                 .collect()
         } else {
-            match detect_source_lang(path).and_then(|l| chunk_by_ast(&text, l)) {
+            match detect_source_lang(&path).and_then(|l| chunk_by_ast(&text, l)) {
                 Some(ast_chunks) if !ast_chunks.is_empty() => {
                     ast_chunks.iter().map(|c| fmt_chunk_key(c, rel_path)).collect()
                 }
@@ -547,24 +542,18 @@ pub async fn index_project(root_path: String, model: String) -> Result<IndexResu
             }
         };
 
-        if !chunks.is_empty() {
-            files_with_chunks.insert(rel_path.clone());
-        }
-        for chunk in chunks {
-            contents.push(chunk);
-            content_files.push(rel_path.clone());
+        for chunk in file_chunks {
+            chunk_pairs.push((chunk, rel_path.clone()));
         }
     }
 
-    // ─── Phase 4: 병렬 임베딩 + 인덱스 갱신 ─────────────────────────────────
-    let futures: Vec<_> = contents.iter().map(|c| embed_auto(&client, &model, c)).collect();
+    // 병렬 임베딩 + 인덱스 갱신
+    let futures: Vec<_> = chunk_pairs.iter().map(|(c, _)| embed_auto(&client, &model, c)).collect();
     let embeddings = join_all(futures).await;
     let chunk_count = embeddings.iter().filter(|e| e.is_some()).count();
 
     let mut embedded_files: HashSet<String> = HashSet::new();
-    for ((content, file), embedding) in
-        contents.into_iter().zip(content_files).zip(embeddings)
-    {
+    for ((content, file), embedding) in chunk_pairs.into_iter().zip(embeddings) {
         if let Some(emb) = embedding {
             embedded_files.insert(file.clone());
             memory.entries.push(MemoryEntry {
@@ -576,14 +565,8 @@ pub async fn index_project(root_path: String, model: String) -> Result<IndexResu
         }
     }
 
-    // mtime 갱신:
-    //   - 청크 없는 파일 → 이미 위에서 갱신
-    //   - 청크 있고 임베딩 성공 → 갱신
-    //   - 청크 있는데 전부 임베딩 실패(서버 장애) → 갱신 안 함 → 다음 run 재시도
+    // 임베딩 성공 파일만 mtime 갱신 — 서버 장애로 전체 실패 시 갱신 안 함 → 다음 run 재시도.
     for rel_path in &to_process {
-        if !files_with_chunks.contains(rel_path) {
-            continue; // 청크 없는 파일은 위에서 처리됨
-        }
         if embedded_files.contains(rel_path.as_str()) {
             if let Some(&mtime) = disk_files.get(rel_path) {
                 memory.file_mtimes.insert(rel_path.clone(), mtime);
