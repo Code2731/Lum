@@ -1,3 +1,4 @@
+use crate::commands::bm25::{rrf_fuse, Bm25Index};
 use crate::commands::config::load_config;
 use crate::commands::lang_detect::{detect_source_lang, language_grammar, SourceLang};
 use crate::memory::{cosine_similarity, MemoryEntry, SemanticMemory};
@@ -596,24 +597,46 @@ pub async fn search_codebase(
     limit: usize,
 ) -> Result<Vec<SearchResult>, String> {
     let client = rag_client();
+    let memory = SemanticMemory::load();
+
+    if memory.entries.is_empty() {
+        return Ok(vec![]);
+    }
+
+    // BM25 lexical 검색 (동기, 빠름) — 식별자 정확매칭 강점
+    let bm25 = Bm25Index::build(memory.entries.iter().map(|e| e.content.as_str()));
+    let lexical = bm25.search(&query, 20);
+
+    // Dense 검색 (비동기, 임베딩 필요) — 의미 유사도 강점
     let embedding = embed_auto(&client, &model, &query)
         .await
         .ok_or("임베딩 생성 실패 — Ollama 또는 xLLM 서버 상태를 확인하세요.")?;
-
-    let memory = SemanticMemory::load();
-    let mut scored: Vec<SearchResult> = memory
+    let mut dense: Vec<(usize, f32)> = memory
         .entries
         .iter()
-        .map(|e| SearchResult {
-            content: e.content.clone(),
-            score: cosine_similarity(&embedding, &e.embedding),
+        .enumerate()
+        .map(|(i, e)| (i, cosine_similarity(&embedding, &e.embedding)))
+        .filter(|(_, s)| *s > 0.25)
+        .collect();
+    dense.sort_by(|a, b| b.1.total_cmp(&a.1));
+    dense.truncate(20);
+
+    // RRF k=60 — 두 랭킹 융합
+    let limit = limit.max(1).min(20);
+    let fused = rrf_fuse(&dense, &lexical);
+
+    let results = fused
+        .into_iter()
+        .take(limit)
+        .filter_map(|(idx, score)| {
+            Some(SearchResult {
+                content: memory.entries.get(idx)?.content.clone(),
+                score,
+            })
         })
-        .filter(|r| r.score > 0.5)
         .collect();
 
-    scored.sort_by(|a, b| b.score.total_cmp(&a.score));
-    scored.truncate(limit.max(1).min(20));
-    Ok(scored)
+    Ok(results)
 }
 
 #[tauri::command]

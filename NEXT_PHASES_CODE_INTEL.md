@@ -12,7 +12,7 @@
 | 137-A AST 청킹 | ✅ **DONE** | `rag.rs` `chunk_by_ast` + module 헤더 + 큰 함수 fallback 분할 + 회귀 가드 8건 |
 | 137-B query_codebase | ✅ **DONE** (`06723a9`) | ReAct 도구 + 빈 인덱스 안내 + 회귀 가드 4건 |
 | 137-C 증분 인덱싱 | ✅ **DONE** | `MemoryEntry.file` + `SemanticMemory.file_mtimes` + `diff_files` + 회귀 가드 5건 |
-| 138 BM25 + RRF | ❌ TODO | tantivy 의존성 0 |
+| 138 BM25 + RRF | ✅ **DONE** | in-memory BM25 (`bm25.rs`) + `rrf_fuse` + `search_codebase` 하이브리드 |
 | 139 호출 그래프 + multi-hop | ❌ TODO | `find_callers` 등 미구현 |
 | 140 Personalized PageRank | ❌ TODO | `repo_map.rs:199` 균등 weight 그대로 |
 | 141 그래프 시각화 | ❌ TODO | reactflow 의존성 0 |
