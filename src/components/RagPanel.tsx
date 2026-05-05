@@ -124,14 +124,17 @@ const RagPanel: React.FC<Props> = ({ model, onClose }) => {
   const swarmSearching = swarmQueryId !== null;
 
   return (
-    <div className="flex flex-col h-full bg-[#0d1117] text-white text-xs">
+    <div className="lum-sidepanel flex flex-col h-full text-white text-xs">
       {/* 헤더 */}
-      <div className="flex items-center justify-between px-3 py-2 border-b border-white/5 shrink-0">
+      <div className="flex items-center justify-between px-3 py-2 border-b border-white/10 shrink-0 bg-white/[0.02]">
         <div className="flex items-center gap-2">
           <Database size={12} className="text-accent" />
-          <span className="font-semibold text-[11px]">RAG 코드 검색</span>
+          <span className="font-semibold text-[11px] text-white/85">RAG 코드 검색</span>
         </div>
-        <button onClick={onClose} className="text-white/30 hover:text-white/70 transition-colors">
+        <button
+          onClick={onClose}
+          className="p-1 rounded border border-white/[0.1] text-white/40 hover:text-white/75 hover:bg-white/[0.08] transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+        >
           <X size={12} />
         </button>
       </div>
@@ -139,12 +142,12 @@ const RagPanel: React.FC<Props> = ({ model, onClose }) => {
       <div className="flex-1 overflow-y-auto p-3 space-y-4">
         {/* 인덱싱 섹션 */}
         <section className="space-y-2">
-          <p className="text-[10px] text-white/40 font-medium uppercase tracking-wider">프로젝트 인덱싱</p>
+          <p className="text-[10px] text-white/45 font-semibold uppercase tracking-wider">프로젝트 인덱싱</p>
           <div className="flex gap-2">
             <div className="relative flex-1">
               <FolderOpen size={11} className="absolute left-2 top-1/2 -translate-y-1/2 text-white/30" />
               <input
-                className="w-full bg-white/5 border border-white/10 rounded px-2 py-1.5 pl-6 text-[11px] outline-none focus:border-accent/50 font-mono"
+                className="w-full bg-white/[0.05] border border-white/[0.12] rounded-md px-2 py-1.5 pl-6 text-[11px] outline-none focus:border-accent/55 text-white/80 placeholder:text-white/28 font-mono"
                 placeholder="/path/to/project"
                 value={indexPath}
                 onChange={(e) => setIndexPath(e.target.value)}
@@ -154,7 +157,7 @@ const RagPanel: React.FC<Props> = ({ model, onClose }) => {
             <button
               onClick={handleIndex}
               disabled={isIndexing || !indexPath.trim()}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded bg-accent/20 text-accent hover:bg-accent/30 disabled:opacity-40 disabled:cursor-not-allowed transition-colors shrink-0"
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-md border border-accent/35 bg-accent/18 text-accent hover:bg-accent/30 disabled:opacity-40 disabled:cursor-not-allowed transition-colors shrink-0"
             >
               {isIndexing ? <Loader2 size={11} className="animate-spin" /> : <Database size={11} />}
               인덱싱
@@ -171,12 +174,12 @@ const RagPanel: React.FC<Props> = ({ model, onClose }) => {
 
         {/* 검색 섹션 */}
         <section className="space-y-2">
-          <p className="text-[10px] text-white/40 font-medium uppercase tracking-wider">코드베이스 검색</p>
+          <p className="text-[10px] text-white/45 font-semibold uppercase tracking-wider">코드베이스 검색</p>
           <div className="flex gap-2">
             <div className="relative flex-1">
               <Search size={11} className="absolute left-2 top-1/2 -translate-y-1/2 text-white/30" />
               <input
-                className="w-full bg-white/5 border border-white/10 rounded px-2 py-1.5 pl-6 text-[11px] outline-none focus:border-accent/50"
+                className="w-full bg-white/[0.05] border border-white/[0.12] rounded-md px-2 py-1.5 pl-6 text-[11px] outline-none focus:border-accent/55 text-white/80 placeholder:text-white/28"
                 placeholder="PTY 채널 아키텍처는 어떻게 구현되어 있나요?"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
@@ -186,7 +189,7 @@ const RagPanel: React.FC<Props> = ({ model, onClose }) => {
             <button
               onClick={handleSearch}
               disabled={isSearching || !query.trim()}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded bg-white/10 text-white/70 hover:bg-white/15 disabled:opacity-40 disabled:cursor-not-allowed transition-colors shrink-0"
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-md border border-white/[0.12] bg-white/[0.07] text-white/74 hover:bg-white/[0.12] disabled:opacity-40 disabled:cursor-not-allowed transition-colors shrink-0"
             >
               {isSearching ? <Loader2 size={11} className="animate-spin" /> : <Search size={11} />}
               검색
@@ -195,7 +198,7 @@ const RagPanel: React.FC<Props> = ({ model, onClose }) => {
               onClick={handleSwarmSearch}
               disabled={swarmSearching || !query.trim()}
               title="연결된 피어 노드에도 검색 브로드캐스트"
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 disabled:opacity-40 disabled:cursor-not-allowed transition-colors shrink-0"
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-md border border-purple-400/35 bg-purple-500/18 text-purple-200 hover:bg-purple-500/30 disabled:opacity-40 disabled:cursor-not-allowed transition-colors shrink-0"
             >
               {swarmSearching ? <Loader2 size={11} className="animate-spin" /> : <Share2 size={11} />}
               스웜
@@ -231,7 +234,7 @@ const RagPanel: React.FC<Props> = ({ model, onClose }) => {
         )}
 
         {results.length === 0 && swarmResults.length === 0 && !isSearching && query && (
-          <p className="text-[10px] text-white/20 text-center py-4">검색 결과가 없습니다.</p>
+          <p className="text-[10px] text-white/24 text-center py-4">검색 결과가 없습니다.</p>
         )}
       </div>
     </div>
@@ -248,17 +251,17 @@ const ResultCard: React.FC<{ content: string; score: number; swarm?: boolean }> 
   const body = lines.slice(1, 6).join("\n");
 
   return (
-    <div className={`rounded border p-2 space-y-1 ${swarm ? "border-purple-500/20 bg-purple-500/5" : "border-white/5 bg-white/3"}`}>
+    <div className={`rounded-md border p-2 space-y-1 ${swarm ? "border-purple-400/25 bg-purple-500/8" : "border-white/[0.1] bg-white/[0.03]"}`}>
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5 min-w-0">
           <FileCode size={10} className={swarm ? "text-purple-400 shrink-0" : "text-accent shrink-0"} />
-          <span className="font-mono text-[10px] text-white/60 truncate">{header}</span>
+          <span className="font-mono text-[10px] text-white/66 truncate">{header}</span>
         </div>
         {score > 0 && (
-          <span className="text-[9px] text-white/30 shrink-0">{(score * 100).toFixed(0)}%</span>
+          <span className="text-[9px] text-white/38 shrink-0">{(score * 100).toFixed(0)}%</span>
         )}
       </div>
-      <pre className="text-[10px] text-white/50 leading-relaxed line-clamp-3 whitespace-pre-wrap font-mono">
+      <pre className="text-[10px] text-white/56 leading-relaxed line-clamp-3 whitespace-pre-wrap font-mono">
         {body}
       </pre>
     </div>

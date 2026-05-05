@@ -94,11 +94,19 @@ const LoraForgePanel: React.FC<Props> = ({ onLoadAdapter, onRevealPath, onClose 
 
   return (
     <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent className="sm:max-w-[760px] max-h-[86vh] flex flex-col gap-0 p-0 overflow-hidden border-white/10 rounded-2xl">
-        <div className="flex items-center gap-2.5 px-5 py-4 border-b border-white/8 shrink-0">
+      <DialogContent className="lum-sidepanel sm:max-w-[760px] max-h-[86vh] flex flex-col gap-0 p-0 overflow-hidden border-white/12 rounded-2xl">
+        <div className="flex items-center gap-2.5 px-5 py-4 border-b border-white/10 bg-white/[0.02] shrink-0">
           <Hammer size={15} className="text-accent" />
           <DialogTitle className="text-sm font-semibold">LoRA Forge</DialogTitle>
           <span className="text-[10px] text-white/35 ml-1">healing 데이터셋으로 내 모델 학습</span>
+          <button
+            type="button"
+            onClick={onClose}
+            className="ml-auto p-1 rounded border border-white/[0.1] text-white/40 hover:text-white/75 hover:bg-white/[0.08] transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            aria-label="닫기"
+          >
+            <XIcon size={12} />
+          </button>
         </div>
 
         {runtimes && (
@@ -132,7 +140,7 @@ const LoraForgePanel: React.FC<Props> = ({ onLoadAdapter, onRevealPath, onClose 
         />
 
         {/* 학습 시작 폼 */}
-        <div className="px-5 py-3.5 border-b border-white/8 shrink-0 space-y-2.5">
+        <div className="px-5 py-3.5 border-b border-white/10 bg-white/[0.015] shrink-0 space-y-2.5">
           <div className="space-y-1">
             <Label htmlFor="forge-task" className="text-[10px] text-white/55">작업 이름</Label>
             <Input
@@ -232,13 +240,13 @@ const LoraForgePanel: React.FC<Props> = ({ onLoadAdapter, onRevealPath, onClose 
             <p className="text-[10px] text-white/35 flex-1">
               데이터셋 미지정 시 healing chatml export(승인된 결정만)를 자동 생성하여 학습.
             </p>
-            <Button
-              onClick={handleSubmit}
-              disabled={submitting || !task.trim() || !baseModel.trim() || !runtimeAvailable}
-              size="sm"
-              className="h-8 gap-1.5"
-              title={!runtimeAvailable ? "선택한 런타임이 설치되어 있지 않습니다" : undefined}
-            >
+                <Button
+                  onClick={handleSubmit}
+                  disabled={submitting || !task.trim() || !baseModel.trim() || !runtimeAvailable}
+                  size="sm"
+                  className="h-8 gap-1.5 border border-accent/35 bg-accent/20 hover:bg-accent/30"
+                  title={!runtimeAvailable ? "선택한 런타임이 설치되어 있지 않습니다" : undefined}
+                >
               {submitting ? <Loader2 size={12} className="animate-spin" /> : <Play size={12} />}
               {submitting ? "시작 중…" : "Forge"}
             </Button>
@@ -308,11 +316,11 @@ const RunRow: React.FC<{
   const duration = run.ts_ended_ms ? run.ts_ended_ms - run.ts_started_ms : null;
 
   return (
-    <div className="rounded-lg bg-white/3 border border-white/7 overflow-hidden">
+    <div className="rounded-lg bg-white/[0.03] border border-white/[0.1] overflow-hidden">
       <button
         type="button"
         onClick={onToggle}
-        className="w-full px-3 py-2 flex items-center gap-2 text-xs hover:bg-white/3 text-left focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+        className="w-full px-3 py-2 flex items-center gap-2 text-xs hover:bg-white/[0.06] text-left focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
       >
         <span className={cn("inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded border shrink-0", meta.tone)}>
           {meta.icon}
@@ -339,7 +347,7 @@ const RunRow: React.FC<{
       </button>
 
       {isOpen && (
-        <div className="px-3 pb-2.5 pt-0.5 space-y-1.5 text-[11px] border-t border-white/5">
+        <div className="px-3 pb-2.5 pt-0.5 space-y-1.5 text-[11px] border-t border-white/[0.08]">
           <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 text-[10px] text-white/55">
             <span>모델: <span className="font-mono text-white/75">{run.base_model}</span></span>
             <span>lr: <span className="tabular-nums">{run.learning_rate}</span></span>
@@ -353,7 +361,7 @@ const RunRow: React.FC<{
             )}
           </div>
 
-          <pre className="text-white/70 font-mono whitespace-pre-wrap text-[10.5px] bg-black/30 rounded px-2 py-1.5 max-h-44 overflow-y-auto">
+          <pre className="text-white/72 font-mono whitespace-pre-wrap text-[10.5px] bg-black/28 border border-white/[0.08] rounded-md px-2 py-1.5 max-h-44 overflow-y-auto">
             {lines.length === 0 ? <span className="text-white/30">(로그 없음)</span> : lines.join("\n")}
           </pre>
 
@@ -494,7 +502,7 @@ const AutoTrainCard: React.FC<AutoCardProps> = ({
   }, [autoEvents]);
 
   return (
-    <div className="px-5 py-3 border-b border-white/8 shrink-0 bg-cyan-500/[0.02] space-y-2.5">
+    <div className="px-5 py-3 border-b border-white/10 shrink-0 bg-cyan-500/[0.03] space-y-2.5">
       <div className="flex items-center gap-2">
         <Sparkles size={13} className="text-cyan-300" />
         <span className="text-xs font-semibold text-white/85">자동 학습 루프</span>
@@ -587,7 +595,7 @@ const AutoTrainCard: React.FC<AutoCardProps> = ({
       )}
 
       {saving && <p className="text-[10px] text-white/35">저장 중…</p>}
-      {saveError && <p className="text-[10px] text-rose-300">{saveError}</p>}
+      {saveError && <p className="text-[10px] text-rose-300 bg-rose-500/10 border border-rose-400/20 rounded px-2 py-1">{saveError}</p>}
 
       {recentEvents.length > 0 && (
         <div className="space-y-1 pt-0.5">

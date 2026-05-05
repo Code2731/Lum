@@ -6,8 +6,15 @@
   --terminal-dark: #0d1117;
   --terminal-black: #010409;
   --accent: #58a6ff;
+  --accent-2: #2dd4bf;
   --dim: #8b949e;
   --border: rgba(255, 255, 255, 0.1);
+  --surface-0: #0b1016;
+  --surface-1: #111827;
+  --surface-2: #172130;
+  --surface-3: #1d2938;
+  --glow-cyan: rgba(45, 212, 191, 0.14);
+  --glow-blue: rgba(88, 166, 255, 0.14);
 
   /* shadcn/ui 토큰 — 기존 LUM 색상에 매핑 (다크 only) */
   --background: #0d1117;
@@ -29,6 +36,8 @@
   --input: rgba(255, 255, 255, 0.1);
   --ring: #58a6ff;
   --radius: 0.5rem;
+  --font-ui: "Space Grotesk", "Pretendard Variable", "SUIT Variable", "Apple SD Gothic Neo", "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", "Cascadia Code", "SF Mono", "Menlo", monospace;
 
   background-color: var(--terminal-dark);
   color: white;
@@ -39,8 +48,94 @@
 body {
   margin: 0;
   padding: 0;
-  background-color: var(--terminal-dark);
+  background:
+    radial-gradient(1200px 640px at 82% -20%, rgba(88, 166, 255, 0.16), transparent 58%),
+    radial-gradient(920px 520px at -12% 118%, rgba(63, 185, 80, 0.11), transparent 62%),
+    linear-gradient(180deg, #0c1118 0%, #0d1117 58%, #090d13 100%);
+  font-family: var(--font-ui);
   overflow: hidden;
+}
+
+#root {
+  width: 100vw;
+  height: 100vh;
+}
+
+/* 앱 프레임에 은은한 깊이감을 주는 배경 레이어 */
+.app-root {
+  position: relative;
+  isolation: isolate;
+}
+
+.lum-app-shell {
+  background: linear-gradient(180deg, rgba(8, 12, 18, 0.94), rgba(10, 14, 20, 0.98));
+}
+
+.app-root::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03) 0%, transparent 18%),
+    radial-gradient(760px 360px at 76% 0%, rgba(88, 166, 255, 0.09), transparent 65%);
+  z-index: -1;
+}
+
+.app-root::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.018) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.016) 1px, transparent 1px);
+  background-size: 32px 32px;
+  mask-image: radial-gradient(circle at center, rgba(0, 0, 0, 0.5), transparent 88%);
+  opacity: 0.42;
+  z-index: -1;
+}
+
+.lum-topbar {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.015));
+  backdrop-filter: blur(10px);
+}
+
+.lum-tabbar {
+  background: linear-gradient(180deg, rgba(15, 22, 32, 0.95), rgba(13, 17, 23, 0.88));
+}
+
+.lum-input-dock {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0)),
+    linear-gradient(180deg, rgba(9, 14, 21, 0.96), rgba(10, 14, 20, 0.98));
+}
+
+.lum-quickbar {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0)),
+    linear-gradient(180deg, rgba(9, 14, 21, 0.95), rgba(10, 15, 22, 0.98));
+}
+
+.lum-explorer {
+  background:
+    radial-gradient(420px 180px at 110% 0%, rgba(88, 166, 255, 0.09), transparent 72%),
+    linear-gradient(180deg, rgba(16, 23, 33, 0.96), rgba(12, 17, 24, 0.99));
+}
+
+.lum-explorer-row {
+  transition: background-color 120ms, border-color 120ms;
+}
+
+.lum-sidepanel {
+  background:
+    radial-gradient(520px 200px at 115% -5%, rgba(88, 166, 255, 0.1), transparent 72%),
+    linear-gradient(180deg, rgba(14, 20, 29, 0.97), rgba(10, 15, 22, 0.99));
+}
+
+::selection {
+  background: rgba(88, 166, 255, 0.28);
+  color: #f0f6fc;
 }
 
 /* Tailwind v4 — LUM 토큰 + shadcn 토큰 모두 utility class로 노출 */
@@ -137,13 +232,19 @@ body {
 
 /* Scrollbar */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 9px;
+  height: 9px;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
+  background: linear-gradient(180deg, rgba(88, 166, 255, 0.42), rgba(139, 148, 158, 0.33));
   border-radius: 10px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, rgba(88, 166, 255, 0.64), rgba(139, 148, 158, 0.46));
+  background-clip: content-box;
 }
 ::-webkit-scrollbar-track {
-  background: transparent;
+  background: rgba(255, 255, 255, 0.02);
 }

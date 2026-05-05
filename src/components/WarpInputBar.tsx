@@ -18,10 +18,15 @@ interface Props {
   onTab?: (buf: string) => boolean;  // 자동완성 — true면 기본 Tab 소비
   onChange?: (buf: string) => void;  // 입력 변화 — AI/explain 훅
   voiceEnabled?: boolean;            // 음성 입력 토글 표시 여부 (기본 true)
+  contextChips?: Array<{
+    id: string;
+    label: string;
+    tone?: "neutral" | "accent" | "success" | "warn";
+  }>;
 }
 
 const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
-  ({ fontFamily, fontSize, onSubmit, onInterrupt, onTab, onChange, voiceEnabled = true }, ref) => {
+  ({ fontFamily, fontSize, onSubmit, onInterrupt, onTab, onChange, voiceEnabled = true, contextChips = [] }, ref) => {
     const [input, setInput] = useState("");
     const [isComposing, setIsComposing] = useState(false);
     const [isFocused, setIsFocused] = useState(false);
@@ -171,20 +176,56 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
         }}
         style={{
           flexShrink: 0,
-          background: "#161b22",
-          borderTop: `1px solid ${isFocused ? "rgba(88,166,255,0.6)" : "rgba(88,166,255,0.2)"}`,
-          padding: "0 10px",
+          background: "linear-gradient(180deg, rgba(20,27,36,0.96), rgba(16,22,30,0.98))",
+          borderTop: `1px solid ${isFocused ? "rgba(88,166,255,0.64)" : "rgba(255,255,255,0.14)"}`,
+          borderBottom: "1px solid rgba(255,255,255,0.05)",
+          boxShadow: isFocused ? "0 -10px 28px rgba(88,166,255,0.12)" : "inset 0 1px 0 rgba(255,255,255,0.02)",
+          padding: contextChips.length > 0 ? "6px 12px" : "0 12px",
           display: "flex",
-          alignItems: "center",
-          gap: 8,
-          height: 40,
-          minHeight: 40,
+          flexDirection: "column",
+          justifyContent: "center",
+          gap: contextChips.length > 0 ? 5 : 0,
+          minHeight: contextChips.length > 0 ? 56 : 40,
           cursor: "text",
           boxSizing: "border-box",
           position: "relative",
           transition: "border-color 120ms",
         }}
       >
+        {contextChips.length > 0 && (
+          <div style={{ width: "100%", display: "flex", alignItems: "center", gap: 6, overflowX: "auto", scrollbarWidth: "none" }}>
+            {contextChips.map((chip) => (
+              <span
+                key={chip.id}
+                style={{
+                  flexShrink: 0,
+                  fontSize: 10,
+                  lineHeight: 1.2,
+                  padding: "2px 7px",
+                  borderRadius: 999,
+                  border:
+                    chip.tone === "accent" ? "1px solid rgba(88,166,255,0.35)" :
+                    chip.tone === "success" ? "1px solid rgba(63,185,80,0.35)" :
+                    chip.tone === "warn" ? "1px solid rgba(227,179,65,0.35)" :
+                    "1px solid rgba(255,255,255,0.14)",
+                  color:
+                    chip.tone === "accent" ? "rgba(121,192,255,0.95)" :
+                    chip.tone === "success" ? "rgba(111,227,132,0.95)" :
+                    chip.tone === "warn" ? "rgba(233,194,105,0.96)" :
+                    "rgba(255,255,255,0.62)",
+                  background:
+                    chip.tone === "accent" ? "rgba(88,166,255,0.12)" :
+                    chip.tone === "success" ? "rgba(63,185,80,0.12)" :
+                    chip.tone === "warn" ? "rgba(227,179,65,0.12)" :
+                    "rgba(255,255,255,0.04)",
+                }}
+              >
+                {chip.label}
+              </span>
+            ))}
+          </div>
+        )}
+
         {voiceError && (
           <div
             style={{
@@ -208,38 +249,39 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
           </div>
         )}
 
-        <span style={{ color: promptColor, fontFamily, fontSize, opacity: 0.85, flexShrink: 0 }}>
-          {promptChar}
-        </span>
+        <div style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, minHeight: 32 }}>
+          <span style={{ color: promptColor, fontFamily, fontSize, opacity: 0.85, flexShrink: 0 }}>
+            {promptChar}
+          </span>
 
-        {voiceEnabled && (
-          <button
-            type="button"
-            onClick={handleMicToggle}
-            disabled={voiceBusy}
-            aria-label={isRecording ? "음성 녹음 중지" : "음성 녹음 시작"}
-            title={isRecording ? "음성 녹음 중지" : "음성 녹음 시작"}
-            style={{
-              width: 24,
-              height: 24,
-              borderRadius: 6,
-              border: "1px solid rgba(255,255,255,0.12)",
-              background: isRecording ? "rgba(248,81,73,0.18)" : "rgba(255,255,255,0.04)",
-              color: isRecording ? "#ff7b72" : "rgba(255,255,255,0.72)",
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-              flexShrink: 0,
-              cursor: voiceBusy ? "wait" : "pointer",
-              opacity: voiceBusy ? 0.55 : 1,
-            }}
-          >
-            {isRecording ? <Mic size={12} /> : <MicOff size={12} />}
-          </button>
-        )}
+          {voiceEnabled && (
+            <button
+              type="button"
+              onClick={handleMicToggle}
+              disabled={voiceBusy}
+              aria-label={isRecording ? "음성 녹음 중지" : "음성 녹음 시작"}
+              title={isRecording ? "음성 녹음 중지" : "음성 녹음 시작"}
+              style={{
+                width: 24,
+                height: 24,
+                borderRadius: 6,
+                border: "1px solid rgba(255,255,255,0.16)",
+                background: isRecording ? "rgba(248,81,73,0.22)" : "rgba(255,255,255,0.06)",
+                color: isRecording ? "#ff7b72" : "rgba(255,255,255,0.78)",
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0,
+                cursor: voiceBusy ? "wait" : "pointer",
+                opacity: voiceBusy ? 0.55 : 1,
+              }}
+            >
+              {isRecording ? <Mic size={12} /> : <MicOff size={12} />}
+            </button>
+          )}
 
-        {/* 입력 영역: 실제 input은 투명, 컬러 오버레이로 syntax highlight */}
-        <div style={{ position: "relative", flex: 1, height: "100%", display: "flex", alignItems: "center" }}>
+          {/* 입력 영역: 실제 input은 투명, 컬러 오버레이로 syntax highlight */}
+          <div style={{ position: "relative", flex: 1, height: "100%", display: "flex", alignItems: "center" }}>
           {/* 컬러 오버레이 (pointer-events: none) */}
           <div
             aria-hidden
@@ -257,7 +299,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
             }}
           >
             {input === "" ? (
-              <span style={{ color: "rgba(255,255,255,0.2)" }}>자연어는 AI · 명령어는 자동 실행 · !강제shell · @강제AI · &gt;&gt;에이전트</span>
+              <span style={{ color: "rgba(255,255,255,0.28)" }}>자연어는 AI · 명령어는 자동 실행 · !강제shell · @강제AI · &gt;&gt;에이전트</span>
             ) : body !== null ? (
               <span style={{ color: TOKEN_COLORS.text }}>{body}</span>
             ) : (
@@ -291,7 +333,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
               border: "none",
               outline: "none",
               color: "transparent",
-              caretColor: "#58a6ff",
+              caretColor: "#79c0ff",
               fontFamily,
               fontSize,
               padding: 0,
@@ -299,6 +341,23 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
               lineHeight: 1.4,
             }}
           />
+          </div>
+
+          {input === "" && (
+            <span
+              style={{
+                flexShrink: 0,
+                fontSize: 10,
+                color: "rgba(255,255,255,0.3)",
+                border: "1px solid rgba(255,255,255,0.12)",
+                borderRadius: 6,
+                padding: "1px 6px",
+                lineHeight: 1.2,
+              }}
+            >
+              Enter 실행
+            </span>
+          )}
         </div>
 
       </div>

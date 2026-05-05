@@ -43,21 +43,21 @@ const ScriptLibraryPanel: React.FC<Props> = ({
   };
 
   return (
-    <div className="flex flex-col h-full bg-[#0d1117] border-l border-white/5">
+    <div className="lum-sidepanel flex flex-col h-full border-l border-white/10">
       {/* 헤더 */}
-      <div className="flex items-center gap-2 px-3 py-2 border-b border-white/5 shrink-0">
+      <div className="flex items-center gap-2 px-3 py-2 border-b border-white/10 bg-white/[0.02] shrink-0">
         <BookOpen size={13} className="text-accent shrink-0" />
-        <span className="text-[11px] font-semibold text-white/80 flex-1">스크립트 라이브러리</span>
+        <span className="text-[11px] font-semibold text-white/86 flex-1">스크립트 라이브러리</span>
         <IconButton
           tooltip="새 스크립트 추가"
           onClick={() => setCreating((v) => !v)}
-          className={`text-white/30 hover:text-accent transition-colors p-0.5 rounded ${creating ? "text-accent" : ""}`}
+          className={`p-1 rounded border border-white/[0.1] text-white/45 hover:text-accent hover:bg-white/[0.08] transition-colors ${creating ? "text-accent border-accent/35" : ""}`}
         >
           <Plus size={12} />
         </IconButton>
         <button
           onClick={onClose}
-          className="text-white/25 hover:text-white/60 transition-colors p-0.5 rounded"
+          className="p-1 rounded border border-white/[0.1] text-white/40 hover:text-white/75 hover:bg-white/[0.08] transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
           aria-label="닫기"
         >
           <X size={11} />
@@ -66,16 +66,16 @@ const ScriptLibraryPanel: React.FC<Props> = ({
 
       {/* 새 스크립트 폼 */}
       {creating && (
-        <div className="shrink-0 border-b border-white/5 p-2 space-y-1.5 bg-white/2">
+        <div className="shrink-0 border-b border-white/8 p-2 space-y-1.5 bg-white/[0.03]">
           <input
-            className="w-full bg-white/5 border border-white/8 rounded px-2 py-1 text-[11px] text-white/80 placeholder-white/20 outline-none focus:border-accent/40"
+            className="w-full bg-white/[0.05] border border-white/[0.12] rounded-md px-2 py-1 text-[11px] text-white/84 placeholder-white/25 outline-none focus:border-accent/50"
             placeholder="스크립트 이름"
             value={newName}
             onChange={e => setNewName(e.target.value)}
             autoFocus
           />
           <input
-            className="w-full bg-white/5 border border-white/8 rounded px-2 py-1 text-[11px] text-white/50 placeholder-white/20 outline-none focus:border-accent/40"
+            className="w-full bg-white/[0.05] border border-white/[0.12] rounded-md px-2 py-1 text-[11px] text-white/56 placeholder-white/25 outline-none focus:border-accent/50"
             placeholder="설명 (선택)"
             value={newDesc}
             onChange={e => setNewDesc(e.target.value)}
@@ -90,14 +90,14 @@ const ScriptLibraryPanel: React.FC<Props> = ({
           <div className="flex gap-1.5 justify-end">
             <button
               onClick={() => setCreating(false)}
-              className="px-2 py-1 text-[10px] text-white/40 hover:text-white/60 transition-colors"
+              className="px-2 py-1 text-[10px] text-white/44 hover:text-white/68 transition-colors"
             >
               취소
             </button>
             <button
               disabled={saving || !newName.trim() || !newCmds.trim()}
               onClick={handleCreate}
-              className="flex items-center gap-1 px-2.5 py-1 text-[10px] rounded bg-accent/20 text-accent hover:bg-accent/30 disabled:opacity-40 transition-colors font-medium"
+              className="flex items-center gap-1 px-2.5 py-1 text-[10px] rounded-md border border-accent/35 bg-accent/18 text-accent hover:bg-accent/30 disabled:opacity-40 transition-colors font-medium"
             >
               <Plus size={9} />
               저장
@@ -124,15 +124,15 @@ const ScriptLibraryPanel: React.FC<Props> = ({
           </div>
         )}
         {scripts.map((sc) => (
-          <div key={sc.id} className="rounded-lg border border-white/5 bg-white/2 overflow-hidden">
+          <div key={sc.id} className="rounded-lg border border-white/[0.1] bg-white/[0.03] overflow-hidden">
             <div className="flex items-start gap-2 px-2.5 py-2">
-              <Terminal size={11} className="text-accent/50 mt-0.5 shrink-0" />
+              <Terminal size={11} className="text-accent/68 mt-0.5 shrink-0" />
               <div className="flex-1 min-w-0">
-                <p className="text-[11px] font-medium text-white/75 truncate">{sc.name}</p>
+                <p className="text-[11px] font-medium text-white/80 truncate">{sc.name}</p>
                 {sc.description && (
-                  <p className="text-[10px] text-white/35 truncate mt-0.5">{sc.description}</p>
+                  <p className="text-[10px] text-white/40 truncate mt-0.5">{sc.description}</p>
                 )}
-                <p className="text-[10px] text-white/25 mt-0.5">
+                <p className="text-[10px] text-white/30 mt-0.5">
                   {sc.commands.length}개 명령어 · {new Date(sc.created_at * 1000).toLocaleDateString("ko-KR")}
                 </p>
               </div>
@@ -144,7 +144,7 @@ const ScriptLibraryPanel: React.FC<Props> = ({
                   onConfirm={() => onDelete(sc.id)}
                 >
                   <button
-                    className="text-white/20 hover:text-red-400 transition-colors p-0.5 rounded"
+                    className="text-white/28 hover:text-red-300 hover:bg-red-500/10 border border-transparent hover:border-red-500/30 transition-colors p-1 rounded"
                     title="삭제"
                   >
                     <Trash2 size={10} />
@@ -152,7 +152,7 @@ const ScriptLibraryPanel: React.FC<Props> = ({
                 </ConfirmDeleteDialog>
                 <button
                   onClick={() => onRun(sc.commands)}
-                  className="flex items-center gap-1 px-2 py-0.5 text-[10px] rounded bg-accent/15 text-accent hover:bg-accent/25 transition-colors font-medium"
+                  className="flex items-center gap-1 px-2 py-0.5 text-[10px] rounded-md border border-accent/30 bg-accent/14 text-accent hover:bg-accent/24 transition-colors font-medium"
                 >
                   <Play size={9} />
                   실행
@@ -161,7 +161,7 @@ const ScriptLibraryPanel: React.FC<Props> = ({
             </div>
             {/* 커맨드 미리보기 */}
             <div className="px-2.5 pb-2">
-              <div className="rounded bg-black/30 px-2 py-1 space-y-0.5">
+              <div className="rounded-md border border-white/[0.08] bg-black/28 px-2 py-1 space-y-0.5">
                 {sc.commands.slice(0, 3).map((cmd, i) => (
                   <p key={i} className="text-[9px] font-mono text-white/30 truncate">
                     <span className="text-white/15">$</span> {cmd}

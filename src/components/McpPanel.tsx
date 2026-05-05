@@ -175,17 +175,17 @@ const McpPanel: React.FC<Props> = ({ onClose }) => {
 
   return (
     <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent className="sm:max-w-[640px] max-h-[85vh] flex flex-col gap-0 p-0 overflow-hidden border-white/10 rounded-xl bg-[#1a1a2e]">
+      <DialogContent className="lum-sidepanel sm:max-w-[640px] max-h-[85vh] flex flex-col gap-0 p-0 overflow-hidden border-white/12 rounded-2xl">
 
         {/* 헤더 */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-white/8">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 bg-white/[0.02]">
           <div className="flex items-center gap-2">
             <PlugZap size={14} className="text-accent" />
             <DialogTitle className="text-[13px] font-semibold text-white/90">MCP 서버</DialogTitle>
-            <span className="text-[10px] text-white/30">· Model Context Protocol</span>
+            <span className="text-[10px] text-white/35">· Model Context Protocol</span>
           </div>
           <IconButton tooltip="새로고침" onClick={loadServers}
-            className="p-1 rounded text-white/30 hover:text-white/70 hover:bg-white/5 mr-8">
+            className="p-1 rounded border border-white/[0.1] text-white/40 hover:text-white/78 hover:bg-white/[0.08] mr-8">
             <RefreshCw size={12} className={loadingList ? "animate-spin" : ""} />
           </IconButton>
         </div>
@@ -193,9 +193,9 @@ const McpPanel: React.FC<Props> = ({ onClose }) => {
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
 
           {recommended.length > 0 && (
-            <div className="p-3 rounded-lg border border-white/8 bg-white/[0.02] space-y-2.5">
+            <div className="p-3 rounded-lg border border-white/10 bg-white/[0.03] space-y-2.5">
               <div className="flex items-center justify-between">
-                <div className="text-[11px] text-white/70 font-medium">추천 서버 (원클릭 설치)</div>
+                <div className="text-[11px] text-white/76 font-semibold">추천 서버 (원클릭 설치)</div>
                 <span className="text-[10px] text-white/35">{recommended.length}개</span>
               </div>
               <div className="space-y-1.5">
@@ -205,7 +205,7 @@ const McpPanel: React.FC<Props> = ({ onClose }) => {
                   return (
                     <div
                       key={rec.name}
-                      className="rounded border border-white/8 bg-black/20 px-2.5 py-2"
+                      className="rounded border border-white/10 bg-black/22 px-2.5 py-2"
                     >
                       <div className="flex items-center justify-between gap-2">
                         <div className="min-w-0">
@@ -220,7 +220,7 @@ const McpPanel: React.FC<Props> = ({ onClose }) => {
                         <button
                           onClick={() => installRecommended(rec)}
                           disabled={busy}
-                          className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-accent/20 hover:bg-accent/30 text-accent text-[10px] disabled:opacity-50"
+                          className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-accent/35 bg-accent/18 hover:bg-accent/30 text-accent text-[10px] disabled:opacity-50"
                         >
                           {busy ? <Loader2 size={10} className="animate-spin" /> : <Download size={10} />}
                           {installed ? "재설치" : "설치"}
@@ -249,12 +249,12 @@ const McpPanel: React.FC<Props> = ({ onClose }) => {
           )}
 
           {servers.length === 0 && !loadingList && (
-            <div className="p-4 bg-white/3 border border-white/5 rounded-lg text-center space-y-2">
+            <div className="p-4 bg-white/[0.03] border border-white/[0.1] rounded-lg text-center space-y-2">
               <p className="text-[12px] text-white/60">등록된 MCP 서버가 없습니다.</p>
               <button
                 onClick={installPresets}
                 disabled={installing}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded bg-accent/20 hover:bg-accent/30 text-accent text-[11px] transition-colors disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-accent/35 bg-accent/18 hover:bg-accent/30 text-accent text-[11px] transition-colors disabled:opacity-50"
               >
                 {installing ? <Loader2 size={11} className="animate-spin" /> : <Download size={11} />}
                 공식 프리셋 설치 (filesystem · playwright · git)
@@ -268,11 +268,11 @@ const McpPanel: React.FC<Props> = ({ onClose }) => {
             const err = rt.error;
             const serverTools = rt.tools;
             return (
-              <div key={s.name} className="rounded-lg border border-white/8 bg-white/[0.02] overflow-hidden">
+              <div key={s.name} className="rounded-lg border border-white/10 bg-white/[0.03] overflow-hidden">
                 <div className="flex items-center gap-2 px-3 py-2">
                   <button
                     onClick={() => expandAndLoadTools(s.name)}
-                    className="flex items-center gap-1 flex-1 text-left text-[12px]"
+                    className="flex items-center gap-1 flex-1 text-left text-[12px] hover:text-white transition-colors"
                   >
                     {isExpanded ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
                     <Plug size={11} className={s.enabled ? "text-accent" : "text-white/30"} />
@@ -299,14 +299,14 @@ const McpPanel: React.FC<Props> = ({ onClose }) => {
                       confirmLabel: "제거",
                     }}
                     onClick={() => removeServer(s.name)}
-                    className="p-1 rounded text-white/30 hover:text-red-400 hover:bg-red-500/10"
+                    className="p-1 rounded border border-transparent text-white/35 hover:text-red-300 hover:bg-red-500/10 hover:border-red-500/25"
                   >
                     <Trash2 size={11} />
                   </IconButton>
                 </div>
 
                 {isExpanded && (
-                  <div className="border-t border-white/5 p-3 space-y-2 bg-black/10">
+                  <div className="border-t border-white/8 p-3 space-y-2 bg-black/12">
                     <div className="font-mono text-[10px] text-white/40 break-all">
                       <span className="text-white/30">$ </span>
                       {s.command} {s.args.join(" ")}
@@ -331,7 +331,7 @@ const McpPanel: React.FC<Props> = ({ onClose }) => {
                           <CheckCircle2 size={10} className="text-green-400" /> {serverTools.length}개 툴
                         </div>
                         {serverTools.map((t) => (
-                          <div key={t.name} className="px-2 py-1.5 bg-white/3 rounded text-[11px]">
+                          <div key={t.name} className="px-2 py-1.5 bg-white/[0.04] border border-white/[0.08] rounded text-[11px]">
                             <div className="flex items-center gap-1.5">
                               <Play size={9} className="text-accent/60" />
                               <span className="font-mono text-accent/90">{t.name}</span>
@@ -357,7 +357,7 @@ const McpPanel: React.FC<Props> = ({ onClose }) => {
 
           {/* 서버 추가 */}
           {addForm ? (
-            <div className="p-3 rounded-lg border border-accent/30 bg-accent/5 space-y-2">
+            <div className="p-3 rounded-lg border border-accent/35 bg-accent/8 space-y-2">
               <div className="text-[12px] font-medium text-accent">새 서버 추가</div>
               <Input placeholder="서버 이름 (고유)" value={addForm.name}
                 onChange={(e) => setAddForm({ ...addForm, name: e.target.value })}
@@ -385,7 +385,7 @@ const McpPanel: React.FC<Props> = ({ onClose }) => {
                     setAddForm(null);
                   }}
                   disabled={!addForm.name || !addForm.command}
-                  className="px-3 py-1 rounded bg-accent/20 hover:bg-accent/30 text-accent text-[11px] disabled:opacity-40"
+                  className="px-3 py-1 rounded-md border border-accent/35 bg-accent/18 hover:bg-accent/30 text-accent text-[11px] disabled:opacity-40"
                 >
                   저장
                 </button>
@@ -394,7 +394,7 @@ const McpPanel: React.FC<Props> = ({ onClose }) => {
           ) : (
             <button
               onClick={() => setAddForm({ name: "", command: "", args: [], env: {}, enabled: true })}
-              className="w-full flex items-center justify-center gap-1.5 py-2 rounded border border-dashed border-white/15 text-white/40 hover:text-white/70 hover:border-white/30 text-[11px] transition-colors"
+              className="w-full flex items-center justify-center gap-1.5 py-2 rounded border border-dashed border-white/[0.22] text-white/45 hover:text-white/76 hover:border-white/35 text-[11px] transition-colors bg-white/[0.02]"
             >
               <Plus size={12} />
               서버 수동 추가

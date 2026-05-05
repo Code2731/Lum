@@ -8,7 +8,7 @@ interface Props {
 
 function GaugeBar({ pct, color }: { pct: number; color: string }) {
   return (
-    <div className="h-1.5 w-full bg-white/8 rounded-full overflow-hidden">
+    <div className="h-1.5 w-full bg-white/[0.1] rounded-full overflow-hidden">
       <div
         className={`h-full rounded-full transition-all duration-500 ${color}`}
         style={{ width: `${Math.min(pct, 100)}%` }}
@@ -18,9 +18,9 @@ function GaugeBar({ pct, color }: { pct: number; color: string }) {
 }
 
 function color(pct: number) {
-  if (pct >= 90) return "bg-red-500";
-  if (pct >= 70) return "bg-yellow-400";
-  return "bg-accent";
+  if (pct >= 90) return "bg-red-400";
+  if (pct >= 70) return "bg-amber-300";
+  return "bg-accent/90";
 }
 
 function ProcTable({
@@ -43,16 +43,16 @@ function ProcTable({
 
         return (
           <div key={`${p.pid}-${mode}`} className="flex items-center gap-2">
-            <span className="w-[100px] text-[10px] font-mono text-white/50 truncate shrink-0">
+            <span className="w-[100px] text-[10px] font-mono text-white/56 truncate shrink-0">
               {p.name}
             </span>
-            <div className="flex-1 h-1 bg-white/6 rounded-full overflow-hidden">
+            <div className="flex-1 h-1 bg-white/[0.09] rounded-full overflow-hidden">
               <div
-                className="h-full bg-accent/60 rounded-full transition-all duration-500"
+                className="h-full bg-accent/70 rounded-full transition-all duration-500"
                 style={{ width: `${barPct}%` }}
               />
             </div>
-            <span className="text-[10px] font-mono text-white/40 w-16 text-right shrink-0">
+            <span className="text-[10px] font-mono text-white/46 w-16 text-right shrink-0">
               {label}
             </span>
           </div>
@@ -66,27 +66,27 @@ const SystemMonitorPanel: React.FC<Props> = ({ onClose }) => {
   const stats = useSystemMonitor(true);
 
   return (
-    <div className="flex flex-col h-full bg-[#0d1117] border-l border-white/5">
+    <div className="lum-sidepanel flex flex-col h-full border-l border-white/10">
       {/* 헤더 */}
-      <div className="flex items-center gap-2 px-3 py-2 border-b border-white/5 shrink-0">
+      <div className="flex items-center gap-2 px-3 py-2 border-b border-white/10 bg-white/[0.02] shrink-0">
         <Cpu size={13} className="text-accent shrink-0" />
-        <span className="text-[11px] font-semibold text-white/80 flex-1">시스템 모니터</span>
+        <span className="text-[11px] font-semibold text-white/86 flex-1">시스템 모니터</span>
         {stats && (
-          <span className="flex items-center gap-1 text-[9px] text-white/20">
+          <span className="flex items-center gap-1 text-[9px] text-white/28">
             <RefreshCw size={8} className="animate-spin" style={{ animationDuration: "2s" }} />
             2초
           </span>
         )}
         <button
           onClick={onClose}
-          className="text-white/25 hover:text-white/60 transition-colors p-0.5 rounded"
+          className="p-1 rounded border border-white/[0.1] text-white/40 hover:text-white/75 hover:bg-white/[0.08] transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
         >
           <X size={11} />
         </button>
       </div>
 
       {!stats ? (
-        <div className="flex-1 flex items-center justify-center text-[11px] text-white/20">
+        <div className="flex-1 flex items-center justify-center text-[11px] text-white/24">
           수집 중…
         </div>
       ) : (
@@ -98,7 +98,7 @@ const SystemMonitorPanel: React.FC<Props> = ({ onClose }) => {
                 <Cpu size={10} />
                 CPU
               </span>
-              <span className="text-[11px] font-mono font-semibold text-white/80">
+              <span className="text-[11px] font-mono font-semibold text-white/86">
                 {stats.cpu_usage.toFixed(1)}%
                 <span className="text-[9px] text-white/25 ml-1">/ {stats.cpu_count}코어</span>
               </span>
@@ -113,7 +113,7 @@ const SystemMonitorPanel: React.FC<Props> = ({ onClose }) => {
                 <MemoryStick size={10} />
                 메모리
               </span>
-              <span className="text-[11px] font-mono font-semibold text-white/80">
+              <span className="text-[11px] font-mono font-semibold text-white/86">
                 {stats.memory_used_gb} GB
                 <span className="text-[9px] text-white/25 ml-1">/ {stats.memory_total_gb} GB</span>
               </span>

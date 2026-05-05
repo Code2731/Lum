@@ -531,7 +531,7 @@ const App: React.FC = () => {
 
   return (
     <TooltipProvider delayDuration={300} skipDelayDuration={150}>
-    <div className="app-root bg-terminal-dark text-white h-screen overflow-hidden flex flex-col">
+    <div className="app-root lum-app-shell text-white h-screen overflow-hidden flex flex-col">
       <ResizeHandles />
       {/* ── 헤더 ─────────────────────────────────────────────── */}
       <AppHeader
@@ -617,7 +617,7 @@ const App: React.FC = () => {
 
       {/* ── 탭 바 ─────────────────────────────────────────────── */}
       {viewMode === "terminal" && (
-        <div className="flex items-center border-b border-white/5 bg-[#0d1117] shrink-0 overflow-x-auto">
+        <div className="lum-tabbar flex items-center border-b border-white/10 shrink-0 overflow-x-auto">
           {tabs.map((tab) => (
             <div
               key={tab.id}
@@ -630,10 +630,10 @@ const App: React.FC = () => {
                 e.preventDefault();
                 setTabCtxMenu({ tabId: tab.id, x: e.clientX, y: e.clientY });
               }}
-              className={`relative flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border-r border-white/5 whitespace-nowrap transition-colors group cursor-pointer ${
+              className={`relative flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border-r border-white/8 whitespace-nowrap transition-colors group cursor-pointer ${
                 tab.id === activeTabId
-                  ? "bg-[#161b22] text-white"
-                  : "text-white/45 hover:text-white/75 hover:bg-white/3"
+                  ? "bg-[#182739] text-white shadow-[inset_0_-2px_0_rgba(88,166,255,0.8)]"
+                  : "text-white/45 hover:text-white/80 hover:bg-white/[0.05]"
               }`}
               style={tab.color ? { borderBottom: `2px solid ${TAB_COLORS[tab.color]}` } : undefined}
             >
@@ -743,7 +743,7 @@ const App: React.FC = () => {
       )}
 
       {/* ── 메인 콘텐츠 ──────────────────────────────────────── */}
-      <main className="flex-1 overflow-hidden flex relative">
+      <main className="flex-1 overflow-hidden flex relative border-t border-white/[0.03]">
         {showFileExplorer && (
           <div style={{ width: 260 }} className="shrink-0">
             <FileExplorerPanel
@@ -771,7 +771,7 @@ const App: React.FC = () => {
             />
           </div>
         )}
-        <div className="flex-1 overflow-hidden relative">
+        <div className="flex-1 overflow-hidden relative bg-[#0a0f16]/65">
           <div className={`absolute inset-0 ${viewMode === "terminal" ? "block" : "hidden"}`}>
             {tabs.map((tab) => (
               <div
@@ -939,7 +939,7 @@ const App: React.FC = () => {
             animate={{ width: 320, opacity: 1 }}
             exit={{ width: 0, opacity: 0 }}
             transition={{ duration: 0.2, ease: "easeOut" }}
-            className="border-l border-white/5 shrink-0 overflow-hidden"
+            className="border-l border-white/8 shrink-0 overflow-hidden bg-[#0e141d]/84"
           >
             <ErrorBoundary label="RAG">
               <RagPanel model={selectedModel} onClose={() => setShowRagPanel(false)} />
@@ -954,7 +954,7 @@ const App: React.FC = () => {
             animate={{ width: 288, opacity: 1 }}
             exit={{ width: 0, opacity: 0 }}
             transition={{ duration: 0.2, ease: "easeOut" }}
-            className="border-l border-white/5 shrink-0 overflow-hidden"
+            className="border-l border-white/8 shrink-0 overflow-hidden bg-[#0e141d]/84"
           >
             <ErrorBoundary label="스크립트 라이브러리">
               <ScriptLibraryPanel
@@ -977,7 +977,7 @@ const App: React.FC = () => {
             animate={{ width: 256, opacity: 1 }}
             exit={{ width: 0, opacity: 0 }}
             transition={{ duration: 0.2, ease: "easeOut" }}
-            className="border-l border-white/5 shrink-0 overflow-hidden"
+            className="border-l border-white/8 shrink-0 overflow-hidden bg-[#0e141d]/84"
           >
             <ErrorBoundary label="시스템 모니터">
               <SystemMonitorPanel onClose={() => setShowSysmon(false)} />
@@ -994,14 +994,14 @@ const App: React.FC = () => {
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 20, opacity: 0 }}
             transition={{ duration: 0.18, ease: "easeOut" }}
-            className="absolute inset-x-0 bottom-0 p-4 bg-gradient-to-t from-terminal-dark/95 to-transparent pointer-events-none"
+            className="absolute inset-x-0 bottom-0 p-4 bg-gradient-to-t from-[#0b1017]/96 via-[#0b1017]/72 to-transparent pointer-events-none"
           >
             <div className="pointer-events-auto">
-              <div className="flex items-center gap-2 bg-white/8 border border-white/10 rounded-lg px-3 py-2 backdrop-blur-sm shadow-lg">
+              <div className="flex items-center gap-2 bg-white/[0.07] border border-white/[0.16] rounded-xl px-3 py-2 backdrop-blur-md shadow-2xl">
                 <Zap size={13} className="text-accent shrink-0" />
                 <input
                   ref={aiInputRef}
-                  className="bg-transparent border-none outline-none text-xs flex-1"
+                  className="bg-transparent border-none outline-none text-xs flex-1 placeholder:text-white/35"
                   placeholder="AI에게 질문하세요… (Enter 전송 · Esc 닫기)"
                   value={aiInput}
                   disabled={isProcessing}

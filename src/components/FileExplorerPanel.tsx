@@ -69,37 +69,40 @@ export default function FileExplorerPanel({ cwd, onClose, onCdTo, onOpenFile }: 
   const segments = currentPath.replace(/\\/g, "/").split("/").filter(Boolean);
 
   return (
-    <div className="flex flex-col h-full bg-[#0f1419] border-r border-white/8">
-      <div className="flex items-center justify-between px-3 py-2 border-b border-white/8">
-        <div className="flex items-center gap-1.5 text-[11px] text-white/70 font-medium">
+    <div className="lum-explorer flex flex-col h-full border-r border-white/10">
+      <div className="flex items-center justify-between px-3 py-2 border-b border-white/10">
+        <div className="flex items-center gap-1.5 text-[11px] text-white/78 font-semibold tracking-wide">
           <Folder size={12} className="text-accent" />
           파일 탐색기
         </div>
-        <button onClick={onClose} className="p-1 rounded hover:bg-white/10 text-white/40">
+        <button
+          onClick={onClose}
+          className="p-1 rounded border border-white/[0.1] hover:bg-white/[0.08] text-white/45 hover:text-white/75 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+        >
           <X size={12} />
         </button>
       </div>
 
-      <div className="flex items-center gap-1 px-2 py-1.5 border-b border-white/5">
+      <div className="flex items-center gap-1 px-2 py-1.5 border-b border-white/8 bg-white/[0.02]">
         <IconButton tooltip="상위 폴더" onClick={goUp}
-          className="p-1 rounded hover:bg-white/10 text-white/50 hover:text-white/80">
+          className="p-1 rounded border border-white/[0.1] hover:bg-white/[0.09] text-white/50 hover:text-white/82">
           <ArrowUp size={12} />
         </IconButton>
         <IconButton tooltip="홈" onClick={() => load("~")}
-          className="p-1 rounded hover:bg-white/10 text-white/50 hover:text-white/80">
+          className="p-1 rounded border border-white/[0.1] hover:bg-white/[0.09] text-white/50 hover:text-white/82">
           <Home size={12} />
         </IconButton>
         <IconButton tooltip="새로고침" onClick={() => load(currentPath)}
-          className="p-1 rounded hover:bg-white/10 text-white/50 hover:text-white/80">
+          className="p-1 rounded border border-white/[0.1] hover:bg-white/[0.09] text-white/50 hover:text-white/82">
           <RefreshCw size={11} />
         </IconButton>
         <IconButton tooltip="터미널을 이 폴더로 이동" onClick={() => onCdTo(currentPath)}
-          className="ml-auto px-2 py-0.5 rounded bg-accent/15 hover:bg-accent/25 text-accent text-[10px]">
+          className="ml-auto px-2 py-0.5 rounded-md border border-accent/35 bg-accent/14 hover:bg-accent/24 text-accent text-[10px]">
           여기로 cd
         </IconButton>
       </div>
 
-      <div className="px-3 py-1.5 text-[10px] text-white/40 font-mono truncate border-b border-white/5" title={currentPath}>
+      <div className="px-3 py-1.5 text-[10px] text-white/45 font-mono truncate border-b border-white/8 bg-black/10" title={currentPath}>
         {segments.length === 0 ? "/" : segments.map((s, i) => (
           <span key={i}>
             <span>{s}</span>
@@ -109,9 +112,9 @@ export default function FileExplorerPanel({ cwd, onClose, onCdTo, onOpenFile }: 
       </div>
 
       <div className="flex-1 overflow-y-auto">
-        {loading && <div className="text-[10px] text-white/30 px-3 py-2">읽는 중…</div>}
+        {loading && <div className="text-[10px] text-white/34 px-3 py-2">읽는 중…</div>}
         {error && (
-          <div className="text-[10px] text-red-400 px-3 py-2 bg-red-500/5 m-2 rounded">
+          <div className="text-[10px] text-red-300 px-3 py-2 bg-red-500/10 border border-red-500/25 m-2 rounded-md">
             {error}
           </div>
         )}
@@ -124,15 +127,15 @@ export default function FileExplorerPanel({ cwd, onClose, onCdTo, onOpenFile }: 
             onClick={() => handleEntryClick(e, false)}
             onDoubleClick={() => handleEntryClick(e, true)}
             title={e.is_dir ? "더블클릭: 이 폴더로 cd / 클릭: 열기" : "더블클릭: 파일 열기"}
-            className="flex items-center gap-1.5 px-3 py-1 text-[11px] hover:bg-white/5 cursor-pointer text-white/70"
+            className="lum-explorer-row flex items-center gap-1.5 px-3 py-1.5 text-[11px] hover:bg-white/[0.06] cursor-pointer text-white/72 border-b border-transparent hover:border-white/[0.06]"
           >
             {e.is_dir ? (
-              <FolderOpen size={12} className="text-yellow-400/70 shrink-0" />
+              <FolderOpen size={12} className="text-yellow-300/75 shrink-0" />
             ) : (
-              <File size={12} className="text-white/35 shrink-0" />
+              <File size={12} className="text-white/40 shrink-0" />
             )}
             <span className="flex-1 truncate">{e.name}</span>
-            {!e.is_dir && <span className="text-[9px] text-white/25 shrink-0">{formatSize(e.size)}</span>}
+            {!e.is_dir && <span className="text-[9px] text-white/30 shrink-0">{formatSize(e.size)}</span>}
           </div>
         ))}
       </div>

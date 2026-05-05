@@ -89,6 +89,26 @@ const PANE_PADDING_Y = 6;
 
 const DEFAULT_MODEL = "Qwen2.5-Coder-7B-Instruct-EXL2-4bpw";
 
+const compactPath = (path?: string): string => {
+  if (!path) return "루트";
+  const normalized = path.replace(/\\/g, "/").replace(/\/+$/, "") || "/";
+  if (normalized.length <= 28) return normalized;
+  const parts = normalized.split("/").filter(Boolean);
+  if (parts.length <= 2) return normalized;
+  return `…/${parts.slice(-2).join("/")}`;
+};
+
+const compactModel = (raw?: string): string => {
+  if (!raw) return "unknown";
+  const last = raw.match(/[^/\\]+$/)?.[0] ?? raw;
+  return last
+    .replace(/-Instruct$/i, "")
+    .replace(/-Q\d+_K_.+$/i, "")
+    .replace(/-\d+\.\d+bpw$/i, "")
+    .replace(/-\d+bit$/i, "")
+    .slice(0, 26);
+};
+
 interface ModeButtonProps {
   label: string;
   title: string;
@@ -101,15 +121,15 @@ const ModeButton: React.FC<ModeButtonProps> = ({ label, title, active, activeCol
     tooltip={title}
     onClick={onClick}
     style={{
-      background: active ? `${activeColor}22` : "transparent",
-      border: `1px solid ${active ? activeColor + "66" : "rgba(255,255,255,0.08)"}`,
-      borderRadius: 4,
-      color: active ? activeColor : "rgba(255,255,255,0.28)",
-      fontSize: 11,
+      background: active ? `${activeColor}1f` : "rgba(255,255,255,0.02)",
+      border: `1px solid ${active ? activeColor + "66" : "rgba(255,255,255,0.12)"}`,
+      borderRadius: 999,
+      color: active ? activeColor : "rgba(255,255,255,0.58)",
+      fontSize: 10.5,
       fontWeight: active ? 700 : 400,
-      padding: "1px 8px",
+      padding: "2px 10px",
       cursor: "pointer",
-      lineHeight: "18px",
+      lineHeight: "16px",
       transition: "all 120ms",
       whiteSpace: "nowrap",
     }}
@@ -650,6 +670,13 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     return false;
   }, []);
 
+  const inputChips: Array<{ id: string; label: string; tone: "neutral" | "accent" | "success" | "warn" }> = [
+    { id: "route", label: "AUTO 라우팅", tone: "accent" },
+    { id: "cwd", label: `CWD ${compactPath(cwd)}`, tone: "neutral" },
+    { id: "model", label: `MODEL ${compactModel(modelRef.current)}`, tone: "neutral" },
+    { id: "term", label: terminalVisible ? "터미널 ON" : "터미널 OFF", tone: terminalVisible ? "success" : "warn" },
+  ];
+
   return (
     <div
       ref={outerRef}
@@ -712,46 +739,65 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
         ) : null}
       </div>
 
-      {/* Warp 입력바 — 입력 필드, 라우팅은 handleSubmit */}
-      <WarpInputBar
-        ref={warpInputRef}
-        fontFamily={fontFamily ? `"${fontFamily}", ${FONT_FAMILY}` : FONT_FAMILY}
-        fontSize={fontSize ?? 13}
-        onSubmit={handleSubmit}
-        onInterrupt={handleInterrupt}
-        onTab={handleTab}
-        onChange={handleInputChange}
-      />
+      <div
+        className="lum-input-dock"
+        style={{
+          padding: "6px 10px 8px",
+          borderTop: "1px solid rgba(255,255,255,0.08)",
+          display: "flex",
+          flexDirection: "column",
+          gap: 6,
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, overflowX: "auto", scrollbarWidth: "none" }}>
+            <span
+              style={{
+                fontSize: 10,
+                color: "rgba(255,255,255,0.5)",
+                letterSpacing: "0.08em",
+                textTransform: "uppercase",
+                flexShrink: 0,
+              }}
+            >
+              INPUT TOOLBELT
+            </span>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <ModeButton
+              label="터미널"
+              title="터미널 표시/숨김 (shell 명령 실행 시 자동 표시)"
+              active={terminalVisible}
+              activeColor="#e3b341"
+              onClick={() => setTerminalVisible(v => !v)}
+            />
+            <ModeButton
+              label="Vision"
+              title="비전 모드 — 이미지 첨부 활성화"
+              active={visionMode}
+              activeColor="#58a6ff"
+              onClick={() => setVisionMode(v => !v)}
+            />
+            <ModeButton
+              label="추론"
+              title="추론 체인 표시 — <think> 블록 보이기 (전역 설정 토글)"
+              active={!!showReasoning}
+              activeColor="#3fb950"
+              onClick={() => onToggleReasoning?.()}
+            />
+          </div>
+        </div>
 
-      {/* 입력 모드 버튼바 */}
-      <div style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 6,
-        padding: "4px 10px 5px",
-        background: xtermTheme?.background ?? "#0d1117",
-        borderTop: "1px solid rgba(255,255,255,0.04)",
-      }}>
-        <ModeButton
-          label="⬛ 터미널"
-          title="터미널 표시/숨김 (shell 명령 실행 시 자동 표시)"
-          active={terminalVisible}
-          activeColor="#e3b341"
-          onClick={() => setTerminalVisible(v => !v)}
-        />
-        <ModeButton
-          label="👁 Vision"
-          title="비전 모드 — 이미지 첨부 활성화"
-          active={visionMode}
-          activeColor="#58a6ff"
-          onClick={() => setVisionMode(v => !v)}
-        />
-        <ModeButton
-          label="🧠 추론"
-          title="추론 체인 표시 — <think> 블록 보이기 (전역 설정 토글)"
-          active={!!showReasoning}
-          activeColor="#3fb950"
-          onClick={() => onToggleReasoning?.()}
+        {/* Warp 입력바 — 입력 필드, 라우팅은 handleSubmit */}
+        <WarpInputBar
+          ref={warpInputRef}
+          fontFamily={fontFamily ? `"${fontFamily}", ${FONT_FAMILY}` : FONT_FAMILY}
+          fontSize={fontSize ?? 13}
+          onSubmit={handleSubmit}
+          onInterrupt={handleInterrupt}
+          onTab={handleTab}
+          onChange={handleInputChange}
+          contextChips={inputChips}
         />
       </div>
 

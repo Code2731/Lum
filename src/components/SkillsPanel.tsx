@@ -122,15 +122,23 @@ const SkillsPanel: React.FC<Props> = ({ onClose }) => {
 
   return (
     <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent className="sm:max-w-[760px] max-h-[85vh] flex flex-col gap-0 p-0 overflow-hidden border-white/10 rounded-2xl">
-        <div className="flex items-center gap-2.5 px-5 py-4 border-b border-white/8 shrink-0">
+      <DialogContent className="lum-sidepanel sm:max-w-[760px] max-h-[85vh] flex flex-col gap-0 p-0 overflow-hidden border-white/12 rounded-2xl">
+        <div className="flex items-center gap-2.5 px-5 py-4 border-b border-white/10 bg-white/[0.02] shrink-0">
           <Library size={15} className="text-accent" />
           <DialogTitle className="text-sm font-semibold">Skills — 절차 라이브러리</DialogTitle>
           <span className="text-[10px] text-white/35 ml-1">자연어 매칭 → ReAct에 자동 주입</span>
+          <button
+            type="button"
+            onClick={onClose}
+            className="ml-auto p-1 rounded border border-white/[0.1] text-white/40 hover:text-white/75 hover:bg-white/[0.08] transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            aria-label="닫기"
+          >
+            <XIcon size={12} />
+          </button>
         </div>
 
         {!isEditing && (
-          <div className="px-5 py-3 border-b border-white/8 shrink-0 flex items-center gap-2">
+          <div className="px-5 py-3 border-b border-white/10 bg-white/[0.02] shrink-0 flex items-center gap-2">
             <div className="flex items-center gap-1.5 flex-1 max-w-md relative">
               <Search size={12} className="absolute left-2.5 text-white/30" />
               <Input
@@ -143,21 +151,21 @@ const SkillsPanel: React.FC<Props> = ({ onClose }) => {
             <span className="text-[11px] text-white/45 tabular-nums">
               {visibleSkills.length} / {skills.length}
             </span>
-            <Button size="sm" className="h-7 gap-1.5 text-xs" onClick={startNew}>
+            <Button size="sm" className="h-7 gap-1.5 text-xs border border-accent/35 bg-accent/20 hover:bg-accent/30" onClick={startNew}>
               <Plus size={12} /> 새 Skill
             </Button>
           </div>
         )}
 
         {!isEditing && (
-          <div className="px-5 py-2.5 border-b border-white/8 shrink-0 flex items-center gap-2">
+          <div className="px-5 py-2.5 border-b border-white/10 bg-white/[0.015] shrink-0 flex items-center gap-2">
             <Input
               value={importUrl}
               onChange={(e) => setImportUrl(e.target.value)}
               placeholder="SKILL.md URL (예: https://.../SKILL.md)"
               className="h-7 text-xs font-mono"
             />
-            <Button size="sm" variant="outline" className="h-7 text-xs" onClick={handleImportUrl} disabled={importing}>
+            <Button size="sm" variant="outline" className="h-7 text-xs border-white/[0.18] bg-white/[0.03] hover:bg-white/[0.08]" onClick={handleImportUrl} disabled={importing}>
               {importing ? "가져오는 중…" : "URL 가져오기"}
             </Button>
           </div>
@@ -217,7 +225,7 @@ const SkillList: React.FC<{
   return (
     <div className="px-5 py-3 space-y-2">
       {skills.map((s) => (
-        <div key={s.id} className="rounded-lg bg-white/3 border border-white/7 px-3 py-2.5 hover:bg-white/5 transition-colors">
+        <div key={s.id} className="rounded-lg bg-white/[0.03] border border-white/[0.1] px-3 py-2.5 hover:bg-white/[0.06] transition-colors">
           <div className="flex items-start gap-2">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
@@ -248,7 +256,7 @@ const SkillList: React.FC<{
               <button
                 type="button"
                 onClick={() => onEdit(s)}
-                className="text-[11px] px-2 py-1 rounded text-white/60 hover:text-white hover:bg-white/8 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                className="text-[11px] px-2 py-1 rounded border border-white/[0.12] text-white/65 hover:text-white hover:bg-white/[0.08] transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               >
                 편집
               </button>
@@ -259,7 +267,7 @@ const SkillList: React.FC<{
               >
                 <button
                   type="button"
-                  className="p-1.5 rounded text-rose-300/70 hover:text-rose-200 hover:bg-rose-500/10 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  className="p-1.5 rounded border border-transparent text-rose-300/70 hover:text-rose-200 hover:bg-rose-500/10 hover:border-rose-400/30 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                   aria-label="삭제"
                 >
                   <Trash2 size={12} />
@@ -283,7 +291,7 @@ const SkillEditor: React.FC<{
 }> = ({ draft, setDraft, saving, error, onSave, onCancel }) => {
   const triggerInput = draft.triggers.join(", ");
   return (
-    <div className="px-5 py-4 space-y-3">
+    <div className="px-5 py-4 space-y-3 bg-white/[0.01]">
       <div>
         <label className="text-[11px] text-white/55 mb-1 block">이름 *</label>
         <Input
@@ -370,10 +378,10 @@ const SkillEditor: React.FC<{
         </div>
       )}
       <div className="flex items-center justify-end gap-2 pt-2 border-t border-white/8">
-        <Button size="sm" variant="outline" className="h-7 gap-1.5 text-xs" onClick={onCancel} disabled={saving}>
+        <Button size="sm" variant="outline" className="h-7 gap-1.5 text-xs border-white/[0.2] bg-white/[0.03] hover:bg-white/[0.08]" onClick={onCancel} disabled={saving}>
           <XIcon size={12} /> 취소
         </Button>
-        <Button size="sm" className="h-7 gap-1.5 text-xs" onClick={onSave} disabled={saving}>
+        <Button size="sm" className="h-7 gap-1.5 text-xs border border-accent/35 bg-accent/20 hover:bg-accent/30" onClick={onSave} disabled={saving}>
           <Save size={12} /> {saving ? "저장 중…" : "저장"}
         </Button>
       </div>

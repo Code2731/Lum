@@ -125,11 +125,11 @@ const AppHeader: React.FC<Props> = ({
   return (
     <header
       data-tauri-drag-region
-      className="h-10 border-b border-white/5 flex items-center justify-between px-4 shrink-0 select-none gap-2 min-w-0"
+      className="lum-topbar h-11 border-b border-white/10 flex items-center justify-between px-3.5 shrink-0 select-none gap-2 min-w-0 shadow-[0_10px_28px_rgba(0,0,0,0.25)]"
     >
-      <div data-tauri-drag-region className="flex items-center gap-4 shrink-0">
+      <div data-tauri-drag-region className="flex items-center gap-3 shrink-0">
         <WindowControls />
-        <div data-tauri-drag-region className="flex items-center gap-1.5 text-xs text-white/45 font-medium shrink-0 whitespace-nowrap">
+        <div data-tauri-drag-region className="flex items-center gap-1.5 text-xs text-white/55 font-medium shrink-0 whitespace-nowrap">
           <Cpu size={12} />
           {specsLoading ? (
             <Loader2 size={12} className="animate-spin" />
@@ -149,15 +149,15 @@ const AppHeader: React.FC<Props> = ({
           ) : null}
         </div>
 
-        <div className="flex bg-white/5 p-0.5 rounded-md">
+        <div className="flex bg-white/[0.04] border border-white/[0.08] p-0.5 rounded-lg">
           {VIEW_BUTTONS.map(({ mode, icon, label }) => (
             <button
               key={mode}
               aria-label={label}
               aria-pressed={viewMode === mode}
               onClick={() => setViewMode(mode)}
-              className={`p-1 rounded transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring ${
-                viewMode === mode ? "bg-white/15 text-white" : "text-white/45 hover:text-white/75"
+              className={`p-1 rounded-md transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring ${
+                viewMode === mode ? "bg-accent/20 text-accent" : "text-white/45 hover:text-white/80 hover:bg-white/[0.06]"
               }`}
             >
               {icon}
@@ -172,10 +172,10 @@ const AppHeader: React.FC<Props> = ({
         <div data-tauri-drag-region className="flex items-center gap-1 min-w-0 overflow-hidden mr-1">
           <div
             data-tauri-drag-region
-            className={`text-xs px-2 py-1 rounded-md truncate max-w-[140px] ${
+            className={`text-[11px] px-2 py-1 rounded-md truncate max-w-[148px] border ${
               fastEmpty
-                ? "bg-white/5 text-white/30 italic"
-                : "bg-blue-400/10 text-blue-300"
+                ? "bg-white/[0.04] border-white/10 text-white/35 italic"
+                : "bg-emerald-400/10 border-emerald-400/25 text-emerald-300"
             }`}
             title={
               fastEmpty
@@ -183,15 +183,15 @@ const AppHeader: React.FC<Props> = ({
                 : `Fast (TabbyAPI): ${loadedModelId}`
             }
           >
-            {fastEmpty ? "○" : "⚡"} {fast}
+            {fastEmpty ? "EMPTY" : "FAST"} · {fast}
           </div>
           {heavyEnabled && heavy && (
             <div
               data-tauri-drag-region
-              className="text-xs px-2 py-1 rounded-md bg-purple-400/10 text-purple-300 truncate max-w-[140px]"
+              className="text-[11px] px-2 py-1 rounded-md bg-amber-400/10 border border-amber-400/25 text-amber-200 truncate max-w-[148px]"
               title={`Heavy Track (mistral.rs): ${heavyModelId}`}
             >
-              🚀 {heavy}
+              HEAVY · {heavy}
             </div>
           )}
         </div>
@@ -345,9 +345,9 @@ const AppHeader: React.FC<Props> = ({
                   initial={{ opacity: 0, scale: 0.96, y: -4 }}
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.96, y: -4 }}
-                  transition={{ duration: 0.15, ease: "easeOut" }}
-                  style={{ transformOrigin: "top right" }}
-                  className="absolute right-0 top-full mt-1.5 z-50 w-64 rounded-xl border border-white/10 bg-[#0d1117]/95 backdrop-blur-md shadow-xl p-2 space-y-0.5"
+                transition={{ duration: 0.15, ease: "easeOut" }}
+                style={{ transformOrigin: "top right" }}
+                  className="absolute right-0 top-full mt-1.5 z-50 w-64 rounded-xl border border-white/[0.12] bg-[#0f1620]/95 backdrop-blur-md shadow-xl p-2 space-y-0.5"
                 >
                   <AdvancedRow
                     icon={<PlugZap size={13} />}
@@ -489,7 +489,7 @@ const AdvancedRow: React.FC<{
   <button
     type="button"
     onClick={onClick}
-    className="w-full flex items-center gap-2 px-2 py-1.5 rounded text-[11px] text-white/75 hover:text-white hover:bg-white/5 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+    className="w-full flex items-center gap-2 px-2 py-1.5 rounded text-[11px] text-white/75 hover:text-white hover:bg-white/[0.07] transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
   >
     <span className="shrink-0 text-white/50">{icon}</span>
     <span className="flex-1 text-left">{label}</span>
