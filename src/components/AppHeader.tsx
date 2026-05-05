@@ -8,7 +8,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import {
   Cpu, Loader2, TerminalSquare, LayoutList, MousePointer2,
   Package, Database, X, SlidersHorizontal, GitCompareArrows, Palette,
-  BookOpen, Bell, Activity, FolderTree, Brain, PlugZap, Users, Sparkles, Library, Hammer, Layers, BookMarked,
+  BookOpen, Bell, Activity, FolderTree, Brain, PlugZap, Users, Sparkles, Library, Hammer, Layers, BookMarked, GitBranch,
 } from "lucide-react";
 import { ToolbarIconButton, ToolbarSeparator } from "@/components/ui/toolbar-icon-button";
 import WindowControls from "./WindowControls";
@@ -100,6 +100,7 @@ const AppHeader: React.FC<Props> = ({
     showMcpPanel, setShowMcpPanel,
     showSquadPanel, setShowSquadPanel,
     showHealingDataset, setShowHealingDataset,
+    showHistoryGraph, setShowHistoryGraph,
     showRecall, setShowRecall,
     showLoraForge, setShowLoraForge,
     showSkills, setShowSkills,
@@ -277,6 +278,14 @@ const AppHeader: React.FC<Props> = ({
               onClick={() => setShowHealingDataset(v => !v)}
             >
               <Sparkles size={14} />
+            </ToolbarIconButton>
+            <ToolbarIconButton
+              label="시맨틱 히스토리 그래프"
+              tone="cyan"
+              active={showHistoryGraph}
+              onClick={() => setShowHistoryGraph(v => !v)}
+            >
+              <GitBranch size={14} />
             </ToolbarIconButton>
             <ToolbarIconButton
               label="메모리 검색 (history/healing/memory)"

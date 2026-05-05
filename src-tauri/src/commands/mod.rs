@@ -12,6 +12,7 @@ pub mod git;
 pub mod hardware;
 pub mod healing_dataset;
 pub mod history;
+pub mod history_graph;
 pub mod lan_discovery;
 pub mod lang_detect;
 pub mod lora_forge;

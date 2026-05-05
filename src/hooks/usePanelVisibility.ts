@@ -18,6 +18,7 @@ export function usePanelVisibility() {
   const [showSquadPanel, setShowSquadPanel] = useState(false);
   const [showHealingDataset, setShowHealingDataset] = useState(false);
   const [showRecall, setShowRecall] = useState(false);
+  const [showHistoryGraph, setShowHistoryGraph] = useState(false);
   const [showLoraForge, setShowLoraForge] = useState(false);
   const [showSkills, setShowSkills] = useState(false);
 
@@ -54,6 +55,7 @@ export function usePanelVisibility() {
     showSquadPanel, setShowSquadPanel,
     showHealingDataset, setShowHealingDataset,
     showRecall, setShowRecall,
+    showHistoryGraph, setShowHistoryGraph,
     showLoraForge, setShowLoraForge,
     showSkills, setShowSkills,
     closeOverlays,

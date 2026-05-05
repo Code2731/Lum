@@ -29,6 +29,7 @@ const DiffReviewPanel = lazy(() => import("./DiffReviewPanel"));
 const McpPanel = lazy(() => import("./McpPanel"));
 const SquadPanel = lazy(() => import("./SquadPanel"));
 const HealingDatasetPanel = lazy(() => import("./HealingDatasetPanel"));
+const HistoryGraphPanel = lazy(() => import("./HistoryGraphPanel").then(m => ({ default: m.HistoryGraphPanel })));
 const RecallPanel = lazy(() => import("./RecallPanel"));
 const LoraForgePanel = lazy(() => import("./LoraForgePanel"));
 const SkillsPanel = lazy(() => import("./SkillsPanel"));
@@ -102,6 +103,7 @@ const AppOverlays: React.FC<Props> = ({
     showXllmPanel, setShowXllmPanel,
     showMcpPanel, setShowMcpPanel,
     showHealingDataset, setShowHealingDataset,
+    showHistoryGraph, setShowHistoryGraph,
     showRecall, setShowRecall,
     showLoraForge, setShowLoraForge,
     showSkills, setShowSkills,
@@ -159,6 +161,14 @@ const AppOverlays: React.FC<Props> = ({
         <Suspense fallback={null}>
           <ErrorBoundary label="Auto-Heal 데이터셋">
             <HealingDatasetPanel onClose={() => setShowHealingDataset(false)} />
+          </ErrorBoundary>
+        </Suspense>
+      )}
+
+      {showHistoryGraph && (
+        <Suspense fallback={null}>
+          <ErrorBoundary label="히스토리 그래프">
+            <HistoryGraphPanel onClose={() => setShowHistoryGraph(false)} />
           </ErrorBoundary>
         </Suspense>
       )}

@@ -161,6 +161,7 @@ pub fn run() {
             commands::history::add_history_entry,
             commands::history::search_history,
             commands::history::get_recent_history,
+            commands::history_graph::get_history_graph,
             // Git
             commands::git::generate_commit_message,
             commands::git::analyze_diff,
