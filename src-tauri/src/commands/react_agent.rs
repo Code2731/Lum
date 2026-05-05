@@ -37,10 +37,7 @@ const FORBIDDEN_PREFIXES: &[&str] = &[
     ".lum_mistral_models",
 ];
 
-// ─── Phase 136 — Progress Ledger (Magentic-style stuck 감지) ─────────────────
-// 단일 ReAct 루프 안에서 반복 패턴을 추적 + 단계적 회복 전략 주입.
-// L1: 첫 반복 → 힌트 주입 후 계속 (다른 접근 유도)
-// L2: 세 번째 이상 반복 → 지금까지 수집한 사실 + 즉시 ANSWER 강제
+// ─── Progress Ledger — stuck 감지 + 단계적 회복 ─────────────────────────────
 
 struct ProgressLedger {
     /// action_key → 호출 횟수
@@ -110,10 +107,9 @@ impl ProgressLedger {
     }
 }
 
-// ─── Phase 136-B — TaskLedger outer loop 헬퍼 ────────────────────────────────
+// ─── TaskLedger outer loop — 복잡한 목표 사전 계획 + stuck 재계획 ─────────────
 
 /// 20단어+, 120자+, 복수태스크 표지 → 복잡한 목표로 판정.
-/// 복잡한 목표는 ReAct 루프 전에 계획을 생성해 컨텍스트로 주입.
 pub fn is_complex_goal(goal: &str) -> bool {
     if goal.split_whitespace().count() >= 20 {
         return true;
@@ -153,6 +149,16 @@ pub fn parse_task_plan(response: &str) -> Vec<String> {
         }
     }
     steps
+}
+
+/// 단계 목록을 번호 목록 문자열로 포맷 — 두 곳(초기 계획 주입 + 재계획 주입)에서 공유.
+fn format_plan(steps: &[String]) -> String {
+    steps
+        .iter()
+        .enumerate()
+        .map(|(i, s)| format!("{}. {s}", i + 1))
+        .collect::<Vec<_>>()
+        .join("\n")
 }
 
 /// 목표에 대한 단계별 계획을 LLM에서 생성.
@@ -1754,25 +1760,19 @@ pub async fn react_agent_run(
         .and_then(|c| c.react_reflexion_enabled)
         .unwrap_or(true);
 
-    // Phase 136 — Progress Ledger + outer TaskLedger 초기화
     let mut ledger = ProgressLedger::new();
-    let mut outer_replan_count = 0usize; // outer re-plan 횟수 (최대 2회)
+    let mut outer_replan_count = 0usize;
     let mut step = 0usize;
     let mut max_steps = MAX_STEPS;
     let mut extra_turn_granted = false;
 
-    // Phase 136-B: 복잡한 목표는 사전 계획 생성 → 컨텍스트 주입
+    // 복잡한 목표는 사전 계획 생성 → 컨텍스트 주입 (LLM 한 번 선행)
     if is_complex_goal(&goal) {
         emit_event(&app, "status", "복잡한 목표 — 작업 계획 생성 중", None, None);
         if let Ok(plan_resp) = generate_task_plan(&client, &goal).await {
             let steps_list = parse_task_plan(&plan_resp);
             if !steps_list.is_empty() {
-                let plan_str = steps_list
-                    .iter()
-                    .enumerate()
-                    .map(|(i, s)| format!("{}. {s}", i + 1))
-                    .collect::<Vec<_>>()
-                    .join("\n");
+                let plan_str = format_plan(&steps_list);
                 conversation.push_str(&format!(
                     "\n\n[작업 계획 — 이 순서로 실행하세요]\n{plan_str}"
                 ));
@@ -1889,7 +1889,6 @@ pub async fn react_agent_run(
                 return Ok(());
             };
 
-            // Phase 136 — Progress Ledger: 반복 감지 + 단계적 회복
             let action_key = format!("{}:{}", action.tool, action.args);
             let repeat_count = ledger.record(&action_key);
 
@@ -1904,7 +1903,6 @@ pub async fn react_agent_run(
                 );
 
                 if ledger.stuck_total >= 3 {
-                    // Phase 136-B: L2 — 먼저 outer re-plan 시도 (최대 2회)
                     if outer_replan_count < 2 {
                         emit_event(
                             &app,
@@ -1917,13 +1915,8 @@ pub async fn react_agent_run(
                             let new_steps = parse_task_plan(&plan_resp);
                             if !new_steps.is_empty() {
                                 outer_replan_count += 1;
-                                ledger.stuck_total = 0; // inner 카운터 리셋
-                                let plan_str = new_steps
-                                    .iter()
-                                    .enumerate()
-                                    .map(|(i, s)| format!("{}. {s}", i + 1))
-                                    .collect::<Vec<_>>()
-                                    .join("\n");
+                                ledger.stuck_total = 0;
+                                let plan_str = format_plan(&new_steps);
                                 conversation.push_str(&format!(
                                     "\n\n{response}\n\nOBSERVATION: ⚠ 반복 패턴 감지. \
                                      재계획으로 재시도하세요 (outer 재계획 {outer_replan_count}/2):\n{plan_str}"
@@ -1975,7 +1968,6 @@ pub async fn react_agent_run(
             )
             .await;
             emit_event(&app, "observation", &observation, None, Some(step + 1));
-            // Phase 136 — 관찰 결과를 Progress Ledger에 기록
             ledger.absorb_observation(&action.tool, &observation);
 
             // 대화 히스토리 업데이트 (최근 6턴만 유지해 컨텍스트 폭발 방지)
