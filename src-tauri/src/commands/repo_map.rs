@@ -10,7 +10,7 @@ use crate::commands::lang_detect::{detect_source_lang, language_grammar, SourceL
 use crate::error::Result;
 use ignore::WalkBuilder;
 use petgraph::graph::{DiGraph, NodeIndex};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use tauri::command;
 use tree_sitter::{Node, Parser, Query, QueryCursor};
@@ -172,19 +172,32 @@ fn node_text<'a>(node: Node<'a>, source: &'a [u8]) -> &'a str {
     node.utf8_text(source).unwrap_or("")
 }
 
-// ─── PageRank ────────────────────────────────────────────────────────────────
+// ─── Personalized PageRank ───────────────────────────────────────────────────
 
-/// symbol-graph 기반 PageRank.
-/// 노드 = 파일, 엣지 = file A가 file B에 정의된 symbol을 참조하면 A → B.
+/// 잘 지어진 식별자 판정 — snake_case 3+ 토큰 또는 CamelCase 2+ 대문자.
+/// "build_graph_and_rank"=true, "AuthService"=true, "foo"=false
+fn is_well_named(name: &str) -> bool {
+    if name.split('_').filter(|s| !s.is_empty()).count() >= 3 {
+        return true;
+    }
+    let upper = name.chars().filter(|c| c.is_uppercase()).count();
+    let lower = name.chars().filter(|c| c.is_lowercase()).count();
+    upper >= 2 && lower > 0
+}
+
+/// symbol-graph 기반 Personalized PageRank (Aider 방식).
+/// active_file 노드 50×, mentioned_symbols 포함 파일 10×, well-named 심볼 1.5×, 나머지 1×.
+/// active_file=None, mentioned_symbols=[] 이면 균등 PageRank (기존 동작).
 fn build_graph_and_rank(
     defs_by_file: &HashMap<PathBuf, Vec<Symbol>>,
     refs_by_file: &HashMap<PathBuf, Vec<String>>,
+    active_file: Option<&Path>,
+    mentioned_symbols: &[String],
 ) -> HashMap<PathBuf, f64> {
     // symbol name → defining file
     let mut symbol_to_file: HashMap<String, PathBuf> = HashMap::new();
     for (file, defs) in defs_by_file {
         for d in defs {
-            // 첫 정의만 기록 (중복 symbol은 무시 — PageRank 노이즈 감소)
             symbol_to_file.entry(d.name.clone()).or_insert(file.clone());
         }
     }
@@ -204,7 +217,7 @@ fn build_graph_and_rank(
         for r in refs {
             if let Some(to_file) = symbol_to_file.get(r) {
                 if to_file == from_file {
-                    continue; // 자기 참조 제외
+                    continue;
                 }
                 if let Some(&to_idx) = file_to_node.get(to_file) {
                     graph.add_edge(from_idx, to_idx, 1.0);
@@ -213,23 +226,48 @@ fn build_graph_and_rank(
         }
     }
 
-    // 단순 PageRank (20 iter, damping=0.85)
     let n = graph.node_count();
     if n == 0 {
         return HashMap::new();
     }
+
+    // 개인화 가중치 계산
+    let mentioned_set: HashSet<&str> = mentioned_symbols.iter().map(|s| s.as_str()).collect();
+    let node_list: Vec<NodeIndex> = graph.node_indices().collect();
+    let weights: Vec<f64> = node_list
+        .iter()
+        .map(|&node_idx| {
+            let file = &graph[node_idx];
+            let defs = defs_by_file.get(file).map(|v| v.as_slice()).unwrap_or(&[]);
+            if active_file.map_or(false, |af| af == file) {
+                50.0
+            } else if defs.iter().any(|d| mentioned_set.contains(d.name.as_str())) {
+                10.0
+            } else if defs.iter().any(|d| is_well_named(&d.name)) {
+                1.5
+            } else {
+                1.0
+            }
+        })
+        .collect();
+
+    let total_w: f64 = weights.iter().sum();
+    // 개인화 벡터 p — teleportation 확률 분포
+    let p: Vec<f64> = weights.iter().map(|w| w / total_w).collect();
+
+    // Personalized PageRank (20 iter, damping=0.85)
     let damping = 0.85;
-    let mut rank: Vec<f64> = vec![1.0 / n as f64; n];
+    let mut rank = p.clone();
 
     for _ in 0..20 {
-        let mut new_rank = vec![(1.0 - damping) / n as f64; n];
-        for node in graph.node_indices() {
+        let mut new_rank: Vec<f64> = p.iter().map(|pi| (1.0 - damping) * pi).collect();
+        for &node in &node_list {
             let neighbors: Vec<NodeIndex> = graph.neighbors(node).collect();
             if neighbors.is_empty() {
-                // dangling node: rank 분산
-                let share = damping * rank[node.index()] / n as f64;
-                for r in new_rank.iter_mut() {
-                    *r += share;
+                // dangling node: 개인화 벡터로 분산
+                let share = damping * rank[node.index()];
+                for (i, r) in new_rank.iter_mut().enumerate() {
+                    *r += share * p[i];
                 }
                 continue;
             }
@@ -242,9 +280,8 @@ fn build_graph_and_rank(
     }
 
     let mut result = HashMap::new();
-    for node in graph.node_indices() {
-        let file = graph[node].clone();
-        result.insert(file, rank[node.index()]);
+    for &node in &node_list {
+        result.insert(graph[node].clone(), rank[node.index()]);
     }
     result
 }
@@ -301,17 +338,31 @@ fn render_map(
 
 /// 프로젝트 루트에서 repo map 생성.
 /// token_budget은 대략적인 상한 (문자수 = token * 3으로 환산).
+/// active_file + mentioned_symbols로 Personalized PageRank 활성화.
 ///
 /// tree-sitter 파싱과 파일 I/O가 blocking — `spawn_blocking`으로 UI 스레드 보호.
 #[command]
-pub async fn get_repo_map(cwd: String, token_budget: Option<usize>) -> Result<String> {
+pub async fn get_repo_map(
+    cwd: String,
+    token_budget: Option<usize>,
+    active_file: Option<String>,
+    mentioned_symbols: Option<Vec<String>>,
+) -> Result<String> {
     let budget = token_budget.unwrap_or(4096);
-    tokio::task::spawn_blocking(move || build_repo_map(&cwd, budget))
-        .await
-        .map_err(|e| crate::error::LumError::Io(format!("repo_map join 실패: {}", e)))?
+    let symbols = mentioned_symbols.unwrap_or_default();
+    tokio::task::spawn_blocking(move || {
+        build_repo_map(&cwd, budget, active_file.as_deref().map(Path::new), &symbols)
+    })
+    .await
+    .map_err(|e| crate::error::LumError::Io(format!("repo_map join 실패: {}", e)))?
 }
 
-pub fn build_repo_map(cwd: &str, budget: usize) -> Result<String> {
+pub fn build_repo_map(
+    cwd: &str,
+    budget: usize,
+    active_file: Option<&Path>,
+    mentioned_symbols: &[String],
+) -> Result<String> {
     let root = PathBuf::from(cwd);
 
     let mut defs_by_file: HashMap<PathBuf, Vec<Symbol>> = HashMap::new();
@@ -352,7 +403,7 @@ pub fn build_repo_map(cwd: &str, budget: usize) -> Result<String> {
         ));
     }
 
-    let ranks = build_graph_and_rank(&defs_by_file, &refs_by_file);
+    let ranks = build_graph_and_rank(&defs_by_file, &refs_by_file, active_file, mentioned_symbols);
     Ok(render_map(&defs_by_file, &ranks, &root, budget))
 }
 
@@ -427,11 +478,89 @@ mod tests {
         );
 
         let mut refs = HashMap::new();
-        // b에서 a의 popular_fn을 참조
         refs.insert(b.clone(), vec!["popular_fn".into()]);
 
-        let ranks = build_graph_and_rank(&defs, &refs);
+        let ranks = build_graph_and_rank(&defs, &refs, None, &[]);
         assert!(ranks.get(&a).unwrap() > ranks.get(&b).unwrap());
+    }
+
+    #[test]
+    fn is_well_named_케이스들() {
+        assert!(is_well_named("build_graph_and_rank"), "snake_case 4 parts");
+        assert!(is_well_named("validate_safe_path"), "snake_case 3 parts");
+        assert!(is_well_named("AuthService"), "CamelCase 2 uppercase");
+        assert!(is_well_named("JWTSecret"), "acronym+word");
+        assert!(!is_well_named("foo"), "too short");
+        assert!(!is_well_named("bar_baz"), "snake_case only 2 parts");
+        assert!(!is_well_named("JWT"), "all uppercase no lowercase");
+    }
+
+    #[test]
+    fn personalized_active_file_최우선_랭크() {
+        let active: PathBuf = "active.rs".into();
+        let other: PathBuf = "other.rs".into();
+
+        let make_sym = |name: &str, file: &PathBuf| Symbol {
+            name: name.into(),
+            kind: "fn".into(),
+            file: file.clone(),
+            line: 1,
+        };
+
+        let mut defs = HashMap::new();
+        defs.insert(active.clone(), vec![make_sym("active_fn", &active)]);
+        defs.insert(other.clone(), vec![make_sym("other_fn", &other)]);
+
+        // b→a 참조 없음 — 구조상 동등
+        let ranks = build_graph_and_rank(&defs, &HashMap::new(), Some(&active), &[]);
+        assert!(
+            ranks.get(&active).unwrap() > ranks.get(&other).unwrap(),
+            "active_file이 더 높아야: active={:.4} other={:.4}",
+            ranks.get(&active).unwrap(),
+            ranks.get(&other).unwrap()
+        );
+    }
+
+    #[test]
+    fn personalized_mentioned_symbol_파일_승격() {
+        let a: PathBuf = "a.rs".into();
+        let b: PathBuf = "b.rs".into();
+
+        let make_sym = |name: &str, file: &PathBuf| Symbol {
+            name: name.into(),
+            kind: "fn".into(),
+            file: file.clone(),
+            line: 1,
+        };
+
+        let mut defs = HashMap::new();
+        defs.insert(a.clone(), vec![make_sym("validate_token", &a)]);
+        defs.insert(b.clone(), vec![make_sym("helper", &b)]);
+
+        let mentioned = vec!["validate_token".to_string()];
+        let ranks = build_graph_and_rank(&defs, &HashMap::new(), None, &mentioned);
+        assert!(
+            ranks.get(&a).unwrap() > ranks.get(&b).unwrap(),
+            "mentioned symbol 파일이 더 높아야"
+        );
+    }
+
+    #[test]
+    fn personalized_none_은_균등에_가까움() {
+        let a: PathBuf = "a.rs".into();
+        let b: PathBuf = "b.rs".into();
+        let mut defs = HashMap::new();
+        let sym = |name: &str, file: &PathBuf| Symbol {
+            name: name.into(), kind: "fn".into(), file: file.clone(), line: 1,
+        };
+        defs.insert(a.clone(), vec![sym("fa", &a)]);
+        defs.insert(b.clone(), vec![sym("fb", &b)]);
+
+        let ranks = build_graph_and_rank(&defs, &HashMap::new(), None, &[]);
+        // 참조 없고 active_file 없으면 두 파일 랭크가 거의 같아야
+        let ra = ranks.get(&a).unwrap();
+        let rb = ranks.get(&b).unwrap();
+        assert!((ra - rb).abs() < 0.01, "균등에 가까워야: ra={ra:.6} rb={rb:.6}");
     }
 
     #[test]

@@ -325,7 +325,7 @@ fn tool_get_repo_map(args: &Value) -> Result<Vec<Value>, String> {
         .and_then(|v| v.as_u64())
         .map(|n| n as usize);
     let map = shared_runtime()
-        .block_on(repo_map::get_repo_map(cwd, token_budget))
+        .block_on(repo_map::get_repo_map(cwd, token_budget, None, None))
         .map_err(|e| format!("get_repo_map failed: {e:?}"))?;
     Ok(vec![json!({ "type": "text", "text": map })])
 }

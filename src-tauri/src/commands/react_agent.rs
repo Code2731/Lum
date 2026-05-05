@@ -366,7 +366,7 @@ async fn run_tool(
         }
         "get_repo_map" => {
             let map_cwd = args["cwd"].as_str().unwrap_or(cwd).to_string();
-            match build_repo_map(&map_cwd, 2048) {
+            match build_repo_map(&map_cwd, 2048, None, &[]) {
                 Ok(map) => truncate(&map),
                 Err(e) => format!("오류: {e}"),
             }
