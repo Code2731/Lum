@@ -4,7 +4,7 @@ use crate::memory::{cosine_similarity, MemoryEntry, SemanticMemory};
 use futures::future::join_all;
 use ignore::Walk;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::Path;
 use std::sync::OnceLock;
 use std::time::Duration;
@@ -38,6 +38,49 @@ struct EmbeddingResponse {
 pub struct IndexResult {
     pub files: usize,
     pub chunks: usize,
+    pub skipped_files: usize,
+    pub removed_files: usize,
+}
+
+// ─── 증분 인덱싱 ──────────────────────────────────────────────────────────────
+
+fn file_mtime_secs(path: &Path) -> Option<u64> {
+    path.metadata().ok()?
+        .modified().ok()?
+        .duration_since(std::time::UNIX_EPOCH).ok()
+        .map(|d| d.as_secs())
+}
+
+struct FileDiff {
+    unchanged: Vec<String>,
+    changed: Vec<String>,
+    added: Vec<String>,
+    deleted: Vec<String>,
+}
+
+/// disk vs 캐시 mtime 비교 — 순수 함수, I/O 없음.
+fn diff_files(
+    disk: &HashMap<String, u64>,
+    cached: &HashMap<String, u64>,
+) -> FileDiff {
+    let mut unchanged = Vec::new();
+    let mut changed = Vec::new();
+    let mut added = Vec::new();
+    let mut deleted = Vec::new();
+
+    for (path, &mtime) in disk {
+        match cached.get(path) {
+            Some(&c) if c == mtime => unchanged.push(path.clone()),
+            Some(_) => changed.push(path.clone()),
+            None => added.push(path.clone()),
+        }
+    }
+    for path in cached.keys() {
+        if !disk.contains_key(path) {
+            deleted.push(path.clone());
+        }
+    }
+    FileDiff { unchanged, changed, added, deleted }
 }
 
 #[derive(Serialize)]
@@ -407,9 +450,9 @@ pub async fn index_project(root_path: String, model: String) -> Result<IndexResu
         .map_err(|e| format!("시스템 시간 오류: {}", e))?
         .as_secs();
 
-    // 파일 목록 + 청크 수집
-    let mut contents: Vec<String> = Vec::new();
-    let mut file_count = 0usize;
+    // ─── Phase 1: 디스크 파일 목록 + mtime 수집 ──────────────────────────────
+    let mut disk_files: HashMap<String, u64> = HashMap::new();
+    let mut disk_paths: HashMap<String, std::path::PathBuf> = HashMap::new();
 
     for entry in Walk::new(Path::new(&root_path))
         .filter_map(|e| e.ok())
@@ -437,59 +480,114 @@ pub async fn index_project(root_path: String, model: String) -> Result<IndexResu
         ) {
             continue;
         }
-        let Ok(text) = std::fs::read_to_string(path) else {
-            continue;
-        };
-        if text.chars().count() < 10 {
-            continue;
-        }
         let rel_path = path
             .strip_prefix(&root_path)
             .unwrap_or(path)
             .to_string_lossy()
             .replace('\\', "/");
-        file_count += 1;
+        let mtime = file_mtime_secs(path).unwrap_or(0);
+        disk_files.insert(rel_path.clone(), mtime);
+        disk_paths.insert(rel_path, path.to_path_buf());
+    }
 
-        // 대용량 파일 — AST 파싱 OOM 방지, 600자 fallback으로만.
-        if text.len() > 500_000 {
-            for chunk in chunk_text(&text) {
-                contents.push(format!("[{}]\n{}", rel_path, chunk));
+    // ─── Phase 2: 증분 diff ───────────────────────────────────────────────────
+    let mut memory = SemanticMemory::load();
+    let diff = diff_files(&disk_files, &memory.file_mtimes);
+    let skipped = diff.unchanged.len();
+    let removed = diff.deleted.len();
+
+    // 변경·삭제된 파일의 기존 청크 제거
+    let invalidate: HashSet<&str> = diff
+        .changed
+        .iter()
+        .chain(diff.deleted.iter())
+        .map(|s| s.as_str())
+        .collect();
+    if !invalidate.is_empty() {
+        memory
+            .entries
+            .retain(|e| !e.file.as_deref().map_or(false, |f| invalidate.contains(f)));
+    }
+    for rel_path in &diff.deleted {
+        memory.file_mtimes.remove(rel_path);
+    }
+
+    // ─── Phase 3: 변경·신규 파일 청킹 ────────────────────────────────────────
+    let to_process: Vec<String> = diff.changed.into_iter().chain(diff.added).collect();
+    let mut contents: Vec<String> = Vec::new();
+    let mut content_files: Vec<String> = Vec::new();
+    // 청크가 하나라도 생성된 파일 집합 (청크 없는 파일은 mtime만 갱신)
+    let mut files_with_chunks: HashSet<String> = HashSet::new();
+
+    for rel_path in &to_process {
+        let Some(path) = disk_paths.get(rel_path) else { continue };
+        let Ok(text) = std::fs::read_to_string(path) else { continue };
+        if text.chars().count() < 10 {
+            // 너무 짧은 파일 — 청크 없이 mtime만 갱신.
+            if let Some(&mtime) = disk_files.get(rel_path) {
+                memory.file_mtimes.insert(rel_path.clone(), mtime);
             }
             continue;
         }
 
-        // AST 청킹 우선, 비지원 언어/파싱 실패 시 600자 fallback.
-        match detect_source_lang(path).and_then(|l| chunk_by_ast(&text, l)) {
-            Some(ast_chunks) if !ast_chunks.is_empty() => {
-                for c in ast_chunks {
-                    contents.push(fmt_chunk_key(&c, &rel_path));
+        let chunks: Vec<String> = if text.len() > 500_000 {
+            chunk_text(&text)
+                .into_iter()
+                .map(|c| format!("[{}]\n{}", rel_path, c))
+                .collect()
+        } else {
+            match detect_source_lang(path).and_then(|l| chunk_by_ast(&text, l)) {
+                Some(ast_chunks) if !ast_chunks.is_empty() => {
+                    ast_chunks.iter().map(|c| fmt_chunk_key(c, rel_path)).collect()
                 }
+                _ => chunk_text(&text)
+                    .into_iter()
+                    .map(|c| format!("[{}]\n{}", rel_path, c))
+                    .collect(),
             }
-            _ => {
-                for chunk in chunk_text(&text) {
-                    contents.push(format!("[{}]\n{}", rel_path, chunk));
-                }
-            }
+        };
+
+        if !chunks.is_empty() {
+            files_with_chunks.insert(rel_path.clone());
+        }
+        for chunk in chunks {
+            contents.push(chunk);
+            content_files.push(rel_path.clone());
         }
     }
 
-    // 모든 청크를 병렬로 임베딩
-    let futures: Vec<_> = contents
-        .iter()
-        .map(|c| embed_auto(&client, &model, c))
-        .collect();
+    // ─── Phase 4: 병렬 임베딩 + 인덱스 갱신 ─────────────────────────────────
+    let futures: Vec<_> = contents.iter().map(|c| embed_auto(&client, &model, c)).collect();
     let embeddings = join_all(futures).await;
-
-    let mut memory = SemanticMemory::load();
     let chunk_count = embeddings.iter().filter(|e| e.is_some()).count();
 
-    for (content, embedding) in contents.into_iter().zip(embeddings) {
-        if let Some(embedding) = embedding {
+    let mut embedded_files: HashSet<String> = HashSet::new();
+    for ((content, file), embedding) in
+        contents.into_iter().zip(content_files).zip(embeddings)
+    {
+        if let Some(emb) = embedding {
+            embedded_files.insert(file.clone());
             memory.entries.push(MemoryEntry {
                 content,
-                embedding,
+                embedding: emb,
                 timestamp,
+                file: Some(file),
             });
+        }
+    }
+
+    // mtime 갱신:
+    //   - 청크 없는 파일 → 이미 위에서 갱신
+    //   - 청크 있고 임베딩 성공 → 갱신
+    //   - 청크 있는데 전부 임베딩 실패(서버 장애) → 갱신 안 함 → 다음 run 재시도
+    for rel_path in &to_process {
+        if !files_with_chunks.contains(rel_path) {
+            continue; // 청크 없는 파일은 위에서 처리됨
+        }
+        if embedded_files.contains(rel_path.as_str()) {
+            if let Some(&mtime) = disk_files.get(rel_path) {
+                memory.file_mtimes.insert(rel_path.clone(), mtime);
+            }
         }
     }
 
@@ -501,8 +599,10 @@ pub async fn index_project(root_path: String, model: String) -> Result<IndexResu
 
     memory.save().map_err(|e| e.to_string())?;
     Ok(IndexResult {
-        files: file_count,
+        files: disk_files.len(),
         chunks: chunk_count,
+        skipped_files: skipped,
+        removed_files: removed,
     })
 }
 
@@ -794,6 +894,75 @@ function helper() { return 42; }
         assert!(names.contains(&"Counter"), "{:?}", names);
         assert!(names.contains(&"helper"), "{:?}", names);
         assert!(!names.contains(&"inc"), "메서드 inc는 클래스에 흡수: {:?}", names);
+    }
+
+    // ─── 증분 인덱싱 회귀 가드 ───────────────────────────────────────────────
+
+    fn make_disk(pairs: &[(&str, u64)]) -> HashMap<String, u64> {
+        pairs.iter().map(|(k, v)| (k.to_string(), *v)).collect()
+    }
+
+    #[test]
+    fn 증분_mtime_동일_파일_스킵() {
+        let disk = make_disk(&[("src/main.rs", 100), ("src/lib.rs", 200)]);
+        let cached = make_disk(&[("src/main.rs", 100), ("src/lib.rs", 200)]);
+        let diff = diff_files(&disk, &cached);
+        assert_eq!(diff.unchanged.len(), 2, "동일 mtime → unchanged");
+        assert!(diff.changed.is_empty());
+        assert!(diff.added.is_empty());
+        assert!(diff.deleted.is_empty());
+    }
+
+    #[test]
+    fn 증분_mtime_변경_파일만_재인덱싱() {
+        let disk = make_disk(&[("src/main.rs", 101), ("src/lib.rs", 200)]);
+        let cached = make_disk(&[("src/main.rs", 100), ("src/lib.rs", 200)]);
+        let diff = diff_files(&disk, &cached);
+        assert_eq!(diff.changed, vec!["src/main.rs"]);
+        assert_eq!(diff.unchanged, vec!["src/lib.rs"]);
+        assert!(diff.added.is_empty());
+        assert!(diff.deleted.is_empty());
+    }
+
+    #[test]
+    fn 증분_신규_파일_추가() {
+        let disk = make_disk(&[("src/main.rs", 100), ("src/new.rs", 999)]);
+        let cached = make_disk(&[("src/main.rs", 100)]);
+        let diff = diff_files(&disk, &cached);
+        assert_eq!(diff.added, vec!["src/new.rs"]);
+        assert_eq!(diff.unchanged, vec!["src/main.rs"]);
+        assert!(diff.changed.is_empty());
+        assert!(diff.deleted.is_empty());
+    }
+
+    #[test]
+    fn 증분_삭제된_파일_제거() {
+        let disk = make_disk(&[("src/main.rs", 100)]);
+        let cached = make_disk(&[("src/main.rs", 100), ("src/old.rs", 50)]);
+        let diff = diff_files(&disk, &cached);
+        assert_eq!(diff.deleted, vec!["src/old.rs"]);
+        assert_eq!(diff.unchanged, vec!["src/main.rs"]);
+        assert!(diff.changed.is_empty());
+        assert!(diff.added.is_empty());
+    }
+
+    #[test]
+    fn 증분_혼합_시나리오() {
+        let disk = make_disk(&[
+            ("src/unchanged.rs", 100),
+            ("src/changed.rs", 200),
+            ("src/added.rs", 300),
+        ]);
+        let cached = make_disk(&[
+            ("src/unchanged.rs", 100),
+            ("src/changed.rs", 150),
+            ("src/deleted.rs", 50),
+        ]);
+        let diff = diff_files(&disk, &cached);
+        assert_eq!(diff.unchanged, vec!["src/unchanged.rs"]);
+        assert_eq!(diff.changed, vec!["src/changed.rs"]);
+        assert_eq!(diff.added, vec!["src/added.rs"]);
+        assert_eq!(diff.deleted, vec!["src/deleted.rs"]);
     }
 
     #[test]

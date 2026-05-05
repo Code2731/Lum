@@ -1,5 +1,6 @@
 use crate::platform;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::fs;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -7,11 +8,17 @@ pub struct MemoryEntry {
     pub content: String,
     pub embedding: Vec<f32>,
     pub timestamp: u64,
+    /// RAG 코드 청크의 소스 파일 rel_path. history/healing entry는 None.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub file: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub struct SemanticMemory {
     pub entries: Vec<MemoryEntry>,
+    /// rel_path → mtime_secs — 증분 인덱싱용 mtime 캐시.
+    #[serde(default)]
+    pub file_mtimes: HashMap<String, u64>,
 }
 
 impl SemanticMemory {
@@ -56,6 +63,7 @@ pub async fn add_to_memory(content: String, embedding: Vec<f32>) -> Result<(), S
         content,
         embedding,
         timestamp,
+        file: None,
     });
 
     if memory.entries.len() > 1000 {
