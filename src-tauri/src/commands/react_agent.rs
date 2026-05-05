@@ -110,6 +110,65 @@ impl ProgressLedger {
     }
 }
 
+// ─── Phase 136-B — TaskLedger outer loop 헬퍼 ────────────────────────────────
+
+/// 20단어+, 120자+, 복수태스크 표지 → 복잡한 목표로 판정.
+/// 복잡한 목표는 ReAct 루프 전에 계획을 생성해 컨텍스트로 주입.
+pub fn is_complex_goal(goal: &str) -> bool {
+    if goal.split_whitespace().count() >= 20 {
+        return true;
+    }
+    if goal.chars().count() >= 120 {
+        return true;
+    }
+    let lower = goal.to_lowercase();
+    // 영어 복수 태스크 표지
+    if lower.contains(", and ") || lower.contains(" and also ") || lower.contains("; ") {
+        return true;
+    }
+    // 한국어 복수 태스크 표지
+    goal.contains("그리고") || goal.contains("다음으로") || goal.contains("또한")
+}
+
+/// LLM 응답에서 번호/대시 목록을 추출 — 최대 7단계, 5자 미만 무시.
+pub fn parse_task_plan(response: &str) -> Vec<String> {
+    let mut steps = Vec::new();
+    for line in response.lines() {
+        let t = line.trim();
+        if t.is_empty() {
+            continue;
+        }
+        let text = if let Some(rest) = t.strip_prefix(|c: char| c.is_ascii_digit()) {
+            rest.trim_start_matches(['.', ')', ' '])
+        } else if let Some(rest) = t.strip_prefix("- ") {
+            rest
+        } else if let Some(rest) = t.strip_prefix("• ") {
+            rest
+        } else {
+            continue;
+        };
+        let text = text.trim();
+        if text.len() >= 5 && steps.len() < 7 {
+            steps.push(text.to_string());
+        }
+    }
+    steps
+}
+
+/// 목표에 대한 단계별 계획을 LLM에서 생성.
+async fn generate_task_plan(client: &reqwest::Client, goal: &str) -> std::result::Result<String, String> {
+    call_xllm(
+        client,
+        "",
+        &format!(
+            "다음 목표를 달성하기 위한 구체적인 단계별 계획을 번호 목록(최대 7단계)으로 작성하세요. \
+             번호 목록만 출력하세요:\n\n목표: {goal}\n\n계획:\n1."
+        ),
+    )
+    .await
+    .map_err(|e| e.to_string())
+}
+
 // ─── 취소 플래그 ──────────────────────────────────────────────────────────────
 
 static CANCEL_FLAG: OnceLock<Arc<AtomicBool>> = OnceLock::new();
@@ -1695,11 +1754,38 @@ pub async fn react_agent_run(
         .and_then(|c| c.react_reflexion_enabled)
         .unwrap_or(true);
 
-    // Phase 136 — Progress Ledger 초기화
+    // Phase 136 — Progress Ledger + outer TaskLedger 초기화
     let mut ledger = ProgressLedger::new();
+    let mut outer_replan_count = 0usize; // outer re-plan 횟수 (최대 2회)
     let mut step = 0usize;
     let mut max_steps = MAX_STEPS;
     let mut extra_turn_granted = false;
+
+    // Phase 136-B: 복잡한 목표는 사전 계획 생성 → 컨텍스트 주입
+    if is_complex_goal(&goal) {
+        emit_event(&app, "status", "복잡한 목표 — 작업 계획 생성 중", None, None);
+        if let Ok(plan_resp) = generate_task_plan(&client, &goal).await {
+            let steps_list = parse_task_plan(&plan_resp);
+            if !steps_list.is_empty() {
+                let plan_str = steps_list
+                    .iter()
+                    .enumerate()
+                    .map(|(i, s)| format!("{}. {s}", i + 1))
+                    .collect::<Vec<_>>()
+                    .join("\n");
+                conversation.push_str(&format!(
+                    "\n\n[작업 계획 — 이 순서로 실행하세요]\n{plan_str}"
+                ));
+                emit_event(
+                    &app,
+                    "status",
+                    format!("작업 계획 생성됨 ({}단계)", steps_list.len()),
+                    None,
+                    None,
+                );
+            }
+        }
+    }
 
     'main: loop {
         while step < max_steps {
@@ -1818,7 +1904,36 @@ pub async fn react_agent_run(
                 );
 
                 if ledger.stuck_total >= 3 {
-                    // L2: 강제 최종 답변
+                    // Phase 136-B: L2 — 먼저 outer re-plan 시도 (최대 2회)
+                    if outer_replan_count < 2 {
+                        emit_event(
+                            &app,
+                            "status",
+                            "막힘 감지 — 재계획 생성 중",
+                            None,
+                            Some(step + 1),
+                        );
+                        if let Ok(plan_resp) = generate_task_plan(&client, &goal).await {
+                            let new_steps = parse_task_plan(&plan_resp);
+                            if !new_steps.is_empty() {
+                                outer_replan_count += 1;
+                                ledger.stuck_total = 0; // inner 카운터 리셋
+                                let plan_str = new_steps
+                                    .iter()
+                                    .enumerate()
+                                    .map(|(i, s)| format!("{}. {s}", i + 1))
+                                    .collect::<Vec<_>>()
+                                    .join("\n");
+                                conversation.push_str(&format!(
+                                    "\n\n{response}\n\nOBSERVATION: ⚠ 반복 패턴 감지. \
+                                     재계획으로 재시도하세요 (outer 재계획 {outer_replan_count}/2):\n{plan_str}"
+                                ));
+                                step += 1;
+                                continue;
+                            }
+                        }
+                    }
+                    // 재계획 실패 또는 횟수 초과 → 강제 최종 답변
                     let force_prompt = format!(
                         "{conversation}\n\n{response}\n\n[시스템]: {}\n즉시 ANSWER를 출력하세요.",
                         ledger.recovery_l2()
@@ -3543,6 +3658,77 @@ ANSWER: 2 + 2는 4입니다."#,
         let r = simulate_react_loop(&script, &td.cwd());
         assert!(!r.finished, "ANSWER 없으므로 미완료 종료");
         assert_eq!(r.consumed_responses, MAX_STEPS, "MAX_STEPS에서 멈춰야 함");
+    }
+
+    // ─── Phase 136-B — TaskLedger 헬퍼 회귀 가드 ─────────────────────────────
+
+    #[test]
+    fn is_complex_goal_짧은_false() {
+        assert!(!is_complex_goal("Fix the login bug"));
+        assert!(!is_complex_goal("버그 수정"));
+        assert!(!is_complex_goal("add a test for auth"));
+    }
+
+    #[test]
+    fn is_complex_goal_20단어이상_true() {
+        let long = "please refactor the authentication module to use JWT tokens and also add comprehensive unit tests for all edge cases";
+        assert!(is_complex_goal(long), "단어 수 초과: {}", long.split_whitespace().count());
+    }
+
+    #[test]
+    fn is_complex_goal_120자이상_true() {
+        let long = "a".repeat(121);
+        assert!(is_complex_goal(&long));
+    }
+
+    #[test]
+    fn is_complex_goal_복수태스크_영어_true() {
+        assert!(is_complex_goal("Fix the bug, and also add a test"));
+        assert!(is_complex_goal("Refactor auth; update docs"));
+    }
+
+    #[test]
+    fn is_complex_goal_복수태스크_한국어_true() {
+        assert!(is_complex_goal("버그를 고치고 그리고 테스트를 추가하세요"));
+        assert!(is_complex_goal("인증 모듈을 리팩터링하세요. 또한 문서도 업데이트하세요"));
+    }
+
+    #[test]
+    fn parse_task_plan_번호_목록() {
+        let resp = "1. 파일 읽기\n2. 버그 분석\n3. 수정 적용\n4. 테스트 실행";
+        let steps = parse_task_plan(resp);
+        assert_eq!(steps.len(), 4);
+        assert_eq!(steps[0], "파일 읽기");
+        assert_eq!(steps[3], "테스트 실행");
+    }
+
+    #[test]
+    fn parse_task_plan_대시_목록() {
+        let resp = "- Read the file\n- Fix the bug\n- Run tests";
+        let steps = parse_task_plan(resp);
+        assert_eq!(steps.len(), 3);
+        assert_eq!(steps[0], "Read the file");
+    }
+
+    #[test]
+    fn parse_task_plan_최대7개_제한() {
+        let resp = (1..=10).map(|i| format!("{i}. step {i}")).collect::<Vec<_>>().join("\n");
+        let steps = parse_task_plan(&resp);
+        assert_eq!(steps.len(), 7, "7개 초과 항목은 잘라야 함");
+    }
+
+    #[test]
+    fn parse_task_plan_빈_응답() {
+        assert!(parse_task_plan("").is_empty());
+        assert!(parse_task_plan("   \n\n").is_empty());
+    }
+
+    #[test]
+    fn parse_task_plan_짧은_항목_무시() {
+        let resp = "1. ok\n2. Read the authentication module carefully\n3. hi";
+        let steps = parse_task_plan(resp);
+        assert_eq!(steps.len(), 1);
+        assert!(steps[0].contains("authentication"));
     }
 
     // ─── Phase 136 — ProgressLedger 회귀 가드 ─────────────────────────────────
