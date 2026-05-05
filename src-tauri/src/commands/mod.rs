@@ -1,6 +1,7 @@
 pub mod agent;
 pub mod ai;
 pub mod bm25;
+pub mod call_graph;
 pub mod config;
 pub mod context;
 pub mod edit_apply;

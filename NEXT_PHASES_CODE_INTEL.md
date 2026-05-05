@@ -13,7 +13,7 @@
 | 137-B query_codebase | ✅ **DONE** (`06723a9`) | ReAct 도구 + 빈 인덱스 안내 + 회귀 가드 4건 |
 | 137-C 증분 인덱싱 | ✅ **DONE** | `MemoryEntry.file` + `SemanticMemory.file_mtimes` + `diff_files` + 회귀 가드 5건 |
 | 138 BM25 + RRF | ✅ **DONE** | in-memory BM25 (`bm25.rs`) + `rrf_fuse` + `search_codebase` 하이브리드 |
-| 139 호출 그래프 + multi-hop | ❌ TODO | `find_callers` 등 미구현 |
+| 139 호출 그래프 + multi-hop | ✅ **DONE** | `call_graph.rs` + `find_callers/callees/trace_dependents` ReAct 도구 3종 |
 | 140 Personalized PageRank | ✅ **DONE** | `build_graph_and_rank` active_file 50× / mentioned 10× / well-named 1.5× |
 | 141 그래프 시각화 | ❌ TODO | reactflow 의존성 0 |
 | 142 SCIP 옵트인 | ❌ TODO | 후순위 |

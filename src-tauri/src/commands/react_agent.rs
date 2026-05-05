@@ -90,6 +90,9 @@ const BASE_PROMPT: &str = r#"당신은 터미널 코딩 에이전트입니다. �
 - query_healing({"query": "질문", "limit": 5, "since_days": 30}) — 자동치유(healing) 기록만 시맨틱 검색
 - analyze_failure_reasons({"since_days": 30, "limit": 5}) — reject 거부 사유 빈도 Top-N 요약
 - query_codebase({"query": "질문", "limit": 5}) — 인덱싱된 코드베이스 시맨틱 검색 (top-K 청크). grep과 달리 의미 매칭 — "auth 관련 함수 찾아" 같은 자연어 질의에 사용. 인덱스 비어있으면 안내 메시지가 반환되며, 그 경우 사용자에게 RAG 색인을 먼저 권장.
+- find_callers({"symbol": "함수명"}) — 이 함수를 호출하는 caller 목록 (tree-sitter 기반, 동명이인 미구분)
+- find_callees({"symbol": "함수명"}) — 이 함수가 호출하는 callee 목록
+- trace_dependents({"symbol": "함수명", "depth": 3}) — 변경 영향도 BFS (기본 depth=3, 최대 5)
 
 쓰기 도구 (CWD 내부 + 안전 경로만 허용 — .git/node_modules/target/dist/.lum_* 거부):
 - write_file({"path": "...", "content": "...", "overwrite": false}) — 신규 파일 생성. 기존 파일은 overwrite=true 명시 필요.
@@ -382,6 +385,9 @@ async fn run_tool(
         "query_healing" => run_query_healing_tool(args).await,
         "analyze_failure_reasons" => run_analyze_failure_reasons_tool(args),
         "query_codebase" => run_query_codebase_tool(args).await,
+        "find_callers" => run_find_callers_tool(args, cwd),
+        "find_callees" => run_find_callees_tool(args, cwd),
+        "trace_dependents" => run_trace_dependents_tool(args, cwd),
         "write_file" => write_file_tool(args, cwd),
         "apply_patch" => apply_patch_tool(args, cwd),
         "delete_file" => delete_file_tool(args, cwd),
@@ -714,6 +720,77 @@ async fn run_query_codebase_tool(args: &serde_json::Value) -> String {
         }
         Err(e) => format!("코드베이스 검색 실패: {e}"),
     }
+}
+
+fn run_find_callers_tool(args: &serde_json::Value, cwd: &str) -> String {
+    let symbol = args["symbol"].as_str().unwrap_or("").trim().to_string();
+    if symbol.is_empty() {
+        return "오류: symbol 파라미터 필요".to_string();
+    }
+    let graph = crate::commands::call_graph::CallGraph::build(std::path::Path::new(cwd));
+    let callers = graph.find_callers(&symbol);
+    if callers.is_empty() {
+        return format!("`{symbol}`를 호출하는 함수를 찾지 못했습니다.");
+    }
+    let lines: Vec<String> = callers
+        .iter()
+        .map(|c| format!("  - {} ({})", c.fn_name, c.file))
+        .collect();
+    format!(
+        "`{symbol}`의 호출자:\n{}\n[{}개] ⚠ tree-sitter 기반 — 동명이인 미구분",
+        lines.join("\n"),
+        callers.len()
+    )
+}
+
+fn run_find_callees_tool(args: &serde_json::Value, cwd: &str) -> String {
+    let symbol = args["symbol"].as_str().unwrap_or("").trim().to_string();
+    if symbol.is_empty() {
+        return "오류: symbol 파라미터 필요".to_string();
+    }
+    let graph = crate::commands::call_graph::CallGraph::build(std::path::Path::new(cwd));
+    let callees = graph.find_callees(&symbol);
+    if callees.is_empty() {
+        return format!("`{symbol}`이 호출하는 함수를 찾지 못했습니다.");
+    }
+    let lines: Vec<String> = callees
+        .iter()
+        .map(|c| {
+            if c.defined_in.is_empty() {
+                format!("  - {} (외부/내장)", c.name)
+            } else {
+                format!("  - {} ({})", c.name, c.defined_in.join(", "))
+            }
+        })
+        .collect();
+    format!("`{symbol}`이 호출하는 함수:\n{}\n[{}개]", lines.join("\n"), callees.len())
+}
+
+fn run_trace_dependents_tool(args: &serde_json::Value, cwd: &str) -> String {
+    let symbol = args["symbol"].as_str().unwrap_or("").trim().to_string();
+    if symbol.is_empty() {
+        return "오류: symbol 파라미터 필요".to_string();
+    }
+    let max_depth = args["depth"].as_u64().unwrap_or(3).min(5) as usize;
+    let graph = crate::commands::call_graph::CallGraph::build(std::path::Path::new(cwd));
+    let deps = graph.trace_dependents(&symbol, max_depth);
+    if deps.is_empty() {
+        return format!("`{symbol}`에 의존하는 함수를 찾지 못했습니다.");
+    }
+    let mut lines: Vec<String> = Vec::new();
+    let mut cur_depth = 0;
+    for d in &deps {
+        if d.depth != cur_depth {
+            cur_depth = d.depth;
+            lines.push(format!("  depth={}:", d.depth));
+        }
+        lines.push(format!("    - {} ({})", d.name, d.file));
+    }
+    format!(
+        "`{symbol}` 변경 영향 범위 (depth≤{max_depth}, BFS):\n{}\n[{}개] ⚠ 동명이인 가능성 있음",
+        lines.join("\n"),
+        deps.len()
+    )
 }
 
 async fn run_query_healing_tool(args: &serde_json::Value) -> String {
