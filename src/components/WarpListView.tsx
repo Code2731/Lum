@@ -458,6 +458,11 @@ const WarpListView: React.FC<Props> = ({
       return next;
     });
   };
+  const clearPinnedTimeline = () => {
+    if (timelinePinnedIds.size === 0) return;
+    setTimelinePinnedIds(new Set());
+    setTimelinePinnedOnly(false);
+  };
   const navigateSelectedTimeline = (dir: 1 | -1) => {
     if (selectedTimelineIds.length === 0) return;
     const currentIdx = deltaOpenId ? selectedTimelineIds.indexOf(deltaOpenId) : -1;
@@ -604,6 +609,13 @@ const WarpListView: React.FC<Props> = ({
         }
         return;
       }
+      if (e.altKey && e.shiftKey && (e.key === "u" || e.key === "U")) {
+        if (timelinePinnedIds.size > 0) {
+          e.preventDefault();
+          clearPinnedTimeline();
+        }
+        return;
+      }
       if (e.altKey && (e.key === "d" || e.key === "D")) {
         if (onResetRetryCompareCompletedCount) {
           e.preventDefault();
@@ -666,6 +678,8 @@ const WarpListView: React.FC<Props> = ({
     canUndoRetryCompareQueueChange,
     retryCompareQueueItems.length,
     comparedTimeline.length,
+    timelinePinnedIds.size,
+    clearPinnedTimeline,
   ]);
 
   return (
@@ -883,6 +897,15 @@ const WarpListView: React.FC<Props> = ({
                         </button>
                         <button
                           type="button"
+                          className="text-[10px] px-2 py-0.5 rounded border border-amber-300/30 text-amber-200 hover:bg-amber-300/12 disabled:opacity-40"
+                          onClick={clearPinnedTimeline}
+                          title="Alt+Shift+U"
+                          disabled={timelinePinnedIds.size === 0}
+                        >
+                          핀 전체 해제
+                        </button>
+                        <button
+                          type="button"
                           className={`text-[10px] px-2 py-0.5 rounded border ${
                             timelineSortMode === "delta"
                               ? "border-cyan-300/45 bg-cyan-300/18 text-cyan-100"
@@ -976,6 +999,7 @@ const WarpListView: React.FC<Props> = ({
                           <div><span className="text-cyan-50">Cmd/Ctrl+Shift+Y</span> 타임라인 열기/닫기</div>
                           <div><span className="text-cyan-50">Alt+Enter / Alt+↑ / Alt+↓</span> 선택 Jump/이동</div>
                           <div><span className="text-cyan-50">Alt+S</span> 타임라인 정렬 토글</div>
+                          <div><span className="text-cyan-50">Alt+Shift+U</span> 핀 전체 해제</div>
                           <div><span className="text-cyan-50">Alt+Q / Alt+K / Alt+P / Alt+D</span> 큐 검색/접기/일시정지/완료리셋</div>
                           <div><span className="text-cyan-50">Alt+Z / Cmd/Ctrl+Z</span> 큐 변경 되돌리기</div>
                           <div><span className="text-cyan-50">Alt+Shift+Z / Cmd/Ctrl+Shift+Z</span> 큐 변경 다시실행</div>
