@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { CheckCircle2, XCircle, Clock, ChevronDown, ChevronRight, Copy, TerminalSquare, Search, MoreHorizontal, Share2 } from "lucide-react";
 import { IconButton } from "@/components/ui/icon-button";
 import { tokenizeShell, TOKEN_COLORS } from "../utils/shellSyntax";
@@ -30,6 +30,8 @@ const WarpListView: React.FC<Props> = ({ blocks, onExecute, onAskAIForFix }) => 
   const [statusFilter, setStatusFilter] = useState<"all" | "failed" | "success">("all");
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
   const [blockSearch, setBlockSearch] = useState<Record<string, string>>({});
+  const [blockSearchCursor, setBlockSearchCursor] = useState<Record<string, number>>({});
+  const outputRefs = useRef<Record<string, HTMLPreElement | null>>({});
 
   const toggle = (id: string) =>
     setExpanded((prev) => {
@@ -63,27 +65,64 @@ const WarpListView: React.FC<Props> = ({ blocks, onExecute, onAskAIForFix }) => 
   const failedCount = blocks.filter((b) => b.exitCode !== 0 && b.exitCode !== null).length;
   const successCount = blocks.length - failedCount;
 
+  useEffect(() => {
+    for (const id of Object.keys(blockSearch)) {
+      const q = blockSearch[id]?.trim();
+      if (!q) continue;
+      const root = outputRefs.current[id];
+      if (!root) continue;
+      const active = root.querySelector<HTMLElement>(".lum-match-active");
+      if (!active) continue;
+      active.scrollIntoView({ block: "nearest", inline: "nearest" });
+    }
+  }, [blockSearchCursor, blockSearch, expanded]);
+
   const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const countMatches = (text: string, needle: string) => {
     if (!needle.trim()) return 0;
     const m = text.match(new RegExp(escapeRegExp(needle), "gi"));
     return m ? m.length : 0;
   };
-  const renderHighlighted = (text: string, needle: string) => {
+  const findMatchRanges = (text: string, needle: string): Array<{ start: number; end: number }> => {
+    if (!needle.trim()) return [];
+    const re = new RegExp(escapeRegExp(needle), "gi");
+    const ranges: Array<{ start: number; end: number }> = [];
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(text)) !== null) {
+      ranges.push({ start: m.index, end: m.index + m[0].length });
+      if (m.index === re.lastIndex) re.lastIndex++;
+    }
+    return ranges;
+  };
+  const renderHighlightedWithCursor = (text: string, needle: string, cursor: number) => {
     if (!needle.trim()) return text;
-    const re = new RegExp(`(${escapeRegExp(needle)})`, "gi");
-    return text.split(re).map((part, i) =>
-      i % 2 === 1
-        ? (
+    const ranges = findMatchRanges(text, needle);
+    if (ranges.length === 0) return text;
+    const nodes: React.ReactNode[] = [];
+    let last = 0;
+    ranges.forEach((r, i) => {
+      if (r.start > last) {
+        nodes.push(<React.Fragment key={`t-${i}-${last}`}>{text.slice(last, r.start)}</React.Fragment>);
+      }
+      const isActive = i === cursor;
+      nodes.push(
           <mark
             key={`m-${i}`}
-            className="bg-amber-300/30 text-amber-100 px-[1px] rounded-[2px]"
+            className={
+              isActive
+              ? "lum-match-active bg-amber-300/70 text-black px-[1px] rounded-[2px]"
+              : "bg-amber-300/30 text-amber-100 px-[1px] rounded-[2px]"
+            }
           >
-            {part}
-          </mark>
-        )
-        : <React.Fragment key={`t-${i}`}>{part}</React.Fragment>,
-    );
+            {text.slice(r.start, r.end)}
+          </mark>,
+      );
+      last = r.end;
+    });
+    if (last < text.length) {
+      nodes.push(<React.Fragment key={`tail-${last}`}>{text.slice(last)}</React.Fragment>);
+    }
+    return nodes;
   };
 
   const openFindWithin = (id: string) => {
@@ -94,6 +133,7 @@ const WarpListView: React.FC<Props> = ({ blocks, onExecute, onAskAIForFix }) => 
     });
     setMenuOpenId(null);
     setBlockSearch((prev) => (prev[id] != null ? prev : { ...prev, [id]: "" }));
+    setBlockSearchCursor((prev) => ({ ...prev, [id]: 0 }));
   };
 
   return (
@@ -125,6 +165,7 @@ const WarpListView: React.FC<Props> = ({ blocks, onExecute, onAskAIForFix }) => 
         const hasOutput  = b.output.trim().length > 0;
         const localQuery = blockSearch[b.id] ?? "";
         const matchCount = hasOutput ? countMatches(b.output, localQuery) : 0;
+        const cursor = Math.min(blockSearchCursor[b.id] ?? 0, Math.max(0, matchCount - 1));
 
         return (
           <div
@@ -268,19 +309,55 @@ const WarpListView: React.FC<Props> = ({ blocks, onExecute, onAskAIForFix }) => 
                   <Search size={10} className="text-white/35 shrink-0" />
                   <input
                     value={localQuery}
-                    onChange={(e) => setBlockSearch((prev) => ({ ...prev, [b.id]: e.target.value }))}
+                    onChange={(e) => {
+                      setBlockSearch((prev) => ({ ...prev, [b.id]: e.target.value }));
+                      setBlockSearchCursor((prev) => ({ ...prev, [b.id]: 0 }));
+                    }}
                     placeholder="블록 내 검색"
                     className="flex-1 bg-transparent border-none outline-none text-[10px] text-white/80 placeholder:text-white/30"
                     onClick={(e) => e.stopPropagation()}
                   />
                   {localQuery.trim() && (
-                    <span className="text-[10px] text-amber-200/80 tabular-nums">
-                      {matchCount}
-                    </span>
+                    <>
+                      <button
+                        type="button"
+                        className="text-[10px] px-1 py-0.5 rounded border border-white/14 text-white/58 hover:text-white/80 hover:bg-white/[0.08]"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (matchCount <= 0) return;
+                          setBlockSearchCursor((prev) => ({
+                            ...prev,
+                            [b.id]: ((prev[b.id] ?? 0) - 1 + matchCount) % matchCount,
+                          }));
+                        }}
+                      >
+                        Prev
+                      </button>
+                      <button
+                        type="button"
+                        className="text-[10px] px-1 py-0.5 rounded border border-white/14 text-white/58 hover:text-white/80 hover:bg-white/[0.08]"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (matchCount <= 0) return;
+                          setBlockSearchCursor((prev) => ({
+                            ...prev,
+                            [b.id]: ((prev[b.id] ?? 0) + 1) % matchCount,
+                          }));
+                        }}
+                      >
+                        Next
+                      </button>
+                      <span className="text-[10px] text-amber-200/80 tabular-nums min-w-[44px] text-right">
+                        {matchCount > 0 ? `${cursor + 1}/${matchCount}` : "0/0"}
+                      </span>
+                    </>
                   )}
                 </div>
-                <pre className="px-3 py-2 text-[10px] font-mono text-white/40 whitespace-pre-wrap max-h-52 overflow-y-auto leading-relaxed bg-[#0d1117]">
-                  {renderHighlighted(b.output.trim(), localQuery)}
+                <pre
+                  ref={(el) => { outputRefs.current[b.id] = el; }}
+                  className="px-3 py-2 text-[10px] font-mono text-white/40 whitespace-pre-wrap max-h-52 overflow-y-auto leading-relaxed bg-[#0d1117]"
+                >
+                  {renderHighlightedWithCursor(b.output.trim(), localQuery, cursor)}
                 </pre>
                 <IconButton
                   tooltip="출력 복사"
