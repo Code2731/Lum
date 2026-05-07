@@ -161,4 +161,50 @@ describe("WarpListView delta actions", () => {
     fireEvent.keyDown(window, { key: "[", ctrlKey: true, shiftKey: true });
     expect(screen.getByText(/Retry Compare/)).toBeInTheDocument();
   });
+
+  it("Δ 팝오버는 바깥 클릭으로 닫힘", () => {
+    render(
+      <WarpListView
+        blocks={blocks}
+        compareResultByBlock={{
+          b2: {
+            added: 1,
+            removed: 1,
+            preview: "",
+            addedLines: ["new line"],
+            removedLines: ["old line"],
+            comparedAt: now,
+          },
+        }}
+      />,
+    );
+
+    fireEvent.click(screen.getByText("Δ +1/-1"));
+    expect(screen.getByText(/Retry Compare/)).toBeInTheDocument();
+    fireEvent.mouseDown(document.body);
+    expect(screen.queryByText(/Retry Compare/)).not.toBeInTheDocument();
+  });
+
+  it("Δ 팝오버는 Escape로 닫힘", () => {
+    render(
+      <WarpListView
+        blocks={blocks}
+        compareResultByBlock={{
+          b2: {
+            added: 1,
+            removed: 1,
+            preview: "",
+            addedLines: ["new line"],
+            removedLines: ["old line"],
+            comparedAt: now,
+          },
+        }}
+      />,
+    );
+
+    fireEvent.click(screen.getByText("Δ +1/-1"));
+    expect(screen.getByText(/Retry Compare/)).toBeInTheDocument();
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(screen.queryByText(/Retry Compare/)).not.toBeInTheDocument();
+  });
 });

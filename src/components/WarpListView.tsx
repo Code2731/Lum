@@ -52,6 +52,8 @@ const WarpListView: React.FC<Props> = ({
   const [deltaOpenId, setDeltaOpenId] = useState<string | null>(null);
   const outputRefs = useRef<Record<string, HTMLPreElement | null>>({});
   const blockRowRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const deltaButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const deltaPopoverRef = useRef<HTMLDivElement | null>(null);
 
   const toggle = (id: string) =>
     setExpanded((prev) => {
@@ -118,6 +120,13 @@ const WarpListView: React.FC<Props> = ({
       row.scrollIntoView({ block: "nearest", inline: "nearest" });
     }
   }, [deltaOpenId]);
+
+  useEffect(() => {
+    if (!deltaOpenId) return;
+    if (!filtered.some((b) => b.id === deltaOpenId)) {
+      setDeltaOpenId(null);
+    }
+  }, [deltaOpenId, filtered]);
 
   const moveBlockSearchCursor = (blockId: string, dir: 1 | -1) => {
     const block = blocks.find((b) => b.id === blockId);
@@ -254,6 +263,27 @@ const WarpListView: React.FC<Props> = ({
     return () => window.removeEventListener("keydown", onWindowKeyDown);
   }, [filteredComparedIds, deltaOpenId]);
 
+  useEffect(() => {
+    if (!deltaOpenId) return;
+    const onWindowKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      setDeltaOpenId(null);
+    };
+    const onMouseDown = (e: MouseEvent) => {
+      const target = e.target as Node | null;
+      if (!target) return;
+      if (deltaPopoverRef.current?.contains(target)) return;
+      if (deltaButtonRefs.current[deltaOpenId]?.contains(target)) return;
+      setDeltaOpenId(null);
+    };
+    window.addEventListener("keydown", onWindowKeyDown);
+    window.addEventListener("mousedown", onMouseDown);
+    return () => {
+      window.removeEventListener("keydown", onWindowKeyDown);
+      window.removeEventListener("mousedown", onMouseDown);
+    };
+  }, [deltaOpenId]);
+
   return (
     <div className="p-3 space-y-1.5 overflow-y-auto h-full">
       <div className="sticky top-0 z-10 mb-2 rounded-xl border border-white/10 bg-[#0f151f]/92 backdrop-blur-sm p-2 space-y-2">
@@ -370,6 +400,7 @@ const WarpListView: React.FC<Props> = ({
                 <div className="relative shrink-0">
                   <button
                     type="button"
+                    ref={(el) => { deltaButtonRefs.current[b.id] = el; }}
                     className="text-[9px] tabular-nums px-1 py-0.5 rounded border border-cyan-300/25 bg-cyan-300/10 text-cyan-200 hover:bg-cyan-300/20"
                     title={compare.preview || "출력 변경 요약"}
                     onClick={(e) => {
@@ -381,6 +412,7 @@ const WarpListView: React.FC<Props> = ({
                   </button>
                   {deltaOpenId === b.id && (
                     <div
+                      ref={deltaPopoverRef}
                       className="absolute right-0 top-6 z-30 w-[360px] rounded-lg border border-cyan-300/25 bg-[#0b131d]/97 shadow-2xl overflow-hidden"
                       onClick={(e) => e.stopPropagation()}
                     >
