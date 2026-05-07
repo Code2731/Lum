@@ -49,3 +49,74 @@ describe("WarpListView block search navigation", () => {
     expect(screen.getByText("1/2")).toBeInTheDocument();
   });
 });
+
+describe("WarpListView delta actions", () => {
+  const blocks = [
+    {
+      id: "b2",
+      command: "npm test",
+      output: "old line\nshared",
+      exitCode: 1,
+      startedAt: now - 3000,
+      endedAt: now - 2000,
+    },
+  ];
+
+  it("Copy Diff가 비교 텍스트를 클립보드에 복사", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText },
+      configurable: true,
+    });
+    render(
+      <WarpListView
+        blocks={blocks}
+        compareResultByBlock={{
+          b2: {
+            added: 1,
+            removed: 1,
+            preview: "+ new line | - old line",
+            addedLines: ["new line"],
+            removedLines: ["old line"],
+            comparedAt: now,
+          },
+        }}
+      />,
+    );
+
+    fireEvent.click(screen.getByText("Δ +1/-1"));
+    fireEvent.click(screen.getByRole("button", { name: "Copy Diff" }));
+
+    expect(writeText).toHaveBeenCalledTimes(1);
+    const copied = String(writeText.mock.calls[0]?.[0] ?? "");
+    expect(copied).toContain("command: npm test");
+    expect(copied).toContain("+ new line");
+    expect(copied).toContain("- old line");
+  });
+
+  it("AI 해석이 diff payload를 상위 콜백으로 전달", () => {
+    const onExplainDiff = vi.fn();
+    render(
+      <WarpListView
+        blocks={blocks}
+        onExplainDiff={onExplainDiff}
+        compareResultByBlock={{
+          b2: {
+            added: 1,
+            removed: 1,
+            preview: "",
+            addedLines: ["new line"],
+            removedLines: ["old line"],
+            comparedAt: now,
+          },
+        }}
+      />,
+    );
+
+    fireEvent.click(screen.getByText("Δ +1/-1"));
+    fireEvent.click(screen.getByRole("button", { name: "AI 해석" }));
+
+    expect(onExplainDiff).toHaveBeenCalledTimes(1);
+    expect(String(onExplainDiff.mock.calls[0]?.[0] ?? "")).toContain("command: npm test");
+  });
+});

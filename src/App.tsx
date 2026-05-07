@@ -1163,6 +1163,16 @@ const App: React.FC = () => {
                 });
                 write(block.command + "\r");
               }}
+              onExplainDiff={(text) => {
+                handleAskAI([
+                  "아래 retry compare diff를 분석해줘.",
+                  "1) 왜 이런 변화가 생겼는지",
+                  "2) 리스크가 있는지",
+                  "3) 다음에 실행할 검증 커맨드 3개",
+                  "",
+                  text,
+                ].join("\n"));
+              }}
             />
           )}
         </div>

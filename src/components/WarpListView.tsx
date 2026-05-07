@@ -9,6 +9,7 @@ interface Props {
   onExecute?: (cmd: string) => void;
   onAskAIForFix?: (text: string) => void;
   onRetryWithDiff?: (block: CommandBlock) => void;
+  onExplainDiff?: (text: string) => void;
   compareResultByBlock?: Record<string, {
     added: number;
     removed: number;
@@ -33,7 +34,14 @@ function fmtDuration(block: CommandBlock): string {
   return ms < 1000 ? `${ms}ms` : `${(ms / 1000).toFixed(1)}s`;
 }
 
-const WarpListView: React.FC<Props> = ({ blocks, onExecute, onAskAIForFix, onRetryWithDiff, compareResultByBlock = {} }) => {
+const WarpListView: React.FC<Props> = ({
+  blocks,
+  onExecute,
+  onAskAIForFix,
+  onRetryWithDiff,
+  onExplainDiff,
+  compareResultByBlock = {},
+}) => {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "failed" | "success" | "compared">("all");
@@ -211,6 +219,20 @@ const WarpListView: React.FC<Props> = ({ blocks, onExecute, onAskAIForFix, onRet
     });
     setDeltaOpenId(id);
   };
+  const buildDiffText = (command: string, compare: NonNullable<Props["compareResultByBlock"]>[string]) => {
+    const lines = [
+      `command: ${command}`,
+      `delta: +${compare.added} / -${compare.removed}`,
+      compare.preview ? `preview: ${compare.preview}` : "",
+      "",
+      "added:",
+      ...compare.addedLines.map((l) => `+ ${l}`),
+      "",
+      "removed:",
+      ...compare.removedLines.map((l) => `- ${l}`),
+    ].filter((line) => line !== "");
+    return lines.join("\n");
+  };
 
   return (
     <div className="p-3 space-y-1.5 overflow-y-auto h-full">
@@ -342,6 +364,28 @@ const WarpListView: React.FC<Props> = ({ blocks, onExecute, onAskAIForFix, onRet
                     >
                       <div className="px-2.5 py-1.5 border-b border-white/10 text-[10px] text-cyan-200 tabular-nums">
                         Retry Compare · +{compare.added} / -{compare.removed}
+                      </div>
+                      <div className="px-2 py-1.5 border-b border-white/10 flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          className="text-[10px] px-2 py-0.5 rounded border border-white/15 text-white/75 hover:bg-white/[0.08]"
+                          onClick={() => {
+                            navigator.clipboard.writeText(buildDiffText(b.command, compare)).catch(() => {});
+                          }}
+                        >
+                          Copy Diff
+                        </button>
+                        {onExplainDiff && (
+                          <button
+                            type="button"
+                            className="text-[10px] px-2 py-0.5 rounded border border-cyan-300/30 text-cyan-200 hover:bg-cyan-300/12"
+                            onClick={() => {
+                              onExplainDiff(buildDiffText(b.command, compare));
+                            }}
+                          >
+                            AI 해석
+                          </button>
+                        )}
                       </div>
                       <div className="max-h-56 overflow-y-auto p-2 space-y-2">
                         {compare.addedLines.length > 0 && (
