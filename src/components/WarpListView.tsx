@@ -243,6 +243,15 @@ const WarpListView: React.FC<Props> = ({
     () => selectedTimelineItems.map((item) => item.block.id),
     [selectedTimelineItems],
   );
+  const timelineViewCustomized = useMemo(
+    () =>
+      timelineQuery.trim() !== ""
+      || timelineRiskFilter !== "all"
+      || timelinePinnedOnly
+      || timelineSelectedOnly
+      || timelineSortMode !== "recent",
+    [timelineQuery, timelineRiskFilter, timelinePinnedOnly, timelineSelectedOnly, timelineSortMode],
+  );
   const filteredQueueItems = useMemo(() => {
     const q = queueQuery.trim().toLowerCase();
     if (!q) return retryCompareQueueItems;
@@ -480,6 +489,13 @@ const WarpListView: React.FC<Props> = ({
       return next;
     });
   };
+  const resetTimelineViewFilters = () => {
+    setTimelineQuery("");
+    setTimelineRiskFilter("all");
+    setTimelinePinnedOnly(false);
+    setTimelineSelectedOnly(false);
+    setTimelineSortMode("recent");
+  };
   const pinSelectedTimeline = () => {
     setTimelinePinnedIds((prev) => {
       const next = new Set(prev);
@@ -645,6 +661,13 @@ const WarpListView: React.FC<Props> = ({
         }
         return;
       }
+      if (e.altKey && (e.key === "r" || e.key === "R")) {
+        if (timelineViewCustomized) {
+          e.preventDefault();
+          resetTimelineViewFilters();
+        }
+        return;
+      }
       if (e.altKey && (e.key === "s" || e.key === "S")) {
         if (comparedTimeline.length > 0) {
           e.preventDefault();
@@ -754,11 +777,13 @@ const WarpListView: React.FC<Props> = ({
     canUndoRetryCompareQueueChange,
     retryCompareQueueItems.length,
     comparedTimeline.length,
+    timelineViewCustomized,
     timelineFiltered.length,
     timelineSelectedIds.length,
     invertTimelineFilteredSelection,
     toggleTimelineSelectedOnly,
     selectHighRiskTimelineFiltered,
+    resetTimelineViewFilters,
     timelinePinnedIds.size,
     clearPinnedTimeline,
   ]);
@@ -910,6 +935,15 @@ const WarpListView: React.FC<Props> = ({
                           onClick={() => setShowShortcutHelp((prev) => !prev)}
                         >
                           Shortcuts
+                        </button>
+                        <button
+                          type="button"
+                          className="text-[10px] px-2 py-0.5 rounded border border-white/15 text-white/70 hover:bg-white/[0.08] disabled:opacity-40"
+                          onClick={resetTimelineViewFilters}
+                          disabled={!timelineViewCustomized}
+                          title="Alt+R"
+                        >
+                          필터 리셋
                         </button>
                         <button
                           type="button"
@@ -1122,6 +1156,7 @@ const WarpListView: React.FC<Props> = ({
                           <div><span className="text-cyan-50">Cmd/Ctrl+Shift+Y</span> 타임라인 열기/닫기</div>
                           <div><span className="text-cyan-50">Alt+Enter / Alt+↑ / Alt+↓</span> 선택 Jump/이동</div>
                           <div><span className="text-cyan-50">Alt+F</span> 타임라인 검색창 포커스</div>
+                          <div><span className="text-cyan-50">Alt+R</span> 타임라인 필터 상태 리셋</div>
                           <div><span className="text-cyan-50">Alt+I</span> 현재 목록 선택 반전</div>
                           <div><span className="text-cyan-50">Alt+O</span> 선택 항목만 보기 토글</div>
                           <div><span className="text-cyan-50">Alt+H</span> 고위험 항목 빠른 선택</div>
