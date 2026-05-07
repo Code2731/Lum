@@ -119,4 +119,46 @@ describe("WarpListView delta actions", () => {
     expect(onExplainDiff).toHaveBeenCalledTimes(1);
     expect(String(onExplainDiff.mock.calls[0]?.[0] ?? "")).toContain("command: npm test");
   });
+
+  it("Cmd/Ctrl+Shift+[ ] 단축키로 비교 블록 탐색", () => {
+    render(
+      <WarpListView
+        blocks={[
+          ...blocks,
+          {
+            id: "b3",
+            command: "npm run build",
+            output: "another",
+            exitCode: 0,
+            startedAt: now - 2000,
+            endedAt: now - 1000,
+          },
+        ]}
+        compareResultByBlock={{
+          b2: {
+            added: 1,
+            removed: 1,
+            preview: "",
+            addedLines: ["new line"],
+            removedLines: ["old line"],
+            comparedAt: now,
+          },
+          b3: {
+            added: 2,
+            removed: 0,
+            preview: "",
+            addedLines: ["a", "b"],
+            removedLines: [],
+            comparedAt: now,
+          },
+        }}
+      />,
+    );
+
+    fireEvent.keyDown(window, { key: "]", ctrlKey: true, shiftKey: true });
+    expect(screen.getByText(/Retry Compare/)).toBeInTheDocument();
+
+    fireEvent.keyDown(window, { key: "[", ctrlKey: true, shiftKey: true });
+    expect(screen.getByText(/Retry Compare/)).toBeInTheDocument();
+  });
 });

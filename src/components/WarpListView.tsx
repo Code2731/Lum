@@ -219,6 +219,12 @@ const WarpListView: React.FC<Props> = ({
     });
     setDeltaOpenId(id);
   };
+  const isTypingTarget = (target: EventTarget | null) => {
+    const el = target as HTMLElement | null;
+    if (!el) return false;
+    const tag = el.tagName;
+    return tag === "INPUT" || tag === "TEXTAREA" || el.isContentEditable;
+  };
   const buildDiffText = (command: string, compare: NonNullable<Props["compareResultByBlock"]>[string]) => {
     const lines = [
       `command: ${command}`,
@@ -233,6 +239,20 @@ const WarpListView: React.FC<Props> = ({
     ].filter((line) => line !== "");
     return lines.join("\n");
   };
+
+  useEffect(() => {
+    const onWindowKeyDown = (e: KeyboardEvent) => {
+      const mod = e.metaKey || e.ctrlKey;
+      if (!mod || !e.shiftKey) return;
+      if (e.key !== "[" && e.key !== "]") return;
+      if (isTypingTarget(e.target)) return;
+      if (filteredComparedIds.length === 0) return;
+      e.preventDefault();
+      navigateCompared(e.key === "]" ? 1 : -1);
+    };
+    window.addEventListener("keydown", onWindowKeyDown);
+    return () => window.removeEventListener("keydown", onWindowKeyDown);
+  }, [filteredComparedIds, deltaOpenId]);
 
   return (
     <div className="p-3 space-y-1.5 overflow-y-auto h-full">
@@ -256,6 +276,7 @@ const WarpListView: React.FC<Props> = ({
               <button
                 type="button"
                 onClick={() => navigateCompared(-1)}
+                title="Cmd/Ctrl+Shift+["
                 className="text-[10px] px-2 py-0.5 rounded border border-cyan-400/30 text-cyan-200/90 hover:bg-cyan-400/15"
               >
                 Prev Δ
@@ -263,6 +284,7 @@ const WarpListView: React.FC<Props> = ({
               <button
                 type="button"
                 onClick={() => navigateCompared(1)}
+                title="Cmd/Ctrl+Shift+]"
                 className="text-[10px] px-2 py-0.5 rounded border border-cyan-400/30 text-cyan-200/90 hover:bg-cyan-400/15"
               >
                 Next Δ
