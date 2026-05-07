@@ -125,6 +125,7 @@ const WarpListView: React.FC<Props> = ({
   const [timelineSelectedIds, setTimelineSelectedIds] = useState<Set<string>>(new Set());
   const [timelinePinnedIds, setTimelinePinnedIds] = useState<Set<string>>(new Set());
   const [timelinePinnedOnly, setTimelinePinnedOnly] = useState(false);
+  const [timelineSelectedOnly, setTimelineSelectedOnly] = useState(false);
   const [timelineRiskFilter, setTimelineRiskFilter] = useState<"all" | TimelineRisk>("all");
   const outputRefs = useRef<Record<string, HTMLPreElement | null>>({});
   const blockRowRefs = useRef<Record<string, HTMLDivElement | null>>({});
@@ -199,14 +200,17 @@ const WarpListView: React.FC<Props> = ({
     const pinnedFiltered = timelinePinnedOnly
       ? comparedTimeline.filter(({ block }) => timelinePinnedIds.has(block.id))
       : comparedTimeline;
+    const selectedFiltered = timelineSelectedOnly
+      ? pinnedFiltered.filter(({ block }) => timelineSelectedIds.has(block.id))
+      : pinnedFiltered;
     const riskFiltered = timelineRiskFilter === "all"
-      ? pinnedFiltered
-      : pinnedFiltered.filter(({ block }) => classifyTimelineRisk(block.command) === timelineRiskFilter);
+      ? selectedFiltered
+      : selectedFiltered.filter(({ block }) => classifyTimelineRisk(block.command) === timelineRiskFilter);
     if (!q) return riskFiltered;
     return riskFiltered.filter(({ block, compare }) =>
       block.command.toLowerCase().includes(q) || (compare.preview ?? "").toLowerCase().includes(q),
     );
-  }, [comparedTimeline, timelinePinnedOnly, timelinePinnedIds, timelineRiskFilter, timelineQuery]);
+  }, [comparedTimeline, timelinePinnedOnly, timelinePinnedIds, timelineSelectedOnly, timelineSelectedIds, timelineRiskFilter, timelineQuery]);
   const riskCounts = useMemo(
     () =>
       comparedTimeline.reduce(
@@ -279,6 +283,7 @@ const WarpListView: React.FC<Props> = ({
     setTimelineSelectedIds(new Set());
     setTimelinePinnedIds(new Set());
     setTimelinePinnedOnly(false);
+    setTimelineSelectedOnly(false);
     setTimelineRiskFilter("all");
   }, [comparedCount]);
   useEffect(() => {
@@ -290,6 +295,11 @@ const WarpListView: React.FC<Props> = ({
       return next;
     });
   }, [comparedTimeline]);
+  useEffect(() => {
+    if (!timelineSelectedOnly) return;
+    if (timelineSelectedIds.size > 0) return;
+    setTimelineSelectedOnly(false);
+  }, [timelineSelectedOnly, timelineSelectedIds]);
   useEffect(() => {
     setTimelinePinnedIds((prev) => {
       const next = new Set(
@@ -454,6 +464,10 @@ const WarpListView: React.FC<Props> = ({
       }
       return next;
     });
+  };
+  const toggleTimelineSelectedOnly = () => {
+    if (selectedTimelineIds.length === 0) return;
+    setTimelineSelectedOnly((prev) => !prev);
   };
   const selectHighRiskTimelineFiltered = () => {
     if (timelineFiltered.length === 0) return;
@@ -637,6 +651,13 @@ const WarpListView: React.FC<Props> = ({
         }
         return;
       }
+      if (e.altKey && (e.key === "o" || e.key === "O" || e.code === "KeyO")) {
+        if (selectedTimelineIds.length > 0) {
+          e.preventDefault();
+          toggleTimelineSelectedOnly();
+        }
+        return;
+      }
       if (e.altKey && (e.key === "h" || e.key === "H")) {
         if (timelineFiltered.length > 0) {
           e.preventDefault();
@@ -714,7 +735,9 @@ const WarpListView: React.FC<Props> = ({
     retryCompareQueueItems.length,
     comparedTimeline.length,
     timelineFiltered.length,
+    timelineSelectedIds.length,
     invertTimelineFilteredSelection,
+    toggleTimelineSelectedOnly,
     selectHighRiskTimelineFiltered,
     timelinePinnedIds.size,
     clearPinnedTimeline,
@@ -881,6 +904,19 @@ const WarpListView: React.FC<Props> = ({
                           title="Alt+I"
                         >
                           선택 반전
+                        </button>
+                        <button
+                          type="button"
+                          className={`text-[10px] px-2 py-0.5 rounded border ${
+                            timelineSelectedOnly
+                              ? "border-cyan-300/45 bg-cyan-300/18 text-cyan-100"
+                              : "border-white/15 text-white/70 hover:bg-white/[0.08]"
+                          } disabled:opacity-40`}
+                          onClick={toggleTimelineSelectedOnly}
+                          disabled={selectedTimelineIds.length === 0}
+                          title="Alt+O"
+                        >
+                          선택만
                         </button>
                         <button
                           type="button"
@@ -1055,6 +1091,7 @@ const WarpListView: React.FC<Props> = ({
                           <div><span className="text-cyan-50">Cmd/Ctrl+Shift+Y</span> 타임라인 열기/닫기</div>
                           <div><span className="text-cyan-50">Alt+Enter / Alt+↑ / Alt+↓</span> 선택 Jump/이동</div>
                           <div><span className="text-cyan-50">Alt+I</span> 현재 목록 선택 반전</div>
+                          <div><span className="text-cyan-50">Alt+O</span> 선택 항목만 보기 토글</div>
                           <div><span className="text-cyan-50">Alt+H</span> 고위험 항목 빠른 선택</div>
                           <div><span className="text-cyan-50">Alt+S</span> 타임라인 정렬 토글</div>
                           <div><span className="text-cyan-50">Alt+Shift+U</span> 핀 전체 해제</div>
