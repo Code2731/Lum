@@ -304,6 +304,7 @@ const App: React.FC = () => {
   const [aiInput, setAiInput] = useState("");
   const [showAiBar, setShowAiBar] = useState(false);
   const [dismissedBlockId, setDismissedBlockId] = useState<string | null>(null);
+  const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
   const aiInputRef = useRef<HTMLInputElement>(null);
   const viewModeRef = useRef(viewMode);
   viewModeRef.current = viewMode;
@@ -356,6 +357,13 @@ const App: React.FC = () => {
       }
     }
   }, [cmdBlocks, selectedModel]); // notifCenter.addNotification은 안정된 useCallback이므로 deps 불필요
+
+  useEffect(() => {
+    if (!selectedBlockId) return;
+    if (!cmdBlocks.some((b) => b.id === selectedBlockId)) {
+      setSelectedBlockId(null);
+    }
+  }, [cmdBlocks, selectedBlockId]);
 
   // Warp prompt 느낌의 탭 Git 칩: 브랜치 + 변경 파일 수.
   useEffect(() => {
@@ -481,6 +489,21 @@ const App: React.FC = () => {
     ptyWriteRefs.current.get(activePaneIdRef.current)?.(cmd + "\n");
   }, [activePaneIdRef, ptyWriteRefs]);
 
+  // 최근 커맨드 블록 네비게이션 (Warp 블록 점프 감각)
+  const navigateCommandBlock = useCallback((delta: -1 | 1) => {
+    if (cmdBlocks.length === 0) return;
+    const currentId = selectedBlockId ?? cmdBlocks[cmdBlocks.length - 1]?.id ?? null;
+    if (!currentId) return;
+    const idx = cmdBlocks.findIndex((b) => b.id === currentId);
+    if (idx < 0) {
+      setSelectedBlockId(cmdBlocks[cmdBlocks.length - 1]?.id ?? null);
+      return;
+    }
+    const nextIdx = Math.max(0, Math.min(cmdBlocks.length - 1, idx + delta));
+    setSelectedBlockId(cmdBlocks[nextIdx]?.id ?? null);
+    setDismissedBlockId(null);
+  }, [cmdBlocks, selectedBlockId]);
+
   const handleAiSubmit = useCallback(async () => {
     const cmd = aiInput.trim();
     if (!cmd) return;
@@ -553,6 +576,8 @@ const App: React.FC = () => {
       if (mod && e.shiftKey && e.key === "m") { e.preventDefault(); setShowSysmon(v => !v); }
       if (mod && e.key === ",") { e.preventDefault(); setShowThemePanel(true); }
       if (mod && e.shiftKey && e.key === "q") { e.preventDefault(); setShowQuickBar(v => !v); }
+      if (mod && e.shiftKey && e.key === "ArrowUp") { e.preventDefault(); navigateCommandBlock(-1); }
+      if (mod && e.shiftKey && e.key === "ArrowDown") { e.preventDefault(); navigateCommandBlock(1); }
       if (mod && e.shiftKey && (e.key === "s" || e.key === "o")) { e.preventDefault(); setShowWorkspace(true); loadWorkspaces(); }
       // Cmd+1~9 — Quick Actions 단축키
       if (mod && !e.shiftKey && /^[1-9]$/.test(e.key)) {
@@ -575,11 +600,15 @@ const App: React.FC = () => {
       window.removeEventListener("keydown", captureHandler, { capture: true });
       window.removeEventListener("keydown", handler);
     };
-  }, [addTabWithReset, closeTabWithReset, toggleSplit, closeOverlays, activeTabIdRef, setShowCommitPanel, setShowHistorySearch, setShowDiffReview, setShowThemePanel, quickActions, ptyWriteRefs, activePaneIdRef, setShowWorkspace, loadWorkspaces, setShowPalette]);
+  }, [addTabWithReset, closeTabWithReset, toggleSplit, closeOverlays, activeTabIdRef, setShowCommitPanel, setShowHistorySearch, setShowDiffReview, setShowThemePanel, quickActions, ptyWriteRefs, activePaneIdRef, setShowWorkspace, loadWorkspaces, setShowPalette, navigateCommandBlock]);
 
   const activeTab = tabs.find((t) => t.id === activeTabId);
   const lastCmdBlock = cmdBlocks[cmdBlocks.length - 1] ?? null;
-  const showBlockBar = lastCmdBlock !== null && lastCmdBlock.id !== dismissedBlockId && !healingError;
+  const focusedCmdBlock = selectedBlockId
+    ? (cmdBlocks.find((b) => b.id === selectedBlockId) ?? null)
+    : lastCmdBlock;
+  const focusedCmdIndex = focusedCmdBlock ? cmdBlocks.findIndex((b) => b.id === focusedCmdBlock.id) : -1;
+  const showBlockBar = focusedCmdBlock !== null && focusedCmdBlock.id !== dismissedBlockId && !healingError;
   const wsTabs = tabs.map(t => ({ id: t.id, title: t.title, cwd: t.cwd ?? "", split_dir: t.splitDir }));
   const contextTab = tabCtxMenu ? tabs.find(t => t.id === tabCtxMenu.tabId) : undefined;
 
@@ -962,10 +991,21 @@ const App: React.FC = () => {
                 )}
               </div>
             ))}
-            {showBlockBar && lastCmdBlock && (
+            {showBlockBar && focusedCmdBlock && focusedCmdIndex >= 0 && (
               <CommandBlockBar
-                block={lastCmdBlock}
-                onDismiss={() => setDismissedBlockId(lastCmdBlock.id)}
+                block={focusedCmdBlock}
+                blockIndex={focusedCmdIndex}
+                blockTotal={cmdBlocks.length}
+                canPrev={focusedCmdIndex > 0}
+                canNext={focusedCmdIndex < cmdBlocks.length - 1}
+                onPrev={() => navigateCommandBlock(-1)}
+                onNext={() => navigateCommandBlock(1)}
+                onRerun={(command) => {
+                  if (!command) return;
+                  const write = ptyWriteRefs.current.get(activePaneIdRef.current);
+                  write?.(command + "\r");
+                }}
+                onDismiss={() => setDismissedBlockId(focusedCmdBlock.id)}
               />
             )}
             {healingError && (

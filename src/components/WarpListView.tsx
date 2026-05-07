@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { CheckCircle2, XCircle, Clock, ChevronDown, ChevronRight, Copy, TerminalSquare } from "lucide-react";
+import { CheckCircle2, XCircle, Clock, ChevronDown, ChevronRight, Copy, TerminalSquare, Search } from "lucide-react";
 import { IconButton } from "@/components/ui/icon-button";
 import { tokenizeShell, TOKEN_COLORS } from "../utils/shellSyntax";
 import type { CommandBlock } from "../hooks/useCommandBlocks";
@@ -25,6 +25,8 @@ function fmtDuration(block: CommandBlock): string {
 
 const WarpListView: React.FC<Props> = ({ blocks, onExecute }) => {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [query, setQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "failed" | "success">("all");
 
   const toggle = (id: string) =>
     setExpanded((prev) => {
@@ -44,9 +46,43 @@ const WarpListView: React.FC<Props> = ({ blocks, onExecute }) => {
     );
   }
 
+  const q = query.trim().toLowerCase();
+  const filtered = [...blocks]
+    .reverse()
+    .filter((b) => {
+      const ok = b.exitCode === 0 || b.exitCode === null;
+      if (statusFilter === "failed" && ok) return false;
+      if (statusFilter === "success" && !ok) return false;
+      if (!q) return true;
+      return b.command.toLowerCase().includes(q) || b.output.toLowerCase().includes(q);
+    });
+
+  const failedCount = blocks.filter((b) => b.exitCode !== 0 && b.exitCode !== null).length;
+  const successCount = blocks.length - failedCount;
+
   return (
     <div className="p-3 space-y-1.5 overflow-y-auto h-full">
-      {[...blocks].reverse().map((b) => {
+      <div className="sticky top-0 z-10 mb-2 rounded-xl border border-white/10 bg-[#0f151f]/92 backdrop-blur-sm p-2 space-y-2">
+        <div className="flex items-center gap-2 px-1">
+          <Search size={12} className="text-white/35 shrink-0" />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="블록 검색 (명령/출력)"
+            className="w-full bg-transparent border-none outline-none text-xs text-white/82 placeholder:text-white/30"
+          />
+        </div>
+        <div className="flex items-center gap-1.5 px-1">
+          <FilterChip active={statusFilter === "all"} onClick={() => setStatusFilter("all")} label={`전체 ${blocks.length}`} />
+          <FilterChip active={statusFilter === "failed"} onClick={() => setStatusFilter("failed")} label={`실패 ${failedCount}`} tone="danger" />
+          <FilterChip active={statusFilter === "success"} onClick={() => setStatusFilter("success")} label={`성공 ${successCount}`} tone="success" />
+          <span className="ml-auto text-[10px] text-white/34 tabular-nums">
+            표시 {filtered.length}
+          </span>
+        </div>
+      </div>
+
+      {filtered.map((b) => {
         const ok         = b.exitCode === 0 || b.exitCode === null;
         const isExpanded = expanded.has(b.id);
         const dur        = fmtDuration(b);
@@ -132,6 +168,33 @@ const WarpListView: React.FC<Props> = ({ blocks, onExecute }) => {
         );
       })}
     </div>
+  );
+};
+
+const FilterChip: React.FC<{
+  active: boolean;
+  onClick: () => void;
+  label: string;
+  tone?: "neutral" | "danger" | "success";
+}> = ({ active, onClick, label, tone = "neutral" }) => {
+  const activeClass =
+    tone === "danger"
+      ? "bg-red-400/20 border-red-400/40 text-red-200"
+      : tone === "success"
+        ? "bg-emerald-400/20 border-emerald-400/40 text-emerald-200"
+        : "bg-accent/20 border-accent/40 text-accent";
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`px-2 py-0.5 rounded-md text-[10px] border transition-colors ${
+        active
+          ? activeClass
+          : "border-white/14 text-white/48 bg-white/[0.04] hover:text-white/72 hover:bg-white/[0.08]"
+      }`}
+    >
+      {label}
+    </button>
   );
 };
 
