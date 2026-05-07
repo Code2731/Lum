@@ -730,6 +730,34 @@ describe("WarpListView delta actions", () => {
     expect(screen.getByText("표시 3/3")).toBeInTheDocument();
   });
 
+  it("Retry+Compare 큐 검색 포커스 단축키(Alt+Q)", () => {
+    render(
+      <WarpListView
+        blocks={blocks}
+        retryCompareQueueDepth={2}
+        retryCompareQueueWaiting={2}
+        retryCompareQueueItems={[
+          { id: "q1", command: "npm test" },
+          { id: "q2", command: "pnpm lint" },
+        ]}
+        compareResultByBlock={{
+          b2: {
+            added: 1,
+            removed: 1,
+            preview: "test changed",
+            addedLines: ["new line"],
+            removedLines: ["old line"],
+            comparedAt: now,
+          },
+        }}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Δ Timeline (1)" }));
+    const input = screen.getByPlaceholderText("큐 검색 (command)");
+    fireEvent.keyDown(window, { key: "q", altKey: true });
+    expect(document.activeElement).toBe(input);
+  });
+
   it("Retry+Compare 현재 실행 커맨드 표시", () => {
     render(
       <WarpListView

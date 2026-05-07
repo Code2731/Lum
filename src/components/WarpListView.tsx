@@ -111,6 +111,7 @@ const WarpListView: React.FC<Props> = ({
   const deltaPopoverRef = useRef<HTMLDivElement | null>(null);
   const timelineButtonRef = useRef<HTMLButtonElement | null>(null);
   const timelinePanelRef = useRef<HTMLDivElement | null>(null);
+  const queueSearchInputRef = useRef<HTMLInputElement | null>(null);
 
   const toggle = (id: string) =>
     setExpanded((prev) => {
@@ -511,6 +512,13 @@ const WarpListView: React.FC<Props> = ({
     if (!timelineOpen) return;
     const onWindowKeyDown = (e: KeyboardEvent) => {
       if (isTypingTarget(e.target)) return;
+      if (e.altKey && (e.key === "q" || e.key === "Q")) {
+        if (queueSearchInputRef.current) {
+          e.preventDefault();
+          queueSearchInputRef.current.focus();
+        }
+        return;
+      }
       if (e.altKey && (e.key === "d" || e.key === "D")) {
         if (onResetRetryCompareCompletedCount) {
           e.preventDefault();
@@ -847,6 +855,7 @@ const WarpListView: React.FC<Props> = ({
                         </div>
                         <div className="flex items-center gap-1.5">
                           <input
+                            ref={queueSearchInputRef}
                             value={queueQuery}
                             onChange={(e) => setQueueQuery(e.target.value)}
                             placeholder="큐 검색 (command)"
