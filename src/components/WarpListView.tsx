@@ -137,6 +137,10 @@ const WarpListView: React.FC<Props> = ({
     () => comparedTimeline.filter(({ block }) => timelineSelectedIds.has(block.id)),
     [comparedTimeline, timelineSelectedIds],
   );
+  const selectedTimelineIds = useMemo(
+    () => selectedTimelineItems.map((item) => item.block.id),
+    [selectedTimelineItems],
+  );
 
   useEffect(() => {
     for (const id of Object.keys(blockSearch)) {
@@ -326,6 +330,21 @@ const WarpListView: React.FC<Props> = ({
       return next;
     });
   };
+  const navigateSelectedTimeline = (dir: 1 | -1) => {
+    if (selectedTimelineIds.length === 0) return;
+    const currentIdx = deltaOpenId ? selectedTimelineIds.indexOf(deltaOpenId) : -1;
+    const nextIdx = currentIdx < 0
+      ? (dir > 0 ? 0 : selectedTimelineIds.length - 1)
+      : (currentIdx + dir + selectedTimelineIds.length) % selectedTimelineIds.length;
+    const id = selectedTimelineIds[nextIdx];
+    if (!id) return;
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      next.add(id);
+      return next;
+    });
+    setDeltaOpenId(id);
+  };
 
   useEffect(() => {
     const onWindowKeyDown = (e: KeyboardEvent) => {
@@ -460,6 +479,9 @@ const WarpListView: React.FC<Props> = ({
                         className="w-full bg-[#0f151f] border border-white/10 rounded px-2 py-1 text-[10px] text-white/80 placeholder:text-white/30 outline-none focus-visible:ring-1 focus-visible:ring-cyan-300/45"
                       />
                       <div className="flex items-center gap-1.5">
+                        <span className="text-[10px] text-white/48 tabular-nums">
+                          선택 {selectedTimelineIds.length}
+                        </span>
                         <button
                           type="button"
                           className="text-[10px] px-2 py-0.5 rounded border border-white/15 text-white/70 hover:bg-white/[0.08] disabled:opacity-40"
@@ -485,6 +507,30 @@ const WarpListView: React.FC<Props> = ({
                           disabled={selectedTimelineItems.length === 0}
                         >
                           Copy Selected
+                        </button>
+                        <button
+                          type="button"
+                          className="text-[10px] px-2 py-0.5 rounded border border-white/15 text-white/70 hover:bg-white/[0.08] disabled:opacity-40"
+                          onClick={() => navigateSelectedTimeline(1)}
+                          disabled={selectedTimelineIds.length === 0}
+                        >
+                          Jump Selected
+                        </button>
+                        <button
+                          type="button"
+                          className="text-[10px] px-2 py-0.5 rounded border border-white/15 text-white/70 hover:bg-white/[0.08] disabled:opacity-40"
+                          onClick={() => navigateSelectedTimeline(-1)}
+                          disabled={selectedTimelineIds.length === 0}
+                        >
+                          Prev Selected
+                        </button>
+                        <button
+                          type="button"
+                          className="text-[10px] px-2 py-0.5 rounded border border-white/15 text-white/70 hover:bg-white/[0.08] disabled:opacity-40"
+                          onClick={() => navigateSelectedTimeline(1)}
+                          disabled={selectedTimelineIds.length === 0}
+                        >
+                          Next Selected
                         </button>
                         {onExplainAllDiffs && (
                           <button
