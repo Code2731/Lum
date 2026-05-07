@@ -644,6 +644,18 @@ const WarpListView: React.FC<Props> = ({
         }
         return;
       }
+      if (
+        e.altKey
+        && (e.key === "0" || e.key === "1" || e.key === "2" || e.key === "3"
+          || e.code === "Digit0" || e.code === "Digit1" || e.code === "Digit2" || e.code === "Digit3")
+      ) {
+        e.preventDefault();
+        if (e.key === "1" || e.code === "Digit1") setTimelineRiskFilter("high");
+        else if (e.key === "2" || e.code === "Digit2") setTimelineRiskFilter("medium");
+        else if (e.key === "3" || e.code === "Digit3") setTimelineRiskFilter("low");
+        else setTimelineRiskFilter("all");
+        return;
+      }
       if (e.altKey && (e.key === "i" || e.key === "I")) {
         if (timelineFiltered.length > 0) {
           e.preventDefault();
@@ -845,24 +857,28 @@ const WarpListView: React.FC<Props> = ({
                           active={timelineRiskFilter === "all"}
                           onClick={() => setTimelineRiskFilter("all")}
                           tone="all"
+                          title="Alt+0"
                         />
                         <RiskChip
                           label={`High ${riskCounts.high}`}
                           active={timelineRiskFilter === "high"}
                           onClick={() => setTimelineRiskFilter("high")}
                           tone="high"
+                          title="Alt+1"
                         />
                         <RiskChip
                           label={`Med ${riskCounts.medium}`}
                           active={timelineRiskFilter === "medium"}
                           onClick={() => setTimelineRiskFilter("medium")}
                           tone="medium"
+                          title="Alt+2"
                         />
                         <RiskChip
                           label={`Low ${riskCounts.low}`}
                           active={timelineRiskFilter === "low"}
                           onClick={() => setTimelineRiskFilter("low")}
                           tone="low"
+                          title="Alt+3"
                         />
                       </div>
                       <div className="flex items-center gap-1.5">
@@ -1093,6 +1109,7 @@ const WarpListView: React.FC<Props> = ({
                           <div><span className="text-cyan-50">Alt+I</span> 현재 목록 선택 반전</div>
                           <div><span className="text-cyan-50">Alt+O</span> 선택 항목만 보기 토글</div>
                           <div><span className="text-cyan-50">Alt+H</span> 고위험 항목 빠른 선택</div>
+                          <div><span className="text-cyan-50">Alt+1/2/3/0</span> 위험도 필터 High/Med/Low/All</div>
                           <div><span className="text-cyan-50">Alt+S</span> 타임라인 정렬 토글</div>
                           <div><span className="text-cyan-50">Alt+Shift+U</span> 핀 전체 해제</div>
                           <div><span className="text-cyan-50">Alt+Q / Alt+K / Alt+P / Alt+D</span> 큐 검색/접기/일시정지/완료리셋</div>
@@ -1806,7 +1823,8 @@ const RiskChip: React.FC<{
   onClick: () => void;
   label: string;
   tone: "all" | TimelineRisk;
-}> = ({ active, onClick, label, tone }) => {
+  title?: string;
+}> = ({ active, onClick, label, tone, title }) => {
   const activeClass =
     tone === "high"
       ? "bg-rose-400/20 border-rose-400/40 text-rose-200"
@@ -1819,6 +1837,7 @@ const RiskChip: React.FC<{
     <button
       type="button"
       onClick={onClick}
+      title={title}
       className={`px-2 py-0.5 rounded text-[10px] border ${active ? activeClass : "border-white/14 text-white/50 hover:bg-white/[0.08]"}`}
     >
       {label}
