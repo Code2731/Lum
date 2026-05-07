@@ -119,6 +119,7 @@ const WarpListView: React.FC<Props> = ({
   const [timelineOpen, setTimelineOpen] = useState(false);
   const [timelineQuery, setTimelineQuery] = useState("");
   const [queueQuery, setQueueQuery] = useState("");
+  const [showShortcutHelp, setShowShortcutHelp] = useState(false);
   const [timelineSelectedIds, setTimelineSelectedIds] = useState<Set<string>>(new Set());
   const [timelinePinnedIds, setTimelinePinnedIds] = useState<Set<string>>(new Set());
   const [timelinePinnedOnly, setTimelinePinnedOnly] = useState(false);
@@ -772,6 +773,17 @@ const WarpListView: React.FC<Props> = ({
                         </span>
                         <button
                           type="button"
+                          className={`text-[10px] px-2 py-0.5 rounded border ${
+                            showShortcutHelp
+                              ? "border-cyan-300/40 bg-cyan-300/14 text-cyan-100"
+                              : "border-white/15 text-white/70 hover:bg-white/[0.08]"
+                          }`}
+                          onClick={() => setShowShortcutHelp((prev) => !prev)}
+                        >
+                          Shortcuts
+                        </button>
+                        <button
+                          type="button"
                           className="text-[10px] px-2 py-0.5 rounded border border-white/15 text-white/70 hover:bg-white/[0.08] disabled:opacity-40"
                           onClick={selectAllTimelineFiltered}
                           disabled={timelineFiltered.length === 0}
@@ -924,6 +936,16 @@ const WarpListView: React.FC<Props> = ({
                           </button>
                         )}
                       </div>
+                      {showShortcutHelp && (
+                        <div className="rounded border border-cyan-300/20 bg-cyan-400/[0.08] px-2 py-1.5 text-[10px] text-cyan-100/90 space-y-0.5">
+                          <div><span className="text-cyan-50">Cmd/Ctrl+Shift+Y</span> 타임라인 열기/닫기</div>
+                          <div><span className="text-cyan-50">Alt+Enter / Alt+↑ / Alt+↓</span> 선택 Jump/이동</div>
+                          <div><span className="text-cyan-50">Alt+Q / Alt+P / Alt+D</span> 큐 검색/일시정지/완료리셋</div>
+                          <div><span className="text-cyan-50">Alt+Z / Cmd/Ctrl+Z</span> 큐 변경 되돌리기</div>
+                          <div><span className="text-cyan-50">Alt+Shift+Z / Cmd/Ctrl+Shift+Z</span> 큐 변경 다시실행</div>
+                          <div><span className="text-cyan-50">Alt+Shift+Enter/↑/↓, Alt+Delete</span> 필터 배치 액션</div>
+                        </div>
+                      )}
                     </div>
                     {retryCompareQueueItems.length > 0 && (
                       <div className="px-2 py-1.5 border-b border-white/10 space-y-1">
