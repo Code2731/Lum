@@ -100,6 +100,7 @@ const WarpListView: React.FC<Props> = ({
   const [deltaOpenId, setDeltaOpenId] = useState<string | null>(null);
   const [timelineOpen, setTimelineOpen] = useState(false);
   const [timelineQuery, setTimelineQuery] = useState("");
+  const [queueQuery, setQueueQuery] = useState("");
   const [timelineSelectedIds, setTimelineSelectedIds] = useState<Set<string>>(new Set());
   const [timelinePinnedIds, setTimelinePinnedIds] = useState<Set<string>>(new Set());
   const [timelinePinnedOnly, setTimelinePinnedOnly] = useState(false);
@@ -210,6 +211,11 @@ const WarpListView: React.FC<Props> = ({
     () => selectedTimelineItems.map((item) => item.block.id),
     [selectedTimelineItems],
   );
+  const filteredQueueItems = useMemo(() => {
+    const q = queueQuery.trim().toLowerCase();
+    if (!q) return retryCompareQueueItems;
+    return retryCompareQueueItems.filter((item) => item.command.toLowerCase().includes(q));
+  }, [retryCompareQueueItems, queueQuery]);
 
   useEffect(() => {
     for (const id of Object.keys(blockSearch)) {
@@ -835,9 +841,29 @@ const WarpListView: React.FC<Props> = ({
                     </div>
                     {retryCompareQueueItems.length > 0 && (
                       <div className="px-2 py-1.5 border-b border-white/10 space-y-1">
-                        <div className="text-[10px] text-white/55">Retry+Compare Queue</div>
+                        <div className="flex items-center gap-1.5 text-[10px] text-white/55">
+                          <span>Retry+Compare Queue</span>
+                          <span className="tabular-nums">표시 {filteredQueueItems.length}/{retryCompareQueueItems.length}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <input
+                            value={queueQuery}
+                            onChange={(e) => setQueueQuery(e.target.value)}
+                            placeholder="큐 검색 (command)"
+                            className="flex-1 bg-[#0f151f] border border-white/10 rounded px-2 py-1 text-[10px] text-white/80 placeholder:text-white/30 outline-none focus-visible:ring-1 focus-visible:ring-cyan-300/45"
+                          />
+                          {queueQuery.trim() !== "" && (
+                            <button
+                              type="button"
+                              className="text-[10px] px-1.5 py-1 rounded border border-white/15 text-white/70 hover:bg-white/[0.08]"
+                              onClick={() => setQueueQuery("")}
+                            >
+                              지우기
+                            </button>
+                          )}
+                        </div>
                         <div className="space-y-1 max-h-24 overflow-y-auto">
-                          {retryCompareQueueItems.map((item, idx) => (
+                          {filteredQueueItems.map((item, idx) => (
                             <div
                               key={item.id}
                               className="flex items-center gap-1.5 rounded border border-white/10 bg-white/[0.03] px-1.5 py-1"
@@ -900,6 +926,9 @@ const WarpListView: React.FC<Props> = ({
                               )}
                             </div>
                           ))}
+                          {filteredQueueItems.length === 0 && (
+                            <div className="text-[10px] text-white/45 px-1 py-1">큐 검색 결과가 없습니다.</div>
+                          )}
                         </div>
                       </div>
                     )}

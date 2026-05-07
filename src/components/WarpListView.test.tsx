@@ -698,6 +698,38 @@ describe("WarpListView delta actions", () => {
     expect(onRemoveRetryCompareQueueItem).toHaveBeenCalledWith("q2");
   });
 
+  it("Retry+Compare 큐 검색/지우기", () => {
+    render(
+      <WarpListView
+        blocks={blocks}
+        retryCompareQueueDepth={3}
+        retryCompareQueueWaiting={3}
+        retryCompareQueueItems={[
+          { id: "q1", command: "npm test" },
+          { id: "q2", command: "pnpm lint" },
+          { id: "q3", command: "npm run build" },
+        ]}
+        compareResultByBlock={{
+          b2: {
+            added: 1,
+            removed: 1,
+            preview: "test changed",
+            addedLines: ["new line"],
+            removedLines: ["old line"],
+            comparedAt: now,
+          },
+        }}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Δ Timeline (1)" }));
+    fireEvent.change(screen.getByPlaceholderText("큐 검색 (command)"), { target: { value: "lint" } });
+    expect(screen.getByText("pnpm lint")).toBeInTheDocument();
+    expect(screen.queryByText("npm run build")).not.toBeInTheDocument();
+    expect(screen.getByText("표시 1/3")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "지우기" }));
+    expect(screen.getByText("표시 3/3")).toBeInTheDocument();
+  });
+
   it("Retry+Compare 현재 실행 커맨드 표시", () => {
     render(
       <WarpListView
