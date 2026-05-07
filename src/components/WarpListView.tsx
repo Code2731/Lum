@@ -31,6 +31,7 @@ const WarpListView: React.FC<Props> = ({ blocks, onExecute, onAskAIForFix }) => 
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
   const [blockSearch, setBlockSearch] = useState<Record<string, string>>({});
   const [blockSearchCursor, setBlockSearchCursor] = useState<Record<string, number>>({});
+  const [activeSearchBlockId, setActiveSearchBlockId] = useState<string | null>(null);
   const outputRefs = useRef<Record<string, HTMLPreElement | null>>({});
 
   const toggle = (id: string) =>
@@ -73,9 +74,36 @@ const WarpListView: React.FC<Props> = ({ blocks, onExecute, onAskAIForFix }) => 
       if (!root) continue;
       const active = root.querySelector<HTMLElement>(".lum-match-active");
       if (!active) continue;
-      active.scrollIntoView({ block: "nearest", inline: "nearest" });
+      if (typeof active.scrollIntoView === "function") {
+        active.scrollIntoView({ block: "nearest", inline: "nearest" });
+      }
     }
   }, [blockSearchCursor, blockSearch, expanded]);
+
+  const moveBlockSearchCursor = (blockId: string, dir: 1 | -1) => {
+    const block = blocks.find((b) => b.id === blockId);
+    if (!block) return;
+    const q = blockSearch[blockId] ?? "";
+    const matchCount = countMatches(block.output, q);
+    if (matchCount <= 0) return;
+    setBlockSearchCursor((prev) => ({
+      ...prev,
+      [blockId]: ((prev[blockId] ?? 0) + dir + matchCount) % matchCount,
+    }));
+  };
+
+  useEffect(() => {
+    const onWindowKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== "F3") return;
+      if (!activeSearchBlockId) return;
+      const q = (blockSearch[activeSearchBlockId] ?? "").trim();
+      if (!q) return;
+      e.preventDefault();
+      moveBlockSearchCursor(activeSearchBlockId, e.shiftKey ? -1 : 1);
+    };
+    window.addEventListener("keydown", onWindowKeyDown);
+    return () => window.removeEventListener("keydown", onWindowKeyDown);
+  }, [activeSearchBlockId, blockSearch, blocks]);
 
   const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const countMatches = (text: string, needle: string) => {
@@ -134,6 +162,7 @@ const WarpListView: React.FC<Props> = ({ blocks, onExecute, onAskAIForFix }) => 
     setMenuOpenId(null);
     setBlockSearch((prev) => (prev[id] != null ? prev : { ...prev, [id]: "" }));
     setBlockSearchCursor((prev) => ({ ...prev, [id]: 0 }));
+    setActiveSearchBlockId(id);
   };
 
   return (
@@ -166,6 +195,7 @@ const WarpListView: React.FC<Props> = ({ blocks, onExecute, onAskAIForFix }) => 
         const localQuery = blockSearch[b.id] ?? "";
         const matchCount = hasOutput ? countMatches(b.output, localQuery) : 0;
         const cursor = Math.min(blockSearchCursor[b.id] ?? 0, Math.max(0, matchCount - 1));
+        const moveCursor = (dir: 1 | -1) => moveBlockSearchCursor(b.id, dir);
 
         return (
           <div
@@ -312,6 +342,14 @@ const WarpListView: React.FC<Props> = ({ blocks, onExecute, onAskAIForFix }) => 
                     onChange={(e) => {
                       setBlockSearch((prev) => ({ ...prev, [b.id]: e.target.value }));
                       setBlockSearchCursor((prev) => ({ ...prev, [b.id]: 0 }));
+                      setActiveSearchBlockId(b.id);
+                    }}
+                    onFocus={() => setActiveSearchBlockId(b.id)}
+                    onKeyDown={(e) => {
+                      if (e.key !== "Enter" && e.key !== "F3") return;
+                      e.preventDefault();
+                      e.stopPropagation();
+                      moveCursor(e.shiftKey ? -1 : 1);
                     }}
                     placeholder="블록 내 검색"
                     className="flex-1 bg-transparent border-none outline-none text-[10px] text-white/80 placeholder:text-white/30"
@@ -324,11 +362,7 @@ const WarpListView: React.FC<Props> = ({ blocks, onExecute, onAskAIForFix }) => 
                         className="text-[10px] px-1 py-0.5 rounded border border-white/14 text-white/58 hover:text-white/80 hover:bg-white/[0.08]"
                         onClick={(e) => {
                           e.stopPropagation();
-                          if (matchCount <= 0) return;
-                          setBlockSearchCursor((prev) => ({
-                            ...prev,
-                            [b.id]: ((prev[b.id] ?? 0) - 1 + matchCount) % matchCount,
-                          }));
+                          moveCursor(-1);
                         }}
                       >
                         Prev
@@ -338,11 +372,7 @@ const WarpListView: React.FC<Props> = ({ blocks, onExecute, onAskAIForFix }) => 
                         className="text-[10px] px-1 py-0.5 rounded border border-white/14 text-white/58 hover:text-white/80 hover:bg-white/[0.08]"
                         onClick={(e) => {
                           e.stopPropagation();
-                          if (matchCount <= 0) return;
-                          setBlockSearchCursor((prev) => ({
-                            ...prev,
-                            [b.id]: ((prev[b.id] ?? 0) + 1) % matchCount,
-                          }));
+                          moveCursor(1);
                         }}
                       >
                         Next
