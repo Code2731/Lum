@@ -62,6 +62,10 @@ interface RetryComparePending {
   baselineOutput: string;
   queuedAt: number;
 }
+interface RetryCompareTask {
+  command: string;
+  baselineOutput: string;
+}
 
 interface RetryCompareResult {
   added: number;
@@ -371,6 +375,7 @@ const App: React.FC = () => {
   const [dismissedBlockId, setDismissedBlockId] = useState<string | null>(null);
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
   const [retryComparePending, setRetryComparePending] = useState<RetryComparePending | null>(null);
+  const [retryCompareQueue, setRetryCompareQueue] = useState<RetryCompareTask[]>([]);
   const [retryCompareByBlock, setRetryCompareByBlock] = useState<Record<string, RetryCompareResult>>(() => loadRetryCompareCache());
   const aiInputRef = useRef<HTMLInputElement>(null);
   const viewModeRef = useRef(viewMode);
@@ -447,6 +452,27 @@ const App: React.FC = () => {
     });
     setRetryComparePending(null);
   }, [cmdBlocks, retryComparePending, notifCenter]);
+  useEffect(() => {
+    if (retryComparePending) return;
+    if (retryCompareQueue.length === 0) return;
+    const write = ptyWriteRefs.current.get(activePaneIdRef.current);
+    if (!write) return;
+    const [next, ...rest] = retryCompareQueue;
+    setRetryCompareQueue(rest);
+    setRetryComparePending({
+      command: next.command,
+      baselineOutput: next.baselineOutput,
+      queuedAt: Date.now(),
+    });
+    write(next.command + "\r");
+  }, [retryComparePending, retryCompareQueue, ptyWriteRefs, activePaneIdRef]);
+  const enqueueRetryCompare = useCallback((blocks: CommandBlock[]) => {
+    const tasks = blocks
+      .filter((b) => b.command.trim() !== "")
+      .map((b) => ({ command: b.command, baselineOutput: b.output }));
+    if (tasks.length === 0) return;
+    setRetryCompareQueue((prev) => [...prev, ...tasks]);
+  }, []);
 
   useEffect(() => {
     if (!selectedBlockId) return;
@@ -1178,14 +1204,10 @@ const App: React.FC = () => {
               }}
               compareResultByBlock={retryCompareByBlock}
               onRetryWithDiff={(block: CommandBlock) => {
-                const write = ptyWriteRefs.current.get(activePaneIdRef.current);
-                if (!write || !block.command.trim()) return;
-                setRetryComparePending({
-                  command: block.command,
-                  baselineOutput: block.output,
-                  queuedAt: Date.now(),
-                });
-                write(block.command + "\r");
+                enqueueRetryCompare([block]);
+              }}
+              onRetrySelectedWithDiff={(blocks) => {
+                enqueueRetryCompare(blocks);
               }}
               onExplainDiff={(text) => {
                 handleAskAI([
@@ -1210,6 +1232,7 @@ const App: React.FC = () => {
               onClearCompareResults={() => {
                 setRetryCompareByBlock({});
                 setRetryComparePending(null);
+                setRetryCompareQueue([]);
               }}
             />
           )}

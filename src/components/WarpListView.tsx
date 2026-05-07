@@ -9,6 +9,7 @@ interface Props {
   onExecute?: (cmd: string) => void;
   onAskAIForFix?: (text: string) => void;
   onRetryWithDiff?: (block: CommandBlock) => void;
+  onRetrySelectedWithDiff?: (blocks: CommandBlock[]) => void;
   onExplainDiff?: (text: string) => void;
   onExplainAllDiffs?: (text: string) => void;
   onClearCompareResults?: () => void;
@@ -42,6 +43,7 @@ const WarpListView: React.FC<Props> = ({
   onExecute,
   onAskAIForFix,
   onRetryWithDiff,
+  onRetrySelectedWithDiff,
   onExplainDiff,
   onExplainAllDiffs,
   onClearCompareResults,
@@ -559,6 +561,18 @@ const WarpListView: React.FC<Props> = ({
                         >
                           Copy Selected
                         </button>
+                        {onRetrySelectedWithDiff && (
+                          <button
+                            type="button"
+                            className="text-[10px] px-2 py-0.5 rounded border border-cyan-300/30 text-cyan-200 hover:bg-cyan-300/12 disabled:opacity-40"
+                            onClick={() => {
+                              onRetrySelectedWithDiff(selectedTimelineItems.map((item) => item.block));
+                            }}
+                            disabled={selectedTimelineItems.length === 0}
+                          >
+                            선택 Retry+Compare
+                          </button>
+                        )}
                         <button
                           type="button"
                           className="text-[10px] px-2 py-0.5 rounded border border-amber-300/30 text-amber-200 hover:bg-amber-300/12 disabled:opacity-40"

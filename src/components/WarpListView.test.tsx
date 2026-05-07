@@ -466,6 +466,52 @@ describe("WarpListView delta actions", () => {
     expect(copied).not.toContain("npm test");
   });
 
+  it("Δ Timeline 선택 Retry+Compare가 선택 항목 전달", () => {
+    const onRetrySelectedWithDiff = vi.fn();
+    render(
+      <WarpListView
+        blocks={[
+          ...blocks,
+          {
+            id: "b3",
+            command: "pnpm lint",
+            output: "ok",
+            exitCode: 0,
+            startedAt: now - 2000,
+            endedAt: now - 1000,
+          },
+        ]}
+        onRetrySelectedWithDiff={onRetrySelectedWithDiff}
+        compareResultByBlock={{
+          b2: {
+            added: 1,
+            removed: 1,
+            preview: "test changed",
+            addedLines: ["new line"],
+            removedLines: ["old line"],
+            comparedAt: now,
+          },
+          b3: {
+            added: 2,
+            removed: 0,
+            preview: "lint fixed",
+            addedLines: ["a", "b"],
+            removedLines: [],
+            comparedAt: now - 3000,
+          },
+        }}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Δ Timeline (2)" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "pnpm lint 선택" }));
+    fireEvent.click(screen.getByRole("button", { name: "선택 Retry+Compare" }));
+    expect(onRetrySelectedWithDiff).toHaveBeenCalledTimes(1);
+    const payload = onRetrySelectedWithDiff.mock.calls[0]?.[0] ?? [];
+    expect(Array.isArray(payload)).toBe(true);
+    expect(payload).toHaveLength(1);
+    expect(payload[0]?.id).toBe("b3");
+  });
+
   it("Δ Timeline 선택 후 AI 선택요약이 선택 항목만 전달", () => {
     const onExplainAllDiffs = vi.fn();
     render(
