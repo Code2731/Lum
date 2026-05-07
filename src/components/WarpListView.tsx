@@ -19,6 +19,7 @@ interface Props {
     comparedAt: number;
   }>;
 }
+type CompareResult = NonNullable<Props["compareResultByBlock"]>[string];
 
 const SyntaxCmd: React.FC<{ cmd: string }> = ({ cmd }) => (
   <>
@@ -50,10 +51,13 @@ const WarpListView: React.FC<Props> = ({
   const [blockSearchCursor, setBlockSearchCursor] = useState<Record<string, number>>({});
   const [activeSearchBlockId, setActiveSearchBlockId] = useState<string | null>(null);
   const [deltaOpenId, setDeltaOpenId] = useState<string | null>(null);
+  const [timelineOpen, setTimelineOpen] = useState(false);
   const outputRefs = useRef<Record<string, HTMLPreElement | null>>({});
   const blockRowRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const deltaButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const deltaPopoverRef = useRef<HTMLDivElement | null>(null);
+  const timelineButtonRef = useRef<HTMLButtonElement | null>(null);
+  const timelinePanelRef = useRef<HTMLDivElement | null>(null);
 
   const toggle = (id: string) =>
     setExpanded((prev) => {
@@ -97,6 +101,14 @@ const WarpListView: React.FC<Props> = ({
     () => filtered.filter((b) => !!compareResultByBlock[b.id]).map((b) => b.id),
     [filtered, compareResultByBlock],
   );
+  const comparedTimeline = useMemo(
+    () =>
+      blocks
+        .filter((b) => !!compareResultByBlock[b.id])
+        .map((b) => ({ block: b, compare: compareResultByBlock[b.id] as CompareResult }))
+        .sort((a, b) => b.compare.comparedAt - a.compare.comparedAt),
+    [blocks, compareResultByBlock],
+  );
 
   useEffect(() => {
     for (const id of Object.keys(blockSearch)) {
@@ -127,6 +139,10 @@ const WarpListView: React.FC<Props> = ({
       setDeltaOpenId(null);
     }
   }, [deltaOpenId, filtered]);
+  useEffect(() => {
+    if (comparedCount > 0) return;
+    setTimelineOpen(false);
+  }, [comparedCount]);
 
   const moveBlockSearchCursor = (blockId: string, dir: 1 | -1) => {
     const block = blocks.find((b) => b.id === blockId);
@@ -234,7 +250,7 @@ const WarpListView: React.FC<Props> = ({
     const tag = el.tagName;
     return tag === "INPUT" || tag === "TEXTAREA" || el.isContentEditable;
   };
-  const buildDiffText = (command: string, compare: NonNullable<Props["compareResultByBlock"]>[string]) => {
+  const buildDiffText = (command: string, compare: CompareResult) => {
     const lines = [
       `command: ${command}`,
       `delta: +${compare.added} / -${compare.removed}`,
@@ -283,6 +299,26 @@ const WarpListView: React.FC<Props> = ({
       window.removeEventListener("mousedown", onMouseDown);
     };
   }, [deltaOpenId]);
+  useEffect(() => {
+    if (!timelineOpen) return;
+    const onWindowKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      setTimelineOpen(false);
+    };
+    const onMouseDown = (e: MouseEvent) => {
+      const target = e.target as Node | null;
+      if (!target) return;
+      if (timelinePanelRef.current?.contains(target)) return;
+      if (timelineButtonRef.current?.contains(target)) return;
+      setTimelineOpen(false);
+    };
+    window.addEventListener("keydown", onWindowKeyDown);
+    window.addEventListener("mousedown", onMouseDown);
+    return () => {
+      window.removeEventListener("keydown", onWindowKeyDown);
+      window.removeEventListener("mousedown", onMouseDown);
+    };
+  }, [timelineOpen]);
 
   return (
     <div className="p-3 space-y-1.5 overflow-y-auto h-full">
@@ -303,6 +339,85 @@ const WarpListView: React.FC<Props> = ({
           <FilterChip active={statusFilter === "compared"} onClick={() => setStatusFilter("compared")} label={`비교 ${comparedCount}`} tone="info" />
           {comparedCount > 0 && (
             <>
+              <div className="relative">
+                <button
+                  ref={timelineButtonRef}
+                  type="button"
+                  onClick={() => setTimelineOpen((prev) => !prev)}
+                  className="text-[10px] px-2 py-0.5 rounded border border-cyan-400/30 text-cyan-200/90 hover:bg-cyan-400/15"
+                >
+                  Δ Timeline ({comparedCount})
+                </button>
+                {timelineOpen && (
+                  <div
+                    ref={timelinePanelRef}
+                    className="absolute left-0 top-6 z-30 w-[440px] rounded-lg border border-cyan-300/25 bg-[#0b131d]/97 shadow-2xl overflow-hidden"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div className="px-2.5 py-1.5 border-b border-white/10 text-[10px] text-cyan-200">
+                      최근 비교 히스토리
+                    </div>
+                    <div className="max-h-72 overflow-y-auto p-2 space-y-1.5">
+                      {comparedTimeline.map(({ block, compare }) => (
+                        <div
+                          key={block.id}
+                          className="rounded border border-white/10 bg-white/[0.02] px-2 py-1.5"
+                        >
+                          <div className="text-[10px] text-white/80 font-mono truncate">
+                            $ {block.command}
+                          </div>
+                          <div className="mt-0.5 text-[10px] text-cyan-200/90 tabular-nums">
+                            Δ +{compare.added}/-{compare.removed}
+                            <span className="ml-1.5 text-white/45">
+                              {new Date(compare.comparedAt).toLocaleTimeString()}
+                            </span>
+                          </div>
+                          {compare.preview && (
+                            <div className="mt-0.5 text-[10px] text-white/50 truncate">{compare.preview}</div>
+                          )}
+                          <div className="mt-1 flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              className="text-[10px] px-2 py-0.5 rounded border border-white/15 text-white/70 hover:bg-white/[0.08]"
+                              onClick={() => {
+                                setExpanded((prev) => {
+                                  const next = new Set(prev);
+                                  next.add(block.id);
+                                  return next;
+                                });
+                                setDeltaOpenId(block.id);
+                                setTimelineOpen(false);
+                              }}
+                            >
+                              Jump
+                            </button>
+                            <button
+                              type="button"
+                              className="text-[10px] px-2 py-0.5 rounded border border-white/15 text-white/70 hover:bg-white/[0.08]"
+                              onClick={() => {
+                                navigator.clipboard.writeText(buildDiffText(block.command, compare)).catch(() => {});
+                              }}
+                            >
+                              Copy
+                            </button>
+                            {onExplainDiff && (
+                              <button
+                                type="button"
+                                className="text-[10px] px-2 py-0.5 rounded border border-cyan-300/30 text-cyan-200 hover:bg-cyan-300/12"
+                                onClick={() => {
+                                  onExplainDiff(buildDiffText(block.command, compare));
+                                }}
+                              >
+                                AI 해석
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
               <button
                 type="button"
                 onClick={() => navigateCompared(-1)}

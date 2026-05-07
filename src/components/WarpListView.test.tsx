@@ -207,4 +207,68 @@ describe("WarpListView delta actions", () => {
     fireEvent.keyDown(window, { key: "Escape" });
     expect(screen.queryByText(/Retry Compare/)).not.toBeInTheDocument();
   });
+
+  it("Δ Timeline에서 Jump로 해당 비교 팝오버를 연다", () => {
+    render(
+      <WarpListView
+        blocks={[
+          ...blocks,
+          {
+            id: "b3",
+            command: "npm run build",
+            output: "another",
+            exitCode: 0,
+            startedAt: now - 2000,
+            endedAt: now - 1000,
+          },
+        ]}
+        compareResultByBlock={{
+          b2: {
+            added: 1,
+            removed: 1,
+            preview: "",
+            addedLines: ["new line"],
+            removedLines: ["old line"],
+            comparedAt: now,
+          },
+          b3: {
+            added: 2,
+            removed: 0,
+            preview: "",
+            addedLines: ["a", "b"],
+            removedLines: [],
+            comparedAt: now - 5000,
+          },
+        }}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Δ Timeline (2)" }));
+    expect(screen.getByText("최근 비교 히스토리")).toBeInTheDocument();
+    fireEvent.click(screen.getAllByRole("button", { name: "Jump" })[0]);
+    expect(screen.getByText("Retry Compare · +1 / -1")).toBeInTheDocument();
+  });
+
+  it("Δ Timeline은 Escape로 닫힘", () => {
+    render(
+      <WarpListView
+        blocks={blocks}
+        compareResultByBlock={{
+          b2: {
+            added: 1,
+            removed: 1,
+            preview: "",
+            addedLines: ["new line"],
+            removedLines: ["old line"],
+            comparedAt: now,
+          },
+        }}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Δ Timeline (1)" }));
+    expect(screen.getByText("최근 비교 히스토리")).toBeInTheDocument();
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(screen.queryByText("최근 비교 히스토리")).not.toBeInTheDocument();
+  });
 });
