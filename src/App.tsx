@@ -1236,6 +1236,14 @@ const App: React.FC = () => {
                   return [picked, ...prev.slice(0, idx), ...prev.slice(idx + 1)];
                 });
               }}
+              onDemoteRetryCompareQueueItem={(id) => {
+                setRetryCompareQueue((prev) => {
+                  const idx = prev.findIndex((t) => t.id === id);
+                  if (idx < 0 || idx >= prev.length - 1) return prev;
+                  const picked = prev[idx];
+                  return [...prev.slice(0, idx), ...prev.slice(idx + 1), picked];
+                });
+              }}
               onRemoveRetryCompareQueueItem={(id) => {
                 setRetryCompareQueue((prev) => prev.filter((t) => t.id !== id));
               }}

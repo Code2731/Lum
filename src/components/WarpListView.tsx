@@ -19,6 +19,7 @@ interface Props {
   onToggleRetryCompareQueuePaused?: () => void;
   retryCompareQueueItems?: Array<{ id: string; command: string }>;
   onPromoteRetryCompareQueueItem?: (id: string) => void;
+  onDemoteRetryCompareQueueItem?: (id: string) => void;
   onRemoveRetryCompareQueueItem?: (id: string) => void;
   onClearRetryCompareQueue?: () => void;
   onExplainDiff?: (text: string) => void;
@@ -75,6 +76,7 @@ const WarpListView: React.FC<Props> = ({
   onToggleRetryCompareQueuePaused,
   retryCompareQueueItems = [],
   onPromoteRetryCompareQueueItem,
+  onDemoteRetryCompareQueueItem,
   onRemoveRetryCompareQueueItem,
   onClearRetryCompareQueue,
   onExplainDiff,
@@ -836,6 +838,16 @@ const WarpListView: React.FC<Props> = ({
                                   onClick={() => onPromoteRetryCompareQueueItem(item.id)}
                                 >
                                   맨앞
+                                </button>
+                              )}
+                              {onDemoteRetryCompareQueueItem && (
+                                <button
+                                  type="button"
+                                  aria-label={`queue-demote-${idx + 1}`}
+                                  className="text-[10px] px-1 py-0.5 rounded border border-cyan-300/30 text-cyan-200 hover:bg-cyan-300/12"
+                                  onClick={() => onDemoteRetryCompareQueueItem(item.id)}
+                                >
+                                  맨뒤
                                 </button>
                               )}
                               {onRemoveRetryCompareQueueItem && (
