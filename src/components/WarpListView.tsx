@@ -409,6 +409,22 @@ const WarpListView: React.FC<Props> = ({
   useEffect(() => {
     if (!timelineOpen) return;
     const onWindowKeyDown = (e: KeyboardEvent) => {
+      if (isTypingTarget(e.target)) return;
+      if (e.altKey && e.key === "ArrowUp") {
+        e.preventDefault();
+        navigateSelectedTimeline(-1);
+        return;
+      }
+      if (e.altKey && e.key === "ArrowDown") {
+        e.preventDefault();
+        navigateSelectedTimeline(1);
+        return;
+      }
+      if (e.altKey && e.key === "Enter") {
+        e.preventDefault();
+        navigateSelectedTimeline(1);
+        return;
+      }
       if (e.key !== "Escape") return;
       setTimelineOpen(false);
     };
@@ -425,7 +441,7 @@ const WarpListView: React.FC<Props> = ({
       window.removeEventListener("keydown", onWindowKeyDown);
       window.removeEventListener("mousedown", onMouseDown);
     };
-  }, [timelineOpen]);
+  }, [timelineOpen, selectedTimelineIds, deltaOpenId]);
 
   return (
     <div className="p-3 space-y-1.5 overflow-y-auto h-full">
@@ -512,6 +528,7 @@ const WarpListView: React.FC<Props> = ({
                           type="button"
                           className="text-[10px] px-2 py-0.5 rounded border border-white/15 text-white/70 hover:bg-white/[0.08] disabled:opacity-40"
                           onClick={() => navigateSelectedTimeline(1)}
+                          title="Alt+Enter"
                           disabled={selectedTimelineIds.length === 0}
                         >
                           Jump Selected
@@ -520,6 +537,7 @@ const WarpListView: React.FC<Props> = ({
                           type="button"
                           className="text-[10px] px-2 py-0.5 rounded border border-white/15 text-white/70 hover:bg-white/[0.08] disabled:opacity-40"
                           onClick={() => navigateSelectedTimeline(-1)}
+                          title="Alt+↑"
                           disabled={selectedTimelineIds.length === 0}
                         >
                           Prev Selected
@@ -528,6 +546,7 @@ const WarpListView: React.FC<Props> = ({
                           type="button"
                           className="text-[10px] px-2 py-0.5 rounded border border-white/15 text-white/70 hover:bg-white/[0.08] disabled:opacity-40"
                           onClick={() => navigateSelectedTimeline(1)}
+                          title="Alt+↓"
                           disabled={selectedTimelineIds.length === 0}
                         >
                           Next Selected
