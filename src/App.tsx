@@ -77,6 +77,12 @@ interface RetryCompareResult {
   comparedAt: number;
 }
 const RETRY_COMPARE_STORAGE_KEY = "lum.retryCompareByBlock.v1";
+const RETRY_COMPARE_RUNTIME_STORAGE_KEY = "lum.retryCompareRuntime.v1";
+interface RetryCompareRuntimeCache {
+  queue: RetryCompareTask[];
+  paused: boolean;
+  completedCount: number;
+}
 function loadRetryCompareCache(): Record<string, RetryCompareResult> {
   try {
     const raw = localStorage.getItem(RETRY_COMPARE_STORAGE_KEY);
@@ -93,6 +99,36 @@ function loadRetryCompareCache(): Record<string, RetryCompareResult> {
 function saveRetryCompareCache(byBlock: Record<string, RetryCompareResult>): void {
   try {
     localStorage.setItem(RETRY_COMPARE_STORAGE_KEY, JSON.stringify({ byBlock }));
+  } catch {
+    // noop
+  }
+}
+function loadRetryCompareRuntimeCache(): RetryCompareRuntimeCache {
+  try {
+    const raw = localStorage.getItem(RETRY_COMPARE_RUNTIME_STORAGE_KEY);
+    if (!raw) return { queue: [], paused: false, completedCount: 0 };
+    const parsed = JSON.parse(raw) as unknown;
+    if (!parsed || typeof parsed !== "object") return { queue: [], paused: false, completedCount: 0 };
+    const obj = parsed as { queue?: unknown; paused?: unknown; completedCount?: unknown };
+    const queue = Array.isArray(obj.queue)
+      ? obj.queue.filter((x): x is RetryCompareTask => {
+        if (!x || typeof x !== "object") return false;
+        const v = x as Partial<RetryCompareTask>;
+        return typeof v.id === "string" && typeof v.command === "string" && typeof v.baselineOutput === "string";
+      })
+      : [];
+    const paused = typeof obj.paused === "boolean" ? obj.paused : false;
+    const completedCount = typeof obj.completedCount === "number" && Number.isFinite(obj.completedCount)
+      ? Math.max(0, Math.floor(obj.completedCount))
+      : 0;
+    return { queue, paused, completedCount };
+  } catch {
+    return { queue: [], paused: false, completedCount: 0 };
+  }
+}
+function saveRetryCompareRuntimeCache(cache: RetryCompareRuntimeCache): void {
+  try {
+    localStorage.setItem(RETRY_COMPARE_RUNTIME_STORAGE_KEY, JSON.stringify(cache));
   } catch {
     // noop
   }
@@ -376,9 +412,9 @@ const App: React.FC = () => {
   const [dismissedBlockId, setDismissedBlockId] = useState<string | null>(null);
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
   const [retryComparePending, setRetryComparePending] = useState<RetryComparePending | null>(null);
-  const [retryCompareQueue, setRetryCompareQueue] = useState<RetryCompareTask[]>([]);
-  const [retryCompareQueuePaused, setRetryCompareQueuePaused] = useState(false);
-  const [retryCompareCompletedCount, setRetryCompareCompletedCount] = useState(0);
+  const [retryCompareQueue, setRetryCompareQueue] = useState<RetryCompareTask[]>(() => loadRetryCompareRuntimeCache().queue);
+  const [retryCompareQueuePaused, setRetryCompareQueuePaused] = useState(() => loadRetryCompareRuntimeCache().paused);
+  const [retryCompareCompletedCount, setRetryCompareCompletedCount] = useState(() => loadRetryCompareRuntimeCache().completedCount);
   const [retryCompareByBlock, setRetryCompareByBlock] = useState<Record<string, RetryCompareResult>>(() => loadRetryCompareCache());
   const aiInputRef = useRef<HTMLInputElement>(null);
   const viewModeRef = useRef(viewMode);
@@ -492,6 +528,13 @@ const App: React.FC = () => {
   useEffect(() => {
     saveRetryCompareCache(retryCompareByBlock);
   }, [retryCompareByBlock]);
+  useEffect(() => {
+    saveRetryCompareRuntimeCache({
+      queue: retryCompareQueue,
+      paused: retryCompareQueuePaused,
+      completedCount: retryCompareCompletedCount,
+    });
+  }, [retryCompareQueue, retryCompareQueuePaused, retryCompareCompletedCount]);
 
   // Warp prompt 느낌의 탭 Git 칩: 브랜치 + 변경 파일 수.
   useEffect(() => {
