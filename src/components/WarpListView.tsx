@@ -471,6 +471,10 @@ const WarpListView: React.FC<Props> = ({
       return next;
     });
   };
+  const clearTimelineSelection = () => {
+    setTimelineSelectedIds(new Set());
+    setTimelineSelectedOnly(false);
+  };
   const invertTimelineFilteredSelection = () => {
     if (timelineFiltered.length === 0) return;
     setTimelineSelectedIds((prev) => {
@@ -683,6 +687,13 @@ const WarpListView: React.FC<Props> = ({
         return;
       }
       if (e.altKey && (e.key === "a" || e.key === "A")) {
+        if (e.shiftKey) {
+          if (selectedTimelineIds.length > 0) {
+            e.preventDefault();
+            clearTimelineSelection();
+          }
+          return;
+        }
         if (timelineFiltered.length > 0) {
           e.preventDefault();
           selectAllTimelineFiltered();
@@ -802,6 +813,7 @@ const WarpListView: React.FC<Props> = ({
     timelineFiltered.length,
     timelineSelectedIds.length,
     selectAllTimelineFiltered,
+    clearTimelineSelection,
     invertTimelineFilteredSelection,
     toggleTimelineSelectedOnly,
     selectHighRiskTimelineFiltered,
@@ -1033,8 +1045,9 @@ const WarpListView: React.FC<Props> = ({
                         <button
                           type="button"
                           className="text-[10px] px-2 py-0.5 rounded border border-white/15 text-white/70 hover:bg-white/[0.08] disabled:opacity-40"
-                          onClick={() => setTimelineSelectedIds(new Set())}
+                          onClick={clearTimelineSelection}
                           disabled={timelineSelectedIds.size === 0}
+                          title="Alt+Shift+A"
                         >
                           선택 해제
                         </button>
@@ -1235,6 +1248,7 @@ const WarpListView: React.FC<Props> = ({
                           <div><span className="text-cyan-50">Alt+F / Cmd/Ctrl+F</span> 타임라인 검색창 포커스</div>
                           <div><span className="text-cyan-50">Alt+R</span> 타임라인 필터 상태 리셋</div>
                           <div><span className="text-cyan-50">Alt+A</span> 현재 목록 선택 전체</div>
+                          <div><span className="text-cyan-50">Alt+Shift+A</span> 선택 항목 전체 해제</div>
                           <div><span className="text-cyan-50">Alt+I</span> 현재 목록 선택 반전</div>
                           <div><span className="text-cyan-50">Alt+O</span> 선택 항목만 보기 토글</div>
                           <div><span className="text-cyan-50">Alt+H</span> 고위험 항목 빠른 선택</div>
