@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { CheckCircle2, XCircle, Clock, ChevronDown, ChevronRight, Copy, TerminalSquare, Search, MoreHorizontal, Share2, RotateCcw } from "lucide-react";
 import { IconButton } from "@/components/ui/icon-button";
 import { tokenizeShell, TOKEN_COLORS } from "../utils/shellSyntax";
@@ -43,6 +43,7 @@ const WarpListView: React.FC<Props> = ({ blocks, onExecute, onAskAIForFix, onRet
   const [activeSearchBlockId, setActiveSearchBlockId] = useState<string | null>(null);
   const [deltaOpenId, setDeltaOpenId] = useState<string | null>(null);
   const outputRefs = useRef<Record<string, HTMLPreElement | null>>({});
+  const blockRowRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   const toggle = (id: string) =>
     setExpanded((prev) => {
@@ -82,6 +83,10 @@ const WarpListView: React.FC<Props> = ({ blocks, onExecute, onAskAIForFix, onRet
   const failedCount = blocks.filter((b) => b.exitCode !== 0 && b.exitCode !== null).length;
   const successCount = blocks.length - failedCount;
   const comparedCount = blocks.filter((b) => !!compareResultByBlock[b.id]).length;
+  const filteredComparedIds = useMemo(
+    () => filtered.filter((b) => !!compareResultByBlock[b.id]).map((b) => b.id),
+    [filtered, compareResultByBlock],
+  );
 
   useEffect(() => {
     for (const id of Object.keys(blockSearch)) {
@@ -96,6 +101,15 @@ const WarpListView: React.FC<Props> = ({ blocks, onExecute, onAskAIForFix, onRet
       }
     }
   }, [blockSearchCursor, blockSearch, expanded]);
+
+  useEffect(() => {
+    if (!deltaOpenId) return;
+    const row = blockRowRefs.current[deltaOpenId];
+    if (!row) return;
+    if (typeof row.scrollIntoView === "function") {
+      row.scrollIntoView({ block: "nearest", inline: "nearest" });
+    }
+  }, [deltaOpenId]);
 
   const moveBlockSearchCursor = (blockId: string, dir: 1 | -1) => {
     const block = blocks.find((b) => b.id === blockId);
@@ -182,6 +196,22 @@ const WarpListView: React.FC<Props> = ({ blocks, onExecute, onAskAIForFix, onRet
     setActiveSearchBlockId(id);
   };
 
+  const navigateCompared = (dir: 1 | -1) => {
+    if (filteredComparedIds.length === 0) return;
+    const currentIdx = deltaOpenId ? filteredComparedIds.indexOf(deltaOpenId) : -1;
+    const nextIdx = currentIdx < 0
+      ? (dir > 0 ? 0 : filteredComparedIds.length - 1)
+      : (currentIdx + dir + filteredComparedIds.length) % filteredComparedIds.length;
+    const id = filteredComparedIds[nextIdx];
+    if (!id) return;
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      next.add(id);
+      return next;
+    });
+    setDeltaOpenId(id);
+  };
+
   return (
     <div className="p-3 space-y-1.5 overflow-y-auto h-full">
       <div className="sticky top-0 z-10 mb-2 rounded-xl border border-white/10 bg-[#0f151f]/92 backdrop-blur-sm p-2 space-y-2">
@@ -199,6 +229,24 @@ const WarpListView: React.FC<Props> = ({ blocks, onExecute, onAskAIForFix, onRet
           <FilterChip active={statusFilter === "failed"} onClick={() => setStatusFilter("failed")} label={`실패 ${failedCount}`} tone="danger" />
           <FilterChip active={statusFilter === "success"} onClick={() => setStatusFilter("success")} label={`성공 ${successCount}`} tone="success" />
           <FilterChip active={statusFilter === "compared"} onClick={() => setStatusFilter("compared")} label={`비교 ${comparedCount}`} tone="info" />
+          {comparedCount > 0 && (
+            <>
+              <button
+                type="button"
+                onClick={() => navigateCompared(-1)}
+                className="text-[10px] px-2 py-0.5 rounded border border-cyan-400/30 text-cyan-200/90 hover:bg-cyan-400/15"
+              >
+                Prev Δ
+              </button>
+              <button
+                type="button"
+                onClick={() => navigateCompared(1)}
+                className="text-[10px] px-2 py-0.5 rounded border border-cyan-400/30 text-cyan-200/90 hover:bg-cyan-400/15"
+              >
+                Next Δ
+              </button>
+            </>
+          )}
           <span className="ml-auto text-[10px] text-white/34 tabular-nums">
             표시 {filtered.length}
           </span>
@@ -247,6 +295,7 @@ const WarpListView: React.FC<Props> = ({ blocks, onExecute, onAskAIForFix, onRet
         return (
           <div
             key={b.id}
+            ref={(el) => { blockRowRefs.current[b.id] = el; }}
             className={`rounded-xl border overflow-hidden ${
               ok ? "border-white/8 bg-white/[0.018]" : "border-red-500/20 bg-red-500/[0.03]"
             }`}
