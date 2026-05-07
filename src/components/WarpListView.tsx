@@ -958,6 +958,12 @@ const WarpListView: React.FC<Props> = ({
                             ref={queueSearchInputRef}
                             value={queueQuery}
                             onChange={(e) => setQueueQuery(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key !== "Escape") return;
+                              if (!queueQuery.trim()) return;
+                              e.preventDefault();
+                              setQueueQuery("");
+                            }}
                             placeholder="큐 검색 (command)"
                             className="flex-1 bg-[#0f151f] border border-white/10 rounded px-2 py-1 text-[10px] text-white/80 placeholder:text-white/30 outline-none focus-visible:ring-1 focus-visible:ring-cyan-300/45"
                           />
