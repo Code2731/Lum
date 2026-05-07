@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { CheckCircle2, XCircle, Clock, ChevronDown, ChevronRight, Copy, TerminalSquare, Search } from "lucide-react";
+import { CheckCircle2, XCircle, Clock, ChevronDown, ChevronRight, Copy, TerminalSquare, Search, MoreHorizontal, Share2 } from "lucide-react";
 import { IconButton } from "@/components/ui/icon-button";
 import { tokenizeShell, TOKEN_COLORS } from "../utils/shellSyntax";
 import type { CommandBlock } from "../hooks/useCommandBlocks";
@@ -7,6 +7,7 @@ import type { CommandBlock } from "../hooks/useCommandBlocks";
 interface Props {
   blocks: CommandBlock[];
   onExecute?: (cmd: string) => void;
+  onAskAIForFix?: (text: string) => void;
 }
 
 const SyntaxCmd: React.FC<{ cmd: string }> = ({ cmd }) => (
@@ -23,10 +24,12 @@ function fmtDuration(block: CommandBlock): string {
   return ms < 1000 ? `${ms}ms` : `${(ms / 1000).toFixed(1)}s`;
 }
 
-const WarpListView: React.FC<Props> = ({ blocks, onExecute }) => {
+const WarpListView: React.FC<Props> = ({ blocks, onExecute, onAskAIForFix }) => {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "failed" | "success">("all");
+  const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
+  const [blockSearch, setBlockSearch] = useState<Record<string, string>>({});
 
   const toggle = (id: string) =>
     setExpanded((prev) => {
@@ -60,6 +63,39 @@ const WarpListView: React.FC<Props> = ({ blocks, onExecute }) => {
   const failedCount = blocks.filter((b) => b.exitCode !== 0 && b.exitCode !== null).length;
   const successCount = blocks.length - failedCount;
 
+  const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const countMatches = (text: string, needle: string) => {
+    if (!needle.trim()) return 0;
+    const m = text.match(new RegExp(escapeRegExp(needle), "gi"));
+    return m ? m.length : 0;
+  };
+  const renderHighlighted = (text: string, needle: string) => {
+    if (!needle.trim()) return text;
+    const re = new RegExp(`(${escapeRegExp(needle)})`, "gi");
+    return text.split(re).map((part, i) =>
+      i % 2 === 1
+        ? (
+          <mark
+            key={`m-${i}`}
+            className="bg-amber-300/30 text-amber-100 px-[1px] rounded-[2px]"
+          >
+            {part}
+          </mark>
+        )
+        : <React.Fragment key={`t-${i}`}>{part}</React.Fragment>,
+    );
+  };
+
+  const openFindWithin = (id: string) => {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      next.add(id);
+      return next;
+    });
+    setMenuOpenId(null);
+    setBlockSearch((prev) => (prev[id] != null ? prev : { ...prev, [id]: "" }));
+  };
+
   return (
     <div className="p-3 space-y-1.5 overflow-y-auto h-full">
       <div className="sticky top-0 z-10 mb-2 rounded-xl border border-white/10 bg-[#0f151f]/92 backdrop-blur-sm p-2 space-y-2">
@@ -87,6 +123,8 @@ const WarpListView: React.FC<Props> = ({ blocks, onExecute }) => {
         const isExpanded = expanded.has(b.id);
         const dur        = fmtDuration(b);
         const hasOutput  = b.output.trim().length > 0;
+        const localQuery = blockSearch[b.id] ?? "";
+        const matchCount = hasOutput ? countMatches(b.output, localQuery) : 0;
 
         return (
           <div
@@ -141,6 +179,80 @@ const WarpListView: React.FC<Props> = ({ blocks, onExecute }) => {
                   <TerminalSquare size={9} />
                 </IconButton>
               )}
+              {!ok && onAskAIForFix && (
+                <IconButton
+                  tooltip="AI로 실패 분석"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const payload = [
+                      `command: ${b.command}`,
+                      `exit: ${b.exitCode ?? "?"}`,
+                      b.output.trim().slice(-4000),
+                    ].join("\n\n");
+                    onAskAIForFix(payload);
+                  }}
+                  className="opacity-0 group-hover:opacity-100 p-0.5 rounded text-white/30 hover:text-amber-300 transition-all shrink-0"
+                >
+                  <Search size={9} />
+                </IconButton>
+              )}
+
+              <div className="relative shrink-0">
+                <IconButton
+                  tooltip="블록 액션"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setMenuOpenId((prev) => (prev === b.id ? null : b.id));
+                  }}
+                  className="opacity-0 group-hover:opacity-100 p-0.5 rounded text-white/30 hover:text-white/70 transition-all shrink-0"
+                >
+                  <MoreHorizontal size={10} />
+                </IconButton>
+                {menuOpenId === b.id && (
+                  <div
+                    className="absolute right-0 top-5 z-20 w-44 rounded-lg border border-white/10 bg-[#0f151f]/96 backdrop-blur-sm shadow-2xl overflow-hidden"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <button
+                      type="button"
+                      className="w-full px-2.5 py-1.5 text-left text-[11px] text-white/78 hover:bg-white/[0.08]"
+                      onClick={() => {
+                        navigator.clipboard.writeText(`$ ${b.command}\n${b.output.trim()}`).catch(() => {});
+                        setMenuOpenId(null);
+                      }}
+                    >
+                      Copy Both
+                    </button>
+                    <button
+                      type="button"
+                      className="w-full px-2.5 py-1.5 text-left text-[11px] text-white/78 hover:bg-white/[0.08]"
+                      onClick={() => openFindWithin(b.id)}
+                    >
+                      Find Within Block
+                    </button>
+                    <button
+                      type="button"
+                      className="w-full px-2.5 py-1.5 text-left text-[11px] text-white/78 hover:bg-white/[0.08] flex items-center gap-1.5"
+                      onClick={() => {
+                        const snapshot = [
+                          `### ${new Date(b.startedAt).toLocaleString()}`,
+                          "```sh",
+                          `$ ${b.command}`,
+                          "```",
+                          "```txt",
+                          b.output.trim(),
+                          "```",
+                        ].join("\n");
+                        navigator.clipboard.writeText(snapshot).catch(() => {});
+                        setMenuOpenId(null);
+                      }}
+                    >
+                      <Share2 size={11} />
+                      Share Snapshot
+                    </button>
+                  </div>
+                )}
+              </div>
 
               {hasOutput && (
                 <span className="text-white/20 shrink-0">
@@ -152,8 +264,23 @@ const WarpListView: React.FC<Props> = ({ blocks, onExecute }) => {
             {/* output */}
             {hasOutput && isExpanded && (
               <div className="relative border-t border-white/5">
+                <div className="flex items-center gap-2 px-3 py-1.5 border-b border-white/6 bg-white/[0.02]">
+                  <Search size={10} className="text-white/35 shrink-0" />
+                  <input
+                    value={localQuery}
+                    onChange={(e) => setBlockSearch((prev) => ({ ...prev, [b.id]: e.target.value }))}
+                    placeholder="블록 내 검색"
+                    className="flex-1 bg-transparent border-none outline-none text-[10px] text-white/80 placeholder:text-white/30"
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                  {localQuery.trim() && (
+                    <span className="text-[10px] text-amber-200/80 tabular-nums">
+                      {matchCount}
+                    </span>
+                  )}
+                </div>
                 <pre className="px-3 py-2 text-[10px] font-mono text-white/40 whitespace-pre-wrap max-h-52 overflow-y-auto leading-relaxed bg-[#0d1117]">
-                  {b.output.trim()}
+                  {renderHighlighted(b.output.trim(), localQuery)}
                 </pre>
                 <IconButton
                   tooltip="출력 복사"

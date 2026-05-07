@@ -504,6 +504,30 @@ const App: React.FC = () => {
     setDismissedBlockId(null);
   }, [cmdBlocks, selectedBlockId]);
 
+  const focusFailedBlock = useCallback(() => {
+    const failed = cmdBlocks
+      .map((b, idx) => ({ b, idx }))
+      .filter(({ b }) => b.exitCode !== null && b.exitCode !== 0);
+    if (failed.length === 0) return;
+
+    if (!selectedBlockId) {
+      setSelectedBlockId(failed[failed.length - 1].b.id);
+      setDismissedBlockId(null);
+      return;
+    }
+
+    const currentPos = failed.findIndex(({ b }) => b.id === selectedBlockId);
+    if (currentPos < 0) {
+      setSelectedBlockId(failed[failed.length - 1].b.id);
+      setDismissedBlockId(null);
+      return;
+    }
+
+    const nextPos = (currentPos - 1 + failed.length) % failed.length;
+    setSelectedBlockId(failed[nextPos].b.id);
+    setDismissedBlockId(null);
+  }, [cmdBlocks, selectedBlockId]);
+
   const handleAiSubmit = useCallback(async () => {
     const cmd = aiInput.trim();
     if (!cmd) return;
@@ -578,6 +602,7 @@ const App: React.FC = () => {
       if (mod && e.shiftKey && e.key === "q") { e.preventDefault(); setShowQuickBar(v => !v); }
       if (mod && e.shiftKey && e.key === "ArrowUp") { e.preventDefault(); navigateCommandBlock(-1); }
       if (mod && e.shiftKey && e.key === "ArrowDown") { e.preventDefault(); navigateCommandBlock(1); }
+      if (mod && e.shiftKey && (e.key === "f" || e.key === "F")) { e.preventDefault(); focusFailedBlock(); }
       if (mod && e.shiftKey && (e.key === "s" || e.key === "o")) { e.preventDefault(); setShowWorkspace(true); loadWorkspaces(); }
       // Cmd+1~9 — Quick Actions 단축키
       if (mod && !e.shiftKey && /^[1-9]$/.test(e.key)) {
@@ -600,7 +625,7 @@ const App: React.FC = () => {
       window.removeEventListener("keydown", captureHandler, { capture: true });
       window.removeEventListener("keydown", handler);
     };
-  }, [addTabWithReset, closeTabWithReset, toggleSplit, closeOverlays, activeTabIdRef, setShowCommitPanel, setShowHistorySearch, setShowDiffReview, setShowThemePanel, quickActions, ptyWriteRefs, activePaneIdRef, setShowWorkspace, loadWorkspaces, setShowPalette, navigateCommandBlock]);
+  }, [addTabWithReset, closeTabWithReset, toggleSplit, closeOverlays, activeTabIdRef, setShowCommitPanel, setShowHistorySearch, setShowDiffReview, setShowThemePanel, quickActions, ptyWriteRefs, activePaneIdRef, setShowWorkspace, loadWorkspaces, setShowPalette, navigateCommandBlock, focusFailedBlock]);
 
   const activeTab = tabs.find((t) => t.id === activeTabId);
   const lastCmdBlock = cmdBlocks[cmdBlocks.length - 1] ?? null;
@@ -1054,6 +1079,9 @@ const App: React.FC = () => {
               onExecute={(cmd) => {
                 const write = ptyWriteRefs.current.get(activePaneIdRef.current);
                 write?.(cmd);
+              }}
+              onAskAIForFix={(text) => {
+                handleAskAI(`이 실패 로그를 분석하고 해결 커맨드를 제안해줘.\n\n${text}`);
               }}
             />
           )}
