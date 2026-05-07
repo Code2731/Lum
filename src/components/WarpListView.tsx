@@ -10,6 +10,7 @@ interface Props {
   onAskAIForFix?: (text: string) => void;
   onRetryWithDiff?: (block: CommandBlock) => void;
   onRetrySelectedWithDiff?: (blocks: CommandBlock[]) => void;
+  retryCompareQueueDepth?: number;
   onExplainDiff?: (text: string) => void;
   onExplainAllDiffs?: (text: string) => void;
   onClearCompareResults?: () => void;
@@ -44,6 +45,7 @@ const WarpListView: React.FC<Props> = ({
   onAskAIForFix,
   onRetryWithDiff,
   onRetrySelectedWithDiff,
+  retryCompareQueueDepth = 0,
   onExplainDiff,
   onExplainAllDiffs,
   onClearCompareResults,
@@ -505,6 +507,14 @@ const WarpListView: React.FC<Props> = ({
               >
                 Σ +{comparedTotals.added}/-{comparedTotals.removed}
               </span>
+              {retryCompareQueueDepth > 0 && (
+                <span
+                  className="text-[10px] px-2 py-0.5 rounded border border-emerald-300/30 bg-emerald-300/12 text-emerald-100 tabular-nums"
+                  title="Retry+Compare 진행 대기/실행 건수"
+                >
+                  Queue {retryCompareQueueDepth}
+                </span>
+              )}
               <div className="relative">
                 <button
                   ref={timelineButtonRef}

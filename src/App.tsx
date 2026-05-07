@@ -1209,6 +1209,7 @@ const App: React.FC = () => {
               onRetrySelectedWithDiff={(blocks) => {
                 enqueueRetryCompare(blocks);
               }}
+              retryCompareQueueDepth={retryCompareQueue.length + (retryComparePending ? 1 : 0)}
               onExplainDiff={(text) => {
                 handleAskAI([
                   "아래 retry compare diff를 분석해줘.",
