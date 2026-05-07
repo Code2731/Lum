@@ -67,6 +67,8 @@ interface RetryCompareResult {
   added: number;
   removed: number;
   preview: string;
+  addedLines: string[];
+  removedLines: string[];
   comparedAt: number;
 }
 
@@ -102,7 +104,13 @@ function parseGitTabInfo(ctx: string): GitTabInfo | null {
   return { branch, changed };
 }
 
-function summarizeOutputDiff(before: string, after: string): { added: number; removed: number; preview: string } {
+function summarizeOutputDiff(before: string, after: string): {
+  added: number;
+  removed: number;
+  preview: string;
+  addedLines: string[];
+  removedLines: string[];
+} {
   const beforeLines = before.split(/\r?\n/).map((l) => l.trimEnd()).filter((l) => l !== "");
   const afterLines = after.split(/\r?\n/).map((l) => l.trimEnd()).filter((l) => l !== "");
   const beforeSet = new Set(beforeLines);
@@ -120,6 +128,8 @@ function summarizeOutputDiff(before: string, after: string): { added: number; re
     added: addedLines.length,
     removed: removedLines.length,
     preview,
+    addedLines: addedLines.slice(0, 20),
+    removedLines: removedLines.slice(0, 20),
   };
 }
 

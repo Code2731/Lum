@@ -13,6 +13,8 @@ interface Props {
     added: number;
     removed: number;
     preview: string;
+    addedLines: string[];
+    removedLines: string[];
     comparedAt: number;
   }>;
 }
@@ -39,6 +41,7 @@ const WarpListView: React.FC<Props> = ({ blocks, onExecute, onAskAIForFix, onRet
   const [blockSearch, setBlockSearch] = useState<Record<string, string>>({});
   const [blockSearchCursor, setBlockSearchCursor] = useState<Record<string, number>>({});
   const [activeSearchBlockId, setActiveSearchBlockId] = useState<string | null>(null);
+  const [deltaOpenId, setDeltaOpenId] = useState<string | null>(null);
   const outputRefs = useRef<Record<string, HTMLPreElement | null>>({});
 
   const toggle = (id: string) =>
@@ -235,12 +238,50 @@ const WarpListView: React.FC<Props> = ({ blocks, onExecute, onAskAIForFix, onRet
                 </span>
               )}
               {compare && (
-                <span
-                  className="text-[9px] shrink-0 tabular-nums px-1 py-0.5 rounded border border-cyan-300/25 bg-cyan-300/10 text-cyan-200"
-                  title={compare.preview || "출력 변경 요약"}
-                >
-                  Δ +{compare.added}/-{compare.removed}
-                </span>
+                <div className="relative shrink-0">
+                  <button
+                    type="button"
+                    className="text-[9px] tabular-nums px-1 py-0.5 rounded border border-cyan-300/25 bg-cyan-300/10 text-cyan-200 hover:bg-cyan-300/20"
+                    title={compare.preview || "출력 변경 요약"}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setDeltaOpenId((prev) => (prev === b.id ? null : b.id));
+                    }}
+                  >
+                    Δ +{compare.added}/-{compare.removed}
+                  </button>
+                  {deltaOpenId === b.id && (
+                    <div
+                      className="absolute right-0 top-6 z-30 w-[360px] rounded-lg border border-cyan-300/25 bg-[#0b131d]/97 shadow-2xl overflow-hidden"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <div className="px-2.5 py-1.5 border-b border-white/10 text-[10px] text-cyan-200 tabular-nums">
+                        Retry Compare · +{compare.added} / -{compare.removed}
+                      </div>
+                      <div className="max-h-56 overflow-y-auto p-2 space-y-2">
+                        {compare.addedLines.length > 0 && (
+                          <div>
+                            <div className="text-[10px] text-emerald-300 mb-1">Added</div>
+                            <pre className="text-[10px] font-mono whitespace-pre-wrap text-emerald-100/90 bg-emerald-500/[0.08] border border-emerald-400/20 rounded p-1.5">
+                              {compare.addedLines.map((l) => `+ ${l}`).join("\n")}
+                            </pre>
+                          </div>
+                        )}
+                        {compare.removedLines.length > 0 && (
+                          <div>
+                            <div className="text-[10px] text-rose-300 mb-1">Removed</div>
+                            <pre className="text-[10px] font-mono whitespace-pre-wrap text-rose-100/90 bg-rose-500/[0.08] border border-rose-400/20 rounded p-1.5">
+                              {compare.removedLines.map((l) => `- ${l}`).join("\n")}
+                            </pre>
+                          </div>
+                        )}
+                        {compare.addedLines.length === 0 && compare.removedLines.length === 0 && (
+                          <div className="text-[10px] text-white/55">라인 변화가 감지되지 않았습니다.</div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
               )}
 
               {b.endedAt && (
