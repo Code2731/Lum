@@ -257,6 +257,13 @@ const WarpListView: React.FC<Props> = ({
     if (!q) return retryCompareQueueItems;
     return retryCompareQueueItems.filter((item) => item.command.toLowerCase().includes(q));
   }, [retryCompareQueueItems, queueQuery]);
+  const timelineRiskLabel = timelineRiskFilter === "high"
+    ? "High"
+    : timelineRiskFilter === "medium"
+      ? "Med"
+      : timelineRiskFilter === "low"
+        ? "Low"
+        : "All";
 
   useEffect(() => {
     for (const id of Object.keys(blockSearch)) {
@@ -921,6 +928,60 @@ const WarpListView: React.FC<Props> = ({
                           title="Alt+3"
                         />
                       </div>
+                      {timelineViewCustomized && (
+                        <div className="flex flex-wrap items-center gap-1">
+                          {timelineQuery.trim() !== "" && (
+                            <button
+                              type="button"
+                              className="text-[10px] px-1.5 py-0.5 rounded border border-cyan-300/30 bg-cyan-300/12 text-cyan-100 hover:bg-cyan-300/20"
+                              onClick={() => setTimelineQuery("")}
+                              title="검색 필터 해제"
+                            >
+                              상태 검색: {timelineQuery.trim()}
+                            </button>
+                          )}
+                          {timelineRiskFilter !== "all" && (
+                            <button
+                              type="button"
+                              className="text-[10px] px-1.5 py-0.5 rounded border border-rose-300/30 bg-rose-300/12 text-rose-100 hover:bg-rose-300/20"
+                              onClick={() => setTimelineRiskFilter("all")}
+                              title="위험도 필터 해제"
+                            >
+                              상태 Risk: {timelineRiskLabel}
+                            </button>
+                          )}
+                          {timelinePinnedOnly && (
+                            <button
+                              type="button"
+                              className="text-[10px] px-1.5 py-0.5 rounded border border-amber-300/30 bg-amber-300/12 text-amber-100 hover:bg-amber-300/20"
+                              onClick={() => setTimelinePinnedOnly(false)}
+                              title="핀만 해제"
+                            >
+                              상태 핀만
+                            </button>
+                          )}
+                          {timelineSelectedOnly && (
+                            <button
+                              type="button"
+                              className="text-[10px] px-1.5 py-0.5 rounded border border-cyan-300/30 bg-cyan-300/12 text-cyan-100 hover:bg-cyan-300/20"
+                              onClick={() => setTimelineSelectedOnly(false)}
+                              title="선택만 해제"
+                            >
+                              상태 선택만
+                            </button>
+                          )}
+                          {timelineSortMode !== "recent" && (
+                            <button
+                              type="button"
+                              className="text-[10px] px-1.5 py-0.5 rounded border border-white/20 bg-white/[0.08] text-white/80 hover:bg-white/[0.14]"
+                              onClick={() => setTimelineSortMode("recent")}
+                              title="정렬 초기화"
+                            >
+                              상태 정렬: 변화량순
+                            </button>
+                          )}
+                        </div>
+                      )}
                       <div className="flex items-center gap-1.5">
                         <span className="text-[10px] text-white/48 tabular-nums">
                           선택 {selectedTimelineIds.length}
