@@ -413,6 +413,7 @@ const App: React.FC = () => {
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
   const [retryComparePending, setRetryComparePending] = useState<RetryComparePending | null>(null);
   const [retryCompareQueue, setRetryCompareQueue] = useState<RetryCompareTask[]>(() => loadRetryCompareRuntimeCache().queue);
+  const [retryCompareQueueUndo, setRetryCompareQueueUndo] = useState<RetryCompareTask[] | null>(null);
   const [retryCompareQueuePaused, setRetryCompareQueuePaused] = useState(() => loadRetryCompareRuntimeCache().paused);
   const [retryCompareCompletedCount, setRetryCompareCompletedCount] = useState(() => loadRetryCompareRuntimeCache().completedCount);
   const [retryCompareByBlock, setRetryCompareByBlock] = useState<Record<string, RetryCompareResult>>(() => loadRetryCompareCache());
@@ -517,6 +518,14 @@ const App: React.FC = () => {
       }));
     if (tasks.length === 0) return;
     setRetryCompareQueue((prev) => [...prev, ...tasks]);
+  }, []);
+  const mutateRetryCompareQueue = useCallback((updater: (prev: RetryCompareTask[]) => RetryCompareTask[]) => {
+    setRetryCompareQueue((prev) => {
+      const next = updater(prev);
+      if (next === prev) return prev;
+      setRetryCompareQueueUndo(prev);
+      return next;
+    });
   }, []);
 
   useEffect(() => {
@@ -1273,10 +1282,16 @@ const App: React.FC = () => {
               onToggleRetryCompareQueuePaused={() => {
                 setRetryCompareQueuePaused((prev) => !prev);
               }}
+              canUndoRetryCompareQueueChange={retryCompareQueueUndo !== null}
+              onUndoRetryCompareQueueChange={() => {
+                if (!retryCompareQueueUndo) return;
+                setRetryCompareQueue(retryCompareQueueUndo);
+                setRetryCompareQueueUndo(null);
+              }}
               retryCompareQueueItems={retryCompareQueue.map((t) => ({ id: t.id, command: t.command }))}
               onPrioritizeRetryCompareQueueItem={(id) => {
                 setRetryCompareQueuePaused(false);
-                setRetryCompareQueue((prev) => {
+                mutateRetryCompareQueue((prev) => {
                   const idx = prev.findIndex((t) => t.id === id);
                   if (idx <= 0) return prev;
                   const picked = prev[idx];
@@ -1284,7 +1299,7 @@ const App: React.FC = () => {
                 });
               }}
               onPromoteRetryCompareQueueItem={(id) => {
-                setRetryCompareQueue((prev) => {
+                mutateRetryCompareQueue((prev) => {
                   const idx = prev.findIndex((t) => t.id === id);
                   if (idx <= 0) return prev;
                   const picked = prev[idx];
@@ -1292,7 +1307,7 @@ const App: React.FC = () => {
                 });
               }}
               onMoveUpRetryCompareQueueItem={(id) => {
-                setRetryCompareQueue((prev) => {
+                mutateRetryCompareQueue((prev) => {
                   const idx = prev.findIndex((t) => t.id === id);
                   if (idx <= 0) return prev;
                   const next = [...prev];
@@ -1301,7 +1316,7 @@ const App: React.FC = () => {
                 });
               }}
               onMoveDownRetryCompareQueueItem={(id) => {
-                setRetryCompareQueue((prev) => {
+                mutateRetryCompareQueue((prev) => {
                   const idx = prev.findIndex((t) => t.id === id);
                   if (idx < 0 || idx >= prev.length - 1) return prev;
                   const next = [...prev];
@@ -1310,7 +1325,7 @@ const App: React.FC = () => {
                 });
               }}
               onDemoteRetryCompareQueueItem={(id) => {
-                setRetryCompareQueue((prev) => {
+                mutateRetryCompareQueue((prev) => {
                   const idx = prev.findIndex((t) => t.id === id);
                   if (idx < 0 || idx >= prev.length - 1) return prev;
                   const picked = prev[idx];
@@ -1318,12 +1333,12 @@ const App: React.FC = () => {
                 });
               }}
               onRemoveRetryCompareQueueItem={(id) => {
-                setRetryCompareQueue((prev) => prev.filter((t) => t.id !== id));
+                mutateRetryCompareQueue((prev) => prev.filter((t) => t.id !== id));
               }}
               onPrioritizeFilteredRetryCompareQueueItems={(ids) => {
                 const target = new Set(ids);
                 setRetryCompareQueuePaused(false);
-                setRetryCompareQueue((prev) => {
+                mutateRetryCompareQueue((prev) => {
                   const picked = prev.filter((t) => target.has(t.id));
                   if (picked.length === 0) return prev;
                   const rest = prev.filter((t) => !target.has(t.id));
@@ -1332,7 +1347,7 @@ const App: React.FC = () => {
               }}
               onPromoteFilteredRetryCompareQueueItems={(ids) => {
                 const target = new Set(ids);
-                setRetryCompareQueue((prev) => {
+                mutateRetryCompareQueue((prev) => {
                   const picked = prev.filter((t) => target.has(t.id));
                   if (picked.length === 0) return prev;
                   const rest = prev.filter((t) => !target.has(t.id));
@@ -1341,7 +1356,7 @@ const App: React.FC = () => {
               }}
               onDemoteFilteredRetryCompareQueueItems={(ids) => {
                 const target = new Set(ids);
-                setRetryCompareQueue((prev) => {
+                mutateRetryCompareQueue((prev) => {
                   const picked = prev.filter((t) => target.has(t.id));
                   if (picked.length === 0) return prev;
                   const rest = prev.filter((t) => !target.has(t.id));
@@ -1350,10 +1365,10 @@ const App: React.FC = () => {
               }}
               onRemoveFilteredRetryCompareQueueItems={(ids) => {
                 const remove = new Set(ids);
-                setRetryCompareQueue((prev) => prev.filter((t) => !remove.has(t.id)));
+                mutateRetryCompareQueue((prev) => prev.filter((t) => !remove.has(t.id)));
               }}
               onClearRetryCompareQueue={() => {
-                setRetryCompareQueue([]);
+                mutateRetryCompareQueue(() => []);
               }}
               onExplainDiff={(text) => {
                 handleAskAI([

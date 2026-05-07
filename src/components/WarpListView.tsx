@@ -18,6 +18,8 @@ interface Props {
   onResetRetryCompareCompletedCount?: () => void;
   retryCompareQueuePaused?: boolean;
   onToggleRetryCompareQueuePaused?: () => void;
+  canUndoRetryCompareQueueChange?: boolean;
+  onUndoRetryCompareQueueChange?: () => void;
   retryCompareQueueItems?: Array<{ id: string; command: string }>;
   onPromoteRetryCompareQueueItem?: (id: string) => void;
   onDemoteRetryCompareQueueItem?: (id: string) => void;
@@ -83,6 +85,8 @@ const WarpListView: React.FC<Props> = ({
   onResetRetryCompareCompletedCount,
   retryCompareQueuePaused = false,
   onToggleRetryCompareQueuePaused,
+  canUndoRetryCompareQueueChange = false,
+  onUndoRetryCompareQueueChange,
   retryCompareQueueItems = [],
   onPromoteRetryCompareQueueItem,
   onDemoteRetryCompareQueueItem,
@@ -917,6 +921,16 @@ const WarpListView: React.FC<Props> = ({
                               onClick={() => setQueueQuery("")}
                             >
                               지우기
+                            </button>
+                          )}
+                          {onUndoRetryCompareQueueChange && (
+                            <button
+                              type="button"
+                              className="text-[10px] px-1.5 py-1 rounded border border-amber-300/30 text-amber-200 hover:bg-amber-300/12 disabled:opacity-40"
+                              onClick={onUndoRetryCompareQueueChange}
+                              disabled={!canUndoRetryCompareQueueChange}
+                            >
+                              큐 변경 되돌리기
                             </button>
                           )}
                           {onRemoveFilteredRetryCompareQueueItems && (

@@ -578,6 +578,36 @@ describe("WarpListView delta actions", () => {
     expect(onClearRetryCompareQueue).toHaveBeenCalledTimes(1);
   });
 
+  it("Retry+Compare 큐 변경 되돌리기 버튼", () => {
+    const onUndoRetryCompareQueueChange = vi.fn();
+    render(
+      <WarpListView
+        blocks={blocks}
+        retryCompareQueueDepth={2}
+        retryCompareQueueWaiting={2}
+        canUndoRetryCompareQueueChange
+        onUndoRetryCompareQueueChange={onUndoRetryCompareQueueChange}
+        retryCompareQueueItems={[
+          { id: "q1", command: "npm test" },
+          { id: "q2", command: "pnpm lint" },
+        ]}
+        compareResultByBlock={{
+          b2: {
+            added: 1,
+            removed: 1,
+            preview: "test changed",
+            addedLines: ["new line"],
+            removedLines: ["old line"],
+            comparedAt: now,
+          },
+        }}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Δ Timeline (1)" }));
+    fireEvent.click(screen.getByRole("button", { name: "큐 변경 되돌리기" }));
+    expect(onUndoRetryCompareQueueChange).toHaveBeenCalledTimes(1);
+  });
+
   it("Retry+Compare 큐 일시정지/재개 토글", () => {
     const onToggleRetryCompareQueuePaused = vi.fn();
     const view = render(
