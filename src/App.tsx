@@ -1223,6 +1223,9 @@ const App: React.FC = () => {
               retryCompareInFlight={retryComparePending !== null}
               retryCompareCurrentCommand={retryComparePending?.command ?? null}
               retryCompareCompletedCount={retryCompareCompletedCount}
+              onResetRetryCompareCompletedCount={() => {
+                setRetryCompareCompletedCount(0);
+              }}
               retryCompareQueuePaused={retryCompareQueuePaused}
               onToggleRetryCompareQueuePaused={() => {
                 setRetryCompareQueuePaused((prev) => !prev);

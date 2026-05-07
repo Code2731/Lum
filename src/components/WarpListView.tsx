@@ -15,6 +15,7 @@ interface Props {
   retryCompareInFlight?: boolean;
   retryCompareCurrentCommand?: string | null;
   retryCompareCompletedCount?: number;
+  onResetRetryCompareCompletedCount?: () => void;
   retryCompareQueuePaused?: boolean;
   onToggleRetryCompareQueuePaused?: () => void;
   retryCompareQueueItems?: Array<{ id: string; command: string }>;
@@ -72,6 +73,7 @@ const WarpListView: React.FC<Props> = ({
   retryCompareInFlight = false,
   retryCompareCurrentCommand = null,
   retryCompareCompletedCount = 0,
+  onResetRetryCompareCompletedCount,
   retryCompareQueuePaused = false,
   onToggleRetryCompareQueuePaused,
   retryCompareQueueItems = [],
@@ -592,9 +594,14 @@ const WarpListView: React.FC<Props> = ({
                 </button>
               )}
               {retryCompareCompletedCount > 0 && (
-                <span className="text-[10px] text-white/45 tabular-nums">
+                <button
+                  type="button"
+                  className="text-[10px] px-2 py-0.5 rounded border border-white/15 text-white/60 hover:bg-white/[0.08] tabular-nums"
+                  onClick={() => onResetRetryCompareCompletedCount?.()}
+                  title="완료 카운트 리셋"
+                >
                   done {retryCompareCompletedCount}
-                </span>
+                </button>
               )}
               {retryCompareInFlight && retryCompareCurrentCommand && (
                 <span
