@@ -57,6 +57,7 @@ const WarpListView: React.FC<Props> = ({
   const [deltaOpenId, setDeltaOpenId] = useState<string | null>(null);
   const [timelineOpen, setTimelineOpen] = useState(false);
   const [timelineQuery, setTimelineQuery] = useState("");
+  const [timelineSelectedIds, setTimelineSelectedIds] = useState<Set<string>>(new Set());
   const outputRefs = useRef<Record<string, HTMLPreElement | null>>({});
   const blockRowRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const deltaButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({});
@@ -132,6 +133,10 @@ const WarpListView: React.FC<Props> = ({
       ),
     [comparedTimeline],
   );
+  const selectedTimelineItems = useMemo(
+    () => comparedTimeline.filter(({ block }) => timelineSelectedIds.has(block.id)),
+    [comparedTimeline, timelineSelectedIds],
+  );
 
   useEffect(() => {
     for (const id of Object.keys(blockSearch)) {
@@ -165,7 +170,17 @@ const WarpListView: React.FC<Props> = ({
   useEffect(() => {
     if (comparedCount > 0) return;
     setTimelineOpen(false);
+    setTimelineSelectedIds(new Set());
   }, [comparedCount]);
+  useEffect(() => {
+    setTimelineSelectedIds((prev) => {
+      const next = new Set(
+        [...prev].filter((id) => comparedTimeline.some((item) => item.block.id === id)),
+      );
+      if (next.size === prev.size) return prev;
+      return next;
+    });
+  }, [comparedTimeline]);
 
   const moveBlockSearchCursor = (blockId: string, dir: 1 | -1) => {
     const block = blocks.find((b) => b.id === blockId);
@@ -294,6 +309,23 @@ const WarpListView: React.FC<Props> = ({
         return [head, buildDiffText(block.command, compare)].join("\n");
       })
       .join("\n\n");
+  const toggleTimelineSelection = (id: string) => {
+    setTimelineSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+  const selectAllTimelineFiltered = () => {
+    setTimelineSelectedIds((prev) => {
+      const next = new Set(prev);
+      for (const item of timelineFiltered) {
+        next.add(item.block.id);
+      }
+      return next;
+    });
+  };
 
   useEffect(() => {
     const onWindowKeyDown = (e: KeyboardEvent) => {
@@ -430,6 +462,45 @@ const WarpListView: React.FC<Props> = ({
                       <div className="flex items-center gap-1.5">
                         <button
                           type="button"
+                          className="text-[10px] px-2 py-0.5 rounded border border-white/15 text-white/70 hover:bg-white/[0.08] disabled:opacity-40"
+                          onClick={selectAllTimelineFiltered}
+                          disabled={timelineFiltered.length === 0}
+                        >
+                          선택 전체
+                        </button>
+                        <button
+                          type="button"
+                          className="text-[10px] px-2 py-0.5 rounded border border-white/15 text-white/70 hover:bg-white/[0.08] disabled:opacity-40"
+                          onClick={() => setTimelineSelectedIds(new Set())}
+                          disabled={timelineSelectedIds.size === 0}
+                        >
+                          선택 해제
+                        </button>
+                        <button
+                          type="button"
+                          className="text-[10px] px-2 py-0.5 rounded border border-white/15 text-white/70 hover:bg-white/[0.08] disabled:opacity-40"
+                          onClick={() => {
+                            navigator.clipboard.writeText(buildAllDiffsText(selectedTimelineItems)).catch(() => {});
+                          }}
+                          disabled={selectedTimelineItems.length === 0}
+                        >
+                          Copy Selected
+                        </button>
+                        {onExplainAllDiffs && (
+                          <button
+                            type="button"
+                            className="text-[10px] px-2 py-0.5 rounded border border-cyan-300/30 text-cyan-200 hover:bg-cyan-300/12 disabled:opacity-40"
+                            onClick={() => {
+                              onExplainAllDiffs(buildAllDiffsText(selectedTimelineItems));
+                              setTimelineOpen(false);
+                            }}
+                            disabled={selectedTimelineItems.length === 0}
+                          >
+                            AI 선택요약
+                          </button>
+                        )}
+                        <button
+                          type="button"
                           className="text-[10px] px-2 py-0.5 rounded border border-white/15 text-white/70 hover:bg-white/[0.08]"
                           onClick={() => {
                             navigator.clipboard.writeText(buildAllDiffsText(timelineFiltered)).catch(() => {});
@@ -458,6 +529,7 @@ const WarpListView: React.FC<Props> = ({
                             onClick={() => {
                               onClearCompareResults();
                               setDeltaOpenId(null);
+                              setTimelineSelectedIds(new Set());
                               setTimelineOpen(false);
                             }}
                           >
@@ -472,8 +544,17 @@ const WarpListView: React.FC<Props> = ({
                           key={block.id}
                           className="rounded border border-white/10 bg-white/[0.02] px-2 py-1.5"
                         >
-                          <div className="text-[10px] text-white/80 font-mono truncate">
-                            $ {block.command}
+                          <div className="flex items-center gap-1.5">
+                            <input
+                              type="checkbox"
+                              aria-label={`${block.command} 선택`}
+                              checked={timelineSelectedIds.has(block.id)}
+                              onChange={() => toggleTimelineSelection(block.id)}
+                              className="size-3 accent-cyan-300"
+                            />
+                            <div className="text-[10px] text-white/80 font-mono truncate">
+                              $ {block.command}
+                            </div>
                           </div>
                           <div className="mt-0.5 text-[10px] text-cyan-200/90 tabular-nums">
                             Δ +{compare.added}/-{compare.removed}
