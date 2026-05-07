@@ -1274,6 +1274,15 @@ const App: React.FC = () => {
                 setRetryCompareQueuePaused((prev) => !prev);
               }}
               retryCompareQueueItems={retryCompareQueue.map((t) => ({ id: t.id, command: t.command }))}
+              onPrioritizeRetryCompareQueueItem={(id) => {
+                setRetryCompareQueuePaused(false);
+                setRetryCompareQueue((prev) => {
+                  const idx = prev.findIndex((t) => t.id === id);
+                  if (idx <= 0) return prev;
+                  const picked = prev[idx];
+                  return [picked, ...prev.slice(0, idx), ...prev.slice(idx + 1)];
+                });
+              }}
               onPromoteRetryCompareQueueItem={(id) => {
                 setRetryCompareQueue((prev) => {
                   const idx = prev.findIndex((t) => t.id === id);
@@ -1310,6 +1319,16 @@ const App: React.FC = () => {
               }}
               onRemoveRetryCompareQueueItem={(id) => {
                 setRetryCompareQueue((prev) => prev.filter((t) => t.id !== id));
+              }}
+              onPrioritizeFilteredRetryCompareQueueItems={(ids) => {
+                const target = new Set(ids);
+                setRetryCompareQueuePaused(false);
+                setRetryCompareQueue((prev) => {
+                  const picked = prev.filter((t) => target.has(t.id));
+                  if (picked.length === 0) return prev;
+                  const rest = prev.filter((t) => !target.has(t.id));
+                  return [...picked, ...rest];
+                });
               }}
               onPromoteFilteredRetryCompareQueueItems={(ids) => {
                 const target = new Set(ids);

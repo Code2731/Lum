@@ -656,6 +656,7 @@ describe("WarpListView delta actions", () => {
     const onDemoteRetryCompareQueueItem = vi.fn();
     const onMoveUpRetryCompareQueueItem = vi.fn();
     const onMoveDownRetryCompareQueueItem = vi.fn();
+    const onPrioritizeRetryCompareQueueItem = vi.fn();
     render(
       <WarpListView
         blocks={blocks}
@@ -670,6 +671,7 @@ describe("WarpListView delta actions", () => {
         onDemoteRetryCompareQueueItem={onDemoteRetryCompareQueueItem}
         onMoveUpRetryCompareQueueItem={onMoveUpRetryCompareQueueItem}
         onMoveDownRetryCompareQueueItem={onMoveDownRetryCompareQueueItem}
+        onPrioritizeRetryCompareQueueItem={onPrioritizeRetryCompareQueueItem}
         onRemoveRetryCompareQueueItem={onRemoveRetryCompareQueueItem}
         compareResultByBlock={{
           b2: {
@@ -688,6 +690,8 @@ describe("WarpListView delta actions", () => {
     expect(screen.getByText("pnpm lint")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "queue-promote-2" }));
     expect(onPromoteRetryCompareQueueItem).toHaveBeenCalledWith("q2");
+    fireEvent.click(screen.getByRole("button", { name: "queue-next-2" }));
+    expect(onPrioritizeRetryCompareQueueItem).toHaveBeenCalledWith("q2");
     fireEvent.click(screen.getByRole("button", { name: "queue-up-2" }));
     expect(onMoveUpRetryCompareQueueItem).toHaveBeenCalledWith("q2");
     fireEvent.click(screen.getByRole("button", { name: "queue-down-2" }));
@@ -765,6 +769,7 @@ describe("WarpListView delta actions", () => {
   it("Retry+Compare 큐 검색 결과 필터 맨앞/맨뒤", () => {
     const onPromoteFilteredRetryCompareQueueItems = vi.fn();
     const onDemoteFilteredRetryCompareQueueItems = vi.fn();
+    const onPrioritizeFilteredRetryCompareQueueItems = vi.fn();
     render(
       <WarpListView
         blocks={blocks}
@@ -775,6 +780,7 @@ describe("WarpListView delta actions", () => {
           { id: "q2", command: "pnpm lint" },
           { id: "q3", command: "npm run build" },
         ]}
+        onPrioritizeFilteredRetryCompareQueueItems={onPrioritizeFilteredRetryCompareQueueItems}
         onPromoteFilteredRetryCompareQueueItems={onPromoteFilteredRetryCompareQueueItems}
         onDemoteFilteredRetryCompareQueueItems={onDemoteFilteredRetryCompareQueueItems}
         compareResultByBlock={{
@@ -791,6 +797,8 @@ describe("WarpListView delta actions", () => {
     );
     fireEvent.click(screen.getByRole("button", { name: "Δ Timeline (1)" }));
     fireEvent.change(screen.getByPlaceholderText("큐 검색 (command)"), { target: { value: "npm" } });
+    fireEvent.click(screen.getByRole("button", { name: "필터 다음실행" }));
+    expect(onPrioritizeFilteredRetryCompareQueueItems).toHaveBeenCalledWith(["q1", "q2", "q3"]);
     fireEvent.click(screen.getByRole("button", { name: "필터 맨앞" }));
     expect(onPromoteFilteredRetryCompareQueueItems).toHaveBeenCalledWith(["q1", "q2", "q3"]);
     fireEvent.click(screen.getByRole("button", { name: "필터 맨뒤" }));

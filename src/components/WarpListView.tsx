@@ -23,6 +23,8 @@ interface Props {
   onDemoteRetryCompareQueueItem?: (id: string) => void;
   onMoveUpRetryCompareQueueItem?: (id: string) => void;
   onMoveDownRetryCompareQueueItem?: (id: string) => void;
+  onPrioritizeRetryCompareQueueItem?: (id: string) => void;
+  onPrioritizeFilteredRetryCompareQueueItems?: (ids: string[]) => void;
   onRemoveRetryCompareQueueItem?: (id: string) => void;
   onPromoteFilteredRetryCompareQueueItems?: (ids: string[]) => void;
   onDemoteFilteredRetryCompareQueueItems?: (ids: string[]) => void;
@@ -86,6 +88,8 @@ const WarpListView: React.FC<Props> = ({
   onDemoteRetryCompareQueueItem,
   onMoveUpRetryCompareQueueItem,
   onMoveDownRetryCompareQueueItem,
+  onPrioritizeRetryCompareQueueItem,
+  onPrioritizeFilteredRetryCompareQueueItems,
   onRemoveRetryCompareQueueItem,
   onPromoteFilteredRetryCompareQueueItems,
   onDemoteFilteredRetryCompareQueueItems,
@@ -888,6 +892,18 @@ const WarpListView: React.FC<Props> = ({
                               필터 제거
                             </button>
                           )}
+                          {onPrioritizeFilteredRetryCompareQueueItems && (
+                            <button
+                              type="button"
+                              className="text-[10px] px-1.5 py-1 rounded border border-emerald-300/30 text-emerald-200 hover:bg-emerald-300/12 disabled:opacity-40"
+                              onClick={() => {
+                                onPrioritizeFilteredRetryCompareQueueItems(filteredQueueItems.map((x) => x.id));
+                              }}
+                              disabled={filteredQueueItems.length === 0}
+                            >
+                              필터 다음실행
+                            </button>
+                          )}
                           {onPromoteFilteredRetryCompareQueueItems && (
                             <button
                               type="button"
@@ -925,6 +941,16 @@ const WarpListView: React.FC<Props> = ({
                               <span className="text-[10px] text-white/75 font-mono truncate flex-1" title={item.command}>
                                 {item.command}
                               </span>
+                              {onPrioritizeRetryCompareQueueItem && (
+                                <button
+                                  type="button"
+                                  aria-label={`queue-next-${idx + 1}`}
+                                  className="text-[10px] px-1 py-0.5 rounded border border-emerald-300/30 text-emerald-200 hover:bg-emerald-300/12"
+                                  onClick={() => onPrioritizeRetryCompareQueueItem(item.id)}
+                                >
+                                  다음
+                                </button>
+                              )}
                               {onPromoteRetryCompareQueueItem && (
                                 <button
                                   type="button"
