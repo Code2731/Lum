@@ -501,6 +501,13 @@ const WarpListView: React.FC<Props> = ({
     if (!timelineOpen) return;
     const onWindowKeyDown = (e: KeyboardEvent) => {
       if (isTypingTarget(e.target)) return;
+      if (e.altKey && (e.key === "d" || e.key === "D")) {
+        if (onResetRetryCompareCompletedCount) {
+          e.preventDefault();
+          onResetRetryCompareCompletedCount();
+        }
+        return;
+      }
       if (e.altKey && (e.key === "p" || e.key === "P")) {
         if (onToggleRetryCompareQueuePaused) {
           e.preventDefault();
@@ -598,7 +605,7 @@ const WarpListView: React.FC<Props> = ({
                   type="button"
                   className="text-[10px] px-2 py-0.5 rounded border border-white/15 text-white/60 hover:bg-white/[0.08] tabular-nums"
                   onClick={() => onResetRetryCompareCompletedCount?.()}
-                  title="완료 카운트 리셋"
+                  title="완료 카운트 리셋 (Alt+D)"
                 >
                   done {retryCompareCompletedCount}
                 </button>
