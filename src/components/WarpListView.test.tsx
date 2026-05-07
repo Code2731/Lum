@@ -305,4 +305,41 @@ describe("WarpListView delta actions", () => {
     fireEvent.keyDown(window, { key: "c", ctrlKey: true, shiftKey: true });
     expect(screen.getByText("표시 2")).toBeInTheDocument();
   });
+
+  it("비교 누적 요약 Σ +N/-M 표시", () => {
+    render(
+      <WarpListView
+        blocks={[
+          ...blocks,
+          {
+            id: "b3",
+            command: "npm run build",
+            output: "another",
+            exitCode: 0,
+            startedAt: now - 2000,
+            endedAt: now - 1000,
+          },
+        ]}
+        compareResultByBlock={{
+          b2: {
+            added: 1,
+            removed: 1,
+            preview: "",
+            addedLines: ["new line"],
+            removedLines: ["old line"],
+            comparedAt: now,
+          },
+          b3: {
+            added: 2,
+            removed: 0,
+            preview: "",
+            addedLines: ["a", "b"],
+            removedLines: [],
+            comparedAt: now - 5000,
+          },
+        }}
+      />,
+    );
+    expect(screen.getByText("Σ +3/-1")).toBeInTheDocument();
+  });
 });

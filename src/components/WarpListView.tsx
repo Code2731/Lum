@@ -109,6 +109,17 @@ const WarpListView: React.FC<Props> = ({
         .sort((a, b) => b.compare.comparedAt - a.compare.comparedAt),
     [blocks, compareResultByBlock],
   );
+  const comparedTotals = useMemo(
+    () =>
+      comparedTimeline.reduce(
+        (acc, item) => ({
+          added: acc.added + item.compare.added,
+          removed: acc.removed + item.compare.removed,
+        }),
+        { added: 0, removed: 0 },
+      ),
+    [comparedTimeline],
+  );
 
   useEffect(() => {
     for (const id of Object.keys(blockSearch)) {
@@ -352,6 +363,12 @@ const WarpListView: React.FC<Props> = ({
           <FilterChip active={statusFilter === "compared"} onClick={() => setStatusFilter("compared")} label={`비교 ${comparedCount}`} title="Cmd/Ctrl+Shift+C" tone="info" />
           {comparedCount > 0 && (
             <>
+              <span
+                className="text-[10px] px-2 py-0.5 rounded border border-cyan-400/20 bg-cyan-400/10 text-cyan-100/90 tabular-nums"
+                title="현재 표시 중인 비교 블록의 누적 변화량"
+              >
+                Σ +{comparedTotals.added}/-{comparedTotals.removed}
+              </span>
               <div className="relative">
                 <button
                   ref={timelineButtonRef}
