@@ -133,6 +133,7 @@ const WarpListView: React.FC<Props> = ({
   const deltaPopoverRef = useRef<HTMLDivElement | null>(null);
   const timelineButtonRef = useRef<HTMLButtonElement | null>(null);
   const timelinePanelRef = useRef<HTMLDivElement | null>(null);
+  const timelineSearchInputRef = useRef<HTMLInputElement | null>(null);
   const queueSearchInputRef = useRef<HTMLInputElement | null>(null);
 
   const toggle = (id: string) =>
@@ -630,6 +631,13 @@ const WarpListView: React.FC<Props> = ({
         }
         return;
       }
+      if (e.altKey && (e.key === "f" || e.key === "F")) {
+        if (timelineSearchInputRef.current) {
+          e.preventDefault();
+          timelineSearchInputRef.current.focus();
+        }
+        return;
+      }
       if (e.altKey && (e.key === "k" || e.key === "K")) {
         if (retryCompareQueueItems.length > 0) {
           e.preventDefault();
@@ -846,8 +854,15 @@ const WarpListView: React.FC<Props> = ({
                     </div>
                     <div className="px-2 py-1.5 border-b border-white/10 space-y-1.5">
                       <input
+                        ref={timelineSearchInputRef}
                         value={timelineQuery}
                         onChange={(e) => setTimelineQuery(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key !== "Escape") return;
+                          if (!timelineQuery.trim()) return;
+                          e.preventDefault();
+                          setTimelineQuery("");
+                        }}
                         placeholder="타임라인 검색 (command/preview)"
                         className="w-full bg-[#0f151f] border border-white/10 rounded px-2 py-1 text-[10px] text-white/80 placeholder:text-white/30 outline-none focus-visible:ring-1 focus-visible:ring-cyan-300/45"
                       />
@@ -1106,6 +1121,7 @@ const WarpListView: React.FC<Props> = ({
                         <div className="rounded border border-cyan-300/20 bg-cyan-400/[0.08] px-2 py-1.5 text-[10px] text-cyan-100/90 space-y-0.5">
                           <div><span className="text-cyan-50">Cmd/Ctrl+Shift+Y</span> 타임라인 열기/닫기</div>
                           <div><span className="text-cyan-50">Alt+Enter / Alt+↑ / Alt+↓</span> 선택 Jump/이동</div>
+                          <div><span className="text-cyan-50">Alt+F</span> 타임라인 검색창 포커스</div>
                           <div><span className="text-cyan-50">Alt+I</span> 현재 목록 선택 반전</div>
                           <div><span className="text-cyan-50">Alt+O</span> 선택 항목만 보기 토글</div>
                           <div><span className="text-cyan-50">Alt+H</span> 고위험 항목 빠른 선택</div>
