@@ -58,6 +58,8 @@ const WarpListView: React.FC<Props> = ({
   const [timelineOpen, setTimelineOpen] = useState(false);
   const [timelineQuery, setTimelineQuery] = useState("");
   const [timelineSelectedIds, setTimelineSelectedIds] = useState<Set<string>>(new Set());
+  const [timelinePinnedIds, setTimelinePinnedIds] = useState<Set<string>>(new Set());
+  const [timelinePinnedOnly, setTimelinePinnedOnly] = useState(false);
   const outputRefs = useRef<Record<string, HTMLPreElement | null>>({});
   const blockRowRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const deltaButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({});
@@ -112,16 +114,24 @@ const WarpListView: React.FC<Props> = ({
       blocks
         .filter((b) => !!compareResultByBlock[b.id])
         .map((b) => ({ block: b, compare: compareResultByBlock[b.id] as CompareResult }))
-        .sort((a, b) => b.compare.comparedAt - a.compare.comparedAt),
-    [blocks, compareResultByBlock],
+        .sort((a, b) => {
+          const aPinned = timelinePinnedIds.has(a.block.id);
+          const bPinned = timelinePinnedIds.has(b.block.id);
+          if (aPinned !== bPinned) return aPinned ? -1 : 1;
+          return b.compare.comparedAt - a.compare.comparedAt;
+        }),
+    [blocks, compareResultByBlock, timelinePinnedIds],
   );
   const timelineFiltered = useMemo(() => {
     const q = timelineQuery.trim().toLowerCase();
-    if (!q) return comparedTimeline;
-    return comparedTimeline.filter(({ block, compare }) =>
+    const pinnedFiltered = timelinePinnedOnly
+      ? comparedTimeline.filter(({ block }) => timelinePinnedIds.has(block.id))
+      : comparedTimeline;
+    if (!q) return pinnedFiltered;
+    return pinnedFiltered.filter(({ block, compare }) =>
       block.command.toLowerCase().includes(q) || (compare.preview ?? "").toLowerCase().includes(q),
     );
-  }, [comparedTimeline, timelineQuery]);
+  }, [comparedTimeline, timelinePinnedOnly, timelinePinnedIds, timelineQuery]);
   const comparedTotals = useMemo(
     () =>
       comparedTimeline.reduce(
@@ -175,9 +185,20 @@ const WarpListView: React.FC<Props> = ({
     if (comparedCount > 0) return;
     setTimelineOpen(false);
     setTimelineSelectedIds(new Set());
+    setTimelinePinnedIds(new Set());
+    setTimelinePinnedOnly(false);
   }, [comparedCount]);
   useEffect(() => {
     setTimelineSelectedIds((prev) => {
+      const next = new Set(
+        [...prev].filter((id) => comparedTimeline.some((item) => item.block.id === id)),
+      );
+      if (next.size === prev.size) return prev;
+      return next;
+    });
+  }, [comparedTimeline]);
+  useEffect(() => {
+    setTimelinePinnedIds((prev) => {
       const next = new Set(
         [...prev].filter((id) => comparedTimeline.some((item) => item.block.id === id)),
       );
@@ -327,6 +348,20 @@ const WarpListView: React.FC<Props> = ({
       for (const item of timelineFiltered) {
         next.add(item.block.id);
       }
+      return next;
+    });
+  };
+  const pinSelectedTimeline = () => {
+    setTimelinePinnedIds((prev) => {
+      const next = new Set(prev);
+      for (const id of timelineSelectedIds) next.add(id);
+      return next;
+    });
+  };
+  const unpinSelectedTimeline = () => {
+    setTimelinePinnedIds((prev) => {
+      const next = new Set(prev);
+      for (const id of timelineSelectedIds) next.delete(id);
       return next;
     });
   };
@@ -526,6 +561,34 @@ const WarpListView: React.FC<Props> = ({
                         </button>
                         <button
                           type="button"
+                          className="text-[10px] px-2 py-0.5 rounded border border-amber-300/30 text-amber-200 hover:bg-amber-300/12 disabled:opacity-40"
+                          onClick={pinSelectedTimeline}
+                          disabled={timelineSelectedIds.size === 0}
+                        >
+                          핀 선택
+                        </button>
+                        <button
+                          type="button"
+                          className="text-[10px] px-2 py-0.5 rounded border border-amber-300/30 text-amber-200 hover:bg-amber-300/12 disabled:opacity-40"
+                          onClick={unpinSelectedTimeline}
+                          disabled={timelineSelectedIds.size === 0}
+                        >
+                          핀 해제
+                        </button>
+                        <button
+                          type="button"
+                          className={`text-[10px] px-2 py-0.5 rounded border ${
+                            timelinePinnedOnly
+                              ? "border-amber-300/45 bg-amber-300/18 text-amber-100"
+                              : "border-white/15 text-white/70 hover:bg-white/[0.08]"
+                          }`}
+                          onClick={() => setTimelinePinnedOnly((prev) => !prev)}
+                          disabled={timelinePinnedIds.size === 0}
+                        >
+                          핀만
+                        </button>
+                        <button
+                          type="button"
                           className="text-[10px] px-2 py-0.5 rounded border border-white/15 text-white/70 hover:bg-white/[0.08] disabled:opacity-40"
                           onClick={() => navigateSelectedTimeline(1)}
                           title="Alt+Enter"
@@ -620,6 +683,11 @@ const WarpListView: React.FC<Props> = ({
                             <div className="text-[10px] text-white/80 font-mono truncate">
                               $ {block.command}
                             </div>
+                            {timelinePinnedIds.has(block.id) && (
+                              <span className="text-[9px] px-1 py-0.5 rounded border border-amber-300/30 bg-amber-300/14 text-amber-100">
+                                PIN
+                              </span>
+                            )}
                           </div>
                           <div className="mt-0.5 text-[10px] text-cyan-200/90 tabular-nums">
                             Δ +{compare.added}/-{compare.removed}

@@ -607,6 +607,73 @@ describe("WarpListView delta actions", () => {
     expect(screen.getByText("Retry Compare · +1 / -1")).toBeInTheDocument();
   });
 
+  it("Δ Timeline에서 선택 항목 핀/핀해제", () => {
+    render(
+      <WarpListView
+        blocks={blocks}
+        compareResultByBlock={{
+          b2: {
+            added: 1,
+            removed: 1,
+            preview: "test changed",
+            addedLines: ["new line"],
+            removedLines: ["old line"],
+            comparedAt: now,
+          },
+        }}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Δ Timeline (1)" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "npm test 선택" }));
+    fireEvent.click(screen.getByRole("button", { name: "핀 선택" }));
+    expect(screen.getByText("PIN")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "핀 해제" }));
+    expect(screen.queryByText("PIN")).not.toBeInTheDocument();
+  });
+
+  it("Δ Timeline 핀만 보기 필터", () => {
+    render(
+      <WarpListView
+        blocks={[
+          ...blocks,
+          {
+            id: "b3",
+            command: "pnpm lint",
+            output: "ok",
+            exitCode: 0,
+            startedAt: now - 2000,
+            endedAt: now - 1000,
+          },
+        ]}
+        compareResultByBlock={{
+          b2: {
+            added: 1,
+            removed: 1,
+            preview: "test changed",
+            addedLines: ["new line"],
+            removedLines: ["old line"],
+            comparedAt: now,
+          },
+          b3: {
+            added: 2,
+            removed: 0,
+            preview: "lint fixed",
+            addedLines: ["a", "b"],
+            removedLines: [],
+            comparedAt: now - 3000,
+          },
+        }}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Δ Timeline (2)" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "pnpm lint 선택" }));
+    fireEvent.click(screen.getByRole("button", { name: "핀 선택" }));
+    fireEvent.click(screen.getByRole("button", { name: "핀만" }));
+    expect(screen.getByText("$ pnpm lint")).toBeInTheDocument();
+    expect(screen.queryByText("$ npm test")).not.toBeInTheDocument();
+  });
+
   it("Δ Timeline Copy All이 전체 diff를 복사", () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     Object.defineProperty(navigator, "clipboard", {
