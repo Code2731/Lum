@@ -705,6 +705,20 @@ const WarpListView: React.FC<Props> = ({
         }
         return;
       }
+      if (mod && (e.key === "a" || e.key === "A")) {
+        if (e.shiftKey) {
+          if (selectedTimelineIds.length > 0) {
+            e.preventDefault();
+            clearTimelineSelection();
+          }
+          return;
+        }
+        if (timelineFiltered.length > 0) {
+          e.preventDefault();
+          selectAllTimelineFiltered();
+        }
+        return;
+      }
       if (e.altKey && (e.key === "c" || e.key === "C")) {
         if (e.shiftKey) {
           if (timelineFiltered.length > 0) {
@@ -1272,6 +1286,7 @@ const WarpListView: React.FC<Props> = ({
                           <div><span className="text-cyan-50">Alt+R</span> 타임라인 필터 상태 리셋</div>
                           <div><span className="text-cyan-50">Alt+A</span> 현재 목록 선택 전체</div>
                           <div><span className="text-cyan-50">Alt+Shift+A</span> 선택 항목 전체 해제</div>
+                          <div><span className="text-cyan-50">Cmd/Ctrl+A / Cmd/Ctrl+Shift+A</span> 선택 전체/해제</div>
                           <div><span className="text-cyan-50">Alt+C / Alt+Shift+C</span> 선택/전체 diff 복사</div>
                           <div><span className="text-cyan-50">Alt+I</span> 현재 목록 선택 반전</div>
                           <div><span className="text-cyan-50">Alt+O</span> 선택 항목만 보기 토글</div>
