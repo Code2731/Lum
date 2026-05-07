@@ -418,6 +418,119 @@ describe("WarpListView delta actions", () => {
     expect(screen.queryByText("$ npm test")).not.toBeInTheDocument();
   });
 
+  it("Δ Timeline 리스크 배지 표시", () => {
+    render(
+      <WarpListView
+        blocks={[
+          ...blocks,
+          {
+            id: "b3",
+            command: "rm -rf ./dist",
+            output: "done",
+            exitCode: 0,
+            startedAt: now - 2000,
+            endedAt: now - 1000,
+          },
+          {
+            id: "b4",
+            command: "npm install",
+            output: "done",
+            exitCode: 0,
+            startedAt: now - 4000,
+            endedAt: now - 3000,
+          },
+        ]}
+        compareResultByBlock={{
+          b2: {
+            added: 1,
+            removed: 1,
+            preview: "test changed",
+            addedLines: ["new line"],
+            removedLines: ["old line"],
+            comparedAt: now,
+          },
+          b3: {
+            added: 1,
+            removed: 0,
+            preview: "",
+            addedLines: ["a"],
+            removedLines: [],
+            comparedAt: now - 1000,
+          },
+          b4: {
+            added: 1,
+            removed: 0,
+            preview: "",
+            addedLines: ["a"],
+            removedLines: [],
+            comparedAt: now - 2000,
+          },
+        }}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Δ Timeline (3)" }));
+    expect(screen.getByText("HIGH")).toBeInTheDocument();
+    expect(screen.getByText("MED")).toBeInTheDocument();
+    expect(screen.getByText("LOW")).toBeInTheDocument();
+  });
+
+  it("Δ Timeline 리스크 필터 High", () => {
+    render(
+      <WarpListView
+        blocks={[
+          ...blocks,
+          {
+            id: "b3",
+            command: "rm -rf ./dist",
+            output: "done",
+            exitCode: 0,
+            startedAt: now - 2000,
+            endedAt: now - 1000,
+          },
+          {
+            id: "b4",
+            command: "npm install",
+            output: "done",
+            exitCode: 0,
+            startedAt: now - 4000,
+            endedAt: now - 3000,
+          },
+        ]}
+        compareResultByBlock={{
+          b2: {
+            added: 1,
+            removed: 1,
+            preview: "test changed",
+            addedLines: ["new line"],
+            removedLines: ["old line"],
+            comparedAt: now,
+          },
+          b3: {
+            added: 1,
+            removed: 0,
+            preview: "",
+            addedLines: ["a"],
+            removedLines: [],
+            comparedAt: now - 1000,
+          },
+          b4: {
+            added: 1,
+            removed: 0,
+            preview: "",
+            addedLines: ["a"],
+            removedLines: [],
+            comparedAt: now - 2000,
+          },
+        }}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Δ Timeline (3)" }));
+    fireEvent.click(screen.getByRole("button", { name: "High 1" }));
+    expect(screen.getByText("$ rm -rf ./dist")).toBeInTheDocument();
+    expect(screen.queryByText("$ npm test")).not.toBeInTheDocument();
+    expect(screen.queryByText("$ npm install")).not.toBeInTheDocument();
+  });
+
   it("Retry+Compare 큐 뱃지 표시", () => {
     render(
       <WarpListView

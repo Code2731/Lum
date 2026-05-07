@@ -24,6 +24,7 @@ interface Props {
   }>;
 }
 type CompareResult = NonNullable<Props["compareResultByBlock"]>[string];
+type TimelineRisk = "high" | "medium" | "low";
 
 const SyntaxCmd: React.FC<{ cmd: string }> = ({ cmd }) => (
   <>
@@ -37,6 +38,16 @@ function fmtDuration(block: CommandBlock): string {
   if (!block.endedAt) return "";
   const ms = block.endedAt - block.startedAt;
   return ms < 1000 ? `${ms}ms` : `${(ms / 1000).toFixed(1)}s`;
+}
+function classifyTimelineRisk(command: string): TimelineRisk {
+  const c = command.toLowerCase();
+  if (/(rm\s+-rf|sudo\s+|chmod\s+|chown\s+|git\s+reset\s+--hard|dd\s+if=|mkfs|shutdown|reboot)/.test(c)) {
+    return "high";
+  }
+  if (/(npm\s+install|pnpm\s+install|yarn\s+install|git\s+pull|git\s+merge|docker\s+|kubectl\s+)/.test(c)) {
+    return "medium";
+  }
+  return "low";
 }
 
 const WarpListView: React.FC<Props> = ({
@@ -64,6 +75,7 @@ const WarpListView: React.FC<Props> = ({
   const [timelineSelectedIds, setTimelineSelectedIds] = useState<Set<string>>(new Set());
   const [timelinePinnedIds, setTimelinePinnedIds] = useState<Set<string>>(new Set());
   const [timelinePinnedOnly, setTimelinePinnedOnly] = useState(false);
+  const [timelineRiskFilter, setTimelineRiskFilter] = useState<"all" | TimelineRisk>("all");
   const outputRefs = useRef<Record<string, HTMLPreElement | null>>({});
   const blockRowRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const deltaButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({});
@@ -131,11 +143,26 @@ const WarpListView: React.FC<Props> = ({
     const pinnedFiltered = timelinePinnedOnly
       ? comparedTimeline.filter(({ block }) => timelinePinnedIds.has(block.id))
       : comparedTimeline;
-    if (!q) return pinnedFiltered;
-    return pinnedFiltered.filter(({ block, compare }) =>
+    const riskFiltered = timelineRiskFilter === "all"
+      ? pinnedFiltered
+      : pinnedFiltered.filter(({ block }) => classifyTimelineRisk(block.command) === timelineRiskFilter);
+    if (!q) return riskFiltered;
+    return riskFiltered.filter(({ block, compare }) =>
       block.command.toLowerCase().includes(q) || (compare.preview ?? "").toLowerCase().includes(q),
     );
-  }, [comparedTimeline, timelinePinnedOnly, timelinePinnedIds, timelineQuery]);
+  }, [comparedTimeline, timelinePinnedOnly, timelinePinnedIds, timelineRiskFilter, timelineQuery]);
+  const riskCounts = useMemo(
+    () =>
+      comparedTimeline.reduce(
+        (acc, item) => {
+          const risk = classifyTimelineRisk(item.block.command);
+          acc[risk] += 1;
+          return acc;
+        },
+        { high: 0, medium: 0, low: 0 },
+      ),
+    [comparedTimeline],
+  );
   const comparedTotals = useMemo(
     () =>
       comparedTimeline.reduce(
@@ -191,6 +218,7 @@ const WarpListView: React.FC<Props> = ({
     setTimelineSelectedIds(new Set());
     setTimelinePinnedIds(new Set());
     setTimelinePinnedOnly(false);
+    setTimelineRiskFilter("all");
   }, [comparedCount]);
   useEffect(() => {
     setTimelineSelectedIds((prev) => {
@@ -542,6 +570,32 @@ const WarpListView: React.FC<Props> = ({
                         className="w-full bg-[#0f151f] border border-white/10 rounded px-2 py-1 text-[10px] text-white/80 placeholder:text-white/30 outline-none focus-visible:ring-1 focus-visible:ring-cyan-300/45"
                       />
                       <div className="flex items-center gap-1.5">
+                        <RiskChip
+                          label={`All ${comparedTimeline.length}`}
+                          active={timelineRiskFilter === "all"}
+                          onClick={() => setTimelineRiskFilter("all")}
+                          tone="all"
+                        />
+                        <RiskChip
+                          label={`High ${riskCounts.high}`}
+                          active={timelineRiskFilter === "high"}
+                          onClick={() => setTimelineRiskFilter("high")}
+                          tone="high"
+                        />
+                        <RiskChip
+                          label={`Med ${riskCounts.medium}`}
+                          active={timelineRiskFilter === "medium"}
+                          onClick={() => setTimelineRiskFilter("medium")}
+                          tone="medium"
+                        />
+                        <RiskChip
+                          label={`Low ${riskCounts.low}`}
+                          active={timelineRiskFilter === "low"}
+                          onClick={() => setTimelineRiskFilter("low")}
+                          tone="low"
+                        />
+                      </div>
+                      <div className="flex items-center gap-1.5">
                         <span className="text-[10px] text-white/48 tabular-nums">
                           선택 {selectedTimelineIds.length}
                         </span>
@@ -717,6 +771,9 @@ const WarpListView: React.FC<Props> = ({
                             Δ +{compare.added}/-{compare.removed}
                             <span className="ml-1.5 text-white/45">
                               {new Date(compare.comparedAt).toLocaleTimeString()}
+                            </span>
+                            <span className="ml-1.5">
+                              <RiskBadge risk={classifyTimelineRisk(block.command)} />
                             </span>
                           </div>
                           {compare.preview && (
@@ -1188,6 +1245,41 @@ const FilterChip: React.FC<{
       {label}
     </button>
   );
+};
+
+const RiskChip: React.FC<{
+  active: boolean;
+  onClick: () => void;
+  label: string;
+  tone: "all" | TimelineRisk;
+}> = ({ active, onClick, label, tone }) => {
+  const activeClass =
+    tone === "high"
+      ? "bg-rose-400/20 border-rose-400/40 text-rose-200"
+      : tone === "medium"
+        ? "bg-amber-400/20 border-amber-400/40 text-amber-200"
+        : tone === "low"
+          ? "bg-emerald-400/20 border-emerald-400/40 text-emerald-200"
+          : "bg-white/15 border-white/35 text-white/88";
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`px-2 py-0.5 rounded text-[10px] border ${active ? activeClass : "border-white/14 text-white/50 hover:bg-white/[0.08]"}`}
+    >
+      {label}
+    </button>
+  );
+};
+
+const RiskBadge: React.FC<{ risk: TimelineRisk }> = ({ risk }) => {
+  const cls = risk === "high"
+    ? "border-rose-400/35 bg-rose-400/14 text-rose-100"
+    : risk === "medium"
+      ? "border-amber-400/35 bg-amber-400/14 text-amber-100"
+      : "border-emerald-400/35 bg-emerald-400/14 text-emerald-100";
+  const label = risk === "high" ? "HIGH" : risk === "medium" ? "MED" : "LOW";
+  return <span className={`text-[9px] px-1 py-0.5 rounded border ${cls}`}>{label}</span>;
 };
 
 export default WarpListView;
