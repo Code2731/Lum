@@ -1219,6 +1219,14 @@ const App: React.FC = () => {
               retryCompareInFlight={retryComparePending !== null}
               retryCompareCurrentCommand={retryComparePending?.command ?? null}
               retryCompareQueueItems={retryCompareQueue.map((t) => ({ id: t.id, command: t.command }))}
+              onPromoteRetryCompareQueueItem={(id) => {
+                setRetryCompareQueue((prev) => {
+                  const idx = prev.findIndex((t) => t.id === id);
+                  if (idx <= 0) return prev;
+                  const picked = prev[idx];
+                  return [picked, ...prev.slice(0, idx), ...prev.slice(idx + 1)];
+                });
+              }}
               onRemoveRetryCompareQueueItem={(id) => {
                 setRetryCompareQueue((prev) => prev.filter((t) => t.id !== id));
               }}

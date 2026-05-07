@@ -15,6 +15,7 @@ interface Props {
   retryCompareInFlight?: boolean;
   retryCompareCurrentCommand?: string | null;
   retryCompareQueueItems?: Array<{ id: string; command: string }>;
+  onPromoteRetryCompareQueueItem?: (id: string) => void;
   onRemoveRetryCompareQueueItem?: (id: string) => void;
   onClearRetryCompareQueue?: () => void;
   onExplainDiff?: (text: string) => void;
@@ -67,6 +68,7 @@ const WarpListView: React.FC<Props> = ({
   retryCompareInFlight = false,
   retryCompareCurrentCommand = null,
   retryCompareQueueItems = [],
+  onPromoteRetryCompareQueueItem,
   onRemoveRetryCompareQueueItem,
   onClearRetryCompareQueue,
   onExplainDiff,
@@ -794,6 +796,16 @@ const WarpListView: React.FC<Props> = ({
                               <span className="text-[10px] text-white/75 font-mono truncate flex-1" title={item.command}>
                                 {item.command}
                               </span>
+                              {onPromoteRetryCompareQueueItem && (
+                                <button
+                                  type="button"
+                                  aria-label={`queue-promote-${idx + 1}`}
+                                  className="text-[10px] px-1 py-0.5 rounded border border-cyan-300/30 text-cyan-200 hover:bg-cyan-300/12"
+                                  onClick={() => onPromoteRetryCompareQueueItem(item.id)}
+                                >
+                                  맨앞
+                                </button>
+                              )}
                               {onRemoveRetryCompareQueueItem && (
                                 <button
                                   type="button"

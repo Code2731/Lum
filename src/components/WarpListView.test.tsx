@@ -580,6 +580,7 @@ describe("WarpListView delta actions", () => {
 
   it("Retry+Compare 큐 상세 목록/개별 제거", () => {
     const onRemoveRetryCompareQueueItem = vi.fn();
+    const onPromoteRetryCompareQueueItem = vi.fn();
     render(
       <WarpListView
         blocks={blocks}
@@ -590,6 +591,7 @@ describe("WarpListView delta actions", () => {
           { id: "q2", command: "pnpm lint" },
           { id: "q3", command: "npm run build" },
         ]}
+        onPromoteRetryCompareQueueItem={onPromoteRetryCompareQueueItem}
         onRemoveRetryCompareQueueItem={onRemoveRetryCompareQueueItem}
         compareResultByBlock={{
           b2: {
@@ -606,6 +608,8 @@ describe("WarpListView delta actions", () => {
     fireEvent.click(screen.getByRole("button", { name: "Δ Timeline (1)" }));
     expect(screen.getByText("Retry+Compare Queue")).toBeInTheDocument();
     expect(screen.getByText("pnpm lint")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "queue-promote-2" }));
+    expect(onPromoteRetryCompareQueueItem).toHaveBeenCalledWith("q2");
     fireEvent.click(screen.getByRole("button", { name: "queue-remove-2" }));
     expect(onRemoveRetryCompareQueueItem).toHaveBeenCalledWith("q2");
   });
