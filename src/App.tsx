@@ -377,6 +377,7 @@ const App: React.FC = () => {
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
   const [retryComparePending, setRetryComparePending] = useState<RetryComparePending | null>(null);
   const [retryCompareQueue, setRetryCompareQueue] = useState<RetryCompareTask[]>([]);
+  const [retryCompareQueuePaused, setRetryCompareQueuePaused] = useState(false);
   const [retryCompareCompletedCount, setRetryCompareCompletedCount] = useState(0);
   const [retryCompareByBlock, setRetryCompareByBlock] = useState<Record<string, RetryCompareResult>>(() => loadRetryCompareCache());
   const aiInputRef = useRef<HTMLInputElement>(null);
@@ -457,6 +458,7 @@ const App: React.FC = () => {
   }, [cmdBlocks, retryComparePending, notifCenter]);
   useEffect(() => {
     if (retryComparePending) return;
+    if (retryCompareQueuePaused) return;
     if (retryCompareQueue.length === 0) return;
     const write = ptyWriteRefs.current.get(activePaneIdRef.current);
     if (!write) return;
@@ -468,7 +470,7 @@ const App: React.FC = () => {
       queuedAt: Date.now(),
     });
     write(next.command + "\r");
-  }, [retryComparePending, retryCompareQueue, ptyWriteRefs, activePaneIdRef]);
+  }, [retryComparePending, retryCompareQueuePaused, retryCompareQueue, ptyWriteRefs, activePaneIdRef]);
   const enqueueRetryCompare = useCallback((blocks: CommandBlock[]) => {
     const tasks = blocks
       .filter((b) => b.command.trim() !== "")
@@ -1221,6 +1223,10 @@ const App: React.FC = () => {
               retryCompareInFlight={retryComparePending !== null}
               retryCompareCurrentCommand={retryComparePending?.command ?? null}
               retryCompareCompletedCount={retryCompareCompletedCount}
+              retryCompareQueuePaused={retryCompareQueuePaused}
+              onToggleRetryCompareQueuePaused={() => {
+                setRetryCompareQueuePaused((prev) => !prev);
+              }}
               retryCompareQueueItems={retryCompareQueue.map((t) => ({ id: t.id, command: t.command }))}
               onPromoteRetryCompareQueueItem={(id) => {
                 setRetryCompareQueue((prev) => {

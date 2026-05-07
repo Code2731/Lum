@@ -15,6 +15,8 @@ interface Props {
   retryCompareInFlight?: boolean;
   retryCompareCurrentCommand?: string | null;
   retryCompareCompletedCount?: number;
+  retryCompareQueuePaused?: boolean;
+  onToggleRetryCompareQueuePaused?: () => void;
   retryCompareQueueItems?: Array<{ id: string; command: string }>;
   onPromoteRetryCompareQueueItem?: (id: string) => void;
   onRemoveRetryCompareQueueItem?: (id: string) => void;
@@ -69,6 +71,8 @@ const WarpListView: React.FC<Props> = ({
   retryCompareInFlight = false,
   retryCompareCurrentCommand = null,
   retryCompareCompletedCount = 0,
+  retryCompareQueuePaused = false,
+  onToggleRetryCompareQueuePaused,
   retryCompareQueueItems = [],
   onPromoteRetryCompareQueueItem,
   onRemoveRetryCompareQueueItem,
@@ -563,6 +567,19 @@ const WarpListView: React.FC<Props> = ({
                 <span className="text-[10px] text-white/45 tabular-nums">
                   {retryCompareInFlight ? "실행 중" : "대기"} · wait {retryCompareQueueWaiting}
                 </span>
+              )}
+              {onToggleRetryCompareQueuePaused && (
+                <button
+                  type="button"
+                  className={`text-[10px] px-2 py-0.5 rounded border ${
+                    retryCompareQueuePaused
+                      ? "border-amber-300/40 bg-amber-300/14 text-amber-100"
+                      : "border-white/15 text-white/70 hover:bg-white/[0.08]"
+                  }`}
+                  onClick={onToggleRetryCompareQueuePaused}
+                >
+                  {retryCompareQueuePaused ? "큐 재개" : "큐 일시정지"}
+                </button>
               )}
               {retryCompareCompletedCount > 0 && (
                 <span className="text-[10px] text-white/45 tabular-nums">
