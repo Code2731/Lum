@@ -730,6 +730,38 @@ describe("WarpListView delta actions", () => {
     expect(screen.getByText("표시 3/3")).toBeInTheDocument();
   });
 
+  it("Retry+Compare 큐 검색 결과 필터 제거", () => {
+    const onRemoveFilteredRetryCompareQueueItems = vi.fn();
+    render(
+      <WarpListView
+        blocks={blocks}
+        retryCompareQueueDepth={3}
+        retryCompareQueueWaiting={3}
+        retryCompareQueueItems={[
+          { id: "q1", command: "npm test" },
+          { id: "q2", command: "pnpm lint" },
+          { id: "q3", command: "npm run build" },
+        ]}
+        onRemoveFilteredRetryCompareQueueItems={onRemoveFilteredRetryCompareQueueItems}
+        compareResultByBlock={{
+          b2: {
+            added: 1,
+            removed: 1,
+            preview: "test changed",
+            addedLines: ["new line"],
+            removedLines: ["old line"],
+            comparedAt: now,
+          },
+        }}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Δ Timeline (1)" }));
+    fireEvent.change(screen.getByPlaceholderText("큐 검색 (command)"), { target: { value: "run build" } });
+    fireEvent.click(screen.getByRole("button", { name: "필터 제거" }));
+    expect(onRemoveFilteredRetryCompareQueueItems).toHaveBeenCalledTimes(1);
+    expect(onRemoveFilteredRetryCompareQueueItems).toHaveBeenCalledWith(["q3"]);
+  });
+
   it("Retry+Compare 큐 검색 포커스 단축키(Alt+Q)", () => {
     render(
       <WarpListView

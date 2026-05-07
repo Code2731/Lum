@@ -24,6 +24,7 @@ interface Props {
   onMoveUpRetryCompareQueueItem?: (id: string) => void;
   onMoveDownRetryCompareQueueItem?: (id: string) => void;
   onRemoveRetryCompareQueueItem?: (id: string) => void;
+  onRemoveFilteredRetryCompareQueueItems?: (ids: string[]) => void;
   onClearRetryCompareQueue?: () => void;
   onExplainDiff?: (text: string) => void;
   onExplainAllDiffs?: (text: string) => void;
@@ -84,6 +85,7 @@ const WarpListView: React.FC<Props> = ({
   onMoveUpRetryCompareQueueItem,
   onMoveDownRetryCompareQueueItem,
   onRemoveRetryCompareQueueItem,
+  onRemoveFilteredRetryCompareQueueItems,
   onClearRetryCompareQueue,
   onExplainDiff,
   onExplainAllDiffs,
@@ -868,6 +870,18 @@ const WarpListView: React.FC<Props> = ({
                               onClick={() => setQueueQuery("")}
                             >
                               지우기
+                            </button>
+                          )}
+                          {onRemoveFilteredRetryCompareQueueItems && (
+                            <button
+                              type="button"
+                              className="text-[10px] px-1.5 py-1 rounded border border-rose-300/30 text-rose-200 hover:bg-rose-300/12 disabled:opacity-40"
+                              onClick={() => {
+                                onRemoveFilteredRetryCompareQueueItems(filteredQueueItems.map((x) => x.id));
+                              }}
+                              disabled={filteredQueueItems.length === 0}
+                            >
+                              필터 제거
                             </button>
                           )}
                         </div>

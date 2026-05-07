@@ -1311,6 +1311,10 @@ const App: React.FC = () => {
               onRemoveRetryCompareQueueItem={(id) => {
                 setRetryCompareQueue((prev) => prev.filter((t) => t.id !== id));
               }}
+              onRemoveFilteredRetryCompareQueueItems={(ids) => {
+                const remove = new Set(ids);
+                setRetryCompareQueue((prev) => prev.filter((t) => !remove.has(t.id)));
+              }}
               onClearRetryCompareQueue={() => {
                 setRetryCompareQueue([]);
               }}
