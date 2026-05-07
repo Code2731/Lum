@@ -36,7 +36,7 @@ function fmtDuration(block: CommandBlock): string {
 const WarpListView: React.FC<Props> = ({ blocks, onExecute, onAskAIForFix, onRetryWithDiff, compareResultByBlock = {} }) => {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [query, setQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | "failed" | "success">("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "failed" | "success" | "compared">("all");
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
   const [blockSearch, setBlockSearch] = useState<Record<string, string>>({});
   const [blockSearchCursor, setBlockSearchCursor] = useState<Record<string, number>>({});
@@ -69,12 +69,19 @@ const WarpListView: React.FC<Props> = ({ blocks, onExecute, onAskAIForFix, onRet
       const ok = b.exitCode === 0 || b.exitCode === null;
       if (statusFilter === "failed" && ok) return false;
       if (statusFilter === "success" && !ok) return false;
+      if (statusFilter === "compared" && !compareResultByBlock[b.id]) return false;
       if (!q) return true;
-      return b.command.toLowerCase().includes(q) || b.output.toLowerCase().includes(q);
+      const compare = compareResultByBlock[b.id];
+      return (
+        b.command.toLowerCase().includes(q)
+        || b.output.toLowerCase().includes(q)
+        || (compare?.preview?.toLowerCase().includes(q) ?? false)
+      );
     });
 
   const failedCount = blocks.filter((b) => b.exitCode !== 0 && b.exitCode !== null).length;
   const successCount = blocks.length - failedCount;
+  const comparedCount = blocks.filter((b) => !!compareResultByBlock[b.id]).length;
 
   useEffect(() => {
     for (const id of Object.keys(blockSearch)) {
@@ -191,11 +198,40 @@ const WarpListView: React.FC<Props> = ({ blocks, onExecute, onAskAIForFix, onRet
           <FilterChip active={statusFilter === "all"} onClick={() => setStatusFilter("all")} label={`전체 ${blocks.length}`} />
           <FilterChip active={statusFilter === "failed"} onClick={() => setStatusFilter("failed")} label={`실패 ${failedCount}`} tone="danger" />
           <FilterChip active={statusFilter === "success"} onClick={() => setStatusFilter("success")} label={`성공 ${successCount}`} tone="success" />
+          <FilterChip active={statusFilter === "compared"} onClick={() => setStatusFilter("compared")} label={`비교 ${comparedCount}`} tone="info" />
           <span className="ml-auto text-[10px] text-white/34 tabular-nums">
             표시 {filtered.length}
           </span>
         </div>
       </div>
+
+      {filtered.length === 0 && (
+        <div className="rounded-xl border border-white/10 bg-white/[0.02] px-3 py-4">
+          <p className="text-[11px] text-white/55">
+            현재 조건에 맞는 블록이 없습니다.
+          </p>
+          <div className="mt-2 flex items-center gap-2">
+            {statusFilter !== "all" && (
+              <button
+                type="button"
+                onClick={() => setStatusFilter("all")}
+                className="text-[10px] px-2 py-1 rounded border border-white/15 text-white/70 hover:bg-white/[0.08]"
+              >
+                필터 초기화
+              </button>
+            )}
+            {query.trim() !== "" && (
+              <button
+                type="button"
+                onClick={() => setQuery("")}
+                className="text-[10px] px-2 py-1 rounded border border-white/15 text-white/70 hover:bg-white/[0.08]"
+              >
+                검색 지우기
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       {filtered.map((b) => {
         const ok         = b.exitCode === 0 || b.exitCode === null;
@@ -491,13 +527,15 @@ const FilterChip: React.FC<{
   active: boolean;
   onClick: () => void;
   label: string;
-  tone?: "neutral" | "danger" | "success";
+  tone?: "neutral" | "danger" | "success" | "info";
 }> = ({ active, onClick, label, tone = "neutral" }) => {
   const activeClass =
     tone === "danger"
       ? "bg-red-400/20 border-red-400/40 text-red-200"
       : tone === "success"
         ? "bg-emerald-400/20 border-emerald-400/40 text-emerald-200"
+        : tone === "info"
+          ? "bg-cyan-400/20 border-cyan-400/40 text-cyan-200"
         : "bg-accent/20 border-accent/40 text-accent";
   return (
     <button
