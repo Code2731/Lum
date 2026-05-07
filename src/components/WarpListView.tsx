@@ -9,6 +9,12 @@ interface Props {
   onExecute?: (cmd: string) => void;
   onAskAIForFix?: (text: string) => void;
   onRetryWithDiff?: (block: CommandBlock) => void;
+  compareResultByBlock?: Record<string, {
+    added: number;
+    removed: number;
+    preview: string;
+    comparedAt: number;
+  }>;
 }
 
 const SyntaxCmd: React.FC<{ cmd: string }> = ({ cmd }) => (
@@ -25,7 +31,7 @@ function fmtDuration(block: CommandBlock): string {
   return ms < 1000 ? `${ms}ms` : `${(ms / 1000).toFixed(1)}s`;
 }
 
-const WarpListView: React.FC<Props> = ({ blocks, onExecute, onAskAIForFix, onRetryWithDiff }) => {
+const WarpListView: React.FC<Props> = ({ blocks, onExecute, onAskAIForFix, onRetryWithDiff, compareResultByBlock = {} }) => {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "failed" | "success">("all");
@@ -197,6 +203,7 @@ const WarpListView: React.FC<Props> = ({ blocks, onExecute, onAskAIForFix, onRet
         const matchCount = hasOutput ? countMatches(b.output, localQuery) : 0;
         const cursor = Math.min(blockSearchCursor[b.id] ?? 0, Math.max(0, matchCount - 1));
         const moveCursor = (dir: 1 | -1) => moveBlockSearchCursor(b.id, dir);
+        const compare = compareResultByBlock[b.id];
 
         return (
           <div
@@ -225,6 +232,14 @@ const WarpListView: React.FC<Props> = ({ blocks, onExecute, onAskAIForFix, onRet
                 <span className="flex items-center gap-0.5 text-[9px] text-white/20 shrink-0 tabular-nums">
                   <Clock size={8} />
                   {dur}
+                </span>
+              )}
+              {compare && (
+                <span
+                  className="text-[9px] shrink-0 tabular-nums px-1 py-0.5 rounded border border-cyan-300/25 bg-cyan-300/10 text-cyan-200"
+                  title={compare.preview || "출력 변경 요약"}
+                >
+                  Δ +{compare.added}/-{compare.removed}
                 </span>
               )}
 
@@ -334,6 +349,18 @@ const WarpListView: React.FC<Props> = ({ blocks, onExecute, onAskAIForFix, onRet
                         <RotateCcw size={11} />
                         Retry + Compare
                       </button>
+                    )}
+                    {compare && (
+                      <div className="px-2.5 py-1.5 border-t border-white/10">
+                        <div className="text-[10px] text-cyan-200/90 tabular-nums">
+                          Δ +{compare.added}/-{compare.removed}
+                        </div>
+                        {compare.preview && (
+                          <div className="text-[10px] text-white/50 leading-relaxed mt-0.5 break-words">
+                            {compare.preview}
+                          </div>
+                        )}
+                      </div>
                     )}
                   </div>
                 )}

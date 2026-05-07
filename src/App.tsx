@@ -63,6 +63,13 @@ interface RetryComparePending {
   queuedAt: number;
 }
 
+interface RetryCompareResult {
+  added: number;
+  removed: number;
+  preview: string;
+  comparedAt: number;
+}
+
 function parseGitTabInfo(ctx: string): GitTabInfo | null {
   if (!ctx) return null;
   const statusHeader = "$ git status";
@@ -333,6 +340,7 @@ const App: React.FC = () => {
   const [dismissedBlockId, setDismissedBlockId] = useState<string | null>(null);
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
   const [retryComparePending, setRetryComparePending] = useState<RetryComparePending | null>(null);
+  const [retryCompareByBlock, setRetryCompareByBlock] = useState<Record<string, RetryCompareResult>>({});
   const aiInputRef = useRef<HTMLInputElement>(null);
   const viewModeRef = useRef(viewMode);
   viewModeRef.current = viewMode;
@@ -397,6 +405,10 @@ const App: React.FC = () => {
     if (!candidate) return;
 
     const diff = summarizeOutputDiff(retryComparePending.baselineOutput, candidate.output);
+    setRetryCompareByBlock((prev) => ({
+      ...prev,
+      [candidate.id]: { ...diff, comparedAt: Date.now() },
+    }));
     notifCenter.addNotification({
       type: "command",
       title: `재시도 비교 · ${candidate.exitCode === 0 ? "성공" : "실패"}`,
@@ -1130,6 +1142,7 @@ const App: React.FC = () => {
               onAskAIForFix={(text) => {
                 handleAskAI(`이 실패 로그를 분석하고 해결 커맨드를 제안해줘.\n\n${text}`);
               }}
+              compareResultByBlock={retryCompareByBlock}
               onRetryWithDiff={(block: CommandBlock) => {
                 const write = ptyWriteRefs.current.get(activePaneIdRef.current);
                 if (!write || !block.command.trim()) return;
