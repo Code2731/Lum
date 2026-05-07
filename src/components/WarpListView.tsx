@@ -421,6 +421,30 @@ const WarpListView: React.FC<Props> = ({
                             >
                               Jump
                             </button>
+                            {onExecute && block.command.trim() && (
+                              <button
+                                type="button"
+                                className="text-[10px] px-2 py-0.5 rounded border border-emerald-300/30 text-emerald-200 hover:bg-emerald-300/12"
+                                onClick={() => {
+                                  onExecute(block.command + "\r");
+                                  setTimelineOpen(false);
+                                }}
+                              >
+                                Run
+                              </button>
+                            )}
+                            {onRetryWithDiff && (
+                              <button
+                                type="button"
+                                className="text-[10px] px-2 py-0.5 rounded border border-cyan-300/30 text-cyan-200 hover:bg-cyan-300/12"
+                                onClick={() => {
+                                  onRetryWithDiff(block);
+                                  setTimelineOpen(false);
+                                }}
+                              >
+                                Retry+Compare
+                              </button>
+                            )}
                             <button
                               type="button"
                               className="text-[10px] px-2 py-0.5 rounded border border-white/15 text-white/70 hover:bg-white/[0.08]"

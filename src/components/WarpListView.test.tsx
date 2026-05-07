@@ -272,6 +272,55 @@ describe("WarpListView delta actions", () => {
     expect(screen.queryByText("최근 비교 히스토리")).not.toBeInTheDocument();
   });
 
+  it("Δ Timeline에서 Retry+Compare 액션이 콜백을 호출", () => {
+    const onRetryWithDiff = vi.fn();
+    render(
+      <WarpListView
+        blocks={blocks}
+        onRetryWithDiff={onRetryWithDiff}
+        compareResultByBlock={{
+          b2: {
+            added: 1,
+            removed: 1,
+            preview: "",
+            addedLines: ["new line"],
+            removedLines: ["old line"],
+            comparedAt: now,
+          },
+        }}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Δ Timeline (1)" }));
+    fireEvent.click(screen.getByRole("button", { name: "Retry+Compare" }));
+    expect(onRetryWithDiff).toHaveBeenCalledTimes(1);
+    expect(onRetryWithDiff.mock.calls[0]?.[0]?.id).toBe("b2");
+  });
+
+  it("Δ Timeline에서 Run 액션이 실행 콜백을 호출", () => {
+    const onExecute = vi.fn();
+    render(
+      <WarpListView
+        blocks={blocks}
+        onExecute={onExecute}
+        compareResultByBlock={{
+          b2: {
+            added: 1,
+            removed: 1,
+            preview: "",
+            addedLines: ["new line"],
+            removedLines: ["old line"],
+            comparedAt: now,
+          },
+        }}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Δ Timeline (1)" }));
+    fireEvent.click(screen.getByRole("button", { name: "Run" }));
+    expect(onExecute).toHaveBeenCalledWith("npm test\r");
+  });
+
   it("Cmd/Ctrl+Shift+C로 compared 필터 토글", () => {
     render(
       <WarpListView
