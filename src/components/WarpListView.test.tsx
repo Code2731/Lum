@@ -271,4 +271,38 @@ describe("WarpListView delta actions", () => {
     fireEvent.keyDown(window, { key: "Escape" });
     expect(screen.queryByText("최근 비교 히스토리")).not.toBeInTheDocument();
   });
+
+  it("Cmd/Ctrl+Shift+C로 compared 필터 토글", () => {
+    render(
+      <WarpListView
+        blocks={[
+          ...blocks,
+          {
+            id: "b3",
+            command: "npm run build",
+            output: "another",
+            exitCode: 0,
+            startedAt: now - 2000,
+            endedAt: now - 1000,
+          },
+        ]}
+        compareResultByBlock={{
+          b2: {
+            added: 1,
+            removed: 1,
+            preview: "",
+            addedLines: ["new line"],
+            removedLines: ["old line"],
+            comparedAt: now,
+          },
+        }}
+      />,
+    );
+
+    expect(screen.getByText("표시 2")).toBeInTheDocument();
+    fireEvent.keyDown(window, { key: "c", ctrlKey: true, shiftKey: true });
+    expect(screen.getByText("표시 1")).toBeInTheDocument();
+    fireEvent.keyDown(window, { key: "c", ctrlKey: true, shiftKey: true });
+    expect(screen.getByText("표시 2")).toBeInTheDocument();
+  });
 });

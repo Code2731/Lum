@@ -278,6 +278,19 @@ const WarpListView: React.FC<Props> = ({
     window.addEventListener("keydown", onWindowKeyDown);
     return () => window.removeEventListener("keydown", onWindowKeyDown);
   }, [filteredComparedIds, deltaOpenId]);
+  useEffect(() => {
+    const onWindowKeyDown = (e: KeyboardEvent) => {
+      const mod = e.metaKey || e.ctrlKey;
+      if (!mod || !e.shiftKey) return;
+      if (e.key.toLowerCase() !== "c") return;
+      if (isTypingTarget(e.target)) return;
+      if (comparedCount === 0) return;
+      e.preventDefault();
+      setStatusFilter((prev) => (prev === "compared" ? "all" : "compared"));
+    };
+    window.addEventListener("keydown", onWindowKeyDown);
+    return () => window.removeEventListener("keydown", onWindowKeyDown);
+  }, [comparedCount]);
 
   useEffect(() => {
     if (!deltaOpenId) return;
@@ -336,7 +349,7 @@ const WarpListView: React.FC<Props> = ({
           <FilterChip active={statusFilter === "all"} onClick={() => setStatusFilter("all")} label={`전체 ${blocks.length}`} />
           <FilterChip active={statusFilter === "failed"} onClick={() => setStatusFilter("failed")} label={`실패 ${failedCount}`} tone="danger" />
           <FilterChip active={statusFilter === "success"} onClick={() => setStatusFilter("success")} label={`성공 ${successCount}`} tone="success" />
-          <FilterChip active={statusFilter === "compared"} onClick={() => setStatusFilter("compared")} label={`비교 ${comparedCount}`} tone="info" />
+          <FilterChip active={statusFilter === "compared"} onClick={() => setStatusFilter("compared")} label={`비교 ${comparedCount}`} title="Cmd/Ctrl+Shift+C" tone="info" />
           {comparedCount > 0 && (
             <>
               <div className="relative">
@@ -789,8 +802,9 @@ const FilterChip: React.FC<{
   active: boolean;
   onClick: () => void;
   label: string;
+  title?: string;
   tone?: "neutral" | "danger" | "success" | "info";
-}> = ({ active, onClick, label, tone = "neutral" }) => {
+}> = ({ active, onClick, label, title, tone = "neutral" }) => {
   const activeClass =
     tone === "danger"
       ? "bg-red-400/20 border-red-400/40 text-red-200"
@@ -803,6 +817,7 @@ const FilterChip: React.FC<{
     <button
       type="button"
       onClick={onClick}
+      title={title}
       className={`px-2 py-0.5 rounded-md text-[10px] border transition-colors ${
         active
           ? activeClass
