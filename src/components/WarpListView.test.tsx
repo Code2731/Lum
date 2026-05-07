@@ -484,6 +484,28 @@ describe("WarpListView delta actions", () => {
     expect(document.activeElement).toBe(input);
   });
 
+  it("Δ Timeline 검색창 포커스 단축키(Ctrl+F)", () => {
+    render(
+      <WarpListView
+        blocks={blocks}
+        compareResultByBlock={{
+          b2: {
+            added: 1,
+            removed: 1,
+            preview: "test changed",
+            addedLines: ["new line"],
+            removedLines: ["old line"],
+            comparedAt: now,
+          },
+        }}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Δ Timeline (1)" }));
+    const input = screen.getByPlaceholderText("타임라인 검색 (command/preview)");
+    fireEvent.keyDown(window, { key: "f", ctrlKey: true });
+    expect(document.activeElement).toBe(input);
+  });
+
   it("Δ Timeline 필터 리셋 버튼", () => {
     render(
       <WarpListView

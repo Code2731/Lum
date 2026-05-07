@@ -661,6 +661,13 @@ const WarpListView: React.FC<Props> = ({
         }
         return;
       }
+      if (mod && (e.key === "f" || e.key === "F")) {
+        if (timelineSearchInputRef.current) {
+          e.preventDefault();
+          timelineSearchInputRef.current.focus();
+        }
+        return;
+      }
       if (e.altKey && (e.key === "k" || e.key === "K")) {
         if (retryCompareQueueItems.length > 0) {
           e.preventDefault();
@@ -1216,7 +1223,7 @@ const WarpListView: React.FC<Props> = ({
                         <div className="rounded border border-cyan-300/20 bg-cyan-400/[0.08] px-2 py-1.5 text-[10px] text-cyan-100/90 space-y-0.5">
                           <div><span className="text-cyan-50">Cmd/Ctrl+Shift+Y</span> 타임라인 열기/닫기</div>
                           <div><span className="text-cyan-50">Alt+Enter / Alt+↑ / Alt+↓</span> 선택 Jump/이동</div>
-                          <div><span className="text-cyan-50">Alt+F</span> 타임라인 검색창 포커스</div>
+                          <div><span className="text-cyan-50">Alt+F / Cmd/Ctrl+F</span> 타임라인 검색창 포커스</div>
                           <div><span className="text-cyan-50">Alt+R</span> 타임라인 필터 상태 리셋</div>
                           <div><span className="text-cyan-50">Alt+I</span> 현재 목록 선택 반전</div>
                           <div><span className="text-cyan-50">Alt+O</span> 선택 항목만 보기 토글</div>
