@@ -522,6 +522,34 @@ const WarpListView: React.FC<Props> = ({
     if (!timelineOpen) return;
     const onWindowKeyDown = (e: KeyboardEvent) => {
       if (isTypingTarget(e.target)) return;
+      if (e.altKey && e.shiftKey && e.key === "Enter") {
+        if (onPrioritizeFilteredRetryCompareQueueItems && filteredQueueItems.length > 0) {
+          e.preventDefault();
+          onPrioritizeFilteredRetryCompareQueueItems(filteredQueueItems.map((x) => x.id));
+        }
+        return;
+      }
+      if (e.altKey && e.shiftKey && e.key === "ArrowUp") {
+        if (onPromoteFilteredRetryCompareQueueItems && filteredQueueItems.length > 0) {
+          e.preventDefault();
+          onPromoteFilteredRetryCompareQueueItems(filteredQueueItems.map((x) => x.id));
+        }
+        return;
+      }
+      if (e.altKey && e.shiftKey && e.key === "ArrowDown") {
+        if (onDemoteFilteredRetryCompareQueueItems && filteredQueueItems.length > 0) {
+          e.preventDefault();
+          onDemoteFilteredRetryCompareQueueItems(filteredQueueItems.map((x) => x.id));
+        }
+        return;
+      }
+      if (e.altKey && (e.key === "Backspace" || e.key === "Delete")) {
+        if (onRemoveFilteredRetryCompareQueueItems && filteredQueueItems.length > 0) {
+          e.preventDefault();
+          onRemoveFilteredRetryCompareQueueItems(filteredQueueItems.map((x) => x.id));
+        }
+        return;
+      }
       if (e.altKey && (e.key === "q" || e.key === "Q")) {
         if (queueSearchInputRef.current) {
           e.preventDefault();
@@ -574,7 +602,18 @@ const WarpListView: React.FC<Props> = ({
       window.removeEventListener("keydown", onWindowKeyDown);
       window.removeEventListener("mousedown", onMouseDown);
     };
-  }, [timelineOpen, selectedTimelineIds, deltaOpenId]);
+  }, [
+    timelineOpen,
+    selectedTimelineIds,
+    deltaOpenId,
+    filteredQueueItems,
+    onPrioritizeFilteredRetryCompareQueueItems,
+    onPromoteFilteredRetryCompareQueueItems,
+    onDemoteFilteredRetryCompareQueueItems,
+    onRemoveFilteredRetryCompareQueueItems,
+    onResetRetryCompareCompletedCount,
+    onToggleRetryCompareQueuePaused,
+  ]);
 
   return (
     <div className="p-3 space-y-1.5 overflow-y-auto h-full">
@@ -887,6 +926,7 @@ const WarpListView: React.FC<Props> = ({
                               onClick={() => {
                                 onRemoveFilteredRetryCompareQueueItems(filteredQueueItems.map((x) => x.id));
                               }}
+                              title="Alt+Delete"
                               disabled={filteredQueueItems.length === 0}
                             >
                               필터 제거
@@ -899,6 +939,7 @@ const WarpListView: React.FC<Props> = ({
                               onClick={() => {
                                 onPrioritizeFilteredRetryCompareQueueItems(filteredQueueItems.map((x) => x.id));
                               }}
+                              title="Alt+Shift+Enter"
                               disabled={filteredQueueItems.length === 0}
                             >
                               필터 다음실행
@@ -911,6 +952,7 @@ const WarpListView: React.FC<Props> = ({
                               onClick={() => {
                                 onPromoteFilteredRetryCompareQueueItems(filteredQueueItems.map((x) => x.id));
                               }}
+                              title="Alt+Shift+↑"
                               disabled={filteredQueueItems.length === 0}
                             >
                               필터 맨앞
@@ -923,6 +965,7 @@ const WarpListView: React.FC<Props> = ({
                               onClick={() => {
                                 onDemoteFilteredRetryCompareQueueItems(filteredQueueItems.map((x) => x.id));
                               }}
+                              title="Alt+Shift+↓"
                               disabled={filteredQueueItems.length === 0}
                             >
                               필터 맨뒤

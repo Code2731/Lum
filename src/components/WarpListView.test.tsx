@@ -805,6 +805,54 @@ describe("WarpListView delta actions", () => {
     expect(onDemoteFilteredRetryCompareQueueItems).toHaveBeenCalledWith(["q1", "q2", "q3"]);
   });
 
+  it("Retry+Compare 큐 필터 액션 단축키", () => {
+    const onPrioritizeFilteredRetryCompareQueueItems = vi.fn();
+    const onPromoteFilteredRetryCompareQueueItems = vi.fn();
+    const onDemoteFilteredRetryCompareQueueItems = vi.fn();
+    const onRemoveFilteredRetryCompareQueueItems = vi.fn();
+    render(
+      <WarpListView
+        blocks={blocks}
+        retryCompareQueueDepth={3}
+        retryCompareQueueWaiting={3}
+        retryCompareQueueItems={[
+          { id: "q1", command: "npm test" },
+          { id: "q2", command: "pnpm lint" },
+          { id: "q3", command: "npm run build" },
+        ]}
+        onPrioritizeFilteredRetryCompareQueueItems={onPrioritizeFilteredRetryCompareQueueItems}
+        onPromoteFilteredRetryCompareQueueItems={onPromoteFilteredRetryCompareQueueItems}
+        onDemoteFilteredRetryCompareQueueItems={onDemoteFilteredRetryCompareQueueItems}
+        onRemoveFilteredRetryCompareQueueItems={onRemoveFilteredRetryCompareQueueItems}
+        compareResultByBlock={{
+          b2: {
+            added: 1,
+            removed: 1,
+            preview: "test changed",
+            addedLines: ["new line"],
+            removedLines: ["old line"],
+            comparedAt: now,
+          },
+        }}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Δ Timeline (1)" }));
+    fireEvent.change(screen.getByPlaceholderText("큐 검색 (command)"), { target: { value: "run build" } });
+    expect(screen.getByText("표시 1/3")).toBeInTheDocument();
+
+    fireEvent.keyDown(window, { key: "Enter", altKey: true, shiftKey: true });
+    expect(onPrioritizeFilteredRetryCompareQueueItems).toHaveBeenCalledWith(["q3"]);
+
+    fireEvent.keyDown(window, { key: "ArrowUp", altKey: true, shiftKey: true });
+    expect(onPromoteFilteredRetryCompareQueueItems).toHaveBeenCalledWith(["q3"]);
+
+    fireEvent.keyDown(window, { key: "ArrowDown", altKey: true, shiftKey: true });
+    expect(onDemoteFilteredRetryCompareQueueItems).toHaveBeenCalledWith(["q3"]);
+
+    fireEvent.keyDown(window, { key: "Delete", altKey: true });
+    expect(onRemoveFilteredRetryCompareQueueItems).toHaveBeenCalledWith(["q3"]);
+  });
+
   it("Retry+Compare 큐 검색 포커스 단축키(Alt+Q)", () => {
     render(
       <WarpListView
