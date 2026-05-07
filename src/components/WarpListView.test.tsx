@@ -1225,6 +1225,29 @@ describe("WarpListView delta actions", () => {
     expect(screen.queryByText("타임라인 열기/닫기")).not.toBeInTheDocument();
   });
 
+  it("Δ Timeline 단축키 도움말 토글 단축키(Ctrl+/)", () => {
+    render(
+      <WarpListView
+        blocks={blocks}
+        compareResultByBlock={{
+          b2: {
+            added: 1,
+            removed: 1,
+            preview: "test changed",
+            addedLines: ["new line"],
+            removedLines: ["old line"],
+            comparedAt: now,
+          },
+        }}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Δ Timeline (1)" }));
+    fireEvent.keyDown(window, { key: "/", ctrlKey: true });
+    expect(screen.getByText("타임라인 열기/닫기")).toBeInTheDocument();
+    fireEvent.keyDown(window, { key: "/", ctrlKey: true });
+    expect(screen.queryByText("타임라인 열기/닫기")).not.toBeInTheDocument();
+  });
+
   it("Retry+Compare 큐 일시정지 단축키(Alt+P)", () => {
     const onToggleRetryCompareQueuePaused = vi.fn();
     render(
