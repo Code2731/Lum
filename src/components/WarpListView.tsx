@@ -530,14 +530,17 @@ const WarpListView: React.FC<Props> = ({
     if (!timelineOpen) return;
     const onWindowKeyDown = (e: KeyboardEvent) => {
       if (isTypingTarget(e.target)) return;
-      if (e.altKey && e.shiftKey && (e.key === "z" || e.key === "Z")) {
+      const mod = e.metaKey || e.ctrlKey;
+      const isRedoKey = (e.altKey && e.shiftKey) || (mod && e.shiftKey);
+      const isUndoKey = e.altKey || mod;
+      if (isRedoKey && (e.key === "z" || e.key === "Z")) {
         if (onRedoRetryCompareQueueChange && canRedoRetryCompareQueueChange) {
           e.preventDefault();
           onRedoRetryCompareQueueChange();
         }
         return;
       }
-      if (e.altKey && (e.key === "z" || e.key === "Z")) {
+      if (isUndoKey && (e.key === "z" || e.key === "Z")) {
         if (onUndoRetryCompareQueueChange && canUndoRetryCompareQueueChange) {
           e.preventDefault();
           onUndoRetryCompareQueueChange();
@@ -950,7 +953,7 @@ const WarpListView: React.FC<Props> = ({
                               type="button"
                               className="text-[10px] px-1.5 py-1 rounded border border-amber-300/30 text-amber-200 hover:bg-amber-300/12 disabled:opacity-40"
                               onClick={onUndoRetryCompareQueueChange}
-                              title="Alt+Z"
+                              title="Alt+Z / Cmd/Ctrl+Z"
                               disabled={!canUndoRetryCompareQueueChange}
                             >
                               큐 변경 되돌리기
@@ -961,7 +964,7 @@ const WarpListView: React.FC<Props> = ({
                               type="button"
                               className="text-[10px] px-1.5 py-1 rounded border border-cyan-300/30 text-cyan-200 hover:bg-cyan-300/12 disabled:opacity-40"
                               onClick={onRedoRetryCompareQueueChange}
-                              title="Alt+Shift+Z"
+                              title="Alt+Shift+Z / Cmd/Ctrl+Shift+Z"
                               disabled={!canRedoRetryCompareQueueChange}
                             >
                               큐 변경 다시실행
