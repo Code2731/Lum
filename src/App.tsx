@@ -1212,6 +1212,7 @@ const App: React.FC = () => {
               retryCompareQueueDepth={retryCompareQueue.length + (retryComparePending ? 1 : 0)}
               retryCompareQueueWaiting={retryCompareQueue.length}
               retryCompareInFlight={retryComparePending !== null}
+              retryCompareCurrentCommand={retryComparePending?.command ?? null}
               onClearRetryCompareQueue={() => {
                 setRetryCompareQueue([]);
               }}

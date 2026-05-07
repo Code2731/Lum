@@ -578,6 +578,29 @@ describe("WarpListView delta actions", () => {
     expect(onClearRetryCompareQueue).toHaveBeenCalledTimes(1);
   });
 
+  it("Retry+Compare 현재 실행 커맨드 표시", () => {
+    render(
+      <WarpListView
+        blocks={blocks}
+        retryCompareQueueDepth={1}
+        retryCompareQueueWaiting={0}
+        retryCompareInFlight
+        retryCompareCurrentCommand="npm test --watch=false"
+        compareResultByBlock={{
+          b2: {
+            added: 1,
+            removed: 1,
+            preview: "test changed",
+            addedLines: ["new line"],
+            removedLines: ["old line"],
+            comparedAt: now,
+          },
+        }}
+      />,
+    );
+    expect(screen.getByText("npm test --watch=false")).toBeInTheDocument();
+  });
+
   it("Δ Timeline 선택 후 Copy Selected가 선택 항목만 복사", () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     Object.defineProperty(navigator, "clipboard", {

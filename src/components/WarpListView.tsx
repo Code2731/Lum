@@ -13,6 +13,7 @@ interface Props {
   retryCompareQueueDepth?: number;
   retryCompareQueueWaiting?: number;
   retryCompareInFlight?: boolean;
+  retryCompareCurrentCommand?: string | null;
   onClearRetryCompareQueue?: () => void;
   onExplainDiff?: (text: string) => void;
   onExplainAllDiffs?: (text: string) => void;
@@ -62,6 +63,7 @@ const WarpListView: React.FC<Props> = ({
   retryCompareQueueDepth = 0,
   retryCompareQueueWaiting = 0,
   retryCompareInFlight = false,
+  retryCompareCurrentCommand = null,
   onClearRetryCompareQueue,
   onExplainDiff,
   onExplainAllDiffs,
@@ -552,6 +554,14 @@ const WarpListView: React.FC<Props> = ({
               {(retryCompareInFlight || retryCompareQueueWaiting > 0) && (
                 <span className="text-[10px] text-white/45 tabular-nums">
                   {retryCompareInFlight ? "실행 중" : "대기"} · wait {retryCompareQueueWaiting}
+                </span>
+              )}
+              {retryCompareInFlight && retryCompareCurrentCommand && (
+                <span
+                  className="max-w-[220px] truncate text-[10px] text-emerald-100/90"
+                  title={retryCompareCurrentCommand}
+                >
+                  {retryCompareCurrentCommand}
                 </span>
               )}
               <div className="relative">
