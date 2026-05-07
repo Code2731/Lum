@@ -455,6 +455,16 @@ const WarpListView: React.FC<Props> = ({
       return next;
     });
   };
+  const selectHighRiskTimelineFiltered = () => {
+    if (timelineFiltered.length === 0) return;
+    setTimelineSelectedIds((prev) => {
+      const next = new Set(prev);
+      for (const item of timelineFiltered) {
+        if (classifyTimelineRisk(item.block.command) === "high") next.add(item.block.id);
+      }
+      return next;
+    });
+  };
   const pinSelectedTimeline = () => {
     setTimelinePinnedIds((prev) => {
       const next = new Set(prev);
@@ -627,6 +637,13 @@ const WarpListView: React.FC<Props> = ({
         }
         return;
       }
+      if (e.altKey && (e.key === "h" || e.key === "H")) {
+        if (timelineFiltered.length > 0) {
+          e.preventDefault();
+          selectHighRiskTimelineFiltered();
+        }
+        return;
+      }
       if (e.altKey && e.shiftKey && (e.key === "u" || e.key === "U")) {
         if (timelinePinnedIds.size > 0) {
           e.preventDefault();
@@ -698,6 +715,7 @@ const WarpListView: React.FC<Props> = ({
     comparedTimeline.length,
     timelineFiltered.length,
     invertTimelineFilteredSelection,
+    selectHighRiskTimelineFiltered,
     timelinePinnedIds.size,
     clearPinnedTimeline,
   ]);
@@ -866,6 +884,15 @@ const WarpListView: React.FC<Props> = ({
                         </button>
                         <button
                           type="button"
+                          className="text-[10px] px-2 py-0.5 rounded border border-rose-300/30 text-rose-200 hover:bg-rose-300/12 disabled:opacity-40"
+                          onClick={selectHighRiskTimelineFiltered}
+                          disabled={timelineFiltered.length === 0}
+                          title="Alt+H"
+                        >
+                          고위험 선택
+                        </button>
+                        <button
+                          type="button"
                           className="text-[10px] px-2 py-0.5 rounded border border-white/15 text-white/70 hover:bg-white/[0.08] disabled:opacity-40"
                           onClick={() => {
                             navigator.clipboard.writeText(buildAllDiffsText(selectedTimelineItems)).catch(() => {});
@@ -1028,6 +1055,7 @@ const WarpListView: React.FC<Props> = ({
                           <div><span className="text-cyan-50">Cmd/Ctrl+Shift+Y</span> 타임라인 열기/닫기</div>
                           <div><span className="text-cyan-50">Alt+Enter / Alt+↑ / Alt+↓</span> 선택 Jump/이동</div>
                           <div><span className="text-cyan-50">Alt+I</span> 현재 목록 선택 반전</div>
+                          <div><span className="text-cyan-50">Alt+H</span> 고위험 항목 빠른 선택</div>
                           <div><span className="text-cyan-50">Alt+S</span> 타임라인 정렬 토글</div>
                           <div><span className="text-cyan-50">Alt+Shift+U</span> 핀 전체 해제</div>
                           <div><span className="text-cyan-50">Alt+Q / Alt+K / Alt+P / Alt+D</span> 큐 검색/접기/일시정지/완료리셋</div>

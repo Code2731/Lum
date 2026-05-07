@@ -1560,6 +1560,88 @@ describe("WarpListView delta actions", () => {
     expect((screen.getByRole("checkbox", { name: "pnpm lint 선택" }) as HTMLInputElement).checked).toBe(true);
   });
 
+  it("Δ Timeline 고위험 선택 버튼", () => {
+    render(
+      <WarpListView
+        blocks={[
+          ...blocks,
+          {
+            id: "b3",
+            command: "rm -rf ./dist",
+            output: "done",
+            exitCode: 0,
+            startedAt: now - 2000,
+            endedAt: now - 1000,
+          },
+        ]}
+        compareResultByBlock={{
+          b2: {
+            added: 1,
+            removed: 1,
+            preview: "test changed",
+            addedLines: ["new line"],
+            removedLines: ["old line"],
+            comparedAt: now,
+          },
+          b3: {
+            added: 2,
+            removed: 0,
+            preview: "dangerous remove",
+            addedLines: ["a", "b"],
+            removedLines: [],
+            comparedAt: now - 3000,
+          },
+        }}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Δ Timeline (2)" }));
+    fireEvent.click(screen.getByRole("button", { name: "고위험 선택" }));
+    expect(screen.getByText("선택 1")).toBeInTheDocument();
+    expect((screen.getByRole("checkbox", { name: "rm -rf ./dist 선택" }) as HTMLInputElement).checked).toBe(true);
+    expect((screen.getByRole("checkbox", { name: "npm test 선택" }) as HTMLInputElement).checked).toBe(false);
+  });
+
+  it("Δ Timeline 고위험 선택 단축키(Alt+H)", () => {
+    render(
+      <WarpListView
+        blocks={[
+          ...blocks,
+          {
+            id: "b3",
+            command: "rm -rf ./dist",
+            output: "done",
+            exitCode: 0,
+            startedAt: now - 2000,
+            endedAt: now - 1000,
+          },
+        ]}
+        compareResultByBlock={{
+          b2: {
+            added: 1,
+            removed: 1,
+            preview: "test changed",
+            addedLines: ["new line"],
+            removedLines: ["old line"],
+            comparedAt: now,
+          },
+          b3: {
+            added: 2,
+            removed: 0,
+            preview: "dangerous remove",
+            addedLines: ["a", "b"],
+            removedLines: [],
+            comparedAt: now - 3000,
+          },
+        }}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Δ Timeline (2)" }));
+    fireEvent.keyDown(window, { key: "h", altKey: true });
+    expect(screen.getByText("선택 1")).toBeInTheDocument();
+    expect((screen.getByRole("checkbox", { name: "rm -rf ./dist 선택" }) as HTMLInputElement).checked).toBe(true);
+    expect((screen.getByRole("checkbox", { name: "npm test 선택" }) as HTMLInputElement).checked).toBe(false);
+  });
+
   it("Δ Timeline 선택 항목 Jump/Prev/Next 탐색", () => {
     render(
       <WarpListView
