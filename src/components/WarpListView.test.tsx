@@ -1781,6 +1781,54 @@ describe("WarpListView delta actions", () => {
     expect(copied).not.toContain("npm test");
   });
 
+  it("Δ Timeline 선택 항목 복사 단축키(Ctrl+C)", () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText },
+      configurable: true,
+    });
+    render(
+      <WarpListView
+        blocks={[
+          ...blocks,
+          {
+            id: "b3",
+            command: "pnpm lint",
+            output: "ok",
+            exitCode: 0,
+            startedAt: now - 2000,
+            endedAt: now - 1000,
+          },
+        ]}
+        compareResultByBlock={{
+          b2: {
+            added: 1,
+            removed: 1,
+            preview: "test changed",
+            addedLines: ["new line"],
+            removedLines: ["old line"],
+            comparedAt: now,
+          },
+          b3: {
+            added: 2,
+            removed: 0,
+            preview: "lint fixed",
+            addedLines: ["a", "b"],
+            removedLines: [],
+            comparedAt: now - 3000,
+          },
+        }}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Δ Timeline (2)" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "pnpm lint 선택" }));
+    fireEvent.keyDown(window, { key: "c", ctrlKey: true });
+    expect(writeText).toHaveBeenCalledTimes(1);
+    const copied = String(writeText.mock.calls[0]?.[0] ?? "");
+    expect(copied).toContain("pnpm lint");
+    expect(copied).not.toContain("npm test");
+  });
+
   it("Δ Timeline 전체 복사 단축키(Alt+Shift+C)", () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     Object.defineProperty(navigator, "clipboard", {
@@ -1822,6 +1870,53 @@ describe("WarpListView delta actions", () => {
     );
     fireEvent.click(screen.getByRole("button", { name: "Δ Timeline (2)" }));
     fireEvent.keyDown(window, { key: "C", altKey: true, shiftKey: true });
+    expect(writeText).toHaveBeenCalledTimes(1);
+    const copied = String(writeText.mock.calls[0]?.[0] ?? "");
+    expect(copied).toContain("pnpm lint");
+    expect(copied).toContain("npm test");
+  });
+
+  it("Δ Timeline 전체 복사 단축키(Ctrl+Shift+C)", () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText },
+      configurable: true,
+    });
+    render(
+      <WarpListView
+        blocks={[
+          ...blocks,
+          {
+            id: "b3",
+            command: "pnpm lint",
+            output: "ok",
+            exitCode: 0,
+            startedAt: now - 2000,
+            endedAt: now - 1000,
+          },
+        ]}
+        compareResultByBlock={{
+          b2: {
+            added: 1,
+            removed: 1,
+            preview: "test changed",
+            addedLines: ["new line"],
+            removedLines: ["old line"],
+            comparedAt: now,
+          },
+          b3: {
+            added: 2,
+            removed: 0,
+            preview: "lint fixed",
+            addedLines: ["a", "b"],
+            removedLines: [],
+            comparedAt: now - 3000,
+          },
+        }}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Δ Timeline (2)" }));
+    fireEvent.keyDown(window, { key: "C", ctrlKey: true, shiftKey: true });
     expect(writeText).toHaveBeenCalledTimes(1);
     const copied = String(writeText.mock.calls[0]?.[0] ?? "");
     expect(copied).toContain("pnpm lint");

@@ -738,6 +738,20 @@ const WarpListView: React.FC<Props> = ({
         }
         return;
       }
+      if (mod && (e.key === "c" || e.key === "C")) {
+        if (e.shiftKey) {
+          if (timelineFiltered.length > 0) {
+            e.preventDefault();
+            navigator.clipboard.writeText(buildAllDiffsText(timelineFiltered)).catch(() => {});
+          }
+          return;
+        }
+        if (selectedTimelineItems.length > 0) {
+          e.preventDefault();
+          navigator.clipboard.writeText(buildAllDiffsText(selectedTimelineItems)).catch(() => {});
+        }
+        return;
+      }
       if (e.altKey && (e.key === "s" || e.key === "S")) {
         if (comparedTimeline.length > 0) {
           e.preventDefault();
@@ -1293,6 +1307,7 @@ const WarpListView: React.FC<Props> = ({
                           <div><span className="text-cyan-50">Alt+Shift+A</span> 선택 항목 전체 해제</div>
                           <div><span className="text-cyan-50">Cmd/Ctrl+A / Cmd/Ctrl+Shift+A</span> 선택 전체/해제</div>
                           <div><span className="text-cyan-50">Alt+C / Alt+Shift+C</span> 선택/전체 diff 복사</div>
+                          <div><span className="text-cyan-50">Cmd/Ctrl+C / Cmd/Ctrl+Shift+C</span> 선택/전체 diff 복사</div>
                           <div><span className="text-cyan-50">Alt+I</span> 현재 목록 선택 반전</div>
                           <div><span className="text-cyan-50">Alt+O</span> 선택 항목만 보기 토글</div>
                           <div><span className="text-cyan-50">Alt+H</span> 고위험 항목 빠른 선택</div>
