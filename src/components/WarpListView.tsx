@@ -444,6 +444,17 @@ const WarpListView: React.FC<Props> = ({
       return next;
     });
   };
+  const invertTimelineFilteredSelection = () => {
+    if (timelineFiltered.length === 0) return;
+    setTimelineSelectedIds((prev) => {
+      const next = new Set(prev);
+      for (const item of timelineFiltered) {
+        if (next.has(item.block.id)) next.delete(item.block.id);
+        else next.add(item.block.id);
+      }
+      return next;
+    });
+  };
   const pinSelectedTimeline = () => {
     setTimelinePinnedIds((prev) => {
       const next = new Set(prev);
@@ -609,6 +620,13 @@ const WarpListView: React.FC<Props> = ({
         }
         return;
       }
+      if (e.altKey && (e.key === "i" || e.key === "I")) {
+        if (timelineFiltered.length > 0) {
+          e.preventDefault();
+          invertTimelineFilteredSelection();
+        }
+        return;
+      }
       if (e.altKey && e.shiftKey && (e.key === "u" || e.key === "U")) {
         if (timelinePinnedIds.size > 0) {
           e.preventDefault();
@@ -678,6 +696,8 @@ const WarpListView: React.FC<Props> = ({
     canUndoRetryCompareQueueChange,
     retryCompareQueueItems.length,
     comparedTimeline.length,
+    timelineFiltered.length,
+    invertTimelineFilteredSelection,
     timelinePinnedIds.size,
     clearPinnedTimeline,
   ]);
@@ -834,6 +854,15 @@ const WarpListView: React.FC<Props> = ({
                           disabled={timelineSelectedIds.size === 0}
                         >
                           선택 해제
+                        </button>
+                        <button
+                          type="button"
+                          className="text-[10px] px-2 py-0.5 rounded border border-white/15 text-white/70 hover:bg-white/[0.08] disabled:opacity-40"
+                          onClick={invertTimelineFilteredSelection}
+                          disabled={timelineFiltered.length === 0}
+                          title="Alt+I"
+                        >
+                          선택 반전
                         </button>
                         <button
                           type="button"
@@ -998,6 +1027,7 @@ const WarpListView: React.FC<Props> = ({
                         <div className="rounded border border-cyan-300/20 bg-cyan-400/[0.08] px-2 py-1.5 text-[10px] text-cyan-100/90 space-y-0.5">
                           <div><span className="text-cyan-50">Cmd/Ctrl+Shift+Y</span> 타임라인 열기/닫기</div>
                           <div><span className="text-cyan-50">Alt+Enter / Alt+↑ / Alt+↓</span> 선택 Jump/이동</div>
+                          <div><span className="text-cyan-50">Alt+I</span> 현재 목록 선택 반전</div>
                           <div><span className="text-cyan-50">Alt+S</span> 타임라인 정렬 토글</div>
                           <div><span className="text-cyan-50">Alt+Shift+U</span> 핀 전체 해제</div>
                           <div><span className="text-cyan-50">Alt+Q / Alt+K / Alt+P / Alt+D</span> 큐 검색/접기/일시정지/완료리셋</div>

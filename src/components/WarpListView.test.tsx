@@ -1475,6 +1475,91 @@ describe("WarpListView delta actions", () => {
     expect(payload).not.toContain("pnpm lint");
   });
 
+  it("Δ Timeline 선택 반전 버튼", () => {
+    render(
+      <WarpListView
+        blocks={[
+          ...blocks,
+          {
+            id: "b3",
+            command: "pnpm lint",
+            output: "ok",
+            exitCode: 0,
+            startedAt: now - 2000,
+            endedAt: now - 1000,
+          },
+        ]}
+        compareResultByBlock={{
+          b2: {
+            added: 1,
+            removed: 1,
+            preview: "test changed",
+            addedLines: ["new line"],
+            removedLines: ["old line"],
+            comparedAt: now,
+          },
+          b3: {
+            added: 2,
+            removed: 0,
+            preview: "lint fixed",
+            addedLines: ["a", "b"],
+            removedLines: [],
+            comparedAt: now - 3000,
+          },
+        }}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Δ Timeline (2)" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "npm test 선택" }));
+    expect(screen.getByText("선택 1")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "선택 반전" }));
+    expect(screen.getByText("선택 1")).toBeInTheDocument();
+    expect((screen.getByRole("checkbox", { name: "npm test 선택" }) as HTMLInputElement).checked).toBe(false);
+    expect((screen.getByRole("checkbox", { name: "pnpm lint 선택" }) as HTMLInputElement).checked).toBe(true);
+  });
+
+  it("Δ Timeline 선택 반전 단축키(Alt+I)", () => {
+    render(
+      <WarpListView
+        blocks={[
+          ...blocks,
+          {
+            id: "b3",
+            command: "pnpm lint",
+            output: "ok",
+            exitCode: 0,
+            startedAt: now - 2000,
+            endedAt: now - 1000,
+          },
+        ]}
+        compareResultByBlock={{
+          b2: {
+            added: 1,
+            removed: 1,
+            preview: "test changed",
+            addedLines: ["new line"],
+            removedLines: ["old line"],
+            comparedAt: now,
+          },
+          b3: {
+            added: 2,
+            removed: 0,
+            preview: "lint fixed",
+            addedLines: ["a", "b"],
+            removedLines: [],
+            comparedAt: now - 3000,
+          },
+        }}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Δ Timeline (2)" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "npm test 선택" }));
+    fireEvent.keyDown(window, { key: "i", altKey: true });
+    expect((screen.getByRole("checkbox", { name: "npm test 선택" }) as HTMLInputElement).checked).toBe(false);
+    expect((screen.getByRole("checkbox", { name: "pnpm lint 선택" }) as HTMLInputElement).checked).toBe(true);
+  });
+
   it("Δ Timeline 선택 항목 Jump/Prev/Next 탐색", () => {
     render(
       <WarpListView
