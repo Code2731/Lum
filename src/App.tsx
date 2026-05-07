@@ -63,6 +63,7 @@ interface RetryComparePending {
   queuedAt: number;
 }
 interface RetryCompareTask {
+  id: string;
   command: string;
   baselineOutput: string;
 }
@@ -469,7 +470,11 @@ const App: React.FC = () => {
   const enqueueRetryCompare = useCallback((blocks: CommandBlock[]) => {
     const tasks = blocks
       .filter((b) => b.command.trim() !== "")
-      .map((b) => ({ command: b.command, baselineOutput: b.output }));
+      .map((b, idx) => ({
+        id: `${Date.now()}-${idx}-${Math.random().toString(36).slice(2, 8)}`,
+        command: b.command,
+        baselineOutput: b.output,
+      }));
     if (tasks.length === 0) return;
     setRetryCompareQueue((prev) => [...prev, ...tasks]);
   }, []);
@@ -1213,6 +1218,10 @@ const App: React.FC = () => {
               retryCompareQueueWaiting={retryCompareQueue.length}
               retryCompareInFlight={retryComparePending !== null}
               retryCompareCurrentCommand={retryComparePending?.command ?? null}
+              retryCompareQueueItems={retryCompareQueue.map((t) => ({ id: t.id, command: t.command }))}
+              onRemoveRetryCompareQueueItem={(id) => {
+                setRetryCompareQueue((prev) => prev.filter((t) => t.id !== id));
+              }}
               onClearRetryCompareQueue={() => {
                 setRetryCompareQueue([]);
               }}

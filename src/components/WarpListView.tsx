@@ -14,6 +14,8 @@ interface Props {
   retryCompareQueueWaiting?: number;
   retryCompareInFlight?: boolean;
   retryCompareCurrentCommand?: string | null;
+  retryCompareQueueItems?: Array<{ id: string; command: string }>;
+  onRemoveRetryCompareQueueItem?: (id: string) => void;
   onClearRetryCompareQueue?: () => void;
   onExplainDiff?: (text: string) => void;
   onExplainAllDiffs?: (text: string) => void;
@@ -64,6 +66,8 @@ const WarpListView: React.FC<Props> = ({
   retryCompareQueueWaiting = 0,
   retryCompareInFlight = false,
   retryCompareCurrentCommand = null,
+  retryCompareQueueItems = [],
+  onRemoveRetryCompareQueueItem,
   onClearRetryCompareQueue,
   onExplainDiff,
   onExplainAllDiffs,
@@ -775,6 +779,36 @@ const WarpListView: React.FC<Props> = ({
                         )}
                       </div>
                     </div>
+                    {retryCompareQueueItems.length > 0 && (
+                      <div className="px-2 py-1.5 border-b border-white/10 space-y-1">
+                        <div className="text-[10px] text-white/55">Retry+Compare Queue</div>
+                        <div className="space-y-1 max-h-24 overflow-y-auto">
+                          {retryCompareQueueItems.map((item, idx) => (
+                            <div
+                              key={item.id}
+                              className="flex items-center gap-1.5 rounded border border-white/10 bg-white/[0.03] px-1.5 py-1"
+                            >
+                              <span className="text-[10px] text-white/45 tabular-nums shrink-0">
+                                {idx + 1}
+                              </span>
+                              <span className="text-[10px] text-white/75 font-mono truncate flex-1" title={item.command}>
+                                {item.command}
+                              </span>
+                              {onRemoveRetryCompareQueueItem && (
+                                <button
+                                  type="button"
+                                  aria-label={`queue-remove-${idx + 1}`}
+                                  className="text-[10px] px-1 py-0.5 rounded border border-rose-300/30 text-rose-200 hover:bg-rose-300/12"
+                                  onClick={() => onRemoveRetryCompareQueueItem(item.id)}
+                                >
+                                  제거
+                                </button>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                     <div className="max-h-72 overflow-y-auto p-2 space-y-1.5">
                       {timelineFiltered.map(({ block, compare }) => (
                         <div

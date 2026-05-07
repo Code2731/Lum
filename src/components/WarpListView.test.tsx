@@ -578,6 +578,38 @@ describe("WarpListView delta actions", () => {
     expect(onClearRetryCompareQueue).toHaveBeenCalledTimes(1);
   });
 
+  it("Retry+Compare 큐 상세 목록/개별 제거", () => {
+    const onRemoveRetryCompareQueueItem = vi.fn();
+    render(
+      <WarpListView
+        blocks={blocks}
+        retryCompareQueueDepth={3}
+        retryCompareQueueWaiting={3}
+        retryCompareQueueItems={[
+          { id: "q1", command: "npm test" },
+          { id: "q2", command: "pnpm lint" },
+          { id: "q3", command: "npm run build" },
+        ]}
+        onRemoveRetryCompareQueueItem={onRemoveRetryCompareQueueItem}
+        compareResultByBlock={{
+          b2: {
+            added: 1,
+            removed: 1,
+            preview: "test changed",
+            addedLines: ["new line"],
+            removedLines: ["old line"],
+            comparedAt: now,
+          },
+        }}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Δ Timeline (1)" }));
+    expect(screen.getByText("Retry+Compare Queue")).toBeInTheDocument();
+    expect(screen.getByText("pnpm lint")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "queue-remove-2" }));
+    expect(onRemoveRetryCompareQueueItem).toHaveBeenCalledWith("q2");
+  });
+
   it("Retry+Compare 현재 실행 커맨드 표시", () => {
     render(
       <WarpListView
