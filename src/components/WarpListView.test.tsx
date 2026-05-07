@@ -2764,6 +2764,29 @@ describe("WarpListView delta actions", () => {
     expect(onClearCompareResults).toHaveBeenCalledTimes(1);
   });
 
+  it("Δ Timeline 비교 초기화 단축키(Ctrl+K)", () => {
+    const onClearCompareResults = vi.fn();
+    render(
+      <WarpListView
+        blocks={blocks}
+        onClearCompareResults={onClearCompareResults}
+        compareResultByBlock={{
+          b2: {
+            added: 1,
+            removed: 1,
+            preview: "test changed",
+            addedLines: ["new line"],
+            removedLines: ["old line"],
+            comparedAt: now,
+          },
+        }}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Δ Timeline (1)" }));
+    fireEvent.keyDown(window, { key: "k", ctrlKey: true });
+    expect(onClearCompareResults).toHaveBeenCalledTimes(1);
+  });
+
   it("비교 누적 요약 Σ +N/-M 표시", () => {
     render(
       <WarpListView

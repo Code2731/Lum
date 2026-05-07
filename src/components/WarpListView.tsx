@@ -752,6 +752,16 @@ const WarpListView: React.FC<Props> = ({
         }
         return;
       }
+      if (mod && (e.key === "k" || e.key === "K")) {
+        if (onClearCompareResults) {
+          e.preventDefault();
+          onClearCompareResults();
+          setDeltaOpenId(null);
+          setTimelineSelectedIds(new Set());
+          setTimelineOpen(false);
+        }
+        return;
+      }
       if (e.altKey && (e.key === "s" || e.key === "S")) {
         if (comparedTimeline.length > 0) {
           e.preventDefault();
@@ -874,6 +884,7 @@ const WarpListView: React.FC<Props> = ({
     resetTimelineViewFilters,
     timelinePinnedIds.size,
     clearPinnedTimeline,
+    onClearCompareResults,
   ]);
 
   return (
@@ -1291,6 +1302,7 @@ const WarpListView: React.FC<Props> = ({
                               setTimelineSelectedIds(new Set());
                               setTimelineOpen(false);
                             }}
+                            title="Cmd/Ctrl+K"
                           >
                             비교 초기화
                           </button>
@@ -1308,6 +1320,7 @@ const WarpListView: React.FC<Props> = ({
                           <div><span className="text-cyan-50">Cmd/Ctrl+A / Cmd/Ctrl+Shift+A</span> 선택 전체/해제</div>
                           <div><span className="text-cyan-50">Alt+C / Alt+Shift+C</span> 선택/전체 diff 복사</div>
                           <div><span className="text-cyan-50">Cmd/Ctrl+C / Cmd/Ctrl+Shift+C</span> 선택/전체 diff 복사</div>
+                          <div><span className="text-cyan-50">Cmd/Ctrl+K</span> 비교 결과 전체 초기화</div>
                           <div><span className="text-cyan-50">Alt+I</span> 현재 목록 선택 반전</div>
                           <div><span className="text-cyan-50">Alt+O</span> 선택 항목만 보기 토글</div>
                           <div><span className="text-cyan-50">Alt+H</span> 고위험 항목 빠른 선택</div>
