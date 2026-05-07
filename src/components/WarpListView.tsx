@@ -24,6 +24,8 @@ interface Props {
   onMoveUpRetryCompareQueueItem?: (id: string) => void;
   onMoveDownRetryCompareQueueItem?: (id: string) => void;
   onRemoveRetryCompareQueueItem?: (id: string) => void;
+  onPromoteFilteredRetryCompareQueueItems?: (ids: string[]) => void;
+  onDemoteFilteredRetryCompareQueueItems?: (ids: string[]) => void;
   onRemoveFilteredRetryCompareQueueItems?: (ids: string[]) => void;
   onClearRetryCompareQueue?: () => void;
   onExplainDiff?: (text: string) => void;
@@ -85,6 +87,8 @@ const WarpListView: React.FC<Props> = ({
   onMoveUpRetryCompareQueueItem,
   onMoveDownRetryCompareQueueItem,
   onRemoveRetryCompareQueueItem,
+  onPromoteFilteredRetryCompareQueueItems,
+  onDemoteFilteredRetryCompareQueueItems,
   onRemoveFilteredRetryCompareQueueItems,
   onClearRetryCompareQueue,
   onExplainDiff,
@@ -882,6 +886,30 @@ const WarpListView: React.FC<Props> = ({
                               disabled={filteredQueueItems.length === 0}
                             >
                               필터 제거
+                            </button>
+                          )}
+                          {onPromoteFilteredRetryCompareQueueItems && (
+                            <button
+                              type="button"
+                              className="text-[10px] px-1.5 py-1 rounded border border-cyan-300/30 text-cyan-200 hover:bg-cyan-300/12 disabled:opacity-40"
+                              onClick={() => {
+                                onPromoteFilteredRetryCompareQueueItems(filteredQueueItems.map((x) => x.id));
+                              }}
+                              disabled={filteredQueueItems.length === 0}
+                            >
+                              필터 맨앞
+                            </button>
+                          )}
+                          {onDemoteFilteredRetryCompareQueueItems && (
+                            <button
+                              type="button"
+                              className="text-[10px] px-1.5 py-1 rounded border border-cyan-300/30 text-cyan-200 hover:bg-cyan-300/12 disabled:opacity-40"
+                              onClick={() => {
+                                onDemoteFilteredRetryCompareQueueItems(filteredQueueItems.map((x) => x.id));
+                              }}
+                              disabled={filteredQueueItems.length === 0}
+                            >
+                              필터 맨뒤
                             </button>
                           )}
                         </div>

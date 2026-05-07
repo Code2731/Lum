@@ -1311,6 +1311,24 @@ const App: React.FC = () => {
               onRemoveRetryCompareQueueItem={(id) => {
                 setRetryCompareQueue((prev) => prev.filter((t) => t.id !== id));
               }}
+              onPromoteFilteredRetryCompareQueueItems={(ids) => {
+                const target = new Set(ids);
+                setRetryCompareQueue((prev) => {
+                  const picked = prev.filter((t) => target.has(t.id));
+                  if (picked.length === 0) return prev;
+                  const rest = prev.filter((t) => !target.has(t.id));
+                  return [...picked, ...rest];
+                });
+              }}
+              onDemoteFilteredRetryCompareQueueItems={(ids) => {
+                const target = new Set(ids);
+                setRetryCompareQueue((prev) => {
+                  const picked = prev.filter((t) => target.has(t.id));
+                  if (picked.length === 0) return prev;
+                  const rest = prev.filter((t) => !target.has(t.id));
+                  return [...rest, ...picked];
+                });
+              }}
               onRemoveFilteredRetryCompareQueueItems={(ids) => {
                 const remove = new Set(ids);
                 setRetryCompareQueue((prev) => prev.filter((t) => !remove.has(t.id)));
