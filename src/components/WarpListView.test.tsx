@@ -654,6 +654,8 @@ describe("WarpListView delta actions", () => {
     const onRemoveRetryCompareQueueItem = vi.fn();
     const onPromoteRetryCompareQueueItem = vi.fn();
     const onDemoteRetryCompareQueueItem = vi.fn();
+    const onMoveUpRetryCompareQueueItem = vi.fn();
+    const onMoveDownRetryCompareQueueItem = vi.fn();
     render(
       <WarpListView
         blocks={blocks}
@@ -666,6 +668,8 @@ describe("WarpListView delta actions", () => {
         ]}
         onPromoteRetryCompareQueueItem={onPromoteRetryCompareQueueItem}
         onDemoteRetryCompareQueueItem={onDemoteRetryCompareQueueItem}
+        onMoveUpRetryCompareQueueItem={onMoveUpRetryCompareQueueItem}
+        onMoveDownRetryCompareQueueItem={onMoveDownRetryCompareQueueItem}
         onRemoveRetryCompareQueueItem={onRemoveRetryCompareQueueItem}
         compareResultByBlock={{
           b2: {
@@ -684,6 +688,10 @@ describe("WarpListView delta actions", () => {
     expect(screen.getByText("pnpm lint")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "queue-promote-2" }));
     expect(onPromoteRetryCompareQueueItem).toHaveBeenCalledWith("q2");
+    fireEvent.click(screen.getByRole("button", { name: "queue-up-2" }));
+    expect(onMoveUpRetryCompareQueueItem).toHaveBeenCalledWith("q2");
+    fireEvent.click(screen.getByRole("button", { name: "queue-down-2" }));
+    expect(onMoveDownRetryCompareQueueItem).toHaveBeenCalledWith("q2");
     fireEvent.click(screen.getByRole("button", { name: "queue-demote-2" }));
     expect(onDemoteRetryCompareQueueItem).toHaveBeenCalledWith("q2");
     fireEvent.click(screen.getByRole("button", { name: "queue-remove-2" }));

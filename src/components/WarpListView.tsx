@@ -21,6 +21,8 @@ interface Props {
   retryCompareQueueItems?: Array<{ id: string; command: string }>;
   onPromoteRetryCompareQueueItem?: (id: string) => void;
   onDemoteRetryCompareQueueItem?: (id: string) => void;
+  onMoveUpRetryCompareQueueItem?: (id: string) => void;
+  onMoveDownRetryCompareQueueItem?: (id: string) => void;
   onRemoveRetryCompareQueueItem?: (id: string) => void;
   onClearRetryCompareQueue?: () => void;
   onExplainDiff?: (text: string) => void;
@@ -79,6 +81,8 @@ const WarpListView: React.FC<Props> = ({
   retryCompareQueueItems = [],
   onPromoteRetryCompareQueueItem,
   onDemoteRetryCompareQueueItem,
+  onMoveUpRetryCompareQueueItem,
+  onMoveDownRetryCompareQueueItem,
   onRemoveRetryCompareQueueItem,
   onClearRetryCompareQueue,
   onExplainDiff,
@@ -852,6 +856,26 @@ const WarpListView: React.FC<Props> = ({
                                   onClick={() => onPromoteRetryCompareQueueItem(item.id)}
                                 >
                                   맨앞
+                                </button>
+                              )}
+                              {onMoveUpRetryCompareQueueItem && (
+                                <button
+                                  type="button"
+                                  aria-label={`queue-up-${idx + 1}`}
+                                  className="text-[10px] px-1 py-0.5 rounded border border-cyan-300/30 text-cyan-200 hover:bg-cyan-300/12"
+                                  onClick={() => onMoveUpRetryCompareQueueItem(item.id)}
+                                >
+                                  ↑
+                                </button>
+                              )}
+                              {onMoveDownRetryCompareQueueItem && (
+                                <button
+                                  type="button"
+                                  aria-label={`queue-down-${idx + 1}`}
+                                  className="text-[10px] px-1 py-0.5 rounded border border-cyan-300/30 text-cyan-200 hover:bg-cyan-300/12"
+                                  onClick={() => onMoveDownRetryCompareQueueItem(item.id)}
+                                >
+                                  ↓
                                 </button>
                               )}
                               {onDemoteRetryCompareQueueItem && (
