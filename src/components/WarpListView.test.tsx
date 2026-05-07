@@ -378,6 +378,120 @@ describe("WarpListView delta actions", () => {
     expect(screen.queryByText("최근 비교 히스토리")).not.toBeInTheDocument();
   });
 
+  it("Δ Timeline 검색으로 항목 필터링", () => {
+    render(
+      <WarpListView
+        blocks={[
+          ...blocks,
+          {
+            id: "b3",
+            command: "pnpm lint",
+            output: "ok",
+            exitCode: 0,
+            startedAt: now - 2000,
+            endedAt: now - 1000,
+          },
+        ]}
+        compareResultByBlock={{
+          b2: {
+            added: 1,
+            removed: 1,
+            preview: "test changed",
+            addedLines: ["new line"],
+            removedLines: ["old line"],
+            comparedAt: now,
+          },
+          b3: {
+            added: 2,
+            removed: 0,
+            preview: "lint fixed",
+            addedLines: ["a", "b"],
+            removedLines: [],
+            comparedAt: now - 3000,
+          },
+        }}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Δ Timeline (2)" }));
+    fireEvent.change(screen.getByPlaceholderText("타임라인 검색 (command/preview)"), { target: { value: "lint" } });
+    expect(screen.getByText("$ pnpm lint")).toBeInTheDocument();
+    expect(screen.queryByText("$ npm test")).not.toBeInTheDocument();
+  });
+
+  it("Δ Timeline Copy All이 전체 diff를 복사", () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText },
+      configurable: true,
+    });
+    render(
+      <WarpListView
+        blocks={blocks}
+        compareResultByBlock={{
+          b2: {
+            added: 1,
+            removed: 1,
+            preview: "",
+            addedLines: ["new line"],
+            removedLines: ["old line"],
+            comparedAt: now,
+          },
+        }}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Δ Timeline (1)" }));
+    fireEvent.click(screen.getByRole("button", { name: "Copy All" }));
+    expect(writeText).toHaveBeenCalledTimes(1);
+    expect(String(writeText.mock.calls[0]?.[0] ?? "")).toContain("## 1. npm test");
+  });
+
+  it("Δ Timeline AI 요약이 상위 콜백 호출", () => {
+    const onExplainAllDiffs = vi.fn();
+    render(
+      <WarpListView
+        blocks={blocks}
+        onExplainAllDiffs={onExplainAllDiffs}
+        compareResultByBlock={{
+          b2: {
+            added: 1,
+            removed: 1,
+            preview: "",
+            addedLines: ["new line"],
+            removedLines: ["old line"],
+            comparedAt: now,
+          },
+        }}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Δ Timeline (1)" }));
+    fireEvent.click(screen.getByRole("button", { name: "AI 요약" }));
+    expect(onExplainAllDiffs).toHaveBeenCalledTimes(1);
+    expect(String(onExplainAllDiffs.mock.calls[0]?.[0] ?? "")).toContain("command: npm test");
+  });
+
+  it("Δ Timeline 비교 초기화가 상위 콜백 호출", () => {
+    const onClearCompareResults = vi.fn();
+    render(
+      <WarpListView
+        blocks={blocks}
+        onClearCompareResults={onClearCompareResults}
+        compareResultByBlock={{
+          b2: {
+            added: 1,
+            removed: 1,
+            preview: "",
+            addedLines: ["new line"],
+            removedLines: ["old line"],
+            comparedAt: now,
+          },
+        }}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Δ Timeline (1)" }));
+    fireEvent.click(screen.getByRole("button", { name: "비교 초기화" }));
+    expect(onClearCompareResults).toHaveBeenCalledTimes(1);
+  });
+
   it("비교 누적 요약 Σ +N/-M 표시", () => {
     render(
       <WarpListView

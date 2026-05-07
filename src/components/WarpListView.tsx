@@ -10,6 +10,8 @@ interface Props {
   onAskAIForFix?: (text: string) => void;
   onRetryWithDiff?: (block: CommandBlock) => void;
   onExplainDiff?: (text: string) => void;
+  onExplainAllDiffs?: (text: string) => void;
+  onClearCompareResults?: () => void;
   compareResultByBlock?: Record<string, {
     added: number;
     removed: number;
@@ -41,6 +43,8 @@ const WarpListView: React.FC<Props> = ({
   onAskAIForFix,
   onRetryWithDiff,
   onExplainDiff,
+  onExplainAllDiffs,
+  onClearCompareResults,
   compareResultByBlock = {},
 }) => {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
@@ -52,6 +56,7 @@ const WarpListView: React.FC<Props> = ({
   const [activeSearchBlockId, setActiveSearchBlockId] = useState<string | null>(null);
   const [deltaOpenId, setDeltaOpenId] = useState<string | null>(null);
   const [timelineOpen, setTimelineOpen] = useState(false);
+  const [timelineQuery, setTimelineQuery] = useState("");
   const outputRefs = useRef<Record<string, HTMLPreElement | null>>({});
   const blockRowRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const deltaButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({});
@@ -109,6 +114,13 @@ const WarpListView: React.FC<Props> = ({
         .sort((a, b) => b.compare.comparedAt - a.compare.comparedAt),
     [blocks, compareResultByBlock],
   );
+  const timelineFiltered = useMemo(() => {
+    const q = timelineQuery.trim().toLowerCase();
+    if (!q) return comparedTimeline;
+    return comparedTimeline.filter(({ block, compare }) =>
+      block.command.toLowerCase().includes(q) || (compare.preview ?? "").toLowerCase().includes(q),
+    );
+  }, [comparedTimeline, timelineQuery]);
   const comparedTotals = useMemo(
     () =>
       comparedTimeline.reduce(
@@ -275,6 +287,13 @@ const WarpListView: React.FC<Props> = ({
     ].filter((line) => line !== "");
     return lines.join("\n");
   };
+  const buildAllDiffsText = (items: Array<{ block: CommandBlock; compare: CompareResult }>) =>
+    items
+      .map(({ block, compare }, idx) => {
+        const head = `## ${idx + 1}. ${block.command}`;
+        return [head, buildDiffText(block.command, compare)].join("\n");
+      })
+      .join("\n\n");
 
   useEffect(() => {
     const onWindowKeyDown = (e: KeyboardEvent) => {
@@ -401,8 +420,54 @@ const WarpListView: React.FC<Props> = ({
                     <div className="px-2.5 py-1.5 border-b border-white/10 text-[10px] text-cyan-200">
                       최근 비교 히스토리
                     </div>
+                    <div className="px-2 py-1.5 border-b border-white/10 space-y-1.5">
+                      <input
+                        value={timelineQuery}
+                        onChange={(e) => setTimelineQuery(e.target.value)}
+                        placeholder="타임라인 검색 (command/preview)"
+                        className="w-full bg-[#0f151f] border border-white/10 rounded px-2 py-1 text-[10px] text-white/80 placeholder:text-white/30 outline-none focus-visible:ring-1 focus-visible:ring-cyan-300/45"
+                      />
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          className="text-[10px] px-2 py-0.5 rounded border border-white/15 text-white/70 hover:bg-white/[0.08]"
+                          onClick={() => {
+                            navigator.clipboard.writeText(buildAllDiffsText(timelineFiltered)).catch(() => {});
+                          }}
+                          disabled={timelineFiltered.length === 0}
+                        >
+                          Copy All
+                        </button>
+                        {onExplainAllDiffs && (
+                          <button
+                            type="button"
+                            className="text-[10px] px-2 py-0.5 rounded border border-cyan-300/30 text-cyan-200 hover:bg-cyan-300/12 disabled:opacity-40"
+                            onClick={() => {
+                              onExplainAllDiffs(buildAllDiffsText(timelineFiltered));
+                              setTimelineOpen(false);
+                            }}
+                            disabled={timelineFiltered.length === 0}
+                          >
+                            AI 요약
+                          </button>
+                        )}
+                        {onClearCompareResults && (
+                          <button
+                            type="button"
+                            className="ml-auto text-[10px] px-2 py-0.5 rounded border border-rose-300/30 text-rose-200 hover:bg-rose-300/12"
+                            onClick={() => {
+                              onClearCompareResults();
+                              setDeltaOpenId(null);
+                              setTimelineOpen(false);
+                            }}
+                          >
+                            비교 초기화
+                          </button>
+                        )}
+                      </div>
+                    </div>
                     <div className="max-h-72 overflow-y-auto p-2 space-y-1.5">
-                      {comparedTimeline.map(({ block, compare }) => (
+                      {timelineFiltered.map(({ block, compare }) => (
                         <div
                           key={block.id}
                           className="rounded border border-white/10 bg-white/[0.02] px-2 py-1.5"
@@ -482,6 +547,9 @@ const WarpListView: React.FC<Props> = ({
                           </div>
                         </div>
                       ))}
+                      {timelineFiltered.length === 0 && (
+                        <div className="text-[10px] text-white/50 px-1 py-1">검색 결과가 없습니다.</div>
+                      )}
                     </div>
                   </div>
                 )}

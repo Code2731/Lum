@@ -71,6 +71,27 @@ interface RetryCompareResult {
   removedLines: string[];
   comparedAt: number;
 }
+const RETRY_COMPARE_STORAGE_KEY = "lum.retryCompareByBlock.v1";
+function loadRetryCompareCache(): Record<string, RetryCompareResult> {
+  try {
+    const raw = localStorage.getItem(RETRY_COMPARE_STORAGE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw) as unknown;
+    if (!parsed || typeof parsed !== "object") return {};
+    const byBlock = (parsed as { byBlock?: unknown }).byBlock;
+    if (!byBlock || typeof byBlock !== "object") return {};
+    return byBlock as Record<string, RetryCompareResult>;
+  } catch {
+    return {};
+  }
+}
+function saveRetryCompareCache(byBlock: Record<string, RetryCompareResult>): void {
+  try {
+    localStorage.setItem(RETRY_COMPARE_STORAGE_KEY, JSON.stringify({ byBlock }));
+  } catch {
+    // noop
+  }
+}
 
 function parseGitTabInfo(ctx: string): GitTabInfo | null {
   if (!ctx) return null;
@@ -350,7 +371,7 @@ const App: React.FC = () => {
   const [dismissedBlockId, setDismissedBlockId] = useState<string | null>(null);
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
   const [retryComparePending, setRetryComparePending] = useState<RetryComparePending | null>(null);
-  const [retryCompareByBlock, setRetryCompareByBlock] = useState<Record<string, RetryCompareResult>>({});
+  const [retryCompareByBlock, setRetryCompareByBlock] = useState<Record<string, RetryCompareResult>>(() => loadRetryCompareCache());
   const aiInputRef = useRef<HTMLInputElement>(null);
   const viewModeRef = useRef(viewMode);
   viewModeRef.current = viewMode;
@@ -433,6 +454,9 @@ const App: React.FC = () => {
       setSelectedBlockId(null);
     }
   }, [cmdBlocks, selectedBlockId]);
+  useEffect(() => {
+    saveRetryCompareCache(retryCompareByBlock);
+  }, [retryCompareByBlock]);
 
   // Warp prompt 느낌의 탭 Git 칩: 브랜치 + 변경 파일 수.
   useEffect(() => {
@@ -1172,6 +1196,20 @@ const App: React.FC = () => {
                   "",
                   text,
                 ].join("\n"));
+              }}
+              onExplainAllDiffs={(text) => {
+                handleAskAI([
+                  "아래는 retry compare 히스토리 전체다.",
+                  "1) 변화 패턴 요약",
+                  "2) 반복 실패/불안정 신호",
+                  "3) 바로 실행할 검증 커맨드 5개",
+                  "",
+                  text,
+                ].join("\n"));
+              }}
+              onClearCompareResults={() => {
+                setRetryCompareByBlock({});
+                setRetryComparePending(null);
               }}
             />
           )}
