@@ -151,6 +151,73 @@ describe("TerminalPane — 입력 라우팅", () => {
     });
   });
 
+  it("@ 첨부 메뉴에서 Enter로 파일 토큰을 입력창에 삽입", async () => {
+    invokeMock.mockImplementation((cmd: string, args?: { path?: string }) => {
+      if (cmd === "spawn_pty") return Promise.resolve();
+      if (cmd === "write_to_pty") return Promise.resolve();
+      if (cmd === "resize_pty") return Promise.resolve();
+      if (cmd === "list_directory" && args?.path === "/repo") {
+        return Promise.resolve([
+          { name: "README.md", path: "/repo/README.md", is_dir: false, size: 123 },
+        ]);
+      }
+      return Promise.resolve();
+    });
+
+    const { container } = render(<TerminalPane id="tab-1" cwd="/repo" />);
+    const input = container.querySelector("input")!;
+    fireEvent.change(input, { target: { value: "설명해줘 @rea" } });
+
+    await waitFor(() => {
+      expect(invokeMock).toHaveBeenCalledWith("list_directory", { path: "/repo" });
+    });
+
+    fireEvent.keyDown(input, { key: "Enter" });
+    await waitFor(() => {
+      expect(input).toHaveValue("설명해줘 @README.md ");
+    });
+  });
+
+  it("@ 첨부 메뉴에서 디렉토리 Enter 시 drill-down 후 파일 첨부 가능", async () => {
+    invokeMock.mockImplementation((cmd: string, args?: { path?: string }) => {
+      if (cmd === "spawn_pty") return Promise.resolve();
+      if (cmd === "write_to_pty") return Promise.resolve();
+      if (cmd === "resize_pty") return Promise.resolve();
+      if (cmd === "list_directory" && args?.path === "/repo") {
+        return Promise.resolve([
+          { name: "src", path: "/repo/src", is_dir: true, size: 0 },
+        ]);
+      }
+      if (cmd === "list_directory" && args?.path === "/repo/src") {
+        return Promise.resolve([
+          { name: "App.tsx", path: "/repo/src/App.tsx", is_dir: false, size: 321 },
+        ]);
+      }
+      return Promise.resolve();
+    });
+
+    const { container } = render(<TerminalPane id="tab-1" cwd="/repo" />);
+    const input = container.querySelector("input")!;
+    fireEvent.change(input, { target: { value: "분석 @s" } });
+
+    await waitFor(() => {
+      expect(invokeMock).toHaveBeenCalledWith("list_directory", { path: "/repo" });
+    });
+
+    fireEvent.keyDown(input, { key: "Enter" });
+    await waitFor(() => {
+      expect(invokeMock).toHaveBeenCalledWith("list_directory", { path: "/repo/src" });
+    });
+    await waitFor(() => {
+      expect(container.textContent).toContain("@src/App.tsx");
+    });
+
+    fireEvent.keyDown(input, { key: "Enter" });
+    await waitFor(() => {
+      expect(input).toHaveValue("분석 @src/App.tsx ");
+    });
+  });
+
   it("aiMessages가 비어있으면 AIBlockStream 미렌더", () => {
     const { queryByTestId } = render(<TerminalPane id="tab-1" aiMessages={[]} />);
     expect(queryByTestId("ai-block-stream")).toBeNull();

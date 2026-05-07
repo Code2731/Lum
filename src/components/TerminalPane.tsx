@@ -29,6 +29,24 @@ interface PtyData {
   data: string;
 }
 
+interface DirEntry {
+  name: string;
+  path: string;
+  is_dir: boolean;
+  size: number;
+}
+
+interface MentionItemParent {
+  kind: "parent";
+}
+
+interface MentionItemEntry {
+  kind: "entry";
+  entry: DirEntry;
+}
+
+type MentionItem = MentionItemParent | MentionItemEntry;
+
 interface Props {
   id: string;
   cwd?: string;
@@ -242,6 +260,14 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
 
   // Right-click context menu
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; text: string } | null>(null);
+  const [inputBuffer, setInputBuffer] = useState("");
+  const [mentionOpen, setMentionOpen] = useState(false);
+  const [mentionQuery, setMentionQuery] = useState("");
+  const [mentionDir, setMentionDir] = useState<string | null>(null);
+  const [mentionTrail, setMentionTrail] = useState("");
+  const [mentionEntries, setMentionEntries] = useState<DirEntry[]>([]);
+  const [mentionLoading, setMentionLoading] = useState(false);
+  const [mentionSelected, setMentionSelected] = useState(0);
 
   // WarpInputBar — 실제 입력 필드
   const warpInputRef = useRef<WarpInputBarHandle>(null);
@@ -257,6 +283,24 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
   const [aiCmdError, setAiCmdError] = useState<string | null>(null);
   const aiSuggestionRef = useRef<string | null>(null);
   const aiDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const loadMentionDirectory = useCallback(async (dir: string, trail: string) => {
+    setMentionLoading(true);
+    try {
+      const entries = await invoke<DirEntry[]>("list_directory", { path: dir });
+      setMentionEntries(Array.isArray(entries) ? entries : []);
+      setMentionDir(dir);
+      setMentionTrail(trail);
+      setMentionSelected(0);
+    } catch {
+      setMentionEntries([]);
+      setMentionDir(dir);
+      setMentionTrail(trail);
+      setMentionSelected(0);
+    } finally {
+      setMentionLoading(false);
+    }
+  }, []);
 
   const clearExplain = useCallback(() => {
     if (explainDebounceRef.current) clearTimeout(explainDebounceRef.current);
@@ -600,6 +644,12 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     setAiCmdError(null);
     setExplainPopup(null);
     setExplainLoading(false);
+    setMentionOpen(false);
+    setMentionQuery("");
+    setMentionDir(null);
+    setMentionTrail("");
+    setMentionEntries([]);
+    setMentionSelected(0);
   }, []);
 
   // 입력 라우팅: 기본=AI, 알려진 CLI=shell, !/@/#/?/>> = 명시적 오버라이드
@@ -634,6 +684,26 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
   }, [id]);
 
   const handleInputChange = useCallback((buf: string) => {
+    setInputBuffer(buf);
+
+    const mentionMatch = /(?:^|\s)@([^\s@]*)$/.exec(buf);
+    const isForcePrefix = buf.trimStart().startsWith("@");
+    const startsWithMention = mentionMatch?.index === 0;
+    if (mentionMatch && !(isForcePrefix && startsWithMention)) {
+      setMentionQuery((mentionMatch[1] ?? "").toLowerCase());
+      setMentionOpen(true);
+      if (!mentionDir && cwd) {
+        loadMentionDirectory(cwd, "");
+      }
+    } else {
+      setMentionOpen(false);
+      setMentionQuery("");
+      setMentionDir(null);
+      setMentionTrail("");
+      setMentionEntries([]);
+      setMentionSelected(0);
+    }
+
     if (buf.startsWith("# ")) {
       clearExplain();
       triggerAiCompletion(buf);
@@ -649,7 +719,103 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
       clearExplain();
       updateGhost(buf);
     }
-  }, [clearAiGhost, clearExplain, triggerAiCompletion, triggerExplain, updateGhost]);
+  }, [clearAiGhost, clearExplain, triggerAiCompletion, triggerExplain, updateGhost, mentionDir, cwd, loadMentionDirectory]);
+
+  const canGoMentionParent = !!mentionOpen && !!mentionDir && !!cwd && mentionDir !== cwd;
+  const filteredMentions = mentionEntries
+    .filter((e) => mentionQuery === "" || e.name.toLowerCase().includes(mentionQuery))
+    .slice(0, 8);
+
+  const mentionItems: MentionItem[] = [
+    ...(canGoMentionParent ? [{ kind: "parent" as const }] : []),
+    ...filteredMentions.map((entry) => ({ kind: "entry" as const, entry })),
+  ];
+
+  useEffect(() => {
+    if (!mentionOpen) return;
+    if (
+      mentionItems.length > 1 &&
+      mentionSelected === 0 &&
+      mentionItems[0].kind === "parent"
+    ) {
+      setMentionSelected(1);
+      return;
+    }
+    if (mentionSelected >= mentionItems.length) {
+      setMentionSelected(Math.max(0, mentionItems.length - 1));
+    }
+  }, [mentionItems, mentionOpen, mentionSelected]);
+
+  const attachMentionToken = useCallback((tokenPath: string) => {
+    const token = `@${tokenPath}`;
+    const next = inputBuffer.replace(
+      /(?:^|\s)@[^\s@]*$/,
+      (whole) => (whole.startsWith(" ") ? ` ${token} ` : `${token} `),
+    );
+    warpInputRef.current?.setValue(next);
+    setInputBuffer(next);
+    setMentionOpen(false);
+    setMentionQuery("");
+    setMentionDir(null);
+    setMentionTrail("");
+    setMentionEntries([]);
+    setMentionSelected(0);
+  }, [inputBuffer]);
+
+  const goMentionParent = useCallback(async () => {
+    if (!mentionDir || !cwd) return;
+    try {
+      const parent = await invoke<string | null>("parent_directory", { path: mentionDir });
+      if (!parent || !parent.startsWith(cwd)) return;
+      const trimmed = mentionTrail.endsWith("/") ? mentionTrail.slice(0, -1) : mentionTrail;
+      const idx = trimmed.lastIndexOf("/");
+      const nextTrail = idx >= 0 ? trimmed.slice(0, idx + 1) : "";
+      await loadMentionDirectory(parent, nextTrail);
+      setMentionQuery("");
+    } catch {
+      // noop
+    }
+  }, [mentionDir, cwd, mentionTrail, loadMentionDirectory]);
+
+  const applyMentionItem = useCallback(async (item: MentionItem) => {
+    if (item.kind === "parent") {
+      await goMentionParent();
+      return;
+    }
+    const entry = item.entry;
+    if (entry.is_dir) {
+      const nextTrail = `${mentionTrail}${entry.name}/`;
+      await loadMentionDirectory(entry.path, nextTrail);
+      setMentionQuery("");
+      return;
+    }
+    attachMentionToken(`${mentionTrail}${entry.name}`);
+  }, [mentionTrail, loadMentionDirectory, attachMentionToken, goMentionParent]);
+
+  const handleMentionKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!mentionOpen || mentionItems.length === 0) return false;
+    if (e.key === "ArrowDown") {
+      setMentionSelected((prev) => (prev + 1) % mentionItems.length);
+      return true;
+    }
+    if (e.key === "ArrowUp") {
+      setMentionSelected((prev) => (prev - 1 + mentionItems.length) % mentionItems.length);
+      return true;
+    }
+    if (e.key === "Escape") {
+      setMentionOpen(false);
+      setMentionQuery("");
+      return true;
+    }
+    if (e.key === "Enter" || e.key === "Tab") {
+      const item = mentionItems[mentionSelected];
+      if (item) {
+        applyMentionItem(item).catch(() => {});
+        return true;
+      }
+    }
+    return false;
+  }, [mentionOpen, mentionItems, mentionSelected, applyMentionItem]);
 
   const handleTab = useCallback((buf: string): boolean => {
     // AI 제안 있으면 전체 교체
@@ -762,6 +928,9 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
             >
               INPUT TOOLBELT
             </span>
+            <span style={{ fontSize: 10, color: "rgba(121,192,255,0.72)", flexShrink: 0 }}>
+              @ 파일 첨부
+            </span>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <ModeButton
@@ -795,11 +964,101 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
           fontSize={fontSize ?? 13}
           onSubmit={handleSubmit}
           onInterrupt={handleInterrupt}
+          onKeyDownIntercept={handleMentionKeyDown}
           onTab={handleTab}
           onChange={handleInputChange}
           contextChips={inputChips}
         />
       </div>
+
+      {mentionOpen && (mentionLoading || mentionItems.length > 0) && (
+        <div
+          style={{
+            position: "absolute",
+            left: 10,
+            right: 10,
+            bottom: 70,
+            zIndex: 28,
+            background: "rgba(10,16,24,0.96)",
+            border: "1px solid rgba(121,192,255,0.28)",
+            borderRadius: 10,
+            boxShadow: "0 10px 24px rgba(0,0,0,0.45)",
+            overflow: "hidden",
+          }}
+        >
+          <div style={{ fontSize: 10, color: "rgba(255,255,255,0.48)", padding: "6px 10px", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+            컨텍스트 첨부 (@) · {mentionTrail ? mentionTrail : "현재 폴더"}
+          </div>
+          <div style={{ maxHeight: 184, overflowY: "auto" }}>
+            {mentionLoading && (
+              <div style={{ padding: "8px 10px", fontSize: 11, color: "rgba(255,255,255,0.52)" }}>
+                불러오는 중…
+              </div>
+            )}
+            {!mentionLoading && mentionItems.length === 0 && (
+              <div style={{ padding: "8px 10px", fontSize: 11, color: "rgba(255,255,255,0.52)" }}>
+                일치하는 항목이 없습니다.
+              </div>
+            )}
+            {!mentionLoading && mentionItems.map((item, idx) => {
+              const selected = idx === mentionSelected;
+              if (item.kind === "parent") {
+                return (
+                  <button
+                    key="mention-parent"
+                    type="button"
+                    onClick={() => applyMentionItem(item)}
+                    style={{
+                      width: "100%",
+                      textAlign: "left",
+                      background: selected ? "rgba(88,166,255,0.18)" : "transparent",
+                      border: "none",
+                      color: "rgba(201,209,217,0.9)",
+                      padding: "7px 10px",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      cursor: "pointer",
+                      fontSize: 12,
+                    }}
+                  >
+                    <span style={{ fontSize: 10, color: "#79c0ff", minWidth: 22 }}>UP</span>
+                    <span style={{ fontFamily: FONT_FAMILY }}>.. (상위 폴더)</span>
+                  </button>
+                );
+              }
+              const entry = item.entry;
+              return (
+                <button
+                  key={entry.path}
+                  type="button"
+                  onClick={() => applyMentionItem(item)}
+                  style={{
+                    width: "100%",
+                    textAlign: "left",
+                    background: selected ? "rgba(88,166,255,0.18)" : "transparent",
+                    border: "none",
+                    color: "rgba(255,255,255,0.84)",
+                    padding: "7px 10px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    cursor: "pointer",
+                    fontSize: 12,
+                  }}
+                >
+                  <span style={{ fontSize: 10, color: entry.is_dir ? "#79c0ff" : "rgba(255,255,255,0.55)", minWidth: 22 }}>
+                    {entry.is_dir ? "DIR" : "FILE"}
+                  </span>
+                  <span style={{ fontFamily: FONT_FAMILY }}>
+                    @{mentionTrail}{entry.name}{entry.is_dir ? "/" : ""}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {ghostText && (
         <div

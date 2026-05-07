@@ -17,6 +17,7 @@ interface Props {
   onInterrupt?: () => void;          // Ctrl+C
   onTab?: (buf: string) => boolean;  // 자동완성 — true면 기본 Tab 소비
   onChange?: (buf: string) => void;  // 입력 변화 — AI/explain 훅
+  onKeyDownIntercept?: (e: React.KeyboardEvent<HTMLInputElement>, value: string) => boolean;
   voiceEnabled?: boolean;            // 음성 입력 토글 표시 여부 (기본 true)
   contextChips?: Array<{
     id: string;
@@ -26,7 +27,7 @@ interface Props {
 }
 
 const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
-  ({ fontFamily, fontSize, onSubmit, onInterrupt, onTab, onChange, voiceEnabled = true, contextChips = [] }, ref) => {
+  ({ fontFamily, fontSize, onSubmit, onInterrupt, onTab, onChange, onKeyDownIntercept, voiceEnabled = true, contextChips = [] }, ref) => {
     const [input, setInput] = useState("");
     const [isComposing, setIsComposing] = useState(false);
     const [isFocused, setIsFocused] = useState(false);
@@ -81,6 +82,10 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
       if (isComposing || e.nativeEvent.isComposing) return;
+      if (onKeyDownIntercept?.(e, input)) {
+        e.preventDefault();
+        return;
+      }
 
       if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();

@@ -71,6 +71,19 @@ function extractPaths(text: string, cwd: string | null): { paths: string[]; useC
     }
   }
 
+  // Warp-style @ 컨텍스트 첨부: "@README.md", "@src/App.tsx", "@docs/"
+  // 시작 위치는 문장 시작 또는 공백 뒤만 허용해 email 같은 패턴을 피한다.
+  const mention = /(?:^|\s)@([^\s@]+(?:\/[^\s@]+)*)/g;
+  while ((m = mention.exec(text)) !== null) {
+    const candidate = m[1].replace(/[.,;:!?]+$/, "");
+    if (!candidate) continue;
+    // backend prefix(@local/@ollama 등) 오탐 방지
+    if (["local", "embedded", "ollama", "xllm", "gemini", "cloud"].includes(candidate.toLowerCase())) {
+      continue;
+    }
+    paths.push(candidate);
+  }
+
   return { paths: [...new Set(paths)], useCwd };
 }
 

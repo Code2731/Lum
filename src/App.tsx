@@ -52,6 +52,43 @@ const ReactAgentPanel = lazy(() => import("./components/ReactAgentPanel"));
 
 type ViewMode = "terminal" | "canvas" | "list";
 
+interface GitTabInfo {
+  branch: string;
+  changed: number;
+}
+
+function parseGitTabInfo(ctx: string): GitTabInfo | null {
+  if (!ctx) return null;
+  const statusHeader = "$ git status";
+  const idx = ctx.indexOf(statusHeader);
+  if (idx < 0) return null;
+
+  const lines = ctx
+    .slice(idx + statusHeader.length)
+    .trimStart()
+    .split(/\r?\n/);
+  if (lines.length === 0) return null;
+
+  const head = lines[0]?.trim() ?? "";
+  if (!head.startsWith("## ")) return null;
+
+  const branch = head
+    .slice(3)
+    .split("...")[0]
+    .replace(/\s+\[.*\]$/, "")
+    .trim();
+  if (!branch) return null;
+
+  let changed = 0;
+  for (const line of lines.slice(1)) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("$ ")) break;
+    changed += 1;
+  }
+
+  return { branch, changed };
+}
+
 const App: React.FC = () => {
   const { blocks, addBlock, updateBlock, moveBlock } = useTerminalBlocks();
   const { isProcessing, analyzeError, streamAICommand } = useAIProcessing();
@@ -262,6 +299,7 @@ const App: React.FC = () => {
   const [renamingTabId, setRenamingTabId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
   const [tabCtxMenu, setTabCtxMenu] = useState<{ tabId: string; x: number; y: number } | null>(null);
+  const [tabGitInfo, setTabGitInfo] = useState<Record<string, GitTabInfo | null>>({});
   const [viewMode, setViewMode] = useState<ViewMode>("terminal");
   const [aiInput, setAiInput] = useState("");
   const [showAiBar, setShowAiBar] = useState(false);
@@ -318,6 +356,34 @@ const App: React.FC = () => {
       }
     }
   }, [cmdBlocks, selectedModel]); // notifCenter.addNotification은 안정된 useCallback이므로 deps 불필요
+
+  // Warp prompt 느낌의 탭 Git 칩: 브랜치 + 변경 파일 수.
+  useEffect(() => {
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      Promise.all(
+        tabs.map(async (tab) => {
+          if (!tab.cwd) return [tab.id, null] as const;
+          try {
+            const gitCtx = await invoke<string>("get_git_context", { cwd: tab.cwd });
+            return [tab.id, parseGitTabInfo(gitCtx)] as const;
+          } catch {
+            return [tab.id, null] as const;
+          }
+        }),
+      ).then((pairs) => {
+        if (cancelled) return;
+        const next: Record<string, GitTabInfo | null> = {};
+        for (const [id, info] of pairs) next[id] = info;
+        setTabGitInfo(next);
+      }).catch(() => {});
+    }, 280);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [tabs, cmdBlocks.length]);
 
   // ReAct 에이전트 태스크 완료 알림 — status 전환 시점에 goal 최신값 사용
   const agentStatusRef = useRef(reactAgent.state.status);
@@ -665,6 +731,28 @@ const App: React.FC = () => {
                 <>
                   {tab.sshProfile && <Lock size={11} className="text-cyan-400 shrink-0" />}
                   {tab.title}
+                  {tabGitInfo[tab.id]?.branch && (
+                    <span
+                      className={`ml-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md border text-[10px] ${
+                        tab.id === activeTabId
+                          ? "border-cyan-300/35 bg-cyan-400/12 text-cyan-200"
+                          : "border-white/15 bg-white/[0.04] text-white/60"
+                      }`}
+                      title={
+                        tabGitInfo[tab.id]!.changed > 0
+                          ? `브랜치 ${tabGitInfo[tab.id]!.branch} · 변경 ${tabGitInfo[tab.id]!.changed}개`
+                          : `브랜치 ${tabGitInfo[tab.id]!.branch}`
+                      }
+                    >
+                      <GitBranch size={10} />
+                      <span>{tabGitInfo[tab.id]!.branch}</span>
+                      {tabGitInfo[tab.id]!.changed > 0 && (
+                        <span className="text-[9px] px-1 rounded bg-amber-400/22 text-amber-200">
+                          {tabGitInfo[tab.id]!.changed}
+                        </span>
+                      )}
+                    </span>
+                  )}
                 </>
               )}
               {tabs.length > 1 && renamingTabId !== tab.id && (
