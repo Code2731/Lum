@@ -497,6 +497,13 @@ const WarpListView: React.FC<Props> = ({
     if (!timelineOpen) return;
     const onWindowKeyDown = (e: KeyboardEvent) => {
       if (isTypingTarget(e.target)) return;
+      if (e.altKey && (e.key === "p" || e.key === "P")) {
+        if (onToggleRetryCompareQueuePaused) {
+          e.preventDefault();
+          onToggleRetryCompareQueuePaused();
+        }
+        return;
+      }
       if (e.altKey && e.key === "ArrowUp") {
         e.preventDefault();
         navigateSelectedTimeline(-1);
@@ -577,6 +584,7 @@ const WarpListView: React.FC<Props> = ({
                       : "border-white/15 text-white/70 hover:bg-white/[0.08]"
                   }`}
                   onClick={onToggleRetryCompareQueuePaused}
+                  title="Alt+P"
                 >
                   {retryCompareQueuePaused ? "큐 재개" : "큐 일시정지"}
                 </button>

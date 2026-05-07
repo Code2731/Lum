@@ -625,6 +625,31 @@ describe("WarpListView delta actions", () => {
     expect(screen.getByRole("button", { name: "큐 재개" })).toBeInTheDocument();
   });
 
+  it("Retry+Compare 큐 일시정지 단축키(Alt+P)", () => {
+    const onToggleRetryCompareQueuePaused = vi.fn();
+    render(
+      <WarpListView
+        blocks={blocks}
+        retryCompareQueueDepth={2}
+        retryCompareQueueWaiting={2}
+        onToggleRetryCompareQueuePaused={onToggleRetryCompareQueuePaused}
+        compareResultByBlock={{
+          b2: {
+            added: 1,
+            removed: 1,
+            preview: "test changed",
+            addedLines: ["new line"],
+            removedLines: ["old line"],
+            comparedAt: now,
+          },
+        }}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Δ Timeline (1)" }));
+    fireEvent.keyDown(window, { key: "p", altKey: true });
+    expect(onToggleRetryCompareQueuePaused).toHaveBeenCalledTimes(1);
+  });
+
   it("Retry+Compare 큐 상세 목록/개별 제거", () => {
     const onRemoveRetryCompareQueueItem = vi.fn();
     const onPromoteRetryCompareQueueItem = vi.fn();
