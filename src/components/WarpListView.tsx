@@ -119,6 +119,7 @@ const WarpListView: React.FC<Props> = ({
   const [timelineOpen, setTimelineOpen] = useState(false);
   const [timelineQuery, setTimelineQuery] = useState("");
   const [queueQuery, setQueueQuery] = useState("");
+  const [queuePanelCollapsed, setQueuePanelCollapsed] = useState(false);
   const [showShortcutHelp, setShowShortcutHelp] = useState(false);
   const [timelineSelectedIds, setTimelineSelectedIds] = useState<Set<string>>(new Set());
   const [timelinePinnedIds, setTimelinePinnedIds] = useState<Set<string>>(new Set());
@@ -583,6 +584,13 @@ const WarpListView: React.FC<Props> = ({
         }
         return;
       }
+      if (e.altKey && (e.key === "k" || e.key === "K")) {
+        if (retryCompareQueueItems.length > 0) {
+          e.preventDefault();
+          setQueuePanelCollapsed((prev) => !prev);
+        }
+        return;
+      }
       if (e.altKey && (e.key === "d" || e.key === "D")) {
         if (onResetRetryCompareCompletedCount) {
           e.preventDefault();
@@ -643,6 +651,7 @@ const WarpListView: React.FC<Props> = ({
     canRedoRetryCompareQueueChange,
     onUndoRetryCompareQueueChange,
     canUndoRetryCompareQueueChange,
+    retryCompareQueueItems.length,
   ]);
 
   return (
@@ -940,7 +949,7 @@ const WarpListView: React.FC<Props> = ({
                         <div className="rounded border border-cyan-300/20 bg-cyan-400/[0.08] px-2 py-1.5 text-[10px] text-cyan-100/90 space-y-0.5">
                           <div><span className="text-cyan-50">Cmd/Ctrl+Shift+Y</span> 타임라인 열기/닫기</div>
                           <div><span className="text-cyan-50">Alt+Enter / Alt+↑ / Alt+↓</span> 선택 Jump/이동</div>
-                          <div><span className="text-cyan-50">Alt+Q / Alt+P / Alt+D</span> 큐 검색/일시정지/완료리셋</div>
+                          <div><span className="text-cyan-50">Alt+Q / Alt+K / Alt+P / Alt+D</span> 큐 검색/접기/일시정지/완료리셋</div>
                           <div><span className="text-cyan-50">Alt+Z / Cmd/Ctrl+Z</span> 큐 변경 되돌리기</div>
                           <div><span className="text-cyan-50">Alt+Shift+Z / Cmd/Ctrl+Shift+Z</span> 큐 변경 다시실행</div>
                           <div><span className="text-cyan-50">Alt+Shift+Enter/↑/↓, Alt+Delete</span> 필터 배치 액션</div>
@@ -952,183 +961,195 @@ const WarpListView: React.FC<Props> = ({
                         <div className="flex items-center gap-1.5 text-[10px] text-white/55">
                           <span>Retry+Compare Queue</span>
                           <span className="tabular-nums">표시 {filteredQueueItems.length}/{retryCompareQueueItems.length}</span>
+                          <button
+                            type="button"
+                            className="ml-auto text-[10px] px-1.5 py-0.5 rounded border border-white/15 text-white/70 hover:bg-white/[0.08]"
+                            onClick={() => setQueuePanelCollapsed((prev) => !prev)}
+                            title="Alt+K"
+                          >
+                            {queuePanelCollapsed ? "펼치기" : "접기"}
+                          </button>
                         </div>
-                        <div className="flex items-center gap-1.5">
-                          <input
-                            ref={queueSearchInputRef}
-                            value={queueQuery}
-                            onChange={(e) => setQueueQuery(e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key !== "Escape") return;
-                              if (!queueQuery.trim()) return;
-                              e.preventDefault();
-                              setQueueQuery("");
-                            }}
-                            placeholder="큐 검색 (command)"
-                            className="flex-1 bg-[#0f151f] border border-white/10 rounded px-2 py-1 text-[10px] text-white/80 placeholder:text-white/30 outline-none focus-visible:ring-1 focus-visible:ring-cyan-300/45"
-                          />
-                          {queueQuery.trim() !== "" && (
-                            <button
-                              type="button"
-                              className="text-[10px] px-1.5 py-1 rounded border border-white/15 text-white/70 hover:bg-white/[0.08]"
-                              onClick={() => setQueueQuery("")}
-                            >
-                              지우기
-                            </button>
-                          )}
-                          {onUndoRetryCompareQueueChange && (
-                            <button
-                              type="button"
-                              className="text-[10px] px-1.5 py-1 rounded border border-amber-300/30 text-amber-200 hover:bg-amber-300/12 disabled:opacity-40"
-                              onClick={onUndoRetryCompareQueueChange}
-                              title="Alt+Z / Cmd/Ctrl+Z"
-                              disabled={!canUndoRetryCompareQueueChange}
-                            >
-                              큐 변경 되돌리기
-                            </button>
-                          )}
-                          {onRedoRetryCompareQueueChange && (
-                            <button
-                              type="button"
-                              className="text-[10px] px-1.5 py-1 rounded border border-cyan-300/30 text-cyan-200 hover:bg-cyan-300/12 disabled:opacity-40"
-                              onClick={onRedoRetryCompareQueueChange}
-                              title="Alt+Shift+Z / Cmd/Ctrl+Shift+Z"
-                              disabled={!canRedoRetryCompareQueueChange}
-                            >
-                              큐 변경 다시실행
-                            </button>
-                          )}
-                          {onRemoveFilteredRetryCompareQueueItems && (
-                            <button
-                              type="button"
-                              className="text-[10px] px-1.5 py-1 rounded border border-rose-300/30 text-rose-200 hover:bg-rose-300/12 disabled:opacity-40"
-                              onClick={() => {
-                                onRemoveFilteredRetryCompareQueueItems(filteredQueueItems.map((x) => x.id));
-                              }}
-                              title="Alt+Delete"
-                              disabled={filteredQueueItems.length === 0}
-                            >
-                              필터 제거
-                            </button>
-                          )}
-                          {onPrioritizeFilteredRetryCompareQueueItems && (
-                            <button
-                              type="button"
-                              className="text-[10px] px-1.5 py-1 rounded border border-emerald-300/30 text-emerald-200 hover:bg-emerald-300/12 disabled:opacity-40"
-                              onClick={() => {
-                                onPrioritizeFilteredRetryCompareQueueItems(filteredQueueItems.map((x) => x.id));
-                              }}
-                              title="Alt+Shift+Enter"
-                              disabled={filteredQueueItems.length === 0}
-                            >
-                              필터 다음실행
-                            </button>
-                          )}
-                          {onPromoteFilteredRetryCompareQueueItems && (
-                            <button
-                              type="button"
-                              className="text-[10px] px-1.5 py-1 rounded border border-cyan-300/30 text-cyan-200 hover:bg-cyan-300/12 disabled:opacity-40"
-                              onClick={() => {
-                                onPromoteFilteredRetryCompareQueueItems(filteredQueueItems.map((x) => x.id));
-                              }}
-                              title="Alt+Shift+↑"
-                              disabled={filteredQueueItems.length === 0}
-                            >
-                              필터 맨앞
-                            </button>
-                          )}
-                          {onDemoteFilteredRetryCompareQueueItems && (
-                            <button
-                              type="button"
-                              className="text-[10px] px-1.5 py-1 rounded border border-cyan-300/30 text-cyan-200 hover:bg-cyan-300/12 disabled:opacity-40"
-                              onClick={() => {
-                                onDemoteFilteredRetryCompareQueueItems(filteredQueueItems.map((x) => x.id));
-                              }}
-                              title="Alt+Shift+↓"
-                              disabled={filteredQueueItems.length === 0}
-                            >
-                              필터 맨뒤
-                            </button>
-                          )}
-                        </div>
-                        <div className="space-y-1 max-h-24 overflow-y-auto">
-                          {filteredQueueItems.map((item, idx) => (
-                            <div
-                              key={item.id}
-                              className="flex items-center gap-1.5 rounded border border-white/10 bg-white/[0.03] px-1.5 py-1"
-                            >
-                              <span className="text-[10px] text-white/45 tabular-nums shrink-0">
-                                {idx + 1}
-                              </span>
-                              <span className="text-[10px] text-white/75 font-mono truncate flex-1" title={item.command}>
-                                {item.command}
-                              </span>
-                              {onPrioritizeRetryCompareQueueItem && (
+                        {!queuePanelCollapsed && (
+                          <>
+                            <div className="flex items-center gap-1.5">
+                              <input
+                                ref={queueSearchInputRef}
+                                value={queueQuery}
+                                onChange={(e) => setQueueQuery(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key !== "Escape") return;
+                                  if (!queueQuery.trim()) return;
+                                  e.preventDefault();
+                                  setQueueQuery("");
+                                }}
+                                placeholder="큐 검색 (command)"
+                                className="flex-1 bg-[#0f151f] border border-white/10 rounded px-2 py-1 text-[10px] text-white/80 placeholder:text-white/30 outline-none focus-visible:ring-1 focus-visible:ring-cyan-300/45"
+                              />
+                              {queueQuery.trim() !== "" && (
                                 <button
                                   type="button"
-                                  aria-label={`queue-next-${idx + 1}`}
-                                  className="text-[10px] px-1 py-0.5 rounded border border-emerald-300/30 text-emerald-200 hover:bg-emerald-300/12"
-                                  onClick={() => onPrioritizeRetryCompareQueueItem(item.id)}
+                                  className="text-[10px] px-1.5 py-1 rounded border border-white/15 text-white/70 hover:bg-white/[0.08]"
+                                  onClick={() => setQueueQuery("")}
                                 >
-                                  다음
+                                  지우기
                                 </button>
                               )}
-                              {onPromoteRetryCompareQueueItem && (
+                              {onUndoRetryCompareQueueChange && (
                                 <button
                                   type="button"
-                                  aria-label={`queue-promote-${idx + 1}`}
-                                  className="text-[10px] px-1 py-0.5 rounded border border-cyan-300/30 text-cyan-200 hover:bg-cyan-300/12"
-                                  onClick={() => onPromoteRetryCompareQueueItem(item.id)}
+                                  className="text-[10px] px-1.5 py-1 rounded border border-amber-300/30 text-amber-200 hover:bg-amber-300/12 disabled:opacity-40"
+                                  onClick={onUndoRetryCompareQueueChange}
+                                  title="Alt+Z / Cmd/Ctrl+Z"
+                                  disabled={!canUndoRetryCompareQueueChange}
                                 >
-                                  맨앞
+                                  큐 변경 되돌리기
                                 </button>
                               )}
-                              {onMoveUpRetryCompareQueueItem && (
+                              {onRedoRetryCompareQueueChange && (
                                 <button
                                   type="button"
-                                  aria-label={`queue-up-${idx + 1}`}
-                                  className="text-[10px] px-1 py-0.5 rounded border border-cyan-300/30 text-cyan-200 hover:bg-cyan-300/12"
-                                  onClick={() => onMoveUpRetryCompareQueueItem(item.id)}
+                                  className="text-[10px] px-1.5 py-1 rounded border border-cyan-300/30 text-cyan-200 hover:bg-cyan-300/12 disabled:opacity-40"
+                                  onClick={onRedoRetryCompareQueueChange}
+                                  title="Alt+Shift+Z / Cmd/Ctrl+Shift+Z"
+                                  disabled={!canRedoRetryCompareQueueChange}
                                 >
-                                  ↑
+                                  큐 변경 다시실행
                                 </button>
                               )}
-                              {onMoveDownRetryCompareQueueItem && (
+                              {onRemoveFilteredRetryCompareQueueItems && (
                                 <button
                                   type="button"
-                                  aria-label={`queue-down-${idx + 1}`}
-                                  className="text-[10px] px-1 py-0.5 rounded border border-cyan-300/30 text-cyan-200 hover:bg-cyan-300/12"
-                                  onClick={() => onMoveDownRetryCompareQueueItem(item.id)}
+                                  className="text-[10px] px-1.5 py-1 rounded border border-rose-300/30 text-rose-200 hover:bg-rose-300/12 disabled:opacity-40"
+                                  onClick={() => {
+                                    onRemoveFilteredRetryCompareQueueItems(filteredQueueItems.map((x) => x.id));
+                                  }}
+                                  title="Alt+Delete"
+                                  disabled={filteredQueueItems.length === 0}
                                 >
-                                  ↓
+                                  필터 제거
                                 </button>
                               )}
-                              {onDemoteRetryCompareQueueItem && (
+                              {onPrioritizeFilteredRetryCompareQueueItems && (
                                 <button
                                   type="button"
-                                  aria-label={`queue-demote-${idx + 1}`}
-                                  className="text-[10px] px-1 py-0.5 rounded border border-cyan-300/30 text-cyan-200 hover:bg-cyan-300/12"
-                                  onClick={() => onDemoteRetryCompareQueueItem(item.id)}
+                                  className="text-[10px] px-1.5 py-1 rounded border border-emerald-300/30 text-emerald-200 hover:bg-emerald-300/12 disabled:opacity-40"
+                                  onClick={() => {
+                                    onPrioritizeFilteredRetryCompareQueueItems(filteredQueueItems.map((x) => x.id));
+                                  }}
+                                  title="Alt+Shift+Enter"
+                                  disabled={filteredQueueItems.length === 0}
                                 >
-                                  맨뒤
+                                  필터 다음실행
                                 </button>
                               )}
-                              {onRemoveRetryCompareQueueItem && (
+                              {onPromoteFilteredRetryCompareQueueItems && (
                                 <button
                                   type="button"
-                                  aria-label={`queue-remove-${idx + 1}`}
-                                  className="text-[10px] px-1 py-0.5 rounded border border-rose-300/30 text-rose-200 hover:bg-rose-300/12"
-                                  onClick={() => onRemoveRetryCompareQueueItem(item.id)}
+                                  className="text-[10px] px-1.5 py-1 rounded border border-cyan-300/30 text-cyan-200 hover:bg-cyan-300/12 disabled:opacity-40"
+                                  onClick={() => {
+                                    onPromoteFilteredRetryCompareQueueItems(filteredQueueItems.map((x) => x.id));
+                                  }}
+                                  title="Alt+Shift+↑"
+                                  disabled={filteredQueueItems.length === 0}
                                 >
-                                  제거
+                                  필터 맨앞
+                                </button>
+                              )}
+                              {onDemoteFilteredRetryCompareQueueItems && (
+                                <button
+                                  type="button"
+                                  className="text-[10px] px-1.5 py-1 rounded border border-cyan-300/30 text-cyan-200 hover:bg-cyan-300/12 disabled:opacity-40"
+                                  onClick={() => {
+                                    onDemoteFilteredRetryCompareQueueItems(filteredQueueItems.map((x) => x.id));
+                                  }}
+                                  title="Alt+Shift+↓"
+                                  disabled={filteredQueueItems.length === 0}
+                                >
+                                  필터 맨뒤
                                 </button>
                               )}
                             </div>
-                          ))}
-                          {filteredQueueItems.length === 0 && (
-                            <div className="text-[10px] text-white/45 px-1 py-1">큐 검색 결과가 없습니다.</div>
-                          )}
-                        </div>
+                            <div className="space-y-1 max-h-24 overflow-y-auto">
+                              {filteredQueueItems.map((item, idx) => (
+                                <div
+                                  key={item.id}
+                                  className="flex items-center gap-1.5 rounded border border-white/10 bg-white/[0.03] px-1.5 py-1"
+                                >
+                                  <span className="text-[10px] text-white/45 tabular-nums shrink-0">
+                                    {idx + 1}
+                                  </span>
+                                  <span className="text-[10px] text-white/75 font-mono truncate flex-1" title={item.command}>
+                                    {item.command}
+                                  </span>
+                                  {onPrioritizeRetryCompareQueueItem && (
+                                    <button
+                                      type="button"
+                                      aria-label={`queue-next-${idx + 1}`}
+                                      className="text-[10px] px-1 py-0.5 rounded border border-emerald-300/30 text-emerald-200 hover:bg-emerald-300/12"
+                                      onClick={() => onPrioritizeRetryCompareQueueItem(item.id)}
+                                    >
+                                      다음
+                                    </button>
+                                  )}
+                                  {onPromoteRetryCompareQueueItem && (
+                                    <button
+                                      type="button"
+                                      aria-label={`queue-promote-${idx + 1}`}
+                                      className="text-[10px] px-1 py-0.5 rounded border border-cyan-300/30 text-cyan-200 hover:bg-cyan-300/12"
+                                      onClick={() => onPromoteRetryCompareQueueItem(item.id)}
+                                    >
+                                      맨앞
+                                    </button>
+                                  )}
+                                  {onMoveUpRetryCompareQueueItem && (
+                                    <button
+                                      type="button"
+                                      aria-label={`queue-up-${idx + 1}`}
+                                      className="text-[10px] px-1 py-0.5 rounded border border-cyan-300/30 text-cyan-200 hover:bg-cyan-300/12"
+                                      onClick={() => onMoveUpRetryCompareQueueItem(item.id)}
+                                    >
+                                      ↑
+                                    </button>
+                                  )}
+                                  {onMoveDownRetryCompareQueueItem && (
+                                    <button
+                                      type="button"
+                                      aria-label={`queue-down-${idx + 1}`}
+                                      className="text-[10px] px-1 py-0.5 rounded border border-cyan-300/30 text-cyan-200 hover:bg-cyan-300/12"
+                                      onClick={() => onMoveDownRetryCompareQueueItem(item.id)}
+                                    >
+                                      ↓
+                                    </button>
+                                  )}
+                                  {onDemoteRetryCompareQueueItem && (
+                                    <button
+                                      type="button"
+                                      aria-label={`queue-demote-${idx + 1}`}
+                                      className="text-[10px] px-1 py-0.5 rounded border border-cyan-300/30 text-cyan-200 hover:bg-cyan-300/12"
+                                      onClick={() => onDemoteRetryCompareQueueItem(item.id)}
+                                    >
+                                      맨뒤
+                                    </button>
+                                  )}
+                                  {onRemoveRetryCompareQueueItem && (
+                                    <button
+                                      type="button"
+                                      aria-label={`queue-remove-${idx + 1}`}
+                                      className="text-[10px] px-1 py-0.5 rounded border border-rose-300/30 text-rose-200 hover:bg-rose-300/12"
+                                      onClick={() => onRemoveRetryCompareQueueItem(item.id)}
+                                    >
+                                      제거
+                                    </button>
+                                  )}
+                                </div>
+                              ))}
+                              {filteredQueueItems.length === 0 && (
+                                <div className="text-[10px] text-white/45 px-1 py-1">큐 검색 결과가 없습니다.</div>
+                              )}
+                            </div>
+                          </>
+                        )}
                       </div>
                     )}
                     <div className="max-h-72 overflow-y-auto p-2 space-y-1.5">

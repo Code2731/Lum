@@ -1123,6 +1123,66 @@ describe("WarpListView delta actions", () => {
     expect(screen.getByText("표시 2/2")).toBeInTheDocument();
   });
 
+  it("Retry+Compare 큐 패널 접기/펼치기 버튼", () => {
+    render(
+      <WarpListView
+        blocks={blocks}
+        retryCompareQueueDepth={2}
+        retryCompareQueueWaiting={2}
+        retryCompareQueueItems={[
+          { id: "q1", command: "npm test" },
+          { id: "q2", command: "pnpm lint" },
+        ]}
+        compareResultByBlock={{
+          b2: {
+            added: 1,
+            removed: 1,
+            preview: "test changed",
+            addedLines: ["new line"],
+            removedLines: ["old line"],
+            comparedAt: now,
+          },
+        }}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Δ Timeline (1)" }));
+    expect(screen.getByPlaceholderText("큐 검색 (command)")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "접기" }));
+    expect(screen.queryByPlaceholderText("큐 검색 (command)")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "펼치기" }));
+    expect(screen.getByPlaceholderText("큐 검색 (command)")).toBeInTheDocument();
+  });
+
+  it("Retry+Compare 큐 패널 토글 단축키(Alt+K)", () => {
+    render(
+      <WarpListView
+        blocks={blocks}
+        retryCompareQueueDepth={2}
+        retryCompareQueueWaiting={2}
+        retryCompareQueueItems={[
+          { id: "q1", command: "npm test" },
+          { id: "q2", command: "pnpm lint" },
+        ]}
+        compareResultByBlock={{
+          b2: {
+            added: 1,
+            removed: 1,
+            preview: "test changed",
+            addedLines: ["new line"],
+            removedLines: ["old line"],
+            comparedAt: now,
+          },
+        }}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Δ Timeline (1)" }));
+    expect(screen.getByPlaceholderText("큐 검색 (command)")).toBeInTheDocument();
+    fireEvent.keyDown(window, { key: "k", altKey: true });
+    expect(screen.queryByPlaceholderText("큐 검색 (command)")).not.toBeInTheDocument();
+    fireEvent.keyDown(window, { key: "k", altKey: true });
+    expect(screen.getByPlaceholderText("큐 검색 (command)")).toBeInTheDocument();
+  });
+
   it("Retry+Compare 현재 실행 커맨드 표시", () => {
     render(
       <WarpListView
