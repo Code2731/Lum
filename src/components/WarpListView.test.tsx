@@ -355,6 +355,29 @@ describe("WarpListView delta actions", () => {
     expect(screen.getByText("표시 2")).toBeInTheDocument();
   });
 
+  it("Cmd/Ctrl+Shift+Y로 Δ Timeline 토글", () => {
+    render(
+      <WarpListView
+        blocks={blocks}
+        compareResultByBlock={{
+          b2: {
+            added: 1,
+            removed: 1,
+            preview: "",
+            addedLines: ["new line"],
+            removedLines: ["old line"],
+            comparedAt: now,
+          },
+        }}
+      />,
+    );
+
+    fireEvent.keyDown(window, { key: "y", ctrlKey: true, shiftKey: true });
+    expect(screen.getByText("최근 비교 히스토리")).toBeInTheDocument();
+    fireEvent.keyDown(window, { key: "y", ctrlKey: true, shiftKey: true });
+    expect(screen.queryByText("최근 비교 히스토리")).not.toBeInTheDocument();
+  });
+
   it("비교 누적 요약 Σ +N/-M 표시", () => {
     render(
       <WarpListView

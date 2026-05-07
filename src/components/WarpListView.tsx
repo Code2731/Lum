@@ -302,6 +302,19 @@ const WarpListView: React.FC<Props> = ({
     window.addEventListener("keydown", onWindowKeyDown);
     return () => window.removeEventListener("keydown", onWindowKeyDown);
   }, [comparedCount]);
+  useEffect(() => {
+    const onWindowKeyDown = (e: KeyboardEvent) => {
+      const mod = e.metaKey || e.ctrlKey;
+      if (!mod || !e.shiftKey) return;
+      if (e.key.toLowerCase() !== "y") return;
+      if (isTypingTarget(e.target)) return;
+      if (comparedCount === 0) return;
+      e.preventDefault();
+      setTimelineOpen((prev) => !prev);
+    };
+    window.addEventListener("keydown", onWindowKeyDown);
+    return () => window.removeEventListener("keydown", onWindowKeyDown);
+  }, [comparedCount]);
 
   useEffect(() => {
     if (!deltaOpenId) return;
@@ -374,6 +387,7 @@ const WarpListView: React.FC<Props> = ({
                   ref={timelineButtonRef}
                   type="button"
                   onClick={() => setTimelineOpen((prev) => !prev)}
+                  title="Cmd/Ctrl+Shift+Y"
                   className="text-[10px] px-2 py-0.5 rounded border border-cyan-400/30 text-cyan-200/90 hover:bg-cyan-400/15"
                 >
                   Δ Timeline ({comparedCount})
