@@ -121,6 +121,7 @@ const WarpListView: React.FC<Props> = ({
   const [queueQuery, setQueueQuery] = useState("");
   const [queuePanelCollapsed, setQueuePanelCollapsed] = useState(false);
   const [showShortcutHelp, setShowShortcutHelp] = useState(false);
+  const [timelineSortMode, setTimelineSortMode] = useState<"recent" | "delta">("recent");
   const [timelineSelectedIds, setTimelineSelectedIds] = useState<Set<string>>(new Set());
   const [timelinePinnedIds, setTimelinePinnedIds] = useState<Set<string>>(new Set());
   const [timelinePinnedOnly, setTimelinePinnedOnly] = useState(false);
@@ -184,9 +185,14 @@ const WarpListView: React.FC<Props> = ({
           const aPinned = timelinePinnedIds.has(a.block.id);
           const bPinned = timelinePinnedIds.has(b.block.id);
           if (aPinned !== bPinned) return aPinned ? -1 : 1;
+          if (timelineSortMode === "delta") {
+            const aDelta = a.compare.added + a.compare.removed;
+            const bDelta = b.compare.added + b.compare.removed;
+            if (aDelta !== bDelta) return bDelta - aDelta;
+          }
           return b.compare.comparedAt - a.compare.comparedAt;
         }),
-    [blocks, compareResultByBlock, timelinePinnedIds],
+    [blocks, compareResultByBlock, timelinePinnedIds, timelineSortMode],
   );
   const timelineFiltered = useMemo(() => {
     const q = timelineQuery.trim().toLowerCase();
@@ -591,6 +597,13 @@ const WarpListView: React.FC<Props> = ({
         }
         return;
       }
+      if (e.altKey && (e.key === "s" || e.key === "S")) {
+        if (comparedTimeline.length > 0) {
+          e.preventDefault();
+          setTimelineSortMode((prev) => (prev === "recent" ? "delta" : "recent"));
+        }
+        return;
+      }
       if (e.altKey && (e.key === "d" || e.key === "D")) {
         if (onResetRetryCompareCompletedCount) {
           e.preventDefault();
@@ -652,6 +665,7 @@ const WarpListView: React.FC<Props> = ({
     onUndoRetryCompareQueueChange,
     canUndoRetryCompareQueueChange,
     retryCompareQueueItems.length,
+    comparedTimeline.length,
   ]);
 
   return (
@@ -869,6 +883,18 @@ const WarpListView: React.FC<Props> = ({
                         </button>
                         <button
                           type="button"
+                          className={`text-[10px] px-2 py-0.5 rounded border ${
+                            timelineSortMode === "delta"
+                              ? "border-cyan-300/45 bg-cyan-300/18 text-cyan-100"
+                              : "border-white/15 text-white/70 hover:bg-white/[0.08]"
+                          }`}
+                          onClick={() => setTimelineSortMode((prev) => (prev === "recent" ? "delta" : "recent"))}
+                          title="Alt+S"
+                        >
+                          정렬: {timelineSortMode === "recent" ? "최근순" : "변화량순"}
+                        </button>
+                        <button
+                          type="button"
                           className="text-[10px] px-2 py-0.5 rounded border border-white/15 text-white/70 hover:bg-white/[0.08] disabled:opacity-40"
                           onClick={() => navigateSelectedTimeline(1)}
                           title="Alt+Enter"
@@ -949,6 +975,7 @@ const WarpListView: React.FC<Props> = ({
                         <div className="rounded border border-cyan-300/20 bg-cyan-400/[0.08] px-2 py-1.5 text-[10px] text-cyan-100/90 space-y-0.5">
                           <div><span className="text-cyan-50">Cmd/Ctrl+Shift+Y</span> 타임라인 열기/닫기</div>
                           <div><span className="text-cyan-50">Alt+Enter / Alt+↑ / Alt+↓</span> 선택 Jump/이동</div>
+                          <div><span className="text-cyan-50">Alt+S</span> 타임라인 정렬 토글</div>
                           <div><span className="text-cyan-50">Alt+Q / Alt+K / Alt+P / Alt+D</span> 큐 검색/접기/일시정지/완료리셋</div>
                           <div><span className="text-cyan-50">Alt+Z / Cmd/Ctrl+Z</span> 큐 변경 되돌리기</div>
                           <div><span className="text-cyan-50">Alt+Shift+Z / Cmd/Ctrl+Shift+Z</span> 큐 변경 다시실행</div>

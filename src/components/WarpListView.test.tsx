@@ -531,6 +531,69 @@ describe("WarpListView delta actions", () => {
     expect(screen.queryByText("$ npm install")).not.toBeInTheDocument();
   });
 
+  it("Δ Timeline 정렬 토글(최근순/변화량순) + Alt+S", () => {
+    render(
+      <WarpListView
+        blocks={[
+          ...blocks,
+          {
+            id: "b3",
+            command: "npm install",
+            output: "done",
+            exitCode: 0,
+            startedAt: now - 2000,
+            endedAt: now - 1000,
+          },
+          {
+            id: "b4",
+            command: "pnpm lint",
+            output: "done",
+            exitCode: 0,
+            startedAt: now - 4000,
+            endedAt: now - 3000,
+          },
+        ]}
+        compareResultByBlock={{
+          b2: {
+            added: 1,
+            removed: 0,
+            preview: "",
+            addedLines: ["a"],
+            removedLines: [],
+            comparedAt: now,
+          },
+          b3: {
+            added: 4,
+            removed: 3,
+            preview: "",
+            addedLines: ["a"],
+            removedLines: ["b"],
+            comparedAt: now - 2000,
+          },
+          b4: {
+            added: 2,
+            removed: 0,
+            preview: "",
+            addedLines: ["a"],
+            removedLines: [],
+            comparedAt: now - 1000,
+          },
+        }}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Δ Timeline (3)" }));
+    const recentOrder = screen.getAllByRole("checkbox").map((el) => el.getAttribute("aria-label"));
+    expect(recentOrder).toEqual(["npm test 선택", "pnpm lint 선택", "npm install 선택"]);
+
+    fireEvent.click(screen.getByRole("button", { name: "정렬: 최근순" }));
+    const deltaOrder = screen.getAllByRole("checkbox").map((el) => el.getAttribute("aria-label"));
+    expect(deltaOrder).toEqual(["npm install 선택", "pnpm lint 선택", "npm test 선택"]);
+    expect(screen.getByRole("button", { name: "정렬: 변화량순" })).toBeInTheDocument();
+
+    fireEvent.keyDown(window, { key: "s", altKey: true });
+    expect(screen.getByRole("button", { name: "정렬: 최근순" })).toBeInTheDocument();
+  });
+
   it("Retry+Compare 큐 뱃지 표시", () => {
     render(
       <WarpListView
