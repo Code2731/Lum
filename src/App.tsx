@@ -414,6 +414,7 @@ const App: React.FC = () => {
   const [retryComparePending, setRetryComparePending] = useState<RetryComparePending | null>(null);
   const [retryCompareQueue, setRetryCompareQueue] = useState<RetryCompareTask[]>(() => loadRetryCompareRuntimeCache().queue);
   const [retryCompareQueueUndo, setRetryCompareQueueUndo] = useState<RetryCompareTask[] | null>(null);
+  const [retryCompareQueueRedo, setRetryCompareQueueRedo] = useState<RetryCompareTask[] | null>(null);
   const [retryCompareQueuePaused, setRetryCompareQueuePaused] = useState(() => loadRetryCompareRuntimeCache().paused);
   const [retryCompareCompletedCount, setRetryCompareCompletedCount] = useState(() => loadRetryCompareRuntimeCache().completedCount);
   const [retryCompareByBlock, setRetryCompareByBlock] = useState<Record<string, RetryCompareResult>>(() => loadRetryCompareCache());
@@ -500,6 +501,8 @@ const App: React.FC = () => {
     const write = ptyWriteRefs.current.get(activePaneIdRef.current);
     if (!write) return;
     const [next, ...rest] = retryCompareQueue;
+    setRetryCompareQueueUndo(null);
+    setRetryCompareQueueRedo(null);
     setRetryCompareQueue(rest);
     setRetryComparePending({
       command: next.command,
@@ -517,6 +520,7 @@ const App: React.FC = () => {
         baselineOutput: b.output,
       }));
     if (tasks.length === 0) return;
+    setRetryCompareQueueRedo(null);
     setRetryCompareQueue((prev) => [...prev, ...tasks]);
   }, []);
   const mutateRetryCompareQueue = useCallback((updater: (prev: RetryCompareTask[]) => RetryCompareTask[]) => {
@@ -524,6 +528,7 @@ const App: React.FC = () => {
       const next = updater(prev);
       if (next === prev) return prev;
       setRetryCompareQueueUndo(prev);
+      setRetryCompareQueueRedo(null);
       return next;
     });
   }, []);
@@ -1285,8 +1290,16 @@ const App: React.FC = () => {
               canUndoRetryCompareQueueChange={retryCompareQueueUndo !== null}
               onUndoRetryCompareQueueChange={() => {
                 if (!retryCompareQueueUndo) return;
+                setRetryCompareQueueRedo(retryCompareQueue);
                 setRetryCompareQueue(retryCompareQueueUndo);
                 setRetryCompareQueueUndo(null);
+              }}
+              canRedoRetryCompareQueueChange={retryCompareQueueRedo !== null}
+              onRedoRetryCompareQueueChange={() => {
+                if (!retryCompareQueueRedo) return;
+                setRetryCompareQueueUndo(retryCompareQueue);
+                setRetryCompareQueue(retryCompareQueueRedo);
+                setRetryCompareQueueRedo(null);
               }}
               retryCompareQueueItems={retryCompareQueue.map((t) => ({ id: t.id, command: t.command }))}
               onPrioritizeRetryCompareQueueItem={(id) => {
@@ -1394,6 +1407,8 @@ const App: React.FC = () => {
                 setRetryCompareByBlock({});
                 setRetryComparePending(null);
                 setRetryCompareQueue([]);
+                setRetryCompareQueueUndo(null);
+                setRetryCompareQueueRedo(null);
               }}
             />
           )}

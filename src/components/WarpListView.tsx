@@ -20,6 +20,8 @@ interface Props {
   onToggleRetryCompareQueuePaused?: () => void;
   canUndoRetryCompareQueueChange?: boolean;
   onUndoRetryCompareQueueChange?: () => void;
+  canRedoRetryCompareQueueChange?: boolean;
+  onRedoRetryCompareQueueChange?: () => void;
   retryCompareQueueItems?: Array<{ id: string; command: string }>;
   onPromoteRetryCompareQueueItem?: (id: string) => void;
   onDemoteRetryCompareQueueItem?: (id: string) => void;
@@ -87,6 +89,8 @@ const WarpListView: React.FC<Props> = ({
   onToggleRetryCompareQueuePaused,
   canUndoRetryCompareQueueChange = false,
   onUndoRetryCompareQueueChange,
+  canRedoRetryCompareQueueChange = false,
+  onRedoRetryCompareQueueChange,
   retryCompareQueueItems = [],
   onPromoteRetryCompareQueueItem,
   onDemoteRetryCompareQueueItem,
@@ -526,6 +530,13 @@ const WarpListView: React.FC<Props> = ({
     if (!timelineOpen) return;
     const onWindowKeyDown = (e: KeyboardEvent) => {
       if (isTypingTarget(e.target)) return;
+      if (e.altKey && e.shiftKey && (e.key === "z" || e.key === "Z")) {
+        if (onRedoRetryCompareQueueChange && canRedoRetryCompareQueueChange) {
+          e.preventDefault();
+          onRedoRetryCompareQueueChange();
+        }
+        return;
+      }
       if (e.altKey && (e.key === "z" || e.key === "Z")) {
         if (onUndoRetryCompareQueueChange && canUndoRetryCompareQueueChange) {
           e.preventDefault();
@@ -624,6 +635,10 @@ const WarpListView: React.FC<Props> = ({
     onRemoveFilteredRetryCompareQueueItems,
     onResetRetryCompareCompletedCount,
     onToggleRetryCompareQueuePaused,
+    onRedoRetryCompareQueueChange,
+    canRedoRetryCompareQueueChange,
+    onUndoRetryCompareQueueChange,
+    canUndoRetryCompareQueueChange,
   ]);
 
   return (
@@ -939,6 +954,17 @@ const WarpListView: React.FC<Props> = ({
                               disabled={!canUndoRetryCompareQueueChange}
                             >
                               큐 변경 되돌리기
+                            </button>
+                          )}
+                          {onRedoRetryCompareQueueChange && (
+                            <button
+                              type="button"
+                              className="text-[10px] px-1.5 py-1 rounded border border-cyan-300/30 text-cyan-200 hover:bg-cyan-300/12 disabled:opacity-40"
+                              onClick={onRedoRetryCompareQueueChange}
+                              title="Alt+Shift+Z"
+                              disabled={!canRedoRetryCompareQueueChange}
+                            >
+                              큐 변경 다시실행
                             </button>
                           )}
                           {onRemoveFilteredRetryCompareQueueItems && (
