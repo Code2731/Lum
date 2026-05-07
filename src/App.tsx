@@ -5,7 +5,7 @@ import { shortPath } from "./utils";
 import { useTerminalBlocks } from "./hooks/useTerminalBlocks";
 import { useAIProcessing } from "./hooks/useAIProcessing";
 import { useHardwareSpecs } from "./hooks/useHardwareSpecs";
-import { useCommandBlocks } from "./hooks/useCommandBlocks";
+import { useCommandBlocks, type CommandBlock } from "./hooks/useCommandBlocks";
 import { useTabManager, splitId } from "./hooks/useTabManager";
 import { useAutoHealing } from "./hooks/useAutoHealing";
 import { usePanelVisibility } from "./hooks/usePanelVisibility";
@@ -57,6 +57,12 @@ interface GitTabInfo {
   changed: number;
 }
 
+interface RetryComparePending {
+  command: string;
+  baselineOutput: string;
+  queuedAt: number;
+}
+
 function parseGitTabInfo(ctx: string): GitTabInfo | null {
   if (!ctx) return null;
   const statusHeader = "$ git status";
@@ -87,6 +93,27 @@ function parseGitTabInfo(ctx: string): GitTabInfo | null {
   }
 
   return { branch, changed };
+}
+
+function summarizeOutputDiff(before: string, after: string): { added: number; removed: number; preview: string } {
+  const beforeLines = before.split(/\r?\n/).map((l) => l.trimEnd()).filter((l) => l !== "");
+  const afterLines = after.split(/\r?\n/).map((l) => l.trimEnd()).filter((l) => l !== "");
+  const beforeSet = new Set(beforeLines);
+  const afterSet = new Set(afterLines);
+
+  const addedLines = afterLines.filter((l) => !beforeSet.has(l));
+  const removedLines = beforeLines.filter((l) => !afterSet.has(l));
+
+  const preview = [
+    ...addedLines.slice(0, 2).map((l) => `+ ${l}`),
+    ...removedLines.slice(0, 2).map((l) => `- ${l}`),
+  ].join(" | ");
+
+  return {
+    added: addedLines.length,
+    removed: removedLines.length,
+    preview,
+  };
 }
 
 const App: React.FC = () => {
@@ -305,6 +332,7 @@ const App: React.FC = () => {
   const [showAiBar, setShowAiBar] = useState(false);
   const [dismissedBlockId, setDismissedBlockId] = useState<string | null>(null);
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
+  const [retryComparePending, setRetryComparePending] = useState<RetryComparePending | null>(null);
   const aiInputRef = useRef<HTMLInputElement>(null);
   const viewModeRef = useRef(viewMode);
   viewModeRef.current = viewMode;
@@ -357,6 +385,25 @@ const App: React.FC = () => {
       }
     }
   }, [cmdBlocks, selectedModel]); // notifCenter.addNotification은 안정된 useCallback이므로 deps 불필요
+
+  useEffect(() => {
+    if (!retryComparePending) return;
+    const candidate = cmdBlocks.find(
+      (b) =>
+        b.startedAt >= retryComparePending.queuedAt &&
+        b.command.trim() === retryComparePending.command.trim() &&
+        b.endedAt !== null,
+    );
+    if (!candidate) return;
+
+    const diff = summarizeOutputDiff(retryComparePending.baselineOutput, candidate.output);
+    notifCenter.addNotification({
+      type: "command",
+      title: `재시도 비교 · ${candidate.exitCode === 0 ? "성공" : "실패"}`,
+      body: `+${diff.added} / -${diff.removed}${diff.preview ? ` · ${diff.preview.slice(0, 140)}` : ""}`,
+    });
+    setRetryComparePending(null);
+  }, [cmdBlocks, retryComparePending, notifCenter]);
 
   useEffect(() => {
     if (!selectedBlockId) return;
@@ -1082,6 +1129,16 @@ const App: React.FC = () => {
               }}
               onAskAIForFix={(text) => {
                 handleAskAI(`이 실패 로그를 분석하고 해결 커맨드를 제안해줘.\n\n${text}`);
+              }}
+              onRetryWithDiff={(block: CommandBlock) => {
+                const write = ptyWriteRefs.current.get(activePaneIdRef.current);
+                if (!write || !block.command.trim()) return;
+                setRetryComparePending({
+                  command: block.command,
+                  baselineOutput: block.output,
+                  queuedAt: Date.now(),
+                });
+                write(block.command + "\r");
               }}
             />
           )}

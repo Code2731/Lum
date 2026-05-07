@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { CheckCircle2, XCircle, Clock, ChevronDown, ChevronRight, Copy, TerminalSquare, Search, MoreHorizontal, Share2 } from "lucide-react";
+import { CheckCircle2, XCircle, Clock, ChevronDown, ChevronRight, Copy, TerminalSquare, Search, MoreHorizontal, Share2, RotateCcw } from "lucide-react";
 import { IconButton } from "@/components/ui/icon-button";
 import { tokenizeShell, TOKEN_COLORS } from "../utils/shellSyntax";
 import type { CommandBlock } from "../hooks/useCommandBlocks";
@@ -8,6 +8,7 @@ interface Props {
   blocks: CommandBlock[];
   onExecute?: (cmd: string) => void;
   onAskAIForFix?: (text: string) => void;
+  onRetryWithDiff?: (block: CommandBlock) => void;
 }
 
 const SyntaxCmd: React.FC<{ cmd: string }> = ({ cmd }) => (
@@ -24,7 +25,7 @@ function fmtDuration(block: CommandBlock): string {
   return ms < 1000 ? `${ms}ms` : `${(ms / 1000).toFixed(1)}s`;
 }
 
-const WarpListView: React.FC<Props> = ({ blocks, onExecute, onAskAIForFix }) => {
+const WarpListView: React.FC<Props> = ({ blocks, onExecute, onAskAIForFix, onRetryWithDiff }) => {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "failed" | "success">("all");
@@ -321,6 +322,19 @@ const WarpListView: React.FC<Props> = ({ blocks, onExecute, onAskAIForFix }) => 
                       <Share2 size={11} />
                       Share Snapshot
                     </button>
+                    {onRetryWithDiff && (
+                      <button
+                        type="button"
+                        className="w-full px-2.5 py-1.5 text-left text-[11px] text-white/78 hover:bg-white/[0.08] flex items-center gap-1.5"
+                        onClick={() => {
+                          onRetryWithDiff(b);
+                          setMenuOpenId(null);
+                        }}
+                      >
+                        <RotateCcw size={11} />
+                        Retry + Compare
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
