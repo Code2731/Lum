@@ -551,6 +551,33 @@ describe("WarpListView delta actions", () => {
     expect(screen.getByText("Queue 3")).toBeInTheDocument();
   });
 
+  it("Retry+Compare 큐 상태/비우기 액션", () => {
+    const onClearRetryCompareQueue = vi.fn();
+    render(
+      <WarpListView
+        blocks={blocks}
+        retryCompareQueueDepth={2}
+        retryCompareQueueWaiting={1}
+        retryCompareInFlight
+        onClearRetryCompareQueue={onClearRetryCompareQueue}
+        compareResultByBlock={{
+          b2: {
+            added: 1,
+            removed: 1,
+            preview: "test changed",
+            addedLines: ["new line"],
+            removedLines: ["old line"],
+            comparedAt: now,
+          },
+        }}
+      />,
+    );
+    expect(screen.getByText("실행 중 · wait 1")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Δ Timeline (1)" }));
+    fireEvent.click(screen.getByRole("button", { name: "큐 비우기" }));
+    expect(onClearRetryCompareQueue).toHaveBeenCalledTimes(1);
+  });
+
   it("Δ Timeline 선택 후 Copy Selected가 선택 항목만 복사", () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     Object.defineProperty(navigator, "clipboard", {

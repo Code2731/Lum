@@ -11,6 +11,9 @@ interface Props {
   onRetryWithDiff?: (block: CommandBlock) => void;
   onRetrySelectedWithDiff?: (blocks: CommandBlock[]) => void;
   retryCompareQueueDepth?: number;
+  retryCompareQueueWaiting?: number;
+  retryCompareInFlight?: boolean;
+  onClearRetryCompareQueue?: () => void;
   onExplainDiff?: (text: string) => void;
   onExplainAllDiffs?: (text: string) => void;
   onClearCompareResults?: () => void;
@@ -57,6 +60,9 @@ const WarpListView: React.FC<Props> = ({
   onRetryWithDiff,
   onRetrySelectedWithDiff,
   retryCompareQueueDepth = 0,
+  retryCompareQueueWaiting = 0,
+  retryCompareInFlight = false,
+  onClearRetryCompareQueue,
   onExplainDiff,
   onExplainAllDiffs,
   onClearCompareResults,
@@ -543,6 +549,11 @@ const WarpListView: React.FC<Props> = ({
                   Queue {retryCompareQueueDepth}
                 </span>
               )}
+              {(retryCompareInFlight || retryCompareQueueWaiting > 0) && (
+                <span className="text-[10px] text-white/45 tabular-nums">
+                  {retryCompareInFlight ? "실행 중" : "대기"} · wait {retryCompareQueueWaiting}
+                </span>
+              )}
               <div className="relative">
                 <button
                   ref={timelineButtonRef}
@@ -635,6 +646,16 @@ const WarpListView: React.FC<Props> = ({
                             disabled={selectedTimelineItems.length === 0}
                           >
                             선택 Retry+Compare
+                          </button>
+                        )}
+                        {onClearRetryCompareQueue && (
+                          <button
+                            type="button"
+                            className="text-[10px] px-2 py-0.5 rounded border border-rose-300/30 text-rose-200 hover:bg-rose-300/12 disabled:opacity-40"
+                            onClick={onClearRetryCompareQueue}
+                            disabled={retryCompareQueueWaiting === 0}
+                          >
+                            큐 비우기
                           </button>
                         )}
                         <button

@@ -1210,6 +1210,11 @@ const App: React.FC = () => {
                 enqueueRetryCompare(blocks);
               }}
               retryCompareQueueDepth={retryCompareQueue.length + (retryComparePending ? 1 : 0)}
+              retryCompareQueueWaiting={retryCompareQueue.length}
+              retryCompareInFlight={retryComparePending !== null}
+              onClearRetryCompareQueue={() => {
+                setRetryCompareQueue([]);
+              }}
               onExplainDiff={(text) => {
                 handleAskAI([
                   "아래 retry compare diff를 분석해줘.",
