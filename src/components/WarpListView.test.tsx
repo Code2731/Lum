@@ -637,6 +637,26 @@ describe("WarpListView delta actions", () => {
     expect(screen.getByText("npm test --watch=false")).toBeInTheDocument();
   });
 
+  it("Retry+Compare 완료 카운트 표시", () => {
+    render(
+      <WarpListView
+        blocks={blocks}
+        retryCompareCompletedCount={5}
+        compareResultByBlock={{
+          b2: {
+            added: 1,
+            removed: 1,
+            preview: "test changed",
+            addedLines: ["new line"],
+            removedLines: ["old line"],
+            comparedAt: now,
+          },
+        }}
+      />,
+    );
+    expect(screen.getByText("done 5")).toBeInTheDocument();
+  });
+
   it("Δ Timeline 선택 후 Copy Selected가 선택 항목만 복사", () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     Object.defineProperty(navigator, "clipboard", {

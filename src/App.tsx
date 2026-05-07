@@ -377,6 +377,7 @@ const App: React.FC = () => {
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
   const [retryComparePending, setRetryComparePending] = useState<RetryComparePending | null>(null);
   const [retryCompareQueue, setRetryCompareQueue] = useState<RetryCompareTask[]>([]);
+  const [retryCompareCompletedCount, setRetryCompareCompletedCount] = useState(0);
   const [retryCompareByBlock, setRetryCompareByBlock] = useState<Record<string, RetryCompareResult>>(() => loadRetryCompareCache());
   const aiInputRef = useRef<HTMLInputElement>(null);
   const viewModeRef = useRef(viewMode);
@@ -451,6 +452,7 @@ const App: React.FC = () => {
       title: `재시도 비교 · ${candidate.exitCode === 0 ? "성공" : "실패"}`,
       body: `+${diff.added} / -${diff.removed}${diff.preview ? ` · ${diff.preview.slice(0, 140)}` : ""}`,
     });
+    setRetryCompareCompletedCount((prev) => prev + 1);
     setRetryComparePending(null);
   }, [cmdBlocks, retryComparePending, notifCenter]);
   useEffect(() => {
@@ -1218,6 +1220,7 @@ const App: React.FC = () => {
               retryCompareQueueWaiting={retryCompareQueue.length}
               retryCompareInFlight={retryComparePending !== null}
               retryCompareCurrentCommand={retryComparePending?.command ?? null}
+              retryCompareCompletedCount={retryCompareCompletedCount}
               retryCompareQueueItems={retryCompareQueue.map((t) => ({ id: t.id, command: t.command }))}
               onPromoteRetryCompareQueueItem={(id) => {
                 setRetryCompareQueue((prev) => {
