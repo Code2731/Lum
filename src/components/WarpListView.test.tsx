@@ -2712,6 +2712,52 @@ describe("WarpListView delta actions", () => {
     expect(screen.queryByText("$ npm test")).not.toBeInTheDocument();
   });
 
+  it("Δ Timeline 핀만 보기 단축키(Alt+M)", () => {
+    render(
+      <WarpListView
+        blocks={[
+          ...blocks,
+          {
+            id: "b3",
+            command: "pnpm lint",
+            output: "ok",
+            exitCode: 0,
+            startedAt: now - 2000,
+            endedAt: now - 1000,
+          },
+        ]}
+        compareResultByBlock={{
+          b2: {
+            added: 1,
+            removed: 1,
+            preview: "test changed",
+            addedLines: ["new line"],
+            removedLines: ["old line"],
+            comparedAt: now,
+          },
+          b3: {
+            added: 2,
+            removed: 0,
+            preview: "lint fixed",
+            addedLines: ["a", "b"],
+            removedLines: [],
+            comparedAt: now - 3000,
+          },
+        }}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Δ Timeline (2)" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "pnpm lint 선택" }));
+    fireEvent.click(screen.getByRole("button", { name: "핀 선택" }));
+
+    fireEvent.keyDown(window, { key: "m", altKey: true });
+    expect(screen.getByText("$ pnpm lint")).toBeInTheDocument();
+    expect(screen.queryByText("$ npm test")).not.toBeInTheDocument();
+
+    fireEvent.keyDown(window, { key: "m", altKey: true });
+    expect(screen.getByText("$ npm test")).toBeInTheDocument();
+  });
+
   it("Δ Timeline 필터 핀/핀해제 버튼", () => {
     render(
       <WarpListView
