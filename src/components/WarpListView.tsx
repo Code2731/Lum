@@ -521,6 +521,22 @@ const WarpListView: React.FC<Props> = ({
       return next;
     });
   };
+  const pinFilteredTimeline = () => {
+    if (timelineFiltered.length === 0) return;
+    setTimelinePinnedIds((prev) => {
+      const next = new Set(prev);
+      for (const item of timelineFiltered) next.add(item.block.id);
+      return next;
+    });
+  };
+  const unpinFilteredTimeline = () => {
+    if (timelineFiltered.length === 0) return;
+    setTimelinePinnedIds((prev) => {
+      const next = new Set(prev);
+      for (const item of timelineFiltered) next.delete(item.block.id);
+      return next;
+    });
+  };
   const clearPinnedTimeline = () => {
     if (timelinePinnedIds.size === 0) return;
     setTimelinePinnedIds(new Set());
@@ -828,6 +844,13 @@ const WarpListView: React.FC<Props> = ({
         }
         return;
       }
+      if (e.altKey && e.shiftKey && (e.key === "p" || e.key === "P")) {
+        if (timelineFiltered.length > 0) {
+          e.preventDefault();
+          pinFilteredTimeline();
+        }
+        return;
+      }
       if (e.altKey && (e.key === "d" || e.key === "D")) {
         if (onResetRetryCompareCompletedCount) {
           e.preventDefault();
@@ -904,6 +927,8 @@ const WarpListView: React.FC<Props> = ({
     resetTimelineViewFilters,
     timelinePinnedIds.size,
     clearPinnedTimeline,
+    pinFilteredTimeline,
+    unpinFilteredTimeline,
     onClearCompareResults,
   ]);
 
@@ -1218,6 +1243,23 @@ const WarpListView: React.FC<Props> = ({
                         </button>
                         <button
                           type="button"
+                          className="text-[10px] px-2 py-0.5 rounded border border-amber-300/30 text-amber-200 hover:bg-amber-300/12 disabled:opacity-40"
+                          onClick={pinFilteredTimeline}
+                          title="Alt+Shift+P"
+                          disabled={timelineFiltered.length === 0}
+                        >
+                          필터 핀
+                        </button>
+                        <button
+                          type="button"
+                          className="text-[10px] px-2 py-0.5 rounded border border-amber-300/30 text-amber-200 hover:bg-amber-300/12 disabled:opacity-40"
+                          onClick={unpinFilteredTimeline}
+                          disabled={timelineFiltered.length === 0}
+                        >
+                          필터 핀해제
+                        </button>
+                        <button
+                          type="button"
                           className={`text-[10px] px-2 py-0.5 rounded border ${
                             timelinePinnedOnly
                               ? "border-amber-300/45 bg-amber-300/18 text-amber-100"
@@ -1348,6 +1390,7 @@ const WarpListView: React.FC<Props> = ({
                           <div><span className="text-cyan-50">Alt+H</span> 고위험 항목 빠른 선택</div>
                           <div><span className="text-cyan-50">Alt+1/2/3/0</span> 위험도 필터 High/Med/Low/All</div>
                           <div><span className="text-cyan-50">Alt+S</span> 타임라인 정렬 토글</div>
+                          <div><span className="text-cyan-50">Alt+Shift+P</span> 현재 목록 일괄 핀</div>
                           <div><span className="text-cyan-50">Alt+Shift+U</span> 핀 전체 해제</div>
                           <div><span className="text-cyan-50">Alt+Q / Alt+K / Alt+P / Alt+D</span> 큐 검색/접기/일시정지/완료리셋</div>
                           <div><span className="text-cyan-50">Alt+Z / Cmd/Ctrl+Z</span> 큐 변경 되돌리기</div>
