@@ -2793,6 +2793,48 @@ describe("WarpListView delta actions", () => {
     expect(screen.getAllByText("PIN")).toHaveLength(2);
   });
 
+  it("Δ Timeline 필터 핀해제 단축키(Alt+Shift+O)", () => {
+    render(
+      <WarpListView
+        blocks={[
+          ...blocks,
+          {
+            id: "b3",
+            command: "pnpm lint",
+            output: "ok",
+            exitCode: 0,
+            startedAt: now - 2000,
+            endedAt: now - 1000,
+          },
+        ]}
+        compareResultByBlock={{
+          b2: {
+            added: 1,
+            removed: 1,
+            preview: "test changed",
+            addedLines: ["new line"],
+            removedLines: ["old line"],
+            comparedAt: now,
+          },
+          b3: {
+            added: 2,
+            removed: 0,
+            preview: "lint fixed",
+            addedLines: ["a", "b"],
+            removedLines: [],
+            comparedAt: now - 3000,
+          },
+        }}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Δ Timeline (2)" }));
+    fireEvent.click(screen.getByRole("button", { name: "필터 핀" }));
+    expect(screen.getAllByText("PIN")).toHaveLength(2);
+
+    fireEvent.keyDown(window, { key: "O", altKey: true, shiftKey: true });
+    expect(screen.queryAllByText("PIN")).toHaveLength(0);
+  });
+
   it("Δ Timeline 핀 전체 해제 버튼", () => {
     render(
       <WarpListView

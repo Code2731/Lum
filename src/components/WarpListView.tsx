@@ -823,7 +823,7 @@ const WarpListView: React.FC<Props> = ({
         }
         return;
       }
-      if (e.altKey && (e.key === "o" || e.key === "O" || e.code === "KeyO")) {
+      if (e.altKey && !e.shiftKey && (e.key === "o" || e.key === "O" || e.code === "KeyO")) {
         if (selectedTimelineIds.length > 0) {
           e.preventDefault();
           toggleTimelineSelectedOnly();
@@ -848,6 +848,13 @@ const WarpListView: React.FC<Props> = ({
         if (timelineFiltered.length > 0) {
           e.preventDefault();
           pinFilteredTimeline();
+        }
+        return;
+      }
+      if (e.altKey && e.shiftKey && (e.key === "o" || e.key === "O")) {
+        if (timelineFiltered.length > 0) {
+          e.preventDefault();
+          unpinFilteredTimeline();
         }
         return;
       }
@@ -1254,6 +1261,7 @@ const WarpListView: React.FC<Props> = ({
                           type="button"
                           className="text-[10px] px-2 py-0.5 rounded border border-amber-300/30 text-amber-200 hover:bg-amber-300/12 disabled:opacity-40"
                           onClick={unpinFilteredTimeline}
+                          title="Alt+Shift+O"
                           disabled={timelineFiltered.length === 0}
                         >
                           필터 핀해제
@@ -1390,7 +1398,7 @@ const WarpListView: React.FC<Props> = ({
                           <div><span className="text-cyan-50">Alt+H</span> 고위험 항목 빠른 선택</div>
                           <div><span className="text-cyan-50">Alt+1/2/3/0</span> 위험도 필터 High/Med/Low/All</div>
                           <div><span className="text-cyan-50">Alt+S</span> 타임라인 정렬 토글</div>
-                          <div><span className="text-cyan-50">Alt+Shift+P</span> 현재 목록 일괄 핀</div>
+                          <div><span className="text-cyan-50">Alt+Shift+P / Alt+Shift+O</span> 현재 목록 일괄 핀/핀해제</div>
                           <div><span className="text-cyan-50">Alt+Shift+U</span> 핀 전체 해제</div>
                           <div><span className="text-cyan-50">Alt+Q / Alt+K / Alt+P / Alt+D</span> 큐 검색/접기/일시정지/완료리셋</div>
                           <div><span className="text-cyan-50">Alt+Z / Cmd/Ctrl+Z</span> 큐 변경 되돌리기</div>
