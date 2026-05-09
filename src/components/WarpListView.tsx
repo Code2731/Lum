@@ -712,6 +712,13 @@ const WarpListView: React.FC<Props> = ({
         }
         return;
       }
+      if (mod && (e.key === "r" || e.key === "R")) {
+        if (timelineViewCustomized) {
+          e.preventDefault();
+          resetTimelineViewFilters();
+        }
+        return;
+      }
       if (e.altKey && (e.key === "a" || e.key === "A")) {
         if (e.shiftKey) {
           if (selectedTimelineIds.length > 0) {
@@ -1205,7 +1212,7 @@ const WarpListView: React.FC<Props> = ({
                           className="text-[10px] px-2 py-0.5 rounded border border-white/15 text-white/70 hover:bg-white/[0.08] disabled:opacity-40"
                           onClick={resetTimelineViewFilters}
                           disabled={!timelineViewCustomized}
-                          title="Alt+R"
+                          title="Alt+R / Cmd/Ctrl+R"
                         >
                           필터 리셋
                         </button>
@@ -1447,7 +1454,7 @@ const WarpListView: React.FC<Props> = ({
                           <div><span className="text-cyan-50">Alt+F / Cmd/Ctrl+F</span> 타임라인 검색창 포커스</div>
                           <div><span className="text-cyan-50">Cmd/Ctrl+Enter / Cmd/Ctrl+Shift+Enter</span> 선택 항목 다음/이전 Jump</div>
                           <div><span className="text-cyan-50">Cmd/Ctrl+L</span> 타임라인 검색어 초기화/포커스</div>
-                          <div><span className="text-cyan-50">Alt+R</span> 타임라인 필터 상태 리셋</div>
+                          <div><span className="text-cyan-50">Alt+R / Cmd/Ctrl+R</span> 타임라인 필터 상태 리셋</div>
                           <div><span className="text-cyan-50">Alt+A</span> 현재 목록 선택 전체</div>
                           <div><span className="text-cyan-50">Alt+Shift+A</span> 선택 항목 전체 해제</div>
                           <div><span className="text-cyan-50">Cmd/Ctrl+A / Cmd/Ctrl+Shift+A</span> 선택 전체/해제</div>

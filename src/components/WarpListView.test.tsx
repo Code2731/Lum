@@ -658,6 +658,49 @@ describe("WarpListView delta actions", () => {
     expect(screen.getByText("$ npm test")).toBeInTheDocument();
   });
 
+  it("Δ Timeline 필터 리셋 단축키(Ctrl+R)", () => {
+    render(
+      <WarpListView
+        blocks={[
+          ...blocks,
+          {
+            id: "b3",
+            command: "rm -rf ./dist",
+            output: "done",
+            exitCode: 0,
+            startedAt: now - 2000,
+            endedAt: now - 1000,
+          },
+        ]}
+        compareResultByBlock={{
+          b2: {
+            added: 1,
+            removed: 1,
+            preview: "test changed",
+            addedLines: ["new line"],
+            removedLines: ["old line"],
+            comparedAt: now,
+          },
+          b3: {
+            added: 2,
+            removed: 0,
+            preview: "dangerous remove",
+            addedLines: ["a", "b"],
+            removedLines: [],
+            comparedAt: now - 3000,
+          },
+        }}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Δ Timeline (2)" }));
+    const search = screen.getByPlaceholderText("타임라인 검색 (command/preview)");
+    fireEvent.change(search, { target: { value: "rm -rf" } });
+    expect(screen.queryByText("$ npm test")).not.toBeInTheDocument();
+    fireEvent.keyDown(window, { key: "r", ctrlKey: true });
+    expect((search as HTMLInputElement).value).toBe("");
+    expect(screen.getByText("$ npm test")).toBeInTheDocument();
+  });
+
   it("Δ Timeline 상태 요약 배지 표시 및 개별 해제", () => {
     render(
       <WarpListView
