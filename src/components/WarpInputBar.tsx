@@ -102,23 +102,35 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
       setInput(next);
       onChange?.(next);
     };
-    const cycleBackendPrefix = () => {
+    const cycleBackendPrefix = (dir: 1 | -1 = 1) => {
       const order: Array<"local" | "ollama" | "xllm" | "gemini"> = ["local", "ollama", "xllm", "gemini"];
       const active = detectBackendPrefixFromInput(input);
       if (!active) {
-        const next = applyBackendPrefixToInput(input, "local");
+        const next = applyBackendPrefixToInput(input, dir > 0 ? "local" : "gemini");
         setInput(next);
         onChange?.(next);
         return;
       }
       const idx = order.indexOf(active);
-      if (idx < 0 || idx === order.length - 1) {
+      if (idx < 0) {
         const next = clearBackendPrefixFromInput(input);
         setInput(next);
         onChange?.(next);
         return;
       }
-      const next = applyBackendPrefixToInput(input, order[idx + 1]);
+      if (dir > 0 && idx === order.length - 1) {
+        const next = clearBackendPrefixFromInput(input);
+        setInput(next);
+        onChange?.(next);
+        return;
+      }
+      if (dir < 0 && idx === 0) {
+        const next = clearBackendPrefixFromInput(input);
+        setInput(next);
+        onChange?.(next);
+        return;
+      }
+      const next = applyBackendPrefixToInput(input, order[idx + dir]);
       setInput(next);
       onChange?.(next);
     };
@@ -139,7 +151,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
       if (mod && !e.altKey) {
         if (e.key === "`" || e.key === "~" || e.code === "Backquote") {
           e.preventDefault();
-          cycleBackendPrefix();
+          cycleBackendPrefix(e.shiftKey ? -1 : 1);
           return;
         }
       }
@@ -415,7 +427,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
           >
             {input === "" ? (
               <span style={{ color: "rgba(255,255,255,0.28)" }}>
-                자연어는 AI · 명령어는 자동 실행 · !강제shell · @강제AI · &gt;&gt;에이전트 · Cmd/Ctrl+1~4/0/` backend
+                자연어는 AI · 명령어는 자동 실행 · !강제shell · @강제AI · &gt;&gt;에이전트 · Cmd/Ctrl+1~4/0/`/Shift+` backend
               </span>
             ) : body !== null ? (
               <span style={{ color: TOKEN_COLORS.text }}>{body}</span>
@@ -462,7 +474,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
 
           {input === "" && (
             <span
-              title="Enter 실행 · Esc 클리어 · Cmd/Ctrl+` backend 순환 · Cmd/Ctrl+0 backend 해제"
+              title="Enter 실행 · Esc 클리어 · Cmd/Ctrl+` 정순환 · Cmd/Ctrl+Shift+` 역순환 · Cmd/Ctrl+0 backend 해제"
               style={{
                 flexShrink: 0,
                 fontSize: 10,
@@ -492,7 +504,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
                 background: activeBackendStyle.background,
                 cursor: "pointer",
               }}
-              title="현재 backend 강제 상태 (Cmd/Ctrl+` 순환, 클릭/Cmd/Ctrl+0 해제)"
+              title="현재 backend 강제 상태 (Cmd/Ctrl+` 정순환, Cmd/Ctrl+Shift+` 역순환, 클릭/Cmd/Ctrl+0 해제)"
             >
               BACKEND {activeBackendLabel}
             </button>
