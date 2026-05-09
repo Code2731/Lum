@@ -992,6 +992,9 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
             <span style={{ fontSize: 10, color: "rgba(227,179,65,0.78)", flexShrink: 0 }}>
               @local/@ollama/@xllm/@gemini
             </span>
+            <span style={{ fontSize: 10, color: "rgba(255,255,255,0.58)", flexShrink: 0 }}>
+              Cmd/Ctrl+1~4 · 0 · `
+            </span>
             <button
               type="button"
               aria-label="quick-backend-auto"

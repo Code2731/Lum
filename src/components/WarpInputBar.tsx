@@ -136,6 +136,13 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
       }
 
       const mod = e.metaKey || e.ctrlKey;
+      if (mod && !e.altKey) {
+        if (e.key === "`" || e.key === "~" || e.code === "Backquote") {
+          e.preventDefault();
+          cycleBackendPrefix();
+          return;
+        }
+      }
       if (mod && !e.altKey && !e.shiftKey) {
         if (e.key === "1" || e.code === "Digit1") {
           e.preventDefault();
@@ -160,11 +167,6 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
         if (e.key === "0" || e.code === "Digit0") {
           e.preventDefault();
           clearBackendPrefix();
-          return;
-        }
-        if (e.key === "`" || e.code === "Backquote") {
-          e.preventDefault();
-          cycleBackendPrefix();
           return;
         }
       }
