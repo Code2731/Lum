@@ -396,6 +396,19 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(screen.getByRole("button", { name: "quick-input-trim" })).toHaveAttribute("disabled");
   });
 
+  it("툴벨트 SQUASH 버튼으로 연속 공백을 한 칸으로 압축한다", () => {
+    const { container } = render(<TerminalPane id="tab-1" />);
+    const input = container.querySelector("input")!;
+    expect(screen.getByRole("button", { name: "quick-input-squash" })).toHaveAttribute("disabled");
+
+    fireEvent.change(input, { target: { value: "echo    hello   world" } });
+    expect(screen.getByRole("button", { name: "quick-input-squash" })).not.toHaveAttribute("disabled");
+
+    fireEvent.click(screen.getByRole("button", { name: "quick-input-squash" }));
+    expect(input).toHaveValue("echo hello world");
+    expect(screen.getByRole("button", { name: "quick-input-squash" })).toHaveAttribute("disabled");
+  });
+
   it("툴벨트 !/>>/? 버튼으로 입력 모드 프리픽스를 토글한다", () => {
     const { container } = render(<TerminalPane id="tab-1" />);
     const input = container.querySelector("input")!;
