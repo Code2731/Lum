@@ -151,6 +151,11 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(screen.getByText("AGENT @LOCAL")).toBeInTheDocument();
   });
 
+  it("툴벨트에 backend 단축키 안내 문구가 노출된다", () => {
+    render(<TerminalPane id="tab-1" />);
+    expect(screen.getByText("Cmd/Ctrl+1~4 토글 · 0 해제 · ` 순환")).toBeInTheDocument();
+  });
+
   it("툴벨트 quick backend 버튼으로 입력 프리픽스를 즉시 전환", async () => {
     const { container } = render(<TerminalPane id="tab-1" />);
     const input = container.querySelector("input")!;

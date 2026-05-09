@@ -993,7 +993,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               @local/@ollama/@xllm/@gemini
             </span>
             <span style={{ fontSize: 10, color: "rgba(255,255,255,0.58)", flexShrink: 0 }}>
-              Cmd/Ctrl+1~4 · 0 · `
+              Cmd/Ctrl+1~4 토글 · 0 해제 · ` 순환
             </span>
             <button
               type="button"
