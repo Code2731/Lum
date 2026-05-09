@@ -268,6 +268,26 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(input).toHaveValue("ls -la");
   });
 
+  it("실행되지 않는 # 입력은 RECALL 대상을 덮어쓰지 않는다", async () => {
+    const { container } = render(<TerminalPane id="tab-1" />);
+    const input = container.querySelector("input")!;
+
+    submitInput(container, "ls -la");
+    await waitFor(() => {
+      expect(invokeMock).toHaveBeenCalledWith("write_to_pty", {
+        id: "tab-1",
+        data: "ls -la\r",
+      });
+    });
+    expect(screen.getByRole("button", { name: "quick-input-recall" })).toHaveTextContent("RECALL ls -la");
+
+    submitInput(container, "# 로그 요약 명령어 만들어줘");
+    expect(screen.getByRole("button", { name: "quick-input-recall" })).toHaveTextContent("RECALL ls -la");
+
+    fireEvent.click(screen.getByRole("button", { name: "quick-input-recall" }));
+    expect(input).toHaveValue("ls -la");
+  });
+
   it("툴벨트 RERUN 버튼으로 직전 실행 입력을 즉시 재실행한다", async () => {
     const { container } = render(<TerminalPane id="tab-1" />);
     expect(screen.getByRole("button", { name: "quick-input-rerun" })).toHaveAttribute("disabled");

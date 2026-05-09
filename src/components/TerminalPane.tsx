@@ -681,17 +681,18 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
   // 입력 라우팅: 기본=AI, 알려진 CLI=shell, !/@/#/?/>> = 명시적 오버라이드
   const handleSubmit = useCallback((rawInput: string) => {
     const route = routeInput(rawInput);
-    if (route.type !== "empty") setLastSubmittedInput(rawInput);
     clearAllOverlays();
     switch (route.type) {
       case "empty":
         return;
       case "shell":
+        setLastSubmittedInput(rawInput);
         setTerminalVisible(true);
         invoke("write_to_pty", { id, data: route.command + "\r" }).catch(() => {});
         return;
       case "ai":
         if (route.question) {
+          setLastSubmittedInput(rawInput);
           if (route.backend) {
             onAskAIRef.current?.(route.question, undefined, undefined, route.backend);
           } else {
@@ -701,10 +702,16 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
         return;
       case "heavy":
         // !! Heavy Track — engine="heavy" 명시 전달 → 백엔드가 mistral.rs로 라우팅
-        if (route.prompt) onAskAIRef.current?.(route.prompt, undefined, "heavy");
+        if (route.prompt) {
+          setLastSubmittedInput(rawInput);
+          onAskAIRef.current?.(route.prompt, undefined, "heavy");
+        }
         return;
       case "agent":
-        if (route.task) onAgentTriggerRef.current?.(route.task, route.backend);
+        if (route.task) {
+          setLastSubmittedInput(rawInput);
+          onAgentTriggerRef.current?.(route.task, route.backend);
+        }
         return;
       case "aiCmd":
       case "explain":
