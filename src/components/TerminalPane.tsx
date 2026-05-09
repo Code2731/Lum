@@ -895,6 +895,19 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     () => detectBackendPrefixFromInput(inputBuffer),
     [inputBuffer],
   );
+  const [lastBackend, setLastBackend] = useState<AiBackend>("local");
+  useEffect(() => {
+    if (activeBackendPrefix) {
+      setLastBackend(activeBackendPrefix);
+    }
+  }, [activeBackendPrefix]);
+  const restoreLastBackendQuickPrefix = useCallback(() => {
+    const current = warpInputRef.current?.getValue() ?? inputBuffer;
+    const next = applyBackendPrefixToInput(current, lastBackend);
+    warpInputRef.current?.setValue(next);
+    warpInputRef.current?.focus();
+  }, [inputBuffer, lastBackend]);
+  const lastBackendLabel = `LAST @${lastBackend.toUpperCase()}`;
 
   const routeChip = useMemo(() => {
     const route = routeInput(inputBuffer);
@@ -1076,6 +1089,25 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               }}
             >
               AUTO
+            </button>
+            <button
+              type="button"
+              aria-label="quick-backend-last"
+              onClick={restoreLastBackendQuickPrefix}
+              title="마지막으로 사용한 backend 복원"
+              style={{
+                fontSize: 10,
+                color: "rgba(210,168,255,0.95)",
+                border: "1px solid rgba(188,140,255,0.4)",
+                background: "rgba(188,140,255,0.14)",
+                borderRadius: 999,
+                padding: "1px 7px",
+                lineHeight: 1.25,
+                cursor: "pointer",
+                flexShrink: 0,
+              }}
+            >
+              {lastBackendLabel}
             </button>
             <button
               type="button"

@@ -200,6 +200,24 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(screen.getByRole("button", { name: "quick-backend-auto" })).toHaveAttribute("aria-pressed", "true");
   });
 
+  it("툴벨트 LAST 버튼으로 마지막 backend를 복원한다", () => {
+    const { container } = render(<TerminalPane id="tab-1" />);
+    const input = container.querySelector("input")!;
+    fireEvent.change(input, { target: { value: "로그 요약해줘" } });
+
+    expect(screen.getByRole("button", { name: "quick-backend-last" })).toHaveTextContent("LAST @LOCAL");
+
+    fireEvent.click(screen.getByRole("button", { name: "quick-backend-xllm" }));
+    expect(input).toHaveValue("@xllm 로그 요약해줘");
+    expect(screen.getByRole("button", { name: "quick-backend-last" })).toHaveTextContent("LAST @XLLM");
+
+    fireEvent.click(screen.getByRole("button", { name: "quick-backend-auto" }));
+    expect(input).toHaveValue("로그 요약해줘");
+
+    fireEvent.click(screen.getByRole("button", { name: "quick-backend-last" }));
+    expect(input).toHaveValue("@xllm 로그 요약해줘");
+  });
+
   it("툴벨트 AUTO 버튼으로 backend 강제 프리픽스를 해제", async () => {
     const { container } = render(<TerminalPane id="tab-1" />);
     const input = container.querySelector("input")!;
