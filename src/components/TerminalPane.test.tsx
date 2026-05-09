@@ -218,6 +218,24 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(input).toHaveValue("@xllm 로그 요약해줘");
   });
 
+  it("툴벨트 BACK 버튼으로 직전 backend를 왕복 전환한다", () => {
+    const { container } = render(<TerminalPane id="tab-1" />);
+    const input = container.querySelector("input")!;
+    fireEvent.change(input, { target: { value: "로그 요약해줘" } });
+
+    expect(screen.getByRole("button", { name: "quick-backend-back" })).toHaveAttribute("disabled");
+    expect(screen.getByRole("button", { name: "quick-backend-back" })).toHaveTextContent("BACK @-");
+
+    fireEvent.click(screen.getByRole("button", { name: "quick-backend-local" }));
+    fireEvent.click(screen.getByRole("button", { name: "quick-backend-gemini" }));
+    expect(input).toHaveValue("@gemini 로그 요약해줘");
+    expect(screen.getByRole("button", { name: "quick-backend-back" })).toHaveTextContent("BACK @LOCAL");
+
+    fireEvent.click(screen.getByRole("button", { name: "quick-backend-back" }));
+    expect(input).toHaveValue("@local 로그 요약해줘");
+    expect(screen.getByRole("button", { name: "quick-backend-back" })).toHaveTextContent("BACK @GEMINI");
+  });
+
   it("툴벨트 AUTO 버튼으로 backend 강제 프리픽스를 해제", async () => {
     const { container } = render(<TerminalPane id="tab-1" />);
     const input = container.querySelector("input")!;

@@ -895,19 +895,35 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     () => detectBackendPrefixFromInput(inputBuffer),
     [inputBuffer],
   );
-  const [lastBackend, setLastBackend] = useState<AiBackend>("local");
+  const [backendTrail, setBackendTrail] = useState<{ last: AiBackend; prev: AiBackend | null }>({
+    last: "local",
+    prev: null,
+  });
   useEffect(() => {
     if (activeBackendPrefix) {
-      setLastBackend(activeBackendPrefix);
+      setBackendTrail((trail) => {
+        if (trail.last === activeBackendPrefix) return trail;
+        return { last: activeBackendPrefix, prev: trail.last };
+      });
     }
   }, [activeBackendPrefix]);
-  const restoreLastBackendQuickPrefix = useCallback(() => {
+  const restorePrevBackendQuickPrefix = useCallback(() => {
+    if (!backendTrail.prev) return;
     const current = warpInputRef.current?.getValue() ?? inputBuffer;
-    const next = applyBackendPrefixToInput(current, lastBackend);
+    const next = applyBackendPrefixToInput(current, backendTrail.prev);
     warpInputRef.current?.setValue(next);
     warpInputRef.current?.focus();
-  }, [inputBuffer, lastBackend]);
-  const lastBackendLabel = `LAST @${lastBackend.toUpperCase()}`;
+  }, [backendTrail.prev, inputBuffer]);
+  const restoreLastBackendQuickPrefix = useCallback(() => {
+    const current = warpInputRef.current?.getValue() ?? inputBuffer;
+    const next = applyBackendPrefixToInput(current, backendTrail.last);
+    warpInputRef.current?.setValue(next);
+    warpInputRef.current?.focus();
+  }, [backendTrail.last, inputBuffer]);
+  const lastBackendLabel = `LAST @${backendTrail.last.toUpperCase()}`;
+  const prevBackendLabel = backendTrail.prev
+    ? `BACK @${backendTrail.prev.toUpperCase()}`
+    : "BACK @-";
 
   const routeChip = useMemo(() => {
     const route = routeInput(inputBuffer);
@@ -1089,6 +1105,30 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               }}
             >
               AUTO
+            </button>
+            <button
+              type="button"
+              aria-label="quick-backend-back"
+              onClick={restorePrevBackendQuickPrefix}
+              disabled={!backendTrail.prev}
+              title={
+                backendTrail.prev
+                  ? "직전 backend로 복귀"
+                  : "직전 backend 기록이 없어서 비활성화"
+              }
+              style={{
+                fontSize: 10,
+                color: backendTrail.prev ? "rgba(255,255,255,0.92)" : "rgba(255,255,255,0.42)",
+                border: backendTrail.prev ? "1px solid rgba(255,255,255,0.34)" : "1px solid rgba(255,255,255,0.18)",
+                background: backendTrail.prev ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.06)",
+                borderRadius: 999,
+                padding: "1px 7px",
+                lineHeight: 1.25,
+                cursor: backendTrail.prev ? "pointer" : "not-allowed",
+                flexShrink: 0,
+              }}
+            >
+              {prevBackendLabel}
             </button>
             <button
               type="button"
