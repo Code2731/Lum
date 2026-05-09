@@ -895,6 +895,29 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     warpInputRef.current?.setValue(next);
     warpInputRef.current?.focus();
   }, [backendTrail.last, inputBuffer]);
+  const clearQuickModePrefix = useCallback((raw: string) => (
+    raw
+      .replace(/^>>\s?/, "")
+      .replace(/^\?\s?/, "")
+      .replace(/^!\s?/, "")
+  ), []);
+  const toggleQuickModePrefix = useCallback((mode: "shell" | "agent" | "explain") => {
+    const current = warpInputRef.current?.getValue() ?? inputBuffer;
+    const isShell = current.startsWith("!");
+    const isAgent = /^>>\s?/.test(current);
+    const isExplain = /^\?\s?/.test(current);
+    const body = clearQuickModePrefix(current);
+    let next = current;
+    if (mode === "shell") {
+      next = isShell ? body : `!${body}`;
+    } else if (mode === "agent") {
+      next = isAgent ? body : `>> ${body}`;
+    } else {
+      next = isExplain ? body : `? ${body}`;
+    }
+    warpInputRef.current?.setValue(next);
+    warpInputRef.current?.focus();
+  }, [clearQuickModePrefix, inputBuffer]);
   const cycleBackendQuickPrefix = useCallback((dir: 1 | -1) => {
     const current = warpInputRef.current?.getValue() ?? inputBuffer;
     const order: AiBackend[] = ["local", "ollama", "xllm", "gemini"];
@@ -936,6 +959,9 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
   const prevBackendLabel = backendTrail.prev
     ? `BACK @${backendTrail.prev.toUpperCase()}`
     : "BACK @-";
+  const quickModeShellActive = inputBuffer.startsWith("!");
+  const quickModeAgentActive = /^>>\s?/.test(inputBuffer);
+  const quickModeExplainActive = /^\?\s?/.test(inputBuffer);
 
   const routeChip = useMemo(() => {
     const route = routeInput(inputBuffer);
@@ -1102,6 +1128,66 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
             <span style={{ fontSize: 10, color: "rgba(255,255,255,0.58)", flexShrink: 0 }}>
               Cmd/Ctrl+1~4 토글 · 0 해제 · `/. 정순환 · Shift+`/, 역순환
             </span>
+            <button
+              type="button"
+              aria-label="quick-mode-shell"
+              aria-pressed={quickModeShellActive}
+              onClick={() => toggleQuickModePrefix("shell")}
+              title="강제 shell 접두어 토글 (!)"
+              style={{
+                fontSize: 10,
+                color: quickModeShellActive ? "rgba(255,245,219,0.96)" : "rgba(255,255,255,0.86)",
+                border: quickModeShellActive ? "1px solid rgba(227,179,65,0.64)" : "1px solid rgba(255,255,255,0.24)",
+                background: quickModeShellActive ? "rgba(227,179,65,0.22)" : "rgba(255,255,255,0.08)",
+                borderRadius: 999,
+                padding: "1px 7px",
+                lineHeight: 1.25,
+                cursor: "pointer",
+                flexShrink: 0,
+              }}
+            >
+              ! Shell
+            </button>
+            <button
+              type="button"
+              aria-label="quick-mode-agent"
+              aria-pressed={quickModeAgentActive}
+              onClick={() => toggleQuickModePrefix("agent")}
+              title="강제 agent 접두어 토글 (>>)"
+              style={{
+                fontSize: 10,
+                color: quickModeAgentActive ? "rgba(255,225,222,0.96)" : "rgba(255,255,255,0.86)",
+                border: quickModeAgentActive ? "1px solid rgba(255,123,114,0.64)" : "1px solid rgba(255,255,255,0.24)",
+                background: quickModeAgentActive ? "rgba(255,123,114,0.2)" : "rgba(255,255,255,0.08)",
+                borderRadius: 999,
+                padding: "1px 7px",
+                lineHeight: 1.25,
+                cursor: "pointer",
+                flexShrink: 0,
+              }}
+            >
+              {">>"} Agent
+            </button>
+            <button
+              type="button"
+              aria-label="quick-mode-explain"
+              aria-pressed={quickModeExplainActive}
+              onClick={() => toggleQuickModePrefix("explain")}
+              title="강제 explain 접두어 토글 (?)"
+              style={{
+                fontSize: 10,
+                color: quickModeExplainActive ? "rgba(220,247,225,0.96)" : "rgba(255,255,255,0.86)",
+                border: quickModeExplainActive ? "1px solid rgba(63,185,80,0.64)" : "1px solid rgba(255,255,255,0.24)",
+                background: quickModeExplainActive ? "rgba(63,185,80,0.2)" : "rgba(255,255,255,0.08)",
+                borderRadius: 999,
+                padding: "1px 7px",
+                lineHeight: 1.25,
+                cursor: "pointer",
+                flexShrink: 0,
+              }}
+            >
+              ? Explain
+            </button>
             <button
               type="button"
               aria-label="quick-backend-prev"
