@@ -1074,6 +1074,14 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     warpInputRef.current?.focus();
     setInputBuffer(lastSubmittedInput);
   }, [lastSubmittedInput]);
+  const swapWithSubmittedInputQuick = useCallback(() => {
+    if (!lastSubmittedInput) return;
+    const current = warpInputRef.current?.getValue() ?? inputBuffer;
+    warpInputRef.current?.setValue(lastSubmittedInput);
+    warpInputRef.current?.focus();
+    setInputBuffer(lastSubmittedInput);
+    setLastSubmittedInput(current);
+  }, [inputBuffer, lastSubmittedInput]);
   const rerunSubmittedInputQuick = useCallback(() => {
     if (!lastSubmittedInput) return;
     handleSubmit(lastSubmittedInput);
@@ -1371,6 +1379,26 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               }}
             >
               {rerunButtonLabel}
+            </button>
+            <button
+              type="button"
+              aria-label="quick-input-swap"
+              onClick={swapWithSubmittedInputQuick}
+              disabled={!lastSubmittedInput}
+              title={lastSubmittedInput ? "현재 입력과 직전 실행 입력 교환" : "교환할 실행 입력이 없어 비활성화"}
+              style={{
+                fontSize: 10,
+                color: lastSubmittedInput ? "rgba(220,247,225,0.96)" : "rgba(255,255,255,0.42)",
+                border: lastSubmittedInput ? "1px solid rgba(63,185,80,0.62)" : "1px solid rgba(255,255,255,0.18)",
+                background: lastSubmittedInput ? "rgba(63,185,80,0.16)" : "rgba(255,255,255,0.06)",
+                borderRadius: 999,
+                padding: "1px 7px",
+                lineHeight: 1.25,
+                cursor: lastSubmittedInput ? "pointer" : "not-allowed",
+                flexShrink: 0,
+              }}
+            >
+              SWAP
             </button>
             <button
               type="button"

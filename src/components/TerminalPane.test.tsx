@@ -331,6 +331,25 @@ describe("TerminalPane — 입력 라우팅", () => {
     });
   });
 
+  it("툴벨트 SWAP 버튼으로 현재 입력과 직전 실행 입력을 교환한다", async () => {
+    const { container } = render(<TerminalPane id="tab-1" />);
+    const input = container.querySelector("input")!;
+    expect(screen.getByRole("button", { name: "quick-input-swap" })).toHaveAttribute("disabled");
+
+    submitInput(container, "ls -la");
+    await waitFor(() => {
+      expect(invokeMock).toHaveBeenCalledWith("write_to_pty", {
+        id: "tab-1",
+        data: "ls -la\r",
+      });
+    });
+    fireEvent.change(input, { target: { value: "pwd" } });
+
+    fireEvent.click(screen.getByRole("button", { name: "quick-input-swap" }));
+    expect(input).toHaveValue("ls -la");
+    expect(screen.getByRole("button", { name: "quick-input-recall" })).toHaveTextContent("RECALL pwd");
+  });
+
   it("툴벨트 PLAIN 버튼으로 강제 프리픽스를 제거하고 일반 입력으로 전환한다", () => {
     const { container } = render(<TerminalPane id="tab-1" />);
     const input = container.querySelector("input")!;
