@@ -187,6 +187,22 @@ describe("WarpInputBar — dumb input, 라우팅은 상위에서", () => {
     expect(onChange).toHaveBeenLastCalledWith("");
   });
 
+  it("backend 강제 상태에서 Escape는 본문만 지우고 prefix 유지", () => {
+    const { input } = setup();
+    fireEvent.change(input, { target: { value: "@local 로그 요약해줘" } });
+    fireEvent.keyDown(input, { key: "Escape" });
+    expect(input).toHaveValue("@local ");
+  });
+
+  it("backend prefix만 남은 상태에서 Escape는 전체 클리어", () => {
+    const { input } = setup();
+    fireEvent.change(input, { target: { value: "@local 로그 요약해줘" } });
+    fireEvent.keyDown(input, { key: "Escape" });
+    expect(input).toHaveValue("@local ");
+    fireEvent.keyDown(input, { key: "Escape" });
+    expect(input).toHaveValue("");
+  });
+
   it("Cmd/Ctrl+1로 @local 프리픽스 적용", () => {
     const { input } = setup();
     fireEvent.change(input, { target: { value: "로그 요약해줘" } });

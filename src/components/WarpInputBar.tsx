@@ -206,6 +206,16 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
       }
 
       if (e.key === "Escape") {
+        const backend = detectBackendPrefixFromInput(input);
+        if (backend) {
+          const rest = clearBackendPrefixFromInput(input);
+          if (rest !== "") {
+            const keep = `@${backend} `;
+            setInput(keep);
+            onChange?.(keep);
+            return;
+          }
+        }
         setInput("");
         onChange?.("");
         return;
