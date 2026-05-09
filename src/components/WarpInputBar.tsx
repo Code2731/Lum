@@ -86,7 +86,10 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
       looksShell   ? "$" : "✨";
 
     const applyBackendPrefix = (backend: "local" | "ollama" | "xllm" | "gemini") => {
-      const next = applyBackendPrefixToInput(input, backend);
+      const active = detectBackendPrefixFromInput(input);
+      const next = active === backend
+        ? clearBackendPrefixFromInput(input)
+        : applyBackendPrefixToInput(input, backend);
       setInput(next);
       onChange?.(next);
     };

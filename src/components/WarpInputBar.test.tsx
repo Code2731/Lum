@@ -188,6 +188,15 @@ describe("WarpInputBar — dumb input, 라우팅은 상위에서", () => {
     expect(input).toHaveValue("@gemini what is closure?");
   });
 
+  it("같은 Cmd/Ctrl+숫자를 다시 누르면 backend 프리픽스 해제", () => {
+    const { input } = setup();
+    fireEvent.change(input, { target: { value: "로그 요약해줘" } });
+    fireEvent.keyDown(input, { key: "1", ctrlKey: true });
+    expect(input).toHaveValue("@local 로그 요약해줘");
+    fireEvent.keyDown(input, { key: "1", ctrlKey: true });
+    expect(input).toHaveValue("로그 요약해줘");
+  });
+
   it("기존 @backend 프리픽스는 Cmd/Ctrl+숫자로 교체", () => {
     const { input } = setup();
     fireEvent.change(input, { target: { value: "@ollama src/utils.ts 함수 수정해줘" } });
