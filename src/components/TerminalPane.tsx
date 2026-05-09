@@ -17,7 +17,11 @@ import TerminalContextMenu from "./TerminalContextMenu";
 import WarpInputBar, { type WarpInputBarHandle } from "./WarpInputBar";
 import AIBlockStream from "./AIBlockStream";
 import { routeInput, type AiBackend } from "../utils/inputRouter";
-import { applyBackendPrefixToInput, clearBackendPrefixFromInput } from "../utils/backendPrefix";
+import {
+  applyBackendPrefixToInput,
+  clearBackendPrefixFromInput,
+  detectBackendPrefixFromInput,
+} from "../utils/backendPrefix";
 import type { ChatMessage } from "../hooks/useAIChat";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import type { XtermTheme } from "../hooks/useTerminalTheme";
@@ -860,6 +864,10 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     warpInputRef.current?.setValue(next);
     warpInputRef.current?.focus();
   }, [inputBuffer]);
+  const activeBackendPrefix = useMemo(
+    () => detectBackendPrefixFromInput(inputBuffer),
+    [inputBuffer],
+  );
 
   const routeChip = useMemo(() => {
     const route = routeInput(inputBuffer);
@@ -984,13 +992,14 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
             <button
               type="button"
               aria-label="quick-backend-auto"
+              aria-pressed={activeBackendPrefix === null}
               onClick={clearBackendQuickPrefix}
               title="백엔드 강제 해제 (Cmd/Ctrl+0)"
               style={{
                 fontSize: 10,
-                color: "rgba(255,255,255,0.82)",
-                border: "1px solid rgba(255,255,255,0.25)",
-                background: "rgba(255,255,255,0.08)",
+                color: activeBackendPrefix === null ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.82)",
+                border: activeBackendPrefix === null ? "1px solid rgba(255,255,255,0.45)" : "1px solid rgba(255,255,255,0.25)",
+                background: activeBackendPrefix === null ? "rgba(255,255,255,0.16)" : "rgba(255,255,255,0.08)",
                 borderRadius: 999,
                 padding: "1px 7px",
                 lineHeight: 1.25,
@@ -1003,13 +1012,14 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
             <button
               type="button"
               aria-label="quick-backend-local"
+              aria-pressed={activeBackendPrefix === "local"}
               onClick={() => applyBackendQuickPrefix("local")}
               title="로컬 백엔드로 전환 (Cmd/Ctrl+1)"
               style={{
                 fontSize: 10,
                 color: "rgba(121,192,255,0.95)",
-                border: "1px solid rgba(88,166,255,0.35)",
-                background: "rgba(88,166,255,0.12)",
+                border: activeBackendPrefix === "local" ? "1px solid rgba(88,166,255,0.75)" : "1px solid rgba(88,166,255,0.35)",
+                background: activeBackendPrefix === "local" ? "rgba(88,166,255,0.24)" : "rgba(88,166,255,0.12)",
                 borderRadius: 999,
                 padding: "1px 7px",
                 lineHeight: 1.25,
@@ -1022,13 +1032,14 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
             <button
               type="button"
               aria-label="quick-backend-ollama"
+              aria-pressed={activeBackendPrefix === "ollama"}
               onClick={() => applyBackendQuickPrefix("ollama")}
               title="Ollama 백엔드로 전환 (Cmd/Ctrl+2)"
               style={{
                 fontSize: 10,
                 color: "rgba(111,227,132,0.95)",
-                border: "1px solid rgba(63,185,80,0.35)",
-                background: "rgba(63,185,80,0.12)",
+                border: activeBackendPrefix === "ollama" ? "1px solid rgba(63,185,80,0.72)" : "1px solid rgba(63,185,80,0.35)",
+                background: activeBackendPrefix === "ollama" ? "rgba(63,185,80,0.24)" : "rgba(63,185,80,0.12)",
                 borderRadius: 999,
                 padding: "1px 7px",
                 lineHeight: 1.25,
@@ -1041,13 +1052,14 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
             <button
               type="button"
               aria-label="quick-backend-xllm"
+              aria-pressed={activeBackendPrefix === "xllm"}
               onClick={() => applyBackendQuickPrefix("xllm")}
               title="xLLM 백엔드로 전환 (Cmd/Ctrl+3)"
               style={{
                 fontSize: 10,
                 color: "rgba(121,192,255,0.95)",
-                border: "1px solid rgba(121,192,255,0.35)",
-                background: "rgba(121,192,255,0.12)",
+                border: activeBackendPrefix === "xllm" ? "1px solid rgba(121,192,255,0.72)" : "1px solid rgba(121,192,255,0.35)",
+                background: activeBackendPrefix === "xllm" ? "rgba(121,192,255,0.24)" : "rgba(121,192,255,0.12)",
                 borderRadius: 999,
                 padding: "1px 7px",
                 lineHeight: 1.25,
@@ -1060,13 +1072,14 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
             <button
               type="button"
               aria-label="quick-backend-gemini"
+              aria-pressed={activeBackendPrefix === "gemini"}
               onClick={() => applyBackendQuickPrefix("gemini")}
               title="Gemini 백엔드로 전환 (Cmd/Ctrl+4)"
               style={{
                 fontSize: 10,
                 color: "rgba(233,194,105,0.96)",
-                border: "1px solid rgba(227,179,65,0.35)",
-                background: "rgba(227,179,65,0.12)",
+                border: activeBackendPrefix === "gemini" ? "1px solid rgba(227,179,65,0.72)" : "1px solid rgba(227,179,65,0.35)",
+                background: activeBackendPrefix === "gemini" ? "rgba(227,179,65,0.24)" : "rgba(227,179,65,0.12)",
                 borderRadius: 999,
                 padding: "1px 7px",
                 lineHeight: 1.25,

@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { applyBackendPrefixToInput, clearBackendPrefixFromInput } from "./backendPrefix";
+import {
+  applyBackendPrefixToInput,
+  clearBackendPrefixFromInput,
+  detectBackendPrefixFromInput,
+} from "./backendPrefix";
 
 describe("applyBackendPrefixToInput", () => {
   it("일반 문장 앞에 backend prefix를 붙인다", () => {
@@ -31,5 +35,24 @@ describe("clearBackendPrefixFromInput", () => {
   it("backend prefix가 없으면 원본을 유지한다", () => {
     expect(clearBackendPrefixFromInput("@ls 왜 에러?")).toBe("@ls 왜 에러?");
     expect(clearBackendPrefixFromInput("plain text")).toBe("plain text");
+  });
+});
+
+describe("detectBackendPrefixFromInput", () => {
+  it("backend prefix를 감지한다", () => {
+    expect(detectBackendPrefixFromInput("@local hi")).toBe("local");
+    expect(detectBackendPrefixFromInput("@ollama hi")).toBe("ollama");
+    expect(detectBackendPrefixFromInput("@xllm hi")).toBe("xllm");
+    expect(detectBackendPrefixFromInput("@gemini hi")).toBe("gemini");
+  });
+
+  it("alias를 정규화한다", () => {
+    expect(detectBackendPrefixFromInput("@embedded hi")).toBe("local");
+    expect(detectBackendPrefixFromInput("@cloud hi")).toBe("gemini");
+  });
+
+  it("backend prefix가 아니면 null", () => {
+    expect(detectBackendPrefixFromInput("plain text")).toBeNull();
+    expect(detectBackendPrefixFromInput("@ls why")).toBeNull();
   });
 });

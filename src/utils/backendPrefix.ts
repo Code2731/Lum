@@ -38,3 +38,19 @@ export function clearBackendPrefixFromInput(raw: string): string {
   if (firstSpace === -1) return "";
   return stripped.slice(firstSpace + 1).trim();
 }
+
+/**
+ * 입력 문자열의 backend prefix를 감지한다.
+ * alias(embedded→local, cloud→gemini)를 정규화해서 반환한다.
+ */
+export function detectBackendPrefixFromInput(raw: string): AiBackend | null {
+  const src = raw.trimStart();
+  if (!src.startsWith("@")) return null;
+  const stripped = src.slice(1).trimStart();
+  const firstSpace = stripped.indexOf(" ");
+  const firstToken = (firstSpace === -1 ? stripped : stripped.slice(0, firstSpace)).toLowerCase();
+  if (!BACKEND_ALIAS.has(firstToken)) return null;
+  if (firstToken === "embedded") return "local";
+  if (firstToken === "cloud") return "gemini";
+  return firstToken as AiBackend;
+}

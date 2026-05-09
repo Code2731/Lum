@@ -144,10 +144,13 @@ describe("TerminalPane — 입력 라우팅", () => {
     fireEvent.click(screen.getByRole("button", { name: "quick-backend-local" }));
     expect(input).toHaveValue("@local 로그 요약해줘");
     expect(screen.getByText("AI @LOCAL")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "quick-backend-local" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "quick-backend-auto" })).toHaveAttribute("aria-pressed", "false");
 
     fireEvent.click(screen.getByRole("button", { name: "quick-backend-xllm" }));
     expect(input).toHaveValue("@xllm 로그 요약해줘");
     expect(screen.getByText("AI @XLLM")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "quick-backend-xllm" })).toHaveAttribute("aria-pressed", "true");
   });
 
   it("툴벨트 AUTO 버튼으로 backend 강제 프리픽스를 해제", async () => {
@@ -157,6 +160,8 @@ describe("TerminalPane — 입력 라우팅", () => {
     fireEvent.click(screen.getByRole("button", { name: "quick-backend-auto" }));
     expect(input).toHaveValue("로그 요약해줘");
     expect(screen.getByText("AI AUTO")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "quick-backend-auto" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "quick-backend-gemini" })).toHaveAttribute("aria-pressed", "false");
   });
 
   it("! 강제 shell → 자연어여도 PTY", async () => {
