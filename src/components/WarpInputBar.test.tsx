@@ -132,6 +132,11 @@ describe("WarpInputBar — dumb input, 라우팅은 상위에서", () => {
     expect(onSubmit).toHaveBeenCalledWith("현재 디렉토리 파일 개수");
   });
 
+  it("빈 입력 도움말에 backend 단축키가 노출된다", () => {
+    setup();
+    expect(screen.getByText(/Cmd\/Ctrl\+1~4\/0\/` backend/)).toBeInTheDocument();
+  });
+
   it("onChange 한 글자씩 호출", () => {
     const { input, onChange } = setup();
     fireEvent.change(input, { target: { value: "l" } });

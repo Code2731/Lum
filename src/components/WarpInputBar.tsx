@@ -414,7 +414,9 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
             }}
           >
             {input === "" ? (
-              <span style={{ color: "rgba(255,255,255,0.28)" }}>자연어는 AI · 명령어는 자동 실행 · !강제shell · @강제AI · &gt;&gt;에이전트</span>
+              <span style={{ color: "rgba(255,255,255,0.28)" }}>
+                자연어는 AI · 명령어는 자동 실행 · !강제shell · @강제AI · &gt;&gt;에이전트 · Cmd/Ctrl+1~4/0/` backend
+              </span>
             ) : body !== null ? (
               <span style={{ color: TOKEN_COLORS.text }}>{body}</span>
             ) : (
@@ -460,6 +462,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
 
           {input === "" && (
             <span
+              title="Enter 실행 · Esc 클리어 · Cmd/Ctrl+` backend 순환 · Cmd/Ctrl+0 backend 해제"
               style={{
                 flexShrink: 0,
                 fontSize: 10,
