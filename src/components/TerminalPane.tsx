@@ -17,6 +17,7 @@ import TerminalContextMenu from "./TerminalContextMenu";
 import WarpInputBar, { type WarpInputBarHandle } from "./WarpInputBar";
 import AIBlockStream from "./AIBlockStream";
 import { routeInput, type AiBackend } from "../utils/inputRouter";
+import { applyBackendPrefixToInput } from "../utils/backendPrefix";
 import type { ChatMessage } from "../hooks/useAIChat";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import type { XtermTheme } from "../hooks/useTerminalTheme";
@@ -847,6 +848,13 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     return false;
   }, []);
 
+  const applyBackendQuickPrefix = useCallback((backend: AiBackend) => {
+    const current = warpInputRef.current?.getValue() ?? inputBuffer;
+    const next = applyBackendPrefixToInput(current, backend);
+    warpInputRef.current?.setValue(next);
+    warpInputRef.current?.focus();
+  }, [inputBuffer]);
+
   const routeChip = useMemo(() => {
     const route = routeInput(inputBuffer);
     const backendTag = (backend?: AiBackend) => (backend ? ` @${backend.toUpperCase()}` : " AUTO");
@@ -967,6 +975,82 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
             <span style={{ fontSize: 10, color: "rgba(227,179,65,0.78)", flexShrink: 0 }}>
               @local/@ollama/@xllm/@gemini
             </span>
+            <button
+              type="button"
+              aria-label="quick-backend-local"
+              onClick={() => applyBackendQuickPrefix("local")}
+              title="로컬 백엔드로 전환 (Cmd/Ctrl+1)"
+              style={{
+                fontSize: 10,
+                color: "rgba(121,192,255,0.95)",
+                border: "1px solid rgba(88,166,255,0.35)",
+                background: "rgba(88,166,255,0.12)",
+                borderRadius: 999,
+                padding: "1px 7px",
+                lineHeight: 1.25,
+                cursor: "pointer",
+                flexShrink: 0,
+              }}
+            >
+              @local
+            </button>
+            <button
+              type="button"
+              aria-label="quick-backend-ollama"
+              onClick={() => applyBackendQuickPrefix("ollama")}
+              title="Ollama 백엔드로 전환 (Cmd/Ctrl+2)"
+              style={{
+                fontSize: 10,
+                color: "rgba(111,227,132,0.95)",
+                border: "1px solid rgba(63,185,80,0.35)",
+                background: "rgba(63,185,80,0.12)",
+                borderRadius: 999,
+                padding: "1px 7px",
+                lineHeight: 1.25,
+                cursor: "pointer",
+                flexShrink: 0,
+              }}
+            >
+              @ollama
+            </button>
+            <button
+              type="button"
+              aria-label="quick-backend-xllm"
+              onClick={() => applyBackendQuickPrefix("xllm")}
+              title="xLLM 백엔드로 전환 (Cmd/Ctrl+3)"
+              style={{
+                fontSize: 10,
+                color: "rgba(121,192,255,0.95)",
+                border: "1px solid rgba(121,192,255,0.35)",
+                background: "rgba(121,192,255,0.12)",
+                borderRadius: 999,
+                padding: "1px 7px",
+                lineHeight: 1.25,
+                cursor: "pointer",
+                flexShrink: 0,
+              }}
+            >
+              @xllm
+            </button>
+            <button
+              type="button"
+              aria-label="quick-backend-gemini"
+              onClick={() => applyBackendQuickPrefix("gemini")}
+              title="Gemini 백엔드로 전환 (Cmd/Ctrl+4)"
+              style={{
+                fontSize: 10,
+                color: "rgba(233,194,105,0.96)",
+                border: "1px solid rgba(227,179,65,0.35)",
+                background: "rgba(227,179,65,0.12)",
+                borderRadius: 999,
+                padding: "1px 7px",
+                lineHeight: 1.25,
+                cursor: "pointer",
+                flexShrink: 0,
+              }}
+            >
+              @gemini
+            </button>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <ModeButton

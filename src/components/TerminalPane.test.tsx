@@ -136,6 +136,20 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(screen.getByText("AGENT @LOCAL")).toBeInTheDocument();
   });
 
+  it("툴벨트 quick backend 버튼으로 입력 프리픽스를 즉시 전환", async () => {
+    const { container } = render(<TerminalPane id="tab-1" />);
+    const input = container.querySelector("input")!;
+    fireEvent.change(input, { target: { value: "로그 요약해줘" } });
+
+    fireEvent.click(screen.getByRole("button", { name: "quick-backend-local" }));
+    expect(input).toHaveValue("@local 로그 요약해줘");
+    expect(screen.getByText("AI @LOCAL")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "quick-backend-xllm" }));
+    expect(input).toHaveValue("@xllm 로그 요약해줘");
+    expect(screen.getByText("AI @XLLM")).toBeInTheDocument();
+  });
+
   it("! 강제 shell → 자연어여도 PTY", async () => {
     const onAskAI = vi.fn();
     const { container } = render(<TerminalPane id="tab-1" onAskAI={onAskAI} />);

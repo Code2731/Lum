@@ -1,6 +1,7 @@
 import React, { useEffect, useImperativeHandle, useRef, useState, forwardRef } from "react";
 import { Mic, MicOff } from "lucide-react";
 import { tokenizeShell, TOKEN_COLORS } from "../utils/shellSyntax";
+import { applyBackendPrefixToInput } from "../utils/backendPrefix";
 import { useVoiceInput } from "../hooks/useVoiceInput";
 
 export interface WarpInputBarHandle {
@@ -25,8 +26,6 @@ interface Props {
     tone?: "neutral" | "accent" | "success" | "warn";
   }>;
 }
-
-const BACKEND_ALIAS = new Set(["local", "embedded", "ollama", "xllm", "gemini", "cloud"]);
 
 const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
   ({ fontFamily, fontSize, onSubmit, onInterrupt, onTab, onChange, onKeyDownIntercept, voiceEnabled = true, contextChips = [] }, ref) => {
@@ -83,19 +82,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
       looksShell   ? "$" : "✨";
 
     const applyBackendPrefix = (backend: "local" | "ollama" | "xllm" | "gemini") => {
-      const src = input.trimStart();
-      let body = src.trim();
-      if (src.startsWith("@")) {
-        const stripped = src.slice(1).trimStart();
-        const firstSpace = stripped.indexOf(" ");
-        const firstToken = (firstSpace === -1 ? stripped : stripped.slice(0, firstSpace)).toLowerCase();
-        if (BACKEND_ALIAS.has(firstToken)) {
-          body = firstSpace === -1 ? "" : stripped.slice(firstSpace + 1).trim();
-        } else {
-          body = stripped.trim();
-        }
-      }
-      const next = body ? `@${backend} ${body}` : `@${backend} `;
+      const next = applyBackendPrefixToInput(input, backend);
       setInput(next);
       onChange?.(next);
     };
