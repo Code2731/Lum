@@ -208,6 +208,17 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(screen.getByRole("button", { name: "quick-input-undo" })).toHaveAttribute("disabled");
   });
 
+  it("툴벨트 STOP 버튼으로 인터럽트(SIGINT)를 전송한다", async () => {
+    render(<TerminalPane id="tab-1" />);
+    fireEvent.click(screen.getByRole("button", { name: "quick-input-stop" }));
+    await waitFor(() => {
+      expect(invokeMock).toHaveBeenCalledWith("write_to_pty", {
+        id: "tab-1",
+        data: "\u0003",
+      });
+    });
+  });
+
   it("툴벨트 RECALL 버튼으로 직전 실행 입력을 복원한다", async () => {
     const { container } = render(<TerminalPane id="tab-1" />);
     const input = container.querySelector("input")!;

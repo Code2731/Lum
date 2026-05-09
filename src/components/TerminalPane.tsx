@@ -1242,6 +1242,25 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
             </button>
             <button
               type="button"
+              aria-label="quick-input-stop"
+              onClick={handleInterrupt}
+              title="현재 실행 인터럽트 (Ctrl/Cmd+C)"
+              style={{
+                fontSize: 10,
+                color: "rgba(255,225,222,0.96)",
+                border: "1px solid rgba(255,123,114,0.56)",
+                background: "rgba(255,123,114,0.16)",
+                borderRadius: 999,
+                padding: "1px 7px",
+                lineHeight: 1.25,
+                cursor: "pointer",
+                flexShrink: 0,
+              }}
+            >
+              STOP
+            </button>
+            <button
+              type="button"
               aria-label="quick-input-undo"
               onClick={restoreInputQuick}
               disabled={!lastClearedInput}
