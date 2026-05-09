@@ -86,6 +86,13 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
       looksShell   ? "$" : "✨";
     const activeBackend = detectBackendPrefixFromInput(input);
     const activeBackendLabel = activeBackend ? activeBackend.toUpperCase() : null;
+    const activeBackendStyle = activeBackend === "local"
+      ? { color: "rgba(121,192,255,0.95)", border: "1px solid rgba(88,166,255,0.35)", background: "rgba(88,166,255,0.12)" }
+      : activeBackend === "ollama"
+        ? { color: "rgba(111,227,132,0.95)", border: "1px solid rgba(63,185,80,0.35)", background: "rgba(63,185,80,0.12)" }
+        : activeBackend === "xllm"
+          ? { color: "rgba(121,192,255,0.95)", border: "1px solid rgba(121,192,255,0.35)", background: "rgba(121,192,255,0.12)" }
+          : { color: "rgba(233,194,105,0.96)", border: "1px solid rgba(227,179,65,0.35)", background: "rgba(227,179,65,0.12)" };
 
     const applyBackendPrefix = (backend: "local" | "ollama" | "xllm" | "gemini") => {
       const active = detectBackendPrefixFromInput(input);
@@ -430,21 +437,25 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
             </span>
           )}
           {activeBackendLabel && (
-            <span
+            <button
+              type="button"
+              aria-label="clear-backend-badge"
+              onClick={clearBackendPrefix}
               style={{
                 flexShrink: 0,
                 fontSize: 10,
-                color: "rgba(121,192,255,0.95)",
-                border: "1px solid rgba(88,166,255,0.35)",
+                color: activeBackendStyle.color,
+                border: activeBackendStyle.border,
                 borderRadius: 6,
                 padding: "1px 6px",
                 lineHeight: 1.2,
-                background: "rgba(88,166,255,0.12)",
+                background: activeBackendStyle.background,
+                cursor: "pointer",
               }}
-              title="현재 backend 강제 상태 (Cmd/Ctrl+0 또는 버튼으로 해제)"
+              title="현재 backend 강제 상태 (클릭 또는 Cmd/Ctrl+0으로 해제)"
             >
               BACKEND {activeBackendLabel}
-            </span>
+            </button>
           )}
         </div>
 

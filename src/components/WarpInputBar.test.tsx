@@ -109,6 +109,15 @@ describe("WarpInputBar — dumb input, 라우팅은 상위에서", () => {
     expect(screen.queryByText("BACKEND XLLM")).not.toBeInTheDocument();
   });
 
+  it("BACKEND 배지를 클릭하면 backend 프리픽스가 해제된다", () => {
+    const { input } = setup();
+    fireEvent.change(input, { target: { value: "@gemini 로그 요약해줘" } });
+    expect(screen.getByText("BACKEND GEMINI")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "clear-backend-badge" }));
+    expect(input).toHaveValue("로그 요약해줘");
+    expect(screen.queryByText("BACKEND GEMINI")).not.toBeInTheDocument();
+  });
+
   it(">> 입력도 그대로 onSubmit에 전달 (라우팅은 부모가)", () => {
     const { input, onSubmit } = setup();
     fireEvent.change(input, { target: { value: ">> 파일 목록" } });
