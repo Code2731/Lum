@@ -886,6 +886,20 @@ const WarpListView: React.FC<Props> = ({
         }
         return;
       }
+      if (mod && e.shiftKey && (e.key === "p" || e.key === "P")) {
+        if (timelineFiltered.length > 0) {
+          e.preventDefault();
+          pinFilteredTimeline();
+        }
+        return;
+      }
+      if (mod && e.shiftKey && (e.key === "o" || e.key === "O")) {
+        if (timelineFiltered.length > 0) {
+          e.preventDefault();
+          unpinFilteredTimeline();
+        }
+        return;
+      }
       if (e.altKey && (e.key === "d" || e.key === "D")) {
         if (onResetRetryCompareCompletedCount) {
           e.preventDefault();
@@ -1284,7 +1298,7 @@ const WarpListView: React.FC<Props> = ({
                           type="button"
                           className="text-[10px] px-2 py-0.5 rounded border border-amber-300/30 text-amber-200 hover:bg-amber-300/12 disabled:opacity-40"
                           onClick={pinFilteredTimeline}
-                          title="Alt+Shift+P"
+                          title="Alt+Shift+P / Cmd/Ctrl+Shift+P"
                           disabled={timelineFiltered.length === 0}
                         >
                           필터 핀
@@ -1293,7 +1307,7 @@ const WarpListView: React.FC<Props> = ({
                           type="button"
                           className="text-[10px] px-2 py-0.5 rounded border border-amber-300/30 text-amber-200 hover:bg-amber-300/12 disabled:opacity-40"
                           onClick={unpinFilteredTimeline}
-                          title="Alt+Shift+O"
+                          title="Alt+Shift+O / Cmd/Ctrl+Shift+O"
                           disabled={timelineFiltered.length === 0}
                         >
                           필터 핀해제
@@ -1431,7 +1445,7 @@ const WarpListView: React.FC<Props> = ({
                           <div><span className="text-cyan-50">Alt+H</span> 고위험 항목 빠른 선택</div>
                           <div><span className="text-cyan-50">Alt+1/2/3/0 / Cmd/Ctrl+1/2/3/0</span> 위험도 필터 High/Med/Low/All</div>
                           <div><span className="text-cyan-50">Alt+S</span> 타임라인 정렬 토글</div>
-                          <div><span className="text-cyan-50">Alt+Shift+P / Alt+Shift+O</span> 현재 목록 일괄 핀/핀해제</div>
+                          <div><span className="text-cyan-50">Alt+Shift+P/O / Cmd/Ctrl+Shift+P/O</span> 현재 목록 일괄 핀/핀해제</div>
                           <div><span className="text-cyan-50">Alt+M / Cmd/Ctrl+M</span> 핀만 보기 토글</div>
                           <div><span className="text-cyan-50">Alt+J / Alt+Shift+J</span> 선택 항목 핀/핀해제</div>
                           <div><span className="text-cyan-50">Alt+Shift+U</span> 핀 전체 해제</div>
