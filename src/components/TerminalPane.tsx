@@ -960,6 +960,14 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     warpInputRef.current?.focus();
     setInputBuffer(next);
   }, [inputBuffer, toPlainInput]);
+  const trimInputQuick = useCallback(() => {
+    const current = warpInputRef.current?.getValue() ?? inputBuffer;
+    const next = current.trim();
+    if (next === current) return;
+    warpInputRef.current?.setValue(next);
+    warpInputRef.current?.focus();
+    setInputBuffer(next);
+  }, [inputBuffer]);
   const cycleBackendQuickPrefix = useCallback((dir: 1 | -1) => {
     const current = warpInputRef.current?.getValue() ?? inputBuffer;
     const order: AiBackend[] = ["local", "ollama", "xllm", "gemini"];
@@ -1009,6 +1017,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
   const quickModeForceAiActive =
     detectBackendPrefixFromInput(inputBuffer) === null && /^@\s?/.test(inputBuffer);
   const canNormalizeToPlain = toPlainInput(inputBuffer) !== inputBuffer;
+  const canTrimInput = inputBuffer !== inputBuffer.trim();
   const triggerMentionAttach = useCallback(() => {
     const current = warpInputRef.current?.getValue() ?? inputBuffer;
     if (/(?:^|\s)@[^\s@]*$/.test(current)) {
@@ -1338,6 +1347,26 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               }}
             >
               PLAIN
+            </button>
+            <button
+              type="button"
+              aria-label="quick-input-trim"
+              onClick={trimInputQuick}
+              disabled={!canTrimInput}
+              title={canTrimInput ? "입력 앞뒤 공백 정리" : "정리할 공백이 없어 비활성화"}
+              style={{
+                fontSize: 10,
+                color: canTrimInput ? "rgba(220,247,225,0.96)" : "rgba(255,255,255,0.42)",
+                border: canTrimInput ? "1px solid rgba(63,185,80,0.62)" : "1px solid rgba(255,255,255,0.18)",
+                background: canTrimInput ? "rgba(63,185,80,0.16)" : "rgba(255,255,255,0.06)",
+                borderRadius: 999,
+                padding: "1px 7px",
+                lineHeight: 1.25,
+                cursor: canTrimInput ? "pointer" : "not-allowed",
+                flexShrink: 0,
+              }}
+            >
+              TRIM
             </button>
             <span style={{ fontSize: 10, color: "rgba(227,179,65,0.78)", flexShrink: 0 }}>
               @local/@ollama/@xllm/@gemini
