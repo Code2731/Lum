@@ -967,6 +967,17 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
   const quickModeAgentActive = /^>>\s?/.test(inputBuffer);
   const quickModeExplainActive = /^\?\s?/.test(inputBuffer);
   const quickModeAiCmdActive = /^#\s?/.test(inputBuffer);
+  const triggerMentionAttach = useCallback(() => {
+    const current = warpInputRef.current?.getValue() ?? inputBuffer;
+    if (/(?:^|\s)@[^\s@]*$/.test(current)) {
+      warpInputRef.current?.focus();
+      return;
+    }
+    const padded = current === "" || /\s$/.test(current) ? current : `${current} `;
+    const next = `${padded}@`;
+    warpInputRef.current?.setValue(next);
+    warpInputRef.current?.focus();
+  }, [inputBuffer]);
 
   const routeChip = useMemo(() => {
     const route = routeInput(inputBuffer);
@@ -1124,9 +1135,25 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
             >
               INPUT TOOLBELT
             </span>
-            <span style={{ fontSize: 10, color: "rgba(121,192,255,0.72)", flexShrink: 0 }}>
+            <button
+              type="button"
+              aria-label="quick-mention-trigger"
+              onClick={triggerMentionAttach}
+              title="파일 첨부 트리거 삽입 (@)"
+              style={{
+                fontSize: 10,
+                color: "rgba(121,192,255,0.9)",
+                border: "1px solid rgba(121,192,255,0.34)",
+                background: "rgba(121,192,255,0.12)",
+                borderRadius: 999,
+                padding: "1px 7px",
+                lineHeight: 1.25,
+                cursor: "pointer",
+                flexShrink: 0,
+              }}
+            >
               @ 파일 첨부
-            </span>
+            </button>
             <span style={{ fontSize: 10, color: "rgba(227,179,65,0.78)", flexShrink: 0 }}>
               @local/@ollama/@xllm/@gemini
             </span>

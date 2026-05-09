@@ -166,6 +166,31 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(screen.queryByText(/TIP · Cmd\/Ctrl\+1~4로 backend 즉시 전환/)).not.toBeInTheDocument();
   });
 
+  it("툴벨트 @ 파일 첨부 버튼으로 첨부 트리거를 삽입하고 목록 로드를 시작한다", async () => {
+    invokeMock.mockImplementation((cmd: string, args?: { path?: string }) => {
+      if (cmd === "spawn_pty") return Promise.resolve();
+      if (cmd === "write_to_pty") return Promise.resolve();
+      if (cmd === "resize_pty") return Promise.resolve();
+      if (cmd === "list_directory" && args?.path === "/repo") {
+        return Promise.resolve([
+          { name: "README.md", path: "/repo/README.md", is_dir: false, size: 123 },
+        ]);
+      }
+      return Promise.resolve();
+    });
+
+    const { container } = render(<TerminalPane id="tab-1" cwd="/repo" />);
+    const input = container.querySelector("input")!;
+    fireEvent.change(input, { target: { value: "분석해줘" } });
+
+    fireEvent.click(screen.getByRole("button", { name: "quick-mention-trigger" }));
+    expect(input).toHaveValue("분석해줘 @");
+
+    await waitFor(() => {
+      expect(invokeMock).toHaveBeenCalledWith("list_directory", { path: "/repo" });
+    });
+  });
+
   it("툴벨트 !/>>/? 버튼으로 입력 모드 프리픽스를 토글한다", () => {
     const { container } = render(<TerminalPane id="tab-1" />);
     const input = container.querySelector("input")!;
