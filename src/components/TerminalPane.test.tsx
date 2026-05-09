@@ -191,6 +191,17 @@ describe("TerminalPane — 입력 라우팅", () => {
     });
   });
 
+  it("툴벨트 CLEAR 버튼으로 입력을 즉시 초기화한다", () => {
+    const { container } = render(<TerminalPane id="tab-1" />);
+    const input = container.querySelector("input")!;
+    fireEvent.change(input, { target: { value: "@xllm # 로그 요약해줘" } });
+    expect(input).toHaveValue("@xllm # 로그 요약해줘");
+
+    fireEvent.click(screen.getByRole("button", { name: "quick-input-clear" }));
+    expect(input).toHaveValue("");
+    expect(screen.getByText("AUTO 라우팅")).toBeInTheDocument();
+  });
+
   it("툴벨트 !/>>/? 버튼으로 입력 모드 프리픽스를 토글한다", () => {
     const { container } = render(<TerminalPane id="tab-1" />);
     const input = container.querySelector("input")!;

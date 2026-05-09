@@ -978,6 +978,12 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     warpInputRef.current?.setValue(next);
     warpInputRef.current?.focus();
   }, [inputBuffer]);
+  const clearInputQuick = useCallback(() => {
+    clearAllOverlays();
+    warpInputRef.current?.setValue("");
+    warpInputRef.current?.focus();
+    setInputBuffer("");
+  }, [clearAllOverlays]);
 
   const routeChip = useMemo(() => {
     const route = routeInput(inputBuffer);
@@ -1153,6 +1159,25 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               }}
             >
               @ 파일 첨부
+            </button>
+            <button
+              type="button"
+              aria-label="quick-input-clear"
+              onClick={clearInputQuick}
+              title="입력/오버레이 빠른 초기화 (Esc)"
+              style={{
+                fontSize: 10,
+                color: "rgba(255,255,255,0.88)",
+                border: "1px solid rgba(255,255,255,0.28)",
+                background: "rgba(255,255,255,0.1)",
+                borderRadius: 999,
+                padding: "1px 7px",
+                lineHeight: 1.25,
+                cursor: "pointer",
+                flexShrink: 0,
+              }}
+            >
+              CLEAR
             </button>
             <span style={{ fontSize: 10, color: "rgba(227,179,65,0.78)", flexShrink: 0 }}>
               @local/@ollama/@xllm/@gemini
