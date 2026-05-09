@@ -899,21 +899,25 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     raw
       .replace(/^>>\s?/, "")
       .replace(/^\?\s?/, "")
+      .replace(/^#\s?/, "")
       .replace(/^!\s?/, "")
   ), []);
-  const toggleQuickModePrefix = useCallback((mode: "shell" | "agent" | "explain") => {
+  const toggleQuickModePrefix = useCallback((mode: "shell" | "agent" | "explain" | "aiCmd") => {
     const current = warpInputRef.current?.getValue() ?? inputBuffer;
     const isShell = current.startsWith("!");
     const isAgent = /^>>\s?/.test(current);
     const isExplain = /^\?\s?/.test(current);
+    const isAiCmd = /^#\s?/.test(current);
     const body = clearQuickModePrefix(current);
     let next = current;
     if (mode === "shell") {
       next = isShell ? body : `!${body}`;
     } else if (mode === "agent") {
       next = isAgent ? body : `>> ${body}`;
-    } else {
+    } else if (mode === "explain") {
       next = isExplain ? body : `? ${body}`;
+    } else {
+      next = isAiCmd ? body : `# ${body}`;
     }
     warpInputRef.current?.setValue(next);
     warpInputRef.current?.focus();
@@ -962,6 +966,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
   const quickModeShellActive = inputBuffer.startsWith("!");
   const quickModeAgentActive = /^>>\s?/.test(inputBuffer);
   const quickModeExplainActive = /^\?\s?/.test(inputBuffer);
+  const quickModeAiCmdActive = /^#\s?/.test(inputBuffer);
 
   const routeChip = useMemo(() => {
     const route = routeInput(inputBuffer);
@@ -1187,6 +1192,26 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               }}
             >
               ? Explain
+            </button>
+            <button
+              type="button"
+              aria-label="quick-mode-ai-cmd"
+              aria-pressed={quickModeAiCmdActive}
+              onClick={() => toggleQuickModePrefix("aiCmd")}
+              title="AI 명령 제안 접두어 토글 (#)"
+              style={{
+                fontSize: 10,
+                color: quickModeAiCmdActive ? "rgba(215,228,255,0.96)" : "rgba(255,255,255,0.86)",
+                border: quickModeAiCmdActive ? "1px solid rgba(88,166,255,0.66)" : "1px solid rgba(255,255,255,0.24)",
+                background: quickModeAiCmdActive ? "rgba(88,166,255,0.22)" : "rgba(255,255,255,0.08)",
+                borderRadius: 999,
+                padding: "1px 7px",
+                lineHeight: 1.25,
+                cursor: "pointer",
+                flexShrink: 0,
+              }}
+            >
+              # Cmd
             </button>
             <button
               type="button"
