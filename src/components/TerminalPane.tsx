@@ -897,6 +897,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
   }, [backendTrail.last, inputBuffer]);
   const clearQuickModePrefix = useCallback((raw: string) => (
     raw
+      .replace(/^!!\s?/, "")
       .replace(/^>>\s?/, "")
       .replace(/^\?\s?/, "")
       .replace(/^#\s?/, "")
@@ -906,15 +907,18 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     if (detectBackendPrefixFromInput(raw)) return clearBackendPrefixFromInput(raw);
     return raw.replace(/^@\s?/, "");
   }, []);
-  const toggleQuickModePrefix = useCallback((mode: "shell" | "agent" | "explain" | "aiCmd") => {
+  const toggleQuickModePrefix = useCallback((mode: "shell" | "agent" | "explain" | "aiCmd" | "heavy") => {
     const current = warpInputRef.current?.getValue() ?? inputBuffer;
+    const isHeavy = /^!!\s?/.test(current);
     const isShell = current.startsWith("!");
     const isAgent = /^>>\s?/.test(current);
     const isExplain = /^\?\s?/.test(current);
     const isAiCmd = /^#\s?/.test(current);
     const body = clearQuickModePrefix(current);
     let next = current;
-    if (mode === "shell") {
+    if (mode === "heavy") {
+      next = isHeavy ? body : `!! ${body}`;
+    } else if (mode === "shell") {
       next = isShell ? body : `!${body}`;
     } else if (mode === "agent") {
       next = isAgent ? body : `>> ${body}`;
@@ -976,7 +980,8 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
   const prevBackendLabel = backendTrail.prev
     ? `BACK @${backendTrail.prev.toUpperCase()}`
     : "BACK @-";
-  const quickModeShellActive = inputBuffer.startsWith("!");
+  const quickModeShellActive = /^!(?!\!)/.test(inputBuffer);
+  const quickModeHeavyActive = /^!!\s?/.test(inputBuffer);
   const quickModeAgentActive = /^>>\s?/.test(inputBuffer);
   const quickModeExplainActive = /^\?\s?/.test(inputBuffer);
   const quickModeAiCmdActive = /^#\s?/.test(inputBuffer);
@@ -1200,6 +1205,26 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
             <span style={{ fontSize: 10, color: "rgba(255,255,255,0.58)", flexShrink: 0 }}>
               Cmd/Ctrl+1~4 토글 · 0 해제 · `/. 정순환 · Shift+`/, 역순환
             </span>
+            <button
+              type="button"
+              aria-label="quick-mode-heavy"
+              aria-pressed={quickModeHeavyActive}
+              onClick={() => toggleQuickModePrefix("heavy")}
+              title="Heavy 추론 접두어 토글 (!!)"
+              style={{
+                fontSize: 10,
+                color: quickModeHeavyActive ? "rgba(255,220,212,0.96)" : "rgba(255,255,255,0.86)",
+                border: quickModeHeavyActive ? "1px solid rgba(255,123,114,0.64)" : "1px solid rgba(255,255,255,0.24)",
+                background: quickModeHeavyActive ? "rgba(255,123,114,0.2)" : "rgba(255,255,255,0.08)",
+                borderRadius: 999,
+                padding: "1px 7px",
+                lineHeight: 1.25,
+                cursor: "pointer",
+                flexShrink: 0,
+              }}
+            >
+              !! Heavy
+            </button>
             <button
               type="button"
               aria-label="quick-mode-shell"
