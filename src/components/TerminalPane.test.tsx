@@ -98,7 +98,22 @@ describe("TerminalPane — 입력 라우팅", () => {
     );
     submitInput(container, ">> 이 프로젝트 빌드");
     await waitFor(() => {
-      expect(onAgentTrigger).toHaveBeenCalledWith("이 프로젝트 빌드");
+      expect(onAgentTrigger).toHaveBeenCalledWith("이 프로젝트 빌드", undefined);
+    });
+    expect(onAskAI).not.toHaveBeenCalled();
+    const writeCalls = invokeMock.mock.calls.filter((c) => c[0] === "write_to_pty");
+    expect(writeCalls.length).toBe(0);
+  });
+
+  it("@local 코딩 의도 → agent + backend=local", async () => {
+    const onAgentTrigger = vi.fn();
+    const onAskAI = vi.fn();
+    const { container } = render(
+      <TerminalPane id="tab-1" onAgentTrigger={onAgentTrigger} onAskAI={onAskAI} />,
+    );
+    submitInput(container, "@local src/utils.ts 함수 수정해줘");
+    await waitFor(() => {
+      expect(onAgentTrigger).toHaveBeenCalledWith("src/utils.ts 함수 수정해줘", "local");
     });
     expect(onAskAI).not.toHaveBeenCalled();
     const writeCalls = invokeMock.mock.calls.filter((c) => c[0] === "write_to_pty");

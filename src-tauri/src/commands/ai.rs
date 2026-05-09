@@ -287,15 +287,8 @@ pub async fn call_ai(client: &reqwest::Client, model: &str, prompt: &str) -> Res
     }
 }
 
-/// xLLM 단일 응답 호출 (기존 호환). embedded → Ollama → xLLM HTTP.
-pub async fn call_xllm(client: &reqwest::Client, _model: &str, prompt: &str) -> Result<String> {
-    if let Some(result) = try_embedded_inference(prompt, &[]).await {
-        return result;
-    }
-    if let Some(result) = try_ollama_once(prompt).await {
-        return result;
-    }
-
+/// xLLM HTTP 단일 응답 호출. (fallback 없음)
+async fn call_xllm_http(client: &reqwest::Client, prompt: &str) -> Result<String> {
     let config = load_config()?;
     let base_url = config.xllm_url();
     let url = format!("{}/v1/chat/completions", base_url);
@@ -325,6 +318,63 @@ pub async fn call_xllm(client: &reqwest::Client, _model: &str, prompt: &str) -> 
         .or_else(|| msg["reasoning_content"].as_str())
         .map(|s| s.to_string())
         .ok_or_else(|| LumError::AiEngine(format!("xLLM 응답 파싱 실패: {}", res_json)))
+}
+
+/// xLLM 단일 응답 호출 (기존 호환). embedded → Ollama → xLLM HTTP.
+pub async fn call_xllm(client: &reqwest::Client, _model: &str, prompt: &str) -> Result<String> {
+    if let Some(result) = try_embedded_inference(prompt, &[]).await {
+        return result;
+    }
+    if let Some(result) = try_ollama_once(prompt).await {
+        return result;
+    }
+    call_xllm_http(client, prompt).await
+}
+
+/// backend 강제 단일 응답 호출.
+/// - None: 기존 fallback 순서 유지 (embedded → ollama → gemini/xllm)
+/// - Some(local|embedded|ollama|xllm|gemini|cloud): 해당 백엔드만 시도
+pub async fn call_ai_with_backend(
+    client: &reqwest::Client,
+    model: &str,
+    prompt: &str,
+    backend: Option<&str>,
+) -> Result<String> {
+    let Some(raw) = backend else {
+        return call_ai(client, model, prompt).await;
+    };
+    let forced = raw.trim().to_lowercase();
+    match forced.as_str() {
+        "local" | "embedded" => {
+            if let Some(result) = try_embedded_inference(prompt, &[]).await {
+                return result;
+            }
+            Err(LumError::AiEngine(
+                "local backend 강제 요청이지만 임베디드 모델이 로드되지 않았습니다.".to_string(),
+            ))
+        }
+        "ollama" => {
+            if let Some(result) = try_ollama_once(prompt).await {
+                return result;
+            }
+            Err(LumError::AiEngine(
+                "ollama backend 강제 요청이지만 ollama 모델/URL 설정이 없습니다.".to_string(),
+            ))
+        }
+        "xllm" => call_xllm_http(client, prompt).await,
+        "gemini" | "cloud" => {
+            if !model.starts_with("gemini") {
+                return Err(LumError::Config(
+                    "gemini backend를 강제하려면 모델을 gemini-*로 선택하세요.".to_string(),
+                ));
+            }
+            call_gemini(client, model, prompt, None).await
+        }
+        _ => Err(LumError::Config(format!(
+            "지원하지 않는 backend: {} (local|ollama|xllm|gemini)",
+            forced
+        ))),
+    }
 }
 
 /// OpenAI 호환 SSE 스트리밍 호출 — TabbyAPI · mistral.rs 공용
@@ -535,6 +585,22 @@ mod tests {
         assert!(is_remote_url(
             "https://generativelanguage.googleapis.com/v1beta"
         ));
+    }
+
+    #[tokio::test]
+    async fn call_ai_with_backend_rejects_unknown_backend() {
+        let client = reqwest::Client::builder()
+            .build()
+            .expect("client should build");
+        let err = call_ai_with_backend(&client, "", "hello", Some("unsupported"))
+            .await
+            .expect_err("unknown backend should fail");
+        match err {
+            LumError::Config(msg) => {
+                assert!(msg.contains("지원하지 않는 backend"));
+            }
+            other => panic!("unexpected error type: {other}"),
+        }
     }
 }
 

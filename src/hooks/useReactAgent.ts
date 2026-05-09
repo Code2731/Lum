@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
+import type { AiBackend } from "../utils/inputRouter";
 
 export interface ReactStep {
   // file_change: 쓰기 도구 성공 시 emit — 프론트 changes 동기화 트리거.
@@ -43,6 +44,8 @@ export interface ReactAgentState {
   goal: string;
   cwd: string;
   planId: string | null;
+  backend: AiBackend | null;
+  model: string | null;
   plannedTools: string[];
   steps: ReactStep[];
   answer: string;
@@ -69,6 +72,8 @@ export function useReactAgent() {
     goal: "",
     cwd: "",
     planId: null,
+    backend: null,
+    model: null,
     plannedTools: [],
     steps: [],
     answer: "",
@@ -97,6 +102,8 @@ export function useReactAgent() {
       goal: string,
       cwd: string,
       mode: ReactMode,
+      backend?: AiBackend | null,
+      model?: string | null,
       toolWhitelist?: string[] | null,
       applyConfigWhitelist?: boolean,
       planId?: string | null,
@@ -111,6 +118,8 @@ export function useReactAgent() {
         goal,
         cwd,
         planId: planId ?? null,
+        backend: backend ?? null,
+        model: model ?? null,
         plannedTools: [],
         steps: [],
         answer: "",
@@ -160,6 +169,8 @@ export function useReactAgent() {
           goal,
           cwd,
           mode,
+          backend: backend ?? null,
+          model: model ?? null,
           toolWhitelist: toolWhitelist ?? null,
           applyConfigWhitelist: applyConfigWhitelist ?? true,
           planId: planId ?? null,
@@ -187,9 +198,9 @@ export function useReactAgent() {
   );
 
   const runPlan = useCallback(
-    async (goal: string, cwd: string) => {
+    async (goal: string, cwd: string, backend?: AiBackend, model?: string | null) => {
       const pid = `plan-${Date.now()}`;
-      await runInternal(goal, cwd, "plan", null, false, pid);
+      await runInternal(goal, cwd, "plan", backend, model, null, false, pid);
     },
     [runInternal],
   );
@@ -199,6 +210,8 @@ export function useReactAgent() {
       goal: string,
       cwd: string,
       planId?: string | null,
+      backend?: AiBackend | null,
+      model?: string | null,
       toolWhitelist?: string[] | null,
       applyConfigWhitelist?: boolean,
     ) => {
@@ -206,6 +219,8 @@ export function useReactAgent() {
         goal,
         cwd,
         "act",
+        backend,
+        model,
         toolWhitelist,
         applyConfigWhitelist ?? true,
         planId ?? null,
@@ -215,8 +230,8 @@ export function useReactAgent() {
   );
 
   const start = useCallback(
-    async (goal: string, cwd: string) => {
-      await runPlan(goal, cwd);
+    async (goal: string, cwd: string, backend?: AiBackend, model?: string | null) => {
+      await runPlan(goal, cwd, backend, model);
     },
     [runPlan],
   );
@@ -260,6 +275,8 @@ export function useReactAgent() {
       goal: "",
       cwd: "",
       planId: null,
+      backend: null,
+      model: null,
       plannedTools: [],
       steps: [],
       answer: "",

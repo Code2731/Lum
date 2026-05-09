@@ -58,7 +58,7 @@ interface Props {
   onOutput?: (data: string) => void;
   onCwdChange?: (cwd: string) => void;
   onReady?: (write: (data: string) => void) => void;
-  onAgentTrigger?: (task: string) => void;
+  onAgentTrigger?: (task: string, backend?: AiBackend) => void;
   onAskAI?: (
     question: string,
     images?: string[],
@@ -682,7 +682,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
         if (route.prompt) onAskAIRef.current?.(route.prompt, undefined, "heavy");
         return;
       case "agent":
-        if (route.task) onAgentTriggerRef.current?.(route.task);
+        if (route.task) onAgentTriggerRef.current?.(route.task, route.backend);
         return;
       case "aiCmd":
       case "explain":

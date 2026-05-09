@@ -639,20 +639,20 @@ const App: React.FC = () => {
 
   // ReAct 에이전트 태스크 시작 핸들러
   const handleAgentTrigger = useCallback(
-    (task: string) => {
+    (task: string, backend?: AiBackend) => {
       const currentTab = tabs.find((t) => t.id === activeTabIdRef.current);
       const cwd = currentTab?.cwd ?? "";
-      reactAgent.start(task, cwd);
+      reactAgent.start(task, cwd, backend, selectedModel);
     },
-    [reactAgent.start, tabs, activeTabIdRef],
+    [reactAgent.start, tabs, activeTabIdRef, selectedModel],
   );
 
   const handleAgentRunAct = useCallback(
     (toolWhitelist: string[] | null) => {
-      const { goal, cwd, planId } = reactAgent.state;
+      const { goal, cwd, planId, backend, model } = reactAgent.state;
       if (!goal) return;
       reactAgent
-        .runAct(goal, cwd, planId, toolWhitelist, Boolean(toolWhitelist))
+        .runAct(goal, cwd, planId, backend, model, toolWhitelist, Boolean(toolWhitelist))
         .catch(() => {});
     },
     [reactAgent],

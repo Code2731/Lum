@@ -84,6 +84,8 @@ describe("useReactAgent — Phase 129 Plan/Act", () => {
         result.current.state.goal,
         result.current.state.cwd,
         result.current.state.planId,
+        result.current.state.backend,
+        result.current.state.model,
         result.current.state.plannedTools,
       );
     });
@@ -104,7 +106,7 @@ describe("useReactAgent — Phase 129 Plan/Act", () => {
   it("runAct에서 whitelist 미전달이면 config whitelist 사용을 끈다", async () => {
     const { result } = renderHook(() => useReactAgent());
     await act(async () => {
-      await result.current.runAct("goal", "/tmp/lum", "plan-1", null, false);
+      await result.current.runAct("goal", "/tmp/lum", "plan-1", null, null, null, false);
     });
     const runCalls = invokeMock.mock.calls.filter((c) => c[0] === "react_agent_run");
     const last = runCalls[runCalls.length - 1];
@@ -113,6 +115,21 @@ describe("useReactAgent — Phase 129 Plan/Act", () => {
       toolWhitelist: null,
       applyConfigWhitelist: false,
       planId: "plan-1",
+    });
+  });
+
+  it("start에 backend/model 전달 시 react_agent_run payload로 전달", async () => {
+    const { result } = renderHook(() => useReactAgent());
+    await act(async () => {
+      await result.current.start("로그인 버그 수정", "/tmp/lum", "local", "Qwen2.5-Coder-7B");
+    });
+    const runCalls = invokeMock.mock.calls.filter((c) => c[0] === "react_agent_run");
+    const first = runCalls[0];
+    expect(first?.[1]).toMatchObject({
+      mode: "plan",
+      backend: "local",
+      model: "Qwen2.5-Coder-7B",
+      applyConfigWhitelist: false,
     });
   });
 });

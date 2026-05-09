@@ -4,7 +4,7 @@
 // shell / read_file / list_dir / get_repo_map / git_diff / run_tests 6종 도구 지원.
 // 각 단계를 `react_event` Tauri 이벤트로 프론트엔드에 스트리밍.
 
-use crate::commands::ai::call_xllm;
+use crate::commands::ai::call_ai_with_backend;
 use crate::commands::repo_map::build_repo_map;
 use crate::commands::test_runner::detect_test_command;
 use crate::error::{LumError, Result};
@@ -162,14 +162,20 @@ fn format_plan(steps: &[String]) -> String {
 }
 
 /// 목표에 대한 단계별 계획을 LLM에서 생성.
-async fn generate_task_plan(client: &reqwest::Client, goal: &str) -> std::result::Result<String, String> {
-    call_xllm(
+async fn generate_task_plan(
+    client: &reqwest::Client,
+    goal: &str,
+    backend: Option<&str>,
+    model: &str,
+) -> std::result::Result<String, String> {
+    call_ai_with_backend(
         client,
-        "",
+        model,
         &format!(
             "다음 목표를 달성하기 위한 구체적인 단계별 계획을 번호 목록(최대 7단계)으로 작성하세요. \
              번호 목록만 출력하세요:\n\n목표: {goal}\n\n계획:\n1."
         ),
+        backend,
     )
     .await
     .map_err(|e| e.to_string())
@@ -444,12 +450,14 @@ async fn run_reflexion(
     conversation: &str,
     goal: &str,
     candidate_answer: Option<&str>,
+    backend: Option<&str>,
+    model: &str,
 ) -> Option<String> {
     let candidate = candidate_answer.unwrap_or("최종 답변 미도출(단계 상한 도달)");
     let prompt = format!(
         "{conversation}\n\n[시스템-Reflexion]\n목표: {goal}\n현재 결론 후보: {candidate}\n지금까지의 과정으로 목표 달성 여부와 회귀 위험을 60자 이내 한 줄로 평가하세요.\n형식: ok: ... 또는 fail: ... 또는 risk_high: ..."
     );
-    let fut = call_xllm(client, "", &prompt);
+    let fut = call_ai_with_backend(client, model, &prompt, backend);
     match tokio::time::timeout(std::time::Duration::from_secs(REFLEXION_TIMEOUT_SECS), fut).await {
         Ok(Ok(resp)) => {
             let line = resp
@@ -1655,6 +1663,8 @@ pub async fn react_agent_run(
     goal: String,
     cwd: String,
     mode: Option<String>,
+    backend: Option<String>,
+    model: Option<String>,
     tool_whitelist: Option<Vec<String>>,
     apply_config_whitelist: Option<bool>,
     plan_id: Option<String>,
@@ -1679,6 +1689,22 @@ pub async fn react_agent_run(
     } else {
         "act"
     };
+    let forced_backend = backend
+        .as_deref()
+        .map(|b| b.trim().to_lowercase())
+        .filter(|b| !b.is_empty());
+    let loaded_config = crate::commands::config::load_config().ok();
+    let effective_model = model
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .map(|s| s.to_string())
+        .or_else(|| {
+            loaded_config
+                .as_ref()
+                .and_then(|c| c.coding_model.clone().or(c.doc_model.clone()))
+        })
+        .unwrap_or_else(|| "Qwen2.5-Coder-7B-Instruct-EXL2-4bpw".to_string());
     emit_event(
         &app,
         "status",
@@ -1686,6 +1712,15 @@ pub async fn react_agent_run(
         None,
         Some(0),
     );
+    if let Some(backend) = forced_backend.as_deref() {
+        emit_event(
+            &app,
+            "status",
+            format!("backend 강제: {backend}"),
+            None,
+            Some(0),
+        );
+    }
     if let Some(pid) = plan_id.as_deref().filter(|s| !s.trim().is_empty()) {
         emit_event(&app, "status", format!("plan_id={pid}"), None, Some(0));
     }
@@ -1718,13 +1753,13 @@ pub async fn react_agent_run(
         build_system_prompt(&mcp_tools, &skills)
     );
     // 사용자 명시 opt-in 토글. 기본 false — 활성화 전에는 ReAct가 화면/입력 제어 불가.
-    let desktop_tools_enabled = crate::commands::config::load_config()
-        .ok()
+    let desktop_tools_enabled = loaded_config
+        .as_ref()
         .and_then(|c| c.react_desktop_tools_enabled)
         .unwrap_or(false);
-    let config_tool_whitelist = crate::commands::config::load_config()
-        .ok()
-        .and_then(|c| c.react_tool_whitelist);
+    let config_tool_whitelist = loaded_config
+        .as_ref()
+        .and_then(|c| c.react_tool_whitelist.clone());
     let use_config_whitelist = apply_config_whitelist.unwrap_or(true);
     let effective_whitelist = match tool_whitelist {
         Some(v) => Some(v),
@@ -1755,8 +1790,8 @@ pub async fn react_agent_run(
         .map_err(|e| LumError::Network(e.to_string()))?;
 
     // Phase 133: Reflexion 1턴 자기검토. 기본 true(설정 미존재 시).
-    let reflexion_enabled = crate::commands::config::load_config()
-        .ok()
+    let reflexion_enabled = loaded_config
+        .as_ref()
         .and_then(|c| c.react_reflexion_enabled)
         .unwrap_or(true);
 
@@ -1769,7 +1804,9 @@ pub async fn react_agent_run(
     // 복잡한 목표는 사전 계획 생성 → 컨텍스트 주입 (LLM 한 번 선행)
     if is_complex_goal(&goal) {
         emit_event(&app, "status", "복잡한 목표 — 작업 계획 생성 중", None, None);
-        if let Ok(plan_resp) = generate_task_plan(&client, &goal).await {
+        if let Ok(plan_resp) =
+            generate_task_plan(&client, &goal, forced_backend.as_deref(), &effective_model).await
+        {
             let steps_list = parse_task_plan(&plan_resp);
             if !steps_list.is_empty() {
                 let plan_str = format_plan(&steps_list);
@@ -1803,7 +1840,14 @@ pub async fn react_agent_run(
             );
 
             // 로컬 전용 — embedded GGUF 우선, 미로드면 xLLM HTTP (127.0.0.1:8080)
-            let response = match call_xllm(&client, "", &conversation).await {
+            let response = match call_ai_with_backend(
+                &client,
+                &effective_model,
+                &conversation,
+                forced_backend.as_deref(),
+            )
+            .await
+            {
                 Ok(r) => r,
                 Err(e) => {
                     emit_event(&app, "error", format!("LLM 오류: {e}"), None, None);
@@ -1821,7 +1865,15 @@ pub async fn react_agent_run(
             if let Some(answer) = parse_answer(&response) {
                 if reflexion_enabled {
                     if let Some(reflect) =
-                        run_reflexion(&client, &conversation, &goal, Some(&answer)).await
+                        run_reflexion(
+                            &client,
+                            &conversation,
+                            &goal,
+                            Some(&answer),
+                            forced_backend.as_deref(),
+                            &effective_model,
+                        )
+                        .await
                     {
                         emit_event(
                             &app,
@@ -1858,7 +1910,15 @@ pub async fn react_agent_run(
                 let candidate = response.trim();
                 if reflexion_enabled {
                     if let Some(reflect) =
-                        run_reflexion(&client, &conversation, &goal, Some(candidate)).await
+                        run_reflexion(
+                            &client,
+                            &conversation,
+                            &goal,
+                            Some(candidate),
+                            forced_backend.as_deref(),
+                            &effective_model,
+                        )
+                        .await
                     {
                         emit_event(
                             &app,
@@ -1911,7 +1971,14 @@ pub async fn react_agent_run(
                             None,
                             Some(step + 1),
                         );
-                        if let Ok(plan_resp) = generate_task_plan(&client, &goal).await {
+                        if let Ok(plan_resp) = generate_task_plan(
+                            &client,
+                            &goal,
+                            forced_backend.as_deref(),
+                            &effective_model,
+                        )
+                        .await
+                        {
                             let new_steps = parse_task_plan(&plan_resp);
                             if !new_steps.is_empty() {
                                 outer_replan_count += 1;
@@ -1931,7 +1998,14 @@ pub async fn react_agent_run(
                         "{conversation}\n\n{response}\n\n[시스템]: {}\n즉시 ANSWER를 출력하세요.",
                         ledger.recovery_l2()
                     );
-                    if let Ok(final_resp) = call_xllm(&client, "", &force_prompt).await {
+                    if let Ok(final_resp) = call_ai_with_backend(
+                        &client,
+                        &effective_model,
+                        &force_prompt,
+                        forced_backend.as_deref(),
+                    )
+                    .await
+                    {
                         let answer = parse_answer(&final_resp)
                             .unwrap_or_else(|| final_resp.trim().to_string());
                         emit_event(&app, "answer", &answer, None, Some(step + 1));
@@ -1985,7 +2059,16 @@ pub async fn react_agent_run(
 
         // 최대 단계 초과 — reflexion에서 위험 감지되면 딱 1턴 추가 허용.
         if reflexion_enabled && !extra_turn_granted {
-            if let Some(reflect) = run_reflexion(&client, &conversation, &goal, None).await {
+            if let Some(reflect) = run_reflexion(
+                &client,
+                &conversation,
+                &goal,
+                None,
+                forced_backend.as_deref(),
+                &effective_model,
+            )
+            .await
+            {
                 emit_event(
                     &app,
                     "status",
