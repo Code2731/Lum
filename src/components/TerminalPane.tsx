@@ -279,6 +279,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
   const [mentionEntries, setMentionEntries] = useState<DirEntry[]>([]);
   const [mentionLoading, setMentionLoading] = useState(false);
   const [mentionSelected, setMentionSelected] = useState(0);
+  const [lastClearedInput, setLastClearedInput] = useState("");
   const [showInputTip, setShowInputTip] = useState(() => {
     try {
       return localStorage.getItem(INPUT_TIP_DISMISSED_KEY) !== "1";
@@ -999,11 +1000,20 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     warpInputRef.current?.focus();
   }, [inputBuffer]);
   const clearInputQuick = useCallback(() => {
+    const current = warpInputRef.current?.getValue() ?? inputBuffer;
+    if (current !== "") setLastClearedInput(current);
     clearAllOverlays();
     warpInputRef.current?.setValue("");
     warpInputRef.current?.focus();
     setInputBuffer("");
-  }, [clearAllOverlays]);
+  }, [clearAllOverlays, inputBuffer]);
+  const restoreInputQuick = useCallback(() => {
+    if (!lastClearedInput) return;
+    warpInputRef.current?.setValue(lastClearedInput);
+    warpInputRef.current?.focus();
+    setInputBuffer(lastClearedInput);
+    setLastClearedInput("");
+  }, [lastClearedInput]);
 
   const routeChip = useMemo(() => {
     const route = routeInput(inputBuffer);
@@ -1198,6 +1208,26 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               }}
             >
               CLEAR
+            </button>
+            <button
+              type="button"
+              aria-label="quick-input-undo"
+              onClick={restoreInputQuick}
+              disabled={!lastClearedInput}
+              title={lastClearedInput ? "직전 CLEAR 입력 복원" : "복원할 입력이 없어 비활성화"}
+              style={{
+                fontSize: 10,
+                color: lastClearedInput ? "rgba(220,247,225,0.96)" : "rgba(255,255,255,0.42)",
+                border: lastClearedInput ? "1px solid rgba(63,185,80,0.6)" : "1px solid rgba(255,255,255,0.18)",
+                background: lastClearedInput ? "rgba(63,185,80,0.18)" : "rgba(255,255,255,0.06)",
+                borderRadius: 999,
+                padding: "1px 7px",
+                lineHeight: 1.25,
+                cursor: lastClearedInput ? "pointer" : "not-allowed",
+                flexShrink: 0,
+              }}
+            >
+              UNDO
             </button>
             <span style={{ fontSize: 10, color: "rgba(227,179,65,0.78)", flexShrink: 0 }}>
               @local/@ollama/@xllm/@gemini
