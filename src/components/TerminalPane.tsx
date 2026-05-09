@@ -114,6 +114,7 @@ const THEME = {
 
 const PANE_PADDING_X = 10;
 const PANE_PADDING_Y = 6;
+const INPUT_TIP_DISMISSED_KEY = "lum_input_toolbelt_tip_dismissed";
 
 const DEFAULT_MODEL = "Qwen2.5-Coder-7B-Instruct-EXL2-4bpw";
 
@@ -278,6 +279,13 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
   const [mentionEntries, setMentionEntries] = useState<DirEntry[]>([]);
   const [mentionLoading, setMentionLoading] = useState(false);
   const [mentionSelected, setMentionSelected] = useState(0);
+  const [showInputTip, setShowInputTip] = useState(() => {
+    try {
+      return localStorage.getItem(INPUT_TIP_DISMISSED_KEY) !== "1";
+    } catch {
+      return true;
+    }
+  });
 
   // WarpInputBar — 실제 입력 필드
   const warpInputRef = useRef<WarpInputBarHandle>(null);
@@ -957,6 +965,12 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     { id: "model", label: `MODEL ${compactModel(modelRef.current)}`, tone: "neutral" },
     { id: "term", label: terminalVisible ? "터미널 ON" : "터미널 OFF", tone: terminalVisible ? "success" : "warn" },
   ];
+  const dismissInputTip = useCallback(() => {
+    setShowInputTip(false);
+    try {
+      localStorage.setItem(INPUT_TIP_DISMISSED_KEY, "1");
+    } catch {}
+  }, []);
 
   return (
     <div
@@ -1030,6 +1044,42 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
           gap: 6,
         }}
       >
+        {showInputTip && (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 8,
+              padding: "4px 8px",
+              border: "1px solid rgba(88,166,255,0.28)",
+              background: "rgba(88,166,255,0.09)",
+              borderRadius: 8,
+            }}
+          >
+            <span style={{ fontSize: 10, color: "rgba(182,218,255,0.95)", lineHeight: 1.35 }}>
+              TIP · Cmd/Ctrl+1~4로 backend 즉시 전환, `/. 정순환, Shift+`/, 역순환
+            </span>
+            <button
+              type="button"
+              aria-label="dismiss-input-toolbelt-tip"
+              onClick={dismissInputTip}
+              style={{
+                fontSize: 10,
+                color: "rgba(255,255,255,0.88)",
+                border: "1px solid rgba(255,255,255,0.22)",
+                background: "rgba(255,255,255,0.08)",
+                borderRadius: 999,
+                padding: "1px 6px",
+                lineHeight: 1.2,
+                cursor: "pointer",
+                flexShrink: 0,
+              }}
+            >
+              닫기
+            </button>
+          </div>
+        )}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6, overflowX: "auto", scrollbarWidth: "none" }}>
             <span

@@ -50,6 +50,9 @@ import TerminalPane from "./TerminalPane";
 
 beforeEach(() => {
   invokeMock.mockReset();
+  try {
+    localStorage.removeItem("lum_input_toolbelt_tip_dismissed");
+  } catch {}
   invokeMock.mockImplementation((cmd: string) => {
     if (cmd === "spawn_pty") return Promise.resolve();
     if (cmd === "write_to_pty") return Promise.resolve();
@@ -154,6 +157,13 @@ describe("TerminalPane — 입력 라우팅", () => {
   it("툴벨트에 backend 단축키 안내 문구가 노출된다", () => {
     render(<TerminalPane id="tab-1" />);
     expect(screen.getByText("Cmd/Ctrl+1~4 토글 · 0 해제 · `/. 정순환 · Shift+`/, 역순환")).toBeInTheDocument();
+  });
+
+  it("입력 툴벨트 TIP 배너는 기본 노출되고 닫으면 사라진다", () => {
+    render(<TerminalPane id="tab-1" />);
+    expect(screen.getByText(/TIP · Cmd\/Ctrl\+1~4로 backend 즉시 전환/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "dismiss-input-toolbelt-tip" }));
+    expect(screen.queryByText(/TIP · Cmd\/Ctrl\+1~4로 backend 즉시 전환/)).not.toBeInTheDocument();
   });
 
   it("툴벨트 이전/다음 버튼으로 backend를 순환한다", () => {
