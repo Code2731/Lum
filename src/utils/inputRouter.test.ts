@@ -202,6 +202,14 @@ describe("routeInput — 기본: 자연어=AI, CLI 감지 시 shell", () => {
       });
     });
 
+    it("@backend + >> 조합은 강제 agent로 처리", () => {
+      expect(routeInput("@local >> 테스트 실패 원인 찾아서 고쳐줘")).toEqual({
+        type: "agent",
+        task: "테스트 실패 원인 찾아서 고쳐줘",
+        backend: "local",
+      });
+    });
+
     it("@embedded는 @local과 동일 alias", () => {
       expect(routeInput("@embedded 코드 수정해줘")).toEqual({
         type: "agent",
