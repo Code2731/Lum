@@ -84,6 +84,8 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
       isForceAI    ? "@" :
       input === "" ? "✨" :
       looksShell   ? "$" : "✨";
+    const activeBackend = detectBackendPrefixFromInput(input);
+    const activeBackendLabel = activeBackend ? activeBackend.toUpperCase() : null;
 
     const applyBackendPrefix = (backend: "local" | "ollama" | "xllm" | "gemini") => {
       const active = detectBackendPrefixFromInput(input);
@@ -425,6 +427,23 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
               }}
             >
               Enter 실행
+            </span>
+          )}
+          {activeBackendLabel && (
+            <span
+              style={{
+                flexShrink: 0,
+                fontSize: 10,
+                color: "rgba(121,192,255,0.95)",
+                border: "1px solid rgba(88,166,255,0.35)",
+                borderRadius: 6,
+                padding: "1px 6px",
+                lineHeight: 1.2,
+                background: "rgba(88,166,255,0.12)",
+              }}
+              title="현재 backend 강제 상태 (Cmd/Ctrl+0 또는 버튼으로 해제)"
+            >
+              BACKEND {activeBackendLabel}
             </span>
           )}
         </div>

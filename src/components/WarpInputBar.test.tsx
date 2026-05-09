@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, fireEvent, act } from "@testing-library/react";
+import { render, fireEvent, act, screen } from "@testing-library/react";
 import { createRef } from "react";
 import WarpInputBar, { type WarpInputBarHandle } from "./WarpInputBar";
 
@@ -99,6 +99,14 @@ describe("WarpInputBar — dumb input, 라우팅은 상위에서", () => {
     fireEvent.keyDown(input, { key: "Enter" });
     expect(onSubmit).toHaveBeenCalledWith("@ollama >> 테스트 실패 원인 찾아줘");
     expect(input).toHaveValue("@ollama ");
+  });
+
+  it("backend 프리픽스가 있으면 BACKEND 배지가 표시되고 해제 시 사라진다", () => {
+    const { input } = setup();
+    fireEvent.change(input, { target: { value: "@xllm 로그 요약해줘" } });
+    expect(screen.getByText("BACKEND XLLM")).toBeInTheDocument();
+    fireEvent.keyDown(input, { key: "3", ctrlKey: true });
+    expect(screen.queryByText("BACKEND XLLM")).not.toBeInTheDocument();
   });
 
   it(">> 입력도 그대로 onSubmit에 전달 (라우팅은 부모가)", () => {
