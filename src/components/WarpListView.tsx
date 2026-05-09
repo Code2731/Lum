@@ -805,7 +805,7 @@ const WarpListView: React.FC<Props> = ({
         return;
       }
       if (
-        e.altKey
+        (e.altKey || mod)
         && (e.key === "0" || e.key === "1" || e.key === "2" || e.key === "3"
           || e.code === "Digit0" || e.code === "Digit1" || e.code === "Digit2" || e.code === "Digit3")
       ) {
@@ -1429,7 +1429,7 @@ const WarpListView: React.FC<Props> = ({
                           <div><span className="text-cyan-50">Alt+I</span> 현재 목록 선택 반전</div>
                           <div><span className="text-cyan-50">Alt+O</span> 선택 항목만 보기 토글</div>
                           <div><span className="text-cyan-50">Alt+H</span> 고위험 항목 빠른 선택</div>
-                          <div><span className="text-cyan-50">Alt+1/2/3/0</span> 위험도 필터 High/Med/Low/All</div>
+                          <div><span className="text-cyan-50">Alt+1/2/3/0 / Cmd/Ctrl+1/2/3/0</span> 위험도 필터 High/Med/Low/All</div>
                           <div><span className="text-cyan-50">Alt+S</span> 타임라인 정렬 토글</div>
                           <div><span className="text-cyan-50">Alt+Shift+P / Alt+Shift+O</span> 현재 목록 일괄 핀/핀해제</div>
                           <div><span className="text-cyan-50">Alt+M / Cmd/Ctrl+M</span> 핀만 보기 토글</div>
