@@ -134,7 +134,9 @@ describe("WarpInputBar — dumb input, 라우팅은 상위에서", () => {
 
   it("빈 입력 도움말에 backend 단축키가 노출된다", () => {
     setup();
-    expect(screen.getByText(/Cmd\/Ctrl\+1~4\/0\/`\/Shift\+` backend/)).toBeInTheDocument();
+    expect(screen.getByText(/Cmd\/Ctrl\+1~4\/0/)).toBeInTheDocument();
+    expect(screen.getByText(/`\/\./)).toBeInTheDocument();
+    expect(screen.getByText(/Shift\+`\/,/)).toBeInTheDocument();
   });
 
   it("onChange 한 글자씩 호출", () => {
@@ -250,6 +252,15 @@ describe("WarpInputBar — dumb input, 라우팅은 상위에서", () => {
     expect(input).toHaveValue("로그 요약해줘");
   });
 
+  it("Cmd/Ctrl+.로 backend 정방향 순환이 동작한다", () => {
+    const { input } = setup();
+    fireEvent.change(input, { target: { value: "로그 요약해줘" } });
+    fireEvent.keyDown(input, { key: ".", code: "Period", ctrlKey: true });
+    expect(input).toHaveValue("@local 로그 요약해줘");
+    fireEvent.keyDown(input, { key: ".", code: "Period", ctrlKey: true });
+    expect(input).toHaveValue("@ollama 로그 요약해줘");
+  });
+
   it("Cmd+`(mac)도 backend 순환이 동작한다", () => {
     const { input } = setup();
     fireEvent.change(input, { target: { value: "로그 요약해줘" } });
@@ -273,6 +284,15 @@ describe("WarpInputBar — dumb input, 라우팅은 상위에서", () => {
     expect(input).toHaveValue("@local 로그 요약해줘");
     fireEvent.keyDown(input, { key: "~", code: "Backquote", ctrlKey: true, shiftKey: true });
     expect(input).toHaveValue("로그 요약해줘");
+  });
+
+  it("Cmd/Ctrl+,로 backend 역방향 순환이 동작한다", () => {
+    const { input } = setup();
+    fireEvent.change(input, { target: { value: "@local 로그 요약해줘" } });
+    fireEvent.keyDown(input, { key: ",", code: "Comma", ctrlKey: true });
+    expect(input).toHaveValue("로그 요약해줘");
+    fireEvent.keyDown(input, { key: ",", code: "Comma", ctrlKey: true });
+    expect(input).toHaveValue("@gemini 로그 요약해줘");
   });
 
   it("기존 @backend 프리픽스는 Cmd/Ctrl+숫자로 교체", () => {
