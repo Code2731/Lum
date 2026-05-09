@@ -137,6 +137,12 @@ const compactModel = (raw?: string): string => {
     .replace(/-\d+bit$/i, "")
     .slice(0, 26);
 };
+const compactInputPreview = (raw?: string): string => {
+  if (!raw) return "";
+  const oneLine = raw.replace(/\s+/g, " ").trim();
+  if (oneLine.length <= 16) return oneLine;
+  return `${oneLine.slice(0, 16)}…`;
+};
 
 interface ModeButtonProps {
   label: string;
@@ -1018,6 +1024,9 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     detectBackendPrefixFromInput(inputBuffer) === null && /^@\s?/.test(inputBuffer);
   const canNormalizeToPlain = toPlainInput(inputBuffer) !== inputBuffer;
   const canTrimInput = inputBuffer !== inputBuffer.trim();
+  const lastSubmittedPreview = compactInputPreview(lastSubmittedInput);
+  const recallButtonLabel = lastSubmittedPreview ? `RECALL ${lastSubmittedPreview}` : "RECALL";
+  const rerunButtonLabel = lastSubmittedPreview ? `RERUN ${lastSubmittedPreview}` : "RERUN";
   const triggerMentionAttach = useCallback(() => {
     const current = warpInputRef.current?.getValue() ?? inputBuffer;
     if (/(?:^|\s)@[^\s@]*$/.test(current)) {
@@ -1293,7 +1302,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               aria-label="quick-input-recall"
               onClick={recallSubmittedInputQuick}
               disabled={!lastSubmittedInput}
-              title={lastSubmittedInput ? "직전 실행 입력 복원" : "복원할 실행 입력이 없어 비활성화"}
+              title={lastSubmittedInput ? `직전 실행 입력 복원: ${lastSubmittedInput}` : "복원할 실행 입력이 없어 비활성화"}
               style={{
                 fontSize: 10,
                 color: lastSubmittedInput ? "rgba(255,244,214,0.95)" : "rgba(255,255,255,0.42)",
@@ -1306,14 +1315,14 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
                 flexShrink: 0,
               }}
             >
-              RECALL
+              {recallButtonLabel}
             </button>
             <button
               type="button"
               aria-label="quick-input-rerun"
               onClick={rerunSubmittedInputQuick}
               disabled={!lastSubmittedInput}
-              title={lastSubmittedInput ? "직전 실행 입력 즉시 재실행" : "재실행할 입력이 없어 비활성화"}
+              title={lastSubmittedInput ? `직전 실행 입력 즉시 재실행: ${lastSubmittedInput}` : "재실행할 입력이 없어 비활성화"}
               style={{
                 fontSize: 10,
                 color: lastSubmittedInput ? "rgba(255,234,199,0.95)" : "rgba(255,255,255,0.42)",
@@ -1326,7 +1335,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
                 flexShrink: 0,
               }}
             >
-              RERUN
+              {rerunButtonLabel}
             </button>
             <button
               type="button"

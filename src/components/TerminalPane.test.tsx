@@ -222,6 +222,7 @@ describe("TerminalPane — 입력 라우팅", () => {
   it("툴벨트 RECALL 버튼으로 직전 실행 입력을 복원한다", async () => {
     const { container } = render(<TerminalPane id="tab-1" />);
     const input = container.querySelector("input")!;
+    expect(screen.getByRole("button", { name: "quick-input-recall" })).toHaveTextContent(/^RECALL$/);
     expect(screen.getByRole("button", { name: "quick-input-recall" })).toHaveAttribute("disabled");
 
     submitInput(container, "ls -la");
@@ -232,7 +233,9 @@ describe("TerminalPane — 입력 라우팅", () => {
       });
     });
     expect(input).toHaveValue("");
+    expect(screen.getByRole("button", { name: "quick-input-recall" })).toHaveTextContent("RECALL ls -la");
     expect(screen.getByRole("button", { name: "quick-input-recall" })).not.toHaveAttribute("disabled");
+    expect(screen.getByRole("button", { name: "quick-input-rerun" })).toHaveTextContent("RERUN ls -la");
 
     fireEvent.click(screen.getByRole("button", { name: "quick-input-recall" }));
     expect(input).toHaveValue("ls -la");
