@@ -227,6 +227,31 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(input).toHaveValue("ls -la");
   });
 
+  it("툴벨트 RERUN 버튼으로 직전 실행 입력을 즉시 재실행한다", async () => {
+    const { container } = render(<TerminalPane id="tab-1" />);
+    expect(screen.getByRole("button", { name: "quick-input-rerun" })).toHaveAttribute("disabled");
+
+    submitInput(container, "pwd");
+    await waitFor(() => {
+      expect(invokeMock).toHaveBeenCalledWith("write_to_pty", {
+        id: "tab-1",
+        data: "pwd\r",
+      });
+    });
+    expect(screen.getByRole("button", { name: "quick-input-rerun" })).not.toHaveAttribute("disabled");
+
+    const writeCallsBefore = invokeMock.mock.calls.filter((c) => c[0] === "write_to_pty").length;
+    fireEvent.click(screen.getByRole("button", { name: "quick-input-rerun" }));
+    await waitFor(() => {
+      const writeCallsAfter = invokeMock.mock.calls.filter((c) => c[0] === "write_to_pty");
+      expect(writeCallsAfter.length).toBe(writeCallsBefore + 1);
+      expect(writeCallsAfter.at(-1)).toEqual([
+        "write_to_pty",
+        { id: "tab-1", data: "pwd\r" },
+      ]);
+    });
+  });
+
   it("툴벨트 PLAIN 버튼으로 강제 프리픽스를 제거하고 일반 입력으로 전환한다", () => {
     const { container } = render(<TerminalPane id="tab-1" />);
     const input = container.querySelector("input")!;
