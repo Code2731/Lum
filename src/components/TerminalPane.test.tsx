@@ -153,7 +153,28 @@ describe("TerminalPane — 입력 라우팅", () => {
 
   it("툴벨트에 backend 단축키 안내 문구가 노출된다", () => {
     render(<TerminalPane id="tab-1" />);
-    expect(screen.getByText("Cmd/Ctrl+1~4 토글 · 0 해제 · ` 정순환 · Shift+` 역순환")).toBeInTheDocument();
+    expect(screen.getByText("Cmd/Ctrl+1~4 토글 · 0 해제 · `/. 정순환 · Shift+`/, 역순환")).toBeInTheDocument();
+  });
+
+  it("툴벨트 이전/다음 버튼으로 backend를 순환한다", () => {
+    const { container } = render(<TerminalPane id="tab-1" />);
+    const input = container.querySelector("input")!;
+    fireEvent.change(input, { target: { value: "로그 요약해줘" } });
+
+    fireEvent.click(screen.getByRole("button", { name: "quick-backend-next" }));
+    expect(input).toHaveValue("@local 로그 요약해줘");
+
+    fireEvent.click(screen.getByRole("button", { name: "quick-backend-next" }));
+    expect(input).toHaveValue("@ollama 로그 요약해줘");
+
+    fireEvent.click(screen.getByRole("button", { name: "quick-backend-prev" }));
+    expect(input).toHaveValue("@local 로그 요약해줘");
+
+    fireEvent.click(screen.getByRole("button", { name: "quick-backend-prev" }));
+    expect(input).toHaveValue("로그 요약해줘");
+
+    fireEvent.click(screen.getByRole("button", { name: "quick-backend-prev" }));
+    expect(input).toHaveValue("@gemini 로그 요약해줘");
   });
 
   it("툴벨트 quick backend 버튼으로 입력 프리픽스를 즉시 전환", async () => {

@@ -867,6 +867,30 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     warpInputRef.current?.setValue(next);
     warpInputRef.current?.focus();
   }, [inputBuffer]);
+  const cycleBackendQuickPrefix = useCallback((dir: 1 | -1) => {
+    const current = warpInputRef.current?.getValue() ?? inputBuffer;
+    const order: AiBackend[] = ["local", "ollama", "xllm", "gemini"];
+    const active = detectBackendPrefixFromInput(current);
+    if (!active) {
+      const next = applyBackendPrefixToInput(current, dir > 0 ? order[0] : order[order.length - 1]);
+      warpInputRef.current?.setValue(next);
+      warpInputRef.current?.focus();
+      return;
+    }
+    const idx = order.indexOf(active);
+    if (idx < 0) {
+      const next = clearBackendPrefixFromInput(current);
+      warpInputRef.current?.setValue(next);
+      warpInputRef.current?.focus();
+      return;
+    }
+    const nextIdx = idx + dir;
+    const next = nextIdx < 0 || nextIdx >= order.length
+      ? clearBackendPrefixFromInput(current)
+      : applyBackendPrefixToInput(current, order[nextIdx]);
+    warpInputRef.current?.setValue(next);
+    warpInputRef.current?.focus();
+  }, [inputBuffer]);
   const activeBackendPrefix = useMemo(
     () => detectBackendPrefixFromInput(inputBuffer),
     [inputBuffer],
@@ -993,8 +1017,46 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               @local/@ollama/@xllm/@gemini
             </span>
             <span style={{ fontSize: 10, color: "rgba(255,255,255,0.58)", flexShrink: 0 }}>
-              Cmd/Ctrl+1~4 토글 · 0 해제 · ` 정순환 · Shift+` 역순환
+              Cmd/Ctrl+1~4 토글 · 0 해제 · `/. 정순환 · Shift+`/, 역순환
             </span>
+            <button
+              type="button"
+              aria-label="quick-backend-prev"
+              onClick={() => cycleBackendQuickPrefix(-1)}
+              title="이전 backend 순환 (Cmd/Ctrl+Shift+` 또는 Cmd/Ctrl+,)"
+              style={{
+                fontSize: 10,
+                color: "rgba(255,255,255,0.86)",
+                border: "1px solid rgba(255,255,255,0.24)",
+                background: "rgba(255,255,255,0.08)",
+                borderRadius: 999,
+                padding: "1px 6px",
+                lineHeight: 1.25,
+                cursor: "pointer",
+                flexShrink: 0,
+              }}
+            >
+              ◀
+            </button>
+            <button
+              type="button"
+              aria-label="quick-backend-next"
+              onClick={() => cycleBackendQuickPrefix(1)}
+              title="다음 backend 순환 (Cmd/Ctrl+` 또는 Cmd/Ctrl+.)"
+              style={{
+                fontSize: 10,
+                color: "rgba(255,255,255,0.86)",
+                border: "1px solid rgba(255,255,255,0.24)",
+                background: "rgba(255,255,255,0.08)",
+                borderRadius: 999,
+                padding: "1px 6px",
+                lineHeight: 1.25,
+                cursor: "pointer",
+                flexShrink: 0,
+              }}
+            >
+              ▶
+            </button>
             <button
               type="button"
               aria-label="quick-backend-auto"
