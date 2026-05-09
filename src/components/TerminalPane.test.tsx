@@ -129,6 +129,17 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(writeCalls.length).toBe(0);
   });
 
+  it("@local prefix → backend=local로 AI Chat 호출", async () => {
+    const onAskAI = vi.fn();
+    const { container } = render(<TerminalPane id="tab-1" onAskAI={onAskAI} />);
+    submitInput(container, "@local 최근 로그 요약해줘");
+    await waitFor(() => {
+      expect(onAskAI).toHaveBeenCalledWith("최근 로그 요약해줘", undefined, undefined, "local");
+    });
+    const writeCalls = invokeMock.mock.calls.filter((c) => c[0] === "write_to_pty");
+    expect(writeCalls.length).toBe(0);
+  });
+
   it("./run.sh 같은 경로 → shell", async () => {
     const { container } = render(<TerminalPane id="tab-1" />);
     submitInput(container, "./run.sh");

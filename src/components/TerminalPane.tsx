@@ -16,7 +16,7 @@ import SmartPasteModal from "./SmartPasteModal";
 import TerminalContextMenu from "./TerminalContextMenu";
 import WarpInputBar, { type WarpInputBarHandle } from "./WarpInputBar";
 import AIBlockStream from "./AIBlockStream";
-import { routeInput } from "../utils/inputRouter";
+import { routeInput, type AiBackend } from "../utils/inputRouter";
 import type { ChatMessage } from "../hooks/useAIChat";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import type { XtermTheme } from "../hooks/useTerminalTheme";
@@ -59,7 +59,12 @@ interface Props {
   onCwdChange?: (cwd: string) => void;
   onReady?: (write: (data: string) => void) => void;
   onAgentTrigger?: (task: string) => void;
-  onAskAI?: (question: string, images?: string[], engine?: "heavy" | "fast") => void;
+  onAskAI?: (
+    question: string,
+    images?: string[],
+    engine?: "heavy" | "fast",
+    backend?: AiBackend,
+  ) => void;
   aiMessages?: ChatMessage[];
   aiStreaming?: boolean;
   aiError?: string | null;
@@ -664,7 +669,13 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
         invoke("write_to_pty", { id, data: route.command + "\r" }).catch(() => {});
         return;
       case "ai":
-        if (route.question) onAskAIRef.current?.(route.question);
+        if (route.question) {
+          if (route.backend) {
+            onAskAIRef.current?.(route.question, undefined, undefined, route.backend);
+          } else {
+            onAskAIRef.current?.(route.question);
+          }
+        }
         return;
       case "heavy":
         // !! Heavy Track — engine="heavy" 명시 전달 → 백엔드가 mistral.rs로 라우팅

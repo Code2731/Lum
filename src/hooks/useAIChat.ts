@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
+import type { AiBackend } from "../utils/inputRouter";
 
 const XLLM_TOKEN_EVENT = "xllm_token";
 
@@ -133,12 +134,27 @@ export function useAIChat(model: string, getTerminalContext: () => string) {
   const [error, setError] = useState<string | null>(null);
 
   const sendMessage = useCallback(
-    async (text: string, images?: string[], engine?: "heavy" | "fast") => {
+    async (
+      text: string,
+      images?: string[],
+      engine?: "heavy" | "fast",
+      backend?: AiBackend,
+    ) => {
       if (streaming) {
         console.warn("[AI] sendMessage skipped — already streaming");
         return;
       }
-      console.log("[AI] sendMessage:", text, "model:", model, "engine:", engine ?? "auto", images?.length ? `· ${images.length}개 이미지` : "");
+      console.log(
+        "[AI] sendMessage:",
+        text,
+        "model:",
+        model,
+        "engine:",
+        engine ?? "auto",
+        "backend:",
+        backend ?? "auto",
+        images?.length ? `· ${images.length}개 이미지` : "",
+      );
 
       const userMsg: ChatMessage = {
         id: crypto.randomUUID(),
@@ -196,6 +212,7 @@ export function useAIChat(model: string, getTerminalContext: () => string) {
           context,
           images: images && images.length > 0 ? images : null,
           engine: engine ?? null,
+          backend: backend ?? null,
           activeFile,
         });
         console.log("[AI] stream_ai_command returned, tokens:", tokenCount);

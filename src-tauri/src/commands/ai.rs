@@ -685,6 +685,8 @@ pub async fn stream_ai_command(
     images: Option<Vec<String>>,
     // engine: 명시적 엔진 — "heavy" = mistral.rs 강제, "fast"/None = TabbyAPI
     engine: Option<String>,
+    // backend: 명시적 백엔드 강제 — local|ollama|xllm|gemini
+    backend: Option<String>,
     // active_file: 현재 편집 파일 경로 — 지정 시 파일 내용 + RAG 스니펫 자동 주입
     active_file: Option<String>,
     cancel_flag: tauri::State<'_, AiStreamCancel>,
@@ -723,6 +725,110 @@ pub async fn stream_ai_command(
     let prompt_chars = full_prompt.len();
     let started = std::time::Instant::now();
 
+    let _ = engine;
+    let config = load_config()?;
+    let forced_backend = backend.as_deref().map(|b| b.trim().to_lowercase());
+
+    if let Some(forced) = forced_backend.as_deref() {
+        match forced {
+            "local" | "embedded" => {
+                let show_reasoning = config.show_reasoning.unwrap_or(true);
+                if let Some(result) = try_embedded_inference_stream(
+                    &app,
+                    &full_prompt,
+                    &imgs,
+                    &cancel_flag,
+                    show_reasoning,
+                )
+                .await
+                {
+                    if result.is_ok() {
+                        emit_route(
+                            &app,
+                            "embedded",
+                            false,
+                            embedded_loaded_key(),
+                            prompt_chars,
+                            started.elapsed().as_millis() as u64,
+                        );
+                    }
+                    return result;
+                }
+                return Err(LumError::AiEngine(
+                    "local backend 강제 요청이지만 임베디드 모델이 로드되지 않았습니다.".to_string(),
+                ));
+            }
+            "ollama" => {
+                if let Some(result) = try_ollama_stream(&app, &full_prompt, &cancel_flag).await {
+                    if result.is_ok() {
+                        let ollama_url = config.ollama_url();
+                        emit_route(
+                            &app,
+                            "ollama",
+                            is_remote_url(&ollama_url),
+                            config.ollama_model.clone(),
+                            prompt_chars,
+                            started.elapsed().as_millis() as u64,
+                        );
+                    }
+                    return result;
+                }
+                return Err(LumError::AiEngine(
+                    "ollama backend 강제 요청이지만 ollama 모델/URL 설정이 없습니다.".to_string(),
+                ));
+            }
+            "xllm" => {
+                let xllm_url = config.xllm_url();
+                let result = call_compat_stream(
+                    &app,
+                    &client,
+                    &full_prompt,
+                    &imgs,
+                    &xllm_url,
+                    config.xllm_api_key.clone(),
+                    &cancel_flag,
+                )
+                .await;
+                if result.is_ok() {
+                    emit_route(
+                        &app,
+                        "xllm",
+                        is_remote_url(&xllm_url),
+                        None,
+                        prompt_chars,
+                        started.elapsed().as_millis() as u64,
+                    );
+                }
+                return result;
+            }
+            "gemini" | "cloud" => {
+                if !model.starts_with("gemini") {
+                    return Err(LumError::Config(
+                        "gemini backend를 강제하려면 모델을 gemini-*로 선택하세요.".to_string(),
+                    ));
+                }
+                let single_image = imgs.first().map(|s| s.as_str());
+                let result = call_gemini(&client, &model, &full_prompt, single_image).await?;
+                emit_route(
+                    &app,
+                    "gemini",
+                    true,
+                    Some(model.clone()),
+                    prompt_chars,
+                    started.elapsed().as_millis() as u64,
+                );
+                let _ = app.emit(XLLM_TOKEN_EVENT, result.clone());
+                return Ok(result);
+            }
+            _ => {
+                return Err(LumError::Config(format!(
+                    "지원하지 않는 backend: {} (local|ollama|xllm|gemini)",
+                    forced
+                )));
+            }
+        }
+    }
+
     if model.starts_with("gemini") {
         let single_image = imgs.first().map(|s| s.as_str());
         let result = call_gemini(&client, &model, &full_prompt, single_image).await?;
@@ -737,8 +843,6 @@ pub async fn stream_ai_command(
         let _ = app.emit(XLLM_TOKEN_EVENT, result.clone());
         Ok(result)
     } else {
-        let _ = engine;
-        let config = load_config()?;
         // 임베디드 GGUF 로드돼있으면 토큰별 스트리밍 — HTTP 우회.
         let show_reasoning = config.show_reasoning.unwrap_or(true);
         if let Some(result) =
