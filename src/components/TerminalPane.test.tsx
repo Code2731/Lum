@@ -227,6 +227,20 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(input).toHaveValue("ls -la");
   });
 
+  it("툴벨트 PLAIN 버튼으로 강제 프리픽스를 제거하고 일반 입력으로 전환한다", () => {
+    const { container } = render(<TerminalPane id="tab-1" />);
+    const input = container.querySelector("input")!;
+    expect(screen.getByRole("button", { name: "quick-input-plain" })).toHaveAttribute("disabled");
+
+    fireEvent.change(input, { target: { value: "@xllm # 로그 요약해줘" } });
+    expect(screen.getByRole("button", { name: "quick-input-plain" })).not.toHaveAttribute("disabled");
+
+    fireEvent.click(screen.getByRole("button", { name: "quick-input-plain" }));
+    expect(input).toHaveValue("로그 요약해줘");
+    expect(screen.getByRole("button", { name: "quick-input-plain" })).toHaveAttribute("disabled");
+    expect(screen.getByText("AI AUTO")).toBeInTheDocument();
+  });
+
   it("툴벨트 !/>>/? 버튼으로 입력 모드 프리픽스를 토글한다", () => {
     const { container } = render(<TerminalPane id="tab-1" />);
     const input = container.querySelector("input")!;

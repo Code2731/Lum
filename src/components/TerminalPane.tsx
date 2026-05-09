@@ -942,6 +942,24 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     warpInputRef.current?.setValue(next);
     warpInputRef.current?.focus();
   }, [clearForceAiPrefix, clearQuickModePrefix, inputBuffer]);
+  const toPlainInput = useCallback((raw: string) => {
+    let next = raw;
+    for (let i = 0; i < 3; i += 1) {
+      const prev = next;
+      next = clearQuickModePrefix(next);
+      next = clearForceAiPrefix(next);
+      if (next === prev) break;
+    }
+    return next;
+  }, [clearForceAiPrefix, clearQuickModePrefix]);
+  const normalizeInputToPlain = useCallback(() => {
+    const current = warpInputRef.current?.getValue() ?? inputBuffer;
+    const next = toPlainInput(current);
+    if (next === current) return;
+    warpInputRef.current?.setValue(next);
+    warpInputRef.current?.focus();
+    setInputBuffer(next);
+  }, [inputBuffer, toPlainInput]);
   const cycleBackendQuickPrefix = useCallback((dir: 1 | -1) => {
     const current = warpInputRef.current?.getValue() ?? inputBuffer;
     const order: AiBackend[] = ["local", "ollama", "xllm", "gemini"];
@@ -990,6 +1008,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
   const quickModeAiCmdActive = /^#\s?/.test(inputBuffer);
   const quickModeForceAiActive =
     detectBackendPrefixFromInput(inputBuffer) === null && /^@\s?/.test(inputBuffer);
+  const canNormalizeToPlain = toPlainInput(inputBuffer) !== inputBuffer;
   const triggerMentionAttach = useCallback(() => {
     const current = warpInputRef.current?.getValue() ?? inputBuffer;
     if (/(?:^|\s)@[^\s@]*$/.test(current)) {
@@ -1256,6 +1275,26 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               }}
             >
               RECALL
+            </button>
+            <button
+              type="button"
+              aria-label="quick-input-plain"
+              onClick={normalizeInputToPlain}
+              disabled={!canNormalizeToPlain}
+              title={canNormalizeToPlain ? "강제 프리픽스 제거 후 일반 입력으로 전환" : "제거할 프리픽스가 없어 비활성화"}
+              style={{
+                fontSize: 10,
+                color: canNormalizeToPlain ? "rgba(215,228,255,0.96)" : "rgba(255,255,255,0.42)",
+                border: canNormalizeToPlain ? "1px solid rgba(88,166,255,0.6)" : "1px solid rgba(255,255,255,0.18)",
+                background: canNormalizeToPlain ? "rgba(88,166,255,0.18)" : "rgba(255,255,255,0.06)",
+                borderRadius: 999,
+                padding: "1px 7px",
+                lineHeight: 1.25,
+                cursor: canNormalizeToPlain ? "pointer" : "not-allowed",
+                flexShrink: 0,
+              }}
+            >
+              PLAIN
             </button>
             <span style={{ fontSize: 10, color: "rgba(227,179,65,0.78)", flexShrink: 0 }}>
               @local/@ollama/@xllm/@gemini
