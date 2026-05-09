@@ -230,6 +230,21 @@ describe("WarpInputBar — dumb input, 라우팅은 상위에서", () => {
     expect(input).toHaveValue("로그 요약해줘");
   });
 
+  it("Cmd/Ctrl+`로 backend를 순환한다 (AUTO→local→ollama→xllm→gemini→AUTO)", () => {
+    const { input } = setup();
+    fireEvent.change(input, { target: { value: "로그 요약해줘" } });
+    fireEvent.keyDown(input, { key: "`", ctrlKey: true });
+    expect(input).toHaveValue("@local 로그 요약해줘");
+    fireEvent.keyDown(input, { key: "`", ctrlKey: true });
+    expect(input).toHaveValue("@ollama 로그 요약해줘");
+    fireEvent.keyDown(input, { key: "`", ctrlKey: true });
+    expect(input).toHaveValue("@xllm 로그 요약해줘");
+    fireEvent.keyDown(input, { key: "`", ctrlKey: true });
+    expect(input).toHaveValue("@gemini 로그 요약해줘");
+    fireEvent.keyDown(input, { key: "`", ctrlKey: true });
+    expect(input).toHaveValue("로그 요약해줘");
+  });
+
   it("기존 @backend 프리픽스는 Cmd/Ctrl+숫자로 교체", () => {
     const { input } = setup();
     fireEvent.change(input, { target: { value: "@ollama src/utils.ts 함수 수정해줘" } });

@@ -102,6 +102,26 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
       setInput(next);
       onChange?.(next);
     };
+    const cycleBackendPrefix = () => {
+      const order: Array<"local" | "ollama" | "xllm" | "gemini"> = ["local", "ollama", "xllm", "gemini"];
+      const active = detectBackendPrefixFromInput(input);
+      if (!active) {
+        const next = applyBackendPrefixToInput(input, "local");
+        setInput(next);
+        onChange?.(next);
+        return;
+      }
+      const idx = order.indexOf(active);
+      if (idx < 0 || idx === order.length - 1) {
+        const next = clearBackendPrefixFromInput(input);
+        setInput(next);
+        onChange?.(next);
+        return;
+      }
+      const next = applyBackendPrefixToInput(input, order[idx + 1]);
+      setInput(next);
+      onChange?.(next);
+    };
     const clearBackendPrefix = () => {
       const next = clearBackendPrefixFromInput(input);
       setInput(next);
@@ -140,6 +160,11 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
         if (e.key === "0" || e.code === "Digit0") {
           e.preventDefault();
           clearBackendPrefix();
+          return;
+        }
+        if (e.key === "`" || e.code === "Backquote") {
+          e.preventDefault();
+          cycleBackendPrefix();
           return;
         }
       }
@@ -462,7 +487,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
                 background: activeBackendStyle.background,
                 cursor: "pointer",
               }}
-              title="현재 backend 강제 상태 (클릭 또는 Cmd/Ctrl+0으로 해제)"
+              title="현재 backend 강제 상태 (Cmd/Ctrl+` 순환, 클릭/Cmd/Ctrl+0 해제)"
             >
               BACKEND {activeBackendLabel}
             </button>
