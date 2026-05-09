@@ -149,8 +149,15 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
           historyIdx.current = history.current.length;
         }
         onSubmit(input);
-        setInput("");
-        onChange?.("");
+        // @backend 질의/태스크 실행 후에는 같은 backend prefix를 유지해 연속 작업 속도를 높인다.
+        if (backend) {
+          const keep = `@${backend} `;
+          setInput(keep);
+          onChange?.(keep);
+        } else {
+          setInput("");
+          onChange?.("");
+        }
         return;
       }
 

@@ -85,6 +85,22 @@ describe("WarpInputBar — dumb input, 라우팅은 상위에서", () => {
     expect(input).toHaveValue("@local ");
   });
 
+  it("@backend 질의 실행 후 입력창은 같은 backend prefix를 유지", () => {
+    const { input, onSubmit } = setup();
+    fireEvent.change(input, { target: { value: "@local 로그 요약해줘" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+    expect(onSubmit).toHaveBeenCalledWith("@local 로그 요약해줘");
+    expect(input).toHaveValue("@local ");
+  });
+
+  it("@backend + >> 태스크 실행 후에도 backend prefix를 유지", () => {
+    const { input, onSubmit } = setup();
+    fireEvent.change(input, { target: { value: "@ollama >> 테스트 실패 원인 찾아줘" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+    expect(onSubmit).toHaveBeenCalledWith("@ollama >> 테스트 실패 원인 찾아줘");
+    expect(input).toHaveValue("@ollama ");
+  });
+
   it(">> 입력도 그대로 onSubmit에 전달 (라우팅은 부모가)", () => {
     const { input, onSubmit } = setup();
     fireEvent.change(input, { target: { value: ">> 파일 목록" } });
