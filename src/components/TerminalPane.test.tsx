@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, fireEvent, waitFor } from "@testing-library/react";
+import { render, fireEvent, waitFor, screen } from "@testing-library/react";
 
 const invokeMock = vi.fn();
 
@@ -118,6 +118,22 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(onAskAI).not.toHaveBeenCalled();
     const writeCalls = invokeMock.mock.calls.filter((c) => c[0] === "write_to_pty");
     expect(writeCalls.length).toBe(0);
+  });
+
+  it("입력 중 라우팅 칩이 동적으로 바뀐다 (SHELL/AI/AGENT)", async () => {
+    const { container } = render(<TerminalPane id="tab-1" />);
+    const input = container.querySelector("input")!;
+
+    expect(screen.getByText("AUTO 라우팅")).toBeInTheDocument();
+
+    fireEvent.change(input, { target: { value: "ls -la" } });
+    expect(screen.getByText("SHELL")).toBeInTheDocument();
+
+    fireEvent.change(input, { target: { value: "@xllm closure가 뭐야?" } });
+    expect(screen.getByText("AI @XLLM")).toBeInTheDocument();
+
+    fireEvent.change(input, { target: { value: "@local src/utils.ts 함수 수정해줘" } });
+    expect(screen.getByText("AGENT @LOCAL")).toBeInTheDocument();
   });
 
   it("! 강제 shell → 자연어여도 PTY", async () => {

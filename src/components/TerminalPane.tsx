@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useCallback, useState } from "react";
+import React, { useEffect, useRef, useCallback, useState, useMemo } from "react";
 import { Terminal } from "@xterm/xterm";
 import type { IDecoration } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
@@ -847,8 +847,30 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     return false;
   }, []);
 
+  const routeChip = useMemo(() => {
+    const route = routeInput(inputBuffer);
+    const backendTag = (backend?: AiBackend) => (backend ? ` @${backend.toUpperCase()}` : " AUTO");
+    switch (route.type) {
+      case "shell":
+        return { label: "SHELL", tone: "success" as const };
+      case "ai":
+        return { label: `AI${backendTag(route.backend)}`, tone: "accent" as const };
+      case "agent":
+        return { label: `AGENT${backendTag(route.backend)}`, tone: "warn" as const };
+      case "aiCmd":
+        return { label: "AI CMD #", tone: "accent" as const };
+      case "explain":
+        return { label: "EXPLAIN ?", tone: "neutral" as const };
+      case "heavy":
+        return { label: "HEAVY !!", tone: "warn" as const };
+      case "empty":
+      default:
+        return { label: "AUTO 라우팅", tone: "accent" as const };
+    }
+  }, [inputBuffer]);
+
   const inputChips: Array<{ id: string; label: string; tone: "neutral" | "accent" | "success" | "warn" }> = [
-    { id: "route", label: "AUTO 라우팅", tone: "accent" },
+    { id: "route", label: routeChip.label, tone: routeChip.tone },
     { id: "cwd", label: `CWD ${compactPath(cwd)}`, tone: "neutral" },
     { id: "model", label: `MODEL ${compactModel(modelRef.current)}`, tone: "neutral" },
     { id: "term", label: terminalVisible ? "터미널 ON" : "터미널 OFF", tone: terminalVisible ? "success" : "warn" },
@@ -941,6 +963,9 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
             </span>
             <span style={{ fontSize: 10, color: "rgba(121,192,255,0.72)", flexShrink: 0 }}>
               @ 파일 첨부
+            </span>
+            <span style={{ fontSize: 10, color: "rgba(227,179,65,0.78)", flexShrink: 0 }}>
+              @local/@ollama/@xllm/@gemini
             </span>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
