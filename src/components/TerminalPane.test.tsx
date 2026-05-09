@@ -235,6 +235,24 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(screen.getByRole("button", { name: "quick-input-undo" })).toHaveAttribute("disabled");
   });
 
+  it("툴벨트 FORGET 버튼으로 CLEAR 복원 이력을 비운다", () => {
+    const { container } = render(<TerminalPane id="tab-1" />);
+    const input = container.querySelector("input")!;
+    expect(screen.getByRole("button", { name: "quick-input-forget-undo" })).toHaveAttribute("disabled");
+
+    fireEvent.change(input, { target: { value: "alpha" } });
+    fireEvent.click(screen.getByRole("button", { name: "quick-input-clear" }));
+    fireEvent.change(input, { target: { value: "beta" } });
+    fireEvent.click(screen.getByRole("button", { name: "quick-input-clear" }));
+    expect(screen.getByRole("button", { name: "quick-input-undo" })).toHaveTextContent("UNDO 2");
+    expect(screen.getByRole("button", { name: "quick-input-forget-undo" })).not.toHaveAttribute("disabled");
+
+    fireEvent.click(screen.getByRole("button", { name: "quick-input-forget-undo" }));
+    expect(screen.getByRole("button", { name: "quick-input-undo" })).toHaveTextContent("UNDO");
+    expect(screen.getByRole("button", { name: "quick-input-undo" })).toHaveAttribute("disabled");
+    expect(screen.getByRole("button", { name: "quick-input-forget-undo" })).toHaveAttribute("disabled");
+  });
+
   it("툴벨트 STOP 버튼으로 인터럽트(SIGINT)를 전송한다", async () => {
     render(<TerminalPane id="tab-1" />);
     fireEvent.click(screen.getByRole("button", { name: "quick-input-stop" }));
