@@ -208,6 +208,25 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(screen.getByRole("button", { name: "quick-input-undo" })).toHaveAttribute("disabled");
   });
 
+  it("툴벨트 RECALL 버튼으로 직전 실행 입력을 복원한다", async () => {
+    const { container } = render(<TerminalPane id="tab-1" />);
+    const input = container.querySelector("input")!;
+    expect(screen.getByRole("button", { name: "quick-input-recall" })).toHaveAttribute("disabled");
+
+    submitInput(container, "ls -la");
+    await waitFor(() => {
+      expect(invokeMock).toHaveBeenCalledWith("write_to_pty", {
+        id: "tab-1",
+        data: "ls -la\r",
+      });
+    });
+    expect(input).toHaveValue("");
+    expect(screen.getByRole("button", { name: "quick-input-recall" })).not.toHaveAttribute("disabled");
+
+    fireEvent.click(screen.getByRole("button", { name: "quick-input-recall" }));
+    expect(input).toHaveValue("ls -la");
+  });
+
   it("툴벨트 !/>>/? 버튼으로 입력 모드 프리픽스를 토글한다", () => {
     const { container } = render(<TerminalPane id="tab-1" />);
     const input = container.querySelector("input")!;

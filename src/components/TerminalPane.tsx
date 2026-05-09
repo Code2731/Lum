@@ -280,6 +280,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
   const [mentionLoading, setMentionLoading] = useState(false);
   const [mentionSelected, setMentionSelected] = useState(0);
   const [lastClearedInput, setLastClearedInput] = useState("");
+  const [lastSubmittedInput, setLastSubmittedInput] = useState("");
   const [showInputTip, setShowInputTip] = useState(() => {
     try {
       return localStorage.getItem(INPUT_TIP_DISMISSED_KEY) !== "1";
@@ -674,6 +675,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
   // 입력 라우팅: 기본=AI, 알려진 CLI=shell, !/@/#/?/>> = 명시적 오버라이드
   const handleSubmit = useCallback((rawInput: string) => {
     const route = routeInput(rawInput);
+    if (route.type !== "empty") setLastSubmittedInput(rawInput);
     clearAllOverlays();
     switch (route.type) {
       case "empty":
@@ -1014,6 +1016,12 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     setInputBuffer(lastClearedInput);
     setLastClearedInput("");
   }, [lastClearedInput]);
+  const recallSubmittedInputQuick = useCallback(() => {
+    if (!lastSubmittedInput) return;
+    warpInputRef.current?.setValue(lastSubmittedInput);
+    warpInputRef.current?.focus();
+    setInputBuffer(lastSubmittedInput);
+  }, [lastSubmittedInput]);
 
   const routeChip = useMemo(() => {
     const route = routeInput(inputBuffer);
@@ -1228,6 +1236,26 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               }}
             >
               UNDO
+            </button>
+            <button
+              type="button"
+              aria-label="quick-input-recall"
+              onClick={recallSubmittedInputQuick}
+              disabled={!lastSubmittedInput}
+              title={lastSubmittedInput ? "직전 실행 입력 복원" : "복원할 실행 입력이 없어 비활성화"}
+              style={{
+                fontSize: 10,
+                color: lastSubmittedInput ? "rgba(255,244,214,0.95)" : "rgba(255,255,255,0.42)",
+                border: lastSubmittedInput ? "1px solid rgba(227,179,65,0.6)" : "1px solid rgba(255,255,255,0.18)",
+                background: lastSubmittedInput ? "rgba(227,179,65,0.16)" : "rgba(255,255,255,0.06)",
+                borderRadius: 999,
+                padding: "1px 7px",
+                lineHeight: 1.25,
+                cursor: lastSubmittedInput ? "pointer" : "not-allowed",
+                flexShrink: 0,
+              }}
+            >
+              RECALL
             </button>
             <span style={{ fontSize: 10, color: "rgba(227,179,65,0.78)", flexShrink: 0 }}>
               @local/@ollama/@xllm/@gemini
