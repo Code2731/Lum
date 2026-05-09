@@ -166,6 +166,12 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(input).toHaveValue("@xllm 로그 요약해줘");
     expect(screen.getByText("AI @XLLM")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "quick-backend-xllm" })).toHaveAttribute("aria-pressed", "true");
+
+    // 같은 backend 버튼을 한 번 더 누르면 AUTO로 해제된다.
+    fireEvent.click(screen.getByRole("button", { name: "quick-backend-xllm" }));
+    expect(input).toHaveValue("로그 요약해줘");
+    expect(screen.getByText("AI AUTO")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "quick-backend-auto" })).toHaveAttribute("aria-pressed", "true");
   });
 
   it("툴벨트 AUTO 버튼으로 backend 강제 프리픽스를 해제", async () => {

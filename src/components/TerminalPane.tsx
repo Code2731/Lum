@@ -854,7 +854,10 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
 
   const applyBackendQuickPrefix = useCallback((backend: AiBackend) => {
     const current = warpInputRef.current?.getValue() ?? inputBuffer;
-    const next = applyBackendPrefixToInput(current, backend);
+    const active = detectBackendPrefixFromInput(current);
+    const next = active === backend
+      ? clearBackendPrefixFromInput(current)
+      : applyBackendPrefixToInput(current, backend);
     warpInputRef.current?.setValue(next);
     warpInputRef.current?.focus();
   }, [inputBuffer]);
@@ -1014,7 +1017,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               aria-label="quick-backend-local"
               aria-pressed={activeBackendPrefix === "local"}
               onClick={() => applyBackendQuickPrefix("local")}
-              title="로컬 백엔드로 전환 (Cmd/Ctrl+1)"
+              title="로컬 백엔드로 전환/해제 토글 (Cmd/Ctrl+1)"
               style={{
                 fontSize: 10,
                 color: "rgba(121,192,255,0.95)",
@@ -1034,7 +1037,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               aria-label="quick-backend-ollama"
               aria-pressed={activeBackendPrefix === "ollama"}
               onClick={() => applyBackendQuickPrefix("ollama")}
-              title="Ollama 백엔드로 전환 (Cmd/Ctrl+2)"
+              title="Ollama 백엔드로 전환/해제 토글 (Cmd/Ctrl+2)"
               style={{
                 fontSize: 10,
                 color: "rgba(111,227,132,0.95)",
@@ -1054,7 +1057,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               aria-label="quick-backend-xllm"
               aria-pressed={activeBackendPrefix === "xllm"}
               onClick={() => applyBackendQuickPrefix("xllm")}
-              title="xLLM 백엔드로 전환 (Cmd/Ctrl+3)"
+              title="xLLM 백엔드로 전환/해제 토글 (Cmd/Ctrl+3)"
               style={{
                 fontSize: 10,
                 color: "rgba(121,192,255,0.95)",
@@ -1074,7 +1077,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               aria-label="quick-backend-gemini"
               aria-pressed={activeBackendPrefix === "gemini"}
               onClick={() => applyBackendQuickPrefix("gemini")}
-              title="Gemini 백엔드로 전환 (Cmd/Ctrl+4)"
+              title="Gemini 백엔드로 전환/해제 토글 (Cmd/Ctrl+4)"
               style={{
                 fontSize: 10,
                 color: "rgba(233,194,105,0.96)",
