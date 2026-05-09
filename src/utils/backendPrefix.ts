@@ -23,3 +23,18 @@ export function applyBackendPrefixToInput(raw: string, backend: AiBackend): stri
 
   return body ? `@${backend} ${body}` : `@${backend} `;
 }
+
+/**
+ * 입력 문자열에서 backend prefix(@local/@ollama/@xllm/@gemini)만 제거한다.
+ * backend prefix가 없으면 원본 문자열을 그대로 반환한다.
+ */
+export function clearBackendPrefixFromInput(raw: string): string {
+  const src = raw.trimStart();
+  if (!src.startsWith("@")) return raw;
+  const stripped = src.slice(1).trimStart();
+  const firstSpace = stripped.indexOf(" ");
+  const firstToken = (firstSpace === -1 ? stripped : stripped.slice(0, firstSpace)).toLowerCase();
+  if (!BACKEND_ALIAS.has(firstToken)) return raw;
+  if (firstSpace === -1) return "";
+  return stripped.slice(firstSpace + 1).trim();
+}

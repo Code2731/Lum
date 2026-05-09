@@ -17,7 +17,7 @@ import TerminalContextMenu from "./TerminalContextMenu";
 import WarpInputBar, { type WarpInputBarHandle } from "./WarpInputBar";
 import AIBlockStream from "./AIBlockStream";
 import { routeInput, type AiBackend } from "../utils/inputRouter";
-import { applyBackendPrefixToInput } from "../utils/backendPrefix";
+import { applyBackendPrefixToInput, clearBackendPrefixFromInput } from "../utils/backendPrefix";
 import type { ChatMessage } from "../hooks/useAIChat";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import type { XtermTheme } from "../hooks/useTerminalTheme";
@@ -854,6 +854,12 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     warpInputRef.current?.setValue(next);
     warpInputRef.current?.focus();
   }, [inputBuffer]);
+  const clearBackendQuickPrefix = useCallback(() => {
+    const current = warpInputRef.current?.getValue() ?? inputBuffer;
+    const next = clearBackendPrefixFromInput(current);
+    warpInputRef.current?.setValue(next);
+    warpInputRef.current?.focus();
+  }, [inputBuffer]);
 
   const routeChip = useMemo(() => {
     const route = routeInput(inputBuffer);
@@ -975,6 +981,25 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
             <span style={{ fontSize: 10, color: "rgba(227,179,65,0.78)", flexShrink: 0 }}>
               @local/@ollama/@xllm/@gemini
             </span>
+            <button
+              type="button"
+              aria-label="quick-backend-auto"
+              onClick={clearBackendQuickPrefix}
+              title="백엔드 강제 해제 (Cmd/Ctrl+0)"
+              style={{
+                fontSize: 10,
+                color: "rgba(255,255,255,0.82)",
+                border: "1px solid rgba(255,255,255,0.25)",
+                background: "rgba(255,255,255,0.08)",
+                borderRadius: 999,
+                padding: "1px 7px",
+                lineHeight: 1.25,
+                cursor: "pointer",
+                flexShrink: 0,
+              }}
+            >
+              AUTO
+            </button>
             <button
               type="button"
               aria-label="quick-backend-local"

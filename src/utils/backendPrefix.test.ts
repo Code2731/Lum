@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyBackendPrefixToInput } from "./backendPrefix";
+import { applyBackendPrefixToInput, clearBackendPrefixFromInput } from "./backendPrefix";
 
 describe("applyBackendPrefixToInput", () => {
   it("일반 문장 앞에 backend prefix를 붙인다", () => {
@@ -16,5 +16,20 @@ describe("applyBackendPrefixToInput", () => {
 
   it("non-backend @강제AI 입력은 본문으로 취급한다", () => {
     expect(applyBackendPrefixToInput("@ls 왜 에러?", "gemini")).toBe("@gemini ls 왜 에러?");
+  });
+});
+
+describe("clearBackendPrefixFromInput", () => {
+  it("backend prefix를 제거하고 본문을 반환한다", () => {
+    expect(clearBackendPrefixFromInput("@local 로그 요약해줘")).toBe("로그 요약해줘");
+  });
+
+  it("backend prefix만 있으면 빈 문자열로 된다", () => {
+    expect(clearBackendPrefixFromInput("@ollama")).toBe("");
+  });
+
+  it("backend prefix가 없으면 원본을 유지한다", () => {
+    expect(clearBackendPrefixFromInput("@ls 왜 에러?")).toBe("@ls 왜 에러?");
+    expect(clearBackendPrefixFromInput("plain text")).toBe("plain text");
   });
 });

@@ -163,6 +163,13 @@ describe("WarpInputBar — dumb input, 라우팅은 상위에서", () => {
     expect(input).toHaveValue("@local src/utils.ts 함수 수정해줘");
   });
 
+  it("Cmd/Ctrl+0으로 backend 프리픽스를 해제한다", () => {
+    const { input } = setup();
+    fireEvent.change(input, { target: { value: "@xllm 로그 요약해줘" } });
+    fireEvent.keyDown(input, { key: "0", ctrlKey: true });
+    expect(input).toHaveValue("로그 요약해줘");
+  });
+
   it("ref.setValue로 외부 설정", () => {
     const { input, ref, onChange } = setup();
     act(() => { ref.current?.setValue("git status"); });

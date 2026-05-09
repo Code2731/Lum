@@ -1,7 +1,7 @@
 import React, { useEffect, useImperativeHandle, useRef, useState, forwardRef } from "react";
 import { Mic, MicOff } from "lucide-react";
 import { tokenizeShell, TOKEN_COLORS } from "../utils/shellSyntax";
-import { applyBackendPrefixToInput } from "../utils/backendPrefix";
+import { applyBackendPrefixToInput, clearBackendPrefixFromInput } from "../utils/backendPrefix";
 import { useVoiceInput } from "../hooks/useVoiceInput";
 
 export interface WarpInputBarHandle {
@@ -86,6 +86,11 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
       setInput(next);
       onChange?.(next);
     };
+    const clearBackendPrefix = () => {
+      const next = clearBackendPrefixFromInput(input);
+      setInput(next);
+      onChange?.(next);
+    };
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
       if (isComposing || e.nativeEvent.isComposing) return;
@@ -114,6 +119,11 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
         if (e.key === "4" || e.code === "Digit4") {
           e.preventDefault();
           applyBackendPrefix("gemini");
+          return;
+        }
+        if (e.key === "0" || e.code === "Digit0") {
+          e.preventDefault();
+          clearBackendPrefix();
           return;
         }
       }
