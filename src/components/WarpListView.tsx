@@ -879,6 +879,13 @@ const WarpListView: React.FC<Props> = ({
         }
         return;
       }
+      if (mod && e.shiftKey && (e.key === "u" || e.key === "U")) {
+        if (timelinePinnedIds.size > 0) {
+          e.preventDefault();
+          clearPinnedTimeline();
+        }
+        return;
+      }
       if (e.altKey && (e.key === "m" || e.key === "M")) {
         if (timelinePinnedIds.size > 0) {
           e.preventDefault();
@@ -1350,7 +1357,7 @@ const WarpListView: React.FC<Props> = ({
                           type="button"
                           className="text-[10px] px-2 py-0.5 rounded border border-amber-300/30 text-amber-200 hover:bg-amber-300/12 disabled:opacity-40"
                           onClick={clearPinnedTimeline}
-                          title="Alt+Shift+U"
+                          title="Alt+Shift+U / Cmd/Ctrl+Shift+U"
                           disabled={timelinePinnedIds.size === 0}
                         >
                           핀 전체 해제
@@ -1469,7 +1476,7 @@ const WarpListView: React.FC<Props> = ({
                           <div><span className="text-cyan-50">Alt+Shift+P/O / Cmd/Ctrl+Shift+P/O</span> 현재 목록 일괄 핀/핀해제</div>
                           <div><span className="text-cyan-50">Alt+M / Cmd/Ctrl+M</span> 핀만 보기 토글</div>
                           <div><span className="text-cyan-50">Alt+J / Alt+Shift+J / Cmd/Ctrl+J / Cmd/Ctrl+Shift+J</span> 선택 항목 핀/핀해제</div>
-                          <div><span className="text-cyan-50">Alt+Shift+U</span> 핀 전체 해제</div>
+                          <div><span className="text-cyan-50">Alt+Shift+U / Cmd/Ctrl+Shift+U</span> 핀 전체 해제</div>
                           <div><span className="text-cyan-50">Alt+Q / Alt+K / Alt+P / Alt+D</span> 큐 검색/접기/일시정지/완료리셋</div>
                           <div><span className="text-cyan-50">Alt+Z / Cmd/Ctrl+Z</span> 큐 변경 되돌리기</div>
                           <div><span className="text-cyan-50">Alt+Shift+Z / Cmd/Ctrl+Shift+Z</span> 큐 변경 다시실행</div>
