@@ -837,6 +837,20 @@ const WarpListView: React.FC<Props> = ({
         }
         return;
       }
+      if (e.altKey && (e.key === "j" || e.key === "J")) {
+        if (e.shiftKey) {
+          if (selectedTimelineIds.length > 0) {
+            e.preventDefault();
+            unpinSelectedTimeline();
+          }
+          return;
+        }
+        if (selectedTimelineIds.length > 0) {
+          e.preventDefault();
+          pinSelectedTimeline();
+        }
+        return;
+      }
       if (e.altKey && e.shiftKey && (e.key === "u" || e.key === "U")) {
         if (timelinePinnedIds.size > 0) {
           e.preventDefault();
@@ -941,6 +955,8 @@ const WarpListView: React.FC<Props> = ({
     resetTimelineViewFilters,
     timelinePinnedIds.size,
     clearPinnedTimeline,
+    pinSelectedTimeline,
+    unpinSelectedTimeline,
     pinFilteredTimeline,
     unpinFilteredTimeline,
     onClearCompareResults,
@@ -1244,6 +1260,7 @@ const WarpListView: React.FC<Props> = ({
                           className="text-[10px] px-2 py-0.5 rounded border border-amber-300/30 text-amber-200 hover:bg-amber-300/12 disabled:opacity-40"
                           onClick={pinSelectedTimeline}
                           disabled={timelineSelectedIds.size === 0}
+                          title="Alt+J"
                         >
                           핀 선택
                         </button>
@@ -1252,6 +1269,7 @@ const WarpListView: React.FC<Props> = ({
                           className="text-[10px] px-2 py-0.5 rounded border border-amber-300/30 text-amber-200 hover:bg-amber-300/12 disabled:opacity-40"
                           onClick={unpinSelectedTimeline}
                           disabled={timelineSelectedIds.size === 0}
+                          title="Alt+Shift+J"
                         >
                           핀 해제
                         </button>
@@ -1408,6 +1426,7 @@ const WarpListView: React.FC<Props> = ({
                           <div><span className="text-cyan-50">Alt+S</span> 타임라인 정렬 토글</div>
                           <div><span className="text-cyan-50">Alt+Shift+P / Alt+Shift+O</span> 현재 목록 일괄 핀/핀해제</div>
                           <div><span className="text-cyan-50">Alt+M</span> 핀만 보기 토글</div>
+                          <div><span className="text-cyan-50">Alt+J / Alt+Shift+J</span> 선택 항목 핀/핀해제</div>
                           <div><span className="text-cyan-50">Alt+Shift+U</span> 핀 전체 해제</div>
                           <div><span className="text-cyan-50">Alt+Q / Alt+K / Alt+P / Alt+D</span> 큐 검색/접기/일시정지/완료리셋</div>
                           <div><span className="text-cyan-50">Alt+Z / Cmd/Ctrl+Z</span> 큐 변경 되돌리기</div>

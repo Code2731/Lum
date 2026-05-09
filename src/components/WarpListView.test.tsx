@@ -2670,6 +2670,32 @@ describe("WarpListView delta actions", () => {
     expect(screen.queryByText("PIN")).not.toBeInTheDocument();
   });
 
+  it("Δ Timeline 선택 항목 핀/핀해제 단축키(Alt+J/Alt+Shift+J)", () => {
+    render(
+      <WarpListView
+        blocks={blocks}
+        compareResultByBlock={{
+          b2: {
+            added: 1,
+            removed: 1,
+            preview: "test changed",
+            addedLines: ["new line"],
+            removedLines: ["old line"],
+            comparedAt: now,
+          },
+        }}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Δ Timeline (1)" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "npm test 선택" }));
+
+    fireEvent.keyDown(window, { key: "j", altKey: true });
+    expect(screen.getByText("PIN")).toBeInTheDocument();
+
+    fireEvent.keyDown(window, { key: "J", altKey: true, shiftKey: true });
+    expect(screen.queryByText("PIN")).not.toBeInTheDocument();
+  });
+
   it("Δ Timeline 핀만 보기 필터", () => {
     render(
       <WarpListView
