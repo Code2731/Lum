@@ -350,6 +350,25 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(screen.getByRole("button", { name: "quick-input-recall" })).toHaveTextContent("RECALL pwd");
   });
 
+  it("툴벨트 MERGE 버튼으로 현재 입력 뒤에 직전 실행 입력을 붙인다", async () => {
+    const { container } = render(<TerminalPane id="tab-1" />);
+    const input = container.querySelector("input")!;
+    expect(screen.getByRole("button", { name: "quick-input-merge-recall" })).toHaveAttribute("disabled");
+
+    submitInput(container, "ls -la");
+    await waitFor(() => {
+      expect(invokeMock).toHaveBeenCalledWith("write_to_pty", {
+        id: "tab-1",
+        data: "ls -la\r",
+      });
+    });
+    expect(screen.getByRole("button", { name: "quick-input-merge-recall" })).not.toHaveAttribute("disabled");
+
+    fireEvent.change(input, { target: { value: "echo done" } });
+    fireEvent.click(screen.getByRole("button", { name: "quick-input-merge-recall" }));
+    expect(input).toHaveValue("echo done ls -la");
+  });
+
   it("툴벨트 PLAIN 버튼으로 강제 프리픽스를 제거하고 일반 입력으로 전환한다", () => {
     const { container } = render(<TerminalPane id="tab-1" />);
     const input = container.querySelector("input")!;
