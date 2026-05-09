@@ -230,6 +230,16 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(screen.getByRole("button", { name: "quick-mode-ai-cmd" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByRole("button", { name: "quick-mode-explain" })).toHaveAttribute("aria-pressed", "false");
     expect(screen.getByText("AI CMD #")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "quick-mode-force-ai" }));
+    expect(input).toHaveValue("@로그 요약해줘");
+    expect(screen.getByRole("button", { name: "quick-mode-force-ai" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "quick-mode-ai-cmd" })).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByText("AI AUTO")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "quick-mode-force-ai" }));
+    expect(input).toHaveValue("로그 요약해줘");
+    expect(screen.getByRole("button", { name: "quick-mode-force-ai" })).toHaveAttribute("aria-pressed", "false");
   });
 
   it("툴벨트 이전/다음 버튼으로 backend를 순환한다", () => {

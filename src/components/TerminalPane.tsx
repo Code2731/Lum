@@ -902,6 +902,10 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
       .replace(/^#\s?/, "")
       .replace(/^!\s?/, "")
   ), []);
+  const clearForceAiPrefix = useCallback((raw: string) => {
+    if (detectBackendPrefixFromInput(raw)) return clearBackendPrefixFromInput(raw);
+    return raw.replace(/^@\s?/, "");
+  }, []);
   const toggleQuickModePrefix = useCallback((mode: "shell" | "agent" | "explain" | "aiCmd") => {
     const current = warpInputRef.current?.getValue() ?? inputBuffer;
     const isShell = current.startsWith("!");
@@ -922,6 +926,15 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     warpInputRef.current?.setValue(next);
     warpInputRef.current?.focus();
   }, [clearQuickModePrefix, inputBuffer]);
+  const toggleForceAiPrefix = useCallback(() => {
+    const current = warpInputRef.current?.getValue() ?? inputBuffer;
+    const hasBackend = detectBackendPrefixFromInput(current) !== null;
+    const isForceAi = !hasBackend && /^@\s?/.test(current);
+    const base = clearForceAiPrefix(clearQuickModePrefix(current));
+    const next = isForceAi ? base : `@${base}`;
+    warpInputRef.current?.setValue(next);
+    warpInputRef.current?.focus();
+  }, [clearForceAiPrefix, clearQuickModePrefix, inputBuffer]);
   const cycleBackendQuickPrefix = useCallback((dir: 1 | -1) => {
     const current = warpInputRef.current?.getValue() ?? inputBuffer;
     const order: AiBackend[] = ["local", "ollama", "xllm", "gemini"];
@@ -967,6 +980,8 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
   const quickModeAgentActive = /^>>\s?/.test(inputBuffer);
   const quickModeExplainActive = /^\?\s?/.test(inputBuffer);
   const quickModeAiCmdActive = /^#\s?/.test(inputBuffer);
+  const quickModeForceAiActive =
+    detectBackendPrefixFromInput(inputBuffer) === null && /^@\s?/.test(inputBuffer);
   const triggerMentionAttach = useCallback(() => {
     const current = warpInputRef.current?.getValue() ?? inputBuffer;
     if (/(?:^|\s)@[^\s@]*$/.test(current)) {
@@ -1264,6 +1279,26 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               }}
             >
               # Cmd
+            </button>
+            <button
+              type="button"
+              aria-label="quick-mode-force-ai"
+              aria-pressed={quickModeForceAiActive}
+              onClick={toggleForceAiPrefix}
+              title="강제 AI 챗 접두어 토글 (@)"
+              style={{
+                fontSize: 10,
+                color: quickModeForceAiActive ? "rgba(215,228,255,0.96)" : "rgba(255,255,255,0.86)",
+                border: quickModeForceAiActive ? "1px solid rgba(121,192,255,0.66)" : "1px solid rgba(255,255,255,0.24)",
+                background: quickModeForceAiActive ? "rgba(121,192,255,0.22)" : "rgba(255,255,255,0.08)",
+                borderRadius: 999,
+                padding: "1px 7px",
+                lineHeight: 1.25,
+                cursor: "pointer",
+                flexShrink: 0,
+              }}
+            >
+              @ AI
             </button>
             <button
               type="button"
