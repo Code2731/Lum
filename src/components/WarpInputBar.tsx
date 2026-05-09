@@ -1,7 +1,11 @@
 import React, { useEffect, useImperativeHandle, useRef, useState, forwardRef } from "react";
 import { Mic, MicOff } from "lucide-react";
 import { tokenizeShell, TOKEN_COLORS } from "../utils/shellSyntax";
-import { applyBackendPrefixToInput, clearBackendPrefixFromInput } from "../utils/backendPrefix";
+import {
+  applyBackendPrefixToInput,
+  clearBackendPrefixFromInput,
+  detectBackendPrefixFromInput,
+} from "../utils/backendPrefix";
 import { useVoiceInput } from "../hooks/useVoiceInput";
 
 export interface WarpInputBarHandle {
@@ -130,6 +134,15 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
 
       if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
+        // @backend 단독 입력은 실행하지 않고 "입력 준비 상태"를 유지.
+        // alias(@embedded/@cloud)는 canonical(@local/@gemini)로 정규화.
+        const backend = detectBackendPrefixFromInput(input);
+        if (backend && clearBackendPrefixFromInput(input) === "") {
+          const normalized = `@${backend} `;
+          setInput(normalized);
+          onChange?.(normalized);
+          return;
+        }
         const trimmed = input.trim();
         if (trimmed) {
           history.current.push(input);

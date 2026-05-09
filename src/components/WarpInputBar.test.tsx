@@ -69,6 +69,22 @@ describe("WarpInputBar — dumb input, 라우팅은 상위에서", () => {
     expect(input).toHaveValue("");
   });
 
+  it("@backend 단독 입력 + Enter는 실행하지 않고 입력을 유지", () => {
+    const { input, onSubmit } = setup();
+    fireEvent.change(input, { target: { value: "@local" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+    expect(onSubmit).not.toHaveBeenCalled();
+    expect(input).toHaveValue("@local ");
+  });
+
+  it("@embedded 단독 입력 + Enter는 canonical(@local)로 정규화", () => {
+    const { input, onSubmit } = setup();
+    fireEvent.change(input, { target: { value: "@embedded" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+    expect(onSubmit).not.toHaveBeenCalled();
+    expect(input).toHaveValue("@local ");
+  });
+
   it(">> 입력도 그대로 onSubmit에 전달 (라우팅은 부모가)", () => {
     const { input, onSubmit } = setup();
     fireEvent.change(input, { target: { value: ">> 파일 목록" } });
