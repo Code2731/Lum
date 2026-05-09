@@ -236,7 +236,7 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(screen.getByRole("button", { name: "quick-backend-back" })).toHaveTextContent("BACK @GEMINI");
   });
 
-  it("툴벨트 AUTO 버튼으로 backend 강제 프리픽스를 해제", async () => {
+  it("툴벨트 AUTO 버튼으로 backend 강제 프리픽스를 해제하고, AUTO 상태 재클릭 시 LAST를 복원", async () => {
     const { container } = render(<TerminalPane id="tab-1" />);
     const input = container.querySelector("input")!;
     fireEvent.change(input, { target: { value: "@gemini 로그 요약해줘" } });
@@ -245,6 +245,10 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(screen.getByText("AI AUTO")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "quick-backend-auto" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByRole("button", { name: "quick-backend-gemini" })).toHaveAttribute("aria-pressed", "false");
+
+    fireEvent.click(screen.getByRole("button", { name: "quick-backend-auto" }));
+    expect(input).toHaveValue("@gemini 로그 요약해줘");
+    expect(screen.getByText("AI @GEMINI")).toBeInTheDocument();
   });
 
   it("! 강제 shell → 자연어여도 PTY", async () => {

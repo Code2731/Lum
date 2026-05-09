@@ -852,6 +852,23 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     return false;
   }, []);
 
+  const activeBackendPrefix = useMemo(
+    () => detectBackendPrefixFromInput(inputBuffer),
+    [inputBuffer],
+  );
+  const [backendTrail, setBackendTrail] = useState<{ last: AiBackend; prev: AiBackend | null }>({
+    last: "local",
+    prev: null,
+  });
+  useEffect(() => {
+    if (activeBackendPrefix) {
+      setBackendTrail((trail) => {
+        if (trail.last === activeBackendPrefix) return trail;
+        return { last: activeBackendPrefix, prev: trail.last };
+      });
+    }
+  }, [activeBackendPrefix]);
+
   const applyBackendQuickPrefix = useCallback((backend: AiBackend) => {
     const current = warpInputRef.current?.getValue() ?? inputBuffer;
     const active = detectBackendPrefixFromInput(current);
@@ -863,10 +880,13 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
   }, [inputBuffer]);
   const clearBackendQuickPrefix = useCallback(() => {
     const current = warpInputRef.current?.getValue() ?? inputBuffer;
-    const next = clearBackendPrefixFromInput(current);
+    const active = detectBackendPrefixFromInput(current);
+    const next = active === null
+      ? applyBackendPrefixToInput(current, backendTrail.last)
+      : clearBackendPrefixFromInput(current);
     warpInputRef.current?.setValue(next);
     warpInputRef.current?.focus();
-  }, [inputBuffer]);
+  }, [backendTrail.last, inputBuffer]);
   const cycleBackendQuickPrefix = useCallback((dir: 1 | -1) => {
     const current = warpInputRef.current?.getValue() ?? inputBuffer;
     const order: AiBackend[] = ["local", "ollama", "xllm", "gemini"];
@@ -891,22 +911,6 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     warpInputRef.current?.setValue(next);
     warpInputRef.current?.focus();
   }, [inputBuffer]);
-  const activeBackendPrefix = useMemo(
-    () => detectBackendPrefixFromInput(inputBuffer),
-    [inputBuffer],
-  );
-  const [backendTrail, setBackendTrail] = useState<{ last: AiBackend; prev: AiBackend | null }>({
-    last: "local",
-    prev: null,
-  });
-  useEffect(() => {
-    if (activeBackendPrefix) {
-      setBackendTrail((trail) => {
-        if (trail.last === activeBackendPrefix) return trail;
-        return { last: activeBackendPrefix, prev: trail.last };
-      });
-    }
-  }, [activeBackendPrefix]);
   const restorePrevBackendQuickPrefix = useCallback(() => {
     if (!backendTrail.prev) return;
     const current = warpInputRef.current?.getValue() ?? inputBuffer;
@@ -1091,7 +1095,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               aria-label="quick-backend-auto"
               aria-pressed={activeBackendPrefix === null}
               onClick={clearBackendQuickPrefix}
-              title="백엔드 강제 해제 (Cmd/Ctrl+0)"
+              title="백엔드 강제 해제 (Cmd/Ctrl+0) · AUTO 상태에서 다시 누르면 LAST 복원"
               style={{
                 fontSize: 10,
                 color: activeBackendPrefix === null ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.82)",
