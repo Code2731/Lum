@@ -285,7 +285,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
   const [mentionEntries, setMentionEntries] = useState<DirEntry[]>([]);
   const [mentionLoading, setMentionLoading] = useState(false);
   const [mentionSelected, setMentionSelected] = useState(0);
-  const [lastClearedInput, setLastClearedInput] = useState("");
+  const [clearedInputStack, setClearedInputStack] = useState<string[]>([]);
   const [lastSubmittedInput, setLastSubmittedInput] = useState("");
   const [showInputTip, setShowInputTip] = useState(() => {
     try {
@@ -1027,6 +1027,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
   const lastSubmittedPreview = compactInputPreview(lastSubmittedInput);
   const recallButtonLabel = lastSubmittedPreview ? `RECALL ${lastSubmittedPreview}` : "RECALL";
   const rerunButtonLabel = lastSubmittedPreview ? `RERUN ${lastSubmittedPreview}` : "RERUN";
+  const undoButtonLabel = clearedInputStack.length > 0 ? `UNDO ${clearedInputStack.length}` : "UNDO";
   const triggerMentionAttach = useCallback(() => {
     const current = warpInputRef.current?.getValue() ?? inputBuffer;
     if (/(?:^|\s)@[^\s@]*$/.test(current)) {
@@ -1040,19 +1041,22 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
   }, [inputBuffer]);
   const clearInputQuick = useCallback(() => {
     const current = warpInputRef.current?.getValue() ?? inputBuffer;
-    if (current !== "") setLastClearedInput(current);
+    if (current !== "") {
+      setClearedInputStack((prev) => [current, ...prev].slice(0, 5));
+    }
     clearAllOverlays();
     warpInputRef.current?.setValue("");
     warpInputRef.current?.focus();
     setInputBuffer("");
   }, [clearAllOverlays, inputBuffer]);
   const restoreInputQuick = useCallback(() => {
-    if (!lastClearedInput) return;
-    warpInputRef.current?.setValue(lastClearedInput);
+    if (clearedInputStack.length === 0) return;
+    const [head, ...rest] = clearedInputStack;
+    warpInputRef.current?.setValue(head);
     warpInputRef.current?.focus();
-    setInputBuffer(lastClearedInput);
-    setLastClearedInput("");
-  }, [lastClearedInput]);
+    setInputBuffer(head);
+    setClearedInputStack(rest);
+  }, [clearedInputStack]);
   const recallSubmittedInputQuick = useCallback(() => {
     if (!lastSubmittedInput) return;
     warpInputRef.current?.setValue(lastSubmittedInput);
@@ -1281,21 +1285,21 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               type="button"
               aria-label="quick-input-undo"
               onClick={restoreInputQuick}
-              disabled={!lastClearedInput}
-              title={lastClearedInput ? "직전 CLEAR 입력 복원" : "복원할 입력이 없어 비활성화"}
+              disabled={clearedInputStack.length === 0}
+              title={clearedInputStack.length > 0 ? "직전 CLEAR 입력 복원" : "복원할 입력이 없어 비활성화"}
               style={{
                 fontSize: 10,
-                color: lastClearedInput ? "rgba(220,247,225,0.96)" : "rgba(255,255,255,0.42)",
-                border: lastClearedInput ? "1px solid rgba(63,185,80,0.6)" : "1px solid rgba(255,255,255,0.18)",
-                background: lastClearedInput ? "rgba(63,185,80,0.18)" : "rgba(255,255,255,0.06)",
+                color: clearedInputStack.length > 0 ? "rgba(220,247,225,0.96)" : "rgba(255,255,255,0.42)",
+                border: clearedInputStack.length > 0 ? "1px solid rgba(63,185,80,0.6)" : "1px solid rgba(255,255,255,0.18)",
+                background: clearedInputStack.length > 0 ? "rgba(63,185,80,0.18)" : "rgba(255,255,255,0.06)",
                 borderRadius: 999,
                 padding: "1px 7px",
                 lineHeight: 1.25,
-                cursor: lastClearedInput ? "pointer" : "not-allowed",
+                cursor: clearedInputStack.length > 0 ? "pointer" : "not-allowed",
                 flexShrink: 0,
               }}
             >
-              UNDO
+              {undoButtonLabel}
             </button>
             <button
               type="button"

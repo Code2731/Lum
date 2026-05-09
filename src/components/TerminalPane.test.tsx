@@ -196,15 +196,42 @@ describe("TerminalPane — 입력 라우팅", () => {
     const input = container.querySelector("input")!;
     fireEvent.change(input, { target: { value: "@xllm # 로그 요약해줘" } });
     expect(input).toHaveValue("@xllm # 로그 요약해줘");
+    expect(screen.getByRole("button", { name: "quick-input-undo" })).toHaveTextContent("UNDO");
     expect(screen.getByRole("button", { name: "quick-input-undo" })).toHaveAttribute("disabled");
 
     fireEvent.click(screen.getByRole("button", { name: "quick-input-clear" }));
     expect(input).toHaveValue("");
     expect(screen.getByText("AUTO 라우팅")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "quick-input-undo" })).toHaveTextContent("UNDO 1");
     expect(screen.getByRole("button", { name: "quick-input-undo" })).not.toHaveAttribute("disabled");
 
     fireEvent.click(screen.getByRole("button", { name: "quick-input-undo" }));
     expect(input).toHaveValue("@xllm # 로그 요약해줘");
+    expect(screen.getByRole("button", { name: "quick-input-undo" })).toHaveTextContent("UNDO");
+    expect(screen.getByRole("button", { name: "quick-input-undo" })).toHaveAttribute("disabled");
+  });
+
+  it("툴벨트 UNDO는 다중 CLEAR 이력을 LIFO 순서로 복원한다", () => {
+    const { container } = render(<TerminalPane id="tab-1" />);
+    const input = container.querySelector("input")!;
+
+    fireEvent.change(input, { target: { value: "first" } });
+    fireEvent.click(screen.getByRole("button", { name: "quick-input-clear" }));
+    fireEvent.change(input, { target: { value: "second" } });
+    fireEvent.click(screen.getByRole("button", { name: "quick-input-clear" }));
+    expect(screen.getByRole("button", { name: "quick-input-undo" })).toHaveTextContent("UNDO 2");
+
+    fireEvent.click(screen.getByRole("button", { name: "quick-input-undo" }));
+    expect(input).toHaveValue("second");
+    expect(screen.getByRole("button", { name: "quick-input-undo" })).toHaveTextContent("UNDO 1");
+
+    fireEvent.click(screen.getByRole("button", { name: "quick-input-clear" }));
+    fireEvent.click(screen.getByRole("button", { name: "quick-input-undo" }));
+    expect(input).toHaveValue("second");
+    expect(screen.getByRole("button", { name: "quick-input-undo" })).toHaveTextContent("UNDO 1");
+
+    fireEvent.click(screen.getByRole("button", { name: "quick-input-undo" }));
+    expect(input).toHaveValue("first");
     expect(screen.getByRole("button", { name: "quick-input-undo" })).toHaveAttribute("disabled");
   });
 
