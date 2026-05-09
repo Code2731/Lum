@@ -138,6 +138,31 @@ describe("WarpInputBar — dumb input, 라우팅은 상위에서", () => {
     expect(onChange).toHaveBeenLastCalledWith("");
   });
 
+  it("Cmd/Ctrl+1로 @local 프리픽스 적용", () => {
+    const { input } = setup();
+    fireEvent.change(input, { target: { value: "로그 요약해줘" } });
+    fireEvent.keyDown(input, { key: "1", ctrlKey: true });
+    expect(input).toHaveValue("@local 로그 요약해줘");
+  });
+
+  it("Cmd/Ctrl+2/3/4로 @ollama/@xllm/@gemini 프리픽스 적용", () => {
+    const { input } = setup();
+    fireEvent.change(input, { target: { value: "what is closure?" } });
+    fireEvent.keyDown(input, { key: "2", ctrlKey: true });
+    expect(input).toHaveValue("@ollama what is closure?");
+    fireEvent.keyDown(input, { key: "3", ctrlKey: true });
+    expect(input).toHaveValue("@xllm what is closure?");
+    fireEvent.keyDown(input, { key: "4", ctrlKey: true });
+    expect(input).toHaveValue("@gemini what is closure?");
+  });
+
+  it("기존 @backend 프리픽스는 Cmd/Ctrl+숫자로 교체", () => {
+    const { input } = setup();
+    fireEvent.change(input, { target: { value: "@ollama src/utils.ts 함수 수정해줘" } });
+    fireEvent.keyDown(input, { key: "1", ctrlKey: true });
+    expect(input).toHaveValue("@local src/utils.ts 함수 수정해줘");
+  });
+
   it("ref.setValue로 외부 설정", () => {
     const { input, ref, onChange } = setup();
     act(() => { ref.current?.setValue("git status"); });

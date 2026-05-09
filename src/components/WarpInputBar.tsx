@@ -26,6 +26,8 @@ interface Props {
   }>;
 }
 
+const BACKEND_ALIAS = new Set(["local", "embedded", "ollama", "xllm", "gemini", "cloud"]);
+
 const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
   ({ fontFamily, fontSize, onSubmit, onInterrupt, onTab, onChange, onKeyDownIntercept, voiceEnabled = true, contextChips = [] }, ref) => {
     const [input, setInput] = useState("");
@@ -80,11 +82,53 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
       input === "" ? "✨" :
       looksShell   ? "$" : "✨";
 
+    const applyBackendPrefix = (backend: "local" | "ollama" | "xllm" | "gemini") => {
+      const src = input.trimStart();
+      let body = src.trim();
+      if (src.startsWith("@")) {
+        const stripped = src.slice(1).trimStart();
+        const firstSpace = stripped.indexOf(" ");
+        const firstToken = (firstSpace === -1 ? stripped : stripped.slice(0, firstSpace)).toLowerCase();
+        if (BACKEND_ALIAS.has(firstToken)) {
+          body = firstSpace === -1 ? "" : stripped.slice(firstSpace + 1).trim();
+        } else {
+          body = stripped.trim();
+        }
+      }
+      const next = body ? `@${backend} ${body}` : `@${backend} `;
+      setInput(next);
+      onChange?.(next);
+    };
+
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
       if (isComposing || e.nativeEvent.isComposing) return;
       if (onKeyDownIntercept?.(e, input)) {
         e.preventDefault();
         return;
+      }
+
+      const mod = e.metaKey || e.ctrlKey;
+      if (mod && !e.altKey && !e.shiftKey) {
+        if (e.key === "1" || e.code === "Digit1") {
+          e.preventDefault();
+          applyBackendPrefix("local");
+          return;
+        }
+        if (e.key === "2" || e.code === "Digit2") {
+          e.preventDefault();
+          applyBackendPrefix("ollama");
+          return;
+        }
+        if (e.key === "3" || e.code === "Digit3") {
+          e.preventDefault();
+          applyBackendPrefix("xllm");
+          return;
+        }
+        if (e.key === "4" || e.code === "Digit4") {
+          e.preventDefault();
+          applyBackendPrefix("gemini");
+          return;
+        }
       }
 
       if (e.key === "Enter" && !e.shiftKey) {
