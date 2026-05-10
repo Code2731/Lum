@@ -1049,6 +1049,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
   const canTrimInput = inputBuffer !== inputBuffer.trim();
   const canSquashInputSpaces = /\s{2,}/.test(inputBuffer);
   const canCleanInput = inputBuffer !== inputBuffer.trim().replace(/\s{2,}/g, " ");
+  const canResetAllQuick = inputBuffer !== "" || clearedInputStack.length > 0 || lastSubmittedInput !== "";
   const lastSubmittedPreview = compactInputPreview(lastSubmittedInput);
   const recallButtonLabel = lastSubmittedPreview ? `RECALL ${lastSubmittedPreview}` : "RECALL";
   const rerunButtonLabel = lastSubmittedPreview ? `RERUN ${lastSubmittedPreview}` : "RERUN";
@@ -1080,6 +1081,15 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     warpInputRef.current?.focus();
     setInputBuffer("");
   }, [clearAllOverlays, inputBuffer, pushUndoSnapshot]);
+  const resetAllInputStateQuick = useCallback(() => {
+    if (!canResetAllQuick) return;
+    clearAllOverlays();
+    warpInputRef.current?.setValue("");
+    warpInputRef.current?.focus();
+    setInputBuffer("");
+    setClearedInputStack([]);
+    setLastSubmittedInput("");
+  }, [canResetAllQuick, clearAllOverlays]);
   const restoreInputQuick = useCallback(() => {
     if (clearedInputStack.length === 0) return;
     const [head, ...rest] = clearedInputStack;
@@ -1356,6 +1366,26 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               }}
             >
               CLEAR
+            </button>
+            <button
+              type="button"
+              aria-label="quick-input-reset-all"
+              onClick={resetAllInputStateQuick}
+              disabled={!canResetAllQuick}
+              title={canResetAllQuick ? "입력/UNDO/RECALL 상태 전체 초기화" : "초기화할 상태가 없어 비활성화"}
+              style={{
+                fontSize: 10,
+                color: canResetAllQuick ? "rgba(255,225,222,0.95)" : "rgba(255,255,255,0.42)",
+                border: canResetAllQuick ? "1px solid rgba(255,123,114,0.58)" : "1px solid rgba(255,255,255,0.18)",
+                background: canResetAllQuick ? "rgba(255,123,114,0.14)" : "rgba(255,255,255,0.06)",
+                borderRadius: 999,
+                padding: "1px 7px",
+                lineHeight: 1.25,
+                cursor: canResetAllQuick ? "pointer" : "not-allowed",
+                flexShrink: 0,
+              }}
+            >
+              RESET
             </button>
             <button
               type="button"

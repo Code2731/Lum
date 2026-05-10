@@ -211,6 +211,33 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(screen.getByRole("button", { name: "quick-input-undo" })).toHaveAttribute("disabled");
   });
 
+  it("툴벨트 RESET 버튼으로 입력/UNDO/RECALL 상태를 한 번에 초기화한다", async () => {
+    const { container } = render(<TerminalPane id="tab-1" />);
+    const input = container.querySelector("input")!;
+    expect(screen.getByRole("button", { name: "quick-input-reset-all" })).toHaveAttribute("disabled");
+
+    submitInput(container, "ls -la");
+    await waitFor(() => {
+      expect(invokeMock).toHaveBeenCalledWith("write_to_pty", {
+        id: "tab-1",
+        data: "ls -la\r",
+      });
+    });
+    fireEvent.change(input, { target: { value: "temp" } });
+    fireEvent.click(screen.getByRole("button", { name: "quick-input-clear" }));
+    expect(screen.getByRole("button", { name: "quick-input-undo" })).not.toHaveAttribute("disabled");
+    expect(screen.getByRole("button", { name: "quick-input-recall" })).not.toHaveAttribute("disabled");
+
+    fireEvent.click(screen.getByRole("button", { name: "quick-input-reset-all" }));
+    expect(input).toHaveValue("");
+    expect(screen.getByRole("button", { name: "quick-input-undo" })).toHaveTextContent("UNDO");
+    expect(screen.getByRole("button", { name: "quick-input-undo" })).toHaveAttribute("disabled");
+    expect(screen.getByRole("button", { name: "quick-input-recall" })).toHaveTextContent("RECALL");
+    expect(screen.getByRole("button", { name: "quick-input-recall" })).toHaveAttribute("disabled");
+    expect(screen.getByRole("button", { name: "quick-input-rerun" })).toHaveAttribute("disabled");
+    expect(screen.getByRole("button", { name: "quick-input-reset-all" })).toHaveAttribute("disabled");
+  });
+
   it("툴벨트 UNDO는 다중 CLEAR 이력을 LIFO 순서로 복원한다", () => {
     const { container } = render(<TerminalPane id="tab-1" />);
     const input = container.querySelector("input")!;
