@@ -299,6 +299,21 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(input).toHaveValue("ls -la");
   });
 
+  it("툴벨트 SET RECALL 버튼으로 실행 없이 현재 입력을 RECALL 대상으로 저장한다", () => {
+    const { container } = render(<TerminalPane id="tab-1" />);
+    const input = container.querySelector("input")!;
+    expect(screen.getByRole("button", { name: "quick-input-set-recall" })).toHaveAttribute("disabled");
+
+    fireEvent.change(input, { target: { value: "echo custom command" } });
+    fireEvent.click(screen.getByRole("button", { name: "quick-input-set-recall" }));
+    expect(screen.getByRole("button", { name: "quick-input-recall" })).toHaveTextContent("RECALL echo custom comm…");
+    expect(screen.getByRole("button", { name: "quick-input-rerun" })).not.toHaveAttribute("disabled");
+
+    fireEvent.change(input, { target: { value: "" } });
+    fireEvent.click(screen.getByRole("button", { name: "quick-input-recall" }));
+    expect(input).toHaveValue("echo custom command");
+  });
+
   it("툴벨트 FORGET RECALL 버튼으로 직전 실행 입력 기록을 비운다", async () => {
     const { container } = render(<TerminalPane id="tab-1" />);
     expect(screen.getByRole("button", { name: "quick-input-forget-recall" })).toHaveAttribute("disabled");

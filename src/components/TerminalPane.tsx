@@ -1053,6 +1053,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
   const recallButtonLabel = lastSubmittedPreview ? `RECALL ${lastSubmittedPreview}` : "RECALL";
   const rerunButtonLabel = lastSubmittedPreview ? `RERUN ${lastSubmittedPreview}` : "RERUN";
   const undoButtonLabel = clearedInputStack.length > 0 ? `UNDO ${clearedInputStack.length}` : "UNDO";
+  const canSetRecallFromCurrent = inputBuffer.trim() !== "";
   const triggerMentionAttach = useCallback(() => {
     const current = warpInputRef.current?.getValue() ?? inputBuffer;
     if (/(?:^|\s)@[^\s@]*$/.test(current)) {
@@ -1095,6 +1096,12 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     warpInputRef.current?.focus();
     setInputBuffer(lastSubmittedInput);
   }, [lastSubmittedInput]);
+  const setRecallFromCurrentQuick = useCallback(() => {
+    const current = warpInputRef.current?.getValue() ?? inputBuffer;
+    if (current.trim() === "") return;
+    setLastSubmittedInput(current);
+    warpInputRef.current?.focus();
+  }, [inputBuffer]);
   const swapWithSubmittedInputQuick = useCallback(() => {
     if (!lastSubmittedInput) return;
     const current = warpInputRef.current?.getValue() ?? inputBuffer;
@@ -1392,6 +1399,26 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               }}
             >
               FORGET
+            </button>
+            <button
+              type="button"
+              aria-label="quick-input-set-recall"
+              onClick={setRecallFromCurrentQuick}
+              disabled={!canSetRecallFromCurrent}
+              title={canSetRecallFromCurrent ? "현재 입력을 RECALL 대상으로 저장" : "저장할 입력이 없어 비활성화"}
+              style={{
+                fontSize: 10,
+                color: canSetRecallFromCurrent ? "rgba(255,244,214,0.95)" : "rgba(255,255,255,0.42)",
+                border: canSetRecallFromCurrent ? "1px solid rgba(227,179,65,0.6)" : "1px solid rgba(255,255,255,0.18)",
+                background: canSetRecallFromCurrent ? "rgba(227,179,65,0.16)" : "rgba(255,255,255,0.06)",
+                borderRadius: 999,
+                padding: "1px 7px",
+                lineHeight: 1.25,
+                cursor: canSetRecallFromCurrent ? "pointer" : "not-allowed",
+                flexShrink: 0,
+              }}
+            >
+              SET RECALL
             </button>
             <button
               type="button"
