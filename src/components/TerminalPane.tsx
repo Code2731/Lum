@@ -965,38 +965,49 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     }
     return next;
   }, [clearForceAiPrefix, clearQuickModePrefix]);
+  const pushUndoSnapshot = useCallback((snapshot: string) => {
+    if (snapshot === "") return;
+    setClearedInputStack((prev) => {
+      if (prev[0] === snapshot) return prev;
+      return [snapshot, ...prev].slice(0, 5);
+    });
+  }, []);
   const normalizeInputToPlain = useCallback(() => {
     const current = warpInputRef.current?.getValue() ?? inputBuffer;
     const next = toPlainInput(current);
     if (next === current) return;
+    pushUndoSnapshot(current);
     warpInputRef.current?.setValue(next);
     warpInputRef.current?.focus();
     setInputBuffer(next);
-  }, [inputBuffer, toPlainInput]);
+  }, [inputBuffer, pushUndoSnapshot, toPlainInput]);
   const trimInputQuick = useCallback(() => {
     const current = warpInputRef.current?.getValue() ?? inputBuffer;
     const next = current.trim();
     if (next === current) return;
+    pushUndoSnapshot(current);
     warpInputRef.current?.setValue(next);
     warpInputRef.current?.focus();
     setInputBuffer(next);
-  }, [inputBuffer]);
+  }, [inputBuffer, pushUndoSnapshot]);
   const squashInputSpacesQuick = useCallback(() => {
     const current = warpInputRef.current?.getValue() ?? inputBuffer;
     const next = current.replace(/\s{2,}/g, " ");
     if (next === current) return;
+    pushUndoSnapshot(current);
     warpInputRef.current?.setValue(next);
     warpInputRef.current?.focus();
     setInputBuffer(next);
-  }, [inputBuffer]);
+  }, [inputBuffer, pushUndoSnapshot]);
   const cleanInputQuick = useCallback(() => {
     const current = warpInputRef.current?.getValue() ?? inputBuffer;
     const next = current.trim().replace(/\s{2,}/g, " ");
     if (next === current) return;
+    pushUndoSnapshot(current);
     warpInputRef.current?.setValue(next);
     warpInputRef.current?.focus();
     setInputBuffer(next);
-  }, [inputBuffer]);
+  }, [inputBuffer, pushUndoSnapshot]);
   const cycleBackendQuickPrefix = useCallback((dir: 1 | -1) => {
     const current = warpInputRef.current?.getValue() ?? inputBuffer;
     const order: AiBackend[] = ["local", "ollama", "xllm", "gemini"];
@@ -1066,13 +1077,6 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     warpInputRef.current?.setValue(next);
     warpInputRef.current?.focus();
   }, [inputBuffer]);
-  const pushUndoSnapshot = useCallback((snapshot: string) => {
-    if (snapshot === "") return;
-    setClearedInputStack((prev) => {
-      if (prev[0] === snapshot) return prev;
-      return [snapshot, ...prev].slice(0, 5);
-    });
-  }, []);
   const clearInputQuick = useCallback(() => {
     const current = warpInputRef.current?.getValue() ?? inputBuffer;
     pushUndoSnapshot(current);
