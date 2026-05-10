@@ -1112,6 +1112,14 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     warpInputRef.current?.focus();
     setInputBuffer(next);
   }, [inputBuffer, lastSubmittedInput]);
+  const prependSubmittedInputQuick = useCallback(() => {
+    if (!lastSubmittedInput) return;
+    const current = warpInputRef.current?.getValue() ?? inputBuffer;
+    const next = current.trim() ? `${lastSubmittedInput} ${current}` : lastSubmittedInput;
+    warpInputRef.current?.setValue(next);
+    warpInputRef.current?.focus();
+    setInputBuffer(next);
+  }, [inputBuffer, lastSubmittedInput]);
 
   const routeChip = useMemo(() => {
     const route = routeInput(inputBuffer);
@@ -1445,6 +1453,26 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               }}
             >
               MERGE
+            </button>
+            <button
+              type="button"
+              aria-label="quick-input-prepend-recall"
+              onClick={prependSubmittedInputQuick}
+              disabled={!lastSubmittedInput}
+              title={lastSubmittedInput ? "현재 입력 앞에 직전 실행 입력 붙이기" : "붙일 실행 입력이 없어 비활성화"}
+              style={{
+                fontSize: 10,
+                color: lastSubmittedInput ? "rgba(215,228,255,0.96)" : "rgba(255,255,255,0.42)",
+                border: lastSubmittedInput ? "1px solid rgba(121,192,255,0.6)" : "1px solid rgba(255,255,255,0.18)",
+                background: lastSubmittedInput ? "rgba(121,192,255,0.16)" : "rgba(255,255,255,0.06)",
+                borderRadius: 999,
+                padding: "1px 7px",
+                lineHeight: 1.25,
+                cursor: lastSubmittedInput ? "pointer" : "not-allowed",
+                flexShrink: 0,
+              }}
+            >
+              PREPEND
             </button>
             <button
               type="button"
