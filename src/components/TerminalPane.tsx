@@ -1076,6 +1076,20 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
   const canTrimInput = inputBuffer !== inputBuffer.trim();
   const canSquashInputSpaces = /\s{2,}/.test(inputBuffer);
   const canCleanInput = inputBuffer !== inputBuffer.trim().replace(/\s{2,}/g, " ");
+  const hasClearableOverlay =
+    ghostText !== null ||
+    aiGhost !== null ||
+    aiLoading ||
+    aiCmdError !== null ||
+    explainPopup !== null ||
+    explainLoading ||
+    mentionOpen ||
+    mentionQuery !== "" ||
+    mentionDir !== null ||
+    mentionTrail !== "" ||
+    mentionEntries.length > 0 ||
+    mentionLoading;
+  const canClearInputQuick = inputBuffer !== "" || hasClearableOverlay;
   const canResetAllQuick = inputBuffer !== "" || clearedInputStack.length > 0 || lastSubmittedInput !== "";
   const lastSubmittedPreview = compactInputPreview(lastSubmittedInput);
   const recallButtonLabel = lastSubmittedPreview ? `RECALL ${lastSubmittedPreview}` : "RECALL";
@@ -1098,13 +1112,14 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     warpInputRef.current?.focus();
   }, [inputBuffer]);
   const clearInputQuick = useCallback(() => {
+    if (!canClearInputQuick) return;
     const current = warpInputRef.current?.getValue() ?? inputBuffer;
     pushUndoSnapshot(current);
     clearAllOverlays();
     warpInputRef.current?.setValue("");
     warpInputRef.current?.focus();
     setInputBuffer("");
-  }, [clearAllOverlays, inputBuffer, pushUndoSnapshot]);
+  }, [canClearInputQuick, clearAllOverlays, inputBuffer, pushUndoSnapshot]);
   const resetAllInputStateQuick = useCallback(() => {
     if (!canResetAllQuick) return;
     clearAllOverlays();
@@ -1427,16 +1442,17 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               type="button"
               aria-label="quick-input-clear"
               onClick={clearInputQuick}
-              title="입력/오버레이 빠른 초기화 (Esc, Cmd/Ctrl+Shift+K)"
+              disabled={!canClearInputQuick}
+              title={canClearInputQuick ? "입력/오버레이 빠른 초기화 (Esc, Cmd/Ctrl+Shift+K)" : "지울 입력/오버레이가 없어 비활성화"}
               style={{
                 fontSize: 10,
-                color: "rgba(255,255,255,0.88)",
-                border: "1px solid rgba(255,255,255,0.28)",
-                background: "rgba(255,255,255,0.1)",
+                color: canClearInputQuick ? "rgba(255,255,255,0.88)" : "rgba(255,255,255,0.42)",
+                border: canClearInputQuick ? "1px solid rgba(255,255,255,0.28)" : "1px solid rgba(255,255,255,0.18)",
+                background: canClearInputQuick ? "rgba(255,255,255,0.1)" : "rgba(255,255,255,0.06)",
                 borderRadius: 999,
                 padding: "1px 7px",
                 lineHeight: 1.25,
-                cursor: "pointer",
+                cursor: canClearInputQuick ? "pointer" : "not-allowed",
                 flexShrink: 0,
               }}
             >
