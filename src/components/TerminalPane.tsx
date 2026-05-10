@@ -1299,6 +1299,22 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
         triggerMentionAttach();
         return true;
       }
+      if (lowered === "h") {
+        toggleQuickModePrefix("heavy");
+        return true;
+      }
+      if (lowered === "y") {
+        toggleQuickModePrefix("shell");
+        return true;
+      }
+      if (lowered === "j") {
+        toggleQuickModePrefix("agent");
+        return true;
+      }
+      if (lowered === "u") {
+        toggleQuickModePrefix("explain");
+        return true;
+      }
     }
     return handleMentionKeyDown(e);
   }, [
@@ -1319,6 +1335,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     setRecallFromCurrentQuick,
     squashInputSpacesQuick,
     swapWithSubmittedInputQuick,
+    toggleQuickModePrefix,
     triggerMentionAttach,
     trimInputQuick,
   ]);
@@ -1828,7 +1845,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               aria-label="quick-mode-heavy"
               aria-pressed={quickModeHeavyActive}
               onClick={() => toggleQuickModePrefix("heavy")}
-              title="Heavy 추론 접두어 토글 (!!)"
+              title="Heavy 추론 접두어 토글 (!!, Cmd/Ctrl+Shift+H)"
               style={{
                 fontSize: 10,
                 color: quickModeHeavyActive ? "rgba(255,220,212,0.96)" : "rgba(255,255,255,0.86)",
@@ -1848,7 +1865,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               aria-label="quick-mode-shell"
               aria-pressed={quickModeShellActive}
               onClick={() => toggleQuickModePrefix("shell")}
-              title="강제 shell 접두어 토글 (!)"
+              title="강제 shell 접두어 토글 (!, Cmd/Ctrl+Shift+Y)"
               style={{
                 fontSize: 10,
                 color: quickModeShellActive ? "rgba(255,245,219,0.96)" : "rgba(255,255,255,0.86)",
@@ -1868,7 +1885,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               aria-label="quick-mode-agent"
               aria-pressed={quickModeAgentActive}
               onClick={() => toggleQuickModePrefix("agent")}
-              title="강제 agent 접두어 토글 (>>)"
+              title="강제 agent 접두어 토글 (>>, Cmd/Ctrl+Shift+J)"
               style={{
                 fontSize: 10,
                 color: quickModeAgentActive ? "rgba(255,225,222,0.96)" : "rgba(255,255,255,0.86)",
@@ -1888,7 +1905,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               aria-label="quick-mode-explain"
               aria-pressed={quickModeExplainActive}
               onClick={() => toggleQuickModePrefix("explain")}
-              title="강제 explain 접두어 토글 (?)"
+              title="강제 explain 접두어 토글 (?, Cmd/Ctrl+Shift+U)"
               style={{
                 fontSize: 10,
                 color: quickModeExplainActive ? "rgba(220,247,225,0.96)" : "rgba(255,255,255,0.86)",
