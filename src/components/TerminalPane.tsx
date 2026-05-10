@@ -1107,7 +1107,13 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
   const mergeSubmittedInputQuick = useCallback(() => {
     if (!lastSubmittedInput) return;
     const current = warpInputRef.current?.getValue() ?? inputBuffer;
-    const next = current.trim() ? `${current} ${lastSubmittedInput}` : lastSubmittedInput;
+    const base = current.trim();
+    const last = lastSubmittedInput.trim();
+    if (base && (base === last || base.endsWith(` ${last}`))) {
+      warpInputRef.current?.focus();
+      return;
+    }
+    const next = base ? `${base} ${last}` : last;
     warpInputRef.current?.setValue(next);
     warpInputRef.current?.focus();
     setInputBuffer(next);
@@ -1115,7 +1121,13 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
   const prependSubmittedInputQuick = useCallback(() => {
     if (!lastSubmittedInput) return;
     const current = warpInputRef.current?.getValue() ?? inputBuffer;
-    const next = current.trim() ? `${lastSubmittedInput} ${current}` : lastSubmittedInput;
+    const base = current.trim();
+    const last = lastSubmittedInput.trim();
+    if (base && (base === last || base.startsWith(`${last} `))) {
+      warpInputRef.current?.focus();
+      return;
+    }
+    const next = base ? `${last} ${base}` : last;
     warpInputRef.current?.setValue(next);
     warpInputRef.current?.focus();
     setInputBuffer(next);
