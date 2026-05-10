@@ -1295,6 +1295,10 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
         squashInputSpacesQuick();
         return true;
       }
+      if (lowered === "a") {
+        triggerMentionAttach();
+        return true;
+      }
     }
     return handleMentionKeyDown(e);
   }, [
@@ -1315,6 +1319,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     setRecallFromCurrentQuick,
     squashInputSpacesQuick,
     swapWithSubmittedInputQuick,
+    triggerMentionAttach,
     trimInputQuick,
   ]);
 
@@ -1439,7 +1444,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
             }}
           >
             <span style={{ fontSize: 10, color: "rgba(182,218,255,0.95)", lineHeight: 1.35 }}>
-              TIP · Cmd/Ctrl+1~4 backend 전환 · Shift+B/N for BACK/LAST · Shift+K/Z/R/L/M/P for 입력 편집
+              TIP · Cmd/Ctrl+1~4 backend 전환 · Shift+A @첨부 · Shift+B/N BACK/LAST · Shift+K/Z/R/L/M/P 입력 편집
             </span>
             <button
               type="button"
@@ -1478,7 +1483,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               type="button"
               aria-label="quick-mention-trigger"
               onClick={triggerMentionAttach}
-              title="파일 첨부 트리거 삽입 (@)"
+              title="파일 첨부 트리거 삽입 (@, Cmd/Ctrl+Shift+A)"
               style={{
                 fontSize: 10,
                 color: "rgba(121,192,255,0.9)",
@@ -1816,7 +1821,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               @local/@ollama/@xllm/@gemini
             </span>
             <span style={{ fontSize: 10, color: "rgba(255,255,255,0.58)", flexShrink: 0 }}>
-              Cmd/Ctrl+1~4 토글 · 0 해제 · `/. 정순환 · Shift+`/, 역순환 · Shift+B/N BACK/LAST · Shift+K/Z/R/L/M/P 편집 단축키
+              Cmd/Ctrl+1~4 토글 · 0 해제 · `/. 정순환 · Shift+`/, 역순환 · Shift+A @첨부 · Shift+B/N BACK/LAST · Shift+K/Z/R/L/M/P 편집 단축키
             </span>
             <button
               type="button"
