@@ -157,15 +157,15 @@ describe("TerminalPane — 입력 라우팅", () => {
   it("툴벨트에 backend 단축키 안내 문구가 노출된다", () => {
     render(<TerminalPane id="tab-1" />);
     expect(
-      screen.getByText("Cmd/Ctrl+1~4 토글 · 0 해제 · `/. 정순환 · Shift+`/, 역순환 · Shift+K CLEAR · Shift+Z UNDO · Shift+R RECALL"),
+      screen.getByText("Cmd/Ctrl+1~4 토글 · 0 해제 · `/. 정순환 · Shift+`/, 역순환 · Shift+K/Z/R/L/M/P 편집 단축키"),
     ).toBeInTheDocument();
   });
 
   it("입력 툴벨트 TIP 배너는 기본 노출되고 닫으면 사라진다", () => {
     render(<TerminalPane id="tab-1" />);
-    expect(screen.getByText(/TIP · Cmd\/Ctrl\+1~4 backend 전환/)).toBeInTheDocument();
+    expect(screen.getByText(/TIP · Cmd\/Ctrl\+1~4 backend 전환 · Shift\+K\/Z\/R\/L\/M\/P/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "dismiss-input-toolbelt-tip" }));
-    expect(screen.queryByText(/TIP · Cmd\/Ctrl\+1~4 backend 전환/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/TIP · Cmd\/Ctrl\+1~4 backend 전환 · Shift\+K\/Z\/R\/L\/M\/P/)).not.toBeInTheDocument();
   });
 
   it("툴벨트 @ 파일 첨부 버튼으로 첨부 트리거를 삽입하고 목록 로드를 시작한다", async () => {
@@ -604,6 +604,30 @@ describe("TerminalPane — 입력 라우팅", () => {
 
     fireEvent.keyDown(input, { key: "R", ctrlKey: true, shiftKey: true });
     expect(input).toHaveValue("ls -la");
+  });
+
+  it("입력 단축키 Cmd/Ctrl+Shift+L/M/P로 CLEAN/MERGE/PREPEND를 실행한다", async () => {
+    const { container } = render(<TerminalPane id="tab-1" />);
+    const input = container.querySelector("input")!;
+
+    submitInput(container, "ls -la");
+    await waitFor(() => {
+      expect(invokeMock).toHaveBeenCalledWith("write_to_pty", {
+        id: "tab-1",
+        data: "ls -la\r",
+      });
+    });
+
+    fireEvent.change(input, { target: { value: "   echo    done   " } });
+    fireEvent.keyDown(input, { key: "L", ctrlKey: true, shiftKey: true });
+    expect(input).toHaveValue("echo done");
+
+    fireEvent.keyDown(input, { key: "M", ctrlKey: true, shiftKey: true });
+    expect(input).toHaveValue("echo done ls -la");
+
+    fireEvent.change(input, { target: { value: "pwd" } });
+    fireEvent.keyDown(input, { key: "P", ctrlKey: true, shiftKey: true });
+    expect(input).toHaveValue("ls -la pwd");
   });
 
   it("툴벨트 !/>>/? 버튼으로 입력 모드 프리픽스를 토글한다", () => {

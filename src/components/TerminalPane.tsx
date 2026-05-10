@@ -1224,9 +1224,29 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
         recallSubmittedInputQuick();
         return true;
       }
+      if (lowered === "l") {
+        cleanInputQuick();
+        return true;
+      }
+      if (lowered === "m") {
+        mergeSubmittedInputQuick();
+        return true;
+      }
+      if (lowered === "p") {
+        prependSubmittedInputQuick();
+        return true;
+      }
     }
     return handleMentionKeyDown(e);
-  }, [clearInputQuick, handleMentionKeyDown, recallSubmittedInputQuick, restoreInputQuick]);
+  }, [
+    cleanInputQuick,
+    clearInputQuick,
+    handleMentionKeyDown,
+    mergeSubmittedInputQuick,
+    prependSubmittedInputQuick,
+    recallSubmittedInputQuick,
+    restoreInputQuick,
+  ]);
 
   const routeChip = useMemo(() => {
     const route = routeInput(inputBuffer);
@@ -1349,7 +1369,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
             }}
           >
             <span style={{ fontSize: 10, color: "rgba(182,218,255,0.95)", lineHeight: 1.35 }}>
-              TIP · Cmd/Ctrl+1~4 backend 전환 · Shift+K CLEAR · Shift+Z UNDO · Shift+R RECALL
+              TIP · Cmd/Ctrl+1~4 backend 전환 · Shift+K/Z/R/L/M/P for CLEAR/UNDO/RECALL/CLEAN/MERGE/PREPEND
             </span>
             <button
               type="button"
@@ -1606,7 +1626,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               aria-label="quick-input-merge-recall"
               onClick={mergeSubmittedInputQuick}
               disabled={!canMergeRecall}
-              title={canMergeRecall ? "현재 입력 뒤에 직전 실행 입력 붙이기" : "붙일 실행 입력이 없어 비활성화"}
+              title={canMergeRecall ? "현재 입력 뒤에 직전 실행 입력 붙이기 (Cmd/Ctrl+Shift+M)" : "붙일 실행 입력이 없어 비활성화"}
               style={{
                 fontSize: 10,
                 color: canMergeRecall ? "rgba(215,228,255,0.96)" : "rgba(255,255,255,0.42)",
@@ -1626,7 +1646,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               aria-label="quick-input-prepend-recall"
               onClick={prependSubmittedInputQuick}
               disabled={!canPrependRecall}
-              title={canPrependRecall ? "현재 입력 앞에 직전 실행 입력 붙이기" : "붙일 실행 입력이 없어 비활성화"}
+              title={canPrependRecall ? "현재 입력 앞에 직전 실행 입력 붙이기 (Cmd/Ctrl+Shift+P)" : "붙일 실행 입력이 없어 비활성화"}
               style={{
                 fontSize: 10,
                 color: canPrependRecall ? "rgba(215,228,255,0.96)" : "rgba(255,255,255,0.42)",
@@ -1706,7 +1726,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               aria-label="quick-input-clean"
               onClick={cleanInputQuick}
               disabled={!canCleanInput}
-              title={canCleanInput ? "앞뒤 공백 제거 + 연속 공백 압축" : "정리할 공백이 없어 비활성화"}
+              title={canCleanInput ? "앞뒤 공백 제거 + 연속 공백 압축 (Cmd/Ctrl+Shift+L)" : "정리할 공백이 없어 비활성화"}
               style={{
                 fontSize: 10,
                 color: canCleanInput ? "rgba(220,247,225,0.96)" : "rgba(255,255,255,0.42)",
@@ -1725,7 +1745,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               @local/@ollama/@xllm/@gemini
             </span>
             <span style={{ fontSize: 10, color: "rgba(255,255,255,0.58)", flexShrink: 0 }}>
-              Cmd/Ctrl+1~4 토글 · 0 해제 · `/. 정순환 · Shift+`/, 역순환 · Shift+K CLEAR · Shift+Z UNDO · Shift+R RECALL
+              Cmd/Ctrl+1~4 토글 · 0 해제 · `/. 정순환 · Shift+`/, 역순환 · Shift+K/Z/R/L/M/P 편집 단축키
             </span>
             <button
               type="button"
