@@ -304,7 +304,7 @@ describe("TerminalPane — 입력 라우팅", () => {
     const input = container.querySelector("input")!;
     expect(screen.getByRole("button", { name: "quick-input-set-recall" })).toHaveAttribute("disabled");
 
-    fireEvent.change(input, { target: { value: "echo custom command" } });
+    fireEvent.change(input, { target: { value: "   echo custom command   " } });
     fireEvent.click(screen.getByRole("button", { name: "quick-input-set-recall" }));
     expect(screen.getByRole("button", { name: "quick-input-recall" })).toHaveTextContent("RECALL echo custom comm…");
     expect(screen.getByRole("button", { name: "quick-input-rerun" })).not.toHaveAttribute("disabled");

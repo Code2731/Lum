@@ -1098,8 +1098,9 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
   }, [lastSubmittedInput]);
   const setRecallFromCurrentQuick = useCallback(() => {
     const current = warpInputRef.current?.getValue() ?? inputBuffer;
-    if (current.trim() === "") return;
-    setLastSubmittedInput(current);
+    const normalized = current.trim();
+    if (normalized === "") return;
+    setLastSubmittedInput(normalized);
     warpInputRef.current?.focus();
   }, [inputBuffer]);
   const swapWithSubmittedInputQuick = useCallback(() => {
