@@ -1104,6 +1104,10 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     if (!lastSubmittedInput) return;
     handleSubmit(lastSubmittedInput);
   }, [handleSubmit, lastSubmittedInput]);
+  const forgetSubmittedInputQuick = useCallback(() => {
+    if (!lastSubmittedInput) return;
+    setLastSubmittedInput("");
+  }, [lastSubmittedInput]);
   const mergeSubmittedInputQuick = useCallback(() => {
     if (!lastSubmittedInput) return;
     const current = warpInputRef.current?.getValue() ?? inputBuffer;
@@ -1425,6 +1429,26 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               }}
             >
               {rerunButtonLabel}
+            </button>
+            <button
+              type="button"
+              aria-label="quick-input-forget-recall"
+              onClick={forgetSubmittedInputQuick}
+              disabled={!lastSubmittedInput}
+              title={lastSubmittedInput ? "직전 실행 입력 기록 비우기" : "비울 실행 입력이 없어 비활성화"}
+              style={{
+                fontSize: 10,
+                color: lastSubmittedInput ? "rgba(255,225,222,0.95)" : "rgba(255,255,255,0.42)",
+                border: lastSubmittedInput ? "1px solid rgba(255,123,114,0.58)" : "1px solid rgba(255,255,255,0.18)",
+                background: lastSubmittedInput ? "rgba(255,123,114,0.14)" : "rgba(255,255,255,0.06)",
+                borderRadius: 999,
+                padding: "1px 7px",
+                lineHeight: 1.25,
+                cursor: lastSubmittedInput ? "pointer" : "not-allowed",
+                flexShrink: 0,
+              }}
+            >
+              FORGET RECALL
             </button>
             <button
               type="button"

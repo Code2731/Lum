@@ -286,6 +286,28 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(input).toHaveValue("ls -la");
   });
 
+  it("툴벨트 FORGET RECALL 버튼으로 직전 실행 입력 기록을 비운다", async () => {
+    const { container } = render(<TerminalPane id="tab-1" />);
+    expect(screen.getByRole("button", { name: "quick-input-forget-recall" })).toHaveAttribute("disabled");
+
+    submitInput(container, "ls -la");
+    await waitFor(() => {
+      expect(invokeMock).toHaveBeenCalledWith("write_to_pty", {
+        id: "tab-1",
+        data: "ls -la\r",
+      });
+    });
+    expect(screen.getByRole("button", { name: "quick-input-recall" })).toHaveTextContent("RECALL ls -la");
+    expect(screen.getByRole("button", { name: "quick-input-forget-recall" })).not.toHaveAttribute("disabled");
+
+    fireEvent.click(screen.getByRole("button", { name: "quick-input-forget-recall" }));
+    expect(screen.getByRole("button", { name: "quick-input-recall" })).toHaveTextContent("RECALL");
+    expect(screen.getByRole("button", { name: "quick-input-recall" })).toHaveAttribute("disabled");
+    expect(screen.getByRole("button", { name: "quick-input-rerun" })).toHaveAttribute("disabled");
+    expect(screen.getByRole("button", { name: "quick-input-swap" })).toHaveAttribute("disabled");
+    expect(screen.getByRole("button", { name: "quick-input-forget-recall" })).toHaveAttribute("disabled");
+  });
+
   it("실행되지 않는 # 입력은 RECALL 대상을 덮어쓰지 않는다", async () => {
     const { container } = render(<TerminalPane id="tab-1" />);
     const input = container.querySelector("input")!;
