@@ -1315,6 +1315,14 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
         toggleQuickModePrefix("explain");
         return true;
       }
+      if (lowered === "v") {
+        toggleQuickModePrefix("aiCmd");
+        return true;
+      }
+      if (lowered === "i") {
+        toggleForceAiPrefix();
+        return true;
+      }
     }
     return handleMentionKeyDown(e);
   }, [
@@ -1335,6 +1343,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     setRecallFromCurrentQuick,
     squashInputSpacesQuick,
     swapWithSubmittedInputQuick,
+    toggleForceAiPrefix,
     toggleQuickModePrefix,
     triggerMentionAttach,
     trimInputQuick,
@@ -1925,7 +1934,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               aria-label="quick-mode-ai-cmd"
               aria-pressed={quickModeAiCmdActive}
               onClick={() => toggleQuickModePrefix("aiCmd")}
-              title="AI 명령 제안 접두어 토글 (#)"
+              title="AI 명령 제안 접두어 토글 (#, Cmd/Ctrl+Shift+V)"
               style={{
                 fontSize: 10,
                 color: quickModeAiCmdActive ? "rgba(215,228,255,0.96)" : "rgba(255,255,255,0.86)",
@@ -1945,7 +1954,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               aria-label="quick-mode-force-ai"
               aria-pressed={quickModeForceAiActive}
               onClick={toggleForceAiPrefix}
-              title="강제 AI 챗 접두어 토글 (@)"
+              title="강제 AI 챗 접두어 토글 (@, Cmd/Ctrl+Shift+I)"
               style={{
                 fontSize: 10,
                 color: quickModeForceAiActive ? "rgba(215,228,255,0.96)" : "rgba(255,255,255,0.86)",
