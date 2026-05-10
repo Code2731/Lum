@@ -1036,15 +1036,31 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     if (!backendTrail.prev) return;
     const current = warpInputRef.current?.getValue() ?? inputBuffer;
     const next = applyBackendPrefixToInput(current, backendTrail.prev);
+    if (next === current) {
+      warpInputRef.current?.focus();
+      return;
+    }
     warpInputRef.current?.setValue(next);
     warpInputRef.current?.focus();
   }, [backendTrail.prev, inputBuffer]);
   const restoreLastBackendQuickPrefix = useCallback(() => {
     const current = warpInputRef.current?.getValue() ?? inputBuffer;
     const next = applyBackendPrefixToInput(current, backendTrail.last);
+    if (next === current) {
+      warpInputRef.current?.focus();
+      return;
+    }
     warpInputRef.current?.setValue(next);
     warpInputRef.current?.focus();
   }, [backendTrail.last, inputBuffer]);
+  const canRestorePrevBackendQuick = useMemo(() => {
+    if (!backendTrail.prev) return false;
+    return applyBackendPrefixToInput(inputBuffer, backendTrail.prev) !== inputBuffer;
+  }, [backendTrail.prev, inputBuffer]);
+  const canRestoreLastBackendQuick = useMemo(
+    () => applyBackendPrefixToInput(inputBuffer, backendTrail.last) !== inputBuffer,
+    [backendTrail.last, inputBuffer],
+  );
   const lastBackendLabel = `LAST @${backendTrail.last.toUpperCase()}`;
   const prevBackendLabel = backendTrail.prev
     ? `BACK @${backendTrail.prev.toUpperCase()}`
@@ -1893,21 +1909,21 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               type="button"
               aria-label="quick-backend-back"
               onClick={restorePrevBackendQuickPrefix}
-              disabled={!backendTrail.prev}
+              disabled={!canRestorePrevBackendQuick}
               title={
-                backendTrail.prev
+                canRestorePrevBackendQuick
                   ? "직전 backend로 복귀"
-                  : "직전 backend 기록이 없어서 비활성화"
+                  : "직전 backend 기록이 없거나 현재 backend와 동일해 비활성화"
               }
               style={{
                 fontSize: 10,
-                color: backendTrail.prev ? "rgba(255,255,255,0.92)" : "rgba(255,255,255,0.42)",
-                border: backendTrail.prev ? "1px solid rgba(255,255,255,0.34)" : "1px solid rgba(255,255,255,0.18)",
-                background: backendTrail.prev ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.06)",
+                color: canRestorePrevBackendQuick ? "rgba(255,255,255,0.92)" : "rgba(255,255,255,0.42)",
+                border: canRestorePrevBackendQuick ? "1px solid rgba(255,255,255,0.34)" : "1px solid rgba(255,255,255,0.18)",
+                background: canRestorePrevBackendQuick ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.06)",
                 borderRadius: 999,
                 padding: "1px 7px",
                 lineHeight: 1.25,
-                cursor: backendTrail.prev ? "pointer" : "not-allowed",
+                cursor: canRestorePrevBackendQuick ? "pointer" : "not-allowed",
                 flexShrink: 0,
               }}
             >
@@ -1917,16 +1933,17 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               type="button"
               aria-label="quick-backend-last"
               onClick={restoreLastBackendQuickPrefix}
-              title="마지막으로 사용한 backend 복원"
+              disabled={!canRestoreLastBackendQuick}
+              title={canRestoreLastBackendQuick ? "마지막으로 사용한 backend 복원" : "이미 마지막 backend 상태라 비활성화"}
               style={{
                 fontSize: 10,
-                color: "rgba(210,168,255,0.95)",
-                border: "1px solid rgba(188,140,255,0.4)",
-                background: "rgba(188,140,255,0.14)",
+                color: canRestoreLastBackendQuick ? "rgba(210,168,255,0.95)" : "rgba(255,255,255,0.42)",
+                border: canRestoreLastBackendQuick ? "1px solid rgba(188,140,255,0.4)" : "1px solid rgba(255,255,255,0.18)",
+                background: canRestoreLastBackendQuick ? "rgba(188,140,255,0.14)" : "rgba(255,255,255,0.06)",
                 borderRadius: 999,
                 padding: "1px 7px",
                 lineHeight: 1.25,
-                cursor: "pointer",
+                cursor: canRestoreLastBackendQuick ? "pointer" : "not-allowed",
                 flexShrink: 0,
               }}
             >

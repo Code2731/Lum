@@ -706,13 +706,16 @@ describe("TerminalPane — 입력 라우팅", () => {
     fireEvent.change(input, { target: { value: "로그 요약해줘" } });
 
     expect(screen.getByRole("button", { name: "quick-backend-last" })).toHaveTextContent("LAST @LOCAL");
+    expect(screen.getByRole("button", { name: "quick-backend-last" })).not.toHaveAttribute("disabled");
 
     fireEvent.click(screen.getByRole("button", { name: "quick-backend-xllm" }));
     expect(input).toHaveValue("@xllm 로그 요약해줘");
     expect(screen.getByRole("button", { name: "quick-backend-last" })).toHaveTextContent("LAST @XLLM");
+    expect(screen.getByRole("button", { name: "quick-backend-last" })).toHaveAttribute("disabled");
 
     fireEvent.click(screen.getByRole("button", { name: "quick-backend-auto" }));
     expect(input).toHaveValue("로그 요약해줘");
+    expect(screen.getByRole("button", { name: "quick-backend-last" })).not.toHaveAttribute("disabled");
 
     fireEvent.click(screen.getByRole("button", { name: "quick-backend-last" }));
     expect(input).toHaveValue("@xllm 로그 요약해줘");
