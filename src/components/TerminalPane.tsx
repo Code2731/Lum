@@ -1259,16 +1259,26 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
         forgetSubmittedInputQuick();
         return true;
       }
+      if (lowered === "x") {
+        resetAllInputStateQuick();
+        return true;
+      }
+      if (lowered === "d") {
+        forgetUndoStackQuick();
+        return true;
+      }
     }
     return handleMentionKeyDown(e);
   }, [
     cleanInputQuick,
     clearInputQuick,
+    forgetUndoStackQuick,
     forgetSubmittedInputQuick,
     handleMentionKeyDown,
     mergeSubmittedInputQuick,
     prependSubmittedInputQuick,
     recallSubmittedInputQuick,
+    resetAllInputStateQuick,
     restoreInputQuick,
     setRecallFromCurrentQuick,
   ]);
@@ -1473,7 +1483,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               aria-label="quick-input-reset-all"
               onClick={resetAllInputStateQuick}
               disabled={!canResetAllQuick}
-              title={canResetAllQuick ? "입력/UNDO/RECALL 상태 전체 초기화" : "초기화할 상태가 없어 비활성화"}
+              title={canResetAllQuick ? "입력/UNDO/RECALL 상태 전체 초기화 (Cmd/Ctrl+Shift+X)" : "초기화할 상태가 없어 비활성화"}
               style={{
                 fontSize: 10,
                 color: canResetAllQuick ? "rgba(255,225,222,0.95)" : "rgba(255,255,255,0.42)",
@@ -1532,7 +1542,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               aria-label="quick-input-forget-undo"
               onClick={forgetUndoStackQuick}
               disabled={clearedInputStack.length === 0}
-              title={clearedInputStack.length > 0 ? "CLEAR 복원 이력 비우기" : "비울 복원 이력이 없어 비활성화"}
+              title={clearedInputStack.length > 0 ? "CLEAR 복원 이력 비우기 (Cmd/Ctrl+Shift+D)" : "비울 복원 이력이 없어 비활성화"}
               style={{
                 fontSize: 10,
                 color: clearedInputStack.length > 0 ? "rgba(255,225,222,0.95)" : "rgba(255,255,255,0.42)",

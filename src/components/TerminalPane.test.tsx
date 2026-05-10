@@ -649,6 +649,26 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(screen.getByRole("button", { name: "quick-input-rerun" })).toHaveAttribute("disabled");
   });
 
+  it("입력 단축키 Cmd/Ctrl+Shift+X/D로 RESET/FORGET(UNDO)을 실행한다", () => {
+    const { container } = render(<TerminalPane id="tab-1" />);
+    const input = container.querySelector("input")!;
+
+    fireEvent.change(input, { target: { value: "temp" } });
+    fireEvent.click(screen.getByRole("button", { name: "quick-input-clear" }));
+    expect(screen.getByRole("button", { name: "quick-input-undo" })).toHaveTextContent("UNDO 1");
+    expect(screen.getByRole("button", { name: "quick-input-forget-undo" })).not.toHaveAttribute("disabled");
+
+    fireEvent.keyDown(input, { key: "D", ctrlKey: true, shiftKey: true });
+    expect(screen.getByRole("button", { name: "quick-input-undo" })).toHaveTextContent("UNDO");
+    expect(screen.getByRole("button", { name: "quick-input-forget-undo" })).toHaveAttribute("disabled");
+
+    fireEvent.change(input, { target: { value: "다시 입력" } });
+    expect(screen.getByRole("button", { name: "quick-input-reset-all" })).not.toHaveAttribute("disabled");
+    fireEvent.keyDown(input, { key: "X", ctrlKey: true, shiftKey: true });
+    expect(input).toHaveValue("");
+    expect(screen.getByRole("button", { name: "quick-input-reset-all" })).toHaveAttribute("disabled");
+  });
+
   it("툴벨트 !/>>/? 버튼으로 입력 모드 프리픽스를 토글한다", () => {
     const { container } = render(<TerminalPane id="tab-1" />);
     const input = container.querySelector("input")!;
