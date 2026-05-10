@@ -1283,6 +1283,18 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
         restoreLastBackendQuickPrefix();
         return true;
       }
+      if (lowered === "g") {
+        normalizeInputToPlain();
+        return true;
+      }
+      if (lowered === "t") {
+        trimInputQuick();
+        return true;
+      }
+      if (lowered === "q") {
+        squashInputSpacesQuick();
+        return true;
+      }
     }
     return handleMentionKeyDown(e);
   }, [
@@ -1297,10 +1309,13 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     rerunSubmittedInputQuick,
     restoreLastBackendQuickPrefix,
     restorePrevBackendQuickPrefix,
+    normalizeInputToPlain,
     resetAllInputStateQuick,
     restoreInputQuick,
     setRecallFromCurrentQuick,
+    squashInputSpacesQuick,
     swapWithSubmittedInputQuick,
+    trimInputQuick,
   ]);
 
   const routeChip = useMemo(() => {
@@ -1722,7 +1737,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               aria-label="quick-input-plain"
               onClick={normalizeInputToPlain}
               disabled={!canNormalizeToPlain}
-              title={canNormalizeToPlain ? "강제 프리픽스 제거 후 일반 입력으로 전환" : "제거할 프리픽스가 없어 비활성화"}
+              title={canNormalizeToPlain ? "강제 프리픽스 제거 후 일반 입력으로 전환 (Cmd/Ctrl+Shift+G)" : "제거할 프리픽스가 없어 비활성화"}
               style={{
                 fontSize: 10,
                 color: canNormalizeToPlain ? "rgba(215,228,255,0.96)" : "rgba(255,255,255,0.42)",
@@ -1742,7 +1757,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               aria-label="quick-input-trim"
               onClick={trimInputQuick}
               disabled={!canTrimInput}
-              title={canTrimInput ? "입력 앞뒤 공백 정리" : "정리할 공백이 없어 비활성화"}
+              title={canTrimInput ? "입력 앞뒤 공백 정리 (Cmd/Ctrl+Shift+T)" : "정리할 공백이 없어 비활성화"}
               style={{
                 fontSize: 10,
                 color: canTrimInput ? "rgba(220,247,225,0.96)" : "rgba(255,255,255,0.42)",
@@ -1762,7 +1777,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               aria-label="quick-input-squash"
               onClick={squashInputSpacesQuick}
               disabled={!canSquashInputSpaces}
-              title={canSquashInputSpaces ? "연속 공백을 한 칸으로 압축" : "압축할 연속 공백이 없어 비활성화"}
+              title={canSquashInputSpaces ? "연속 공백을 한 칸으로 압축 (Cmd/Ctrl+Shift+Q)" : "압축할 연속 공백이 없어 비활성화"}
               style={{
                 fontSize: 10,
                 color: canSquashInputSpaces ? "rgba(220,247,225,0.96)" : "rgba(255,255,255,0.42)",

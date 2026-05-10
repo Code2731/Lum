@@ -716,6 +716,21 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(input).toHaveValue("@local 로그 요약해줘");
   });
 
+  it("입력 단축키 Cmd/Ctrl+Shift+G/T/Q로 PLAIN/TRIM/SQUASH를 실행한다", () => {
+    const { container } = render(<TerminalPane id="tab-1" />);
+    const input = container.querySelector("input")!;
+
+    fireEvent.change(input, { target: { value: "   @xllm 로그    요약해줘   " } });
+    fireEvent.keyDown(input, { key: "G", ctrlKey: true, shiftKey: true });
+    expect(input).toHaveValue("로그    요약해줘");
+
+    fireEvent.keyDown(input, { key: "T", ctrlKey: true, shiftKey: true });
+    expect(input).toHaveValue("로그    요약해줘");
+
+    fireEvent.keyDown(input, { key: "Q", ctrlKey: true, shiftKey: true });
+    expect(input).toHaveValue("로그 요약해줘");
+  });
+
   it("툴벨트 !/>>/? 버튼으로 입력 모드 프리픽스를 토글한다", () => {
     const { container } = render(<TerminalPane id="tab-1" />);
     const input = container.querySelector("input")!;
