@@ -1146,36 +1146,48 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     if (!lastSubmittedInput) return;
     setLastSubmittedInput("");
   }, [lastSubmittedInput]);
+  const computeMergeRecallNext = useCallback((current: string, recall: string): string | null => {
+    const base = current.trim();
+    const last = recall.trim();
+    if (!last) return null;
+    if (base && (base === last || base.endsWith(` ${last}`))) return null;
+    return base ? `${base} ${last}` : last;
+  }, []);
+  const computePrependRecallNext = useCallback((current: string, recall: string): string | null => {
+    const base = current.trim();
+    const last = recall.trim();
+    if (!last) return null;
+    if (base && (base === last || base.startsWith(`${last} `))) return null;
+    return base ? `${last} ${base}` : last;
+  }, []);
   const mergeSubmittedInputQuick = useCallback(() => {
     if (!lastSubmittedInput) return;
     const current = warpInputRef.current?.getValue() ?? inputBuffer;
-    const base = current.trim();
-    const last = lastSubmittedInput.trim();
-    if (base && (base === last || base.endsWith(` ${last}`))) {
+    const next = computeMergeRecallNext(current, lastSubmittedInput);
+    if (!next) {
       warpInputRef.current?.focus();
       return;
     }
     pushUndoSnapshot(current);
-    const next = base ? `${base} ${last}` : last;
     warpInputRef.current?.setValue(next);
     warpInputRef.current?.focus();
     setInputBuffer(next);
-  }, [inputBuffer, lastSubmittedInput, pushUndoSnapshot]);
+  }, [computeMergeRecallNext, inputBuffer, lastSubmittedInput, pushUndoSnapshot]);
   const prependSubmittedInputQuick = useCallback(() => {
     if (!lastSubmittedInput) return;
     const current = warpInputRef.current?.getValue() ?? inputBuffer;
-    const base = current.trim();
-    const last = lastSubmittedInput.trim();
-    if (base && (base === last || base.startsWith(`${last} `))) {
+    const next = computePrependRecallNext(current, lastSubmittedInput);
+    if (!next) {
       warpInputRef.current?.focus();
       return;
     }
     pushUndoSnapshot(current);
-    const next = base ? `${last} ${base}` : last;
     warpInputRef.current?.setValue(next);
     warpInputRef.current?.focus();
     setInputBuffer(next);
-  }, [inputBuffer, lastSubmittedInput, pushUndoSnapshot]);
+  }, [computePrependRecallNext, inputBuffer, lastSubmittedInput, pushUndoSnapshot]);
+  const canMergeRecall = !!lastSubmittedInput && computeMergeRecallNext(inputBuffer, lastSubmittedInput) !== null;
+  const canPrependRecall = !!lastSubmittedInput && computePrependRecallNext(inputBuffer, lastSubmittedInput) !== null;
 
   const routeChip = useMemo(() => {
     const route = routeInput(inputBuffer);
@@ -1554,17 +1566,17 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               type="button"
               aria-label="quick-input-merge-recall"
               onClick={mergeSubmittedInputQuick}
-              disabled={!lastSubmittedInput}
-              title={lastSubmittedInput ? "현재 입력 뒤에 직전 실행 입력 붙이기" : "붙일 실행 입력이 없어 비활성화"}
+              disabled={!canMergeRecall}
+              title={canMergeRecall ? "현재 입력 뒤에 직전 실행 입력 붙이기" : "붙일 실행 입력이 없어 비활성화"}
               style={{
                 fontSize: 10,
-                color: lastSubmittedInput ? "rgba(215,228,255,0.96)" : "rgba(255,255,255,0.42)",
-                border: lastSubmittedInput ? "1px solid rgba(121,192,255,0.6)" : "1px solid rgba(255,255,255,0.18)",
-                background: lastSubmittedInput ? "rgba(121,192,255,0.16)" : "rgba(255,255,255,0.06)",
+                color: canMergeRecall ? "rgba(215,228,255,0.96)" : "rgba(255,255,255,0.42)",
+                border: canMergeRecall ? "1px solid rgba(121,192,255,0.6)" : "1px solid rgba(255,255,255,0.18)",
+                background: canMergeRecall ? "rgba(121,192,255,0.16)" : "rgba(255,255,255,0.06)",
                 borderRadius: 999,
                 padding: "1px 7px",
                 lineHeight: 1.25,
-                cursor: lastSubmittedInput ? "pointer" : "not-allowed",
+                cursor: canMergeRecall ? "pointer" : "not-allowed",
                 flexShrink: 0,
               }}
             >
@@ -1574,17 +1586,17 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               type="button"
               aria-label="quick-input-prepend-recall"
               onClick={prependSubmittedInputQuick}
-              disabled={!lastSubmittedInput}
-              title={lastSubmittedInput ? "현재 입력 앞에 직전 실행 입력 붙이기" : "붙일 실행 입력이 없어 비활성화"}
+              disabled={!canPrependRecall}
+              title={canPrependRecall ? "현재 입력 앞에 직전 실행 입력 붙이기" : "붙일 실행 입력이 없어 비활성화"}
               style={{
                 fontSize: 10,
-                color: lastSubmittedInput ? "rgba(215,228,255,0.96)" : "rgba(255,255,255,0.42)",
-                border: lastSubmittedInput ? "1px solid rgba(121,192,255,0.6)" : "1px solid rgba(255,255,255,0.18)",
-                background: lastSubmittedInput ? "rgba(121,192,255,0.16)" : "rgba(255,255,255,0.06)",
+                color: canPrependRecall ? "rgba(215,228,255,0.96)" : "rgba(255,255,255,0.42)",
+                border: canPrependRecall ? "1px solid rgba(121,192,255,0.6)" : "1px solid rgba(255,255,255,0.18)",
+                background: canPrependRecall ? "rgba(121,192,255,0.16)" : "rgba(255,255,255,0.06)",
                 borderRadius: 999,
                 padding: "1px 7px",
                 lineHeight: 1.25,
-                cursor: lastSubmittedInput ? "pointer" : "not-allowed",
+                cursor: canPrependRecall ? "pointer" : "not-allowed",
                 flexShrink: 0,
               }}
             >

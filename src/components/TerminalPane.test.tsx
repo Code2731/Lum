@@ -464,9 +464,7 @@ describe("TerminalPane — 입력 라우팅", () => {
     fireEvent.change(input, { target: { value: "echo done" } });
     fireEvent.click(screen.getByRole("button", { name: "quick-input-merge-recall" }));
     expect(input).toHaveValue("echo done ls -la");
-
-    fireEvent.click(screen.getByRole("button", { name: "quick-input-merge-recall" }));
-    expect(input).toHaveValue("echo done ls -la");
+    expect(screen.getByRole("button", { name: "quick-input-merge-recall" })).toHaveAttribute("disabled");
   });
 
   it("툴벨트 PREPEND 버튼으로 현재 입력 앞에 직전 실행 입력을 붙인다", async () => {
@@ -486,9 +484,7 @@ describe("TerminalPane — 입력 라우팅", () => {
     fireEvent.change(input, { target: { value: "echo done" } });
     fireEvent.click(screen.getByRole("button", { name: "quick-input-prepend-recall" }));
     expect(input).toHaveValue("ls -la echo done");
-
-    fireEvent.click(screen.getByRole("button", { name: "quick-input-prepend-recall" }));
-    expect(input).toHaveValue("ls -la echo done");
+    expect(screen.getByRole("button", { name: "quick-input-prepend-recall" })).toHaveAttribute("disabled");
   });
 
   it("툴벨트 PLAIN 버튼으로 강제 프리픽스를 제거하고 일반 입력으로 전환한다", () => {
