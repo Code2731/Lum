@@ -1251,16 +1251,26 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
         prependSubmittedInputQuick();
         return true;
       }
+      if (lowered === "s") {
+        setRecallFromCurrentQuick();
+        return true;
+      }
+      if (lowered === "f") {
+        forgetSubmittedInputQuick();
+        return true;
+      }
     }
     return handleMentionKeyDown(e);
   }, [
     cleanInputQuick,
     clearInputQuick,
+    forgetSubmittedInputQuick,
     handleMentionKeyDown,
     mergeSubmittedInputQuick,
     prependSubmittedInputQuick,
     recallSubmittedInputQuick,
     restoreInputQuick,
+    setRecallFromCurrentQuick,
   ]);
 
   const routeChip = useMemo(() => {
@@ -1542,7 +1552,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               aria-label="quick-input-set-recall"
               onClick={setRecallFromCurrentQuick}
               disabled={!canSetRecallFromCurrent}
-              title={canSetRecallFromCurrent ? "현재 입력을 RECALL 대상으로 저장" : "저장할 입력이 없거나 RECALL과 동일해 비활성화"}
+              title={canSetRecallFromCurrent ? "현재 입력을 RECALL 대상으로 저장 (Cmd/Ctrl+Shift+S)" : "저장할 입력이 없거나 RECALL과 동일해 비활성화"}
               style={{
                 fontSize: 10,
                 color: canSetRecallFromCurrent ? "rgba(255,244,214,0.95)" : "rgba(255,255,255,0.42)",
@@ -1602,7 +1612,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               aria-label="quick-input-forget-recall"
               onClick={forgetSubmittedInputQuick}
               disabled={!lastSubmittedInput}
-              title={lastSubmittedInput ? "직전 실행 입력 기록 비우기" : "비울 실행 입력이 없어 비활성화"}
+              title={lastSubmittedInput ? "직전 실행 입력 기록 비우기 (Cmd/Ctrl+Shift+F)" : "비울 실행 입력이 없어 비활성화"}
               style={{
                 fontSize: 10,
                 color: lastSubmittedInput ? "rgba(255,225,222,0.95)" : "rgba(255,255,255,0.42)",

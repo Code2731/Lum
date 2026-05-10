@@ -634,6 +634,21 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(input).toHaveValue("ls -la pwd");
   });
 
+  it("입력 단축키 Cmd/Ctrl+Shift+S/F로 SET/FORGET RECALL을 실행한다", () => {
+    const { container } = render(<TerminalPane id="tab-1" />);
+    const input = container.querySelector("input")!;
+
+    fireEvent.change(input, { target: { value: "  echo shortcut  " } });
+    fireEvent.keyDown(input, { key: "S", ctrlKey: true, shiftKey: true });
+    expect(screen.getByRole("button", { name: "quick-input-recall" })).toHaveTextContent("RECALL echo shortcut");
+    expect(screen.getByRole("button", { name: "quick-input-rerun" })).not.toHaveAttribute("disabled");
+
+    fireEvent.keyDown(input, { key: "F", ctrlKey: true, shiftKey: true });
+    expect(screen.getByRole("button", { name: "quick-input-recall" })).toHaveTextContent("RECALL");
+    expect(screen.getByRole("button", { name: "quick-input-recall" })).toHaveAttribute("disabled");
+    expect(screen.getByRole("button", { name: "quick-input-rerun" })).toHaveAttribute("disabled");
+  });
+
   it("툴벨트 !/>>/? 버튼으로 입력 모드 프리픽스를 토글한다", () => {
     const { container } = render(<TerminalPane id="tab-1" />);
     const input = container.querySelector("input")!;
