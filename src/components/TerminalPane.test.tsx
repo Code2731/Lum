@@ -669,6 +669,35 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(screen.getByRole("button", { name: "quick-input-reset-all" })).toHaveAttribute("disabled");
   });
 
+  it("입력 단축키 Cmd/Ctrl+Shift+E/W로 RERUN/SWAP을 실행한다", async () => {
+    const { container } = render(<TerminalPane id="tab-1" />);
+    const input = container.querySelector("input")!;
+
+    submitInput(container, "pwd");
+    await waitFor(() => {
+      expect(invokeMock).toHaveBeenCalledWith("write_to_pty", {
+        id: "tab-1",
+        data: "pwd\r",
+      });
+    });
+
+    const writeCallsBefore = invokeMock.mock.calls.filter((c) => c[0] === "write_to_pty").length;
+    fireEvent.keyDown(input, { key: "E", ctrlKey: true, shiftKey: true });
+    await waitFor(() => {
+      const writeCallsAfter = invokeMock.mock.calls.filter((c) => c[0] === "write_to_pty");
+      expect(writeCallsAfter.length).toBe(writeCallsBefore + 1);
+      expect(writeCallsAfter.at(-1)).toEqual([
+        "write_to_pty",
+        { id: "tab-1", data: "pwd\r" },
+      ]);
+    });
+
+    fireEvent.change(input, { target: { value: "ls -la" } });
+    fireEvent.keyDown(input, { key: "W", ctrlKey: true, shiftKey: true });
+    expect(input).toHaveValue("pwd");
+    expect(screen.getByRole("button", { name: "quick-input-recall" })).toHaveTextContent("RECALL ls -la");
+  });
+
   it("툴벨트 !/>>/? 버튼으로 입력 모드 프리픽스를 토글한다", () => {
     const { container } = render(<TerminalPane id="tab-1" />);
     const input = container.querySelector("input")!;

@@ -1267,6 +1267,14 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
         forgetUndoStackQuick();
         return true;
       }
+      if (lowered === "e") {
+        rerunSubmittedInputQuick();
+        return true;
+      }
+      if (lowered === "w") {
+        swapWithSubmittedInputQuick();
+        return true;
+      }
     }
     return handleMentionKeyDown(e);
   }, [
@@ -1278,9 +1286,11 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     mergeSubmittedInputQuick,
     prependSubmittedInputQuick,
     recallSubmittedInputQuick,
+    rerunSubmittedInputQuick,
     resetAllInputStateQuick,
     restoreInputQuick,
     setRecallFromCurrentQuick,
+    swapWithSubmittedInputQuick,
   ]);
 
   const routeChip = useMemo(() => {
@@ -1602,7 +1612,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               aria-label="quick-input-rerun"
               onClick={rerunSubmittedInputQuick}
               disabled={!lastSubmittedInput}
-              title={lastSubmittedInput ? `직전 실행 입력 즉시 재실행: ${lastSubmittedInput}` : "재실행할 입력이 없어 비활성화"}
+              title={lastSubmittedInput ? `직전 실행 입력 즉시 재실행 (Cmd/Ctrl+Shift+E): ${lastSubmittedInput}` : "재실행할 입력이 없어 비활성화"}
               style={{
                 fontSize: 10,
                 color: lastSubmittedInput ? "rgba(255,234,199,0.95)" : "rgba(255,255,255,0.42)",
@@ -1642,7 +1652,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               aria-label="quick-input-swap"
               onClick={swapWithSubmittedInputQuick}
               disabled={!canSwapSubmittedInput}
-              title={canSwapSubmittedInput ? "현재 입력과 직전 실행 입력 교환" : "교환할 실행 입력이 없거나 현재 입력과 동일해 비활성화"}
+              title={canSwapSubmittedInput ? "현재 입력과 직전 실행 입력 교환 (Cmd/Ctrl+Shift+W)" : "교환할 실행 입력이 없거나 현재 입력과 동일해 비활성화"}
               style={{
                 fontSize: 10,
                 color: canSwapSubmittedInput ? "rgba(220,247,225,0.96)" : "rgba(255,255,255,0.42)",
