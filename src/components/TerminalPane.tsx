@@ -989,6 +989,14 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     warpInputRef.current?.focus();
     setInputBuffer(next);
   }, [inputBuffer]);
+  const cleanInputQuick = useCallback(() => {
+    const current = warpInputRef.current?.getValue() ?? inputBuffer;
+    const next = current.trim().replace(/\s{2,}/g, " ");
+    if (next === current) return;
+    warpInputRef.current?.setValue(next);
+    warpInputRef.current?.focus();
+    setInputBuffer(next);
+  }, [inputBuffer]);
   const cycleBackendQuickPrefix = useCallback((dir: 1 | -1) => {
     const current = warpInputRef.current?.getValue() ?? inputBuffer;
     const order: AiBackend[] = ["local", "ollama", "xllm", "gemini"];
@@ -1040,6 +1048,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
   const canNormalizeToPlain = toPlainInput(inputBuffer) !== inputBuffer;
   const canTrimInput = inputBuffer !== inputBuffer.trim();
   const canSquashInputSpaces = /\s{2,}/.test(inputBuffer);
+  const canCleanInput = inputBuffer !== inputBuffer.trim().replace(/\s{2,}/g, " ");
   const lastSubmittedPreview = compactInputPreview(lastSubmittedInput);
   const recallButtonLabel = lastSubmittedPreview ? `RECALL ${lastSubmittedPreview}` : "RECALL";
   const rerunButtonLabel = lastSubmittedPreview ? `RERUN ${lastSubmittedPreview}` : "RERUN";
@@ -1496,6 +1505,26 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               }}
             >
               SQUASH
+            </button>
+            <button
+              type="button"
+              aria-label="quick-input-clean"
+              onClick={cleanInputQuick}
+              disabled={!canCleanInput}
+              title={canCleanInput ? "앞뒤 공백 제거 + 연속 공백 압축" : "정리할 공백이 없어 비활성화"}
+              style={{
+                fontSize: 10,
+                color: canCleanInput ? "rgba(220,247,225,0.96)" : "rgba(255,255,255,0.42)",
+                border: canCleanInput ? "1px solid rgba(63,185,80,0.62)" : "1px solid rgba(255,255,255,0.18)",
+                background: canCleanInput ? "rgba(63,185,80,0.16)" : "rgba(255,255,255,0.06)",
+                borderRadius: 999,
+                padding: "1px 7px",
+                lineHeight: 1.25,
+                cursor: canCleanInput ? "pointer" : "not-allowed",
+                flexShrink: 0,
+              }}
+            >
+              CLEAN
             </button>
             <span style={{ fontSize: 10, color: "rgba(227,179,65,0.78)", flexShrink: 0 }}>
               @local/@ollama/@xllm/@gemini

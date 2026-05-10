@@ -409,6 +409,19 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(screen.getByRole("button", { name: "quick-input-squash" })).toHaveAttribute("disabled");
   });
 
+  it("툴벨트 CLEAN 버튼으로 trim+squash를 한 번에 수행한다", () => {
+    const { container } = render(<TerminalPane id="tab-1" />);
+    const input = container.querySelector("input")!;
+    expect(screen.getByRole("button", { name: "quick-input-clean" })).toHaveAttribute("disabled");
+
+    fireEvent.change(input, { target: { value: "   echo    hello   world   " } });
+    expect(screen.getByRole("button", { name: "quick-input-clean" })).not.toHaveAttribute("disabled");
+
+    fireEvent.click(screen.getByRole("button", { name: "quick-input-clean" }));
+    expect(input).toHaveValue("echo hello world");
+    expect(screen.getByRole("button", { name: "quick-input-clean" })).toHaveAttribute("disabled");
+  });
+
   it("툴벨트 !/>>/? 버튼으로 입력 모드 프리픽스를 토글한다", () => {
     const { container } = render(<TerminalPane id="tab-1" />);
     const input = container.querySelector("input")!;
