@@ -1275,6 +1275,14 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
         swapWithSubmittedInputQuick();
         return true;
       }
+      if (lowered === "b") {
+        restorePrevBackendQuickPrefix();
+        return true;
+      }
+      if (lowered === "n") {
+        restoreLastBackendQuickPrefix();
+        return true;
+      }
     }
     return handleMentionKeyDown(e);
   }, [
@@ -1287,6 +1295,8 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     prependSubmittedInputQuick,
     recallSubmittedInputQuick,
     rerunSubmittedInputQuick,
+    restoreLastBackendQuickPrefix,
+    restorePrevBackendQuickPrefix,
     resetAllInputStateQuick,
     restoreInputQuick,
     setRecallFromCurrentQuick,
@@ -1414,7 +1424,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
             }}
           >
             <span style={{ fontSize: 10, color: "rgba(182,218,255,0.95)", lineHeight: 1.35 }}>
-              TIP · Cmd/Ctrl+1~4 backend 전환 · Shift+K/Z/R/L/M/P for CLEAR/UNDO/RECALL/CLEAN/MERGE/PREPEND
+              TIP · Cmd/Ctrl+1~4 backend 전환 · Shift+B/N for BACK/LAST · Shift+K/Z/R/L/M/P for 입력 편집
             </span>
             <button
               type="button"
@@ -1791,7 +1801,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               @local/@ollama/@xllm/@gemini
             </span>
             <span style={{ fontSize: 10, color: "rgba(255,255,255,0.58)", flexShrink: 0 }}>
-              Cmd/Ctrl+1~4 토글 · 0 해제 · `/. 정순환 · Shift+`/, 역순환 · Shift+K/Z/R/L/M/P 편집 단축키
+              Cmd/Ctrl+1~4 토글 · 0 해제 · `/. 정순환 · Shift+`/, 역순환 · Shift+B/N BACK/LAST · Shift+K/Z/R/L/M/P 편집 단축키
             </span>
             <button
               type="button"
@@ -1978,7 +1988,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               disabled={!canRestorePrevBackendQuick}
               title={
                 canRestorePrevBackendQuick
-                  ? "직전 backend로 복귀"
+                  ? "직전 backend로 복귀 (Cmd/Ctrl+Shift+B)"
                   : "직전 backend 기록이 없거나 현재 backend와 동일해 비활성화"
               }
               style={{
@@ -2000,7 +2010,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               aria-label="quick-backend-last"
               onClick={restoreLastBackendQuickPrefix}
               disabled={!canRestoreLastBackendQuick}
-              title={canRestoreLastBackendQuick ? "마지막으로 사용한 backend 복원" : "이미 마지막 backend 상태라 비활성화"}
+              title={canRestoreLastBackendQuick ? "마지막으로 사용한 backend 복원 (Cmd/Ctrl+Shift+N)" : "이미 마지막 backend 상태라 비활성화"}
               style={{
                 fontSize: 10,
                 color: canRestoreLastBackendQuick ? "rgba(210,168,255,0.95)" : "rgba(255,255,255,0.42)",
