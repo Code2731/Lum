@@ -1192,6 +1192,25 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
   }, [computePrependRecallNext, inputBuffer, lastSubmittedInput, pushUndoSnapshot]);
   const canMergeRecall = !!lastSubmittedInput && computeMergeRecallNext(inputBuffer, lastSubmittedInput) !== null;
   const canPrependRecall = !!lastSubmittedInput && computePrependRecallNext(inputBuffer, lastSubmittedInput) !== null;
+  const handleInputKeyDownIntercept = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+    const mod = e.metaKey || e.ctrlKey;
+    const lowered = e.key.toLowerCase();
+    if (mod && e.shiftKey && !e.altKey) {
+      if (lowered === "k") {
+        clearInputQuick();
+        return true;
+      }
+      if (lowered === "z") {
+        restoreInputQuick();
+        return true;
+      }
+      if (lowered === "r") {
+        recallSubmittedInputQuick();
+        return true;
+      }
+    }
+    return handleMentionKeyDown(e);
+  }, [clearInputQuick, handleMentionKeyDown, recallSubmittedInputQuick, restoreInputQuick]);
 
   const routeChip = useMemo(() => {
     const route = routeInput(inputBuffer);
@@ -1314,7 +1333,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
             }}
           >
             <span style={{ fontSize: 10, color: "rgba(182,218,255,0.95)", lineHeight: 1.35 }}>
-              TIP · Cmd/Ctrl+1~4로 backend 즉시 전환, `/. 정순환, Shift+`/, 역순환
+              TIP · Cmd/Ctrl+1~4 backend 전환 · Shift+K CLEAR · Shift+Z UNDO · Shift+R RECALL
             </span>
             <button
               type="button"
@@ -1372,7 +1391,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               type="button"
               aria-label="quick-input-clear"
               onClick={clearInputQuick}
-              title="입력/오버레이 빠른 초기화 (Esc)"
+              title="입력/오버레이 빠른 초기화 (Esc, Cmd/Ctrl+Shift+K)"
               style={{
                 fontSize: 10,
                 color: "rgba(255,255,255,0.88)",
@@ -1431,7 +1450,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               aria-label="quick-input-undo"
               onClick={restoreInputQuick}
               disabled={clearedInputStack.length === 0}
-              title={clearedInputStack.length > 0 ? "직전 CLEAR 입력 복원" : "복원할 입력이 없어 비활성화"}
+              title={clearedInputStack.length > 0 ? "직전 CLEAR 입력 복원 (Cmd/Ctrl+Shift+Z)" : "복원할 입력이 없어 비활성화"}
               style={{
                 fontSize: 10,
                 color: clearedInputStack.length > 0 ? "rgba(220,247,225,0.96)" : "rgba(255,255,255,0.42)",
@@ -1491,7 +1510,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               aria-label="quick-input-recall"
               onClick={recallSubmittedInputQuick}
               disabled={!canRecallSubmittedInput}
-              title={canRecallSubmittedInput ? `직전 실행 입력 복원: ${lastSubmittedInput}` : "복원할 실행 입력이 없거나 현재 입력과 동일해 비활성화"}
+              title={canRecallSubmittedInput ? `직전 실행 입력 복원 (Cmd/Ctrl+Shift+R): ${lastSubmittedInput}` : "복원할 실행 입력이 없거나 현재 입력과 동일해 비활성화"}
               style={{
                 fontSize: 10,
                 color: canRecallSubmittedInput ? "rgba(255,244,214,0.95)" : "rgba(255,255,255,0.42)",
@@ -1690,7 +1709,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               @local/@ollama/@xllm/@gemini
             </span>
             <span style={{ fontSize: 10, color: "rgba(255,255,255,0.58)", flexShrink: 0 }}>
-              Cmd/Ctrl+1~4 토글 · 0 해제 · `/. 정순환 · Shift+`/, 역순환
+              Cmd/Ctrl+1~4 토글 · 0 해제 · `/. 정순환 · Shift+`/, 역순환 · Shift+K CLEAR · Shift+Z UNDO · Shift+R RECALL
             </span>
             <button
               type="button"
@@ -2026,7 +2045,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
           fontSize={fontSize ?? 13}
           onSubmit={handleSubmit}
           onInterrupt={handleInterrupt}
-          onKeyDownIntercept={handleMentionKeyDown}
+          onKeyDownIntercept={handleInputKeyDownIntercept}
           onTab={handleTab}
           onChange={handleInputChange}
           contextChips={inputChips}
