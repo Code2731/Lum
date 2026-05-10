@@ -1065,7 +1065,11 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
   const recallButtonLabel = lastSubmittedPreview ? `RECALL ${lastSubmittedPreview}` : "RECALL";
   const rerunButtonLabel = lastSubmittedPreview ? `RERUN ${lastSubmittedPreview}` : "RERUN";
   const undoButtonLabel = clearedInputStack.length > 0 ? `UNDO ${clearedInputStack.length}` : "UNDO";
-  const canSetRecallFromCurrent = inputBuffer.trim() !== "";
+  const normalizedRecallCandidate = inputBuffer.trim();
+  const canSetRecallFromCurrent =
+    normalizedRecallCandidate !== "" && normalizedRecallCandidate !== lastSubmittedInput;
+  const canRecallSubmittedInput = !!lastSubmittedInput && inputBuffer !== lastSubmittedInput;
+  const canSwapSubmittedInput = !!lastSubmittedInput && inputBuffer !== lastSubmittedInput;
   const triggerMentionAttach = useCallback(() => {
     const current = warpInputRef.current?.getValue() ?? inputBuffer;
     if (/(?:^|\s)@[^\s@]*$/.test(current)) {
@@ -1467,7 +1471,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               aria-label="quick-input-set-recall"
               onClick={setRecallFromCurrentQuick}
               disabled={!canSetRecallFromCurrent}
-              title={canSetRecallFromCurrent ? "현재 입력을 RECALL 대상으로 저장" : "저장할 입력이 없어 비활성화"}
+              title={canSetRecallFromCurrent ? "현재 입력을 RECALL 대상으로 저장" : "저장할 입력이 없거나 RECALL과 동일해 비활성화"}
               style={{
                 fontSize: 10,
                 color: canSetRecallFromCurrent ? "rgba(255,244,214,0.95)" : "rgba(255,255,255,0.42)",
@@ -1486,17 +1490,17 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               type="button"
               aria-label="quick-input-recall"
               onClick={recallSubmittedInputQuick}
-              disabled={!lastSubmittedInput}
-              title={lastSubmittedInput ? `직전 실행 입력 복원: ${lastSubmittedInput}` : "복원할 실행 입력이 없어 비활성화"}
+              disabled={!canRecallSubmittedInput}
+              title={canRecallSubmittedInput ? `직전 실행 입력 복원: ${lastSubmittedInput}` : "복원할 실행 입력이 없거나 현재 입력과 동일해 비활성화"}
               style={{
                 fontSize: 10,
-                color: lastSubmittedInput ? "rgba(255,244,214,0.95)" : "rgba(255,255,255,0.42)",
-                border: lastSubmittedInput ? "1px solid rgba(227,179,65,0.6)" : "1px solid rgba(255,255,255,0.18)",
-                background: lastSubmittedInput ? "rgba(227,179,65,0.16)" : "rgba(255,255,255,0.06)",
+                color: canRecallSubmittedInput ? "rgba(255,244,214,0.95)" : "rgba(255,255,255,0.42)",
+                border: canRecallSubmittedInput ? "1px solid rgba(227,179,65,0.6)" : "1px solid rgba(255,255,255,0.18)",
+                background: canRecallSubmittedInput ? "rgba(227,179,65,0.16)" : "rgba(255,255,255,0.06)",
                 borderRadius: 999,
                 padding: "1px 7px",
                 lineHeight: 1.25,
-                cursor: lastSubmittedInput ? "pointer" : "not-allowed",
+                cursor: canRecallSubmittedInput ? "pointer" : "not-allowed",
                 flexShrink: 0,
               }}
             >
@@ -1546,17 +1550,17 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               type="button"
               aria-label="quick-input-swap"
               onClick={swapWithSubmittedInputQuick}
-              disabled={!lastSubmittedInput}
-              title={lastSubmittedInput ? "현재 입력과 직전 실행 입력 교환" : "교환할 실행 입력이 없어 비활성화"}
+              disabled={!canSwapSubmittedInput}
+              title={canSwapSubmittedInput ? "현재 입력과 직전 실행 입력 교환" : "교환할 실행 입력이 없거나 현재 입력과 동일해 비활성화"}
               style={{
                 fontSize: 10,
-                color: lastSubmittedInput ? "rgba(220,247,225,0.96)" : "rgba(255,255,255,0.42)",
-                border: lastSubmittedInput ? "1px solid rgba(63,185,80,0.62)" : "1px solid rgba(255,255,255,0.18)",
-                background: lastSubmittedInput ? "rgba(63,185,80,0.16)" : "rgba(255,255,255,0.06)",
+                color: canSwapSubmittedInput ? "rgba(220,247,225,0.96)" : "rgba(255,255,255,0.42)",
+                border: canSwapSubmittedInput ? "1px solid rgba(63,185,80,0.62)" : "1px solid rgba(255,255,255,0.18)",
+                background: canSwapSubmittedInput ? "rgba(63,185,80,0.16)" : "rgba(255,255,255,0.06)",
                 borderRadius: 999,
                 padding: "1px 7px",
                 lineHeight: 1.25,
-                cursor: lastSubmittedInput ? "pointer" : "not-allowed",
+                cursor: canSwapSubmittedInput ? "pointer" : "not-allowed",
                 flexShrink: 0,
               }}
             >
