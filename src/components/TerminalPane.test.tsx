@@ -299,6 +299,26 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(input).toHaveValue("ls -la");
   });
 
+  it("툴벨트 RECALL로 교체된 입력은 UNDO로 직전 입력 복원이 가능하다", async () => {
+    const { container } = render(<TerminalPane id="tab-1" />);
+    const input = container.querySelector("input")!;
+    submitInput(container, "ls -la");
+    await waitFor(() => {
+      expect(invokeMock).toHaveBeenCalledWith("write_to_pty", {
+        id: "tab-1",
+        data: "ls -la\r",
+      });
+    });
+
+    fireEvent.change(input, { target: { value: "pwd" } });
+    fireEvent.click(screen.getByRole("button", { name: "quick-input-recall" }));
+    expect(input).toHaveValue("ls -la");
+    expect(screen.getByRole("button", { name: "quick-input-undo" })).toHaveTextContent("UNDO 1");
+
+    fireEvent.click(screen.getByRole("button", { name: "quick-input-undo" }));
+    expect(input).toHaveValue("pwd");
+  });
+
   it("툴벨트 SET RECALL 버튼으로 실행 없이 현재 입력을 RECALL 대상으로 저장한다", () => {
     const { container } = render(<TerminalPane id="tab-1" />);
     const input = container.querySelector("input")!;

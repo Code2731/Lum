@@ -1065,19 +1065,21 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     warpInputRef.current?.setValue(next);
     warpInputRef.current?.focus();
   }, [inputBuffer]);
+  const pushUndoSnapshot = useCallback((snapshot: string) => {
+    if (snapshot === "") return;
+    setClearedInputStack((prev) => {
+      if (prev[0] === snapshot) return prev;
+      return [snapshot, ...prev].slice(0, 5);
+    });
+  }, []);
   const clearInputQuick = useCallback(() => {
     const current = warpInputRef.current?.getValue() ?? inputBuffer;
-    if (current !== "") {
-      setClearedInputStack((prev) => {
-        if (prev[0] === current) return prev;
-        return [current, ...prev].slice(0, 5);
-      });
-    }
+    pushUndoSnapshot(current);
     clearAllOverlays();
     warpInputRef.current?.setValue("");
     warpInputRef.current?.focus();
     setInputBuffer("");
-  }, [clearAllOverlays, inputBuffer]);
+  }, [clearAllOverlays, inputBuffer, pushUndoSnapshot]);
   const restoreInputQuick = useCallback(() => {
     if (clearedInputStack.length === 0) return;
     const [head, ...rest] = clearedInputStack;
@@ -1092,10 +1094,16 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
   }, [clearedInputStack]);
   const recallSubmittedInputQuick = useCallback(() => {
     if (!lastSubmittedInput) return;
+    const current = warpInputRef.current?.getValue() ?? inputBuffer;
+    if (current === lastSubmittedInput) {
+      warpInputRef.current?.focus();
+      return;
+    }
+    pushUndoSnapshot(current);
     warpInputRef.current?.setValue(lastSubmittedInput);
     warpInputRef.current?.focus();
     setInputBuffer(lastSubmittedInput);
-  }, [lastSubmittedInput]);
+  }, [inputBuffer, lastSubmittedInput, pushUndoSnapshot]);
   const setRecallFromCurrentQuick = useCallback(() => {
     const current = warpInputRef.current?.getValue() ?? inputBuffer;
     const normalized = current.trim();
@@ -1106,11 +1114,16 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
   const swapWithSubmittedInputQuick = useCallback(() => {
     if (!lastSubmittedInput) return;
     const current = warpInputRef.current?.getValue() ?? inputBuffer;
+    if (current === lastSubmittedInput) {
+      warpInputRef.current?.focus();
+      return;
+    }
+    pushUndoSnapshot(current);
     warpInputRef.current?.setValue(lastSubmittedInput);
     warpInputRef.current?.focus();
     setInputBuffer(lastSubmittedInput);
     setLastSubmittedInput(current);
-  }, [inputBuffer, lastSubmittedInput]);
+  }, [inputBuffer, lastSubmittedInput, pushUndoSnapshot]);
   const rerunSubmittedInputQuick = useCallback(() => {
     if (!lastSubmittedInput) return;
     handleSubmit(lastSubmittedInput);
@@ -1128,11 +1141,12 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
       warpInputRef.current?.focus();
       return;
     }
+    pushUndoSnapshot(current);
     const next = base ? `${base} ${last}` : last;
     warpInputRef.current?.setValue(next);
     warpInputRef.current?.focus();
     setInputBuffer(next);
-  }, [inputBuffer, lastSubmittedInput]);
+  }, [inputBuffer, lastSubmittedInput, pushUndoSnapshot]);
   const prependSubmittedInputQuick = useCallback(() => {
     if (!lastSubmittedInput) return;
     const current = warpInputRef.current?.getValue() ?? inputBuffer;
@@ -1142,11 +1156,12 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
       warpInputRef.current?.focus();
       return;
     }
+    pushUndoSnapshot(current);
     const next = base ? `${last} ${base}` : last;
     warpInputRef.current?.setValue(next);
     warpInputRef.current?.focus();
     setInputBuffer(next);
-  }, [inputBuffer, lastSubmittedInput]);
+  }, [inputBuffer, lastSubmittedInput, pushUndoSnapshot]);
 
   const routeChip = useMemo(() => {
     const route = routeInput(inputBuffer);
