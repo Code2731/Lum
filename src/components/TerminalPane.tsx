@@ -1067,7 +1067,10 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
   const clearInputQuick = useCallback(() => {
     const current = warpInputRef.current?.getValue() ?? inputBuffer;
     if (current !== "") {
-      setClearedInputStack((prev) => [current, ...prev].slice(0, 5));
+      setClearedInputStack((prev) => {
+        if (prev[0] === current) return prev;
+        return [current, ...prev].slice(0, 5);
+      });
     }
     clearAllOverlays();
     warpInputRef.current?.setValue("");

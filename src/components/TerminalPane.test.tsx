@@ -253,6 +253,19 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(screen.getByRole("button", { name: "quick-input-forget-undo" })).toHaveAttribute("disabled");
   });
 
+  it("동일 입력을 연속 CLEAR해도 UNDO 스택은 중복 저장하지 않는다", () => {
+    const { container } = render(<TerminalPane id="tab-1" />);
+    const input = container.querySelector("input")!;
+
+    fireEvent.change(input, { target: { value: "same" } });
+    fireEvent.click(screen.getByRole("button", { name: "quick-input-clear" }));
+    expect(screen.getByRole("button", { name: "quick-input-undo" })).toHaveTextContent("UNDO 1");
+
+    fireEvent.change(input, { target: { value: "same" } });
+    fireEvent.click(screen.getByRole("button", { name: "quick-input-clear" }));
+    expect(screen.getByRole("button", { name: "quick-input-undo" })).toHaveTextContent("UNDO 1");
+  });
+
   it("툴벨트 STOP 버튼으로 인터럽트(SIGINT)를 전송한다", async () => {
     render(<TerminalPane id="tab-1" />);
     fireEvent.click(screen.getByRole("button", { name: "quick-input-stop" }));
