@@ -147,18 +147,22 @@ describe("TerminalPane — 입력 라우팅", () => {
 
     expect(screen.getByText("AUTO 라우팅")).toBeInTheDocument();
     expect(screen.getByText("BACKEND AUTO (LOCAL→OLLAMA→XLLM→GEMINI)")).toBeInTheDocument();
+    expect(screen.getByText("WHY EMPTY")).toBeInTheDocument();
 
     fireEvent.change(input, { target: { value: "ls -la" } });
     expect(screen.getByText("SHELL")).toBeInTheDocument();
     expect(screen.getByText("BACKEND AUTO (LOCAL→OLLAMA→XLLM→GEMINI)")).toBeInTheDocument();
+    expect(screen.getByText("WHY HEURISTIC CLI")).toBeInTheDocument();
 
     fireEvent.change(input, { target: { value: "@xllm closure가 뭐야?" } });
     expect(screen.getByText("AI @XLLM")).toBeInTheDocument();
     expect(screen.getByText("BACKEND FORCED @XLLM")).toBeInTheDocument();
+    expect(screen.getByText("WHY BACKEND @XLLM")).toBeInTheDocument();
 
     fireEvent.change(input, { target: { value: "@local src/utils.ts 함수 수정해줘" } });
     expect(screen.getByText("AGENT @LOCAL")).toBeInTheDocument();
     expect(screen.getByText("BACKEND FORCED @LOCAL")).toBeInTheDocument();
+    expect(screen.getByText("WHY BACKEND @LOCAL")).toBeInTheDocument();
   });
 
   it("툴벨트에 backend 단축키 안내 문구가 노출된다", () => {

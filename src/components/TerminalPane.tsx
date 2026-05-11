@@ -1560,30 +1560,42 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     setActionPaletteSelected,
   ]);
 
-  const routeChip = useMemo(() => {
+  const routeMeta = useMemo(() => {
     const route = routeInput(inputBuffer);
+    const trimmed = inputBuffer.trimStart();
+    const forcedBackend = detectBackendPrefixFromInput(inputBuffer);
     const backendTag = (backend?: AiBackend) => (backend ? ` @${backend.toUpperCase()}` : " AUTO");
+    let reason = "WHY DEFAULT";
+    if (trimmed.startsWith("!!")) reason = "WHY PREFIX !!";
+    else if (trimmed.startsWith(">>")) reason = "WHY PREFIX >>";
+    else if (trimmed.startsWith("?")) reason = "WHY PREFIX ?";
+    else if (trimmed.startsWith("#")) reason = "WHY PREFIX #";
+    else if (trimmed.startsWith("@") && forcedBackend === null) reason = "WHY PREFIX @";
+    else if (forcedBackend) reason = `WHY BACKEND @${forcedBackend.toUpperCase()}`;
+    else if (route.type === "shell") reason = "WHY HEURISTIC CLI";
+    else if (route.type === "ai" || route.type === "agent") reason = "WHY HEURISTIC INTENT";
     switch (route.type) {
       case "shell":
-        return { label: "SHELL", tone: "success" as const };
+        return { label: "SHELL", tone: "success" as const, reason };
       case "ai":
-        return { label: `AI${backendTag(route.backend)}`, tone: "accent" as const };
+        return { label: `AI${backendTag(route.backend)}`, tone: "accent" as const, reason };
       case "agent":
-        return { label: `AGENT${backendTag(route.backend)}`, tone: "warn" as const };
+        return { label: `AGENT${backendTag(route.backend)}`, tone: "warn" as const, reason };
       case "aiCmd":
-        return { label: "AI CMD #", tone: "accent" as const };
+        return { label: "AI CMD #", tone: "accent" as const, reason };
       case "explain":
-        return { label: "EXPLAIN ?", tone: "neutral" as const };
+        return { label: "EXPLAIN ?", tone: "neutral" as const, reason };
       case "heavy":
-        return { label: "HEAVY !!", tone: "warn" as const };
+        return { label: "HEAVY !!", tone: "warn" as const, reason };
       case "empty":
       default:
-        return { label: "AUTO 라우팅", tone: "accent" as const };
+        return { label: "AUTO 라우팅", tone: "accent" as const, reason: "WHY EMPTY" };
     }
   }, [inputBuffer]);
 
   const inputChips: Array<{ id: string; label: string; tone: "neutral" | "accent" | "success" | "warn" }> = [
-    { id: "route", label: routeChip.label, tone: routeChip.tone },
+    { id: "route", label: routeMeta.label, tone: routeMeta.tone },
+    { id: "why", label: routeMeta.reason, tone: "neutral" },
     {
       id: "backend",
       label: activeBackendPrefix
