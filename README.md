@@ -160,9 +160,12 @@ LUM works as a plain terminal with no AI server. To enable embedded local AI:
 
 If LUM cannot start on macOS, check these steps in order:
 
-1. Use the bundled helper script to fetch the right DMG for this machine:
-   - `bash scripts/download-latest-lum-macos.sh`
-2. Download the DMG matching your machine:
+1. Recommended: run one-shot install (download → install → launch):
+   - `bash scripts/install-latest-lum-macos.sh`
+2. If you prefer manual install:
+   1. Fetch the matching DMG for this machine:
+      - `bash scripts/download-latest-lum-macos.sh`
+   2. Download the DMG matching your machine:
    - Apple Silicon → `*aarch64.dmg`
    - Intel → `*x64.dmg`
 3. If needed, remove quarantine flags from the downloaded DMG and app:
@@ -281,11 +284,14 @@ npm run tauri build -- --features embedded-ai     # OS별 CUDA/Metal 자동 선�
 
 macOS에서 LUM이 실행되지 않을 때는 순서대로 확인하세요.
 
-1. 먼저 프로젝트 스크립트로 현재 아키텍처에 맞는 DMG를 받아보세요.
-   - `bash scripts/download-latest-lum-macos.sh`
-2. 사용 중인 CPU 아키텍처에 맞는 DMG를 받았는지 확인합니다.
-   - Apple Silicon → `*aarch64.dmg`
-   - Intel → `*x64.dmg`
+1. 권장: 한 번에 설치(다운로드 → 설치 → 실행):
+   - `bash scripts/install-latest-lum-macos.sh`
+2. 수동으로 하려면 순서를 따라주세요.
+   1. 프로젝트 스크립트로 현재 아키텍처에 맞는 DMG를 받아보세요.
+      - `bash scripts/download-latest-lum-macos.sh`
+   2. 사용 중인 CPU 아키텍처에 맞는 DMG를 받았는지 확인합니다.
+      - Apple Silicon → `*aarch64.dmg`
+      - Intel → `*x64.dmg`
 3. 필요한 경우 다운로드한 DMG와 앱의 격리 플래그를 제거합니다.
    - `xattr -dr com.apple.quarantine ~/Downloads/LUM.Terminal_*.dmg`
    - `xattr -dr com.apple.quarantine "/Applications/LUM Terminal.app"`
