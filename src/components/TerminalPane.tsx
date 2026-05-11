@@ -117,6 +117,7 @@ const PANE_PADDING_Y = 6;
 const INPUT_TIP_DISMISSED_KEY = "lum_input_toolbelt_tip_dismissed";
 const TOOLBELT_ADVANCED_KEY = "lum_toolbelt_show_advanced";
 const TOOLBELT_BACKEND_KEY = "lum_toolbelt_show_backend";
+const INPUT_HISTORY_KEY = "lum_input_submit_history";
 
 const DEFAULT_MODEL = "Qwen2.5-Coder-7B-Instruct-EXL2-4bpw";
 
@@ -183,6 +184,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
   const [actionPaletteOpen, setActionPaletteOpen] = useState(false);
   const [actionPaletteQuery, setActionPaletteQuery] = useState("");
   const [actionPaletteSelected, setActionPaletteSelected] = useState(0);
+  const [inputHistoryOpen, setInputHistoryOpen] = useState(false);
 
   const outerRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -294,6 +296,17 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
   const [mentionSelected, setMentionSelected] = useState(0);
   const [clearedInputStack, setClearedInputStack] = useState<string[]>([]);
   const [lastSubmittedInput, setLastSubmittedInput] = useState("");
+  const [submittedInputHistory, setSubmittedInputHistory] = useState<string[]>(() => {
+    try {
+      const raw = localStorage.getItem(INPUT_HISTORY_KEY);
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) return [];
+      return parsed.filter((v): v is string => typeof v === "string").slice(0, 20);
+    } catch {
+      return [];
+    }
+  });
   const [showInputTip, setShowInputTip] = useState(() => {
     try {
       return localStorage.getItem(INPUT_TIP_DISMISSED_KEY) !== "1";
@@ -699,6 +712,38 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     setMentionEntries([]);
     setMentionSelected(0);
   }, []);
+  const persistInputHistory = useCallback((next: string[]) => {
+    try {
+      localStorage.setItem(INPUT_HISTORY_KEY, JSON.stringify(next));
+    } catch {}
+  }, []);
+  const recordSubmittedInput = useCallback((rawInput: string) => {
+    setLastSubmittedInput(rawInput);
+    setSubmittedInputHistory((prev) => {
+      const next = [rawInput, ...prev.filter((item) => item !== rawInput)].slice(0, 20);
+      persistInputHistory(next);
+      return next;
+    });
+  }, [persistInputHistory]);
+  const applyHistoryInput = useCallback((rawInput: string) => {
+    const current = warpInputRef.current?.getValue() ?? inputBuffer;
+    if (current !== rawInput) {
+      if (current !== "") {
+        setClearedInputStack((prev) => {
+          if (prev[0] === current) return prev;
+          return [current, ...prev].slice(0, 5);
+        });
+      }
+      warpInputRef.current?.setValue(rawInput);
+      setInputBuffer(rawInput);
+    }
+    setInputHistoryOpen(false);
+    warpInputRef.current?.focus();
+  }, [inputBuffer]);
+  const clearSubmittedInputHistory = useCallback(() => {
+    setSubmittedInputHistory([]);
+    persistInputHistory([]);
+  }, [persistInputHistory]);
 
   // 입력 라우팅: 기본=AI, 알려진 CLI=shell, !/@/#/?/>> = 명시적 오버라이드
   const handleSubmit = useCallback((rawInput: string) => {
@@ -708,13 +753,13 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
       case "empty":
         return;
       case "shell":
-        setLastSubmittedInput(rawInput);
+        recordSubmittedInput(rawInput);
         setTerminalVisible(true);
         invoke("write_to_pty", { id, data: route.command + "\r" }).catch(() => {});
         return;
       case "ai":
         if (route.question) {
-          setLastSubmittedInput(rawInput);
+          recordSubmittedInput(rawInput);
           if (route.backend) {
             onAskAIRef.current?.(route.question, undefined, undefined, route.backend);
           } else {
@@ -725,13 +770,13 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
       case "heavy":
         // !! Heavy Track — engine="heavy" 명시 전달 → 백엔드가 mistral.rs로 라우팅
         if (route.prompt) {
-          setLastSubmittedInput(rawInput);
+          recordSubmittedInput(rawInput);
           onAskAIRef.current?.(route.prompt, undefined, "heavy");
         }
         return;
       case "agent":
         if (route.task) {
-          setLastSubmittedInput(rawInput);
+          recordSubmittedInput(rawInput);
           onAgentTriggerRef.current?.(route.task, route.backend);
         }
         return;
@@ -739,7 +784,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
       case "explain":
         return;
     }
-  }, [id, clearAllOverlays]);
+  }, [id, clearAllOverlays, recordSubmittedInput]);
 
   const handleInterrupt = useCallback(() => {
     invoke("write_to_pty", { id, data: "\x03" }).catch(() => {});
@@ -1121,6 +1166,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
   const lastSubmittedPreview = compactInputPreview(lastSubmittedInput);
   const recallButtonLabel = lastSubmittedPreview ? `RECALL ${lastSubmittedPreview}` : "RECALL";
   const rerunButtonLabel = lastSubmittedPreview ? `RERUN ${lastSubmittedPreview}` : "RERUN";
+  const historyButtonLabel = submittedInputHistory.length > 0 ? `HISTORY ${submittedInputHistory.length}` : "HISTORY";
   const undoButtonLabel = clearedInputStack.length > 0 ? `UNDO ${clearedInputStack.length}` : "UNDO";
   const normalizedRecallCandidate = inputBuffer.trim();
   const canSetRecallFromCurrent =
@@ -1184,9 +1230,9 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     const current = warpInputRef.current?.getValue() ?? inputBuffer;
     const normalized = current.trim();
     if (normalized === "") return;
-    setLastSubmittedInput(normalized);
+    recordSubmittedInput(normalized);
     warpInputRef.current?.focus();
-  }, [inputBuffer]);
+  }, [inputBuffer, recordSubmittedInput]);
   const swapWithSubmittedInputQuick = useCallback(() => {
     if (!lastSubmittedInput) return;
     const current = warpInputRef.current?.getValue() ?? inputBuffer;
@@ -1251,6 +1297,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
   const canMergeRecall = !!lastSubmittedInput && computeMergeRecallNext(inputBuffer, lastSubmittedInput) !== null;
   const canPrependRecall = !!lastSubmittedInput && computePrependRecallNext(inputBuffer, lastSubmittedInput) !== null;
   const actionPaletteActions = useMemo(() => ([
+    { id: "history_open", label: "Open Input History", keywords: "history recent", run: () => setInputHistoryOpen(true), disabled: submittedInputHistory.length === 0 },
     { id: "clear", label: "Clear Input", keywords: "clear", run: clearInputQuick, disabled: !canClearInputQuick },
     { id: "undo", label: "Undo Clear", keywords: "undo restore", run: restoreInputQuick, disabled: clearedInputStack.length === 0 },
     { id: "recall", label: "Recall Last Input", keywords: "recall", run: recallSubmittedInputQuick, disabled: !canRecallSubmittedInput },
@@ -1269,12 +1316,14 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     clearInputQuick,
     clearedInputStack.length,
     lastSubmittedInput,
+    submittedInputHistory.length,
     recallSubmittedInputQuick,
     rerunSubmittedInputQuick,
     resetAllInputStateQuick,
     restoreInputQuick,
     restoreLastBackendQuickPrefix,
     restorePrevBackendQuickPrefix,
+    setInputHistoryOpen,
   ]);
   const actionPaletteFiltered = useMemo(() => {
     const query = actionPaletteQuery.trim().toLowerCase();
@@ -1325,6 +1374,10 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
   const handleInputKeyDownIntercept = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
     const mod = e.metaKey || e.ctrlKey;
     const lowered = e.key.toLowerCase();
+    if (e.key === "Escape" && inputHistoryOpen) {
+      setInputHistoryOpen(false);
+      return true;
+    }
     if (mod && !e.shiftKey && !e.altKey && (lowered === "k" || e.code === "KeyK")) {
       setActionPaletteOpen((open) => !open);
       setActionPaletteQuery("");
@@ -1496,6 +1549,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     setRecallFromCurrentQuick,
     squashInputSpacesQuick,
     shortcutHelpOpen,
+    inputHistoryOpen,
     swapWithSubmittedInputQuick,
     toggleForceAiPrefix,
     toggleQuickModePrefix,
@@ -1878,6 +1932,26 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               }}
             >
               {rerunButtonLabel}
+            </button>
+            <button
+              type="button"
+              aria-label="quick-input-history-open"
+              onClick={() => setInputHistoryOpen((open) => !open)}
+              disabled={submittedInputHistory.length === 0}
+              title={submittedInputHistory.length > 0 ? "실행 입력 히스토리 열기/닫기" : "표시할 실행 입력 히스토리가 없어 비활성화"}
+              style={{
+                fontSize: 10,
+                color: submittedInputHistory.length > 0 ? "rgba(215,228,255,0.96)" : "rgba(255,255,255,0.42)",
+                border: submittedInputHistory.length > 0 ? "1px solid rgba(121,192,255,0.62)" : "1px solid rgba(255,255,255,0.18)",
+                background: submittedInputHistory.length > 0 ? "rgba(121,192,255,0.16)" : "rgba(255,255,255,0.06)",
+                borderRadius: 999,
+                padding: "1px 7px",
+                lineHeight: 1.25,
+                cursor: submittedInputHistory.length > 0 ? "pointer" : "not-allowed",
+                flexShrink: 0,
+              }}
+            >
+              {historyButtonLabel}
             </button>
             <button
               type="button"
@@ -2542,6 +2616,95 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
                 </button>
               );
             })}
+          </div>
+        </div>
+      )}
+
+      {inputHistoryOpen && (
+        <div
+          style={{
+            position: "absolute",
+            left: 10,
+            right: 10,
+            bottom: 70,
+            zIndex: 30,
+            background: "rgba(10,16,24,0.97)",
+            border: "1px solid rgba(121,192,255,0.28)",
+            borderRadius: 12,
+            boxShadow: "0 14px 30px rgba(0,0,0,0.45)",
+            overflow: "hidden",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 10px", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+            <span style={{ fontSize: 11, color: "rgba(182,218,255,0.96)", letterSpacing: "0.05em", fontWeight: 600 }}>
+              INPUT HISTORY
+            </span>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <button
+                type="button"
+                aria-label="quick-input-history-clear"
+                onClick={clearSubmittedInputHistory}
+                disabled={submittedInputHistory.length === 0}
+                style={{
+                  fontSize: 10,
+                  color: submittedInputHistory.length > 0 ? "rgba(255,225,222,0.95)" : "rgba(255,255,255,0.42)",
+                  border: submittedInputHistory.length > 0 ? "1px solid rgba(255,123,114,0.58)" : "1px solid rgba(255,255,255,0.18)",
+                  background: submittedInputHistory.length > 0 ? "rgba(255,123,114,0.14)" : "rgba(255,255,255,0.06)",
+                  borderRadius: 999,
+                  padding: "1px 6px",
+                  lineHeight: 1.2,
+                  cursor: submittedInputHistory.length > 0 ? "pointer" : "not-allowed",
+                }}
+              >
+                CLEAR
+              </button>
+              <button
+                type="button"
+                aria-label="quick-input-history-close"
+                onClick={() => setInputHistoryOpen(false)}
+                style={{
+                  fontSize: 10,
+                  color: "rgba(255,255,255,0.88)",
+                  border: "1px solid rgba(255,255,255,0.22)",
+                  background: "rgba(255,255,255,0.08)",
+                  borderRadius: 999,
+                  padding: "1px 6px",
+                  lineHeight: 1.2,
+                  cursor: "pointer",
+                }}
+              >
+                닫기
+              </button>
+            </div>
+          </div>
+          <div style={{ maxHeight: 220, overflowY: "auto" }}>
+            {submittedInputHistory.length === 0 && (
+              <div style={{ padding: "10px 12px", fontSize: 11, color: "rgba(255,255,255,0.55)" }}>
+                기록된 실행 입력이 없습니다.
+              </div>
+            )}
+            {submittedInputHistory.map((entry, idx) => (
+              <button
+                key={`${entry}-${idx}`}
+                type="button"
+                aria-label={`quick-input-history-item-${idx}`}
+                onClick={() => applyHistoryInput(entry)}
+                style={{
+                  width: "100%",
+                  textAlign: "left",
+                  padding: "8px 10px",
+                  border: "none",
+                  borderTop: idx === 0 ? "none" : "1px solid rgba(255,255,255,0.04)",
+                  background: "transparent",
+                  color: "rgba(255,255,255,0.9)",
+                  fontSize: 12,
+                  fontFamily: FONT_FAMILY,
+                  cursor: "pointer",
+                }}
+              >
+                {entry}
+              </button>
+            ))}
           </div>
         </div>
       )}

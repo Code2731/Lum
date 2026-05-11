@@ -54,6 +54,7 @@ beforeEach(() => {
     localStorage.removeItem("lum_input_toolbelt_tip_dismissed");
     localStorage.removeItem("lum_toolbelt_show_advanced");
     localStorage.removeItem("lum_toolbelt_show_backend");
+    localStorage.removeItem("lum_input_submit_history");
   } catch {}
   invokeMock.mockImplementation((cmd: string) => {
     if (cmd === "spawn_pty") return Promise.resolve();
@@ -414,6 +415,52 @@ describe("TerminalPane — 입력 라우팅", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "quick-input-recall" }));
     expect(input).toHaveValue("ls -la");
+  });
+
+  it("툴벨트 HISTORY 패널에서 실행 입력을 선택해 복원한다", async () => {
+    const { container } = render(<TerminalPane id="tab-1" />);
+    const input = container.querySelector("input")!;
+    expect(screen.getByRole("button", { name: "quick-input-history-open" })).toHaveAttribute("disabled");
+
+    submitInput(container, "ls -la");
+    await waitFor(() => {
+      expect(invokeMock).toHaveBeenCalledWith("write_to_pty", {
+        id: "tab-1",
+        data: "ls -la\r",
+      });
+    });
+    submitInput(container, "pwd");
+    await waitFor(() => {
+      expect(invokeMock).toHaveBeenCalledWith("write_to_pty", {
+        id: "tab-1",
+        data: "pwd\r",
+      });
+    });
+
+    const historyOpen = screen.getByRole("button", { name: "quick-input-history-open" });
+    expect(historyOpen).not.toHaveAttribute("disabled");
+    fireEvent.click(historyOpen);
+    expect(screen.getByText("INPUT HISTORY")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "quick-input-history-item-1" }));
+    expect(screen.queryByText("INPUT HISTORY")).not.toBeInTheDocument();
+    expect(input).toHaveValue("ls -la");
+  });
+
+  it("HISTORY CLEAR로 실행 입력 기록을 비운다", async () => {
+    const { container } = render(<TerminalPane id="tab-1" />);
+    submitInput(container, "ls -la");
+    await waitFor(() => {
+      expect(invokeMock).toHaveBeenCalledWith("write_to_pty", {
+        id: "tab-1",
+        data: "ls -la\r",
+      });
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "quick-input-history-open" }));
+    fireEvent.click(screen.getByRole("button", { name: "quick-input-history-clear" }));
+    expect(screen.getByText("기록된 실행 입력이 없습니다.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "quick-input-history-open" })).toHaveTextContent("HISTORY");
   });
 
   it("툴벨트 RECALL로 교체된 입력은 UNDO로 직전 입력 복원이 가능하다", async () => {
