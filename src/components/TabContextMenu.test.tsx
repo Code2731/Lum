@@ -74,4 +74,39 @@ describe("TabContextMenu", () => {
     expect(screen.getByLabelText("탭 색상 초기화")).toBeInTheDocument();
     expect(screen.getByLabelText("탭 그룹 초기화")).toBeInTheDocument();
   });
+
+  it("화면 경계 근처에서 메뉴 위치를 보정한다", () => {
+    const rectSpy = vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue({
+      width: 220,
+      height: 280,
+      top: 0,
+      left: 0,
+      right: 220,
+      bottom: 280,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    });
+    const initialInnerWidth = window.innerWidth;
+    const initialInnerHeight = window.innerHeight;
+    Object.defineProperty(window, "innerWidth", { value: 240, configurable: true });
+    Object.defineProperty(window, "innerHeight", { value: 320, configurable: true });
+
+    const { getByRole } = render(
+      <TabContextMenu
+        {...baseProps}
+        x={230}
+        y={300}
+        onClose={vi.fn()}
+        onSetColor={vi.fn()}
+        onSetGroup={vi.fn()}
+      />,
+    );
+
+    const menu = getByRole("menu");
+    expect(menu).toHaveStyle({ left: "10px", top: "30px" });
+    rectSpy.mockRestore();
+    Object.defineProperty(window, "innerWidth", { value: initialInnerWidth, configurable: true });
+    Object.defineProperty(window, "innerHeight", { value: initialInnerHeight, configurable: true });
+  });
 });

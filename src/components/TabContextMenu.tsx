@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Palette, Tag, X } from "lucide-react";
 import { TAB_COLORS } from "../hooks/useTabManager";
 import type { TabColor } from "../hooks/useTabManager";
@@ -15,12 +15,21 @@ interface Props {
 }
 
 const COLOR_ENTRIES = Object.entries(TAB_COLORS) as [TabColor, string][];
+const MENU_FALLBACK_WIDTH = 220;
+const MENU_FALLBACK_HEIGHT = 280;
+const MENU_EDGE_GAP = 10;
+
+const clampValue = (value: number, min: number, max: number): number => Math.max(min, Math.min(value, max));
 
 const TabContextMenu: React.FC<Props> = ({
   tabId, currentColor, currentGroup,
   x, y, onSetColor, onSetGroup, onClose,
 }) => {
   const ref = useRef<HTMLDivElement>(null);
+  const [position, setPosition] = useState({
+    left: clampValue(x, 0, Math.max(0, window.innerWidth - MENU_FALLBACK_WIDTH - MENU_EDGE_GAP)),
+    top: clampValue(y, 0, Math.max(0, window.innerHeight - MENU_FALLBACK_HEIGHT - MENU_EDGE_GAP)),
+  });
 
   useEffect(() => {
     const handle = (e: MouseEvent) => {
@@ -38,11 +47,21 @@ const TabContextMenu: React.FC<Props> = ({
     };
   }, [onClose]);
 
-  // 화면 끝에 걸리지 않도록 위치 조정
+  useLayoutEffect(() => {
+    if (!ref.current) return;
+    const rect = ref.current.getBoundingClientRect();
+    const menuWidth = Number.isFinite(rect.width) && rect.width > 0 ? rect.width : MENU_FALLBACK_WIDTH;
+    const menuHeight = Number.isFinite(rect.height) && rect.height > 0 ? rect.height : MENU_FALLBACK_HEIGHT;
+    setPosition({
+      left: clampValue(x, 0, Math.max(0, window.innerWidth - menuWidth - MENU_EDGE_GAP)),
+      top: clampValue(y, 0, Math.max(0, window.innerHeight - menuHeight - MENU_EDGE_GAP)),
+    });
+  }, [x, y]);
+
   const style: React.CSSProperties = {
     position: "fixed",
-    left: Math.min(x, window.innerWidth - 220),
-    top: Math.min(y, window.innerHeight - 280),
+    left: position.left,
+    top: position.top,
     zIndex: 100,
   };
 
