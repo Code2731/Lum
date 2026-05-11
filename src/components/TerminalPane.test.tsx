@@ -452,6 +452,7 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(screen.getByLabelText("input-history-shortcuts")).toHaveTextContent("Del/Backspace 삭제");
     expect(screen.getByLabelText("input-history-shortcuts")).toHaveTextContent("Shift+↑/↓ 범위 선택");
     expect(screen.getByLabelText("input-history-shortcuts")).toHaveTextContent("Shift+클릭 범위 선택");
+    expect(screen.getByLabelText("input-history-shortcuts")).toHaveTextContent("Cmd/Ctrl+A 전체 선택");
 
     fireEvent.click(screen.getByRole("button", { name: "quick-input-history-item-1" }));
     expect(screen.queryByText("INPUT HISTORY")).not.toBeInTheDocument();
@@ -671,6 +672,52 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(screen.queryByLabelText("input-history-selected-count")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "quick-input-history-item-0" })).toHaveTextContent("ls -la");
     expect(screen.getByRole("button", { name: "quick-input-history-open" })).toHaveTextContent("HISTORY 1");
+  });
+
+  it("HISTORY 검색창에서 Cmd/Ctrl+A로 필터 결과 전체 선택 후 Delete로 일괄 삭제한다", async () => {
+    render(<TerminalPane id="tab-1" />);
+
+    const input = screen.getByRole("textbox");
+    fireEvent.change(input, { target: { value: "ls -la" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+    await waitFor(() => {
+      expect(invokeMock).toHaveBeenCalledWith("write_to_pty", {
+        id: "tab-1",
+        data: "ls -la\r",
+      });
+    });
+
+    fireEvent.change(input, { target: { value: "npm test" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+    await waitFor(() => {
+      expect(invokeMock).toHaveBeenCalledWith("write_to_pty", {
+        id: "tab-1",
+        data: "npm test\r",
+      });
+    });
+
+    fireEvent.change(input, { target: { value: "pwd" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+    await waitFor(() => {
+      expect(invokeMock).toHaveBeenCalledWith("write_to_pty", {
+        id: "tab-1",
+        data: "pwd\r",
+      });
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "quick-input-history-open" }));
+    const search = screen.getByRole("textbox", { name: "input-history-search" });
+    fireEvent.change(search, { target: { value: "p" } });
+
+    fireEvent.keyDown(search, { key: "a", ctrlKey: true });
+    expect(screen.getByLabelText("input-history-selected-count")).toHaveTextContent("2 selected");
+
+    fireEvent.keyDown(search, { key: "Delete" });
+    expect(screen.queryByLabelText("input-history-selected-count")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "quick-input-history-item-0" })).not.toBeInTheDocument();
+    expect(screen.getByText("기록된 실행 입력이 없습니다.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "quick-input-history-open" })).toHaveTextContent("HISTORY 1");
+    expect(screen.getByRole("button", { name: "quick-input-recall" })).toHaveTextContent("RECALL ls -la");
   });
 
   it("HISTORY 선택 해제 버튼으로 멀티 선택 상태만 초기화한다", async () => {

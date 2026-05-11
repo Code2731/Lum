@@ -785,6 +785,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     return submittedInputHistory.filter((entry) => entry.toLowerCase().includes(query));
   }, [inputHistoryQuery, submittedInputHistory]);
   const handleInputHistoryKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+    const mod = e.metaKey || e.ctrlKey;
     if (e.key === "Escape") {
       e.preventDefault();
       if (inputHistoryMultiSelected.length > 1) {
@@ -797,6 +798,14 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
       setInputHistoryRangeAnchor(null);
       setInputHistoryMultiSelected([]);
       warpInputRef.current?.focus();
+      return;
+    }
+    if (mod && !e.shiftKey && !e.altKey && e.key.toLowerCase() === "a") {
+      e.preventDefault();
+      if (filteredSubmittedInputHistory.length === 0) return;
+      setInputHistoryRangeAnchor(0);
+      setInputHistorySelected(filteredSubmittedInputHistory.length - 1);
+      setInputHistoryMultiSelected(filteredSubmittedInputHistory);
       return;
     }
     if (e.key === "ArrowDown") {
@@ -2934,6 +2943,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               <span>↑/↓ 이동</span>
               <span>Shift+↑/↓ 범위 선택</span>
               <span>Shift+클릭 범위 선택</span>
+              <span>Cmd/Ctrl+A 전체 선택</span>
               <span>Enter 복원</span>
               <span>Del/Backspace 삭제</span>
               <span>Esc 선택해제/닫기</span>
