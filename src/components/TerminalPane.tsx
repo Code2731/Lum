@@ -177,6 +177,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
   // 입력 모드 토글 상태 — Heavy(Phase 85b 제거)는 dead, reasoning은 App.tsx props 통해 글로벌 상태 연동
   const [visionMode, setVisionMode] = useState(visionEnabled ?? false);
   const [terminalVisible, setTerminalVisible] = useState(false);
+  const [shortcutHelpOpen, setShortcutHelpOpen] = useState(false);
 
   const outerRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -1226,6 +1227,14 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
   const handleInputKeyDownIntercept = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
     const mod = e.metaKey || e.ctrlKey;
     const lowered = e.key.toLowerCase();
+    if (e.key === "Escape" && shortcutHelpOpen) {
+      setShortcutHelpOpen(false);
+      return true;
+    }
+    if (mod && !e.altKey && (e.key === "/" || e.code === "Slash")) {
+      setShortcutHelpOpen((open) => !open);
+      return true;
+    }
     if (mod && e.shiftKey && !e.altKey) {
       if (e.key === "ArrowLeft") {
         cycleBackendQuickPrefix(-1);
@@ -1382,6 +1391,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     restoreInputQuick,
     setRecallFromCurrentQuick,
     squashInputSpacesQuick,
+    shortcutHelpOpen,
     swapWithSubmittedInputQuick,
     toggleForceAiPrefix,
     toggleQuickModePrefix,
@@ -2316,6 +2326,57 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
                 </button>
               );
             })}
+          </div>
+        </div>
+      )}
+
+      {shortcutHelpOpen && (
+        <div
+          style={{
+            position: "absolute",
+            right: 10,
+            bottom: 70,
+            zIndex: 30,
+            width: 420,
+            maxWidth: "calc(100% - 20px)",
+            background: "rgba(9,14,22,0.97)",
+            border: "1px solid rgba(121,192,255,0.28)",
+            borderRadius: 12,
+            boxShadow: "0 14px 30px rgba(0,0,0,0.45)",
+            padding: "10px 11px",
+            color: "rgba(255,255,255,0.86)",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+            <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.05em", color: "rgba(182,218,255,0.96)" }}>
+              SHORTCUT CHEATSHEET
+            </span>
+            <button
+              type="button"
+              aria-label="shortcut-help-close"
+              onClick={() => setShortcutHelpOpen(false)}
+              style={{
+                fontSize: 10,
+                color: "rgba(255,255,255,0.88)",
+                border: "1px solid rgba(255,255,255,0.22)",
+                background: "rgba(255,255,255,0.08)",
+                borderRadius: 999,
+                padding: "1px 6px",
+                lineHeight: 1.2,
+                cursor: "pointer",
+              }}
+            >
+              닫기
+            </button>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "5px 12px", fontSize: 10.5, lineHeight: 1.45 }}>
+            <span>Cmd/Ctrl+/ · 치트시트 토글</span><span>Shift+C · 인터럽트</span>
+            <span>Shift+1~4/0 · backend 지정/해제</span><span>Shift+←/→ · backend 순환</span>
+            <span>Shift+B/N · BACK/LAST</span><span>Shift+O · AUTO 토글</span>
+            <span>Shift+K/Z/R · CLEAR/UNDO/RECALL</span><span>Shift+S/F · SET/FORGET RECALL</span>
+            <span>Shift+E/W · RERUN/SWAP</span><span>Shift+M/P · MERGE/PREPEND</span>
+            <span>Shift+G/T/Q/L · PLAIN/TRIM/SQUASH/CLEAN</span><span>Shift+A · @ 첨부</span>
+            <span>Shift+H/Y/J/U/V/I · 모드 토글</span><span>Esc · 오버레이 닫기</span>
           </div>
         </div>
       )}

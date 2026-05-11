@@ -168,6 +168,18 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(screen.queryByText(/TIP · Cmd\/Ctrl\+1~4 backend 전환 · Shift\+A @첨부 · Shift\+B\/N BACK\/LAST · Shift\+K\/Z\/R\/L\/M\/P 입력 편집/)).not.toBeInTheDocument();
   });
 
+  it("Cmd/Ctrl+/로 단축키 치트시트를 열고 Esc로 닫는다", () => {
+    const { container } = render(<TerminalPane id="tab-1" />);
+    const input = container.querySelector("input")!;
+    expect(screen.queryByText("SHORTCUT CHEATSHEET")).not.toBeInTheDocument();
+
+    fireEvent.keyDown(input, { key: "/", code: "Slash", ctrlKey: true });
+    expect(screen.getByText("SHORTCUT CHEATSHEET")).toBeInTheDocument();
+
+    fireEvent.keyDown(input, { key: "Escape" });
+    expect(screen.queryByText("SHORTCUT CHEATSHEET")).not.toBeInTheDocument();
+  });
+
   it("툴벨트 @ 파일 첨부 버튼으로 첨부 트리거를 삽입하고 목록 로드를 시작한다", async () => {
     invokeMock.mockImplementation((cmd: string, args?: { path?: string }) => {
       if (cmd === "spawn_pty") return Promise.resolve();
