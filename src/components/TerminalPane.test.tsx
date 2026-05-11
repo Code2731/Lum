@@ -621,6 +621,8 @@ describe("TerminalPane — 입력 라우팅", () => {
 
     fireEvent.keyDown(search, { key: "ArrowDown", shiftKey: true });
     expect(screen.getByLabelText("input-history-selected-count")).toHaveTextContent("2 selected");
+    expect(screen.getByLabelText("input-history-selected-preview")).toHaveTextContent("pwd");
+    expect(screen.getByLabelText("input-history-selected-preview")).toHaveTextContent("npm test");
     fireEvent.keyDown(search, { key: "Delete" });
 
     expect(screen.queryByLabelText("input-history-selected-count")).not.toBeInTheDocument();

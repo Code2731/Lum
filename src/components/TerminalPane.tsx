@@ -784,6 +784,16 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     if (!query) return submittedInputHistory;
     return submittedInputHistory.filter((entry) => entry.toLowerCase().includes(query));
   }, [inputHistoryQuery, submittedInputHistory]);
+  const inputHistoryMultiSelectedPreview = useMemo(() => {
+    if (inputHistoryMultiSelected.length <= 1) return "";
+    const tokens = inputHistoryMultiSelected.slice(0, 2).map((entry) => (
+      entry.length > 24 ? `${entry.slice(0, 21)}…` : entry
+    ));
+    if (inputHistoryMultiSelected.length > 2) {
+      tokens.push(`+${inputHistoryMultiSelected.length - 2}`);
+    }
+    return tokens.join(" · ");
+  }, [inputHistoryMultiSelected]);
   const handleInputHistoryKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
     const mod = e.metaKey || e.ctrlKey;
     if (e.key === "Escape") {
@@ -2838,6 +2848,20 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
                     }}
                   >
                     {inputHistoryMultiSelected.length} selected
+                  </span>
+                  <span
+                    aria-label="input-history-selected-preview"
+                    style={{
+                      fontSize: 10,
+                      color: "rgba(182,218,255,0.86)",
+                      maxWidth: 220,
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }}
+                    title={inputHistoryMultiSelected.join(", ")}
+                  >
+                    {inputHistoryMultiSelectedPreview}
                   </span>
                   <button
                     type="button"
