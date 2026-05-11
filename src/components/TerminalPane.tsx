@@ -194,6 +194,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
   const containerRef = useRef<HTMLDivElement>(null);
   const actionPaletteInputRef = useRef<HTMLInputElement>(null);
   const inputHistoryInputRef = useRef<HTMLInputElement>(null);
+  const inputDockRef = useRef<HTMLDivElement>(null);
   const termRef = useRef<Terminal | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
   const searchAddonRef = useRef<SearchAddon | null>(null);
@@ -334,6 +335,8 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     }
   });
   const [toolbeltCustomizeOpen, setToolbeltCustomizeOpen] = useState(false);
+  const [inputDockHeight, setInputDockHeight] = useState(70);
+  const overlayBottomOffset = Math.max(70, inputDockHeight + 8);
 
   // WarpInputBar — 실제 입력 필드
   const warpInputRef = useRef<WarpInputBarHandle>(null);
@@ -995,6 +998,21 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     inputHistoryInputRef.current?.focus();
     inputHistoryInputRef.current?.select();
   }, [inputHistoryOpen]);
+  useEffect(() => {
+    const dock = inputDockRef.current;
+    if (!dock) return;
+    const update = () => {
+      setInputDockHeight(Math.ceil(dock.getBoundingClientRect().height));
+    };
+    update();
+    if (typeof ResizeObserver === "undefined") {
+      window.addEventListener("resize", update);
+      return () => window.removeEventListener("resize", update);
+    }
+    const observer = new ResizeObserver(() => update());
+    observer.observe(dock);
+    return () => observer.disconnect();
+  }, [showInputTip, showAdvancedInputTools, showBackendQuickTools, toolbeltCustomizeOpen]);
 
   const attachMentionToken = useCallback((tokenPath: string) => {
     const token = `@${tokenPath}`;
@@ -1863,6 +1881,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
       </div>
 
       <div
+        ref={inputDockRef}
         className="lum-input-dock"
         style={{
           padding: "6px 10px 8px",
@@ -2722,7 +2741,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
             position: "absolute",
             left: 10,
             right: 10,
-            bottom: 70,
+            bottom: overlayBottomOffset,
             zIndex: 31,
             background: "rgba(10,16,24,0.97)",
             border: "1px solid rgba(88,166,255,0.3)",
@@ -2819,7 +2838,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
             position: "absolute",
             left: 10,
             right: 10,
-            bottom: 70,
+            bottom: overlayBottomOffset,
             zIndex: 30,
             background: "rgba(10,16,24,0.97)",
             border: "1px solid rgba(121,192,255,0.28)",
@@ -3057,7 +3076,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
             position: "absolute",
             left: 10,
             right: 10,
-            bottom: 70,
+            bottom: overlayBottomOffset,
             zIndex: 28,
             background: "rgba(10,16,24,0.96)",
             border: "1px solid rgba(121,192,255,0.28)",
@@ -3145,7 +3164,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
           style={{
             position: "absolute",
             right: 10,
-            bottom: 70,
+            bottom: overlayBottomOffset,
             zIndex: 30,
             width: 420,
             maxWidth: "calc(100% - 20px)",
