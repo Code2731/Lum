@@ -19,6 +19,18 @@ const MENU_FALLBACK_HEIGHT_WITH_LINK = 204;
 const MENU_FALLBACK_HEIGHT_WITHOUT_LINK = 172;
 const MENU_EDGE_GAP = 8;
 const clampValue = (value: number, min: number, max: number): number => Math.max(min, Math.min(value, max));
+const getFallbackViewportSize = () => ({
+  width: typeof window === "undefined" ? 1200 : window.innerWidth,
+  height: typeof window === "undefined" ? 800 : window.innerHeight,
+});
+
+const clampMenuPos = (x: number, y: number, width: number, height: number) => {
+  const viewport = getFallbackViewportSize();
+  return {
+    left: clampValue(x, 0, Math.max(0, viewport.width - width - MENU_EDGE_GAP)),
+    top: clampValue(y, 0, Math.max(0, viewport.height - height - MENU_EDGE_GAP)),
+  };
+};
 
 const TerminalContextMenu: React.FC<Props> = ({
   x, y, text, isPathOrUrl,
@@ -28,10 +40,8 @@ const TerminalContextMenu: React.FC<Props> = ({
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const previousFocusRef = useRef<HTMLElement | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
-  const [position, setPosition] = useState({
-    left: 0,
-    top: 0,
-  });
+  const fallbackHeight = isPathOrUrl ? MENU_FALLBACK_HEIGHT_WITH_LINK : MENU_FALLBACK_HEIGHT_WITHOUT_LINK;
+  const [position, setPosition] = useState(() => clampMenuPos(x, y, MENU_WIDTH, fallbackHeight));
 
   const menuItems = [
     { label: "복사", shortcut: "⌘C", action: onCopy },
@@ -92,9 +102,12 @@ const TerminalContextMenu: React.FC<Props> = ({
     const fallbackHeight = isPathOrUrl ? MENU_FALLBACK_HEIGHT_WITH_LINK : MENU_FALLBACK_HEIGHT_WITHOUT_LINK;
     const height = (menuRectHeight && Number.isFinite(menuRectHeight) && menuRectHeight > 0) ? menuRectHeight : fallbackHeight;
 
-    setPosition({
-      left: clampValue(x, 0, Math.max(0, window.innerWidth - width - MENU_EDGE_GAP)),
-      top: clampValue(y, 0, Math.max(0, window.innerHeight - height - MENU_EDGE_GAP)),
+    setPosition((prev) => {
+      const next = clampMenuPos(x, y, width, height);
+      if (prev.left === next.left && prev.top === next.top) {
+        return prev;
+      }
+      return next;
     });
   }, [x, y, isPathOrUrl]);
 
