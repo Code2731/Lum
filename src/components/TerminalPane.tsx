@@ -794,8 +794,15 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
       e.preventDefault();
       const target = filteredSubmittedInputHistory[inputHistorySelected];
       if (target) applyHistoryInput(target);
+      return;
     }
-  }, [applyHistoryInput, filteredSubmittedInputHistory, inputHistorySelected]);
+    if (e.key === "Delete" || e.key === "Backspace") {
+      const target = filteredSubmittedInputHistory[inputHistorySelected];
+      if (!target) return;
+      e.preventDefault();
+      removeSubmittedInputHistoryEntry(target);
+    }
+  }, [applyHistoryInput, filteredSubmittedInputHistory, inputHistorySelected, removeSubmittedInputHistoryEntry]);
 
   // 입력 라우팅: 기본=AI, 알려진 CLI=shell, !/@/#/?/>> = 명시적 오버라이드
   const handleSubmit = useCallback((rawInput: string) => {

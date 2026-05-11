@@ -536,6 +536,48 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(screen.queryByText("INPUT HISTORY")).not.toBeInTheDocument();
   });
 
+  it("HISTORY 검색창에서 Delete/Backspace 키로 선택 항목을 삭제한다", async () => {
+    const { container } = render(<TerminalPane id="tab-1" />);
+    const input = container.querySelector("input")!;
+
+    submitInput(container, "ls -la");
+    await waitFor(() => {
+      expect(invokeMock).toHaveBeenCalledWith("write_to_pty", {
+        id: "tab-1",
+        data: "ls -la\r",
+      });
+    });
+    submitInput(container, "npm test");
+    await waitFor(() => {
+      expect(invokeMock).toHaveBeenCalledWith("write_to_pty", {
+        id: "tab-1",
+        data: "npm test\r",
+      });
+    });
+    submitInput(container, "pwd");
+    await waitFor(() => {
+      expect(invokeMock).toHaveBeenCalledWith("write_to_pty", {
+        id: "tab-1",
+        data: "pwd\r",
+      });
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "quick-input-history-open" }));
+    const search = screen.getByRole("textbox", { name: "input-history-search" });
+    fireEvent.change(search, { target: { value: "p" } });
+    expect(screen.getByRole("button", { name: "quick-input-history-item-0" })).toHaveTextContent("pwd");
+
+    fireEvent.keyDown(search, { key: "Delete" });
+    expect(screen.getByRole("button", { name: "quick-input-history-item-0" })).toHaveTextContent("npm test");
+    expect(screen.getByRole("button", { name: "quick-input-recall" })).toHaveTextContent("RECALL npm test");
+
+    fireEvent.change(search, { target: { value: "ls" } });
+    expect(screen.getByRole("button", { name: "quick-input-history-item-0" })).toHaveTextContent("ls -la");
+    fireEvent.keyDown(search, { key: "Backspace" });
+    expect(screen.queryByRole("button", { name: "quick-input-history-item-0" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "quick-input-history-open" })).toHaveTextContent("HISTORY 1");
+  });
+
   it("툴벨트 RECALL로 교체된 입력은 UNDO로 직전 입력 복원이 가능하다", async () => {
     const { container } = render(<TerminalPane id="tab-1" />);
     const input = container.querySelector("input")!;
