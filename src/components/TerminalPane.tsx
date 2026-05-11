@@ -115,6 +115,8 @@ const THEME = {
 const PANE_PADDING_X = 10;
 const PANE_PADDING_Y = 6;
 const INPUT_TIP_DISMISSED_KEY = "lum_input_toolbelt_tip_dismissed";
+const TOOLBELT_ADVANCED_KEY = "lum_toolbelt_show_advanced";
+const TOOLBELT_BACKEND_KEY = "lum_toolbelt_show_backend";
 
 const DEFAULT_MODEL = "Qwen2.5-Coder-7B-Instruct-EXL2-4bpw";
 
@@ -299,6 +301,21 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
       return true;
     }
   });
+  const [showAdvancedInputTools, setShowAdvancedInputTools] = useState(() => {
+    try {
+      return localStorage.getItem(TOOLBELT_ADVANCED_KEY) !== "0";
+    } catch {
+      return true;
+    }
+  });
+  const [showBackendQuickTools, setShowBackendQuickTools] = useState(() => {
+    try {
+      return localStorage.getItem(TOOLBELT_BACKEND_KEY) !== "0";
+    } catch {
+      return true;
+    }
+  });
+  const [toolbeltCustomizeOpen, setToolbeltCustomizeOpen] = useState(false);
 
   // WarpInputBar — 실제 입력 필드
   const warpInputRef = useRef<WarpInputBarHandle>(null);
@@ -1523,6 +1540,24 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
       localStorage.setItem(INPUT_TIP_DISMISSED_KEY, "1");
     } catch {}
   }, []);
+  const toggleAdvancedInputTools = useCallback(() => {
+    setShowAdvancedInputTools((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem(TOOLBELT_ADVANCED_KEY, next ? "1" : "0");
+      } catch {}
+      return next;
+    });
+  }, []);
+  const toggleBackendQuickTools = useCallback(() => {
+    setShowBackendQuickTools((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem(TOOLBELT_BACKEND_KEY, next ? "1" : "0");
+      } catch {}
+      return next;
+    });
+  }, []);
 
   return (
     <div
@@ -1647,6 +1682,25 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
             </span>
             <button
               type="button"
+              aria-label="toolbelt-customize-toggle"
+              onClick={() => setToolbeltCustomizeOpen((open) => !open)}
+              style={{
+                fontSize: 10,
+                color: toolbeltCustomizeOpen ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.76)",
+                border: toolbeltCustomizeOpen ? "1px solid rgba(121,192,255,0.58)" : "1px solid rgba(255,255,255,0.24)",
+                background: toolbeltCustomizeOpen ? "rgba(88,166,255,0.18)" : "rgba(255,255,255,0.08)",
+                borderRadius: 999,
+                padding: "1px 7px",
+                lineHeight: 1.25,
+                cursor: "pointer",
+                flexShrink: 0,
+              }}
+              title="툴벨트 커스터마이징"
+            >
+              CUSTOMIZE
+            </button>
+            <button
+              type="button"
               aria-label="quick-mention-trigger"
               onClick={triggerMentionAttach}
               title="파일 첨부 트리거 삽입 (@, Cmd/Ctrl+Shift+A)"
@@ -1763,6 +1817,8 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
             >
               FORGET
             </button>
+            {showAdvancedInputTools && (
+              <>
             <button
               type="button"
               aria-label="quick-input-set-recall"
@@ -1983,12 +2039,18 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
             >
               CLEAN
             </button>
+              </>
+            )}
+            {showBackendQuickTools && (
+              <>
             <span style={{ fontSize: 10, color: "rgba(227,179,65,0.78)", flexShrink: 0 }}>
               @local/@ollama/@xllm/@gemini
             </span>
             <span style={{ fontSize: 10, color: "rgba(255,255,255,0.58)", flexShrink: 0 }}>
               Cmd/Ctrl+1~4 토글 · 0 해제 · `/. 정순환 · Shift+`/, 역순환 · Shift+A @첨부 · Shift+B/N BACK/LAST · Shift+K/Z/R/L/M/P 편집 단축키
             </span>
+              </>
+            )}
             <button
               type="button"
               aria-label="quick-mode-heavy"
@@ -2109,6 +2171,8 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
             >
               @ AI
             </button>
+            {showBackendQuickTools && (
+              <>
             <button
               type="button"
               aria-label="quick-backend-prev"
@@ -2291,6 +2355,8 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
             >
               @gemini
             </button>
+              </>
+            )}
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <ModeButton
@@ -2316,6 +2382,58 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
             />
           </div>
         </div>
+        {toolbeltCustomizeOpen && (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              flexWrap: "wrap",
+              padding: "6px 8px",
+              border: "1px solid rgba(121,192,255,0.24)",
+              borderRadius: 9,
+              background: "rgba(88,166,255,0.08)",
+            }}
+          >
+            <span style={{ fontSize: 10, color: "rgba(182,218,255,0.92)", letterSpacing: "0.04em" }}>
+              TOOLBELT OPTIONS
+            </span>
+            <button
+              type="button"
+              aria-label="toolbelt-toggle-advanced"
+              onClick={toggleAdvancedInputTools}
+              style={{
+                fontSize: 10,
+                color: showAdvancedInputTools ? "rgba(220,247,225,0.96)" : "rgba(255,255,255,0.68)",
+                border: showAdvancedInputTools ? "1px solid rgba(63,185,80,0.62)" : "1px solid rgba(255,255,255,0.22)",
+                background: showAdvancedInputTools ? "rgba(63,185,80,0.18)" : "rgba(255,255,255,0.08)",
+                borderRadius: 999,
+                padding: "1px 7px",
+                lineHeight: 1.25,
+                cursor: "pointer",
+              }}
+            >
+              고급 편집 {showAdvancedInputTools ? "ON" : "OFF"}
+            </button>
+            <button
+              type="button"
+              aria-label="toolbelt-toggle-backend"
+              onClick={toggleBackendQuickTools}
+              style={{
+                fontSize: 10,
+                color: showBackendQuickTools ? "rgba(215,228,255,0.96)" : "rgba(255,255,255,0.68)",
+                border: showBackendQuickTools ? "1px solid rgba(121,192,255,0.62)" : "1px solid rgba(255,255,255,0.22)",
+                background: showBackendQuickTools ? "rgba(121,192,255,0.18)" : "rgba(255,255,255,0.08)",
+                borderRadius: 999,
+                padding: "1px 7px",
+                lineHeight: 1.25,
+                cursor: "pointer",
+              }}
+            >
+              백엔드 버튼 {showBackendQuickTools ? "ON" : "OFF"}
+            </button>
+          </div>
+        )}
 
         {/* Warp 입력바 — 입력 필드, 라우팅은 handleSubmit */}
         <WarpInputBar

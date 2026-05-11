@@ -52,6 +52,8 @@ beforeEach(() => {
   invokeMock.mockReset();
   try {
     localStorage.removeItem("lum_input_toolbelt_tip_dismissed");
+    localStorage.removeItem("lum_toolbelt_show_advanced");
+    localStorage.removeItem("lum_toolbelt_show_backend");
   } catch {}
   invokeMock.mockImplementation((cmd: string) => {
     if (cmd === "spawn_pty") return Promise.resolve();
@@ -232,6 +234,25 @@ describe("TerminalPane — 입력 라우팅", () => {
     await waitFor(() => {
       expect(invokeMock).toHaveBeenCalledWith("list_directory", { path: "/repo" });
     });
+  });
+
+  it("툴벨트 커스터마이징으로 고급 편집/백엔드 버튼 표시를 토글한다", () => {
+    render(<TerminalPane id="tab-1" />);
+
+    expect(screen.getByRole("button", { name: "quick-input-merge-recall" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "quick-backend-local" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "toolbelt-customize-toggle" }));
+    fireEvent.click(screen.getByRole("button", { name: "toolbelt-toggle-advanced" }));
+    fireEvent.click(screen.getByRole("button", { name: "toolbelt-toggle-backend" }));
+
+    expect(screen.queryByRole("button", { name: "quick-input-merge-recall" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "quick-backend-local" })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "toolbelt-toggle-advanced" }));
+    fireEvent.click(screen.getByRole("button", { name: "toolbelt-toggle-backend" }));
+    expect(screen.getByRole("button", { name: "quick-input-merge-recall" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "quick-backend-local" })).toBeInTheDocument();
   });
 
   it("입력 단축키 Cmd/Ctrl+Shift+A로 @ 파일 첨부 트리거를 삽입한다", () => {
