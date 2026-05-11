@@ -121,6 +121,30 @@ const AppHeader: React.FC<Props> = ({
   const fastEmpty = !loadedModelId;
   const fast = fastEmpty ? "Empty Model" : shortName(loadedModelId);
   const heavy = shortName(heavyModelId);
+  const advancedOverflowRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    if (!showAdvancedOverflow) return;
+
+    const handleClose = (e: MouseEvent) => {
+      if (advancedOverflowRef.current && !advancedOverflowRef.current.contains(e.target as Node)) {
+        setShowAdvancedOverflow(false);
+      }
+    };
+
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setShowAdvancedOverflow(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClose);
+    document.addEventListener("keydown", handleEscape);
+    return () => {
+      document.removeEventListener("mousedown", handleClose);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [showAdvancedOverflow]);
 
   return (
     <header
@@ -329,7 +353,7 @@ const AppHeader: React.FC<Props> = ({
         )}
 
         {!toolbarShowAdvanced && (
-          <div className="relative">
+          <div className="relative" ref={advancedOverflowRef}>
             <ToolbarIconButton
               label="고급 기능 (MCP / Squad / Healing / Recall / LoRA / RAG / xLLM)"
               active={showAdvancedOverflow}

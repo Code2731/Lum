@@ -84,8 +84,17 @@ const PrivacyLedgerBadge: React.FC<Props> = ({ state, isAllOnDevice, onReset }) 
         setOpen(false);
       }
     };
+    const keyHandler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setOpen(false);
+      }
+    };
     document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
+    document.addEventListener("keydown", keyHandler);
+    return () => {
+      document.removeEventListener("mousedown", handler);
+      document.removeEventListener("keydown", keyHandler);
+    };
   }, [open]);
 
   const { tone, label, tooltip: tooltipText } = classify(state, isAllOnDevice);

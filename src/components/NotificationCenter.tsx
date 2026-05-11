@@ -47,8 +47,17 @@ const NotificationCenter: React.FC<Props> = ({
         onCloseRef.current();
       }
     };
+    const keyHandler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onCloseRef.current();
+      }
+    };
     document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
+    document.addEventListener("keydown", keyHandler);
+    return () => {
+      document.removeEventListener("mousedown", handler);
+      document.removeEventListener("keydown", keyHandler);
+    };
   }, []); // 리스너는 한 번만 등록, 최신 onClose는 ref를 통해 참조
 
   return (
