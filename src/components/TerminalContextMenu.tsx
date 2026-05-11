@@ -83,8 +83,6 @@ const TerminalContextMenu: React.FC<Props> = ({
   useEffect(() => {
     itemRefs.current = [];
     setActiveIndex(0);
-    const first = itemRefs.current[0];
-    first?.focus();
   }, [isPathOrUrl]);
 
   useLayoutEffect(() => {
@@ -101,14 +99,21 @@ const TerminalContextMenu: React.FC<Props> = ({
   }, [x, y, isPathOrUrl]);
 
   const handleMenuKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === "Escape") {
+      e.preventDefault();
+      e.stopPropagation();
+      onClose();
+      return;
+    }
+
     const last = menuItems.length - 1;
 
-    if (["ArrowDown"].includes(e.key)) {
+    if (e.key === "ArrowDown") {
       e.preventDefault();
       setActiveIndex((prev) => (prev >= last ? 0 : prev + 1));
       return;
     }
-    if (["ArrowUp"].includes(e.key)) {
+    if (e.key === "ArrowUp") {
       e.preventDefault();
       setActiveIndex((prev) => (prev <= 0 ? last : prev - 1));
       return;
@@ -125,6 +130,7 @@ const TerminalContextMenu: React.FC<Props> = ({
     }
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
+      e.stopPropagation();
       closeOrAction(activeIndex);
     }
   };
@@ -159,7 +165,9 @@ const TerminalContextMenu: React.FC<Props> = ({
             onClick={() => closeOrAction(index)}
             aria-label={entry.label}
             tabIndex={activeIndex === index ? 0 : -1}
-            className={`w-full flex items-center gap-2.5 px-3 py-1.5 text-[11px] text-left transition-colors rounded-md`}
+            className={`w-full flex items-center gap-2.5 px-3 py-1.5 text-[11px] text-left transition-colors rounded-md
+              focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent focus-visible:ring-offset-1 focus-visible:ring-offset-[#161b22]
+            `}
           >
             <span className="shrink-0 text-white/30">
               {entry.label === "복사" ? <Copy size={11} /> : null}

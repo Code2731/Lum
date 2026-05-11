@@ -75,4 +75,37 @@ describe("TerminalContextMenu", () => {
 
     expect(screen.getByRole("menuitem", { name: "열기" })).toBeInTheDocument();
   });
+
+  it("메뉴가 열리면 첫 항목에 포커스되고 닫힘 시 이전 포커스로 복귀한다", () => {
+    const onClose = vi.fn();
+    const App = () => {
+      const [open, setOpen] = React.useState(true);
+      return (
+        <div>
+          <button type="button" autoFocus>
+            원본
+          </button>
+          {open && (
+            <TerminalContextMenu
+              {...baseProps}
+              isPathOrUrl={false}
+              onClose={() => {
+                setOpen(false);
+                onClose();
+              }}
+            />
+          )}
+        </div>
+      );
+    };
+
+    render(<App />);
+    const firstItem = screen.getByRole("menuitem", { name: "복사" });
+    expect(firstItem).toHaveFocus();
+
+    const menu = screen.getByRole("menu", { name: "터미널 컨텍스트 메뉴" });
+    fireEvent.keyDown(menu, { key: "Escape" });
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole("button", { name: "원본" })).toHaveFocus();
+  });
 });
