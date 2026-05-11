@@ -2795,6 +2795,23 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
                 outline: "none",
               }}
             />
+            <div
+              aria-label="input-history-shortcuts"
+              style={{
+                marginTop: 6,
+                fontSize: 10,
+                color: "rgba(255,255,255,0.56)",
+                letterSpacing: "0.01em",
+                display: "flex",
+                gap: 10,
+                flexWrap: "wrap",
+              }}
+            >
+              <span>↑/↓ 이동</span>
+              <span>Enter 복원</span>
+              <span>Del/Backspace 삭제</span>
+              <span>Esc 닫기</span>
+            </div>
           </div>
           <div style={{ maxHeight: 220, overflowY: "auto" }}>
             {filteredSubmittedInputHistory.length === 0 && (

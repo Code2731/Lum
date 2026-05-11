@@ -449,6 +449,7 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(historyOpen).not.toHaveAttribute("disabled");
     fireEvent.click(historyOpen);
     expect(screen.getByText("INPUT HISTORY")).toBeInTheDocument();
+    expect(screen.getByLabelText("input-history-shortcuts")).toHaveTextContent("Del/Backspace 삭제");
 
     fireEvent.click(screen.getByRole("button", { name: "quick-input-history-item-1" }));
     expect(screen.queryByText("INPUT HISTORY")).not.toBeInTheDocument();
