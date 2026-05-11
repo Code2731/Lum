@@ -185,10 +185,13 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
   const [actionPaletteQuery, setActionPaletteQuery] = useState("");
   const [actionPaletteSelected, setActionPaletteSelected] = useState(0);
   const [inputHistoryOpen, setInputHistoryOpen] = useState(false);
+  const [inputHistoryQuery, setInputHistoryQuery] = useState("");
+  const [inputHistorySelected, setInputHistorySelected] = useState(0);
 
   const outerRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const actionPaletteInputRef = useRef<HTMLInputElement>(null);
+  const inputHistoryInputRef = useRef<HTMLInputElement>(null);
   const termRef = useRef<Terminal | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
   const searchAddonRef = useRef<SearchAddon | null>(null);
@@ -743,7 +746,44 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
   const clearSubmittedInputHistory = useCallback(() => {
     setSubmittedInputHistory([]);
     persistInputHistory([]);
+    setInputHistorySelected(0);
   }, [persistInputHistory]);
+  const filteredSubmittedInputHistory = useMemo(() => {
+    const query = inputHistoryQuery.trim().toLowerCase();
+    if (!query) return submittedInputHistory;
+    return submittedInputHistory.filter((entry) => entry.toLowerCase().includes(query));
+  }, [inputHistoryQuery, submittedInputHistory]);
+  const handleInputHistoryKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Escape") {
+      e.preventDefault();
+      setInputHistoryOpen(false);
+      setInputHistoryQuery("");
+      setInputHistorySelected(0);
+      warpInputRef.current?.focus();
+      return;
+    }
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setInputHistorySelected((prev) => {
+        if (filteredSubmittedInputHistory.length === 0) return 0;
+        return (prev + 1) % filteredSubmittedInputHistory.length;
+      });
+      return;
+    }
+    if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setInputHistorySelected((prev) => {
+        if (filteredSubmittedInputHistory.length === 0) return 0;
+        return (prev - 1 + filteredSubmittedInputHistory.length) % filteredSubmittedInputHistory.length;
+      });
+      return;
+    }
+    if (e.key === "Enter") {
+      e.preventDefault();
+      const target = filteredSubmittedInputHistory[inputHistorySelected];
+      if (target) applyHistoryInput(target);
+    }
+  }, [applyHistoryInput, filteredSubmittedInputHistory, inputHistorySelected]);
 
   // 입력 라우팅: 기본=AI, 알려진 CLI=shell, !/@/#/?/>> = 명시적 오버라이드
   const handleSubmit = useCallback((rawInput: string) => {
@@ -857,6 +897,11 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     actionPaletteInputRef.current?.focus();
     actionPaletteInputRef.current?.select();
   }, [actionPaletteOpen]);
+  useEffect(() => {
+    if (!inputHistoryOpen) return;
+    inputHistoryInputRef.current?.focus();
+    inputHistoryInputRef.current?.select();
+  }, [inputHistoryOpen]);
 
   const attachMentionToken = useCallback((tokenPath: string) => {
     const token = `@${tokenPath}`;
@@ -1376,6 +1421,8 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     const lowered = e.key.toLowerCase();
     if (e.key === "Escape" && inputHistoryOpen) {
       setInputHistoryOpen(false);
+      setInputHistoryQuery("");
+      setInputHistorySelected(0);
       return true;
     }
     if (mod && !e.shiftKey && !e.altKey && (lowered === "k" || e.code === "KeyK")) {
@@ -1558,6 +1605,8 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     setActionPaletteOpen,
     setActionPaletteQuery,
     setActionPaletteSelected,
+    setInputHistoryQuery,
+    setInputHistorySelected,
   ]);
 
   const routeMeta = useMemo(() => {
@@ -1955,7 +2004,11 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
             <button
               type="button"
               aria-label="quick-input-history-open"
-              onClick={() => setInputHistoryOpen((open) => !open)}
+              onClick={() => {
+                setInputHistoryOpen((open) => !open);
+                setInputHistoryQuery("");
+                setInputHistorySelected(0);
+              }}
               disabled={submittedInputHistory.length === 0}
               title={submittedInputHistory.length > 0 ? "실행 입력 히스토리 열기/닫기" : "표시할 실행 입력 히스토리가 없어 비활성화"}
               style={{
@@ -2680,7 +2733,11 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               <button
                 type="button"
                 aria-label="quick-input-history-close"
-                onClick={() => setInputHistoryOpen(false)}
+                onClick={() => {
+                  setInputHistoryOpen(false);
+                  setInputHistoryQuery("");
+                  setInputHistorySelected(0);
+                }}
                 style={{
                   fontSize: 10,
                   color: "rgba(255,255,255,0.88)",
@@ -2696,13 +2753,37 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               </button>
             </div>
           </div>
+          <div style={{ padding: "8px 10px", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+            <input
+              ref={inputHistoryInputRef}
+              aria-label="input-history-search"
+              value={inputHistoryQuery}
+              onChange={(e) => {
+                setInputHistoryQuery(e.target.value);
+                setInputHistorySelected(0);
+              }}
+              onKeyDown={handleInputHistoryKeyDown}
+              placeholder="히스토리 검색 (↑↓ 선택, Enter 복원, Esc 닫기)"
+              style={{
+                width: "100%",
+                borderRadius: 8,
+                border: "1px solid rgba(121,192,255,0.35)",
+                background: "rgba(13,17,23,0.9)",
+                color: "rgba(255,255,255,0.92)",
+                fontSize: 12,
+                fontFamily: FONT_FAMILY,
+                padding: "6px 8px",
+                outline: "none",
+              }}
+            />
+          </div>
           <div style={{ maxHeight: 220, overflowY: "auto" }}>
-            {submittedInputHistory.length === 0 && (
+            {filteredSubmittedInputHistory.length === 0 && (
               <div style={{ padding: "10px 12px", fontSize: 11, color: "rgba(255,255,255,0.55)" }}>
                 기록된 실행 입력이 없습니다.
               </div>
             )}
-            {submittedInputHistory.map((entry, idx) => (
+            {filteredSubmittedInputHistory.map((entry, idx) => (
               <button
                 key={`${entry}-${idx}`}
                 type="button"
@@ -2714,7 +2795,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
                   padding: "8px 10px",
                   border: "none",
                   borderTop: idx === 0 ? "none" : "1px solid rgba(255,255,255,0.04)",
-                  background: "transparent",
+                  background: idx === inputHistorySelected ? "rgba(88,166,255,0.2)" : "transparent",
                   color: "rgba(255,255,255,0.9)",
                   fontSize: 12,
                   fontFamily: FONT_FAMILY,
