@@ -1299,6 +1299,10 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
         triggerMentionAttach();
         return true;
       }
+      if (lowered === "o") {
+        clearBackendQuickPrefix();
+        return true;
+      }
       if (lowered === "h") {
         toggleQuickModePrefix("heavy");
         return true;
@@ -1337,6 +1341,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     rerunSubmittedInputQuick,
     restoreLastBackendQuickPrefix,
     restorePrevBackendQuickPrefix,
+    clearBackendQuickPrefix,
     normalizeInputToPlain,
     resetAllInputStateQuick,
     restoreInputQuick,
@@ -2012,7 +2017,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               aria-label="quick-backend-auto"
               aria-pressed={activeBackendPrefix === null}
               onClick={clearBackendQuickPrefix}
-              title="백엔드 강제 해제 (Cmd/Ctrl+0) · AUTO 상태에서 다시 누르면 LAST 복원"
+              title="백엔드 강제 해제 (Cmd/Ctrl+0 or Cmd/Ctrl+Shift+O) · AUTO 상태에서 다시 누르면 LAST 복원"
               style={{
                 fontSize: 10,
                 color: activeBackendPrefix === null ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.82)",

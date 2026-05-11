@@ -725,6 +725,20 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(input).toHaveValue("@local 로그 요약해줘");
   });
 
+  it("입력 단축키 Cmd/Ctrl+Shift+O로 AUTO 해제/복원을 토글한다", () => {
+    const { container } = render(<TerminalPane id="tab-1" />);
+    const input = container.querySelector("input")!;
+    fireEvent.change(input, { target: { value: "@gemini 로그 요약해줘" } });
+
+    fireEvent.keyDown(input, { key: "O", ctrlKey: true, shiftKey: true });
+    expect(input).toHaveValue("로그 요약해줘");
+    expect(screen.getByText("AI AUTO")).toBeInTheDocument();
+
+    fireEvent.keyDown(input, { key: "O", ctrlKey: true, shiftKey: true });
+    expect(input).toHaveValue("@gemini 로그 요약해줘");
+    expect(screen.getByText("AI @GEMINI")).toBeInTheDocument();
+  });
+
   it("입력 단축키 Cmd/Ctrl+Shift+G/T/Q로 PLAIN/TRIM/SQUASH를 실행한다", () => {
     const { container } = render(<TerminalPane id="tab-1" />);
     const input = container.querySelector("input")!;
