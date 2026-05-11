@@ -160,6 +160,8 @@ LUM works as a plain terminal with no AI server. To enable embedded local AI:
 
 If LUM cannot start on macOS, check these steps in order:
 
+1. Use the bundled helper script to fetch the right DMG for this machine:
+   - `bash scripts/download-latest-lum-macos.sh`
 1. Download the DMG matching your machine:
    - Apple Silicon → `*aarch64.dmg`
    - Intel → `*x64.dmg`
@@ -276,20 +278,16 @@ npm run tauri build -- --features embedded-ai     # OS별 CUDA/Metal 자동 선�
 
 macOS에서 LUM이 실행되지 않을 때는 순서대로 확인하세요.
 
-1. 사용 중인 CPU 아키텍처에 맞는 DMG를 받았는지 확인합니다.
+1. 먼저 프로젝트 스크립트로 현재 아키텍처에 맞는 DMG를 받아보세요.
+   - `bash scripts/download-latest-lum-macos.sh`
+2. 사용 중인 CPU 아키텍처에 맞는 DMG를 받았는지 확인합니다.
    - Apple Silicon → `*aarch64.dmg`
    - Intel → `*x64.dmg`
-2. 다운로드한 DMG와 앱의 격리 플래그를 제거합니다.
+3. 다운로드한 DMG와 앱의 격리 플래그를 제거합니다.
    - `xattr -dr com.apple.quarantine ~/Downloads/LUM.Terminal_*.dmg`
    - `xattr -dr com.apple.quarantine "/Applications/LUM Terminal.app"`
-3. Finder에서 DMG를 열고 앱을 설치한 뒤, 앱에서 우클릭 → **열기**를 한번 실행합니다.
-4. 그래도 실행되지 않으면 DMG를 다시 받았는지 확인하고, Console 로그(오류 메시지)와 함께 이슈를 남겨주세요.
-
-자동 판별 스크립트도 바로 사용할 수 있습니다.
-
-```bash
-bash scripts/download-latest-lum-macos.sh
-```
+4. Finder에서 DMG를 열고 앱을 설치한 뒤, 앱에서 우클릭 → **열기**를 한번 실행합니다.
+5. 그래도 실행되지 않으면 DMG를 다시 받았는지 확인하고, Console 로그(오류 메시지)와 함께 이슈를 남겨주세요.
 
 **AI 기능 활성화 (선택)**
 

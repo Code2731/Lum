@@ -71,6 +71,11 @@ jobs:
 
             - **macOS (Apple Silicon, M1/M2/M3/M4)**: `LUM.Terminal_*_aarch64.dmg`
             - **macOS (Intel)**: `LUM.Terminal_*_x64.dmg`
+            - 현재 머신 아키텍처에 맞는 DMG를 바로 받으려면 아래 명령을 실행:
+
+              ```bash
+              bash scripts/download-latest-lum-macos.sh
+              ```
             - **Windows**: `LUM.Terminal_*_x64-setup.exe` (NSIS) 또는 `LUM.Terminal_*_x64_en-US.msi`
             > 코드 서명이 없으므로 macOS는 `우클릭 → 열기`, Windows는 `추가 정보 → 실행`으로 설치하세요.
 
