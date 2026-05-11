@@ -120,6 +120,7 @@ const TOOLBELT_BACKEND_KEY = "lum_toolbelt_show_backend";
 const INPUT_HISTORY_KEY = "lum_input_submit_history";
 
 const DEFAULT_MODEL = "Qwen2.5-Coder-7B-Instruct-EXL2-4bpw";
+const UI_TEXT_MICRO = "var(--lum-ui-text-micro)";
 
 const compactPath = (path?: string): string => {
   if (!path) return "루트";
@@ -158,16 +159,19 @@ const ModeButton: React.FC<ModeButtonProps> = ({ label, title, active, activeCol
   <IconButton
     tooltip={title}
     onClick={onClick}
+    aria-pressed={active}
+    className="lum-mode-toggle"
     style={{
       background: active ? `${activeColor}1f` : "rgba(255,255,255,0.02)",
       border: `1px solid ${active ? activeColor + "66" : "rgba(255,255,255,0.12)"}`,
       borderRadius: 999,
       color: active ? activeColor : "rgba(255,255,255,0.58)",
-      fontSize: 10.5,
+      fontSize: UI_TEXT_MICRO,
       fontWeight: active ? 700 : 400,
       padding: "2px 10px",
       cursor: "pointer",
       lineHeight: "16px",
+      boxShadow: active ? `0 0 0 1px ${activeColor}44` : "none",
       transition: "all 120ms",
       whiteSpace: "nowrap",
     }}
@@ -335,10 +339,14 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     }
   });
   const [toolbeltCustomizeOpen, setToolbeltCustomizeOpen] = useState(false);
+  const [warpInputFocused, setWarpInputFocused] = useState(false);
   const [inputDockHeight, setInputDockHeight] = useState(70);
+  const [inputDockWidth, setInputDockWidth] = useState(960);
   const overlayBottomOffset = Math.max(70, inputDockHeight + 8);
   const overlayTopGap = 10;
   const overlayMaxHeight = `calc(100% - ${overlayBottomOffset + overlayTopGap}px)`;
+  const inputDockNarrow = inputDockWidth < 1080;
+  const inputDockCompact = inputDockWidth < 840;
 
   // WarpInputBar — 실제 입력 필드
   const warpInputRef = useRef<WarpInputBarHandle>(null);
@@ -1004,7 +1012,9 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     const dock = inputDockRef.current;
     if (!dock) return;
     const update = () => {
-      setInputDockHeight(Math.ceil(dock.getBoundingClientRect().height));
+      const rect = dock.getBoundingClientRect();
+      setInputDockHeight(Math.ceil(rect.height));
+      setInputDockWidth(Math.ceil(rect.width));
     };
     update();
     if (typeof ResizeObserver === "undefined") {
@@ -1795,6 +1805,14 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     { id: "model", label: `MODEL ${compactModel(modelRef.current)}`, tone: "neutral" },
     { id: "term", label: terminalVisible ? "터미널 ON" : "터미널 OFF", tone: terminalVisible ? "success" : "warn" },
   ];
+  const inputFocusCompact =
+    warpInputFocused &&
+    inputBuffer.trim() !== "" &&
+    !toolbeltCustomizeOpen &&
+    !actionPaletteOpen &&
+    !inputHistoryOpen &&
+    !mentionOpen &&
+    !shortcutHelpOpen;
   const dismissInputTip = useCallback(() => {
     setShowInputTip(false);
     try {
@@ -1884,7 +1902,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
 
       <div
         ref={inputDockRef}
-        className="lum-input-dock"
+        className={`lum-input-dock ${inputDockNarrow ? "lum-input-dock--narrow" : ""} ${inputDockCompact ? "lum-input-dock--compact" : ""} ${inputFocusCompact ? "lum-input-dock--focus" : ""}`}
         style={{
           padding: "6px 10px 8px",
           borderTop: "1px solid rgba(255,255,255,0.08)",
@@ -1893,7 +1911,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
           gap: 6,
         }}
       >
-        {showInputTip && (
+        {showInputTip && !inputFocusCompact && (
           <div
             style={{
               display: "flex",
@@ -1906,7 +1924,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               borderRadius: 8,
             }}
           >
-            <span style={{ fontSize: 10, color: "rgba(182,218,255,0.95)", lineHeight: 1.35 }}>
+            <span className="lum-toolbelt-secondary-hint" style={{ fontSize: UI_TEXT_MICRO, color: "rgba(182,218,255,0.95)", lineHeight: 1.35 }}>
               TIP · Cmd/Ctrl+1~4 backend 전환 · Shift+A @첨부 · Shift+B/N BACK/LAST · Shift+K/Z/R/L/M/P 입력 편집
             </span>
             <button
@@ -1929,11 +1947,32 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
             </button>
           </div>
         )}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 6, overflowX: "auto", scrollbarWidth: "none" }}>
+        <div
+          style={{
+            display: "flex",
+            flexDirection: inputDockNarrow ? "column" : "row",
+            alignItems: inputDockNarrow ? "stretch" : "center",
+            justifyContent: "space-between",
+            gap: inputDockNarrow ? 6 : 8,
+          }}
+        >
+          <div
+            className={`lum-toolbelt-rail ${inputDockNarrow ? "lum-toolbelt-rail--narrow" : ""} ${inputDockCompact ? "lum-toolbelt-rail--compact" : ""} ${inputFocusCompact ? "lum-toolbelt-rail--focus" : ""}`}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              alignContent: "flex-start",
+              gap: inputDockCompact ? 4 : 6,
+              rowGap: inputDockNarrow ? 4 : 0,
+              flexWrap: inputDockNarrow ? "wrap" : "nowrap",
+              overflowX: inputDockNarrow ? "visible" : "auto",
+              scrollbarWidth: "none",
+            }}
+          >
             <span
+              className="lum-toolbelt-eyebrow"
               style={{
-                fontSize: 10,
+                fontSize: UI_TEXT_MICRO,
                 color: "rgba(255,255,255,0.5)",
                 letterSpacing: "0.08em",
                 textTransform: "uppercase",
@@ -1961,6 +2000,8 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
             >
               CUSTOMIZE
             </button>
+            {inputFocusCompact && <span className="lum-toolbelt-section-tag">FOCUS</span>}
+            <span className="lum-toolbelt-section-tag">CORE</span>
             <button
               type="button"
               aria-label="quick-mention-trigger"
@@ -2081,6 +2122,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
             </button>
             {showAdvancedInputTools && (
               <>
+            <span className="lum-toolbelt-section-tag">EDIT</span>
             <button
               type="button"
               aria-label="quick-input-set-recall"
@@ -2331,14 +2373,24 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
             )}
             {showBackendQuickTools && (
               <>
-            <span style={{ fontSize: 10, color: "rgba(227,179,65,0.78)", flexShrink: 0 }}>
+            <span className="lum-toolbelt-section-tag">BACKEND</span>
+            <span
+              className="lum-toolbelt-secondary-hint"
+              title="@local/@ollama/@xllm/@gemini"
+              style={{ fontSize: UI_TEXT_MICRO, color: "rgba(227,179,65,0.78)", flexShrink: 0 }}
+            >
               @local/@ollama/@xllm/@gemini
             </span>
-            <span style={{ fontSize: 10, color: "rgba(255,255,255,0.58)", flexShrink: 0 }}>
+            <span
+              className="lum-toolbelt-secondary-hint"
+              title="Cmd/Ctrl+1~4 토글 · 0 해제 · `/. 정순환 · Shift+`/, 역순환 · Shift+A @첨부 · Shift+B/N BACK/LAST · Shift+K/Z/R/L/M/P 편집 단축키"
+              style={{ fontSize: UI_TEXT_MICRO, color: "rgba(255,255,255,0.58)", flexShrink: 0 }}
+            >
               Cmd/Ctrl+1~4 토글 · 0 해제 · `/. 정순환 · Shift+`/, 역순환 · Shift+A @첨부 · Shift+B/N BACK/LAST · Shift+K/Z/R/L/M/P 편집 단축키
             </span>
               </>
             )}
+            <span className="lum-toolbelt-section-tag">ROUTE</span>
             <button
               type="button"
               aria-label="quick-mode-heavy"
@@ -2646,7 +2698,16 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               </>
             )}
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <div
+            className={`lum-mode-row ${inputDockNarrow ? "lum-mode-row--narrow" : ""}`}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: inputDockNarrow ? "flex-end" : "flex-start",
+              gap: 6,
+              width: inputDockNarrow ? "100%" : "auto",
+            }}
+          >
             <ModeButton
               label="터미널"
               title="터미널 표시/숨김 (shell 명령 실행 시 자동 표시)"
@@ -2683,7 +2744,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               background: "rgba(88,166,255,0.08)",
             }}
           >
-            <span style={{ fontSize: 10, color: "rgba(182,218,255,0.92)", letterSpacing: "0.04em" }}>
+            <span className="lum-toolbelt-eyebrow" style={{ fontSize: UI_TEXT_MICRO, color: "rgba(182,218,255,0.92)", letterSpacing: "0.04em" }}>
               TOOLBELT OPTIONS
             </span>
             <button
@@ -2733,53 +2794,38 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
           onKeyDownIntercept={handleInputKeyDownIntercept}
           onTab={handleTab}
           onChange={handleInputChange}
+          onFocusChange={setWarpInputFocused}
           contextChips={inputChips}
+          compactContextChips={inputFocusCompact}
         />
       </div>
 
       {actionPaletteOpen && (
         <div
+          className="lum-overlay-panel lum-overlay-panel--accent lum-overlay-panel--full"
           style={{
-            position: "absolute",
-            left: 10,
-            right: 10,
             bottom: overlayBottomOffset,
             zIndex: 31,
-            background: "rgba(10,16,24,0.97)",
-            border: "1px solid rgba(88,166,255,0.3)",
-            borderRadius: 12,
-            boxShadow: "0 14px 30px rgba(0,0,0,0.45)",
-            overflow: "hidden",
             maxHeight: overlayMaxHeight,
-            display: "flex",
-            flexDirection: "column",
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 10px", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
-            <span style={{ fontSize: 11, color: "rgba(182,218,255,0.96)", letterSpacing: "0.05em", fontWeight: 600 }}>
+          <div className="lum-overlay-header lum-overlay-header--bordered">
+            <span className="lum-overlay-title">
               ACTION PALETTE
             </span>
             <button
+              className="lum-overlay-close lum-overlay-close-btn"
               type="button"
               aria-label="action-palette-close"
               onClick={() => setActionPaletteOpen(false)}
-              style={{
-                fontSize: 10,
-                color: "rgba(255,255,255,0.88)",
-                border: "1px solid rgba(255,255,255,0.22)",
-                background: "rgba(255,255,255,0.08)",
-                borderRadius: 999,
-                padding: "1px 6px",
-                lineHeight: 1.2,
-                cursor: "pointer",
-              }}
             >
               닫기
             </button>
           </div>
-          <div style={{ padding: 10, borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+          <div className="lum-overlay-search-row">
             <input
               ref={actionPaletteInputRef}
+              className="lum-overlay-input"
               aria-label="action-palette-input"
               value={actionPaletteQuery}
               onChange={(e) => {
@@ -2788,22 +2834,11 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               }}
               onKeyDown={handleActionPaletteKeyDown}
               placeholder="액션 검색 (예: clear, recall, backend)"
-              style={{
-                width: "100%",
-                borderRadius: 8,
-                border: "1px solid rgba(88,166,255,0.42)",
-                background: "rgba(13,17,23,0.9)",
-                color: "rgba(255,255,255,0.92)",
-                fontSize: 12,
-                fontFamily: FONT_FAMILY,
-                padding: "6px 8px",
-                outline: "none",
-              }}
             />
           </div>
-          <div style={{ maxHeight: 220, overflowY: "auto", minHeight: 0 }}>
+          <div className="lum-overlay-list">
             {actionPaletteFiltered.length === 0 && (
-              <div style={{ padding: "10px 12px", fontSize: 11, color: "rgba(255,255,255,0.55)" }}>
+              <div className="lum-overlay-empty">
                 일치하는 액션이 없습니다.
               </div>
             )}
@@ -2813,21 +2848,10 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
                 <button
                   key={action.id}
                   type="button"
+                  className={`lum-overlay-item ${active ? "is-active" : ""} ${action.disabled ? "is-disabled" : ""}`}
                   aria-label={`action-palette-item-${action.id}`}
                   disabled={action.disabled}
                   onClick={() => executePaletteAction(idx)}
-                  style={{
-                    width: "100%",
-                    textAlign: "left",
-                    padding: "8px 10px",
-                    border: "none",
-                    borderTop: idx === 0 ? "none" : "1px solid rgba(255,255,255,0.04)",
-                    background: active ? "rgba(88,166,255,0.2)" : "transparent",
-                    color: action.disabled ? "rgba(255,255,255,0.4)" : "rgba(255,255,255,0.9)",
-                    fontSize: 12,
-                    fontFamily: FONT_FAMILY,
-                    cursor: action.disabled ? "not-allowed" : "pointer",
-                  }}
                 >
                   {action.label}
                 </button>
@@ -2839,71 +2863,35 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
 
       {inputHistoryOpen && (
         <div
+          className="lum-overlay-panel lum-overlay-panel--blue lum-overlay-panel--full"
           style={{
-            position: "absolute",
-            left: 10,
-            right: 10,
             bottom: overlayBottomOffset,
             zIndex: 30,
-            background: "rgba(10,16,24,0.97)",
-            border: "1px solid rgba(121,192,255,0.28)",
-            borderRadius: 12,
-            boxShadow: "0 14px 30px rgba(0,0,0,0.45)",
-            overflow: "hidden",
             maxHeight: overlayMaxHeight,
-            display: "flex",
-            flexDirection: "column",
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 10px", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+          <div className="lum-overlay-header lum-overlay-header--bordered">
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ fontSize: 11, color: "rgba(182,218,255,0.96)", letterSpacing: "0.05em", fontWeight: 600 }}>
+              <span className="lum-overlay-title">
                 INPUT HISTORY
               </span>
               {inputHistoryMultiSelected.length > 1 && (
                 <>
-                  <span
-                    aria-label="input-history-selected-count"
-                    style={{
-                      fontSize: 10,
-                      color: "rgba(215,228,255,0.95)",
-                      border: "1px solid rgba(121,192,255,0.55)",
-                      background: "rgba(121,192,255,0.14)",
-                      borderRadius: 999,
-                      padding: "1px 6px",
-                      lineHeight: 1.2,
-                    }}
-                  >
+                  <span aria-label="input-history-selected-count" className="lum-overlay-pill">
                     {inputHistoryMultiSelected.length} selected
                   </span>
                   <span
                     aria-label="input-history-selected-preview"
-                    style={{
-                      fontSize: 10,
-                      color: "rgba(182,218,255,0.86)",
-                      maxWidth: 220,
-                      whiteSpace: "nowrap",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                    }}
+                    className="lum-overlay-pill-preview"
                     title={inputHistoryMultiSelected.join(", ")}
                   >
                     {inputHistoryMultiSelectedPreview}
                   </span>
                   <button
                     type="button"
+                    className="lum-overlay-pill-btn"
                     aria-label="quick-input-history-clear-selection"
                     onClick={clearInputHistoryMultiSelection}
-                    style={{
-                      fontSize: 10,
-                      color: "rgba(215,228,255,0.95)",
-                      border: "1px solid rgba(121,192,255,0.45)",
-                      background: "rgba(121,192,255,0.08)",
-                      borderRadius: 999,
-                      padding: "1px 6px",
-                      lineHeight: 1.2,
-                      cursor: "pointer",
-                    }}
                   >
                     SELECTION CLEAR
                   </button>
@@ -2916,20 +2904,12 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
                 aria-label="quick-input-history-clear"
                 onClick={clearSubmittedInputHistory}
                 disabled={submittedInputHistory.length === 0}
-                style={{
-                  fontSize: 10,
-                  color: submittedInputHistory.length > 0 ? "rgba(255,225,222,0.95)" : "rgba(255,255,255,0.42)",
-                  border: submittedInputHistory.length > 0 ? "1px solid rgba(255,123,114,0.58)" : "1px solid rgba(255,255,255,0.18)",
-                  background: submittedInputHistory.length > 0 ? "rgba(255,123,114,0.14)" : "rgba(255,255,255,0.06)",
-                  borderRadius: 999,
-                  padding: "1px 6px",
-                  lineHeight: 1.2,
-                  cursor: submittedInputHistory.length > 0 ? "pointer" : "not-allowed",
-                }}
+                className={`lum-overlay-danger-btn ${submittedInputHistory.length === 0 ? "is-disabled" : ""}`}
               >
                 CLEAR
               </button>
               <button
+                className="lum-overlay-close lum-overlay-close-btn"
                 type="button"
                 aria-label="quick-input-history-close"
                 onClick={() => {
@@ -2939,24 +2919,15 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
                   setInputHistoryRangeAnchor(null);
                   setInputHistoryMultiSelected([]);
                 }}
-                style={{
-                  fontSize: 10,
-                  color: "rgba(255,255,255,0.88)",
-                  border: "1px solid rgba(255,255,255,0.22)",
-                  background: "rgba(255,255,255,0.08)",
-                  borderRadius: 999,
-                  padding: "1px 6px",
-                  lineHeight: 1.2,
-                  cursor: "pointer",
-                }}
               >
                 닫기
               </button>
             </div>
           </div>
-          <div style={{ padding: "8px 10px", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+          <div className="lum-overlay-search-row">
             <input
               ref={inputHistoryInputRef}
+              className="lum-overlay-input"
               aria-label="input-history-search"
               value={inputHistoryQuery}
               onChange={(e) => {
@@ -2967,29 +2938,10 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               }}
               onKeyDown={handleInputHistoryKeyDown}
               placeholder="히스토리 검색 (↑↓ 선택, Enter 복원, Esc 닫기)"
-              style={{
-                width: "100%",
-                borderRadius: 8,
-                border: "1px solid rgba(121,192,255,0.35)",
-                background: "rgba(13,17,23,0.9)",
-                color: "rgba(255,255,255,0.92)",
-                fontSize: 12,
-                fontFamily: FONT_FAMILY,
-                padding: "6px 8px",
-                outline: "none",
-              }}
             />
             <div
               aria-label="input-history-shortcuts"
-              style={{
-                marginTop: 6,
-                fontSize: 10,
-                color: "rgba(255,255,255,0.56)",
-                letterSpacing: "0.01em",
-                display: "flex",
-                gap: 10,
-                flexWrap: "wrap",
-              }}
+              className="lum-overlay-shortcuts"
             >
               <span>↑/↓ 이동</span>
               <span>Shift+↑/↓ 범위 선택</span>
@@ -3000,77 +2952,52 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               <span>Esc 선택해제/닫기</span>
             </div>
           </div>
-          <div style={{ maxHeight: 220, overflowY: "auto", minHeight: 0 }}>
+          <div className="lum-overlay-list">
             {filteredSubmittedInputHistory.length === 0 && (
-              <div style={{ padding: "10px 12px", fontSize: 11, color: "rgba(255,255,255,0.55)" }}>
+              <div className="lum-overlay-empty">
                 기록된 실행 입력이 없습니다.
               </div>
             )}
             {filteredSubmittedInputHistory.map((entry, idx) => {
               const inMultiSelection = inputHistoryMultiSelected.includes(entry);
+              const selected = idx === inputHistorySelected;
               return (
                 <div
-                key={`${entry}-${idx}`}
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr auto",
-                  alignItems: "stretch",
-                  borderTop: idx === 0 ? "none" : "1px solid rgba(255,255,255,0.04)",
-                  background: inMultiSelection
-                    ? "rgba(88,166,255,0.26)"
-                    : (idx === inputHistorySelected ? "rgba(88,166,255,0.2)" : "transparent"),
-                }}
-              >
-                <button
-                  type="button"
-                  aria-label={`quick-input-history-item-${idx}`}
-                  onClick={(e) => {
-                    if (e.shiftKey) {
-                      const anchor = inputHistoryRangeAnchor ?? inputHistorySelected;
-                      const min = Math.min(anchor, idx);
-                      const max = Math.max(anchor, idx);
-                      setInputHistoryRangeAnchor(anchor);
-                      setInputHistorySelected(idx);
-                      setInputHistoryMultiSelected(filteredSubmittedInputHistory.slice(min, max + 1));
-                      return;
-                    }
-                    applyHistoryInput(entry);
-                  }}
-                  style={{
-                    width: "100%",
-                    textAlign: "left",
-                    padding: "8px 10px",
-                    border: "none",
-                    background: "transparent",
-                    color: "rgba(255,255,255,0.9)",
-                    fontSize: 12,
-                    fontFamily: FONT_FAMILY,
-                    cursor: "pointer",
-                  }}
+                  key={`${entry}-${idx}`}
+                  className={`lum-overlay-split-row ${inMultiSelection ? "is-multi" : ""} ${selected ? "is-active" : ""}`}
                 >
-                  {entry}
-                </button>
-                <button
-                  type="button"
-                  aria-label={`quick-input-history-remove-${idx}`}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    removeSubmittedInputHistoryEntry(entry);
-                  }}
-                  style={{
-                    border: "none",
-                    borderLeft: "1px solid rgba(255,255,255,0.08)",
-                    background: "transparent",
-                    color: "rgba(255,180,174,0.86)",
-                    fontSize: 10,
-                    padding: "0 9px",
-                    cursor: "pointer",
-                  }}
-                  title="이 항목 삭제"
-                >
-                  DEL
-                </button>
+                  <button
+                    type="button"
+                    className="lum-overlay-item lum-overlay-item--split-main"
+                    aria-label={`quick-input-history-item-${idx}`}
+                    onClick={(e) => {
+                      if (e.shiftKey) {
+                        const anchor = inputHistoryRangeAnchor ?? inputHistorySelected;
+                        const min = Math.min(anchor, idx);
+                        const max = Math.max(anchor, idx);
+                        setInputHistoryRangeAnchor(anchor);
+                        setInputHistorySelected(idx);
+                        setInputHistoryMultiSelected(filteredSubmittedInputHistory.slice(min, max + 1));
+                        return;
+                      }
+                      applyHistoryInput(entry);
+                    }}
+                  >
+                    {entry}
+                  </button>
+                  <button
+                    type="button"
+                    className="lum-overlay-item lum-overlay-item--split-del"
+                    aria-label={`quick-input-history-remove-${idx}`}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      removeSubmittedInputHistoryEntry(entry);
+                    }}
+                    title="이 항목 삭제"
+                  >
+                    DEL
+                  </button>
                 </div>
               );
             })}
@@ -3080,33 +3007,24 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
 
       {mentionOpen && (mentionLoading || mentionItems.length > 0) && (
         <div
+          className="lum-overlay-panel lum-overlay-panel--blue lum-overlay-panel--full"
           style={{
-            position: "absolute",
-            left: 10,
-            right: 10,
             bottom: overlayBottomOffset,
             zIndex: 28,
-            background: "rgba(10,16,24,0.96)",
-            border: "1px solid rgba(121,192,255,0.28)",
-            borderRadius: 10,
-            boxShadow: "0 10px 24px rgba(0,0,0,0.45)",
-            overflow: "hidden",
             maxHeight: overlayMaxHeight,
-            display: "flex",
-            flexDirection: "column",
           }}
         >
-          <div style={{ fontSize: 10, color: "rgba(255,255,255,0.48)", padding: "6px 10px", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+          <div className="lum-overlay-caption">
             컨텍스트 첨부 (@) · {mentionTrail ? mentionTrail : "현재 폴더"}
           </div>
-          <div style={{ maxHeight: 184, overflowY: "auto", minHeight: 0 }}>
+          <div className="lum-overlay-list lum-overlay-list--mention">
             {mentionLoading && (
-              <div style={{ padding: "8px 10px", fontSize: 11, color: "rgba(255,255,255,0.52)" }}>
+              <div className="lum-overlay-empty">
                 불러오는 중…
               </div>
             )}
             {!mentionLoading && mentionItems.length === 0 && (
-              <div style={{ padding: "8px 10px", fontSize: 11, color: "rgba(255,255,255,0.52)" }}>
+              <div className="lum-overlay-empty">
                 일치하는 항목이 없습니다.
               </div>
             )}
@@ -3118,22 +3036,10 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
                     key="mention-parent"
                     type="button"
                     onClick={() => applyMentionItem(item)}
-                    style={{
-                      width: "100%",
-                      textAlign: "left",
-                      background: selected ? "rgba(88,166,255,0.18)" : "transparent",
-                      border: "none",
-                      color: "rgba(201,209,217,0.9)",
-                      padding: "7px 10px",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 8,
-                      cursor: "pointer",
-                      fontSize: 12,
-                    }}
+                    className={`lum-overlay-item lum-overlay-item--mention ${selected ? "is-active" : ""}`}
                   >
-                    <span style={{ fontSize: 10, color: "#79c0ff", minWidth: 22 }}>UP</span>
-                    <span style={{ fontFamily: FONT_FAMILY }}>.. (상위 폴더)</span>
+                    <span className="lum-overlay-item-kicker lum-overlay-item-kicker--dir">UP</span>
+                    <span className="lum-overlay-item-text">.. (상위 폴더)</span>
                   </button>
                 );
               }
@@ -3143,24 +3049,12 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
                   key={entry.path}
                   type="button"
                   onClick={() => applyMentionItem(item)}
-                  style={{
-                    width: "100%",
-                    textAlign: "left",
-                    background: selected ? "rgba(88,166,255,0.18)" : "transparent",
-                    border: "none",
-                    color: "rgba(255,255,255,0.84)",
-                    padding: "7px 10px",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 8,
-                    cursor: "pointer",
-                    fontSize: 12,
-                  }}
+                  className={`lum-overlay-item lum-overlay-item--mention ${selected ? "is-active" : ""}`}
                 >
-                  <span style={{ fontSize: 10, color: entry.is_dir ? "#79c0ff" : "rgba(255,255,255,0.55)", minWidth: 22 }}>
+                  <span className={`lum-overlay-item-kicker ${entry.is_dir ? "lum-overlay-item-kicker--dir" : ""}`}>
                     {entry.is_dir ? "DIR" : "FILE"}
                   </span>
-                  <span style={{ fontFamily: FONT_FAMILY }}>
+                  <span className="lum-overlay-item-text">
                     @{mentionTrail}{entry.name}{entry.is_dir ? "/" : ""}
                   </span>
                 </button>
@@ -3172,46 +3066,27 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
 
       {shortcutHelpOpen && (
         <div
+          className="lum-overlay-panel lum-overlay-panel--cheatsheet lum-overlay-panel--sheet"
           style={{
-            position: "absolute",
-            right: 10,
             bottom: overlayBottomOffset,
             zIndex: 30,
-            width: 420,
-            maxWidth: "calc(100% - 20px)",
             maxHeight: overlayMaxHeight,
-            background: "rgba(9,14,22,0.97)",
-            border: "1px solid rgba(121,192,255,0.28)",
-            borderRadius: 12,
-            boxShadow: "0 14px 30px rgba(0,0,0,0.45)",
-            padding: "10px 11px",
-            color: "rgba(255,255,255,0.86)",
-            overflowY: "auto",
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-            <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.05em", color: "rgba(182,218,255,0.96)" }}>
+          <div className="lum-overlay-header">
+            <span className="lum-overlay-title">
               SHORTCUT CHEATSHEET
             </span>
             <button
+              className="lum-overlay-close lum-overlay-close-btn"
               type="button"
               aria-label="shortcut-help-close"
               onClick={() => setShortcutHelpOpen(false)}
-              style={{
-                fontSize: 10,
-                color: "rgba(255,255,255,0.88)",
-                border: "1px solid rgba(255,255,255,0.22)",
-                background: "rgba(255,255,255,0.08)",
-                borderRadius: 999,
-                padding: "1px 6px",
-                lineHeight: 1.2,
-                cursor: "pointer",
-              }}
             >
               닫기
             </button>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "5px 12px", fontSize: 10.5, lineHeight: 1.45 }}>
+          <div className="lum-cheatsheet-grid">
             <span>Cmd/Ctrl+/ · 치트시트 토글</span><span>Shift+C · 인터럽트</span>
             <span>Shift+1~4/0 · backend 지정/해제</span><span>Shift+←/→ · backend 순환</span>
             <span>Shift+B/N · BACK/LAST</span><span>Shift+O · AUTO 토글</span>

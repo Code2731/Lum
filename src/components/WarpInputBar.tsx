@@ -22,8 +22,10 @@ interface Props {
   onInterrupt?: () => void;          // Ctrl+C
   onTab?: (buf: string) => boolean;  // 자동완성 — true면 기본 Tab 소비
   onChange?: (buf: string) => void;  // 입력 변화 — AI/explain 훅
+  onFocusChange?: (focused: boolean) => void;
   onKeyDownIntercept?: (e: React.KeyboardEvent<HTMLInputElement>, value: string) => boolean;
   voiceEnabled?: boolean;            // 음성 입력 토글 표시 여부 (기본 true)
+  compactContextChips?: boolean;
   contextChips?: Array<{
     id: string;
     label: string;
@@ -32,7 +34,7 @@ interface Props {
 }
 
 const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
-  ({ fontFamily, fontSize, onSubmit, onInterrupt, onTab, onChange, onKeyDownIntercept, voiceEnabled = true, contextChips = [] }, ref) => {
+  ({ fontFamily, fontSize, onSubmit, onInterrupt, onTab, onChange, onFocusChange, onKeyDownIntercept, voiceEnabled = true, compactContextChips = false, contextChips = [] }, ref) => {
     const [input, setInput] = useState("");
     const [isComposing, setIsComposing] = useState(false);
     const [isFocused, setIsFocused] = useState(false);
@@ -317,12 +319,12 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
           borderTop: `1px solid ${isFocused ? "rgba(88,166,255,0.64)" : "rgba(255,255,255,0.14)"}`,
           borderBottom: "1px solid rgba(255,255,255,0.05)",
           boxShadow: isFocused ? "0 -10px 28px rgba(88,166,255,0.12)" : "inset 0 1px 0 rgba(255,255,255,0.02)",
-          padding: contextChips.length > 0 ? "6px 12px" : "0 12px",
+          padding: contextChips.length > 0 ? (compactContextChips ? "4px 10px" : "6px 12px") : "0 12px",
           display: "flex",
           flexDirection: "column",
           justifyContent: "center",
-          gap: contextChips.length > 0 ? 5 : 0,
-          minHeight: contextChips.length > 0 ? 56 : 40,
+          gap: contextChips.length > 0 ? (compactContextChips ? 3 : 5) : 0,
+          minHeight: contextChips.length > 0 ? (compactContextChips ? 48 : 56) : 40,
           cursor: "text",
           boxSizing: "border-box",
           position: "relative",
@@ -330,15 +332,39 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
         }}
       >
         {contextChips.length > 0 && (
-          <div style={{ width: "100%", display: "flex", alignItems: "center", gap: 6, overflowX: "auto", scrollbarWidth: "none" }}>
-            {contextChips.map((chip) => (
+          <div
+            style={{
+              width: "100%",
+              display: "flex",
+              alignItems: "center",
+              alignContent: "flex-start",
+              gap: 6,
+              rowGap: compactContextChips ? 3 : 0,
+              flexWrap: compactContextChips ? "wrap" : "nowrap",
+              overflowX: "auto",
+              scrollbarWidth: "none",
+            }}
+          >
+            {contextChips.map((chip) => {
+              const primaryChip = chip.id === "route" || chip.id === "backend" || chip.id === "term";
+              const chipOrder = !compactContextChips
+                ? 0
+                : chip.id === "route"
+                  ? 0
+                  : chip.id === "backend"
+                    ? 1
+                    : chip.id === "term"
+                      ? 2
+                      : 3;
+              return (
               <span
                 key={chip.id}
                 style={{
+                  order: chipOrder,
                   flexShrink: 0,
                   fontSize: 10,
                   lineHeight: 1.2,
-                  padding: "2px 7px",
+                  padding: compactContextChips ? "1px 6px" : "2px 7px",
                   borderRadius: 999,
                   border:
                     chip.tone === "accent" ? "1px solid rgba(88,166,255,0.35)" :
@@ -355,11 +381,18 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
                     chip.tone === "success" ? "rgba(63,185,80,0.12)" :
                     chip.tone === "warn" ? "rgba(227,179,65,0.12)" :
                     "rgba(255,255,255,0.04)",
+                  opacity: compactContextChips && !primaryChip ? 0.52 : 1,
+                  maxWidth: compactContextChips && !primaryChip ? 132 : undefined,
+                  overflow: compactContextChips && !primaryChip ? "hidden" : undefined,
+                  textOverflow: compactContextChips && !primaryChip ? "ellipsis" : undefined,
+                  whiteSpace: compactContextChips && !primaryChip ? "nowrap" : undefined,
+                  boxShadow: compactContextChips && primaryChip ? "0 0 0 1px rgba(255,255,255,0.12)" : "none",
                 }}
               >
                 {chip.label}
               </span>
-            ))}
+            );
+            })}
           </div>
         )}
 
@@ -457,8 +490,14 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
             onKeyDown={handleKeyDown}
             onCompositionStart={() => setIsComposing(true)}
             onCompositionEnd={() => setIsComposing(false)}
-            onFocus={() => setIsFocused(true)}
-            onBlur={() => setIsFocused(false)}
+            onFocus={() => {
+              setIsFocused(true);
+              onFocusChange?.(true);
+            }}
+            onBlur={() => {
+              setIsFocused(false);
+              onFocusChange?.(false);
+            }}
             autoFocus
             spellCheck={false}
             autoComplete="off"
