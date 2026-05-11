@@ -2933,6 +2933,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
             >
               <span>↑/↓ 이동</span>
               <span>Shift+↑/↓ 범위 선택</span>
+              <span>Shift+클릭 범위 선택</span>
               <span>Enter 복원</span>
               <span>Del/Backspace 삭제</span>
               <span>Esc 선택해제/닫기</span>
@@ -2962,7 +2963,18 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
                 <button
                   type="button"
                   aria-label={`quick-input-history-item-${idx}`}
-                  onClick={() => applyHistoryInput(entry)}
+                  onClick={(e) => {
+                    if (e.shiftKey) {
+                      const anchor = inputHistoryRangeAnchor ?? inputHistorySelected;
+                      const min = Math.min(anchor, idx);
+                      const max = Math.max(anchor, idx);
+                      setInputHistoryRangeAnchor(anchor);
+                      setInputHistorySelected(idx);
+                      setInputHistoryMultiSelected(filteredSubmittedInputHistory.slice(min, max + 1));
+                      return;
+                    }
+                    applyHistoryInput(entry);
+                  }}
                   style={{
                     width: "100%",
                     textAlign: "left",
