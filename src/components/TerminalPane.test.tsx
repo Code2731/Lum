@@ -319,6 +319,19 @@ describe("TerminalPane — 입력 라우팅", () => {
     });
   });
 
+  it("입력 단축키 Cmd/Ctrl+Shift+C로 인터럽트(SIGINT)를 전송한다", async () => {
+    const { container } = render(<TerminalPane id="tab-1" />);
+    const input = container.querySelector("input")!;
+    fireEvent.change(input, { target: { value: "sleep 30" } });
+    fireEvent.keyDown(input, { key: "C", ctrlKey: true, shiftKey: true });
+    await waitFor(() => {
+      expect(invokeMock).toHaveBeenCalledWith("write_to_pty", {
+        id: "tab-1",
+        data: "\u0003",
+      });
+    });
+  });
+
   it("툴벨트 RECALL 버튼으로 직전 실행 입력을 복원한다", async () => {
     const { container } = render(<TerminalPane id="tab-1" />);
     const input = container.querySelector("input")!;

@@ -1227,6 +1227,10 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     const mod = e.metaKey || e.ctrlKey;
     const lowered = e.key.toLowerCase();
     if (mod && e.shiftKey && !e.altKey) {
+      if (lowered === "c") {
+        handleInterrupt();
+        return true;
+      }
       if (e.key === "1" || e.code === "Digit1") {
         applyBackendQuickPrefix("local");
         return true;
@@ -1364,6 +1368,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     restoreLastBackendQuickPrefix,
     restorePrevBackendQuickPrefix,
     clearBackendQuickPrefix,
+    handleInterrupt,
     normalizeInputToPlain,
     resetAllInputStateQuick,
     restoreInputQuick,
@@ -1595,7 +1600,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               type="button"
               aria-label="quick-input-stop"
               onClick={handleInterrupt}
-              title="현재 실행 인터럽트 (Ctrl/Cmd+C)"
+              title="현재 실행 인터럽트 (Ctrl/Cmd+C, Cmd/Ctrl+Shift+C)"
               style={{
                 fontSize: 10,
                 color: "rgba(255,225,222,0.96)",
