@@ -3091,7 +3091,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
         </div>
       )}
 
-      {mentionOpen && (mentionLoading || mentionItems.length > 0) && (
+      {mentionOpen && (mentionLoading || mentionDir !== null) && (
         <div
           className="lum-overlay-panel lum-overlay-panel--blue lum-overlay-panel--full"
           style={{
