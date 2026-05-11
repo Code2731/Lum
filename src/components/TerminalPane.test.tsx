@@ -471,6 +471,37 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(screen.getByRole("button", { name: "quick-input-history-open" })).toHaveTextContent("HISTORY");
   });
 
+  it("HISTORY DEL로 개별 실행 입력을 삭제하고 RECALL 대상을 갱신한다", async () => {
+    render(<TerminalPane id="tab-1" />);
+
+    const input = screen.getByRole("textbox");
+    fireEvent.change(input, { target: { value: "ls -la" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+    await waitFor(() => {
+      expect(invokeMock).toHaveBeenCalledWith("write_to_pty", {
+        id: "tab-1",
+        data: "ls -la\r",
+      });
+    });
+
+    fireEvent.change(input, { target: { value: "pwd" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+    await waitFor(() => {
+      expect(invokeMock).toHaveBeenCalledWith("write_to_pty", {
+        id: "tab-1",
+        data: "pwd\r",
+      });
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "quick-input-history-open" }));
+    expect(screen.getByRole("button", { name: "quick-input-history-item-0" })).toHaveTextContent("pwd");
+    fireEvent.click(screen.getByRole("button", { name: "quick-input-history-remove-0" }));
+
+    expect(screen.getByRole("button", { name: "quick-input-history-item-0" })).toHaveTextContent("ls -la");
+    expect(screen.getByRole("button", { name: "quick-input-history-open" })).toHaveTextContent("HISTORY 1");
+    expect(screen.getByRole("button", { name: "quick-input-recall" })).toHaveTextContent("RECALL ls -la");
+  });
+
   it("HISTORY 검색창에서 필터 후 Enter/Escape 키로 복원/닫기를 처리한다", async () => {
     const { container } = render(<TerminalPane id="tab-1" />);
     const input = container.querySelector("input")!;

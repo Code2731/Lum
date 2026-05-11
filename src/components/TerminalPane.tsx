@@ -746,8 +746,20 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
   const clearSubmittedInputHistory = useCallback(() => {
     setSubmittedInputHistory([]);
     persistInputHistory([]);
+    setLastSubmittedInput("");
     setInputHistorySelected(0);
   }, [persistInputHistory]);
+  const removeSubmittedInputHistoryEntry = useCallback((entry: string) => {
+    setSubmittedInputHistory((prev) => {
+      const next = prev.filter((item) => item !== entry);
+      persistInputHistory(next);
+      if (lastSubmittedInput === entry) {
+        setLastSubmittedInput(next[0] ?? "");
+      }
+      return next;
+    });
+    setInputHistorySelected(0);
+  }, [lastSubmittedInput, persistInputHistory]);
   const filteredSubmittedInputHistory = useMemo(() => {
     const query = inputHistoryQuery.trim().toLowerCase();
     if (!query) return submittedInputHistory;
@@ -2784,26 +2796,56 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               </div>
             )}
             {filteredSubmittedInputHistory.map((entry, idx) => (
-              <button
+              <div
                 key={`${entry}-${idx}`}
-                type="button"
-                aria-label={`quick-input-history-item-${idx}`}
-                onClick={() => applyHistoryInput(entry)}
                 style={{
-                  width: "100%",
-                  textAlign: "left",
-                  padding: "8px 10px",
-                  border: "none",
+                  display: "grid",
+                  gridTemplateColumns: "1fr auto",
+                  alignItems: "stretch",
                   borderTop: idx === 0 ? "none" : "1px solid rgba(255,255,255,0.04)",
                   background: idx === inputHistorySelected ? "rgba(88,166,255,0.2)" : "transparent",
-                  color: "rgba(255,255,255,0.9)",
-                  fontSize: 12,
-                  fontFamily: FONT_FAMILY,
-                  cursor: "pointer",
                 }}
               >
-                {entry}
-              </button>
+                <button
+                  type="button"
+                  aria-label={`quick-input-history-item-${idx}`}
+                  onClick={() => applyHistoryInput(entry)}
+                  style={{
+                    width: "100%",
+                    textAlign: "left",
+                    padding: "8px 10px",
+                    border: "none",
+                    background: "transparent",
+                    color: "rgba(255,255,255,0.9)",
+                    fontSize: 12,
+                    fontFamily: FONT_FAMILY,
+                    cursor: "pointer",
+                  }}
+                >
+                  {entry}
+                </button>
+                <button
+                  type="button"
+                  aria-label={`quick-input-history-remove-${idx}`}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    removeSubmittedInputHistoryEntry(entry);
+                  }}
+                  style={{
+                    border: "none",
+                    borderLeft: "1px solid rgba(255,255,255,0.08)",
+                    background: "transparent",
+                    color: "rgba(255,180,174,0.86)",
+                    fontSize: 10,
+                    padding: "0 9px",
+                    cursor: "pointer",
+                  }}
+                  title="이 항목 삭제"
+                >
+                  DEL
+                </button>
+              </div>
             ))}
           </div>
         </div>
