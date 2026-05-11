@@ -162,14 +162,17 @@ If LUM cannot start on macOS, check these steps in order:
 
 1. Use the bundled helper script to fetch the right DMG for this machine:
    - `bash scripts/download-latest-lum-macos.sh`
-1. Download the DMG matching your machine:
+2. Download the DMG matching your machine:
    - Apple Silicon → `*aarch64.dmg`
    - Intel → `*x64.dmg`
-2. Remove quarantine flags from the downloaded DMG and app:
+3. If needed, remove quarantine flags from the downloaded DMG and app:
    - `xattr -dr com.apple.quarantine ~/Downloads/LUM.Terminal_*.dmg`
    - `xattr -dr com.apple.quarantine "/Applications/LUM Terminal.app"`
-3. Install/Run from Finder with right-click + **Open** at least once.
-4. If it still fails, re-download the DMG and retry. If there is still an error, attach the macOS Console log to this issue/PR.
+4. For unsigned app behavior:
+   - Right-click the app → **Open** at least once, then run it again.
+   - If it still fails, open Terminal log:
+     - `log show --predicate 'eventMessage contains "LUM Terminal"' --style syslog --last 5m`
+5. If it still fails, re-download the DMG and retry. If there is still an error, attach the macOS Console output to this issue/PR.
 
 ### Platform Support
 
@@ -283,11 +286,13 @@ macOS에서 LUM이 실행되지 않을 때는 순서대로 확인하세요.
 2. 사용 중인 CPU 아키텍처에 맞는 DMG를 받았는지 확인합니다.
    - Apple Silicon → `*aarch64.dmg`
    - Intel → `*x64.dmg`
-3. 다운로드한 DMG와 앱의 격리 플래그를 제거합니다.
+3. 필요한 경우 다운로드한 DMG와 앱의 격리 플래그를 제거합니다.
    - `xattr -dr com.apple.quarantine ~/Downloads/LUM.Terminal_*.dmg`
    - `xattr -dr com.apple.quarantine "/Applications/LUM Terminal.app"`
-4. Finder에서 DMG를 열고 앱을 설치한 뒤, 앱에서 우클릭 → **열기**를 한번 실행합니다.
-5. 그래도 실행되지 않으면 DMG를 다시 받았는지 확인하고, Console 로그(오류 메시지)와 함께 이슈를 남겨주세요.
+4. 서명 미등록 앱은 우클릭 → **열기**를 먼저 1회 실행한 뒤 다시 실행해 보세요.
+5. 실행 로그가 필요하면 다음으로 최근 로그를 확인합니다.
+   - `log show --predicate 'eventMessage contains "LUM Terminal"' --style syslog --last 5m`
+6. 그래도 실행되지 않으면 DMG를 다시 받았는지 확인하고, Console 로그(오류 메시지)와 함께 이슈를 남겨주세요.
 
 **AI 기능 활성화 (선택)**
 
