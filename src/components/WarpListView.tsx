@@ -145,6 +145,16 @@ const WarpListView: React.FC<Props> = ({
     timelineRestoreFocusRef.current = restoreFocus;
     setTimelineOpen(false);
   };
+  const toggleTimelinePanel = () => {
+    setTimelineOpen((prev) => {
+      if (prev) {
+        timelineRestoreFocusRef.current = true;
+        return false;
+      }
+      timelineRestoreFocusRef.current = false;
+      return true;
+    });
+  };
 
   const toggle = (id: string) =>
     setExpanded((prev) => {
@@ -644,7 +654,7 @@ const WarpListView: React.FC<Props> = ({
       if (isTypingTarget(e.target)) return;
       if (comparedCount === 0) return;
       e.preventDefault();
-      setTimelineOpen((prev) => !prev);
+      toggleTimelinePanel();
     };
     window.addEventListener("keydown", onWindowKeyDown);
     return () => window.removeEventListener("keydown", onWindowKeyDown);
@@ -1244,7 +1254,7 @@ const WarpListView: React.FC<Props> = ({
                 <button
                   ref={timelineButtonRef}
                   type="button"
-                  onClick={() => setTimelineOpen((prev) => !prev)}
+                  onClick={toggleTimelinePanel}
                   title="Cmd/Ctrl+Shift+Y"
                   className="text-[10px] px-2 py-0.5 rounded border border-cyan-400/30 text-cyan-200/90 hover:bg-cyan-400/15"
                 >

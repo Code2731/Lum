@@ -608,6 +608,33 @@ describe("WarpListView delta actions", () => {
     expect(screen.queryByText("최근 비교 히스토리")).not.toBeInTheDocument();
   });
 
+  it("Cmd/Ctrl+Shift+Y로 닫을 때 타임라인 버튼으로 포커스 복귀", async () => {
+    render(
+      <WarpListView
+        blocks={blocks}
+        compareResultByBlock={{
+          b2: {
+            added: 1,
+            removed: 1,
+            preview: "",
+            addedLines: ["new line"],
+            removedLines: ["old line"],
+            comparedAt: now,
+          },
+        }}
+      />,
+    );
+
+    const timelineButton = screen.getByRole("button", { name: "Δ Timeline (1)" });
+    fireEvent.keyDown(window, { key: "y", ctrlKey: true, shiftKey: true });
+    expect(screen.getByText("최근 비교 히스토리")).toBeInTheDocument();
+    fireEvent.keyDown(window, { key: "y", ctrlKey: true, shiftKey: true });
+    await waitFor(() => {
+      expect(screen.queryByText("최근 비교 히스토리")).not.toBeInTheDocument();
+      expect(timelineButton).toHaveFocus();
+    });
+  });
+
   it("Δ Timeline이 열리면 검색창에 자동 포커스", async () => {
     render(
       <WarpListView
