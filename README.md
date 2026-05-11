@@ -156,6 +156,19 @@ LUM works as a plain terminal with no AI server. To enable embedded local AI:
 
 **No GPU / no CUDA?** Set `GEMINI_API_KEY` in your environment — LUM falls back to Gemini cloud automatically.
 
+### macOS launch troubleshooting
+
+If LUM cannot start on macOS, check these steps in order:
+
+1. Download the DMG matching your machine:
+   - Apple Silicon → `*aarch64.dmg`
+   - Intel → `*x64.dmg`
+2. Remove quarantine flags from the downloaded DMG and app:
+   - `xattr -dr com.apple.quarantine ~/Downloads/LUM.Terminal_*.dmg`
+   - `xattr -dr com.apple.quarantine "/Applications/LUM Terminal.app"`
+3. Install/Run from Finder with right-click + **Open** at least once.
+4. If it still fails, re-download the DMG and retry. If there is still an error, attach the macOS Console log to this issue/PR.
+
 ### Platform Support
 
 | Platform | Shell | Desktop Automation | Bundle |
@@ -258,6 +271,19 @@ npm run tauri dev               # 외부 LLM 백엔드만 (on-device AI 없음)
 npm run tauri build                                # 경량 (on-device 추론 없음)
 npm run tauri build -- --features embedded-ai     # OS별 CUDA/Metal 자동 선택
 ```
+
+### macOS 실행 문제 해결
+
+macOS에서 LUM이 실행되지 않을 때는 순서대로 확인하세요.
+
+1. 사용 중인 CPU 아키텍처에 맞는 DMG를 받았는지 확인합니다.
+   - Apple Silicon → `*aarch64.dmg`
+   - Intel → `*x64.dmg`
+2. 다운로드한 DMG와 앱의 격리 플래그를 제거합니다.
+   - `xattr -dr com.apple.quarantine ~/Downloads/LUM.Terminal_*.dmg`
+   - `xattr -dr com.apple.quarantine "/Applications/LUM Terminal.app"`
+3. Finder에서 DMG를 열고 앱을 설치한 뒤, 앱에서 우클릭 → **열기**를 한번 실행합니다.
+4. 그래도 실행되지 않으면 DMG를 다시 받았는지 확인하고, Console 로그(오류 메시지)와 함께 이슈를 남겨주세요.
 
 **AI 기능 활성화 (선택)**
 
