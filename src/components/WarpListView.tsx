@@ -2154,6 +2154,13 @@ const WarpListView: React.FC<Props> = ({
                     aria-label="블록 액션 메뉴"
                     className="absolute right-0 top-5 z-20 w-56 rounded-lg border border-white/10 bg-[#0f151f]/96 backdrop-blur-sm shadow-2xl overflow-hidden"
                     onClick={(e) => e.stopPropagation()}
+                    onBlurCapture={(e) => {
+                      const next = e.relatedTarget as Node | null;
+                      const menuContainer = menuContainerRefs.current[b.id];
+                      const menuButton = menuButtonRefs.current[b.id];
+                      if (next && (menuContainer?.contains(next) || menuButton?.contains(next))) return;
+                      closeMenuById(b.id, false);
+                    }}
                     onKeyDown={(e) => {
                       const currentMenuItems = menuItemRefs.current[b.id] ?? [];
                       const last = Math.max(0, currentMenuItems.length - 1);
@@ -2161,6 +2168,10 @@ const WarpListView: React.FC<Props> = ({
                         e.preventDefault();
                         e.stopPropagation();
                         closeMenuById(b.id, true);
+                        return;
+                      }
+                      if (e.key === "Tab") {
+                        closeMenuById(b.id, false);
                         return;
                       }
                       if (e.altKey) {

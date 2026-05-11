@@ -365,6 +365,29 @@ describe("WarpListView delta actions", () => {
     expect(screen.queryByRole("menuitem", { name: /Copy Both/ })).not.toBeInTheDocument();
   });
 
+  it("블록 액션 메뉴는 Tab으로 닫힘", () => {
+    render(
+      <WarpListView
+        blocks={[
+          {
+            id: "b7",
+            command: "echo menu tab",
+            output: "menu ok",
+            exitCode: 0,
+            startedAt: now - 1000,
+            endedAt: now,
+          },
+        ]}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "블록 액션" }));
+    const firstItem = screen.getByRole("menuitem", { name: /Copy Both/ });
+    firstItem.focus();
+    fireEvent.keyDown(firstItem, { key: "Tab" });
+    expect(screen.queryByRole("menuitem", { name: /Copy Both/ })).not.toBeInTheDocument();
+  });
+
   it("블록 액션 메뉴는 키보드로 탐색하고 Enter로 실행한다", () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     Object.defineProperty(navigator, "clipboard", {
