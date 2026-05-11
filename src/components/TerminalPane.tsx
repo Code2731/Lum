@@ -787,6 +787,10 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
   const handleInputHistoryKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Escape") {
       e.preventDefault();
+      if (inputHistoryMultiSelected.length > 1) {
+        clearInputHistoryMultiSelection();
+        return;
+      }
       setInputHistoryOpen(false);
       setInputHistoryQuery("");
       setInputHistorySelected(0);
@@ -847,6 +851,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     }
   }, [
     applyHistoryInput,
+    clearInputHistoryMultiSelection,
     filteredSubmittedInputHistory,
     inputHistoryMultiSelected,
     inputHistoryRangeAnchor,
@@ -1505,6 +1510,10 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     const mod = e.metaKey || e.ctrlKey;
     const lowered = e.key.toLowerCase();
     if (e.key === "Escape" && inputHistoryOpen) {
+      if (inputHistoryMultiSelected.length > 1) {
+        clearInputHistoryMultiSelection();
+        return true;
+      }
       setInputHistoryOpen(false);
       setInputHistoryQuery("");
       setInputHistorySelected(0);
@@ -1665,6 +1674,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     applyBackendQuickPrefix,
     cleanInputQuick,
     clearBackendQuickPrefix,
+    clearInputHistoryMultiSelection,
     clearInputQuick,
     cycleBackendQuickPrefix,
     forgetUndoStackQuick,
@@ -1684,6 +1694,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     squashInputSpacesQuick,
     shortcutHelpOpen,
     inputHistoryOpen,
+    inputHistoryMultiSelected.length,
     swapWithSubmittedInputQuick,
     toggleForceAiPrefix,
     toggleQuickModePrefix,
@@ -2924,7 +2935,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               <span>Shift+↑/↓ 범위 선택</span>
               <span>Enter 복원</span>
               <span>Del/Backspace 삭제</span>
-              <span>Esc 닫기</span>
+              <span>Esc 선택해제/닫기</span>
             </div>
           </div>
           <div style={{ maxHeight: 220, overflowY: "auto" }}>

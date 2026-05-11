@@ -674,6 +674,51 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(screen.getByRole("button", { name: "quick-input-history-item-2" })).toHaveTextContent("ls -la");
   });
 
+  it("HISTORY 멀티 선택 상태에서 Esc는 먼저 선택만 해제하고, 다시 누르면 패널을 닫는다", async () => {
+    render(<TerminalPane id="tab-1" />);
+
+    const input = screen.getByRole("textbox");
+    fireEvent.change(input, { target: { value: "ls -la" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+    await waitFor(() => {
+      expect(invokeMock).toHaveBeenCalledWith("write_to_pty", {
+        id: "tab-1",
+        data: "ls -la\r",
+      });
+    });
+
+    fireEvent.change(input, { target: { value: "npm test" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+    await waitFor(() => {
+      expect(invokeMock).toHaveBeenCalledWith("write_to_pty", {
+        id: "tab-1",
+        data: "npm test\r",
+      });
+    });
+
+    fireEvent.change(input, { target: { value: "pwd" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+    await waitFor(() => {
+      expect(invokeMock).toHaveBeenCalledWith("write_to_pty", {
+        id: "tab-1",
+        data: "pwd\r",
+      });
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "quick-input-history-open" }));
+    const search = screen.getByRole("textbox", { name: "input-history-search" });
+
+    fireEvent.keyDown(search, { key: "ArrowDown", shiftKey: true });
+    expect(screen.getByLabelText("input-history-selected-count")).toHaveTextContent("2 selected");
+
+    fireEvent.keyDown(search, { key: "Escape" });
+    expect(screen.queryByLabelText("input-history-selected-count")).not.toBeInTheDocument();
+    expect(screen.getByText("INPUT HISTORY")).toBeInTheDocument();
+
+    fireEvent.keyDown(search, { key: "Escape" });
+    expect(screen.queryByText("INPUT HISTORY")).not.toBeInTheDocument();
+  });
+
   it("툴벨트 RECALL로 교체된 입력은 UNDO로 직전 입력 복원이 가능하다", async () => {
     const { container } = render(<TerminalPane id="tab-1" />);
     const input = container.querySelector("input")!;
