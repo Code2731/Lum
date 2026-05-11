@@ -140,10 +140,37 @@ const WarpListView: React.FC<Props> = ({
   const timelineSearchInputRef = useRef<HTMLInputElement | null>(null);
   const queueSearchInputRef = useRef<HTMLInputElement | null>(null);
   const timelineRestoreFocusRef = useRef(false);
+  const deltaRestoreFocusRef = useRef(false);
+  const deltaRestoreFocusIdRef = useRef<string | null>(null);
 
   const closeTimelinePanel = (restoreFocus: boolean) => {
     timelineRestoreFocusRef.current = restoreFocus;
     setTimelineOpen(false);
+  };
+  const closeDeltaPopover = (restoreFocus: boolean, id?: string | null) => {
+    if (restoreFocus) {
+      deltaRestoreFocusRef.current = true;
+      if (id || deltaOpenId) {
+        deltaRestoreFocusIdRef.current = id ?? deltaOpenId;
+      } else {
+        deltaRestoreFocusIdRef.current = null;
+      }
+    } else {
+      deltaRestoreFocusRef.current = false;
+      deltaRestoreFocusIdRef.current = null;
+    }
+    setDeltaOpenId(null);
+  };
+  const toggleDeltaPopover = (id: string) => {
+    setDeltaOpenId((prev) => {
+      if (prev === id) {
+        closeDeltaPopover(true, id);
+        return null;
+      }
+      deltaRestoreFocusRef.current = false;
+      deltaRestoreFocusIdRef.current = null;
+      return id;
+    });
   };
   const toggleTimelinePanel = () => {
     setTimelineOpen((prev) => {
@@ -307,11 +334,24 @@ const WarpListView: React.FC<Props> = ({
       row.scrollIntoView({ block: "nearest", inline: "nearest" });
     }
   }, [deltaOpenId]);
+  useEffect(() => {
+    if (deltaOpenId) return;
+    if (!deltaRestoreFocusRef.current) return;
+    const timer = setTimeout(() => {
+      const id = deltaRestoreFocusIdRef.current;
+      if (id) {
+        deltaButtonRefs.current[id]?.focus();
+      }
+      deltaRestoreFocusRef.current = false;
+      deltaRestoreFocusIdRef.current = null;
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [deltaOpenId]);
 
   useEffect(() => {
     if (!deltaOpenId) return;
     if (!filtered.some((b) => b.id === deltaOpenId)) {
-      setDeltaOpenId(null);
+      closeDeltaPopover(false, deltaOpenId);
     }
   }, [deltaOpenId, filtered]);
   useEffect(() => {
@@ -664,14 +704,14 @@ const WarpListView: React.FC<Props> = ({
     if (!deltaOpenId) return;
     const onWindowKeyDown = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
-      setDeltaOpenId(null);
+      closeDeltaPopover(true, deltaOpenId);
     };
     const onMouseDown = (e: MouseEvent) => {
       const target = e.target as Node | null;
       if (!target) return;
       if (deltaPopoverRef.current?.contains(target)) return;
       if (deltaButtonRefs.current[deltaOpenId]?.contains(target)) return;
-      setDeltaOpenId(null);
+      closeDeltaPopover(false, deltaOpenId);
     };
     window.addEventListener("keydown", onWindowKeyDown);
     window.addEventListener("mousedown", onMouseDown);
@@ -948,7 +988,7 @@ const WarpListView: React.FC<Props> = ({
         if (onClearCompareResults) {
           e.preventDefault();
           onClearCompareResults();
-          setDeltaOpenId(null);
+          closeDeltaPopover(false);
           setTimelineSelectedIds(new Set());
           closeTimelinePanel(true);
         }
@@ -1612,7 +1652,7 @@ const WarpListView: React.FC<Props> = ({
                             className="ml-auto text-[10px] px-2 py-0.5 rounded border border-rose-300/30 text-rose-200 hover:bg-rose-300/12"
                             onClick={() => {
                               onClearCompareResults();
-                              setDeltaOpenId(null);
+                              closeDeltaPopover(false);
                               setTimelineSelectedIds(new Set());
                               closeTimelinePanel(true);
                             }}
@@ -2056,7 +2096,7 @@ const WarpListView: React.FC<Props> = ({
                     title={compare.preview || "출력 변경 요약"}
                     onClick={(e) => {
                       e.stopPropagation();
-                      setDeltaOpenId((prev) => (prev === b.id ? null : b.id));
+                      toggleDeltaPopover(b.id);
                     }}
                   >
                     Δ +{compare.added}/-{compare.removed}

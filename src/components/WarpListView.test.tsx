@@ -208,6 +208,33 @@ describe("WarpListView delta actions", () => {
     expect(screen.queryByText(/Retry Compare/)).not.toBeInTheDocument();
   });
 
+  it("Δ 팝오버에서 Escape로 닫히면 버튼에 포커스를 돌려준다", async () => {
+    render(
+      <WarpListView
+        blocks={blocks}
+        compareResultByBlock={{
+          b2: {
+            added: 1,
+            removed: 1,
+            preview: "",
+            addedLines: ["new line"],
+            removedLines: ["old line"],
+            comparedAt: now,
+          },
+        }}
+      />,
+    );
+
+    const deltaButton = screen.getByRole("button", { name: "Δ +1/-1" });
+    fireEvent.click(deltaButton);
+    expect(screen.getByText(/Retry Compare/)).toBeInTheDocument();
+    fireEvent.keyDown(window, { key: "Escape" });
+
+    await waitFor(() => {
+      expect(deltaButton).toHaveFocus();
+    });
+  });
+
   it("Δ Timeline에서 Jump로 해당 비교 팝오버를 연다", () => {
     render(
       <WarpListView
