@@ -569,8 +569,11 @@ body {
   display: flex;
   align-items: center;
   gap: 4px;
+  width: max-content;
+  max-width: min(560px, calc(100% - 20px));
   border: 1px solid rgba(88, 166, 255, 0.3);
   padding: 4px 6px;
+  overflow: hidden;
 }
 
 .lum-inline-popup-header {
@@ -631,6 +634,8 @@ body {
   color: #c9d1d9;
   font-size: var(--lum-ui-text-body);
   font-family: var(--font-mono);
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .lum-searchbar-input::placeholder {
@@ -669,10 +674,16 @@ body {
 
 .lum-searchbar-nav {
   font-size: 14px;
+  width: 16px;
+  text-align: center;
+  line-height: 1;
 }
 
 .lum-searchbar-close {
   font-size: var(--lum-ui-text-body);
+  width: 14px;
+  text-align: center;
+  line-height: 1;
 }
 
 .lum-searchbar-nav:hover,

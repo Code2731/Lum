@@ -3185,6 +3185,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               <button
                 type="button"
                 className="lum-inline-popup-close"
+                aria-label="ai-explain-close"
                 onClick={clearExplain}
               >
                 ✕
@@ -3217,6 +3218,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
           <input
             className="lum-searchbar-input"
             ref={searchInputRef}
+            aria-label="search-input"
             value={searchQuery}
             onChange={e => { setSearchQuery(e.target.value); doSearch(e.target.value); }}
             onKeyDown={e => {
@@ -3247,6 +3249,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
             tooltip="이전 (Shift+Enter)"
             onClick={() => doSearch(searchQuery, false)}
             className="lum-searchbar-nav"
+            aria-label="search-prev"
           >
             ‹
           </IconButton>
@@ -3254,10 +3257,13 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
             tooltip="다음 (Enter)"
             onClick={() => doSearch(searchQuery, true)}
             className="lum-searchbar-nav"
+            aria-label="search-next"
           >
             ›
           </IconButton>
-          <button type="button" onClick={closeSearch} className="lum-searchbar-close">✕</button>
+          <button type="button" onClick={closeSearch} className="lum-searchbar-close" aria-label="search-close">
+            ✕
+          </button>
         </div>
       )}
 
