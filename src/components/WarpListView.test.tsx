@@ -608,6 +608,58 @@ describe("WarpListView delta actions", () => {
     expect(screen.queryByText("최근 비교 히스토리")).not.toBeInTheDocument();
   });
 
+  it("Δ Timeline이 열리면 검색창에 자동 포커스", async () => {
+    render(
+      <WarpListView
+        blocks={blocks}
+        compareResultByBlock={{
+          b2: {
+            added: 1,
+            removed: 1,
+            preview: "",
+            addedLines: ["new line"],
+            removedLines: ["old line"],
+            comparedAt: now,
+          },
+        }}
+      />,
+    );
+
+    const timelineButton = screen.getByRole("button", { name: "Δ Timeline (1)" });
+    fireEvent.click(timelineButton);
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText("타임라인 검색 (command/preview)")).toHaveFocus();
+    });
+  });
+
+  it("Δ Timeline은 Escape로 닫히면 버튼에 포커스를 돌려준다", async () => {
+    render(
+      <WarpListView
+        blocks={blocks}
+        compareResultByBlock={{
+          b2: {
+            added: 1,
+            removed: 1,
+            preview: "",
+            addedLines: ["new line"],
+            removedLines: ["old line"],
+            comparedAt: now,
+          },
+        }}
+      />,
+    );
+
+    const timelineButton = screen.getByRole("button", { name: "Δ Timeline (1)" });
+    fireEvent.click(timelineButton);
+    await waitFor(() => {
+      expect(screen.getByText("최근 비교 히스토리")).toBeInTheDocument();
+    });
+    fireEvent.keyDown(window, { key: "Escape" });
+    await waitFor(() => {
+      expect(timelineButton).toHaveFocus();
+    });
+  });
+
   it("Δ Timeline 검색으로 항목 필터링", () => {
     render(
       <WarpListView

@@ -139,6 +139,12 @@ const WarpListView: React.FC<Props> = ({
   const timelinePanelRef = useRef<HTMLDivElement | null>(null);
   const timelineSearchInputRef = useRef<HTMLInputElement | null>(null);
   const queueSearchInputRef = useRef<HTMLInputElement | null>(null);
+  const timelineRestoreFocusRef = useRef(false);
+
+  const closeTimelinePanel = (restoreFocus: boolean) => {
+    timelineRestoreFocusRef.current = restoreFocus;
+    setTimelineOpen(false);
+  };
 
   const toggle = (id: string) =>
     setExpanded((prev) => {
@@ -300,7 +306,7 @@ const WarpListView: React.FC<Props> = ({
   }, [deltaOpenId, filtered]);
   useEffect(() => {
     if (comparedCount > 0) return;
-    setTimelineOpen(false);
+    closeTimelinePanel(false);
     setTimelineSelectedIds(new Set());
     setTimelinePinnedIds(new Set());
     setTimelinePinnedOnly(false);
@@ -757,6 +763,21 @@ const WarpListView: React.FC<Props> = ({
     }
   }, [menuOpenId, filtered]);
   useEffect(() => {
+    if (timelineOpen) {
+      timelineRestoreFocusRef.current = false;
+      const timer = setTimeout(() => {
+        timelineSearchInputRef.current?.focus();
+      }, 0);
+      return () => clearTimeout(timer);
+    }
+    if (!timelineRestoreFocusRef.current) return;
+    const timer = setTimeout(() => {
+      timelineButtonRef.current?.focus();
+      timelineRestoreFocusRef.current = false;
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [timelineOpen]);
+  useEffect(() => {
     if (!timelineOpen) return;
     const onWindowKeyDown = (e: KeyboardEvent) => {
       if (isTypingTarget(e.target)) return;
@@ -919,7 +940,7 @@ const WarpListView: React.FC<Props> = ({
           onClearCompareResults();
           setDeltaOpenId(null);
           setTimelineSelectedIds(new Set());
-          setTimelineOpen(false);
+          closeTimelinePanel(true);
         }
         return;
       }
@@ -1096,14 +1117,14 @@ const WarpListView: React.FC<Props> = ({
         return;
       }
       if (e.key !== "Escape") return;
-      setTimelineOpen(false);
+      closeTimelinePanel(true);
     };
     const onMouseDown = (e: MouseEvent) => {
       const target = e.target as Node | null;
       if (!target) return;
       if (timelinePanelRef.current?.contains(target)) return;
       if (timelineButtonRef.current?.contains(target)) return;
-      setTimelineOpen(false);
+      closeTimelinePanel(false);
     };
     window.addEventListener("keydown", onWindowKeyDown);
     window.addEventListener("mousedown", onMouseDown);
@@ -1545,7 +1566,7 @@ const WarpListView: React.FC<Props> = ({
                             className="text-[10px] px-2 py-0.5 rounded border border-cyan-300/30 text-cyan-200 hover:bg-cyan-300/12 disabled:opacity-40"
                             onClick={() => {
                               onExplainAllDiffs(buildAllDiffsText(selectedTimelineItems));
-                              setTimelineOpen(false);
+                              closeTimelinePanel(false);
                             }}
                             disabled={selectedTimelineItems.length === 0}
                           >
@@ -1568,7 +1589,7 @@ const WarpListView: React.FC<Props> = ({
                             className="text-[10px] px-2 py-0.5 rounded border border-cyan-300/30 text-cyan-200 hover:bg-cyan-300/12 disabled:opacity-40"
                             onClick={() => {
                               onExplainAllDiffs(buildAllDiffsText(timelineFiltered));
-                              setTimelineOpen(false);
+                              closeTimelinePanel(false);
                             }}
                             disabled={timelineFiltered.length === 0}
                           >
@@ -1583,7 +1604,7 @@ const WarpListView: React.FC<Props> = ({
                               onClearCompareResults();
                               setDeltaOpenId(null);
                               setTimelineSelectedIds(new Set());
-                              setTimelineOpen(false);
+                              closeTimelinePanel(true);
                             }}
                             title="Cmd/Ctrl+K"
                           >
@@ -1864,7 +1885,7 @@ const WarpListView: React.FC<Props> = ({
                                   return next;
                                 });
                                 setDeltaOpenId(block.id);
-                                setTimelineOpen(false);
+                                closeTimelinePanel(false);
                               }}
                             >
                               Jump
@@ -1875,7 +1896,7 @@ const WarpListView: React.FC<Props> = ({
                                 className="text-[10px] px-2 py-0.5 rounded border border-emerald-300/30 text-emerald-200 hover:bg-emerald-300/12"
                                 onClick={() => {
                                   onExecute(block.command + "\r");
-                                  setTimelineOpen(false);
+                                  closeTimelinePanel(false);
                                 }}
                               >
                                 Run
@@ -1887,7 +1908,7 @@ const WarpListView: React.FC<Props> = ({
                                 className="text-[10px] px-2 py-0.5 rounded border border-cyan-300/30 text-cyan-200 hover:bg-cyan-300/12"
                                 onClick={() => {
                                   onRetryWithDiff(block);
-                                  setTimelineOpen(false);
+                                  closeTimelinePanel(false);
                                 }}
                               >
                                 Retry+Compare
