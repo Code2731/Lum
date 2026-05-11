@@ -178,9 +178,13 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
   const [visionMode, setVisionMode] = useState(visionEnabled ?? false);
   const [terminalVisible, setTerminalVisible] = useState(false);
   const [shortcutHelpOpen, setShortcutHelpOpen] = useState(false);
+  const [actionPaletteOpen, setActionPaletteOpen] = useState(false);
+  const [actionPaletteQuery, setActionPaletteQuery] = useState("");
+  const [actionPaletteSelected, setActionPaletteSelected] = useState(0);
 
   const outerRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const actionPaletteInputRef = useRef<HTMLInputElement>(null);
   const termRef = useRef<Terminal | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
   const searchAddonRef = useRef<SearchAddon | null>(null);
@@ -786,6 +790,11 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
       setMentionSelected(Math.max(0, mentionItems.length - 1));
     }
   }, [mentionItems, mentionOpen, mentionSelected]);
+  useEffect(() => {
+    if (!actionPaletteOpen) return;
+    actionPaletteInputRef.current?.focus();
+    actionPaletteInputRef.current?.select();
+  }, [actionPaletteOpen]);
 
   const attachMentionToken = useCallback((tokenPath: string) => {
     const token = `@${tokenPath}`;
@@ -1224,9 +1233,87 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
   }, [computePrependRecallNext, inputBuffer, lastSubmittedInput, pushUndoSnapshot]);
   const canMergeRecall = !!lastSubmittedInput && computeMergeRecallNext(inputBuffer, lastSubmittedInput) !== null;
   const canPrependRecall = !!lastSubmittedInput && computePrependRecallNext(inputBuffer, lastSubmittedInput) !== null;
+  const actionPaletteActions = useMemo(() => ([
+    { id: "clear", label: "Clear Input", keywords: "clear", run: clearInputQuick, disabled: !canClearInputQuick },
+    { id: "undo", label: "Undo Clear", keywords: "undo restore", run: restoreInputQuick, disabled: clearedInputStack.length === 0 },
+    { id: "recall", label: "Recall Last Input", keywords: "recall", run: recallSubmittedInputQuick, disabled: !canRecallSubmittedInput },
+    { id: "rerun", label: "Rerun Last Input", keywords: "rerun repeat", run: rerunSubmittedInputQuick, disabled: !lastSubmittedInput },
+    { id: "reset", label: "Reset Input State", keywords: "reset", run: resetAllInputStateQuick, disabled: !canResetAllQuick },
+    { id: "backend_auto", label: "Backend Auto Toggle", keywords: "backend auto", run: clearBackendQuickPrefix, disabled: false },
+    { id: "backend_back", label: "Backend Back", keywords: "backend back", run: restorePrevBackendQuickPrefix, disabled: !canRestorePrevBackendQuick },
+    { id: "backend_last", label: "Backend Last", keywords: "backend last", run: restoreLastBackendQuickPrefix, disabled: !canRestoreLastBackendQuick },
+  ]), [
+    canClearInputQuick,
+    canRecallSubmittedInput,
+    canResetAllQuick,
+    canRestoreLastBackendQuick,
+    canRestorePrevBackendQuick,
+    clearBackendQuickPrefix,
+    clearInputQuick,
+    clearedInputStack.length,
+    lastSubmittedInput,
+    recallSubmittedInputQuick,
+    rerunSubmittedInputQuick,
+    resetAllInputStateQuick,
+    restoreInputQuick,
+    restoreLastBackendQuickPrefix,
+    restorePrevBackendQuickPrefix,
+  ]);
+  const actionPaletteFiltered = useMemo(() => {
+    const query = actionPaletteQuery.trim().toLowerCase();
+    if (!query) return actionPaletteActions;
+    return actionPaletteActions.filter((action) => (
+      action.label.toLowerCase().includes(query) || action.keywords.includes(query)
+    ));
+  }, [actionPaletteActions, actionPaletteQuery]);
+  const executePaletteAction = useCallback((index: number) => {
+    const action = actionPaletteFiltered[index];
+    if (!action || action.disabled) return;
+    action.run();
+    setActionPaletteOpen(false);
+    setActionPaletteQuery("");
+    setActionPaletteSelected(0);
+    warpInputRef.current?.focus();
+  }, [actionPaletteFiltered]);
+  const handleActionPaletteKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Escape") {
+      e.preventDefault();
+      setActionPaletteOpen(false);
+      setActionPaletteQuery("");
+      setActionPaletteSelected(0);
+      warpInputRef.current?.focus();
+      return;
+    }
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setActionPaletteSelected((prev) => {
+        if (actionPaletteFiltered.length === 0) return 0;
+        return (prev + 1) % actionPaletteFiltered.length;
+      });
+      return;
+    }
+    if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setActionPaletteSelected((prev) => {
+        if (actionPaletteFiltered.length === 0) return 0;
+        return (prev - 1 + actionPaletteFiltered.length) % actionPaletteFiltered.length;
+      });
+      return;
+    }
+    if (e.key === "Enter") {
+      e.preventDefault();
+      executePaletteAction(actionPaletteSelected);
+    }
+  }, [actionPaletteFiltered.length, actionPaletteSelected, executePaletteAction]);
   const handleInputKeyDownIntercept = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
     const mod = e.metaKey || e.ctrlKey;
     const lowered = e.key.toLowerCase();
+    if (mod && !e.shiftKey && !e.altKey && (lowered === "k" || e.code === "KeyK")) {
+      setActionPaletteOpen((open) => !open);
+      setActionPaletteQuery("");
+      setActionPaletteSelected(0);
+      return true;
+    }
     if (e.key === "Escape" && shortcutHelpOpen) {
       setShortcutHelpOpen(false);
       return true;
@@ -1397,6 +1484,9 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     toggleQuickModePrefix,
     triggerMentionAttach,
     trimInputQuick,
+    setActionPaletteOpen,
+    setActionPaletteQuery,
+    setActionPaletteSelected,
   ]);
 
   const routeChip = useMemo(() => {
@@ -2240,6 +2330,103 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
           contextChips={inputChips}
         />
       </div>
+
+      {actionPaletteOpen && (
+        <div
+          style={{
+            position: "absolute",
+            left: 10,
+            right: 10,
+            bottom: 70,
+            zIndex: 31,
+            background: "rgba(10,16,24,0.97)",
+            border: "1px solid rgba(88,166,255,0.3)",
+            borderRadius: 12,
+            boxShadow: "0 14px 30px rgba(0,0,0,0.45)",
+            overflow: "hidden",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 10px", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+            <span style={{ fontSize: 11, color: "rgba(182,218,255,0.96)", letterSpacing: "0.05em", fontWeight: 600 }}>
+              ACTION PALETTE
+            </span>
+            <button
+              type="button"
+              aria-label="action-palette-close"
+              onClick={() => setActionPaletteOpen(false)}
+              style={{
+                fontSize: 10,
+                color: "rgba(255,255,255,0.88)",
+                border: "1px solid rgba(255,255,255,0.22)",
+                background: "rgba(255,255,255,0.08)",
+                borderRadius: 999,
+                padding: "1px 6px",
+                lineHeight: 1.2,
+                cursor: "pointer",
+              }}
+            >
+              닫기
+            </button>
+          </div>
+          <div style={{ padding: 10, borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+            <input
+              ref={actionPaletteInputRef}
+              aria-label="action-palette-input"
+              value={actionPaletteQuery}
+              onChange={(e) => {
+                setActionPaletteQuery(e.target.value);
+                setActionPaletteSelected(0);
+              }}
+              onKeyDown={handleActionPaletteKeyDown}
+              placeholder="액션 검색 (예: clear, recall, backend)"
+              style={{
+                width: "100%",
+                borderRadius: 8,
+                border: "1px solid rgba(88,166,255,0.42)",
+                background: "rgba(13,17,23,0.9)",
+                color: "rgba(255,255,255,0.92)",
+                fontSize: 12,
+                fontFamily: FONT_FAMILY,
+                padding: "6px 8px",
+                outline: "none",
+              }}
+            />
+          </div>
+          <div style={{ maxHeight: 220, overflowY: "auto" }}>
+            {actionPaletteFiltered.length === 0 && (
+              <div style={{ padding: "10px 12px", fontSize: 11, color: "rgba(255,255,255,0.55)" }}>
+                일치하는 액션이 없습니다.
+              </div>
+            )}
+            {actionPaletteFiltered.map((action, idx) => {
+              const active = idx === actionPaletteSelected;
+              return (
+                <button
+                  key={action.id}
+                  type="button"
+                  aria-label={`action-palette-item-${action.id}`}
+                  disabled={action.disabled}
+                  onClick={() => executePaletteAction(idx)}
+                  style={{
+                    width: "100%",
+                    textAlign: "left",
+                    padding: "8px 10px",
+                    border: "none",
+                    borderTop: idx === 0 ? "none" : "1px solid rgba(255,255,255,0.04)",
+                    background: active ? "rgba(88,166,255,0.2)" : "transparent",
+                    color: action.disabled ? "rgba(255,255,255,0.4)" : "rgba(255,255,255,0.9)",
+                    fontSize: 12,
+                    fontFamily: FONT_FAMILY,
+                    cursor: action.disabled ? "not-allowed" : "pointer",
+                  }}
+                >
+                  {action.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {mentionOpen && (mentionLoading || mentionItems.length > 0) && (
         <div

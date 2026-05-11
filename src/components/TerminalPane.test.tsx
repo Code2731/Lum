@@ -180,6 +180,35 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(screen.queryByText("SHORTCUT CHEATSHEET")).not.toBeInTheDocument();
   });
 
+  it("Cmd/Ctrl+K로 Action Palette를 열고 Esc로 닫는다", () => {
+    const { container } = render(<TerminalPane id="tab-1" />);
+    const input = container.querySelector("input")!;
+    expect(screen.queryByText("ACTION PALETTE")).not.toBeInTheDocument();
+
+    fireEvent.keyDown(input, { key: "k", code: "KeyK", ctrlKey: true });
+    expect(screen.getByText("ACTION PALETTE")).toBeInTheDocument();
+
+    const paletteInput = screen.getByRole("textbox", { name: "action-palette-input" });
+    fireEvent.keyDown(paletteInput, { key: "Escape" });
+    expect(screen.queryByText("ACTION PALETTE")).not.toBeInTheDocument();
+  });
+
+  it("Action Palette 검색 후 Enter로 액션을 실행한다", () => {
+    const { container } = render(<TerminalPane id="tab-1" />);
+    const input = container.querySelector("input")!;
+    fireEvent.change(input, { target: { value: "alpha" } });
+    fireEvent.click(screen.getByRole("button", { name: "quick-input-clear" }));
+    expect(input).toHaveValue("");
+
+    fireEvent.keyDown(input, { key: "k", code: "KeyK", ctrlKey: true });
+    const paletteInput = screen.getByRole("textbox", { name: "action-palette-input" });
+    fireEvent.change(paletteInput, { target: { value: "undo" } });
+    fireEvent.keyDown(paletteInput, { key: "Enter" });
+
+    expect(screen.queryByText("ACTION PALETTE")).not.toBeInTheDocument();
+    expect(input).toHaveValue("alpha");
+  });
+
   it("툴벨트 @ 파일 첨부 버튼으로 첨부 트리거를 삽입하고 목록 로드를 시작한다", async () => {
     invokeMock.mockImplementation((cmd: string, args?: { path?: string }) => {
       if (cmd === "spawn_pty") return Promise.resolve();
