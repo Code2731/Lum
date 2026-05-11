@@ -1227,6 +1227,26 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     const mod = e.metaKey || e.ctrlKey;
     const lowered = e.key.toLowerCase();
     if (mod && e.shiftKey && !e.altKey) {
+      if (e.key === "1" || e.code === "Digit1") {
+        applyBackendQuickPrefix("local");
+        return true;
+      }
+      if (e.key === "2" || e.code === "Digit2") {
+        applyBackendQuickPrefix("ollama");
+        return true;
+      }
+      if (e.key === "3" || e.code === "Digit3") {
+        applyBackendQuickPrefix("xllm");
+        return true;
+      }
+      if (e.key === "4" || e.code === "Digit4") {
+        applyBackendQuickPrefix("gemini");
+        return true;
+      }
+      if (e.key === "0" || e.code === "Digit0") {
+        clearBackendQuickPrefix();
+        return true;
+      }
       if (lowered === "k") {
         clearInputQuick();
         return true;
@@ -1330,7 +1350,9 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     }
     return handleMentionKeyDown(e);
   }, [
+    applyBackendQuickPrefix,
     cleanInputQuick,
+    clearBackendQuickPrefix,
     clearInputQuick,
     forgetUndoStackQuick,
     forgetSubmittedInputQuick,
