@@ -98,6 +98,12 @@ pub struct AppConfig {
     pub ui_show_file_explorer: Option<bool>,
     /// Welcome 힌트를 이미 본 적 있는지. true면 더 이상 표시 안 함. 기본 false.
     pub ui_hints_shown: Option<bool>,
+    /// 입력 툴벨트 TIP 노출 여부. 기본 true.
+    pub ui_show_input_toolbelt_tip: Option<bool>,
+    /// 고급 입력 도구(편집 전용) 표시 여부. 기본 true.
+    pub ui_show_advanced_input_tools: Option<bool>,
+    /// 백엔드 퀵 전환 버튼 표시 여부. 기본 true.
+    pub ui_show_backend_quick_tools: Option<bool>,
     /// AI 채팅 패널 폰트 크기(px, 10~24). 기본 14.
     pub ui_ai_chat_font_size: Option<u32>,
     /// 사용자가 클릭한 적 있는 "신규" 기능 ID 목록. 미클릭 항목엔 dot 배지 표시.
@@ -390,6 +396,9 @@ pub fn save_ui_preferences(
     show_file_explorer: Option<bool>,
     hints_shown: Option<bool>,
     ai_chat_font_size: Option<u32>,
+    show_input_toolbelt_tip: Option<bool>,
+    show_advanced_input_tools: Option<bool>,
+    show_backend_quick_tools: Option<bool>,
 ) -> Result<()> {
     let mut config = load_config()?;
     if show_file_explorer.is_some() {
@@ -397,6 +406,15 @@ pub fn save_ui_preferences(
     }
     if hints_shown.is_some() {
         config.ui_hints_shown = hints_shown;
+    }
+    if show_input_toolbelt_tip.is_some() {
+        config.ui_show_input_toolbelt_tip = show_input_toolbelt_tip;
+    }
+    if show_advanced_input_tools.is_some() {
+        config.ui_show_advanced_input_tools = show_advanced_input_tools;
+    }
+    if show_backend_quick_tools.is_some() {
+        config.ui_show_backend_quick_tools = show_backend_quick_tools;
     }
     if let Some(size) = ai_chat_font_size {
         if !(8..=32).contains(&size) {

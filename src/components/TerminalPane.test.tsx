@@ -50,6 +50,19 @@ import TerminalPane from "./TerminalPane";
 
 beforeEach(() => {
   invokeMock.mockReset();
+  const storage = new Map<string, string>();
+  Object.defineProperty(globalThis, "localStorage", {
+    configurable: true,
+    value: {
+      getItem: (key: string): string | null => storage.get(key) ?? null,
+      setItem: (key: string, value: string) => {
+        storage.set(key, String(value));
+      },
+      removeItem: (key: string) => {
+        storage.delete(key);
+      },
+    },
+  });
   try {
     localStorage.removeItem("lum_input_toolbelt_tip_dismissed");
     localStorage.removeItem("lum_toolbelt_show_advanced");
@@ -57,6 +70,13 @@ beforeEach(() => {
     localStorage.removeItem("lum_input_submit_history");
   } catch {}
   invokeMock.mockImplementation((cmd: string) => {
+    if (cmd === "load_app_config") {
+      return Promise.resolve({
+        ui_show_input_toolbelt_tip: true,
+        ui_show_advanced_input_tools: true,
+        ui_show_backend_quick_tools: true,
+      });
+    }
     if (cmd === "spawn_pty") return Promise.resolve();
     if (cmd === "write_to_pty") return Promise.resolve();
     if (cmd === "resize_pty") return Promise.resolve();
@@ -179,6 +199,63 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(screen.queryByText(/TIP · Cmd\/Ctrl\+1~4 backend 전환 · Shift\+A @첨부 · Shift\+B\/N BACK\/LAST · Shift\+K\/Z\/R\/L\/M\/P 입력 편집/)).not.toBeInTheDocument();
   });
 
+  it("설정 값 기반으로 툴벨트 표시가 반영된다", async () => {
+    invokeMock.mockImplementation((cmd: string) => {
+      if (cmd === "load_app_config") {
+        return Promise.resolve({
+          ui_show_input_toolbelt_tip: false,
+          ui_show_advanced_input_tools: false,
+          ui_show_backend_quick_tools: false,
+        });
+      }
+      if (cmd === "spawn_pty") return Promise.resolve();
+      if (cmd === "write_to_pty") return Promise.resolve();
+      if (cmd === "resize_pty") return Promise.resolve();
+      if (cmd === "get_project_context") return Promise.resolve("");
+      if (cmd === "get_recent_history") return Promise.resolve([]);
+      if (cmd === "generate_ai_command") return Promise.resolve(JSON.stringify({ command: "ls -la" }));
+      return Promise.resolve();
+    });
+    render(<TerminalPane id="tab-1" />);
+
+    await waitFor(() => {
+      expect(screen.queryByText(/TIP · Cmd\/Ctrl\+1~4 backend 전환 · Shift\+A @첨부 · Shift\+B\/N BACK\/LAST · Shift\+K\/Z\/R\/L\/M\/P 입력 편집/)).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "quick-input-merge-recall" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "quick-backend-local" })).not.toBeInTheDocument();
+    });
+  });
+
+  it("기존 localStorage 값은 config로 마이그레이션되고 즉시 반영된다", async () => {
+    try {
+      localStorage.setItem("lum_input_toolbelt_tip_dismissed", "1");
+      localStorage.setItem("lum_toolbelt_show_advanced", "0");
+      localStorage.setItem("lum_toolbelt_show_backend", "0");
+    } catch {}
+    invokeMock.mockImplementation((cmd: string) => {
+      if (cmd === "load_app_config") return Promise.resolve({});
+      if (cmd === "spawn_pty") return Promise.resolve();
+      if (cmd === "write_to_pty") return Promise.resolve();
+      if (cmd === "resize_pty") return Promise.resolve();
+      if (cmd === "get_project_context") return Promise.resolve("");
+      if (cmd === "get_recent_history") return Promise.resolve([]);
+      if (cmd === "generate_ai_command") return Promise.resolve(JSON.stringify({ command: "ls -la" }));
+      return Promise.resolve();
+    });
+
+    render(<TerminalPane id="tab-1" />);
+
+    await waitFor(() => {
+      expect(invokeMock).toHaveBeenCalledWith("save_ui_preferences", {
+        showInputToolbeltTip: false,
+        showAdvancedInputTools: false,
+        showBackendQuickTools: false,
+      });
+      expect(screen.queryByText(/TIP · Cmd\/Ctrl\+1~4 backend 전환 · Shift\+A @첨부 · Shift\+B\/N BACK\/LAST · Shift\+K\/Z\/R\/L\/M\/P 입력 편집/)).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "quick-input-merge-recall" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "quick-backend-local" })).not.toBeInTheDocument();
+    });
+  });
+
   it("Cmd/Ctrl+/로 단축키 치트시트를 열고 Esc로 닫는다", () => {
     const { container } = render(<TerminalPane id="tab-1" />);
     const input = container.querySelector("input")!;
@@ -222,6 +299,13 @@ describe("TerminalPane — 입력 라우팅", () => {
 
   it("툴벨트 @ 파일 첨부 버튼으로 첨부 트리거를 삽입하고 목록 로드를 시작한다", async () => {
     invokeMock.mockImplementation((cmd: string, args?: { path?: string }) => {
+      if (cmd === "load_app_config") {
+        return Promise.resolve({
+          ui_show_input_toolbelt_tip: true,
+          ui_show_advanced_input_tools: true,
+          ui_show_backend_quick_tools: true,
+        });
+      }
       if (cmd === "spawn_pty") return Promise.resolve();
       if (cmd === "write_to_pty") return Promise.resolve();
       if (cmd === "resize_pty") return Promise.resolve();
@@ -1494,6 +1578,13 @@ describe("TerminalPane — 입력 라우팅", () => {
 
   it("@ 첨부 메뉴에서 Enter로 파일 토큰을 입력창에 삽입", async () => {
     invokeMock.mockImplementation((cmd: string, args?: { path?: string }) => {
+      if (cmd === "load_app_config") {
+        return Promise.resolve({
+          ui_show_input_toolbelt_tip: true,
+          ui_show_advanced_input_tools: true,
+          ui_show_backend_quick_tools: true,
+        });
+      }
       if (cmd === "spawn_pty") return Promise.resolve();
       if (cmd === "write_to_pty") return Promise.resolve();
       if (cmd === "resize_pty") return Promise.resolve();
@@ -1521,6 +1612,13 @@ describe("TerminalPane — 입력 라우팅", () => {
 
   it("@ 첨부 메뉴에서 디렉토리 Enter 시 drill-down 후 파일 첨부 가능", async () => {
     invokeMock.mockImplementation((cmd: string, args?: { path?: string }) => {
+      if (cmd === "load_app_config") {
+        return Promise.resolve({
+          ui_show_input_toolbelt_tip: true,
+          ui_show_advanced_input_tools: true,
+          ui_show_backend_quick_tools: true,
+        });
+      }
       if (cmd === "spawn_pty") return Promise.resolve();
       if (cmd === "write_to_pty") return Promise.resolve();
       if (cmd === "resize_pty") return Promise.resolve();

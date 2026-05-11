@@ -338,6 +338,81 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
       return true;
     }
   });
+  useEffect(() => {
+    const readLegacySettings = () => {
+      const showInput = (() => {
+        try {
+          return localStorage.getItem(INPUT_TIP_DISMISSED_KEY) !== "1";
+        } catch {
+          return true;
+        }
+      })();
+      const showAdvanced = (() => {
+        try {
+          return localStorage.getItem(TOOLBELT_ADVANCED_KEY) !== "0";
+        } catch {
+          return true;
+        }
+      })();
+      const showBackend = (() => {
+        try {
+          return localStorage.getItem(TOOLBELT_BACKEND_KEY) !== "0";
+        } catch {
+          return true;
+        }
+      })();
+      return { showInput, showAdvanced, showBackend };
+    };
+
+    let mounted = true;
+    (async () => {
+      const legacy = readLegacySettings();
+      try {
+        const cfg = await invoke<{
+          ui_show_input_toolbelt_tip?: boolean;
+          ui_show_advanced_input_tools?: boolean;
+          ui_show_backend_quick_tools?: boolean;
+        }>("load_app_config");
+        if (!mounted) return;
+
+        const patch: Record<string, boolean> = {};
+        if (typeof cfg.ui_show_input_toolbelt_tip === "boolean") {
+          setShowInputTip(cfg.ui_show_input_toolbelt_tip);
+        } else {
+          patch.showInputToolbeltTip = legacy.showInput;
+          setShowInputTip(legacy.showInput);
+        }
+        if (typeof cfg.ui_show_advanced_input_tools === "boolean") {
+          setShowAdvancedInputTools(cfg.ui_show_advanced_input_tools);
+        } else {
+          patch.showAdvancedInputTools = legacy.showAdvanced;
+          setShowAdvancedInputTools(legacy.showAdvanced);
+        }
+        if (typeof cfg.ui_show_backend_quick_tools === "boolean") {
+          setShowBackendQuickTools(cfg.ui_show_backend_quick_tools);
+        } else {
+          patch.showBackendQuickTools = legacy.showBackend;
+          setShowBackendQuickTools(legacy.showBackend);
+        }
+
+        if (Object.keys(patch).length > 0) {
+          invoke("save_ui_preferences", patch).catch(() => {});
+        }
+      } catch {
+        if (!mounted) return;
+        setShowInputTip(legacy.showInput);
+        setShowAdvancedInputTools(legacy.showAdvanced);
+        setShowBackendQuickTools(legacy.showBackend);
+        invoke("save_ui_preferences", {
+          showInputToolbeltTip: legacy.showInput,
+          showAdvancedInputTools: legacy.showAdvanced,
+          showBackendQuickTools: legacy.showBackend,
+        }).catch(() => {});
+      }
+    })();
+
+    return () => { mounted = false; };
+  }, []);
   const [toolbeltCustomizeOpen, setToolbeltCustomizeOpen] = useState(false);
   const [warpInputFocused, setWarpInputFocused] = useState(false);
   const [inputDockHeight, setInputDockHeight] = useState(70);
@@ -1818,6 +1893,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     try {
       localStorage.setItem(INPUT_TIP_DISMISSED_KEY, "1");
     } catch {}
+    invoke("save_ui_preferences", { showInputToolbeltTip: false }).catch(() => {});
   }, []);
   const toggleAdvancedInputTools = useCallback(() => {
     setShowAdvancedInputTools((prev) => {
@@ -1825,6 +1901,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
       try {
         localStorage.setItem(TOOLBELT_ADVANCED_KEY, next ? "1" : "0");
       } catch {}
+      invoke("save_ui_preferences", { showAdvancedInputTools: next }).catch(() => {});
       return next;
     });
   }, []);
@@ -1834,6 +1911,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
       try {
         localStorage.setItem(TOOLBELT_BACKEND_KEY, next ? "1" : "0");
       } catch {}
+      invoke("save_ui_preferences", { showBackendQuickTools: next }).catch(() => {});
       return next;
     });
   }, []);
