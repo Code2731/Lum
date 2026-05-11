@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
+import React from "react";
 import TabContextMenu from "./TabContextMenu";
 
 describe("TabContextMenu", () => {
@@ -93,6 +94,46 @@ describe("TabContextMenu", () => {
     fireEvent.keyDown(menu, { key: "Enter" });
     expect(onSetColor).toHaveBeenCalledWith("tab-1", "green");
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("메뉴가 열리면 첫 번째 항목에 포커스가 이동하고 닫힘 시 원래 요소로 복귀한다", () => {
+    const onClose = vi.fn();
+    const Wrapper = () => {
+      const [open, setOpen] = React.useState(true);
+      const triggerRef = React.useRef<HTMLButtonElement>(null);
+      const focusClose = () => {
+        setOpen(false);
+        onClose();
+      };
+
+      return (
+        <div>
+          <button ref={triggerRef} type="button" autoFocus>
+            tab
+          </button>
+          {open && (
+            <TabContextMenu
+              tabId="tab-1"
+              x={120}
+              y={120}
+              onSetColor={vi.fn()}
+              onSetGroup={vi.fn()}
+              onClose={focusClose}
+            />
+          )}
+          <button type="button" onClick={() => setOpen(true)} />
+        </div>
+      );
+    };
+
+    render(<div><Wrapper /></div>);
+    const firstColor = screen.getByRole("radio", { name: "탭 색상 blue" });
+    expect(firstColor).toHaveFocus();
+
+    const menu = screen.getByRole("menu");
+    fireEvent.keyDown(menu, { key: "Escape" });
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole("button", { name: "tab" })).toHaveFocus();
   });
 
   it("화면 경계 근처에서 메뉴 위치를 보정한다", () => {

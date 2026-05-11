@@ -28,6 +28,7 @@ const TabContextMenu: React.FC<Props> = ({
   const ref = useRef<HTMLDivElement>(null);
   const colorButtonsRef = useRef<(HTMLButtonElement | null)[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
   const [activeColorIndex, setActiveColorIndex] = useState(0);
   const [position, setPosition] = useState({
     left: clampValue(x, 0, Math.max(0, window.innerWidth - MENU_FALLBACK_WIDTH - MENU_EDGE_GAP)),
@@ -49,6 +50,18 @@ const TabContextMenu: React.FC<Props> = ({
       document.removeEventListener("keydown", handleKeydown);
     };
   }, [onClose]);
+
+  useEffect(() => {
+    const activeElement = document.activeElement;
+    if (activeElement instanceof HTMLElement) previousFocusRef.current = activeElement;
+
+    return () => {
+      const target = previousFocusRef.current;
+      if (target?.isConnected) {
+        target.focus({ preventScroll: true });
+      }
+    };
+  }, []);
 
   useLayoutEffect(() => {
     if (!ref.current) return;
