@@ -187,6 +187,8 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
   const [inputHistoryOpen, setInputHistoryOpen] = useState(false);
   const [inputHistoryQuery, setInputHistoryQuery] = useState("");
   const [inputHistorySelected, setInputHistorySelected] = useState(0);
+  const [inputHistoryRangeAnchor, setInputHistoryRangeAnchor] = useState<number | null>(null);
+  const [inputHistoryMultiSelected, setInputHistoryMultiSelected] = useState<string[]>([]);
 
   const outerRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -741,6 +743,10 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
       setInputBuffer(rawInput);
     }
     setInputHistoryOpen(false);
+    setInputHistoryQuery("");
+    setInputHistorySelected(0);
+    setInputHistoryRangeAnchor(null);
+    setInputHistoryMultiSelected([]);
     warpInputRef.current?.focus();
   }, [inputBuffer]);
   const clearSubmittedInputHistory = useCallback(() => {
@@ -748,18 +754,27 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     persistInputHistory([]);
     setLastSubmittedInput("");
     setInputHistorySelected(0);
+    setInputHistoryRangeAnchor(null);
+    setInputHistoryMultiSelected([]);
   }, [persistInputHistory]);
-  const removeSubmittedInputHistoryEntry = useCallback((entry: string) => {
+  const removeSubmittedInputHistoryEntries = useCallback((entries: string[]) => {
+    if (entries.length === 0) return;
+    const removeSet = new Set(entries);
     setSubmittedInputHistory((prev) => {
-      const next = prev.filter((item) => item !== entry);
+      const next = prev.filter((item) => !removeSet.has(item));
       persistInputHistory(next);
-      if (lastSubmittedInput === entry) {
+      if (lastSubmittedInput && removeSet.has(lastSubmittedInput)) {
         setLastSubmittedInput(next[0] ?? "");
       }
       return next;
     });
     setInputHistorySelected(0);
+    setInputHistoryRangeAnchor(null);
+    setInputHistoryMultiSelected([]);
   }, [lastSubmittedInput, persistInputHistory]);
+  const removeSubmittedInputHistoryEntry = useCallback((entry: string) => {
+    removeSubmittedInputHistoryEntries([entry]);
+  }, [removeSubmittedInputHistoryEntries]);
   const filteredSubmittedInputHistory = useMemo(() => {
     const query = inputHistoryQuery.trim().toLowerCase();
     if (!query) return submittedInputHistory;
@@ -771,23 +786,43 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
       setInputHistoryOpen(false);
       setInputHistoryQuery("");
       setInputHistorySelected(0);
+      setInputHistoryRangeAnchor(null);
+      setInputHistoryMultiSelected([]);
       warpInputRef.current?.focus();
       return;
     }
     if (e.key === "ArrowDown") {
       e.preventDefault();
-      setInputHistorySelected((prev) => {
-        if (filteredSubmittedInputHistory.length === 0) return 0;
-        return (prev + 1) % filteredSubmittedInputHistory.length;
-      });
+      if (filteredSubmittedInputHistory.length === 0) return;
+      const next = (inputHistorySelected + 1) % filteredSubmittedInputHistory.length;
+      if (e.shiftKey) {
+        const anchor = inputHistoryRangeAnchor ?? inputHistorySelected;
+        const min = Math.min(anchor, next);
+        const max = Math.max(anchor, next);
+        setInputHistoryRangeAnchor(anchor);
+        setInputHistoryMultiSelected(filteredSubmittedInputHistory.slice(min, max + 1));
+      } else {
+        setInputHistoryRangeAnchor(next);
+        setInputHistoryMultiSelected([]);
+      }
+      setInputHistorySelected(next);
       return;
     }
     if (e.key === "ArrowUp") {
       e.preventDefault();
-      setInputHistorySelected((prev) => {
-        if (filteredSubmittedInputHistory.length === 0) return 0;
-        return (prev - 1 + filteredSubmittedInputHistory.length) % filteredSubmittedInputHistory.length;
-      });
+      if (filteredSubmittedInputHistory.length === 0) return;
+      const next = (inputHistorySelected - 1 + filteredSubmittedInputHistory.length) % filteredSubmittedInputHistory.length;
+      if (e.shiftKey) {
+        const anchor = inputHistoryRangeAnchor ?? inputHistorySelected;
+        const min = Math.min(anchor, next);
+        const max = Math.max(anchor, next);
+        setInputHistoryRangeAnchor(anchor);
+        setInputHistoryMultiSelected(filteredSubmittedInputHistory.slice(min, max + 1));
+      } else {
+        setInputHistoryRangeAnchor(next);
+        setInputHistoryMultiSelected([]);
+      }
+      setInputHistorySelected(next);
       return;
     }
     if (e.key === "Enter") {
@@ -797,12 +832,23 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
       return;
     }
     if (e.key === "Delete" || e.key === "Backspace") {
+      e.preventDefault();
+      if (inputHistoryMultiSelected.length > 1) {
+        removeSubmittedInputHistoryEntries(inputHistoryMultiSelected);
+        return;
+      }
       const target = filteredSubmittedInputHistory[inputHistorySelected];
       if (!target) return;
-      e.preventDefault();
-      removeSubmittedInputHistoryEntry(target);
+      removeSubmittedInputHistoryEntries([target]);
     }
-  }, [applyHistoryInput, filteredSubmittedInputHistory, inputHistorySelected, removeSubmittedInputHistoryEntry]);
+  }, [
+    applyHistoryInput,
+    filteredSubmittedInputHistory,
+    inputHistoryMultiSelected,
+    inputHistoryRangeAnchor,
+    inputHistorySelected,
+    removeSubmittedInputHistoryEntries,
+  ]);
 
   // 입력 라우팅: 기본=AI, 알려진 CLI=shell, !/@/#/?/>> = 명시적 오버라이드
   const handleSubmit = useCallback((rawInput: string) => {
@@ -1361,7 +1407,19 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
   const canMergeRecall = !!lastSubmittedInput && computeMergeRecallNext(inputBuffer, lastSubmittedInput) !== null;
   const canPrependRecall = !!lastSubmittedInput && computePrependRecallNext(inputBuffer, lastSubmittedInput) !== null;
   const actionPaletteActions = useMemo(() => ([
-    { id: "history_open", label: "Open Input History", keywords: "history recent", run: () => setInputHistoryOpen(true), disabled: submittedInputHistory.length === 0 },
+    {
+      id: "history_open",
+      label: "Open Input History",
+      keywords: "history recent",
+      run: () => {
+        setInputHistoryOpen(true);
+        setInputHistoryQuery("");
+        setInputHistorySelected(0);
+        setInputHistoryRangeAnchor(null);
+        setInputHistoryMultiSelected([]);
+      },
+      disabled: submittedInputHistory.length === 0,
+    },
     { id: "clear", label: "Clear Input", keywords: "clear", run: clearInputQuick, disabled: !canClearInputQuick },
     { id: "undo", label: "Undo Clear", keywords: "undo restore", run: restoreInputQuick, disabled: clearedInputStack.length === 0 },
     { id: "recall", label: "Recall Last Input", keywords: "recall", run: recallSubmittedInputQuick, disabled: !canRecallSubmittedInput },
@@ -1387,7 +1445,11 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     restoreInputQuick,
     restoreLastBackendQuickPrefix,
     restorePrevBackendQuickPrefix,
+    setInputHistoryMultiSelected,
     setInputHistoryOpen,
+    setInputHistoryQuery,
+    setInputHistoryRangeAnchor,
+    setInputHistorySelected,
   ]);
   const actionPaletteFiltered = useMemo(() => {
     const query = actionPaletteQuery.trim().toLowerCase();
@@ -1442,6 +1504,8 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
       setInputHistoryOpen(false);
       setInputHistoryQuery("");
       setInputHistorySelected(0);
+      setInputHistoryRangeAnchor(null);
+      setInputHistoryMultiSelected([]);
       return true;
     }
     if (mod && !e.shiftKey && !e.altKey && (lowered === "k" || e.code === "KeyK")) {
@@ -1625,6 +1689,8 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     setActionPaletteQuery,
     setActionPaletteSelected,
     setInputHistoryQuery,
+    setInputHistoryMultiSelected,
+    setInputHistoryRangeAnchor,
     setInputHistorySelected,
   ]);
 
@@ -2027,6 +2093,8 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
                 setInputHistoryOpen((open) => !open);
                 setInputHistoryQuery("");
                 setInputHistorySelected(0);
+                setInputHistoryRangeAnchor(null);
+                setInputHistoryMultiSelected([]);
               }}
               disabled={submittedInputHistory.length === 0}
               title={submittedInputHistory.length > 0 ? "실행 입력 히스토리 열기/닫기" : "표시할 실행 입력 히스토리가 없어 비활성화"}
@@ -2756,6 +2824,8 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
                   setInputHistoryOpen(false);
                   setInputHistoryQuery("");
                   setInputHistorySelected(0);
+                  setInputHistoryRangeAnchor(null);
+                  setInputHistoryMultiSelected([]);
                 }}
                 style={{
                   fontSize: 10,
@@ -2780,6 +2850,8 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               onChange={(e) => {
                 setInputHistoryQuery(e.target.value);
                 setInputHistorySelected(0);
+                setInputHistoryRangeAnchor(null);
+                setInputHistoryMultiSelected([]);
               }}
               onKeyDown={handleInputHistoryKeyDown}
               placeholder="히스토리 검색 (↑↓ 선택, Enter 복원, Esc 닫기)"
@@ -2808,6 +2880,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               }}
             >
               <span>↑/↓ 이동</span>
+              <span>Shift+↑/↓ 범위 선택</span>
               <span>Enter 복원</span>
               <span>Del/Backspace 삭제</span>
               <span>Esc 닫기</span>
@@ -2819,15 +2892,19 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
                 기록된 실행 입력이 없습니다.
               </div>
             )}
-            {filteredSubmittedInputHistory.map((entry, idx) => (
-              <div
+            {filteredSubmittedInputHistory.map((entry, idx) => {
+              const inMultiSelection = inputHistoryMultiSelected.includes(entry);
+              return (
+                <div
                 key={`${entry}-${idx}`}
                 style={{
                   display: "grid",
                   gridTemplateColumns: "1fr auto",
                   alignItems: "stretch",
                   borderTop: idx === 0 ? "none" : "1px solid rgba(255,255,255,0.04)",
-                  background: idx === inputHistorySelected ? "rgba(88,166,255,0.2)" : "transparent",
+                  background: inMultiSelection
+                    ? "rgba(88,166,255,0.26)"
+                    : (idx === inputHistorySelected ? "rgba(88,166,255,0.2)" : "transparent"),
                 }}
               >
                 <button
@@ -2869,8 +2946,9 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
                 >
                   DEL
                 </button>
-              </div>
-            ))}
+                </div>
+              );
+            })}
           </div>
         </div>
       )}

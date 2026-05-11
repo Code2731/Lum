@@ -450,6 +450,7 @@ describe("TerminalPane — 입력 라우팅", () => {
     fireEvent.click(historyOpen);
     expect(screen.getByText("INPUT HISTORY")).toBeInTheDocument();
     expect(screen.getByLabelText("input-history-shortcuts")).toHaveTextContent("Del/Backspace 삭제");
+    expect(screen.getByLabelText("input-history-shortcuts")).toHaveTextContent("Shift+↑/↓ 범위 선택");
 
     fireEvent.click(screen.getByRole("button", { name: "quick-input-history-item-1" }));
     expect(screen.queryByText("INPUT HISTORY")).not.toBeInTheDocument();
@@ -577,6 +578,52 @@ describe("TerminalPane — 입력 라우팅", () => {
     fireEvent.keyDown(search, { key: "Backspace" });
     expect(screen.queryByRole("button", { name: "quick-input-history-item-0" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "quick-input-history-open" })).toHaveTextContent("HISTORY 1");
+  });
+
+  it("HISTORY 검색창에서 Shift+Arrow + Delete로 범위를 일괄 삭제한다", async () => {
+    render(<TerminalPane id="tab-1" />);
+
+    const input = screen.getByRole("textbox");
+    fireEvent.change(input, { target: { value: "ls -la" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+    await waitFor(() => {
+      expect(invokeMock).toHaveBeenCalledWith("write_to_pty", {
+        id: "tab-1",
+        data: "ls -la\r",
+      });
+    });
+
+    fireEvent.change(input, { target: { value: "npm test" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+    await waitFor(() => {
+      expect(invokeMock).toHaveBeenCalledWith("write_to_pty", {
+        id: "tab-1",
+        data: "npm test\r",
+      });
+    });
+
+    fireEvent.change(input, { target: { value: "pwd" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+    await waitFor(() => {
+      expect(invokeMock).toHaveBeenCalledWith("write_to_pty", {
+        id: "tab-1",
+        data: "pwd\r",
+      });
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "quick-input-history-open" }));
+    const search = screen.getByRole("textbox", { name: "input-history-search" });
+    expect(screen.getByRole("button", { name: "quick-input-history-item-0" })).toHaveTextContent("pwd");
+    expect(screen.getByRole("button", { name: "quick-input-history-item-1" })).toHaveTextContent("npm test");
+    expect(screen.getByRole("button", { name: "quick-input-history-item-2" })).toHaveTextContent("ls -la");
+
+    fireEvent.keyDown(search, { key: "ArrowDown", shiftKey: true });
+    fireEvent.keyDown(search, { key: "Delete" });
+
+    expect(screen.queryByRole("button", { name: "quick-input-history-item-1" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "quick-input-history-item-0" })).toHaveTextContent("ls -la");
+    expect(screen.getByRole("button", { name: "quick-input-history-open" })).toHaveTextContent("HISTORY 1");
+    expect(screen.getByRole("button", { name: "quick-input-recall" })).toHaveTextContent("RECALL ls -la");
   });
 
   it("툴벨트 RECALL로 교체된 입력은 UNDO로 직전 입력 복원이 가능하다", async () => {
