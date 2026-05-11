@@ -926,7 +926,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
   const toggleQuickModePrefix = useCallback((mode: "shell" | "agent" | "explain" | "aiCmd" | "heavy") => {
     const current = warpInputRef.current?.getValue() ?? inputBuffer;
     const isHeavy = /^!!\s?/.test(current);
-    const isShell = current.startsWith("!");
+    const isShell = /^!(?!\!)/.test(current);
     const isAgent = /^>>\s?/.test(current);
     const isExplain = /^\?\s?/.test(current);
     const isAiCmd = /^#\s?/.test(current);

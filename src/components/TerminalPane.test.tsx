@@ -749,7 +749,7 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(input).toHaveValue("!! 로그 요약해줘");
 
     fireEvent.keyDown(input, { key: "Y", ctrlKey: true, shiftKey: true });
-    expect(input).toHaveValue("로그 요약해줘");
+    expect(input).toHaveValue("!로그 요약해줘");
 
     fireEvent.keyDown(input, { key: "J", ctrlKey: true, shiftKey: true });
     expect(input).toHaveValue(">> 로그 요약해줘");
