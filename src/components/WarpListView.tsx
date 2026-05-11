@@ -404,13 +404,44 @@ const WarpListView: React.FC<Props> = ({
     return nodes;
   };
 
+  const getMenuItemCount = () => (onRetryWithDiff ? 4 : 3);
+  const closeMenuById = (id: string | null, restoreFocus: boolean) => {
+    setMenuOpenId(null);
+    setMenuActiveIndex(0);
+    if (id) {
+      menuItemRefs.current[id] = [];
+    }
+    if (!restoreFocus || !id) return;
+    setTimeout(() => {
+      menuButtonRefs.current[id]?.focus();
+    }, 0);
+  };
+
+  const setMenuItemRef = (id: string, index: number, el: HTMLButtonElement | null) => {
+    const expectedCount = getMenuItemCount();
+    const arr = menuItemRefs.current[id] ?? [];
+    if (arr.length > expectedCount) {
+      arr.length = expectedCount;
+    }
+    arr[index] = el;
+    while (arr.length < expectedCount) arr.push(null);
+    menuItemRefs.current[id] = arr;
+  };
+
+  const triggerMenuShortcut = (id: string, index: number) => {
+    const item = menuItemRefs.current[id]?.[index];
+    if (!item) return false;
+    item.click();
+    return true;
+  };
+
   const openFindWithin = (id: string) => {
     setExpanded((prev) => {
       const next = new Set(prev);
       next.add(id);
       return next;
     });
-    setMenuOpenId(null);
+    closeMenuById(id, false);
     setBlockSearch((prev) => (prev[id] != null ? prev : { ...prev, [id]: "" }));
     setBlockSearchCursor((prev) => ({ ...prev, [id]: 0 }));
     setActiveSearchBlockId(id);
@@ -458,6 +489,17 @@ const WarpListView: React.FC<Props> = ({
         return [head, buildDiffText(block.command, compare)].join("\n");
       })
       .join("\n\n");
+  useEffect(() => {
+    if (!menuOpenId) return;
+    const arr = menuItemRefs.current[menuOpenId] ?? [];
+    const expectedCount = getMenuItemCount();
+    if (arr.length > expectedCount) {
+      arr.length = expectedCount;
+    }
+    while (arr.length < expectedCount) arr.push(null);
+    menuItemRefs.current[menuOpenId] = arr;
+  }, [menuOpenId, onRetryWithDiff]);
+
   const toggleTimelineSelection = (id: string) => {
     setTimelineSelectedIds((prev) => {
       const next = new Set(prev);
@@ -629,7 +671,20 @@ const WarpListView: React.FC<Props> = ({
       const currentMenuItems = menuItemRefs.current[menuOpenId] ?? [];
       const last = Math.max(0, currentMenuItems.length - 1);
       if (e.key === "Escape") {
-        setMenuOpenId(null);
+        e.preventDefault();
+        closeMenuById(menuOpenId, true);
+        return;
+      }
+      if (e.altKey) {
+        const key = e.key.toLowerCase();
+        let handled = false;
+        if (key === "c") handled = triggerMenuShortcut(menuOpenId, 0);
+        if (key === "f") handled = triggerMenuShortcut(menuOpenId, 1);
+        if (key === "s") handled = triggerMenuShortcut(menuOpenId, 2);
+        if (key === "r" && onRetryWithDiff) handled = triggerMenuShortcut(menuOpenId, 3);
+        if (handled) {
+          e.preventDefault();
+        }
         return;
       }
       if (e.key === "ArrowDown") {
@@ -675,7 +730,7 @@ const WarpListView: React.FC<Props> = ({
       const menuContainer = menuContainerRefs.current[menuOpenId];
       if (menuButton?.contains(target)) return;
       if (menuContainer?.contains(target)) return;
-      setMenuOpenId(null);
+      closeMenuById(menuOpenId, false);
     };
     window.addEventListener("keydown", onWindowKeyDown);
     window.addEventListener("mousedown", onMouseDown);
@@ -683,7 +738,7 @@ const WarpListView: React.FC<Props> = ({
       window.removeEventListener("keydown", onWindowKeyDown);
       window.removeEventListener("mousedown", onMouseDown);
     };
-  }, [menuOpenId]);
+  }, [menuOpenId, onRetryWithDiff]);
 
   useEffect(() => {
     if (!menuOpenId) {
@@ -698,7 +753,7 @@ const WarpListView: React.FC<Props> = ({
   useEffect(() => {
     if (!menuOpenId) return;
     if (!filtered.some((b) => b.id === menuOpenId)) {
-      setMenuOpenId(null);
+      closeMenuById(menuOpenId, false);
     }
   }, [menuOpenId, filtered]);
   useEffect(() => {
@@ -1935,7 +1990,7 @@ const WarpListView: React.FC<Props> = ({
           <div
             key={b.id}
             ref={(el) => { blockRowRefs.current[b.id] = el; }}
-            className={`rounded-xl border overflow-hidden ${
+            className={`relative rounded-xl border ${
               ok ? "border-white/8 bg-white/[0.018]" : "border-red-500/20 bg-red-500/[0.03]"
             }`}
           >
@@ -2078,20 +2133,26 @@ const WarpListView: React.FC<Props> = ({
                   ref={(el) => { menuButtonRefs.current[b.id] = el; }}
                   tooltip="블록 액션"
                   aria-label="블록 액션"
+                  aria-haspopup="menu"
+                  aria-expanded={menuOpenId === b.id}
+                  aria-controls={`block-action-menu-${b.id}`}
                   onClick={(e) => {
                     e.stopPropagation();
                     setMenuOpenId((prev) => (prev === b.id ? null : b.id));
                   }}
-                  className="opacity-0 group-hover:opacity-100 p-0.5 rounded text-white/30 hover:text-white/70 transition-all shrink-0"
+                  className={`opacity-0 group-hover:opacity-100 focus-visible:opacity-100 ${
+                    menuOpenId === b.id ? "opacity-100" : ""
+                  } p-0.5 rounded text-white/30 hover:text-white/70 focus-visible:ring-1 focus-visible:ring-cyan-300/55 transition-all shrink-0`}
                 >
                   <MoreHorizontal size={10} />
                 </IconButton>
                 {menuOpenId === b.id && (
                   <div
+                    id={`block-action-menu-${b.id}`}
                     ref={(el) => { menuContainerRefs.current[b.id] = el; }}
                     role="menu"
                     aria-label="블록 액션 메뉴"
-                    className="absolute right-0 top-5 z-20 w-44 rounded-lg border border-white/10 bg-[#0f151f]/96 backdrop-blur-sm shadow-2xl overflow-hidden"
+                    className="absolute right-0 top-5 z-20 w-56 rounded-lg border border-white/10 bg-[#0f151f]/96 backdrop-blur-sm shadow-2xl overflow-hidden"
                     onClick={(e) => e.stopPropagation()}
                     onKeyDown={(e) => {
                       const currentMenuItems = menuItemRefs.current[b.id] ?? [];
@@ -2099,7 +2160,20 @@ const WarpListView: React.FC<Props> = ({
                       if (e.key === "Escape") {
                         e.preventDefault();
                         e.stopPropagation();
-                        setMenuOpenId(null);
+                        closeMenuById(b.id, true);
+                        return;
+                      }
+                      if (e.altKey) {
+                        const key = e.key.toLowerCase();
+                        let handled = false;
+                        if (key === "c") handled = triggerMenuShortcut(b.id, 0);
+                        if (key === "f") handled = triggerMenuShortcut(b.id, 1);
+                        if (key === "s") handled = triggerMenuShortcut(b.id, 2);
+                        if (key === "r" && onRetryWithDiff) handled = triggerMenuShortcut(b.id, 3);
+                        if (handled) {
+                          e.preventDefault();
+                          e.stopPropagation();
+                        }
                         return;
                       }
                       if (e.key === "ArrowDown") {
@@ -2143,42 +2217,44 @@ const WarpListView: React.FC<Props> = ({
                     <button
                       type="button"
                       role="menuitem"
-                      className="w-full px-2.5 py-1.5 text-left text-[11px] text-white/78 hover:bg-white/[0.08]"
+                      title="Alt+C"
+                      className="w-full px-2.5 py-1.5 text-left text-[11px] text-white/78 hover:bg-white/[0.08] flex items-center justify-between gap-2"
                       tabIndex={menuOpenId === b.id && menuActiveIndex === 0 ? 0 : -1}
                       ref={(el) => {
-                        const arr = menuItemRefs.current[b.id] ?? (menuItemRefs.current[b.id] = []);
-                        arr[0] = el;
+                        setMenuItemRef(b.id, 0, el);
                       }}
                       onFocus={() => setMenuActiveIndex(0)}
                       onClick={() => {
                         navigator.clipboard.writeText(`$ ${b.command}\n${b.output.trim()}`).catch(() => {});
-                        setMenuOpenId(null);
+                        closeMenuById(b.id, false);
                       }}
                     >
-                      Copy Both
+                      <span>Copy Both</span>
+                      <span className="text-[10px] text-white/35 tabular-nums">Alt+C</span>
                     </button>
                     <button
                       type="button"
                       role="menuitem"
-                      className="w-full px-2.5 py-1.5 text-left text-[11px] text-white/78 hover:bg-white/[0.08]"
+                      title="Alt+F"
+                      className="w-full px-2.5 py-1.5 text-left text-[11px] text-white/78 hover:bg-white/[0.08] flex items-center justify-between gap-2"
                       tabIndex={menuOpenId === b.id && menuActiveIndex === 1 ? 0 : -1}
                       ref={(el) => {
-                        const arr = menuItemRefs.current[b.id] ?? (menuItemRefs.current[b.id] = []);
-                        arr[1] = el;
+                        setMenuItemRef(b.id, 1, el);
                       }}
                       onFocus={() => setMenuActiveIndex(1)}
                       onClick={() => openFindWithin(b.id)}
                     >
-                      Find Within Block
+                      <span>Find Within Block</span>
+                      <span className="text-[10px] text-white/35 tabular-nums">Alt+F</span>
                     </button>
                     <button
                       type="button"
                       role="menuitem"
-                      className="w-full px-2.5 py-1.5 text-left text-[11px] text-white/78 hover:bg-white/[0.08] flex items-center gap-1.5"
+                      title="Alt+S"
+                      className="w-full px-2.5 py-1.5 text-left text-[11px] text-white/78 hover:bg-white/[0.08] flex items-center justify-between gap-2"
                       tabIndex={menuOpenId === b.id && menuActiveIndex === 2 ? 0 : -1}
                       ref={(el) => {
-                        const arr = menuItemRefs.current[b.id] ?? (menuItemRefs.current[b.id] = []);
-                        arr[2] = el;
+                        setMenuItemRef(b.id, 2, el);
                       }}
                       onFocus={() => setMenuActiveIndex(2)}
                       onClick={() => {
@@ -2192,30 +2268,36 @@ const WarpListView: React.FC<Props> = ({
                           "```",
                         ].join("\n");
                         navigator.clipboard.writeText(snapshot).catch(() => {});
-                        setMenuOpenId(null);
+                        closeMenuById(b.id, false);
                       }}
                     >
-                      <Share2 size={11} />
-                      Share Snapshot
+                      <span className="inline-flex items-center gap-1.5">
+                        <Share2 size={11} />
+                        Share Snapshot
+                      </span>
+                      <span className="text-[10px] text-white/35 tabular-nums">Alt+S</span>
                     </button>
                     {onRetryWithDiff && (
                       <button
                         type="button"
                         role="menuitem"
-                        className="w-full px-2.5 py-1.5 text-left text-[11px] text-white/78 hover:bg-white/[0.08] flex items-center gap-1.5"
+                        title="Alt+R"
+                        className="w-full px-2.5 py-1.5 text-left text-[11px] text-white/78 hover:bg-white/[0.08] flex items-center justify-between gap-2"
                         tabIndex={menuOpenId === b.id && menuActiveIndex === 3 ? 0 : -1}
                         ref={(el) => {
-                          const arr = menuItemRefs.current[b.id] ?? (menuItemRefs.current[b.id] = []);
-                          arr[3] = el;
+                          setMenuItemRef(b.id, 3, el);
                         }}
                         onFocus={() => setMenuActiveIndex(3)}
                         onClick={() => {
                           onRetryWithDiff(b);
-                          setMenuOpenId(null);
+                          closeMenuById(b.id, false);
                         }}
                       >
-                        <RotateCcw size={11} />
-                        Retry + Compare
+                        <span className="inline-flex items-center gap-1.5">
+                          <RotateCcw size={11} />
+                          Retry + Compare
+                        </span>
+                        <span className="text-[10px] text-white/35 tabular-nums">Alt+R</span>
                       </button>
                     )}
                     {compare && (
@@ -2230,6 +2312,9 @@ const WarpListView: React.FC<Props> = ({
                         )}
                       </div>
                     )}
+                    <div className="px-2.5 py-1 border-t border-white/10 text-[10px] text-white/35">
+                      ↑/↓ 이동 · Enter 실행 · Esc 닫기
+                    </div>
                   </div>
                 )}
               </div>
