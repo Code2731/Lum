@@ -76,6 +76,7 @@ function classify(state: LedgerState, isAllOnDevice: boolean): {
 const PrivacyLedgerBadge: React.FC<Props> = ({ state, isAllOnDevice, onReset }) => {
   const [open, setOpen] = useState(false);
   const popRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -87,6 +88,7 @@ const PrivacyLedgerBadge: React.FC<Props> = ({ state, isAllOnDevice, onReset }) 
     const keyHandler = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         setOpen(false);
+        triggerRef.current?.focus();
       }
     };
     document.addEventListener("mousedown", handler);
@@ -108,6 +110,7 @@ const PrivacyLedgerBadge: React.FC<Props> = ({ state, isAllOnDevice, onReset }) 
             type="button"
             aria-label={`Privacy Ledger — ${label}`}
             aria-pressed={open}
+            ref={triggerRef}
             onClick={() => setOpen((v) => !v)}
             className={cn(
               "inline-flex items-center gap-1.5 h-7 px-2 rounded-md border text-xs font-medium transition-colors",

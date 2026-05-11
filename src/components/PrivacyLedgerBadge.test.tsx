@@ -33,6 +33,7 @@ describe("PrivacyLedgerBadge", () => {
 
     fireEvent.keyDown(document.body, { key: "Escape" });
     expect(button).toHaveAttribute("aria-pressed", "false");
+    expect(button).toHaveFocus();
   });
 
   it("초기화 버튼이 표시되고 동작한다", () => {

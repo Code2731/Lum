@@ -122,19 +122,35 @@ const AppHeader: React.FC<Props> = ({
   const fast = fastEmpty ? "Empty Model" : shortName(loadedModelId);
   const heavy = shortName(heavyModelId);
   const advancedOverflowRef = React.useRef<HTMLDivElement>(null);
+  const advancedOverflowButtonRef = React.useRef<HTMLButtonElement>(null);
+  const notifCenterButtonRef = React.useRef<HTMLButtonElement>(null);
+
+  const closeAdvancedOverflow = React.useCallback(() => {
+    setShowAdvancedOverflow(false);
+    requestAnimationFrame(() => {
+      advancedOverflowButtonRef.current?.focus();
+    });
+  }, [setShowAdvancedOverflow]);
+
+  const closeNotifCenter = React.useCallback(() => {
+    setShowNotifCenter(false);
+    requestAnimationFrame(() => {
+      notifCenterButtonRef.current?.focus();
+    });
+  }, [setShowNotifCenter]);
 
   React.useEffect(() => {
     if (!showAdvancedOverflow) return;
 
     const handleClose = (e: MouseEvent) => {
       if (advancedOverflowRef.current && !advancedOverflowRef.current.contains(e.target as Node)) {
-        setShowAdvancedOverflow(false);
+        closeAdvancedOverflow();
       }
     };
 
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        setShowAdvancedOverflow(false);
+        closeAdvancedOverflow();
       }
     };
 
@@ -144,7 +160,7 @@ const AppHeader: React.FC<Props> = ({
       document.removeEventListener("mousedown", handleClose);
       document.removeEventListener("keydown", handleEscape);
     };
-  }, [showAdvancedOverflow]);
+  }, [showAdvancedOverflow, closeAdvancedOverflow]);
 
   return (
     <header
@@ -355,6 +371,7 @@ const AppHeader: React.FC<Props> = ({
         {!toolbarShowAdvanced && (
           <div className="relative" ref={advancedOverflowRef}>
             <ToolbarIconButton
+              ref={advancedOverflowButtonRef}
               label="고급 기능 (MCP / Squad / Healing / Recall / LoRA / RAG / xLLM)"
               active={showAdvancedOverflow}
               badge={squadStore.squads.length > 0 || hasUnseenAdvanced}
@@ -467,6 +484,7 @@ const AppHeader: React.FC<Props> = ({
         </ToolbarIconButton>
         <div className="relative">
           <ToolbarIconButton
+            ref={notifCenterButtonRef}
             label="알림 센터"
             active={showNotifCenter}
             badge={notifCenter.unreadCount > 0}
@@ -490,7 +508,7 @@ const AppHeader: React.FC<Props> = ({
                   onMarkAllRead={notifCenter.markAllRead}
                   onDismiss={notifCenter.dismiss}
                   onClear={notifCenter.clear}
-                  onClose={() => setShowNotifCenter(false)}
+                  onClose={closeNotifCenter}
                 />
               </motion.div>
             )}
