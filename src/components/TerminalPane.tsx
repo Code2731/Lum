@@ -775,6 +775,10 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
   const removeSubmittedInputHistoryEntry = useCallback((entry: string) => {
     removeSubmittedInputHistoryEntries([entry]);
   }, [removeSubmittedInputHistoryEntries]);
+  const clearInputHistoryMultiSelection = useCallback(() => {
+    setInputHistoryRangeAnchor(null);
+    setInputHistoryMultiSelected([]);
+  }, []);
   const filteredSubmittedInputHistory = useMemo(() => {
     const query = inputHistoryQuery.trim().toLowerCase();
     if (!query) return submittedInputHistory;
@@ -2800,20 +2804,39 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
                 INPUT HISTORY
               </span>
               {inputHistoryMultiSelected.length > 1 && (
-                <span
-                  aria-label="input-history-selected-count"
-                  style={{
-                    fontSize: 10,
-                    color: "rgba(215,228,255,0.95)",
-                    border: "1px solid rgba(121,192,255,0.55)",
-                    background: "rgba(121,192,255,0.14)",
-                    borderRadius: 999,
-                    padding: "1px 6px",
-                    lineHeight: 1.2,
-                  }}
-                >
-                  {inputHistoryMultiSelected.length} selected
-                </span>
+                <>
+                  <span
+                    aria-label="input-history-selected-count"
+                    style={{
+                      fontSize: 10,
+                      color: "rgba(215,228,255,0.95)",
+                      border: "1px solid rgba(121,192,255,0.55)",
+                      background: "rgba(121,192,255,0.14)",
+                      borderRadius: 999,
+                      padding: "1px 6px",
+                      lineHeight: 1.2,
+                    }}
+                  >
+                    {inputHistoryMultiSelected.length} selected
+                  </span>
+                  <button
+                    type="button"
+                    aria-label="quick-input-history-clear-selection"
+                    onClick={clearInputHistoryMultiSelection}
+                    style={{
+                      fontSize: 10,
+                      color: "rgba(215,228,255,0.95)",
+                      border: "1px solid rgba(121,192,255,0.45)",
+                      background: "rgba(121,192,255,0.08)",
+                      borderRadius: 999,
+                      padding: "1px 6px",
+                      lineHeight: 1.2,
+                      cursor: "pointer",
+                    }}
+                  >
+                    SELECTION CLEAR
+                  </button>
+                </>
               )}
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
