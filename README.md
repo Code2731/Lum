@@ -285,6 +285,12 @@ macOS에서 LUM이 실행되지 않을 때는 순서대로 확인하세요.
 3. Finder에서 DMG를 열고 앱을 설치한 뒤, 앱에서 우클릭 → **열기**를 한번 실행합니다.
 4. 그래도 실행되지 않으면 DMG를 다시 받았는지 확인하고, Console 로그(오류 메시지)와 함께 이슈를 남겨주세요.
 
+자동 판별 스크립트도 바로 사용할 수 있습니다.
+
+```bash
+bash scripts/download-latest-lum-macos.sh
+```
+
 **AI 기능 활성화 (선택)**
 
 1. `--features embedded-ai`로 빌드/실행 (CUDA + MSVC 필요)
