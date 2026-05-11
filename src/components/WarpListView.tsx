@@ -130,6 +130,8 @@ const WarpListView: React.FC<Props> = ({
   const outputRefs = useRef<Record<string, HTMLPreElement | null>>({});
   const blockRowRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const deltaButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const menuButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const menuContainerRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const deltaPopoverRef = useRef<HTMLDivElement | null>(null);
   const timelineButtonRef = useRef<HTMLButtonElement | null>(null);
   const timelinePanelRef = useRef<HTMLDivElement | null>(null);
@@ -618,6 +620,36 @@ const WarpListView: React.FC<Props> = ({
       window.removeEventListener("mousedown", onMouseDown);
     };
   }, [deltaOpenId]);
+
+  useEffect(() => {
+    if (!menuOpenId) return;
+    const onWindowKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      setMenuOpenId(null);
+    };
+    const onMouseDown = (e: MouseEvent) => {
+      const target = e.target as Node | null;
+      if (!target) return;
+      const menuButton = menuButtonRefs.current[menuOpenId];
+      const menuContainer = menuContainerRefs.current[menuOpenId];
+      if (menuButton?.contains(target)) return;
+      if (menuContainer?.contains(target)) return;
+      setMenuOpenId(null);
+    };
+    window.addEventListener("keydown", onWindowKeyDown);
+    window.addEventListener("mousedown", onMouseDown);
+    return () => {
+      window.removeEventListener("keydown", onWindowKeyDown);
+      window.removeEventListener("mousedown", onMouseDown);
+    };
+  }, [menuOpenId]);
+
+  useEffect(() => {
+    if (!menuOpenId) return;
+    if (!filtered.some((b) => b.id === menuOpenId)) {
+      setMenuOpenId(null);
+    }
+  }, [menuOpenId, filtered]);
   useEffect(() => {
     if (!timelineOpen) return;
     const onWindowKeyDown = (e: KeyboardEvent) => {
@@ -1992,7 +2024,9 @@ const WarpListView: React.FC<Props> = ({
 
               <div className="relative shrink-0">
                 <IconButton
+                  ref={(el) => { menuButtonRefs.current[b.id] = el; }}
                   tooltip="블록 액션"
+                  aria-label="블록 액션"
                   onClick={(e) => {
                     e.stopPropagation();
                     setMenuOpenId((prev) => (prev === b.id ? null : b.id));
@@ -2003,6 +2037,7 @@ const WarpListView: React.FC<Props> = ({
                 </IconButton>
                 {menuOpenId === b.id && (
                   <div
+                    ref={(el) => { menuContainerRefs.current[b.id] = el; }}
                     className="absolute right-0 top-5 z-20 w-44 rounded-lg border border-white/10 bg-[#0f151f]/96 backdrop-blur-sm shadow-2xl overflow-hidden"
                     onClick={(e) => e.stopPropagation()}
                   >

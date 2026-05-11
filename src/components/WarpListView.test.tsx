@@ -321,6 +321,50 @@ describe("WarpListView delta actions", () => {
     expect(onExecute).toHaveBeenCalledWith("npm test\r");
   });
 
+  it("블록 액션 메뉴가 바깥 클릭으로 닫힘", () => {
+    render(
+      <WarpListView
+        blocks={[
+          {
+            id: "b4",
+            command: "echo menu test",
+            output: "menu ok",
+            exitCode: 0,
+            startedAt: now - 1000,
+            endedAt: now,
+          },
+        ]}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "블록 액션" }));
+    expect(screen.getByRole("button", { name: "Copy Both" })).toBeInTheDocument();
+    fireEvent.mouseDown(document.body);
+    expect(screen.queryByRole("button", { name: "Copy Both" })).not.toBeInTheDocument();
+  });
+
+  it("블록 액션 메뉴는 Escape로 닫힘", () => {
+    render(
+      <WarpListView
+        blocks={[
+          {
+            id: "b5",
+            command: "echo menu test",
+            output: "menu ok",
+            exitCode: 0,
+            startedAt: now - 1000,
+            endedAt: now,
+          },
+        ]}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "블록 액션" }));
+    expect(screen.getByRole("button", { name: "Copy Both" })).toBeInTheDocument();
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(screen.queryByRole("button", { name: "Copy Both" })).not.toBeInTheDocument();
+  });
+
   it("Cmd/Ctrl+Shift+C로 compared 필터 토글", () => {
     render(
       <WarpListView
