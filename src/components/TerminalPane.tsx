@@ -1227,6 +1227,14 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     const mod = e.metaKey || e.ctrlKey;
     const lowered = e.key.toLowerCase();
     if (mod && e.shiftKey && !e.altKey) {
+      if (e.key === "ArrowLeft") {
+        cycleBackendQuickPrefix(-1);
+        return true;
+      }
+      if (e.key === "ArrowRight") {
+        cycleBackendQuickPrefix(1);
+        return true;
+      }
       if (lowered === "c") {
         handleInterrupt();
         return true;
@@ -1358,6 +1366,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     cleanInputQuick,
     clearBackendQuickPrefix,
     clearInputQuick,
+    cycleBackendQuickPrefix,
     forgetUndoStackQuick,
     forgetSubmittedInputQuick,
     handleMentionKeyDown,
@@ -2005,7 +2014,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               type="button"
               aria-label="quick-backend-prev"
               onClick={() => cycleBackendQuickPrefix(-1)}
-              title="이전 backend 순환 (Cmd/Ctrl+Shift+` 또는 Cmd/Ctrl+,)"
+              title="이전 backend 순환 (Cmd/Ctrl+Shift+` 또는 Cmd/Ctrl+, 또는 Cmd/Ctrl+Shift+←)"
               style={{
                 fontSize: 10,
                 color: "rgba(255,255,255,0.86)",
@@ -2024,7 +2033,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               type="button"
               aria-label="quick-backend-next"
               onClick={() => cycleBackendQuickPrefix(1)}
-              title="다음 backend 순환 (Cmd/Ctrl+` 또는 Cmd/Ctrl+.)"
+              title="다음 backend 순환 (Cmd/Ctrl+` 또는 Cmd/Ctrl+. 또는 Cmd/Ctrl+Shift+→)"
               style={{
                 fontSize: 10,
                 color: "rgba(255,255,255,0.86)",

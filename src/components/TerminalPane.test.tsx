@@ -768,6 +768,21 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(screen.getByText("AI AUTO")).toBeInTheDocument();
   });
 
+  it("입력 단축키 Cmd/Ctrl+Shift+←/→로 backend를 순환한다", () => {
+    const { container } = render(<TerminalPane id="tab-1" />);
+    const input = container.querySelector("input")!;
+    fireEvent.change(input, { target: { value: "로그 요약해줘" } });
+
+    fireEvent.keyDown(input, { key: "ArrowRight", ctrlKey: true, shiftKey: true });
+    expect(input).toHaveValue("@local 로그 요약해줘");
+
+    fireEvent.keyDown(input, { key: "ArrowRight", ctrlKey: true, shiftKey: true });
+    expect(input).toHaveValue("@ollama 로그 요약해줘");
+
+    fireEvent.keyDown(input, { key: "ArrowLeft", ctrlKey: true, shiftKey: true });
+    expect(input).toHaveValue("@local 로그 요약해줘");
+  });
+
   it("입력 단축키 Cmd/Ctrl+Shift+G/T/Q로 PLAIN/TRIM/SQUASH를 실행한다", () => {
     const { container } = render(<TerminalPane id="tab-1" />);
     const input = container.querySelector("input")!;
