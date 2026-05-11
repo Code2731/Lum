@@ -1584,6 +1584,13 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
 
   const inputChips: Array<{ id: string; label: string; tone: "neutral" | "accent" | "success" | "warn" }> = [
     { id: "route", label: routeChip.label, tone: routeChip.tone },
+    {
+      id: "backend",
+      label: activeBackendPrefix
+        ? `BACKEND FORCED @${activeBackendPrefix.toUpperCase()}`
+        : "BACKEND AUTO (LOCAL→OLLAMA→XLLM→GEMINI)",
+      tone: activeBackendPrefix ? "warn" : "neutral",
+    },
     { id: "cwd", label: `CWD ${compactPath(cwd)}`, tone: "neutral" },
     { id: "model", label: `MODEL ${compactModel(modelRef.current)}`, tone: "neutral" },
     { id: "term", label: terminalVisible ? "터미널 ON" : "터미널 OFF", tone: terminalVisible ? "success" : "warn" },
