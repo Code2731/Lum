@@ -337,6 +337,8 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
   const [toolbeltCustomizeOpen, setToolbeltCustomizeOpen] = useState(false);
   const [inputDockHeight, setInputDockHeight] = useState(70);
   const overlayBottomOffset = Math.max(70, inputDockHeight + 8);
+  const overlayTopGap = 10;
+  const overlayMaxHeight = `calc(100% - ${overlayBottomOffset + overlayTopGap}px)`;
 
   // WarpInputBar — 실제 입력 필드
   const warpInputRef = useRef<WarpInputBarHandle>(null);
@@ -2748,6 +2750,9 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
             borderRadius: 12,
             boxShadow: "0 14px 30px rgba(0,0,0,0.45)",
             overflow: "hidden",
+            maxHeight: overlayMaxHeight,
+            display: "flex",
+            flexDirection: "column",
           }}
         >
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 10px", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
@@ -2796,7 +2801,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               }}
             />
           </div>
-          <div style={{ maxHeight: 220, overflowY: "auto" }}>
+          <div style={{ maxHeight: 220, overflowY: "auto", minHeight: 0 }}>
             {actionPaletteFiltered.length === 0 && (
               <div style={{ padding: "10px 12px", fontSize: 11, color: "rgba(255,255,255,0.55)" }}>
                 일치하는 액션이 없습니다.
@@ -2845,6 +2850,9 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
             borderRadius: 12,
             boxShadow: "0 14px 30px rgba(0,0,0,0.45)",
             overflow: "hidden",
+            maxHeight: overlayMaxHeight,
+            display: "flex",
+            flexDirection: "column",
           }}
         >
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 10px", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
@@ -2992,7 +3000,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               <span>Esc 선택해제/닫기</span>
             </div>
           </div>
-          <div style={{ maxHeight: 220, overflowY: "auto" }}>
+          <div style={{ maxHeight: 220, overflowY: "auto", minHeight: 0 }}>
             {filteredSubmittedInputHistory.length === 0 && (
               <div style={{ padding: "10px 12px", fontSize: 11, color: "rgba(255,255,255,0.55)" }}>
                 기록된 실행 입력이 없습니다.
@@ -3083,12 +3091,15 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
             borderRadius: 10,
             boxShadow: "0 10px 24px rgba(0,0,0,0.45)",
             overflow: "hidden",
+            maxHeight: overlayMaxHeight,
+            display: "flex",
+            flexDirection: "column",
           }}
         >
           <div style={{ fontSize: 10, color: "rgba(255,255,255,0.48)", padding: "6px 10px", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
             컨텍스트 첨부 (@) · {mentionTrail ? mentionTrail : "현재 폴더"}
           </div>
-          <div style={{ maxHeight: 184, overflowY: "auto" }}>
+          <div style={{ maxHeight: 184, overflowY: "auto", minHeight: 0 }}>
             {mentionLoading && (
               <div style={{ padding: "8px 10px", fontSize: 11, color: "rgba(255,255,255,0.52)" }}>
                 불러오는 중…
@@ -3168,12 +3179,14 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
             zIndex: 30,
             width: 420,
             maxWidth: "calc(100% - 20px)",
+            maxHeight: overlayMaxHeight,
             background: "rgba(9,14,22,0.97)",
             border: "1px solid rgba(121,192,255,0.28)",
             borderRadius: 12,
             boxShadow: "0 14px 30px rgba(0,0,0,0.45)",
             padding: "10px 11px",
             color: "rgba(255,255,255,0.86)",
+            overflowY: "auto",
           }}
         >
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
