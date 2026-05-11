@@ -329,6 +329,40 @@ describe("TerminalPane — 입력 라우팅", () => {
     });
   });
 
+  it("빈 입력에서 @ 파일 첨부 버튼을 누르면 멘션 패널이 열리고 항목 선택이 반영된다", async () => {
+    invokeMock.mockImplementation((cmd: string, args?: { path?: string }) => {
+      if (cmd === "load_app_config") {
+        return Promise.resolve({
+          ui_show_input_toolbelt_tip: true,
+          ui_show_advanced_input_tools: true,
+          ui_show_backend_quick_tools: true,
+        });
+      }
+      if (cmd === "spawn_pty") return Promise.resolve();
+      if (cmd === "write_to_pty") return Promise.resolve();
+      if (cmd === "resize_pty") return Promise.resolve();
+      if (cmd === "list_directory" && args?.path === "/repo") {
+        return Promise.resolve([
+          { name: "README.md", path: "/repo/README.md", is_dir: false, size: 512 },
+        ]);
+      }
+      return Promise.resolve();
+    });
+
+    const { container } = render(<TerminalPane id="tab-1" cwd="/repo" />);
+    const input = container.querySelector("input")!;
+    expect(input).toHaveValue("");
+
+    fireEvent.click(screen.getByRole("button", { name: "quick-mention-trigger" }));
+    expect(input).toHaveValue("@");
+    await waitFor(() => expect(screen.getByText(/컨텍스트 첨부/)).toBeInTheDocument());
+
+    const itemButton = screen.getByRole("button", { name: /README\.md/ });
+    fireEvent.click(itemButton);
+
+    expect(input).toHaveValue("@README.md ");
+  });
+
   it("툴벨트 커스터마이징으로 고급 편집/백엔드 버튼 표시를 토글한다", () => {
     render(<TerminalPane id="tab-1" />);
 

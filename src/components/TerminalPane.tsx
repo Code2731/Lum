@@ -430,6 +430,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
   const [ghostText, setGhostText] = useState<string | null>(null);
   const ghostTextRef = useRef<string | null>(null);
   const suggestionRef = useRef<{ suffix: string; insert: string } | null>(null);
+  const forceMentionAttachRef = useRef(false);
 
   // AI inline edit (# prefix) — WarpInputBar 위 팝업
   const [aiGhost, setAiGhost] = useState<{ cmd: string } | null>(null);
@@ -790,6 +791,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     ghostTextRef.current = null;
     setGhostText(null);
     suggestionRef.current = null;
+    forceMentionAttachRef.current = false;
     if (aiDebounceRef.current) clearTimeout(aiDebounceRef.current);
     if (explainDebounceRef.current) clearTimeout(explainDebounceRef.current);
     aiSuggestionRef.current = null;
@@ -1017,13 +1019,17 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     const mentionMatch = /(?:^|\s)@([^\s@]*)$/.exec(buf);
     const isForcePrefix = buf.trimStart().startsWith("@");
     const startsWithMention = mentionMatch?.index === 0;
-    if (mentionMatch && !(isForcePrefix && startsWithMention)) {
+    const isForceMentionOpen = isForcePrefix && startsWithMention && forceMentionAttachRef.current;
+    if (mentionMatch && (!isForcePrefix || !startsWithMention || isForceMentionOpen)) {
       setMentionQuery((mentionMatch[1] ?? "").toLowerCase());
       setMentionOpen(true);
       if (!mentionDir && cwd) {
         loadMentionDirectory(cwd, "");
       }
     } else {
+      if (forceMentionAttachRef.current) {
+        forceMentionAttachRef.current = false;
+      }
       setMentionOpen(false);
       setMentionQuery("");
       setMentionDir(null);
@@ -1102,6 +1108,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
   }, [showInputTip, showAdvancedInputTools, showBackendQuickTools, toolbeltCustomizeOpen]);
 
   const attachMentionToken = useCallback((tokenPath: string) => {
+    forceMentionAttachRef.current = false;
     const token = `@${tokenPath}`;
     const next = inputBuffer.replace(
       /(?:^|\s)@[^\s@]*$/,
@@ -1417,6 +1424,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
   const canRecallSubmittedInput = !!lastSubmittedInput && inputBuffer !== lastSubmittedInput;
   const canSwapSubmittedInput = !!lastSubmittedInput && inputBuffer !== lastSubmittedInput;
   const triggerMentionAttach = useCallback(() => {
+    forceMentionAttachRef.current = true;
     const current = warpInputRef.current?.getValue() ?? inputBuffer;
     if (/(?:^|\s)@[^\s@]*$/.test(current)) {
       warpInputRef.current?.focus();
