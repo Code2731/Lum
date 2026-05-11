@@ -26,8 +26,16 @@ const TabContextMenu: React.FC<Props> = ({
     const handle = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) onClose();
     };
+    const handleKeydown = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      onClose();
+    };
     document.addEventListener("mousedown", handle);
-    return () => document.removeEventListener("mousedown", handle);
+    document.addEventListener("keydown", handleKeydown);
+    return () => {
+      document.removeEventListener("mousedown", handle);
+      document.removeEventListener("keydown", handleKeydown);
+    };
   }, [onClose]);
 
   // 화면 끝에 걸리지 않도록 위치 조정
@@ -42,6 +50,7 @@ const TabContextMenu: React.FC<Props> = ({
     <div
       ref={ref}
       style={style}
+      role="menu"
       className="bg-[#161b22] border border-white/10 rounded-xl shadow-2xl w-52 overflow-hidden"
       onContextMenu={e => e.preventDefault()}
     >
@@ -51,6 +60,8 @@ const TabContextMenu: React.FC<Props> = ({
           <span className="text-[10px] text-white/30">탭 색상</span>
           {currentColor && (
             <button
+              type="button"
+              aria-label="탭 색상 초기화"
               onClick={() => { onSetColor(tabId, undefined); onClose(); }}
               className="ml-auto text-[9px] text-white/25 hover:text-white/60 transition-colors"
             >
@@ -61,6 +72,9 @@ const TabContextMenu: React.FC<Props> = ({
         <div className="flex flex-wrap gap-1.5">
           {COLOR_ENTRIES.map(([name, hex]) => (
             <button
+              type="button"
+              role="menuitem"
+              aria-label={`탭 색상 ${name}`}
               key={name}
               title={name}
               onClick={() => { onSetColor(tabId, name); onClose(); }}
@@ -83,6 +97,8 @@ const TabContextMenu: React.FC<Props> = ({
           <span className="text-[10px] text-white/30">그룹 이름</span>
           {currentGroup && (
             <button
+              type="button"
+              aria-label="탭 그룹 초기화"
               onClick={() => { onSetGroup(tabId, undefined); onClose(); }}
               className="ml-auto text-[9px] text-white/25 hover:text-white/60 transition-colors"
             >
