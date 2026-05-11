@@ -553,6 +553,143 @@ body {
   line-height: 1.45;
 }
 
+.lum-inline-popup {
+  background: rgba(13, 17, 23, 0.97);
+  border-radius: 8px;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.42);
+  animation: lum-overlay-in 140ms ease-out;
+}
+
+.lum-inline-popup--explain {
+  border: 1px solid rgba(63, 185, 80, 0.3);
+  padding: 6px 10px;
+}
+
+.lum-inline-popup--search {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid rgba(88, 166, 255, 0.3);
+  padding: 4px 6px;
+}
+
+.lum-inline-popup-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.lum-inline-popup-kicker {
+  font-size: var(--lum-ui-text-micro);
+  color: #3fb950;
+  font-family: var(--font-mono);
+}
+
+.lum-inline-popup-close {
+  margin-left: auto;
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.28);
+  cursor: pointer;
+  font-size: 11px;
+  padding: 0 2px;
+  line-height: 1.2;
+  transition: color 120ms ease;
+}
+
+.lum-inline-popup-close:hover {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.lum-inline-popup-close:focus-visible {
+  outline: none;
+  color: rgba(255, 255, 255, 0.8);
+  box-shadow:
+    0 0 0 1px rgba(13, 17, 23, 0.95),
+    0 0 0 2px rgba(63, 185, 80, 0.45);
+}
+
+.lum-inline-popup-loading {
+  font-size: var(--lum-ui-text-label);
+  color: rgba(63, 185, 80, 0.5);
+  font-family: var(--font-mono);
+}
+
+.lum-inline-popup-content {
+  font-size: var(--lum-ui-text-label);
+  color: rgba(201, 209, 217, 0.85);
+  font-family: var(--font-mono);
+  white-space: pre-wrap;
+  line-height: 1.5;
+}
+
+.lum-searchbar-input {
+  width: 160px;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #c9d1d9;
+  font-size: var(--lum-ui-text-body);
+  font-family: var(--font-mono);
+}
+
+.lum-searchbar-input::placeholder {
+  color: rgba(201, 209, 217, 0.42);
+}
+
+.lum-searchbar-toggle {
+  border-radius: 4px;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.35);
+  cursor: pointer;
+  font-size: var(--lum-ui-text-micro);
+  padding: 1px 5px;
+  font-family: var(--font-mono);
+  line-height: 1.2;
+  transition: border-color 120ms ease, background 120ms ease, color 120ms ease;
+}
+
+.lum-searchbar-toggle.is-active {
+  background: rgba(88, 166, 255, 0.2);
+  border-color: rgba(88, 166, 255, 0.5);
+  color: #58a6ff;
+}
+
+.lum-searchbar-nav,
+.lum-searchbar-close {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.42);
+  cursor: pointer;
+  padding: 0 2px;
+  line-height: 1.2;
+  transition: color 120ms ease;
+}
+
+.lum-searchbar-nav {
+  font-size: 14px;
+}
+
+.lum-searchbar-close {
+  font-size: var(--lum-ui-text-body);
+}
+
+.lum-searchbar-nav:hover,
+.lum-searchbar-close:hover {
+  color: rgba(255, 255, 255, 0.76);
+}
+
+.lum-searchbar-toggle:focus-visible,
+.lum-searchbar-nav:focus-visible,
+.lum-searchbar-close:focus-visible,
+.lum-searchbar-input:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 1px rgba(13, 17, 23, 0.95),
+    0 0 0 2px rgba(88, 166, 255, 0.6);
+}
+
 @keyframes lum-overlay-in {
   from {
     opacity: 0;
@@ -586,6 +723,18 @@ body {
   .lum-cheatsheet-grid {
     grid-template-columns: 1fr;
   }
+
+  .lum-inline-popup--search {
+    left: 10px !important;
+    right: 10px !important;
+    width: auto;
+  }
+
+  .lum-searchbar-input {
+    width: 100%;
+    min-width: 0;
+    flex: 1;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -594,7 +743,12 @@ body {
   .lum-toolbelt-secondary-hint,
   .lum-mode-toggle,
   .lum-overlay-panel,
-  .lum-overlay-close {
+  .lum-overlay-close,
+  .lum-inline-popup,
+  .lum-inline-popup-close,
+  .lum-searchbar-toggle,
+  .lum-searchbar-nav,
+  .lum-searchbar-close {
     transition: none !important;
     animation: none !important;
     transform: none !important;

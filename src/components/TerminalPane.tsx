@@ -3166,36 +3166,37 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
       {/* ── AI Explain 팝업 (? prefix) ─────────────────────────────────── */}
       {(explainPopup || explainLoading) && (
         <div
+          className="lum-inline-popup lum-inline-popup--explain"
           style={{
             position: "absolute",
             left: PANE_PADDING_X,
             bottom: 40,
             zIndex: 25,
             maxWidth: "min(520px, 90%)",
-            background: "rgba(13,17,23,0.97)",
-            border: "1px solid rgba(63,185,80,0.3)",
-            borderRadius: 8,
-            padding: "6px 10px",
             pointerEvents: "auto",
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: explainPopup ? 4 : 0 }}>
-            <span style={{ fontSize: 10, color: "#3fb950", fontFamily: FONT_FAMILY }}>? 설명</span>
+          <div
+            className="lum-inline-popup-header"
+            style={{ marginBottom: explainPopup ? 4 : 0 }}
+          >
+            <span className="lum-inline-popup-kicker">? 설명</span>
             {!explainLoading && (
               <button
+                type="button"
+                className="lum-inline-popup-close"
                 onClick={clearExplain}
-                style={{ marginLeft: "auto", background: "none", border: "none", color: "rgba(255,255,255,0.25)", cursor: "pointer", fontSize: 11, padding: "0 2px" }}
               >
                 ✕
               </button>
             )}
           </div>
           {explainLoading ? (
-            <span style={{ fontSize: 11, color: "rgba(63,185,80,0.5)", fontFamily: FONT_FAMILY }}>
+            <span className="lum-inline-popup-loading">
               분석 중…
             </span>
           ) : (
-            <span style={{ fontSize: 11, color: "rgba(201,209,217,0.85)", fontFamily: FONT_FAMILY, whiteSpace: "pre-wrap", lineHeight: 1.5 }}>
+            <span className="lum-inline-popup-content">
               {explainPopup?.text}
             </span>
           )}
@@ -3205,22 +3206,16 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
       {/* ── 검색 바 (Cmd+F) ───────────────────────────────────────────── */}
       {searchOpen && (
         <div
+          className="lum-inline-popup lum-inline-popup--search"
           style={{
             position: "absolute",
             top: 8,
             right: 12,
             zIndex: 30,
-            display: "flex",
-            alignItems: "center",
-            gap: 4,
-            background: "rgba(13,17,23,0.97)",
-            border: "1px solid rgba(88,166,255,0.3)",
-            borderRadius: 8,
-            padding: "4px 6px",
-            boxShadow: "0 4px 16px rgba(0,0,0,0.4)",
           }}
         >
           <input
+            className="lum-searchbar-input"
             ref={searchInputRef}
             value={searchQuery}
             onChange={e => { setSearchQuery(e.target.value); doSearch(e.target.value); }}
@@ -3230,30 +3225,12 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               e.stopPropagation();
             }}
             placeholder="검색…"
-            style={{
-              background: "transparent",
-              border: "none",
-              outline: "none",
-              color: "#c9d1d9",
-              fontSize: 12,
-              fontFamily: FONT_FAMILY,
-              width: 160,
-            }}
           />
           {/* 대소문자 */}
           <IconButton
             tooltip="대소문자 구분"
             onClick={() => setSearchCase(v => !v)}
-            style={{
-              background: searchCase ? "rgba(88,166,255,0.2)" : "transparent",
-              border: "1px solid " + (searchCase ? "rgba(88,166,255,0.5)" : "rgba(255,255,255,0.1)"),
-              borderRadius: 4,
-              color: searchCase ? "#58a6ff" : "rgba(255,255,255,0.3)",
-              cursor: "pointer",
-              fontSize: 10,
-              padding: "1px 5px",
-              fontFamily: FONT_FAMILY,
-            }}
+            className={`lum-searchbar-toggle ${searchCase ? "is-active" : ""}`}
           >
             Aa
           </IconButton>
@@ -3261,23 +3238,26 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
           <IconButton
             tooltip="정규식"
             onClick={() => setSearchRegex(v => !v)}
-            style={{
-              background: searchRegex ? "rgba(88,166,255,0.2)" : "transparent",
-              border: "1px solid " + (searchRegex ? "rgba(88,166,255,0.5)" : "rgba(255,255,255,0.1)"),
-              borderRadius: 4,
-              color: searchRegex ? "#58a6ff" : "rgba(255,255,255,0.3)",
-              cursor: "pointer",
-              fontSize: 10,
-              padding: "1px 5px",
-              fontFamily: FONT_FAMILY,
-            }}
+            className={`lum-searchbar-toggle ${searchRegex ? "is-active" : ""}`}
           >
             .*
           </IconButton>
           {/* 이전/다음 */}
-          <IconButton tooltip="이전 (Shift+Enter)" onClick={() => doSearch(searchQuery, false)} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.4)", cursor: "pointer", fontSize: 14, padding: "0 2px" }}>‹</IconButton>
-          <IconButton tooltip="다음 (Enter)" onClick={() => doSearch(searchQuery, true)} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.4)", cursor: "pointer", fontSize: 14, padding: "0 2px" }}>›</IconButton>
-          <button onClick={closeSearch} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.25)", cursor: "pointer", fontSize: 12, padding: "0 2px" }}>✕</button>
+          <IconButton
+            tooltip="이전 (Shift+Enter)"
+            onClick={() => doSearch(searchQuery, false)}
+            className="lum-searchbar-nav"
+          >
+            ‹
+          </IconButton>
+          <IconButton
+            tooltip="다음 (Enter)"
+            onClick={() => doSearch(searchQuery, true)}
+            className="lum-searchbar-nav"
+          >
+            ›
+          </IconButton>
+          <button type="button" onClick={closeSearch} className="lum-searchbar-close">✕</button>
         </div>
       )}
 
