@@ -1,12 +1,20 @@
 name: LUM Release Build
 
 on:
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: "릴리스 태그 (예: v0.3.1)"
+        required: true
+        default: "v0.3.1"
   push:
     tags:
       - 'v*'
 
 jobs:
   build:
+    env:
+      RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag_name || github.ref_name }}
     permissions:
       contents: write
     strategy:
@@ -17,8 +25,6 @@ jobs:
             args: '--target aarch64-apple-darwin --bundles dmg'
           - platform: macos-13
             args: '--target x86_64-apple-darwin --bundles dmg'
-          - platform: ubuntu-22.04
-            args: '--bundles deb,appimage'
           - platform: windows-latest
             args: '--bundles msi,nsis'
 
@@ -38,15 +44,6 @@ jobs:
         with:
           targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin' || matrix.platform == 'macos-13' && 'x86_64-apple-darwin' || '' }}
 
-      - name: Install Linux system dependencies
-        if: matrix.platform == 'ubuntu-22.04'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            libgtk-3-dev libwebkit2gtk-4.1-dev libappindicator3-dev \
-            librsvg2-dev patchelf libasound2-dev \
-            libxdo-dev libxtst-dev libx11-dev libxrandr-dev
-
       - name: Rust cache
         uses: swatinem/rust-cache@v2
         with:
@@ -62,10 +59,10 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
-          tagName: ${{ github.ref_name }}
-          releaseName: 'LUM ${{ github.ref_name }}'
+          tagName: ${{ env.RELEASE_TAG }}
+          releaseName: 'LUM ${{ env.RELEASE_TAG }}'
           releaseBody: |
-            ## LUM ${{ github.ref_name }}
+            ## LUM ${{ env.RELEASE_TAG }}
 
             실제 PTY 터미널 + 로컬 AI가 통합된 Warp 스타일 터미널 에뮬레이터.
 
@@ -75,15 +72,12 @@ jobs:
             - **macOS (Apple Silicon, M1/M2/M3/M4)**: `LUM.Terminal_*_aarch64.dmg`
             - **macOS (Intel)**: `LUM.Terminal_*_x64.dmg`
             - **Windows**: `LUM.Terminal_*_x64-setup.exe` (NSIS) 또는 `LUM.Terminal_*_x64_en-US.msi`
-            - **Linux**: `LUM.Terminal_*_amd64.deb` 또는 `LUM.Terminal_*_amd64.AppImage`
-
             > 코드 서명이 없으므로 macOS는 `우클릭 → 열기`, Windows는 `추가 정보 → 실행`으로 설치하세요.
 
             ### 주요 변경사항
             이 릴리즈의 변경사항은 [CHANGELOG](https://github.com/Code2731/Lum/commits/main)를 참고하세요.
-          # draft 상태로 생성 → 모든 매트릭스(4개 플랫폼)가 완료된 뒤
-          # GitHub Releases 페이지에서 "Publish release" 수동 클릭으로 공개.
-          # false로 두면 2/4 플랫폼만 끝났을 때 publish되는 레이스 위험.
-          releaseDraft: true
+          # 태그 푸시 또는 수동 실행 시 즉시 공개 릴리즈로 생성.
+          # 수동 실행의 경우, 입력한 태그와 동일한 이름으로 배포 아티팩트가 생성됩니다.
+          releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }}

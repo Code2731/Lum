@@ -8,12 +8,15 @@
 [![Tauri](https://img.shields.io/badge/Tauri-v2-24C8D8?logo=tauri)](https://tauri.app)
 [![Rust](https://img.shields.io/badge/Rust-stable-orange?logo=rust)](https://www.rust-lang.org)
 [![React](https://img.shields.io/badge/React-19-61DAFB?logo=react)](https://react.dev)
+[![Latest Release](https://img.shields.io/github/v/release/Code2731/Lum?label=Latest%20Release&logo=github)](https://github.com/Code2731/Lum/releases/latest)
 
 [![Download for Windows](https://img.shields.io/badge/Download-Windows-0078D4?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/Code2731/Lum/releases/latest)
 [![Download for macOS](https://img.shields.io/badge/Download-macOS-000000?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/Code2731/Lum/releases/latest)
 [![Download for Linux](https://img.shields.io/badge/Download-Linux-FCC624?style=for-the-badge&logo=linux&logoColor=black)](https://github.com/Code2731/Lum/releases/latest)
 
 **[English](#english) · [한국어](#한국어)**
+
+**GitHub Release:** [https://github.com/Code2731/Lum/releases/latest](https://github.com/Code2731/Lum/releases/latest)
 
 </div>
 
