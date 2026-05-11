@@ -6,15 +6,49 @@
  * 여기서는 모든 invoke 호출이 예외를 던지지 않고 null(또는 적절한 기본값)을 반환하도록 설정한다.
  */
 export async function setupTauriMock(): Promise<void> {
-  // @tauri-apps/api v2 의 내부 인터페이스 모킹
+  // @tauri-apps/api v2 내부 인터페이스 모킹 (window/event/core/window 모듈 공통)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (window as any).__TAURI_INTERNALS__ = {
+  const w = window as any;
+  // E2E에서는 초기 웰컴 힌트 모달을 기본적으로 숨겨 상호작용을 안정화한다.
+  try {
+    localStorage.setItem("lum.hintsShown", "1");
+  } catch {
+    // noop
+  }
+  const callbacks = new Map<number, (payload: unknown) => void>();
+  let callbackSeq = 1;
+
+  const transformCallback = (callback?: (payload: unknown) => void, once?: boolean): number => {
+    const id = callbackSeq++;
+    callbacks.set(id, (payload: unknown) => {
+      callback?.(payload);
+      if (once) callbacks.delete(id);
+    });
+    return id;
+  };
+
+  const unregisterCallback = (id: number): void => {
+    callbacks.delete(id);
+  };
+
+  const runCallback = (id: number, payload: unknown): void => {
+    callbacks.get(id)?.(payload);
+  };
+
+  w.__TAURI_INTERNALS__ = {
     /**
      * invoke 는 커맨드 이름과 인수를 받아 결과를 반환한다.
      * 테스트에서는 명령별 기본값을 반환해 UI가 오류 없이 렌더링되도록 한다.
      */
-    invoke: async (cmd: string, _args?: unknown): Promise<unknown> => {
+    invoke: async (cmd: string, args?: unknown): Promise<unknown> => {
       switch (cmd) {
+        case "plugin:event|listen":
+          return (args as { handler?: number } | undefined)?.handler ?? 0;
+        case "plugin:event|unlisten":
+          return null;
+        case "plugin:event|emit":
+          return null;
+
         // 온보딩 완료 상태 — true를 반환해 온보딩 위저드가 뜨지 않도록 함
         case "check_onboarding_complete":
           return true;
@@ -39,6 +73,15 @@ export async function setupTauriMock(): Promise<void> {
         // 설정 로드 — 빈 객체
         case "load_config":
           return {};
+        case "load_app_config":
+          return {
+            show_reasoning: true,
+            vision_enabled: false,
+            toolbar_show_advanced: false,
+            ui_show_file_explorer: true,
+            ui_hints_shown: true,
+            ui_seen_advanced_features: [],
+          };
 
         // 세션 로드 — null (새 세션)
         case "load_session":
@@ -55,6 +98,20 @@ export async function setupTauriMock(): Promise<void> {
         // 워크스페이스 목록 — 빈 배열
         case "list_workspaces":
           return [];
+        case "squad_list":
+          return [];
+        case "list_scripts":
+          return [];
+        case "list_mcp_servers":
+          return [];
+        case "list_healing_dataset":
+          return [];
+        case "lora_forge_list":
+          return [];
+        case "list_directory":
+          return [];
+        case "parent_directory":
+          return null;
 
         // 퀵 액션 로드 — 빈 배열
         case "load_quick_actions":
@@ -69,12 +126,28 @@ export async function setupTauriMock(): Promise<void> {
           return null;
       }
     },
+    transformCallback,
+    unregisterCallback,
+    runCallback,
+    callbacks,
+    metadata: {
+      currentWindow: { label: "main" },
+      currentWebview: { windowLabel: "main", label: "main" },
+    },
+    convertFileSrc: (filePath: string, protocol = "asset"): string =>
+      `${protocol}://localhost/${encodeURIComponent(filePath)}`,
+    plugins: {
+      path: {
+        sep: "/",
+        delimiter: ":",
+      },
+    },
+  };
 
-    // Tauri v2 내부에서 사용하는 transformCallback 스텁
-    transformCallback: (callback: (response: unknown) => void, once?: boolean): number => {
-      void once;
-      void callback;
-      return Math.floor(Math.random() * 1000000);
+  w.__TAURI_EVENT_PLUGIN_INTERNALS__ = {
+    unregisterListener: (event: string, id: number) => {
+      void event;
+      unregisterCallback(id);
     },
   };
 }

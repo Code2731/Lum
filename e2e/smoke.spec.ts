@@ -24,6 +24,28 @@ async function waitForApp(page: Page): Promise<void> {
   await page.goto("/");
   // LUM 브랜드 텍스트가 헤더에 렌더링될 때까지 대기
   await expect(page.getByText("LUM").first()).toBeVisible({ timeout: 15_000 });
+  // 초기 웰컴 힌트 모달이 떠 있으면 닫아 테스트 상호작용을 복구한다.
+  const startButton = page.getByRole("button", { name: "시작하기" });
+  if (await startButton.isVisible().catch(() => false)) {
+    await startButton.click();
+  }
+  await expect(page.getByRole("dialog", { name: "LUM — AI 터미널 힌트" })).toBeHidden({ timeout: 5_000 });
+}
+
+// locator 가 현재 뷰포트 내부에 완전히 들어오는지 검증하는 헬퍼
+async function expectInViewport(page: Page, selector: string): Promise<void> {
+  const locator = page.locator(selector).first();
+  await expect(locator).toBeVisible();
+  const box = await locator.boundingBox();
+  expect(box).not.toBeNull();
+  const viewport = page.viewportSize();
+  expect(viewport).not.toBeNull();
+  const safeViewport = viewport!;
+  const safeBox = box!;
+  expect(safeBox.x).toBeGreaterThanOrEqual(0);
+  expect(safeBox.y).toBeGreaterThanOrEqual(0);
+  expect(safeBox.x + safeBox.width).toBeLessThanOrEqual(safeViewport.width);
+  expect(safeBox.y + safeBox.height).toBeLessThanOrEqual(safeViewport.height);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -51,18 +73,20 @@ test.describe("LUM 스모크 테스트", () => {
   });
 
   // ── 2. Cmd+T 로 새 탭 생성 ────────────────────────────────────────────────
-  test("Cmd+T 를 누르면 새 탭이 생성된다", async ({ page }) => {
+  test("새 탭 버튼을 누르면 새 탭이 생성된다", async ({ page }) => {
     await waitForApp(page);
 
-    // 초기 탭 수 확인 — "Shell 1" 만 존재
-    await expect(page.getByText("Shell 1").first()).toBeVisible();
-    await expect(page.getByText("Shell 2")).not.toBeVisible();
+    // 초기 탭 수를 기록한다. (세션 복원/카운터 상태에 따라 번호는 유동적)
+    const shellTabs = page.getByText(/^Shell \d+$/);
+    const beforeCount = await shellTabs.count();
+    expect(beforeCount).toBeGreaterThan(0);
 
-    // Cmd+T (macOS) / Ctrl+T (Linux/Windows) 로 새 탭 생성
-    await page.keyboard.press("Meta+t");
+    // 브라우저 환경 E2E에서는 Ctrl/Cmd+T가 브라우저 새 탭 단축키와 충돌하므로
+    // 동일 동작을 담당하는 헤더 버튼 경로를 검증한다.
+    await page.getByRole("button", { name: "새 탭 (Cmd+T)" }).click();
 
-    // "Shell 2" 탭이 탭 바에 나타나야 한다
-    await expect(page.getByText("Shell 2").first()).toBeVisible({ timeout: 5_000 });
+    // 탭 개수가 1개 증가해야 한다.
+    await expect(shellTabs).toHaveCount(beforeCount + 1, { timeout: 5_000 });
   });
 
   // ── 3. Cmd+Shift+H 로 SSH 연결 모달 열기 ─────────────────────────────────
@@ -73,7 +97,7 @@ test.describe("LUM 스모크 테스트", () => {
     await expect(page.getByText("SSH 연결")).not.toBeVisible();
 
     // SSH 단축키 발동
-    await page.keyboard.press("Meta+Shift+h");
+    await page.keyboard.press("Control+Shift+h");
 
     // SSH 모달 타이틀 "SSH 연결"이 표시되어야 한다
     await expect(page.getByText("SSH 연결").first()).toBeVisible({ timeout: 5_000 });
@@ -92,7 +116,7 @@ test.describe("LUM 스모크 테스트", () => {
     await waitForApp(page);
 
     // SSH 모달 열기
-    await page.keyboard.press("Meta+Shift+h");
+    await page.keyboard.press("Control+Shift+h");
     await expect(page.getByText("SSH 연결").first()).toBeVisible({ timeout: 5_000 });
 
     // Escape 로 닫기
@@ -110,7 +134,7 @@ test.describe("LUM 스모크 테스트", () => {
     ).not.toBeVisible();
 
     // Cmd+K 발동
-    await page.keyboard.press("Meta+k");
+    await page.keyboard.press("Control+k");
 
     // 팔레트의 검색 인풋이 표시되어야 한다
     await expect(
@@ -122,5 +146,41 @@ test.describe("LUM 스모크 테스트", () => {
     await expect(
       page.getByPlaceholder("탭, 워크스페이스, 액션, 히스토리 검색…"),
     ).not.toBeVisible({ timeout: 3_000 });
+  });
+
+  // ── 6. 좁은 뷰포트 오버레이 하네스 ───────────────────────────────────────
+  test("좁은 뷰포트에서도 주요 오버레이가 화면 안에 유지된다", async ({ page }) => {
+    await page.setViewportSize({ width: 960, height: 520 });
+    await waitForApp(page);
+
+    // 히스토리 버튼 활성화를 위해 shell 입력 2건 생성
+    const mainInput = page.locator("input[type='text']").first();
+    await mainInput.click();
+    await mainInput.fill("ls -la");
+    await page.keyboard.press("Enter");
+    await mainInput.fill("pwd");
+    await page.keyboard.press("Enter");
+
+    // INPUT HISTORY 패널 검증
+    await page.getByRole("button", { name: "quick-input-history-open" }).click();
+    await expect(page.getByText("INPUT HISTORY")).toBeVisible();
+    await expectInViewport(page, "[aria-label='input-history-search']");
+    await expectInViewport(page, "[aria-label='quick-input-history-close']");
+    await page.keyboard.press("Escape");
+
+    // ACTION PALETTE 패널 검증 (input intercept: Ctrl+K)
+    await mainInput.click();
+    await page.keyboard.press("Control+k");
+    await expect(page.getByText("ACTION PALETTE")).toBeVisible();
+    await expectInViewport(page, "[aria-label='action-palette-input']");
+    await expectInViewport(page, "[aria-label='action-palette-close']");
+    await page.keyboard.press("Escape");
+
+    // SHORTCUT CHEATSHEET 패널 검증 (input intercept: Ctrl+/)
+    await mainInput.click();
+    await page.keyboard.press("Control+/");
+    await expect(page.getByText("SHORTCUT CHEATSHEET")).toBeVisible();
+    await expectInViewport(page, "[aria-label='shortcut-help-close']");
+    await page.keyboard.press("Escape");
   });
 });
