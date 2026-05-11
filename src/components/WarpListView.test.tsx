@@ -338,9 +338,9 @@ describe("WarpListView delta actions", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: "블록 액션" }));
-    expect(screen.getByRole("button", { name: "Copy Both" })).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: "Copy Both" })).toBeInTheDocument();
     fireEvent.mouseDown(document.body);
-    expect(screen.queryByRole("button", { name: "Copy Both" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("menuitem", { name: "Copy Both" })).not.toBeInTheDocument();
   });
 
   it("블록 액션 메뉴는 Escape로 닫힘", () => {
@@ -360,9 +360,42 @@ describe("WarpListView delta actions", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: "블록 액션" }));
-    expect(screen.getByRole("button", { name: "Copy Both" })).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: "Copy Both" })).toBeInTheDocument();
     fireEvent.keyDown(window, { key: "Escape" });
-    expect(screen.queryByRole("button", { name: "Copy Both" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("menuitem", { name: "Copy Both" })).not.toBeInTheDocument();
+  });
+
+  it("블록 액션 메뉴는 키보드로 탐색하고 Enter로 실행한다", () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText },
+      configurable: true,
+    });
+    render(
+      <WarpListView
+        blocks={[
+          {
+            id: "b6",
+            command: "echo menu test",
+            output: "menu ok",
+            exitCode: 0,
+            startedAt: now - 1000,
+            endedAt: now,
+          },
+        ]}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "블록 액션" }));
+    const menu = screen.getByRole("menu", { name: "블록 액션 메뉴" });
+    const first = screen.getByRole("menuitem", { name: "Copy Both" });
+    const second = screen.getByRole("menuitem", { name: "Find Within Block" });
+    expect(first).toHaveFocus();
+    fireEvent.keyDown(menu, { key: "ArrowDown" });
+    expect(second).toHaveFocus();
+    fireEvent.keyDown(menu, { key: "Enter" });
+    expect(writeText).toHaveBeenCalledTimes(0);
+    expect(screen.queryByRole("menuitem", { name: "Copy Both" })).not.toBeInTheDocument();
   });
 
   it("Cmd/Ctrl+Shift+C로 compared 필터 토글", () => {

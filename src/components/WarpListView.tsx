@@ -112,6 +112,7 @@ const WarpListView: React.FC<Props> = ({
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "failed" | "success" | "compared">("all");
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
+  const [menuActiveIndex, setMenuActiveIndex] = useState(0);
   const [blockSearch, setBlockSearch] = useState<Record<string, string>>({});
   const [blockSearchCursor, setBlockSearchCursor] = useState<Record<string, number>>({});
   const [activeSearchBlockId, setActiveSearchBlockId] = useState<string | null>(null);
@@ -132,6 +133,7 @@ const WarpListView: React.FC<Props> = ({
   const deltaButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const menuButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const menuContainerRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const menuItemRefs = useRef<Record<string, (HTMLButtonElement | null)[]>>({});
   const deltaPopoverRef = useRef<HTMLDivElement | null>(null);
   const timelineButtonRef = useRef<HTMLButtonElement | null>(null);
   const timelinePanelRef = useRef<HTMLDivElement | null>(null);
@@ -624,8 +626,47 @@ const WarpListView: React.FC<Props> = ({
   useEffect(() => {
     if (!menuOpenId) return;
     const onWindowKeyDown = (e: KeyboardEvent) => {
-      if (e.key !== "Escape") return;
-      setMenuOpenId(null);
+      const currentMenuItems = menuItemRefs.current[menuOpenId] ?? [];
+      const last = Math.max(0, currentMenuItems.length - 1);
+      if (e.key === "Escape") {
+        setMenuOpenId(null);
+        return;
+      }
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setMenuActiveIndex((prev) => {
+          const next = prev >= last ? 0 : prev + 1;
+          currentMenuItems[next]?.focus();
+          return next;
+        });
+        return;
+      }
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setMenuActiveIndex((prev) => {
+          const next = prev <= 0 ? last : prev - 1;
+          currentMenuItems[next]?.focus();
+          return next;
+        });
+        return;
+      }
+      if (e.key === "Home") {
+        e.preventDefault();
+        currentMenuItems[0]?.focus();
+        setMenuActiveIndex(0);
+        return;
+      }
+      if (e.key === "End") {
+        e.preventDefault();
+        currentMenuItems[last]?.focus();
+        setMenuActiveIndex(last);
+        return;
+      }
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        currentMenuItems[menuActiveIndex]?.click();
+        return;
+      }
     };
     const onMouseDown = (e: MouseEvent) => {
       const target = e.target as Node | null;
@@ -642,6 +683,16 @@ const WarpListView: React.FC<Props> = ({
       window.removeEventListener("keydown", onWindowKeyDown);
       window.removeEventListener("mousedown", onMouseDown);
     };
+  }, [menuOpenId]);
+
+  useEffect(() => {
+    if (!menuOpenId) {
+      setMenuActiveIndex(0);
+      return;
+    }
+    const activeItem = menuItemRefs.current[menuOpenId]?.[0];
+    setMenuActiveIndex(0);
+    activeItem?.focus();
   }, [menuOpenId]);
 
   useEffect(() => {
@@ -2038,12 +2089,67 @@ const WarpListView: React.FC<Props> = ({
                 {menuOpenId === b.id && (
                   <div
                     ref={(el) => { menuContainerRefs.current[b.id] = el; }}
+                    role="menu"
+                    aria-label="블록 액션 메뉴"
                     className="absolute right-0 top-5 z-20 w-44 rounded-lg border border-white/10 bg-[#0f151f]/96 backdrop-blur-sm shadow-2xl overflow-hidden"
                     onClick={(e) => e.stopPropagation()}
+                    onKeyDown={(e) => {
+                      const currentMenuItems = menuItemRefs.current[b.id] ?? [];
+                      const last = Math.max(0, currentMenuItems.length - 1);
+                      if (e.key === "Escape") {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setMenuOpenId(null);
+                        return;
+                      }
+                      if (e.key === "ArrowDown") {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const next = menuActiveIndex >= last ? 0 : menuActiveIndex + 1;
+                        currentMenuItems[next]?.focus();
+                        setMenuActiveIndex(next);
+                        return;
+                      }
+                      if (e.key === "ArrowUp") {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const next = menuActiveIndex <= 0 ? last : menuActiveIndex - 1;
+                        currentMenuItems[next]?.focus();
+                        setMenuActiveIndex(next);
+                        return;
+                      }
+                      if (e.key === "Home") {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        currentMenuItems[0]?.focus();
+                        setMenuActiveIndex(0);
+                        return;
+                      }
+                      if (e.key === "End") {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        currentMenuItems[last]?.focus();
+                        setMenuActiveIndex(last);
+                        return;
+                      }
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        currentMenuItems[menuActiveIndex]?.click();
+                        return;
+                      }
+                    }}
                   >
                     <button
                       type="button"
+                      role="menuitem"
                       className="w-full px-2.5 py-1.5 text-left text-[11px] text-white/78 hover:bg-white/[0.08]"
+                      tabIndex={menuOpenId === b.id && menuActiveIndex === 0 ? 0 : -1}
+                      ref={(el) => {
+                        const arr = menuItemRefs.current[b.id] ?? (menuItemRefs.current[b.id] = []);
+                        arr[0] = el;
+                      }}
+                      onFocus={() => setMenuActiveIndex(0)}
                       onClick={() => {
                         navigator.clipboard.writeText(`$ ${b.command}\n${b.output.trim()}`).catch(() => {});
                         setMenuOpenId(null);
@@ -2053,14 +2159,28 @@ const WarpListView: React.FC<Props> = ({
                     </button>
                     <button
                       type="button"
+                      role="menuitem"
                       className="w-full px-2.5 py-1.5 text-left text-[11px] text-white/78 hover:bg-white/[0.08]"
+                      tabIndex={menuOpenId === b.id && menuActiveIndex === 1 ? 0 : -1}
+                      ref={(el) => {
+                        const arr = menuItemRefs.current[b.id] ?? (menuItemRefs.current[b.id] = []);
+                        arr[1] = el;
+                      }}
+                      onFocus={() => setMenuActiveIndex(1)}
                       onClick={() => openFindWithin(b.id)}
                     >
                       Find Within Block
                     </button>
                     <button
                       type="button"
+                      role="menuitem"
                       className="w-full px-2.5 py-1.5 text-left text-[11px] text-white/78 hover:bg-white/[0.08] flex items-center gap-1.5"
+                      tabIndex={menuOpenId === b.id && menuActiveIndex === 2 ? 0 : -1}
+                      ref={(el) => {
+                        const arr = menuItemRefs.current[b.id] ?? (menuItemRefs.current[b.id] = []);
+                        arr[2] = el;
+                      }}
+                      onFocus={() => setMenuActiveIndex(2)}
                       onClick={() => {
                         const snapshot = [
                           `### ${new Date(b.startedAt).toLocaleString()}`,
@@ -2081,7 +2201,14 @@ const WarpListView: React.FC<Props> = ({
                     {onRetryWithDiff && (
                       <button
                         type="button"
+                        role="menuitem"
                         className="w-full px-2.5 py-1.5 text-left text-[11px] text-white/78 hover:bg-white/[0.08] flex items-center gap-1.5"
+                        tabIndex={menuOpenId === b.id && menuActiveIndex === 3 ? 0 : -1}
+                        ref={(el) => {
+                          const arr = menuItemRefs.current[b.id] ?? (menuItemRefs.current[b.id] = []);
+                          arr[3] = el;
+                        }}
+                        onFocus={() => setMenuActiveIndex(3)}
                         onClick={() => {
                           onRetryWithDiff(b);
                           setMenuOpenId(null);
