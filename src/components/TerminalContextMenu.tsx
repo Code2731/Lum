@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Copy, Play, Search, ExternalLink, Sparkles } from "lucide-react";
 
 interface Props {
@@ -14,11 +14,39 @@ interface Props {
   onOpen: () => void;
 }
 
+const MENU_WIDTH = 200;
+const MENU_FALLBACK_HEIGHT_WITH_LINK = 204;
+const MENU_FALLBACK_HEIGHT_WITHOUT_LINK = 172;
+const MENU_EDGE_GAP = 8;
+const clampValue = (value: number, min: number, max: number): number => Math.max(min, Math.min(value, max));
+
 const TerminalContextMenu: React.FC<Props> = ({
   x, y, text, isPathOrUrl,
   onClose, onCopy, onRun, onExplain, onWebSearch, onOpen,
 }) => {
   const menuRef = useRef<HTMLDivElement>(null);
+  const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [position, setPosition] = useState({
+    left: 0,
+    top: 0,
+  });
+
+  const menuItems = [
+    { label: "복사", shortcut: "⌘C", action: onCopy },
+    { label: "명령어로 실행", shortcut: null, action: onRun },
+    { label: "AI로 설명", shortcut: "?", action: onExplain },
+    { label: "웹에서 검색", shortcut: null, action: onWebSearch },
+    ...(isPathOrUrl ? [{ label: "열기", shortcut: null, action: onOpen }] : []),
+  ];
+
+  const closeOrAction = (index: number) => {
+    const item = menuItems[index];
+    if (!item) return;
+    item.action();
+    onClose();
+  };
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -35,41 +63,85 @@ const TerminalContextMenu: React.FC<Props> = ({
     };
   }, [onClose]);
 
+  useEffect(() => {
+    const activeElement = document.activeElement;
+    if (activeElement instanceof HTMLElement) previousFocusRef.current = activeElement;
+
+    return () => {
+      const target = previousFocusRef.current;
+      if (target?.isConnected) {
+        target.focus({ preventScroll: true });
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    const selected = itemRefs.current[activeIndex];
+    selected?.focus();
+  }, [activeIndex]);
+
+  useEffect(() => {
+    itemRefs.current = [];
+    setActiveIndex(0);
+    const first = itemRefs.current[0];
+    first?.focus();
+  }, [isPathOrUrl]);
+
+  useLayoutEffect(() => {
+    const menuRectWidth = menuRef.current?.getBoundingClientRect().width;
+    const menuRectHeight = menuRef.current?.getBoundingClientRect().height;
+    const width = (menuRectWidth && Number.isFinite(menuRectWidth) && menuRectWidth > 0) ? menuRectWidth : MENU_WIDTH;
+    const fallbackHeight = isPathOrUrl ? MENU_FALLBACK_HEIGHT_WITH_LINK : MENU_FALLBACK_HEIGHT_WITHOUT_LINK;
+    const height = (menuRectHeight && Number.isFinite(menuRectHeight) && menuRectHeight > 0) ? menuRectHeight : fallbackHeight;
+
+    setPosition({
+      left: clampValue(x, 0, Math.max(0, window.innerWidth - width - MENU_EDGE_GAP)),
+      top: clampValue(y, 0, Math.max(0, window.innerHeight - height - MENU_EDGE_GAP)),
+    });
+  }, [x, y, isPathOrUrl]);
+
+  const handleMenuKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    const last = menuItems.length - 1;
+
+    if (["ArrowDown"].includes(e.key)) {
+      e.preventDefault();
+      setActiveIndex((prev) => (prev >= last ? 0 : prev + 1));
+      return;
+    }
+    if (["ArrowUp"].includes(e.key)) {
+      e.preventDefault();
+      setActiveIndex((prev) => (prev <= 0 ? last : prev - 1));
+      return;
+    }
+    if (e.key === "Home") {
+      e.preventDefault();
+      setActiveIndex(0);
+      return;
+    }
+    if (e.key === "End") {
+      e.preventDefault();
+      setActiveIndex(last);
+      return;
+    }
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      closeOrAction(activeIndex);
+    }
+  };
+
   // 화면 밖으로 나가지 않도록 위치 조정
-  const menuW = 200;
-  const menuH = isPathOrUrl ? 200 : 168;
-  const adjustedX = Math.min(x, window.innerWidth - menuW - 8);
-  const adjustedY = Math.min(y, window.innerHeight - menuH - 8);
-
   const preview = text.length > 40 ? text.slice(0, 40) + "…" : text;
-
-  const item = (
-    icon: React.ReactNode,
-    label: string,
-    shortcut: string | null,
-    action: () => void,
-    danger = false,
-  ) => (
-    <button
-      onClick={() => { action(); onClose(); }}
-      className={`w-full flex items-center gap-2.5 px-3 py-1.5 text-[11px] text-left transition-colors rounded-md
-        ${danger
-          ? "text-red-400 hover:bg-red-500/10"
-          : "text-white/65 hover:bg-white/6 hover:text-white/90"
-        }`}
-    >
-      <span className="shrink-0 text-white/30">{icon}</span>
-      <span className="flex-1">{label}</span>
-      {shortcut && <span className="text-white/20 text-[9px] shrink-0">{shortcut}</span>}
-    </button>
-  );
 
   return (
     <div
       ref={menuRef}
       className="fixed z-50 w-[200px] bg-[#161b22] border border-white/10 rounded-xl shadow-2xl overflow-hidden py-1"
-      style={{ left: adjustedX, top: adjustedY }}
+      role="menu"
+      aria-label="터미널 컨텍스트 메뉴"
+      tabIndex={-1}
+      style={{ left: position.left, top: position.top }}
       onContextMenu={(e) => e.preventDefault()}
+      onKeyDown={handleMenuKeyDown}
     >
       {/* 선택 텍스트 미리보기 */}
       <div className="px-3 py-1.5 mb-0.5 border-b border-white/5">
@@ -77,11 +149,29 @@ const TerminalContextMenu: React.FC<Props> = ({
       </div>
 
       <div className="px-1 space-y-0.5">
-        {item(<Copy size={11} />, "복사", "⌘C", onCopy)}
-        {item(<Play size={11} />, "명령어로 실행", null, onRun)}
-        {item(<Sparkles size={11} />, "AI로 설명", "?", onExplain)}
-        {item(<Search size={11} />, "웹에서 검색", null, onWebSearch)}
-        {isPathOrUrl && item(<ExternalLink size={11} />, "열기", null, onOpen)}
+        {menuItems.map((entry, index) => (
+          <button
+            type="button"
+            role="menuitem"
+            key={entry.label}
+            ref={(el) => { itemRefs.current[index] = el; }}
+            onFocus={() => setActiveIndex(index)}
+            onClick={() => closeOrAction(index)}
+            aria-label={entry.label}
+            tabIndex={activeIndex === index ? 0 : -1}
+            className={`w-full flex items-center gap-2.5 px-3 py-1.5 text-[11px] text-left transition-colors rounded-md`}
+          >
+            <span className="shrink-0 text-white/30">
+              {entry.label === "복사" ? <Copy size={11} /> : null}
+              {entry.label === "명령어로 실행" ? <Play size={11} /> : null}
+              {entry.label === "AI로 설명" ? <Sparkles size={11} /> : null}
+              {entry.label === "웹에서 검색" ? <Search size={11} /> : null}
+              {entry.label === "열기" ? <ExternalLink size={11} /> : null}
+            </span>
+            <span className="flex-1">{entry.label}</span>
+            {entry.shortcut && <span className="text-white/20 text-[9px] shrink-0">{entry.shortcut}</span>}
+          </button>
+        ))}
       </div>
     </div>
   );
