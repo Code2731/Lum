@@ -1,4 +1,5 @@
 <div align="center">
+  <img src="./public/lum-screenshot.png" alt="LUM 실행 화면" width="880" />
 
 # LUM Terminal
 
