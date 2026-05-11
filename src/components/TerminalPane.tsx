@@ -2795,9 +2795,27 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
           }}
         >
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 10px", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
-            <span style={{ fontSize: 11, color: "rgba(182,218,255,0.96)", letterSpacing: "0.05em", fontWeight: 600 }}>
-              INPUT HISTORY
-            </span>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontSize: 11, color: "rgba(182,218,255,0.96)", letterSpacing: "0.05em", fontWeight: 600 }}>
+                INPUT HISTORY
+              </span>
+              {inputHistoryMultiSelected.length > 1 && (
+                <span
+                  aria-label="input-history-selected-count"
+                  style={{
+                    fontSize: 10,
+                    color: "rgba(215,228,255,0.95)",
+                    border: "1px solid rgba(121,192,255,0.55)",
+                    background: "rgba(121,192,255,0.14)",
+                    borderRadius: 999,
+                    padding: "1px 6px",
+                    lineHeight: 1.2,
+                  }}
+                >
+                  {inputHistoryMultiSelected.length} selected
+                </span>
+              )}
+            </div>
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
               <button
                 type="button"

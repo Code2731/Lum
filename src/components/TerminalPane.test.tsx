@@ -618,8 +618,10 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(screen.getByRole("button", { name: "quick-input-history-item-2" })).toHaveTextContent("ls -la");
 
     fireEvent.keyDown(search, { key: "ArrowDown", shiftKey: true });
+    expect(screen.getByLabelText("input-history-selected-count")).toHaveTextContent("2 selected");
     fireEvent.keyDown(search, { key: "Delete" });
 
+    expect(screen.queryByLabelText("input-history-selected-count")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "quick-input-history-item-1" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "quick-input-history-item-0" })).toHaveTextContent("ls -la");
     expect(screen.getByRole("button", { name: "quick-input-history-open" })).toHaveTextContent("HISTORY 1");
