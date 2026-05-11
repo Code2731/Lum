@@ -54,7 +54,7 @@ describe("TabContextMenu", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("menuitem", { name: "탭 색상 red" }));
+    fireEvent.click(screen.getByRole("radio", { name: "탭 색상 red" }));
     expect(onSetColor).toHaveBeenCalledWith("tab-1", "red");
   });
 
@@ -73,6 +73,26 @@ describe("TabContextMenu", () => {
 
     expect(screen.getByLabelText("탭 색상 초기화")).toBeInTheDocument();
     expect(screen.getByLabelText("탭 그룹 초기화")).toBeInTheDocument();
+  });
+
+  it("방향키로 색상을 변경하고 Enter로 적용한다", () => {
+    const onSetColor = vi.fn();
+    const onClose = vi.fn();
+
+    render(
+      <TabContextMenu
+        {...baseProps}
+        onClose={onClose}
+        onSetColor={onSetColor}
+        onSetGroup={vi.fn()}
+      />,
+    );
+
+    const menu = screen.getByRole("menu");
+    fireEvent.keyDown(menu, { key: "ArrowRight" });
+    fireEvent.keyDown(menu, { key: "Enter" });
+    expect(onSetColor).toHaveBeenCalledWith("tab-1", "green");
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 
   it("화면 경계 근처에서 메뉴 위치를 보정한다", () => {

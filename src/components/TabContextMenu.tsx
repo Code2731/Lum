@@ -26,6 +26,9 @@ const TabContextMenu: React.FC<Props> = ({
   x, y, onSetColor, onSetGroup, onClose,
 }) => {
   const ref = useRef<HTMLDivElement>(null);
+  const colorButtonsRef = useRef<(HTMLButtonElement | null)[]>([]);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [activeColorIndex, setActiveColorIndex] = useState(0);
   const [position, setPosition] = useState({
     left: clampValue(x, 0, Math.max(0, window.innerWidth - MENU_FALLBACK_WIDTH - MENU_EDGE_GAP)),
     top: clampValue(y, 0, Math.max(0, window.innerHeight - MENU_FALLBACK_HEIGHT - MENU_EDGE_GAP)),
@@ -58,6 +61,61 @@ const TabContextMenu: React.FC<Props> = ({
     });
   }, [x, y]);
 
+  useEffect(() => {
+    const currentColorIdx = COLOR_ENTRIES.findIndex(([name]) => name === currentColor);
+    setActiveColorIndex(Math.max(0, currentColorIdx));
+  }, [currentColor]);
+
+  useEffect(() => {
+    const current = colorButtonsRef.current[activeColorIndex];
+    current?.focus();
+  }, [activeColorIndex]);
+
+  const handleMenuKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === "Tab") {
+      return;
+    }
+
+    const last = COLOR_ENTRIES.length - 1;
+    if (["ArrowRight", "ArrowDown"].includes(e.key)) {
+      e.preventDefault();
+      setActiveColorIndex(prev => (prev >= last ? 0 : prev + 1));
+      return;
+    }
+
+    if (["ArrowLeft", "ArrowUp"].includes(e.key)) {
+      e.preventDefault();
+      setActiveColorIndex(prev => (prev <= 0 ? last : prev - 1));
+      return;
+    }
+
+    if (e.key === "Home") {
+      e.preventDefault();
+      setActiveColorIndex(0);
+      return;
+    }
+
+    if (e.key === "End") {
+      e.preventDefault();
+      setActiveColorIndex(last);
+      return;
+    }
+
+    if (e.key === "Enter" || e.key === " ") {
+      const [color] = COLOR_ENTRIES[activeColorIndex];
+      if (color) {
+        e.preventDefault();
+        onSetColor(tabId, color);
+        onClose();
+      }
+      return;
+    }
+
+    if (e.key === "g" || e.key === "G") {
+      inputRef.current?.focus();
+    }
+  };
+
   const style: React.CSSProperties = {
     position: "fixed",
     left: position.left,
@@ -68,10 +126,12 @@ const TabContextMenu: React.FC<Props> = ({
   return (
     <div
       ref={ref}
+      tabIndex={-1}
       style={style}
       role="menu"
       className="bg-[#161b22] border border-white/10 rounded-xl shadow-2xl w-52 overflow-hidden"
       onContextMenu={e => e.preventDefault()}
+      onKeyDown={handleMenuKeyDown}
     >
       <div className="px-3 pt-3 pb-2">
         <div className="flex items-center gap-1.5 mb-2">
@@ -88,16 +148,28 @@ const TabContextMenu: React.FC<Props> = ({
             </button>
           )}
         </div>
-        <div className="flex flex-wrap gap-1.5">
-          {COLOR_ENTRIES.map(([name, hex]) => (
+        <div role="radiogroup" aria-label="탭 색상 선택" className="flex flex-wrap gap-1.5">
+          {COLOR_ENTRIES.map(([name, hex], index) => (
             <button
               type="button"
-              role="menuitem"
+              role="radio"
               aria-label={`탭 색상 ${name}`}
               key={name}
+              ref={(el) => { colorButtonsRef.current[index] = el; }}
+              aria-checked={currentColor === name}
+              tabIndex={activeColorIndex === index ? 0 : -1}
+              onFocus={() => setActiveColorIndex(index)}
               title={name}
               onClick={() => { onSetColor(tabId, name); onClose(); }}
               className="w-5 h-5 rounded-full transition-transform hover:scale-110 ring-offset-1 ring-offset-[#161b22]"
+              onKeyDown={e => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  onSetColor(tabId, name);
+                  onClose();
+                }
+                e.stopPropagation();
+              }}
               style={{
                 backgroundColor: hex,
                 boxShadow: currentColor === name ? `0 0 0 2px #fff4` : undefined,
@@ -126,6 +198,7 @@ const TabContextMenu: React.FC<Props> = ({
           )}
         </div>
         <input
+          ref={inputRef}
           defaultValue={currentGroup ?? ""}
           placeholder="예: backend, deploy…"
           className="w-full bg-white/5 border border-white/8 rounded-lg px-2 py-1 text-[11px] text-white/70 placeholder:text-white/20 outline-none focus:border-accent/40"
