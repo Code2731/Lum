@@ -276,4 +276,71 @@ describe("AppHeader", () => {
     });
     expect(notifButton).toHaveFocus();
   });
+
+  it("고급 기능 패널을 열 때 알림 센터를 닫는다", async () => {
+    const props = buildProps() as any;
+    const Wrapper = () => {
+      const [showAdvancedOverflow, setShowAdvancedOverflow] = React.useState(false);
+      const [showNotifCenter, setShowNotifCenter] = React.useState(true);
+      return (
+        <AppHeader
+          {...props}
+          showAdvancedOverflow={showAdvancedOverflow}
+          setShowAdvancedOverflow={setShowAdvancedOverflow}
+          panels={{
+            ...props.panels,
+            showNotifCenter,
+            setShowNotifCenter,
+          }}
+        />
+      );
+    };
+
+    render(<Wrapper />);
+
+    const advancedButton = screen.getByRole("button", { name: "고급 기능 (MCP / Squad / Healing / Recall / LoRA / RAG / xLLM)" });
+    const closeSpy = props.notifCenter.markAllRead;
+    expect(screen.getByRole("menu", { name: "알림 센터" })).toBeInTheDocument();
+
+    fireEvent.click(advancedButton);
+
+    await waitFor(() => {
+      expect(screen.queryByRole("menu", { name: "알림 센터" })).not.toBeInTheDocument();
+      expect(screen.getByRole("menu", { name: "고급 기능 메뉴" })).toBeInTheDocument();
+    });
+    expect(closeSpy).not.toHaveBeenCalled();
+  });
+
+  it("알림 센터를 열 때 고급 기능 패널을 닫는다", async () => {
+    const props = buildProps() as any;
+    const Wrapper = () => {
+      const [showAdvancedOverflow, setShowAdvancedOverflow] = React.useState(true);
+      const [showNotifCenter, setShowNotifCenter] = React.useState(false);
+      return (
+        <AppHeader
+          {...props}
+          showAdvancedOverflow={showAdvancedOverflow}
+          setShowAdvancedOverflow={setShowAdvancedOverflow}
+          panels={{
+            ...props.panels,
+            showNotifCenter,
+            setShowNotifCenter,
+          }}
+        />
+      );
+    };
+
+    render(<Wrapper />);
+
+    const notifButton = screen.getByRole("button", { name: "알림 센터" });
+    expect(screen.getByRole("menu", { name: "고급 기능 메뉴" })).toBeInTheDocument();
+
+    fireEvent.click(notifButton);
+
+    await waitFor(() => {
+      expect(screen.queryByRole("menu", { name: "고급 기능 메뉴" })).not.toBeInTheDocument();
+      expect(screen.getByRole("menu", { name: "알림 센터" })).toBeInTheDocument();
+    });
+    expect(props.notifCenter.markAllRead).toHaveBeenCalledTimes(1);
+  });
 });

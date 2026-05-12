@@ -199,6 +199,22 @@ const AppHeader: React.FC<Props> = ({
     });
   }, [setShowNotifCenter]);
 
+  const toggleAdvancedOverflow = React.useCallback(() => {
+    setShowNotifCenter(false);
+    setShowAdvancedOverflow((prev) => !prev);
+  }, [setShowAdvancedOverflow, setShowNotifCenter]);
+
+  const toggleNotifCenter = React.useCallback(() => {
+    setShowAdvancedOverflow(false);
+    setShowNotifCenter((prev) => {
+      const next = !prev;
+      if (next) {
+        notifCenter.markAllRead();
+      }
+      return next;
+    });
+  }, [notifCenter, setShowAdvancedOverflow, setShowNotifCenter]);
+
   React.useEffect(() => {
     if (!showAdvancedOverflow) return;
 
@@ -453,7 +469,7 @@ const AppHeader: React.FC<Props> = ({
               badge={squadStore.squads.length > 0 || hasUnseenAdvanced}
               aria-controls={ADVANCED_OVERFLOW_PANEL_ID}
               aria-expanded={showAdvancedOverflow}
-              onClick={() => setShowAdvancedOverflow(v => !v)}
+              onClick={toggleAdvancedOverflow}
             >
               <SlidersHorizontal size={14} />
             </ToolbarIconButton>
@@ -576,7 +592,7 @@ const AppHeader: React.FC<Props> = ({
             badge={notifCenter.unreadCount > 0}
             aria-controls={NOTIF_CENTER_PANEL_ID}
             aria-expanded={showNotifCenter}
-            onClick={() => { setShowNotifCenter(v => !v); if (!showNotifCenter) notifCenter.markAllRead(); }}
+            onClick={toggleNotifCenter}
           >
             <Bell size={14} />
           </ToolbarIconButton>
