@@ -35,6 +35,7 @@ const makeEnv = {
 const launchFallbackProfiles = [
   { name: "default", env: {} },
   { name: "bundled-chromium", env: { E2E_USE_PLAYWRIGHT_CHROMIUM: "1" } },
+  { name: "headful", env: { E2E_HEADLESS: "0" } },
   {
     name: "no-sandbox",
     env: {
@@ -51,7 +52,39 @@ const launchFailureSignatures = [
   "Looks like Playwright was just installed or updated",
   "could not launch a browser process",
   "not found. Available projects",
+  "bootstrap_check_in org.chromium.Chromium.MachPortRendezvousServer",
+  "Permission denied (1100)",
 ];
+
+const launchFailureHints = [
+  {
+    matches: (output) =>
+      output.includes("bootstrap_check_in org.chromium.Chromium.MachPortRendezvousServer") ||
+      output.includes("Permission denied (1100)"),
+    message:
+      "권한 제한으로 Mach port 초기화가 실패했습니다. 이 환경에서는 `E2E_HEADLESS=0`(headful) 또는 별도 Playwright 환경에서의 실행을 먼저 확인하세요. " +
+      "`E2E_USE_PLAYWRIGHT_CHROMIUM=1` + `E2E_CHROMIUM_ARGS=--disable-gpu --disable-dev-shm-usage --no-sandbox`를 조합해도 실패한다면, 브라우저 바이너리 설치 상태 및 샌드박스 권한을 점검하세요.",
+  },
+  {
+    matches: (output) => output.includes("Executable doesn't exist"),
+    message:
+      "브라우저 실행 파일이 없다는 오류가 확인되었습니다. `npx playwright install --with-deps chromium` 또는 `npx playwright install` 후 다시 실행하세요.",
+  },
+  {
+    matches: (output) => output.includes("could not launch a browser process"),
+    message: "브라우저 프로세스 런치 실패입니다. `E2E_FALLBACK_PROJECTS`는 프로젝트(브라우저 종류) 순서를 바꾸거나 `E2E_USE_PLAYWRIGHT_CHROMIUM=1`을 적용해 보세요.",
+  },
+];
+
+const printFailureHints = (output) => {
+  const seen = new Set();
+  for (const hint of launchFailureHints) {
+    if (hint.matches(output) && !seen.has(hint.message)) {
+      console.error(`[E2E-HELP] ${hint.message}`);
+      seen.add(hint.message);
+    }
+  }
+};
 
 const buildCommandEnv = (profile) => ({
   ...makeEnv,
@@ -145,6 +178,9 @@ for (const command of candidates) {
       }
       if (hasLaunchFailure(lastOutput) && !hasNextProject) {
         console.error(`Playwright 프로젝트 ${failedProject} 실행 실패 후 fallback 프로젝트가 없습니다.`);
+      }
+      if (hasLaunchFailure(lastOutput)) {
+        printFailureHints(lastOutput);
       }
       process.exit(status);
     }

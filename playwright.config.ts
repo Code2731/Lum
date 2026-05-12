@@ -15,6 +15,7 @@ const preferredLocalBrowserChannel =
     : undefined;
 const rawChromiumArgs = process.env.E2E_CHROMIUM_ARGS ?? "";
 const chromiumLaunchArgs = rawChromiumArgs.split(/\s+/).map((arg) => arg.trim()).filter(Boolean);
+const isHeadless = process.env.E2E_HEADLESS !== "0";
 const webServerConfig: WebServerConfig = shouldStartWebServer
   ? {
       command: "npm run dev -- --host 127.0.0.1 --port 1420",
@@ -89,6 +90,7 @@ export default defineConfig({
       name: "chromium",
       use: {
         ...devices["Desktop Chrome"],
+        headless: isHeadless,
         ...(preferredLocalBrowserChannel ? { channel: preferredLocalBrowserChannel } : {}),
         ...(chromiumLaunchArgs.length > 0 ? { launchOptions: { args: chromiumLaunchArgs } } : {}),
       },
