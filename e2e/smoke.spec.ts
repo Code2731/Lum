@@ -218,4 +218,28 @@ test.describe("LUM 스모크 테스트", () => {
     await page.keyboard.press("Escape");
     await expect(notifPanel).toBeHidden();
   });
+
+  test("고급 기능과 알림 센터는 동시에 열리지 않는다", async ({ page }) => {
+    await page.setViewportSize({ width: 860, height: 520 });
+    await waitForApp(page);
+
+    const advancedButton = page.getByRole("button", {
+      name: "고급 기능 (MCP / Squad / Healing / Recall / LoRA / RAG / xLLM)",
+    });
+    const notifButton = page.getByRole("button", { name: "알림 센터" });
+    const advancedPanel = page.getByRole("menu", { name: "고급 기능 메뉴" });
+    const notifPanel = page.getByRole("menu", { name: "알림 센터" });
+
+    await advancedButton.click();
+    await expect(advancedPanel).toBeVisible();
+    await expect(notifPanel).toBeHidden();
+
+    await notifButton.click();
+    await expect(notifPanel).toBeVisible();
+    await expect(advancedPanel).toBeHidden();
+
+    await advancedButton.click();
+    await expect(advancedPanel).toBeVisible();
+    await expect(notifPanel).toBeHidden();
+  });
 });
