@@ -73,10 +73,21 @@ for (const command of candidates) {
       process.exit(0);
     }
 
-    if (!projectArgSpecified && hasLaunchFailure(output)) {
+    if (projectArgSpecified) {
+      process.exit(status);
+    }
+
+    const projectIndex = testArgMatrix.indexOf(testArgs);
+    const hasNextProject = projectIndex < testArgMatrix.length - 1;
+    if (!projectArgSpecified && hasLaunchFailure(output) && hasNextProject) {
       const failedProject = testArgs.find((arg) => arg.startsWith("--project=")) || "unknown";
       console.error(`Playwright 프로젝트 ${failedProject} 실행 실패를 감지했습니다. 다음 프로젝트로 우회합니다.`);
       continue;
+    }
+
+    if (!projectArgSpecified && hasLaunchFailure(output) && hasNextProject === false) {
+      const failedProject = testArgs.find((arg) => arg.startsWith("--project=")) || "unknown";
+      console.error(`Playwright 프로젝트 ${failedProject} 실행 실패 후 fallback 프로젝트가 없습니다.`);
     }
 
     process.exit(status);
