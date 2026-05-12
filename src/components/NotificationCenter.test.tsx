@@ -65,4 +65,82 @@ describe("NotificationCenter", () => {
 
     expect(getByText("agent done")).toBeInTheDocument();
   });
+
+  it("알림 센터에서 화살표 키로 포커스가 순환 이동한다", () => {
+    const notifications: AppNotification[] = [
+      {
+        id: "1",
+        type: "agent",
+        title: "agent done",
+        body: "첫 번째 메시지",
+        timestamp: Date.now(),
+        read: false,
+      },
+      {
+        id: "2",
+        type: "command",
+        title: "command done",
+        body: "두 번째 메시지",
+        timestamp: Date.now(),
+        read: true,
+      },
+    ];
+
+    const { container } = render(
+      <NotificationCenter
+        notifications={notifications}
+        unreadCount={1}
+        onMarkAllRead={vi.fn()}
+        onDismiss={vi.fn()}
+        onClear={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    const focusables = Array.from(container.querySelectorAll("button")).filter((el) => !el.hasAttribute("disabled"));
+    expect(focusables.length).toBeGreaterThanOrEqual(4);
+    focusables[0]?.focus();
+    expect(document.activeElement).toBe(focusables[0]);
+
+    fireEvent.keyDown(focusables[0], { key: "ArrowDown" });
+    expect(document.activeElement).toBe(focusables[1]);
+
+    fireEvent.keyDown(focusables[1], { key: "ArrowDown" });
+    expect(document.activeElement).toBe(focusables[2]);
+
+    fireEvent.keyDown(focusables[2], { key: "ArrowUp" });
+    expect(document.activeElement).toBe(focusables[1]);
+
+    fireEvent.keyDown(focusables[1], { key: "ArrowUp" });
+    expect(document.activeElement).toBe(focusables[0]);
+
+    fireEvent.keyDown(focusables[0], { key: "ArrowUp" });
+    expect(document.activeElement).toBe(focusables[focusables.length - 1]);
+  });
+
+  it("알림 삭제 버튼에 접근성 라벨이 있다", () => {
+    const notifications: AppNotification[] = [
+      {
+        id: "1",
+        type: "command",
+        title: "cmd",
+        body: "삭제 테스트",
+        timestamp: Date.now(),
+        read: false,
+      },
+    ];
+
+    const { getByLabelText } = render(
+      <NotificationCenter
+        notifications={notifications}
+        unreadCount={1}
+        onMarkAllRead={vi.fn()}
+        onDismiss={vi.fn()}
+        onClear={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    expect(getByLabelText("cmd 알림 닫기")).toBeInTheDocument();
+  });
 });
