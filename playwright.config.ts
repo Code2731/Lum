@@ -1,8 +1,17 @@
 import { defineConfig, devices } from "@playwright/test";
+import { existsSync } from "node:fs";
 
 type WebServerConfig = NonNullable<Parameters<typeof defineConfig>[0]["webServer"]>;
 
 const shouldStartWebServer = process.env.E2E_NO_WEB_SERVER !== "1" && process.env.E2E_SKIP_WEBSERVER !== "1";
+const hasChrome = existsSync("/Applications/Google Chrome.app");
+const hasEdge = existsSync("/Applications/Microsoft Edge.app");
+const preferredLocalBrowserChannel =
+  process.platform === "darwin" && (hasChrome || hasEdge)
+    ? hasChrome
+      ? "chrome"
+      : "msedge"
+    : undefined;
 const webServerConfig: WebServerConfig = shouldStartWebServer
   ? {
       command: "npm run dev -- --host 127.0.0.1 --port 1420",
@@ -70,6 +79,8 @@ export default defineConfig({
 
     /* Tauri는 decorations: false (커스텀 타이틀바) 이므로 뷰포트를 명시 */
     viewport: { width: 1280, height: 800 },
+
+    ...(preferredLocalBrowserChannel ? { channel: preferredLocalBrowserChannel } : {}),
   },
 
   projects: [
