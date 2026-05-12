@@ -130,4 +130,28 @@ describe("PrivacyLedgerBadge", () => {
     fireEvent.keyDown(resetButton, { key: "Tab", shiftKey: true });
     expect(closeButtonNode).toHaveFocus();
   });
+
+  it("바깥 영역 클릭으로 닫으면 트리거로 포커스가 돌아간다", () => {
+    const onReset = vi.fn();
+    const { getByRole } = render(
+      <PrivacyLedgerBadge
+        state={defaultState}
+        isAllOnDevice
+        onReset={onReset}
+      />,
+    );
+
+    const trigger = getByRole("button", { name: /Privacy Ledger/ });
+    trigger.focus();
+    expect(trigger).toHaveFocus();
+
+    fireEvent.click(trigger);
+
+    const reset = getByRole("button", { name: "세션 카운터 초기화" });
+    expect(reset).toBeInTheDocument();
+
+    fireEvent.mouseDown(document.body);
+
+    expect(trigger).toHaveFocus();
+  });
 });
