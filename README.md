@@ -167,6 +167,7 @@ node scripts/run-e2e-noserver.js
   - `E2E_USE_PLAYWRIGHT_CHROMIUM=1` : 시스템 Chrome/Edge 대신 Playwright 번들 Chromium을 강제 사용.
   - `E2E_CHROMIUM_ARGS="--disable-gpu --disable-dev-shm-usage --no-sandbox"` : Chromium launch 인자 강제.
   - `E2E_HEADLESS=0` : 헤드리스 실행 대신 headful로 시도 (GUI 가능 환경에서만).
+  - `E2E_LAUNCH_PROFILES="default,bundled-chromium,headful,no-sandbox"` : 런치 시도 순서를 지정. 잘못된 값은 경고 후 무시됩니다. (대소문자 비구분, 중복 자동 제거)
   - 실패 시 스크립트가 `Playwright` 종료 로그에서 권한/바이너리 오류 패턴을 감지해 힌트를 출력합니다.
 - CI에서는 기존 환경 변수로 이미 실행 중인 서버를 재사용하지 않도록 설정되어 있습니다.
 

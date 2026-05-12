@@ -32,17 +32,45 @@ const makeEnv = {
   E2E_SKIP_WEBSERVER: "1",
 };
 
-const launchFallbackProfiles = [
-  { name: "default", env: {} },
-  { name: "bundled-chromium", env: { E2E_USE_PLAYWRIGHT_CHROMIUM: "1" } },
-  { name: "headful", env: { E2E_HEADLESS: "0" } },
-  {
-    name: "no-sandbox",
-    env: {
-      E2E_CHROMIUM_ARGS: "--disable-gpu --disable-dev-shm-usage --no-sandbox",
-    },
+const launchProfileTemplates = {
+  default: {},
+  "bundled-chromium": { E2E_USE_PLAYWRIGHT_CHROMIUM: "1" },
+  headful: { E2E_HEADLESS: "0" },
+  "no-sandbox": {
+    E2E_CHROMIUM_ARGS: "--disable-gpu --disable-dev-shm-usage --no-sandbox",
   },
-];
+};
+
+const defaultLaunchProfiles = ["default", "bundled-chromium", "headful", "no-sandbox"];
+const rawLaunchProfiles = process.env.E2E_LAUNCH_PROFILES
+  ? process.env.E2E_LAUNCH_PROFILES.split(",").map((profile) => profile.trim()).filter(Boolean)
+  : defaultLaunchProfiles;
+
+const dedup = new Set();
+const launchProfileList = [];
+const skippedProfiles = [];
+for (const profileName of rawLaunchProfiles) {
+  const key = profileName.toLowerCase();
+  if (!launchProfileTemplates[key]) {
+    skippedProfiles.push(profileName);
+    continue;
+  }
+  if (dedup.has(key)) {
+    continue;
+  }
+  dedup.add(key);
+  launchProfileList.push({ name: key, env: launchProfileTemplates[key] });
+}
+if (launchProfileList.length === 0) {
+  launchProfileList.push({ name: "default", env: launchProfileTemplates.default });
+}
+if (skippedProfiles.length > 0) {
+  console.error(
+    `[E2E-WARN] 알 수 없는 E2E_LAUNCH_PROFILES 값이 있어 건너뜁니다: ${skippedProfiles.join(", ")}`,
+  );
+  console.error(`[E2E-HINT] 사용 가능한 launch profile: ${Object.keys(launchProfileTemplates).join(", ")}`);
+}
+const launchFallbackProfiles = launchProfileList;
 
 const launchFailureSignatures = [
   "Target page, context or browser has been closed",
@@ -52,8 +80,11 @@ const launchFailureSignatures = [
   "Looks like Playwright was just installed or updated",
   "could not launch a browser process",
   "not found. Available projects",
+  "chrome_crashpad_handler: --database is required",
   "bootstrap_check_in org.chromium.Chromium.MachPortRendezvousServer",
   "Permission denied (1100)",
+  "Check failed: kr == KERN_SUCCESS",
+  "kill EPERM",
 ];
 
 const launchFailureHints = [
@@ -73,6 +104,14 @@ const launchFailureHints = [
   {
     matches: (output) => output.includes("could not launch a browser process"),
     message: "브라우저 프로세스 런치 실패입니다. `E2E_FALLBACK_PROJECTS`는 프로젝트(브라우저 종류) 순서를 바꾸거나 `E2E_USE_PLAYWRIGHT_CHROMIUM=1`을 적용해 보세요.",
+  },
+  {
+    matches: (output) =>
+      output.includes("chrome_crashpad_handler: --database is required") ||
+      output.includes("Check failed: kr == KERN_SUCCESS") ||
+      output.includes("kill EPERM"),
+    message:
+      "브라우저 런타임 초기화 충돌이 감지되었습니다. `E2E_USE_PLAYWRIGHT_CHROMIUM=1` + `E2E_CHROMIUM_ARGS=--disable-gpu --disable-dev-shm-usage --no-sandbox` 조합 또는 `E2E_HEADLESS=0`(headful)로 재시도해 보세요.",
   },
 ];
 
