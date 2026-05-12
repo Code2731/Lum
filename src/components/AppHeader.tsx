@@ -144,23 +144,20 @@ const AppHeader: React.FC<Props> = ({
     const focusables = getPopupElements(panelRef);
     if (focusables.length === 0) return;
 
-    const first = focusables[0];
-    const last = focusables[focusables.length - 1];
     const active = document.activeElement;
-    const isActiveInside = active && panelRef.current?.contains(active as Node);
-
-    if (e.shiftKey) {
-      if (!isActiveInside || active === first) {
-        e.preventDefault();
-        last.focus();
+    const currentIndex = focusables.indexOf(active as HTMLElement);
+    const nextIndex = (() => {
+      if (currentIndex < 0) {
+        return 0;
       }
-      return;
-    }
+      if (e.shiftKey) {
+        return (currentIndex - 1 + focusables.length) % focusables.length;
+      }
+      return (currentIndex + 1) % focusables.length;
+    })();
 
-    if (isActiveInside && active === last) {
-      e.preventDefault();
-      first.focus();
-    }
+    e.preventDefault();
+    focusables[nextIndex]?.focus();
   };
 
   const handlePopupArrowNav = (

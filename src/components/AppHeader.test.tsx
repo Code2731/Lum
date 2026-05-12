@@ -152,6 +152,39 @@ describe("AppHeader", () => {
     expect(mcpItem).toHaveFocus();
   });
 
+  it("고급 메뉴에서 Tab 키로 포커스가 순환한다", async () => {
+    const HeaderHarness = () => {
+      const [showAdvancedOverflow, setShowAdvancedOverflow] = React.useState(true);
+      const props = buildProps() as any;
+      props.showAdvancedOverflow = showAdvancedOverflow;
+      props.setShowAdvancedOverflow = setShowAdvancedOverflow;
+      return <AppHeader {...props} />;
+    };
+
+    render(<HeaderHarness />);
+
+    const menu = await screen.findByRole("menu", { name: "고급 기능 메뉴" });
+    const focusables = Array.from(menu.querySelectorAll("button")).filter((el) => !el.hasAttribute("disabled"));
+    expect(focusables.length).toBeGreaterThan(2);
+
+    focusables[0]?.focus();
+    expect(document.activeElement).toBe(focusables[0]);
+
+    fireEvent.keyDown(focusables[0], { key: "Tab" });
+    expect(document.activeElement).toBe(focusables[1]);
+
+    focusables[1]?.focus();
+    fireEvent.keyDown(focusables[1], { key: "Tab" });
+    expect(document.activeElement).toBe(focusables[2]);
+
+    fireEvent.keyDown(document.activeElement as HTMLElement, { key: "Tab", shiftKey: true });
+    expect(document.activeElement).toBe(focusables[1]);
+
+    focusables[focusables.length - 1]?.focus();
+    fireEvent.keyDown(focusables[focusables.length - 1], { key: "Tab" });
+    expect(document.activeElement).toBe(focusables[0]);
+  });
+
   it("고급 메뉴에서 Escape로 닫으면 트리거로 포커스가 돌아간다", async () => {
     const HeaderHarness = () => {
       const [showAdvancedOverflow, setShowAdvancedOverflow] = React.useState(true);
