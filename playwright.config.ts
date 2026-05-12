@@ -79,14 +79,15 @@ export default defineConfig({
 
     /* Tauri는 decorations: false (커스텀 타이틀바) 이므로 뷰포트를 명시 */
     viewport: { width: 1280, height: 800 },
-
-    ...(preferredLocalBrowserChannel ? { channel: preferredLocalBrowserChannel } : {}),
   },
 
   projects: [
     {
       name: "chromium",
-      use: { ...devices["Desktop Chrome"] },
+      use: {
+        ...devices["Desktop Chrome"],
+        ...(preferredLocalBrowserChannel ? { channel: preferredLocalBrowserChannel } : {}),
+      },
     },
   ],
 
