@@ -111,6 +111,14 @@ const NotificationCenter: React.FC<Props> = ({
     };
   }, []); // 리스너는 한 번만 등록, 최신 onClose는 ref를 통해 참조
 
+  useEffect(() => {
+    const focusables = getPopupElements();
+    if (focusables.length === 0) return;
+    requestAnimationFrame(() => {
+      focusables[0]?.focus();
+    });
+  }, []);
+
   return (
     <div
       id={panelId}

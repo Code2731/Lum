@@ -1,6 +1,6 @@
 import React from "react";
 import { describe, expect, it, vi } from "vitest";
-import { fireEvent, render } from "@testing-library/react";
+import { fireEvent, render, waitFor } from "@testing-library/react";
 import NotificationCenter from "./NotificationCenter";
 import type { AppNotification } from "../hooks/useNotificationCenter";
 
@@ -142,5 +142,34 @@ describe("NotificationCenter", () => {
     );
 
     expect(getByLabelText("cmd 알림 닫기")).toBeInTheDocument();
+  });
+
+  it("패널이 열리면 첫 포커스 가능한 요소가 포커스를 받는다", async () => {
+    const notifications: AppNotification[] = [
+      {
+        id: "1",
+        type: "command",
+        title: "cmd",
+        body: "삭제 테스트",
+        timestamp: Date.now(),
+        read: false,
+      },
+    ];
+
+    const { getByLabelText } = render(
+      <NotificationCenter
+        notifications={notifications}
+        unreadCount={1}
+        onMarkAllRead={vi.fn()}
+        onDismiss={vi.fn()}
+        onClear={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    const initialFocusTarget = getByLabelText("모든 알림 읽음 처리");
+    await waitFor(() => {
+      expect(initialFocusTarget).toHaveFocus();
+    });
   });
 });
