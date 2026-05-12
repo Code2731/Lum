@@ -205,6 +205,7 @@ test.describe("LUM 스모크 테스트", () => {
     await notifButton.click();
     const notifPanel = page.getByRole("menu", { name: "알림 센터" });
     const notifClose = notifPanel.getByRole("button", { name: "알림 센터 닫기" });
+    await expectInViewport(page, "[role='menu'][aria-label='알림 센터']");
     await expect(notifClose).toBeVisible();
 
     const closeBox = await notifClose.boundingBox();
@@ -217,6 +218,41 @@ test.describe("LUM 스모크 테스트", () => {
     expect(closeBox!.y + closeBox!.height).toBeLessThanOrEqual(viewport!.height);
     await page.keyboard.press("Escape");
     await expect(notifPanel).toBeHidden();
+  });
+
+  test("고급 기능과 알림 센터는 키보드로도 상호 배타적으로 열리고 포커스가 복구된다", async ({ page }) => {
+    await page.setViewportSize({ width: 860, height: 520 });
+    await waitForApp(page);
+
+    const advancedButton = page.getByRole("button", {
+      name: "고급 기능 (MCP / Squad / Healing / Recall / LoRA / RAG / xLLM)",
+    });
+    const notifButton = page.getByRole("button", { name: "알림 센터" });
+    const advancedPanel = page.getByRole("menu", { name: "고급 기능 메뉴" });
+    const notifPanel = page.getByRole("menu", { name: "알림 센터" });
+
+    await advancedButton.focus();
+    await page.keyboard.press("Enter");
+    await expect(advancedPanel).toBeVisible();
+    await expect(notifPanel).toBeHidden();
+
+    await notifButton.focus();
+    await page.keyboard.press("Space");
+    await expect(notifPanel).toBeVisible();
+    await expect(advancedPanel).toBeHidden();
+    await expect(notifPanel.getByRole("button", { name: "알림 센터 닫기" })).toBeVisible();
+    await expectInViewport(page, "[role='menu'][aria-label='알림 센터']");
+
+    await page.keyboard.press("Escape");
+    await expect(notifPanel).toBeHidden();
+    await expect(notifButton).toHaveFocus();
+
+    await advancedButton.focus();
+    await page.keyboard.press("Enter");
+    await expect(advancedPanel).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(advancedPanel).toBeHidden();
+    await expect(advancedButton).toHaveFocus();
   });
 
   test("고급 기능과 알림 센터는 동시에 열리지 않는다", async ({ page }) => {
