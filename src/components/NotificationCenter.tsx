@@ -6,6 +6,7 @@ import type { AppNotification, NotifType } from "../hooks/useNotificationCenter"
 interface Props {
   notifications: AppNotification[];
   unreadCount: number;
+  panelId?: string;
   onMarkAllRead: () => void;
   onDismiss: (id: string) => void;
   onClear: () => void;
@@ -35,7 +36,7 @@ function timeAgo(ts: number): string {
 }
 
 const NotificationCenter: React.FC<Props> = ({
-  notifications, unreadCount, onMarkAllRead, onDismiss, onClear, onClose,
+  notifications, unreadCount, panelId, onMarkAllRead, onDismiss, onClear, onClose,
 }) => {
   const panelRef = useRef<HTMLDivElement>(null);
   const onCloseRef = useRef(onClose);
@@ -62,6 +63,9 @@ const NotificationCenter: React.FC<Props> = ({
 
   return (
     <div
+      id={panelId}
+      role="dialog"
+      aria-label="알림 센터"
       ref={panelRef}
       className="absolute top-full right-0 mt-1 w-80 max-h-[480px] flex flex-col bg-[#161b22] border border-white/10 rounded-xl shadow-2xl z-50 overflow-hidden"
     >

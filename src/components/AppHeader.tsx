@@ -124,6 +124,8 @@ const AppHeader: React.FC<Props> = ({
   const advancedOverflowRef = React.useRef<HTMLDivElement>(null);
   const advancedOverflowButtonRef = React.useRef<HTMLButtonElement>(null);
   const notifCenterButtonRef = React.useRef<HTMLButtonElement>(null);
+  const ADVANCED_OVERFLOW_PANEL_ID = "advanced-overflow-panel";
+  const NOTIF_CENTER_PANEL_ID = "notification-center-panel";
 
   const closeAdvancedOverflow = React.useCallback(() => {
     setShowAdvancedOverflow(false);
@@ -375,6 +377,8 @@ const AppHeader: React.FC<Props> = ({
               label="고급 기능 (MCP / Squad / Healing / Recall / LoRA / RAG / xLLM)"
               active={showAdvancedOverflow}
               badge={squadStore.squads.length > 0 || hasUnseenAdvanced}
+              aria-controls={ADVANCED_OVERFLOW_PANEL_ID}
+              aria-expanded={showAdvancedOverflow}
               onClick={() => setShowAdvancedOverflow(v => !v)}
             >
               <SlidersHorizontal size={14} />
@@ -382,7 +386,10 @@ const AppHeader: React.FC<Props> = ({
             <AnimatePresence>
               {showAdvancedOverflow && (
                 <motion.div
+                  id={ADVANCED_OVERFLOW_PANEL_ID}
                   key="advanced-overflow"
+                  role="menu"
+                  aria-label="고급 기능 메뉴"
                   initial={{ opacity: 0, scale: 0.96, y: -4 }}
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.96, y: -4 }}
@@ -488,6 +495,8 @@ const AppHeader: React.FC<Props> = ({
             label="알림 센터"
             active={showNotifCenter}
             badge={notifCenter.unreadCount > 0}
+            aria-controls={NOTIF_CENTER_PANEL_ID}
+            aria-expanded={showNotifCenter}
             onClick={() => { setShowNotifCenter(v => !v); if (!showNotifCenter) notifCenter.markAllRead(); }}
           >
             <Bell size={14} />
@@ -508,6 +517,7 @@ const AppHeader: React.FC<Props> = ({
                   onMarkAllRead={notifCenter.markAllRead}
                   onDismiss={notifCenter.dismiss}
                   onClear={notifCenter.clear}
+                  panelId={NOTIF_CENTER_PANEL_ID}
                   onClose={closeNotifCenter}
                 />
               </motion.div>
@@ -530,6 +540,7 @@ const AdvancedRow: React.FC<{
 }> = ({ icon, label, badge, isNew, onClick }) => (
   <button
     type="button"
+    role="menuitem"
     onClick={onClick}
     className="w-full flex items-center gap-2 px-2 py-1.5 rounded text-[11px] text-white/75 hover:text-white hover:bg-white/[0.07] transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
   >
