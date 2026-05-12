@@ -37,7 +37,7 @@ export default defineConfig({
 
   use: {
     /* Vite 개발 서버 주소 (vite.config.ts 의 server.port: 1420) */
-    baseURL: "http://localhost:1420",
+    baseURL: "http://127.0.0.1:1420",
 
     /* 헤드리스 브라우저 */
     headless: true,
@@ -67,8 +67,8 @@ export default defineConfig({
    * 이미 실행 중인 서버가 있으면 재사용한다.
    */
   webServer: {
-    command: "npm run dev",
-    url: "http://localhost:1420",
+    command: "npm run dev -- --host 127.0.0.1 --port 1420",
+    url: "http://127.0.0.1:1420",
     reuseExistingServer: !process.env.CI,
     timeout: 60_000,
     stdout: "ignore",
