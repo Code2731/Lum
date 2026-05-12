@@ -26,6 +26,9 @@ const candidates = [
   "npx",
 ];
 
+const isVerbose = process.env.E2E_VERBOSE === "1";
+const isDryRun = process.env.E2E_DRY_RUN === "1";
+
 const makeEnv = {
   ...process.env,
   E2E_NO_WEB_SERVER: "1",
@@ -130,8 +133,28 @@ const buildCommandEnv = (profile) => ({
   ...profile.env,
 });
 
+const printInfo = (...messages) => {
+  if (isVerbose || isDryRun) {
+    for (const message of messages) {
+      console.error(`[E2E-INFO] ${message}`);
+    }
+  }
+};
+
 const hasLaunchFailure = (output) =>
   launchFailureSignatures.some((signature) => output.includes(signature));
+
+if (isDryRun) {
+  printInfo("Dry-run enabled. No tests will be executed.");
+  printInfo(`project filter: ${projectArgSpecified ? "explicit --project 사용" : "fallback 프로젝트 순회"}`);
+  printInfo(`launch projects: ${finalFallbackProjects.join(", ")}`);
+  printInfo(`launch profiles: ${launchFallbackProfiles.map((profile) => profile.name).join(", ")}`);
+  printInfo(
+    `playwright candidates: ${candidates.filter((candidate) => Boolean(candidate) && candidate.length > 0).join(", ")}`,
+  );
+  printInfo(`total attempts 예상: ${candidates.filter((candidate) => Boolean(candidate) && candidate.length > 0).length * launchFallbackProfiles.length * testArgMatrix.length}개`);
+  process.exit(0);
+}
 
 for (const command of candidates) {
   if (!command || command.length === 0) {
