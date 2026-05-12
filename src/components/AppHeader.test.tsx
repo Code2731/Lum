@@ -1,0 +1,154 @@
+import React from "react";
+import { describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
+vi.mock("@tauri-apps/api/window", () => ({
+  getCurrentWindow: vi.fn(() => ({
+    isMaximized: vi.fn(() => Promise.resolve(false)),
+    onResized: vi.fn(() => Promise.resolve(vi.fn())),
+    close: vi.fn(() => Promise.resolve()),
+    minimize: vi.fn(() => Promise.resolve()),
+    toggleMaximize: vi.fn(() => Promise.resolve()),
+  })),
+}));
+import AppHeader from "./AppHeader";
+
+const buildProps = () => {
+  return {
+    specs: {
+      total_memory_gb: 16,
+      available_memory_gb: 8,
+      cpu_cores: 8,
+      gpu_type: "integrated" as const,
+      wgpu_supported: false,
+      gpu_name: "Apple GPU",
+      recommended_engine: "xllm" as const,
+      recommended_model: "mock",
+      recommendation_reason: "",
+    },
+    specsLoading: false,
+    viewMode: "terminal" as const,
+    setViewMode: vi.fn(),
+    loadedModelId: "mock-model",
+    heavyModelId: "mock-heavy",
+    heavyEnabled: false,
+    privacyLedger: {
+      state: {
+        total: 0,
+        onlineCalls: 0,
+        perBackend: {
+          embedded: { count: 0, totalPromptChars: 0, totalLatencyMs: 0, lastTs: 0 },
+          ollama: { count: 0, totalPromptChars: 0, totalLatencyMs: 0, lastTs: 0 },
+          xllm: { count: 0, totalPromptChars: 0, totalLatencyMs: 0, lastTs: 0 },
+          gemini: { count: 0, totalPromptChars: 0, totalLatencyMs: 0, lastTs: 0 },
+        },
+        last: null,
+      },
+      reset: vi.fn(),
+      isAllOnDevice: true,
+    },
+    squadStore: {
+      squads: [],
+      load: vi.fn(),
+    },
+    notifCenter: {
+      notifications: [],
+      unreadCount: 0,
+      markAllRead: vi.fn(),
+      dismiss: vi.fn(),
+      clear: vi.fn(),
+    },
+    scriptLib: {
+      loadScripts: vi.fn(),
+      scripts: [],
+      loading: false,
+      saveScript: vi.fn(),
+      deleteScript: vi.fn(),
+      runScript: vi.fn(),
+    },
+    panels: {
+      showModelManager: false,
+      setShowModelManager: vi.fn(),
+      showRagPanel: false,
+      setShowRagPanel: vi.fn(),
+      showHistorySearch: false,
+      setShowHistorySearch: vi.fn(),
+      showCommitPanel: false,
+      setShowCommitPanel: vi.fn(),
+      showXllmPanel: false,
+      setShowXllmPanel: vi.fn(),
+      showDiffReview: false,
+      setShowDiffReview: vi.fn(),
+      showThemePanel: false,
+      setShowThemePanel: vi.fn(),
+      showWorkspace: false,
+      setShowWorkspace: vi.fn(),
+      showScriptPanel: false,
+      setShowScriptPanel: vi.fn(),
+      showSysmon: false,
+      setShowSysmon: vi.fn(),
+      showNotifCenter: false,
+      setShowNotifCenter: vi.fn(),
+      showMcpPanel: false,
+      setShowMcpPanel: vi.fn(),
+      showPalette: false,
+      setShowPalette: vi.fn(),
+      showSshModal: false,
+      setShowSshModal: vi.fn(),
+      showSquadPanel: false,
+      setShowSquadPanel: vi.fn(),
+      showHealingDataset: false,
+      setShowHealingDataset: vi.fn(),
+      showHistoryGraph: false,
+      setShowHistoryGraph: vi.fn(),
+      showRecall: false,
+      setShowRecall: vi.fn(),
+      showLoraForge: false,
+      setShowLoraForge: vi.fn(),
+      showSkills: false,
+      setShowSkills: vi.fn(),
+      closeOverlays: vi.fn(),
+    },
+    showFileExplorer: false,
+    setShowFileExplorer: vi.fn(),
+    showReasoning: false,
+    toggleReasoning: vi.fn(),
+    toolbarShowAdvanced: false,
+    toggleToolbarAdvanced: vi.fn(),
+    showAdvancedOverflow: false,
+    setShowAdvancedOverflow: vi.fn(),
+    loadWorkspaces: vi.fn(),
+    seenAdvancedFeatures: [] as string[],
+    onMarkAdvancedSeen: vi.fn(),
+  } as any;
+};
+
+describe("AppHeader", () => {
+  it("고급 메뉴에서 화살표 키로 포커스가 순환 이동한다", async () => {
+    const HeaderHarness = () => {
+      const [showAdvancedOverflow, setShowAdvancedOverflow] = React.useState(true);
+      const [showNotifCenter, setShowNotifCenter] = React.useState(false);
+      const props = buildProps() as any;
+      props.showAdvancedOverflow = showAdvancedOverflow;
+      props.setShowAdvancedOverflow = setShowAdvancedOverflow;
+      props.showNotifCenter = showNotifCenter;
+      props.setShowNotifCenter = setShowNotifCenter;
+      return <AppHeader {...props} />;
+    };
+
+    render(<HeaderHarness />);
+
+    const mcpItem = await screen.findByRole("menuitem", { name: "MCP 서버" });
+    mcpItem.focus();
+    expect(mcpItem).toHaveFocus();
+
+    const squadItem = screen.getByRole("menuitem", { name: "Worktree Squad" });
+    const focusSpy = vi.spyOn(squadItem, "focus");
+
+    fireEvent.keyDown(mcpItem, { key: "ArrowDown" });
+    expect(focusSpy).toHaveBeenCalled();
+    expect(squadItem).toHaveFocus();
+
+    fireEvent.keyDown(squadItem, { key: "ArrowUp" });
+    expect(mcpItem).toHaveFocus();
+  });
+});
