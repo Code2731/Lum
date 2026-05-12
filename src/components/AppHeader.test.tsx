@@ -230,4 +230,50 @@ describe("AppHeader", () => {
     });
     expect(notifButton).toHaveFocus();
   });
+
+  it("고급 메뉴를 바깥에서 클릭하면 닫히고 트리거로 포커스가 돌아간다", async () => {
+    const HeaderHarness = () => {
+      const [showAdvancedOverflow, setShowAdvancedOverflow] = React.useState(true);
+      const props = buildProps() as any;
+      props.showAdvancedOverflow = showAdvancedOverflow;
+      props.setShowAdvancedOverflow = setShowAdvancedOverflow;
+      return <AppHeader {...props} />;
+    };
+
+    render(<HeaderHarness />);
+
+    const overflowButton = screen.getByRole("button", { name: "고급 기능 (MCP / Squad / Healing / Recall / LoRA / RAG / xLLM)" });
+    overflowButton.focus();
+    expect(overflowButton).toHaveFocus();
+
+    fireEvent.mouseDown(document.body);
+
+    await waitFor(() => {
+      expect(screen.queryByRole("menu", { name: "고급 기능 메뉴" })).not.toBeInTheDocument();
+    });
+    expect(overflowButton).toHaveFocus();
+  });
+
+  it("알림 센터를 바깥에서 클릭하면 닫히고 트리거로 포커스가 돌아간다", async () => {
+    const HeaderHarness = () => {
+      const [showNotifCenter, setShowNotifCenter] = React.useState(true);
+      const props = buildProps() as any;
+      props.showNotifCenter = showNotifCenter;
+      props.setShowNotifCenter = setShowNotifCenter;
+      return <AppHeader {...props} />;
+    };
+
+    render(<HeaderHarness />);
+
+    const notifButton = screen.getByRole("button", { name: "알림 센터" });
+    notifButton.focus();
+    expect(notifButton).toHaveFocus();
+
+    fireEvent.mouseDown(document.body);
+
+    await waitFor(() => {
+      expect(screen.queryByRole("menu", { name: "알림 센터" })).not.toBeInTheDocument();
+    });
+    expect(notifButton).toHaveFocus();
+  });
 });
