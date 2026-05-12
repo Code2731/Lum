@@ -4,7 +4,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Cloud, ShieldCheck, RotateCcw } from "lucide-react";
+import { Cloud, ShieldCheck, RotateCcw, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { LedgerState, Backend } from "../hooks/usePrivacyLedger";
 import { cn } from "@/lib/utils";
@@ -47,6 +47,7 @@ const TONE_CLASS: Record<LedgerTone, string> = {
   mixed: "bg-amber-300/10 text-amber-200 border-amber-300/30",
   cloudHeavy: "bg-rose-400/10 text-rose-300 border-rose-400/30",
 };
+const popupFocusables = "a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex='-1'])";
 
 function classify(state: LedgerState, isAllOnDevice: boolean): {
   tone: LedgerTone; label: string; tooltip: string;
@@ -78,18 +79,73 @@ const PrivacyLedgerBadge: React.FC<Props> = ({ state, isAllOnDevice, onReset }) 
   const popRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const popoverId = React.useId();
+  const onResetRef = useRef(onReset);
+  onResetRef.current = onReset;
+
+  const getPopupElements = () => {
+    if (!popRef.current) return [];
+    return Array.from(popRef.current.querySelectorAll<HTMLElement>(popupFocusables));
+  };
+
+  const closePopover = React.useCallback(() => {
+    setOpen(false);
+    triggerRef.current?.focus();
+  }, []);
+
+  const handlePopupTabTrap = (e: React.KeyboardEvent) => {
+    if (e.key !== "Tab") return;
+
+    const focusables = getPopupElements();
+    if (focusables.length === 0) return;
+
+    const active = document.activeElement;
+    const currentIndex = focusables.indexOf(active as HTMLElement);
+    const nextIndex = (() => {
+      if (currentIndex < 0) {
+        return 0;
+      }
+      if (e.shiftKey) {
+        return (currentIndex - 1 + focusables.length) % focusables.length;
+      }
+      return (currentIndex + 1) % focusables.length;
+    })();
+
+    e.preventDefault();
+    focusables[nextIndex]?.focus();
+  };
+
+  const handlePopupArrowNav = (e: React.KeyboardEvent) => {
+    if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
+
+    const focusables = getPopupElements();
+    if (focusables.length === 0) return;
+
+    const active = document.activeElement;
+    const currentIndex = focusables.indexOf(active as HTMLElement);
+    const nextIndex = (() => {
+      if (currentIndex < 0) {
+        return 0;
+      }
+      if (e.key === "ArrowDown") {
+        return (currentIndex + 1) % focusables.length;
+      }
+      return (currentIndex - 1 + focusables.length) % focusables.length;
+    })();
+
+    e.preventDefault();
+    focusables[nextIndex]?.focus();
+  };
 
   useEffect(() => {
     if (!open) return;
     const handler = (e: MouseEvent) => {
       if (popRef.current && !popRef.current.contains(e.target as Node)) {
-        setOpen(false);
+        closePopover();
       }
     };
     const keyHandler = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        setOpen(false);
-        triggerRef.current?.focus();
+        closePopover();
       }
     };
     document.addEventListener("mousedown", handler);
@@ -98,6 +154,13 @@ const PrivacyLedgerBadge: React.FC<Props> = ({ state, isAllOnDevice, onReset }) 
       document.removeEventListener("mousedown", handler);
       document.removeEventListener("keydown", keyHandler);
     };
+  }, [open, closePopover]);
+
+  useEffect(() => {
+    if (!open) return;
+    const focusables = getPopupElements();
+    if (focusables.length === 0) return;
+    focusables[0]?.focus();
   }, [open]);
 
   const { tone, label, tooltip: tooltipText } = classify(state, isAllOnDevice);
@@ -131,6 +194,10 @@ const PrivacyLedgerBadge: React.FC<Props> = ({ state, isAllOnDevice, onReset }) 
       <AnimatePresence>
         {open && (
           <motion.div
+            onKeyDown={(e) => {
+              handlePopupTabTrap(e);
+              handlePopupArrowNav(e);
+            }}
             key="privacy-ledger-pop"
             ref={popRef}
             initial={{ opacity: 0, scale: 0.96, y: -4 }}
@@ -148,16 +215,27 @@ const PrivacyLedgerBadge: React.FC<Props> = ({ state, isAllOnDevice, onReset }) 
                 <ShieldCheck size={12} />
                 <span>Privacy Ledger</span>
               </div>
-              <button
-                type="button"
-                onClick={onReset}
-                title="이번 세션 카운터 초기화"
-                aria-label="세션 카운터 초기화"
-                className="inline-flex items-center gap-1 text-[11px] text-white/45 hover:text-white/85 transition-colors rounded px-1.5 py-0.5 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-              >
-                <RotateCcw size={10} />
-                초기화
-              </button>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={closePopover}
+                  aria-label="Privacy Ledger 상세 닫기"
+                  className="inline-flex items-center gap-1 text-[11px] text-white/45 hover:text-white/85 transition-colors rounded px-1.5 py-0.5 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                >
+                  <X size={11} />
+                  닫기
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onResetRef.current()}
+                  title="이번 세션 카운터 초기화"
+                  aria-label="세션 카운터 초기화"
+                  className="inline-flex items-center gap-1 text-[11px] text-white/45 hover:text-white/85 transition-colors rounded px-1.5 py-0.5 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                >
+                  <RotateCcw size={10} />
+                  초기화
+                </button>
+              </div>
             </div>
 
             <div className="px-3 py-2.5 border-b border-white/5">

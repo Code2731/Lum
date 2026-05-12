@@ -74,4 +74,60 @@ describe("PrivacyLedgerBadge", () => {
     const reset = queryByText("초기화");
     expect(reset).toBeInTheDocument();
   });
+
+  it("팝오버에서 Tab/Arrow 키로 포커스를 순환한다", () => {
+    const state: LedgerState = {
+      ...defaultState,
+      total: 2,
+      onlineCalls: 1,
+      perBackend: {
+        ...defaultState.perBackend,
+        gemini: {
+          count: 1,
+          totalPromptChars: 11,
+          totalLatencyMs: 123,
+          lastTs: Date.now(),
+        },
+      },
+      last: {
+        backend: "gemini",
+        online: true,
+        model: "gpt-test",
+        prompt_chars: 11,
+        latency_ms: 123,
+        ts_ms: Date.now(),
+      },
+    };
+
+    const { getByRole, queryAllByRole } = render(
+      <PrivacyLedgerBadge
+        state={state}
+        isAllOnDevice={false}
+        onReset={vi.fn()}
+      />,
+    );
+
+    const trigger = getByRole("button", { name: /Privacy Ledger/ });
+    fireEvent.click(trigger);
+
+    const buttons = queryAllByRole("button").filter((btn) => btn !== trigger);
+    expect(buttons.length).toBeGreaterThanOrEqual(2);
+
+    const closeButton = getByRole("button", { name: "Privacy Ledger 상세 닫기" });
+    const resetButton = getByRole("button", { name: "세션 카운터 초기화" });
+    const closeButtonNode = closeButton as HTMLButtonElement;
+
+    closeButtonNode.focus();
+    fireEvent.keyDown(closeButtonNode, { key: "ArrowDown" });
+    expect(resetButton).toHaveFocus();
+
+    fireEvent.keyDown(resetButton, { key: "ArrowDown" });
+    expect(closeButtonNode).toHaveFocus();
+
+    fireEvent.keyDown(closeButtonNode, { key: "ArrowUp" });
+    expect(resetButton).toHaveFocus();
+
+    fireEvent.keyDown(resetButton, { key: "Tab", shiftKey: true });
+    expect(closeButtonNode).toHaveFocus();
+  });
 });
