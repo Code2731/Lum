@@ -11,6 +11,8 @@
     "tauri:dev:cuda": "scripts\\tauri-dev-cuda.bat",
     "tauri:dev:metal": "tauri dev --features embedded-ai",
     "test": "vitest run",
+    "test:e2e": "npx playwright test",
+    "test:e2e:noserver": "E2E_NO_WEB_SERVER=1 npx playwright test",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "format": "prettier --write \"src/**/*.{ts,tsx,css,json}\""
   },

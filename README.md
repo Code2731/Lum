@@ -106,6 +106,11 @@ write_to_pty ──► SyncSender ──► Writer thread ──► PTY master �
 - **Agent ecosystem** — `lum-mcp-server` (Rust native stdio MCP, 7 tools — usable from external MCP clients such as Claude Desktop, CrewAI, or any custom agent)
 - **Testing** — Vitest (TS 131 tests), Playwright (E2E smoke), `cargo test` (Rust 125+ tests)
 
+E2E 실행:
+- `npm run test` : 프론트엔드 유닛·통합 테스트
+- `npm run test:e2e` : Playwright E2E (Vite 서버 자동 기동 시도)
+- `npm run test:e2e:noserver` : 서버가 이미 실행 중일 때 E2E만 실행
+
 ### Getting Started
 
 **Prerequisites**
@@ -142,6 +147,20 @@ npm run tauri dev                       # external LLM backends only (no on-devi
 npm run tauri build                                # lightweight (no on-device inference)
 npm run tauri build -- --features embedded-ai     # full build — Cargo가 OS에 맞춰 CUDA/Metal 자동 선택
 ```
+
+### Playwright E2E 실행
+
+```bash
+# 기본 동작: Playwright가 127.0.0.1:1420 서버를 자동 시작/재사용 시도
+npm run test:e2e
+
+# 바인딩/권한 제약이 있는 환경: 서버를 먼저 띄운 뒤 실행
+npm run dev -- --host 127.0.0.1 --port 1420
+npm run test:e2e:noserver
+```
+
+- `E2E_NO_WEB_SERVER=1` 또는 `E2E_SKIP_WEBSERVER=1` 설정 시 Playwright가 `webServer`를 직접 띄우지 않습니다.
+- CI에서는 기존 환경 변수로 이미 실행 중인 서버를 재사용하지 않도록 설정되어 있습니다.
 
 ### AI Setup (optional)
 
