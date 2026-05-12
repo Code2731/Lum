@@ -123,9 +123,45 @@ const AppHeader: React.FC<Props> = ({
   const heavy = shortName(heavyModelId);
   const advancedOverflowRef = React.useRef<HTMLDivElement>(null);
   const advancedOverflowButtonRef = React.useRef<HTMLButtonElement>(null);
+  const advancedOverflowPanelRef = React.useRef<HTMLDivElement>(null);
   const notifCenterButtonRef = React.useRef<HTMLButtonElement>(null);
+  const notifCenterPanelRef = React.useRef<HTMLDivElement>(null);
   const ADVANCED_OVERFLOW_PANEL_ID = "advanced-overflow-panel";
   const NOTIF_CENTER_PANEL_ID = "notification-center-panel";
+  const popupFocusables = "a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex='-1'])";
+
+  const getPopupElements = (panelRef: React.RefObject<HTMLDivElement>): HTMLElement[] => {
+    if (!panelRef.current) return [];
+    return Array.from(panelRef.current.querySelectorAll<HTMLElement>(popupFocusables)).filter((el) => el.offsetParent !== null);
+  };
+
+  const handlePopupTabTrap = (
+    e: React.KeyboardEvent,
+    panelRef: React.RefObject<HTMLDivElement>,
+  ) => {
+    if (e.key !== "Tab") return;
+
+    const focusables = getPopupElements(panelRef);
+    if (focusables.length === 0) return;
+
+    const first = focusables[0];
+    const last = focusables[focusables.length - 1];
+    const active = document.activeElement;
+    const isActiveInside = active && panelRef.current?.contains(active as Node);
+
+    if (e.shiftKey) {
+      if (!isActiveInside || active === first) {
+        e.preventDefault();
+        last.focus();
+      }
+      return;
+    }
+
+    if (isActiveInside && active === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  };
 
   const closeAdvancedOverflow = React.useCallback(() => {
     setShowAdvancedOverflow(false);
@@ -163,6 +199,22 @@ const AppHeader: React.FC<Props> = ({
       document.removeEventListener("keydown", handleEscape);
     };
   }, [showAdvancedOverflow, closeAdvancedOverflow]);
+
+  React.useEffect(() => {
+    if (!showAdvancedOverflow) return;
+    const focusables = getPopupElements(advancedOverflowPanelRef);
+    if (focusables.length > 0) {
+      focusables[0]?.focus();
+    }
+  }, [showAdvancedOverflow]);
+
+  React.useEffect(() => {
+    if (!showNotifCenter) return;
+    const focusables = getPopupElements(notifCenterPanelRef);
+    if (focusables.length > 0) {
+      focusables[0]?.focus();
+    }
+  }, [showNotifCenter]);
 
   return (
     <header
@@ -386,10 +438,12 @@ const AppHeader: React.FC<Props> = ({
             <AnimatePresence>
               {showAdvancedOverflow && (
                 <motion.div
+                  ref={advancedOverflowPanelRef}
                   id={ADVANCED_OVERFLOW_PANEL_ID}
                   key="advanced-overflow"
                   role="menu"
                   aria-label="고급 기능 메뉴"
+                  onKeyDown={(e) => handlePopupTabTrap(e, advancedOverflowPanelRef)}
                   initial={{ opacity: 0, scale: 0.96, y: -4 }}
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.96, y: -4 }}
@@ -504,7 +558,11 @@ const AppHeader: React.FC<Props> = ({
           <AnimatePresence>
             {showNotifCenter && (
               <motion.div
+                ref={notifCenterPanelRef}
                 key="notif-center"
+                role="menu"
+                aria-label="알림 센터"
+                onKeyDown={(e) => handlePopupTabTrap(e, notifCenterPanelRef)}
                 initial={{ opacity: 0, scale: 0.96, y: -4 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.96, y: -4 }}
