@@ -118,6 +118,55 @@ describe("NotificationCenter", () => {
     expect(document.activeElement).toBe(focusables[focusables.length - 1]);
   });
 
+  it("포커스는 Tab 키로도 순환 이동한다", () => {
+    const notifications: AppNotification[] = [
+      {
+        id: "1",
+        type: "agent",
+        title: "agent done",
+        body: "첫 번째 메시지",
+        timestamp: Date.now(),
+        read: false,
+      },
+      {
+        id: "2",
+        type: "command",
+        title: "command done",
+        body: "두 번째 메시지",
+        timestamp: Date.now(),
+        read: true,
+      },
+    ];
+
+    const { container } = render(
+      <NotificationCenter
+        notifications={notifications}
+        unreadCount={1}
+        onMarkAllRead={vi.fn()}
+        onDismiss={vi.fn()}
+        onClear={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    const focusables = Array.from(container.querySelectorAll("button")).filter((el) => !el.hasAttribute("disabled"));
+    expect(focusables.length).toBeGreaterThan(2);
+
+    focusables[0]?.focus();
+    expect(document.activeElement).toBe(focusables[0]);
+
+    fireEvent.keyDown(focusables[0], { key: "Tab" });
+    expect(document.activeElement).toBe(focusables[1]);
+
+    focusables[1]?.focus();
+    fireEvent.keyDown(focusables[1], { key: "Tab", shiftKey: true });
+    expect(document.activeElement).toBe(focusables[0]);
+
+    focusables[focusables.length - 1]?.focus();
+    fireEvent.keyDown(focusables[focusables.length - 1], { key: "Tab" });
+    expect(document.activeElement).toBe(focusables[0]);
+  });
+
   it("알림 삭제 버튼에 접근성 라벨이 있다", () => {
     const notifications: AppNotification[] = [
       {
