@@ -1,5 +1,19 @@
 import { defineConfig, devices } from "@playwright/test";
 
+type WebServerConfig = NonNullable<Parameters<typeof defineConfig>[0]["webServer"]>;
+
+const shouldStartWebServer = process.env.E2E_NO_WEB_SERVER !== "1" && process.env.E2E_SKIP_WEBSERVER !== "1";
+const webServerConfig: WebServerConfig = shouldStartWebServer
+  ? {
+      command: "npm run dev -- --host 127.0.0.1 --port 1420",
+      url: "http://127.0.0.1:1420",
+      reuseExistingServer: !process.env.CI,
+      timeout: 60_000,
+      stdout: "ignore",
+      stderr: "pipe",
+    }
+  : undefined;
+
 /**
  * Playwright E2E 설정 — LUM 터미널 에뮬레이터 스모크 테스트 스위트.
  *
@@ -7,7 +21,10 @@ import { defineConfig, devices } from "@playwright/test";
  * window.__TAURI_INTERNALS__ 모킹은 각 테스트 파일의 beforeEach 에서 주입된다.
  *
  * 실행 방법:
- *   npx playwright test          # 헤드리스 실행
+ *   npx playwright test                         # 헤드리스 실행(가능하면 내부에서 서버 자동 시작)
+ *   E2E_NO_WEB_SERVER=1 npx playwright test     # 서버가 이미 켜져 있을 때 사용
+ *   E2E_SKIP_WEBSERVER=1 npx playwright test    # 동일 의미의 대체 변수
+ *   npm run dev -- --host 127.0.0.1 --port 1420 # 사전 실행 후 위 Playwright 명령 수행
  *   npx playwright test --ui     # UI 모드
  *   npx playwright show-report   # 리포트 보기
  */
@@ -63,15 +80,9 @@ export default defineConfig({
   ],
 
   /**
-   * Vite 개발 서버를 자동으로 시작/종료.
-   * 이미 실행 중인 서버가 있으면 재사용한다.
+   * Vite 개발 서버를 자동으로 시작/종료한다.
+   * 샌드박스처럼 바인딩이 제한되는 환경에서는 E2E_NO_WEB_SERVER/ E2E_SKIP_WEBSERVER를
+   * 1로 두고, 별도로 `npm run dev`를 띄운 뒤 테스트를 실행한다.
    */
-  webServer: {
-    command: "npm run dev -- --host 127.0.0.1 --port 1420",
-    url: "http://127.0.0.1:1420",
-    reuseExistingServer: !process.env.CI,
-    timeout: 60_000,
-    stdout: "ignore",
-    stderr: "pipe",
-  },
+  ...(webServerConfig ? { webServer: webServerConfig } : {}),
 });
