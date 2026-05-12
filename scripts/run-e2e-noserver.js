@@ -10,6 +10,7 @@ const result = spawnSync(
     env: {
       ...process.env,
       E2E_NO_WEB_SERVER: "1",
+      E2E_SKIP_WEBSERVER: "1",
     },
   },
 );
