@@ -183,4 +183,39 @@ test.describe("LUM 스모크 테스트", () => {
     await expectInViewport(page, "[aria-label='shortcut-help-close']");
     await page.keyboard.press("Escape");
   });
+
+  test("헤더 오버레이가 뷰포트 밖으로 벗어나지 않는다", async ({ page }) => {
+    await page.setViewportSize({ width: 860, height: 520 });
+    await waitForApp(page);
+
+    const advancedButton = page.getByRole("button", {
+      name: "고급 기능 (MCP / Squad / Healing / Recall / LoRA / RAG / xLLM)",
+    });
+    await expect(advancedButton).toBeVisible();
+    await advancedButton.click();
+    const advancedPanel = page.getByRole("menu", { name: "고급 기능 메뉴" });
+    await expect(advancedPanel).toBeVisible();
+    await expectInViewport(page, "[role='menu'][aria-label='고급 기능 메뉴']");
+    await expect(advancedPanel.getByRole("menuitem", { name: "MCP 서버" })).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(advancedPanel).toBeHidden();
+
+    const notifButton = page.getByRole("button", { name: "알림 센터" });
+    await expect(notifButton).toBeVisible();
+    await notifButton.click();
+    const notifPanel = page.getByRole("menu", { name: "알림 센터" });
+    const notifClose = notifPanel.getByRole("button", { name: "알림 센터 닫기" });
+    await expect(notifClose).toBeVisible();
+
+    const closeBox = await notifClose.boundingBox();
+    const viewport = page.viewportSize();
+    expect(closeBox).not.toBeNull();
+    expect(viewport).not.toBeNull();
+    expect(closeBox!.x).toBeGreaterThanOrEqual(0);
+    expect(closeBox!.y).toBeGreaterThanOrEqual(0);
+    expect(closeBox!.x + closeBox!.width).toBeLessThanOrEqual(viewport!.width);
+    expect(closeBox!.y + closeBox!.height).toBeLessThanOrEqual(viewport!.height);
+    await page.keyboard.press("Escape");
+    await expect(notifPanel).toBeHidden();
+  });
 });
