@@ -13,9 +13,11 @@ const fallbackProjects = projectArgSpecified
       .map((project) => project.trim())
       .filter(Boolean);
 
+const finalFallbackProjects = fallbackProjects.length > 0 ? fallbackProjects : ["chromium"];
+
 const testArgMatrix = projectArgSpecified
   ? [baseArgs]
-  : fallbackProjects.map((project) => [...baseArgs, `--project=${project}`]);
+  : finalFallbackProjects.map((project) => [...baseArgs, `--project=${project}`]);
 
 const candidates = [
   process.env.PLAYWRIGHT_BIN,
@@ -34,6 +36,10 @@ const launchFailureSignatures = [
   "Target page, context or browser has been closed",
   "browserType.launch",
   "Process exited with code",
+  "Executable doesn't exist",
+  "Looks like Playwright was just installed or updated",
+  "could not launch a browser process",
+  "not found. Available projects",
 ];
 
 const hasLaunchFailure = (output) =>

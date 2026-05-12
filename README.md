@@ -161,7 +161,8 @@ node scripts/run-e2e-noserver.js
 
 - `npm run test:e2e:noserver`는 `E2E_NO_WEB_SERVER=1`을 내부에서 주입하므로 Windows/macOS/Linux 모두 동일하게 동작합니다.
 - `E2E_NO_WEB_SERVER=1` 또는 `E2E_SKIP_WEBSERVER=1` 설정 시 Playwright가 `webServer`를 직접 띄우지 않습니다.
-- `E2E_FALLBACK_PROJECTS`를 설정하면 noserver 실행 시 기본 `--project=chromium` 실패 시 대체 프로젝트를 순차 실행할 수 있습니다. 예: `E2E_FALLBACK_PROJECTS="chromium,webkit,firefox"`.
+- `E2E_FALLBACK_PROJECTS`를 설정하면 noserver 실행 시 기본 `--project=chromium` 실패 시 대체 프로젝트를 순차 실행할 수 있습니다. 예: `E2E_FALLBACK_PROJECTS="chromium"`.
+  - `webkit`/`firefox`를 넣으려면 `playwright.config.ts`의 `projects` 항목에 해당 프로젝트가 등록되어 있어야 합니다.
 - CI에서는 기존 환경 변수로 이미 실행 중인 서버를 재사용하지 않도록 설정되어 있습니다.
 
 ### AI Setup (optional)
