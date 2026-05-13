@@ -71,6 +71,8 @@ interface Props {
   onMarkAdvancedSeen: (id: string) => void;
 }
 
+type PopupPlacement = "down" | "up";
+
 const AppHeader: React.FC<Props> = ({
   specs, specsLoading,
   viewMode, setViewMode,
@@ -127,9 +129,33 @@ const AppHeader: React.FC<Props> = ({
   const notifCenterPopupRef = React.useRef<HTMLDivElement>(null);
   const notifCenterButtonRef = React.useRef<HTMLButtonElement>(null);
   const notifCenterPanelRef = React.useRef<HTMLDivElement>(null);
+  const [advancedOverflowPlacement, setAdvancedOverflowPlacement] = React.useState<PopupPlacement>("down");
+  const [notifCenterPlacement, setNotifCenterPlacement] = React.useState<PopupPlacement>("down");
   const ADVANCED_OVERFLOW_PANEL_ID = "advanced-overflow-panel";
   const NOTIF_CENTER_PANEL_ID = "notification-center-panel";
   const popupFocusables = "a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex='-1'])";
+  const measurePopupPlacement = React.useCallback((trigger: HTMLElement | null): PopupPlacement => {
+    if (typeof window === "undefined" || !trigger) return "down";
+
+    const rect = trigger.getBoundingClientRect();
+    const gutter = 8;
+    const spaceAbove = rect.top - gutter;
+    const spaceBelow = window.innerHeight - rect.bottom - gutter;
+
+    return spaceAbove > spaceBelow ? "up" : "down";
+  }, []);
+
+  const advancedOverflowPanelClassName = advancedOverflowPlacement === "up"
+    ? "absolute right-0 bottom-full mb-1.5"
+    : "absolute right-0 top-full mt-1.5";
+
+  const advancedOverflowPanelOrigin = advancedOverflowPlacement === "up" ? "bottom right" : "top right";
+  const advancedOverflowPanelOffsetY = advancedOverflowPlacement === "up" ? 4 : -4;
+  const notifCenterPanelClassName = notifCenterPlacement === "up"
+    ? "absolute right-0 bottom-full mb-1.5"
+    : "absolute right-0 top-full mt-1";
+  const notifCenterPanelOrigin = notifCenterPlacement === "up" ? "bottom right" : "top right";
+  const notifCenterPanelOffsetY = notifCenterPlacement === "up" ? 4 : -4;
 
   const getPopupElements = (panelRef: React.RefObject<HTMLDivElement | null>): HTMLElement[] => {
     if (!panelRef.current) return [];
@@ -242,6 +268,20 @@ const AppHeader: React.FC<Props> = ({
   }, [showAdvancedOverflow, closeAdvancedOverflow]);
 
   React.useEffect(() => {
+    if (!showAdvancedOverflow) return;
+
+    const updatePlacement = () => {
+      setAdvancedOverflowPlacement(measurePopupPlacement(advancedOverflowButtonRef.current));
+    };
+
+    updatePlacement();
+    window.addEventListener("resize", updatePlacement);
+    return () => {
+      window.removeEventListener("resize", updatePlacement);
+    };
+  }, [showAdvancedOverflow, measurePopupPlacement]);
+
+  React.useEffect(() => {
     if (!showNotifCenter) return;
 
     const handleClose = (e: MouseEvent | PointerEvent) => {
@@ -265,6 +305,20 @@ const AppHeader: React.FC<Props> = ({
       document.removeEventListener("keydown", handleEscape);
     };
   }, [showNotifCenter, closeNotifCenter]);
+
+  React.useEffect(() => {
+    if (!showNotifCenter) return;
+
+    const updatePlacement = () => {
+      setNotifCenterPlacement(measurePopupPlacement(notifCenterButtonRef.current));
+    };
+
+    updatePlacement();
+    window.addEventListener("resize", updatePlacement);
+    return () => {
+      window.removeEventListener("resize", updatePlacement);
+    };
+  }, [showNotifCenter, measurePopupPlacement]);
 
   React.useEffect(() => {
     if (!showAdvancedOverflow) return;
@@ -513,12 +567,12 @@ const AppHeader: React.FC<Props> = ({
                     handlePopupTabTrap(e, advancedOverflowPanelRef);
                     handlePopupArrowNav(e, advancedOverflowPanelRef);
                   }}
-                  initial={{ opacity: 0, scale: 0.96, y: -4 }}
+                  initial={{ opacity: 0, scale: 0.96, y: advancedOverflowPanelOffsetY }}
                   animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.96, y: -4 }}
-                transition={{ duration: 0.15, ease: "easeOut" }}
-                style={{ transformOrigin: "top right" }}
-                className="absolute right-0 top-full mt-1.5 z-50 w-64 max-h-[min(440px,calc(100vh-3.5rem))] overflow-y-auto rounded-xl border border-white/[0.12] bg-[#0f1620]/95 backdrop-blur-md shadow-xl p-2 space-y-0.5"
+                  exit={{ opacity: 0, scale: 0.96, y: advancedOverflowPanelOffsetY }}
+                  transition={{ duration: 0.15, ease: "easeOut" }}
+                  style={{ transformOrigin: advancedOverflowPanelOrigin }}
+                  className={`${advancedOverflowPanelClassName} z-50 w-64 max-h-[min(440px,calc(100vh-3.5rem))] overflow-y-auto rounded-xl border border-white/[0.12] bg-[#0f1620]/95 backdrop-blur-md shadow-xl p-2 space-y-0.5`}
                 >
                   <AdvancedRow
                     icon={<PlugZap size={13} />}
@@ -626,21 +680,22 @@ const AppHeader: React.FC<Props> = ({
           </ToolbarIconButton>
           <AnimatePresence>
             {showNotifCenter && (
-              <motion.div
-                ref={notifCenterPanelRef}
-                key="notif-center"
+                <motion.div
+                  ref={notifCenterPanelRef}
+                  key="notif-center"
                 role="menu"
                 aria-label="알림 센터"
-                onKeyDown={(e) => {
-                  handlePopupTabTrap(e, notifCenterPanelRef);
-                  handlePopupArrowNav(e, notifCenterPanelRef);
-                }}
-                initial={{ opacity: 0, scale: 0.96, y: -4 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.96, y: -4 }}
-                transition={{ duration: 0.15, ease: "easeOut" }}
-                style={{ transformOrigin: "top right" }}
-              >
+                  onKeyDown={(e) => {
+                    handlePopupTabTrap(e, notifCenterPanelRef);
+                    handlePopupArrowNav(e, notifCenterPanelRef);
+                  }}
+                  initial={{ opacity: 0, scale: 0.96, y: notifCenterPanelOffsetY }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.96, y: notifCenterPanelOffsetY }}
+                  transition={{ duration: 0.15, ease: "easeOut" }}
+                  className={notifCenterPanelClassName}
+                  style={{ transformOrigin: notifCenterPanelOrigin }}
+                >
                 <NotificationCenter
                   notifications={notifCenter.notifications}
                   unreadCount={notifCenter.unreadCount}

@@ -48,6 +48,7 @@ const TONE_CLASS: Record<LedgerTone, string> = {
   cloudHeavy: "bg-rose-400/10 text-rose-300 border-rose-400/30",
 };
 const popupFocusables = "a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex='-1'])";
+type PopupPlacement = "down" | "up";
 
 function classify(state: LedgerState, isAllOnDevice: boolean): {
   tone: LedgerTone; label: string; tooltip: string;
@@ -78,6 +79,7 @@ const PrivacyLedgerBadge: React.FC<Props> = ({ state, isAllOnDevice, onReset }) 
   const [open, setOpen] = useState(false);
   const popRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const [placement, setPlacement] = useState<PopupPlacement>("down");
   const popoverId = React.useId();
   const onResetRef = useRef(onReset);
   onResetRef.current = onReset;
@@ -136,6 +138,16 @@ const PrivacyLedgerBadge: React.FC<Props> = ({ state, isAllOnDevice, onReset }) 
     focusables[nextIndex]?.focus();
   };
 
+  const updatePlacement = React.useCallback(() => {
+    if (!triggerRef.current || typeof window === "undefined") return;
+    const rect = triggerRef.current.getBoundingClientRect();
+    const gutter = 8;
+    const spaceAbove = rect.top - gutter;
+    const spaceBelow = window.innerHeight - rect.bottom - gutter;
+    const nextPlacement: PopupPlacement = spaceAbove > spaceBelow ? "up" : "down";
+    setPlacement(nextPlacement);
+  }, []);
+
   useEffect(() => {
     if (!open) return;
     const handler = (e: MouseEvent) => {
@@ -158,6 +170,15 @@ const PrivacyLedgerBadge: React.FC<Props> = ({ state, isAllOnDevice, onReset }) 
 
   useEffect(() => {
     if (!open) return;
+    updatePlacement();
+    window.addEventListener("resize", updatePlacement);
+    return () => {
+      window.removeEventListener("resize", updatePlacement);
+    };
+  }, [open, updatePlacement]);
+
+  useEffect(() => {
+    if (!open) return;
     const focusables = getPopupElements();
     if (focusables.length === 0) return;
     focusables[0]?.focus();
@@ -165,6 +186,11 @@ const PrivacyLedgerBadge: React.FC<Props> = ({ state, isAllOnDevice, onReset }) 
 
   const { tone, label, tooltip: tooltipText } = classify(state, isAllOnDevice);
   const Icon = tone === "ondevice" || tone === "neutral" ? ShieldCheck : Cloud;
+  const popupYOffset = placement === "up" ? 4 : -4;
+  const popupOrigin = placement === "up" ? "bottom right" : "top right";
+  const popupPositionClass = placement === "up"
+    ? "absolute right-0 bottom-full mb-1"
+    : "absolute right-0 top-full mt-1";
 
   return (
     <div className="relative">
@@ -200,16 +226,16 @@ const PrivacyLedgerBadge: React.FC<Props> = ({ state, isAllOnDevice, onReset }) 
             }}
             key="privacy-ledger-pop"
             ref={popRef}
-            initial={{ opacity: 0, scale: 0.96, y: -4 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.96, y: -4 }}
-                transition={{ duration: 0.15, ease: "easeOut" }}
-                style={{ transformOrigin: "top right" }}
-                id={popoverId}
-                role="dialog"
-                aria-label="Privacy Ledger 상세"
-                className="absolute top-full right-0 mt-1 w-72 max-h-[min(440px,calc(100vh-3.5rem))] flex flex-col bg-[#161b22] border border-white/10 rounded-xl shadow-2xl z-50 overflow-hidden"
-              >
+            initial={{ opacity: 0, scale: 0.96, y: popupYOffset }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.96, y: popupYOffset }}
+            transition={{ duration: 0.15, ease: "easeOut" }}
+            style={{ transformOrigin: popupOrigin }}
+            className={`${popupPositionClass} w-72 max-h-[min(440px,calc(100vh-3.5rem))] flex flex-col bg-[#161b22] border border-white/10 rounded-xl shadow-2xl z-50 overflow-hidden`}
+            id={popoverId}
+            role="dialog"
+            aria-label="Privacy Ledger 상세"
+          >
             <div className="flex items-center justify-between px-3 py-2 border-b border-white/5">
               <div className="flex items-center gap-1.5 text-xs font-semibold text-white/85">
                 <ShieldCheck size={12} />
