@@ -400,4 +400,57 @@ describe("AppHeader", () => {
       });
     }
   });
+
+  it("알림 센터는 패널 높이를 고려해 위쪽으로 배치된다", async () => {
+    const originalInnerHeight = window.innerHeight;
+
+    try {
+      const props = buildProps() as any;
+
+      const HeaderHarness = () => {
+        const [showNotifCenter, setShowNotifCenter] = React.useState(true);
+        return (
+          <AppHeader
+            {...props}
+            panels={{
+              ...props.panels,
+              showNotifCenter,
+              setShowNotifCenter,
+            }}
+          />
+        );
+      };
+
+      render(<HeaderHarness />);
+
+      const button = await screen.findByRole("button", { name: "알림 센터" });
+      const menu = await screen.findByRole("menu", { name: "알림 센터" });
+
+      Object.defineProperty(button, "getBoundingClientRect", {
+        configurable: true,
+        value: () => domRect(730, 0, 40, 28),
+      });
+      Object.defineProperty(menu, "getBoundingClientRect", {
+        configurable: true,
+        value: () => domRect(0, 0, 320, 420),
+      });
+      Object.defineProperty(window, "innerHeight", {
+        configurable: true,
+        value: 780,
+      });
+
+      fireEvent(window, new Event("resize"));
+
+      await waitFor(() => {
+        const notificationMenu = screen.getByRole("menu", { name: "알림 센터" });
+        expect(notificationMenu.className).toContain("bottom-full");
+        expect(notificationMenu.className).not.toContain("top-full");
+      });
+    } finally {
+      Object.defineProperty(window, "innerHeight", {
+        configurable: true,
+        value: originalInnerHeight,
+      });
+    }
+  });
 });
