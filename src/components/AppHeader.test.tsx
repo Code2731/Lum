@@ -602,4 +602,53 @@ describe("AppHeader", () => {
       });
     }
   });
+
+  it("고급 메뉴의 최대 높이가 화면 여백 기준으로 동적으로 제한된다", async () => {
+    const originalInnerHeight = window.innerHeight;
+
+    try {
+      const props = buildProps() as any;
+      const HeaderHarness = () => {
+        const [showAdvancedOverflow, setShowAdvancedOverflow] = React.useState(true);
+        return (
+          <AppHeader
+            {...props}
+            showAdvancedOverflow={showAdvancedOverflow}
+            setShowAdvancedOverflow={setShowAdvancedOverflow}
+          />
+        );
+      };
+
+      render(<HeaderHarness />);
+
+      const button = await screen.findByRole("button", { name: ADVANCED_BUTTON_NAME });
+      const menu = await screen.findByRole("menu", { name: "고급 기능 메뉴" });
+
+      Object.defineProperty(button, "getBoundingClientRect", {
+        configurable: true,
+        value: () => domRect(150, 0, 40, 28),
+      });
+      Object.defineProperty(menu, "getBoundingClientRect", {
+        configurable: true,
+        value: () => domRect(0, 0, 256, 440),
+      });
+      Object.defineProperty(window, "innerHeight", {
+        configurable: true,
+        value: 220,
+      });
+
+      fireEvent(window, new Event("resize"));
+
+      await waitFor(() => {
+        const menuEl = screen.getByRole("menu", { name: "고급 기능 메뉴" });
+        expect(menuEl.className).toContain("bottom-full");
+        expect(menuEl).toHaveStyle({ maxHeight: "138px" });
+      });
+    } finally {
+      Object.defineProperty(window, "innerHeight", {
+        configurable: true,
+        value: originalInnerHeight,
+      });
+    }
+  });
 });
