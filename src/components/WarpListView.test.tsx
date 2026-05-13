@@ -448,6 +448,82 @@ describe("WarpListView delta actions", () => {
     expect(screen.queryByRole("menuitem", { name: /Copy Both/ })).not.toBeInTheDocument();
   });
 
+  it("블록 액션 메뉴는 화면 아래 공간이 부족하면 위로 펼쳐진다", () => {
+    const viewportHeight = 190;
+    Object.defineProperty(window, "innerHeight", { value: viewportHeight, configurable: true });
+    const blocksData = [
+      {
+        id: "b6p",
+        command: "echo menu test",
+        output: "menu ok",
+        exitCode: 0,
+        startedAt: now - 1000,
+        endedAt: now,
+      },
+    ];
+
+    render(
+      <WarpListView
+        blocks={blocksData}
+      />,
+    );
+
+    const menuButton = screen.getByRole("button", { name: "블록 액션" });
+    vi.spyOn(menuButton, "getBoundingClientRect").mockReturnValue({
+      x: 10,
+      y: 140,
+      top: 140,
+      left: 10,
+      right: 120,
+      bottom: 160,
+      width: 110,
+      height: 20,
+      toJSON: () => ({}),
+    } as DOMRect);
+    fireEvent.click(menuButton);
+
+    const menu = screen.getByRole("menu", { name: "블록 액션 메뉴" });
+    expect(menu.className).toContain("bottom-full");
+    expect(menu.className).not.toContain("top-full");
+  });
+
+  it("블록 액션 메뉴는 화면 아래 공간이 충분하면 아래로 펼쳐진다", () => {
+    const viewportHeight = 1200;
+    Object.defineProperty(window, "innerHeight", { value: viewportHeight, configurable: true });
+    render(
+      <WarpListView
+        blocks={[
+          {
+            id: "b6q",
+            command: "echo menu test",
+            output: "menu ok",
+            exitCode: 0,
+            startedAt: now - 1000,
+            endedAt: now,
+          },
+        ]}
+      />,
+    );
+
+    const menuButton = screen.getByRole("button", { name: "블록 액션" });
+    vi.spyOn(menuButton, "getBoundingClientRect").mockReturnValue({
+      x: 10,
+      y: 40,
+      top: 40,
+      left: 10,
+      right: 120,
+      bottom: 60,
+      width: 110,
+      height: 20,
+      toJSON: () => ({}),
+    } as DOMRect);
+    fireEvent.click(menuButton);
+
+    const menu = screen.getByRole("menu", { name: "블록 액션 메뉴" });
+    expect(menu.className).toContain("top-full");
+    expect(menu.className).not.toContain("bottom-full");
+  });
+
   it("블록 액션 메뉴는 메뉴 항목마다 단축키 정보를 갖는다", () => {
     render(
       <WarpListView
