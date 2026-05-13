@@ -128,7 +128,7 @@ const NotificationCenter: React.FC<Props> = ({
       role="dialog"
       aria-label="알림 센터"
       ref={panelRef}
-      className="absolute top-full right-0 mt-1 w-80 max-h-[480px] flex flex-col bg-[#161b22] border border-white/10 rounded-xl shadow-2xl z-50 overflow-hidden"
+      className="absolute top-full right-0 mt-1 w-80 max-h-[min(440px,calc(100vh-3.5rem))] flex flex-col bg-[#161b22] border border-white/10 rounded-xl shadow-2xl z-50 overflow-hidden"
       onKeyDown={(e) => {
         handlePopupTabTrap(e);
         handlePopupArrowNav(e);

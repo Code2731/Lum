@@ -518,7 +518,7 @@ const AppHeader: React.FC<Props> = ({
                   exit={{ opacity: 0, scale: 0.96, y: -4 }}
                 transition={{ duration: 0.15, ease: "easeOut" }}
                 style={{ transformOrigin: "top right" }}
-                  className="absolute right-0 top-full mt-1.5 z-50 w-64 rounded-xl border border-white/[0.12] bg-[#0f1620]/95 backdrop-blur-md shadow-xl p-2 space-y-0.5"
+                className="absolute right-0 top-full mt-1.5 z-50 w-64 max-h-[min(440px,calc(100vh-3.5rem))] overflow-y-auto rounded-xl border border-white/[0.12] bg-[#0f1620]/95 backdrop-blur-md shadow-xl p-2 space-y-0.5"
                 >
                   <AdvancedRow
                     icon={<PlugZap size={13} />}
