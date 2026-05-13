@@ -122,6 +122,18 @@ const buildProps = () => {
   } as any;
 };
 
+const domRect = (top: number, left: number, width: number, height: number): DOMRect => ({
+  x: left,
+  y: top,
+  top,
+  left,
+  right: left + width,
+  bottom: top + height,
+  width,
+  height,
+  toJSON: () => ({}),
+});
+
 describe("AppHeader", () => {
   it("고급 메뉴에서 화살표 키로 포커스가 순환 이동한다", async () => {
     const HeaderHarness = () => {
@@ -342,5 +354,50 @@ describe("AppHeader", () => {
       expect(screen.getByRole("menu", { name: "알림 센터" })).toBeInTheDocument();
     });
     expect(props.notifCenter.markAllRead).toHaveBeenCalledTimes(1);
+  });
+
+  it("고급 메뉴는 패널 높이를 고려해 위쪽으로 배치한다", async () => {
+    const originalInnerHeight = window.innerHeight;
+
+    try {
+      const HeaderHarness = () => {
+        const [showAdvancedOverflow, setShowAdvancedOverflow] = React.useState(true);
+        const props = buildProps() as any;
+        props.showAdvancedOverflow = showAdvancedOverflow;
+        props.setShowAdvancedOverflow = setShowAdvancedOverflow;
+        return <AppHeader {...props} />;
+      };
+
+      render(<HeaderHarness />);
+
+      const button = await screen.findByRole("button", { name: "고급 기능 (MCP / Squad / Healing / Recall / LoRA / RAG / xLLM)" });
+      const menu = await screen.findByRole("menu", { name: "고급 기능 메뉴" });
+
+      Object.defineProperty(button, "getBoundingClientRect", {
+        configurable: true,
+        value: () => domRect(730, 0, 40, 28),
+      });
+      Object.defineProperty(menu, "getBoundingClientRect", {
+        configurable: true,
+        value: () => domRect(0, 0, 256, 420),
+      });
+      Object.defineProperty(window, "innerHeight", {
+        configurable: true,
+        value: 780,
+      });
+
+      fireEvent(window, new Event("resize"));
+
+      await waitFor(() => {
+        const menu = screen.getByRole("menu", { name: "고급 기능 메뉴" });
+        expect(menu.className).toContain("bottom-full");
+        expect(menu.className).not.toContain("top-full");
+      });
+    } finally {
+      Object.defineProperty(window, "innerHeight", {
+        configurable: true,
+        value: originalInnerHeight,
+      });
+    }
   });
 });

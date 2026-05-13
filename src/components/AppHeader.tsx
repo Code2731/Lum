@@ -133,15 +133,31 @@ const AppHeader: React.FC<Props> = ({
   const [notifCenterPlacement, setNotifCenterPlacement] = React.useState<PopupPlacement>("down");
   const ADVANCED_OVERFLOW_PANEL_ID = "advanced-overflow-panel";
   const NOTIF_CENTER_PANEL_ID = "notification-center-panel";
+  const POPUP_GUTTER = 8;
+  const POPUP_ESTIMATE_HEIGHT = 440;
   const popupFocusables = "a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex='-1'])";
-  const measurePopupPlacement = React.useCallback((trigger: HTMLElement | null): PopupPlacement => {
+  const measurePopupPlacement = React.useCallback((trigger: HTMLElement | null, panelRef?: React.RefObject<HTMLDivElement | null>): PopupPlacement => {
     if (typeof window === "undefined" || !trigger) return "down";
 
     const rect = trigger.getBoundingClientRect();
-    const gutter = 8;
-    const spaceAbove = rect.top - gutter;
-    const spaceBelow = window.innerHeight - rect.bottom - gutter;
+    const spaceAbove = rect.top - POPUP_GUTTER;
+    const spaceBelow = window.innerHeight - rect.bottom - POPUP_GUTTER;
+    const panelRectHeight = panelRef?.current?.getBoundingClientRect().height;
+    const panelHeight = (typeof panelRectHeight === "number" && Number.isFinite(panelRectHeight) && panelRectHeight > 0)
+      ? panelRectHeight
+      : POPUP_ESTIMATE_HEIGHT;
+    const canOpenUp = spaceAbove >= panelHeight;
+    const canOpenDown = spaceBelow >= panelHeight;
 
+    if (canOpenUp && canOpenDown) {
+      return spaceAbove > spaceBelow ? "up" : "down";
+    }
+    if (canOpenUp) {
+      return "up";
+    }
+    if (canOpenDown) {
+      return "down";
+    }
     return spaceAbove > spaceBelow ? "up" : "down";
   }, []);
 
@@ -271,7 +287,7 @@ const AppHeader: React.FC<Props> = ({
     if (!showAdvancedOverflow) return;
 
     const updatePlacement = () => {
-      setAdvancedOverflowPlacement(measurePopupPlacement(advancedOverflowButtonRef.current));
+      setAdvancedOverflowPlacement(measurePopupPlacement(advancedOverflowButtonRef.current, advancedOverflowPanelRef));
     };
 
     updatePlacement();
@@ -310,7 +326,7 @@ const AppHeader: React.FC<Props> = ({
     if (!showNotifCenter) return;
 
     const updatePlacement = () => {
-      setNotifCenterPlacement(measurePopupPlacement(notifCenterButtonRef.current));
+      setNotifCenterPlacement(measurePopupPlacement(notifCenterButtonRef.current, notifCenterPanelRef));
     };
 
     updatePlacement();
