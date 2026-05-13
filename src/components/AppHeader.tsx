@@ -124,20 +124,21 @@ const AppHeader: React.FC<Props> = ({
   const advancedOverflowRef = React.useRef<HTMLDivElement>(null);
   const advancedOverflowButtonRef = React.useRef<HTMLButtonElement>(null);
   const advancedOverflowPanelRef = React.useRef<HTMLDivElement>(null);
+  const notifCenterPopupRef = React.useRef<HTMLDivElement>(null);
   const notifCenterButtonRef = React.useRef<HTMLButtonElement>(null);
   const notifCenterPanelRef = React.useRef<HTMLDivElement>(null);
   const ADVANCED_OVERFLOW_PANEL_ID = "advanced-overflow-panel";
   const NOTIF_CENTER_PANEL_ID = "notification-center-panel";
   const popupFocusables = "a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex='-1'])";
 
-  const getPopupElements = (panelRef: React.RefObject<HTMLDivElement>): HTMLElement[] => {
+  const getPopupElements = (panelRef: React.RefObject<HTMLDivElement | null>): HTMLElement[] => {
     if (!panelRef.current) return [];
     return Array.from(panelRef.current.querySelectorAll<HTMLElement>(popupFocusables));
   };
 
   const handlePopupTabTrap = (
     e: React.KeyboardEvent,
-    panelRef: React.RefObject<HTMLDivElement>,
+    panelRef: React.RefObject<HTMLDivElement | null>,
   ) => {
     if (e.key !== "Tab") return;
 
@@ -162,7 +163,7 @@ const AppHeader: React.FC<Props> = ({
 
   const handlePopupArrowNav = (
     e: React.KeyboardEvent,
-    panelRef: React.RefObject<HTMLDivElement>,
+    panelRef: React.RefObject<HTMLDivElement | null>,
   ) => {
     if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
 
@@ -218,7 +219,7 @@ const AppHeader: React.FC<Props> = ({
   React.useEffect(() => {
     if (!showAdvancedOverflow) return;
 
-    const handleClose = (e: MouseEvent) => {
+    const handleClose = (e: MouseEvent | PointerEvent) => {
       if (advancedOverflowRef.current && !advancedOverflowRef.current.contains(e.target as Node)) {
         closeAdvancedOverflow();
       }
@@ -231,12 +232,39 @@ const AppHeader: React.FC<Props> = ({
     };
 
     document.addEventListener("mousedown", handleClose);
+    document.addEventListener("pointerdown", handleClose);
     document.addEventListener("keydown", handleEscape);
     return () => {
       document.removeEventListener("mousedown", handleClose);
+      document.removeEventListener("pointerdown", handleClose);
       document.removeEventListener("keydown", handleEscape);
     };
   }, [showAdvancedOverflow, closeAdvancedOverflow]);
+
+  React.useEffect(() => {
+    if (!showNotifCenter) return;
+
+    const handleClose = (e: MouseEvent | PointerEvent) => {
+      if (notifCenterPopupRef.current && !notifCenterPopupRef.current.contains(e.target as Node)) {
+        closeNotifCenter();
+      }
+    };
+
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        closeNotifCenter();
+      }
+    };
+
+    document.addEventListener("mousedown", handleClose);
+    document.addEventListener("pointerdown", handleClose);
+    document.addEventListener("keydown", handleEscape);
+    return () => {
+      document.removeEventListener("mousedown", handleClose);
+      document.removeEventListener("pointerdown", handleClose);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [showNotifCenter, closeNotifCenter]);
 
   React.useEffect(() => {
     if (!showAdvancedOverflow) return;
@@ -584,7 +612,7 @@ const AppHeader: React.FC<Props> = ({
         >
           <Palette size={14} />
         </ToolbarIconButton>
-        <div className="relative">
+        <div className="relative" ref={notifCenterPopupRef}>
           <ToolbarIconButton
             ref={notifCenterButtonRef}
             label="알림 센터"
@@ -621,6 +649,7 @@ const AppHeader: React.FC<Props> = ({
                   onClear={notifCenter.clear}
                   panelId={NOTIF_CENTER_PANEL_ID}
                   onClose={closeNotifCenter}
+                  closeOnDocument={false}
                 />
               </motion.div>
             )}

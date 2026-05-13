@@ -11,6 +11,7 @@ interface Props {
   onDismiss: (id: string) => void;
   onClear: () => void;
   onClose: () => void;
+  closeOnDocument?: boolean;
 }
 
 const TYPE_ICON: Record<NotifType, React.ReactNode> = {
@@ -37,7 +38,7 @@ function timeAgo(ts: number): string {
 }
 
 const NotificationCenter: React.FC<Props> = ({
-  notifications, unreadCount, panelId, onMarkAllRead, onDismiss, onClear, onClose,
+  notifications, unreadCount, panelId, onMarkAllRead, onDismiss, onClear, onClose, closeOnDocument = true,
 }) => {
   const panelRef = useRef<HTMLDivElement>(null);
   const onCloseRef = useRef(onClose);
@@ -93,6 +94,8 @@ const NotificationCenter: React.FC<Props> = ({
   };
 
   useEffect(() => {
+    if (!closeOnDocument) return;
+
     const handler = (e: MouseEvent) => {
       if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
         onCloseRef.current();
@@ -109,7 +112,7 @@ const NotificationCenter: React.FC<Props> = ({
       document.removeEventListener("mousedown", handler);
       document.removeEventListener("keydown", keyHandler);
     };
-  }, []); // 리스너는 한 번만 등록, 최신 onClose는 ref를 통해 참조
+  }, [closeOnDocument]); // 리스너는 한 번만 등록, 최신 onClose는 ref를 통해 참조
 
   useEffect(() => {
     const focusables = getPopupElements();
