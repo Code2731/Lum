@@ -89,6 +89,7 @@ const AppHeader: React.FC<Props> = ({
   const isNew = (id: string) =>
     (NEW_ADVANCED_FEATURES as readonly string[]).includes(id) && !seenAdvancedFeatures.includes(id);
   const hasUnseenAdvanced = NEW_ADVANCED_FEATURES.some((id) => !seenAdvancedFeatures.includes(id));
+  const unseenAdvancedCount = NEW_ADVANCED_FEATURES.reduce((acc, id) => (isNew(id) ? acc + 1 : acc), 0);
   const advancedBadgeLabel = hasUnseenAdvanced
     ? "새 고급 기능이 있습니다"
     : squadStore.squads.length > 0
@@ -604,6 +605,16 @@ const AppHeader: React.FC<Props> = ({
                   style={{ transformOrigin: advancedOverflowPanelOrigin }}
                   className={`${advancedOverflowPanelClassName} z-50 w-64 max-h-[min(440px,calc(100vh-3.5rem))] overflow-y-auto rounded-xl border border-white/[0.12] bg-[#0f1620]/95 backdrop-blur-md shadow-xl p-2 space-y-0.5`}
                 >
+                  {hasUnseenAdvanced && (
+                    <div className="px-2 py-1.5 mb-1 border-b border-white/10">
+                      <p className="text-[9px] font-semibold tracking-[0.06em] text-amber-300 uppercase">
+                        NEW FEATURE
+                      </p>
+                      <p className="text-[10px] text-white/65 mt-0.5">
+                        신규 기능 {unseenAdvancedCount}개를 확인해 보세요.
+                      </p>
+                    </div>
+                  )}
                   <AdvancedRow
                     icon={<PlugZap size={13} />}
                     label="MCP 서버"

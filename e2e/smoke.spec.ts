@@ -191,10 +191,12 @@ test.describe("LUM 스모크 테스트", () => {
     const advancedButton = page.getByRole("button", {
       name: "고급 기능 (MCP / Squad / Healing / Recall / LoRA / RAG / xLLM)",
     });
+    await expect(advancedButton).toHaveAttribute("aria-label", /새 고급 기능이 있습니다/);
     await expect(advancedButton).toBeVisible();
     await advancedButton.click();
     const advancedPanel = page.getByRole("menu", { name: "고급 기능 메뉴" });
     await expect(advancedPanel).toBeVisible();
+    await expect(advancedPanel.getByText("NEW FEATURE")).toBeVisible();
     await expectInViewport(page, "[role='menu'][aria-label='고급 기능 메뉴']");
     await expect(advancedPanel.getByRole("menuitem", { name: "MCP 서버" })).toBeVisible();
     await page.keyboard.press("Escape");
