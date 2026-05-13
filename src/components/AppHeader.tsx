@@ -244,7 +244,12 @@ const AppHeader: React.FC<Props> = ({
 
   const toggleAdvancedOverflow = React.useCallback(() => {
     setShowNotifCenter(false);
-    setShowAdvancedOverflow((prev) => !prev);
+    setShowAdvancedOverflow((prev) => {
+      if (!prev) {
+        setAdvancedOverflowPlacement(measurePopupPlacement(advancedOverflowButtonRef.current, advancedOverflowPanelRef));
+      }
+      return !prev;
+    });
   }, [setShowAdvancedOverflow, setShowNotifCenter]);
 
   const toggleNotifCenter = React.useCallback(() => {
@@ -252,13 +257,14 @@ const AppHeader: React.FC<Props> = ({
     setShowNotifCenter((prev) => {
       const next = !prev;
       if (next) {
+        setNotifCenterPlacement(measurePopupPlacement(notifCenterButtonRef.current, notifCenterPanelRef));
         notifCenter.markAllRead();
       }
       return next;
     });
   }, [notifCenter, setShowAdvancedOverflow, setShowNotifCenter]);
 
-  React.useEffect(() => {
+  React.useLayoutEffect(() => {
     if (!showAdvancedOverflow) return;
 
     const handleClose = (e: MouseEvent | PointerEvent) => {
@@ -297,7 +303,7 @@ const AppHeader: React.FC<Props> = ({
     };
   }, [showAdvancedOverflow, measurePopupPlacement]);
 
-  React.useEffect(() => {
+  React.useLayoutEffect(() => {
     if (!showNotifCenter) return;
 
     const handleClose = (e: MouseEvent | PointerEvent) => {
