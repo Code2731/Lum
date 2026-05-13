@@ -86,7 +86,13 @@ const CommitPanel: React.FC<Props> = ({ model, onExecute, onClose }) => {
                   placeholder="/Users/you/MyProject  (비우면 홈 디렉토리)"
                   value={repoPath}
                   onChange={(e) => setRepoPath(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleGenerate()}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleGenerate();
+                    }
+                  }}
                 />
               </div>
               <button

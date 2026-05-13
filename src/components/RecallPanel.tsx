@@ -82,7 +82,13 @@ const RecallPanel: React.FC<Props> = ({ model, onInjectToChat, onClose }) => {
               autoFocus
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter") submit(); }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  submit();
+                }
+              }}
               placeholder='예: "지난 달 docker 빌드 실패 때 뭐 고쳤지?"'
               className="h-8 text-xs"
             />

@@ -395,7 +395,13 @@ const ModelManager: React.FC<Props> = ({ onClose }) => {
                     placeholder="author/model-name  예) Qwen/Qwen3-8B"
                     value={mistralRepo}
                     onChange={(e) => setMistralRepo(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && handleMistralDownload(mistralRepo)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleMistralDownload(mistralRepo);
+                      }
+                    }}
                     className="flex-1 focus:border-purple-400/50 font-mono"
                   />
                   {mistralBusy ? (

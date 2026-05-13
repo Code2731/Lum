@@ -117,10 +117,22 @@ const QuickActionsEditor: React.FC<Props> = ({
           <p className="text-[10px] text-white/30 mb-2">새 액션 추가</p>
           <div className="flex items-center gap-2">
             <Input value={newLabel} onChange={e => setNewLabel(e.target.value)}
-              onKeyDown={e => e.key === "Enter" && handleAdd()}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleAdd();
+                }
+              }}
               placeholder="이름" className="w-24 shrink-0 px-2" />
             <Input value={newCmd} onChange={e => setNewCmd(e.target.value)}
-              onKeyDown={e => e.key === "Enter" && handleAdd()}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleAdd();
+                }
+              }}
               placeholder="실행할 커맨드 (예: npm run dev)" className="flex-1 px-2 font-mono" />
             <Select
               value={newShortcut != null ? String(newShortcut) : ""}

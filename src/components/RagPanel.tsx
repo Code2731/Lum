@@ -151,7 +151,13 @@ const RagPanel: React.FC<Props> = ({ model, onClose }) => {
                 placeholder="/path/to/project"
                 value={indexPath}
                 onChange={(e) => setIndexPath(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleIndex()}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleIndex();
+                  }
+                }}
               />
             </div>
             <button
@@ -183,7 +189,13 @@ const RagPanel: React.FC<Props> = ({ model, onClose }) => {
                 placeholder="PTY 채널 아키텍처는 어떻게 구현되어 있나요?"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleSearch();
+                  }
+                }}
               />
             </div>
             <button

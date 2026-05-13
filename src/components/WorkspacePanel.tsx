@@ -65,7 +65,13 @@ const WorkspacePanel: React.FC<Props> = ({
               <input
                 value={saveName}
                 onChange={e => setSaveName(e.target.value)}
-                onKeyDown={e => e.key === "Enter" && handleSave()}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleSave();
+                  }
+                }}
                 placeholder={`워크스페이스 이름 (기본: 날짜)`}
                 className="w-full bg-transparent text-xs outline-none text-white/70 placeholder:text-white/20"
               />

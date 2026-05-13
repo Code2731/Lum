@@ -1499,8 +1499,16 @@ const App: React.FC = () => {
                   disabled={isProcessing}
                   onChange={(e) => setAiInput(e.target.value)}
                   onKeyDown={(e) => {
-                    if (e.key === "Enter") handleAiSubmit();
-                    if (e.key === "Escape") setShowAiBar(false);
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleAiSubmit();
+                    }
+                    if (e.key === "Escape") {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setShowAiBar(false);
+                    }
                   }}
                 />
                 {isProcessing && <Loader2 size={12} className="animate-spin text-white/40 shrink-0" />}
