@@ -88,6 +88,7 @@ const TabContextMenu: React.FC<Props> = ({
 
   const handleMenuKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     if (e.key === "Tab") {
+      e.stopPropagation();
       return;
     }
     if (e.key === "Escape") {
@@ -190,8 +191,10 @@ const TabContextMenu: React.FC<Props> = ({
               onKeyDown={e => {
                 if (e.key === "Enter" || e.key === " ") {
                   e.preventDefault();
+                  e.stopPropagation();
                   onSetColor(tabId, name);
                   onClose();
+                  return;
                 }
                 e.stopPropagation();
               }}
@@ -229,11 +232,18 @@ const TabContextMenu: React.FC<Props> = ({
           className="w-full bg-white/5 border border-white/8 rounded-lg px-2 py-1 text-[11px] text-white/70 placeholder:text-white/20 outline-none focus:border-accent/40"
           onKeyDown={e => {
             if (e.key === "Enter") {
+              e.preventDefault();
+              e.stopPropagation();
               const val = (e.target as HTMLInputElement).value.trim();
               onSetGroup(tabId, val || undefined);
               onClose();
+              return;
             }
-            if (e.key === "Escape") onClose();
+            if (e.key === "Escape") {
+              e.preventDefault();
+              e.stopPropagation();
+              onClose();
+            }
             e.stopPropagation();
           }}
           onClick={e => e.stopPropagation()}

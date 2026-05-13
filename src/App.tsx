@@ -968,8 +968,15 @@ const App: React.FC = () => {
                   onChange={e => setRenameValue(e.target.value)}
                   onBlur={() => { renameTab(tab.id, renameValue); setRenamingTabId(null); }}
                   onKeyDown={e => {
-                    if (e.key === "Enter") { renameTab(tab.id, renameValue); setRenamingTabId(null); }
-                    if (e.key === "Escape") setRenamingTabId(null);
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      renameTab(tab.id, renameValue);
+                      setRenamingTabId(null);
+                    }
+                    if (e.key === "Escape") {
+                      e.preventDefault();
+                      setRenamingTabId(null);
+                    }
                     e.stopPropagation();
                   }}
                   onClick={e => e.stopPropagation()}

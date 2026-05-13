@@ -94,11 +94,11 @@ const PrivacyLedgerBadge: React.FC<Props> = ({ state, isAllOnDevice, onReset }) 
     triggerRef.current?.focus();
   }, []);
 
-  const handlePopupTabTrap = (e: React.KeyboardEvent) => {
-    if (e.key !== "Tab") return;
+  const handlePopupTabTrap = (e: React.KeyboardEvent): boolean => {
+    if (e.key !== "Tab") return false;
 
     const focusables = getPopupElements();
-    if (focusables.length === 0) return;
+    if (focusables.length === 0) return false;
 
     const active = document.activeElement;
     const currentIndex = focusables.indexOf(active as HTMLElement);
@@ -114,13 +114,14 @@ const PrivacyLedgerBadge: React.FC<Props> = ({ state, isAllOnDevice, onReset }) 
 
     e.preventDefault();
     focusables[nextIndex]?.focus();
+    return true;
   };
 
-  const handlePopupArrowNav = (e: React.KeyboardEvent) => {
-    if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
+  const handlePopupArrowNav = (e: React.KeyboardEvent): boolean => {
+    if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return false;
 
     const focusables = getPopupElements();
-    if (focusables.length === 0) return;
+    if (focusables.length === 0) return false;
 
     const active = document.activeElement;
     const currentIndex = focusables.indexOf(active as HTMLElement);
@@ -136,6 +137,7 @@ const PrivacyLedgerBadge: React.FC<Props> = ({ state, isAllOnDevice, onReset }) 
 
     e.preventDefault();
     focusables[nextIndex]?.focus();
+    return true;
   };
 
   const updatePlacement = React.useCallback(() => {
@@ -223,8 +225,10 @@ const PrivacyLedgerBadge: React.FC<Props> = ({ state, isAllOnDevice, onReset }) 
         {open && (
           <motion.div
             onKeyDown={(e) => {
-              handlePopupTabTrap(e);
-              handlePopupArrowNav(e);
+              const handled = handlePopupTabTrap(e) || handlePopupArrowNav(e);
+              if (handled) {
+                e.stopPropagation();
+              }
             }}
             key="privacy-ledger-pop"
             ref={popRef}

@@ -49,11 +49,11 @@ const NotificationCenter: React.FC<Props> = ({
     return Array.from(panelRef.current.querySelectorAll<HTMLElement>(popupFocusables));
   };
 
-  const handlePopupTabTrap = (e: React.KeyboardEvent) => {
-    if (e.key !== "Tab") return;
+  const handlePopupTabTrap = (e: React.KeyboardEvent): boolean => {
+    if (e.key !== "Tab") return false;
 
     const focusables = getPopupElements();
-    if (focusables.length === 0) return;
+    if (focusables.length === 0) return false;
 
     const active = document.activeElement;
     const currentIndex = focusables.indexOf(active as HTMLElement);
@@ -69,13 +69,14 @@ const NotificationCenter: React.FC<Props> = ({
 
     e.preventDefault();
     focusables[nextIndex]?.focus();
+    return true;
   };
 
-  const handlePopupArrowNav = (e: React.KeyboardEvent) => {
-    if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
+  const handlePopupArrowNav = (e: React.KeyboardEvent): boolean => {
+    if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return false;
 
     const focusables = getPopupElements();
-    if (focusables.length === 0) return;
+    if (focusables.length === 0) return false;
 
     const active = document.activeElement;
     const currentIndex = focusables.indexOf(active as HTMLElement);
@@ -91,6 +92,7 @@ const NotificationCenter: React.FC<Props> = ({
 
     e.preventDefault();
     focusables[nextIndex]?.focus();
+    return true;
   };
 
   useEffect(() => {
@@ -134,8 +136,10 @@ const NotificationCenter: React.FC<Props> = ({
       ref={panelRef}
       className={`${popupPositionClass} w-80 max-h-[min(440px,calc(100vh-3.5rem))] flex flex-col bg-[#161b22] border border-white/10 rounded-xl shadow-2xl z-50 overflow-hidden`}
       onKeyDown={(e) => {
-        handlePopupTabTrap(e);
-        handlePopupArrowNav(e);
+        const handled = handlePopupTabTrap(e) || handlePopupArrowNav(e);
+        if (handled) {
+          e.stopPropagation();
+        }
       }}
     >
       {/* 헤더 */}

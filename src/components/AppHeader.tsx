@@ -208,11 +208,11 @@ const AppHeader: React.FC<Props> = ({
   const handlePopupTabTrap = (
     e: React.KeyboardEvent,
     panelRef: React.RefObject<HTMLDivElement | null>,
-  ) => {
-    if (e.key !== "Tab") return;
+  ): boolean => {
+    if (e.key !== "Tab") return false;
 
     const focusables = getPopupElements(panelRef);
-    if (focusables.length === 0) return;
+    if (focusables.length === 0) return false;
 
     const active = document.activeElement;
     const currentIndex = focusables.indexOf(active as HTMLElement);
@@ -228,16 +228,17 @@ const AppHeader: React.FC<Props> = ({
 
     e.preventDefault();
     focusables[nextIndex]?.focus();
+    return true;
   };
 
   const handlePopupArrowNav = (
     e: React.KeyboardEvent,
     panelRef: React.RefObject<HTMLDivElement | null>,
-  ) => {
-    if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
+  ): boolean => {
+    if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return false;
 
     const focusables = getPopupElements(panelRef);
-    if (focusables.length === 0) return;
+    if (focusables.length === 0) return false;
 
     const active = document.activeElement;
     const currentIndex = focusables.indexOf(active as HTMLElement);
@@ -253,6 +254,7 @@ const AppHeader: React.FC<Props> = ({
 
     e.preventDefault();
     focusables[nextIndex]?.focus();
+    return true;
   };
 
   const focusFirstPopupElement = React.useCallback((panelRef: React.RefObject<HTMLDivElement | null>) => {
@@ -636,8 +638,11 @@ const AppHeader: React.FC<Props> = ({
                   role="menu"
                   aria-label="고급 기능 메뉴"
                   onKeyDown={(e) => {
-                    handlePopupTabTrap(e, advancedOverflowPanelRef);
-                    handlePopupArrowNav(e, advancedOverflowPanelRef);
+                    const handled = handlePopupTabTrap(e, advancedOverflowPanelRef)
+                      || handlePopupArrowNav(e, advancedOverflowPanelRef);
+                    if (handled) {
+                      e.stopPropagation();
+                    }
                   }}
                   initial={{ opacity: 0, scale: 0.96, y: advancedOverflowPanelOffsetY }}
                   animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -771,8 +776,11 @@ const AppHeader: React.FC<Props> = ({
                 role="menu"
                 aria-label="알림 센터"
                   onKeyDown={(e) => {
-                    handlePopupTabTrap(e, notifCenterPanelRef);
-                    handlePopupArrowNav(e, notifCenterPanelRef);
+                    const handled = handlePopupTabTrap(e, notifCenterPanelRef)
+                      || handlePopupArrowNav(e, notifCenterPanelRef);
+                    if (handled) {
+                      e.stopPropagation();
+                    }
                   }}
                   initial={{ opacity: 0, scale: 0.96, y: notifCenterPanelOffsetY }}
                   animate={{ opacity: 1, scale: 1, y: 0 }}

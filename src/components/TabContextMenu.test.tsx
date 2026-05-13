@@ -96,6 +96,32 @@ describe("TabContextMenu", () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
+  it("그룹 입력 Enter에서 Enter 이벤트가 상위로 전파되지 않는다", () => {
+    const onSetGroup = vi.fn();
+    const onClose = vi.fn();
+    const parentKeyDown = vi.fn();
+
+    render(
+      <div onKeyDown={parentKeyDown}>
+        <TabContextMenu
+          {...baseProps}
+          onClose={onClose}
+          onSetColor={vi.fn()}
+          onSetGroup={onSetGroup}
+          currentGroup="frontend"
+        />
+      </div>,
+    );
+
+    const groupInput = screen.getByPlaceholderText("예: backend, deploy…");
+    fireEvent.change(groupInput, { target: { value: "backend" } });
+    fireEvent.keyDown(groupInput, { key: "Enter" });
+
+    expect(onSetGroup).toHaveBeenCalledWith("tab-1", "backend");
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(parentKeyDown).not.toHaveBeenCalled();
+  });
+
   it("메뉴가 열리면 첫 번째 항목에 포커스가 이동하고 닫힘 시 원래 요소로 복귀한다", () => {
     const onClose = vi.fn();
     const Wrapper = () => {
