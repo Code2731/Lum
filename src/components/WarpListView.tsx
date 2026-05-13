@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { CheckCircle2, XCircle, Clock, ChevronDown, ChevronRight, Copy, TerminalSquare, Search, MoreHorizontal, Share2, RotateCcw } from "lucide-react";
 import { IconButton } from "@/components/ui/icon-button";
 import { tokenizeShell, TOKEN_COLORS } from "../utils/shellSyntax";
+import { isTextInputTarget } from "../utils/event";
 import type { CommandBlock } from "../hooks/useCommandBlocks";
 
 interface Props {
@@ -519,12 +520,7 @@ const WarpListView: React.FC<Props> = ({
     });
     setDeltaOpenId(id);
   };
-  const isTypingTarget = (target: EventTarget | null) => {
-    const el = target as HTMLElement | null;
-    if (!el) return false;
-    const tag = el.tagName;
-    return tag === "INPUT" || tag === "TEXTAREA" || el.isContentEditable;
-  };
+  const isTypingTarget = isTextInputTarget;
   const buildDiffText = (command: string, compare: CompareResult) => {
     const lines = [
       `command: ${command}`,
