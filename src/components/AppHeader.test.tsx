@@ -252,6 +252,9 @@ describe("AppHeader", () => {
     expect(screen.getByRole("button", { name: "스크립트 라이브러리" })).toHaveAttribute("aria-keyshortcuts", "Meta+Shift+L");
     expect(screen.getByRole("button", { name: "워크스페이스" })).toHaveAttribute("aria-keyshortcuts", "Meta+Shift+S");
     expect(screen.getByRole("button", { name: "AI Diff 리뷰" })).toHaveAttribute("aria-keyshortcuts", "Meta+Shift+R");
+    expect(screen.getByRole("button", { name: "시스템 모니터" })).toHaveAttribute("aria-keyshortcuts", "Meta+Shift+M");
+    expect(screen.getByRole("button", { name: "터미널 테마" })).toHaveAttribute("aria-keyshortcuts", "Meta+,");
+    expect(screen.getByRole("button", { name: "모델 관리" })).not.toHaveAttribute("aria-keyshortcuts");
   });
 
   it("고급 메뉴를 바깥에서 클릭하면 닫히고 트리거로 포커스가 돌아간다", async () => {
