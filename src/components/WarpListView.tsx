@@ -113,6 +113,7 @@ const WarpListView: React.FC<Props> = ({
   const [statusFilter, setStatusFilter] = useState<"all" | "failed" | "success" | "compared">("all");
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
   const [menuActiveIndex, setMenuActiveIndex] = useState(0);
+  const [menuPlacement, setMenuPlacement] = useState<"down" | "up">("down");
   const [blockSearch, setBlockSearch] = useState<Record<string, string>>({});
   const [blockSearchCursor, setBlockSearchCursor] = useState<Record<string, number>>({});
   const [activeSearchBlockId, setActiveSearchBlockId] = useState<string | null>(null);
@@ -723,6 +724,13 @@ const WarpListView: React.FC<Props> = ({
 
   useEffect(() => {
     if (!menuOpenId) return;
+    const trigger = menuButtonRefs.current[menuOpenId];
+    const fallbackHeight = 220;
+    const buttonRect = trigger?.getBoundingClientRect();
+    const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+    const hasRoomBelow = !buttonRect ? true : (viewportHeight - buttonRect.bottom - 10) >= fallbackHeight;
+    setMenuPlacement(!buttonRect || hasRoomBelow ? "down" : "up");
+
     const onWindowKeyDown = (e: KeyboardEvent) => {
       const currentMenuItems = menuItemRefs.current[menuOpenId] ?? [];
       const last = Math.max(0, currentMenuItems.length - 1);
@@ -2223,7 +2231,9 @@ const WarpListView: React.FC<Props> = ({
                     ref={(el) => { menuContainerRefs.current[b.id] = el; }}
                     role="menu"
                     aria-label="블록 액션 메뉴"
-                    className="absolute right-0 top-5 z-20 w-56 rounded-lg border border-white/10 bg-[#0f151f]/96 backdrop-blur-sm shadow-2xl overflow-hidden"
+                    className={`absolute right-0 z-20 w-56 rounded-lg border border-white/10 bg-[#0f151f]/96 backdrop-blur-sm shadow-2xl overflow-hidden ${
+                      menuPlacement === "up" ? "bottom-full mb-1" : "top-full mt-1"
+                    }`}
                     onClick={(e) => e.stopPropagation()}
                     onBlurCapture={(e) => {
                       const next = e.relatedTarget as Node | null;
@@ -2299,6 +2309,8 @@ const WarpListView: React.FC<Props> = ({
                     <button
                       type="button"
                       role="menuitem"
+                      aria-label="Copy Both (Alt+C)"
+                      aria-keyshortcuts="Alt+C"
                       title="Alt+C"
                       className="w-full px-2.5 py-1.5 text-left text-[11px] text-white/78 hover:bg-white/[0.08] flex items-center justify-between gap-2"
                       tabIndex={menuOpenId === b.id && menuActiveIndex === 0 ? 0 : -1}
@@ -2317,6 +2329,8 @@ const WarpListView: React.FC<Props> = ({
                     <button
                       type="button"
                       role="menuitem"
+                      aria-label="Find Within Block (Alt+F)"
+                      aria-keyshortcuts="Alt+F"
                       title="Alt+F"
                       className="w-full px-2.5 py-1.5 text-left text-[11px] text-white/78 hover:bg-white/[0.08] flex items-center justify-between gap-2"
                       tabIndex={menuOpenId === b.id && menuActiveIndex === 1 ? 0 : -1}
@@ -2332,6 +2346,8 @@ const WarpListView: React.FC<Props> = ({
                     <button
                       type="button"
                       role="menuitem"
+                      aria-label="Share Snapshot (Alt+S)"
+                      aria-keyshortcuts="Alt+S"
                       title="Alt+S"
                       className="w-full px-2.5 py-1.5 text-left text-[11px] text-white/78 hover:bg-white/[0.08] flex items-center justify-between gap-2"
                       tabIndex={menuOpenId === b.id && menuActiveIndex === 2 ? 0 : -1}
@@ -2363,6 +2379,8 @@ const WarpListView: React.FC<Props> = ({
                       <button
                         type="button"
                         role="menuitem"
+                        aria-label="Retry and Compare (Alt+R)"
+                        aria-keyshortcuts="Alt+R"
                         title="Alt+R"
                         className="w-full px-2.5 py-1.5 text-left text-[11px] text-white/78 hover:bg-white/[0.08] flex items-center justify-between gap-2"
                         tabIndex={menuOpenId === b.id && menuActiveIndex === 3 ? 0 : -1}

@@ -448,6 +448,28 @@ describe("WarpListView delta actions", () => {
     expect(screen.queryByRole("menuitem", { name: /Copy Both/ })).not.toBeInTheDocument();
   });
 
+  it("블록 액션 메뉴는 메뉴 항목마다 단축키 정보를 갖는다", () => {
+    render(
+      <WarpListView
+        blocks={[
+          {
+            id: "b6k",
+            command: "echo menu test",
+            output: "menu ok",
+            exitCode: 0,
+            startedAt: now - 1000,
+            endedAt: now,
+          },
+        ]}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "블록 액션" }));
+    expect(screen.getByRole("menuitem", { name: /Copy Both/ })).toHaveAttribute("aria-keyshortcuts", "Alt+C");
+    expect(screen.getByRole("menuitem", { name: /Find Within Block/ })).toHaveAttribute("aria-keyshortcuts", "Alt+F");
+    expect(screen.getByRole("menuitem", { name: /Share Snapshot/ })).toHaveAttribute("aria-keyshortcuts", "Alt+S");
+  });
+
   it("블록 액션 메뉴는 Alt+C로 Copy Both를 실행한다", () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     Object.defineProperty(navigator, "clipboard", {
@@ -548,11 +570,12 @@ describe("WarpListView delta actions", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: "블록 액션" }));
-    expect(screen.getByRole("menuitem", { name: /Retry \+ Compare/ })).toBeInTheDocument();
+    const retryMenuItem = screen.getByRole("menuitem", { name: /Retry/ });
+    expect(retryMenuItem).toBeInTheDocument();
     fireEvent.keyDown(window, { key: "r", altKey: true });
     expect(onRetryWithDiff).toHaveBeenCalledTimes(1);
     expect(onRetryWithDiff.mock.calls[0]?.[0]?.id).toBe("b6e");
-    expect(screen.queryByRole("menuitem", { name: /Retry \+ Compare/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("menuitem", { name: /Retry/ })).not.toBeInTheDocument();
   });
 
   it("블록 액션 메뉴는 Escape로 닫히면 트리거 버튼에 포커스를 돌려준다", async () => {
