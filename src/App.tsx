@@ -34,6 +34,7 @@ import { useNotificationCenter } from "./hooks/useNotificationCenter";
 import { usePrivacyLedger } from "./hooks/usePrivacyLedger";
 import { useSquads } from "./hooks/useSquads";
 import type { SshProfile } from "./hooks/useTabManager";
+import { isTextInputTarget } from "./utils/event";
 import InfiniteCanvas from "./components/layout/InfiniteCanvas";
 import TerminalPane from "./components/TerminalPane";
 import HealingPanel from "./components/HealingPanel";
@@ -748,6 +749,7 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const captureHandler = (e: KeyboardEvent) => {
+      if (isTextInputTarget(e.target)) return;
       if (e.ctrlKey && e.key === "r" && viewModeRef.current === "terminal") {
         e.preventDefault();
         e.stopPropagation();
@@ -757,6 +759,7 @@ const App: React.FC = () => {
     window.addEventListener("keydown", captureHandler, { capture: true });
 
     const handler = (e: KeyboardEvent) => {
+      if (isTextInputTarget(e.target)) return;
       const mod = e.metaKey || e.ctrlKey;
       if (mod && !e.shiftKey && e.key === "k") {
         e.preventDefault();
