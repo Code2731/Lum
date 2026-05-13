@@ -27,6 +27,29 @@ const toneActive: Record<ToolbarTone, string> = {
 const toAriaKeyShortcut = (shortcut?: string): string | undefined => {
   if (!shortcut) return undefined;
 
+  const keyAlias: Record<string, string> = {
+    enter: "Enter",
+    return: "Enter",
+    space: "Space",
+    esc: "Escape",
+    escape: "Escape",
+    tab: "Tab",
+    backspace: "Backspace",
+    delete: "Delete",
+    del: "Delete",
+    up: "ArrowUp",
+    down: "ArrowDown",
+    left: "ArrowLeft",
+    right: "ArrowRight",
+    home: "Home",
+    end: "End",
+    insert: "Insert",
+    pageup: "PageUp",
+    pgup: "PageUp",
+    pagedown: "PageDown",
+    pgdn: "PageDown",
+  };
+
   const expanded = shortcut
     .replace(/\bcmd\b/gi, "Meta")
     .replace(/\bcommand\b/gi, "Meta")
@@ -43,6 +66,9 @@ const toAriaKeyShortcut = (shortcut?: string): string | undefined => {
   const normalizeToken = (token: string): string | undefined => {
     const trimmed = token.trim();
     if (!trimmed) return undefined;
+
+    const lowered = trimmed.toLowerCase();
+    if (keyAlias[lowered]) return keyAlias[lowered];
 
     if (trimmed.startsWith("Meta") && trimmed.length === 4) return "Meta";
     if (trimmed.startsWith("Control") && trimmed.length === 7) return "Control";
