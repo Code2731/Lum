@@ -17,6 +17,8 @@ describe("ToolbarIconButton", () => {
         <ToolbarIconButton label="문자키 버튼" shortcut="cmd+enter" />
         <ToolbarIconButton label="특수키 버튼" shortcut="Ctrl+Esc" />
         <ToolbarIconButton label="화살표 버튼" shortcut="Alt+up" />
+        <ToolbarIconButton label="함수키 버튼" shortcut="Cmd+f5" />
+        <ToolbarIconButton label="함수키 버튼 2" shortcut="Alt+F12" />
         <ToolbarIconButton label="일반 버튼" />
       </>
     );
@@ -56,6 +58,14 @@ describe("ToolbarIconButton", () => {
     expect(screen.getByRole("button", { name: "화살표 버튼" })).toHaveAttribute(
       "aria-keyshortcuts",
       "Alt+ArrowUp"
+    );
+    expect(screen.getByRole("button", { name: "함수키 버튼" })).toHaveAttribute(
+      "aria-keyshortcuts",
+      "Meta+F5"
+    );
+    expect(screen.getByRole("button", { name: "함수키 버튼 2" })).toHaveAttribute(
+      "aria-keyshortcuts",
+      "Alt+F12"
     );
     expect(screen.getByRole("button", { name: "일반 버튼" })).not.toHaveAttribute(
       "aria-keyshortcuts"

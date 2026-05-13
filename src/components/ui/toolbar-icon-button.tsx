@@ -70,6 +70,13 @@ const toAriaKeyShortcut = (shortcut?: string): string | undefined => {
     const lowered = trimmed.toLowerCase();
     if (keyAlias[lowered]) return keyAlias[lowered];
 
+    if (/^f\d+$/i.test(trimmed)) {
+      return trimmed.toUpperCase();
+    }
+
+    if (/^pageup$/i.test(trimmed)) return "PageUp";
+    if (/^pagedown$/i.test(trimmed)) return "PageDown";
+
     if (trimmed.startsWith("Meta") && trimmed.length === 4) return "Meta";
     if (trimmed.startsWith("Control") && trimmed.length === 7) return "Control";
     if (trimmed.startsWith("Shift") && trimmed.length === 5) return "Shift";
