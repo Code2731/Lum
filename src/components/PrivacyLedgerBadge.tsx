@@ -208,7 +208,7 @@ const PrivacyLedgerBadge: React.FC<Props> = ({ state, isAllOnDevice, onReset }) 
                 id={popoverId}
                 role="dialog"
                 aria-label="Privacy Ledger 상세"
-                className="absolute top-full right-0 mt-1 w-72 bg-[#161b22] border border-white/10 rounded-xl shadow-2xl z-50 overflow-hidden"
+                className="absolute top-full right-0 mt-1 w-72 max-h-[min(440px,calc(100vh-3.5rem))] flex flex-col bg-[#161b22] border border-white/10 rounded-xl shadow-2xl z-50 overflow-hidden"
               >
             <div className="flex items-center justify-between px-3 py-2 border-b border-white/5">
               <div className="flex items-center gap-1.5 text-xs font-semibold text-white/85">
@@ -248,7 +248,7 @@ const PrivacyLedgerBadge: React.FC<Props> = ({ state, isAllOnDevice, onReset }) 
               </div>
             </div>
 
-            <div className="px-3 py-2 space-y-1.5">
+            <div className="flex-1 min-h-0 overflow-y-auto px-3 py-2 space-y-1.5">
               {(Object.keys(state.perBackend) as Backend[]).map((b) => {
                 const s = state.perBackend[b];
                 const ratio = pct(s.count, state.total);
