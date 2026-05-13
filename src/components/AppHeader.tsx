@@ -137,11 +137,21 @@ const AppHeader: React.FC<Props> = ({
   const notifCenterPanelRef = React.useRef<HTMLDivElement>(null);
   const [advancedOverflowPlacement, setAdvancedOverflowPlacement] = React.useState<PopupPlacement>("down");
   const [notifCenterPlacement, setNotifCenterPlacement] = React.useState<PopupPlacement>("down");
+  const [advancedOverflowMaxHeight, setAdvancedOverflowMaxHeight] = React.useState(440);
+  const [notifCenterMaxHeight, setNotifCenterMaxHeight] = React.useState(440);
   const ADVANCED_OVERFLOW_PANEL_ID = "advanced-overflow-panel";
   const NOTIF_CENTER_PANEL_ID = "notification-center-panel";
   const POPUP_GUTTER = 8;
   const POPUP_ESTIMATE_HEIGHT = 440;
   const popupFocusables = "a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex='-1'])";
+  const clampPopupHeight = (placement: PopupPlacement, triggerRect: DOMRect | null): number => {
+    if (!triggerRect) return POPUP_ESTIMATE_HEIGHT;
+    const spaceAbove = triggerRect.top - POPUP_GUTTER;
+    const spaceBelow = window.innerHeight - triggerRect.bottom - POPUP_GUTTER;
+    const preferredSpace = placement === "up" ? spaceAbove : spaceBelow;
+    const safeSpace = Math.max(96, preferredSpace - 4);
+    return Math.min(POPUP_ESTIMATE_HEIGHT, safeSpace);
+  };
   const measurePopupPlacement = React.useCallback((trigger: HTMLElement | null, panelRef?: React.RefObject<HTMLDivElement | null>): PopupPlacement => {
     if (typeof window === "undefined" || !trigger) return "down";
 
@@ -166,6 +176,17 @@ const AppHeader: React.FC<Props> = ({
     }
     return spaceAbove > spaceBelow ? "up" : "down";
   }, []);
+  const updatePopupPlacement = React.useCallback((options: {
+    trigger: HTMLElement | null;
+    panelRef?: React.RefObject<HTMLDivElement | null>;
+    setPlacement: (placement: PopupPlacement) => void;
+    setMaxHeight: (height: number) => void;
+  }) => {
+    const placement = measurePopupPlacement(options.trigger, options.panelRef);
+    options.setPlacement(placement);
+    const nextHeight = clampPopupHeight(placement, options.trigger?.getBoundingClientRect() ?? null);
+    options.setMaxHeight(nextHeight);
+  }, [measurePopupPlacement]);
 
   const advancedOverflowPanelClassName = advancedOverflowPlacement === "up"
     ? "absolute right-0 bottom-full mb-1.5"
@@ -258,23 +279,33 @@ const AppHeader: React.FC<Props> = ({
     setShowNotifCenter(false);
     setShowAdvancedOverflow((prev) => {
       if (!prev) {
-        setAdvancedOverflowPlacement(measurePopupPlacement(advancedOverflowButtonRef.current, advancedOverflowPanelRef));
+        updatePopupPlacement({
+          trigger: advancedOverflowButtonRef.current,
+          panelRef: advancedOverflowPanelRef,
+          setPlacement: setAdvancedOverflowPlacement,
+          setMaxHeight: setAdvancedOverflowMaxHeight,
+        });
       }
       return !prev;
     });
-  }, [setShowAdvancedOverflow, setShowNotifCenter]);
+  }, [setShowAdvancedOverflow, setShowNotifCenter, updatePopupPlacement]);
 
   const toggleNotifCenter = React.useCallback(() => {
     setShowAdvancedOverflow(false);
     setShowNotifCenter((prev) => {
       const next = !prev;
       if (next) {
-        setNotifCenterPlacement(measurePopupPlacement(notifCenterButtonRef.current, notifCenterPanelRef));
+        updatePopupPlacement({
+          trigger: notifCenterButtonRef.current,
+          panelRef: notifCenterPanelRef,
+          setPlacement: setNotifCenterPlacement,
+          setMaxHeight: setNotifCenterMaxHeight,
+        });
         notifCenter.markAllRead();
       }
       return next;
     });
-  }, [notifCenter, setShowAdvancedOverflow, setShowNotifCenter]);
+  }, [notifCenter, setShowAdvancedOverflow, setShowNotifCenter, updatePopupPlacement]);
 
   React.useLayoutEffect(() => {
     if (!showAdvancedOverflow) return;
@@ -303,7 +334,12 @@ const AppHeader: React.FC<Props> = ({
     if (!showAdvancedOverflow) return;
 
     const updatePlacement = () => {
-      setAdvancedOverflowPlacement(measurePopupPlacement(advancedOverflowButtonRef.current, advancedOverflowPanelRef));
+      updatePopupPlacement({
+        trigger: advancedOverflowButtonRef.current,
+        panelRef: advancedOverflowPanelRef,
+        setPlacement: setAdvancedOverflowPlacement,
+        setMaxHeight: setAdvancedOverflowMaxHeight,
+      });
     };
 
     updatePlacement();
@@ -311,7 +347,7 @@ const AppHeader: React.FC<Props> = ({
     return () => {
       window.removeEventListener("resize", updatePlacement);
     };
-  }, [showAdvancedOverflow, measurePopupPlacement]);
+  }, [showAdvancedOverflow, updatePopupPlacement]);
 
   React.useLayoutEffect(() => {
     if (!showNotifCenter) return;
@@ -340,7 +376,12 @@ const AppHeader: React.FC<Props> = ({
     if (!showNotifCenter) return;
 
     const updatePlacement = () => {
-      setNotifCenterPlacement(measurePopupPlacement(notifCenterButtonRef.current, notifCenterPanelRef));
+      updatePopupPlacement({
+        trigger: notifCenterButtonRef.current,
+        panelRef: notifCenterPanelRef,
+        setPlacement: setNotifCenterPlacement,
+        setMaxHeight: setNotifCenterMaxHeight,
+      });
     };
 
     updatePlacement();
@@ -348,7 +389,7 @@ const AppHeader: React.FC<Props> = ({
     return () => {
       window.removeEventListener("resize", updatePlacement);
     };
-  }, [showNotifCenter, measurePopupPlacement]);
+  }, [showNotifCenter, updatePopupPlacement]);
 
   React.useLayoutEffect(() => {
     if (!showAdvancedOverflow) return;
@@ -598,7 +639,10 @@ const AppHeader: React.FC<Props> = ({
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.96, y: advancedOverflowPanelOffsetY }}
                   transition={{ duration: 0.15, ease: "easeOut" }}
-                  style={{ transformOrigin: advancedOverflowPanelOrigin }}
+                  style={{
+                    transformOrigin: advancedOverflowPanelOrigin,
+                    maxHeight: `${Math.max(130, advancedOverflowMaxHeight)}px`,
+                  }}
                   className={`${advancedOverflowPanelClassName} z-50 w-64 max-h-[min(440px,calc(100vh-3.5rem))] overflow-y-auto rounded-xl border border-white/[0.12] bg-[#0f1620]/95 backdrop-blur-md shadow-xl p-2 space-y-0.5`}
                 >
                   {hasUnseenAdvanced && (
@@ -730,8 +774,11 @@ const AppHeader: React.FC<Props> = ({
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.96, y: notifCenterPanelOffsetY }}
                   transition={{ duration: 0.15, ease: "easeOut" }}
+                  style={{
+                    transformOrigin: notifCenterPanelOrigin,
+                    maxHeight: `${Math.max(130, notifCenterMaxHeight)}px`,
+                  }}
                   className={notifCenterPanelClassName}
-                  style={{ transformOrigin: notifCenterPanelOrigin }}
                 >
                 <NotificationCenter
                   notifications={notifCenter.notifications}
