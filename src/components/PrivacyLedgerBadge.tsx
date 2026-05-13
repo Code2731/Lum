@@ -157,6 +157,8 @@ const PrivacyLedgerBadge: React.FC<Props> = ({ state, isAllOnDevice, onReset }) 
     };
     const keyHandler = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
+        e.preventDefault();
+        e.stopPropagation();
         closePopover();
       }
     };

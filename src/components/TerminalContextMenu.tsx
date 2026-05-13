@@ -64,7 +64,13 @@ const TerminalContextMenu: React.FC<Props> = ({
         onClose();
       }
     };
-    const keyHandler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    const keyHandler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        e.stopPropagation();
+        onClose();
+      }
+    };
     document.addEventListener("mousedown", handler);
     document.addEventListener("keydown", keyHandler);
     return () => {
@@ -118,6 +124,7 @@ const TerminalContextMenu: React.FC<Props> = ({
       onClose();
       return;
     }
+    e.stopPropagation();
 
     const last = menuItems.length - 1;
 

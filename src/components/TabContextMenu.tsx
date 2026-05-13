@@ -41,6 +41,8 @@ const TabContextMenu: React.FC<Props> = ({
     };
     const handleKeydown = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
+      e.preventDefault();
+      e.stopPropagation();
       onClose();
     };
     document.addEventListener("mousedown", handle);
@@ -88,6 +90,15 @@ const TabContextMenu: React.FC<Props> = ({
     if (e.key === "Tab") {
       return;
     }
+    if (e.key === "Escape") {
+      e.preventDefault();
+      e.stopPropagation();
+      onClose();
+      return;
+    }
+    if (e.key !== "Tab") {
+      e.stopPropagation();
+    }
 
     const last = COLOR_ENTRIES.length - 1;
     if (["ArrowRight", "ArrowDown"].includes(e.key)) {
@@ -125,6 +136,7 @@ const TabContextMenu: React.FC<Props> = ({
     }
 
     if (e.key === "g" || e.key === "G") {
+      e.preventDefault();
       inputRef.current?.focus();
     }
   };

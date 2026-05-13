@@ -103,6 +103,8 @@ const NotificationCenter: React.FC<Props> = ({
     };
     const keyHandler = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
+        e.preventDefault();
+        e.stopPropagation();
         onCloseRef.current();
       }
     };

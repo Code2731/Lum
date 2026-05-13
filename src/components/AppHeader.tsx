@@ -318,6 +318,8 @@ const AppHeader: React.FC<Props> = ({
 
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
+        e.preventDefault();
+        e.stopPropagation();
         closeAdvancedOverflow();
       }
     };
@@ -360,6 +362,8 @@ const AppHeader: React.FC<Props> = ({
 
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
+        e.preventDefault();
+        e.stopPropagation();
         closeNotifCenter();
       }
     };
