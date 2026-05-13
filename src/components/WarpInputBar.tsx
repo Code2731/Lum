@@ -146,6 +146,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
       if (isComposing || e.nativeEvent.isComposing) return;
       if (onKeyDownIntercept?.(e, input)) {
         e.preventDefault();
+        e.stopPropagation();
         return;
       }
 

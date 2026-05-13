@@ -295,6 +295,20 @@ describe("WarpInputBar — dumb input, 라우팅은 상위에서", () => {
     expect(input).toHaveValue("@gemini 로그 요약해줘");
   });
 
+  it("onKeyDownIntercept가 true일 때 상위 keydown 핸들러로 전파하지 않는다", () => {
+    const windowHandler = vi.fn();
+    window.addEventListener("keydown", windowHandler);
+    const onKeyDownIntercept = vi.fn(() => true);
+    const { input } = setup({ onKeyDownIntercept });
+
+    fireEvent.keyDown(input, { key: "k", ctrlKey: true });
+
+    expect(onKeyDownIntercept).toHaveBeenCalled();
+    expect(windowHandler).not.toHaveBeenCalled();
+
+    window.removeEventListener("keydown", windowHandler);
+  });
+
   it("기존 @backend 프리픽스는 Cmd/Ctrl+숫자로 교체", () => {
     const { input } = setup();
     fireEvent.change(input, { target: { value: "@ollama src/utils.ts 함수 수정해줘" } });
