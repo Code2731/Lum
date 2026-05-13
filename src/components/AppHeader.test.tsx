@@ -453,4 +453,103 @@ describe("AppHeader", () => {
       });
     }
   });
+
+  it("공간을 모두 확보할 수 있을 때 아래쪽 공간이 크면 아래로 배치한다", async () => {
+    const originalInnerHeight = window.innerHeight;
+
+    try {
+      const props = buildProps() as any;
+
+      const HeaderHarness = () => {
+        const [showAdvancedOverflow, setShowAdvancedOverflow] = React.useState(true);
+        return (
+          <AppHeader
+            {...props}
+            showAdvancedOverflow={showAdvancedOverflow}
+            setShowAdvancedOverflow={setShowAdvancedOverflow}
+          />
+        );
+      };
+
+      render(<HeaderHarness />);
+
+      const button = await screen.findByRole("button", { name: "고급 기능 (MCP / Squad / Healing / Recall / LoRA / RAG / xLLM)" });
+      const menu = await screen.findByRole("menu", { name: "고급 기능 메뉴" });
+
+      Object.defineProperty(button, "getBoundingClientRect", {
+        configurable: true,
+        value: () => domRect(120, 0, 40, 28),
+      });
+      Object.defineProperty(menu, "getBoundingClientRect", {
+        configurable: true,
+        value: () => domRect(0, 0, 256, 180),
+      });
+      Object.defineProperty(window, "innerHeight", {
+        configurable: true,
+        value: 520,
+      });
+
+      fireEvent(window, new Event("resize"));
+
+      await waitFor(() => {
+        const menuEl = screen.getByRole("menu", { name: "고급 기능 메뉴" });
+        expect(menuEl.className).toContain("top-full");
+        expect(menuEl.className).not.toContain("bottom-full");
+      });
+    } finally {
+      Object.defineProperty(window, "innerHeight", {
+        configurable: true,
+        value: originalInnerHeight,
+      });
+    }
+  });
+
+  it("위아래 모두 들어가지 않을 때 아래쪽 여유가 더 크면 아래로 배치한다", async () => {
+    const originalInnerHeight = window.innerHeight;
+
+    try {
+      const props = buildProps() as any;
+
+      const HeaderHarness = () => {
+        const [showAdvancedOverflow, setShowAdvancedOverflow] = React.useState(true);
+        return (
+          <AppHeader
+            {...props}
+            showAdvancedOverflow={showAdvancedOverflow}
+            setShowAdvancedOverflow={setShowAdvancedOverflow}
+          />
+        );
+      };
+
+      render(<HeaderHarness />);
+
+      const button = await screen.findByRole("button", { name: "고급 기능 (MCP / Squad / Healing / Recall / LoRA / RAG / xLLM)" });
+      const menu = await screen.findByRole("menu", { name: "고급 기능 메뉴" });
+
+      Object.defineProperty(button, "getBoundingClientRect", {
+        configurable: true,
+        value: () => domRect(20, 0, 40, 28),
+      });
+      Object.defineProperty(menu, "getBoundingClientRect", {
+        configurable: true,
+        value: () => domRect(0, 0, 256, 470),
+      });
+      Object.defineProperty(window, "innerHeight", {
+        configurable: true,
+        value: 500,
+      });
+
+      fireEvent(window, new Event("resize"));
+
+      await waitFor(() => {
+        const menuEl = screen.getByRole("menu", { name: "고급 기능 메뉴" });
+        expect(menuEl.className).toContain("top-full");
+      });
+    } finally {
+      Object.defineProperty(window, "innerHeight", {
+        configurable: true,
+        value: originalInnerHeight,
+      });
+    }
+  });
 });
