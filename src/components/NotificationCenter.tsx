@@ -122,7 +122,7 @@ const NotificationCenter: React.FC<Props> = ({
     });
   }, []);
 
-  const popupPositionClass = "absolute right-0";
+  const popupPositionClass = "";
 
   return (
     <div

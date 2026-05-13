@@ -245,14 +245,14 @@ test.describe("LUM 스모크 테스트", () => {
 
     await page.keyboard.press("Escape");
     await expect(notifPanel).toBeHidden();
-    await expect(notifButton).toHaveFocus();
+    await expect(notifButton).toBeFocused();
 
     await advancedButton.focus();
     await page.keyboard.press("Enter");
     await expect(advancedPanel).toBeVisible();
     await page.keyboard.press("Escape");
     await expect(advancedPanel).toBeHidden();
-    await expect(advancedButton).toHaveFocus();
+    await expect(advancedButton).toBeFocused();
   });
 
   test("고급 기능과 알림 센터는 동시에 열리지 않는다", async ({ page }) => {

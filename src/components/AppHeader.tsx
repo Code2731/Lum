@@ -168,8 +168,8 @@ const AppHeader: React.FC<Props> = ({
   const advancedOverflowPanelOrigin = advancedOverflowPlacement === "up" ? "bottom right" : "top right";
   const advancedOverflowPanelOffsetY = advancedOverflowPlacement === "up" ? 4 : -4;
   const notifCenterPanelClassName = notifCenterPlacement === "up"
-    ? "absolute right-0 bottom-full mb-1.5"
-    : "absolute right-0 top-full mt-1";
+    ? "absolute right-0 bottom-full mb-1.5 w-80 h-fit"
+    : "absolute right-0 top-full mt-1 w-80 h-fit";
   const notifCenterPanelOrigin = notifCenterPlacement === "up" ? "bottom right" : "top right";
   const notifCenterPanelOffsetY = notifCenterPlacement === "up" ? 4 : -4;
 
