@@ -272,12 +272,48 @@ describe("AppHeader", () => {
     overflowButton.focus();
     expect(overflowButton).toHaveFocus();
 
-    fireEvent.mouseDown(document.body);
+    fireEvent.pointerDown(document.body);
 
     await waitFor(() => {
       expect(screen.queryByRole("menu", { name: "고급 기능 메뉴" })).not.toBeInTheDocument();
     });
     expect(overflowButton).toHaveFocus();
+  });
+
+  it("고급 메뉴를 열면 즉시 닫히지 않고 바깥에서 닫힌다", async () => {
+    const props = buildProps() as any;
+    const Wrapper = () => {
+      const [showAdvancedOverflow, setShowAdvancedOverflow] = React.useState(false);
+      const [showNotifCenter, setShowNotifCenter] = React.useState(false);
+      return (
+        <AppHeader
+          {...props}
+          showAdvancedOverflow={showAdvancedOverflow}
+          setShowAdvancedOverflow={setShowAdvancedOverflow}
+          panels={{
+            ...props.panels,
+            showNotifCenter,
+            setShowNotifCenter,
+          }}
+        />
+      );
+    };
+
+    render(<Wrapper />);
+
+    const advancedButton = screen.getByRole("button", { name: ADVANCED_BUTTON_NAME });
+    fireEvent.click(advancedButton);
+
+    await waitFor(() => {
+      expect(screen.getByRole("menu", { name: "고급 기능 메뉴" })).toBeInTheDocument();
+    });
+    expect(screen.queryByRole("menu", { name: "알림 센터" })).not.toBeInTheDocument();
+
+    fireEvent.pointerDown(document.body);
+
+    await waitFor(() => {
+      expect(screen.queryByRole("menu", { name: "고급 기능 메뉴" })).not.toBeInTheDocument();
+    });
   });
 
   it("알림 센터를 바깥에서 클릭하면 닫히고 트리거로 포커스가 돌아간다", async () => {
@@ -295,7 +331,7 @@ describe("AppHeader", () => {
     notifButton.focus();
     expect(notifButton).toHaveFocus();
 
-    fireEvent.mouseDown(document.body);
+    fireEvent.pointerDown(document.body);
 
     await waitFor(() => {
       expect(screen.queryByRole("menu", { name: "알림 센터" })).not.toBeInTheDocument();

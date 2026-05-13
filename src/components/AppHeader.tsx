@@ -279,7 +279,7 @@ const AppHeader: React.FC<Props> = ({
   React.useLayoutEffect(() => {
     if (!showAdvancedOverflow) return;
 
-    const handleClose = (e: MouseEvent | PointerEvent) => {
+    const handleClose = (e: PointerEvent) => {
       if (advancedOverflowRef.current && !advancedOverflowRef.current.contains(e.target as Node)) {
         closeAdvancedOverflow();
       }
@@ -291,11 +291,9 @@ const AppHeader: React.FC<Props> = ({
       }
     };
 
-    document.addEventListener("mousedown", handleClose);
     document.addEventListener("pointerdown", handleClose);
     document.addEventListener("keydown", handleEscape);
     return () => {
-      document.removeEventListener("mousedown", handleClose);
       document.removeEventListener("pointerdown", handleClose);
       document.removeEventListener("keydown", handleEscape);
     };
@@ -318,7 +316,7 @@ const AppHeader: React.FC<Props> = ({
   React.useLayoutEffect(() => {
     if (!showNotifCenter) return;
 
-    const handleClose = (e: MouseEvent | PointerEvent) => {
+    const handleClose = (e: PointerEvent) => {
       if (notifCenterPopupRef.current && !notifCenterPopupRef.current.contains(e.target as Node)) {
         closeNotifCenter();
       }
@@ -330,11 +328,9 @@ const AppHeader: React.FC<Props> = ({
       }
     };
 
-    document.addEventListener("mousedown", handleClose);
     document.addEventListener("pointerdown", handleClose);
     document.addEventListener("keydown", handleEscape);
     return () => {
-      document.removeEventListener("mousedown", handleClose);
       document.removeEventListener("pointerdown", handleClose);
       document.removeEventListener("keydown", handleEscape);
     };
