@@ -89,6 +89,11 @@ const AppHeader: React.FC<Props> = ({
   const isNew = (id: string) =>
     (NEW_ADVANCED_FEATURES as readonly string[]).includes(id) && !seenAdvancedFeatures.includes(id);
   const hasUnseenAdvanced = NEW_ADVANCED_FEATURES.some((id) => !seenAdvancedFeatures.includes(id));
+  const advancedBadgeLabel = hasUnseenAdvanced
+    ? "새 고급 기능이 있습니다"
+    : squadStore.squads.length > 0
+      ? "활성 Squad가 있습니다"
+      : undefined;
   const {
     setShowModelManager,
     showRagPanel, setShowRagPanel,
@@ -573,6 +578,7 @@ const AppHeader: React.FC<Props> = ({
               label="고급 기능 (MCP / Squad / Healing / Recall / LoRA / RAG / xLLM)"
               active={showAdvancedOverflow}
               badge={squadStore.squads.length > 0 || hasUnseenAdvanced}
+              badgeLabel={advancedBadgeLabel}
               aria-controls={ADVANCED_OVERFLOW_PANEL_ID}
               aria-expanded={showAdvancedOverflow}
               onClick={toggleAdvancedOverflow}

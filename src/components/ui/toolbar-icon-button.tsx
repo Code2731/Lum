@@ -13,6 +13,8 @@ interface ToolbarIconButtonProps extends React.ButtonHTMLAttributes<HTMLButtonEl
   active?: boolean;
   /** 우상단 알림 점 표시 */
   badge?: boolean;
+  /** 배지 보조 텍스트 (툴팁/스크린리더) */
+  badgeLabel?: string;
   /** 활성 컬러 — 기본 accent, 특수 토글(추론 등)은 cyan */
   tone?: ToolbarTone;
 }
@@ -23,12 +25,14 @@ const toneActive: Record<ToolbarTone, string> = {
 };
 
 export const ToolbarIconButton = React.forwardRef<HTMLButtonElement, ToolbarIconButtonProps>(
-  ({ label, shortcut, active, badge, tone = "accent", className, children, ...props }, ref) => (
+  ({ label, shortcut, active, badge, badgeLabel, tone = "accent", className, children, ...props }, ref) => {
+    const a11yLabel = badge && badgeLabel ? `${label} (${badgeLabel})` : label;
+    return (
     <Tooltip>
       <TooltipTrigger asChild>
         <button
           ref={ref}
-          aria-label={label}
+          aria-label={a11yLabel}
           aria-pressed={active}
           {...props}
           className={cn(
@@ -44,10 +48,16 @@ export const ToolbarIconButton = React.forwardRef<HTMLButtonElement, ToolbarIcon
           {badge && (
             <span className="pointer-events-none absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-red-500" />
           )}
+          {badge && badgeLabel && (
+            <span className="sr-only">{badgeLabel}</span>
+          )}
         </button>
       </TooltipTrigger>
       <TooltipContent side="bottom" className="flex items-center gap-2">
         <span>{label}</span>
+        {badge && badgeLabel && (
+          <span className="text-[10px] text-accent">[{badgeLabel}]</span>
+        )}
         {shortcut && (
           <kbd className="text-[10px] text-white/50 border border-white/15 rounded px-1 py-px font-mono leading-none">
             {shortcut}
@@ -55,7 +65,8 @@ export const ToolbarIconButton = React.forwardRef<HTMLButtonElement, ToolbarIcon
         )}
       </TooltipContent>
     </Tooltip>
-  ),
+  );
+  },
 );
 ToolbarIconButton.displayName = "ToolbarIconButton";
 
