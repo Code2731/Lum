@@ -24,15 +24,36 @@ const toneActive: Record<ToolbarTone, string> = {
   cyan: "text-cyan-300 bg-cyan-400/10",
 };
 
+const toAriaKeyShortcut = (shortcut?: string): string | undefined => {
+  if (!shortcut) return undefined;
+
+  const expanded = shortcut
+    .replace(/⌘/g, "Meta+")
+    .replace(/⇧/g, "Shift+")
+    .replace(/⌥/g, "Alt+")
+    .replace(/⌃/g, "Control+");
+
+  const tokens = expanded
+    .split("+")
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+  if (tokens.length === 0) return undefined;
+
+  return tokens.join("+");
+};
+
 export const ToolbarIconButton = React.forwardRef<HTMLButtonElement, ToolbarIconButtonProps>(
   ({ label, shortcut, active, badge, badgeLabel, tone = "accent", className, children, ...props }, ref) => {
     const a11yLabel = badge && badgeLabel ? `${label} (${badgeLabel})` : label;
+    const ariaShortcut = toAriaKeyShortcut(shortcut);
     return (
     <Tooltip>
       <TooltipTrigger asChild>
         <button
           ref={ref}
           aria-label={a11yLabel}
+          aria-keyshortcuts={ariaShortcut}
           aria-pressed={active}
           {...props}
           className={cn(

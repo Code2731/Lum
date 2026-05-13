@@ -134,6 +134,8 @@ const domRect = (top: number, left: number, width: number, height: number): DOMR
   toJSON: () => ({}),
 });
 
+const ADVANCED_BUTTON_NAME = /^고급 기능 \(MCP \/ Squad \/ Healing \/ Recall \/ LoRA \/ RAG \/ xLLM\)(?: \(새 고급 기능이 있습니다\))?$/;
+
 describe("AppHeader", () => {
   it("고급 메뉴에서 화살표 키로 포커스가 순환 이동한다", async () => {
     const HeaderHarness = () => {
@@ -208,7 +210,7 @@ describe("AppHeader", () => {
 
     render(<HeaderHarness />);
 
-    const overflowButton = screen.getByRole("button", { name: "고급 기능 (MCP / Squad / Healing / Recall / LoRA / RAG / xLLM)" });
+    const overflowButton = screen.getByRole("button", { name: ADVANCED_BUTTON_NAME });
     overflowButton.focus();
     expect(overflowButton).toHaveFocus();
 
@@ -243,6 +245,15 @@ describe("AppHeader", () => {
     expect(notifButton).toHaveFocus();
   });
 
+  it("툴바 버튼은 shortcut 속성을 aria-keyshortcuts로 노출한다", () => {
+    render(<AppHeader {...buildProps()} />);
+
+    expect(screen.getByRole("button", { name: "파일 탐색기" })).toHaveAttribute("aria-keyshortcuts", "Meta+B");
+    expect(screen.getByRole("button", { name: "스크립트 라이브러리" })).toHaveAttribute("aria-keyshortcuts", "Meta+Shift+L");
+    expect(screen.getByRole("button", { name: "워크스페이스" })).toHaveAttribute("aria-keyshortcuts", "Meta+Shift+S");
+    expect(screen.getByRole("button", { name: "AI Diff 리뷰" })).toHaveAttribute("aria-keyshortcuts", "Meta+Shift+R");
+  });
+
   it("고급 메뉴를 바깥에서 클릭하면 닫히고 트리거로 포커스가 돌아간다", async () => {
     const HeaderHarness = () => {
       const [showAdvancedOverflow, setShowAdvancedOverflow] = React.useState(true);
@@ -254,7 +265,7 @@ describe("AppHeader", () => {
 
     render(<HeaderHarness />);
 
-    const overflowButton = screen.getByRole("button", { name: "고급 기능 (MCP / Squad / Healing / Recall / LoRA / RAG / xLLM)" });
+    const overflowButton = screen.getByRole("button", { name: ADVANCED_BUTTON_NAME });
     overflowButton.focus();
     expect(overflowButton).toHaveFocus();
 
@@ -310,7 +321,7 @@ describe("AppHeader", () => {
 
     render(<Wrapper />);
 
-    const advancedButton = screen.getByRole("button", { name: "고급 기능 (MCP / Squad / Healing / Recall / LoRA / RAG / xLLM)" });
+    const advancedButton = screen.getByRole("button", { name: ADVANCED_BUTTON_NAME });
     const closeSpy = props.notifCenter.markAllRead;
     expect(screen.getByRole("menu", { name: "알림 센터" })).toBeInTheDocument();
 
@@ -370,7 +381,7 @@ describe("AppHeader", () => {
 
       render(<HeaderHarness />);
 
-      const button = await screen.findByRole("button", { name: "고급 기능 (MCP / Squad / Healing / Recall / LoRA / RAG / xLLM)" });
+      const button = await screen.findByRole("button", { name: ADVANCED_BUTTON_NAME });
       const menu = await screen.findByRole("menu", { name: "고급 기능 메뉴" });
 
       Object.defineProperty(button, "getBoundingClientRect", {
@@ -473,7 +484,7 @@ describe("AppHeader", () => {
 
       render(<HeaderHarness />);
 
-      const button = await screen.findByRole("button", { name: "고급 기능 (MCP / Squad / Healing / Recall / LoRA / RAG / xLLM)" });
+      const button = await screen.findByRole("button", { name: ADVANCED_BUTTON_NAME });
       const menu = await screen.findByRole("menu", { name: "고급 기능 메뉴" });
 
       Object.defineProperty(button, "getBoundingClientRect", {
@@ -523,7 +534,7 @@ describe("AppHeader", () => {
 
       render(<HeaderHarness />);
 
-      const button = await screen.findByRole("button", { name: "고급 기능 (MCP / Squad / Healing / Recall / LoRA / RAG / xLLM)" });
+      const button = await screen.findByRole("button", { name: ADVANCED_BUTTON_NAME });
       const menu = await screen.findByRole("menu", { name: "고급 기능 메뉴" });
 
       Object.defineProperty(button, "getBoundingClientRect", {
