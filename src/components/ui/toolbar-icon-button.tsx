@@ -28,15 +28,36 @@ const toAriaKeyShortcut = (shortcut?: string): string | undefined => {
   if (!shortcut) return undefined;
 
   const expanded = shortcut
+    .replace(/\bcmd\b/gi, "Meta")
+    .replace(/\bcommand\b/gi, "Meta")
+    .replace(/\bctrl\b/gi, "Control")
+    .replace(/\bcontrol\b/gi, "Control")
+    .replace(/\balt\b/gi, "Alt")
+    .replace(/\boption\b/gi, "Alt")
+    .replace(/\bshift\b/gi, "Shift")
     .replace(/⌘/g, "Meta+")
     .replace(/⇧/g, "Shift+")
     .replace(/⌥/g, "Alt+")
     .replace(/⌃/g, "Control+");
 
+  const normalizeToken = (token: string): string | undefined => {
+    const trimmed = token.trim();
+    if (!trimmed) return undefined;
+
+    if (trimmed.startsWith("Meta") && trimmed.length === 4) return "Meta";
+    if (trimmed.startsWith("Control") && trimmed.length === 7) return "Control";
+    if (trimmed.startsWith("Shift") && trimmed.length === 5) return "Shift";
+    if (trimmed.startsWith("Alt") && trimmed.length === 3) return "Alt";
+
+    return trimmed.length === 1
+      ? trimmed.toUpperCase()
+      : trimmed;
+  };
+
   const tokens = expanded
     .split("+")
-    .map((item) => item.trim())
-    .filter(Boolean);
+    .map((token) => normalizeToken(token))
+    .filter(Boolean) as string[];
 
   if (tokens.length === 0) return undefined;
 
