@@ -228,6 +228,12 @@ const AppHeader: React.FC<Props> = ({
     focusables[nextIndex]?.focus();
   };
 
+  const focusFirstPopupElement = React.useCallback((panelRef: React.RefObject<HTMLDivElement | null>) => {
+    const focusables = getPopupElements(panelRef);
+    if (focusables.length === 0) return;
+    focusables[0]?.focus();
+  }, []);
+
   const closeAdvancedOverflow = React.useCallback(() => {
     setShowAdvancedOverflow(false);
     requestAnimationFrame(() => {
@@ -342,21 +348,17 @@ const AppHeader: React.FC<Props> = ({
     };
   }, [showNotifCenter, measurePopupPlacement]);
 
-  React.useEffect(() => {
+  React.useLayoutEffect(() => {
     if (!showAdvancedOverflow) return;
-    const focusables = getPopupElements(advancedOverflowPanelRef);
-    if (focusables.length > 0) {
-      focusables[0]?.focus();
-    }
-  }, [showAdvancedOverflow]);
 
-  React.useEffect(() => {
+    focusFirstPopupElement(advancedOverflowPanelRef);
+  }, [showAdvancedOverflow, focusFirstPopupElement]);
+
+  React.useLayoutEffect(() => {
     if (!showNotifCenter) return;
-    const focusables = getPopupElements(notifCenterPanelRef);
-    if (focusables.length > 0) {
-      focusables[0]?.focus();
-    }
-  }, [showNotifCenter]);
+
+    focusFirstPopupElement(notifCenterPanelRef);
+  }, [showNotifCenter, focusFirstPopupElement]);
 
   return (
     <header
