@@ -221,6 +221,8 @@ const ReactAgentPanel: React.FC<Props> = ({
     React.useState(false);
   const [scipRebuildForce, setScipRebuildForce] = React.useState(false);
   const [scipRebuildMessage, setScipRebuildMessage] = React.useState("");
+  const [scipRebuildTargetLanguage, setScipRebuildTargetLanguage] =
+    React.useState<string>("all");
   const { status, goal, steps, changes, undoing, undoReport } = state;
   const isActive = status === "running";
   const isPlanDone = status === "done" && state.mode === "plan";
@@ -246,11 +248,41 @@ const ReactAgentPanel: React.FC<Props> = ({
   const isScipEnabled =
     scipToolsEnabled && availableScipBackends > 0 && scipStatus?.enabled;
   const scipRebuildDisabled =
-    isScipRebuildInProgress || availableScipBackends === 0 || !scipStatus;
+    isScipRebuildInProgress ||
+    availableScipBackends === 0 ||
+    !scipStatus ||
+    scipRebuildTargetInvalid;
   const hasScipMissingIndex =
     scipStatus?.backends.some(
       (backend) => backend.available && !backend.index_exists,
     ) ?? false;
+  const scipAvailableTargets = scipStatus?.backends
+    .filter((backend) => backend.available)
+    .map((backend) => ({
+      language: backend.language,
+      value: backend.language.toLowerCase(),
+    }));
+  const scipRebuildTargetAll = scipRebuildTargetLanguage === "all";
+  const scipRebuildTargetLanguageLabel = scipRebuildTargetAll
+    ? "전체"
+    : scipAvailableTargets?.find(
+        (entry) => entry.value === scipRebuildTargetLanguage,
+      )?.language ?? scipRebuildTargetLanguage;
+  const scipRebuildTargetMissing = scipRebuildTargetAll
+    ? hasScipMissingIndex
+    : !!scipStatus?.backends.find(
+        (backend) =>
+          backend.language.toLowerCase() === scipRebuildTargetLanguage &&
+          !backend.index_exists,
+      );
+  const scipRebuildTargetInvalid = React.useMemo(
+    () =>
+      scipRebuildTargetLanguage !== "all" &&
+      !scipAvailableTargets?.some(
+        (entry) => entry.value === scipRebuildTargetLanguage,
+      ),
+    [scipRebuildTargetLanguage, scipAvailableTargets],
+  );
   const showUndoButton =
     hasChanges &&
     (status === "done" || status === "error" || status === "cancelled");
@@ -287,6 +319,12 @@ const ReactAgentPanel: React.FC<Props> = ({
       .catch(() => {});
     refreshScipStatus();
   }, [state.cwd]);
+
+  useEffect(() => {
+    if (!scipRebuildTargetAll && scipRebuildTargetInvalid) {
+      setScipRebuildTargetLanguage("all");
+    }
+  }, [scipRebuildTargetAll, scipRebuildTargetInvalid]);
 
   const toggleDesktopTools = async () => {
     const next = !desktopToolsEnabled;
@@ -325,11 +363,12 @@ const ReactAgentPanel: React.FC<Props> = ({
       return;
     }
     setIsScipRebuildInProgress(true);
-    setScipRebuildMessage("SCIP 인덱스를 생성합니다...");
+    const requestLanguage = scipRebuildTargetAll ? null : scipRebuildTargetLanguage;
+    setScipRebuildMessage(`${scipRebuildTargetLanguageLabel} SCIP 인덱스를 생성합니다...`);
     try {
       const summary = await invoke<ScipRebuildSummary>("scip_rebuild_index", {
         cwd: state.cwd,
-        language: null,
+        language: requestLanguage,
         force: scipRebuildForce,
       });
       const lines = summary.results.map((result) => {
@@ -459,11 +498,34 @@ const ReactAgentPanel: React.FC<Props> = ({
           {isScipRebuildInProgress
             ? "SCIP 생성 중..."
             : scipRebuildForce
-              ? "SCIP 인덱스 강제 생성"
-              : hasScipMissingIndex
-                ? "SCIP 인덱스 생성(누락분)"
-                : "SCIP 인덱스 생성"}
+              ? scipRebuildTargetAll
+                ? "SCIP 인덱스 전체 강제 생성"
+                : `${scipRebuildTargetLanguageLabel} 강제 생성`
+              : scipRebuildTargetMissing
+                ? `${scipRebuildTargetLanguageLabel} 인덱스 생성(누락분)`
+                : `${scipRebuildTargetLanguageLabel} 인덱스 생성`}
         </button>
+        <label className="ml-2 px-2 py-0.5 rounded border border-white/10 bg-white/5 text-[9px] text-white/65 inline-flex items-center gap-1">
+          <span>언어:</span>
+          <select
+            value={scipRebuildTargetLanguage}
+            onChange={(e) => setScipRebuildTargetLanguage(e.target.value)}
+            disabled={isScipRebuildInProgress}
+            className="bg-transparent text-[10px] border-none outline-none text-white/75"
+            title="재빌드할 SCIP 언어를 선택하세요"
+          >
+            <option value="all">전체</option>
+            {scipAvailableTargets?.map((backend) => (
+              <option
+                value={backend.value}
+                key={backend.value}
+                className="bg-[#161b22] text-white"
+              >
+                {backend.language}
+              </option>
+            ))}
+          </select>
+        </label>
         <label className="ml-2 px-2 py-0.5 rounded border border-white/10 bg-white/5 text-[9px] text-white/65 inline-flex items-center gap-1">
           <input
             type="checkbox"
