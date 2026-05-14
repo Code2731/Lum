@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { CheckCircle2, XCircle, Clock, ChevronDown, ChevronRight, Copy, TerminalSquare, Search, MoreHorizontal, Share2, RotateCcw } from "lucide-react";
 import { IconButton } from "@/components/ui/icon-button";
 import { tokenizeShell, TOKEN_COLORS } from "../utils/shellSyntax";
@@ -2450,200 +2451,205 @@ const WarpListView: React.FC<Props> = ({
                   <MoreHorizontal size={10} />
                 </IconButton>
                 {menuOpenId === b.id && (
-                  <div
-                    id={`block-action-menu-${b.id}`}
-                    ref={(el) => { menuContainerRefs.current[b.id] = el; }}
-                    role="menu"
-                    aria-label="블록 액션 메뉴"
-                    className={`fixed z-30 w-56 rounded-lg border border-white/10 bg-[#0f151f]/96 backdrop-blur-sm shadow-2xl overflow-hidden ${
-                      menuPlacement === "up" ? "bottom-full mb-1" : "top-full mt-1"
-                    }`}
-                    style={{
-                      left: menuPosition.x,
-                      top: menuPosition.y,
-                    }}
-                    onClick={(e) => e.stopPropagation()}
-                    onBlurCapture={(e) => {
-                      const next = e.relatedTarget as Node | null;
-                      const menuContainer = menuContainerRefs.current[b.id];
-                      const menuButton = menuButtonRefs.current[b.id];
-                      if (next && (menuContainer?.contains(next) || menuButton?.contains(next))) return;
-                      closeMenuById(b.id, false);
-                    }}
-                    onKeyDown={(e) => {
-                      const currentMenuItems = menuItemRefs.current[b.id] ?? [];
-                      const last = Math.max(0, currentMenuItems.length - 1);
-                      if (e.key === "Escape") {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        closeMenuById(b.id, true);
-                        return;
-                      }
-                      if (e.key === "Tab") {
-                        closeMenuById(b.id, false);
-                        return;
-                      }
-                      if (e.altKey) {
-                        const key = e.key.toLowerCase();
-                        let handled = false;
-                        if (key === "c") handled = triggerMenuShortcut(b.id, 0);
-                        if (key === "f") handled = triggerMenuShortcut(b.id, 1);
-                        if (key === "s") handled = triggerMenuShortcut(b.id, 2);
-                        if (key === "r" && onRetryWithDiff) handled = triggerMenuShortcut(b.id, 3);
-                        if (handled) {
-                          e.preventDefault();
-                          e.stopPropagation();
-                        }
-                        return;
-                      }
-                      if (e.key === "ArrowDown") {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        const next = menuActiveIndex >= last ? 0 : menuActiveIndex + 1;
-                        currentMenuItems[next]?.focus();
-                        setMenuActiveIndex(next);
-                        return;
-                      }
-                      if (e.key === "ArrowUp") {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        const next = menuActiveIndex <= 0 ? last : menuActiveIndex - 1;
-                        currentMenuItems[next]?.focus();
-                        setMenuActiveIndex(next);
-                        return;
-                      }
-                      if (e.key === "Home") {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        currentMenuItems[0]?.focus();
-                        setMenuActiveIndex(0);
-                        return;
-                      }
-                      if (e.key === "End") {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        currentMenuItems[last]?.focus();
-                        setMenuActiveIndex(last);
-                        return;
-                      }
-                      if (e.key === "Enter" || e.key === " ") {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        currentMenuItems[menuActiveIndex]?.click();
-                        return;
-                      }
-                    }}
-                  >
-                    <button
-                      type="button"
-                      role="menuitem"
-                      aria-label="Copy Both (Alt+C)"
-                      aria-keyshortcuts="Alt+C"
-                      title="Alt+C"
-                      className="w-full px-2.5 py-1.5 text-left text-[11px] text-white/78 hover:bg-white/[0.08] flex items-center justify-between gap-2"
-                      tabIndex={menuOpenId === b.id && menuActiveIndex === 0 ? 0 : -1}
-                      ref={(el) => {
-                        setMenuItemRef(b.id, 0, el);
-                      }}
-                      onFocus={() => setMenuActiveIndex(0)}
-                      onClick={() => {
-                        navigator.clipboard.writeText(`$ ${b.command}\n${b.output.trim()}`).catch(() => {});
-                        closeMenuById(b.id, false);
-                      }}
-                    >
-                      <span>Copy Both</span>
-                      <span className="text-[10px] text-white/35 tabular-nums">Alt+C</span>
-                    </button>
-                    <button
-                      type="button"
-                      role="menuitem"
-                      aria-label="Find Within Block (Alt+F)"
-                      aria-keyshortcuts="Alt+F"
-                      title="Alt+F"
-                      className="w-full px-2.5 py-1.5 text-left text-[11px] text-white/78 hover:bg-white/[0.08] flex items-center justify-between gap-2"
-                      tabIndex={menuOpenId === b.id && menuActiveIndex === 1 ? 0 : -1}
-                      ref={(el) => {
-                        setMenuItemRef(b.id, 1, el);
-                      }}
-                      onFocus={() => setMenuActiveIndex(1)}
-                      onClick={() => openFindWithin(b.id)}
-                    >
-                      <span>Find Within Block</span>
-                      <span className="text-[10px] text-white/35 tabular-nums">Alt+F</span>
-                    </button>
-                    <button
-                      type="button"
-                      role="menuitem"
-                      aria-label="Share Snapshot (Alt+S)"
-                      aria-keyshortcuts="Alt+S"
-                      title="Alt+S"
-                      className="w-full px-2.5 py-1.5 text-left text-[11px] text-white/78 hover:bg-white/[0.08] flex items-center justify-between gap-2"
-                      tabIndex={menuOpenId === b.id && menuActiveIndex === 2 ? 0 : -1}
-                      ref={(el) => {
-                        setMenuItemRef(b.id, 2, el);
-                      }}
-                      onFocus={() => setMenuActiveIndex(2)}
-                      onClick={() => {
-                        const snapshot = [
-                          `### ${new Date(b.startedAt).toLocaleString()}`,
-                          "```sh",
-                          `$ ${b.command}`,
-                          "```",
-                          "```txt",
-                          b.output.trim(),
-                          "```",
-                        ].join("\n");
-                        navigator.clipboard.writeText(snapshot).catch(() => {});
-                        closeMenuById(b.id, false);
-                      }}
-                    >
-                      <span className="inline-flex items-center gap-1.5">
-                        <Share2 size={11} />
-                        Share Snapshot
-                      </span>
-                      <span className="text-[10px] text-white/35 tabular-nums">Alt+S</span>
-                    </button>
-                    {onRetryWithDiff && (
-                      <button
-                        type="button"
-                        role="menuitem"
-                        aria-label="Retry and Compare (Alt+R)"
-                        aria-keyshortcuts="Alt+R"
-                        title="Alt+R"
-                        className="w-full px-2.5 py-1.5 text-left text-[11px] text-white/78 hover:bg-white/[0.08] flex items-center justify-between gap-2"
-                        tabIndex={menuOpenId === b.id && menuActiveIndex === 3 ? 0 : -1}
-                        ref={(el) => {
-                          setMenuItemRef(b.id, 3, el);
-                        }}
-                        onFocus={() => setMenuActiveIndex(3)}
-                        onClick={() => {
-                          onRetryWithDiff(b);
-                          closeMenuById(b.id, false);
-                        }}
-                      >
-                        <span className="inline-flex items-center gap-1.5">
-                          <RotateCcw size={11} />
-                          Retry + Compare
-                        </span>
-                        <span className="text-[10px] text-white/35 tabular-nums">Alt+R</span>
-                      </button>
-                    )}
-                    {compare && (
-                      <div className="px-2.5 py-1.5 border-t border-white/10">
-                        <div className="text-[10px] text-cyan-200/90 tabular-nums">
-                          Δ +{compare.added}/-{compare.removed}
-                        </div>
-                        {compare.preview && (
-                          <div className="text-[10px] text-white/50 leading-relaxed mt-0.5 break-words">
-                            {compare.preview}
+                  (typeof document === "undefined"
+                    ? null
+                    : createPortal(
+                        <div
+                          id={`block-action-menu-${b.id}`}
+                          ref={(el) => { menuContainerRefs.current[b.id] = el; }}
+                          role="menu"
+                          aria-label="블록 액션 메뉴"
+                          className={`fixed z-30 w-56 rounded-lg border border-white/10 bg-[#0f151f]/96 backdrop-blur-sm shadow-2xl overflow-hidden ${
+                            menuPlacement === "up" ? "bottom-full mb-1" : "top-full mt-1"
+                          }`}
+                          style={{
+                            left: menuPosition.x,
+                            top: menuPosition.y,
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                          onBlurCapture={(e) => {
+                            const next = e.relatedTarget as Node | null;
+                            const menuContainer = menuContainerRefs.current[b.id];
+                            const menuButton = menuButtonRefs.current[b.id];
+                            if (next && (menuContainer?.contains(next) || menuButton?.contains(next))) return;
+                            closeMenuById(b.id, false);
+                          }}
+                          onKeyDown={(e) => {
+                            const currentMenuItems = menuItemRefs.current[b.id] ?? [];
+                            const last = Math.max(0, currentMenuItems.length - 1);
+                            if (e.key === "Escape") {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              closeMenuById(b.id, true);
+                              return;
+                            }
+                            if (e.key === "Tab") {
+                              closeMenuById(b.id, false);
+                              return;
+                            }
+                            if (e.altKey) {
+                              const key = e.key.toLowerCase();
+                              let handled = false;
+                              if (key === "c") handled = triggerMenuShortcut(b.id, 0);
+                              if (key === "f") handled = triggerMenuShortcut(b.id, 1);
+                              if (key === "s") handled = triggerMenuShortcut(b.id, 2);
+                              if (key === "r" && onRetryWithDiff) handled = triggerMenuShortcut(b.id, 3);
+                              if (handled) {
+                                e.preventDefault();
+                                e.stopPropagation();
+                              }
+                              return;
+                            }
+                            if (e.key === "ArrowDown") {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              const next = menuActiveIndex >= last ? 0 : menuActiveIndex + 1;
+                              currentMenuItems[next]?.focus();
+                              setMenuActiveIndex(next);
+                              return;
+                            }
+                            if (e.key === "ArrowUp") {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              const next = menuActiveIndex <= 0 ? last : menuActiveIndex - 1;
+                              currentMenuItems[next]?.focus();
+                              setMenuActiveIndex(next);
+                              return;
+                            }
+                            if (e.key === "Home") {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              currentMenuItems[0]?.focus();
+                              setMenuActiveIndex(0);
+                              return;
+                            }
+                            if (e.key === "End") {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              currentMenuItems[last]?.focus();
+                              setMenuActiveIndex(last);
+                              return;
+                            }
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              currentMenuItems[menuActiveIndex]?.click();
+                              return;
+                            }
+                          }}
+                        >
+                          <button
+                            type="button"
+                            role="menuitem"
+                            aria-label="Copy Both (Alt+C)"
+                            aria-keyshortcuts="Alt+C"
+                            title="Alt+C"
+                            className="w-full px-2.5 py-1.5 text-left text-[11px] text-white/78 hover:bg-white/[0.08] flex items-center justify-between gap-2"
+                            tabIndex={menuOpenId === b.id && menuActiveIndex === 0 ? 0 : -1}
+                            ref={(el) => {
+                              setMenuItemRef(b.id, 0, el);
+                            }}
+                            onFocus={() => setMenuActiveIndex(0)}
+                            onClick={() => {
+                              navigator.clipboard.writeText(`$ ${b.command}\n${b.output.trim()}`).catch(() => {});
+                              closeMenuById(b.id, false);
+                            }}
+                          >
+                            <span>Copy Both</span>
+                            <span className="text-[10px] text-white/35 tabular-nums">Alt+C</span>
+                          </button>
+                          <button
+                            type="button"
+                            role="menuitem"
+                            aria-label="Find Within Block (Alt+F)"
+                            aria-keyshortcuts="Alt+F"
+                            title="Alt+F"
+                            className="w-full px-2.5 py-1.5 text-left text-[11px] text-white/78 hover:bg-white/[0.08] flex items-center justify-between gap-2"
+                            tabIndex={menuOpenId === b.id && menuActiveIndex === 1 ? 0 : -1}
+                            ref={(el) => {
+                              setMenuItemRef(b.id, 1, el);
+                            }}
+                            onFocus={() => setMenuActiveIndex(1)}
+                            onClick={() => openFindWithin(b.id)}
+                          >
+                            <span>Find Within Block</span>
+                            <span className="text-[10px] text-white/35 tabular-nums">Alt+F</span>
+                          </button>
+                          <button
+                            type="button"
+                            role="menuitem"
+                            aria-label="Share Snapshot (Alt+S)"
+                            aria-keyshortcuts="Alt+S"
+                            title="Alt+S"
+                            className="w-full px-2.5 py-1.5 text-left text-[11px] text-white/78 hover:bg-white/[0.08] flex items-center justify-between gap-2"
+                            tabIndex={menuOpenId === b.id && menuActiveIndex === 2 ? 0 : -1}
+                            ref={(el) => {
+                              setMenuItemRef(b.id, 2, el);
+                            }}
+                            onFocus={() => setMenuActiveIndex(2)}
+                            onClick={() => {
+                              const snapshot = [
+                                `### ${new Date(b.startedAt).toLocaleString()}`,
+                                "```sh",
+                                `$ ${b.command}`,
+                                "```",
+                                "```txt",
+                                b.output.trim(),
+                                "```",
+                              ].join("\n");
+                              navigator.clipboard.writeText(snapshot).catch(() => {});
+                              closeMenuById(b.id, false);
+                            }}
+                          >
+                            <span className="inline-flex items-center gap-1.5">
+                              <Share2 size={11} />
+                              Share Snapshot
+                            </span>
+                            <span className="text-[10px] text-white/35 tabular-nums">Alt+S</span>
+                          </button>
+                          {onRetryWithDiff && (
+                            <button
+                              type="button"
+                              role="menuitem"
+                              aria-label="Retry and Compare (Alt+R)"
+                              aria-keyshortcuts="Alt+R"
+                              title="Alt+R"
+                              className="w-full px-2.5 py-1.5 text-left text-[11px] text-white/78 hover:bg-white/[0.08] flex items-center justify-between gap-2"
+                              tabIndex={menuOpenId === b.id && menuActiveIndex === 3 ? 0 : -1}
+                              ref={(el) => {
+                                setMenuItemRef(b.id, 3, el);
+                              }}
+                              onFocus={() => setMenuActiveIndex(3)}
+                              onClick={() => {
+                                onRetryWithDiff(b);
+                                closeMenuById(b.id, false);
+                              }}
+                            >
+                              <span className="inline-flex items-center gap-1.5">
+                                <RotateCcw size={11} />
+                                Retry + Compare
+                              </span>
+                              <span className="text-[10px] text-white/35 tabular-nums">Alt+R</span>
+                            </button>
+                          )}
+                          {compare && (
+                            <div className="px-2.5 py-1.5 border-t border-white/10">
+                              <div className="text-[10px] text-cyan-200/90 tabular-nums">
+                                Δ +{compare.added}/-{compare.removed}
+                              </div>
+                              {compare.preview && (
+                                <div className="text-[10px] text-white/50 leading-relaxed mt-0.5 break-words">
+                                  {compare.preview}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                          <div className="px-2.5 py-1 border-t border-white/10 text-[10px] text-white/35">
+                            ↑/↓ 이동 · Enter 실행 · Esc 닫기
                           </div>
-                        )}
-                      </div>
-                    )}
-                    <div className="px-2.5 py-1 border-t border-white/10 text-[10px] text-white/35">
-                      ↑/↓ 이동 · Enter 실행 · Esc 닫기
-                    </div>
-                  </div>
+                        </div>,
+                        document.body,
+                      ))
                 )}
               </div>
 
