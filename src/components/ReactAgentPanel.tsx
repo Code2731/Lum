@@ -27,6 +27,7 @@ import type {
 
 interface ScipBackend {
   language: string;
+  key: string;
   binary: string;
   available: boolean;
   index_path: string;
@@ -247,11 +248,6 @@ const ReactAgentPanel: React.FC<Props> = ({
     "SCIP 백엔드 상태 없음";
   const isScipEnabled =
     scipToolsEnabled && availableScipBackends > 0 && scipStatus?.enabled;
-  const scipRebuildDisabled =
-    isScipRebuildInProgress ||
-    availableScipBackends === 0 ||
-    !scipStatus ||
-    scipRebuildTargetInvalid;
   const hasScipMissingIndex =
     scipStatus?.backends.some(
       (backend) => backend.available && !backend.index_exists,
@@ -260,7 +256,7 @@ const ReactAgentPanel: React.FC<Props> = ({
     .filter((backend) => backend.available)
     .map((backend) => ({
       language: backend.language,
-      value: backend.language.toLowerCase(),
+      value: backend.key,
     }));
   const scipRebuildTargetAll = scipRebuildTargetLanguage === "all";
   const scipRebuildTargetLanguageLabel = scipRebuildTargetAll
@@ -272,7 +268,7 @@ const ReactAgentPanel: React.FC<Props> = ({
     ? hasScipMissingIndex
     : !!scipStatus?.backends.find(
         (backend) =>
-          backend.language.toLowerCase() === scipRebuildTargetLanguage &&
+          backend.key === scipRebuildTargetLanguage &&
           !backend.index_exists,
       );
   const scipRebuildTargetInvalid = React.useMemo(
@@ -283,6 +279,11 @@ const ReactAgentPanel: React.FC<Props> = ({
       ),
     [scipRebuildTargetLanguage, scipAvailableTargets],
   );
+  const scipRebuildDisabled =
+    isScipRebuildInProgress ||
+    availableScipBackends === 0 ||
+    !scipStatus ||
+    scipRebuildTargetInvalid;
   const showUndoButton =
     hasChanges &&
     (status === "done" || status === "error" || status === "cancelled");

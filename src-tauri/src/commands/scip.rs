@@ -12,6 +12,7 @@ const SCIP_BUILD_LOG_LIMIT: usize = 2048;
 #[derive(Debug, Clone, Serialize)]
 pub struct ScipBackend {
     pub language: String,
+    pub key: String,
     pub binary: String,
     pub available: bool,
     pub index_path: String,
@@ -148,6 +149,7 @@ fn build_scip_backend_status(cwd: &str, entry: &BackendEntry) -> ScipBackend {
         .unwrap_or(false);
     ScipBackend {
         language: entry.language.to_string(),
+        key: entry.key.to_string(),
         binary: entry.binary.to_string(),
         available: has_binary(entry.binary),
         index_path: index_path.to_string_lossy().into_owned(),
@@ -436,6 +438,15 @@ mod tests {
     fn detect_scip_backends_항목_개수_확인() {
         let backends = detect_scip_backends(Some(".".to_string()));
         assert_eq!(backends.len(), KNOWN_BACKENDS.len());
+    }
+
+    #[test]
+    fn detect_scip_backends_키_정보_확인() {
+        let backends = detect_scip_backends(Some(".".to_string()));
+        let keys: Vec<_> = backends.iter().map(|b| b.key.as_str()).collect();
+        assert!(keys.contains(&"rust"));
+        assert!(keys.contains(&"typescript"));
+        assert!(keys.contains(&"go"));
     }
 
     #[test]
