@@ -1029,7 +1029,7 @@ fn run_precise_callers_tool(args: &serde_json::Value, cwd: &str, scip_enabled: b
     };
     let index_status = format!("{status}\n{status_lines}");
 
-    let mut lines = vec!["`{symbol}` 정밀 caller 후보:".to_string()];
+    let mut lines = vec![format!("`{symbol}` 정밀 caller 후보:")];
     for item in result {
         if let Some(line) = item.line {
             if let Some(col) = item.column {
@@ -2759,6 +2759,12 @@ ACTION: mcp({"server": "playwright", "tool": "screenshot", "arguments": {"url": 
     fn phase142_precise_callers_도구_심볼_필수() {
         let out = run_precise_callers_tool(&serde_json::json!({}), "/tmp", true);
         assert!(out.contains("symbol 파라미터 필요"), "{out}");
+    }
+
+    #[test]
+    fn phase142_precise_callers_타이틀에_심볼_표시() {
+        let out = run_precise_callers_tool(&serde_json::json!({"symbol": "target"}), "/tmp", false);
+        assert!(out.contains("`target` 정밀 caller"), "{out}");
     }
 
     #[test]
