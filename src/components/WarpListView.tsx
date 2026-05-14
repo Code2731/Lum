@@ -1211,7 +1211,7 @@ const WarpListView: React.FC<Props> = ({
     comparedTimeline.length,
     timelineViewCustomized,
     timelineFiltered.length,
-    timelineSelectedIds.length,
+    timelineSelectedIds.size,
     timelineQuery,
     timelineFiltered,
     selectedTimelineItems,

@@ -684,7 +684,6 @@ describe("TerminalPane — 입력 라우팅", () => {
 
   it("HISTORY 검색창에서 Delete/Backspace 키로 선택 항목을 삭제한다", async () => {
     const { container } = render(<TerminalPane id="tab-1" />);
-    const input = container.querySelector("input")!;
 
     submitInput(container, "ls -la");
     await waitFor(() => {
@@ -1050,7 +1049,7 @@ describe("TerminalPane — 입력 라우팅", () => {
     await waitFor(() => {
       const writeCallsAfter = invokeMock.mock.calls.filter((c) => c[0] === "write_to_pty");
       expect(writeCallsAfter.length).toBe(writeCallsBefore + 1);
-      expect(writeCallsAfter.at(-1)).toEqual([
+      expect(writeCallsAfter[writeCallsAfter.length - 1]).toEqual([
         "write_to_pty",
         { id: "tab-1", data: "pwd\r" },
       ]);
@@ -1309,7 +1308,7 @@ describe("TerminalPane — 입력 라우팅", () => {
     await waitFor(() => {
       const writeCallsAfter = invokeMock.mock.calls.filter((c) => c[0] === "write_to_pty");
       expect(writeCallsAfter.length).toBe(writeCallsBefore + 1);
-      expect(writeCallsAfter.at(-1)).toEqual([
+      expect(writeCallsAfter[writeCallsAfter.length - 1]).toEqual([
         "write_to_pty",
         { id: "tab-1", data: "pwd\r" },
       ]);
