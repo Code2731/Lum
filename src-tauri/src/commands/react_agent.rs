@@ -2487,6 +2487,37 @@ ACTION: mcp({"server": "playwright", "tool": "screenshot", "arguments": {"url": 
         clear_desktop_tool_mock();
     }
 
+    #[tokio::test]
+    async fn desktop_tools_scroll_파라미터_누락시_에러() {
+        let missing_amount = run_desktop_tool(
+            "scroll",
+            &serde_json::json!({"x": 10, "y": 20}),
+            true,
+        )
+        .await;
+        assert!(
+            missing_amount.contains("x, y, amount"),
+            "scroll 누락 파라미터 처리 필요: {missing_amount}"
+        );
+
+        let missing_xy = run_desktop_tool("scroll", &serde_json::json!({"amount": 120}), true).await;
+        assert!(
+            missing_xy.contains("x, y, amount"),
+            "scroll 누락 파라미터 처리 필요: {missing_xy}"
+        );
+    }
+
+    #[tokio::test]
+    async fn desktop_tools_scroll_0은_거부() {
+        let zero = run_desktop_tool(
+            "scroll",
+            &serde_json::json!({"x": 10, "y": 20, "amount": 0}),
+            true,
+        )
+        .await;
+        assert!(zero.contains("0일 수 없습니다"), "scroll 0 방어 필요: {zero}");
+    }
+
     // HealingToolMock도 글로벌 state — 3개 테스트가 mock을 공유해 병렬 실행 시 race.
     // Phase 137-B 테스트 추가로 스케줄링이 변하며 race가 더 자주 표면화됨 → 직렬 lock.
     static HEALING_TEST_LOCK: Mutex<()> = Mutex::new(());
