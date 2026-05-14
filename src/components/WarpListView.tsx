@@ -126,6 +126,10 @@ const WarpListView: React.FC<Props> = ({
   const [menuActiveIndex, setMenuActiveIndex] = useState(0);
   const [menuPlacement, setMenuPlacement] = useState<"down" | "up">("down");
   const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
+  const [timelinePanelPosition, setTimelinePanelPosition] = useState({ x: 0, y: 0 });
+  const [timelinePanelPlacement, setTimelinePanelPlacement] = useState<"down" | "up">("down");
+  const [deltaPanelPosition, setDeltaPanelPosition] = useState({ x: 0, y: 0 });
+  const [deltaPanelPlacement, setDeltaPanelPlacement] = useState<"down" | "up">("down");
   const [blockSearch, setBlockSearch] = useState<Record<string, string>>({});
   const [blockSearchCursor, setBlockSearchCursor] = useState<Record<string, number>>({});
   const [activeSearchBlockId, setActiveSearchBlockId] = useState<string | null>(null);
@@ -200,6 +204,101 @@ const WarpListView: React.FC<Props> = ({
     );
     setMenuPlacement((prev) => (prev === nextPlacement ? prev : nextPlacement));
   }, [MENU_ITEM_HEIGHT, MENU_WIDTH, MENU_VERTICAL_GAP, VIEWPORT_GAP, getMenuItemCount]);
+
+  const TIMELINE_PANEL_WIDTH = 440;
+  const DELTA_PANEL_WIDTH = 360;
+  const DELTA_PANEL_FALLBACK_HEIGHT = 240;
+  const updateTimelinePanelPosition = React.useCallback(() => {
+    if (!timelineOpen) return;
+
+    const timelineButtonRect = timelineButtonRef.current?.getBoundingClientRect();
+    if (!timelineButtonRect) return;
+
+    const timelinePanelRect = timelinePanelRef.current?.getBoundingClientRect();
+    const timelinePanelHeight = timelinePanelRect?.height && Number.isFinite(timelinePanelRect.height) && timelinePanelRect.height > 0
+      ? timelinePanelRect.height
+      : DELTA_PANEL_FALLBACK_HEIGHT;
+    const timelinePanelWidth = timelinePanelRect?.width && Number.isFinite(timelinePanelRect.width) && timelinePanelRect.width > 0
+      ? timelinePanelRect.width
+      : TIMELINE_PANEL_WIDTH;
+
+    const viewport = getViewportSize();
+    const spaceBelow = viewport.height - timelineButtonRect.bottom - MENU_VERTICAL_GAP - VIEWPORT_GAP;
+    const spaceAbove = timelineButtonRect.top - MENU_VERTICAL_GAP - VIEWPORT_GAP;
+    const canOpenBelow = spaceBelow >= timelinePanelHeight;
+    const canOpenAbove = spaceAbove >= timelinePanelHeight;
+
+    const nextPlacement: "down" | "up" = canOpenBelow && canOpenAbove
+      ? (spaceBelow >= spaceAbove ? "down" : "up")
+      : canOpenAbove
+        ? "up"
+        : canOpenBelow
+          ? "down"
+          : spaceBelow >= spaceAbove ? "down" : "up";
+
+    const nextY = nextPlacement === "down"
+      ? timelineButtonRect.bottom + MENU_VERTICAL_GAP
+      : timelineButtonRect.top - timelinePanelHeight - MENU_VERTICAL_GAP;
+    const nextX = timelineButtonRect.left;
+    const maxTop = Math.max(VIEWPORT_GAP, viewport.height - timelinePanelHeight - VIEWPORT_GAP);
+    const maxLeft = Math.max(VIEWPORT_GAP, viewport.width - timelinePanelWidth - VIEWPORT_GAP);
+
+    const nextPosition = {
+      x: clamp(nextX, VIEWPORT_GAP, maxLeft),
+      y: clamp(nextY, VIEWPORT_GAP, maxTop),
+    };
+
+    setTimelinePanelPosition((prev) => (
+      prev.x === nextPosition.x && prev.y === nextPosition.y ? prev : nextPosition
+    ));
+    setTimelinePanelPlacement((prev) => (prev === nextPlacement ? prev : nextPlacement));
+  }, [DELTA_PANEL_FALLBACK_HEIGHT, TIMELINE_PANEL_WIDTH, MENU_VERTICAL_GAP, VIEWPORT_GAP, getViewportSize, clamp, timelineOpen]);
+
+  const updateDeltaPanelPosition = React.useCallback(() => {
+    if (!deltaOpenId) return;
+
+    const deltaButtonRect = deltaButtonRefs.current[deltaOpenId]?.getBoundingClientRect();
+    if (!deltaButtonRect) return;
+
+    const deltaPanelRect = deltaPopoverRef.current?.getBoundingClientRect();
+    const deltaPanelHeight = deltaPanelRect?.height && Number.isFinite(deltaPanelRect.height) && deltaPanelRect.height > 0
+      ? deltaPanelRect.height
+      : DELTA_PANEL_FALLBACK_HEIGHT;
+    const deltaPanelWidth = deltaPanelRect?.width && Number.isFinite(deltaPanelRect.width) && deltaPanelRect.width > 0
+      ? deltaPanelRect.width
+      : DELTA_PANEL_WIDTH;
+
+    const viewport = getViewportSize();
+    const spaceBelow = viewport.height - deltaButtonRect.bottom - MENU_VERTICAL_GAP - VIEWPORT_GAP;
+    const spaceAbove = deltaButtonRect.top - MENU_VERTICAL_GAP - VIEWPORT_GAP;
+    const canOpenBelow = spaceBelow >= deltaPanelHeight;
+    const canOpenAbove = spaceAbove >= deltaPanelHeight;
+
+    const nextPlacement: "down" | "up" = canOpenBelow && canOpenAbove
+      ? (spaceBelow >= spaceAbove ? "down" : "up")
+      : canOpenAbove
+        ? "up"
+        : canOpenBelow
+          ? "down"
+          : spaceBelow >= spaceAbove ? "down" : "up";
+
+    const nextY = nextPlacement === "down"
+      ? deltaButtonRect.bottom + MENU_VERTICAL_GAP
+      : deltaButtonRect.top - deltaPanelHeight - MENU_VERTICAL_GAP;
+    const nextX = deltaButtonRect.right - deltaPanelWidth;
+    const maxTop = Math.max(VIEWPORT_GAP, viewport.height - deltaPanelHeight - VIEWPORT_GAP);
+    const maxLeft = Math.max(VIEWPORT_GAP, viewport.width - deltaPanelWidth - VIEWPORT_GAP);
+
+    const nextPosition = {
+      x: clamp(nextX, VIEWPORT_GAP, maxLeft),
+      y: clamp(nextY, VIEWPORT_GAP, maxTop),
+    };
+
+    setDeltaPanelPosition((prev) => (
+      prev.x === nextPosition.x && prev.y === nextPosition.y ? prev : nextPosition
+    ));
+    setDeltaPanelPlacement((prev) => (prev === nextPlacement ? prev : nextPlacement));
+  }, [DELTA_PANEL_WIDTH, DELTA_PANEL_FALLBACK_HEIGHT, MENU_VERTICAL_GAP, VIEWPORT_GAP, getViewportSize, clamp, deltaOpenId]);
 
   const closeTimelinePanel = (restoreFocus: boolean) => {
     timelineRestoreFocusRef.current = restoreFocus;
@@ -754,6 +853,7 @@ const WarpListView: React.FC<Props> = ({
 
   useEffect(() => {
     if (!deltaOpenId) return;
+    const updatePosition = () => updateDeltaPanelPosition();
     const onWindowKeyDown = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
       e.preventDefault();
@@ -770,11 +870,20 @@ const WarpListView: React.FC<Props> = ({
     };
     window.addEventListener("keydown", onWindowKeyDown);
     window.addEventListener("mousedown", onMouseDown);
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, { capture: true });
     return () => {
       window.removeEventListener("keydown", onWindowKeyDown);
       window.removeEventListener("mousedown", onMouseDown);
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, { capture: true });
     };
-  }, [deltaOpenId]);
+  }, [deltaOpenId, updateDeltaPanelPosition]);
+
+  React.useLayoutEffect(() => {
+    if (!deltaOpenId) return;
+    updateDeltaPanelPosition();
+  }, [deltaOpenId, updateDeltaPanelPosition]);
 
   useEffect(() => {
     if (!menuOpenId) return;
@@ -893,6 +1002,20 @@ const WarpListView: React.FC<Props> = ({
     }, 0);
     return () => clearTimeout(timer);
   }, [timelineOpen]);
+  useEffect(() => {
+    if (!timelineOpen) return;
+    const updatePosition = () => updateTimelinePanelPosition();
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, { capture: true });
+    return () => {
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, { capture: true });
+    };
+  }, [timelineOpen, updateTimelinePanelPosition]);
+  React.useLayoutEffect(() => {
+    if (!timelineOpen) return;
+    updateTimelinePanelPosition();
+  }, [timelineOpen, updateTimelinePanelPosition]);
   useEffect(() => {
     if (!timelineOpen) return;
     const onWindowKeyDown = (e: KeyboardEvent) => {
@@ -1372,7 +1495,13 @@ const WarpListView: React.FC<Props> = ({
                 {timelineOpen && (
                   <div
                     ref={timelinePanelRef}
-                    className="absolute left-0 top-6 z-30 w-[440px] rounded-lg border border-cyan-300/25 bg-[#0b131d]/97 shadow-2xl overflow-hidden"
+                    className={`fixed z-30 w-[440px] rounded-lg border border-cyan-300/25 bg-[#0b131d]/97 shadow-2xl overflow-hidden ${
+                      timelinePanelPlacement === "up" ? "origin-bottom-right" : "origin-top-right"
+                    }`}
+                    style={{
+                      left: timelinePanelPosition.x,
+                      top: timelinePanelPosition.y,
+                    }}
                     onClick={(e) => e.stopPropagation()}
                   >
                     <div className="px-2.5 py-1.5 border-b border-white/10 text-[10px] text-cyan-200">
@@ -2173,7 +2302,13 @@ const WarpListView: React.FC<Props> = ({
                   {deltaOpenId === b.id && (
                     <div
                       ref={deltaPopoverRef}
-                      className="absolute right-0 top-6 z-30 w-[360px] rounded-lg border border-cyan-300/25 bg-[#0b131d]/97 shadow-2xl overflow-hidden"
+                      className={`fixed z-30 w-[360px] rounded-lg border border-cyan-300/25 bg-[#0b131d]/97 shadow-2xl overflow-hidden ${
+                        deltaPanelPlacement === "up" ? "origin-bottom-right" : "origin-top-right"
+                      }`}
+                      style={{
+                        left: deltaPanelPosition.x,
+                        top: deltaPanelPosition.y,
+                      }}
                       onClick={(e) => e.stopPropagation()}
                     >
                       <div className="px-2.5 py-1.5 border-b border-white/10 text-[10px] text-cyan-200 tabular-nums">
