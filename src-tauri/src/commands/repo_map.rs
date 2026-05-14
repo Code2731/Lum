@@ -351,7 +351,12 @@ pub async fn get_repo_map(
     let budget = token_budget.unwrap_or(4096);
     let symbols = mentioned_symbols.unwrap_or_default();
     tokio::task::spawn_blocking(move || {
-        build_repo_map(&cwd, budget, active_file.as_deref().map(Path::new), &symbols)
+        build_repo_map(
+            &cwd,
+            budget,
+            active_file.as_deref().map(Path::new),
+            &symbols,
+        )
     })
     .await
     .map_err(|e| crate::error::LumError::Io(format!("repo_map join 실패: {}", e)))?
@@ -551,7 +556,10 @@ mod tests {
         let b: PathBuf = "b.rs".into();
         let mut defs = HashMap::new();
         let sym = |name: &str, file: &PathBuf| Symbol {
-            name: name.into(), kind: "fn".into(), file: file.clone(), line: 1,
+            name: name.into(),
+            kind: "fn".into(),
+            file: file.clone(),
+            line: 1,
         };
         defs.insert(a.clone(), vec![sym("fa", &a)]);
         defs.insert(b.clone(), vec![sym("fb", &b)]);
@@ -560,7 +568,10 @@ mod tests {
         // 참조 없고 active_file 없으면 두 파일 랭크가 거의 같아야
         let ra = ranks.get(&a).unwrap();
         let rb = ranks.get(&b).unwrap();
-        assert!((ra - rb).abs() < 0.01, "균등에 가까워야: ra={ra:.6} rb={rb:.6}");
+        assert!(
+            (ra - rb).abs() < 0.01,
+            "균등에 가까워야: ra={ra:.6} rb={rb:.6}"
+        );
     }
 
     #[test]

@@ -44,15 +44,42 @@ mod tests {
 
     #[test]
     fn 확장자_매핑() {
-        assert_eq!(detect_source_lang(&PathBuf::from("a.rs")), Some(SourceLang::Rust));
-        assert_eq!(detect_source_lang(&PathBuf::from("a.ts")), Some(SourceLang::TypeScript));
-        assert_eq!(detect_source_lang(&PathBuf::from("a.tsx")), Some(SourceLang::Tsx));
-        assert_eq!(detect_source_lang(&PathBuf::from("a.js")), Some(SourceLang::JavaScript));
-        assert_eq!(detect_source_lang(&PathBuf::from("a.mjs")), Some(SourceLang::JavaScript));
-        assert_eq!(detect_source_lang(&PathBuf::from("a.cjs")), Some(SourceLang::JavaScript));
-        assert_eq!(detect_source_lang(&PathBuf::from("a.jsx")), Some(SourceLang::JavaScript));
-        assert_eq!(detect_source_lang(&PathBuf::from("a.py")), Some(SourceLang::Python));
-        assert_eq!(detect_source_lang(&PathBuf::from("a.pyi")), Some(SourceLang::Python));
+        assert_eq!(
+            detect_source_lang(&PathBuf::from("a.rs")),
+            Some(SourceLang::Rust)
+        );
+        assert_eq!(
+            detect_source_lang(&PathBuf::from("a.ts")),
+            Some(SourceLang::TypeScript)
+        );
+        assert_eq!(
+            detect_source_lang(&PathBuf::from("a.tsx")),
+            Some(SourceLang::Tsx)
+        );
+        assert_eq!(
+            detect_source_lang(&PathBuf::from("a.js")),
+            Some(SourceLang::JavaScript)
+        );
+        assert_eq!(
+            detect_source_lang(&PathBuf::from("a.mjs")),
+            Some(SourceLang::JavaScript)
+        );
+        assert_eq!(
+            detect_source_lang(&PathBuf::from("a.cjs")),
+            Some(SourceLang::JavaScript)
+        );
+        assert_eq!(
+            detect_source_lang(&PathBuf::from("a.jsx")),
+            Some(SourceLang::JavaScript)
+        );
+        assert_eq!(
+            detect_source_lang(&PathBuf::from("a.py")),
+            Some(SourceLang::Python)
+        );
+        assert_eq!(
+            detect_source_lang(&PathBuf::from("a.pyi")),
+            Some(SourceLang::Python)
+        );
         assert_eq!(detect_source_lang(&PathBuf::from("a.go")), None);
         assert_eq!(detect_source_lang(&PathBuf::from("a.txt")), None);
         assert_eq!(detect_source_lang(&PathBuf::from("README")), None);

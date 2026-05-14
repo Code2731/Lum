@@ -82,9 +82,18 @@ impl Bm25Index {
 
         let n_docs = doc_lengths.len();
         let total: usize = doc_lengths.iter().sum();
-        let avg_dl = if n_docs == 0 { 1.0 } else { total as f32 / n_docs as f32 };
+        let avg_dl = if n_docs == 0 {
+            1.0
+        } else {
+            total as f32 / n_docs as f32
+        };
 
-        Self { n_docs, avg_dl, inv, doc_lengths }
+        Self {
+            n_docs,
+            avg_dl,
+            inv,
+            doc_lengths,
+        }
     }
 
     /// BM25 검색 — (doc_idx, score) 내림차순, limit개.
@@ -101,14 +110,16 @@ impl Bm25Index {
         let n = self.n_docs as f32;
 
         for token in &query_tokens {
-            let Some(postings) = self.inv.get(token) else { continue };
+            let Some(postings) = self.inv.get(token) else {
+                continue;
+            };
             let df = postings.len() as f32;
             // IDF (Robertson 변형, log 기반)
             let idf = ((n - df + 0.5) / (df + 0.5) + 1.0).ln();
             for &(doc_idx, tf) in postings {
                 let dl = self.doc_lengths[doc_idx] as f32;
-                let tf_norm = (tf as f32 * (K1 + 1.0))
-                    / (tf as f32 + K1 * (1.0 - B + B * dl / self.avg_dl));
+                let tf_norm =
+                    (tf as f32 * (K1 + 1.0)) / (tf as f32 + K1 * (1.0 - B + B * dl / self.avg_dl));
                 scores[doc_idx] += idf * tf_norm;
             }
         }
@@ -126,10 +137,7 @@ impl Bm25Index {
 
 /// Reciprocal Rank Fusion (k=60, OpenSearch 표준).
 /// dense + lexical 두 랭킹을 융합 — (doc_idx, rrf_score) 내림차순.
-pub fn rrf_fuse(
-    dense: &[(usize, f32)],
-    lexical: &[(usize, f32)],
-) -> Vec<(usize, f32)> {
+pub fn rrf_fuse(dense: &[(usize, f32)], lexical: &[(usize, f32)]) -> Vec<(usize, f32)> {
     let mut scores: HashMap<usize, f32> = HashMap::new();
     for (rank, &(idx, _)) in dense.iter().enumerate() {
         *scores.entry(idx).or_insert(0.0) += 1.0 / (60.0 + rank as f32 + 1.0);
@@ -220,11 +228,28 @@ mod tests {
         let lexical = vec![(0usize, 5.0f32)];
         let fused = rrf_fuse(&dense, &lexical);
         assert!(!fused.is_empty());
-        assert_eq!(fused[0].0, 0, "두 랭킹에 모두 등장한 doc 0이 top-1: {:?}", fused);
+        assert_eq!(
+            fused[0].0, 0,
+            "두 랭킹에 모두 등장한 doc 0이 top-1: {:?}",
+            fused
+        );
         // doc 0의 RRF score는 doc 1보다 높아야
-        let score_0 = fused.iter().find(|(i, _)| *i == 0).map(|(_, s)| *s).unwrap_or(0.0);
-        let score_1 = fused.iter().find(|(i, _)| *i == 1).map(|(_, s)| *s).unwrap_or(0.0);
-        assert!(score_0 > score_1, "score_0={} <= score_1={}", score_0, score_1);
+        let score_0 = fused
+            .iter()
+            .find(|(i, _)| *i == 0)
+            .map(|(_, s)| *s)
+            .unwrap_or(0.0);
+        let score_1 = fused
+            .iter()
+            .find(|(i, _)| *i == 1)
+            .map(|(_, s)| *s)
+            .unwrap_or(0.0);
+        assert!(
+            score_0 > score_1,
+            "score_0={} <= score_1={}",
+            score_0,
+            score_1
+        );
     }
 
     #[test]

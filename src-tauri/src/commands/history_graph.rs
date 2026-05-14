@@ -129,8 +129,8 @@ pub fn circular_layout(cluster_ids: &[usize], n_clusters: usize) -> Vec<(f32, f3
 /// 클러스터 내 노드들의 레이블에서 빈도 높은 단어를 클러스터 이름으로.
 pub fn label_cluster(labels: &[&str]) -> String {
     let stopwords: HashSet<&str> = [
-        "the", "a", "an", "is", "in", "on", "at", "to", "for", "of", "and", "or",
-        "it", "this", "that", "with", "cd", "ls", "git", "rm",
+        "the", "a", "an", "is", "in", "on", "at", "to", "for", "of", "and", "or", "it", "this",
+        "that", "with", "cd", "ls", "git", "rm",
     ]
     .iter()
     .copied()
@@ -139,7 +139,11 @@ pub fn label_cluster(labels: &[&str]) -> String {
     let mut freq: HashMap<String, usize> = HashMap::new();
     for label in labels {
         for word in label.split_whitespace() {
-            let w: String = word.chars().filter(|c| c.is_alphabetic()).collect::<String>().to_lowercase();
+            let w: String = word
+                .chars()
+                .filter(|c| c.is_alphabetic())
+                .collect::<String>()
+                .to_lowercase();
             if w.len() >= 3 && !stopwords.contains(w.as_str()) {
                 *freq.entry(w).or_insert(0) += 1;
             }
@@ -155,10 +159,13 @@ fn cluster_center(node_indices: &[usize], positions: &[(f32, f32)]) -> (f32, f32
     if node_indices.is_empty() {
         return (0.0, 0.0);
     }
-    let (sx, sy) = node_indices
-        .iter()
-        .fold((0.0f32, 0.0f32), |(ax, ay), &i| (ax + positions[i].0, ay + positions[i].1));
-    (sx / node_indices.len() as f32, sy / node_indices.len() as f32)
+    let (sx, sy) = node_indices.iter().fold((0.0f32, 0.0f32), |(ax, ay), &i| {
+        (ax + positions[i].0, ay + positions[i].1)
+    });
+    (
+        sx / node_indices.len() as f32,
+        sy / node_indices.len() as f32,
+    )
 }
 
 // ─── Tauri 커맨드 ─────────────────────────────────────────────────────────────
@@ -189,7 +196,12 @@ pub fn get_history_graph(limit: Option<usize>) -> GraphData {
     // ─ 치유 기록 수집 ─────────────────────────────────────────────────────────
     let heal_budget = max.saturating_sub(raw.len());
     if let Ok(records) = healing_dataset::list_healing_dataset() {
-        for rec in records.into_iter().rev().filter(|r| !r.embedding.is_empty()).take(heal_budget) {
+        for rec in records
+            .into_iter()
+            .rev()
+            .filter(|r| !r.embedding.is_empty())
+            .take(heal_budget)
+        {
             let node_type = if rec.decision == "approve" {
                 "healing_approve"
             } else {
@@ -206,7 +218,11 @@ pub fn get_history_graph(limit: Option<usize>) -> GraphData {
     }
 
     if raw.is_empty() {
-        return GraphData { nodes: vec![], edges: vec![], clusters: vec![] };
+        return GraphData {
+            nodes: vec![],
+            edges: vec![],
+            clusters: vec![],
+        };
     }
 
     let n = raw.len();
@@ -239,7 +255,12 @@ pub fn get_history_graph(limit: Option<usize>) -> GraphData {
 
     // ─ 클러스터링 + 배치 ──────────────────────────────────────────────────────
     let cluster_ids = bfs_clusters(&adj, n);
-    let n_clusters = cluster_ids.iter().copied().max().map(|m| m + 1).unwrap_or(1);
+    let n_clusters = cluster_ids
+        .iter()
+        .copied()
+        .max()
+        .map(|m| m + 1)
+        .unwrap_or(1);
     let positions = circular_layout(&cluster_ids, n_clusters);
 
     let mut cluster_nodes: HashMap<usize, Vec<usize>> = HashMap::new();
@@ -253,7 +274,13 @@ pub fn get_history_graph(limit: Option<usize>) -> GraphData {
             let labels: Vec<&str> = members.iter().map(|&i| raw[i].label.as_str()).collect();
             let label = label_cluster(&labels);
             let (cx, cy) = cluster_center(members, &positions);
-            ClusterInfo { id: cid, label, count: members.len(), cx, cy }
+            ClusterInfo {
+                id: cid,
+                label,
+                count: members.len(),
+                cx,
+                cy,
+            }
         })
         .collect();
 
@@ -274,7 +301,11 @@ pub fn get_history_graph(limit: Option<usize>) -> GraphData {
         })
         .collect();
 
-    GraphData { nodes, edges: graph_edges, clusters }
+    GraphData {
+        nodes,
+        edges: graph_edges,
+        clusters,
+    }
 }
 
 // ─── 테스트 ───────────────────────────────────────────────────────────────────
@@ -333,7 +364,8 @@ mod tests {
         let pos = circular_layout(&ids, 2);
         let c0_center = ((pos[0].0 + pos[1].0) / 2.0, (pos[0].1 + pos[1].1) / 2.0);
         let c1_center = ((pos[2].0 + pos[3].0) / 2.0, (pos[2].1 + pos[3].1) / 2.0);
-        let dist = ((c0_center.0 - c1_center.0).powi(2) + (c0_center.1 - c1_center.1).powi(2)).sqrt();
+        let dist =
+            ((c0_center.0 - c1_center.0).powi(2) + (c0_center.1 - c1_center.1).powi(2)).sqrt();
         assert!(dist > 100.0, "클러스터간 거리 부족: {dist}");
     }
 
@@ -362,6 +394,10 @@ mod tests {
     fn truncate_label_길이_제한() {
         let long = "a".repeat(50);
         let out = truncate_label(&long, 40);
-        assert!(out.chars().count() <= 42, "줄임말 포함 42자 이내: {}", out.len());
+        assert!(
+            out.chars().count() <= 42,
+            "줄임말 포함 42자 이내: {}",
+            out.len()
+        );
     }
 }

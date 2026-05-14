@@ -246,8 +246,8 @@ fn tool_read_file(args: &Value) -> Result<Vec<Value>, String> {
 
 fn tool_list_directory(args: &Value) -> Result<Vec<Value>, String> {
     let path = require_string_arg(args, "path")?;
-    let entries = std::fs::read_dir(&path)
-        .map_err(|e| format!("list_directory failed for '{path}': {e}"))?;
+    let entries =
+        std::fs::read_dir(&path).map_err(|e| format!("list_directory failed for '{path}': {e}"))?;
     let mut lines = Vec::new();
     for entry in entries.flatten() {
         let kind = entry
@@ -268,7 +268,10 @@ fn tool_read_file_lines(args: &Value) -> Result<Vec<Value>, String> {
         .and_then(|v| v.as_u64())
         .unwrap_or(1)
         .max(1) as usize;
-    let end = args.get("end_line").and_then(|v| v.as_u64()).map(|n| n as usize);
+    let end = args
+        .get("end_line")
+        .and_then(|v| v.as_u64())
+        .map(|n| n as usize);
     let content = std::fs::read_to_string(&path)
         .map_err(|e| format!("read_file_lines failed for '{path}': {e}"))?;
     let lines: Vec<&str> = content.lines().collect();
@@ -277,12 +280,17 @@ fn tool_read_file_lines(args: &Value) -> Result<Vec<Value>, String> {
     if lo >= hi {
         return Ok(vec![json!({ "type": "text", "text": "" })]);
     }
-    Ok(vec![json!({ "type": "text", "text": lines[lo..hi].join("\n") })])
+    Ok(vec![
+        json!({ "type": "text", "text": lines[lo..hi].join("\n") }),
+    ])
 }
 
 fn tool_git_diff(args: &Value) -> Result<Vec<Value>, String> {
     let cwd = require_string_arg(args, "cwd")?;
-    let staged = args.get("staged").and_then(|v| v.as_bool()).unwrap_or(false);
+    let staged = args
+        .get("staged")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
     let mut cmd = std::process::Command::new("git");
     cmd.arg("diff");
     if staged {
@@ -297,7 +305,9 @@ fn tool_git_diff(args: &Value) -> Result<Vec<Value>, String> {
         return Err(format!("git_diff failed: {err}"));
     }
     let text = String::from_utf8_lossy(&output.stdout).to_string();
-    Ok(vec![json!({ "type": "text", "text": if text.is_empty() { "(no diff)".to_string() } else { text } })])
+    Ok(vec![
+        json!({ "type": "text", "text": if text.is_empty() { "(no diff)".to_string() } else { text } }),
+    ])
 }
 
 fn tool_apply_edit_block(args: &Value) -> Result<Vec<Value>, String> {
@@ -313,7 +323,10 @@ fn tool_apply_edit_block(args: &Value) -> Result<Vec<Value>, String> {
         result.applied,
         result.fuzzy,
         result.file,
-        result.reason.map(|r| format!(" reason={r}")).unwrap_or_default()
+        result
+            .reason
+            .map(|r| format!(" reason={r}"))
+            .unwrap_or_default()
     );
     Ok(vec![json!({ "type": "text", "text": summary })])
 }
@@ -505,10 +518,8 @@ mod tests {
         let f = dir.join("c.txt");
         std::fs::write(&f, "L1\nL2").unwrap();
         // start > 파일 길이 → 빈 결과
-        let r = tool_read_file_lines(
-            &json!({ "path": f.to_str().unwrap(), "start_line": 99 }),
-        )
-        .unwrap();
+        let r = tool_read_file_lines(&json!({ "path": f.to_str().unwrap(), "start_line": 99 }))
+            .unwrap();
         assert_eq!(r[0]["text"], "");
         let _ = std::fs::remove_dir_all(&dir);
     }
@@ -517,11 +528,16 @@ mod tests {
     // 단위 테스트 어려움 — dispatch 라우팅이 동작하는지(존재하는 도구로 인식되는지)만 확인.
     #[test]
     fn dispatch_recognizes_all_phase82b_tools() {
-        for name in ["read_file_lines", "git_diff", "apply_edit_block", "get_repo_map", "run_tests"] {
+        for name in [
+            "read_file_lines",
+            "git_diff",
+            "apply_edit_block",
+            "get_repo_map",
+            "run_tests",
+        ] {
             // 인자 없이 호출 → dispatch는 도구를 찾고 도구 함수 안에서 인자 누락 에러를 냄.
             // "Unknown tool"이 아닌 게 핵심.
-            let err = dispatch_tool_call(&json!({ "name": name, "arguments": {} }))
-                .unwrap_err();
+            let err = dispatch_tool_call(&json!({ "name": name, "arguments": {} })).unwrap_err();
             assert!(
                 !err.contains("Unknown tool"),
                 "dispatch failed to recognize '{name}': {err}"

@@ -32,6 +32,7 @@ fn voice_error(code: &str, message: impl AsRef<str>) -> String {
 
 const DEFAULT_VOICE_START_CMD_TIMEOUT_MS: u64 = 8_000;
 const DEFAULT_VOICE_STOP_CMD_TIMEOUT_MS: u64 = 12_000;
+const TRANSCRIPT_STALE_TOLERANCE_MS: u64 = 1_000;
 
 fn parse_voice_timeout_ms(env_key: &str, default_ms: u64) -> u64 {
     std::env::var(env_key)
@@ -49,14 +50,42 @@ fn transcript_file_path() -> PathBuf {
 
 /// 전사 파일을 읽고, 유효한 텍스트면 반환 후 파일 삭제.
 /// 빈 텍스트면 None.
-fn read_transcript_file(path: &Path) -> Option<String> {
-    let text = std::fs::read_to_string(path).ok()?;
-    let trimmed = text.trim().to_string();
+fn read_transcript_file(path: &Path, min_modified_ms: u64) -> Option<String> {
+    let Some(text) = std::fs::read_to_string(path)
+        .ok()
+        .map(|raw| raw.trim().to_string())
+    else {
+        return None;
+    };
+
+    let is_fresh = if min_modified_ms == 0 {
+        true
+    } else {
+        if let Ok(meta) = std::fs::metadata(path) {
+            if let Ok(modified) = meta.modified() {
+                if let Ok(modified_ms) = modified
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .map(|d| d.as_millis() as u64)
+                {
+                    let min_modified_ms =
+                        min_modified_ms.saturating_sub(TRANSCRIPT_STALE_TOLERANCE_MS);
+                    modified_ms >= min_modified_ms
+                } else {
+                    true
+                }
+            } else {
+                true
+            }
+        } else {
+            true
+        }
+    };
+
     let _ = std::fs::remove_file(path);
-    if trimmed.is_empty() {
+    if text.is_empty() || !is_fresh {
         None
     } else {
-        Some(trimmed)
+        Some(text)
     }
 }
 
@@ -115,6 +144,9 @@ async fn start_voice_recording_inner() -> Result<(), String> {
         state.started_ms = now_ms();
     }
 
+    // 이전 세션의 잔여 전사 파일을 남기면 잘못된 텍스트가 재사용될 수 있어 정리.
+    let _ = std::fs::remove_file(transcript_file_path());
+
     if let Ok(cmd) = std::env::var("LUM_VOICE_START_CMD") {
         let trimmed = cmd.trim();
         if !trimmed.is_empty() {
@@ -172,7 +204,7 @@ pub fn voice_recording_status() -> Result<bool, String> {
 /// 2) `~/.lum_whisper/last_transcript.txt` 파일
 /// 없으면 명확한 에러 반환.
 async fn stop_voice_recording_inner() -> Result<String, String> {
-    {
+    let started_ms = {
         let mut state = voice_state_lock()
             .lock()
             .map_err(|_| voice_error("STATE_LOCK_POISONED", "voice state lock poisoned"))?;
@@ -182,9 +214,11 @@ async fn stop_voice_recording_inner() -> Result<String, String> {
                 "현재 진행 중인 음성 녹음이 없습니다.",
             ));
         }
+        let started_ms = state.started_ms;
         state.recording = false;
         state.started_ms = 0;
-    }
+        started_ms
+    };
 
     if let Ok(cmd) = std::env::var("LUM_VOICE_STOP_CMD") {
         let trimmed = cmd.trim();
@@ -204,7 +238,7 @@ async fn stop_voice_recording_inner() -> Result<String, String> {
     }
 
     let path = transcript_file_path();
-    if let Some(t) = read_transcript_file(&path) {
+    if let Some(t) = read_transcript_file(&path, started_ms) {
         return Ok(t);
     }
 
@@ -292,10 +326,53 @@ mod tests {
         std::fs::create_dir_all(&base).unwrap();
         let f = base.join("last_transcript.txt");
         std::fs::write(&f, "  git status  ").unwrap();
-        let out = read_transcript_file(&f);
+        let out = read_transcript_file(&f, 0);
         assert_eq!(out.as_deref(), Some("git status"));
         assert!(!f.exists(), "읽은 뒤 파일이 삭제되어야 함");
         let _ = std::fs::remove_dir_all(&base);
+    }
+
+    #[tokio::test]
+    async fn stale_transcript_파일은_시작시각_이전이면_무시() {
+        let _g = AUDIO_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        reset_state();
+        std::env::set_var("LUM_VOICE_STOP_CMD", "exit 0");
+
+        let tmp_home = std::env::temp_dir().join(format!(
+            "lum_voice_home_{}_{}",
+            std::process::id(),
+            now_ms()
+        ));
+        std::fs::create_dir_all(&tmp_home).unwrap();
+        let old_home = std::env::var("HOME").ok();
+        std::env::set_var("HOME", &tmp_home);
+
+        let path = transcript_file_path();
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent).unwrap();
+        }
+        std::fs::write(&path, "  stale transcript  ").unwrap();
+        if let Ok(mut state) = voice_state_lock().lock() {
+            state.recording = true;
+            state.started_ms = now_ms().saturating_add(5_000);
+        }
+
+        let result = stop_voice_recording_inner().await;
+        assert!(
+            result
+                .unwrap_err()
+                .contains("LUM_VOICE_ERROR::TRANSCRIPT_NOT_FOUND::"),
+            "시작시각 이후 파일만 fallback해야 합니다."
+        );
+
+        assert!(!path.exists(), "폴백 판정 후 파일은 삭제되어야 합니다.");
+        std::env::remove_var("LUM_VOICE_STOP_CMD");
+        if let Some(home) = old_home {
+            std::env::set_var("HOME", home);
+        } else {
+            std::env::remove_var("HOME");
+        }
+        reset_state();
     }
 
     #[test]

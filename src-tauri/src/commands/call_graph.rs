@@ -73,8 +73,14 @@ fn parse_file_for_calls(
     // ── 함수 정의 추출 (이름 + 바이트 범위) ──────────────────────────────────
     let def_q = Query::new(&grammar, fn_def_query(lang)).ok()?;
     let def_names = def_q.capture_names().to_vec();
-    let fn_name_idx = def_names.iter().position(|n| *n == "fn_name").map(|i| i as u32);
-    let fn_node_idx = def_names.iter().position(|n| *n == "fn_node").map(|i| i as u32);
+    let fn_name_idx = def_names
+        .iter()
+        .position(|n| *n == "fn_name")
+        .map(|i| i as u32);
+    let fn_node_idx = def_names
+        .iter()
+        .position(|n| *n == "fn_node")
+        .map(|i| i as u32);
 
     let mut fn_ranges: Vec<(String, usize, usize)> = Vec::new();
     let mut def_cur = QueryCursor::new();
@@ -100,7 +106,10 @@ fn parse_file_for_calls(
     // ── call_expression 추출 ─────────────────────────────────────────────────
     let call_q = Query::new(&grammar, call_query(lang)).ok()?;
     let call_cap_names = call_q.capture_names().to_vec();
-    let callee_idx = call_cap_names.iter().position(|n| *n == "callee").map(|i| i as u32);
+    let callee_idx = call_cap_names
+        .iter()
+        .position(|n| *n == "callee")
+        .map(|i| i as u32);
 
     let mut calls: Vec<(String, usize)> = Vec::new();
     let mut call_cur = QueryCursor::new();
@@ -172,7 +181,9 @@ impl CallGraph {
             .filter(|e| e.file_type().map(|t| t.is_file()).unwrap_or(false))
         {
             let path = entry.path();
-            let Some(lang) = detect_source_lang(path) else { continue };
+            let Some(lang) = detect_source_lang(path) else {
+                continue;
+            };
 
             if let Some((defs, edges)) = parse_file_for_calls(path, lang, root) {
                 let rel = path
@@ -192,7 +203,10 @@ impl CallGraph {
             }
         }
 
-        Self { fn_defs, edges: all_edges }
+        Self {
+            fn_defs,
+            edges: all_edges,
+        }
     }
 
     /// `symbol`을 호출하는 함수 목록 (1-hop callers)
@@ -227,7 +241,10 @@ impl CallGraph {
             .map(|(name, files)| {
                 let mut v: Vec<String> = files.into_iter().collect();
                 v.sort();
-                CalleeInfo { name: name.to_string(), defined_in: v }
+                CalleeInfo {
+                    name: name.to_string(),
+                    defined_in: v,
+                }
             })
             .collect();
         result.sort_by(|a, b| a.name.cmp(&b.name));
@@ -247,7 +264,11 @@ impl CallGraph {
         }
 
         while let Some((name, file, depth)) = queue.pop_front() {
-            result.push(DependentNode { name: name.clone(), file: file.clone(), depth });
+            result.push(DependentNode {
+                name: name.clone(),
+                file: file.clone(),
+                depth,
+            });
             if depth < max_depth {
                 for c in self.find_callers(&name) {
                     if visited.insert((c.fn_name.clone(), c.file.clone())) {
@@ -267,13 +288,13 @@ impl CallGraph {
 mod tests {
     use super::*;
 
-    fn make_graph(
-        edges: &[(&str, &str, &str)],
-        defs: &[(&str, &str)],
-    ) -> CallGraph {
+    fn make_graph(edges: &[(&str, &str, &str)], defs: &[(&str, &str)]) -> CallGraph {
         let mut fn_defs: HashMap<String, Vec<String>> = HashMap::new();
         for (name, file) in defs {
-            fn_defs.entry(name.to_string()).or_default().push(file.to_string());
+            fn_defs
+                .entry(name.to_string())
+                .or_default()
+                .push(file.to_string());
         }
         let edges = edges
             .iter()
@@ -331,7 +352,10 @@ mod tests {
         let g = make_graph(&[("my_fn", "a.rs", "println")], &[]);
         let callees = g.find_callees("my_fn");
         let println = callees.iter().find(|c| c.name == "println").unwrap();
-        assert!(println.defined_in.is_empty(), "외부 함수는 defined_in 빈 벡터");
+        assert!(
+            println.defined_in.is_empty(),
+            "외부 함수는 defined_in 빈 벡터"
+        );
     }
 
     #[test]
@@ -385,10 +409,7 @@ mod tests {
     #[test]
     fn trace_dependents_순환_무한루프_없음() {
         // A ↔ B (상호 호출)
-        let g = make_graph(
-            &[("A", "f.rs", "B"), ("B", "f.rs", "A")],
-            &[],
-        );
+        let g = make_graph(&[("A", "f.rs", "B"), ("B", "f.rs", "A")], &[]);
         // 무한 루프 없이 종료해야
         let deps = g.trace_dependents("A", 10);
         assert!(deps.len() <= 2, "순환 중복 없음: {:?}", deps);
@@ -397,10 +418,7 @@ mod tests {
     #[test]
     fn find_callers_동명이인_여러_파일() {
         let g = make_graph(
-            &[
-                ("impl_a", "a.rs", "target"),
-                ("impl_b", "b.rs", "target"),
-            ],
+            &[("impl_a", "a.rs", "target"), ("impl_b", "b.rs", "target")],
             &[("target", "lib.rs"), ("target", "extra.rs")],
         );
         let callers = g.find_callers("target");

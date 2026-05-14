@@ -821,7 +821,8 @@ pub async fn stream_ai_command(
                     return result;
                 }
                 return Err(LumError::AiEngine(
-                    "local backend 강제 요청이지만 임베디드 모델이 로드되지 않았습니다.".to_string(),
+                    "local backend 강제 요청이지만 임베디드 모델이 로드되지 않았습니다."
+                        .to_string(),
                 ));
             }
             "ollama" => {
