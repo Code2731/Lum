@@ -50,12 +50,19 @@ struct ProgressLedger {
 
 impl ProgressLedger {
     fn new() -> Self {
-        Self { action_counts: HashMap::new(), key_facts: Vec::new(), stuck_total: 0 }
+        Self {
+            action_counts: HashMap::new(),
+            key_facts: Vec::new(),
+            stuck_total: 0,
+        }
     }
 
     /// action_key를 기록하고 현재 호출 횟수를 반환.
     fn record(&mut self, action_key: &str) -> usize {
-        let c = self.action_counts.entry(action_key.to_string()).or_insert(0);
+        let c = self
+            .action_counts
+            .entry(action_key.to_string())
+            .or_insert(0);
         *c += 1;
         *c
     }
@@ -237,6 +244,8 @@ const BASE_PROMPT: &str = r#"당신은 터미널 코딩 에이전트입니다. �
 - find_callers({"symbol": "함수명"}) — 이 함수를 호출하는 caller 목록 (tree-sitter 기반, 동명이인 미구분)
 - find_callees({"symbol": "함수명"}) — 이 함수가 호출하는 callee 목록
 - trace_dependents({"symbol": "함수명", "depth": 3}) — 변경 영향도 BFS (기본 depth=3, 최대 5)
+- precise_callers({"symbol": "함수명"}) — scip가 있을 때 동명이인 해소 + 정밀 caller 목록(미지원시 tree-sitter fallback)
+- precise_definition({"symbol": "식별자"}) — scip가 있을 때 정확한 정의 위치(미지원시 tree-sitter fallback)
 
 쓰기 도구 (CWD 내부 + 안전 경로만 허용 — .git/node_modules/target/dist/.lum_* 거부):
 - write_file({"path": "...", "content": "...", "overwrite": false}) — 신규 파일 생성. 기존 파일은 overwrite=true 명시 필요.
@@ -482,6 +491,7 @@ async fn run_tool(
     args: &serde_json::Value,
     cwd: &str,
     desktop_tools_enabled: bool,
+    scip_tools_enabled: bool,
     mode: ReactMode,
     tool_whitelist: Option<&HashSet<String>>,
 ) -> String {
@@ -534,6 +544,8 @@ async fn run_tool(
         "find_callers" => run_find_callers_tool(args, cwd),
         "find_callees" => run_find_callees_tool(args, cwd),
         "trace_dependents" => run_trace_dependents_tool(args, cwd),
+        "precise_callers" => run_precise_callers_tool(args, cwd, scip_tools_enabled),
+        "precise_definition" => run_precise_definition_tool(args, cwd, scip_tools_enabled),
         "write_file" => write_file_tool(args, cwd),
         "apply_patch" => apply_patch_tool(args, cwd),
         "delete_file" => delete_file_tool(args, cwd),
@@ -909,7 +921,11 @@ fn run_find_callees_tool(args: &serde_json::Value, cwd: &str) -> String {
             }
         })
         .collect();
-    format!("`{symbol}`이 호출하는 함수:\n{}\n[{}개]", lines.join("\n"), callees.len())
+    format!(
+        "`{symbol}`이 호출하는 함수:\n{}\n[{}개]",
+        lines.join("\n"),
+        callees.len()
+    )
 }
 
 fn run_trace_dependents_tool(args: &serde_json::Value, cwd: &str) -> String {
@@ -936,6 +952,64 @@ fn run_trace_dependents_tool(args: &serde_json::Value, cwd: &str) -> String {
         "`{symbol}` 변경 영향 범위 (depth≤{max_depth}, BFS):\n{}\n[{}개] ⚠ 동명이인 가능성 있음",
         lines.join("\n"),
         deps.len()
+    )
+}
+
+fn run_precise_callers_tool(args: &serde_json::Value, cwd: &str, scip_enabled: bool) -> String {
+    let symbol = args["symbol"].as_str().unwrap_or("").trim().to_string();
+    if symbol.is_empty() {
+        return "오류: symbol 파라미터 필요".to_string();
+    }
+    let base = run_find_callers_tool(args, cwd);
+    if !scip_enabled {
+        return format!("`{symbol}` 정밀 caller 분석은 비활성입니다. 정확 모드 토글 활성화 후 재요청하세요.\n{base}");
+    }
+
+    let backends = crate::commands::scip::detect_scip_backends();
+    let installed: Vec<String> = backends
+        .iter()
+        .filter(|b| b.available)
+        .map(|b| format!("{}({})", b.language, b.binary))
+        .collect();
+    let status = if installed.is_empty() {
+        "SCIP 설치가 감지되지 않아 tree-sitter 기반 결과만 제공합니다".to_string()
+    } else {
+        format!(
+            "SCIP 백엔드 설치 감지({}) — 현재 정밀 파서 미구현으로 tree-sitter fallback 반환",
+            installed.join(", ")
+        )
+    };
+
+    format!("{base}\n[SCIP] {status}")
+}
+
+fn run_precise_definition_tool(args: &serde_json::Value, cwd: &str, scip_enabled: bool) -> String {
+    let symbol = args["symbol"].as_str().unwrap_or("").trim().to_string();
+    if symbol.is_empty() {
+        return "오류: symbol 파라미터 필요".to_string();
+    }
+
+    if !scip_enabled {
+        return format!("`{symbol}` 정밀 definition 분석은 비활성입니다. 정확 모드 토글 활성화 후 재요청하세요.");
+    }
+
+    let graph = crate::commands::call_graph::CallGraph::build(std::path::Path::new(cwd));
+    let definitions = graph.fn_defs.get(&symbol).cloned().unwrap_or_default();
+
+    if definitions.is_empty() {
+        let msg = format!(
+            "`{symbol}`의 정의를 찾지 못했습니다. 파일 인덱스 미완성/동명이인일 수 있습니다."
+        );
+        return format!("{msg}\n[SCIP] tree-sitter 기반 결과입니다");
+    }
+
+    let mut lines: Vec<String> = Vec::new();
+    for file in definitions {
+        lines.push(format!("  - {} ({})", symbol, file));
+    }
+    format!(
+        "`{symbol}` 정의 후보:\n{}\n[SCIP] 정확 모듈 미구현으로 tree-sitter fallback 결과입니다.",
+        lines.join("\n")
     )
 }
 
@@ -1757,6 +1831,10 @@ pub async fn react_agent_run(
         .as_ref()
         .and_then(|c| c.react_desktop_tools_enabled)
         .unwrap_or(false);
+    let scip_tools_enabled = loaded_config
+        .as_ref()
+        .and_then(|c| c.react_scip_tools_enabled)
+        .unwrap_or(false);
     let config_tool_whitelist = loaded_config
         .as_ref()
         .and_then(|c| c.react_tool_whitelist.clone());
@@ -1803,7 +1881,13 @@ pub async fn react_agent_run(
 
     // 복잡한 목표는 사전 계획 생성 → 컨텍스트 주입 (LLM 한 번 선행)
     if is_complex_goal(&goal) {
-        emit_event(&app, "status", "복잡한 목표 — 작업 계획 생성 중", None, None);
+        emit_event(
+            &app,
+            "status",
+            "복잡한 목표 — 작업 계획 생성 중",
+            None,
+            None,
+        );
         if let Ok(plan_resp) =
             generate_task_plan(&client, &goal, forced_backend.as_deref(), &effective_model).await
         {
@@ -1864,16 +1948,15 @@ pub async fn react_agent_run(
             // ANSWER 확인 — 완료 직전 reflexion 1회.
             if let Some(answer) = parse_answer(&response) {
                 if reflexion_enabled {
-                    if let Some(reflect) =
-                        run_reflexion(
-                            &client,
-                            &conversation,
-                            &goal,
-                            Some(&answer),
-                            forced_backend.as_deref(),
-                            &effective_model,
-                        )
-                        .await
+                    if let Some(reflect) = run_reflexion(
+                        &client,
+                        &conversation,
+                        &goal,
+                        Some(&answer),
+                        forced_backend.as_deref(),
+                        &effective_model,
+                    )
+                    .await
                     {
                         emit_event(
                             &app,
@@ -1909,16 +1992,15 @@ pub async fn react_agent_run(
                 // 파싱 실패 — 응답 전체를 ANSWER로 취급(반성 1회 후 종료 가능)
                 let candidate = response.trim();
                 if reflexion_enabled {
-                    if let Some(reflect) =
-                        run_reflexion(
-                            &client,
-                            &conversation,
-                            &goal,
-                            Some(candidate),
-                            forced_backend.as_deref(),
-                            &effective_model,
-                        )
-                        .await
+                    if let Some(reflect) = run_reflexion(
+                        &client,
+                        &conversation,
+                        &goal,
+                        Some(candidate),
+                        forced_backend.as_deref(),
+                        &effective_model,
+                    )
+                    .await
                     {
                         emit_event(
                             &app,
@@ -1957,7 +2039,11 @@ pub async fn react_agent_run(
                 emit_event(
                     &app,
                     "status",
-                    format!("반복 감지 ({}회): {}", ledger.stuck_total, &action_key[..action_key.len().min(60)]),
+                    format!(
+                        "반복 감지 ({}회): {}",
+                        ledger.stuck_total,
+                        &action_key[..action_key.len().min(60)]
+                    ),
                     None,
                     Some(step + 1),
                 );
@@ -2037,6 +2123,7 @@ pub async fn react_agent_run(
                 &action.args,
                 &effective_cwd,
                 desktop_tools_enabled,
+                scip_tools_enabled,
                 react_mode,
                 whitelist_set.as_ref(),
             )
@@ -2213,6 +2300,8 @@ mod tests {
         // 라벨에 의존하지 않고 베이스 도구 자체가 들어가는지로 검사 — 향후 라벨 리네임에 강함.
         assert!(s.contains("shell"));
         assert!(s.contains("read_file"));
+        assert!(s.contains("precise_callers"));
+        assert!(s.contains("precise_definition"));
         assert!(s.contains("ANSWER:"));
     }
 
@@ -2403,7 +2492,10 @@ ACTION: mcp({"server": "playwright", "tool": "screenshot", "arguments": {"url": 
         // 시스템 프롬프트에 query_codebase 항목이 노출되는지 + LLM이 호출했을 때
         // run_tool match → run_query_codebase_tool로 라우팅되어 결과를 요약 반환하는지.
         let prompt = build_system_prompt(&[], &[]);
-        assert!(prompt.contains("query_codebase"), "프롬프트에 도구 미등록: {prompt}");
+        assert!(
+            prompt.contains("query_codebase"),
+            "프롬프트에 도구 미등록: {prompt}"
+        );
 
         set_codebase_tool_mock(CodebaseToolMock {
             search_result: Some(Ok(vec![
@@ -2437,7 +2529,11 @@ ACTION: mcp({"server": "playwright", "tool": "screenshot", "arguments": {"url": 
         });
         let out = run_query_codebase_tool(&serde_json::json!({"query": "big"})).await;
         assert!(out.contains("생략"), "결과 truncation 미적용: {out}");
-        assert!(out.len() < TOOL_OUTPUT_LIMIT + 100, "truncate 후에도 너무 김: {}", out.len());
+        assert!(
+            out.len() < TOOL_OUTPUT_LIMIT + 100,
+            "truncate 후에도 너무 김: {}",
+            out.len()
+        );
         clear_codebase_tool_mock();
     }
 
@@ -2459,6 +2555,25 @@ ACTION: mcp({"server": "playwright", "tool": "screenshot", "arguments": {"url": 
         let _g = CODEBASE_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         let out = run_query_codebase_tool(&serde_json::json!({})).await;
         assert!(out.contains("query 파라미터"), "{out}");
+    }
+
+    #[test]
+    fn phase142_precise_callers_도구_비활성_메시지() {
+        let out = run_precise_callers_tool(&serde_json::json!({"symbol": "foo"}), "/tmp", false);
+        assert!(out.contains("비활성"), "{out}");
+    }
+
+    #[test]
+    fn phase142_precise_definition_정의_리턴() {
+        let td = TempDir::new("scip-def");
+        let repo = td.path().join("sample.rs");
+        let source = "fn helper() {}\nfn target() { helper(); }\n";
+        std::fs::write(&repo, source).unwrap();
+
+        let out =
+            run_precise_definition_tool(&serde_json::json!({"symbol": "target"}), &td.cwd(), true);
+        assert!(out.contains("정의 후보"), "{out}");
+        assert!(out.contains("[SCIP]"), "{out}");
     }
 
     // ─── 코드 편집 도구 회귀 가드 ─────────────────────────────────────────────
@@ -3747,7 +3862,11 @@ ANSWER: 2 + 2는 4입니다."#,
     #[test]
     fn is_complex_goal_20단어이상_true() {
         let long = "please refactor the authentication module to use JWT tokens and also add comprehensive unit tests for all edge cases";
-        assert!(is_complex_goal(long), "단어 수 초과: {}", long.split_whitespace().count());
+        assert!(
+            is_complex_goal(long),
+            "단어 수 초과: {}",
+            long.split_whitespace().count()
+        );
     }
 
     #[test]
@@ -3765,7 +3884,9 @@ ANSWER: 2 + 2는 4입니다."#,
     #[test]
     fn is_complex_goal_복수태스크_한국어_true() {
         assert!(is_complex_goal("버그를 고치고 그리고 테스트를 추가하세요"));
-        assert!(is_complex_goal("인증 모듈을 리팩터링하세요. 또한 문서도 업데이트하세요"));
+        assert!(is_complex_goal(
+            "인증 모듈을 리팩터링하세요. 또한 문서도 업데이트하세요"
+        ));
     }
 
     #[test]
@@ -3787,7 +3908,10 @@ ANSWER: 2 + 2는 4입니다."#,
 
     #[test]
     fn parse_task_plan_최대7개_제한() {
-        let resp = (1..=10).map(|i| format!("{i}. step {i}")).collect::<Vec<_>>().join("\n");
+        let resp = (1..=10)
+            .map(|i| format!("{i}. step {i}"))
+            .collect::<Vec<_>>()
+            .join("\n");
         let steps = parse_task_plan(&resp);
         assert_eq!(steps.len(), 7, "7개 초과 항목은 잘라야 함");
     }

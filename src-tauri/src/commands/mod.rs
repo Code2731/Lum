@@ -26,6 +26,7 @@ pub mod rag;
 pub mod react_agent;
 pub mod recall;
 pub mod repo_map;
+pub mod scip;
 pub mod scripts;
 pub mod session;
 pub mod skills;

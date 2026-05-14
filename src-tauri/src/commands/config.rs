@@ -112,6 +112,8 @@ pub struct AppConfig {
     // ── Phase 130-A: ReAct 데스크톱 제어 도구 안전 토글 ────────────────────
     /// true면 ReAct의 screenshot/click/type/key_combo 도구 허용. 기본 false (opt-in).
     pub react_desktop_tools_enabled: Option<bool>,
+    /// true면 ReAct의 SCIP 정밀 도구(precise_* 계열) 허용. 기본 false (opt-in).
+    pub react_scip_tools_enabled: Option<bool>,
     // ── Phase 133: ReAct Reflexion 1턴 자기검토 토글 ────────────────────────
     /// true면 최종 직전/상한 도달 시 자기검토 1회 수행. 기본 true.
     pub react_reflexion_enabled: Option<bool>,
@@ -430,6 +432,14 @@ pub fn save_ui_preferences(
 pub fn save_react_desktop_tools_enabled(enabled: bool) -> Result<()> {
     let mut config = load_config()?;
     config.react_desktop_tools_enabled = Some(enabled);
+    save_config(&config)
+}
+
+/// Phase 142: SCIP 정밀 도구 opt-in 토글 저장.
+#[tauri::command]
+pub fn save_react_scip_tools_enabled(enabled: bool) -> Result<()> {
+    let mut config = load_config()?;
+    config.react_scip_tools_enabled = Some(enabled);
     save_config(&config)
 }
 
