@@ -151,6 +151,7 @@ const WarpListView: React.FC<Props> = ({
   const menuButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const menuContainerRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const menuItemRefs = useRef<Record<string, (HTMLButtonElement | null)[]>>({});
+  const menuResizeObserverRef = useRef<ResizeObserver | null>(null);
   const deltaPopoverRef = useRef<HTMLDivElement | null>(null);
   const timelineButtonRef = useRef<HTMLButtonElement | null>(null);
   const timelinePanelRef = useRef<HTMLDivElement | null>(null);
@@ -969,6 +970,33 @@ const WarpListView: React.FC<Props> = ({
   React.useLayoutEffect(() => {
     if (!menuOpenId) return;
     updateMenuPosition(menuOpenId);
+    requestAnimationFrame(() => {
+      updateMenuPosition(menuOpenId);
+    });
+  }, [menuOpenId, updateMenuPosition]);
+
+  useEffect(() => {
+    const menuEl = menuOpenId ? menuContainerRefs.current[menuOpenId] : null;
+    const observer = menuResizeObserverRef.current;
+    observer?.disconnect();
+    menuResizeObserverRef.current = null;
+
+    if (!menuOpenId || !menuEl || typeof ResizeObserver === "undefined") {
+      return;
+    }
+
+    const next = new ResizeObserver(() => {
+      updateMenuPosition(menuOpenId);
+    });
+    next.observe(menuEl);
+    menuResizeObserverRef.current = next;
+
+    return () => {
+      next.disconnect();
+      if (menuResizeObserverRef.current === next) {
+        menuResizeObserverRef.current = null;
+      }
+    };
   }, [menuOpenId, updateMenuPosition]);
 
   useEffect(() => {
