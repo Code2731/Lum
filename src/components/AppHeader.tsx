@@ -73,6 +73,22 @@ interface Props {
 
 type PopupPlacement = "down" | "up";
 
+type PopupPosition = {
+  x: number;
+  y: number;
+};
+
+const clampValue = (value: number, min: number, max: number): number => {
+  return Math.max(min, Math.min(value, max));
+};
+
+const POPUP_FALLBACK_WIDTH = {
+  advanced: 256,
+  notif: 320,
+};
+const POPUP_FALLBACK_HEIGHT = 440;
+const POPUP_EDGE_GUTTER = 8;
+
 const AppHeader: React.FC<Props> = ({
   specs, specsLoading,
   viewMode, setViewMode,
@@ -139,10 +155,14 @@ const AppHeader: React.FC<Props> = ({
   const [notifCenterPlacement, setNotifCenterPlacement] = React.useState<PopupPlacement>("down");
   const [advancedOverflowMaxHeight, setAdvancedOverflowMaxHeight] = React.useState(440);
   const [notifCenterMaxHeight, setNotifCenterMaxHeight] = React.useState(440);
+  const [advancedOverflowPosition, setAdvancedOverflowPosition] = React.useState<PopupPosition>({ x: 0, y: 0 });
+  const [notifCenterPosition, setNotifCenterPosition] = React.useState<PopupPosition>({ x: 0, y: 0 });
+  const [hasAdvancedPosition, setHasAdvancedPosition] = React.useState(false);
+  const [hasNotifCenterPosition, setHasNotifCenterPosition] = React.useState(false);
   const ADVANCED_OVERFLOW_PANEL_ID = "advanced-overflow-panel";
   const NOTIF_CENTER_PANEL_ID = "notification-center-panel";
   const POPUP_GUTTER = 8;
-  const POPUP_ESTIMATE_HEIGHT = 440;
+  const POPUP_ESTIMATE_HEIGHT = POPUP_FALLBACK_HEIGHT;
   const popupFocusables = "a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex='-1'])";
   const clampPopupHeight = (placement: PopupPlacement, triggerRect: DOMRect | null): number => {
     if (!triggerRect) return POPUP_ESTIMATE_HEIGHT;
@@ -181,22 +201,57 @@ const AppHeader: React.FC<Props> = ({
     panelRef?: React.RefObject<HTMLDivElement | null>;
     setPlacement: (placement: PopupPlacement) => void;
     setMaxHeight: (height: number) => void;
+    setPosition: (position: PopupPosition) => void;
+    fallbackWidth: number;
+    onReady: () => void;
   }) => {
     const placement = measurePopupPlacement(options.trigger, options.panelRef);
     options.setPlacement(placement);
     const nextHeight = clampPopupHeight(placement, options.trigger?.getBoundingClientRect() ?? null);
     options.setMaxHeight(nextHeight);
+
+    if (typeof window === "undefined" || !options.trigger) {
+      return;
+    }
+
+    const triggerRect = options.trigger.getBoundingClientRect();
+    const panelRect = options.panelRef?.current?.getBoundingClientRect();
+    const panelWidth = (panelRect?.width && Number.isFinite(panelRect.width) && panelRect.width > 0)
+      ? panelRect.width
+      : options.fallbackWidth;
+    const panelHeight = (panelRect?.height && Number.isFinite(panelRect.height) && panelRect.height > 0)
+      ? panelRect.height
+      : POPUP_ESTIMATE_HEIGHT;
+
+    const nextY = placement === "up"
+      ? triggerRect.top - panelHeight - POPUP_EDGE_GUTTER
+      : triggerRect.bottom + POPUP_EDGE_GUTTER;
+
+    const nextX = triggerRect.right - panelWidth;
+    const maxTop = Math.max(POPUP_EDGE_GUTTER, window.innerHeight - panelHeight - POPUP_EDGE_GUTTER);
+    const maxLeft = Math.max(POPUP_EDGE_GUTTER, window.innerWidth - panelWidth - POPUP_EDGE_GUTTER);
+
+    options.setPosition({
+      x: clampValue(nextX, POPUP_EDGE_GUTTER, maxLeft),
+      y: clampValue(nextY, POPUP_EDGE_GUTTER, maxTop),
+    });
+    options.onReady();
   }, [measurePopupPlacement]);
 
-  const advancedOverflowPanelClassName = advancedOverflowPlacement === "up"
-    ? "absolute right-0 bottom-full mb-1.5"
-    : "absolute right-0 top-full mt-1.5";
+  const advancedOverflowPanelStyle: React.CSSProperties = {
+    left: `${advancedOverflowPosition.x}px`,
+    top: `${advancedOverflowPosition.y}px`,
+    visibility: hasAdvancedPosition ? "visible" : "hidden",
+  };
 
   const advancedOverflowPanelOrigin = advancedOverflowPlacement === "up" ? "bottom right" : "top right";
   const advancedOverflowPanelOffsetY = advancedOverflowPlacement === "up" ? 4 : -4;
-  const notifCenterPanelClassName = notifCenterPlacement === "up"
-    ? "absolute right-0 bottom-full mb-1.5 w-80 h-fit"
-    : "absolute right-0 top-full mt-1 w-80 h-fit";
+
+  const notifCenterPanelStyle: React.CSSProperties = {
+    left: `${notifCenterPosition.x}px`,
+    top: `${notifCenterPosition.y}px`,
+    visibility: hasNotifCenterPosition ? "visible" : "hidden",
+  };
   const notifCenterPanelOrigin = notifCenterPlacement === "up" ? "bottom right" : "top right";
   const notifCenterPanelOffsetY = notifCenterPlacement === "up" ? 4 : -4;
 
@@ -264,6 +319,7 @@ const AppHeader: React.FC<Props> = ({
   }, []);
 
   const closeAdvancedOverflow = React.useCallback(() => {
+    setHasAdvancedPosition(false);
     setShowAdvancedOverflow(false);
     requestAnimationFrame(() => {
       advancedOverflowButtonRef.current?.focus();
@@ -271,6 +327,7 @@ const AppHeader: React.FC<Props> = ({
   }, [setShowAdvancedOverflow]);
 
   const closeNotifCenter = React.useCallback(() => {
+    setHasNotifCenterPosition(false);
     setShowNotifCenter(false);
     requestAnimationFrame(() => {
       notifCenterButtonRef.current?.focus();
@@ -286,7 +343,12 @@ const AppHeader: React.FC<Props> = ({
           panelRef: advancedOverflowPanelRef,
           setPlacement: setAdvancedOverflowPlacement,
           setMaxHeight: setAdvancedOverflowMaxHeight,
+          setPosition: setAdvancedOverflowPosition,
+          fallbackWidth: POPUP_FALLBACK_WIDTH.advanced,
+          onReady: () => setHasAdvancedPosition(true),
         });
+      } else {
+        setHasAdvancedPosition(false);
       }
       return !prev;
     });
@@ -302,8 +364,13 @@ const AppHeader: React.FC<Props> = ({
           panelRef: notifCenterPanelRef,
           setPlacement: setNotifCenterPlacement,
           setMaxHeight: setNotifCenterMaxHeight,
+          setPosition: setNotifCenterPosition,
+          fallbackWidth: POPUP_FALLBACK_WIDTH.notif,
+          onReady: () => setHasNotifCenterPosition(true),
         });
         notifCenter.markAllRead();
+      } else {
+        setHasNotifCenterPosition(false);
       }
       return next;
     });
@@ -344,13 +411,18 @@ const AppHeader: React.FC<Props> = ({
         panelRef: advancedOverflowPanelRef,
         setPlacement: setAdvancedOverflowPlacement,
         setMaxHeight: setAdvancedOverflowMaxHeight,
+        setPosition: setAdvancedOverflowPosition,
+        fallbackWidth: POPUP_FALLBACK_WIDTH.advanced,
+        onReady: () => setHasAdvancedPosition(true),
       });
     };
 
     updatePlacement();
     window.addEventListener("resize", updatePlacement);
+    window.addEventListener("scroll", updatePlacement, true);
     return () => {
       window.removeEventListener("resize", updatePlacement);
+      window.removeEventListener("scroll", updatePlacement, true);
     };
   }, [showAdvancedOverflow, updatePopupPlacement]);
 
@@ -389,13 +461,18 @@ const AppHeader: React.FC<Props> = ({
         panelRef: notifCenterPanelRef,
         setPlacement: setNotifCenterPlacement,
         setMaxHeight: setNotifCenterMaxHeight,
+        setPosition: setNotifCenterPosition,
+        fallbackWidth: POPUP_FALLBACK_WIDTH.notif,
+        onReady: () => setHasNotifCenterPosition(true),
       });
     };
 
     updatePlacement();
     window.addEventListener("resize", updatePlacement);
+    window.addEventListener("scroll", updatePlacement, true);
     return () => {
       window.removeEventListener("resize", updatePlacement);
+      window.removeEventListener("scroll", updatePlacement, true);
     };
   }, [showNotifCenter, updatePopupPlacement]);
 
@@ -653,8 +730,9 @@ const AppHeader: React.FC<Props> = ({
                   style={{
                     transformOrigin: advancedOverflowPanelOrigin,
                     maxHeight: `${Math.max(130, advancedOverflowMaxHeight)}px`,
+                    ...advancedOverflowPanelStyle,
                   }}
-                  className={`${advancedOverflowPanelClassName} z-50 w-64 max-h-[min(440px,calc(100vh-3.5rem))] overflow-y-auto rounded-xl border border-white/[0.12] bg-[#0f1620]/95 backdrop-blur-md shadow-xl p-2 space-y-0.5`}
+                  className="fixed z-50 w-64 max-h-[min(440px,calc(100vh-3.5rem))] overflow-y-auto rounded-xl border border-white/[0.12] bg-[#0f1620]/95 backdrop-blur-md shadow-xl p-2 space-y-0.5"
                 >
                   {hasUnseenAdvanced && (
                     <div className="px-2 py-1.5 mb-1 border-b border-white/10">
@@ -791,8 +869,9 @@ const AppHeader: React.FC<Props> = ({
                   style={{
                     transformOrigin: notifCenterPanelOrigin,
                     maxHeight: `${Math.max(130, notifCenterMaxHeight)}px`,
+                    ...notifCenterPanelStyle,
                   }}
-                  className={notifCenterPanelClassName}
+                  className="fixed w-80 h-fit z-50"
                 >
                 <NotificationCenter
                   notifications={notifCenter.notifications}

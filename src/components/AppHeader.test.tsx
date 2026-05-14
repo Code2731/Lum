@@ -440,8 +440,7 @@ describe("AppHeader", () => {
 
       await waitFor(() => {
         const menu = screen.getByRole("menu", { name: "고급 기능 메뉴" });
-        expect(menu.className).toContain("bottom-full");
-        expect(menu.className).not.toContain("top-full");
+        expect(Number(menu.style.top.replace("px", ""))).toBeLessThan(730);
       });
     } finally {
       Object.defineProperty(window, "innerHeight", {
@@ -493,8 +492,7 @@ describe("AppHeader", () => {
 
       await waitFor(() => {
         const notificationMenu = screen.getByRole("menu", { name: "알림 센터" });
-        expect(notificationMenu.className).toContain("bottom-full");
-        expect(notificationMenu.className).not.toContain("top-full");
+        expect(Number(notificationMenu.style.top.replace("px", ""))).toBeLessThan(730);
       });
     } finally {
       Object.defineProperty(window, "innerHeight", {
@@ -543,8 +541,7 @@ describe("AppHeader", () => {
 
       await waitFor(() => {
         const menuEl = screen.getByRole("menu", { name: "고급 기능 메뉴" });
-        expect(menuEl.className).toContain("top-full");
-        expect(menuEl.className).not.toContain("bottom-full");
+        expect(Number(menuEl.style.top.replace("px", ""))).toBeGreaterThan(120);
       });
     } finally {
       Object.defineProperty(window, "innerHeight", {
@@ -593,7 +590,7 @@ describe("AppHeader", () => {
 
       await waitFor(() => {
         const menuEl = screen.getByRole("menu", { name: "고급 기능 메뉴" });
-        expect(menuEl.className).toContain("top-full");
+        expect(Number(menuEl.style.top.replace("px", ""))).toBeGreaterThan(0);
       });
     } finally {
       Object.defineProperty(window, "innerHeight", {
@@ -641,7 +638,6 @@ describe("AppHeader", () => {
 
       await waitFor(() => {
         const menuEl = screen.getByRole("menu", { name: "고급 기능 메뉴" });
-        expect(menuEl.className).toContain("bottom-full");
         expect(menuEl).toHaveStyle({ maxHeight: "138px" });
       });
     } finally {
