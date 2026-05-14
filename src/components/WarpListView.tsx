@@ -109,12 +109,23 @@ const WarpListView: React.FC<Props> = ({
   onClearCompareResults,
   compareResultByBlock = {},
 }) => {
+  const MENU_WIDTH = 224;
+  const MENU_ITEM_HEIGHT = 34;
+  const MENU_VERTICAL_GAP = 8;
+  const VIEWPORT_GAP = 8;
+  const getViewportSize = () => ({
+    width: typeof window === "undefined" ? 1280 : window.innerWidth,
+    height: typeof window === "undefined" ? 720 : window.innerHeight,
+  });
+  const clamp = (value: number, min: number, max: number): number => Math.max(min, Math.min(value, max));
+
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "failed" | "success" | "compared">("all");
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
   const [menuActiveIndex, setMenuActiveIndex] = useState(0);
   const [menuPlacement, setMenuPlacement] = useState<"down" | "up">("down");
+  const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
   const [blockSearch, setBlockSearch] = useState<Record<string, string>>({});
   const [blockSearchCursor, setBlockSearchCursor] = useState<Record<string, number>>({});
   const [activeSearchBlockId, setActiveSearchBlockId] = useState<string | null>(null);
@@ -144,6 +155,51 @@ const WarpListView: React.FC<Props> = ({
   const timelineRestoreFocusRef = useRef(false);
   const deltaRestoreFocusRef = useRef(false);
   const deltaRestoreFocusIdRef = useRef<string | null>(null);
+
+  const getMenuItemCount = () => (onRetryWithDiff ? 4 : 3);
+  const updateMenuPosition = React.useCallback((id: string) => {
+    const trigger = menuButtonRefs.current[id];
+    const triggerRect = trigger?.getBoundingClientRect();
+    if (!triggerRect) return;
+
+    const menuRect = menuContainerRefs.current[id]?.getBoundingClientRect();
+    const menuHeight = menuRect?.height && Number.isFinite(menuRect.height) && menuRect.height > 0
+      ? menuRect.height
+      : MENU_ITEM_HEIGHT * getMenuItemCount();
+    const menuWidth = menuRect?.width && Number.isFinite(menuRect.width) && menuRect.width > 0
+      ? menuRect.width
+      : MENU_WIDTH;
+
+    const viewport = getViewportSize();
+    const spaceBelow = viewport.height - triggerRect.bottom - MENU_VERTICAL_GAP - VIEWPORT_GAP;
+    const spaceAbove = triggerRect.top - MENU_VERTICAL_GAP - VIEWPORT_GAP;
+    const canOpenBelow = spaceBelow >= menuHeight;
+    const canOpenAbove = spaceAbove >= menuHeight;
+
+    const nextPlacement: "down" | "up" = canOpenBelow && canOpenAbove
+      ? (spaceBelow >= spaceAbove ? "down" : "up")
+      : canOpenAbove
+        ? "up"
+        : canOpenBelow
+          ? "down"
+          : spaceBelow >= spaceAbove ? "down" : "up";
+
+    const nextY = nextPlacement === "down"
+      ? triggerRect.bottom + MENU_VERTICAL_GAP
+      : triggerRect.top - menuHeight - MENU_VERTICAL_GAP;
+    const nextX = triggerRect.right - menuWidth;
+    const maxTop = Math.max(VIEWPORT_GAP, viewport.height - menuHeight - VIEWPORT_GAP);
+    const maxLeft = Math.max(VIEWPORT_GAP, viewport.width - menuWidth - VIEWPORT_GAP);
+
+    const nextPosition = {
+      x: clamp(nextX, VIEWPORT_GAP, maxLeft),
+      y: clamp(nextY, VIEWPORT_GAP, maxTop),
+    };
+    setMenuPosition((prev) =>
+      prev.x === nextPosition.x && prev.y === nextPosition.y ? prev : nextPosition,
+    );
+    setMenuPlacement((prev) => (prev === nextPlacement ? prev : nextPlacement));
+  }, [MENU_ITEM_HEIGHT, MENU_WIDTH, MENU_VERTICAL_GAP, VIEWPORT_GAP, getMenuItemCount]);
 
   const closeTimelinePanel = (restoreFocus: boolean) => {
     timelineRestoreFocusRef.current = restoreFocus;
@@ -462,7 +518,6 @@ const WarpListView: React.FC<Props> = ({
     return nodes;
   };
 
-  const getMenuItemCount = () => (onRetryWithDiff ? 4 : 3);
   const closeMenuById = (id: string | null, restoreFocus: boolean) => {
     setMenuOpenId(null);
     setMenuActiveIndex(0);
@@ -723,12 +778,7 @@ const WarpListView: React.FC<Props> = ({
 
   useEffect(() => {
     if (!menuOpenId) return;
-    const trigger = menuButtonRefs.current[menuOpenId];
-    const fallbackHeight = 220;
-    const buttonRect = trigger?.getBoundingClientRect();
-    const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
-    const hasRoomBelow = !buttonRect ? true : (viewportHeight - buttonRect.bottom - 10) >= fallbackHeight;
-    setMenuPlacement(!buttonRect || hasRoomBelow ? "down" : "up");
+    const updatePosition = () => updateMenuPosition(menuOpenId);
 
     const onWindowKeyDown = (e: KeyboardEvent) => {
       const currentMenuItems = menuItemRefs.current[menuOpenId] ?? [];
@@ -797,11 +847,20 @@ const WarpListView: React.FC<Props> = ({
     };
     window.addEventListener("keydown", onWindowKeyDown);
     window.addEventListener("mousedown", onMouseDown);
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, { capture: true });
     return () => {
       window.removeEventListener("keydown", onWindowKeyDown);
       window.removeEventListener("mousedown", onMouseDown);
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, { capture: true });
     };
-  }, [menuOpenId, onRetryWithDiff]);
+  }, [menuOpenId, onRetryWithDiff, updateMenuPosition]);
+
+  React.useLayoutEffect(() => {
+    if (!menuOpenId) return;
+    updateMenuPosition(menuOpenId);
+  }, [menuOpenId, updateMenuPosition]);
 
   useEffect(() => {
     if (!menuOpenId) {
@@ -2233,9 +2292,13 @@ const WarpListView: React.FC<Props> = ({
                     ref={(el) => { menuContainerRefs.current[b.id] = el; }}
                     role="menu"
                     aria-label="블록 액션 메뉴"
-                    className={`absolute right-0 z-20 w-56 rounded-lg border border-white/10 bg-[#0f151f]/96 backdrop-blur-sm shadow-2xl overflow-hidden ${
+                    className={`fixed z-30 w-56 rounded-lg border border-white/10 bg-[#0f151f]/96 backdrop-blur-sm shadow-2xl overflow-hidden ${
                       menuPlacement === "up" ? "bottom-full mb-1" : "top-full mt-1"
                     }`}
+                    style={{
+                      left: menuPosition.x,
+                      top: menuPosition.y,
+                    }}
                     onClick={(e) => e.stopPropagation()}
                     onBlurCapture={(e) => {
                       const next = e.relatedTarget as Node | null;
