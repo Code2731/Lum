@@ -107,14 +107,15 @@ const NotificationCenter: React.FC<Props> = ({
       if (e.key === "Escape") {
         e.preventDefault();
         e.stopPropagation();
+        e.stopImmediatePropagation();
         onCloseRef.current();
       }
     };
     document.addEventListener("mousedown", handler);
-    document.addEventListener("keydown", keyHandler);
+    document.addEventListener("keydown", keyHandler, { capture: true });
     return () => {
       document.removeEventListener("mousedown", handler);
-      document.removeEventListener("keydown", keyHandler);
+      document.removeEventListener("keydown", keyHandler, { capture: true });
     };
   }, [closeOnDocument]); // 리스너는 한 번만 등록, 최신 onClose는 ref를 통해 참조
 

@@ -43,13 +43,14 @@ const TabContextMenu: React.FC<Props> = ({
       if (e.key !== "Escape") return;
       e.preventDefault();
       e.stopPropagation();
+      e.stopImmediatePropagation();
       onClose();
     };
     document.addEventListener("mousedown", handle);
-    document.addEventListener("keydown", handleKeydown);
+    document.addEventListener("keydown", handleKeydown, { capture: true });
     return () => {
       document.removeEventListener("mousedown", handle);
-      document.removeEventListener("keydown", handleKeydown);
+      document.removeEventListener("keydown", handleKeydown, { capture: true });
     };
   }, [onClose]);
 

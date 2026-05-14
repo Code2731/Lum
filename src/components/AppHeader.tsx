@@ -322,15 +322,16 @@ const AppHeader: React.FC<Props> = ({
       if (e.key === "Escape") {
         e.preventDefault();
         e.stopPropagation();
+        e.stopImmediatePropagation();
         closeAdvancedOverflow();
       }
     };
 
     document.addEventListener("pointerdown", handleClose);
-    document.addEventListener("keydown", handleEscape);
+    document.addEventListener("keydown", handleEscape, { capture: true });
     return () => {
       document.removeEventListener("pointerdown", handleClose);
-      document.removeEventListener("keydown", handleEscape);
+      document.removeEventListener("keydown", handleEscape, { capture: true });
     };
   }, [showAdvancedOverflow, closeAdvancedOverflow]);
 
@@ -366,15 +367,16 @@ const AppHeader: React.FC<Props> = ({
       if (e.key === "Escape") {
         e.preventDefault();
         e.stopPropagation();
+        e.stopImmediatePropagation();
         closeNotifCenter();
       }
     };
 
     document.addEventListener("pointerdown", handleClose);
-    document.addEventListener("keydown", handleEscape);
+    document.addEventListener("keydown", handleEscape, { capture: true });
     return () => {
       document.removeEventListener("pointerdown", handleClose);
-      document.removeEventListener("keydown", handleEscape);
+      document.removeEventListener("keydown", handleEscape, { capture: true });
     };
   }, [showNotifCenter, closeNotifCenter]);
 

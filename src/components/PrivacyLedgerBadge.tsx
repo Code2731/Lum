@@ -161,14 +161,15 @@ const PrivacyLedgerBadge: React.FC<Props> = ({ state, isAllOnDevice, onReset }) 
       if (e.key === "Escape") {
         e.preventDefault();
         e.stopPropagation();
+        e.stopImmediatePropagation();
         closePopover();
       }
     };
     document.addEventListener("mousedown", handler);
-    document.addEventListener("keydown", keyHandler);
+    document.addEventListener("keydown", keyHandler, { capture: true });
     return () => {
       document.removeEventListener("mousedown", handler);
-      document.removeEventListener("keydown", keyHandler);
+      document.removeEventListener("keydown", keyHandler, { capture: true });
     };
   }, [open, closePopover]);
 

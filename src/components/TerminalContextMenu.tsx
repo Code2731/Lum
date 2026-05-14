@@ -68,14 +68,15 @@ const TerminalContextMenu: React.FC<Props> = ({
       if (e.key === "Escape") {
         e.preventDefault();
         e.stopPropagation();
+        e.stopImmediatePropagation();
         onClose();
       }
     };
     document.addEventListener("mousedown", handler);
-    document.addEventListener("keydown", keyHandler);
+    document.addEventListener("keydown", keyHandler, { capture: true });
     return () => {
       document.removeEventListener("mousedown", handler);
-      document.removeEventListener("keydown", keyHandler);
+      document.removeEventListener("keydown", keyHandler, { capture: true });
     };
   }, [onClose]);
 

@@ -30,6 +30,32 @@ describe("TerminalContextMenu", () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
+  it("Escape 키는 상위 keydown으로 전파되지 않는다", () => {
+    const onClose = vi.fn();
+    const parentKeyDown = vi.fn();
+    const onWindowKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") parentKeyDown();
+    };
+
+    document.addEventListener("keydown", onWindowKeyDown);
+    try {
+      render(
+        <TerminalContextMenu
+          {...baseProps}
+          onClose={onClose}
+          isPathOrUrl={false}
+        />,
+      );
+
+      fireEvent.keyDown(document, { key: "Escape" });
+
+      expect(onClose).toHaveBeenCalledTimes(1);
+      expect(parentKeyDown).not.toHaveBeenCalled();
+    } finally {
+      document.removeEventListener("keydown", onWindowKeyDown);
+    }
+  });
+
   it("바깥 클릭으로 메뉴가 닫힌다", () => {
     const onClose = vi.fn();
     render(
