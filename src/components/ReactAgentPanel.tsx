@@ -29,6 +29,8 @@ interface ScipBackend {
   language: string;
   binary: string;
   available: boolean;
+  index_path: string;
+  index_exists: boolean;
 }
 
 interface ScipStatus {
@@ -205,6 +207,20 @@ const ReactAgentPanel: React.FC<Props> = ({
   const highRiskCount = changes.filter((c) => c.risk === "high").length;
   const availableScipBackends =
     scipStatus?.backends.filter((backend) => backend.available).length ?? 0;
+  const indexedScipBackends =
+    scipStatus?.backends.filter(
+      (backend) => backend.available && backend.index_exists,
+    ).length ?? 0;
+  const scipStatusLines =
+    scipStatus?.backends
+      .filter((backend) => backend.available)
+      .map((backend) =>
+        backend.index_exists
+          ? `${backend.language}: index.scip 존재`
+          : `${backend.language}: index.scip 없음`,
+      )
+      .join(" · ") ??
+    "SCIP 백엔드 상태 없음";
   const isScipEnabled =
     scipToolsEnabled && availableScipBackends > 0 && scipStatus?.enabled;
   const showUndoButton =
@@ -220,6 +236,17 @@ const ReactAgentPanel: React.FC<Props> = ({
 
   // ReAct 데스크톱 제어 도구는 opt-in 기본값(false). 패널 열 때 현재 설정 동기화.
   useEffect(() => {
+    const refreshScipStatus = async () => {
+      try {
+        const refreshed = state.cwd
+          ? await invoke<ScipStatus>("scip_status", { cwd: state.cwd })
+          : await invoke<ScipStatus>("scip_status");
+        setScipStatus(refreshed);
+      } catch {
+        // 조회 실패해도 기존 상태 유지 — 표시 신뢰도보다 토글 우선.
+      }
+    };
+
     invoke<{ react_desktop_tools_enabled?: boolean }>("load_app_config")
       .then((cfg) =>
         setDesktopToolsEnabled(Boolean(cfg.react_desktop_tools_enabled)),
@@ -230,10 +257,8 @@ const ReactAgentPanel: React.FC<Props> = ({
         setScipToolsEnabled(Boolean(cfg.react_scip_tools_enabled));
       })
       .catch(() => {});
-    invoke<ScipStatus>("scip_status")
-      .then((status) => setScipStatus(status))
-      .catch(() => {});
-  }, []);
+    refreshScipStatus();
+  }, [state.cwd]);
 
   const toggleDesktopTools = async () => {
     const next = !desktopToolsEnabled;
@@ -255,7 +280,9 @@ const ReactAgentPanel: React.FC<Props> = ({
     setScipToolsEnabled(next);
     try {
       await invoke("save_react_scip_tools_enabled", { enabled: next });
-      const refreshed = await invoke<ScipStatus>("scip_status");
+      const refreshed = state.cwd
+        ? await invoke<ScipStatus>("scip_status", { cwd: state.cwd })
+        : await invoke<ScipStatus>("scip_status");
       setScipStatus(refreshed);
       if (next && !refreshed.enabled) {
         setScipToolsEnabled(false);
@@ -356,13 +383,10 @@ const ReactAgentPanel: React.FC<Props> = ({
           title={
             availableScipBackends === 0
               ? "SCIP 백엔드가 없어 토글할 수 없습니다"
-              : `ReAct 정밀 도구(precise_callers/precise_definition). 사용 가능한 언어: ${scipStatus?.backends
-                  .filter((backend) => backend.available)
-                  .map((backend) => backend.language)
-                  .join(", ")}`
+              : `ReAct 정밀 도구(precise_callers/precise_definition). ${scipStatusLines}`
           }
         >
-          SCIP {isScipEnabled ? "ON" : "OFF"}
+          SCIP {isScipEnabled ? "ON" : "OFF"} ({indexedScipBackends}/{availableScipBackends})
         </button>
       </div>
 

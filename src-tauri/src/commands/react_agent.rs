@@ -962,25 +962,57 @@ fn run_precise_callers_tool(args: &serde_json::Value, cwd: &str, scip_enabled: b
     }
     let base = run_find_callers_tool(args, cwd);
     if !scip_enabled {
-        return format!("`{symbol}` 정밀 caller 분석은 비활성입니다. 정확 모드 토글 활성화 후 재요청하세요.\n{base}");
+        let status = scip_backend_status_lines(cwd);
+        return format!(
+            "`{symbol}` 정밀 caller 분석은 비활성입니다. 정확 모드 토글 활성화 후 재요청하세요.\n{status}\n{base}"
+        );
     }
 
-    let backends = crate::commands::scip::detect_scip_backends();
-    let installed: Vec<String> = backends
+    let backends = crate::commands::scip::detect_scip_backends(Some(cwd.to_string()));
+    let available_count = backends.iter().filter(|b| b.available).count();
+    let indexed_count = backends
         .iter()
-        .filter(|b| b.available)
-        .map(|b| format!("{}({})", b.language, b.binary))
-        .collect();
-    let status = if installed.is_empty() {
-        "SCIP 설치가 감지되지 않아 tree-sitter 기반 결과만 제공합니다".to_string()
+        .filter(|backend| backend.available && backend.index_exists)
+        .count();
+    let status = if available_count == 0 {
+        "SCIP 설치가 감지되지 않아 tree-sitter 기반 결과만 제공합니다"
+    } else if indexed_count == 0 {
+        "SCIP 백엔드는 있으나 index.scip 미생성으로 tree-sitter fallback 결과만 제공합니다"
     } else {
-        format!(
-            "SCIP 백엔드 설치 감지({}) — 현재 정밀 파서 미구현으로 tree-sitter fallback 반환",
-            installed.join(", ")
-        )
+        "SCIP 백엔드가 준비되었으나 정밀 파서 미구현으로 tree-sitter fallback 결과만 제공합니다"
     };
+    let status_lines = scip_backend_status_lines(cwd);
 
-    format!("{base}\n[SCIP] {status}")
+    format!("{base}\n[SCIP] {status}\n{status_lines}")
+}
+
+fn scip_backend_status_lines(cwd: &str) -> String {
+    let backends = crate::commands::scip::detect_scip_backends(Some(cwd.to_string()));
+    let lines: Vec<String> = backends
+        .into_iter()
+        .map(|backend| {
+            let installed = if backend.available {
+                "설치됨"
+            } else {
+                "미설치"
+            };
+            let ready = if backend.index_exists {
+                "index.scip 있음"
+            } else {
+                "index.scip 없음"
+            };
+            format!(
+                " - {installed} / {ready} / {}({}) ({})",
+                backend.language, backend.binary, backend.index_path
+            )
+        })
+        .collect();
+
+    if lines.is_empty() {
+        "[SCIP] 백엔드 상태 정보 없음".to_string()
+    } else {
+        format!("[SCIP] 백엔드 상태:\n{}", lines.join("\n"))
+    }
 }
 
 fn run_precise_definition_tool(args: &serde_json::Value, cwd: &str, scip_enabled: bool) -> String {
@@ -990,17 +1022,37 @@ fn run_precise_definition_tool(args: &serde_json::Value, cwd: &str, scip_enabled
     }
 
     if !scip_enabled {
-        return format!("`{symbol}` 정밀 definition 분석은 비활성입니다. 정확 모드 토글 활성화 후 재요청하세요.");
+        let status = scip_backend_status_lines(cwd);
+        return format!(
+            "`{symbol}` 정밀 definition 분석은 비활성입니다. 정확 모드 토글 활성화 후 재요청하세요.\n{status}"
+        );
     }
 
     let graph = crate::commands::call_graph::CallGraph::build(std::path::Path::new(cwd));
     let definitions = graph.fn_defs.get(&symbol).cloned().unwrap_or_default();
+    let status_lines = scip_backend_status_lines(cwd);
+    let backends_for_status = crate::commands::scip::detect_scip_backends(Some(cwd.to_string()));
+    let available_count = backends_for_status
+        .iter()
+        .filter(|backend| backend.available)
+        .count();
+    let indexed_count = backends_for_status
+        .iter()
+        .filter(|backend| backend.available && backend.index_exists)
+        .count();
+    let index_status = if available_count == 0 {
+        "SCIP 설치가 감지되지 않아 tree-sitter fallback 결과입니다."
+    } else if indexed_count == 0 {
+        "SCIP 백엔드는 있으나 index.scip가 없어 tree-sitter fallback 결과입니다."
+    } else {
+        "SCIP 백엔드가 준비되었으나 정밀 파서 미구현으로 tree-sitter fallback 결과입니다."
+    };
 
     if definitions.is_empty() {
         let msg = format!(
             "`{symbol}`의 정의를 찾지 못했습니다. 파일 인덱스 미완성/동명이인일 수 있습니다."
         );
-        return format!("{msg}\n[SCIP] tree-sitter 기반 결과입니다");
+        return format!("{msg}\n[SCIP] {index_status}\n{status_lines}");
     }
 
     let mut lines: Vec<String> = Vec::new();
@@ -1008,7 +1060,7 @@ fn run_precise_definition_tool(args: &serde_json::Value, cwd: &str, scip_enabled
         lines.push(format!("  - {} ({})", symbol, file));
     }
     format!(
-        "`{symbol}` 정의 후보:\n{}\n[SCIP] 정확 모듈 미구현으로 tree-sitter fallback 결과입니다.",
+        "`{symbol}` 정의 후보:\n{}\n[SCIP] {index_status}\n{status_lines}",
         lines.join("\n")
     )
 }
