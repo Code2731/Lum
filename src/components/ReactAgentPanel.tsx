@@ -25,6 +25,17 @@ import type {
   ChangeKind,
 } from "../hooks/useReactAgent";
 
+interface ScipBackend {
+  language: string;
+  binary: string;
+  available: boolean;
+}
+
+interface ScipStatus {
+  enabled: boolean;
+  backends: ScipBackend[];
+}
+
 interface Props {
   state: ReactAgentState;
   onCancel: () => void;
@@ -54,7 +65,10 @@ const KIND_COLOR: Record<ReactStep["kind"], string> = {
   file_change: "text-cyan-300/80",
 };
 
-const RISK_BADGE: Record<ChangeRisk, { label: string; bg: string; fg: string; border: string }> = {
+const RISK_BADGE: Record<
+  ChangeRisk,
+  { label: string; bg: string; fg: string; border: string }
+> = {
   low: {
     label: "Low",
     bg: "bg-green-500/10",
@@ -96,23 +110,36 @@ const StepRow: React.FC<{ step: ReactStep; idx: number }> = ({ step }) => {
     return (
       <div className="flex items-center gap-1.5 py-0.5 px-1">
         {KIND_ICON[step.kind]}
-        <span className="text-[10px] text-white/25 font-mono">{step.content}</span>
+        <span className="text-[10px] text-white/25 font-mono">
+          {step.content}
+        </span>
       </div>
     );
   }
   return (
-    <div className={`flex items-start gap-1.5 py-1 px-1 rounded ${
-      step.kind === "observation" ? "bg-white/2" :
-      step.kind === "answer" ? "bg-green-500/5 border border-green-500/10" : ""
-    }`}>
+    <div
+      className={`flex items-start gap-1.5 py-1 px-1 rounded ${
+        step.kind === "observation"
+          ? "bg-white/2"
+          : step.kind === "answer"
+            ? "bg-green-500/5 border border-green-500/10"
+            : ""
+      }`}
+    >
       {KIND_ICON[step.kind]}
       <div className="flex-1 min-w-0">
         {step.kind === "action" && step.tool && (
-          <span className="text-[9px] font-mono text-yellow-500/60 mr-1">[{step.tool}]</span>
+          <span className="text-[9px] font-mono text-yellow-500/60 mr-1">
+            [{step.tool}]
+          </span>
         )}
-        <span className={`text-[11px] leading-relaxed ${KIND_COLOR[step.kind]} ${
-          step.kind === "observation" || step.kind === "action" ? "font-mono" : ""
-        }`}>
+        <span
+          className={`text-[11px] leading-relaxed ${KIND_COLOR[step.kind]} ${
+            step.kind === "observation" || step.kind === "action"
+              ? "font-mono"
+              : ""
+          }`}
+        >
           {step.content}
         </span>
       </div>
@@ -158,18 +185,31 @@ const STATUS_LABEL: Record<ReactAgentState["status"], string> = {
   cancelled: "취소됨",
 };
 
-const ReactAgentPanel: React.FC<Props> = ({ state, onCancel, onClose, onUndo, onRunAct }) => {
+const ReactAgentPanel: React.FC<Props> = ({
+  state,
+  onCancel,
+  onClose,
+  onUndo,
+  onRunAct,
+}) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [desktopToolsEnabled, setDesktopToolsEnabled] = React.useState(false);
   const [autoApprovePlanTools, setAutoApprovePlanTools] = React.useState(false);
+  const [scipToolsEnabled, setScipToolsEnabled] = React.useState(false);
+  const [scipStatus, setScipStatus] = React.useState<ScipStatus | null>(null);
   const { status, goal, steps, changes, undoing, undoReport } = state;
   const isActive = status === "running";
   const isPlanDone = status === "done" && state.mode === "plan";
-  const currentStep = steps.filter(s => s.kind === "status").length;
+  const currentStep = steps.filter((s) => s.kind === "status").length;
   const hasChanges = changes.length > 0;
   const highRiskCount = changes.filter((c) => c.risk === "high").length;
+  const availableScipBackends =
+    scipStatus?.backends.filter((backend) => backend.available).length ?? 0;
+  const isScipEnabled =
+    scipToolsEnabled && availableScipBackends > 0 && scipStatus?.enabled;
   const showUndoButton =
-    hasChanges && (status === "done" || status === "error" || status === "cancelled");
+    hasChanges &&
+    (status === "done" || status === "error" || status === "cancelled");
 
   // 새 단계 추가 시 자동 스크롤
   useEffect(() => {
@@ -181,7 +221,17 @@ const ReactAgentPanel: React.FC<Props> = ({ state, onCancel, onClose, onUndo, on
   // ReAct 데스크톱 제어 도구는 opt-in 기본값(false). 패널 열 때 현재 설정 동기화.
   useEffect(() => {
     invoke<{ react_desktop_tools_enabled?: boolean }>("load_app_config")
-      .then((cfg) => setDesktopToolsEnabled(Boolean(cfg.react_desktop_tools_enabled)))
+      .then((cfg) =>
+        setDesktopToolsEnabled(Boolean(cfg.react_desktop_tools_enabled)),
+      )
+      .catch(() => {});
+    invoke<{ react_scip_tools_enabled?: boolean }>("load_app_config")
+      .then((cfg) => {
+        setScipToolsEnabled(Boolean(cfg.react_scip_tools_enabled));
+      })
+      .catch(() => {});
+    invoke<ScipStatus>("scip_status")
+      .then((status) => setScipStatus(status))
       .catch(() => {});
   }, []);
 
@@ -196,13 +246,36 @@ const ReactAgentPanel: React.FC<Props> = ({ state, onCancel, onClose, onUndo, on
     }
   };
 
+  const toggleScipTools = async () => {
+    if (!scipStatus) {
+      return;
+    }
+
+    const next = !scipToolsEnabled;
+    setScipToolsEnabled(next);
+    try {
+      await invoke("save_react_scip_tools_enabled", { enabled: next });
+      const refreshed = await invoke<ScipStatus>("scip_status");
+      setScipStatus(refreshed);
+      if (next && !refreshed.enabled) {
+        setScipToolsEnabled(false);
+      }
+    } catch {
+      setScipToolsEnabled(!next);
+    }
+  };
+
   return (
     <div className="w-[540px] max-h-[80vh] flex flex-col bg-[#161b22] border border-white/10 rounded-xl shadow-2xl overflow-hidden">
       {/* ── 헤더 ─────────────────────────────────────────── */}
       <div className="flex items-center gap-2 px-3 py-2.5 border-b border-white/5 bg-white/3 shrink-0">
         <Bot size={13} className="text-accent shrink-0" />
-        <span className="text-[11px] font-semibold text-accent">ReAct 에이전트</span>
-        <span className="text-[10px] text-white/30 ml-1 truncate flex-1">{goal}</span>
+        <span className="text-[11px] font-semibold text-accent">
+          ReAct 에이전트
+        </span>
+        <span className="text-[10px] text-white/30 ml-1 truncate flex-1">
+          {goal}
+        </span>
         <button
           onClick={onClose}
           className="ml-auto text-white/30 hover:text-white/70 transition-colors shrink-0"
@@ -214,16 +287,29 @@ const ReactAgentPanel: React.FC<Props> = ({ state, onCancel, onClose, onUndo, on
 
       {/* ── 상태 표시줄 ───────────────────────────────────── */}
       <div className="flex items-center gap-2 px-3 py-1.5 border-b border-white/5 bg-white/2 shrink-0">
-        {isActive && <Loader2 size={11} className="animate-spin text-accent shrink-0" />}
-        {status === "done" && <CheckCircle2 size={11} className="text-green-400 shrink-0" />}
-        {status === "error" && <XCircle size={11} className="text-red-400 shrink-0" />}
-        {status === "cancelled" && <AlertTriangle size={11} className="text-white/40 shrink-0" />}
-        <span className={`text-[11px] font-medium ${
-          status === "done" ? "text-green-400" :
-          status === "error" ? "text-red-400" :
-          status === "cancelled" ? "text-white/40" :
-          "text-white/60"
-        }`}>
+        {isActive && (
+          <Loader2 size={11} className="animate-spin text-accent shrink-0" />
+        )}
+        {status === "done" && (
+          <CheckCircle2 size={11} className="text-green-400 shrink-0" />
+        )}
+        {status === "error" && (
+          <XCircle size={11} className="text-red-400 shrink-0" />
+        )}
+        {status === "cancelled" && (
+          <AlertTriangle size={11} className="text-white/40 shrink-0" />
+        )}
+        <span
+          className={`text-[11px] font-medium ${
+            status === "done"
+              ? "text-green-400"
+              : status === "error"
+                ? "text-red-400"
+                : status === "cancelled"
+                  ? "text-white/40"
+                  : "text-white/60"
+          }`}
+        >
           {STATUS_LABEL[status]}
         </span>
         {isActive && currentStep > 0 && (
@@ -242,7 +328,8 @@ const ReactAgentPanel: React.FC<Props> = ({ state, onCancel, onClose, onUndo, on
                 : `${changes.length}개 파일 변경됨`
             }
           >
-            변경 {changes.length}{highRiskCount > 0 ? ` · High ${highRiskCount}` : ""}
+            변경 {changes.length}
+            {highRiskCount > 0 ? ` · High ${highRiskCount}` : ""}
           </span>
         )}
         <button
@@ -256,16 +343,43 @@ const ReactAgentPanel: React.FC<Props> = ({ state, onCancel, onClose, onUndo, on
         >
           Desktop {desktopToolsEnabled ? "ON" : "OFF"}
         </button>
+        <button
+          onClick={toggleScipTools}
+          disabled={availableScipBackends === 0}
+          className={`ml-2 px-2 py-0.5 rounded border text-[9px] font-medium transition-colors ${
+            availableScipBackends === 0
+              ? "border-white/10 bg-white/5 text-white/30 cursor-not-allowed"
+              : isScipEnabled
+                ? "border-violet-500/30 bg-violet-500/10 text-violet-300 hover:bg-violet-500/20"
+                : "border-white/10 bg-white/5 text-white/40 hover:bg-white/10"
+          }`}
+          title={
+            availableScipBackends === 0
+              ? "SCIP 백엔드가 없어 토글할 수 없습니다"
+              : `ReAct 정밀 도구(precise_callers/precise_definition). 사용 가능한 언어: ${scipStatus?.backends
+                  .filter((backend) => backend.available)
+                  .map((backend) => backend.language)
+                  .join(", ")}`
+          }
+        >
+          SCIP {isScipEnabled ? "ON" : "OFF"}
+        </button>
       </div>
 
       {/* ── 단계 목록 (스크롤) ───────────────────────────── */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto min-h-0 p-2 space-y-0.5">
+      <div
+        ref={scrollRef}
+        className="flex-1 overflow-y-auto min-h-0 p-2 space-y-0.5"
+      >
         {steps.map((step, idx) => (
           <StepRow key={idx} step={step} idx={idx} />
         ))}
         {isActive && (
           <div className="flex items-center gap-1.5 py-1 px-1">
-            <Loader2 size={10} className="animate-spin text-accent/60 shrink-0" />
+            <Loader2
+              size={10}
+              className="animate-spin text-accent/60 shrink-0"
+            />
             <span className="text-[10px] text-white/30">생각 중...</span>
           </div>
         )}
@@ -279,7 +393,9 @@ const ReactAgentPanel: React.FC<Props> = ({ state, onCancel, onClose, onUndo, on
 
       {isPlanDone && state.plannedTools.length > 0 && (
         <div className="shrink-0 border-t border-white/5 bg-cyan-500/5 px-3 py-2">
-          <div className="text-[10px] text-cyan-200/80 mb-1">Plan에서 제안된 도구</div>
+          <div className="text-[10px] text-cyan-200/80 mb-1">
+            Plan에서 제안된 도구
+          </div>
           <div className="flex flex-wrap gap-1">
             {state.plannedTools.map((tool) => (
               <span
@@ -341,7 +457,9 @@ const ReactAgentPanel: React.FC<Props> = ({ state, onCancel, onClose, onUndo, on
         {isPlanDone && (
           <div className="mr-auto flex items-center gap-2 text-[10px] text-white/55">
             <span className="text-cyan-300/80 font-medium">Plan 완료</span>
-            <span className="text-white/35">도구 {state.plannedTools.length}개</span>
+            <span className="text-white/35">
+              도구 {state.plannedTools.length}개
+            </span>
           </div>
         )}
         {isActive && (
@@ -384,7 +502,9 @@ const ReactAgentPanel: React.FC<Props> = ({ state, onCancel, onClose, onUndo, on
                 const wl = autoApprovePlanTools ? state.plannedTools : null;
                 if (autoApprovePlanTools) {
                   try {
-                    await invoke("save_react_tool_whitelist", { whitelist: state.plannedTools });
+                    await invoke("save_react_tool_whitelist", {
+                      whitelist: state.plannedTools,
+                    });
                   } catch {
                     // 저장 실패해도 이번 실행은 진행.
                   }
@@ -397,7 +517,9 @@ const ReactAgentPanel: React.FC<Props> = ({ state, onCancel, onClose, onUndo, on
             </button>
           </>
         )}
-        {(status === "done" || status === "error" || status === "cancelled") && (
+        {(status === "done" ||
+          status === "error" ||
+          status === "cancelled") && (
           <button
             onClick={onClose}
             className="px-3 py-1.5 text-[11px] rounded-md bg-white/8 text-white/60 hover:bg-white/12 hover:text-white/80 transition-colors"
