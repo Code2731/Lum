@@ -997,11 +997,11 @@ fn run_precise_callers_tool(args: &serde_json::Value, cwd: &str, scip_enabled: b
     if symbol.is_empty() {
         return "오류: symbol 파라미터 필요".to_string();
     }
-    let base = run_find_callers_tool(args, cwd);
+    let status_lines = scip_backend_status_lines(cwd);
+    let fallback = run_find_callers_tool(args, cwd);
     if !scip_enabled {
-        let status = scip_backend_status_lines(cwd);
         return format!(
-            "`{symbol}` 정밀 caller 분석은 비활성입니다. 정확 모드 토글 활성화 후 재요청하세요.\n{status}\n{base}"
+            "`{symbol}` 정밀 caller 분석은 비활성입니다. 정확 모드 토글 활성화 후 재요청하세요.\n{fallback}\n{status_lines}"
         );
     }
 
@@ -1011,16 +1011,42 @@ fn run_precise_callers_tool(args: &serde_json::Value, cwd: &str, scip_enabled: b
         .iter()
         .filter(|backend| backend.available && backend.index_exists)
         .count();
-    let status = if available_count == 0 {
-        "SCIP 설치가 감지되지 않아 tree-sitter 기반 결과만 제공합니다"
-    } else if indexed_count == 0 {
-        "SCIP 백엔드는 있으나 index.scip 미생성으로 tree-sitter fallback 결과만 제공합니다"
-    } else {
-        "SCIP 백엔드가 준비되었으나 정밀 파서 미구현으로 tree-sitter fallback 결과만 제공합니다"
-    };
-    let status_lines = scip_backend_status_lines(cwd);
+    if available_count == 0 {
+        return format!(
+            "`{symbol}` 정밀 caller 분석은 SCIP index 기반 조회가 불가합니다. tree-sitter fallback으로 반환합니다.\n{fallback}\n[SCIP] {status_lines}"
+        );
+    }
 
-    format!("{base}\n[SCIP] {status}\n{status_lines}")
+    let result = crate::commands::scip::query_scip_callers(cwd, &symbol);
+    if result.is_empty() {
+        return format!("`{symbol}` 정밀 caller 분석 결과가 없습니다. tree-sitter fallback으로 제공합니다.\n{fallback}\n{status_lines}");
+    }
+
+    let status = if indexed_count == 0 {
+        "SCIP 준비 중(index.scip 미생성). 현재는 fallback만 사용 가능합니다."
+    } else {
+        "SCIP 정밀 caller 조회 완료"
+    };
+    let index_status = format!("{status}\n{status_lines}");
+
+    let mut lines = vec!["`{symbol}` 정밀 caller 후보:".to_string()];
+    for item in result {
+        if let Some(line) = item.line {
+            if let Some(col) = item.column {
+                lines.push(format!("- {} ({}:{line}:{col})", item.symbol, item.file));
+            } else {
+                lines.push(format!("- {} ({})", item.symbol, item.file));
+            }
+        } else {
+            lines.push(format!("- {} ({})", item.symbol, item.file));
+        }
+    }
+    lines.push(format!(
+        "[SCIP] {} ({}건)",
+        index_status,
+        lines.len().saturating_sub(1)
+    ));
+    lines.join("\n")
 }
 
 fn scip_backend_status_lines(cwd: &str) -> String {
@@ -1057,16 +1083,27 @@ fn run_precise_definition_tool(args: &serde_json::Value, cwd: &str, scip_enabled
     if symbol.is_empty() {
         return "오류: symbol 파라미터 필요".to_string();
     }
+    let graph = crate::commands::call_graph::CallGraph::build(std::path::Path::new(cwd));
+    let definitions = graph.fn_defs.get(&symbol).cloned().unwrap_or_default();
+    let mut fallback = format!("`{symbol}`의 정의를 tree-sitter에서 찾지 못했습니다.");
+    if !definitions.is_empty() {
+        let fallback_lines: Vec<String> = definitions
+            .iter()
+            .map(|file| format!("  - {} ({file})", symbol))
+            .collect();
+        fallback = format!(
+            "`{symbol}` 정의 후보(tree-sitter):\n{}\n",
+            fallback_lines.join("\n")
+        );
+    }
 
     if !scip_enabled {
         let status = scip_backend_status_lines(cwd);
         return format!(
-            "`{symbol}` 정밀 definition 분석은 비활성입니다. 정확 모드 토글 활성화 후 재요청하세요.\n{status}"
+            "`{symbol}` 정밀 definition 분석은 비활성입니다. 정확 모드 토글 활성화 후 재요청하세요.\n{status}\n{fallback}"
         );
     }
 
-    let graph = crate::commands::call_graph::CallGraph::build(std::path::Path::new(cwd));
-    let definitions = graph.fn_defs.get(&symbol).cloned().unwrap_or_default();
     let status_lines = scip_backend_status_lines(cwd);
     let backends_for_status = crate::commands::scip::detect_scip_backends(Some(cwd.to_string()));
     let available_count = backends_for_status
@@ -1082,22 +1119,36 @@ fn run_precise_definition_tool(args: &serde_json::Value, cwd: &str, scip_enabled
     } else if indexed_count == 0 {
         "SCIP 백엔드는 있으나 index.scip가 없어 tree-sitter fallback 결과입니다."
     } else {
-        "SCIP 백엔드가 준비되었으나 정밀 파서 미구현으로 tree-sitter fallback 결과입니다."
+        "SCIP 정밀 정의 조회 완료"
     };
 
-    if definitions.is_empty() {
+    let result = crate::commands::scip::query_scip_symbol_definitions(cwd, &symbol);
+    if result.is_empty() {
         let msg = format!(
             "`{symbol}`의 정의를 찾지 못했습니다. 파일 인덱스 미완성/동명이인일 수 있습니다."
         );
-        return format!("{msg}\n[SCIP] {index_status}\n{status_lines}");
+        return format!("{msg}\n[SCIP] {index_status}\n{fallback}\n{status_lines}");
     }
 
     let mut lines: Vec<String> = Vec::new();
-    for file in definitions {
-        lines.push(format!("  - {} ({})", symbol, file));
+    for item in result {
+        if let Some(line) = item.line {
+            if let Some(col) = item.column {
+                lines.push(format!("  - {} ({}:{line}:{col})", item.symbol, item.file));
+            } else {
+                lines.push(format!("  - {} ({})", item.symbol, item.file));
+            }
+        } else {
+            lines.push(format!("  - {} ({})", item.symbol, item.file));
+        }
+    }
+    if lines.is_empty() {
+        return format!(
+            "`{symbol}` 정밀 정의 조회에 결과가 없습니다. tree-sitter fallback 결과를 사용합니다.\n{fallback}\n[SCIP] {index_status}\n{status_lines}"
+        );
     }
     format!(
-        "`{symbol}` 정의 후보:\n{}\n[SCIP] {index_status}\n{status_lines}",
+        "`{symbol}` 정밀 정의 후보:\n{}\n[SCIP] {index_status}\n{status_lines}",
         lines.join("\n")
     )
 }
@@ -2489,18 +2540,15 @@ ACTION: mcp({"server": "playwright", "tool": "screenshot", "arguments": {"url": 
 
     #[tokio::test]
     async fn desktop_tools_scroll_파라미터_누락시_에러() {
-        let missing_amount = run_desktop_tool(
-            "scroll",
-            &serde_json::json!({"x": 10, "y": 20}),
-            true,
-        )
-        .await;
+        let missing_amount =
+            run_desktop_tool("scroll", &serde_json::json!({"x": 10, "y": 20}), true).await;
         assert!(
             missing_amount.contains("x, y, amount"),
             "scroll 누락 파라미터 처리 필요: {missing_amount}"
         );
 
-        let missing_xy = run_desktop_tool("scroll", &serde_json::json!({"amount": 120}), true).await;
+        let missing_xy =
+            run_desktop_tool("scroll", &serde_json::json!({"amount": 120}), true).await;
         assert!(
             missing_xy.contains("x, y, amount"),
             "scroll 누락 파라미터 처리 필요: {missing_xy}"
@@ -2515,7 +2563,10 @@ ACTION: mcp({"server": "playwright", "tool": "screenshot", "arguments": {"url": 
             true,
         )
         .await;
-        assert!(zero.contains("0일 수 없습니다"), "scroll 0 방어 필요: {zero}");
+        assert!(
+            zero.contains("0일 수 없습니다"),
+            "scroll 0 방어 필요: {zero}"
+        );
     }
 
     // HealingToolMock도 글로벌 state — 3개 테스트가 mock을 공유해 병렬 실행 시 race.
@@ -2690,6 +2741,38 @@ ACTION: mcp({"server": "playwright", "tool": "screenshot", "arguments": {"url": 
     fn phase142_precise_callers_도구_비활성_메시지() {
         let out = run_precise_callers_tool(&serde_json::json!({"symbol": "foo"}), "/tmp", false);
         assert!(out.contains("비활성"), "{out}");
+    }
+
+    #[test]
+    fn phase142_precise_callers_도구_심볼_필수() {
+        let out = run_precise_callers_tool(&serde_json::json!({}), "/tmp", true);
+        assert!(out.contains("symbol 파라미터 필요"), "{out}");
+    }
+
+    #[test]
+    fn phase142_precise_callers_비활성_시_fallback_반환() {
+        let out = run_precise_callers_tool(
+            &serde_json::json!({"symbol": "validate_safe_path"}),
+            "/tmp",
+            false,
+        );
+        assert!(out.contains("정밀 caller 분석은 비활성"));
+        assert!(out.contains("validate_safe_path"));
+        assert!(out.contains("호출"));
+    }
+
+    #[test]
+    fn phase142_precise_definition_비활성_시_fallback_반환() {
+        let td = TempDir::new("scip-def-disabled");
+        let repo = td.path().join("sample.rs");
+        let source = "fn helper() {}\nfn target() { helper(); }\n";
+        std::fs::write(&repo, source).unwrap();
+
+        let out =
+            run_precise_definition_tool(&serde_json::json!({"symbol": "target"}), &td.cwd(), false);
+        assert!(out.contains("정밀 definition 분석은 비활성"), "{out}");
+        assert!(out.contains("정의 후보"), "{out}");
+        assert!(out.contains("target"), "{out}");
     }
 
     #[test]
