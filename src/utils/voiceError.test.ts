@@ -18,5 +18,11 @@ describe("parseVoiceError", () => {
     const msg = parseVoiceError("unknown issue");
     expect(msg).toBe("unknown issue");
   });
-});
 
+  it("타임아웃 코드는 사용자 친화 메시지로 변환한다", () => {
+    const msg = parseVoiceError(
+      "LUM_VOICE_ERROR::COMMAND_TIMEOUT::음성 처리 명령이 제한 시간 내에 끝나지 않았습니다.",
+    );
+    expect(msg).toContain("음성 처리 명령이 제한 시간 내에 끝나지 않았습니다.");
+  });
+});

@@ -8,6 +8,7 @@ const CODE_MESSAGES: Record<string, string> = {
   COMMAND_EXEC_FAILED: "음성 처리 명령 실행에 실패했습니다.",
   COMMAND_EXIT_NON_ZERO: "음성 처리 명령이 비정상 종료되었습니다.",
   COMMAND_STDERR: "음성 처리 중 오류가 발생했습니다.",
+  COMMAND_TIMEOUT: "음성 처리 명령이 제한 시간 내에 끝나지 않았습니다.",
   STATE_LOCK_POISONED: "음성 상태 동기화에 실패했습니다.",
 };
 
@@ -38,4 +39,3 @@ export function parseVoiceError(raw: unknown): string {
   }
   return text || "음성 입력 처리 중 오류가 발생했습니다.";
 }
-

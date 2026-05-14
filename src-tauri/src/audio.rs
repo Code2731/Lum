@@ -3,6 +3,7 @@ use std::path::{Path, PathBuf};
 use std::sync::{Mutex, OnceLock};
 use tauri::Emitter;
 use tokio::process::Command as TokioCommand;
+use tokio::time::{timeout, Duration};
 
 #[derive(Debug, Default, Clone)]
 struct VoiceState {
@@ -29,6 +30,17 @@ fn voice_error(code: &str, message: impl AsRef<str>) -> String {
     format!("{VOICE_ERR_PREFIX}::{code}::{}", message.as_ref())
 }
 
+const DEFAULT_VOICE_START_CMD_TIMEOUT_MS: u64 = 8_000;
+const DEFAULT_VOICE_STOP_CMD_TIMEOUT_MS: u64 = 12_000;
+
+fn parse_voice_timeout_ms(env_key: &str, default_ms: u64) -> u64 {
+    std::env::var(env_key)
+        .ok()
+        .and_then(|raw| raw.trim().parse::<u64>().ok())
+        .filter(|value| *value > 0)
+        .unwrap_or(default_ms)
+}
+
 fn transcript_file_path() -> PathBuf {
     platform::home_dir()
         .join(".lum_whisper")
@@ -48,18 +60,26 @@ fn read_transcript_file(path: &Path) -> Option<String> {
     }
 }
 
-async fn run_shell_capture(cmd: &str) -> Result<String, String> {
-    let out = if cfg!(windows) {
-        TokioCommand::new("cmd")
-            .args(["/C", cmd])
-            .output()
+async fn run_shell_capture(cmd: &str, timeout_ms: u64) -> Result<String, String> {
+    let command = if cfg!(windows) {
+        TokioCommand::new("cmd").args(["/C", cmd]).output()
+    } else {
+        TokioCommand::new("sh").args(["-c", cmd]).output()
+    };
+
+    let out = if timeout_ms == 0 {
+        command
             .await
             .map_err(|e| voice_error("COMMAND_EXEC_FAILED", format!("명령 실행 실패: {e}")))?
     } else {
-        TokioCommand::new("sh")
-            .args(["-c", cmd])
-            .output()
+        timeout(Duration::from_millis(timeout_ms), command)
             .await
+            .map_err(|_| {
+                voice_error(
+                    "COMMAND_TIMEOUT",
+                    format!("명령 실행이 시간 제한을 초과했습니다 ({timeout_ms}ms): {cmd}"),
+                )
+            })?
             .map_err(|e| voice_error("COMMAND_EXEC_FAILED", format!("명령 실행 실패: {e}")))?
     };
     if !out.status.success() {
@@ -98,14 +118,21 @@ async fn start_voice_recording_inner() -> Result<(), String> {
     if let Ok(cmd) = std::env::var("LUM_VOICE_START_CMD") {
         let trimmed = cmd.trim();
         if !trimmed.is_empty() {
-            if let Err(e) = run_shell_capture(trimmed).await {
+            let timeout_ms = parse_voice_timeout_ms(
+                "LUM_VOICE_START_CMD_TIMEOUT_MS",
+                DEFAULT_VOICE_START_CMD_TIMEOUT_MS,
+            );
+            if let Err(e) = run_shell_capture(trimmed, timeout_ms).await {
                 // 외부 훅 실패면 녹음 상태 롤백.
                 let mut state = voice_state_lock()
                     .lock()
                     .map_err(|_| voice_error("STATE_LOCK_POISONED", "voice state lock poisoned"))?;
                 state.recording = false;
                 state.started_ms = 0;
-                return Err(voice_error("START_HOOK_FAILED", format!("음성 시작 훅 실패: {e}")));
+                return Err(voice_error(
+                    "START_HOOK_FAILED",
+                    format!("음성 시작 훅 실패: {e}"),
+                ));
             }
         }
     }
@@ -162,7 +189,14 @@ async fn stop_voice_recording_inner() -> Result<String, String> {
     if let Ok(cmd) = std::env::var("LUM_VOICE_STOP_CMD") {
         let trimmed = cmd.trim();
         if !trimmed.is_empty() {
-            let out = run_shell_capture(trimmed).await?;
+            let out = run_shell_capture(
+                trimmed,
+                parse_voice_timeout_ms(
+                    "LUM_VOICE_STOP_CMD_TIMEOUT_MS",
+                    DEFAULT_VOICE_STOP_CMD_TIMEOUT_MS,
+                ),
+            )
+            .await?;
             if !out.is_empty() {
                 return Ok(out);
             }
@@ -217,7 +251,8 @@ mod tests {
         assert!(r1.is_ok());
         let r2 = start_voice_recording_inner().await;
         assert!(
-            r2.unwrap_err().contains("LUM_VOICE_ERROR::ALREADY_RECORDING::"),
+            r2.unwrap_err()
+                .contains("LUM_VOICE_ERROR::ALREADY_RECORDING::"),
             "already recording 에러 코드가 포함되어야 함"
         );
         reset_state();
@@ -261,6 +296,88 @@ mod tests {
         assert_eq!(out.as_deref(), Some("git status"));
         assert!(!f.exists(), "읽은 뒤 파일이 삭제되어야 함");
         let _ = std::fs::remove_dir_all(&base);
+    }
+
+    #[test]
+    fn parse_voice_timeout_ms_기본값_및_잘못된_값_보완() {
+        std::env::remove_var("LUM_VOICE_START_CMD_TIMEOUT_MS");
+        assert_eq!(
+            parse_voice_timeout_ms("LUM_VOICE_START_CMD_TIMEOUT_MS", 9_000),
+            9_000
+        );
+
+        std::env::set_var("LUM_VOICE_START_CMD_TIMEOUT_MS", "abc");
+        assert_eq!(
+            parse_voice_timeout_ms("LUM_VOICE_START_CMD_TIMEOUT_MS", 9_000),
+            9_000
+        );
+
+        std::env::set_var("LUM_VOICE_START_CMD_TIMEOUT_MS", "15000");
+        assert_eq!(
+            parse_voice_timeout_ms("LUM_VOICE_START_CMD_TIMEOUT_MS", 9_000),
+            15_000
+        );
+
+        std::env::set_var("LUM_VOICE_START_CMD_TIMEOUT_MS", "0");
+        assert_eq!(
+            parse_voice_timeout_ms("LUM_VOICE_START_CMD_TIMEOUT_MS", 9_000),
+            9_000
+        );
+        std::env::remove_var("LUM_VOICE_START_CMD_TIMEOUT_MS");
+    }
+
+    #[tokio::test]
+    async fn start_hook_실패_시_상태_복구() {
+        let _g = AUDIO_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        reset_state();
+        std::env::set_var("LUM_VOICE_START_CMD", "exit 1");
+
+        let result = start_voice_recording_inner().await;
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .contains("LUM_VOICE_ERROR::START_HOOK_FAILED::"));
+        assert_eq!(voice_recording_status().ok(), Some(false));
+
+        std::env::remove_var("LUM_VOICE_START_CMD");
+        reset_state();
+    }
+
+    #[tokio::test]
+    async fn stop_cmd_빈출력_시_파일_폴백() {
+        let _g = AUDIO_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        reset_state();
+        std::env::set_var("LUM_VOICE_STOP_CMD", "exit 0");
+
+        let tmp_home = std::env::temp_dir().join(format!(
+            "lum_voice_home_{}_{}",
+            std::process::id(),
+            now_ms()
+        ));
+        std::fs::create_dir_all(&tmp_home).unwrap();
+        let old_home = std::env::var("HOME").ok();
+        std::env::set_var("HOME", &tmp_home);
+
+        let path = transcript_file_path();
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent).unwrap();
+        }
+        std::fs::write(&path, "  git status  ").unwrap();
+
+        if let Ok(mut s) = voice_state_lock().lock() {
+            s.recording = true;
+        }
+        let result = stop_voice_recording_inner().await;
+        assert_eq!(result.ok(), Some("git status".to_string()));
+        assert!(!path.exists(), "폴백 파일은 읽은 뒤 삭제되어야 합니다.");
+
+        std::env::remove_var("LUM_VOICE_STOP_CMD");
+        if let Some(home) = old_home {
+            std::env::set_var("HOME", home);
+        } else {
+            std::env::remove_var("HOME");
+        }
+        reset_state();
     }
 
     #[tokio::test]
