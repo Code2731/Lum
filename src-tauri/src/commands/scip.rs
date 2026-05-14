@@ -142,12 +142,16 @@ fn build_scip_backend_status(cwd: &str, entry: &BackendEntry) -> ScipBackend {
     let root = scip_root_for_workspace(cwd);
     let _ = std::fs::create_dir_all(&root);
     let index_path = scip_index_path(&root, entry.key);
+    let index_exists = index_path
+        .metadata()
+        .map(|meta| meta.is_file() && meta.len() > 0)
+        .unwrap_or(false);
     ScipBackend {
         language: entry.language.to_string(),
         binary: entry.binary.to_string(),
         available: has_binary(entry.binary),
         index_path: index_path.to_string_lossy().into_owned(),
-        index_exists: index_path.exists(),
+        index_exists,
     }
 }
 

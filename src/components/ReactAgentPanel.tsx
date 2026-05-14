@@ -219,6 +219,7 @@ const ReactAgentPanel: React.FC<Props> = ({
   const [scipStatus, setScipStatus] = React.useState<ScipStatus | null>(null);
   const [isScipRebuildInProgress, setIsScipRebuildInProgress] =
     React.useState(false);
+  const [scipRebuildForce, setScipRebuildForce] = React.useState(false);
   const [scipRebuildMessage, setScipRebuildMessage] = React.useState("");
   const { status, goal, steps, changes, undoing, undoReport } = state;
   const isActive = status === "running";
@@ -246,6 +247,10 @@ const ReactAgentPanel: React.FC<Props> = ({
     scipToolsEnabled && availableScipBackends > 0 && scipStatus?.enabled;
   const scipRebuildDisabled =
     isScipRebuildInProgress || availableScipBackends === 0 || !scipStatus;
+  const hasScipMissingIndex =
+    scipStatus?.backends.some(
+      (backend) => backend.available && !backend.index_exists,
+    ) ?? false;
   const showUndoButton =
     hasChanges &&
     (status === "done" || status === "error" || status === "cancelled");
@@ -325,7 +330,7 @@ const ReactAgentPanel: React.FC<Props> = ({
       const summary = await invoke<ScipRebuildSummary>("scip_rebuild_index", {
         cwd: state.cwd,
         language: null,
-        force: false,
+        force: scipRebuildForce,
       });
       const lines = summary.results.map((result) => {
         const stateLabel = result.success
@@ -451,8 +456,24 @@ const ReactAgentPanel: React.FC<Props> = ({
           }`}
           title="SCIP 백엔드의 index.scip를 생성/갱신합니다"
         >
-          {isScipRebuildInProgress ? "SCIP 생성 중..." : "SCIP 인덱스 생성"}
+          {isScipRebuildInProgress
+            ? "SCIP 생성 중..."
+            : scipRebuildForce
+              ? "SCIP 인덱스 강제 생성"
+              : hasScipMissingIndex
+                ? "SCIP 인덱스 생성(누락분)"
+                : "SCIP 인덱스 생성"}
         </button>
+        <label className="ml-2 px-2 py-0.5 rounded border border-white/10 bg-white/5 text-[9px] text-white/65 inline-flex items-center gap-1">
+          <input
+            type="checkbox"
+            checked={scipRebuildForce}
+            onChange={(e) => setScipRebuildForce(e.target.checked)}
+            disabled={isScipRebuildInProgress}
+            className="accent-cyan-500 w-3 h-3 disabled:opacity-40"
+          />
+          강제 재생성
+        </label>
       </div>
 
       {scipRebuildMessage && (
