@@ -701,6 +701,9 @@ const WarpListView: React.FC<Props> = ({
     if (!deltaOpenId) return;
     const onWindowKeyDown = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
       closeDeltaPopover(true, deltaOpenId);
     };
     const onMouseDown = (e: MouseEvent) => {
@@ -1171,6 +1174,9 @@ const WarpListView: React.FC<Props> = ({
         return;
       }
       if (e.key !== "Escape") return;
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
       closeTimelinePanel(true);
     };
     const onMouseDown = (e: MouseEvent) => {

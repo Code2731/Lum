@@ -207,6 +207,41 @@ describe("WarpListView delta actions", () => {
     fireEvent.keyDown(window, { key: "Escape" });
     expect(screen.queryByText(/Retry Compare/)).not.toBeInTheDocument();
   });
+  it("Δ 팝오버에서 Escape는 상위 키 핸들러로 전파되지 않음", () => {
+    const onParentEscape = vi.fn();
+    const onParentKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onParentEscape();
+      }
+    };
+
+    try {
+      render(
+        <WarpListView
+          blocks={blocks}
+          compareResultByBlock={{
+            b2: {
+              added: 1,
+              removed: 1,
+              preview: "",
+              addedLines: ["new line"],
+              removedLines: ["old line"],
+              comparedAt: now,
+            },
+          }}
+        />,
+      );
+
+      fireEvent.click(screen.getByText("Δ +1/-1"));
+      expect(screen.getByText(/Retry Compare/)).toBeInTheDocument();
+      window.addEventListener("keydown", onParentKeyDown);
+      fireEvent.keyDown(window, { key: "Escape" });
+      expect(screen.queryByText(/Retry Compare/)).not.toBeInTheDocument();
+      expect(onParentEscape).not.toHaveBeenCalled();
+    } finally {
+      window.removeEventListener("keydown", onParentKeyDown);
+    }
+  });
 
   it("Δ 팝오버에서 Escape로 닫히면 버튼에 포커스를 돌려준다", async () => {
     render(
@@ -297,6 +332,41 @@ describe("WarpListView delta actions", () => {
     expect(screen.getByText("최근 비교 히스토리")).toBeInTheDocument();
     fireEvent.keyDown(window, { key: "Escape" });
     expect(screen.queryByText("최근 비교 히스토리")).not.toBeInTheDocument();
+  });
+  it("Δ Timeline에서 Escape는 상위 키 핸들러로 전파되지 않음", () => {
+    const onParentEscape = vi.fn();
+    const onParentKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onParentEscape();
+      }
+    };
+
+    try {
+      render(
+        <WarpListView
+          blocks={blocks}
+          compareResultByBlock={{
+            b2: {
+              added: 1,
+              removed: 1,
+              preview: "",
+              addedLines: ["new line"],
+              removedLines: ["old line"],
+              comparedAt: now,
+            },
+          }}
+        />,
+      );
+
+      fireEvent.click(screen.getByRole("button", { name: "Δ Timeline (1)" }));
+      expect(screen.getByText("최근 비교 히스토리")).toBeInTheDocument();
+      window.addEventListener("keydown", onParentKeyDown);
+      fireEvent.keyDown(window, { key: "Escape" });
+      expect(screen.queryByText("최근 비교 히스토리")).not.toBeInTheDocument();
+      expect(onParentEscape).not.toHaveBeenCalled();
+    } finally {
+      window.removeEventListener("keydown", onParentKeyDown);
+    }
   });
 
   it("Δ Timeline에서 Retry+Compare 액션이 콜백을 호출", () => {
