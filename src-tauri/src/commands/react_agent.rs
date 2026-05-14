@@ -1502,8 +1502,22 @@ fn backup_lock() -> &'static Mutex<Option<ReactBackup>> {
     REACT_BACKUP.get_or_init(|| Mutex::new(None))
 }
 
-fn react_backup_dir() -> PathBuf {
-    platform::home_dir().join(".lum_react_backup")
+fn react_backup_dir(cwd: &Path) -> Vec<PathBuf> {
+    vec![
+        platform::home_dir().join(".lum_react_backup"),
+        cwd.join(".lum_react_backup"),
+        std::env::temp_dir().join(".lum_react_backup"),
+    ]
+}
+
+fn pick_react_backup_dir(cwd: &Path) -> Option<PathBuf> {
+    for dir in react_backup_dir(cwd) {
+        let _ = std::fs::remove_dir_all(&dir);
+        if std::fs::create_dir_all(&dir).is_ok() {
+            return Some(dir);
+        }
+    }
+    None
 }
 
 /// 새 ReAct run 시작 시 호출 — 기존 백업 dir 삭제 후 재생성, cwd 정규화 보관.
@@ -1517,12 +1531,10 @@ fn init_react_backup(cwd: &str) {
             return;
         }
     };
-    let backup_dir = react_backup_dir();
-    let _ = std::fs::remove_dir_all(&backup_dir);
-    if std::fs::create_dir_all(&backup_dir).is_err() {
+    let Some(backup_dir) = pick_react_backup_dir(&cwd_path) else {
         *backup_lock().lock().unwrap() = None;
         return;
-    }
+    };
     *backup_lock().lock().unwrap() = Some(ReactBackup {
         cwd_input: cwd.to_string(),
         cwd: cwd_path,
@@ -3610,8 +3622,16 @@ ANSWER: 2 + 2는 4입니다."#,
 
     /// undo 실패 시 다음 테스트가 영향받지 않게 정리.
     fn cleanup_backup_state() {
-        *backup_lock().lock().unwrap() = None;
-        let _ = std::fs::remove_dir_all(react_backup_dir());
+        let backup = backup_lock().lock().unwrap().take();
+        if let Some(active) = backup {
+            let _ = std::fs::remove_dir_all(active.backup_dir);
+        }
+
+        if let Ok(cwd) = std::env::current_dir() {
+            for dir in react_backup_dir(&cwd) {
+                let _ = std::fs::remove_dir_all(dir);
+            }
+        }
     }
 
     #[test]
