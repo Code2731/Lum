@@ -53,10 +53,7 @@ struct FileDiff {
 }
 
 /// disk vs 캐시 mtime 비교 — 순수 함수, I/O 없음.
-fn diff_files(
-    disk: &HashMap<String, u64>,
-    cached: &HashMap<String, u64>,
-) -> FileDiff {
+fn diff_files(disk: &HashMap<String, u64>, cached: &HashMap<String, u64>) -> FileDiff {
     let mut unchanged = Vec::new();
     let mut changed = Vec::new();
     let mut added = Vec::new();
@@ -74,7 +71,12 @@ fn diff_files(
             deleted.push(path.clone());
         }
     }
-    FileDiff { unchanged, changed, added, deleted }
+    FileDiff {
+        unchanged,
+        changed,
+        added,
+        deleted,
+    }
 }
 
 #[derive(Serialize)]
@@ -339,7 +341,12 @@ fn collect_top_level_chunks(content: &str, lang: SourceLang) -> Option<Vec<RawCh
             let start = n.start_byte();
             let end = n.end_byte();
             if end > start && end <= content.len() {
-                raw.push(RawChunk { start, end, kind: k, name: name_str });
+                raw.push(RawChunk {
+                    start,
+                    end,
+                    kind: k,
+                    name: name_str,
+                });
             }
         }
     }
@@ -364,7 +371,11 @@ fn deduplicate_contained(mut raw: Vec<RawChunk>) -> Vec<RawChunk> {
 
 fn split_oversized(kind: ChunkKind, name: String, body: &str) -> Vec<AstChunk> {
     if body.chars().count() <= AST_CHUNK_MAX_CHARS {
-        return vec![AstChunk { kind, name, body: body.to_string() }];
+        return vec![AstChunk {
+            kind,
+            name,
+            body: body.to_string(),
+        }];
     }
     chunk_text(body)
         .into_iter()
@@ -407,7 +418,11 @@ fn chunk_by_ast(content: &str, lang: SourceLang) -> Option<Vec<AstChunk>> {
     let mut out: Vec<AstChunk> = Vec::new();
     if module_body.chars().count() >= MODULE_HEADER_MIN_CHARS {
         // 큰 모듈 헤더(많은 import/const)도 분할 — 큰 임베딩 단위는 검색 정밀도 저하.
-        out.extend(split_oversized(ChunkKind::Module, String::new(), &module_body));
+        out.extend(split_oversized(
+            ChunkKind::Module,
+            String::new(),
+            &module_body,
+        ));
     }
     for r in top {
         let body = &content[r.start..r.end];
@@ -424,8 +439,34 @@ fn fmt_chunk_key(chunk: &AstChunk, rel_path: &str) -> String {
     if chunk.name.is_empty() {
         format!("[{} | {}]\n{}", kind_str, rel_path, chunk.body)
     } else {
-        format!("[{} {} | {}]\n{}", kind_str, chunk.name, rel_path, chunk.body)
+        format!(
+            "[{} {} | {}]\n{}",
+            kind_str, chunk.name, rel_path, chunk.body
+        )
     }
+}
+
+fn rank_search_results(
+    memory: &SemanticMemory,
+    dense: Option<&[(usize, f32)]>,
+    lexical: &[(usize, f32)],
+    limit: usize,
+) -> Vec<SearchResult> {
+    let limit = limit.max(1).min(20);
+    let ranked: Vec<(usize, f32)> = match dense {
+        Some(dense) => rrf_fuse(dense, lexical),
+        None => lexical.to_vec(),
+    };
+    ranked
+        .into_iter()
+        .take(limit)
+        .filter_map(|(idx, score)| {
+            memory.entries.get(idx).map(|entry| SearchResult {
+                content: entry.content.clone(),
+                score,
+            })
+        })
+        .collect()
 }
 
 #[tauri::command]
@@ -517,7 +558,9 @@ pub async fn index_project(root_path: String, model: String) -> Result<IndexResu
 
     for rel_path in &to_process {
         let path = std::path::Path::new(&root_path).join(rel_path);
-        let Ok(text) = std::fs::read_to_string(&path) else { continue };
+        let Ok(text) = std::fs::read_to_string(&path) else {
+            continue;
+        };
         if text.chars().count() < 10 {
             // 청크 없는 짧은 파일 — mtime만 갱신.
             if let Some(&mtime) = disk_files.get(rel_path) {
@@ -533,9 +576,10 @@ pub async fn index_project(root_path: String, model: String) -> Result<IndexResu
                 .collect()
         } else {
             match detect_source_lang(&path).and_then(|l| chunk_by_ast(&text, l)) {
-                Some(ast_chunks) if !ast_chunks.is_empty() => {
-                    ast_chunks.iter().map(|c| fmt_chunk_key(c, rel_path)).collect()
-                }
+                Some(ast_chunks) if !ast_chunks.is_empty() => ast_chunks
+                    .iter()
+                    .map(|c| fmt_chunk_key(c, rel_path))
+                    .collect(),
                 _ => chunk_text(&text)
                     .into_iter()
                     .map(|c| format!("[{}]\n{}", rel_path, c))
@@ -549,7 +593,10 @@ pub async fn index_project(root_path: String, model: String) -> Result<IndexResu
     }
 
     // 병렬 임베딩 + 인덱스 갱신
-    let futures: Vec<_> = chunk_pairs.iter().map(|(c, _)| embed_auto(&client, &model, c)).collect();
+    let futures: Vec<_> = chunk_pairs
+        .iter()
+        .map(|(c, _)| embed_auto(&client, &model, c))
+        .collect();
     let embeddings = join_all(futures).await;
     let chunk_count = embeddings.iter().filter(|e| e.is_some()).count();
 
@@ -607,36 +654,26 @@ pub async fn search_codebase(
     let bm25 = Bm25Index::build(memory.entries.iter().map(|e| e.content.as_str()));
     let lexical = bm25.search(&query, 20);
 
-    // Dense 검색 (비동기, 임베딩 필요) — 의미 유사도 강점
-    let embedding = embed_auto(&client, &model, &query)
-        .await
-        .ok_or("임베딩 생성 실패 — Ollama 또는 xLLM 서버 상태를 확인하세요.")?;
-    let mut dense: Vec<(usize, f32)> = memory
-        .entries
-        .iter()
-        .enumerate()
-        .map(|(i, e)| (i, cosine_similarity(&embedding, &e.embedding)))
-        .filter(|(_, s)| *s > 0.25)
-        .collect();
-    dense.sort_by(|a, b| b.1.total_cmp(&a.1));
-    dense.truncate(20);
+    // Dense 검색 (비동기, 임베딩 필요) — 의미 유사도 강점. 임베딩이 없으면 lexical만 fallback.
+    let dense = embed_auto(&client, &model, &query).await.map(|embedding| {
+        let mut ranked: Vec<(usize, f32)> = memory
+            .entries
+            .iter()
+            .enumerate()
+            .map(|(i, e)| (i, cosine_similarity(&embedding, &e.embedding)))
+            .filter(|(_, s)| *s > 0.25)
+            .collect();
+        ranked.sort_by(|a, b| b.1.total_cmp(&a.1));
+        ranked.truncate(20);
+        ranked
+    });
 
-    // RRF k=60 — 두 랭킹 융합
-    let limit = limit.max(1).min(20);
-    let fused = rrf_fuse(&dense, &lexical);
-
-    let results = fused
-        .into_iter()
-        .take(limit)
-        .filter_map(|(idx, score)| {
-            Some(SearchResult {
-                content: memory.entries.get(idx)?.content.clone(),
-                score,
-            })
-        })
-        .collect();
-
-    Ok(results)
+    Ok(rank_search_results(
+        &memory,
+        dense.as_deref(),
+        &lexical,
+        limit,
+    ))
 }
 
 #[tauri::command]
@@ -740,14 +777,22 @@ fn second(b: i32) -> i32 {
 "#;
         let chunks = chunk_by_ast(src, SourceLang::Rust).expect("파싱 성공");
         let kinds: Vec<ChunkKind> = chunks.iter().map(|c| c.kind).collect();
-        assert!(kinds.contains(&ChunkKind::Module), "module 헤더 누락: {:?}", kinds);
+        assert!(
+            kinds.contains(&ChunkKind::Module),
+            "module 헤더 누락: {:?}",
+            kinds
+        );
         assert_eq!(
             kinds.iter().filter(|k| **k == ChunkKind::Function).count(),
             2,
             "fn 2개여야: {:?}",
             kinds
         );
-        assert!(kinds.contains(&ChunkKind::Struct), "struct 누락: {:?}", kinds);
+        assert!(
+            kinds.contains(&ChunkKind::Struct),
+            "struct 누락: {:?}",
+            kinds
+        );
 
         let names: Vec<&str> = chunks.iter().map(|c| c.name.as_str()).collect();
         assert!(names.contains(&"first"), "{:?}", names);
@@ -755,7 +800,11 @@ fn second(b: i32) -> i32 {
         assert!(names.contains(&"Foo"), "{:?}", names);
 
         let module = chunks.iter().find(|c| c.kind == ChunkKind::Module).unwrap();
-        assert!(module.body.contains("use std::path::Path"), "{}", module.body);
+        assert!(
+            module.body.contains("use std::path::Path"),
+            "{}",
+            module.body
+        );
         assert!(module.body.contains("const X"), "{}", module.body);
     }
 
@@ -785,7 +834,11 @@ def standalone():
         let names: Vec<&str> = chunks.iter().map(|c| c.name.as_str()).collect();
         assert!(names.contains(&"Greeter"), "{:?}", names);
         assert!(names.contains(&"standalone"), "{:?}", names);
-        assert!(!names.contains(&"hello"), "메서드 hello는 클래스에 흡수: {:?}", names);
+        assert!(
+            !names.contains(&"hello"),
+            "메서드 hello는 클래스에 흡수: {:?}",
+            names
+        );
     }
 
     #[test]
@@ -816,7 +869,11 @@ function login(u: string) {
         assert!(names.contains(&"User"), "{:?}", names);
         assert!(names.contains(&"Auth"), "{:?}", names);
         assert!(names.contains(&"login"), "{:?}", names);
-        assert!(!names.contains(&"verify"), "메서드 verify는 클래스에 흡수: {:?}", names);
+        assert!(
+            !names.contains(&"verify"),
+            "메서드 verify는 클래스에 흡수: {:?}",
+            names
+        );
     }
 
     #[test]
@@ -899,7 +956,11 @@ function helper() { return 42; }
         let names: Vec<&str> = chunks.iter().map(|c| c.name.as_str()).collect();
         assert!(names.contains(&"Counter"), "{:?}", names);
         assert!(names.contains(&"helper"), "{:?}", names);
-        assert!(!names.contains(&"inc"), "메서드 inc는 클래스에 흡수: {:?}", names);
+        assert!(
+            !names.contains(&"inc"),
+            "메서드 inc는 클래스에 흡수: {:?}",
+            names
+        );
     }
 
     // ─── 증분 인덱싱 회귀 가드 ───────────────────────────────────────────────
@@ -1009,7 +1070,11 @@ def top():
         let names: Vec<&str> = chunks.iter().map(|c| c.name.as_str()).collect();
         assert!(names.contains(&"outer"), "{:?}", names);
         assert!(names.contains(&"top"), "{:?}", names);
-        assert!(!names.contains(&"inner"), "중첩 inner는 outer에 흡수되어야: {:?}", names);
+        assert!(
+            !names.contains(&"inner"),
+            "중첩 inner는 outer에 흡수되어야: {:?}",
+            names
+        );
     }
 
     #[test]
@@ -1018,5 +1083,34 @@ def top():
         let bad_src = "fn broken( { let x = ; }\nfn ok() { 42 }\n";
         let result = chunk_by_ast(bad_src, SourceLang::Rust);
         let _ = result; // Some 또는 None — 패닉만 없으면 OK.
+    }
+
+    #[test]
+    fn search_임베딩_실패_시_lexical만으로_폴백() {
+        let memory = SemanticMemory {
+            file_mtimes: HashMap::new(),
+            entries: vec![
+                MemoryEntry {
+                    content: "[fn parse_url | src/auth.rs]\nfn parse_url() {}".into(),
+                    embedding: vec![0.2, 0.1, 0.9],
+                    timestamp: 1,
+                    file: Some("src/auth.rs".into()),
+                },
+                MemoryEntry {
+                    content: "[fn verify_token | src/auth.rs]\nfn verify_token() {}".into(),
+                    embedding: vec![0.1, 0.3, 0.1],
+                    timestamp: 2,
+                    file: Some("src/auth.rs".into()),
+                },
+            ],
+        };
+
+        let lexical = vec![(0usize, 4.2f32), (1usize, 3.1f32)];
+        let results = rank_search_results(&memory, None, &lexical, 5);
+
+        assert_eq!(results.len(), 2);
+        assert!(results[0].content.contains("parse_url"));
+        assert!(results[1].content.contains("verify_token"));
+        assert!(results[0].score > results[1].score);
     }
 }
