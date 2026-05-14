@@ -38,6 +38,24 @@ interface ScipStatus {
   backends: ScipBackend[];
 }
 
+interface ScipRebuildResult {
+  language: string;
+  binary: string;
+  available: boolean;
+  index_path: string;
+  requested: boolean;
+  skipped: boolean;
+  success: boolean;
+  timed_out: boolean;
+  message: string;
+}
+
+interface ScipRebuildSummary {
+  requested_language: string | null;
+  force: boolean;
+  results: ScipRebuildResult[];
+}
+
 interface Props {
   state: ReactAgentState;
   onCancel: () => void;
@@ -199,6 +217,9 @@ const ReactAgentPanel: React.FC<Props> = ({
   const [autoApprovePlanTools, setAutoApprovePlanTools] = React.useState(false);
   const [scipToolsEnabled, setScipToolsEnabled] = React.useState(false);
   const [scipStatus, setScipStatus] = React.useState<ScipStatus | null>(null);
+  const [isScipRebuildInProgress, setIsScipRebuildInProgress] =
+    React.useState(false);
+  const [scipRebuildMessage, setScipRebuildMessage] = React.useState("");
   const { status, goal, steps, changes, undoing, undoReport } = state;
   const isActive = status === "running";
   const isPlanDone = status === "done" && state.mode === "plan";
@@ -223,6 +244,8 @@ const ReactAgentPanel: React.FC<Props> = ({
     "SCIP 백엔드 상태 없음";
   const isScipEnabled =
     scipToolsEnabled && availableScipBackends > 0 && scipStatus?.enabled;
+  const scipRebuildDisabled =
+    isScipRebuildInProgress || availableScipBackends === 0 || !scipStatus;
   const showUndoButton =
     hasChanges &&
     (status === "done" || status === "error" || status === "cancelled");
@@ -289,6 +312,36 @@ const ReactAgentPanel: React.FC<Props> = ({
       }
     } catch {
       setScipToolsEnabled(!next);
+    }
+  };
+
+  const runScipRebuild = async () => {
+    if (!state.cwd || !scipStatus) {
+      return;
+    }
+    setIsScipRebuildInProgress(true);
+    setScipRebuildMessage("SCIP 인덱스를 생성합니다...");
+    try {
+      const summary = await invoke<ScipRebuildSummary>("scip_rebuild_index", {
+        cwd: state.cwd,
+        language: null,
+        force: false,
+      });
+      const lines = summary.results.map((result) => {
+        const stateLabel = result.success
+          ? result.skipped
+            ? "생략"
+            : "성공"
+          : "실패";
+        return `[${stateLabel}] ${result.language}: ${result.message}`;
+      });
+      const updatedStatus = await invoke<ScipStatus>("scip_status", { cwd: state.cwd });
+      setScipStatus(updatedStatus);
+      setScipRebuildMessage(lines.join(" · "));
+    } catch {
+      setScipRebuildMessage("SCIP 인덱스 생성에 실패했습니다.");
+    } finally {
+      setIsScipRebuildInProgress(false);
     }
   };
 
@@ -388,7 +441,25 @@ const ReactAgentPanel: React.FC<Props> = ({
         >
           SCIP {isScipEnabled ? "ON" : "OFF"} ({indexedScipBackends}/{availableScipBackends})
         </button>
+        <button
+          onClick={runScipRebuild}
+          disabled={scipRebuildDisabled}
+          className={`ml-2 px-2 py-0.5 rounded border text-[9px] font-medium transition-colors ${
+            scipRebuildDisabled
+              ? "border-white/10 bg-white/5 text-white/30 cursor-not-allowed"
+              : "border-cyan-500/30 bg-cyan-500/10 text-cyan-300 hover:bg-cyan-500/20"
+          }`}
+          title="SCIP 백엔드의 index.scip를 생성/갱신합니다"
+        >
+          {isScipRebuildInProgress ? "SCIP 생성 중..." : "SCIP 인덱스 생성"}
+        </button>
       </div>
+
+      {scipRebuildMessage && (
+        <div className="px-3 py-1.5 text-[10px] text-white/55 border-b border-white/5 bg-white/2">
+          {scipRebuildMessage}
+        </div>
+      )}
 
       {/* ── 단계 목록 (스크롤) ───────────────────────────── */}
       <div

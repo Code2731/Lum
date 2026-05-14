@@ -221,6 +221,7 @@ pub fn run() {
             commands::config::save_react_desktop_tools_enabled,
             commands::config::save_react_scip_tools_enabled,
             commands::scip::scip_status,
+            commands::scip::scip_rebuild_index,
             // Phase 133 — ReAct Reflexion 토글
             commands::config::save_react_reflexion_enabled,
             // Phase 129 — ReAct Plan/Act 도구 화이트리스트
