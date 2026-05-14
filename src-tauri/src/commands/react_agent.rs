@@ -257,6 +257,7 @@ const DESKTOP_PROMPT: &str = r#"
 - screenshot({}) — 현재 화면 PNG 캡처(base64). UI 상태 확인용.
 - click({"x": 100, "y": 200, "button": "left"}) — 화면 절대좌표 클릭 (button: left/right/middle, 생략 시 left)
 - type({"text": "입력할 텍스트"}) — 키보드 텍스트 입력
+- scroll({"x": 100, "y": 200, "amount": -120}) — 화면 절대좌표 기준 마우스 휠 스크롤 (amount>0: 아래, <0: 위)
 - key_combo({"modifier": "cmd", "key": "k"}) — 단축키 조합 입력 (modifier: cmd/ctrl/alt/shift)"#;
 
 const PROMPT_TAIL: &str = r#"응답 형식 (반드시 준수):
@@ -549,7 +550,7 @@ async fn run_tool(
         "write_file" => write_file_tool(args, cwd),
         "apply_patch" => apply_patch_tool(args, cwd),
         "delete_file" => delete_file_tool(args, cwd),
-        "screenshot" | "click" | "type" | "key_combo" => {
+        "screenshot" | "click" | "type" | "key_combo" | "scroll" => {
             run_desktop_tool(tool, args, desktop_tools_enabled).await
         }
         "mcp" => run_mcp_tool(app, args).await,
@@ -590,6 +591,7 @@ struct DesktopToolMock {
     screenshot: Option<std::result::Result<String, String>>,
     click: Option<std::result::Result<(), String>>,
     typing: Option<std::result::Result<(), String>>,
+    scroll: Option<std::result::Result<(), String>>,
     key_combo: Option<std::result::Result<(), String>>,
 }
 
@@ -655,6 +657,17 @@ fn desktop_simulate_key_combo(modifier: String, key: String) -> std::result::Res
     crate::desktop::simulate_key_combo(modifier, key)
 }
 
+fn desktop_simulate_scroll(x: i32, y: i32, amount: i32) -> std::result::Result<(), String> {
+    #[cfg(test)]
+    {
+        let mut guard = desktop_tool_mock_lock().lock().unwrap();
+        if let Some(v) = guard.scroll.take() {
+            return v;
+        }
+    }
+    crate::desktop::simulate_scroll(x, y, amount)
+}
+
 async fn run_desktop_tool(tool: &str, args: &serde_json::Value, enabled: bool) -> String {
     if !enabled {
         return "데스크톱 제어가 비활성화되어 있습니다. 설정에서 활성화하세요.".to_string();
@@ -706,6 +719,30 @@ async fn run_desktop_tool(tool: &str, args: &serde_json::Value, enabled: bool) -
             match desktop_simulate_key_combo(modifier.clone(), key.clone()) {
                 Ok(()) => format!("단축키 성공: {modifier}+{key}"),
                 Err(e) => format!("단축키 실패: {e}"),
+            }
+        }
+        "scroll" => {
+            let x = args["x"].as_i64().unwrap_or(i64::MIN);
+            let y = args["y"].as_i64().unwrap_or(i64::MIN);
+            let amount = args["amount"].as_i64().unwrap_or(i64::MIN);
+            if x == i64::MIN || y == i64::MIN || amount == i64::MIN {
+                return "오류: scroll은 x, y, amount 파라미터가 필요합니다".to_string();
+            }
+            if amount == 0 {
+                return "오류: scroll amount는 0일 수 없습니다".to_string();
+            }
+            let Ok(x_i32) = i32::try_from(x) else {
+                return format!("오류: x 좌표 범위를 벗어났습니다 ({x})");
+            };
+            let Ok(y_i32) = i32::try_from(y) else {
+                return format!("오류: y 좌표 범위를 벗어났습니다 ({y})");
+            };
+            let Ok(amount_i32) = i32::try_from(amount) else {
+                return format!("오류: amount 범위를 벗어났습니다 ({amount})");
+            };
+            match desktop_simulate_scroll(x_i32, y_i32, amount_i32) {
+                Ok(()) => format!("스크롤 성공: ({x}, {y}, {amount})"),
+                Err(e) => format!("스크롤 실패: {e}"),
             }
         }
         _ => format!("알 수 없는 데스크톱 도구: {tool}"),
@@ -2397,8 +2434,9 @@ ACTION: mcp({"server": "playwright", "tool": "screenshot", "arguments": {"url": 
 
     #[tokio::test]
     async fn desktop_tools_토글_off면_호출_거부() {
-        for tool in ["screenshot", "click", "type", "key_combo"] {
+        for tool in ["screenshot", "click", "type", "key_combo", "scroll"] {
             let args = match tool {
+                "scroll" => serde_json::json!({"x": 10, "y": 20, "amount": -120}),
                 "click" => serde_json::json!({"x": 10, "y": 20}),
                 "type" => serde_json::json!({"text": "hello"}),
                 "key_combo" => serde_json::json!({"modifier": "cmd", "key": "k"}),
@@ -2418,6 +2456,7 @@ ACTION: mcp({"server": "playwright", "tool": "screenshot", "arguments": {"url": 
             screenshot: Some(Ok("A".repeat(TOOL_OUTPUT_LIMIT + 30))),
             click: Some(Ok(())),
             typing: Some(Ok(())),
+            scroll: Some(Ok(())),
             key_combo: Some(Ok(())),
         });
 
@@ -2437,6 +2476,13 @@ ACTION: mcp({"server": "playwright", "tool": "screenshot", "arguments": {"url": 
         )
         .await;
         assert!(combo.contains("단축키 성공"), "{combo}");
+        let scroll = run_desktop_tool(
+            "scroll",
+            &serde_json::json!({"x": 100, "y": 120, "amount": -240}),
+            true,
+        )
+        .await;
+        assert!(scroll.contains("스크롤 성공"), "{scroll}");
 
         clear_desktop_tool_mock();
     }
@@ -2871,6 +2917,8 @@ ACTION: write_file({"path": "src/new.rs", "content": "pub fn x() {}", "overwrite
         assert!(s.contains("delete_file"));
         assert!(s.contains("screenshot"));
         assert!(s.contains("click"));
+        assert!(s.contains("type"));
+        assert!(s.contains("scroll"));
         assert!(s.contains("key_combo"));
         // 안전 가드 안내가 시스템 프롬프트에 들어가야 함
         assert!(s.contains(".git") || s.contains("CWD 내부"));
