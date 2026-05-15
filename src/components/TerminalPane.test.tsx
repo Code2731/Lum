@@ -250,6 +250,9 @@ describe("TerminalPane — 입력 라우팅", () => {
         showAdvancedInputTools: false,
         showBackendQuickTools: false,
       });
+      expect(localStorage.getItem("lum_input_toolbelt_tip_dismissed")).toBeNull();
+      expect(localStorage.getItem("lum_toolbelt_show_advanced")).toBeNull();
+      expect(localStorage.getItem("lum_toolbelt_show_backend")).toBeNull();
       expect(screen.queryByText(/TIP · Cmd\/Ctrl\+1~4 backend 전환 · Shift\+A @첨부 · Shift\+B\/N BACK\/LAST · Shift\+K\/Z\/R\/L\/M\/P 입력 편집/)).not.toBeInTheDocument();
       expect(screen.queryByRole("button", { name: "quick-input-merge-recall" })).not.toBeInTheDocument();
       expect(screen.queryByRole("button", { name: "quick-backend-local" })).not.toBeInTheDocument();

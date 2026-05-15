@@ -118,6 +118,9 @@ const INPUT_TIP_DISMISSED_KEY = "lum_input_toolbelt_tip_dismissed";
 const TOOLBELT_ADVANCED_KEY = "lum_toolbelt_show_advanced";
 const TOOLBELT_BACKEND_KEY = "lum_toolbelt_show_backend";
 const INPUT_HISTORY_KEY = "lum_input_submit_history";
+const LEGACY_TOOLBELT_TIP_KEY = INPUT_TIP_DISMISSED_KEY;
+const LEGACY_TOOLBELT_ADVANCED_KEY = TOOLBELT_ADVANCED_KEY;
+const LEGACY_TOOLBELT_BACKEND_KEY = TOOLBELT_BACKEND_KEY;
 
 const DEFAULT_MODEL = "Qwen2.5-Coder-7B-Instruct-EXL2-4bpw";
 const UI_TEXT_MICRO = "var(--lum-ui-text-micro)";
@@ -319,44 +322,53 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
   });
   const [showInputTip, setShowInputTip] = useState(() => {
     try {
-      return localStorage.getItem(INPUT_TIP_DISMISSED_KEY) !== "1";
+      return localStorage.getItem(LEGACY_TOOLBELT_TIP_KEY) !== "1";
     } catch {
       return true;
     }
   });
   const [showAdvancedInputTools, setShowAdvancedInputTools] = useState(() => {
     try {
-      return localStorage.getItem(TOOLBELT_ADVANCED_KEY) !== "0";
+      return localStorage.getItem(LEGACY_TOOLBELT_ADVANCED_KEY) !== "0";
     } catch {
       return true;
     }
   });
   const [showBackendQuickTools, setShowBackendQuickTools] = useState(() => {
     try {
-      return localStorage.getItem(TOOLBELT_BACKEND_KEY) !== "0";
+      return localStorage.getItem(LEGACY_TOOLBELT_BACKEND_KEY) !== "0";
     } catch {
       return true;
     }
   });
   useEffect(() => {
+    const clearLegacyToolbeltSettings = () => {
+      try {
+        localStorage.removeItem(LEGACY_TOOLBELT_TIP_KEY);
+        localStorage.removeItem(LEGACY_TOOLBELT_ADVANCED_KEY);
+        localStorage.removeItem(LEGACY_TOOLBELT_BACKEND_KEY);
+      } catch {
+        /* noop */
+      }
+    };
     const readLegacySettings = () => {
       const showInput = (() => {
         try {
-          return localStorage.getItem(INPUT_TIP_DISMISSED_KEY) !== "1";
+          return localStorage.getItem(LEGACY_TOOLBELT_TIP_KEY) !== "1";
         } catch {
           return true;
         }
       })();
       const showAdvanced = (() => {
         try {
-          return localStorage.getItem(TOOLBELT_ADVANCED_KEY) !== "0";
+          return localStorage.getItem(LEGACY_TOOLBELT_ADVANCED_KEY) !== "0";
         } catch {
           return true;
         }
       })();
       const showBackend = (() => {
         try {
-          return localStorage.getItem(TOOLBELT_BACKEND_KEY) !== "0";
+          return localStorage.getItem(LEGACY_TOOLBELT_BACKEND_KEY) !== "0";
         } catch {
           return true;
         }
@@ -398,6 +410,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
         if (Object.keys(patch).length > 0) {
           invoke("save_ui_preferences", patch).catch(() => {});
         }
+        clearLegacyToolbeltSettings();
       } catch {
         if (!mounted) return;
         setShowInputTip(legacy.showInput);
@@ -408,6 +421,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
           showAdvancedInputTools: legacy.showAdvanced,
           showBackendQuickTools: legacy.showBackend,
         }).catch(() => {});
+        clearLegacyToolbeltSettings();
       }
     })();
 
