@@ -17,7 +17,7 @@
 | 140 Personalized PageRank | ✅ **DONE** | `build_graph_and_rank` active_file 50× / mentioned 10× / well-named 1.5× |
 | 141 그래프 시각화 | ✅ **DONE** | `history_graph.rs` BFS클러스터+원형배치 + `HistoryGraphPanel.tsx` ReactFlow |
 | 142 SCIP 옵트인 | ❌ TODO | 후순위 |
-| 143 GraphRAG flat | ❌ TODO | 큰 투자 |
+| 143 GraphRAG flat | 🟡 IN_PROGRESS | `query_graph` ReAct 도구: 검색 결과 중심 심볼을 graph 기준 요약 |
 
 
 이 문서는 **R_AND_D_ITEMS.md §2 (Advanced Code Intelligence)** 의 단기 실행 계획입니다. NEXT_PHASES.md(자연어 표면)와 직교 — 병렬 진행 가능.
