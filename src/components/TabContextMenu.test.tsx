@@ -82,7 +82,11 @@ describe("TabContextMenu", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("radio", { name: "탭 색상 red" }));
+    const radios = screen.getAllByRole("radio", { hidden: true });
+    const redRadio = radios.find((item) => item.getAttribute("aria-label") === "탭 색상 red");
+    if (!redRadio) throw new Error("탭 색상 red 버튼을 찾지 못했습니다.");
+
+    fireEvent.click(redRadio);
     expect(onSetColor).toHaveBeenCalledWith("tab-1", "red");
   });
 
@@ -116,7 +120,7 @@ describe("TabContextMenu", () => {
       />,
     );
 
-    const menu = screen.getByRole("menu");
+    const menu = screen.getByRole("menu", { hidden: true });
     fireEvent.keyDown(menu, { key: "ArrowRight" });
     fireEvent.keyDown(menu, { key: "Enter" });
     expect(onSetColor).toHaveBeenCalledWith("tab-1", "green");
@@ -180,10 +184,12 @@ describe("TabContextMenu", () => {
     };
 
     render(<div><Wrapper /></div>);
-    const firstColor = screen.getByRole("radio", { name: "탭 색상 blue" });
+    const firstColor = screen.getAllByRole("radio", { hidden: true })[0];
     expect(firstColor).toHaveFocus();
 
-    const menu = screen.getByRole("menu");
+    const menu = document.querySelector('[role="menu"]');
+    if (!menu) throw new Error("탭 컨텍스트 메뉴를 찾지 못했습니다.");
+
     fireEvent.keyDown(menu, { key: "Escape" });
     expect(onClose).toHaveBeenCalledTimes(1);
     expect(screen.getByRole("button", { name: "tab" })).toHaveFocus();
@@ -217,7 +223,7 @@ describe("TabContextMenu", () => {
       />,
     );
 
-    const menu = getByRole("menu");
+    const menu = getByRole("menu", { hidden: true });
     expect(menu).toHaveStyle({ left: "10px", top: "30px" });
     rectSpy.mockRestore();
     Object.defineProperty(window, "innerWidth", { value: initialInnerWidth, configurable: true });

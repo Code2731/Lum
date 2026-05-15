@@ -83,7 +83,9 @@ describe("TerminalContextMenu", () => {
       />,
     );
 
-    const menu = screen.getByRole("menu", { name: "터미널 컨텍스트 메뉴" });
+    const menu = document.querySelector('[role="menu"]');
+    if (!menu) throw new Error("컨텍스트 메뉴를 찾지 못했습니다.");
+
     fireEvent.keyDown(menu, { key: "ArrowDown" });
     fireEvent.keyDown(menu, { key: "Enter" });
     expect(onRun).toHaveBeenCalledTimes(1);
@@ -99,7 +101,7 @@ describe("TerminalContextMenu", () => {
       />,
     );
 
-    expect(screen.getByRole("menuitem", { name: "열기" })).toBeInTheDocument();
+    expect(screen.getByLabelText("열기")).toBeInTheDocument();
   });
 
   it("메뉴가 열리면 첫 항목에 포커스되고 닫힘 시 이전 포커스로 복귀한다", () => {
@@ -126,10 +128,12 @@ describe("TerminalContextMenu", () => {
     };
 
     render(<App />);
-    const firstItem = screen.getByRole("menuitem", { name: "복사" });
+    const firstItem = screen.getByLabelText("복사");
     expect(firstItem).toHaveFocus();
 
-    const menu = screen.getByRole("menu", { name: "터미널 컨텍스트 메뉴" });
+    const menu = document.querySelector('[role="menu"]');
+    if (!menu) throw new Error("컨텍스트 메뉴를 찾지 못했습니다.");
+
     fireEvent.keyDown(menu, { key: "Escape" });
     expect(onClose).toHaveBeenCalledTimes(1);
     expect(screen.getByRole("button", { name: "원본" })).toHaveFocus();

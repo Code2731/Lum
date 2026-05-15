@@ -41,6 +41,7 @@ const TerminalContextMenu: React.FC<Props> = ({
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const previousFocusRef = useRef<HTMLElement | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [isReady, setIsReady] = useState(false);
   const fallbackHeight = isPathOrUrl ? MENU_FALLBACK_HEIGHT_WITH_LINK : MENU_FALLBACK_HEIGHT_WITHOUT_LINK;
   const [position, setPosition] = useState(() => clampMenuPos(x, y, MENU_WIDTH, fallbackHeight));
 
@@ -94,6 +95,10 @@ const TerminalContextMenu: React.FC<Props> = ({
   }, []);
 
   useEffect(() => {
+    setIsReady(false);
+  }, [x, y, isPathOrUrl]);
+
+  useEffect(() => {
     const selected = itemRefs.current[activeIndex];
     selected?.focus();
   }, [activeIndex]);
@@ -117,6 +122,7 @@ const TerminalContextMenu: React.FC<Props> = ({
       }
       return next;
     });
+    setIsReady(true);
   }, [x, y, isPathOrUrl]);
 
   const handleMenuKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
@@ -167,7 +173,12 @@ const TerminalContextMenu: React.FC<Props> = ({
       role="menu"
       aria-label="터미널 컨텍스트 메뉴"
       tabIndex={-1}
-      style={{ left: position.left, top: position.top }}
+      style={{
+        left: position.left,
+        top: position.top,
+        visibility: isReady ? "visible" : "hidden",
+        pointerEvents: isReady ? "auto" : "none",
+      }}
       onContextMenu={(e) => e.preventDefault()}
       onKeyDown={handleMenuKeyDown}
     >

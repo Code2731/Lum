@@ -31,6 +31,7 @@ const TabContextMenu: React.FC<Props> = ({
   const inputRef = useRef<HTMLInputElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
   const [activeColorIndex, setActiveColorIndex] = useState(0);
+  const [isReady, setIsReady] = useState(false);
   const [position, setPosition] = useState({
     left: clampValue(x, 0, Math.max(0, window.innerWidth - MENU_FALLBACK_WIDTH - MENU_EDGE_GAP)),
     top: clampValue(y, 0, Math.max(0, window.innerHeight - MENU_FALLBACK_HEIGHT - MENU_EDGE_GAP)),
@@ -67,6 +68,10 @@ const TabContextMenu: React.FC<Props> = ({
     };
   }, []);
 
+  useEffect(() => {
+    setIsReady(false);
+  }, [x, y]);
+
   useLayoutEffect(() => {
     if (!ref.current) return;
     const rect = ref.current.getBoundingClientRect();
@@ -76,6 +81,7 @@ const TabContextMenu: React.FC<Props> = ({
       left: clampValue(x, 0, Math.max(0, window.innerWidth - menuWidth - MENU_EDGE_GAP)),
       top: clampValue(y, 0, Math.max(0, window.innerHeight - menuHeight - MENU_EDGE_GAP)),
     });
+    setIsReady(true);
   }, [x, y]);
 
   useEffect(() => {
@@ -149,6 +155,8 @@ const TabContextMenu: React.FC<Props> = ({
     left: position.left,
     top: position.top,
     zIndex: 100,
+    visibility: isReady ? "visible" : "hidden",
+    pointerEvents: isReady ? "auto" : "none",
   };
 
   const menu = (
