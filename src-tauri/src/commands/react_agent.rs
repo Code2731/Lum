@@ -1135,6 +1135,46 @@ fn extract_first_quoted_path(value: &str) -> Option<&str> {
     None
 }
 
+fn normalize_graph_file_ref(raw: &str) -> String {
+    let mut path = raw.trim().replace('\\', "/");
+    if path == "." {
+        return ".".to_string();
+    }
+    if let Some(stripped) = path.strip_prefix("./") {
+        path = stripped.to_string();
+    }
+
+    let absolute = path.starts_with('/') || path.chars().nth(1) == Some(':');
+    let mut parts: Vec<&str> = Vec::new();
+    for seg in path.split('/') {
+        if seg.is_empty() || seg == "." {
+            continue;
+        }
+        if seg == ".." {
+            if absolute {
+                if let Some(last) = parts.last() {
+                    if *last != ".." {
+                        parts.pop();
+                        continue;
+                    }
+                }
+            } else if !parts.is_empty() && parts.last() != Some(&"..") {
+                parts.pop();
+                continue;
+            }
+            parts.push("..");
+            continue;
+        }
+        parts.push(seg);
+    }
+
+    if absolute {
+        format!("/{}", parts.join("/"))
+    } else {
+        parts.join("/")
+    }
+}
+
 fn collect_graph_file_contexts(
     files: &[String],
     cwd: &str,
@@ -1144,15 +1184,20 @@ fn collect_graph_file_contexts(
     let mut out = Vec::new();
     let mut seen = std::collections::HashSet::new();
     for raw in files.iter().take(max_files) {
-        let norm_path = raw.replace('\\', "/");
+        let norm_path = normalize_graph_file_ref(raw);
         if !seen.insert(norm_path.to_lowercase()) {
             continue;
         }
 
-        let abs = if Path::new(raw).is_absolute() {
+        let abs = if Path::new(raw).is_absolute() || Path::new(raw).exists() {
             PathBuf::from(raw)
         } else {
-            Path::new(cwd).join(raw)
+            let ref_path = Path::new(cwd).join(&norm_path);
+            if ref_path.exists() {
+                ref_path
+            } else {
+                Path::new(cwd).join(raw)
+            }
         };
         let imports = parse_module_imports_from_file(&abs, max_imports);
         out.push((norm_path, imports));
@@ -1297,8 +1342,8 @@ async fn run_query_graph_tool(args: &serde_json::Value, cwd: &str) -> String {
             }
         }
         if let Some(file) = parse_graph_file_from_chunk(&r.content) {
-            let normalized = file.replace('\\', "/");
-            if seen_files.insert(normalized.clone()) && files.len() < max_file_context {
+            let normalized = normalize_graph_file_ref(&file);
+            if seen_files.insert(normalized.to_lowercase()) && files.len() < max_file_context {
                 files.push(normalized);
             }
         }
@@ -3372,6 +3417,90 @@ fn legacy_format() {}
     fn phase143_parse_graph_file_from_chunk_legacy_포맷() {
         let path = parse_graph_file_from_chunk("[legacy.rs]\nlegacy format chunk");
         assert_eq!(path, Some("legacy.rs".to_string()));
+    }
+
+    #[test]
+    fn phase143_normalize_graph_file_ref_변형_정규화() {
+        assert_eq!(normalize_graph_file_ref("./sample.rs"), "sample.rs");
+        assert_eq!(
+            normalize_graph_file_ref("src/../src/sample.rs"),
+            "src/sample.rs"
+        );
+        assert_eq!(normalize_graph_file_ref("src//./mod.rs"), "src/mod.rs");
+        assert_eq!(
+            normalize_graph_file_ref("src\\legacy\\main.rs"),
+            "src/legacy/main.rs"
+        );
+    }
+
+    #[test]
+    fn phase143_collect_graph_file_contexts_중복_경로_병합() {
+        let td = TempDir::new("query-graph-context-merge");
+        let target = td.path().join("sample.rs");
+        std::fs::write(
+            &target,
+            r#"
+use std::fmt::Debug;
+
+fn sample() {}
+"#,
+        )
+        .unwrap();
+
+        let file_list = vec![
+            "./sample.rs".to_string(),
+            "sample.rs".to_string(),
+            "src/../".to_string() + target.file_name().unwrap().to_str().unwrap(),
+        ];
+        let contexts = collect_graph_file_contexts(&file_list, &td.cwd(), 8, 6);
+        assert_eq!(contexts.len(), 1);
+        assert_eq!(contexts[0].0, "sample.rs");
+        assert!(contexts[0].1.contains(&"std::fmt::Debug".to_string()));
+    }
+
+    #[tokio::test]
+    async fn phase143_query_graph_도구_경로_변형_컨텍스트_중복_제거() {
+        let _g = CODEBASE_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        let td = TempDir::new("query-graph-dup-file");
+        std::fs::write(&td.path().join("sample.rs"), "fn sample() {}\n").unwrap();
+
+        set_codebase_tool_mock(CodebaseToolMock {
+            search_result: Some(Ok(vec![
+                crate::commands::rag::SearchResult {
+                    content: "[fn sample | ./sample.rs]\nfn sample() {}".to_string(),
+                    score: 0.95,
+                },
+                crate::commands::rag::SearchResult {
+                    content: "[fn sample | sample.rs]\nfn sample() {}".to_string(),
+                    score: 0.94,
+                },
+            ])),
+        });
+
+        let out = run_query_graph_tool(
+            &serde_json::json!({"query": "sample", "symbols": 2}),
+            &td.cwd(),
+        )
+        .await;
+        assert!(out.contains("연결 모듈 컨텍스트 1개"), "{out}");
+        let mut context_files = Vec::new();
+        let mut in_context = false;
+        for line in out.lines() {
+            if line.starts_with("연결 모듈 컨텍스트") {
+                in_context = true;
+                continue;
+            }
+            if in_context {
+                if line.starts_with("관계 요약 대상") {
+                    break;
+                }
+                if line.starts_with("  - ") {
+                    context_files.push(line.trim().to_string());
+                }
+            }
+        }
+        assert_eq!(context_files, vec!["- sample.rs".to_string()]);
+        clear_codebase_tool_mock();
     }
 
     #[test]
