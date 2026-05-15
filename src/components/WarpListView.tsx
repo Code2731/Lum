@@ -1522,17 +1522,20 @@ const WarpListView: React.FC<Props> = ({
                   Δ Timeline ({comparedCount})
                 </button>
                 {timelineOpen && (
-                  <div
-                    ref={timelinePanelRef}
-                    className={`fixed z-30 w-[440px] rounded-lg border border-cyan-300/25 bg-[#0b131d]/97 shadow-2xl overflow-hidden ${
-                      timelinePanelPlacement === "up" ? "origin-bottom-right" : "origin-top-right"
-                    }`}
-                    style={{
-                      left: timelinePanelPosition.x,
-                      top: timelinePanelPosition.y,
-                    }}
-                    onClick={(e) => e.stopPropagation()}
-                  >
+                  (typeof document === "undefined"
+                    ? null
+                    : createPortal(
+                        <div
+                          ref={timelinePanelRef}
+                          className={`fixed z-30 w-[440px] rounded-lg border border-cyan-300/25 bg-[#0b131d]/97 shadow-2xl overflow-hidden ${
+                            timelinePanelPlacement === "up" ? "origin-bottom-right" : "origin-top-right"
+                          }`}
+                          style={{
+                            left: timelinePanelPosition.x,
+                            top: timelinePanelPosition.y,
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                        >
                     <div className="px-2.5 py-1.5 border-b border-white/10 text-[10px] text-cyan-200">
                       최근 비교 히스토리
                     </div>
@@ -2218,7 +2221,9 @@ const WarpListView: React.FC<Props> = ({
                         <div className="text-[10px] text-white/50 px-1 py-1">검색 결과가 없습니다.</div>
                       )}
                     </div>
-                  </div>
+                        </div>,
+                        document.body,
+                      ))
                 )}
               </div>
               <button
@@ -2329,17 +2334,20 @@ const WarpListView: React.FC<Props> = ({
                     Δ +{compare.added}/-{compare.removed}
                   </button>
                   {deltaOpenId === b.id && (
-                    <div
-                      ref={deltaPopoverRef}
-                      className={`fixed z-30 w-[360px] rounded-lg border border-cyan-300/25 bg-[#0b131d]/97 shadow-2xl overflow-hidden ${
-                        deltaPanelPlacement === "up" ? "origin-bottom-right" : "origin-top-right"
-                      }`}
-                      style={{
-                        left: deltaPanelPosition.x,
-                        top: deltaPanelPosition.y,
-                      }}
-                      onClick={(e) => e.stopPropagation()}
-                    >
+                    (typeof document === "undefined"
+                      ? null
+                      : createPortal(
+                          <div
+                            ref={deltaPopoverRef}
+                            className={`fixed z-30 w-[360px] rounded-lg border border-cyan-300/25 bg-[#0b131d]/97 shadow-2xl overflow-hidden ${
+                              deltaPanelPlacement === "up" ? "origin-bottom-right" : "origin-top-right"
+                            }`}
+                            style={{
+                              left: deltaPanelPosition.x,
+                              top: deltaPanelPosition.y,
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                          >
                       <div className="px-2.5 py-1.5 border-b border-white/10 text-[10px] text-cyan-200 tabular-nums">
                         Retry Compare · +{compare.added} / -{compare.removed}
                       </div>
@@ -2386,7 +2394,9 @@ const WarpListView: React.FC<Props> = ({
                           <div className="text-[10px] text-white/55">라인 변화가 감지되지 않았습니다.</div>
                         )}
                       </div>
-                    </div>
+                          </div>,
+                          document.body,
+                        ))
                   )}
                 </div>
               )}
