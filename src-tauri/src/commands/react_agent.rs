@@ -1351,22 +1351,34 @@ async fn run_query_graph_tool(args: &serde_json::Value, cwd: &str) -> String {
 
     let max_file_context = 8usize;
     let max_imports_per_file = 6usize;
+    let mut symbol_to_files: std::collections::HashMap<String, Vec<String>> = HashMap::new();
+    let mut symbol_file_pairs: std::collections::HashSet<String> = HashSet::new();
     let mut symbols = Vec::new();
     let mut seen_symbols = std::collections::HashSet::new();
     let mut seen_files = std::collections::HashSet::new();
     let mut files = Vec::new();
     for r in &results {
+        let parsed_file =
+            parse_graph_file_from_chunk(&r.content).map(|f| normalize_graph_file_ref(&f));
         if symbols.len() < symbol_count {
             if let Some(symbol) = parse_graph_symbol_from_chunk(&r.content) {
                 if seen_symbols.insert(symbol.clone()) {
-                    symbols.push(symbol);
+                    symbols.push(symbol.clone());
+                }
+                if let Some(file_ref) = parsed_file.as_ref().map(|s| s.to_lowercase()) {
+                    let symbol_key = format!("{}::{file_ref}", parsed_file.as_ref().unwrap());
+                    if symbol_file_pairs.insert(symbol_key) {
+                        symbol_to_files
+                            .entry(file_ref)
+                            .or_default()
+                            .push(symbol.clone());
+                    }
                 }
             }
         }
-        if let Some(file) = parse_graph_file_from_chunk(&r.content) {
-            let normalized = normalize_graph_file_ref(&file);
-            if seen_files.insert(normalized.to_lowercase()) && files.len() < max_file_context {
-                files.push(normalized);
+        if let Some(file) = parsed_file {
+            if seen_files.insert(file.to_lowercase()) && files.len() < max_file_context {
+                files.push(file);
             }
         }
     }
@@ -1377,8 +1389,59 @@ async fn run_query_graph_tool(args: &serde_json::Value, cwd: &str) -> String {
         results.len()
     ));
 
+    let mut module_summary: Vec<(String, Vec<String>)> = symbol_to_files
+        .into_iter()
+        .map(|(file, mut symbol_list)| {
+            symbol_list.sort();
+            symbol_list.dedup();
+            (file, symbol_list)
+        })
+        .filter(|(_, symbol_list)| !symbol_list.is_empty())
+        .collect();
+    module_summary.sort_by(|a, b| b.1.len().cmp(&a.1.len()).then(a.0.cmp(&b.0)));
+
     let file_contexts =
         collect_graph_file_contexts(&files, cwd, max_file_context, max_imports_per_file);
+    let context_map: std::collections::HashMap<String, Vec<String>> = file_contexts
+        .iter()
+        .map(|(file, imports)| (file.to_lowercase(), imports.clone()))
+        .collect();
+
+    if !module_summary.is_empty() {
+        out.push(format!(
+            "모듈 중심 요약 {}개:",
+            module_summary.len().min(max_file_context)
+        ));
+        for (file, symbol_list) in module_summary.iter().take(max_file_context) {
+            let display_file = files
+                .iter()
+                .find(|f| f.to_lowercase() == *file)
+                .cloned()
+                .unwrap_or_else(|| file.clone());
+            out.push(format!(
+                "  - {display_file} (심볼 {cnt}개)",
+                cnt = symbol_list.len()
+            ));
+            for symbol in symbol_list.iter().take(4) {
+                out.push(format!("    - {symbol}"));
+            }
+            if symbol_list.len() > 4 {
+                out.push(format!(
+                    "    - ... {}개 추가",
+                    symbol_list.len().saturating_sub(4)
+                ));
+            }
+            if let Some(imports) = context_map.get(file) {
+                if !imports.is_empty() {
+                    out.push("    - 연결 모듈 힌트:".to_string());
+                    for imp in imports.iter().take(3) {
+                        out.push(format!("      - {imp}"));
+                    }
+                }
+            }
+        }
+    }
+
     if !file_contexts.is_empty() {
         out.push(format!("연결 모듈 컨텍스트 {}개:", file_contexts.len()));
         for (file, imports) in file_contexts {
@@ -1396,11 +1459,13 @@ async fn run_query_graph_tool(args: &serde_json::Value, cwd: &str) -> String {
     if symbols.is_empty() {
         out.push("관계 요약 대상 심볼이 없어 스니펫만 반환합니다.".to_string());
     } else {
+        let symbol_set: HashSet<String> = symbols.iter().cloned().collect();
         let graph = crate::commands::call_graph::CallGraph::build(std::path::Path::new(cwd));
         out.push(format!(
             "관계 요약 대상 심볼 {}개 (최대 {symbol_count}개):",
             symbols.len()
         ));
+        let mut symbol_links = Vec::new();
         for symbol in &symbols {
             let callers = graph.find_callers(symbol);
             let callees = graph.find_callees(symbol);
@@ -1408,9 +1473,25 @@ async fn run_query_graph_tool(args: &serde_json::Value, cwd: &str) -> String {
             let mut defs = graph.fn_defs.get(symbol).cloned().unwrap_or_default();
             defs.sort();
             defs.dedup();
+            for callee in &callees {
+                if symbol_set.contains(&callee.name) {
+                    symbol_links.push(format!("{symbol} -> {}", callee.name));
+                }
+            }
             out.extend(format_graph_lines(
                 symbol, &callers, &callees, &deps, &defs, depth, 5,
             ));
+        }
+        symbol_links.sort();
+        symbol_links.dedup();
+        if !symbol_links.is_empty() {
+            out.push(format!(
+                "검색 심볼 간 호출 관계 {}개:",
+                symbol_links.len().min(12)
+            ));
+            for link in symbol_links.iter().take(12) {
+                out.push(format!("  - {link}"));
+            }
         }
     }
 
@@ -3362,6 +3443,8 @@ fn main() {
         assert!(out.contains("정의 파일"), "{out}");
         assert!(out.contains("validate_auth"), "{out}");
         assert!(out.contains("관계 요약 대상 심볼"), "{out}");
+        assert!(out.contains("모듈 중심 요약"), "{out}");
+        assert!(out.contains("검색 심볼 간 호출 관계"), "{out}");
         assert!(out.contains("호출자"), "{out}");
         assert!(out.contains("피호출자"), "{out}");
         assert!(out.contains("영향도"), "{out}");
@@ -3402,6 +3485,59 @@ fn main() {
             2,
             "{out}"
         );
+        clear_codebase_tool_mock();
+    }
+
+    #[tokio::test]
+    async fn phase143_query_graph_도구_모듈요약_중복_정규화() {
+        let _g = CODEBASE_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        let td = TempDir::new("query-graph-module-summary");
+        let repo = td.path().join("service.rs");
+        std::fs::write(
+            &repo,
+            r#"
+fn check_auth() {
+    verify_auth();
+}
+fn verify_auth() {}
+use crate::db::query;
+"#,
+        )
+        .unwrap();
+        std::fs::write(td.path().join("auth.rs"), "fn query() {}\n").unwrap();
+        std::fs::write(td.path().join("legacy.rs"), "fn legacy_check() {}\n").unwrap();
+
+        set_codebase_tool_mock(CodebaseToolMock {
+            search_result: Some(Ok(vec![
+                crate::commands::rag::SearchResult {
+                    content: "[fn check_auth | ./service.rs]\nfn check_auth() {}".to_string(),
+                    score: 0.95,
+                },
+                crate::commands::rag::SearchResult {
+                    content: "[fn check_auth | service.rs]\nfn check_auth() {}".to_string(),
+                    score: 0.94,
+                },
+                crate::commands::rag::SearchResult {
+                    content: "[fn verify_auth | service.rs]\nfn verify_auth() {}".to_string(),
+                    score: 0.90,
+                },
+                crate::commands::rag::SearchResult {
+                    content: "[fn query | auth.rs]\nfn query() {}".to_string(),
+                    score: 0.89,
+                },
+            ])),
+        });
+
+        let out = run_query_graph_tool(
+            &serde_json::json!({"query": "auth", "symbols": 3}),
+            &td.cwd(),
+        )
+        .await;
+        assert!(out.contains("모듈 중심 요약"), "{out}");
+        assert!(out.contains("- service.rs"), "{out}");
+        assert!(out.contains("check_auth"), "{out}");
+        assert!(out.contains("검색 심볼 간 호출 관계"), "{out}");
+        assert!(out.contains("check_auth -> verify_auth"), "{out}");
         clear_codebase_tool_mock();
     }
 
