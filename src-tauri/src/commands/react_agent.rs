@@ -1352,6 +1352,7 @@ async fn run_query_graph_tool(args: &serde_json::Value, cwd: &str) -> String {
     let max_file_context = 8usize;
     let max_imports_per_file = 6usize;
     let mut symbol_to_files: std::collections::HashMap<String, Vec<String>> = HashMap::new();
+    let mut module_scores: std::collections::HashMap<String, f64> = HashMap::new();
     let mut symbol_file_pairs: std::collections::HashSet<String> = HashSet::new();
     let mut symbols = Vec::new();
     let mut seen_symbols = std::collections::HashSet::new();
@@ -1360,6 +1361,10 @@ async fn run_query_graph_tool(args: &serde_json::Value, cwd: &str) -> String {
     for r in &results {
         let parsed_file =
             parse_graph_file_from_chunk(&r.content).map(|f| normalize_graph_file_ref(&f));
+        if let Some(file_ref) = parsed_file.as_ref() {
+            let file_key = file_ref.to_lowercase();
+            *module_scores.entry(file_key).or_insert(0.0) += r.score as f64;
+        }
         if symbols.len() < symbol_count {
             if let Some(symbol) = parse_graph_symbol_from_chunk(&r.content) {
                 if seen_symbols.insert(symbol.clone()) {
@@ -1389,16 +1394,32 @@ async fn run_query_graph_tool(args: &serde_json::Value, cwd: &str) -> String {
         results.len()
     ));
 
-    let mut module_summary: Vec<(String, Vec<String>)> = symbol_to_files
+    let mut module_summary: Vec<(String, Vec<String>, f64)> = symbol_to_files
         .into_iter()
         .map(|(file, mut symbol_list)| {
             symbol_list.sort();
             symbol_list.dedup();
-            (file, symbol_list)
+            let score = module_scores.get(&file).copied().unwrap_or(0.0);
+            (file, symbol_list, score)
         })
-        .filter(|(_, symbol_list)| !symbol_list.is_empty())
         .collect();
-    module_summary.sort_by(|a, b| b.1.len().cmp(&a.1.len()).then(a.0.cmp(&b.0)));
+    for file in &files {
+        let file_key = file.to_lowercase();
+        if module_summary.iter().any(|(f, _, _)| f == &file_key) {
+            continue;
+        }
+        if let Some(score) = module_scores.get(&file_key).copied() {
+            if score > 0.0 {
+                module_summary.push((file_key, Vec::new(), score));
+            }
+        }
+    }
+    module_summary.sort_by(|a, b| {
+        b.2.partial_cmp(&a.2)
+            .unwrap_or(std::cmp::Ordering::Equal)
+            .then_with(|| b.1.len().cmp(&a.1.len()))
+            .then_with(|| a.0.cmp(&b.0))
+    });
 
     let file_contexts =
         collect_graph_file_contexts(&files, cwd, max_file_context, max_imports_per_file);
@@ -1412,24 +1433,33 @@ async fn run_query_graph_tool(args: &serde_json::Value, cwd: &str) -> String {
             "모듈 중심 요약 {}개:",
             module_summary.len().min(max_file_context)
         ));
-        for (file, symbol_list) in module_summary.iter().take(max_file_context) {
+        for (file, symbol_list, score) in module_summary.iter().take(max_file_context) {
             let display_file = files
                 .iter()
                 .find(|f| f.to_lowercase() == *file)
                 .cloned()
                 .unwrap_or_else(|| file.clone());
+            let score_text = if *score > 0.0 {
+                format!(" (점수 {:.3})", score)
+            } else {
+                String::new()
+            };
             out.push(format!(
-                "  - {display_file} (심볼 {cnt}개)",
+                "  - {display_file} (심볼 {cnt}개){score_text}",
                 cnt = symbol_list.len()
             ));
-            for symbol in symbol_list.iter().take(4) {
-                out.push(format!("    - {symbol}"));
-            }
-            if symbol_list.len() > 4 {
-                out.push(format!(
-                    "    - ... {}개 추가",
-                    symbol_list.len().saturating_sub(4)
-                ));
+            if symbol_list.is_empty() {
+                out.push("    - 심볼 미탐지".to_string());
+            } else {
+                for symbol in symbol_list.iter().take(4) {
+                    out.push(format!("    - {symbol}"));
+                }
+                if symbol_list.len() > 4 {
+                    out.push(format!(
+                        "    - ... {}개 추가",
+                        symbol_list.len().saturating_sub(4)
+                    ));
+                }
             }
             if let Some(imports) = context_map.get(file) {
                 if !imports.is_empty() {
@@ -3565,9 +3595,52 @@ fn legacy_format() {}
 
         let out = run_query_graph_tool(&serde_json::json!({"query": "legacy"}), &td.cwd()).await;
         assert!(out.contains("관계 요약 대상 심볼이 없어"), "{out}");
+        assert!(out.contains("모듈 중심 요약"), "{out}");
+        assert!(out.contains("심볼 미탐지"), "{out}");
         assert!(out.contains("연결 모듈 컨텍스트"), "{out}");
         assert!(out.contains("legacy.rs"), "{out}");
         assert!(out.contains("../core/legacy.rs"), "{out}");
+        clear_codebase_tool_mock();
+    }
+
+    #[tokio::test]
+    async fn phase143_query_graph_도구_모듈점수_정렬() {
+        let _g = CODEBASE_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        let td = TempDir::new("query-graph-module-score");
+
+        set_codebase_tool_mock(CodebaseToolMock {
+            search_result: Some(Ok(vec![
+                crate::commands::rag::SearchResult {
+                    content: "[fn alpha | low.rs]\nfn alpha() {}".to_string(),
+                    score: 0.31,
+                },
+                crate::commands::rag::SearchResult {
+                    content: "[fn beta | mid.rs]\nfn beta() {}".to_string(),
+                    score: 0.54,
+                },
+                crate::commands::rag::SearchResult {
+                    content: "[fn gamma | low.rs]\nfn gamma() {}".to_string(),
+                    score: 0.62,
+                },
+                crate::commands::rag::SearchResult {
+                    content: "[fn delta | top.rs]\nfn delta() {}".to_string(),
+                    score: 0.98,
+                },
+            ])),
+        });
+
+        let out = run_query_graph_tool(
+            &serde_json::json!({"query": "score", "symbols": 4}),
+            &td.cwd(),
+        )
+        .await;
+        assert!(out.contains("모듈 중심 요약"), "{out}");
+        let idx_top = out.find("  - top.rs").expect("top.rs");
+        let idx_low = out.find("  - low.rs").expect("low.rs");
+        let idx_mid = out.find("  - mid.rs").expect("mid.rs");
+        assert!(idx_top < idx_mid, "{out}");
+        assert!(idx_top < idx_low, "{out}");
+        assert!(out.contains("심볼 1개"), "{out}");
         clear_codebase_tool_mock();
     }
 
