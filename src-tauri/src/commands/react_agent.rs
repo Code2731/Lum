@@ -1241,7 +1241,8 @@ fn collect_query_graph_module_links_by_imports(
         }
         let mut seen_pairs = std::collections::HashSet::new();
         for import in imports {
-            for target in resolve_query_graph_import_target(import, available_modules) {
+            for target in resolve_query_graph_import_target(import, source_file, available_modules)
+            {
                 if target == src {
                     continue;
                 }
@@ -1310,13 +1311,14 @@ fn collect_query_graph_module_links_by_calls(
 
 fn resolve_query_graph_import_target(
     raw_import: &str,
+    source_file: &str,
     available_modules: &std::collections::HashSet<String>,
 ) -> Vec<String> {
     let mut out = Vec::new();
     let mut seen = std::collections::HashSet::new();
 
     for candidate in query_graph_import_candidates(raw_import) {
-        for normalized in normalize_query_graph_import_candidate(&candidate) {
+        for normalized in normalize_query_graph_import_candidate(&candidate, source_file) {
             if available_modules.contains(&normalized) && seen.insert(normalized.clone()) {
                 out.push(normalized);
             }
@@ -1373,17 +1375,28 @@ fn query_graph_import_candidates(raw_import: &str) -> Vec<String> {
     out
 }
 
-fn normalize_query_graph_import_candidate(candidate: &str) -> Vec<String> {
+fn normalize_query_graph_import_candidate(candidate: &str, source_file: &str) -> Vec<String> {
     let mut out = Vec::new();
     let mut seen = std::collections::HashSet::new();
-    let base = normalize_graph_file_ref(candidate);
+    let absolute_candidate = if is_relative_query_graph_import(candidate) {
+        if let Some(parent) = Path::new(source_file).parent() {
+            let joined = parent.join(candidate);
+            joined.to_string_lossy().to_string()
+        } else {
+            candidate.to_string()
+        }
+    } else {
+        candidate.to_string()
+    };
+    let base = normalize_graph_file_ref(&absolute_candidate);
     if base.is_empty() || base == "." {
         return out;
     }
+    let is_file_like = is_query_graph_file_like_path(&base);
 
     let mut extend_with = |candidate: String| {
         if !candidate.is_empty() && seen.insert(candidate.clone()) {
-            out.push(candidate);
+            out.push(candidate.to_lowercase());
         }
     };
 
@@ -1394,7 +1407,7 @@ fn normalize_query_graph_import_candidate(candidate: &str) -> Vec<String> {
             let parent = base.trim_end_matches("/mod.rs").to_string();
             extend_with(parent);
         }
-    } else {
+    } else if !is_file_like {
         extend_with(format!("src/{base}"));
     }
 
@@ -1412,6 +1425,18 @@ fn normalize_query_graph_import_candidate(candidate: &str) -> Vec<String> {
     }
 
     out
+}
+
+fn is_relative_query_graph_import(raw: &str) -> bool {
+    raw.starts_with("./") || raw.starts_with("../") || raw == "."
+}
+
+fn is_query_graph_file_like_path(raw: &str) -> bool {
+    raw.starts_with("../")
+        || raw == ".."
+        || raw.starts_with("./")
+        || raw.starts_with('/')
+        || (raw.len() >= 2 && raw.as_bytes().get(1).is_some_and(|b| *b == b':'))
 }
 
 fn format_graph_lines(
@@ -3972,9 +3997,71 @@ fn parse() {
             set.insert("src/api.rs".to_string());
             set
         };
-        let targets = resolve_query_graph_import_target("crate::db::query_user", &modules);
+        let targets =
+            resolve_query_graph_import_target("crate::db::query_user", "service.rs", &modules);
         assert!(targets.contains(&"db.rs".to_string()), "{targets:?}");
         assert!(!targets.contains(&"std.rs".to_string()), "{targets:?}");
+    }
+
+    #[test]
+    fn phase143_query_graph_import_상대경로_해결() {
+        let modules = {
+            let mut set = std::collections::HashSet::new();
+            set.insert("api.js".to_string());
+            set.insert("modules/user.js".to_string());
+            set.insert("src/modules/user.js".to_string());
+            set
+        };
+        let targets = resolve_query_graph_import_target("./modules/user.js", "api.js", &modules);
+        assert!(
+            targets.contains(&"modules/user.js".to_string()),
+            "{targets:?}"
+        );
+    }
+
+    #[tokio::test]
+    async fn phase143_query_graph_모듈연결_상대경로_도구결과() {
+        let _g = CODEBASE_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        let td = TempDir::new("query-graph-module-links-relative");
+        std::fs::write(
+            td.path().join("api.js"),
+            r#"
+import user from "./modules/user.js";
+
+function api() {
+    return user();
+}
+"#,
+        )
+        .unwrap();
+        std::fs::create_dir_all(td.path().join("modules")).unwrap();
+        std::fs::write(
+            td.path().join("modules/user.js"),
+            "export function user() {\n    return 1;\n}\n",
+        )
+        .unwrap();
+
+        set_codebase_tool_mock(CodebaseToolMock {
+            search_result: Some(Ok(vec![
+                crate::commands::rag::SearchResult {
+                    content: "[fn api | api.js]\nfunction api() {}".to_string(),
+                    score: 0.93,
+                },
+                crate::commands::rag::SearchResult {
+                    content: "[fn user | modules/user.js]\nexport function user() {}".to_string(),
+                    score: 0.88,
+                },
+            ])),
+        });
+
+        let out = run_query_graph_tool(
+            &serde_json::json!({"query": "user", "symbols": 2}),
+            &td.cwd(),
+        )
+        .await;
+        assert!(out.contains("모듈 연결 요약"), "{out}");
+        assert!(out.contains("api.js -> modules/user.js"), "{out}");
+        clear_codebase_tool_mock();
     }
 
     #[test]
