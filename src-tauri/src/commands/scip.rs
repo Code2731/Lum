@@ -141,6 +141,15 @@ fn normalize_workspace_path(raw: Option<&str>) -> String {
                 }
             }
         }
+    } else if let Some(parent) = path.parent() {
+        let has_extension = path
+            .file_name()
+            .and_then(|name| Path::new(name).extension())
+            .is_some();
+        let parent_exists = parent.exists();
+        if has_extension && parent_exists {
+            path = parent.to_path_buf();
+        }
     }
 
     match path.canonicalize() {
@@ -1120,6 +1129,90 @@ mod tests {
         assert!(symbol_token_match("foo(", "pkg#foo("));
         assert!(symbol_token_match("helper", "my.module#helper"));
         assert!(!symbol_token_match("bar", "pkg#foo"));
+    }
+
+    #[test]
+    fn normalize_workspace_path_파일경로_입력은_부모_디렉터리로_정규화() {
+        let nonce = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("시간 계산")
+            .as_nanos();
+        let workspace = env::temp_dir().join(format!("lum_scip_path_normalize_existing_{nonce}"));
+        let _ = fs::remove_dir_all(&workspace);
+        fs::create_dir_all(&workspace).unwrap();
+        let file_path = workspace.join("main.rs");
+        fs::write(&file_path, b"").unwrap();
+
+        let normalized = normalize_workspace_path(Some(&file_path.to_string_lossy()));
+        assert_eq!(
+            normalized,
+            workspace.canonicalize().unwrap().to_string_lossy(),
+            "파일 경로를 전달하면 부모 디렉터리가 사용되어야 함"
+        );
+
+        let _ = fs::remove_file(&file_path);
+        let _ = fs::remove_dir_all(&workspace);
+    }
+
+    #[test]
+    fn normalize_workspace_path_빈값은_현재_작업디렉터리_기본값() {
+        let normalized = normalize_workspace_path(Some(""));
+        let expected = std::env::current_dir().unwrap().to_string_lossy().to_string();
+        assert_eq!(
+            normalized,
+            expected,
+            "빈 문자열은 현재 작업 디렉터리로 fallback 되어야 함"
+        );
+    }
+
+    #[test]
+    fn normalize_workspace_path_없어진_파일입력은_부모_디렉터리로_정규화() {
+        let nonce = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("시간 계산")
+            .as_nanos();
+        let workspace = env::temp_dir().join(format!("lum_scip_path_normalize_missing_{nonce}"));
+        let _ = fs::remove_dir_all(&workspace);
+        fs::create_dir_all(&workspace).unwrap();
+        let missing_file_path = workspace.join("disappeared.rs");
+        assert!(
+            !missing_file_path.exists(),
+            "테스트 준비 상태: 파일이 존재하면 안 됨"
+        );
+
+        let normalized = normalize_workspace_path(Some(&missing_file_path.to_string_lossy()));
+        assert_eq!(
+            normalized,
+            workspace.canonicalize().unwrap().to_string_lossy(),
+            "누락된 파일 경로를 받으면 부모 디렉터리로 정규화되어야 함"
+        );
+
+        let _ = fs::remove_dir_all(&workspace);
+    }
+
+    #[test]
+    fn normalize_workspace_path_relative_경로도_절대경로로_변환() {
+        let nonce = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("시간 계산")
+            .as_nanos();
+        let original_cwd = std::env::current_dir().unwrap();
+        let workspace = env::temp_dir().join(format!("lum_scip_path_normalize_relative_{nonce}"));
+        let _ = fs::remove_dir_all(&workspace);
+        fs::create_dir_all(&workspace).unwrap();
+        let rel_path = workspace
+            .strip_prefix(&original_cwd)
+            .map(|p| p.to_string_lossy().to_string())
+            .unwrap_or_else(|_| workspace.to_string_lossy().to_string());
+
+        let normalized = normalize_workspace_path(Some(&rel_path));
+        assert_eq!(
+            normalized,
+            workspace.canonicalize().unwrap().to_string_lossy(),
+            "상대 경로도 절대 경로로 정규화되어야 함"
+        );
+
+        let _ = fs::remove_dir_all(&workspace);
     }
 
     #[test]
