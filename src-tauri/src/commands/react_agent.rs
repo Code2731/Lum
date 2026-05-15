@@ -1136,22 +1136,28 @@ fn extract_first_quoted_path(value: &str) -> Option<&str> {
 }
 
 fn normalize_graph_file_ref(raw: &str) -> String {
-    let mut path = raw.trim().replace('\\', "/");
-    if path == "." {
+    let raw = raw.trim().replace('\\', "/");
+    let (prefix, rel) = if raw.starts_with("//") {
+        ("//", raw.trim_start_matches('/'))
+    } else if raw.len() >= 2 && raw.as_bytes().get(1).is_some_and(|b| *b == b':') {
+        let drive = &raw[..2];
+        (drive, raw[2..].trim_start_matches('/'))
+    } else if raw.starts_with('/') {
+        ("/", raw.trim_start_matches('/'))
+    } else {
+        ("", raw.as_str())
+    };
+    if rel == "." {
         return ".".to_string();
     }
-    if let Some(stripped) = path.strip_prefix("./") {
-        path = stripped.to_string();
-    }
 
-    let absolute = path.starts_with('/') || path.chars().nth(1) == Some(':');
     let mut parts: Vec<&str> = Vec::new();
-    for seg in path.split('/') {
+    for seg in rel.split('/') {
         if seg.is_empty() || seg == "." {
             continue;
         }
         if seg == ".." {
-            if absolute {
+            if !prefix.is_empty() {
                 if let Some(last) = parts.last() {
                     if *last != ".." {
                         parts.pop();
@@ -1168,8 +1174,24 @@ fn normalize_graph_file_ref(raw: &str) -> String {
         parts.push(seg);
     }
 
-    if absolute {
-        format!("/{}", parts.join("/"))
+    if parts.is_empty() {
+        if prefix == "/" {
+            "/".to_string()
+        } else {
+            if !prefix.is_empty() {
+                format!("{prefix}")
+            } else {
+                "".to_string()
+            }
+        }
+    } else if !prefix.is_empty() {
+        if prefix == "//" {
+            format!("//{}", parts.join("/"))
+        } else if prefix == "/" {
+            format!("/{}", parts.join("/"))
+        } else {
+            format!("{prefix}/{}", parts.join("/"))
+        }
     } else {
         parts.join("/")
     }
@@ -3430,6 +3452,26 @@ fn legacy_format() {}
         assert_eq!(
             normalize_graph_file_ref("src\\legacy\\main.rs"),
             "src/legacy/main.rs"
+        );
+    }
+
+    #[test]
+    fn phase143_normalize_graph_file_ref_절대경로_및_unc_처리() {
+        assert_eq!(
+            normalize_graph_file_ref("C:\\projects\\lum\\src\\main.rs"),
+            "C:/projects/lum/src/main.rs"
+        );
+        assert_eq!(
+            normalize_graph_file_ref("C:/projects/../projects/lum/src/main.rs"),
+            "C:/projects/lum/src/main.rs"
+        );
+        assert_eq!(
+            normalize_graph_file_ref("//server/share/repo/../repo/main.rs"),
+            "//server/share/repo/main.rs"
+        );
+        assert_eq!(
+            normalize_graph_file_ref("/abs/path/../repo/main.rs"),
+            "/abs/repo/main.rs"
         );
     }
 
