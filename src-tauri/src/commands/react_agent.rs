@@ -241,7 +241,7 @@ const BASE_PROMPT: &str = r#"당신은 터미널 코딩 에이전트입니다. �
 - query_healing({"query": "질문", "limit": 5, "since_days": 30}) — 자동치유(healing) 기록만 시맨틱 검색
 - analyze_failure_reasons({"since_days": 30, "limit": 5}) — reject 거부 사유 빈도 Top-N 요약
 - query_codebase({"query": "질문", "limit": 5}) — 인덱싱된 코드베이스 시맨틱 검색 (top-K 청크). grep과 달리 의미 매칭 — "auth 관련 함수 찾아" 같은 자연어 질의에 사용. 인덱스 비어있으면 안내 메시지가 반환되며, 그 경우 사용자에게 RAG 색인을 먼저 권장.
-- query_graph({"query": "질문", "limit": 8, "depth": 3, "symbols": 4}) — 코드베이스 질의 + 주변 호출 그래프 요약(동일 심볼 기준 호출자/피호출자/영향도). 한 번에 모듈 맥락을 잡을 때 사용.
+- query_graph({"query": "질문", "limit": 8, "depth": 3, "symbols": 4}) — 코드베이스 질의 + 주변 호출 그래프 요약(동일 심볼 기준 호출자/피호출자/영향도) 및 연결 모듈 컨텍스트(요약/import 힌트) 포함.
 - find_callers({"symbol": "함수명"}) — 이 함수를 호출하는 caller 목록 (tree-sitter 기반, 동명이인 미구분)
 - find_callees({"symbol": "함수명"}) — 이 함수가 호출하는 callee 목록
 - trace_dependents({"symbol": "함수명", "depth": 3}) — 변경 영향도 BFS (기본 depth=3, 최대 5)
@@ -1048,6 +1048,32 @@ fn parse_graph_import_line(
 
     match kind {
         "rust_use" => {
+            let clean = body.trim_end_matches(';').trim();
+            if let Some((prefix, rest)) = clean.split_once("::{") {
+                if let Some(end) = rest.find('}') {
+                    let list = &rest[..end];
+                    if list.trim().is_empty() || list.trim() == "self" {
+                        add_import(prefix);
+                        return;
+                    }
+                    for seg in list.split(',') {
+                        let seg = seg.trim().trim_start_matches('{').trim_end_matches('}');
+                        if seg.is_empty() || seg == "self" || seg == "*" {
+                            continue;
+                        }
+                        let seg = if let Some((left, _)) = seg.split_once(" as ") {
+                            left.trim()
+                        } else {
+                            seg
+                        };
+                        if seg.is_empty() || seg == "self" || seg == "*" {
+                            continue;
+                        }
+                        add_import(&format!("{prefix}::{seg}"));
+                    }
+                    return;
+                }
+            }
             if let Some((left, _)) = body.split_once(" as ") {
                 add_import(left);
             } else {
@@ -1139,11 +1165,26 @@ fn format_graph_lines(
     callers: &[crate::commands::call_graph::CallerInfo],
     callees: &[crate::commands::call_graph::CalleeInfo],
     dependents: &[crate::commands::call_graph::DependentNode],
+    symbol_defs: &[String],
     max_depth: usize,
     max_items: usize,
 ) -> Vec<String> {
     let mut out = Vec::new();
     out.push(format!("  - {symbol}"));
+    if symbol_defs.is_empty() {
+        out.push("    - 정의 파일: 없음(동명이인/외부 호출 기반)".to_string());
+    } else {
+        out.push(format!("    - 정의 파일 {}개", symbol_defs.len()));
+        for def in symbol_defs.iter().take(max_items) {
+            out.push(format!("      - {def}"));
+        }
+        if symbol_defs.len() > max_items {
+            out.push(format!(
+                "      - ... {}개 추가",
+                symbol_defs.len().saturating_sub(max_items)
+            ));
+        }
+    }
 
     out.push(format!("    - 호출자 {}개", callers.len()));
     for caller in callers.iter().take(max_items) {
@@ -1297,8 +1338,11 @@ async fn run_query_graph_tool(args: &serde_json::Value, cwd: &str) -> String {
             let callers = graph.find_callers(symbol);
             let callees = graph.find_callees(symbol);
             let deps = graph.trace_dependents(symbol, depth);
+            let mut defs = graph.fn_defs.get(symbol).cloned().unwrap_or_default();
+            defs.sort();
+            defs.dedup();
             out.extend(format_graph_lines(
-                symbol, &callers, &callees, &deps, depth, 5,
+                symbol, &callers, &callees, &deps, &defs, depth, 5,
             ));
         }
     }
@@ -3248,8 +3292,9 @@ fn main() {
         assert!(out.contains("연결 모듈 컨텍스트"), "{out}");
         assert!(out.contains("sample.rs"), "{out}");
         assert!(out.contains("std::collections::HashMap"), "{out}");
-        assert!(out.contains("관계 요약 대상 심볼"), "{out}");
+        assert!(out.contains("정의 파일"), "{out}");
         assert!(out.contains("validate_auth"), "{out}");
+        assert!(out.contains("관계 요약 대상 심볼"), "{out}");
         assert!(out.contains("호출자"), "{out}");
         assert!(out.contains("피호출자"), "{out}");
         assert!(out.contains("영향도"), "{out}");
@@ -3284,6 +3329,42 @@ fn legacy_format() {}
         assert!(out.contains("legacy.rs"), "{out}");
         assert!(out.contains("../core/legacy.rs"), "{out}");
         clear_codebase_tool_mock();
+    }
+
+    #[test]
+    fn phase143_parse_graph_file_from_chunk_legacy_포맷() {
+        let path = parse_graph_file_from_chunk("[legacy.rs]\nlegacy format chunk");
+        assert_eq!(path, Some("legacy.rs".to_string()));
+    }
+
+    #[test]
+    fn phase143_parse_graph_import_rust_use_구조분해() {
+        let mut imports = Vec::new();
+        let mut seen = std::collections::HashSet::new();
+        parse_graph_import_line(
+            "rust_use",
+            "crate::auth::{login, verify as v};",
+            "use crate::auth::{login, verify as v};",
+            &mut imports,
+            &mut seen,
+        );
+        assert!(imports.contains(&"crate::auth::login".to_string()));
+        assert!(imports.contains(&"crate::auth::verify".to_string()));
+        assert!(!imports.contains(&"crate::auth::{login".to_string()));
+    }
+
+    #[test]
+    fn phase143_parse_graph_import_rust_use_alias() {
+        let mut imports = Vec::new();
+        let mut seen = std::collections::HashSet::new();
+        parse_graph_import_line(
+            "rust_use",
+            "crate::auth::AuthService as AuthSvc;",
+            "use crate::auth::AuthService as AuthSvc;",
+            &mut imports,
+            &mut seen,
+        );
+        assert!(imports.contains(&"crate::auth::AuthService".to_string()));
     }
 
     #[tokio::test]
