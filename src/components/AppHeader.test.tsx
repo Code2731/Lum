@@ -10,7 +10,7 @@ vi.mock("@tauri-apps/api/window", () => ({
     toggleMaximize: vi.fn(() => Promise.resolve()),
   })),
 }));
-import AppHeader from "./AppHeader";
+import AppHeader, { type NewFeatureId } from "./AppHeader";
 
 const buildProps = () => {
   return {
@@ -255,6 +255,57 @@ describe("AppHeader", () => {
     expect(screen.getByRole("button", { name: "시스템 모니터" })).toHaveAttribute("aria-keyshortcuts", "Meta+Shift+M");
     expect(screen.getByRole("button", { name: "터미널 테마" })).toHaveAttribute("aria-keyshortcuts", "Meta+,");
     expect(screen.getByRole("button", { name: "모델 관리" })).not.toHaveAttribute("aria-keyshortcuts");
+  });
+
+  it("고급 메뉴에서 새 기능 항목은 클릭 시 seen 플래그를 기록한다", () => {
+    const onMarkAdvancedSeen = vi.fn();
+    const cases = [
+      { name: "Auto-Heal 학습 데이터셋", featureId: "healing" as NewFeatureId },
+      { name: "메모리 검색", featureId: "recall" as NewFeatureId },
+      { name: "LoRA Forge", featureId: "lora" as NewFeatureId },
+      { name: "Skills — 절차 라이브러리", featureId: "skills" as NewFeatureId },
+    ];
+
+    for (const item of cases) {
+      onMarkAdvancedSeen.mockClear();
+      const result = render(
+        <AppHeader
+          {...buildProps() as any}
+          showAdvancedOverflow={true}
+          seenAdvancedFeatures={[]}
+          onMarkAdvancedSeen={onMarkAdvancedSeen}
+        />,
+      );
+
+      const menuItems = screen.getAllByRole("menuitem");
+      const target = menuItems.find((el) => (el as HTMLElement).textContent?.includes(item.name));
+      expect(target).toBeDefined();
+      fireEvent.click(target as HTMLElement);
+      expect(onMarkAdvancedSeen).toHaveBeenCalledTimes(1);
+      expect(onMarkAdvancedSeen).toHaveBeenCalledWith(item.featureId);
+
+      result.unmount();
+    }
+  });
+
+  it("고급 인라인 모드에서 New 기능 버튼 클릭 시에도 seen 플래그를 기록한다", () => {
+    const onMarkAdvancedSeen = vi.fn();
+    const props = buildProps() as any;
+    props.toolbarShowAdvanced = true;
+    props.onMarkAdvancedSeen = onMarkAdvancedSeen;
+
+    render(<AppHeader {...props} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Auto-Heal 학습 데이터셋" }));
+    fireEvent.click(screen.getByRole("button", { name: "메모리 검색 \(history\/healing\/memory\)" }));
+    fireEvent.click(screen.getByRole("button", { name: "LoRA Forge — 내 데이터로 모델 학습" }));
+    fireEvent.click(screen.getByRole("button", { name: "Skills — 절차 라이브러리" }));
+
+    expect(onMarkAdvancedSeen).toHaveBeenCalledTimes(4);
+    expect(onMarkAdvancedSeen).toHaveBeenCalledWith("healing");
+    expect(onMarkAdvancedSeen).toHaveBeenCalledWith("recall");
+    expect(onMarkAdvancedSeen).toHaveBeenCalledWith("lora");
+    expect(onMarkAdvancedSeen).toHaveBeenCalledWith("skills");
   });
 
   it("고급 메뉴를 바깥에서 클릭하면 닫히고 트리거로 포커스가 돌아간다", async () => {

@@ -641,7 +641,10 @@ const AppHeader: React.FC<Props> = ({
               label="Auto-Heal 학습 데이터셋"
               tone="cyan"
               active={showHealingDataset}
-              onClick={() => setShowHealingDataset(v => !v)}
+              onClick={() => {
+                onMarkAdvancedSeen("healing");
+                setShowHealingDataset(v => !v);
+              }}
             >
               <Sparkles size={14} />
             </ToolbarIconButton>
@@ -657,7 +660,10 @@ const AppHeader: React.FC<Props> = ({
               label="메모리 검색 (history/healing/memory)"
               tone="cyan"
               active={showRecall}
-              onClick={() => setShowRecall(v => !v)}
+              onClick={() => {
+                onMarkAdvancedSeen("recall");
+                setShowRecall(v => !v);
+              }}
             >
               <Library size={14} />
             </ToolbarIconButton>
@@ -665,7 +671,10 @@ const AppHeader: React.FC<Props> = ({
               label="LoRA Forge — 내 데이터로 모델 학습"
               tone="cyan"
               active={showLoraForge}
-              onClick={() => setShowLoraForge(v => !v)}
+              onClick={() => {
+                onMarkAdvancedSeen("lora");
+                setShowLoraForge(v => !v);
+              }}
             >
               <Hammer size={14} />
             </ToolbarIconButton>
@@ -673,7 +682,10 @@ const AppHeader: React.FC<Props> = ({
               label="Skills — 절차 라이브러리"
               tone="cyan"
               active={showSkills}
-              onClick={() => setShowSkills(v => !v)}
+              onClick={() => {
+                onMarkAdvancedSeen("skills");
+                setShowSkills(v => !v);
+              }}
             >
               <BookMarked size={14} />
             </ToolbarIconButton>
