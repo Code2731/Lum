@@ -955,6 +955,185 @@ fn parse_graph_symbol_from_chunk(content: &str) -> Option<String> {
     Some(symbol.to_string())
 }
 
+fn parse_graph_file_from_chunk(content: &str) -> Option<String> {
+    let header = content.lines().next()?.trim();
+    if !header.starts_with('[') {
+        return None;
+    }
+    let close = header.find(']')?;
+    let inner = header[1..close].trim();
+
+    // 최신 포맷: "[fn name | path]" 또는 "[module | path]"
+    // 레거시 포맷: "[path]" fallback.
+    if let Some((_, file)) = inner.split_once(" | ") {
+        let path = file.trim();
+        if path.is_empty() {
+            None
+        } else {
+            Some(path.to_string())
+        }
+    } else {
+        Some(inner.to_string())
+    }
+}
+
+fn parse_module_imports_from_file(path: &Path, max_imports: usize) -> Vec<String> {
+    let mut imports = Vec::new();
+    if max_imports == 0 {
+        return imports;
+    }
+    let content = match std::fs::read_to_string(path) {
+        Ok(v) => v,
+        Err(_) => return imports,
+    };
+    // 과도하게 큰 파일은 모듈 컨텍스트 추출 비용을 줄이기 위해 상단 일부만 스캔.
+    if content.len() > 240_000 {
+        return imports;
+    }
+
+    let mut seen = std::collections::HashSet::new();
+    for line in content.lines().take(220) {
+        let trimmed = line.trim();
+        if trimmed.is_empty() {
+            continue;
+        }
+
+        let (kind, body) = if let Some(rest) = trimmed.strip_prefix("use ") {
+            ("rust_use", rest)
+        } else if let Some(rest) = trimmed.strip_prefix("from ") {
+            ("py_from", rest)
+        } else if trimmed.starts_with("import ") {
+            if trimmed.contains(" from ")
+                || trimmed.contains("import \"")
+                || trimmed.contains("import '")
+            {
+                ("js_import", trimmed)
+            } else {
+                ("py_import", trimmed)
+            }
+        } else if trimmed.starts_with("export ") {
+            ("js_import", trimmed)
+        } else if trimmed.starts_with("const ") && trimmed.contains("require(") {
+            ("js_require", trimmed)
+        } else {
+            continue;
+        };
+
+        parse_graph_import_line(kind, body, trimmed, &mut imports, &mut seen);
+        if imports.len() >= max_imports {
+            break;
+        }
+    }
+
+    imports
+}
+
+fn parse_graph_import_line(
+    kind: &str,
+    body: &str,
+    full_line: &str,
+    imports: &mut Vec<String>,
+    seen: &mut std::collections::HashSet<String>,
+) {
+    let mut add_import = |value: &str| {
+        let value = value.trim().trim_end_matches(';').trim().to_string();
+        if value.is_empty() {
+            return;
+        }
+        let normalized = value.to_string();
+        if seen.insert(normalized.clone()) {
+            imports.push(normalized);
+        }
+    };
+
+    match kind {
+        "rust_use" => {
+            if let Some((left, _)) = body.split_once(" as ") {
+                add_import(left);
+            } else {
+                add_import(body);
+            }
+        }
+        "py_from" => {
+            if let Some((module, _)) = body.split_once(" import ") {
+                add_import(module);
+            }
+        }
+        "py_import" => {
+            let rest = full_line.trim_start_matches("import ").trim();
+            for seg in rest.split(',') {
+                let seg = seg.trim();
+                if seg.is_empty() {
+                    continue;
+                }
+                if let Some((left, _)) = seg.split_once(" as ") {
+                    add_import(left);
+                } else {
+                    add_import(seg);
+                }
+            }
+        }
+        "js_import" => {
+            if let Some(mod_name) = extract_first_quoted_path(full_line) {
+                add_import(mod_name);
+                return;
+            }
+            if let Some((_, after_from)) = full_line.split_once(" from ") {
+                if let Some(mod_name) = extract_first_quoted_path(after_from) {
+                    add_import(mod_name);
+                }
+            }
+        }
+        "js_require" => {
+            if let Some(start) = full_line.find("require(") {
+                if let Some(rest) = full_line.get(start + "require(".len()..) {
+                    if let Some(mod_name) = extract_first_quoted_path(rest) {
+                        add_import(mod_name);
+                    }
+                }
+            }
+        }
+        _ => {}
+    }
+}
+
+fn extract_first_quoted_path(value: &str) -> Option<&str> {
+    for quote in ['"', '\''] {
+        if let Some(start) = value.find(quote) {
+            if let Some(end) = value[start + 1..].find(quote) {
+                let head = start + 1;
+                return Some(&value[head..head + end]);
+            }
+        }
+    }
+    None
+}
+
+fn collect_graph_file_contexts(
+    files: &[String],
+    cwd: &str,
+    max_files: usize,
+    max_imports: usize,
+) -> Vec<(String, Vec<String>)> {
+    let mut out = Vec::new();
+    let mut seen = std::collections::HashSet::new();
+    for raw in files.iter().take(max_files) {
+        let norm_path = raw.replace('\\', "/");
+        if !seen.insert(norm_path.to_lowercase()) {
+            continue;
+        }
+
+        let abs = if Path::new(raw).is_absolute() {
+            PathBuf::from(raw)
+        } else {
+            Path::new(cwd).join(raw)
+        };
+        let imports = parse_module_imports_from_file(&abs, max_imports);
+        out.push((norm_path, imports));
+    }
+    out
+}
+
 fn format_graph_lines(
     symbol: &str,
     callers: &[crate::commands::call_graph::CallerInfo],
@@ -971,7 +1150,10 @@ fn format_graph_lines(
         out.push(format!("      - {} ({})", caller.fn_name, caller.file));
     }
     if callers.len() > max_items {
-        out.push(format!("      - ... {}개 추가", callers.len().saturating_sub(max_items)));
+        out.push(format!(
+            "      - ... {}개 추가",
+            callers.len().saturating_sub(max_items)
+        ));
     }
     if callers.is_empty() {
         out.push("      - 없음".to_string());
@@ -996,9 +1178,19 @@ fn format_graph_lines(
         out.push("      - 없음".to_string());
     }
 
-    out.push(format!("    - 영향도 depth≤{max_depth}: {}개", dependents.len()));
-    for dep in dependents.iter().filter(|d| d.depth <= max_depth).take(max_items) {
-        out.push(format!("      - depth {}: {} ({})", dep.depth, dep.name, dep.file));
+    out.push(format!(
+        "    - 영향도 depth≤{max_depth}: {}개",
+        dependents.len()
+    ));
+    for dep in dependents
+        .iter()
+        .filter(|d| d.depth <= max_depth)
+        .take(max_items)
+    {
+        out.push(format!(
+            "      - depth {}: {} ({})",
+            dep.depth, dep.name, dep.file
+        ));
     }
     if dependents.len() > max_items {
         out.push(format!(
@@ -1009,7 +1201,10 @@ fn format_graph_lines(
     if dependents.is_empty() {
         out.push("      - 없음".to_string());
     }
-    out.push("    - 동명이인 가능성: 식별자 충돌 시 결과가 섞일 수 있음 (필요 시 precise_* 사용)".to_string());
+    out.push(
+        "    - 동명이인 가능성: 식별자 충돌 시 결과가 섞일 수 있음 (필요 시 precise_* 사용)"
+            .to_string(),
+    );
     out
 }
 
@@ -1046,29 +1241,54 @@ async fn run_query_graph_tool(args: &serde_json::Value, cwd: &str) -> String {
 
     results.sort_by(|a, b| b.score.total_cmp(&a.score));
 
+    let max_file_context = 8usize;
+    let max_imports_per_file = 6usize;
     let mut symbols = Vec::new();
-    let mut seen = std::collections::HashSet::new();
+    let mut seen_symbols = std::collections::HashSet::new();
+    let mut seen_files = std::collections::HashSet::new();
+    let mut files = Vec::new();
     for r in &results {
-        if let Some(symbol) = parse_graph_symbol_from_chunk(&r.content) {
-            if seen.insert(symbol.clone()) {
-                symbols.push(symbol);
+        if symbols.len() < symbol_count {
+            if let Some(symbol) = parse_graph_symbol_from_chunk(&r.content) {
+                if seen_symbols.insert(symbol.clone()) {
+                    symbols.push(symbol);
+                }
             }
         }
-        if symbols.len() >= symbol_count {
-            break;
+        if let Some(file) = parse_graph_file_from_chunk(&r.content) {
+            let normalized = file.replace('\\', "/");
+            if seen_files.insert(normalized.clone()) && files.len() < max_file_context {
+                files.push(normalized);
+            }
         }
     }
 
-    let graph = crate::commands::call_graph::CallGraph::build(std::path::Path::new(cwd));
     let mut out = Vec::new();
     out.push(format!(
         "query_graph 결과: \"{query}\" (snippets={}, depth={depth})",
         results.len()
     ));
 
+    let file_contexts =
+        collect_graph_file_contexts(&files, cwd, max_file_context, max_imports_per_file);
+    if !file_contexts.is_empty() {
+        out.push(format!("연결 모듈 컨텍스트 {}개:", file_contexts.len()));
+        for (file, imports) in file_contexts {
+            out.push(format!("  - {file}"));
+            if imports.is_empty() {
+                out.push("    - import/사용 모듈 힌트 없음".to_string());
+            } else {
+                for imp in &imports {
+                    out.push(format!("    - {imp}"));
+                }
+            }
+        }
+    }
+
     if symbols.is_empty() {
         out.push("관계 요약 대상 심볼이 없어 스니펫만 반환합니다.".to_string());
     } else {
+        let graph = crate::commands::call_graph::CallGraph::build(std::path::Path::new(cwd));
         out.push(format!(
             "관계 요약 대상 심볼 {}개 (최대 {symbol_count}개):",
             symbols.len()
@@ -1077,7 +1297,9 @@ async fn run_query_graph_tool(args: &serde_json::Value, cwd: &str) -> String {
             let callers = graph.find_callers(symbol);
             let callees = graph.find_callees(symbol);
             let deps = graph.trace_dependents(symbol, depth);
-            out.extend(format_graph_lines(symbol, &callers, &callees, &deps, depth, 5));
+            out.extend(format_graph_lines(
+                symbol, &callers, &callees, &deps, depth, 5,
+            ));
         }
     }
 
@@ -1259,7 +1481,11 @@ fn run_scip_status_tool(cwd: &str) -> String {
     let status = crate::commands::scip::scip_status(Some(cwd.to_string()));
     let mut lines = vec![format!(
         "SCIP 정밀 도구: {}",
-        if status.enabled { "활성" } else { "비활성" }
+        if status.enabled {
+            "활성"
+        } else {
+            "비활성"
+        }
     )];
 
     if status.backends.is_empty() {
@@ -1278,9 +1504,7 @@ fn run_scip_status_tool(cwd: &str) -> String {
             };
             lines.push(format!(
                 "- {installed} / {ready} / {}/{} ({})",
-                backend.language,
-                backend.binary,
-                backend.index_path
+                backend.language, backend.binary, backend.index_path
             ));
         }
     }
@@ -2982,6 +3206,8 @@ ACTION: mcp({"server": "playwright", "tool": "screenshot", "arguments": {"url": 
         std::fs::write(
             &repo,
             r#"
+use std::collections::HashMap;
+
 fn auth_guard() {}
 
 fn validate_auth() {
@@ -3019,11 +3245,44 @@ fn main() {
         )
         .await;
         assert!(out.contains("query_graph 결과"), "{out}");
+        assert!(out.contains("연결 모듈 컨텍스트"), "{out}");
+        assert!(out.contains("sample.rs"), "{out}");
+        assert!(out.contains("std::collections::HashMap"), "{out}");
         assert!(out.contains("관계 요약 대상 심볼"), "{out}");
         assert!(out.contains("validate_auth"), "{out}");
         assert!(out.contains("호출자"), "{out}");
         assert!(out.contains("피호출자"), "{out}");
         assert!(out.contains("영향도"), "{out}");
+        clear_codebase_tool_mock();
+    }
+
+    #[tokio::test]
+    async fn phase143_query_graph_도구_심볼없음_컨텍스트_포함() {
+        let _g = CODEBASE_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        let td = TempDir::new("query-graph-no-symbol");
+        let repo = td.path().join("legacy.rs");
+        std::fs::write(
+            &repo,
+            r#"
+import { legacy } from "../core/legacy.rs";
+
+fn legacy_format() {}
+"#,
+        )
+        .unwrap();
+
+        set_codebase_tool_mock(CodebaseToolMock {
+            search_result: Some(Ok(vec![crate::commands::rag::SearchResult {
+                content: "[legacy.rs]\nlegacy format chunk".to_string(),
+                score: 0.75,
+            }])),
+        });
+
+        let out = run_query_graph_tool(&serde_json::json!({"query": "legacy"}), &td.cwd()).await;
+        assert!(out.contains("관계 요약 대상 심볼이 없어"), "{out}");
+        assert!(out.contains("연결 모듈 컨텍스트"), "{out}");
+        assert!(out.contains("legacy.rs"), "{out}");
+        assert!(out.contains("../core/legacy.rs"), "{out}");
         clear_codebase_tool_mock();
     }
 
@@ -3046,7 +3305,10 @@ fn main() {
     async fn phase143_query_graph_도구_query_파라미터_필수() {
         let _g = CODEBASE_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         let out = run_query_graph_tool(&serde_json::json!({}), "/tmp").await;
-        assert!(out.contains("query_graph는 query 파라미터가 필요합니다"), "{out}");
+        assert!(
+            out.contains("query_graph는 query 파라미터가 필요합니다"),
+            "{out}"
+        );
     }
 
     #[test]
@@ -3174,7 +3436,8 @@ fn main() {
         "#;
         std::fs::write(&repo, source).unwrap();
 
-        let out = run_trace_dependents_tool(&serde_json::json!({"symbol": "d", "depth": 10}), &td.cwd());
+        let out =
+            run_trace_dependents_tool(&serde_json::json!({"symbol": "d", "depth": 10}), &td.cwd());
         assert!(out.contains("`d` 변경 영향 범위"), "{out}");
         assert!(out.contains("depth=1"));
         assert!(out.contains("c"));
