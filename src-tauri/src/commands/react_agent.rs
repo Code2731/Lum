@@ -2806,6 +2806,84 @@ ACTION: mcp({"server": "playwright", "tool": "screenshot", "arguments": {"url": 
         assert!(out.contains("[SCIP]"), "{out}");
     }
 
+    #[test]
+    fn phase139_call_graph_도구_호출자_조회() {
+        let td = TempDir::new("call-graph-callers");
+        let repo = td.path().join("sample.rs");
+        let source = r#"
+            fn a() {
+                b();
+                c();
+            }
+            fn b() {
+                d();
+            }
+            fn c() {
+                b();
+            }
+            fn d() {}
+        "#;
+        std::fs::write(&repo, source).unwrap();
+
+        let out = run_find_callers_tool(&serde_json::json!({"symbol": "b"}), &td.cwd());
+        assert!(out.contains("`b`의 호출자"), "{out}");
+        assert!(out.contains("(sample.rs)"));
+        assert!(out.contains("a"));
+        assert!(out.contains("c"));
+    }
+
+    #[test]
+    fn phase139_call_graph_도구_피호출_조회() {
+        let td = TempDir::new("call-graph-callees");
+        let repo = td.path().join("sample.rs");
+        let source = r#"
+            fn a() {
+                b();
+                c();
+            }
+            fn b() {
+                d();
+            }
+            fn c() {}
+            fn d() {}
+        "#;
+        std::fs::write(&repo, source).unwrap();
+
+        let out = run_find_callees_tool(&serde_json::json!({"symbol": "a"}), &td.cwd());
+        assert!(out.contains("`a`이 호출하는 함수"), "{out}");
+        assert!(out.contains("b"));
+        assert!(out.contains("c"));
+        assert!(!out.contains("d (sample.rs)"), "{out}");
+    }
+
+    #[test]
+    fn phase139_call_graph_도구_영향도분석_depth_제한() {
+        let td = TempDir::new("call-graph-dependents");
+        let repo = td.path().join("sample.rs");
+        let source = r#"
+            fn a() {
+                b();
+            }
+            fn b() {
+                c();
+            }
+            fn c() {
+                d();
+            }
+            fn d() {}
+        "#;
+        std::fs::write(&repo, source).unwrap();
+
+        let out = run_trace_dependents_tool(&serde_json::json!({"symbol": "d", "depth": 10}), &td.cwd());
+        assert!(out.contains("`d` 변경 영향 범위"), "{out}");
+        assert!(out.contains("depth=1"));
+        assert!(out.contains("c"));
+        assert!(out.contains("b"));
+        assert!(out.contains("a"));
+        assert!(out.contains("[3개]"));
+        assert!(out.contains("동명이인 가능성 있음"));
+    }
+
     // ─── 코드 편집 도구 회귀 가드 ─────────────────────────────────────────────
 
     /// 테스트 종료 시 자동 정리되는 임시 디렉터리. tempfile crate를 추가하지 않기 위해 직접 구현.
