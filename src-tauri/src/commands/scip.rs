@@ -117,20 +117,44 @@ fn has_binary(binary: &str) -> bool {
         .is_ok()
 }
 
+fn normalize_workspace_path(raw: Option<&str>) -> String {
+    let fallback = std::env::current_dir()
+        .map(|p| p.to_string_lossy().into_owned())
+        .unwrap_or_else(|_| ".".to_string());
+
+    let candidate = raw.map(str::trim).filter(|v| !v.is_empty());
+    let base = candidate.unwrap_or(&fallback);
+
+    let mut path = if Path::new(base).is_absolute() {
+        Path::new(base).to_path_buf()
+    } else {
+        std::env::current_dir()
+            .unwrap_or_else(|_| Path::new(".").to_path_buf())
+            .join(base)
+    };
+
+    if path.exists() {
+        if let Ok(metadata) = std::fs::metadata(&path) {
+            if metadata.is_file() {
+                if let Some(parent) = path.parent() {
+                    path = parent.to_path_buf();
+                }
+            }
+        }
+    }
+
+    match path.canonicalize() {
+        Ok(canonical) => canonical.to_string_lossy().into_owned(),
+        Err(_) => path.to_string_lossy().into_owned(),
+    }
+}
+
 fn scip_index_path(root: &Path, key: &str) -> PathBuf {
     root.join(key).join("index.scip")
 }
 
 fn resolve_cwd(cwd: Option<String>) -> String {
-    if let Some(raw) = cwd {
-        let trimmed = raw.trim();
-        if !trimmed.is_empty() {
-            return trimmed.to_string();
-        }
-    }
-    std::env::current_dir()
-        .map(|p| p.to_string_lossy().into_owned())
-        .unwrap_or_else(|_| ".".to_string())
+    normalize_workspace_path(cwd.as_deref())
 }
 
 fn scip_backend_by_request(request: &str) -> Option<&'static BackendEntry> {
