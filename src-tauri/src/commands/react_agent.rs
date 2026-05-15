@@ -3302,6 +3302,43 @@ fn main() {
     }
 
     #[tokio::test]
+    async fn phase143_query_graph_도구_심볼정의_중복_병합() {
+        let _g = CODEBASE_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        let td = TempDir::new("query-graph-dupfns");
+
+        std::fs::write(&td.path().join("a.rs"), "fn shared()\n{}\nfn caller() {}\n").unwrap();
+        std::fs::write(&td.path().join("b.rs"), "fn shared()\n{}\nfn other() {}\n").unwrap();
+
+        set_codebase_tool_mock(CodebaseToolMock {
+            search_result: Some(Ok(vec![
+                crate::commands::rag::SearchResult {
+                    content: "[fn shared | a.rs]\nfn shared() {}".to_string(),
+                    score: 0.94,
+                },
+                crate::commands::rag::SearchResult {
+                    content: "[fn shared | b.rs]\nfn shared() {}".to_string(),
+                    score: 0.93,
+                },
+            ])),
+        });
+
+        let out = run_query_graph_tool(
+            &serde_json::json!({"query": "shared", "symbols": 1}),
+            &td.cwd(),
+        )
+        .await;
+        assert!(out.contains("정의 파일 2개"), "{out}");
+        assert!(out.contains("a.rs"), "{out}");
+        assert!(out.contains("b.rs"), "{out}");
+        assert_eq!(
+            out.matches("      - a.rs").count() + out.matches("      - b.rs").count(),
+            2,
+            "{out}"
+        );
+        clear_codebase_tool_mock();
+    }
+
+    #[tokio::test]
     async fn phase143_query_graph_도구_심볼없음_컨텍스트_포함() {
         let _g = CODEBASE_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         let td = TempDir::new("query-graph-no-symbol");
