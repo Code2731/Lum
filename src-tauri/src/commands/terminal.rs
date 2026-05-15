@@ -83,6 +83,7 @@ const POWERSHELL_INIT: &str = concat!(
     " \"PS $p> \"",
     " }\r\n"
 );
+use crate::commands::scip;
 use std::collections::{HashMap, HashSet};
 use std::io::{Read, Write};
 use std::sync::{Arc, Mutex};
@@ -145,6 +146,7 @@ pub async fn spawn_pty(
 
     // 플랫폼별 기본 셸·홈 디렉토리
     let shell = platform::default_shell();
+    let has_explicit_cwd = !cwd.is_empty();
     let work_dir = if cwd.is_empty() {
         platform::home_dir().to_string_lossy().into_owned()
     } else {
@@ -279,6 +281,13 @@ pub async fn spawn_pty(
             },
         );
         spawning.remove(&id);
+    }
+
+    if has_explicit_cwd {
+        let cwd_for_index = work_dir.clone();
+        let _ = tauri::async_runtime::spawn(async move {
+            scip::maybe_auto_rebuild_scip_index(cwd_for_index).await;
+        });
     }
 
     Ok(())

@@ -4,6 +4,7 @@ use serde_json::Value;
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use std::process::{Command as StdCommand, Stdio};
+use std::sync::{Mutex, OnceLock};
 use std::time::Duration;
 use tokio::process::Command as TokioCommand;
 use tokio::time::timeout;
@@ -95,6 +96,53 @@ const KNOWN_BACKENDS: &[BackendEntry] = &[
         key: "go",
     },
 ];
+
+static AUTO_REBUILD_INFLIGHT: OnceLock<Mutex<HashSet<String>>> = OnceLock::new();
+
+fn auto_rebuild_inflight_set() -> &'static Mutex<HashSet<String>> {
+    AUTO_REBUILD_INFLIGHT.get_or_init(|| Mutex::new(HashSet::new()))
+}
+
+fn normalize_to_absolute_workspace(raw: &str) -> String {
+    normalize_workspace_path(Some(raw))
+}
+
+fn request_auto_rebuild_slot(raw_cwd: &str) -> bool {
+    let cwd = normalize_to_absolute_workspace(raw_cwd);
+    let mut set = match auto_rebuild_inflight_set().lock() {
+        Ok(set) => set,
+        Err(_) => return false,
+    };
+    if set.contains(&cwd) {
+        return false;
+    }
+    set.insert(cwd);
+    true
+}
+
+fn release_auto_rebuild_slot(raw_cwd: &str) {
+    let cwd = normalize_to_absolute_workspace(raw_cwd);
+    if let Ok(mut set) = auto_rebuild_inflight_set().lock() {
+        set.remove(&cwd);
+    }
+}
+
+pub async fn maybe_auto_rebuild_scip_index(raw_cwd: String) {
+    let cwd = normalize_workspace_path(Some(&raw_cwd));
+    let backends = detect_scip_backends(Some(cwd.clone()));
+    let needs_rebuild = backends
+        .iter()
+        .any(|backend| backend.available && !backend.index_exists);
+    if !needs_rebuild {
+        return;
+    }
+    if !request_auto_rebuild_slot(&cwd) {
+        return;
+    }
+
+    let _ = scip_rebuild_index(Some(cwd.clone()), None, Some(false)).await;
+    release_auto_rebuild_slot(&cwd);
+}
 
 fn scip_root_for_workspace(cwd: &str) -> PathBuf {
     let base = Path::new(cwd);
@@ -1157,10 +1205,12 @@ mod tests {
     #[test]
     fn normalize_workspace_path_빈값은_현재_작업디렉터리_기본값() {
         let normalized = normalize_workspace_path(Some(""));
-        let expected = std::env::current_dir().unwrap().to_string_lossy().to_string();
+        let expected = std::env::current_dir()
+            .unwrap()
+            .to_string_lossy()
+            .to_string();
         assert_eq!(
-            normalized,
-            expected,
+            normalized, expected,
             "빈 문자열은 현재 작업 디렉터리로 fallback 되어야 함"
         );
     }
@@ -1424,5 +1474,22 @@ mod tests {
     async fn scip_rebuild_index_요청언어_검증() {
         let result = scip_rebuild_index(None, Some("python".to_string()), None).await;
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn maybe_auto_rebuild_중복_방지_슬롯() {
+        let cwd = {
+            let nonce = SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .expect("시간 계산")
+                .as_nanos();
+            format!("/tmp/lum-scip-auto-rebuild-{nonce}")
+        };
+
+        assert!(request_auto_rebuild_slot(&cwd));
+        assert!(!request_auto_rebuild_slot(&cwd));
+        release_auto_rebuild_slot(&cwd);
+        assert!(request_auto_rebuild_slot(&cwd));
+        release_auto_rebuild_slot(&cwd);
     }
 }
