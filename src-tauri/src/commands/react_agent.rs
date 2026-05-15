@@ -241,6 +241,7 @@ const BASE_PROMPT: &str = r#"당신은 터미널 코딩 에이전트입니다. �
 - query_healing({"query": "질문", "limit": 5, "since_days": 30}) — 자동치유(healing) 기록만 시맨틱 검색
 - analyze_failure_reasons({"since_days": 30, "limit": 5}) — reject 거부 사유 빈도 Top-N 요약
 - query_codebase({"query": "질문", "limit": 5}) — 인덱싱된 코드베이스 시맨틱 검색 (top-K 청크). grep과 달리 의미 매칭 — "auth 관련 함수 찾아" 같은 자연어 질의에 사용. 인덱스 비어있으면 안내 메시지가 반환되며, 그 경우 사용자에게 RAG 색인을 먼저 권장.
+- query_graph({"query": "질문", "limit": 8, "depth": 3, "symbols": 4}) — 코드베이스 질의 + 주변 호출 그래프 요약(동일 심볼 기준 호출자/피호출자/영향도). 한 번에 모듈 맥락을 잡을 때 사용.
 - find_callers({"symbol": "함수명"}) — 이 함수를 호출하는 caller 목록 (tree-sitter 기반, 동명이인 미구분)
 - find_callees({"symbol": "함수명"}) — 이 함수가 호출하는 callee 목록
 - trace_dependents({"symbol": "함수명", "depth": 3}) — 변경 영향도 BFS (기본 depth=3, 최대 5)
@@ -543,6 +544,7 @@ async fn run_tool(
         "query_healing" => run_query_healing_tool(args).await,
         "analyze_failure_reasons" => run_analyze_failure_reasons_tool(args),
         "query_codebase" => run_query_codebase_tool(args).await,
+        "query_graph" => run_query_graph_tool(args, cwd).await,
         "find_callers" => run_find_callers_tool(args, cwd),
         "find_callees" => run_find_callees_tool(args, cwd),
         "trace_dependents" => run_trace_dependents_tool(args, cwd),
@@ -917,6 +919,179 @@ async fn run_query_codebase_tool(args: &serde_json::Value) -> String {
         }
         Err(e) => format!("코드베이스 검색 실패: {e}"),
     }
+}
+
+fn parse_graph_symbol_from_chunk(content: &str) -> Option<String> {
+    let header = content.lines().next()?.trim();
+    if !header.starts_with('[') {
+        return None;
+    }
+    let close = header.find(']')?;
+    let inner = header[1..close].trim();
+
+    // "[module | ...]" 형태는 모듈 단위 헤더이므로 호출 그래프 후보에서 제외.
+    if inner.starts_with("module ") || inner == "module" {
+        return None;
+    }
+
+    // 새 포맷: "[fn name | path]" 또는 "[class MyType | path]"
+    let title_and_file = inner.split_once(" | ");
+    if title_and_file.is_none() {
+        return None;
+    }
+    let (symbol_with_kind, _) = title_and_file?;
+    let mut split = symbol_with_kind.splitn(2, ' ');
+    let kind = split.next()?;
+    let symbol = split.next()?.trim();
+    if symbol.is_empty() {
+        return None;
+    }
+
+    // tree-sitter 헤더 메타가 충분히 신뢰되지 않는 경우를 막기 위한 방어.
+    if symbol == kind || symbol == "*" || symbol.starts_with('#') {
+        return None;
+    }
+
+    Some(symbol.to_string())
+}
+
+fn format_graph_lines(
+    symbol: &str,
+    callers: &[crate::commands::call_graph::CallerInfo],
+    callees: &[crate::commands::call_graph::CalleeInfo],
+    dependents: &[crate::commands::call_graph::DependentNode],
+    max_depth: usize,
+    max_items: usize,
+) -> Vec<String> {
+    let mut out = Vec::new();
+    out.push(format!("  - {symbol}"));
+
+    out.push(format!("    - 호출자 {}개", callers.len()));
+    for caller in callers.iter().take(max_items) {
+        out.push(format!("      - {} ({})", caller.fn_name, caller.file));
+    }
+    if callers.len() > max_items {
+        out.push(format!("      - ... {}개 추가", callers.len().saturating_sub(max_items)));
+    }
+    if callers.is_empty() {
+        out.push("      - 없음".to_string());
+    }
+
+    out.push(format!("    - 피호출자 {}개", callees.len()));
+    for callee in callees.iter().take(max_items) {
+        let defs = if callee.defined_in.is_empty() {
+            "외부/내장".to_string()
+        } else {
+            callee.defined_in.join(", ")
+        };
+        out.push(format!("      - {} ({defs})", callee.name));
+    }
+    if callees.len() > max_items {
+        out.push(format!(
+            "      - ... {}개 추가",
+            callees.len().saturating_sub(max_items)
+        ));
+    }
+    if callees.is_empty() {
+        out.push("      - 없음".to_string());
+    }
+
+    out.push(format!("    - 영향도 depth≤{max_depth}: {}개", dependents.len()));
+    for dep in dependents.iter().filter(|d| d.depth <= max_depth).take(max_items) {
+        out.push(format!("      - depth {}: {} ({})", dep.depth, dep.name, dep.file));
+    }
+    if dependents.len() > max_items {
+        out.push(format!(
+            "      - ... {}개 추가",
+            dependents.len().saturating_sub(max_items)
+        ));
+    }
+    if dependents.is_empty() {
+        out.push("      - 없음".to_string());
+    }
+    out.push("    - 동명이인 가능성: 식별자 충돌 시 결과가 섞일 수 있음 (필요 시 precise_* 사용)".to_string());
+    out
+}
+
+async fn run_query_graph_tool(args: &serde_json::Value, cwd: &str) -> String {
+    let query = args["query"].as_str().unwrap_or("").trim().to_string();
+    if query.is_empty() {
+        return "오류: query_graph는 query 파라미터가 필요합니다".to_string();
+    }
+    let limit = args["limit"]
+        .as_u64()
+        .and_then(|v| usize::try_from(v).ok())
+        .unwrap_or(8)
+        .clamp(1, 20);
+    let depth = args["depth"]
+        .as_u64()
+        .and_then(|v| usize::try_from(v).ok())
+        .unwrap_or(3)
+        .clamp(1, 5);
+    let symbol_count = args["symbols"]
+        .as_u64()
+        .and_then(|v| usize::try_from(v).ok())
+        .unwrap_or(4)
+        .clamp(1, 8);
+
+    let mut results = match search_codebase_internal(query.clone(), limit).await {
+        Ok(results) => results,
+        Err(e) => return format!("코드베이스 검색 실패: {e}"),
+    };
+    if results.is_empty() {
+        return format!(
+            "query_graph 검색 결과 0건 (query=\"{query}\"). 인덱스가 비어있을 수 있습니다 — 사용자에게 RAG 색인(index_project)을 먼저 실행하도록 안내하세요."
+        );
+    }
+
+    results.sort_by(|a, b| b.score.total_cmp(&a.score));
+
+    let mut symbols = Vec::new();
+    let mut seen = std::collections::HashSet::new();
+    for r in &results {
+        if let Some(symbol) = parse_graph_symbol_from_chunk(&r.content) {
+            if seen.insert(symbol.clone()) {
+                symbols.push(symbol);
+            }
+        }
+        if symbols.len() >= symbol_count {
+            break;
+        }
+    }
+
+    let graph = crate::commands::call_graph::CallGraph::build(std::path::Path::new(cwd));
+    let mut out = Vec::new();
+    out.push(format!(
+        "query_graph 결과: \"{query}\" (snippets={}, depth={depth})",
+        results.len()
+    ));
+
+    if symbols.is_empty() {
+        out.push("관계 요약 대상 심볼이 없어 스니펫만 반환합니다.".to_string());
+    } else {
+        out.push(format!(
+            "관계 요약 대상 심볼 {}개 (최대 {symbol_count}개):",
+            symbols.len()
+        ));
+        for symbol in &symbols {
+            let callers = graph.find_callers(symbol);
+            let callees = graph.find_callees(symbol);
+            let deps = graph.trace_dependents(symbol, depth);
+            out.extend(format_graph_lines(symbol, &callers, &callees, &deps, depth, 5));
+        }
+    }
+
+    out.push("---".to_string());
+    for (idx, result) in results.iter().enumerate() {
+        if idx >= 6 {
+            break;
+        }
+        out.push(format!("{}. score={:.3}", idx + 1, result.score));
+        out.push(result.content.clone());
+        out.push("---".to_string());
+    }
+
+    truncate(&out.join("\n"))
 }
 
 fn run_find_callers_tool(args: &serde_json::Value, cwd: &str) -> String {
@@ -2797,6 +2972,81 @@ ACTION: mcp({"server": "playwright", "tool": "screenshot", "arguments": {"url": 
         let _g = CODEBASE_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         let out = run_query_codebase_tool(&serde_json::json!({})).await;
         assert!(out.contains("query 파라미터"), "{out}");
+    }
+
+    #[tokio::test]
+    async fn phase143_query_graph_도구_심볼요약() {
+        let _g = CODEBASE_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        let td = TempDir::new("query-graph-1");
+        let repo = td.path().join("sample.rs");
+        std::fs::write(
+            &repo,
+            r#"
+fn auth_guard() {}
+
+fn validate_auth() {
+    auth_guard();
+}
+
+fn main() {
+    validate_auth();
+}
+"#,
+        )
+        .unwrap();
+
+        set_codebase_tool_mock(CodebaseToolMock {
+            search_result: Some(Ok(vec![
+                crate::commands::rag::SearchResult {
+                    content: "[fn validate_auth | sample.rs]\nfn validate_auth() { auth_guard(); }"
+                        .to_string(),
+                    score: 0.95,
+                },
+                crate::commands::rag::SearchResult {
+                    content: "[fn auth_guard | sample.rs]\nfn auth_guard() {}".to_string(),
+                    score: 0.82,
+                },
+                crate::commands::rag::SearchResult {
+                    content: "[module | sample.rs]\nuse crate::auth::AuthService;".to_string(),
+                    score: 0.60,
+                },
+            ])),
+        });
+
+        let out = run_query_graph_tool(
+            &serde_json::json!({"query": "auth", "limit": 5, "depth": 3, "symbols": 3}),
+            &td.cwd(),
+        )
+        .await;
+        assert!(out.contains("query_graph 결과"), "{out}");
+        assert!(out.contains("관계 요약 대상 심볼"), "{out}");
+        assert!(out.contains("validate_auth"), "{out}");
+        assert!(out.contains("호출자"), "{out}");
+        assert!(out.contains("피호출자"), "{out}");
+        assert!(out.contains("영향도"), "{out}");
+        clear_codebase_tool_mock();
+    }
+
+    #[tokio::test]
+    async fn phase143_query_graph_도구_심볼없음_폴백() {
+        let _g = CODEBASE_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        set_codebase_tool_mock(CodebaseToolMock {
+            search_result: Some(Ok(vec![crate::commands::rag::SearchResult {
+                content: "[sample.rs]\nfn old_format_chunk() {}".to_string(),
+                score: 0.75,
+            }])),
+        });
+        let out = run_query_graph_tool(&serde_json::json!({"query": "legacy"}), "/tmp").await;
+        assert!(out.contains("관계 요약 대상 심볼이 없어"), "{out}");
+        assert!(out.contains("스니펫만 반환"), "{out}");
+        clear_codebase_tool_mock();
+    }
+
+    #[tokio::test]
+    async fn phase143_query_graph_도구_query_파라미터_필수() {
+        let _g = CODEBASE_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        let out = run_query_graph_tool(&serde_json::json!({}), "/tmp").await;
+        assert!(out.contains("query_graph는 query 파라미터가 필요합니다"), "{out}");
     }
 
     #[test]
