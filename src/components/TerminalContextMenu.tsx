@@ -1,4 +1,5 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Copy, Play, Search, ExternalLink, Sparkles } from "lucide-react";
 
 interface Props {
@@ -159,7 +160,7 @@ const TerminalContextMenu: React.FC<Props> = ({
   // 화면 밖으로 나가지 않도록 위치 조정
   const preview = text.length > 40 ? text.slice(0, 40) + "…" : text;
 
-  return (
+  const menu = (
     <div
       ref={menuRef}
       className="fixed z-50 w-[200px] bg-[#161b22] border border-white/10 rounded-xl shadow-2xl overflow-hidden py-1"
@@ -204,6 +205,9 @@ const TerminalContextMenu: React.FC<Props> = ({
       </div>
     </div>
   );
+
+  if (typeof document === "undefined") return menu;
+  return createPortal(menu, document.body);
 };
 
 export default TerminalContextMenu;

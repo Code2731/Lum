@@ -1,4 +1,5 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Palette, Tag, X } from "lucide-react";
 import { TAB_COLORS } from "../hooks/useTabManager";
 import type { TabColor } from "../hooks/useTabManager";
@@ -150,7 +151,7 @@ const TabContextMenu: React.FC<Props> = ({
     zIndex: 100,
   };
 
-  return (
+  const menu = (
     <div
       ref={ref}
       tabIndex={-1}
@@ -253,6 +254,9 @@ const TabContextMenu: React.FC<Props> = ({
       </div>
     </div>
   );
+
+  if (typeof document === "undefined") return menu;
+  return createPortal(menu, document.body);
 };
 
 export default TabContextMenu;
