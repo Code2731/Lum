@@ -281,6 +281,7 @@ const ReactAgentPanel: React.FC<Props> = ({
   );
   const scipRebuildDisabled =
     isScipRebuildInProgress ||
+    !state.cwd ||
     availableScipBackends === 0 ||
     !scipStatus ||
     scipRebuildTargetInvalid;
