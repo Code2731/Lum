@@ -13,6 +13,14 @@ const SCIP_BUILD_TIMEOUT_SECS: u64 = 120;
 const SCIP_BUILD_LOG_LIMIT: usize = 2048;
 const SCIP_QUERY_OUTPUT_LIMIT: usize = 8 * 1024 * 1024;
 
+// 자동 재빌드는 opt-in 설정이 켜져 있을 때만 수행.
+fn is_scip_auto_rebuild_enabled() -> bool {
+    crate::commands::config::load_config()
+        .ok()
+        .and_then(|cfg| cfg.react_scip_tools_enabled)
+        .unwrap_or(false)
+}
+
 #[derive(Debug, Clone)]
 pub struct ScipSymbolLocation {
     pub symbol: String,
@@ -128,6 +136,10 @@ fn release_auto_rebuild_slot(raw_cwd: &str) {
 }
 
 pub async fn maybe_auto_rebuild_scip_index(raw_cwd: String) {
+    if !is_scip_auto_rebuild_enabled() {
+        return;
+    }
+
     let cwd = normalize_workspace_path(Some(&raw_cwd));
     let backends = detect_scip_backends(Some(cwd.clone()));
     let needs_rebuild = backends
