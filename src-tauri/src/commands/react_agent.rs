@@ -241,7 +241,7 @@ const BASE_PROMPT: &str = r#"당신은 터미널 코딩 에이전트입니다. �
 - query_healing({"query": "질문", "limit": 5, "since_days": 30}) — 자동치유(healing) 기록만 시맨틱 검색
 - analyze_failure_reasons({"since_days": 30, "limit": 5}) — reject 거부 사유 빈도 Top-N 요약
 - query_codebase({"query": "질문", "limit": 5}) — 인덱싱된 코드베이스 시맨틱 검색 (top-K 청크). grep과 달리 의미 매칭 — "auth 관련 함수 찾아" 같은 자연어 질의에 사용. 인덱스 비어있으면 안내 메시지가 반환되며, 그 경우 사용자에게 RAG 색인을 먼저 권장.
-- query_graph({"query": "질문", "limit": 8, "depth": 3, "symbols": 4}) — 코드베이스 질의 + 주변 호출 그래프 요약(동일 심볼 기준 호출자/피호출자/영향도) 및 연결 모듈 컨텍스트(요약/import 힌트) 포함.
+- query_graph({"query": "질문", "limit": 8, "depth": 3, "symbols": 4}) — 코드베이스 질의 + 주변 호출 그래프 요약(동일 심볼 기준 호출자/피호출자/영향도), 모듈 간 연결 요약, 연결 모듈 컨텍스트(요약/import 힌트) 포함.
 - find_callers({"symbol": "함수명"}) — 이 함수를 호출하는 caller 목록 (tree-sitter 기반, 동명이인 미구분)
 - find_callees({"symbol": "함수명"}) — 이 함수가 호출하는 callee 목록
 - trace_dependents({"symbol": "함수명", "depth": 3}) — 변경 영향도 BFS (기본 depth=3, 최대 5)
@@ -1227,6 +1227,193 @@ fn collect_graph_file_contexts(
     out
 }
 
+fn collect_query_graph_module_links_by_imports(
+    file_contexts: &[(String, Vec<String>)],
+    available_modules: &std::collections::HashSet<String>,
+) -> std::collections::HashMap<(String, String), usize> {
+    let mut links: std::collections::HashMap<(String, String), usize> =
+        std::collections::HashMap::new();
+
+    for (source_file, imports) in file_contexts {
+        let src = source_file.to_lowercase();
+        if !available_modules.contains(&src) {
+            continue;
+        }
+        let mut seen_pairs = std::collections::HashSet::new();
+        for import in imports {
+            for target in resolve_query_graph_import_target(import, available_modules) {
+                if target == src {
+                    continue;
+                }
+                let key = (src.clone(), target);
+                if seen_pairs.insert(key.clone()) {
+                    *links.entry(key).or_insert(0) += 1;
+                }
+            }
+        }
+    }
+
+    links
+}
+
+fn collect_query_graph_module_links_by_calls(
+    graph: &crate::commands::call_graph::CallGraph,
+    symbols: &[String],
+    available_modules: &std::collections::HashSet<String>,
+) -> std::collections::HashMap<(String, String), usize> {
+    let mut links: std::collections::HashMap<(String, String), usize> =
+        std::collections::HashMap::new();
+
+    for symbol in symbols {
+        let caller_defs = graph.fn_defs.get(symbol).cloned().unwrap_or_default();
+        let mut caller_modules = Vec::new();
+        for caller_file in caller_defs {
+            let normalized = normalize_graph_file_ref(&caller_file).to_lowercase();
+            if available_modules.contains(&normalized) {
+                caller_modules.push(normalized);
+            }
+        }
+        if caller_modules.is_empty() {
+            continue;
+        }
+
+        for callee in graph.find_callees(symbol) {
+            if callee.defined_in.is_empty() {
+                continue;
+            }
+            let mut callee_modules = Vec::new();
+            for callee_file in callee.defined_in {
+                let normalized = normalize_graph_file_ref(&callee_file).to_lowercase();
+                if available_modules.contains(&normalized) {
+                    callee_modules.push(normalized);
+                }
+            }
+            if callee_modules.is_empty() {
+                continue;
+            }
+
+            for caller_module in &caller_modules {
+                for callee_module in &callee_modules {
+                    if caller_module == callee_module {
+                        continue;
+                    }
+                    *links
+                        .entry((caller_module.clone(), callee_module.clone()))
+                        .or_insert(0) += 1;
+                }
+            }
+        }
+    }
+
+    links
+}
+
+fn resolve_query_graph_import_target(
+    raw_import: &str,
+    available_modules: &std::collections::HashSet<String>,
+) -> Vec<String> {
+    let mut out = Vec::new();
+    let mut seen = std::collections::HashSet::new();
+
+    for candidate in query_graph_import_candidates(raw_import) {
+        for normalized in normalize_query_graph_import_candidate(&candidate) {
+            if available_modules.contains(&normalized) && seen.insert(normalized.clone()) {
+                out.push(normalized);
+            }
+        }
+    }
+
+    out
+}
+
+fn query_graph_import_candidates(raw_import: &str) -> Vec<String> {
+    let trimmed = raw_import.trim().trim_end_matches(';').trim();
+    if trimmed.is_empty() {
+        return Vec::new();
+    }
+
+    let tokens = trimmed.trim_matches(&['\"', '\''][..]).to_string();
+    if tokens.is_empty() {
+        return Vec::new();
+    }
+    let mut out = Vec::new();
+    let mut seen = std::collections::HashSet::new();
+
+    if tokens.contains("::") {
+        let mut segments: Vec<&str> = tokens
+            .split("::")
+            .map(|s| s.trim())
+            .filter(|s| !s.is_empty())
+            .collect();
+        if !segments.is_empty() {
+            while let Some(first) = segments.first() {
+                if matches!(*first, "crate" | "self" | "super") {
+                    segments.remove(0);
+                } else {
+                    break;
+                }
+            }
+        }
+        for take in 1..=segments.len() {
+            let candidate = segments[..take].join("/");
+            if seen.insert(candidate.clone()) {
+                out.push(candidate);
+            }
+        }
+    } else if tokens.starts_with('.') || tokens.starts_with('/') || tokens.contains('/') {
+        if seen.insert(tokens.clone()) {
+            out.push(tokens);
+        }
+    } else {
+        if seen.insert(tokens.clone()) {
+            out.push(tokens);
+        }
+    }
+
+    out
+}
+
+fn normalize_query_graph_import_candidate(candidate: &str) -> Vec<String> {
+    let mut out = Vec::new();
+    let mut seen = std::collections::HashSet::new();
+    let base = normalize_graph_file_ref(candidate);
+    if base.is_empty() || base == "." {
+        return out;
+    }
+
+    let mut extend_with = |candidate: String| {
+        if !candidate.is_empty() && seen.insert(candidate.clone()) {
+            out.push(candidate);
+        }
+    };
+
+    let has_extension = Path::new(&base).extension().is_some();
+    extend_with(base.clone());
+    if base.starts_with("src/") {
+        if base.ends_with("/mod.rs") {
+            let parent = base.trim_end_matches("/mod.rs").to_string();
+            extend_with(parent);
+        }
+    } else {
+        extend_with(format!("src/{base}"));
+    }
+
+    if !has_extension {
+        for ext in ["rs", "tsx", "ts", "js", "jsx", "py", "mjs", "cjs"].iter() {
+            let with_ext = format!("{base}.{ext}");
+            let with_src_ext = format!("src/{with_ext}");
+            extend_with(with_ext);
+            extend_with(with_src_ext);
+        }
+        if !base.ends_with("/mod.rs") {
+            extend_with(format!("{base}/mod.rs"));
+            extend_with(format!("src/{base}/mod.rs"));
+        }
+    }
+
+    out
+}
+
 fn format_graph_lines(
     symbol: &str,
     callers: &[crate::commands::call_graph::CallerInfo],
@@ -1427,6 +1614,13 @@ async fn run_query_graph_tool(args: &serde_json::Value, cwd: &str) -> String {
         .iter()
         .map(|(file, imports)| (file.to_lowercase(), imports.clone()))
         .collect();
+    let module_set: std::collections::HashSet<String> =
+        files.iter().map(|f| f.to_lowercase()).collect();
+    let file_display_map: std::collections::HashMap<String, String> = files
+        .iter()
+        .map(|f| (f.to_lowercase(), f.clone()))
+        .collect();
+    let mut module_links = collect_query_graph_module_links_by_imports(&file_contexts, &module_set);
 
     if !module_summary.is_empty() {
         out.push(format!(
@@ -1491,6 +1685,10 @@ async fn run_query_graph_tool(args: &serde_json::Value, cwd: &str) -> String {
     } else {
         let symbol_set: HashSet<String> = symbols.iter().cloned().collect();
         let graph = crate::commands::call_graph::CallGraph::build(std::path::Path::new(cwd));
+        let call_links = collect_query_graph_module_links_by_calls(&graph, &symbols, &module_set);
+        for (key, score) in call_links {
+            *module_links.entry(key).or_insert(0) += score;
+        }
         out.push(format!(
             "관계 요약 대상 심볼 {}개 (최대 {symbol_count}개):",
             symbols.len()
@@ -1522,6 +1720,36 @@ async fn run_query_graph_tool(args: &serde_json::Value, cwd: &str) -> String {
             for link in symbol_links.iter().take(12) {
                 out.push(format!("  - {link}"));
             }
+        }
+    }
+
+    {
+        let mut sorted_links: Vec<_> = module_links
+            .into_iter()
+            .map(|((from, to), score)| ((from, to), score))
+            .collect();
+        sorted_links.sort_by(|a, b| {
+            b.1.partial_cmp(&a.1)
+                .unwrap_or(std::cmp::Ordering::Equal)
+                .then_with(|| a.0 .0.cmp(&b.0 .0))
+                .then_with(|| a.0 .1.cmp(&b.0 .1))
+        });
+        out.push(format!("모듈 연결 요약 {}개:", sorted_links.len().min(12)));
+        let mut has_links = false;
+        for ((from, to), score) in sorted_links.iter().take(12) {
+            has_links = true;
+            let from_label = file_display_map
+                .get(from)
+                .cloned()
+                .unwrap_or_else(|| from.clone());
+            let to_label = file_display_map
+                .get(to)
+                .cloned()
+                .unwrap_or_else(|| to.clone());
+            out.push(format!("  - {from_label} -> {to_label} (연결 {score}건)"));
+        }
+        if !has_links {
+            out.push("  - 탐지된 모듈 연결 없음".to_string());
         }
     }
 
@@ -3642,6 +3870,111 @@ fn legacy_format() {}
         assert!(idx_top < idx_low, "{out}");
         assert!(out.contains("심볼 1개"), "{out}");
         clear_codebase_tool_mock();
+    }
+
+    #[tokio::test]
+    async fn phase143_query_graph_모듈연결_요약() {
+        let _g = CODEBASE_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        let td = TempDir::new("query-graph-module-links");
+        std::fs::write(
+            td.path().join("service.rs"),
+            r#"
+use crate::db::{query_user, find_user};
+fn service_api() {
+    query_user();
+}
+"#,
+        )
+        .unwrap();
+        std::fs::write(
+            td.path().join("db.rs"),
+            "fn query_user() {}\nfn find_user() {}\n",
+        )
+        .unwrap();
+        std::fs::write(
+            td.path().join("api.rs"),
+            r#"
+use crate::service;
+fn main_api() { service_api(); }
+"#,
+        )
+        .unwrap();
+
+        set_codebase_tool_mock(CodebaseToolMock {
+            search_result: Some(Ok(vec![
+                crate::commands::rag::SearchResult {
+                    content: "[fn service_api | service.rs]\nfn service_api() {}".to_string(),
+                    score: 0.95,
+                },
+                crate::commands::rag::SearchResult {
+                    content: "[fn query_user | db.rs]\nfn query_user() {}".to_string(),
+                    score: 0.94,
+                },
+                crate::commands::rag::SearchResult {
+                    content: "[fn main_api | api.rs]\nfn main_api() {}".to_string(),
+                    score: 0.93,
+                },
+            ])),
+        });
+
+        let out = run_query_graph_tool(
+            &serde_json::json!({"query": "service", "symbols": 3}),
+            &td.cwd(),
+        )
+        .await;
+        assert!(out.contains("모듈 연결 요약"), "{out}");
+        assert!(out.contains("service.rs -> db.rs"), "{out}");
+        assert!(out.contains("api.rs -> service.rs"), "{out}");
+        assert!(out.contains("검색 심볼 간 호출 관계"), "{out}");
+        clear_codebase_tool_mock();
+    }
+
+    #[tokio::test]
+    async fn phase143_query_graph_모듈연결_없음() {
+        let _g = CODEBASE_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        let td = TempDir::new("query-graph-module-links-empty");
+        std::fs::write(
+            td.path().join("util.rs"),
+            r#"
+use std::collections::HashMap;
+use serde::Deserialize;
+
+fn parse() {
+    let _ = HashMap::<String, String>::new();
+}
+"#,
+        )
+        .unwrap();
+
+        set_codebase_tool_mock(CodebaseToolMock {
+            search_result: Some(Ok(vec![crate::commands::rag::SearchResult {
+                content: "[module | util.rs]\nmodule chunk".to_string(),
+                score: 0.80,
+            }])),
+        });
+
+        let out = run_query_graph_tool(
+            &serde_json::json!({"query": "parse", "symbols": 2}),
+            &td.cwd(),
+        )
+        .await;
+        assert!(out.contains("모듈 연결 요약"), "{out}");
+        assert!(out.contains("탐지된 모듈 연결 없음"), "{out}");
+        clear_codebase_tool_mock();
+    }
+
+    #[test]
+    fn phase143_query_graph_import_대상해결() {
+        let modules = {
+            let mut set = std::collections::HashSet::new();
+            set.insert("service.rs".to_string());
+            set.insert("db.rs".to_string());
+            set.insert("src/api.rs".to_string());
+            set
+        };
+        let targets = resolve_query_graph_import_target("crate::db::query_user", &modules);
+        assert!(targets.contains(&"db.rs".to_string()), "{targets:?}");
+        assert!(!targets.contains(&"std.rs".to_string()), "{targets:?}");
     }
 
     #[test]
