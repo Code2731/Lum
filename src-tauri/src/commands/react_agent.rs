@@ -245,6 +245,7 @@ const BASE_PROMPT: &str = r#"당신은 터미널 코딩 에이전트입니다. �
 - find_callees({"symbol": "함수명"}) — 이 함수가 호출하는 callee 목록
 - trace_dependents({"symbol": "함수명", "depth": 3}) — 변경 영향도 BFS (기본 depth=3, 최대 5)
 - precise_callers({"symbol": "함수명"}) — scip가 있을 때 동명이인 해소 + 정밀 caller 목록(미지원시 tree-sitter fallback)
+- scip_status() — scip 백엔드 상태, index.scip 존재 여부, opt-in 토글 상태를 조회.
 - precise_definition({"symbol": "식별자"}) — scip가 있을 때 정확한 정의 위치(미지원시 tree-sitter fallback)
 
 쓰기 도구 (CWD 내부 + 안전 경로만 허용 — .git/node_modules/target/dist/.lum_* 거부):
@@ -547,6 +548,7 @@ async fn run_tool(
         "trace_dependents" => run_trace_dependents_tool(args, cwd),
         "precise_callers" => run_precise_callers_tool(args, cwd, scip_tools_enabled),
         "precise_definition" => run_precise_definition_tool(args, cwd, scip_tools_enabled),
+        "scip_status" => run_scip_status_tool(cwd),
         "write_file" => write_file_tool(args, cwd),
         "apply_patch" => apply_patch_tool(args, cwd),
         "delete_file" => delete_file_tool(args, cwd),
@@ -1076,6 +1078,39 @@ fn scip_backend_status_lines(cwd: &str) -> String {
     } else {
         format!("[SCIP] 백엔드 상태:\n{}", lines.join("\n"))
     }
+}
+
+fn run_scip_status_tool(cwd: &str) -> String {
+    let status = crate::commands::scip::scip_status(Some(cwd.to_string()));
+    let mut lines = vec![format!(
+        "SCIP 정밀 도구: {}",
+        if status.enabled { "활성" } else { "비활성" }
+    )];
+
+    if status.backends.is_empty() {
+        lines.push("백엔드 상태 정보 없음".to_string());
+    } else {
+        for backend in status.backends {
+            let installed = if backend.available {
+                "설치됨"
+            } else {
+                "미설치"
+            };
+            let ready = if backend.index_exists {
+                "index.scip 있음"
+            } else {
+                "index.scip 없음"
+            };
+            lines.push(format!(
+                "- {installed} / {ready} / {}/{} ({})",
+                backend.language,
+                backend.binary,
+                backend.index_path
+            ));
+        }
+    }
+
+    lines.join("\n")
 }
 
 fn run_precise_definition_tool(args: &serde_json::Value, cwd: &str, scip_enabled: bool) -> String {
@@ -2454,7 +2489,22 @@ mod tests {
         assert!(s.contains("read_file"));
         assert!(s.contains("precise_callers"));
         assert!(s.contains("precise_definition"));
+        assert!(s.contains("scip_status"));
         assert!(s.contains("ANSWER:"));
+    }
+
+    #[test]
+    fn phase142_scip_status_도구_형식_검증() {
+        let out = run_scip_status_tool("/tmp");
+        assert!(out.starts_with("SCIP 정밀 도구: "));
+        assert!(out.contains("index.scip"));
+        if out.contains("백엔드 상태:") {
+            assert!(out.contains("scip-rust"));
+            assert!(out.contains("scip-typescript"));
+            assert!(out.contains("scip-go"));
+            assert!(out.contains("미설치") || out.contains("설치됨"));
+            assert!(out.contains("index.scip 있음") || out.contains("index.scip 없음"));
+        }
     }
 
     #[test]
