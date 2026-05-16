@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import App from "./App";
 
 vi.mock("@tauri-apps/api/core", () => ({
@@ -39,6 +39,10 @@ vi.mock("@tauri-apps/api/window", () => ({
 
 vi.mock("@tauri-apps/plugin-opener", () => ({
   openUrl: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock("./components/FileExplorerPanel", () => ({
+  default: () => <div data-testid="file-explorer-mock" />,
 }));
 
 vi.mock("./components/TerminalPane", () => ({
@@ -85,5 +89,75 @@ describe("App (LUM 터미널)", () => {
     render(<App />);
     // 툴바 그룹화 이후: aria-label은 기능 이름만, 단축키는 Tooltip kbd로 분리
     expect(screen.getByLabelText("스크립트 라이브러리")).toBeInTheDocument();
+  });
+
+  it("Inspector 탭은 키보드 탐색과 단축키 속성을 갖는다", async () => {
+    render(<App />);
+
+    const tablist = screen.getByRole("tablist", { name: "Inspector 탭" });
+    const tabRoles = within(tablist).getAllByRole("tab");
+    expect(tabRoles).toHaveLength(4);
+
+    expect(tabRoles[0]).toHaveAttribute("aria-keyshortcuts", "Alt+1");
+    expect(tabRoles[1]).toHaveAttribute("aria-keyshortcuts", "Alt+2");
+    expect(tabRoles[2]).toHaveAttribute("aria-keyshortcuts", "Alt+3");
+    expect(tabRoles[3]).toHaveAttribute("aria-keyshortcuts", "Alt+4");
+
+    expect(tabRoles[0]).toHaveTextContent("개요(1)");
+    expect(tabRoles[1]).toHaveTextContent("RAG(2)");
+    expect(tabRoles[2]).toHaveTextContent("Scripts(3)");
+    expect(tabRoles[3]).toHaveTextContent("System(4)");
+
+    tabRoles[0].focus();
+    expect(tabRoles[0]).toHaveFocus();
+
+    fireEvent.keyDown(tablist, { key: "ArrowRight" });
+    await waitFor(() => {
+      expect(tabRoles[1]).toHaveAttribute("aria-selected", "true");
+      expect(tabRoles[1]).toHaveFocus();
+    });
+
+    fireEvent.keyDown(tablist, { key: "End" });
+    await waitFor(() => {
+      expect(tabRoles[3]).toHaveAttribute("aria-selected", "true");
+      expect(tabRoles[3]).toHaveFocus();
+    });
+  });
+
+  it("Inspector 단축키는 입력 필드 포커스일 때는 동작하지 않는다", async () => {
+    render(<App />);
+    const input = document.createElement("input");
+    document.body.appendChild(input);
+
+    try {
+      const summaryTab = screen.getByRole("tab", { name: /개요/ });
+      const ragTab = screen.getByRole("tab", { name: /RAG/ });
+
+      fireEvent.keyDown(window, { key: "1", altKey: true });
+      await waitFor(() => {
+        expect(summaryTab).toHaveAttribute("aria-selected", "true");
+      });
+
+      input.focus();
+      expect(document.activeElement).toBe(input);
+
+      fireEvent.keyDown(input, { key: "2", altKey: true });
+
+      await waitFor(() => {
+        expect(summaryTab).toHaveAttribute("aria-selected", "true");
+        expect(ragTab).toHaveAttribute("aria-selected", "false");
+      });
+
+      fireEvent.keyDown(window, { key: "2", altKey: true });
+      await waitFor(() => {
+        expect(ragTab).toHaveAttribute("aria-selected", "true");
+      });
+      fireEvent.keyDown(window, { key: "1", altKey: true });
+      await waitFor(() => {
+        expect(summaryTab).toHaveAttribute("aria-selected", "true");
+      });
+    } finally {
+      input.remove();
+    }
   });
 });
