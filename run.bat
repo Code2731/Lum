@@ -40,7 +40,26 @@ goto MENU
 
 :NATIVE_DEV
 echo [LUM] Starting Standard Dev with Native fallback...
-npm run tauri:dev:native
+set "native_host=%LUM_DEV_HOST%"
+if not defined native_host set "native_host=127.0.0.1"
+set "native_port=%LUM_DEV_PORT%"
+if not defined native_port set "native_port=1420"
+
+set /p "native_host_input=Native host (default %native_host%): "
+if "%native_host_input%"=="" (
+    set "native_host=%native_host%"
+) else (
+    set "native_host=%native_host_input%"
+)
+
+set /p "native_port_input=Native port (default %native_port%): "
+if "%native_port_input%"=="" (
+    set "native_port=%native_port%"
+) else (
+    set "native_port=%native_port_input%"
+)
+
+npm run tauri:dev:native -- --host "%native_host%" --port "%native_port%"
 pause
 goto MENU
 

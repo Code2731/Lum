@@ -300,6 +300,8 @@ npm install
 npm run tauri:dev:cuda          # Windows/Linux + NVIDIA: mistralrs CUDA
 npm run tauri:dev:metal         # macOS Apple Silicon: mistralrs Metal
 npm run tauri:dev:native        # 네트워크 바인딩 실패 환경용 우회 모드 (사전 빌드 후 no-dev-server 실행)
+npm run tauri:dev:native -- --host 0.0.0.0 --port 1421  # 기본값 오버라이드 (host/port 직접 지정)
+LUM_DEV_HOST=0.0.0.0 LUM_DEV_PORT=1421 npm run tauri:dev:native   # 환경변수 방식 오버라이드
 
 # ── 폴백 모드: 경량 (임베디드 추론 X, 바이너리 ~150MB 작음)
 npm run tauri dev               # 외부 LLM 백엔드만 (on-device AI 없음)

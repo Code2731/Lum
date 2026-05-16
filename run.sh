@@ -36,8 +36,14 @@ case "${choice}" in
     npm run tauri dev
     ;;
   2)
+    read -r -p "Native host (기본: ${LUM_DEV_HOST:-127.0.0.1}): " native_host < /dev/tty
+    read -r -p "Native port (기본: ${LUM_DEV_PORT:-1420}): " native_port < /dev/tty
+
+    native_host="${native_host:-${LUM_DEV_HOST:-127.0.0.1}}"
+    native_port="${native_port:-${LUM_DEV_PORT:-1420}}"
+
     echo "Tauri 개발 서버 실행 중... (native/no-dev-server)"
-    npm run tauri:dev:native
+    npm run tauri:dev:native -- --host "${native_host}" --port "${native_port}"
     ;;
   3)
     echo "Embedded AI 기반 개발 서버 실행 중..."
