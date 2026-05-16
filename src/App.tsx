@@ -257,6 +257,7 @@ const App: React.FC = () => {
   // Phase 121: 툴바 고급 기능 표시 모드 (기본 false — "더보기" 팝오버에 숨김).
   const [toolbarShowAdvanced, setToolbarShowAdvanced] = useState(false);
   const [showAdvancedOverflow, setShowAdvancedOverflow] = useState(false);
+  const [compactToolbar, setCompactToolbar] = useState(false);
   // Phase 126: 사용자가 클릭한 "신규" 기능 ID 누적. 미클릭 항목엔 NEW 라벨.
   const [seenAdvancedFeatures, setSeenAdvancedFeatures] = useState<string[]>([]);
   useEffect(() => {
@@ -264,6 +265,7 @@ const App: React.FC = () => {
       show_reasoning?: boolean;
       vision_enabled?: boolean;
       toolbar_show_advanced?: boolean;
+      ui_compact_toolbar?: boolean;
       ui_show_file_explorer?: boolean;
       ui_hints_shown?: boolean;
       ui_seen_advanced_features?: string[];
@@ -272,6 +274,7 @@ const App: React.FC = () => {
         setShowReasoning(c.show_reasoning ?? true);
         setVisionEnabled(c.vision_enabled ?? false);
         setToolbarShowAdvanced(c.toolbar_show_advanced ?? false);
+        setCompactToolbar(c.ui_compact_toolbar ?? false);
         setSeenAdvancedFeatures(c.ui_seen_advanced_features ?? []);
 
         // Phase 126 — UI 환경설정 통합. config가 있으면 그 값, 없으면 localStorage에서 1회 마이그레이션.
@@ -325,6 +328,15 @@ const App: React.FC = () => {
       });
     } catch {}
   }, [showReasoning]);
+  const toggleCompactToolbar = useCallback(async () => {
+    const next = !compactToolbar;
+    setCompactToolbar(next);
+    try {
+      await invoke("save_ui_preferences", { ui_compact_toolbar: next });
+    } catch {
+      // noop
+    }
+  }, [compactToolbar]);
 
   const selectedModel = loadedModelId ?? specs?.recommended_model ?? "Qwen2.5-Coder-7B-Instruct-EXL2-4bpw";
 
@@ -866,7 +878,9 @@ const App: React.FC = () => {
         showReasoning={showReasoning}
         toggleReasoning={toggleReasoning}
         toolbarShowAdvanced={toolbarShowAdvanced}
+        compactMode={compactToolbar}
         toggleToolbarAdvanced={toggleToolbarAdvanced}
+        toggleCompactMode={toggleCompactToolbar}
         showAdvancedOverflow={showAdvancedOverflow}
         setShowAdvancedOverflow={setShowAdvancedOverflow}
         loadWorkspaces={loadWorkspaces}

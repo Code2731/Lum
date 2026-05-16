@@ -59,6 +59,8 @@ interface Props {
   // reasoning toggle
   showReasoning: boolean;
   toggleReasoning: () => void;
+  compactMode: boolean;
+  toggleCompactMode: () => void;
   // toolbar advanced mode
   toolbarShowAdvanced: boolean;
   toggleToolbarAdvanced: () => void;
@@ -97,6 +99,7 @@ const AppHeader: React.FC<Props> = ({
   panels,
   showFileExplorer, setShowFileExplorer,
   showReasoning, toggleReasoning,
+  compactMode, toggleCompactMode,
   toolbarShowAdvanced, toggleToolbarAdvanced,
   showAdvancedOverflow, setShowAdvancedOverflow,
   loadWorkspaces,
@@ -558,22 +561,26 @@ const AppHeader: React.FC<Props> = ({
         >
           <FolderTree size={14} />
         </ToolbarIconButton>
-        <ToolbarIconButton
-          label="워크스페이스"
-          shortcut="⌘⇧S"
-          active={showWorkspace}
-          onClick={() => { setShowWorkspace(true); loadWorkspaces(); }}
-        >
-          <Layers size={14} />
-        </ToolbarIconButton>
-        <ToolbarIconButton
-          label="스크립트 라이브러리"
-          shortcut="⌘⇧L"
-          active={showScriptPanel}
-          onClick={() => { setShowScriptPanel(v => { if (!v) scriptLib.loadScripts(); return !v; }); }}
-        >
-          <BookOpen size={14} />
-        </ToolbarIconButton>
+        {!compactMode && (
+          <>
+            <ToolbarIconButton
+              label="워크스페이스"
+              shortcut="⌘⇧S"
+              active={showWorkspace}
+              onClick={() => { setShowWorkspace(true); loadWorkspaces(); }}
+            >
+              <Layers size={14} />
+            </ToolbarIconButton>
+            <ToolbarIconButton
+              label="스크립트 라이브러리"
+              shortcut="⌘⇧L"
+              active={showScriptPanel}
+              onClick={() => { setShowScriptPanel(v => { if (!v) scriptLib.loadScripts(); return !v; }); }}
+            >
+              <BookOpen size={14} />
+            </ToolbarIconButton>
+          </>
+        )}
 
         <ToolbarSeparator />
 
@@ -596,7 +603,7 @@ const AppHeader: React.FC<Props> = ({
         <ToolbarSeparator />
 
         {/* 그룹 2 고급 — toolbar_show_advanced=true면 인라인, 아니면 "더보기" 팝오버 */}
-        {toolbarShowAdvanced && (
+        {toolbarShowAdvanced && !compactMode && (
           <>
             <ToolbarIconButton
               label="MCP 서버"
@@ -682,11 +689,14 @@ const AppHeader: React.FC<Props> = ({
           </>
         )}
 
-        {!toolbarShowAdvanced && (
+        {(!toolbarShowAdvanced || compactMode) && (
           <div className="relative" ref={advancedOverflowRef}>
             <ToolbarIconButton
               ref={advancedOverflowButtonRef}
-              label="고급 기능 (MCP / Squad / Healing / Recall / LoRA / RAG / xLLM)"
+              label={compactMode
+                ? "기능 메뉴"
+                : "고급 기능 (MCP / Squad / Healing / Recall / LoRA / RAG / xLLM)"
+              }
               active={showAdvancedOverflow}
               badge={squadStore.squads.length > 0 || hasUnseenAdvanced}
               badgeLabel={advancedBadgeLabel}
@@ -777,6 +787,57 @@ const AppHeader: React.FC<Props> = ({
                     label="xLLM 설정"
                     onClick={() => { setShowAdvancedOverflow(false); setShowXllmPanel(true); }}
                   />
+                  {compactMode && (
+                    <>
+                      <p className="px-2 py-1.5 text-[9px] font-semibold tracking-[0.06em] text-white/50 uppercase">
+                        QUICK ACCESS
+                      </p>
+                      <AdvancedRow
+                        icon={<Layers size={13} />}
+                        label="워크스페이스"
+                        onClick={() => {
+                          setShowAdvancedOverflow(false);
+                          setShowWorkspace(true);
+                          loadWorkspaces();
+                        }}
+                      />
+                      <AdvancedRow
+                        icon={<BookOpen size={13} />}
+                        label="스크립트 라이브러리"
+                        onClick={() => {
+                          setShowAdvancedOverflow(false);
+                          setShowScriptPanel((v) => {
+                            if (!v) scriptLib.loadScripts();
+                            return !v;
+                          });
+                        }}
+                      />
+                      <AdvancedRow
+                        icon={<GitCompareArrows size={13} />}
+                        label="AI Diff 리뷰"
+                        onClick={() => {
+                          setShowAdvancedOverflow(false);
+                          setShowDiffReview(true);
+                        }}
+                      />
+                      <AdvancedRow
+                        icon={<Activity size={13} />}
+                        label="시스템 모니터"
+                        onClick={() => {
+                          setShowAdvancedOverflow(false);
+                          setShowSysmon(v => !v);
+                        }}
+                      />
+                      <AdvancedRow
+                        icon={<Palette size={13} />}
+                        label="터미널 테마"
+                        onClick={() => {
+                          setShowAdvancedOverflow(false);
+                          setShowThemePanel(true);
+                        }}
+                      />
+                    </>
+                  )}
                   <div className="h-px bg-white/8 my-1" />
                   <button
                     type="button"
@@ -798,32 +859,43 @@ const AppHeader: React.FC<Props> = ({
             <X size={14} />
           </ToolbarIconButton>
         )}
+        <ToolbarIconButton
+          label={compactMode ? "툴바 확장 모드" : "툴바 단순 모드"}
+          active={compactMode}
+          onClick={toggleCompactMode}
+        >
+          <SlidersHorizontal size={14} />
+        </ToolbarIconButton>
 
         {/* 그룹 3 — 도구 / 알림 */}
-        <ToolbarIconButton
-          label="AI Diff 리뷰"
-          shortcut="⌘⇧R"
-          active={showDiffReview}
-          onClick={() => setShowDiffReview(true)}
-        >
-          <GitCompareArrows size={14} />
-        </ToolbarIconButton>
-        <ToolbarIconButton
-          label="시스템 모니터"
-          shortcut="⌘⇧M"
-          active={showSysmon}
-          onClick={() => setShowSysmon(v => !v)}
-        >
-          <Activity size={14} />
-        </ToolbarIconButton>
-        <ToolbarIconButton
-          label="터미널 테마"
-          shortcut="⌘,"
-          active={showThemePanel}
-          onClick={() => setShowThemePanel(true)}
-        >
-          <Palette size={14} />
-        </ToolbarIconButton>
+        {!compactMode && (
+          <>
+            <ToolbarIconButton
+              label="AI Diff 리뷰"
+              shortcut="⌘⇧R"
+              active={showDiffReview}
+              onClick={() => setShowDiffReview(true)}
+            >
+              <GitCompareArrows size={14} />
+            </ToolbarIconButton>
+            <ToolbarIconButton
+              label="시스템 모니터"
+              shortcut="⌘⇧M"
+              active={showSysmon}
+              onClick={() => setShowSysmon(v => !v)}
+            >
+              <Activity size={14} />
+            </ToolbarIconButton>
+            <ToolbarIconButton
+              label="터미널 테마"
+              shortcut="⌘,"
+              active={showThemePanel}
+              onClick={() => setShowThemePanel(true)}
+            >
+              <Palette size={14} />
+            </ToolbarIconButton>
+          </>
+        )}
         <div className="relative" ref={notifCenterPopupRef}>
           <ToolbarIconButton
             ref={notifCenterButtonRef}

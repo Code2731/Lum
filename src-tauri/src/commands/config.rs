@@ -104,6 +104,8 @@ pub struct AppConfig {
     pub ui_show_advanced_input_tools: Option<bool>,
     /// 백엔드 퀵 전환 버튼 표시 여부. 기본 true.
     pub ui_show_backend_quick_tools: Option<bool>,
+    /// 툴바를 단순 모드로 렌더링할지 여부. 기본 false.
+    pub ui_compact_toolbar: Option<bool>,
     /// AI 채팅 패널 폰트 크기(px, 10~24). 기본 14.
     pub ui_ai_chat_font_size: Option<u32>,
     /// 사용자가 클릭한 적 있는 "신규" 기능 ID 목록. 미클릭 항목엔 dot 배지 표시.
@@ -401,6 +403,7 @@ pub fn save_ui_preferences(
     show_input_toolbelt_tip: Option<bool>,
     show_advanced_input_tools: Option<bool>,
     show_backend_quick_tools: Option<bool>,
+    ui_compact_toolbar: Option<bool>,
 ) -> Result<()> {
     let mut config = load_config()?;
     if show_file_explorer.is_some() {
@@ -417,6 +420,9 @@ pub fn save_ui_preferences(
     }
     if show_backend_quick_tools.is_some() {
         config.ui_show_backend_quick_tools = show_backend_quick_tools;
+    }
+    if ui_compact_toolbar.is_some() {
+        config.ui_compact_toolbar = ui_compact_toolbar;
     }
     if let Some(size) = ai_chat_font_size {
         if !(8..=32).contains(&size) {
