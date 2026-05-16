@@ -8,6 +8,7 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "tauri": "tauri",
+    "tauri:dev:native": "node scripts/tauri-dev-native.mjs",
     "tauri:dev:cuda": "scripts\\tauri-dev-cuda.bat",
     "tauri:dev:metal": "tauri dev --features embedded-ai",
     "test": "vitest run",

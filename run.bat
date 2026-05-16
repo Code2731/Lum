@@ -16,23 +16,31 @@ echo ==========================================
 echo       LUM Project Launcher
 echo ==========================================
 echo  1. Run Standard Dev (Default)
-echo  2. Run with Embedded AI (CUDA/GPU)
-echo  3. Clean and Run Standard
-echo  4. Clean and Run with AI (CUDA)
-echo  5. Exit
+echo  2. Run Native/NoDevServer (network bind issue workaround)
+echo  3. Run with Embedded AI (CUDA/GPU)
+echo  4. Clean and Run Standard
+echo  5. Clean and Run with AI (CUDA)
+echo  6. Exit
 echo ==========================================
-set /p choice="Select option (1-5): "
+set /p choice="Select option (1-6): "
 
 if "%choice%"=="1" goto DEV
-if "%choice%"=="2" goto AI_DEV
-if "%choice%"=="3" goto CLEAN_DEV
-if "%choice%"=="4" goto CLEAN_AI_DEV
-if "%choice%"=="5" exit
+if "%choice%"=="2" goto NATIVE_DEV
+if "%choice%"=="3" goto AI_DEV
+if "%choice%"=="4" goto CLEAN_DEV
+if "%choice%"=="5" goto CLEAN_AI_DEV
+if "%choice%"=="6" exit
 goto MENU
 
 :DEV
 echo [LUM] Starting Standard Dev...
 npm run tauri dev
+pause
+goto MENU
+
+:NATIVE_DEV
+echo [LUM] Starting Standard Dev with Native fallback...
+npm run tauri:dev:native
 pause
 goto MENU
 

@@ -136,6 +136,7 @@ npm install
 # ── PRIMARY mode: embedded mistral.rs in-process ────────────────────────────
 npm run tauri:dev:cuda                  # Windows/Linux + NVIDIA: mistralrs CUDA
 npm run tauri:dev:metal                 # macOS Apple Silicon: mistralrs Metal
+npm run tauri:dev:native                # EPERM/네트워크 바인딩 이슈 우회: 빌드 후 no-dev-server로 실행
 
 # ── FALLBACK mode: lightweight (no embedded inference, ~150MB smaller binary)
 npm run tauri dev                       # external LLM backends only (no on-device AI)
@@ -298,6 +299,7 @@ npm install
 # ── 정상 모드: 임베디드 mistral.rs in-process ───────────────────────────────
 npm run tauri:dev:cuda          # Windows/Linux + NVIDIA: mistralrs CUDA
 npm run tauri:dev:metal         # macOS Apple Silicon: mistralrs Metal
+npm run tauri:dev:native        # 네트워크 바인딩 실패 환경용 우회 모드 (사전 빌드 후 no-dev-server 실행)
 
 # ── 폴백 모드: 경량 (임베디드 추론 X, 바이너리 ~150MB 작음)
 npm run tauri dev               # 외부 LLM 백엔드만 (on-device AI 없음)

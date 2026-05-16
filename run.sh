@@ -17,6 +17,34 @@ else
     echo "xLLM 서버 오프라인 — 앱 내 xLLM 패널에서 시작하세요."
 fi
 
-# Tauri 개발 서버 실행
-echo "Tauri 개발 서버 실행 중..."
-npm run tauri dev
+# 실행 모드 안내
+cat <<'EOF'
+----------------------------------------
+실행 모드 선택:
+1) Standard Dev (기본)
+2) Standard Dev (native/NoDevServer, 바인딩 이슈 우회)
+3) Standard Dev + 임베디드 AI (CUDA)
+4) Exit
+----------------------------------------
+EOF
+
+read -r -p "선택: " choice < /dev/tty
+
+case "${choice}" in
+  1)
+    echo "Tauri 개발 서버 실행 중... (기본)"
+    npm run tauri dev
+    ;;
+  2)
+    echo "Tauri 개발 서버 실행 중... (native/no-dev-server)"
+    npm run tauri:dev:native
+    ;;
+  3)
+    echo "Embedded AI 기반 개발 서버 실행 중..."
+    npm run tauri:dev:cuda
+    ;;
+  4|*)
+    echo "종료"
+    exit 0
+    ;;
+esac

@@ -336,45 +336,21 @@ const AppHeader: React.FC<Props> = ({
 
   const toggleAdvancedOverflow = React.useCallback(() => {
     setShowNotifCenter(false);
+    setHasAdvancedPosition(false);
     setShowAdvancedOverflow((prev) => {
-      if (!prev) {
-        updatePopupPlacement({
-          trigger: advancedOverflowButtonRef.current,
-          panelRef: advancedOverflowPanelRef,
-          setPlacement: setAdvancedOverflowPlacement,
-          setMaxHeight: setAdvancedOverflowMaxHeight,
-          setPosition: setAdvancedOverflowPosition,
-          fallbackWidth: POPUP_FALLBACK_WIDTH.advanced,
-          onReady: () => setHasAdvancedPosition(true),
-        });
-      } else {
-        setHasAdvancedPosition(false);
-      }
       return !prev;
     });
-  }, [setShowAdvancedOverflow, setShowNotifCenter, updatePopupPlacement]);
+  }, [setShowAdvancedOverflow, setShowNotifCenter]);
 
   const toggleNotifCenter = React.useCallback(() => {
     setShowAdvancedOverflow(false);
+    setHasNotifCenterPosition(false);
     setShowNotifCenter((prev) => {
       const next = !prev;
-      if (next) {
-        updatePopupPlacement({
-          trigger: notifCenterButtonRef.current,
-          panelRef: notifCenterPanelRef,
-          setPlacement: setNotifCenterPlacement,
-          setMaxHeight: setNotifCenterMaxHeight,
-          setPosition: setNotifCenterPosition,
-          fallbackWidth: POPUP_FALLBACK_WIDTH.notif,
-          onReady: () => setHasNotifCenterPosition(true),
-        });
-        notifCenter.markAllRead();
-      } else {
-        setHasNotifCenterPosition(false);
-      }
+      if (next) notifCenter.markAllRead();
       return next;
     });
-  }, [notifCenter, setShowAdvancedOverflow, setShowNotifCenter, updatePopupPlacement]);
+  }, [notifCenter, setShowAdvancedOverflow, setShowNotifCenter]);
 
   React.useLayoutEffect(() => {
     if (!showAdvancedOverflow) return;
