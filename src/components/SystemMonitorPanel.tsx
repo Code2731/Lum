@@ -4,6 +4,7 @@ import { useSystemMonitor, type SystemStats } from "../hooks/useSystemMonitor";
 
 interface Props {
   onClose: () => void;
+  compact?: boolean;
 }
 
 function GaugeBar({ pct, color }: { pct: number; color: string }) {
@@ -62,13 +63,19 @@ function ProcTable({
   );
 }
 
-const SystemMonitorPanel: React.FC<Props> = ({ onClose }) => {
+const SystemMonitorPanel: React.FC<Props> = ({ onClose, compact = false }) => {
   const stats = useSystemMonitor(true);
+  const panelTextClass = compact ? "text-[10px]" : "text-xs";
+  const headerPadClass = compact ? "px-2.5 py-1.5" : "px-3 py-2";
+  const bodyPadClass = compact
+    ? "flex-1 overflow-y-auto px-2 py-2 space-y-3 min-h-0"
+    : "flex-1 overflow-y-auto px-3 py-2.5 space-y-4 min-h-0";
+  const sectionGapClass = compact ? "space-y-1" : "space-y-1.5";
 
   return (
-    <div className="lum-sidepanel flex flex-col h-full border-l border-white/10">
+    <div className={`lum-sidepanel flex flex-col h-full border-l border-white/10 ${panelTextClass}`}>
       {/* 헤더 */}
-      <div className="flex items-center gap-2 px-3 py-2 border-b border-white/10 bg-white/[0.02] shrink-0">
+      <div className={`flex items-center gap-2 ${headerPadClass} border-b border-white/10 bg-white/[0.02] shrink-0`}>
         <Cpu size={13} className="text-accent shrink-0" />
         <span className="text-[11px] font-semibold text-white/86 flex-1">시스템 모니터</span>
         {stats && (
@@ -79,6 +86,7 @@ const SystemMonitorPanel: React.FC<Props> = ({ onClose }) => {
         )}
         <button
           onClick={onClose}
+          aria-label="시스템 모니터 닫기"
           className="p-1 rounded border border-white/[0.1] text-white/40 hover:text-white/75 hover:bg-white/[0.08] transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
         >
           <X size={11} />
@@ -90,9 +98,9 @@ const SystemMonitorPanel: React.FC<Props> = ({ onClose }) => {
           수집 중…
         </div>
       ) : (
-        <div className="flex-1 overflow-y-auto px-3 py-2.5 space-y-4 min-h-0">
+        <div className={bodyPadClass}>
           {/* CPU */}
-          <section className="space-y-1.5">
+          <section className={sectionGapClass}>
             <div className="flex items-center justify-between">
               <span className="flex items-center gap-1.5 text-[10px] font-semibold text-white/50 uppercase tracking-wider">
                 <Cpu size={10} />
@@ -107,7 +115,7 @@ const SystemMonitorPanel: React.FC<Props> = ({ onClose }) => {
           </section>
 
           {/* 메모리 */}
-          <section className="space-y-1.5">
+          <section className={sectionGapClass}>
             <div className="flex items-center justify-between">
               <span className="flex items-center gap-1.5 text-[10px] font-semibold text-white/50 uppercase tracking-wider">
                 <MemoryStick size={10} />
@@ -123,7 +131,7 @@ const SystemMonitorPanel: React.FC<Props> = ({ onClose }) => {
           </section>
 
           {/* 프로세스 — CPU */}
-          <section className="space-y-1.5">
+          <section className={sectionGapClass}>
             <p className="text-[10px] font-semibold text-white/40 uppercase tracking-wider">
               CPU 상위 프로세스
             </p>
@@ -131,7 +139,7 @@ const SystemMonitorPanel: React.FC<Props> = ({ onClose }) => {
           </section>
 
           {/* 프로세스 — 메모리 */}
-          <section className="space-y-1.5">
+          <section className={sectionGapClass}>
             <p className="text-[10px] font-semibold text-white/40 uppercase tracking-wider">
               메모리 상위 프로세스
             </p>

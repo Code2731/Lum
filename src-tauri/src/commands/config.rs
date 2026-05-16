@@ -96,6 +96,10 @@ pub struct AppConfig {
     // ── Phase 126: UI 환경설정 통합 (localStorage → config) ───────────────
     /// 파일 탐색기 사이드바 가시성. 기본 true (열림).
     pub ui_show_file_explorer: Option<bool>,
+    /// 우측 Inspector 패널 가시성. 기본 true (열림).
+    pub ui_show_inspector: Option<bool>,
+    /// 우측 Inspector 밀도. "cozy" | "compact" (기본 cozy).
+    pub ui_inspector_density: Option<String>,
     /// Welcome 힌트를 이미 본 적 있는지. true면 더 이상 표시 안 함. 기본 false.
     pub ui_hints_shown: Option<bool>,
     /// 입력 툴벨트 TIP 노출 여부. 기본 true.
@@ -398,6 +402,8 @@ pub fn mark_advanced_feature_seen(feature_id: String) -> Result<()> {
 #[tauri::command]
 pub fn save_ui_preferences(
     show_file_explorer: Option<bool>,
+    show_inspector: Option<bool>,
+    inspector_density: Option<String>,
     hints_shown: Option<bool>,
     ai_chat_font_size: Option<u32>,
     show_input_toolbelt_tip: Option<bool>,
@@ -408,6 +414,18 @@ pub fn save_ui_preferences(
     let mut config = load_config()?;
     if show_file_explorer.is_some() {
         config.ui_show_file_explorer = show_file_explorer;
+    }
+    if show_inspector.is_some() {
+        config.ui_show_inspector = show_inspector;
+    }
+    if let Some(density) = inspector_density {
+        let normalized = density.trim().to_ascii_lowercase();
+        if normalized != "cozy" && normalized != "compact" {
+            return Err(LumError::Config(
+                "inspector_density는 cozy | compact".into(),
+            ));
+        }
+        config.ui_inspector_density = Some(normalized);
     }
     if hints_shown.is_some() {
         config.ui_hints_shown = hints_shown;

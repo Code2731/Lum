@@ -110,6 +110,8 @@ const buildProps = () => {
     },
     showFileExplorer: false,
     setShowFileExplorer: vi.fn(),
+    showInspector: false,
+    onToggleInspector: vi.fn(),
     showReasoning: false,
     toggleReasoning: vi.fn(),
     toolbarShowAdvanced: false,

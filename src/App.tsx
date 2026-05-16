@@ -21,7 +21,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import {
   Zap, Cpu, Loader2, TerminalSquare,
   Package, Plus, X, Columns2, Rows2, ArrowUpCircle,
-  GitBranch, Container, Lock,
+  GitBranch, Container, Lock, FolderTree, Clock3, Search, GitCompareArrows, Library, Activity, Layers, AlertTriangle, RotateCcw, Copy, MoreHorizontal,
 } from "lucide-react";
 import { useReactAgent } from "./hooks/useReactAgent";
 import { useAIChat } from "./hooks/useAIChat";
@@ -49,10 +49,27 @@ import AppOverlays from "./components/AppOverlays";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { TAB_COLORS } from "./hooks/useTabManager";
 import type { AiBackend } from "./utils/inputRouter";
+import { extractInspectorAnalyzeCommands } from "./utils/inspectorAnalyze";
+import { getRovingMenuNextIndex } from "./utils/menuRoving";
+import { resolveInspectorMenuHotkey } from "./utils/inspectorMenuHotkeys";
 
 const ReactAgentPanel = lazy(() => import("./components/ReactAgentPanel"));
 
 type ViewMode = "terminal" | "canvas" | "list";
+type InspectorTab = "summary" | "rag" | "scripts" | "sysmon";
+type InspectorDensity = "cozy" | "compact";
+
+interface InspectorAnalyzeCache {
+  blockId: string;
+  command: string;
+  requestedAt: number;
+  status: "streaming" | "done" | "error";
+  result: string;
+  rawResult: string;
+  suggestedCommands: string[];
+}
+
+type SafetyLevel = "Safe" | "Warning" | "Dangerous" | "Blocked";
 
 interface GitTabInfo {
   branch: string;
@@ -197,6 +214,33 @@ function summarizeOutputDiff(before: string, after: string): {
   };
 }
 
+function formatDurationMs(ms: number | null): string {
+  if (ms == null || !Number.isFinite(ms) || ms < 0) return "-";
+  if (ms < 1000) return `${Math.round(ms)}ms`;
+  if (ms < 60_000) return `${(ms / 1000).toFixed(1)}s`;
+  const mins = Math.floor(ms / 60_000);
+  const secs = Math.round((ms % 60_000) / 1000);
+  return `${mins}m ${secs}s`;
+}
+
+function extractOutputTail(output: string, maxChars = 160): string {
+  const lines = output
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
+  if (lines.length === 0) return "";
+  const tail = lines[lines.length - 1];
+  if (tail.length <= maxChars) return tail;
+  return `${tail.slice(0, maxChars)}...`;
+}
+
+function summarizeAssistantResult(content: string, maxChars = 520): string {
+  const normalized = content.replace(/\s+/g, " ").trim();
+  if (!normalized) return "";
+  if (normalized.length <= maxChars) return normalized;
+  return `${normalized.slice(0, maxChars)}...`;
+}
+
 const App: React.FC = () => {
   const { blocks, addBlock, updateBlock, moveBlock } = useTerminalBlocks();
   const { isProcessing, analyzeError, streamAICommand } = useAIProcessing();
@@ -258,8 +302,30 @@ const App: React.FC = () => {
   const [toolbarShowAdvanced, setToolbarShowAdvanced] = useState(false);
   const [showAdvancedOverflow, setShowAdvancedOverflow] = useState(false);
   const [compactToolbar, setCompactToolbar] = useState(false);
+  const [inspectorCommandMenuIndex, setInspectorCommandMenuIndex] = useState<number | null>(null);
+  const inspectorCommandMenuOpenRef = useRef<number | null>(null);
+  const inspectorMoreButtonRefs = useRef<Record<number, HTMLButtonElement | null>>({});
+  const inspectorMenuFirstActionRefs = useRef<Record<number, HTMLButtonElement | null>>({});
+  const inspectorTabRefs = useRef<Record<InspectorTab, HTMLButtonElement | null>>({
+    summary: null,
+    rag: null,
+    scripts: null,
+    sysmon: null,
+  });
+  const [showInspector, setShowInspector] = useState(() => {
+    try { return localStorage.getItem("lum.inspector") !== "0"; } catch { return true; }
+  });
+  const [inspectorTab, setInspectorTab] = useState<InspectorTab>("summary");
+  const [inspectorDensity, setInspectorDensity] = useState<InspectorDensity>(() => {
+    try {
+      return localStorage.getItem("lum.inspectorDensity") === "compact" ? "compact" : "cozy";
+    } catch {
+      return "cozy";
+    }
+  });
   // Phase 126: 사용자가 클릭한 "신규" 기능 ID 누적. 미클릭 항목엔 NEW 라벨.
   const [seenAdvancedFeatures, setSeenAdvancedFeatures] = useState<string[]>([]);
+  const [inspectorAnalyzeCache, setInspectorAnalyzeCache] = useState<InspectorAnalyzeCache | null>(null);
   useEffect(() => {
     invoke<{
       show_reasoning?: boolean;
@@ -267,6 +333,8 @@ const App: React.FC = () => {
       toolbar_show_advanced?: boolean;
       ui_compact_toolbar?: boolean;
       ui_show_file_explorer?: boolean;
+      ui_show_inspector?: boolean;
+      ui_inspector_density?: "cozy" | "compact";
       ui_hints_shown?: boolean;
       ui_seen_advanced_features?: string[];
     }>("load_app_config")
@@ -286,6 +354,12 @@ const App: React.FC = () => {
             const raw = localStorage.getItem("lum.fileExplorer");
             if (raw != null) migrate.showFileExplorer = raw !== "0";
           } catch { /* noop */ }
+        }
+        if (c.ui_show_inspector != null) {
+          setShowInspector(c.ui_show_inspector);
+        }
+        if (c.ui_inspector_density === "compact" || c.ui_inspector_density === "cozy") {
+          setInspectorDensity(c.ui_inspector_density);
         }
         if (c.ui_hints_shown != null) {
           setShowWelcome(!c.ui_hints_shown);
@@ -338,6 +412,66 @@ const App: React.FC = () => {
     }
   }, [compactToolbar]);
 
+  useEffect(() => {
+    try {
+      localStorage.setItem("lum.inspector", showInspector ? "1" : "0");
+    } catch {
+      // noop
+    }
+    invoke("save_ui_preferences", { showInspector }).catch(() => {});
+  }, [showInspector]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("lum.inspectorDensity", inspectorDensity);
+    } catch {
+      // noop
+    }
+    invoke("save_ui_preferences", { inspectorDensity }).catch(() => {});
+  }, [inspectorDensity]);
+
+  useEffect(() => {
+    inspectorCommandMenuOpenRef.current = inspectorCommandMenuIndex;
+  }, [inspectorCommandMenuIndex]);
+
+  const closeInspectorCommandMenu = useCallback((restoreFocus = false) => {
+    setInspectorCommandMenuIndex((prev) => {
+      if (restoreFocus && prev != null) {
+        setTimeout(() => inspectorMoreButtonRefs.current[prev]?.focus(), 0);
+      }
+      return null;
+    });
+  }, []);
+
+  useEffect(() => {
+    if (inspectorCommandMenuIndex == null) return;
+    setTimeout(() => inspectorMenuFirstActionRefs.current[inspectorCommandMenuIndex]?.focus(), 0);
+  }, [inspectorCommandMenuIndex]);
+
+  const handleInspectorCompactMenuKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>, rowIndex: number) => {
+    if (e.key === "Escape") {
+      e.preventDefault();
+      e.stopPropagation();
+      closeInspectorCommandMenu(true);
+      return;
+    }
+    if (e.key !== "ArrowRight" && e.key !== "ArrowLeft" && e.key !== "Home" && e.key !== "End") return;
+    const items = Array.from(
+      e.currentTarget.querySelectorAll<HTMLButtonElement>("[role='menuitem']"),
+    );
+    if (items.length === 0) return;
+    const active = document.activeElement as HTMLButtonElement | null;
+    const currentIdx = active ? items.indexOf(active) : -1;
+    const navKey = e.key as "ArrowRight" | "ArrowLeft" | "Home" | "End";
+    const nextIdx = getRovingMenuNextIndex(navKey, items.length, currentIdx);
+    if (nextIdx < 0) return;
+    e.preventDefault();
+    items[nextIdx]?.focus();
+    if (inspectorCommandMenuOpenRef.current !== rowIndex) {
+      setInspectorCommandMenuIndex(rowIndex);
+    }
+  }, [closeInspectorCommandMenu]);
+
   const selectedModel = loadedModelId ?? specs?.recommended_model ?? "Qwen2.5-Coder-7B-Instruct-EXL2-4bpw";
 
   const {
@@ -367,6 +501,90 @@ const App: React.FC = () => {
     setShowSshModal,
     closeOverlays,
   } = panels;
+
+  const openInspectorTab = useCallback((tab: InspectorTab) => {
+    setShowInspector(true);
+    setInspectorTab(tab);
+    setShowRagPanel(tab === "rag");
+    setShowScriptPanel(tab === "scripts");
+    setShowSysmon(tab === "sysmon");
+  }, [setShowRagPanel, setShowScriptPanel, setShowSysmon]);
+  const inspectorTabs = useMemo(() => [
+    { id: "summary", label: "개요", shortcut: "1" },
+    { id: "rag", label: "RAG", shortcut: "2" },
+    { id: "scripts", label: "Scripts", shortcut: "3" },
+    { id: "sysmon", label: "System", shortcut: "4" },
+  ] as const, []);
+  const handleInspectorTabKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (!["ArrowRight", "ArrowLeft", "Home", "End"].includes(e.key)) return;
+    e.preventDefault();
+    const activeIndex = inspectorTabs.findIndex((item) => item.id === inspectorTab);
+    const next = getRovingMenuNextIndex(
+      e.key as "ArrowRight" | "ArrowLeft" | "Home" | "End",
+      inspectorTabs.length,
+      activeIndex,
+    );
+    if (next < 0) return;
+    const nextTab = inspectorTabs[next].id;
+    openInspectorTab(nextTab);
+    requestAnimationFrame(() => {
+      inspectorTabRefs.current[nextTab]?.focus();
+    });
+  }, [inspectorTab, inspectorTabs, openInspectorTab]);
+  useEffect(() => {
+    const handleInspectorTabShortcut = (e: KeyboardEvent) => {
+      if (!e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+      const tab = (() => {
+        switch (e.key) {
+          case "1":
+            return "summary" as const;
+          case "2":
+            return "rag" as const;
+          case "3":
+            return "scripts" as const;
+          case "4":
+            return "sysmon" as const;
+          default:
+            return null;
+        }
+      })();
+      if (!tab || isTextInputTarget(e.target)) return;
+      e.preventDefault();
+      openInspectorTab(tab);
+      requestAnimationFrame(() => {
+        inspectorTabRefs.current[tab]?.focus();
+      });
+    };
+
+    window.addEventListener("keydown", handleInspectorTabShortcut);
+    return () => window.removeEventListener("keydown", handleInspectorTabShortcut);
+  }, [openInspectorTab]);
+
+  const closeInspector = useCallback(() => {
+    setShowInspector(false);
+    setShowRagPanel(false);
+    setShowScriptPanel(false);
+    setShowSysmon(false);
+  }, [setShowRagPanel, setShowScriptPanel, setShowSysmon]);
+
+  useEffect(() => {
+    if (showRagPanel) {
+      setShowInspector(true);
+      setInspectorTab("rag");
+      return;
+    }
+    if (showScriptPanel) {
+      setShowInspector(true);
+      setInspectorTab("scripts");
+      return;
+    }
+    if (showSysmon) {
+      setShowInspector(true);
+      setInspectorTab("sysmon");
+      return;
+    }
+    setInspectorTab("summary");
+  }, [showRagPanel, showScriptPanel, showSysmon]);
 
   const { appearance, saveAppearance, xtermTheme } = useTerminalTheme();
   const { actions: quickActions, addAction, updateAction, deleteAction, moveAction } = useQuickActions();
@@ -715,6 +933,7 @@ const App: React.FC = () => {
     if (failed.length === 0) return;
 
     if (!selectedBlockId) {
+      setViewMode("terminal");
       setSelectedBlockId(failed[failed.length - 1].b.id);
       setDismissedBlockId(null);
       return;
@@ -722,15 +941,292 @@ const App: React.FC = () => {
 
     const currentPos = failed.findIndex(({ b }) => b.id === selectedBlockId);
     if (currentPos < 0) {
+      setViewMode("terminal");
       setSelectedBlockId(failed[failed.length - 1].b.id);
       setDismissedBlockId(null);
       return;
     }
 
     const nextPos = (currentPos - 1 + failed.length) % failed.length;
+    setViewMode("terminal");
     setSelectedBlockId(failed[nextPos].b.id);
     setDismissedBlockId(null);
   }, [cmdBlocks, selectedBlockId]);
+
+  const selectInspectorBlock = useCallback((blockId: string) => {
+    setViewMode("terminal");
+    setSelectedBlockId(blockId);
+    setDismissedBlockId(null);
+  }, []);
+
+  const rerunInspectorBlock = useCallback((command: string) => {
+    const trimmed = command.trim();
+    if (!trimmed) return;
+    ptyWriteRefs.current.get(activePaneIdRef.current)?.(`${trimmed}\r`);
+  }, [activePaneIdRef, ptyWriteRefs]);
+
+  const resolveInspectorFailedBlock = useCallback((blockId?: string) => {
+    const failed = cmdBlocks.filter((b) => b.exitCode !== null && b.exitCode !== 0 && b.command.trim() !== "");
+    if (failed.length === 0) return null;
+    const selected = blockId
+      ? failed.find((b) => b.id === blockId)
+      : (selectedBlockId ? failed.find((b) => b.id === selectedBlockId) : null);
+    return selected ?? failed[failed.length - 1];
+  }, [cmdBlocks, selectedBlockId]);
+
+  const buildFailedAnalyzePrompt = useCallback((target: CommandBlock, cwd?: string) => {
+    const outputSnippet = target.output.trim().slice(-3000);
+    return [
+      "아래 실패한 터미널 실행을 분석해줘.",
+      "1) 실패 원인 요약",
+      "2) 바로 실행할 수정 커맨드 3개",
+      "3) 재발 방지 체크포인트",
+      "",
+      `Command: ${target.command}`,
+      `Exit Code: ${target.exitCode}`,
+      cwd ? `CWD: ${cwd}` : "",
+      "",
+      "Output:",
+      outputSnippet || "(출력이 비어 있음)",
+    ].filter(Boolean).join("\n");
+  }, []);
+
+  const analyzeInspectorFailedBlock = useCallback((blockId?: string) => {
+    const target = resolveInspectorFailedBlock(blockId);
+    if (!target) return;
+
+    const currentTab = tabs.find((t) => t.id === activeTabIdRef.current);
+    const prompt = buildFailedAnalyzePrompt(target, currentTab?.cwd);
+    const requestedAt = Date.now();
+    closeInspectorCommandMenu();
+    setInspectorAnalyzeCache({
+      blockId: target.id,
+      command: target.command,
+      requestedAt,
+      status: "streaming",
+      result: "",
+      rawResult: "",
+      suggestedCommands: [],
+    });
+    handleAskAI(prompt);
+    setViewMode("terminal");
+  }, [resolveInspectorFailedBlock, tabs, activeTabIdRef, buildFailedAnalyzePrompt, handleAskAI, closeInspectorCommandMenu]);
+
+  const copyInspectorFailedOutput = useCallback(async (blockId?: string) => {
+    const target = resolveInspectorFailedBlock(blockId);
+    if (!target) return;
+
+    const payload = [
+      `Command: ${target.command}`,
+      `Exit Code: ${target.exitCode}`,
+      "",
+      "Output:",
+      target.output || "(출력이 비어 있음)",
+    ].join("\n");
+    try {
+      await navigator.clipboard.writeText(payload);
+      notifCenter.addNotification({
+        type: "command",
+        title: "실패 로그 복사 완료",
+        body: `${target.command.slice(0, 56)}${target.command.length > 56 ? "…" : ""}`,
+      });
+    } catch {
+      notifCenter.addNotification({
+        type: "command",
+        title: "실패 로그 복사 실패",
+        body: "클립보드 접근 권한을 확인해 주세요.",
+      });
+    }
+  }, [resolveInspectorFailedBlock, notifCenter]);
+
+  const copyInspectorAnalyzePrompt = useCallback(async (blockId?: string) => {
+    const target = resolveInspectorFailedBlock(blockId);
+    if (!target) return;
+    const currentTab = tabs.find((t) => t.id === activeTabIdRef.current);
+    const prompt = buildFailedAnalyzePrompt(target, currentTab?.cwd);
+    try {
+      await navigator.clipboard.writeText(prompt);
+      notifCenter.addNotification({
+        type: "command",
+        title: "AI 분석 프롬프트 복사 완료",
+        body: `${target.command.slice(0, 56)}${target.command.length > 56 ? "…" : ""}`,
+      });
+    } catch {
+      notifCenter.addNotification({
+        type: "command",
+        title: "AI 분석 프롬프트 복사 실패",
+        body: "클립보드 접근 권한을 확인해 주세요.",
+      });
+    }
+  }, [resolveInspectorFailedBlock, tabs, activeTabIdRef, buildFailedAnalyzePrompt, notifCenter]);
+
+  useEffect(() => {
+    if (!inspectorAnalyzeCache || inspectorAnalyzeCache.status !== "streaming") return;
+    const latestAssistant = [...aiChat.messages]
+      .reverse()
+      .find((m) => m.role === "assistant" && m.timestamp >= inspectorAnalyzeCache.requestedAt && m.content.trim() !== "");
+    if (!latestAssistant) return;
+
+    const isDone = !aiChat.streaming;
+    if (!isDone) return;
+    const isError = latestAssistant.content.trim().startsWith("❌");
+    const suggestedCommands = extractInspectorAnalyzeCommands(latestAssistant.content, 3);
+    setInspectorAnalyzeCache((prev) => {
+      if (!prev || prev.requestedAt !== inspectorAnalyzeCache.requestedAt) return prev;
+      return {
+        ...prev,
+        status: isError ? "error" : "done",
+        result: summarizeAssistantResult(latestAssistant.content),
+        rawResult: latestAssistant.content.trim(),
+        suggestedCommands,
+      };
+    });
+  }, [aiChat.messages, aiChat.streaming, inspectorAnalyzeCache]);
+
+  const loadInspectorAnalyzePromptToAiBar = useCallback((blockId?: string) => {
+    const target = resolveInspectorFailedBlock(blockId);
+    if (!target) return;
+    const currentTab = tabs.find((t) => t.id === activeTabIdRef.current);
+    const prompt = buildFailedAnalyzePrompt(target, currentTab?.cwd);
+    setAiInput(prompt);
+    setShowAiBar(true);
+    setViewMode("terminal");
+    closeInspector();
+    setTimeout(() => aiInputRef.current?.focus(), 50);
+    notifCenter.addNotification({
+      type: "command",
+      title: "AI 분석 프롬프트 로드됨",
+      body: "AI 입력바에서 수정 후 Enter로 실행하세요.",
+    });
+  }, [resolveInspectorFailedBlock, tabs, activeTabIdRef, buildFailedAnalyzePrompt, closeInspector, notifCenter]);
+
+  const copyInspectorAnalyzeResult = useCallback(async () => {
+    if (!inspectorAnalyzeCache) return;
+    const payload = [
+      `Command: ${inspectorAnalyzeCache.command}`,
+      `Status: ${inspectorAnalyzeCache.status.toUpperCase()}`,
+      "",
+      inspectorAnalyzeCache.rawResult || inspectorAnalyzeCache.result || "(응답 없음)",
+    ].join("\n");
+    try {
+      await navigator.clipboard.writeText(payload);
+      notifCenter.addNotification({
+        type: "command",
+        title: "AI 분석 결과 복사 완료",
+        body: `${inspectorAnalyzeCache.command.slice(0, 56)}${inspectorAnalyzeCache.command.length > 56 ? "…" : ""}`,
+      });
+    } catch {
+      notifCenter.addNotification({
+        type: "command",
+        title: "AI 분석 결과 복사 실패",
+        body: "클립보드 접근 권한을 확인해 주세요.",
+      });
+    }
+  }, [inspectorAnalyzeCache, notifCenter]);
+
+  const copyInspectorSuggestedCommand = useCallback(async (commandIndex: number) => {
+    const cmd = inspectorAnalyzeCache?.suggestedCommands[commandIndex]?.trim() ?? "";
+    if (!cmd) {
+      notifCenter.addNotification({
+        type: "command",
+        title: "복사할 커맨드 없음",
+        body: `${commandIndex + 1}번 추천 커맨드를 찾지 못했습니다.`,
+      });
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(cmd);
+      closeInspectorCommandMenu(true);
+      notifCenter.addNotification({
+        type: "command",
+        title: "추천 커맨드 복사 완료",
+        body: `[${commandIndex + 1}] ${cmd}`,
+      });
+    } catch {
+      notifCenter.addNotification({
+        type: "command",
+        title: "추천 커맨드 복사 실패",
+        body: "클립보드 접근 권한을 확인해 주세요.",
+      });
+    }
+  }, [inspectorAnalyzeCache, notifCenter, closeInspectorCommandMenu]);
+
+  const loadInspectorSuggestedCommandToAiBar = useCallback((commandIndex: number) => {
+    const cmd = inspectorAnalyzeCache?.suggestedCommands[commandIndex]?.trim() ?? "";
+    if (!cmd) {
+      notifCenter.addNotification({
+        type: "command",
+        title: "로드할 커맨드 없음",
+        body: `${commandIndex + 1}번 추천 커맨드를 찾지 못했습니다.`,
+      });
+      return;
+    }
+    setAiInput(cmd);
+    setShowAiBar(true);
+    setViewMode("terminal");
+    closeInspectorCommandMenu();
+    closeInspector();
+    setTimeout(() => aiInputRef.current?.focus(), 50);
+    notifCenter.addNotification({
+      type: "command",
+      title: "추천 커맨드 로드됨",
+      body: `[${commandIndex + 1}] AI 입력바에서 수정 후 실행하세요.`,
+    });
+  }, [inspectorAnalyzeCache, notifCenter, setAiInput, setShowAiBar, setViewMode, closeInspector, closeInspectorCommandMenu]);
+
+  const applyInspectorAnalyzeCommand = useCallback(async (commandIndex = 0) => {
+    if (!inspectorAnalyzeCache || inspectorAnalyzeCache.status !== "done") return;
+    const nextCommand = inspectorAnalyzeCache.suggestedCommands[commandIndex]?.trim() ?? "";
+    if (!nextCommand) {
+      notifCenter.addNotification({
+        type: "command",
+        title: "적용할 커맨드 없음",
+        body: `${commandIndex + 1}번 추천 커맨드를 찾지 못했습니다.`,
+      });
+      return;
+    }
+
+    try {
+      const report = await invoke<{ level: SafetyLevel; reason: string }>("verify_command_safety", { command: nextCommand });
+      if (report.level === "Blocked") {
+        notifCenter.addNotification({
+          type: "command",
+          title: "차단된 커맨드",
+          body: report.reason,
+        });
+        return;
+      }
+      if (report.level === "Dangerous") {
+        setAiInput(nextCommand);
+        setShowAiBar(true);
+        setViewMode("terminal");
+        closeInspectorCommandMenu();
+        closeInspector();
+        setTimeout(() => aiInputRef.current?.focus(), 50);
+        notifCenter.addNotification({
+          type: "command",
+          title: "위험 커맨드 감지",
+          body: "자동 실행하지 않고 AI 입력바로만 로드했습니다.",
+        });
+        return;
+      }
+      ptyWriteRefs.current.get(activePaneIdRef.current)?.(`${nextCommand}\r`);
+      setViewMode("terminal");
+      closeInspectorCommandMenu();
+      closeInspector();
+      notifCenter.addNotification({
+        type: "command",
+        title: report.level === "Warning" ? "경고 커맨드 실행됨" : "추천 커맨드 실행됨",
+        body: `[${commandIndex + 1}] ${nextCommand}`,
+      });
+    } catch {
+      notifCenter.addNotification({
+        type: "command",
+        title: "커맨드 실행 실패",
+        body: "안전도 검사 또는 PTY 전송 중 오류가 발생했습니다.",
+      });
+    }
+  }, [inspectorAnalyzeCache, notifCenter, setAiInput, setShowAiBar, setViewMode, closeInspector, ptyWriteRefs, activePaneIdRef, closeInspectorCommandMenu]);
 
   const handleAiSubmit = useCallback(async () => {
     const cmd = aiInput.trim();
@@ -805,6 +1301,14 @@ const App: React.FC = () => {
       if (mod && e.shiftKey && e.key === "l") { e.preventDefault(); setShowScriptPanel(v => { if (!v) scriptLib.loadScripts(); return !v; }); }
       if (mod && e.shiftKey && e.key === "m") { e.preventDefault(); setShowSysmon(v => !v); }
       if (mod && e.key === ",") { e.preventDefault(); setShowThemePanel(true); }
+      if (mod && !e.shiftKey && !e.altKey && (e.key === "i" || e.key === "I")) {
+        e.preventDefault();
+        if (showInspector) {
+          closeInspector();
+        } else {
+          openInspectorTab("summary");
+        }
+      }
       if (mod && e.shiftKey && e.key === "q") { e.preventDefault(); setShowQuickBar(v => !v); }
       if (mod && e.shiftKey && e.key === "ArrowUp") { e.preventDefault(); navigateCommandBlock(-1); }
       if (mod && e.shiftKey && e.key === "ArrowDown") { e.preventDefault(); navigateCommandBlock(1); }
@@ -821,6 +1325,11 @@ const App: React.FC = () => {
         }
       }
       if (e.key === "Escape") {
+        if (inspectorCommandMenuIndex != null) {
+          e.preventDefault();
+          closeInspectorCommandMenu(true);
+          return;
+        }
         setShowAiBar(false);
         setTabCtxMenu(null);
         closeOverlays();
@@ -831,10 +1340,67 @@ const App: React.FC = () => {
       window.removeEventListener("keydown", captureHandler, { capture: true });
       window.removeEventListener("keydown", handler);
     };
-  }, [addTabWithReset, closeTabWithReset, toggleSplit, closeOverlays, activeTabIdRef, setShowCommitPanel, setShowHistorySearch, setShowDiffReview, setShowThemePanel, quickActions, ptyWriteRefs, activePaneIdRef, setShowWorkspace, loadWorkspaces, setShowPalette, navigateCommandBlock, focusFailedBlock]);
+  }, [addTabWithReset, closeTabWithReset, toggleSplit, closeOverlays, activeTabIdRef, setShowCommitPanel, setShowHistorySearch, setShowDiffReview, setShowThemePanel, quickActions, ptyWriteRefs, activePaneIdRef, setShowWorkspace, loadWorkspaces, setShowPalette, navigateCommandBlock, focusFailedBlock, showInspector, closeInspector, openInspectorTab, inspectorCommandMenuIndex, closeInspectorCommandMenu]);
+
+  useEffect(() => {
+    const onPointerDown = (e: MouseEvent) => {
+      if (inspectorCommandMenuOpenRef.current == null) return;
+      const target = e.target as HTMLElement | null;
+      if (target?.closest("[data-inspector-command-menu-row='1']")) return;
+      closeInspectorCommandMenu();
+    };
+    window.addEventListener("mousedown", onPointerDown, { capture: true });
+    return () => window.removeEventListener("mousedown", onPointerDown, { capture: true });
+  }, [closeInspectorCommandMenu]);
 
   const activeTab = tabs.find((t) => t.id === activeTabId);
+  const activeTabGitInfo = activeTab ? tabGitInfo[activeTab.id] ?? null : null;
+  const inspectorFailedBlocks = useMemo(() => (
+    cmdBlocks
+      .filter((b) => b.exitCode !== null && b.exitCode !== 0 && b.command.trim() !== "")
+      .map((b) => ({
+        id: b.id,
+        command: b.command.trim(),
+        exitCode: b.exitCode ?? 1,
+        outputTail: extractOutputTail(b.output),
+      }))
+      .reverse()
+  ), [cmdBlocks]);
+  const inspectorFocusedFailedBlock = useMemo(() => {
+    if (inspectorFailedBlocks.length === 0) return null;
+    if (selectedBlockId) {
+      const selected = inspectorFailedBlocks.find((b) => b.id === selectedBlockId);
+      if (selected) return selected;
+    }
+    return inspectorFailedBlocks[0];
+  }, [inspectorFailedBlocks, selectedBlockId]);
+  const inspectorRecentBlocks = useMemo(() => (
+    cmdBlocks
+      .filter((b) => b.command.trim() !== "")
+      .slice(-6)
+      .reverse()
+      .map((b) => ({
+        id: b.id,
+        command: b.command.trim(),
+        exitCode: b.exitCode,
+        durationMs: b.endedAt != null ? Math.max(0, b.endedAt - b.startedAt) : null,
+        outputTail: extractOutputTail(b.output, 120),
+      }))
+  ), [cmdBlocks]);
   const lastCmdBlock = cmdBlocks[cmdBlocks.length - 1] ?? null;
+  const isInspectorCompact = inspectorDensity === "compact";
+  const inspectorSummaryWrapClass = isInspectorCompact
+    ? "h-full overflow-y-auto p-2 space-y-1.5 text-[10px]"
+    : "h-full overflow-y-auto p-3 space-y-2 text-[11px]";
+  const inspectorCardPadClass = isInspectorCompact ? "px-2 py-1.5" : "px-2.5 py-2";
+  const inspectorCardTightClass = `rounded-lg border border-white/10 bg-white/[0.03] ${inspectorCardPadClass} space-y-1`;
+  const inspectorCardRegularClass = `rounded-lg border border-white/10 bg-white/[0.03] ${inspectorCardPadClass} ${isInspectorCompact ? "space-y-1" : "space-y-1.5"}`;
+  const inspectorQuickGridClass = isInspectorCompact ? "grid grid-cols-2 gap-1" : "grid grid-cols-2 gap-1.5";
+  useEffect(() => {
+    if (!isInspectorCompact && inspectorCommandMenuIndex != null) {
+      closeInspectorCommandMenu();
+    }
+  }, [isInspectorCompact, inspectorCommandMenuIndex, closeInspectorCommandMenu]);
   const focusedCmdBlock = selectedBlockId
     ? (cmdBlocks.find((b) => b.id === selectedBlockId) ?? null)
     : lastCmdBlock;
@@ -875,6 +1441,11 @@ const App: React.FC = () => {
         panels={panels}
         showFileExplorer={showFileExplorer}
         setShowFileExplorer={setShowFileExplorer}
+        showInspector={showInspector}
+        onToggleInspector={() => {
+          if (showInspector) closeInspector();
+          else openInspectorTab("summary");
+        }}
         showReasoning={showReasoning}
         toggleReasoning={toggleReasoning}
         toolbarShowAdvanced={toolbarShowAdvanced}
@@ -1445,56 +2016,569 @@ const App: React.FC = () => {
         </div>
 
         <AnimatePresence initial={false}>
-        {showRagPanel && (
+        {showInspector && (
           <motion.div
-            key="rag-panel"
+            key="inspector-panel"
             initial={{ width: 0, opacity: 0 }}
-            animate={{ width: 320, opacity: 1 }}
+            animate={{ width: inspectorDensity === "compact" ? 304 : 336, opacity: 1 }}
             exit={{ width: 0, opacity: 0 }}
             transition={{ duration: 0.2, ease: "easeOut" }}
-            className="border-l border-white/8 shrink-0 overflow-hidden bg-[#0e141d]/84"
+            className="border-l border-white/8 shrink-0 overflow-hidden bg-[#0e141d]/88"
           >
-            <ErrorBoundary label="RAG">
-              <RagPanel model={selectedModel} onClose={() => setShowRagPanel(false)} />
-            </ErrorBoundary>
-          </motion.div>
-        )}
+            <div className="h-full flex flex-col">
+              <div className="px-2.5 py-2 border-b border-white/10 bg-white/[0.02] shrink-0">
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <span className="text-[11px] tracking-[0.06em] uppercase text-white/65 font-semibold">Inspector</span>
+                  <button
+                    onClick={() => setInspectorDensity((prev) => (prev === "cozy" ? "compact" : "cozy"))}
+                    className={`px-1.5 py-0.5 rounded border text-[10px] transition-colors ${
+                      inspectorDensity === "compact"
+                        ? "border-cyan-300/35 bg-cyan-400/16 text-cyan-100"
+                        : "border-white/[0.1] bg-white/[0.05] text-white/58 hover:text-white/80"
+                    }`}
+                    aria-label="Inspector 밀도 토글"
+                    title={inspectorDensity === "compact" ? "Cozy 보기" : "Compact 보기"}
+                  >
+                    {inspectorDensity === "compact" ? "COMPACT" : "COZY"}
+                  </button>
+                  <button
+                    onClick={closeInspector}
+                    className="p-1 rounded border border-white/[0.1] text-white/42 hover:text-white/78 hover:bg-white/[0.08] transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                    aria-label="Inspector 닫기"
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
+                <div
+                  className="flex items-center gap-1"
+                  role="tablist"
+                  aria-label="Inspector 탭"
+                  onKeyDown={handleInspectorTabKeyDown}
+                >
+                  {inspectorTabs.map((tab) => (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      ref={(el) => {
+                        inspectorTabRefs.current[tab.id] = el;
+                      }}
+                      role="tab"
+                      id={`inspector-tab-${tab.id}`}
+                      aria-selected={inspectorTab === tab.id}
+                      aria-controls={`inspector-tabpanel-${tab.id}`}
+                      aria-keyshortcuts={`Alt+${tab.shortcut}`}
+                      tabIndex={inspectorTab === tab.id ? 0 : -1}
+                      onClick={() => openInspectorTab(tab.id)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          openInspectorTab(tab.id);
+                        }
+                      }}
+                      className={`px-2 py-1 rounded-md text-[10.5px] border transition-colors ${
+                        inspectorTab === tab.id
+                          ? "border-cyan-300/35 bg-cyan-400/16 text-cyan-100"
+                          : "border-white/10 bg-white/[0.04] text-white/58 hover:text-white/82"
+                      } focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring`}
+                      title={`Alt+${tab.shortcut} : ${tab.label}`}
+                    >
+                      <span>{tab.label}</span>
+                      <span className="ml-1 inline-flex text-[9px] text-white/35">({tab.shortcut})</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
 
-        {showScriptPanel && (
-          <motion.div
-            key="script-panel"
-            initial={{ width: 0, opacity: 0 }}
-            animate={{ width: 288, opacity: 1 }}
-            exit={{ width: 0, opacity: 0 }}
-            transition={{ duration: 0.2, ease: "easeOut" }}
-            className="border-l border-white/8 shrink-0 overflow-hidden bg-[#0e141d]/84"
-          >
-            <ErrorBoundary label="스크립트 라이브러리">
-              <ScriptLibraryPanel
-                scripts={scriptLib.scripts}
-                loading={scriptLib.loading}
-                onLoad={scriptLib.loadScripts}
-                onRun={scriptLib.runScript}
-                onDelete={scriptLib.deleteScript}
-                onSave={scriptLib.saveScript}
-                onClose={() => setShowScriptPanel(false)}
-              />
-            </ErrorBoundary>
-          </motion.div>
-        )}
+              <div className="flex-1 min-h-0 overflow-hidden">
+                {inspectorTab === "summary" && (
+                  <section
+                    id="inspector-tabpanel-summary"
+                    role="tabpanel"
+                    aria-labelledby="inspector-tab-summary"
+                    tabIndex={0}
+                    className={`${inspectorSummaryWrapClass} text-white/72`}
+                  >
+                    <div className={inspectorCardTightClass}>
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-white/45 uppercase tracking-[0.06em] text-[10px]">Workspace</p>
+                        {activeTabGitInfo?.branch && (
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md border border-cyan-300/30 bg-cyan-400/12 text-cyan-100 text-[10px]">
+                            <GitBranch size={10} />
+                            {activeTabGitInfo.branch}
+                            {activeTabGitInfo.changed > 0 && (
+                              <span className="px-1 rounded bg-amber-400/22 text-amber-200 text-[9px]">
+                                {activeTabGitInfo.changed}
+                              </span>
+                            )}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-white/82 truncate">{activeTab?.title ?? "탭 없음"}</p>
+                      <p className="text-white/55 font-mono break-all">{activeTab?.cwd ?? "cwd 없음"}</p>
+                    </div>
+                    <div className={inspectorCardTightClass}>
+                      <p className="text-white/45 uppercase tracking-[0.06em] text-[10px]">Model</p>
+                      <p className="text-white/82 break-all">{selectedModel}</p>
+                    </div>
+                    <div className={inspectorCardRegularClass}>
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-white/45 uppercase tracking-[0.06em] text-[10px]">Failed Block</p>
+                        <span className="text-[10px] text-rose-200/80">{inspectorFailedBlocks.length}개</span>
+                      </div>
+                      {inspectorFocusedFailedBlock ? (
+                        <div className="rounded-md border border-rose-300/25 bg-rose-400/8 px-2 py-1.5 space-y-1">
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="text-rose-100/90 truncate">{inspectorFocusedFailedBlock.command}</p>
+                            <span className="text-[9px] px-1.5 py-0.5 rounded bg-rose-400/20 text-rose-100">
+                              ERR {inspectorFocusedFailedBlock.exitCode}
+                            </span>
+                          </div>
+                          {inspectorFocusedFailedBlock.outputTail && (
+                            <p className="text-[10px] text-rose-100/75 font-mono break-words">
+                              {inspectorFocusedFailedBlock.outputTail}
+                            </p>
+                          )}
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <button
+                              onClick={focusFailedBlock}
+                              className="inline-flex w-[84px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-rose-300/35 bg-rose-400/14 text-[9px] text-rose-100 hover:bg-rose-400/22 transition-colors"
+                            >
+                              <AlertTriangle size={9} />
+                              NEXT FAIL
+                            </button>
+                            <button
+                              onClick={() => analyzeInspectorFailedBlock(inspectorFocusedFailedBlock.id)}
+                              className="inline-flex w-[88px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-cyan-300/35 bg-cyan-400/14 text-[9px] text-cyan-100 hover:bg-cyan-400/24 transition-colors"
+                            >
+                              <Search size={9} />
+                              AI ANALYZE
+                            </button>
+                            <button
+                              onClick={() => copyInspectorFailedOutput(inspectorFocusedFailedBlock.id)}
+                              className="inline-flex w-[76px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-white/20 bg-white/[0.05] text-[9px] text-white/75 hover:text-white hover:bg-white/[0.12] transition-colors"
+                            >
+                              <Copy size={9} />
+                              COPY LOG
+                            </button>
+                            <button
+                              onClick={() => copyInspectorAnalyzePrompt(inspectorFocusedFailedBlock.id)}
+                              className="inline-flex w-[92px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-cyan-300/30 bg-cyan-400/10 text-[9px] text-cyan-100 hover:bg-cyan-400/20 transition-colors"
+                            >
+                              <Copy size={9} />
+                              COPY PROMPT
+                            </button>
+                            <button
+                              onClick={() => loadInspectorAnalyzePromptToAiBar(inspectorFocusedFailedBlock.id)}
+                              className="inline-flex w-[92px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-accent/35 bg-accent/14 text-[9px] text-accent hover:bg-accent/24 transition-colors"
+                            >
+                              <Search size={9} />
+                              LOAD PROMPT
+                            </button>
+                            <button
+                              onClick={() => selectInspectorBlock(inspectorFocusedFailedBlock.id)}
+                              className="inline-flex w-[60px] justify-center items-center px-1.5 py-0.5 rounded border border-white/18 bg-white/[0.05] text-[9px] text-white/75 hover:text-white hover:bg-white/[0.11] transition-colors"
+                            >
+                              SELECT
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="text-white/40">실패 블록이 없습니다.</p>
+                      )}
+                    </div>
+                    <div className={inspectorCardRegularClass}>
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-white/45 uppercase tracking-[0.06em] text-[10px]">Last AI Analyze</p>
+                        {inspectorAnalyzeCache && (
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={copyInspectorAnalyzeResult}
+                              className="inline-flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded border border-white/18 bg-white/[0.05] text-white/72 hover:text-white hover:bg-white/[0.1] transition-colors"
+                            >
+                              <Copy size={9} />
+                              COPY
+                            </button>
+                            <button
+                              onClick={() => {
+                                setInspectorAnalyzeCache(null);
+                                closeInspectorCommandMenu();
+                              }}
+                              className="text-[9px] px-1.5 py-0.5 rounded border border-white/18 bg-white/[0.05] text-white/70 hover:text-white hover:bg-white/[0.1] transition-colors"
+                            >
+                              CLEAR
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                      {!inspectorAnalyzeCache && (
+                        <p className="text-white/40">아직 실행된 분석이 없습니다.</p>
+                      )}
+                      {inspectorAnalyzeCache && (
+                        <div className={`rounded-md border px-2 py-1.5 space-y-1 ${
+                          inspectorAnalyzeCache.status === "error"
+                            ? "border-rose-300/25 bg-rose-400/8"
+                            : "border-cyan-300/20 bg-cyan-400/8"
+                        }`}>
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="text-white/82 truncate">{inspectorAnalyzeCache.command}</p>
+                            {inspectorAnalyzeCache.status === "streaming" ? (
+                              <span className="inline-flex items-center gap-1 text-[9px] text-cyan-100">
+                                <Loader2 size={9} className="animate-spin" />
+                                STREAMING
+                              </span>
+                            ) : inspectorAnalyzeCache.status === "error" ? (
+                              <span className="text-[9px] px-1.5 py-0.5 rounded bg-rose-400/20 text-rose-100">
+                                ERROR
+                              </span>
+                            ) : (
+                              <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-400/20 text-emerald-100">
+                                DONE
+                              </span>
+                            )}
+                          </div>
+                          <p className={`text-[10px] font-mono break-words ${
+                            inspectorAnalyzeCache.status === "error" ? "text-rose-100/80" : "text-cyan-100/78"
+                          }`}>
+                            {inspectorAnalyzeCache.result || "응답을 기다리는 중..."}
+                          </p>
+                          {inspectorAnalyzeCache.status === "done" && inspectorAnalyzeCache.suggestedCommands.length > 0 && (
+                            <div className="space-y-1">
+                              <div className="flex items-center justify-between gap-2">
+                                <p className="text-[9px] uppercase tracking-[0.06em] text-cyan-100/70">Suggested Commands</p>
+                                <p className="text-[9px] text-cyan-100/62">
+                                  {isInspectorCompact ? "R 실행 · MORE→C/L" : "R 실행 · C 복사 · L 로드"}
+                                </p>
+                              </div>
+                              <div className="space-y-1">
+                                {inspectorAnalyzeCache.suggestedCommands.map((cmd, idx) => (
+                                  <div
+                                    key={`${cmd}-${idx}`}
+                                    data-inspector-command-menu-row="1"
+                                    tabIndex={isInspectorCompact ? 0 : -1}
+                                    className="rounded border border-cyan-300/18 bg-cyan-400/[0.06] px-1.5 py-1 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-cyan-300/45"
+                                    onBlurCapture={(e) => {
+                                      if (!isInspectorCompact || inspectorCommandMenuIndex !== idx) return;
+                                      const next = e.relatedTarget as Node | null;
+                                      if (!next || !e.currentTarget.contains(next)) {
+                                        closeInspectorCommandMenu();
+                                      }
+                                    }}
+                                    onKeyDown={(e) => {
+                                      if (!isInspectorCompact) return;
+                                      if (e.metaKey || e.ctrlKey || e.altKey) return;
+                                      const action = resolveInspectorMenuHotkey(
+                                        e.key,
+                                        inspectorCommandMenuIndex === idx,
+                                      );
+                                      if (!action) return;
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      if (action === "run") {
+                                        applyInspectorAnalyzeCommand(idx);
+                                        return;
+                                      }
+                                      if (action === "copy") {
+                                        copyInspectorSuggestedCommand(idx);
+                                        return;
+                                      }
+                                      loadInspectorSuggestedCommandToAiBar(idx);
+                                    }}
+                                  >
+                                    <div className="flex items-center gap-1.5">
+                                      <span className="inline-flex items-center justify-center min-w-4 h-4 rounded bg-cyan-400/20 text-[9px] text-cyan-100">
+                                        {idx + 1}
+                                      </span>
+                                      <p className="min-w-0 flex-1 text-[10px] font-mono text-cyan-100/92 truncate" title={cmd}>
+                                        {cmd}
+                                      </p>
+                                      {isInspectorCompact ? (
+                                        <div className="flex items-center gap-1 shrink-0">
+                                          <button
+                                            onClick={() => applyInspectorAnalyzeCommand(idx)}
+                                            className="inline-flex w-[68px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-emerald-300/35 bg-emerald-400/16 text-[9px] text-emerald-100 hover:bg-emerald-400/26 transition-colors"
+                                            title={`${idx + 1}번 커맨드 실행 (R)`}
+                                          >
+                                            <TerminalSquare size={9} />
+                                            RUN (R)
+                                          </button>
+                                          <button
+                                            ref={(el) => { inspectorMoreButtonRefs.current[idx] = el; }}
+                                            onClick={() => setInspectorCommandMenuIndex((prev) => (prev === idx ? null : idx))}
+                                            onKeyDown={(e) => {
+                                              if (e.key === "ArrowDown" || e.key === "Enter" || e.key === " ") {
+                                                e.preventDefault();
+                                                setInspectorCommandMenuIndex(idx);
+                                              }
+                                            }}
+                                            aria-expanded={inspectorCommandMenuIndex === idx}
+                                            aria-controls={`inspector-command-menu-${idx}`}
+                                            className="inline-flex w-[58px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-white/20 bg-white/[0.05] text-[9px] text-white/75 hover:text-white hover:bg-white/[0.12] transition-colors"
+                                            title={`${idx + 1}번 추가 액션 (C/L 단축키 활성화)`}
+                                          >
+                                            <MoreHorizontal size={9} />
+                                            MORE
+                                          </button>
+                                        </div>
+                                      ) : (
+                                        <div className="flex items-center gap-1 shrink-0">
+                                          <button
+                                            onClick={() => copyInspectorSuggestedCommand(idx)}
+                                            className="inline-flex w-[58px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-white/22 bg-white/[0.05] text-[9px] text-white/76 hover:text-white hover:bg-white/[0.12] transition-colors"
+                                            title={`${idx + 1}번 커맨드 복사 (C)`}
+                                          >
+                                            <Copy size={9} />
+                                            COPY
+                                          </button>
+                                          <button
+                                            onClick={() => loadInspectorSuggestedCommandToAiBar(idx)}
+                                            className="inline-flex w-[58px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-accent/35 bg-accent/14 text-[9px] text-accent hover:bg-accent/24 transition-colors"
+                                            title={`${idx + 1}번 커맨드 AI 입력바 로드 (L)`}
+                                          >
+                                            <Search size={9} />
+                                            LOAD
+                                          </button>
+                                          <button
+                                            onClick={() => applyInspectorAnalyzeCommand(idx)}
+                                            className="inline-flex w-[58px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-emerald-300/35 bg-emerald-400/16 text-[9px] text-emerald-100 hover:bg-emerald-400/26 transition-colors"
+                                            title={`${idx + 1}번 커맨드 실행 (R)`}
+                                          >
+                                            <TerminalSquare size={9} />
+                                            RUN
+                                          </button>
+                                        </div>
+                                      )}
+                                    </div>
+                                    {isInspectorCompact && inspectorCommandMenuIndex === idx && (
+                                      <div
+                                        id={`inspector-command-menu-${idx}`}
+                                        role="menu"
+                                        onKeyDown={(e) => handleInspectorCompactMenuKeyDown(e, idx)}
+                                        className="mt-1.5 ml-5 flex items-center gap-1"
+                                      >
+                                        <button
+                                          ref={(el) => { inspectorMenuFirstActionRefs.current[idx] = el; }}
+                                          role="menuitem"
+                                          onClick={() => copyInspectorSuggestedCommand(idx)}
+                                          className="inline-flex w-[72px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-white/22 bg-white/[0.05] text-[9px] text-white/76 hover:text-white hover:bg-white/[0.12] transition-colors"
+                                          title={`${idx + 1}번 커맨드 복사 (C)`}
+                                        >
+                                          <Copy size={9} />
+                                          COPY (C)
+                                        </button>
+                                        <button
+                                          role="menuitem"
+                                          onClick={() => loadInspectorSuggestedCommandToAiBar(idx)}
+                                          className="inline-flex w-[72px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-accent/35 bg-accent/14 text-[9px] text-accent hover:bg-accent/24 transition-colors"
+                                          title={`${idx + 1}번 커맨드 AI 입력바 로드 (L)`}
+                                        >
+                                          <Search size={9} />
+                                          LOAD (L)
+                                        </button>
+                                      </div>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          {inspectorAnalyzeCache.status === "done" && !isInspectorCompact && (
+                            <div className="flex items-center gap-1.5">
+                              <button
+                                onClick={() => applyInspectorAnalyzeCommand(0)}
+                                title="첫 번째 추천 커맨드 실행 (R)"
+                                className="inline-flex w-[74px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-emerald-300/35 bg-emerald-400/16 text-[9px] text-emerald-100 hover:bg-emerald-400/26 transition-colors"
+                              >
+                                <TerminalSquare size={9} />
+                                RUN #1
+                              </button>
+                              <button
+                                onClick={copyInspectorAnalyzeResult}
+                                title="분석 결과 전체 복사"
+                                className="inline-flex w-[64px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-white/20 bg-white/[0.05] text-[9px] text-white/76 hover:text-white hover:bg-white/[0.12] transition-colors"
+                              >
+                                <Copy size={9} />
+                                COPY
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    <div className={inspectorCardRegularClass}>
+                      <p className="text-white/45 uppercase tracking-[0.06em] text-[10px]">Recent Blocks</p>
+                      {inspectorRecentBlocks.length === 0 && (
+                        <p className="text-white/40">최근 실행 기록이 없습니다.</p>
+                      )}
+                      {inspectorRecentBlocks.map((block) => (
+                        <div key={block.id} className="flex items-start gap-2 rounded-md border border-white/[0.08] bg-black/20 px-2 py-1.5">
+                          <span className={`mt-0.5 inline-flex items-center justify-center text-[9px] px-1.5 py-0.5 rounded ${
+                            block.exitCode === 0 || block.exitCode == null
+                              ? "bg-emerald-400/16 text-emerald-200"
+                              : "bg-rose-400/18 text-rose-200"
+                          }`}>
+                            {block.exitCode === 0 || block.exitCode == null ? "OK" : `ERR ${block.exitCode}`}
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-white/80 truncate">{block.command}</p>
+                            <p className="text-white/44 text-[10px] inline-flex items-center gap-1 mt-0.5">
+                              <Clock3 size={10} />
+                              {formatDurationMs(block.durationMs)}
+                            </p>
+                            {block.outputTail && (
+                              <p className="text-[10px] text-white/36 font-mono truncate mt-0.5">{block.outputTail}</p>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1 shrink-0">
+                            <button
+                              onClick={() => selectInspectorBlock(block.id)}
+                              className="inline-flex w-[56px] justify-center items-center px-1.5 py-0.5 rounded border border-white/12 bg-white/[0.05] text-[9px] text-white/68 hover:text-white hover:bg-white/[0.11] transition-colors"
+                              title="이 블록 선택"
+                            >
+                              SEL
+                            </button>
+                            <button
+                              onClick={() => rerunInspectorBlock(block.command)}
+                              className="inline-flex w-[64px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-cyan-300/30 bg-cyan-400/14 text-[9px] text-cyan-100 hover:bg-cyan-400/24 transition-colors"
+                              title="명령 재실행"
+                            >
+                              <RotateCcw size={9} />
+                              RUN
+                            </button>
+                            {block.exitCode !== 0 && block.exitCode != null && (
+                              <button
+                                onClick={() => loadInspectorAnalyzePromptToAiBar(block.id)}
+                                className="inline-flex w-[68px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-accent/35 bg-accent/14 text-[9px] text-accent hover:bg-accent/24 transition-colors"
+                                title="실패 분석 프롬프트 로드"
+                              >
+                                <Search size={9} />
+                                LOAD
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className={inspectorCardRegularClass}>
+                      <p className="text-white/45 uppercase tracking-[0.06em] text-[10px]">Quick Actions</p>
+                      <div className={inspectorQuickGridClass}>
+                        <button
+                          onClick={() => setShowFileExplorer((prev) => {
+                            const next = !prev;
+                            invoke("save_ui_preferences", { showFileExplorer: next }).catch(() => {});
+                            return next;
+                          })}
+                          className="inline-flex w-full h-7 items-center gap-1.5 px-2 rounded-md text-[10.5px] border border-white/12 bg-white/[0.05] text-white/74 hover:text-white hover:bg-white/[0.1] transition-colors"
+                        >
+                          <FolderTree size={11} />
+                          Project Bin
+                        </button>
+                        <button
+                          onClick={() => {
+                            setShowWorkspace(true);
+                            loadWorkspaces();
+                          }}
+                          className="inline-flex w-full h-7 items-center gap-1.5 px-2 rounded-md text-[10.5px] border border-white/12 bg-white/[0.05] text-white/74 hover:text-white hover:bg-white/[0.1] transition-colors"
+                        >
+                          <Layers size={11} />
+                          Workspace
+                        </button>
+                        <button
+                          onClick={() => setShowHistorySearch(true)}
+                          className="inline-flex w-full h-7 items-center gap-1.5 px-2 rounded-md text-[10.5px] border border-white/12 bg-white/[0.05] text-white/74 hover:text-white hover:bg-white/[0.1] transition-colors"
+                        >
+                          <Search size={11} />
+                          History
+                        </button>
+                        <button
+                          onClick={() => setShowDiffReview(true)}
+                          className="inline-flex w-full h-7 items-center gap-1.5 px-2 rounded-md text-[10.5px] border border-white/12 bg-white/[0.05] text-white/74 hover:text-white hover:bg-white/[0.1] transition-colors"
+                        >
+                          <GitCompareArrows size={11} />
+                          Diff
+                        </button>
+                        <button
+                          onClick={focusFailedBlock}
+                          className="inline-flex w-full h-7 items-center gap-1.5 px-2 rounded-md text-[10.5px] border border-rose-300/30 bg-rose-400/12 text-rose-100 hover:bg-rose-400/20 transition-colors"
+                        >
+                          <AlertTriangle size={11} />
+                          Failed
+                        </button>
+                        <button
+                          onClick={() => openInspectorTab("rag")}
+                          className="inline-flex w-full h-7 items-center gap-1.5 px-2 rounded-md text-[10.5px] border border-white/12 bg-white/[0.05] text-white/74 hover:text-white hover:bg-white/[0.1] transition-colors"
+                        >
+                          <Library size={11} />
+                          RAG
+                        </button>
+                        <button
+                          onClick={() => openInspectorTab("scripts")}
+                          className="inline-flex w-full h-7 items-center gap-1.5 px-2 rounded-md text-[10.5px] border border-white/12 bg-white/[0.05] text-white/74 hover:text-white hover:bg-white/[0.1] transition-colors"
+                        >
+                          Scripts
+                        </button>
+                        <button
+                          onClick={() => openInspectorTab("sysmon")}
+                          className="inline-flex w-full h-7 items-center gap-1.5 px-2 rounded-md text-[10.5px] border border-white/12 bg-white/[0.05] text-white/74 hover:text-white hover:bg-white/[0.1] transition-colors"
+                        >
+                          <Activity size={11} />
+                          System
+                        </button>
+                      </div>
+                    </div>
+                  </section>
+                )}
 
-        {showSysmon && (
-          <motion.div
-            key="sysmon-panel"
-            initial={{ width: 0, opacity: 0 }}
-            animate={{ width: 256, opacity: 1 }}
-            exit={{ width: 0, opacity: 0 }}
-            transition={{ duration: 0.2, ease: "easeOut" }}
-            className="border-l border-white/8 shrink-0 overflow-hidden bg-[#0e141d]/84"
-          >
-            <ErrorBoundary label="시스템 모니터">
-              <SystemMonitorPanel onClose={() => setShowSysmon(false)} />
-            </ErrorBoundary>
+                {inspectorTab === "rag" && (
+                  <section id="inspector-tabpanel-rag" role="tabpanel" aria-labelledby="inspector-tab-rag" tabIndex={0}>
+                    <ErrorBoundary label="RAG">
+                      <RagPanel
+                        model={selectedModel}
+                        onClose={closeInspector}
+                        compact={isInspectorCompact}
+                      />
+                    </ErrorBoundary>
+                  </section>
+                )}
+
+                {inspectorTab === "scripts" && (
+                  <section
+                    id="inspector-tabpanel-scripts"
+                    role="tabpanel"
+                    aria-labelledby="inspector-tab-scripts"
+                    tabIndex={0}
+                  >
+                    <ErrorBoundary label="스크립트 라이브러리">
+                      <ScriptLibraryPanel
+                        scripts={scriptLib.scripts}
+                        loading={scriptLib.loading}
+                        onLoad={scriptLib.loadScripts}
+                        onRun={scriptLib.runScript}
+                        onDelete={scriptLib.deleteScript}
+                        onSave={scriptLib.saveScript}
+                        onClose={closeInspector}
+                        compact={isInspectorCompact}
+                      />
+                    </ErrorBoundary>
+                  </section>
+                )}
+
+                {inspectorTab === "sysmon" && (
+                  <section
+                    id="inspector-tabpanel-sysmon"
+                    role="tabpanel"
+                    aria-labelledby="inspector-tab-sysmon"
+                    tabIndex={0}
+                  >
+                    <ErrorBoundary label="시스템 모니터">
+                      <SystemMonitorPanel
+                        onClose={closeInspector}
+                        compact={isInspectorCompact}
+                      />
+                    </ErrorBoundary>
+                  </section>
+                )}
+              </div>
+            </div>
           </motion.div>
         )}
         </AnimatePresence>

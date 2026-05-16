@@ -9,6 +9,7 @@ import {
   Cpu, Loader2, TerminalSquare, LayoutList, MousePointer2,
   Package, Database, X, SlidersHorizontal, GitCompareArrows, Palette,
   BookOpen, Bell, Activity, FolderTree, Brain, PlugZap, Users, Sparkles, Library, Hammer, Layers, BookMarked, GitBranch,
+  PanelRightOpen,
 } from "lucide-react";
 import { ToolbarIconButton, ToolbarSeparator } from "@/components/ui/toolbar-icon-button";
 import WindowControls from "./WindowControls";
@@ -81,6 +82,8 @@ interface Props {
   // file explorer (App-local state, not in panels hook)
   showFileExplorer: boolean;
   setShowFileExplorer: React.Dispatch<React.SetStateAction<boolean>>;
+  showInspector: boolean;
+  onToggleInspector: () => void;
   // reasoning toggle
   showReasoning: boolean;
   toggleReasoning: () => void;
@@ -123,6 +126,7 @@ const AppHeader: React.FC<Props> = ({
   privacyLedger, squadStore, notifCenter, scriptLib,
   panels,
   showFileExplorer, setShowFileExplorer,
+  showInspector, onToggleInspector,
   showReasoning, toggleReasoning,
   compactMode, toggleCompactMode,
   toolbarShowAdvanced, toggleToolbarAdvanced,
@@ -771,6 +775,14 @@ const AppHeader: React.FC<Props> = ({
           })}
         >
           <FolderTree size={14} />
+        </ToolbarIconButton>
+        <ToolbarIconButton
+          label="Inspector"
+          shortcut="⌘I"
+          active={showInspector}
+          onClick={onToggleInspector}
+        >
+          <PanelRightOpen size={14} />
         </ToolbarIconButton>
         {!compactMode && compactQuickAccessActions
           .slice(0, 2)

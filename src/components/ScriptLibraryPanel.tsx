@@ -13,10 +13,11 @@ interface Props {
   onDelete: (id: string) => void;
   onSave: (name: string, description: string, commands: string[]) => Promise<unknown>;
   onClose: () => void;
+  compact?: boolean;
 }
 
 const ScriptLibraryPanel: React.FC<Props> = ({
-  scripts, loading, onLoad, onRun, onDelete, onSave, onClose,
+  scripts, loading, onLoad, onRun, onDelete, onSave, onClose, compact = false,
 }) => {
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState("");
@@ -41,13 +42,21 @@ const ScriptLibraryPanel: React.FC<Props> = ({
       setSaving(false);
     }
   };
+  const panelTextClass = compact ? "text-[10px]" : "text-xs";
+  const headerPadClass = compact ? "px-2.5 py-1.5" : "px-3 py-2";
+  const cardPadClass = compact ? "px-2 py-1.5" : "px-2.5 py-2";
+  const listPadClass = compact ? "px-2 py-1.5" : "px-2 py-2";
+  const formSpaceClass = compact ? "space-y-1" : "space-y-1.5";
+  const titleTextClass = compact ? "text-[10px]" : "text-[11px]";
+  const bodyTextClass = compact ? "text-[10px]" : "text-[11px]";
+  const captionTextClass = compact ? "text-[9px]" : "text-[10px]";
 
   return (
-    <div className="lum-sidepanel flex flex-col h-full border-l border-white/10">
+    <div className={`lum-sidepanel flex flex-col h-full border-l border-white/10 ${panelTextClass}`}>
       {/* 헤더 */}
-      <div className="flex items-center gap-2 px-3 py-2 border-b border-white/10 bg-white/[0.02] shrink-0">
+      <div className={`flex items-center gap-2 ${headerPadClass} border-b border-white/10 bg-white/[0.02] shrink-0`}>
         <BookOpen size={13} className="text-accent shrink-0" />
-        <span className="text-[11px] font-semibold text-white/86 flex-1">스크립트 라이브러리</span>
+        <span className={`${titleTextClass} font-semibold text-white/86 flex-1`}>스크립트 라이브러리</span>
         <IconButton
           tooltip="새 스크립트 추가"
           onClick={() => setCreating((v) => !v)}
@@ -66,22 +75,22 @@ const ScriptLibraryPanel: React.FC<Props> = ({
 
       {/* 새 스크립트 폼 */}
       {creating && (
-        <div className="shrink-0 border-b border-white/8 p-2 space-y-1.5 bg-white/[0.03]">
+        <div className={`shrink-0 border-b border-white/8 ${cardPadClass} ${formSpaceClass} bg-white/[0.03]`}>
           <input
-            className="w-full bg-white/[0.05] border border-white/[0.12] rounded-md px-2 py-1 text-[11px] text-white/84 placeholder-white/25 outline-none focus:border-accent/50"
+            className={`w-full bg-white/[0.05] border border-white/[0.12] rounded-md px-2 py-1 ${bodyTextClass} text-white/84 placeholder-white/25 outline-none focus:border-accent/50`}
             placeholder="스크립트 이름"
             value={newName}
             onChange={e => setNewName(e.target.value)}
             autoFocus
           />
           <input
-            className="w-full bg-white/[0.05] border border-white/[0.12] rounded-md px-2 py-1 text-[11px] text-white/56 placeholder-white/25 outline-none focus:border-accent/50"
+            className={`w-full bg-white/[0.05] border border-white/[0.12] rounded-md px-2 py-1 ${bodyTextClass} text-white/56 placeholder-white/25 outline-none focus:border-accent/50`}
             placeholder="설명 (선택)"
             value={newDesc}
             onChange={e => setNewDesc(e.target.value)}
           />
           <Textarea
-            className="px-2 py-1 text-[10px] font-mono text-white/60 focus:border-accent/40"
+            className={`px-2 py-1 ${captionTextClass} font-mono text-white/60 focus:border-accent/40`}
             placeholder={"명령어를 줄마다 입력\ngit pull\nnpm install\nnpm run build"}
             rows={4}
             value={newCmds}
@@ -107,14 +116,14 @@ const ScriptLibraryPanel: React.FC<Props> = ({
       )}
 
       {/* 스크립트 목록 */}
-      <div className="flex-1 overflow-y-auto min-h-0 px-2 py-2 space-y-1.5">
+      <div className={`flex-1 overflow-y-auto min-h-0 ${listPadClass} ${compact ? "space-y-1" : "space-y-1.5"}`}>
         {loading && (
-          <p className="text-[11px] text-white/20 text-center py-8">불러오는 중…</p>
+          <p className={`${bodyTextClass} text-white/20 text-center py-8`}>불러오는 중…</p>
         )}
         {!loading && scripts.length === 0 && !creating && (
           <div className="flex flex-col items-center justify-center h-full gap-2 text-white/20 py-12">
             <BookOpen size={24} />
-            <p className="text-[11px] text-center leading-relaxed">
+            <p className={`${bodyTextClass} text-center leading-relaxed`}>
               저장된 스크립트가 없습니다.
               <br />
               + 버튼으로 스크립트를 추가하거나
@@ -125,14 +134,14 @@ const ScriptLibraryPanel: React.FC<Props> = ({
         )}
         {scripts.map((sc) => (
           <div key={sc.id} className="rounded-lg border border-white/[0.1] bg-white/[0.03] overflow-hidden">
-            <div className="flex items-start gap-2 px-2.5 py-2">
+            <div className={`flex items-start gap-2 ${cardPadClass}`}>
               <Terminal size={11} className="text-accent/68 mt-0.5 shrink-0" />
               <div className="flex-1 min-w-0">
-                <p className="text-[11px] font-medium text-white/80 truncate">{sc.name}</p>
+                <p className={`font-medium text-white/80 ${bodyTextClass} truncate`}>{sc.name}</p>
                 {sc.description && (
-                  <p className="text-[10px] text-white/40 truncate mt-0.5">{sc.description}</p>
+                  <p className={`${captionTextClass} text-white/40 truncate mt-0.5`}>{sc.description}</p>
                 )}
-                <p className="text-[10px] text-white/30 mt-0.5">
+                <p className={`${captionTextClass} text-white/30 mt-0.5`}>
                   {sc.commands.length}개 명령어 · {new Date(sc.created_at * 1000).toLocaleDateString("ko-KR")}
                 </p>
               </div>
@@ -160,7 +169,7 @@ const ScriptLibraryPanel: React.FC<Props> = ({
               </div>
             </div>
             {/* 커맨드 미리보기 */}
-            <div className="px-2.5 pb-2">
+            <div className={compact ? "px-2 pb-1" : "px-2.5 pb-2"}>
               <div className="rounded-md border border-white/[0.08] bg-black/28 px-2 py-1 space-y-0.5">
                 {sc.commands.slice(0, 3).map((cmd, i) => (
                   <p key={i} className="text-[9px] font-mono text-white/30 truncate">

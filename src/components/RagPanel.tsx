@@ -21,9 +21,10 @@ type IndexStatus =
 interface Props {
   model: string;
   onClose: () => void;
+  compact?: boolean;
 }
 
-const RagPanel: React.FC<Props> = ({ model, onClose }) => {
+const RagPanel: React.FC<Props> = ({ model, onClose, compact = false }) => {
   const [indexPath, setIndexPath] = useState("");
   const [indexStatus, setIndexStatus] = useState<IndexStatus | null>(null);
   const [isIndexing, setIsIndexing] = useState(false);
@@ -122,32 +123,39 @@ const RagPanel: React.FC<Props> = ({ model, onClose }) => {
   }, [query, model]);
 
   const swarmSearching = swarmQueryId !== null;
+  const panelTextClass = compact ? "text-[10px]" : "text-xs";
+  const headerPadClass = compact ? "px-2.5 py-1.5" : "px-3 py-2";
+  const bodyPadClass = compact ? "flex-1 overflow-y-auto p-2 space-y-3" : "flex-1 overflow-y-auto p-3 space-y-4";
+  const sectionGapClass = compact ? "space-y-1.5" : "space-y-2";
+  const titleSizeClass = compact ? "text-[10px]" : "text-[11px]";
+  const bodyInputTextClass = compact ? "text-[10px]" : "text-[11px]";
 
   return (
-    <div className="lum-sidepanel flex flex-col h-full text-white text-xs">
+    <div className={`lum-sidepanel flex flex-col h-full text-white ${panelTextClass}`}>
       {/* 헤더 */}
-      <div className="flex items-center justify-between px-3 py-2 border-b border-white/10 shrink-0 bg-white/[0.02]">
+      <div className={`flex items-center justify-between ${headerPadClass} border-b border-white/10 shrink-0 bg-white/[0.02]`}>
         <div className="flex items-center gap-2">
           <Database size={12} className="text-accent" />
-          <span className="font-semibold text-[11px] text-white/85">RAG 코드 검색</span>
+          <span className={`font-semibold ${titleSizeClass} text-white/85`}>RAG 코드 검색</span>
         </div>
         <button
           onClick={onClose}
+          aria-label="RAG 패널 닫기"
           className="p-1 rounded border border-white/[0.1] text-white/40 hover:text-white/75 hover:bg-white/[0.08] transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
         >
           <X size={12} />
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-3 space-y-4">
+      <div className={bodyPadClass}>
         {/* 인덱싱 섹션 */}
-        <section className="space-y-2">
+        <section className={sectionGapClass}>
           <p className="text-[10px] text-white/45 font-semibold uppercase tracking-wider">프로젝트 인덱싱</p>
           <div className="flex gap-2">
             <div className="relative flex-1">
               <FolderOpen size={11} className="absolute left-2 top-1/2 -translate-y-1/2 text-white/30" />
               <input
-                className="w-full bg-white/[0.05] border border-white/[0.12] rounded-md px-2 py-1.5 pl-6 text-[11px] outline-none focus:border-accent/55 text-white/80 placeholder:text-white/28 font-mono"
+                className={`w-full bg-white/[0.05] border border-white/[0.12] rounded-md px-2 py-1.5 pl-6 ${bodyInputTextClass} outline-none focus:border-accent/55 text-white/80 placeholder:text-white/28 font-mono`}
                 placeholder="/path/to/project"
                 value={indexPath}
                 onChange={(e) => setIndexPath(e.target.value)}
@@ -179,13 +187,13 @@ const RagPanel: React.FC<Props> = ({ model, onClose }) => {
         </section>
 
         {/* 검색 섹션 */}
-        <section className="space-y-2">
+        <section className={sectionGapClass}>
           <p className="text-[10px] text-white/45 font-semibold uppercase tracking-wider">코드베이스 검색</p>
           <div className="flex gap-2">
             <div className="relative flex-1">
               <Search size={11} className="absolute left-2 top-1/2 -translate-y-1/2 text-white/30" />
               <input
-                className="w-full bg-white/[0.05] border border-white/[0.12] rounded-md px-2 py-1.5 pl-6 text-[11px] outline-none focus:border-accent/55 text-white/80 placeholder:text-white/28"
+                className={`w-full bg-white/[0.05] border border-white/[0.12] rounded-md px-2 py-1.5 pl-6 ${bodyInputTextClass} outline-none focus:border-accent/55 text-white/80 placeholder:text-white/28`}
                 placeholder="PTY 채널 아키텍처는 어떻게 구현되어 있나요?"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
@@ -220,7 +228,7 @@ const RagPanel: React.FC<Props> = ({ model, onClose }) => {
 
         {/* 로컬 검색 결과 */}
         {results.length > 0 && (
-          <section className="space-y-1.5">
+          <section className={compact ? "space-y-1" : "space-y-1.5"}>
             <p className="text-[10px] text-white/40 font-medium uppercase tracking-wider">로컬 결과</p>
             {results.map((r, i) => (
               <ResultCard key={i} content={r.content} score={r.score} />
@@ -230,7 +238,7 @@ const RagPanel: React.FC<Props> = ({ model, onClose }) => {
 
         {/* 스웜 검색 결과 */}
         {swarmResults.length > 0 && (
-          <section className="space-y-1.5">
+          <section className={compact ? "space-y-1" : "space-y-1.5"}>
             <p className="text-[10px] text-white/40 font-medium uppercase tracking-wider">
               스웜 결과 ({swarmResults.length}개 피어)
             </p>
