@@ -396,7 +396,7 @@ const AppHeader: React.FC<Props> = ({
     const spaceBelow = window.innerHeight - rect.bottom - POPUP_GUTTER;
     const panelRectHeight = panelRef?.current?.getBoundingClientRect().height;
     const panelHeight = (typeof panelRectHeight === "number" && Number.isFinite(panelRectHeight) && panelRectHeight > 0)
-      ? panelRectHeight
+      ? Math.min(panelRectHeight, POPUP_ESTIMATE_HEIGHT)
       : POPUP_ESTIMATE_HEIGHT;
     const canOpenUp = spaceAbove >= panelHeight;
     const canOpenDown = spaceBelow >= panelHeight;
@@ -435,9 +435,7 @@ const AppHeader: React.FC<Props> = ({
     const panelWidth = (panelRect?.width && Number.isFinite(panelRect.width) && panelRect.width > 0)
       ? panelRect.width
       : options.fallbackWidth;
-    const panelHeight = (panelRect?.height && Number.isFinite(panelRect.height) && panelRect.height > 0)
-      ? panelRect.height
-      : POPUP_ESTIMATE_HEIGHT;
+    const panelHeight = nextHeight;
 
     const nextY = placement === "up"
       ? triggerRect.top - panelHeight - POPUP_EDGE_GUTTER
@@ -865,7 +863,7 @@ const AppHeader: React.FC<Props> = ({
                   transition={{ duration: 0.15, ease: "easeOut" }}
                   style={{
                     transformOrigin: advancedOverflowPanelOrigin,
-                    maxHeight: `${Math.max(130, advancedOverflowMaxHeight)}px`,
+                    maxHeight: `${advancedOverflowMaxHeight}px`,
                     ...advancedOverflowPanelStyle,
                   }}
                   className="fixed z-50 w-64 max-h-[min(440px,calc(100vh-3.5rem))] overflow-y-auto rounded-xl border border-white/[0.12] bg-[#0f1620]/95 backdrop-blur-md shadow-xl p-2 space-y-0.5"
@@ -1003,7 +1001,7 @@ const AppHeader: React.FC<Props> = ({
                   transition={{ duration: 0.15, ease: "easeOut" }}
                   style={{
                     transformOrigin: notifCenterPanelOrigin,
-                    maxHeight: `${Math.max(130, notifCenterMaxHeight)}px`,
+                    maxHeight: `${notifCenterMaxHeight}px`,
                     ...notifCenterPanelStyle,
                   }}
                   className="fixed w-80 h-fit z-50"
