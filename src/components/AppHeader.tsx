@@ -35,6 +35,31 @@ const VIEW_BUTTONS: { mode: ViewMode; icon: React.ReactNode; label: string }[] =
 export const NEW_ADVANCED_FEATURES = ["skills", "healing", "recall", "lora"] as const;
 export type NewFeatureId = typeof NEW_ADVANCED_FEATURES[number];
 
+type AdvancedAction = {
+  id: string;
+  label: string;
+  icon: (size: number) => React.ReactNode;
+  active: boolean;
+  /** 신규 feature 배지 대상 ID */
+  newFeatureId?: NewFeatureId;
+  /** 메뉴용 배지 (예: 활성 Squad 존재) */
+  badge?: boolean;
+  /** 툴바 인라인 버튼 클릭 동작 */
+  onActivate: () => void;
+  /** 툴팁용 단축키 */
+  shortcut?: string;
+  tone?: "accent" | "cyan";
+};
+
+type QuickAccessAction = {
+  id: string;
+  label: string;
+  icon: (size: number) => React.ReactNode;
+  active?: boolean;
+  shortcut?: string;
+  onActivate: () => void;
+};
+
 interface Props {
   // hardware
   specs: ReturnType<typeof useHardwareSpecs>["specs"];
@@ -132,6 +157,194 @@ const AppHeader: React.FC<Props> = ({
     showLoraForge, setShowLoraForge,
     showSkills, setShowSkills,
   } = panels;
+
+  const advancedActions = React.useMemo<AdvancedAction[]>(() => [
+    {
+      id: "mcp",
+      label: "MCP 서버",
+      icon: (size) => <PlugZap size={size} />,
+      active: showMcpPanel,
+      onActivate: () => setShowMcpPanel(v => !v),
+    },
+    {
+      id: "squad",
+      label: "Worktree Squad",
+      icon: (size) => <Users size={size} />,
+      active: showSquadPanel,
+      badge: squadStore.squads.length > 0,
+      onActivate: () => {
+        setShowSquadPanel(v => !v);
+        if (!showSquadPanel) squadStore.load();
+      },
+    },
+    {
+      id: "healing",
+      label: "Auto-Heal 학습 데이터셋",
+      icon: (size) => <Sparkles size={size} className={size <= 13 ? "text-cyan-300" : undefined} />,
+      active: showHealingDataset,
+      newFeatureId: "healing",
+      onActivate: () => {
+        onMarkAdvancedSeen("healing");
+        setShowHealingDataset(v => !v);
+      },
+      tone: "cyan",
+    },
+    {
+      id: "history",
+      label: "시맨틱 히스토리 그래프",
+      icon: (size) => <GitBranch size={size} />,
+      active: showHistoryGraph,
+      onActivate: () => setShowHistoryGraph(v => !v),
+      tone: "cyan",
+    },
+    {
+      id: "recall",
+      label: "메모리 검색 (history/healing/memory)",
+      icon: (size) => <Library size={size} className={size <= 13 ? "text-cyan-300" : undefined} />,
+      active: showRecall,
+      newFeatureId: "recall",
+      onActivate: () => {
+        onMarkAdvancedSeen("recall");
+        setShowRecall(v => !v);
+      },
+      tone: "cyan",
+    },
+    {
+      id: "lora",
+      label: "LoRA Forge — 내 데이터로 모델 학습",
+      icon: (size) => <Hammer size={size} className={size <= 13 ? "text-cyan-300" : undefined} />,
+      active: showLoraForge,
+      newFeatureId: "lora",
+      onActivate: () => {
+        onMarkAdvancedSeen("lora");
+        setShowLoraForge(v => !v);
+      },
+      tone: "cyan",
+    },
+    {
+      id: "skills",
+      label: "Skills — 절차 라이브러리",
+      icon: (size) => <BookMarked size={size} className={size <= 13 ? "text-cyan-300" : undefined} />,
+      active: showSkills,
+      newFeatureId: "skills",
+      onActivate: () => {
+        onMarkAdvancedSeen("skills");
+        setShowSkills(v => !v);
+      },
+      tone: "cyan",
+    },
+    {
+      id: "rag",
+      label: "RAG 코드 검색",
+      icon: (size) => <Database size={size} />,
+      active: showRagPanel,
+      onActivate: () => setShowRagPanel(v => !v),
+    },
+    {
+      id: "xllm",
+      label: "xLLM 최적화 설정",
+      icon: (size) => <SlidersHorizontal size={size} />,
+      active: false,
+      onActivate: () => setShowXllmPanel(true),
+    },
+  ], [
+    showMcpPanel,
+    showSquadPanel,
+    squadStore.squads.length,
+    showHealingDataset,
+    showHistoryGraph,
+    showRecall,
+    showLoraForge,
+    showSkills,
+    showRagPanel,
+    onMarkAdvancedSeen,
+    squadStore.load,
+    setShowMcpPanel,
+    setShowSquadPanel,
+    setShowHealingDataset,
+    setShowHistoryGraph,
+    setShowRecall,
+    setShowLoraForge,
+    setShowSkills,
+    setShowRagPanel,
+    setShowXllmPanel,
+  ]);
+
+  const compactQuickAccessActions = React.useMemo<QuickAccessAction[]>(() => [
+    {
+      id: "workspace",
+      label: "워크스페이스",
+      shortcut: "⌘⇧S",
+      active: showWorkspace,
+      icon: (size) => <Layers size={size} />,
+      onActivate: () => {
+        setShowWorkspace(true);
+        loadWorkspaces();
+      },
+    },
+    {
+      id: "scripts",
+      label: "스크립트 라이브러리",
+      shortcut: "⌘⇧L",
+      active: showScriptPanel,
+      icon: (size) => <BookOpen size={size} />,
+      onActivate: () => {
+        setShowScriptPanel(v => {
+          if (!v) scriptLib.loadScripts();
+          return !v;
+        });
+      },
+    },
+    {
+      id: "diffReview",
+      label: "AI Diff 리뷰",
+      icon: (size) => <GitCompareArrows size={size} />,
+      active: showDiffReview,
+      onActivate: () => setShowDiffReview(true),
+    },
+    {
+      id: "sysmon",
+      label: "시스템 모니터",
+      icon: (size) => <Activity size={size} />,
+      active: showSysmon,
+      onActivate: () => setShowSysmon(v => !v),
+    },
+    {
+      id: "theme",
+      label: "터미널 테마",
+      icon: (size) => <Palette size={size} />,
+      active: showThemePanel,
+      onActivate: () => setShowThemePanel(true),
+    },
+  ], [
+    showWorkspace,
+    showScriptPanel,
+    showDiffReview,
+    showSysmon,
+    showThemePanel,
+    loadWorkspaces,
+    setShowWorkspace,
+    setShowScriptPanel,
+    scriptLib.loadScripts,
+    setShowDiffReview,
+    setShowSysmon,
+    setShowThemePanel,
+  ]);
+
+  const orderedOverflowActions = React.useMemo(() => {
+    return [...advancedActions]
+      .map((action, index) => {
+        const isActionNew = action.newFeatureId != null && isNew(action.newFeatureId);
+        const score = (action.active ? 200 : 0) + (isActionNew ? 80 : 0) - index;
+        return { action, score, index };
+      })
+      .sort((a, b) => {
+        if (a.score !== b.score) return b.score - a.score;
+        return a.index - b.index;
+      })
+      .map((entry) => entry.action);
+  }, [advancedActions, seenAdvancedFeatures]);
+
 
   // 모델명 짧게 — 마지막 segment에서 흔한 suffix 제거
   const shortName = (n?: string | null) => {
@@ -561,26 +774,19 @@ const AppHeader: React.FC<Props> = ({
         >
           <FolderTree size={14} />
         </ToolbarIconButton>
-        {!compactMode && (
-          <>
+        {!compactMode && compactQuickAccessActions
+          .slice(0, 2)
+          .map((action) => (
             <ToolbarIconButton
-              label="워크스페이스"
-              shortcut="⌘⇧S"
-              active={showWorkspace}
-              onClick={() => { setShowWorkspace(true); loadWorkspaces(); }}
+              key={`quick-inline-${action.id}`}
+              label={action.label}
+              shortcut={action.shortcut}
+              active={action.active}
+              onClick={action.onActivate}
             >
-              <Layers size={14} />
+              {action.icon(14)}
             </ToolbarIconButton>
-            <ToolbarIconButton
-              label="스크립트 라이브러리"
-              shortcut="⌘⇧L"
-              active={showScriptPanel}
-              onClick={() => { setShowScriptPanel(v => { if (!v) scriptLib.loadScripts(); return !v; }); }}
-            >
-              <BookOpen size={14} />
-            </ToolbarIconButton>
-          </>
-        )}
+          ))}
 
         <ToolbarSeparator />
 
@@ -605,86 +811,18 @@ const AppHeader: React.FC<Props> = ({
         {/* 그룹 2 고급 — toolbar_show_advanced=true면 인라인, 아니면 "더보기" 팝오버 */}
         {toolbarShowAdvanced && !compactMode && (
           <>
-            <ToolbarIconButton
-              label="MCP 서버"
-              active={showMcpPanel}
-              onClick={() => setShowMcpPanel(v => !v)}
-            >
-              <PlugZap size={14} />
-            </ToolbarIconButton>
-            <ToolbarIconButton
-              label="Worktree Squad"
-              active={showSquadPanel}
-              badge={squadStore.squads.length > 0}
-              onClick={() => { setShowSquadPanel(v => !v); if (!showSquadPanel) squadStore.load(); }}
-            >
-              <Users size={14} />
-            </ToolbarIconButton>
-            <ToolbarIconButton
-              label="Auto-Heal 학습 데이터셋"
-              tone="cyan"
-              active={showHealingDataset}
-              onClick={() => {
-                onMarkAdvancedSeen("healing");
-                setShowHealingDataset(v => !v);
-              }}
-            >
-              <Sparkles size={14} />
-            </ToolbarIconButton>
-            <ToolbarIconButton
-              label="시맨틱 히스토리 그래프"
-              tone="cyan"
-              active={showHistoryGraph}
-              onClick={() => setShowHistoryGraph(v => !v)}
-            >
-              <GitBranch size={14} />
-            </ToolbarIconButton>
-            <ToolbarIconButton
-              label="메모리 검색 (history/healing/memory)"
-              tone="cyan"
-              active={showRecall}
-              onClick={() => {
-                onMarkAdvancedSeen("recall");
-                setShowRecall(v => !v);
-              }}
-            >
-              <Library size={14} />
-            </ToolbarIconButton>
-            <ToolbarIconButton
-              label="LoRA Forge — 내 데이터로 모델 학습"
-              tone="cyan"
-              active={showLoraForge}
-              onClick={() => {
-                onMarkAdvancedSeen("lora");
-                setShowLoraForge(v => !v);
-              }}
-            >
-              <Hammer size={14} />
-            </ToolbarIconButton>
-            <ToolbarIconButton
-              label="Skills — 절차 라이브러리"
-              tone="cyan"
-              active={showSkills}
-              onClick={() => {
-                onMarkAdvancedSeen("skills");
-                setShowSkills(v => !v);
-              }}
-            >
-              <BookMarked size={14} />
-            </ToolbarIconButton>
-            <ToolbarIconButton
-              label="RAG 코드 검색"
-              active={showRagPanel}
-              onClick={() => setShowRagPanel(v => !v)}
-            >
-              <Database size={14} />
-            </ToolbarIconButton>
-            <ToolbarIconButton
-              label="xLLM 최적화 설정"
-              onClick={() => setShowXllmPanel(true)}
-            >
-              <SlidersHorizontal size={14} />
-            </ToolbarIconButton>
+            {advancedActions.map((action) => (
+              <ToolbarIconButton
+                key={`advanced-inline-${action.id}`}
+                label={action.label}
+                active={action.active}
+                tone={action.tone}
+                badge={action.badge}
+                onClick={action.onActivate}
+              >
+                {action.icon(14)}
+              </ToolbarIconButton>
+            ))}
             <ToolbarSeparator />
           </>
         )}
@@ -742,116 +880,53 @@ const AppHeader: React.FC<Props> = ({
                       </p>
                     </div>
                   )}
-                  <AdvancedRow
-                    icon={<PlugZap size={13} />}
-                    label="MCP 서버"
-                    onClick={() => { setShowAdvancedOverflow(false); setShowMcpPanel(true); }}
-                  />
-                  <AdvancedRow
-                    icon={<Users size={13} />}
-                    label="Worktree Squad"
-                    badge={squadStore.squads.length > 0}
-                    onClick={() => { setShowAdvancedOverflow(false); setShowSquadPanel(true); squadStore.load(); }}
-                  />
-                  <AdvancedRow
-                    icon={<Sparkles size={13} className="text-cyan-300" />}
-                    label="Auto-Heal 학습 데이터셋"
-                    isNew={isNew("healing")}
-                    onClick={() => { onMarkAdvancedSeen("healing"); setShowAdvancedOverflow(false); setShowHealingDataset(true); }}
-                  />
-                  <AdvancedRow
-                    icon={<Library size={13} className="text-cyan-300" />}
-                    label="메모리 검색"
-                    isNew={isNew("recall")}
-                    onClick={() => { onMarkAdvancedSeen("recall"); setShowAdvancedOverflow(false); setShowRecall(true); }}
-                  />
-                  <AdvancedRow
-                    icon={<Hammer size={13} className="text-cyan-300" />}
-                    label="LoRA Forge"
-                    isNew={isNew("lora")}
-                    onClick={() => { onMarkAdvancedSeen("lora"); setShowAdvancedOverflow(false); setShowLoraForge(true); }}
-                  />
-                  <AdvancedRow
-                    icon={<BookMarked size={13} className="text-cyan-300" />}
-                    label="Skills — 절차 라이브러리"
-                    isNew={isNew("skills")}
-                    onClick={() => { onMarkAdvancedSeen("skills"); setShowAdvancedOverflow(false); setShowSkills(true); }}
-                  />
-                  <AdvancedRow
-                    icon={<Database size={13} />}
-                    label="RAG 코드 검색"
-                    onClick={() => { setShowAdvancedOverflow(false); setShowRagPanel(true); }}
-                  />
-                  <AdvancedRow
-                    icon={<SlidersHorizontal size={13} />}
-                    label="xLLM 설정"
-                    onClick={() => { setShowAdvancedOverflow(false); setShowXllmPanel(true); }}
-                  />
+                  {orderedOverflowActions.map((action) => (
+                    <AdvancedRow
+                      key={`advanced-overflow-${action.id}`}
+                      icon={action.icon(13)}
+                      label={action.label}
+                      badge={action.badge}
+                      isNew={action.newFeatureId ? isNew(action.newFeatureId) : false}
+                      onClick={() => {
+                        setShowAdvancedOverflow(false);
+                        action.onActivate();
+                      }}
+                    />
+                  ))}
                   {compactMode && (
                     <>
                       <p className="px-2 py-1.5 text-[9px] font-semibold tracking-[0.06em] text-white/50 uppercase">
                         QUICK ACCESS
                       </p>
-                      <AdvancedRow
-                        icon={<Layers size={13} />}
-                        label="워크스페이스"
-                        onClick={() => {
-                          setShowAdvancedOverflow(false);
-                          setShowWorkspace(true);
-                          loadWorkspaces();
-                        }}
-                      />
-                      <AdvancedRow
-                        icon={<BookOpen size={13} />}
-                        label="스크립트 라이브러리"
-                        onClick={() => {
-                          setShowAdvancedOverflow(false);
-                          setShowScriptPanel((v) => {
-                            if (!v) scriptLib.loadScripts();
-                            return !v;
-                          });
-                        }}
-                      />
-                      <AdvancedRow
-                        icon={<GitCompareArrows size={13} />}
-                        label="AI Diff 리뷰"
-                        onClick={() => {
-                          setShowAdvancedOverflow(false);
-                          setShowDiffReview(true);
-                        }}
-                      />
-                      <AdvancedRow
-                        icon={<Activity size={13} />}
-                        label="시스템 모니터"
-                        onClick={() => {
-                          setShowAdvancedOverflow(false);
-                          setShowSysmon(v => !v);
-                        }}
-                      />
-                      <AdvancedRow
-                        icon={<Palette size={13} />}
-                        label="터미널 테마"
-                        onClick={() => {
-                          setShowAdvancedOverflow(false);
-                          setShowThemePanel(true);
-                        }}
-                      />
+                      {compactQuickAccessActions.map((action) => (
+                        <AdvancedRow
+                          key={`quick-access-${action.id}`}
+                          icon={action.icon(13)}
+                          label={action.label}
+                          onClick={() => {
+                            setShowAdvancedOverflow(false);
+                            action.onActivate();
+                          }}
+                        />
+                      ))}
                     </>
                   )}
                   <div className="h-px bg-white/8 my-1" />
-                  <button
-                    type="button"
-                    onClick={() => { toggleToolbarAdvanced(); setShowAdvancedOverflow(false); }}
-                    className="w-full text-left px-2 py-1.5 rounded text-[10.5px] text-white/55 hover:text-white/85 hover:bg-white/5 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                  >
-                    툴바에 항상 표시 (고급 기능 펼치기)
-                  </button>
+                  {!compactMode && (
+                    <button
+                      type="button"
+                      onClick={() => { toggleToolbarAdvanced(); setShowAdvancedOverflow(false); }}
+                      className="w-full text-left px-2 py-1.5 rounded text-[10.5px] text-white/55 hover:text-white/85 hover:bg-white/5 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                    >
+                      툴바에 항상 표시 (고급 기능 펼치기)
+                    </button>
+                  )}
                 </motion.div>
               )}
             </AnimatePresence>
           </div>
         )}
-        {toolbarShowAdvanced && (
+        {toolbarShowAdvanced && !compactMode && (
           <ToolbarIconButton
             label="고급 기능 접기"
             onClick={toggleToolbarAdvanced}
