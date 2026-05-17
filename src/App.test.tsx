@@ -1,5 +1,6 @@
-import { describe, it, expect, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { invoke } from "@tauri-apps/api/core";
 import App from "./App";
 
 vi.mock("@tauri-apps/api/core", () => ({
@@ -52,6 +53,10 @@ vi.mock("./components/TerminalPane", () => ({
 }));
 
 describe("App (LUM 터미널)", () => {
+  beforeEach(() => {
+    invoke.mockClear();
+  });
+
   it("Phase 66 이후 헤더에 LUM 텍스트 로고 제거됨 — 아이콘만 사용", () => {
     render(<App />);
     // headline에 "LUM" 텍스트가 있어선 안 됨 (툴팁·aria-label은 허용)
@@ -216,6 +221,77 @@ describe("App (LUM 터미널)", () => {
     const ragSearchButton = summaryButtons.find((button) => button.textContent?.trim() === "RAG 검색");
     expect(projectBinButton).not.toBeNull();
     expect(ragSearchButton).not.toBeNull();
+  });
+
+  it("요약에서 Project Bin 버튼을 누르면 파일 탐색기가 열린다", async () => {
+    render(<App />);
+
+    const fileExplorerToggle = screen.getByLabelText("파일 탐색기");
+    const inspectorButton = screen.getByLabelText("Inspector");
+
+    const inspectorSummaryPanel = async () => {
+      let panel = document.querySelector("#inspector-tabpanel-summary");
+      if (!panel) {
+        await waitFor(() => {
+          panel = document.querySelector("#inspector-tabpanel-summary");
+          expect(panel).not.toBeNull();
+        });
+      }
+      return panel;
+    };
+
+    fireEvent.click(fileExplorerToggle);
+    await waitFor(() => {
+      expect(screen.queryByTestId("file-explorer-mock")).not.toBeInTheDocument();
+    });
+
+    const inspectorCloseButton = screen.queryByLabelText("Inspector 닫기");
+    if (!inspectorCloseButton) {
+      fireEvent.click(inspectorButton);
+    }
+    await waitFor(() => {
+      expect(screen.getByLabelText("Inspector 닫기")).toBeInTheDocument();
+    });
+
+    const panel = await inspectorSummaryPanel();
+    const projectBinButtons = within(panel as HTMLElement).getAllByRole("button", { name: "Project Bin" });
+    expect(projectBinButtons).toHaveLength(2);
+    const projectBinButton = projectBinButtons[0];
+    fireEvent.click(projectBinButton);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("file-explorer-mock")).toBeInTheDocument();
+    });
+
+    expect(invoke).toHaveBeenCalledWith("save_ui_preferences", {
+      showFileExplorer: true,
+    });
+  });
+
+  it("요약에서 RAG 검색 버튼을 누르면 RAG 탭으로 이동한다", async () => {
+    render(<App />);
+
+    const inspectorButton = screen.getByLabelText("Inspector");
+    const inspectorCloseButton = screen.queryByLabelText("Inspector 닫기");
+
+    if (inspectorCloseButton) {
+      fireEvent.click(inspectorCloseButton);
+    }
+    fireEvent.click(inspectorButton);
+
+    await waitFor(() => {
+      expect(screen.getByRole("tablist", { name: "Inspector 탭" })).toBeInTheDocument();
+    });
+
+    const panel = document.querySelector("#inspector-tabpanel-summary");
+    expect(panel).toBeTruthy();
+    const ragButton = within(panel as HTMLElement).getByRole("button", { name: "RAG 검색" });
+    fireEvent.click(ragButton);
+
+    await waitFor(() => {
+      expect(screen.getByRole("tab", { name: /RAG/ })).toHaveAttribute("aria-selected", "true");
+      expect(document.querySelector("#inspector-tabpanel-rag")).toBeInTheDocument();
+    });
   });
 
   it("Inspector는 Escape 키로 닫히고 포커스가 트리거로 되돌아간다", async () => {
