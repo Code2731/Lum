@@ -154,6 +154,7 @@ describe("WarpInputBar — dumb input, 라우팅은 상위에서", () => {
     expect(screen.getByText(/Cmd\/Ctrl\+1~4\/0/)).toBeInTheDocument();
     expect(screen.getByText(/`\/\./)).toBeInTheDocument();
     expect(screen.getByText(/Shift\+`\/,/)).toBeInTheDocument();
+    expect(screen.getByText(/@sglang/)).toBeInTheDocument();
   });
 
   it("onChange 한 글자씩 호출", () => {
