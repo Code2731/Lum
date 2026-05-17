@@ -2212,6 +2212,30 @@ const App: React.FC = () => {
                         <p className="text-white/72">
                           터미널에서 최근 명령을 실행하면 여기에서 실패 블록·추천 커맨드·최근 기록을 확인할 수 있습니다.
                         </p>
+                        <div className="mt-2 grid grid-cols-2 gap-1.5">
+                          <button
+                            onClick={() => {
+                              setShowFileExplorer((prev) => {
+                                if (prev) return true;
+                                invoke("save_ui_preferences", { showFileExplorer: true }).catch(() => {});
+                                return true;
+                              });
+                            }}
+                            className="inline-flex items-center justify-center gap-1 px-2 py-1.5 rounded-md border border-white/12 bg-white/[0.04] text-[10px] text-white/76 hover:text-white hover:bg-white/[0.1] transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                          >
+                            <FolderTree size={11} />
+                            Project Bin
+                          </button>
+                          <button
+                            onClick={() => {
+                              openInspectorTab("rag");
+                            }}
+                            className="inline-flex items-center justify-center gap-1 px-2 py-1.5 rounded-md border border-white/12 bg-white/[0.04] text-[10px] text-white/76 hover:text-white hover:bg-white/[0.1] transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                          >
+                            <Library size={11} />
+                            RAG 검색
+                          </button>
+                        </div>
                       </div>
                     )}
                     <div className={inspectorCardRegularClass}>

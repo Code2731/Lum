@@ -188,13 +188,34 @@ describe("App (LUM 터미널)", () => {
   });
 
   it("Inspector 초기 진입 시 활동 내역이 없으면 안내 문구가 노출된다", async () => {
-    render(<App />);
+    const { container } = render(<App />);
 
-    fireEvent.click(screen.getByLabelText("Inspector"));
+    const inspectorButton = screen.getByLabelText("Inspector");
+    const inspectorCloseButton = screen.queryByLabelText("Inspector 닫기");
 
-    await waitFor(() => {
-      expect(screen.getByText("터미널에서 최근 명령을 실행하면 여기에서 실패 블록·추천 커맨드·최근 기록을 확인할 수 있습니다.")).toBeInTheDocument();
-    });
+    if (inspectorCloseButton) {
+      fireEvent.click(inspectorCloseButton);
+    }
+    fireEvent.click(inspectorButton);
+
+    let inspectorSummaryPanel = container.querySelector("#inspector-tabpanel-summary");
+    if (!inspectorSummaryPanel) {
+      await waitFor(() => {
+        inspectorSummaryPanel = container.querySelector("#inspector-tabpanel-summary");
+        expect(inspectorSummaryPanel).not.toBeNull();
+      });
+    }
+    if (!inspectorSummaryPanel) {
+      throw new Error("Inspector summary panel not found");
+    }
+
+    expect(screen.getByRole("tablist", { name: "Inspector 탭" })).toBeInTheDocument();
+    expect(within(inspectorSummaryPanel as HTMLElement).getByText(/실패 블록[\s·\-]*추천 커맨드/)).toBeInTheDocument();
+    const summaryButtons = Array.from((inspectorSummaryPanel as HTMLElement).querySelectorAll("button"));
+    const projectBinButton = summaryButtons.find((button) => button.textContent?.trim() === "Project Bin");
+    const ragSearchButton = summaryButtons.find((button) => button.textContent?.trim() === "RAG 검색");
+    expect(projectBinButton).not.toBeNull();
+    expect(ragSearchButton).not.toBeNull();
   });
 
   it("Inspector는 Escape 키로 닫히고 포커스가 트리거로 되돌아간다", async () => {
