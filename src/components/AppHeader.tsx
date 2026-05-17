@@ -379,7 +379,7 @@ const AppHeader: React.FC<Props> = ({
   const [notifCenterMaxHeight, setNotifCenterMaxHeight] = React.useState(440);
   const [advancedOverflowPosition, setAdvancedOverflowPosition] = React.useState<PopupPosition>({ x: 0, y: 0 });
   const [notifCenterPosition, setNotifCenterPosition] = React.useState<PopupPosition>({ x: 0, y: 0 });
-  const [hasAdvancedPosition, setHasAdvancedPosition] = React.useState(false);
+  const [hasAdvancedPosition, setHasAdvancedPosition] = React.useState(true);
   const [hasNotifCenterPosition, setHasNotifCenterPosition] = React.useState(false);
   const ADVANCED_OVERFLOW_PANEL_ID = "advanced-overflow-panel";
   const NOTIF_CENTER_PANEL_ID = "notification-center-panel";
@@ -576,7 +576,11 @@ const AppHeader: React.FC<Props> = ({
     if (!showAdvancedOverflow) return;
 
     const handleClose = (e: PointerEvent) => {
-      if (advancedOverflowRef.current && !advancedOverflowRef.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      if (
+        (advancedOverflowRef.current && !advancedOverflowRef.current.contains(target))
+        && (advancedOverflowPanelRef.current && !advancedOverflowPanelRef.current.contains(target))
+      ) {
         closeAdvancedOverflow();
       }
     };
@@ -928,7 +932,10 @@ const AppHeader: React.FC<Props> = ({
                   {!compactMode && (
                     <button
                       type="button"
-                      onClick={() => { toggleToolbarAdvanced(); setShowAdvancedOverflow(false); }}
+                      onClick={() => {
+                        toggleToolbarAdvanced();
+                        setShowAdvancedOverflow(false);
+                      }}
                       className="w-full text-left px-2 py-1.5 rounded text-[10.5px] text-white/55 hover:text-white/85 hover:bg-white/5 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                     >
                       툴바에 항상 표시 (고급 기능 펼치기)
