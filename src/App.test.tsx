@@ -160,4 +160,30 @@ describe("App (LUM 터미널)", () => {
       input.remove();
     }
   });
+
+  it("Inspector 닫기 버튼은 트리거 버튼으로 포커스를 되돌린다", async () => {
+    render(<App />);
+
+    const inspectorButton = screen.getByLabelText("Inspector");
+    let inspectorCloseButton = screen.queryByLabelText("Inspector 닫기");
+
+    if (!inspectorCloseButton) {
+      fireEvent.click(inspectorButton);
+    }
+    await waitFor(() => {
+      expect(screen.getByLabelText("Inspector 닫기")).toBeInTheDocument();
+    });
+    inspectorCloseButton = screen.getByLabelText("Inspector 닫기");
+
+    inspectorCloseButton.focus();
+    inspectorCloseButton.blur();
+
+    fireEvent.click(inspectorCloseButton);
+
+    await waitFor(() => {
+      expect(screen.queryByRole("tablist", { name: "Inspector 탭" })).not.toBeInTheDocument();
+      expect(inspectorButton).toHaveAttribute("aria-pressed", "false");
+      expect(inspectorButton).toHaveFocus();
+    });
+  });
 });

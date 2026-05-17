@@ -316,6 +316,7 @@ const App: React.FC = () => {
     try { return localStorage.getItem("lum.inspector") !== "0"; } catch { return true; }
   });
   const [inspectorTab, setInspectorTab] = useState<InspectorTab>("summary");
+  const inspectorToggleButtonRef = useRef<HTMLButtonElement>(null);
   const [inspectorDensity, setInspectorDensity] = useState<InspectorDensity>(() => {
     try {
       return localStorage.getItem("lum.inspectorDensity") === "compact" ? "compact" : "cozy";
@@ -508,6 +509,9 @@ const App: React.FC = () => {
     setShowRagPanel(tab === "rag");
     setShowScriptPanel(tab === "scripts");
     setShowSysmon(tab === "sysmon");
+    requestAnimationFrame(() => {
+      inspectorTabRefs.current[tab]?.focus();
+    });
   }, [setShowRagPanel, setShowScriptPanel, setShowSysmon]);
   const inspectorTabs = useMemo(() => [
     { id: "summary", label: "개요", shortcut: "1" },
@@ -565,6 +569,7 @@ const App: React.FC = () => {
     setShowRagPanel(false);
     setShowScriptPanel(false);
     setShowSysmon(false);
+    requestAnimationFrame(() => inspectorToggleButtonRef.current?.focus());
   }, [setShowRagPanel, setShowScriptPanel, setShowSysmon]);
 
   useEffect(() => {
@@ -1442,6 +1447,7 @@ const App: React.FC = () => {
         showFileExplorer={showFileExplorer}
         setShowFileExplorer={setShowFileExplorer}
         showInspector={showInspector}
+        inspectorToggleButtonRef={inspectorToggleButtonRef}
         onToggleInspector={() => {
           if (showInspector) closeInspector();
           else openInspectorTab("summary");

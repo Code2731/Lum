@@ -84,6 +84,7 @@ interface Props {
   setShowFileExplorer: React.Dispatch<React.SetStateAction<boolean>>;
   showInspector: boolean;
   onToggleInspector: () => void;
+  inspectorToggleButtonRef?: React.Ref<HTMLButtonElement>;
   // reasoning toggle
   showReasoning: boolean;
   toggleReasoning: () => void;
@@ -127,6 +128,7 @@ const AppHeader: React.FC<Props> = ({
   panels,
   showFileExplorer, setShowFileExplorer,
   showInspector, onToggleInspector,
+  inspectorToggleButtonRef,
   showReasoning, toggleReasoning,
   compactMode, toggleCompactMode,
   toolbarShowAdvanced, toggleToolbarAdvanced,
@@ -780,6 +782,7 @@ const AppHeader: React.FC<Props> = ({
           label="Inspector"
           shortcut="⌘I"
           active={showInspector}
+          ref={inspectorToggleButtonRef}
           onClick={onToggleInspector}
         >
           <PanelRightOpen size={14} />
