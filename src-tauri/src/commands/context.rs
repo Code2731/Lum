@@ -1,5 +1,7 @@
 use std::path::{Path, PathBuf};
 
+const MAX_READ_TEXT_FILE_BYTES: usize = 1_200_000;
+
 const MAX_CTX_CHARS: usize = 40_000;
 const FILE_CHUNK: usize = 8_000;
 const SKIP_DIRS: &[&str] = &[
@@ -170,6 +172,46 @@ pub fn get_staged_diff(cwd: String) -> String {
 }
 
 // ── 파일 읽기 ────────────────────────────────────────────────────
+
+/// .md 중심 문서 미리보기용 원문 텍스트 조회.
+/// 경로가 상대 경로면 현재 작업 디렉터리 기준으로 해석.
+#[tauri::command]
+pub fn read_text_file(path: String, cwd: Option<String>) -> Result<String, String> {
+    let is_win_abs = path.len() >= 3
+        && path.chars().nth(1) == Some(':')
+        && matches!(path.chars().nth(2), Some('\\') | Some('/'));
+
+    let resolved: PathBuf = if path.starts_with("~/") {
+        dirs::home_dir()
+            .map(|h| h.join(&path[2..]))
+            .ok_or_else(|| "홈 디렉토리를 찾을 수 없음".to_string())?
+    } else if path.starts_with('/') || is_win_abs {
+        PathBuf::from(&path)
+    } else {
+        PathBuf::from(cwd.as_deref().unwrap_or(".")).join(&path)
+    };
+
+    let ext = resolved
+        .extension()
+        .and_then(|e| e.to_str())
+        .unwrap_or("")
+        .to_lowercase();
+    if ext != "md" && ext != "markdown" {
+        return Err("지원하지 않는 파일 형식입니다. .md 파일만 미리봅니다.".to_string());
+    }
+
+    if !resolved.is_file() {
+        return Err(format!("파일이 아닙니다: {}", resolved.display()));
+    }
+
+    let metadata = std::fs::metadata(&resolved).map_err(|e| format!("메타데이터 확인 실패: {e}"))?;
+    if metadata.len() > MAX_READ_TEXT_FILE_BYTES as u64 {
+        return Err(format!("파일이 너무 큽니다: {} bytes", metadata.len()));
+    }
+
+    std::fs::read_to_string(&resolved).map_err(|e| format!("읽기 실패: {e}"))
+}
+
 
 /// 경로(파일 or 디렉토리)를 읽어 AI 컨텍스트 문자열로 반환.
 /// path가 상대 경로이면 cwd 기준으로 해석.

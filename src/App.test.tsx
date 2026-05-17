@@ -186,4 +186,23 @@ describe("App (LUM 터미널)", () => {
       expect(inspectorButton).toHaveFocus();
     });
   });
+
+  it("Inspector는 Escape 키로 닫히고 포커스가 트리거로 되돌아간다", async () => {
+    render(<App />);
+
+    const inspectorButton = screen.getByLabelText("Inspector");
+    fireEvent.click(inspectorButton);
+
+    await waitFor(() => {
+      expect(screen.getByRole("tablist", { name: "Inspector 탭" })).toBeInTheDocument();
+    });
+
+    fireEvent.keyDown(window, { key: "Escape" });
+
+    await waitFor(() => {
+      expect(screen.queryByRole("tablist", { name: "Inspector 탭" })).not.toBeInTheDocument();
+      expect(inspectorButton).toHaveAttribute("aria-pressed", "false");
+      expect(inspectorButton).toHaveFocus();
+    });
+  });
 });

@@ -44,6 +44,7 @@ import QuickActionsBar from "./components/QuickActionsBar";
 import ResizeHandles from "./components/ResizeHandles";
 import WarpListView from "./components/WarpListView";
 import FileExplorerPanel from "./components/FileExplorerPanel";
+import MarkdownViewerPanel from "./components/MarkdownViewerPanel";
 import AppHeader from "./components/AppHeader";
 import AppOverlays from "./components/AppOverlays";
 import { ErrorBoundary } from "./components/ErrorBoundary";
@@ -85,6 +86,14 @@ interface RetryCompareTask {
   id: string;
   command: string;
   baselineOutput: string;
+}
+
+interface MarkdownDocViewState {
+  path: string;
+  title: string;
+  content: string;
+  loading: boolean;
+  error: string | null;
 }
 
 interface RetryCompareResult {
@@ -473,6 +482,12 @@ const App: React.FC = () => {
     }
   }, [closeInspectorCommandMenu]);
 
+  const openInspectorCompactMenu = useCallback((index: number) => {
+    const triggerButton = inspectorMoreButtonRefs.current[index];
+    triggerButton?.scrollIntoView({ block: "center", inline: "nearest", behavior: "auto" });
+    setInspectorCommandMenuIndex(index);
+  }, []);
+
   const selectedModel = loadedModelId ?? specs?.recommended_model ?? "Qwen2.5-Coder-7B-Instruct-EXL2-4bpw";
 
   const {
@@ -596,6 +611,52 @@ const App: React.FC = () => {
   const { workspaces, loading: wsLoading, loadWorkspaces, saveWorkspace, deleteWorkspace } = useWorkspace();
 
   const { updateInfo, installing, progress, installError, installUpdate, dismissUpdate } = useUpdateCheck();
+
+  const [markdownView, setMarkdownView] = useState<MarkdownDocViewState | null>(null);
+
+  const closeMarkdownView = useCallback(() => {
+    setMarkdownView(null);
+  }, []);
+
+  const openMarkdownView = useCallback(async (path: string) => {
+    const title = path.split(/[\\/]/).pop() || path;
+    setMarkdownView({ path, title, content: "", loading: true, error: null });
+
+    const activeTab = tabs.find((t) => t.id === activeTabId);
+    try {
+      const content = await invoke<string>("read_text_file", {
+        path,
+        cwd: activeTab?.cwd || null,
+      });
+      setMarkdownView((prev) => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          content,
+          loading: false,
+          error: null,
+        };
+      });
+    } catch (e) {
+      setMarkdownView((prev) => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          loading: false,
+          error: typeof e === "string" ? e : "문서 로딩에 실패했습니다.",
+        };
+      });
+    }
+  }, [tabs, activeTabId]);
+
+  const maybeOpenMarkdownInViewer = useCallback((path: string) => {
+    const lower = path.toLowerCase();
+    if (!lower.endsWith(".md") && !lower.endsWith(".markdown")) {
+      return false;
+    }
+    void openMarkdownView(path);
+    return true;
+  }, [openMarkdownView]);
 
   // ReAct 에이전트 (>> 프리픽스 태스크)
   const reactAgent = useReactAgent();
@@ -1335,6 +1396,11 @@ const App: React.FC = () => {
           closeInspectorCommandMenu(true);
           return;
         }
+        if (showInspector) {
+          e.preventDefault();
+          closeInspector();
+          return;
+        }
         setShowAiBar(false);
         setTabCtxMenu(null);
         closeOverlays();
@@ -1351,7 +1417,9 @@ const App: React.FC = () => {
     const onPointerDown = (e: MouseEvent) => {
       if (inspectorCommandMenuOpenRef.current == null) return;
       const target = e.target as HTMLElement | null;
-      if (target?.closest("[data-inspector-command-menu-row='1']")) return;
+      if (!target) return;
+      if (target.closest("[data-inspector-command-menu-row='1']")) return;
+      if (target.closest("[data-inspector-command-menu='compact']")) return;
       closeInspectorCommandMenu();
     };
     window.addEventListener("mousedown", onPointerDown, { capture: true });
@@ -1692,6 +1760,7 @@ const App: React.FC = () => {
                 write?.(`cd ${quoted}\r`);
               }}
               onOpenFile={(p) => {
+                if (maybeOpenMarkdownInViewer(p)) return;
                 const write = ptyWriteRefs.current.get(activePaneIdRef.current);
                 const quoted = p.includes(" ") ? `"${p}"` : p;
                 // Windows: start, Mac: open, Linux: xdg-open
@@ -1704,6 +1773,16 @@ const App: React.FC = () => {
               }}
             />
           </div>
+        )}
+        {markdownView && (
+          <MarkdownViewerPanel
+            path={markdownView.path}
+            title={markdownView.title}
+            content={markdownView.content}
+            loading={markdownView.loading}
+            error={markdownView.error}
+            onClose={closeMarkdownView}
+          />
         )}
         <div className="flex-1 overflow-hidden relative bg-[#0a0f16]/65">
           <div className={`absolute inset-0 ${viewMode === "terminal" ? "block" : "hidden"}`}>
@@ -2264,8 +2343,13 @@ const App: React.FC = () => {
                                     className="rounded border border-cyan-300/18 bg-cyan-400/[0.06] px-1.5 py-1 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-cyan-300/45"
                                     onBlurCapture={(e) => {
                                       if (!isInspectorCompact || inspectorCommandMenuIndex !== idx) return;
-                                      const next = e.relatedTarget as Node | null;
-                                      if (!next || !e.currentTarget.contains(next)) {
+                                      const next = e.relatedTarget as Element | null;
+                                      if (!next) {
+                                        closeInspectorCommandMenu();
+                                        return;
+                                      }
+                                      const menuContainer = next.closest("[data-inspector-command-menu='compact']");
+                                      if (!e.currentTarget.contains(next) && !menuContainer) {
                                         closeInspectorCommandMenu();
                                       }
                                     }}
@@ -2309,12 +2393,17 @@ const App: React.FC = () => {
                                           </button>
                                           <button
                                             ref={(el) => { inspectorMoreButtonRefs.current[idx] = el; }}
-                                            onClick={() => setInspectorCommandMenuIndex((prev) => (prev === idx ? null : idx))}
-                                            onKeyDown={(e) => {
-                                              if (e.key === "ArrowDown" || e.key === "Enter" || e.key === " ") {
-                                                e.preventDefault();
-                                                setInspectorCommandMenuIndex(idx);
+                                            onClick={() => {
+                                              if (inspectorCommandMenuIndex === idx) {
+                                                closeInspectorCommandMenu();
+                                                return;
                                               }
+                                              openInspectorCompactMenu(idx);
+                                            }}
+                                            onKeyDown={(e) => {
+                                              if (e.key !== "ArrowDown" && e.key !== "Enter" && e.key !== " ") return;
+                                              e.preventDefault();
+                                              openInspectorCompactMenu(idx);
                                             }}
                                             aria-expanded={inspectorCommandMenuIndex === idx}
                                             aria-controls={`inspector-command-menu-${idx}`}
@@ -2354,13 +2443,14 @@ const App: React.FC = () => {
                                         </div>
                                       )}
                                     </div>
-                                    {isInspectorCompact && inspectorCommandMenuIndex === idx && (
-                                      <div
-                                        id={`inspector-command-menu-${idx}`}
-                                        role="menu"
-                                        onKeyDown={(e) => handleInspectorCompactMenuKeyDown(e, idx)}
-                                        className="mt-1.5 ml-5 flex items-center gap-1"
-                                      >
+                                      {isInspectorCompact && inspectorCommandMenuIndex === idx && (
+                                        <div
+                                          id={`inspector-command-menu-${idx}`}
+                                          data-inspector-command-menu="compact"
+                                          role="menu"
+                                          onKeyDown={(e) => handleInspectorCompactMenuKeyDown(e, idx)}
+                                          className="mt-1.5 ml-5 flex items-center gap-1"
+                                        >
                                         <button
                                           ref={(el) => { inspectorMenuFirstActionRefs.current[idx] = el; }}
                                           role="menuitem"
