@@ -218,6 +218,14 @@ describe("routeInput — 기본: 자연어=AI, CLI 감지 시 shell", () => {
       });
     });
 
+    it("@sglang는 xllm 강제와 동일하게 동작", () => {
+      expect(routeInput("@sglang what is a closure?")).toEqual({
+        type: "ai",
+        question: "what is a closure?",
+        backend: "xllm",
+      });
+    });
+
     it("@ollama 일반 질문 → ai + backend=ollama", () => {
       expect(routeInput("@ollama 이 코드 어떻게 동작해?")).toEqual({
         type: "ai",

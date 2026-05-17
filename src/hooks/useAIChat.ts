@@ -79,7 +79,7 @@ function extractPaths(text: string, cwd: string | null): { paths: string[]; useC
     const candidate = m[1].replace(/[.,;:!?]+$/, "");
     if (!candidate) continue;
     // backend prefix(@local/@ollama 등) 오탐 방지
-    if (["local", "embedded", "ollama", "xllm", "gemini", "cloud"].includes(candidate.toLowerCase())) {
+    if (["local", "embedded", "ollama", "xllm", "sglang", "gemini", "cloud"].includes(candidate.toLowerCase())) {
       continue;
     }
     paths.push(candidate);

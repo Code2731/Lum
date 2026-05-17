@@ -43,11 +43,13 @@ describe("detectBackendPrefixFromInput", () => {
     expect(detectBackendPrefixFromInput("@local hi")).toBe("local");
     expect(detectBackendPrefixFromInput("@ollama hi")).toBe("ollama");
     expect(detectBackendPrefixFromInput("@xllm hi")).toBe("xllm");
+    expect(detectBackendPrefixFromInput("@sglang hi")).toBe("xllm");
     expect(detectBackendPrefixFromInput("@gemini hi")).toBe("gemini");
   });
 
   it("alias를 정규화한다", () => {
     expect(detectBackendPrefixFromInput("@embedded hi")).toBe("local");
+    expect(detectBackendPrefixFromInput("@sglang hi")).toBe("xllm");
     expect(detectBackendPrefixFromInput("@cloud hi")).toBe("gemini");
   });
 

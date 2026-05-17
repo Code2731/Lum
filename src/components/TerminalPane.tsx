@@ -2476,10 +2476,10 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
             <span className="lum-toolbelt-section-tag">BACKEND</span>
             <span
               className="lum-toolbelt-secondary-hint"
-              title="@local/@ollama/@xllm/@gemini"
+              title="@local/@ollama/@xllm/@sglang/@gemini"
               style={{ fontSize: UI_TEXT_MICRO, color: "rgba(227,179,65,0.78)", flexShrink: 0 }}
             >
-              @local/@ollama/@xllm/@gemini
+              @local/@ollama/@xllm/@sglang/@gemini
             </span>
             <span
               className="lum-toolbelt-secondary-hint"

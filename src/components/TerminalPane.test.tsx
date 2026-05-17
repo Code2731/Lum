@@ -179,6 +179,11 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(screen.getByText("BACKEND FORCED @XLLM")).toBeInTheDocument();
     expect(screen.getByText("WHY BACKEND @XLLM")).toBeInTheDocument();
 
+    fireEvent.change(input, { target: { value: "@sglang closure가 뭐야?" } });
+    expect(screen.getByText("AI @XLLM")).toBeInTheDocument();
+    expect(screen.getByText("BACKEND FORCED @XLLM")).toBeInTheDocument();
+    expect(screen.getByText("WHY BACKEND @XLLM")).toBeInTheDocument();
+
     fireEvent.change(input, { target: { value: "@local src/utils.ts 함수 수정해줘" } });
     expect(screen.getByText("AGENT @LOCAL")).toBeInTheDocument();
     expect(screen.getByText("BACKEND FORCED @LOCAL")).toBeInTheDocument();
@@ -1612,6 +1617,26 @@ describe("TerminalPane — 입력 라우팅", () => {
     });
     const writeCalls = invokeMock.mock.calls.filter((c) => c[0] === "write_to_pty");
     expect(writeCalls.length).toBe(0);
+  });
+
+  it("@sglang prefix → backend=xllm로 AI Chat 호출", async () => {
+    const onAskAI = vi.fn();
+    const { container } = render(<TerminalPane id="tab-1" onAskAI={onAskAI} />);
+    submitInput(container, "@sglang 최신 로그 요약해줘");
+    await waitFor(() => {
+      expect(onAskAI).toHaveBeenCalledWith("최신 로그 요약해줘", undefined, undefined, "xllm");
+    });
+    const writeCalls = invokeMock.mock.calls.filter((c) => c[0] === "write_to_pty");
+    expect(writeCalls.length).toBe(0);
+  });
+
+  it("@sglang + coding intent → agent + backend=xllm 호출", async () => {
+    const onAgentTrigger = vi.fn();
+    const { container } = render(<TerminalPane id="tab-1" onAgentTrigger={onAgentTrigger} />);
+    submitInput(container, "@sglang 파일 수정해줘");
+    await waitFor(() => {
+      expect(onAgentTrigger).toHaveBeenCalledWith("파일 수정해줘", "xllm");
+    });
   });
 
   it("./run.sh 같은 경로 → shell", async () => {

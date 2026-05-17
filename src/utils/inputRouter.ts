@@ -21,12 +21,14 @@ export type Route =
   | { type: "heavy"; prompt: string }     // "!! ..." — Heavy Track (mistral.rs 30B)
   | { type: "empty" };
 
-/** @local·@embedded → "local" 등 — alias 흡수. 첫 토큰이 키워드 아니면 null. */
+/** @local·@embedded → "local" 등 — alias 흡수. 첫 토큰이 키워드 아니면 null.
+ * sglang는 별도 엔진이 아니라 xLLM HTTP 경로로 라우팅한다. */
 const BACKEND_KEYWORDS: Record<string, AiBackend> = {
   local: "local",
   embedded: "local",
   ollama: "ollama",
   xllm: "xllm",
+  sglang: "xllm",
   gemini: "gemini",
   cloud: "gemini",
 };

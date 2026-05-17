@@ -77,6 +77,14 @@ describe("WarpInputBar — dumb input, 라우팅은 상위에서", () => {
     expect(input).toHaveValue("@local ");
   });
 
+  it("@sglang 단독 입력 + Enter는 @xllm으로 정규화", () => {
+    const { input, onSubmit } = setup();
+    fireEvent.change(input, { target: { value: "@sglang" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+    expect(onSubmit).not.toHaveBeenCalled();
+    expect(input).toHaveValue("@xllm ");
+  });
+
   it("@embedded 단독 입력 + Enter는 canonical(@local)로 정규화", () => {
     const { input, onSubmit } = setup();
     fireEvent.change(input, { target: { value: "@embedded" } });
@@ -106,6 +114,15 @@ describe("WarpInputBar — dumb input, 라우팅은 상위에서", () => {
     fireEvent.change(input, { target: { value: "@xllm 로그 요약해줘" } });
     expect(screen.getByText("BACKEND XLLM")).toBeInTheDocument();
     fireEvent.keyDown(input, { key: "3", ctrlKey: true });
+    expect(screen.queryByText("BACKEND XLLM")).not.toBeInTheDocument();
+  });
+
+  it("backend 배지가 @sglang에서 @xllm으로 정규화되어 표시됨", () => {
+    const { input } = setup();
+    fireEvent.change(input, { target: { value: "@sglang 로그 요약해줘" } });
+    expect(screen.getByText("BACKEND XLLM")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "clear-backend-badge" }));
+    expect(input).toHaveValue("로그 요약해줘");
     expect(screen.queryByText("BACKEND XLLM")).not.toBeInTheDocument();
   });
 

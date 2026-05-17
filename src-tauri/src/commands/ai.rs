@@ -333,7 +333,7 @@ pub async fn call_xllm(client: &reqwest::Client, _model: &str, prompt: &str) -> 
 
 /// backend 강제 단일 응답 호출.
 /// - None: 기존 fallback 순서 유지 (embedded → ollama → gemini/xllm)
-/// - Some(local|embedded|ollama|xllm|gemini|cloud): 해당 백엔드만 시도
+/// - Some(local|embedded|ollama|xllm|sglang|gemini|cloud): 해당 백엔드만 시도
 pub async fn call_ai_with_backend(
     client: &reqwest::Client,
     model: &str,
@@ -361,7 +361,7 @@ pub async fn call_ai_with_backend(
                 "ollama backend 강제 요청이지만 ollama 모델/URL 설정이 없습니다.".to_string(),
             ))
         }
-        "xllm" => call_xllm_http(client, prompt).await,
+        "xllm" | "sglang" => call_xllm_http(client, prompt).await,
         "gemini" | "cloud" => {
             if !model.starts_with("gemini") {
                 return Err(LumError::Config(
@@ -371,7 +371,7 @@ pub async fn call_ai_with_backend(
             call_gemini(client, model, prompt, None).await
         }
         _ => Err(LumError::Config(format!(
-            "지원하지 않는 backend: {} (local|ollama|xllm|gemini)",
+            "지원하지 않는 backend: {} (local|ollama|xllm|sglang|gemini)",
             forced
         ))),
     }
@@ -751,7 +751,7 @@ pub async fn stream_ai_command(
     images: Option<Vec<String>>,
     // engine: 명시적 엔진 — "heavy" = mistral.rs 강제, "fast"/None = TabbyAPI
     engine: Option<String>,
-    // backend: 명시적 백엔드 강제 — local|ollama|xllm|gemini
+    // backend: 명시적 백엔드 강제 — local|ollama|xllm|sglang|gemini
     backend: Option<String>,
     // active_file: 현재 편집 파일 경로 — 지정 시 파일 내용 + RAG 스니펫 자동 주입
     active_file: Option<String>,
@@ -844,7 +844,7 @@ pub async fn stream_ai_command(
                     "ollama backend 강제 요청이지만 ollama 모델/URL 설정이 없습니다.".to_string(),
                 ));
             }
-            "xllm" => {
+            "xllm" | "sglang" => {
                 let xllm_url = config.xllm_url();
                 let result = call_compat_stream(
                     &app,
@@ -889,7 +889,7 @@ pub async fn stream_ai_command(
             }
             _ => {
                 return Err(LumError::Config(format!(
-                    "지원하지 않는 backend: {} (local|ollama|xllm|gemini)",
+                    "지원하지 않는 backend: {} (local|ollama|xllm|sglang|gemini)",
                     forced
                 )));
             }
