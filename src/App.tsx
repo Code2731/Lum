@@ -1478,6 +1478,7 @@ const App: React.FC = () => {
     ? (cmdBlocks.find((b) => b.id === selectedBlockId) ?? null)
     : lastCmdBlock;
   const focusedCmdIndex = focusedCmdBlock ? cmdBlocks.findIndex((b) => b.id === focusedCmdBlock.id) : -1;
+  const inspectorHasNoActivity = cmdBlocks.length === 0 && !inspectorAnalyzeCache;
   const showBlockBar = focusedCmdBlock !== null && focusedCmdBlock.id !== dismissedBlockId && !healingError;
   const wsTabs = tabs.map(t => ({ id: t.id, title: t.title, cwd: t.cwd ?? "", split_dir: t.splitDir }));
   const contextTab = tabCtxMenu ? tabs.find(t => t.id === tabCtxMenu.tabId) : undefined;
@@ -2205,6 +2206,14 @@ const App: React.FC = () => {
                       <p className="text-white/45 uppercase tracking-[0.06em] text-[10px]">Model</p>
                       <p className="text-white/82 break-all">{selectedModel}</p>
                     </div>
+                    {inspectorHasNoActivity && (
+                      <div className={inspectorCardRegularClass}>
+                        <p className="text-white/45 uppercase tracking-[0.06em] text-[10px]">INSPECTOR</p>
+                        <p className="text-white/72">
+                          터미널에서 최근 명령을 실행하면 여기에서 실패 블록·추천 커맨드·최근 기록을 확인할 수 있습니다.
+                        </p>
+                      </div>
+                    )}
                     <div className={inspectorCardRegularClass}>
                       <div className="flex items-center justify-between gap-2">
                         <p className="text-white/45 uppercase tracking-[0.06em] text-[10px]">Failed Block</p>

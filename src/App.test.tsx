@@ -187,6 +187,16 @@ describe("App (LUM 터미널)", () => {
     });
   });
 
+  it("Inspector 초기 진입 시 활동 내역이 없으면 안내 문구가 노출된다", async () => {
+    render(<App />);
+
+    fireEvent.click(screen.getByLabelText("Inspector"));
+
+    await waitFor(() => {
+      expect(screen.getByText("터미널에서 최근 명령을 실행하면 여기에서 실패 블록·추천 커맨드·최근 기록을 확인할 수 있습니다.")).toBeInTheDocument();
+    });
+  });
+
   it("Inspector는 Escape 키로 닫히고 포커스가 트리거로 되돌아간다", async () => {
     render(<App />);
 
