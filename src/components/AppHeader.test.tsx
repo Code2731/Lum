@@ -295,11 +295,14 @@ describe("AppHeader", () => {
 
       const top = Number.parseFloat(menu.style.top || "0");
       const left = Number.parseFloat(menu.style.left || "0");
+      const width = Number.parseFloat(menu.style.width || "0");
 
       expect(top).toBeGreaterThanOrEqual(8);
       expect(top).toBeLessThanOrEqual(292);
       expect(left).toBeGreaterThanOrEqual(8);
       expect(left).toBeLessThanOrEqual(700 - 8);
+      expect(width).toBeGreaterThan(0);
+      expect(width).toBeLessThanOrEqual(700 - 16);
     } finally {
       spy.mockRestore();
     }

@@ -107,6 +107,7 @@ type PopupPlacement = "down" | "up";
 type PopupPosition = {
   x: number;
   y: number;
+  width?: number;
 };
 
 const clampValue = (value: number, min: number, max: number): number => {
@@ -441,19 +442,22 @@ const AppHeader: React.FC<Props> = ({
     const panelWidth = (panelRect?.width && Number.isFinite(panelRect.width) && panelRect.width > 0)
       ? panelRect.width
       : options.fallbackWidth;
+    const safeViewportWidth = Math.max(POPUP_EDGE_GUTTER * 2 + 1, window.innerWidth - POPUP_EDGE_GUTTER * 2);
+    const clampedPanelWidth = Math.min(panelWidth, safeViewportWidth);
     const panelHeight = nextHeight;
 
     const nextY = placement === "up"
       ? triggerRect.top - panelHeight - POPUP_EDGE_GUTTER
       : triggerRect.bottom + POPUP_EDGE_GUTTER;
 
-    const nextX = triggerRect.right - panelWidth;
+    const nextX = triggerRect.right - clampedPanelWidth;
     const maxTop = Math.max(POPUP_EDGE_GUTTER, window.innerHeight - panelHeight - POPUP_EDGE_GUTTER);
-    const maxLeft = Math.max(POPUP_EDGE_GUTTER, window.innerWidth - panelWidth - POPUP_EDGE_GUTTER);
+    const maxLeft = Math.max(POPUP_EDGE_GUTTER, window.innerWidth - clampedPanelWidth - POPUP_EDGE_GUTTER);
 
     options.setPosition({
       x: clampValue(nextX, POPUP_EDGE_GUTTER, maxLeft),
       y: clampValue(nextY, POPUP_EDGE_GUTTER, maxTop),
+      width: clampedPanelWidth,
     });
     options.onReady();
   }, [measurePopupPlacement]);
@@ -461,6 +465,7 @@ const AppHeader: React.FC<Props> = ({
   const advancedOverflowPanelStyle: React.CSSProperties = {
     left: `${advancedOverflowPosition.x}px`,
     top: `${advancedOverflowPosition.y}px`,
+    width: typeof advancedOverflowPosition.width === "number" ? `${advancedOverflowPosition.width}px` : undefined,
     opacity: hasAdvancedPosition ? 1 : 0,
     visibility: hasAdvancedPosition ? "visible" : "hidden",
     pointerEvents: hasAdvancedPosition ? "auto" : "none",
@@ -472,6 +477,7 @@ const AppHeader: React.FC<Props> = ({
   const notifCenterPanelStyle: React.CSSProperties = {
     left: `${notifCenterPosition.x}px`,
     top: `${notifCenterPosition.y}px`,
+    width: typeof notifCenterPosition.width === "number" ? `${notifCenterPosition.width}px` : undefined,
     opacity: hasNotifCenterPosition ? 1 : 0,
     visibility: hasNotifCenterPosition ? "visible" : "hidden",
     pointerEvents: hasNotifCenterPosition ? "auto" : "none",
