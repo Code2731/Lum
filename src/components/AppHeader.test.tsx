@@ -247,6 +247,64 @@ describe("AppHeader", () => {
     expect(notifButton).toHaveFocus();
   });
 
+  it("고급 메뉴는 화면 경계에서 잘림 없이 위치가 보정된다", async () => {
+    const HeaderHarness = () => {
+      const props = buildProps() as any;
+      props.showAdvancedOverflow = true;
+      return <AppHeader {...props} />;
+    };
+
+    const originalGetBoundingClientRect = Element.prototype.getBoundingClientRect;
+    const spy = vi.spyOn(Element.prototype, "getBoundingClientRect")
+      .mockImplementation(function () {
+        const element = this as Element;
+        if (
+          element instanceof HTMLButtonElement
+          && (element.textContent?.includes("고급 기능") || element.textContent?.includes("기능 메뉴"))
+        ) {
+          return {
+            x: 620,
+            y: 260,
+            width: 30,
+            height: 28,
+            top: 260,
+            right: 650,
+            bottom: 288,
+            left: 620,
+            toJSON: () => ({}),
+          };
+        }
+        return originalGetBoundingClientRect.call(this);
+      });
+
+    Object.defineProperty(window, "innerHeight", {
+      configurable: true,
+      value: 300,
+    });
+    Object.defineProperty(window, "innerWidth", {
+      configurable: true,
+      value: 700,
+    });
+
+    try {
+      render(<HeaderHarness />);
+      const menu = await screen.findByRole("menu", { name: "고급 기능 메뉴" });
+      await waitFor(() => {
+        expect(menu.style.visibility).toBe("visible");
+      });
+
+      const top = Number.parseFloat(menu.style.top || "0");
+      const left = Number.parseFloat(menu.style.left || "0");
+
+      expect(top).toBeGreaterThanOrEqual(8);
+      expect(top).toBeLessThanOrEqual(292);
+      expect(left).toBeGreaterThanOrEqual(8);
+      expect(left).toBeLessThanOrEqual(700 - 8);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
   it("툴바 버튼은 shortcut 속성을 aria-keyshortcuts로 노출한다", () => {
     render(<AppHeader {...buildProps()} />);
 

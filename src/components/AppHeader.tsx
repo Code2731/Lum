@@ -462,6 +462,7 @@ const AppHeader: React.FC<Props> = ({
     left: `${advancedOverflowPosition.x}px`,
     top: `${advancedOverflowPosition.y}px`,
     opacity: hasAdvancedPosition ? 1 : 0,
+    visibility: hasAdvancedPosition ? "visible" : "hidden",
     pointerEvents: hasAdvancedPosition ? "auto" : "none",
   };
 
@@ -472,6 +473,7 @@ const AppHeader: React.FC<Props> = ({
     left: `${notifCenterPosition.x}px`,
     top: `${notifCenterPosition.y}px`,
     opacity: hasNotifCenterPosition ? 1 : 0,
+    visibility: hasNotifCenterPosition ? "visible" : "hidden",
     pointerEvents: hasNotifCenterPosition ? "auto" : "none",
   };
   const notifCenterPanelOrigin = notifCenterPlacement === "up" ? "bottom right" : "top right";
