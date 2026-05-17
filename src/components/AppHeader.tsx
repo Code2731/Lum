@@ -379,7 +379,7 @@ const AppHeader: React.FC<Props> = ({
   const [notifCenterMaxHeight, setNotifCenterMaxHeight] = React.useState(440);
   const [advancedOverflowPosition, setAdvancedOverflowPosition] = React.useState<PopupPosition>({ x: 0, y: 0 });
   const [notifCenterPosition, setNotifCenterPosition] = React.useState<PopupPosition>({ x: 0, y: 0 });
-  const [hasAdvancedPosition, setHasAdvancedPosition] = React.useState(true);
+  const [hasAdvancedPosition, setHasAdvancedPosition] = React.useState(false);
   const [hasNotifCenterPosition, setHasNotifCenterPosition] = React.useState(false);
   const ADVANCED_OVERFLOW_PANEL_ID = "advanced-overflow-panel";
   const NOTIF_CENTER_PANEL_ID = "notification-center-panel";
@@ -461,7 +461,8 @@ const AppHeader: React.FC<Props> = ({
   const advancedOverflowPanelStyle: React.CSSProperties = {
     left: `${advancedOverflowPosition.x}px`,
     top: `${advancedOverflowPosition.y}px`,
-    visibility: hasAdvancedPosition ? "visible" : "hidden",
+    opacity: hasAdvancedPosition ? 1 : 0,
+    pointerEvents: hasAdvancedPosition ? "auto" : "none",
   };
 
   const advancedOverflowPanelOrigin = advancedOverflowPlacement === "up" ? "bottom right" : "top right";
@@ -470,7 +471,8 @@ const AppHeader: React.FC<Props> = ({
   const notifCenterPanelStyle: React.CSSProperties = {
     left: `${notifCenterPosition.x}px`,
     top: `${notifCenterPosition.y}px`,
-    visibility: hasNotifCenterPosition ? "visible" : "hidden",
+    opacity: hasNotifCenterPosition ? 1 : 0,
+    pointerEvents: hasNotifCenterPosition ? "auto" : "none",
   };
   const notifCenterPanelOrigin = notifCenterPlacement === "up" ? "bottom right" : "top right";
   const notifCenterPanelOffsetY = notifCenterPlacement === "up" ? 4 : -4;
