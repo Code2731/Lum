@@ -328,6 +328,22 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(screen.queryByText("ACTION PALETTE")).not.toBeInTheDocument();
   });
 
+  it("Action Palette에서 결과가 없을 때 Home/End 입력이 크래시 없이 처리된다", () => {
+    const { container } = render(<TerminalPane id="tab-1" />);
+    const input = container.querySelector("input")!;
+
+    fireEvent.keyDown(input, { key: "k", code: "KeyK", ctrlKey: true });
+    const paletteInput = screen.getByRole("textbox", { name: "action-palette-input" });
+    fireEvent.change(paletteInput, { target: { value: "__no_match__" } });
+    expect(screen.getByText("일치하는 액션이 없습니다.")).toBeInTheDocument();
+
+    fireEvent.keyDown(paletteInput, { key: "Home" });
+    expect(screen.getByText("일치하는 액션이 없습니다.")).toBeInTheDocument();
+
+    fireEvent.keyDown(paletteInput, { key: "End" });
+    expect(screen.getByText("일치하는 액션이 없습니다.")).toBeInTheDocument();
+  });
+
   it("툴벨트 @ 파일 첨부 버튼으로 첨부 트리거를 삽입하고 목록 로드를 시작한다", async () => {
     invokeMock.mockImplementation((cmd: string, args?: { path?: string }) => {
       if (cmd === "load_app_config") {
