@@ -518,6 +518,35 @@ describe("WarpListView delta actions", () => {
     expect(screen.queryByRole("menuitem", { name: /Copy Both/ })).not.toBeInTheDocument();
   });
 
+  it("블록 액션 메뉴는 Home/End로 첫/끝 항목으로 이동한다", () => {
+    render(
+      <WarpListView
+        blocks={[
+          {
+            id: "b8",
+            command: "echo menu homeend",
+            output: "menu ok",
+            exitCode: 0,
+            startedAt: now - 1000,
+            endedAt: now,
+          },
+        ]}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "블록 액션" }));
+    const menu = screen.getByRole("menu", { name: "블록 액션 메뉴" });
+    const menuItems = screen.getAllByRole("menuitem");
+    expect(menuItems.length).toBeGreaterThan(0);
+    expect(menuItems[0]).toHaveFocus();
+
+    fireEvent.keyDown(menu, { key: "End" });
+    expect(menuItems[menuItems.length - 1]).toHaveFocus();
+
+    fireEvent.keyDown(menu, { key: "Home" });
+    expect(menuItems[0]).toHaveFocus();
+  });
+
   it("블록 액션 메뉴는 화면 아래 공간이 부족하면 위로 펼쳐진다", () => {
     const viewportHeight = 190;
     Object.defineProperty(window, "innerHeight", { value: viewportHeight, configurable: true });
