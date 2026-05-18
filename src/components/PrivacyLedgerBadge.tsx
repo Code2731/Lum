@@ -118,7 +118,12 @@ const PrivacyLedgerBadge: React.FC<Props> = ({ state, isAllOnDevice, onReset }) 
   };
 
   const handlePopupArrowNav = (e: React.KeyboardEvent): boolean => {
-    if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return false;
+    if (
+      e.key !== "ArrowDown" &&
+      e.key !== "ArrowUp" &&
+      e.key !== "Home" &&
+      e.key !== "End"
+    ) return false;
 
     const focusables = getPopupElements();
     if (focusables.length === 0) return false;
@@ -131,6 +136,12 @@ const PrivacyLedgerBadge: React.FC<Props> = ({ state, isAllOnDevice, onReset }) 
       }
       if (e.key === "ArrowDown") {
         return (currentIndex + 1) % focusables.length;
+      }
+      if (e.key === "Home") {
+        return 0;
+      }
+      if (e.key === "End") {
+        return focusables.length - 1;
       }
       return (currentIndex - 1 + focusables.length) % focusables.length;
     })();
