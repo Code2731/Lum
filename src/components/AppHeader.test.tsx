@@ -138,6 +138,32 @@ const domRect = (top: number, left: number, width: number, height: number): DOMR
 
 const ADVANCED_BUTTON_NAME = /^고급 기능 \(MCP \/ Squad \/ Healing \/ Recall \/ LoRA \/ RAG \/ xLLM\)(?: \(새 고급 기능이 있습니다\))?$/;
 
+const installResizeObserverMock = () => {
+  const originalResizeObserver = (globalThis as any).ResizeObserver;
+  const observers: Array<() => void> = [];
+
+  class TestResizeObserver {
+    private onResize: () => void;
+    constructor(cb: (entries: any[]) => void) {
+      this.onResize = () => cb([]);
+    }
+    observe() {
+      observers.push(this.onResize);
+    }
+    unobserve() {}
+    disconnect() {}
+  }
+
+  (globalThis as any).ResizeObserver = TestResizeObserver as any;
+
+  return {
+    observers,
+    restore: () => {
+      (globalThis as any).ResizeObserver = originalResizeObserver;
+    },
+  };
+};
+
 describe("AppHeader", () => {
   it("고급 메뉴에서 화살표 키로 포커스가 순환 이동한다", async () => {
     const HeaderHarness = () => {
@@ -612,6 +638,125 @@ describe("AppHeader", () => {
       Object.defineProperty(window, "innerHeight", {
         configurable: true,
         value: originalInnerHeight,
+      });
+    }
+  });
+
+  it("고급 메뉴는 패널 크기 변경 시 위치를 다시 계산한다", async () => {
+    const originalInnerWidth = window.innerWidth;
+    const mock = installResizeObserverMock();
+
+    try {
+      const props = buildProps() as any;
+      const HeaderHarness = () => {
+        const [showAdvancedOverflow, setShowAdvancedOverflow] = React.useState(true);
+        return (
+          <AppHeader
+            {...props}
+            showAdvancedOverflow={showAdvancedOverflow}
+            setShowAdvancedOverflow={setShowAdvancedOverflow}
+          />
+        );
+      };
+
+      render(<HeaderHarness />);
+
+      const button = await screen.findByRole("button", { name: ADVANCED_BUTTON_NAME });
+      const menu = await screen.findByRole("menu", { name: "고급 기능 메뉴" });
+
+      let panelWidth = 220;
+      Object.defineProperty(button, "getBoundingClientRect", {
+        configurable: true,
+        value: () => domRect(20, 620, 40, 28),
+      });
+      Object.defineProperty(menu, "getBoundingClientRect", {
+        configurable: true,
+        value: () => domRect(0, 0, panelWidth, 180),
+      });
+      Object.defineProperty(window, "innerWidth", {
+        configurable: true,
+        value: 800,
+      });
+
+      fireEvent(window, new Event("resize"));
+      await waitFor(() => {
+        expect(Number(menu.style.left.replace("px", ""))).toBe(440);
+        expect(Number(menu.style.width.replace("px", ""))).toBe(220);
+      });
+
+      panelWidth = 150;
+      mock.observers[0]?.();
+
+      await waitFor(() => {
+        expect(Number(menu.style.left.replace("px", ""))).toBe(510);
+        expect(Number(menu.style.width.replace("px", ""))).toBe(150);
+      });
+    } finally {
+      mock.restore();
+      Object.defineProperty(window, "innerWidth", {
+        configurable: true,
+        value: originalInnerWidth,
+      });
+    }
+  });
+
+  it("알림 센터는 패널 크기 변경 시 위치를 다시 계산한다", async () => {
+    const originalInnerWidth = window.innerWidth;
+    const mock = installResizeObserverMock();
+
+    try {
+      const props = buildProps() as any;
+      const HeaderHarness = () => {
+        const [showNotifCenter, setShowNotifCenter] = React.useState(true);
+        return (
+          <AppHeader
+            {...props}
+            panels={{
+              ...props.panels,
+              showNotifCenter,
+              setShowNotifCenter,
+            }}
+          />
+        );
+      };
+
+      render(<HeaderHarness />);
+
+      const button = await screen.findByRole("button", { name: "알림 센터" });
+      const menu = await screen.findByRole("menu", { name: "알림 센터" });
+
+      let panelWidth = 320;
+      Object.defineProperty(button, "getBoundingClientRect", {
+        configurable: true,
+        value: () => domRect(20, 620, 40, 28),
+      });
+      Object.defineProperty(menu, "getBoundingClientRect", {
+        configurable: true,
+        value: () => domRect(0, 0, panelWidth, 180),
+      });
+      Object.defineProperty(window, "innerWidth", {
+        configurable: true,
+        value: 800,
+      });
+
+      fireEvent(window, new Event("resize"));
+      await waitFor(() => {
+        expect(Number(menu.style.left.replace("px", ""))).toBe(340);
+        expect(Number(menu.style.width.replace("px", ""))).toBe(320);
+      });
+
+      panelWidth = 170;
+      mock.observers[0]?.();
+
+      await waitFor(() => {
+        expect(Number(menu.style.left.replace("px", ""))).toBe(490);
+        expect(Number(menu.style.width.replace("px", ""))).toBe(170);
+      });
+    } finally {
+      mock.restore();
+      Object.defineProperty(window, "innerWidth", {
+        configurable: true,
+        value: originalInnerWidth,
       });
     }
   });
