@@ -1188,10 +1188,12 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
       return true;
     }
     if (e.key === "Home") {
+      e.preventDefault();
       setMentionSelected(0);
       return true;
     }
     if (e.key === "End") {
+      e.preventDefault();
       setMentionSelected(mentionItems.length - 1);
       return true;
     }
