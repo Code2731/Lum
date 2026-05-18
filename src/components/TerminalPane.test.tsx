@@ -796,6 +796,39 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(historyItems[0].parentElement).toHaveClass("lum-overlay-split-row is-active");
   });
 
+  it("HISTORY 검색창에서 결과가 없을 때 Home/End를 눌러도 크래시나 예외가 없어야 함", async () => {
+    render(<TerminalPane id="tab-1" />);
+    const input = screen.getByRole("textbox");
+
+    fireEvent.change(input, { target: { value: "ls -la" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+    await waitFor(() => {
+      expect(invokeMock).toHaveBeenCalledWith("write_to_pty", {
+        id: "tab-1",
+        data: "ls -la\r",
+      });
+    });
+    fireEvent.change(input, { target: { value: "npm test" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+    await waitFor(() => {
+      expect(invokeMock).toHaveBeenCalledWith("write_to_pty", {
+        id: "tab-1",
+        data: "npm test\r",
+      });
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "quick-input-history-open" }));
+    const search = screen.getByRole("textbox", { name: "input-history-search" });
+    fireEvent.change(search, { target: { value: "zzz-no-match" } });
+    expect(screen.getByText("기록된 실행 입력이 없습니다.")).toBeInTheDocument();
+
+    fireEvent.keyDown(search, { key: "Home" });
+    expect(screen.getByText("기록된 실행 입력이 없습니다.")).toBeInTheDocument();
+
+    fireEvent.keyDown(search, { key: "End" });
+    expect(screen.getByText("기록된 실행 입력이 없습니다.")).toBeInTheDocument();
+  });
+
   it("HISTORY 검색창에서 Delete/Backspace 키로 선택 항목을 삭제한다", async () => {
     const { container } = render(<TerminalPane id="tab-1" />);
 
