@@ -221,6 +221,14 @@ describe("WarpInputBar — dumb input, 라우팅은 상위에서", () => {
     expect(input).toHaveValue("second");
   });
 
+  it("입력 내용이 있을 때 Home/End는 입력 유지", () => {
+    const { input } = setup();
+    fireEvent.change(input, { target: { value: "typing..." } });
+    fireEvent.keyDown(input, { key: "Home" });
+    fireEvent.keyDown(input, { key: "End" });
+    expect(input).toHaveValue("typing...");
+  });
+
   it("Escape → 클리어", () => {
     const { input, onChange } = setup();
     fireEvent.change(input, { target: { value: "abc" } });

@@ -195,4 +195,14 @@ describe("CommandInput Component", () => {
     fireEvent.keyDown(input, { key: "End", code: "End" });
     expect(input).toHaveValue("first");
   });
+
+  it("입력 내용이 있을 때 Home/End는 기존 텍스트를 유지해야 함", () => {
+    render(<CommandInput {...defaultProps} />);
+    const input = screen.getByTestId("mock-editor");
+
+    fireEvent.change(input, { target: { value: "typing..." } });
+    fireEvent.keyDown(input, { key: "Home", code: "Home" });
+    fireEvent.keyDown(input, { key: "End", code: "End" });
+    expect(input).toHaveValue("typing...");
+  });
 });
