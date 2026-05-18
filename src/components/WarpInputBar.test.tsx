@@ -176,6 +176,17 @@ describe("WarpInputBar — dumb input, 라우팅은 상위에서", () => {
     expect(onSubmit).toHaveBeenCalledWith("안녕");
   });
 
+  it("IME 조합 중에는 Home/End가 입력/네비게이션을 방해하지 않는다", () => {
+    const { input, onSubmit } = setup();
+    fireEvent.change(input, { target: { value: "안녕" } });
+    fireEvent.compositionStart(input);
+    fireEvent.keyDown(input, { key: "Home" });
+    fireEvent.keyDown(input, { key: "End" });
+    expect(onSubmit).not.toHaveBeenCalled();
+    expect(input).toHaveValue("안녕");
+    fireEvent.compositionEnd(input);
+  });
+
   it("빈 입력 Ctrl+C → onInterrupt", () => {
     const { input, onInterrupt } = setup();
     fireEvent.keyDown(input, { key: "c", ctrlKey: true });
