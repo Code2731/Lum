@@ -333,6 +333,7 @@ const App: React.FC = () => {
       return "cozy";
     }
   });
+  const [showInspectorQuickActionsExpanded, setShowInspectorQuickActionsExpanded] = useState(false);
   // Phase 126: 사용자가 클릭한 "신규" 기능 ID 누적. 미클릭 항목엔 NEW 라벨.
   const [seenAdvancedFeatures, setSeenAdvancedFeatures] = useState<string[]>([]);
   const [inspectorAnalyzeCache, setInspectorAnalyzeCache] = useState<InspectorAnalyzeCache | null>(null);
@@ -2569,67 +2570,42 @@ const App: React.FC = () => {
                     <div className={inspectorCardRegularClass}>
                       <p className="text-white/45 uppercase tracking-[0.06em] text-[10px]">Quick Actions</p>
                       <div className={inspectorQuickGridClass}>
-                        {inspectorHasNoActivity ? (
+                        <button
+                          onClick={() => setShowFileExplorer((prev) => {
+                            const next = !prev;
+                            invoke("save_ui_preferences", { showFileExplorer: next }).catch(() => {});
+                            return next;
+                          })}
+                          className="inline-flex w-full h-7 items-center gap-1.5 px-2 rounded-md text-[10.5px] border border-white/12 bg-white/[0.05] text-white/74 hover:text-white hover:bg-white/[0.1] transition-colors"
+                        >
+                          <FolderTree size={11} />
+                          Project Bin
+                        </button>
+                        <button
+                          onClick={() => {
+                            setShowWorkspace(true);
+                            loadWorkspaces();
+                          }}
+                          className="inline-flex w-full h-7 items-center gap-1.5 px-2 rounded-md text-[10.5px] border border-white/12 bg-white/[0.05] text-white/74 hover:text-white hover:bg-white/[0.1] transition-colors"
+                        >
+                          <Layers size={11} />
+                          Workspace
+                        </button>
+                        <button
+                          onClick={() => openInspectorTab("rag")}
+                          className="inline-flex w-full h-7 items-center gap-1.5 px-2 rounded-md text-[10.5px] border border-white/12 bg-white/[0.05] text-white/74 hover:text-white hover:bg-white/[0.1] transition-colors"
+                        >
+                          <Library size={11} />
+                          RAG
+                        </button>
+                        <button
+                          onClick={() => setShowInspectorQuickActionsExpanded((prev) => !prev)}
+                          className="inline-flex w-full h-7 items-center gap-1.5 px-2 rounded-md text-[10.5px] border border-white/12 bg-white/[0.05] text-white/74 hover:text-white hover:bg-white/[0.1] transition-colors"
+                        >
+                          {showInspectorQuickActionsExpanded ? "축소" : "더보기"}
+                        </button>
+                        {showInspectorQuickActionsExpanded && (
                           <>
-                            <button
-                              onClick={() => setShowFileExplorer((prev) => {
-                                const next = !prev;
-                                invoke("save_ui_preferences", { showFileExplorer: next }).catch(() => {});
-                                return next;
-                              })}
-                              className="inline-flex w-full h-7 items-center gap-1.5 px-2 rounded-md text-[10.5px] border border-white/12 bg-white/[0.05] text-white/74 hover:text-white hover:bg-white/[0.1] transition-colors"
-                            >
-                              <FolderTree size={11} />
-                              Project Bin
-                            </button>
-                            <button
-                              onClick={() => {
-                                setShowWorkspace(true);
-                                loadWorkspaces();
-                              }}
-                              className="inline-flex w-full h-7 items-center gap-1.5 px-2 rounded-md text-[10.5px] border border-white/12 bg-white/[0.05] text-white/74 hover:text-white hover:bg-white/[0.1] transition-colors"
-                            >
-                              <Layers size={11} />
-                              Workspace
-                            </button>
-                            <button
-                              onClick={() => setShowHistorySearch(true)}
-                              className="inline-flex w-full h-7 items-center gap-1.5 px-2 rounded-md text-[10.5px] border border-white/12 bg-white/[0.05] text-white/74 hover:text-white hover:bg-white/[0.1] transition-colors"
-                            >
-                              <Search size={11} />
-                              History
-                            </button>
-                            <button
-                              onClick={() => openInspectorTab("rag")}
-                              className="inline-flex w-full h-7 items-center gap-1.5 px-2 rounded-md text-[10.5px] border border-white/12 bg-white/[0.05] text-white/74 hover:text-white hover:bg-white/[0.1] transition-colors"
-                            >
-                              <Library size={11} />
-                              RAG
-                            </button>
-                          </>
-                        ) : (
-                          <>
-                            <button
-                              onClick={() => setShowFileExplorer((prev) => {
-                                const next = !prev;
-                                invoke("save_ui_preferences", { showFileExplorer: next }).catch(() => {});
-                                return next;
-                              })}
-                              className="inline-flex w-full h-7 items-center gap-1.5 px-2 rounded-md text-[10.5px] border border-white/12 bg-white/[0.05] text-white/74 hover:text-white hover:bg-white/[0.1] transition-colors"
-                            >
-                              <FolderTree size={11} />
-                              Project Bin
-                            </button>
-                            <button
-                              onClick={() => {
-                                setShowWorkspace(true);
-                                loadWorkspaces();
-                              }}
-                              className="inline-flex w-full h-7 items-center gap-1.5 px-2 rounded-md text-[10.5px] border border-white/12 bg-white/[0.05] text-white/74 hover:text-white hover:bg-white/[0.1] transition-colors"
-                            >
-                              <Layers size={11} />
-                              Workspace
-                            </button>
                             <button
                               onClick={() => setShowHistorySearch(true)}
                               className="inline-flex w-full h-7 items-center gap-1.5 px-2 rounded-md text-[10.5px] border border-white/12 bg-white/[0.05] text-white/74 hover:text-white hover:bg-white/[0.1] transition-colors"
@@ -2650,13 +2626,6 @@ const App: React.FC = () => {
                             >
                               <AlertTriangle size={11} />
                               Failed
-                            </button>
-                            <button
-                              onClick={() => openInspectorTab("rag")}
-                              className="inline-flex w-full h-7 items-center gap-1.5 px-2 rounded-md text-[10.5px] border border-white/12 bg-white/[0.05] text-white/74 hover:text-white hover:bg-white/[0.1] transition-colors"
-                            >
-                              <Library size={11} />
-                              RAG
                             </button>
                             <button
                               onClick={() => openInspectorTab("scripts")}
