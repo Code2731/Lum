@@ -628,9 +628,23 @@ const AppHeader: React.FC<Props> = ({
     };
 
     updatePlacement();
+
+    const observer = (() => {
+      if (typeof ResizeObserver === "undefined") return null;
+
+      const next = new ResizeObserver(() => {
+        updatePlacement();
+      });
+      if (advancedOverflowPanelRef.current) {
+        next.observe(advancedOverflowPanelRef.current);
+      }
+      return next;
+    })();
+
     window.addEventListener("resize", updatePlacement);
     window.addEventListener("scroll", updatePlacement, true);
     return () => {
+      observer?.disconnect();
       window.removeEventListener("resize", updatePlacement);
       window.removeEventListener("scroll", updatePlacement, true);
     };
@@ -678,9 +692,23 @@ const AppHeader: React.FC<Props> = ({
     };
 
     updatePlacement();
+
+    const observer = (() => {
+      if (typeof ResizeObserver === "undefined") return null;
+
+      const next = new ResizeObserver(() => {
+        updatePlacement();
+      });
+      if (notifCenterPanelRef.current) {
+        next.observe(notifCenterPanelRef.current);
+      }
+      return next;
+    })();
+
     window.addEventListener("resize", updatePlacement);
     window.addEventListener("scroll", updatePlacement, true);
     return () => {
+      observer?.disconnect();
       window.removeEventListener("resize", updatePlacement);
       window.removeEventListener("scroll", updatePlacement, true);
     };
