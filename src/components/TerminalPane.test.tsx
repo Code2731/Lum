@@ -474,6 +474,35 @@ describe("TerminalPane — 입력 라우팅", () => {
     await waitFor(() => expect(screen.getByText("일치하는 항목이 없습니다.")).toBeInTheDocument());
   });
 
+  it("빈 멘션 패널에서 Home/End가 크래시 없이 처리된다", async () => {
+    invokeMock.mockImplementation((cmd: string, args?: { path?: string }) => {
+      if (cmd === "load_app_config") {
+        return Promise.resolve({
+          ui_show_input_toolbelt_tip: true,
+          ui_show_advanced_input_tools: true,
+          ui_show_backend_quick_tools: true,
+        });
+      }
+      if (cmd === "spawn_pty") return Promise.resolve();
+      if (cmd === "write_to_pty") return Promise.resolve();
+      if (cmd === "resize_pty") return Promise.resolve();
+      if (cmd === "list_directory" && args?.path === "/repo-empty") return Promise.resolve([]);
+      return Promise.resolve();
+    });
+
+    const { container } = render(<TerminalPane id="tab-1" cwd="/repo-empty" />);
+    const input = container.querySelector("input")!;
+
+    fireEvent.click(screen.getByRole("button", { name: "quick-mention-trigger" }));
+    expect(input).toHaveValue("@");
+    await waitFor(() => expect(screen.getByText("일치하는 항목이 없습니다.")).toBeInTheDocument());
+
+    fireEvent.keyDown(input, { key: "Home" });
+    expect(screen.getByText("일치하는 항목이 없습니다.")).toBeInTheDocument();
+    fireEvent.keyDown(input, { key: "End" });
+    expect(screen.getByText("일치하는 항목이 없습니다.")).toBeInTheDocument();
+  });
+
   it("툴벨트 커스터마이징으로 고급 편집/백엔드 버튼 표시를 토글한다", () => {
     render(<TerminalPane id="tab-1" />);
 
