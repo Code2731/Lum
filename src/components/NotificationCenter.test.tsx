@@ -238,6 +238,31 @@ describe("NotificationCenter", () => {
     expect(document.activeElement).toBe(focusables[0]);
   });
 
+  it("알림이 없을 때 Home/End는 첫/끝 포커스로 이동 요청이 있어도 안전하게 처리된다", () => {
+    const { container } = render(
+      <NotificationCenter
+        notifications={[]}
+        unreadCount={0}
+        onMarkAllRead={vi.fn()}
+        onDismiss={vi.fn()}
+        onClear={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    const focusables = Array.from(container.querySelectorAll("button")).filter((el) => !el.hasAttribute("disabled"));
+    expect(focusables.length).toBeGreaterThan(0);
+
+    focusables[0]?.focus();
+    expect(document.activeElement).toBe(focusables[0]);
+
+    fireEvent.keyDown(focusables[0], { key: "Home", code: "Home" });
+    expect(document.activeElement).toBe(focusables[0]);
+
+    fireEvent.keyDown(focusables[0], { key: "End", code: "End" });
+    expect(document.activeElement).toBe(focusables[focusables.length - 1]);
+  });
+
   it("알림 삭제 버튼에 접근성 라벨이 있다", () => {
     const notifications: AppNotification[] = [
       {
