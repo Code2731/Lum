@@ -177,4 +177,22 @@ describe("CommandInput Component", () => {
     });
     expect(micButton).not.toBeDisabled();
   });
+
+  it("Home/End에서 히스토리 항목의 최신/최초로 이동해야 함", () => {
+    render(<CommandInput {...defaultProps} />);
+    const input = screen.getByTestId("mock-editor");
+
+    fireEvent.change(input, { target: { value: "first" } });
+    fireEvent.keyDown(input, { key: "Enter", code: "Enter" });
+    fireEvent.change(input, { target: { value: "second" } });
+    fireEvent.keyDown(input, { key: "Enter", code: "Enter" });
+
+    fireEvent.change(input, { target: { value: "" } });
+    fireEvent.keyDown(input, { key: "Home", code: "Home" });
+    expect(input).toHaveValue("second");
+
+    fireEvent.change(input, { target: { value: "" } });
+    fireEvent.keyDown(input, { key: "End", code: "End" });
+    expect(input).toHaveValue("first");
+  });
 });

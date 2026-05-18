@@ -257,6 +257,24 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
         return;
       }
 
+      if (e.key === "Home" && input === "" && history.current.length > 0) {
+        e.preventDefault();
+        historyIdx.current = 0;
+        const v = history.current[historyIdx.current] ?? "";
+        setInput(v);
+        onChange?.(v);
+        return;
+      }
+
+      if (e.key === "End" && input === "" && history.current.length > 0) {
+        e.preventDefault();
+        historyIdx.current = history.current.length - 1;
+        const v = history.current[historyIdx.current] ?? "";
+        setInput(v);
+        onChange?.(v);
+        return;
+      }
+
       if (e.key === "Escape") {
         const backend = detectBackendPrefixFromInput(input);
         if (backend) {

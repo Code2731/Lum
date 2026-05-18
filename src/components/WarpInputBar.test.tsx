@@ -204,6 +204,23 @@ describe("WarpInputBar — dumb input, 라우팅은 상위에서", () => {
     expect(input).toHaveValue("first");
   });
 
+  it("Home/End → 히스토리 최신/최초 항목으로 즉시 이동", () => {
+    const { input, onSubmit } = setup();
+    fireEvent.change(input, { target: { value: "first" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+    fireEvent.change(input, { target: { value: "second" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+    expect(onSubmit).toHaveBeenCalledTimes(2);
+
+    fireEvent.change(input, { target: { value: "" } });
+    fireEvent.keyDown(input, { key: "Home" });
+    expect(input).toHaveValue("first");
+
+    fireEvent.change(input, { target: { value: "" } });
+    fireEvent.keyDown(input, { key: "End" });
+    expect(input).toHaveValue("second");
+  });
+
   it("Escape → 클리어", () => {
     const { input, onChange } = setup();
     fireEvent.change(input, { target: { value: "abc" } });

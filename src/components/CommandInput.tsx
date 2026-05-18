@@ -137,6 +137,22 @@ const CommandInput = ({
       }
     }
 
+    if (e.key === "Home" && !value && history.length > 0) {
+      e.preventDefault();
+      const first = 0;
+      setHistoryIdx(first);
+      setValue(history[first]);
+      return;
+    }
+
+    if (e.key === "End" && !value && history.length > 0) {
+      e.preventDefault();
+      const last = history.length - 1;
+      setHistoryIdx(last);
+      setValue(history[last]);
+      return;
+    }
+
     if (
       e.key !== "Tab" &&
       e.key !== "ArrowUp" &&
