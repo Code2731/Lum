@@ -216,14 +216,10 @@ describe("App (LUM 터미널)", () => {
 
     expect(screen.getByRole("tablist", { name: "Inspector 탭" })).toBeInTheDocument();
     expect(within(inspectorSummaryPanel as HTMLElement).getByText(/실패 블록[\s·\-]*추천 커맨드/)).toBeInTheDocument();
-    const summaryButtons = Array.from((inspectorSummaryPanel as HTMLElement).querySelectorAll("button"));
-    const projectBinButton = summaryButtons.find((button) => button.textContent?.trim() === "Project Bin");
-    const ragSearchButton = summaryButtons.find((button) => button.textContent?.trim() === "RAG 검색");
-    expect(projectBinButton).not.toBeNull();
-    expect(ragSearchButton).not.toBeNull();
+    expect(within(inspectorSummaryPanel as HTMLElement).getByText("Quick Actions")).toBeInTheDocument();
   });
 
-  it("요약에서 Project Bin 버튼을 누르면 파일 탐색기가 열린다", async () => {
+  it("요약에서 Quick Actions의 Project Bin 버튼을 누르면 파일 탐색기가 열린다", async () => {
     render(<App />);
 
     const fileExplorerToggle = screen.getByLabelText("파일 탐색기");
@@ -254,9 +250,7 @@ describe("App (LUM 터미널)", () => {
     });
 
     const panel = await inspectorSummaryPanel();
-    const projectBinButtons = within(panel as HTMLElement).getAllByRole("button", { name: "Project Bin" });
-    expect(projectBinButtons).toHaveLength(2);
-    const projectBinButton = projectBinButtons[0];
+    const projectBinButton = within(panel as HTMLElement).getByRole("button", { name: "Project Bin" });
     fireEvent.click(projectBinButton);
 
     await waitFor(() => {
@@ -268,7 +262,7 @@ describe("App (LUM 터미널)", () => {
     });
   });
 
-  it("요약에서 RAG 검색 버튼을 누르면 RAG 탭으로 이동한다", async () => {
+  it("Quick Actions에서 RAG 검색 버튼을 누르면 RAG 탭으로 이동한다", async () => {
     render(<App />);
 
     const inspectorButton = screen.getByLabelText("Inspector");
@@ -285,7 +279,7 @@ describe("App (LUM 터미널)", () => {
 
     const panel = document.querySelector("#inspector-tabpanel-summary");
     expect(panel).toBeTruthy();
-    const ragButton = within(panel as HTMLElement).getByRole("button", { name: "RAG 검색" });
+    const ragButton = within(panel as HTMLElement).getByRole("button", { name: "RAG" });
     fireEvent.click(ragButton);
 
     await waitFor(() => {
