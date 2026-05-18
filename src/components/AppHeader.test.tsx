@@ -227,6 +227,31 @@ describe("AppHeader", () => {
     expect(document.activeElement).toBe(focusables[0]);
   });
 
+  it("고급 메뉴에서 Home/End 키로 상/하단으로 즉시 이동한다", async () => {
+    const HeaderHarness = () => {
+      const [showAdvancedOverflow, setShowAdvancedOverflow] = React.useState(true);
+      const props = buildProps() as any;
+      props.showAdvancedOverflow = showAdvancedOverflow;
+      props.setShowAdvancedOverflow = setShowAdvancedOverflow;
+      return <AppHeader {...props} />;
+    };
+
+    render(<HeaderHarness />);
+
+    const menu = await screen.findByRole("menu", { name: "고급 기능 메뉴" });
+    const focusables = Array.from(menu.querySelectorAll("button")).filter((el) => !el.hasAttribute("disabled"));
+    expect(focusables.length).toBeGreaterThan(2);
+
+    focusables[0]?.focus();
+    expect(document.activeElement).toBe(focusables[0]);
+
+    fireEvent.keyDown(focusables[0], { key: "End" });
+    expect(document.activeElement).toBe(focusables[focusables.length - 1]);
+
+    fireEvent.keyDown(focusables[focusables.length - 1] as HTMLElement, { key: "Home" });
+    expect(document.activeElement).toBe(focusables[0]);
+  });
+
   it("고급 메뉴에서 Escape로 닫으면 트리거로 포커스가 돌아간다", async () => {
     const HeaderHarness = () => {
       const [showAdvancedOverflow, setShowAdvancedOverflow] = React.useState(true);

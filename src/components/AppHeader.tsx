@@ -520,7 +520,7 @@ const AppHeader: React.FC<Props> = ({
     e: React.KeyboardEvent,
     panelRef: React.RefObject<HTMLDivElement | null>,
   ): boolean => {
-    if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return false;
+    if (e.key !== "ArrowDown" && e.key !== "ArrowUp" && e.key !== "Home" && e.key !== "End") return false;
 
     const focusables = getPopupElements(panelRef);
     if (focusables.length === 0) return false;
@@ -528,6 +528,8 @@ const AppHeader: React.FC<Props> = ({
     const active = document.activeElement;
     const currentIndex = focusables.indexOf(active as HTMLElement);
     const nextIndex = (() => {
+      if (e.key === "Home") return 0;
+      if (e.key === "End") return focusables.length - 1;
       if (currentIndex < 0) {
         return 0;
       }
