@@ -2214,244 +2214,247 @@ const App: React.FC = () => {
                         </p>
                       </div>
                     )}
-                    <div className={inspectorCardRegularClass}>
-                      <div className="flex items-center justify-between gap-2">
-                        <p className="text-white/45 uppercase tracking-[0.06em] text-[10px]">Failed Block</p>
-                        <span className="text-[10px] text-rose-200/80">{inspectorFailedBlocks.length}개</span>
-                      </div>
-                      {inspectorFocusedFailedBlock ? (
-                        <div className="rounded-md border border-rose-300/25 bg-rose-400/8 px-2 py-1.5 space-y-1">
-                          <div className="flex items-center justify-between gap-2">
-                            <p className="text-rose-100/90 truncate">{inspectorFocusedFailedBlock.command}</p>
-                            <span className="text-[9px] px-1.5 py-0.5 rounded bg-rose-400/20 text-rose-100">
-                              ERR {inspectorFocusedFailedBlock.exitCode}
-                            </span>
-                          </div>
-                          {inspectorFocusedFailedBlock.outputTail && (
-                            <p className="text-[10px] text-rose-100/75 font-mono break-words">
-                              {inspectorFocusedFailedBlock.outputTail}
-                            </p>
-                          )}
-                          <div className="flex flex-wrap items-center gap-1.5">
-                            <button
-                              onClick={focusFailedBlock}
-                              className="inline-flex w-[84px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-rose-300/35 bg-rose-400/14 text-[9px] text-rose-100 hover:bg-rose-400/22 transition-colors"
-                            >
-                              <AlertTriangle size={9} />
-                              NEXT FAIL
-                            </button>
-                            <button
-                              onClick={() => analyzeInspectorFailedBlock(inspectorFocusedFailedBlock.id)}
-                              className="inline-flex w-[88px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-cyan-300/35 bg-cyan-400/14 text-[9px] text-cyan-100 hover:bg-cyan-400/24 transition-colors"
-                            >
-                              <Search size={9} />
-                              AI ANALYZE
-                            </button>
-                            <button
-                              onClick={() => copyInspectorFailedOutput(inspectorFocusedFailedBlock.id)}
-                              className="inline-flex w-[76px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-white/20 bg-white/[0.05] text-[9px] text-white/75 hover:text-white hover:bg-white/[0.12] transition-colors"
-                            >
-                              <Copy size={9} />
-                              COPY LOG
-                            </button>
-                            <button
-                              onClick={() => copyInspectorAnalyzePrompt(inspectorFocusedFailedBlock.id)}
-                              className="inline-flex w-[92px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-cyan-300/30 bg-cyan-400/10 text-[9px] text-cyan-100 hover:bg-cyan-400/20 transition-colors"
-                            >
-                              <Copy size={9} />
-                              COPY PROMPT
-                            </button>
-                            <button
-                              onClick={() => loadInspectorAnalyzePromptToAiBar(inspectorFocusedFailedBlock.id)}
-                              className="inline-flex w-[92px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-accent/35 bg-accent/14 text-[9px] text-accent hover:bg-accent/24 transition-colors"
-                            >
-                              <Search size={9} />
-                              LOAD PROMPT
-                            </button>
-                            <button
-                              onClick={() => selectInspectorBlock(inspectorFocusedFailedBlock.id)}
-                              className="inline-flex w-[60px] justify-center items-center px-1.5 py-0.5 rounded border border-white/18 bg-white/[0.05] text-[9px] text-white/75 hover:text-white hover:bg-white/[0.11] transition-colors"
-                            >
-                              SELECT
-                            </button>
-                          </div>
+                    {!inspectorHasNoActivity && (
+                      <div className={inspectorCardRegularClass}>
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-white/45 uppercase tracking-[0.06em] text-[10px]">Failed Block</p>
+                          <span className="text-[10px] text-rose-200/80">{inspectorFailedBlocks.length}개</span>
                         </div>
-                      ) : (
-                        <p className="text-white/40">실패 블록이 없습니다.</p>
-                      )}
-                    </div>
-                    <div className={inspectorCardRegularClass}>
-                      <div className="flex items-center justify-between gap-2">
-                        <p className="text-white/45 uppercase tracking-[0.06em] text-[10px]">Last AI Analyze</p>
-                        {inspectorAnalyzeCache && (
-                          <div className="flex items-center gap-1">
-                            <button
-                              onClick={copyInspectorAnalyzeResult}
-                              className="inline-flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded border border-white/18 bg-white/[0.05] text-white/72 hover:text-white hover:bg-white/[0.1] transition-colors"
-                            >
-                              <Copy size={9} />
-                              COPY
-                            </button>
-                            <button
-                              onClick={() => {
-                                setInspectorAnalyzeCache(null);
-                                closeInspectorCommandMenu();
-                              }}
-                              className="text-[9px] px-1.5 py-0.5 rounded border border-white/18 bg-white/[0.05] text-white/70 hover:text-white hover:bg-white/[0.1] transition-colors"
-                            >
-                              CLEAR
-                            </button>
+                        {inspectorFocusedFailedBlock ? (
+                          <div className="rounded-md border border-rose-300/25 bg-rose-400/8 px-2 py-1.5 space-y-1">
+                            <div className="flex items-center justify-between gap-2">
+                              <p className="text-rose-100/90 truncate">{inspectorFocusedFailedBlock.command}</p>
+                              <span className="text-[9px] px-1.5 py-0.5 rounded bg-rose-400/20 text-rose-100">
+                                ERR {inspectorFocusedFailedBlock.exitCode}
+                              </span>
+                            </div>
+                            {inspectorFocusedFailedBlock.outputTail && (
+                              <p className="text-[10px] text-rose-100/75 font-mono break-words">
+                                {inspectorFocusedFailedBlock.outputTail}
+                              </p>
+                            )}
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              <button
+                                onClick={focusFailedBlock}
+                                className="inline-flex w-[84px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-rose-300/35 bg-rose-400/14 text-[9px] text-rose-100 hover:bg-rose-400/22 transition-colors"
+                              >
+                                <AlertTriangle size={9} />
+                                NEXT FAIL
+                              </button>
+                              <button
+                                onClick={() => analyzeInspectorFailedBlock(inspectorFocusedFailedBlock.id)}
+                                className="inline-flex w-[88px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-cyan-300/35 bg-cyan-400/14 text-[9px] text-cyan-100 hover:bg-cyan-400/24 transition-colors"
+                              >
+                                <Search size={9} />
+                                AI ANALYZE
+                              </button>
+                              <button
+                                onClick={() => copyInspectorFailedOutput(inspectorFocusedFailedBlock.id)}
+                                className="inline-flex w-[76px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-white/20 bg-white/[0.05] text-[9px] text-white/75 hover:text-white hover:bg-white/[0.12] transition-colors"
+                              >
+                                <Copy size={9} />
+                                COPY LOG
+                              </button>
+                              <button
+                                onClick={() => copyInspectorAnalyzePrompt(inspectorFocusedFailedBlock.id)}
+                                className="inline-flex w-[92px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-cyan-300/30 bg-cyan-400/10 text-[9px] text-cyan-100 hover:bg-cyan-400/20 transition-colors"
+                              >
+                                <Copy size={9} />
+                                COPY PROMPT
+                              </button>
+                              <button
+                                onClick={() => loadInspectorAnalyzePromptToAiBar(inspectorFocusedFailedBlock.id)}
+                                className="inline-flex w-[92px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-accent/35 bg-accent/14 text-[9px] text-accent hover:bg-accent/24 transition-colors"
+                              >
+                                <Search size={9} />
+                                LOAD PROMPT
+                              </button>
+                              <button
+                                onClick={() => selectInspectorBlock(inspectorFocusedFailedBlock.id)}
+                                className="inline-flex w-[60px] justify-center items-center px-1.5 py-0.5 rounded border border-white/18 bg-white/[0.05] text-[9px] text-white/75 hover:text-white hover:bg-white/[0.11] transition-colors"
+                              >
+                                SELECT
+                              </button>
+                            </div>
                           </div>
+                        ) : (
+                          <p className="text-white/40">실패 블록이 없습니다.</p>
                         )}
                       </div>
-                      {!inspectorAnalyzeCache && (
-                        <p className="text-white/40">아직 실행된 분석이 없습니다.</p>
-                      )}
-                      {inspectorAnalyzeCache && (
-                        <div className={`rounded-md border px-2 py-1.5 space-y-1 ${
-                          inspectorAnalyzeCache.status === "error"
-                            ? "border-rose-300/25 bg-rose-400/8"
-                            : "border-cyan-300/20 bg-cyan-400/8"
-                        }`}>
-                          <div className="flex items-center justify-between gap-2">
-                            <p className="text-white/82 truncate">{inspectorAnalyzeCache.command}</p>
-                            {inspectorAnalyzeCache.status === "streaming" ? (
-                              <span className="inline-flex items-center gap-1 text-[9px] text-cyan-100">
-                                <Loader2 size={9} className="animate-spin" />
-                                STREAMING
-                              </span>
-                            ) : inspectorAnalyzeCache.status === "error" ? (
-                              <span className="text-[9px] px-1.5 py-0.5 rounded bg-rose-400/20 text-rose-100">
-                                ERROR
-                              </span>
-                            ) : (
-                              <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-400/20 text-emerald-100">
-                                DONE
-                              </span>
-                            )}
-                          </div>
-                          <p className={`text-[10px] font-mono break-words ${
-                            inspectorAnalyzeCache.status === "error" ? "text-rose-100/80" : "text-cyan-100/78"
+                    )}
+                    {!inspectorHasNoActivity && (
+                      <div className={inspectorCardRegularClass}>
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-white/45 uppercase tracking-[0.06em] text-[10px]">Last AI Analyze</p>
+                          {inspectorAnalyzeCache && (
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={copyInspectorAnalyzeResult}
+                                className="inline-flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded border border-white/18 bg-white/[0.05] text-white/72 hover:text-white hover:bg-white/[0.1] transition-colors"
+                              >
+                                <Copy size={9} />
+                                COPY
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setInspectorAnalyzeCache(null);
+                                  closeInspectorCommandMenu();
+                                }}
+                                className="text-[9px] px-1.5 py-0.5 rounded border border-white/18 bg-white/[0.05] text-white/70 hover:text-white hover:bg-white/[0.1] transition-colors"
+                              >
+                                CLEAR
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                        {!inspectorAnalyzeCache && (
+                          <p className="text-white/40">아직 실행된 분석이 없습니다.</p>
+                        )}
+                        {inspectorAnalyzeCache && (
+                          <div className={`rounded-md border px-2 py-1.5 space-y-1 ${
+                            inspectorAnalyzeCache.status === "error"
+                              ? "border-rose-300/25 bg-rose-400/8"
+                              : "border-cyan-300/20 bg-cyan-400/8"
                           }`}>
-                            {inspectorAnalyzeCache.result || "응답을 기다리는 중..."}
-                          </p>
-                          {inspectorAnalyzeCache.status === "done" && inspectorAnalyzeCache.suggestedCommands.length > 0 && (
-                            <div className="space-y-1">
-                              <div className="flex items-center justify-between gap-2">
-                                <p className="text-[9px] uppercase tracking-[0.06em] text-cyan-100/70">Suggested Commands</p>
-                                <p className="text-[9px] text-cyan-100/62">
-                                  {isInspectorCompact ? "R 실행 · MORE→C/L" : "R 실행 · C 복사 · L 로드"}
-                                </p>
-                              </div>
+                            <div className="flex items-center justify-between gap-2">
+                              <p className="text-white/82 truncate">{inspectorAnalyzeCache.command}</p>
+                              {inspectorAnalyzeCache.status === "streaming" ? (
+                                <span className="inline-flex items-center gap-1 text-[9px] text-cyan-100">
+                                  <Loader2 size={9} className="animate-spin" />
+                                  STREAMING
+                                </span>
+                              ) : inspectorAnalyzeCache.status === "error" ? (
+                                <span className="text-[9px] px-1.5 py-0.5 rounded bg-rose-400/20 text-rose-100">
+                                  ERROR
+                                </span>
+                              ) : (
+                                <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-400/20 text-emerald-100">
+                                  DONE
+                                </span>
+                              )}
+                            </div>
+                            <p className={`text-[10px] font-mono break-words ${
+                              inspectorAnalyzeCache.status === "error" ? "text-rose-100/80" : "text-cyan-100/78"
+                            }`}>
+                              {inspectorAnalyzeCache.result || "응답을 기다리는 중..."}
+                            </p>
+                            {inspectorAnalyzeCache.status === "done" && inspectorAnalyzeCache.suggestedCommands.length > 0 && (
                               <div className="space-y-1">
-                                {inspectorAnalyzeCache.suggestedCommands.map((cmd, idx) => (
-                                  <div
-                                    key={`${cmd}-${idx}`}
-                                    data-inspector-command-menu-row="1"
-                                    tabIndex={isInspectorCompact ? 0 : -1}
-                                    className="rounded border border-cyan-300/18 bg-cyan-400/[0.06] px-1.5 py-1 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-cyan-300/45"
-                                    onBlurCapture={(e) => {
-                                      if (!isInspectorCompact || inspectorCommandMenuIndex !== idx) return;
-                                      const next = e.relatedTarget as Element | null;
-                                      if (!next) {
-                                        closeInspectorCommandMenu();
-                                        return;
-                                      }
-                                      const menuContainer = next.closest("[data-inspector-command-menu='compact']");
-                                      if (!e.currentTarget.contains(next) && !menuContainer) {
-                                        closeInspectorCommandMenu();
-                                      }
-                                    }}
-                                    onKeyDown={(e) => {
-                                      if (!isInspectorCompact) return;
-                                      if (e.metaKey || e.ctrlKey || e.altKey) return;
-                                      const action = resolveInspectorMenuHotkey(
-                                        e.key,
-                                        inspectorCommandMenuIndex === idx,
-                                      );
-                                      if (!action) return;
-                                      e.preventDefault();
-                                      e.stopPropagation();
-                                      if (action === "run") {
-                                        applyInspectorAnalyzeCommand(idx);
-                                        return;
-                                      }
-                                      if (action === "copy") {
-                                        copyInspectorSuggestedCommand(idx);
-                                        return;
-                                      }
-                                      loadInspectorSuggestedCommandToAiBar(idx);
-                                    }}
-                                  >
-                                    <div className="flex items-center gap-1.5">
-                                      <span className="inline-flex items-center justify-center min-w-4 h-4 rounded bg-cyan-400/20 text-[9px] text-cyan-100">
-                                        {idx + 1}
-                                      </span>
-                                      <p className="min-w-0 flex-1 text-[10px] font-mono text-cyan-100/92 truncate" title={cmd}>
-                                        {cmd}
-                                      </p>
-                                      {isInspectorCompact ? (
-                                        <div className="flex items-center gap-1 shrink-0">
-                                          <button
-                                            onClick={() => applyInspectorAnalyzeCommand(idx)}
-                                            className="inline-flex w-[68px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-emerald-300/35 bg-emerald-400/16 text-[9px] text-emerald-100 hover:bg-emerald-400/26 transition-colors"
-                                            title={`${idx + 1}번 커맨드 실행 (R)`}
-                                          >
-                                            <TerminalSquare size={9} />
-                                            RUN (R)
-                                          </button>
-                                          <button
-                                            ref={(el) => { inspectorMoreButtonRefs.current[idx] = el; }}
-                                            onClick={() => {
-                                              if (inspectorCommandMenuIndex === idx) {
-                                                closeInspectorCommandMenu();
-                                                return;
-                                              }
-                                              openInspectorCompactMenu(idx);
-                                            }}
-                                            onKeyDown={(e) => {
-                                              if (e.key !== "ArrowDown" && e.key !== "Enter" && e.key !== " ") return;
-                                              e.preventDefault();
-                                              openInspectorCompactMenu(idx);
-                                            }}
-                                            aria-expanded={inspectorCommandMenuIndex === idx}
-                                            aria-controls={`inspector-command-menu-${idx}`}
-                                            className="inline-flex w-[58px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-white/20 bg-white/[0.05] text-[9px] text-white/75 hover:text-white hover:bg-white/[0.12] transition-colors"
-                                            title={`${idx + 1}번 추가 액션 (C/L 단축키 활성화)`}
-                                          >
-                                            <MoreHorizontal size={9} />
-                                            MORE
-                                          </button>
-                                        </div>
-                                      ) : (
-                                        <div className="flex items-center gap-1 shrink-0">
-                                          <button
-                                            onClick={() => copyInspectorSuggestedCommand(idx)}
-                                            className="inline-flex w-[58px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-white/22 bg-white/[0.05] text-[9px] text-white/76 hover:text-white hover:bg-white/[0.12] transition-colors"
-                                            title={`${idx + 1}번 커맨드 복사 (C)`}
-                                          >
-                                            <Copy size={9} />
-                                            COPY
-                                          </button>
-                                          <button
-                                            onClick={() => loadInspectorSuggestedCommandToAiBar(idx)}
-                                            className="inline-flex w-[58px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-accent/35 bg-accent/14 text-[9px] text-accent hover:bg-accent/24 transition-colors"
-                                            title={`${idx + 1}번 커맨드 AI 입력바 로드 (L)`}
-                                          >
-                                            <Search size={9} />
-                                            LOAD
-                                          </button>
-                                          <button
-                                            onClick={() => applyInspectorAnalyzeCommand(idx)}
-                                            className="inline-flex w-[58px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-emerald-300/35 bg-emerald-400/16 text-[9px] text-emerald-100 hover:bg-emerald-400/26 transition-colors"
-                                            title={`${idx + 1}번 커맨드 실행 (R)`}
-                                          >
-                                            <TerminalSquare size={9} />
-                                            RUN
-                                          </button>
-                                        </div>
-                                      )}
-                                    </div>
+                                <div className="flex items-center justify-between gap-2">
+                                  <p className="text-[9px] uppercase tracking-[0.06em] text-cyan-100/70">Suggested Commands</p>
+                                  <p className="text-[9px] text-cyan-100/62">
+                                    {isInspectorCompact ? "R 실행 · MORE→C/L" : "R 실행 · C 복사 · L 로드"}
+                                  </p>
+                                </div>
+                                <div className="space-y-1">
+                                  {inspectorAnalyzeCache.suggestedCommands.map((cmd, idx) => (
+                                    <div
+                                      key={`${cmd}-${idx}`}
+                                      data-inspector-command-menu-row="1"
+                                      tabIndex={isInspectorCompact ? 0 : -1}
+                                      className="rounded border border-cyan-300/18 bg-cyan-400/[0.06] px-1.5 py-1 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-cyan-300/45"
+                                      onBlurCapture={(e) => {
+                                        if (!isInspectorCompact || inspectorCommandMenuIndex !== idx) return;
+                                        const next = e.relatedTarget as Element | null;
+                                        if (!next) {
+                                          closeInspectorCommandMenu();
+                                          return;
+                                        }
+                                        const menuContainer = next.closest("[data-inspector-command-menu='compact']");
+                                        if (!e.currentTarget.contains(next) && !menuContainer) {
+                                          closeInspectorCommandMenu();
+                                        }
+                                      }}
+                                      onKeyDown={(e) => {
+                                        if (!isInspectorCompact) return;
+                                        if (e.metaKey || e.ctrlKey || e.altKey) return;
+                                        const action = resolveInspectorMenuHotkey(
+                                          e.key,
+                                          inspectorCommandMenuIndex === idx,
+                                        );
+                                        if (!action) return;
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        if (action === "run") {
+                                          applyInspectorAnalyzeCommand(idx);
+                                          return;
+                                        }
+                                        if (action === "copy") {
+                                          copyInspectorSuggestedCommand(idx);
+                                          return;
+                                        }
+                                        loadInspectorSuggestedCommandToAiBar(idx);
+                                      }}
+                                    >
+                                      <div className="flex items-center gap-1.5">
+                                        <span className="inline-flex items-center justify-center min-w-4 h-4 rounded bg-cyan-400/20 text-[9px] text-cyan-100">
+                                          {idx + 1}
+                                        </span>
+                                        <p className="min-w-0 flex-1 text-[10px] font-mono text-cyan-100/92 truncate" title={cmd}>
+                                          {cmd}
+                                        </p>
+                                        {isInspectorCompact ? (
+                                          <div className="flex items-center gap-1 shrink-0">
+                                            <button
+                                              onClick={() => applyInspectorAnalyzeCommand(idx)}
+                                              className="inline-flex w-[68px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-emerald-300/35 bg-emerald-400/16 text-[9px] text-emerald-100 hover:bg-emerald-400/26 transition-colors"
+                                              title={`${idx + 1}번 커맨드 실행 (R)`}
+                                            >
+                                              <TerminalSquare size={9} />
+                                              RUN (R)
+                                            </button>
+                                            <button
+                                              ref={(el) => { inspectorMoreButtonRefs.current[idx] = el; }}
+                                              onClick={() => {
+                                                if (inspectorCommandMenuIndex === idx) {
+                                                  closeInspectorCommandMenu();
+                                                  return;
+                                                }
+                                                openInspectorCompactMenu(idx);
+                                              }}
+                                              onKeyDown={(e) => {
+                                                if (e.key !== "ArrowDown" && e.key !== "Enter" && e.key !== " ") return;
+                                                e.preventDefault();
+                                                openInspectorCompactMenu(idx);
+                                              }}
+                                              aria-expanded={inspectorCommandMenuIndex === idx}
+                                              aria-controls={`inspector-command-menu-${idx}`}
+                                              className="inline-flex w-[58px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-white/20 bg-white/[0.05] text-[9px] text-white/75 hover:text-white hover:bg-white/[0.12] transition-colors"
+                                              title={`${idx + 1}번 추가 액션 (C/L 단축키 활성화)`}
+                                            >
+                                              <MoreHorizontal size={9} />
+                                              MORE
+                                            </button>
+                                          </div>
+                                        ) : (
+                                          <div className="flex items-center gap-1 shrink-0">
+                                            <button
+                                              onClick={() => copyInspectorSuggestedCommand(idx)}
+                                              className="inline-flex w-[58px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-white/22 bg-white/[0.05] text-[9px] text-white/76 hover:text-white hover:bg-white/[0.12] transition-colors"
+                                              title={`${idx + 1}번 커맨드 복사 (C)`}
+                                            >
+                                              <Copy size={9} />
+                                              COPY
+                                            </button>
+                                            <button
+                                              onClick={() => loadInspectorSuggestedCommandToAiBar(idx)}
+                                              className="inline-flex w-[58px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-accent/35 bg-accent/14 text-[9px] text-accent hover:bg-accent/24 transition-colors"
+                                              title={`${idx + 1}번 커맨드 AI 입력바 로드 (L)`}
+                                            >
+                                              <Search size={9} />
+                                              LOAD
+                                            </button>
+                                            <button
+                                              onClick={() => applyInspectorAnalyzeCommand(idx)}
+                                              className="inline-flex w-[58px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-emerald-300/35 bg-emerald-400/16 text-[9px] text-emerald-100 hover:bg-emerald-400/26 transition-colors"
+                                              title={`${idx + 1}번 커맨드 실행 (R)`}
+                                            >
+                                              <TerminalSquare size={9} />
+                                              RUN
+                                            </button>
+                                          </div>
+                                        )}
+                                      </div>
                                       {isInspectorCompact && inspectorCommandMenuIndex === idx && (
                                         <div
                                           id={`inspector-command-menu-${idx}`}
@@ -2460,174 +2463,216 @@ const App: React.FC = () => {
                                           onKeyDown={(e) => handleInspectorCompactMenuKeyDown(e, idx)}
                                           className="mt-1.5 ml-5 flex items-center gap-1"
                                         >
-                                        <button
-                                          ref={(el) => { inspectorMenuFirstActionRefs.current[idx] = el; }}
-                                          role="menuitem"
-                                          onClick={() => copyInspectorSuggestedCommand(idx)}
-                                          className="inline-flex w-[72px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-white/22 bg-white/[0.05] text-[9px] text-white/76 hover:text-white hover:bg-white/[0.12] transition-colors"
-                                          title={`${idx + 1}번 커맨드 복사 (C)`}
-                                        >
-                                          <Copy size={9} />
-                                          COPY (C)
-                                        </button>
-                                        <button
-                                          role="menuitem"
-                                          onClick={() => loadInspectorSuggestedCommandToAiBar(idx)}
-                                          className="inline-flex w-[72px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-accent/35 bg-accent/14 text-[9px] text-accent hover:bg-accent/24 transition-colors"
-                                          title={`${idx + 1}번 커맨드 AI 입력바 로드 (L)`}
-                                        >
-                                          <Search size={9} />
-                                          LOAD (L)
-                                        </button>
-                                      </div>
-                                    )}
-                                  </div>
-                                ))}
+                                          <button
+                                            ref={(el) => { inspectorMenuFirstActionRefs.current[idx] = el; }}
+                                            role="menuitem"
+                                            onClick={() => copyInspectorSuggestedCommand(idx)}
+                                            className="inline-flex w-[72px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-white/22 bg-white/[0.05] text-[9px] text-white/76 hover:text-white hover:bg-white/[0.12] transition-colors"
+                                            title={`${idx + 1}번 커맨드 복사 (C)`}
+                                          >
+                                            <Copy size={9} />
+                                            COPY (C)
+                                          </button>
+                                          <button
+                                            role="menuitem"
+                                            onClick={() => loadInspectorSuggestedCommandToAiBar(idx)}
+                                            className="inline-flex w-[72px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-accent/35 bg-accent/14 text-[9px] text-accent hover:bg-accent/24 transition-colors"
+                                            title={`${idx + 1}번 커맨드 AI 입력바 로드 (L)`}
+                                          >
+                                            <Search size={9} />
+                                            LOAD (L)
+                                          </button>
+                                        </div>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
                               </div>
-                            </div>
-                          )}
-                          {inspectorAnalyzeCache.status === "done" && !isInspectorCompact && (
-                            <div className="flex items-center gap-1.5">
-                              <button
-                                onClick={() => applyInspectorAnalyzeCommand(0)}
-                                title="첫 번째 추천 커맨드 실행 (R)"
-                                className="inline-flex w-[74px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-emerald-300/35 bg-emerald-400/16 text-[9px] text-emerald-100 hover:bg-emerald-400/26 transition-colors"
-                              >
-                                <TerminalSquare size={9} />
-                                RUN #1
-                              </button>
-                              <button
-                                onClick={copyInspectorAnalyzeResult}
-                                title="분석 결과 전체 복사"
-                                className="inline-flex w-[64px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-white/20 bg-white/[0.05] text-[9px] text-white/76 hover:text-white hover:bg-white/[0.12] transition-colors"
-                              >
-                                <Copy size={9} />
-                                COPY
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                    <div className={inspectorCardRegularClass}>
-                      <p className="text-white/45 uppercase tracking-[0.06em] text-[10px]">Recent Blocks</p>
-                      {inspectorRecentBlocks.length === 0 && (
-                        <p className="text-white/40">최근 실행 기록이 없습니다.</p>
-                      )}
-                      {inspectorRecentBlocks.map((block) => (
-                        <div key={block.id} className="flex items-start gap-2 rounded-md border border-white/[0.08] bg-black/20 px-2 py-1.5">
-                          <span className={`mt-0.5 inline-flex items-center justify-center text-[9px] px-1.5 py-0.5 rounded ${
-                            block.exitCode === 0 || block.exitCode == null
-                              ? "bg-emerald-400/16 text-emerald-200"
-                              : "bg-rose-400/18 text-rose-200"
-                          }`}>
-                            {block.exitCode === 0 || block.exitCode == null ? "OK" : `ERR ${block.exitCode}`}
-                          </span>
-                          <div className="min-w-0 flex-1">
-                            <p className="text-white/80 truncate">{block.command}</p>
-                            <p className="text-white/44 text-[10px] inline-flex items-center gap-1 mt-0.5">
-                              <Clock3 size={10} />
-                              {formatDurationMs(block.durationMs)}
-                            </p>
-                            {block.outputTail && (
-                              <p className="text-[10px] text-white/36 font-mono truncate mt-0.5">{block.outputTail}</p>
+                            )}
+                            {inspectorAnalyzeCache.status === "done" && !isInspectorCompact && (
+                              <div className="flex items-center gap-1.5">
+                                <button
+                                  onClick={() => applyInspectorAnalyzeCommand(0)}
+                                  title="첫 번째 추천 커맨드 실행 (R)"
+                                  className="inline-flex w-[74px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-emerald-300/35 bg-emerald-400/16 text-[9px] text-emerald-100 hover:bg-emerald-400/26 transition-colors"
+                                >
+                                  <TerminalSquare size={9} />
+                                  RUN #1
+                                </button>
+                                <button
+                                  onClick={copyInspectorAnalyzeResult}
+                                  title="분석 결과 전체 복사"
+                                  className="inline-flex w-[64px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-white/20 bg-white/[0.05] text-[9px] text-white/76 hover:text-white hover:bg-white/[0.12] transition-colors"
+                                >
+                                  <Copy size={9} />
+                                  COPY
+                                </button>
+                              </div>
                             )}
                           </div>
-                          <div className="flex items-center gap-1 shrink-0">
-                            <button
-                              onClick={() => selectInspectorBlock(block.id)}
-                              className="inline-flex w-[56px] justify-center items-center px-1.5 py-0.5 rounded border border-white/12 bg-white/[0.05] text-[9px] text-white/68 hover:text-white hover:bg-white/[0.11] transition-colors"
-                              title="이 블록 선택"
-                            >
-                              SEL
-                            </button>
-                            <button
-                              onClick={() => rerunInspectorBlock(block.command)}
-                              className="inline-flex w-[64px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-cyan-300/30 bg-cyan-400/14 text-[9px] text-cyan-100 hover:bg-cyan-400/24 transition-colors"
-                              title="명령 재실행"
-                            >
-                              <RotateCcw size={9} />
-                              RUN
-                            </button>
-                            {block.exitCode !== 0 && block.exitCode != null && (
+                        )}
+                      </div>
+                    )}
+                    {!inspectorHasNoActivity && inspectorRecentBlocks.length > 0 && (
+                      <div className={inspectorCardRegularClass}>
+                        <p className="text-white/45 uppercase tracking-[0.06em] text-[10px]">Recent Blocks</p>
+                        {inspectorRecentBlocks.map((block) => (
+                          <div key={block.id} className="flex items-start gap-2 rounded-md border border-white/[0.08] bg-black/20 px-2 py-1.5">
+                            <span className={`mt-0.5 inline-flex items-center justify-center text-[9px] px-1.5 py-0.5 rounded ${
+                              block.exitCode === 0 || block.exitCode == null
+                                ? "bg-emerald-400/16 text-emerald-200"
+                                : "bg-rose-400/18 text-rose-200"
+                            }`}>
+                              {block.exitCode === 0 || block.exitCode == null ? "OK" : `ERR ${block.exitCode}`}
+                            </span>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-white/80 truncate">{block.command}</p>
+                              <p className="text-white/44 text-[10px] inline-flex items-center gap-1 mt-0.5">
+                                <Clock3 size={10} />
+                                {formatDurationMs(block.durationMs)}
+                              </p>
+                              {block.outputTail && (
+                                <p className="text-[10px] text-white/36 font-mono truncate mt-0.5">{block.outputTail}</p>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-1 shrink-0">
                               <button
-                                onClick={() => loadInspectorAnalyzePromptToAiBar(block.id)}
-                                className="inline-flex w-[68px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-accent/35 bg-accent/14 text-[9px] text-accent hover:bg-accent/24 transition-colors"
-                                title="실패 분석 프롬프트 로드"
+                                onClick={() => selectInspectorBlock(block.id)}
+                                className="inline-flex w-[56px] justify-center items-center px-1.5 py-0.5 rounded border border-white/12 bg-white/[0.05] text-[9px] text-white/68 hover:text-white hover:bg-white/[0.11] transition-colors"
+                                title="이 블록 선택"
                               >
-                                <Search size={9} />
-                                LOAD
+                                SEL
                               </button>
-                            )}
+                              <button
+                                onClick={() => rerunInspectorBlock(block.command)}
+                                className="inline-flex w-[64px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-cyan-300/30 bg-cyan-400/14 text-[9px] text-cyan-100 hover:bg-cyan-400/24 transition-colors"
+                                title="명령 재실행"
+                              >
+                                <RotateCcw size={9} />
+                                RUN
+                              </button>
+                              {block.exitCode !== 0 && block.exitCode != null && (
+                                <button
+                                  onClick={() => loadInspectorAnalyzePromptToAiBar(block.id)}
+                                  className="inline-flex w-[68px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-accent/35 bg-accent/14 text-[9px] text-accent hover:bg-accent/24 transition-colors"
+                                  title="실패 분석 프롬프트 로드"
+                                >
+                                  <Search size={9} />
+                                  LOAD
+                                </button>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      ))}
-                    </div>
+                        ))}
+                      </div>
+                    )}
                     <div className={inspectorCardRegularClass}>
                       <p className="text-white/45 uppercase tracking-[0.06em] text-[10px]">Quick Actions</p>
                       <div className={inspectorQuickGridClass}>
-                        <button
-                          onClick={() => setShowFileExplorer((prev) => {
-                            const next = !prev;
-                            invoke("save_ui_preferences", { showFileExplorer: next }).catch(() => {});
-                            return next;
-                          })}
-                          className="inline-flex w-full h-7 items-center gap-1.5 px-2 rounded-md text-[10.5px] border border-white/12 bg-white/[0.05] text-white/74 hover:text-white hover:bg-white/[0.1] transition-colors"
-                        >
-                          <FolderTree size={11} />
-                          Project Bin
-                        </button>
-                        <button
-                          onClick={() => {
-                            setShowWorkspace(true);
-                            loadWorkspaces();
-                          }}
-                          className="inline-flex w-full h-7 items-center gap-1.5 px-2 rounded-md text-[10.5px] border border-white/12 bg-white/[0.05] text-white/74 hover:text-white hover:bg-white/[0.1] transition-colors"
-                        >
-                          <Layers size={11} />
-                          Workspace
-                        </button>
-                        <button
-                          onClick={() => setShowHistorySearch(true)}
-                          className="inline-flex w-full h-7 items-center gap-1.5 px-2 rounded-md text-[10.5px] border border-white/12 bg-white/[0.05] text-white/74 hover:text-white hover:bg-white/[0.1] transition-colors"
-                        >
-                          <Search size={11} />
-                          History
-                        </button>
-                        <button
-                          onClick={() => setShowDiffReview(true)}
-                          className="inline-flex w-full h-7 items-center gap-1.5 px-2 rounded-md text-[10.5px] border border-white/12 bg-white/[0.05] text-white/74 hover:text-white hover:bg-white/[0.1] transition-colors"
-                        >
-                          <GitCompareArrows size={11} />
-                          Diff
-                        </button>
-                        <button
-                          onClick={focusFailedBlock}
-                          className="inline-flex w-full h-7 items-center gap-1.5 px-2 rounded-md text-[10.5px] border border-rose-300/30 bg-rose-400/12 text-rose-100 hover:bg-rose-400/20 transition-colors"
-                        >
-                          <AlertTriangle size={11} />
-                          Failed
-                        </button>
-                        <button
-                          onClick={() => openInspectorTab("rag")}
-                          className="inline-flex w-full h-7 items-center gap-1.5 px-2 rounded-md text-[10.5px] border border-white/12 bg-white/[0.05] text-white/74 hover:text-white hover:bg-white/[0.1] transition-colors"
-                        >
-                          <Library size={11} />
-                          RAG
-                        </button>
-                        <button
-                          onClick={() => openInspectorTab("scripts")}
-                          className="inline-flex w-full h-7 items-center gap-1.5 px-2 rounded-md text-[10.5px] border border-white/12 bg-white/[0.05] text-white/74 hover:text-white hover:bg-white/[0.1] transition-colors"
-                        >
-                          Scripts
-                        </button>
-                        <button
-                          onClick={() => openInspectorTab("sysmon")}
-                          className="inline-flex w-full h-7 items-center gap-1.5 px-2 rounded-md text-[10.5px] border border-white/12 bg-white/[0.05] text-white/74 hover:text-white hover:bg-white/[0.1] transition-colors"
-                        >
-                          <Activity size={11} />
-                          System
-                        </button>
+                        {inspectorHasNoActivity ? (
+                          <>
+                            <button
+                              onClick={() => setShowFileExplorer((prev) => {
+                                const next = !prev;
+                                invoke("save_ui_preferences", { showFileExplorer: next }).catch(() => {});
+                                return next;
+                              })}
+                              className="inline-flex w-full h-7 items-center gap-1.5 px-2 rounded-md text-[10.5px] border border-white/12 bg-white/[0.05] text-white/74 hover:text-white hover:bg-white/[0.1] transition-colors"
+                            >
+                              <FolderTree size={11} />
+                              Project Bin
+                            </button>
+                            <button
+                              onClick={() => {
+                                setShowWorkspace(true);
+                                loadWorkspaces();
+                              }}
+                              className="inline-flex w-full h-7 items-center gap-1.5 px-2 rounded-md text-[10.5px] border border-white/12 bg-white/[0.05] text-white/74 hover:text-white hover:bg-white/[0.1] transition-colors"
+                            >
+                              <Layers size={11} />
+                              Workspace
+                            </button>
+                            <button
+                              onClick={() => setShowHistorySearch(true)}
+                              className="inline-flex w-full h-7 items-center gap-1.5 px-2 rounded-md text-[10.5px] border border-white/12 bg-white/[0.05] text-white/74 hover:text-white hover:bg-white/[0.1] transition-colors"
+                            >
+                              <Search size={11} />
+                              History
+                            </button>
+                            <button
+                              onClick={() => openInspectorTab("rag")}
+                              className="inline-flex w-full h-7 items-center gap-1.5 px-2 rounded-md text-[10.5px] border border-white/12 bg-white/[0.05] text-white/74 hover:text-white hover:bg-white/[0.1] transition-colors"
+                            >
+                              <Library size={11} />
+                              RAG
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button
+                              onClick={() => setShowFileExplorer((prev) => {
+                                const next = !prev;
+                                invoke("save_ui_preferences", { showFileExplorer: next }).catch(() => {});
+                                return next;
+                              })}
+                              className="inline-flex w-full h-7 items-center gap-1.5 px-2 rounded-md text-[10.5px] border border-white/12 bg-white/[0.05] text-white/74 hover:text-white hover:bg-white/[0.1] transition-colors"
+                            >
+                              <FolderTree size={11} />
+                              Project Bin
+                            </button>
+                            <button
+                              onClick={() => {
+                                setShowWorkspace(true);
+                                loadWorkspaces();
+                              }}
+                              className="inline-flex w-full h-7 items-center gap-1.5 px-2 rounded-md text-[10.5px] border border-white/12 bg-white/[0.05] text-white/74 hover:text-white hover:bg-white/[0.1] transition-colors"
+                            >
+                              <Layers size={11} />
+                              Workspace
+                            </button>
+                            <button
+                              onClick={() => setShowHistorySearch(true)}
+                              className="inline-flex w-full h-7 items-center gap-1.5 px-2 rounded-md text-[10.5px] border border-white/12 bg-white/[0.05] text-white/74 hover:text-white hover:bg-white/[0.1] transition-colors"
+                            >
+                              <Search size={11} />
+                              History
+                            </button>
+                            <button
+                              onClick={() => setShowDiffReview(true)}
+                              className="inline-flex w-full h-7 items-center gap-1.5 px-2 rounded-md text-[10.5px] border border-white/12 bg-white/[0.05] text-white/74 hover:text-white hover:bg-white/[0.1] transition-colors"
+                            >
+                              <GitCompareArrows size={11} />
+                              Diff
+                            </button>
+                            <button
+                              onClick={focusFailedBlock}
+                              className="inline-flex w-full h-7 items-center gap-1.5 px-2 rounded-md text-[10.5px] border border-rose-300/30 bg-rose-400/12 text-rose-100 hover:bg-rose-400/20 transition-colors"
+                            >
+                              <AlertTriangle size={11} />
+                              Failed
+                            </button>
+                            <button
+                              onClick={() => openInspectorTab("rag")}
+                              className="inline-flex w-full h-7 items-center gap-1.5 px-2 rounded-md text-[10.5px] border border-white/12 bg-white/[0.05] text-white/74 hover:text-white hover:bg-white/[0.1] transition-colors"
+                            >
+                              <Library size={11} />
+                              RAG
+                            </button>
+                            <button
+                              onClick={() => openInspectorTab("scripts")}
+                              className="inline-flex w-full h-7 items-center gap-1.5 px-2 rounded-md text-[10.5px] border border-white/12 bg-white/[0.05] text-white/74 hover:text-white hover:bg-white/[0.1] transition-colors"
+                            >
+                              Scripts
+                            </button>
+                            <button
+                              onClick={() => openInspectorTab("sysmon")}
+                              className="inline-flex w-full h-7 items-center gap-1.5 px-2 rounded-md text-[10.5px] border border-white/12 bg-white/[0.05] text-white/74 hover:text-white hover:bg-white/[0.1] transition-colors"
+                            >
+                              <Activity size={11} />
+                              System
+                            </button>
+                          </>
+                        )}
                       </div>
                     </div>
                   </section>
