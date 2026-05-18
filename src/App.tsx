@@ -567,6 +567,74 @@ const App: React.FC = () => {
     setShowInspectorQuickActionsExpanded((prev) => !prev);
   }, []);
 
+  const handleInspectorQuickActionsToggleKeyDown = useCallback((
+    e: React.KeyboardEvent<HTMLButtonElement>,
+  ) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      handleInspectorQuickActionsToggle();
+      return;
+    }
+
+    if (e.key === "ArrowDown" && !showInspectorQuickActionsExpanded) {
+      e.preventDefault();
+      handleInspectorQuickActionsToggle();
+      return;
+    }
+  }, [handleInspectorQuickActionsToggle, showInspectorQuickActionsExpanded]);
+
+  const handleInspectorQuickActionsAdvancedKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (!showInspectorQuickActionsExpanded) return;
+
+    if (e.key === "Escape") {
+      e.preventDefault();
+      closeInspectorQuickActions();
+      return;
+    }
+
+    if (!["ArrowRight", "ArrowLeft", "ArrowDown", "ArrowUp", "Home", "End"].includes(e.key)) return;
+
+    const buttons = Array.from(inspectorQuickActionsAdvancedRef.current?.querySelectorAll<HTMLButtonElement>("button") ?? []);
+    if (buttons.length === 0) return;
+
+    const active = document.activeElement as HTMLButtonElement | null;
+    const currentIdx = active ? buttons.indexOf(active) : -1;
+    const navKey: "ArrowRight" | "ArrowLeft" | "Home" | "End" = e.key === "ArrowDown" || e.key === "ArrowRight"
+      ? "ArrowRight"
+      : e.key === "ArrowUp" || e.key === "ArrowLeft"
+        ? "ArrowLeft"
+        : e.key as "Home" | "End" | "ArrowRight" | "ArrowLeft";
+    const nextIdx = getRovingMenuNextIndex(
+      navKey,
+      buttons.length,
+      currentIdx,
+    );
+    if (nextIdx < 0) return;
+    e.preventDefault();
+    buttons[nextIdx]?.focus();
+  }, [closeInspectorQuickActions, showInspectorQuickActionsExpanded]);
+
+  useEffect(() => {
+    if (!showInspectorQuickActionsExpanded) return;
+    requestAnimationFrame(() => {
+      const firstAction = inspectorQuickActionsAdvancedRef.current?.querySelector("button");
+      firstAction?.focus();
+    });
+  }, [showInspectorQuickActionsExpanded]);
+
+  useEffect(() => {
+    const handlePointerDown = (e: PointerEvent) => {
+      if (!showInspectorQuickActionsExpanded) return;
+      const target = e.target as HTMLElement | null;
+      if (!target) return;
+      if (target.closest("[data-inspector-quick-actions-advanced]")) return;
+      if (target.closest("[data-inspector-quick-actions-toggle]")) return;
+      closeInspectorQuickActions();
+    };
+    window.addEventListener("pointerdown", handlePointerDown, { capture: true });
+    return () => window.removeEventListener("pointerdown", handlePointerDown, { capture: true });
+  }, [showInspectorQuickActionsExpanded, closeInspectorQuickActions]);
+
   useEffect(() => {
     const handleInspectorTabShortcut = (e: KeyboardEvent) => {
       if (!e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
@@ -2638,9 +2706,11 @@ const App: React.FC = () => {
                         </button>
                         <button
                           type="button"
+                          data-inspector-quick-actions-toggle
                           aria-controls="inspector-quick-actions-advanced"
                           aria-expanded={showInspectorQuickActionsExpanded}
                           ref={inspectorQuickActionsToggleRef}
+                          onKeyDown={handleInspectorQuickActionsToggleKeyDown}
                           onClick={handleInspectorQuickActionsToggle}
                           className="inline-flex w-full h-7 items-center gap-1.5 px-2 rounded-md text-[10.5px] border border-white/12 bg-white/[0.05] text-white/74 hover:text-white hover:bg-white/[0.1] transition-colors"
                         >
@@ -2650,9 +2720,11 @@ const App: React.FC = () => {
                           {showInspectorQuickActionsExpanded && (
                             <motion.div
                               id="inspector-quick-actions-advanced"
+                              data-inspector-quick-actions-advanced
                               key="inspector-quick-actions-advanced"
                               className="col-span-2"
                               ref={inspectorQuickActionsAdvancedRef}
+                              onKeyDown={handleInspectorQuickActionsAdvancedKeyDown}
                               initial={{ opacity: 0, height: 0 }}
                               animate={{ opacity: 1, height: "auto" }}
                               exit={{ opacity: 0, height: 0 }}

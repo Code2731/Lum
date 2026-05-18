@@ -356,6 +356,132 @@ describe("App (LUM 터미널)", () => {
     });
   });
 
+  it("더보기 토글은 Enter/Space로도 열리고 닫힌다", async () => {
+    render(<App />);
+
+    const inspectorButton = screen.getByLabelText("Inspector");
+    const inspectorCloseButton = screen.queryByLabelText("Inspector 닫기");
+
+    if (inspectorCloseButton) {
+      fireEvent.click(inspectorCloseButton);
+    }
+    fireEvent.click(inspectorButton);
+
+    await waitFor(() => {
+      expect(screen.getByRole("tablist", { name: "Inspector 탭" })).toBeInTheDocument();
+    });
+
+    const panel = document.querySelector("#inspector-tabpanel-summary");
+    expect(panel).toBeTruthy();
+    const summary = panel as HTMLElement;
+    const moreButton = within(summary).getByRole("button", { name: "더보기" });
+
+    fireEvent.keyDown(moreButton, { key: "Enter", code: "Enter" });
+    await waitFor(() => {
+      expect(within(summary).getByRole("button", { name: "Diff" })).toBeInTheDocument();
+    });
+
+    fireEvent.keyDown(moreButton, { key: " ", code: "Space" });
+    await waitFor(() => {
+      expect(within(summary).queryByRole("button", { name: "Diff" })).toBeNull();
+    });
+  });
+
+  it("고급 액션 영역에서 좌우 화살표로 버튼 간 이동이 된다", async () => {
+    render(<App />);
+
+    const inspectorButton = screen.getByLabelText("Inspector");
+    const inspectorCloseButton = screen.queryByLabelText("Inspector 닫기");
+
+    if (inspectorCloseButton) {
+      fireEvent.click(inspectorCloseButton);
+    }
+    fireEvent.click(inspectorButton);
+
+    await waitFor(() => {
+      expect(screen.getByRole("tablist", { name: "Inspector 탭" })).toBeInTheDocument();
+    });
+
+    const panel = document.querySelector("#inspector-tabpanel-summary");
+    expect(panel).toBeTruthy();
+    const summary = panel as HTMLElement;
+
+    const moreButton = within(summary).getByRole("button", { name: "더보기" });
+    fireEvent.keyDown(moreButton, { key: "Enter", code: "Enter" });
+
+    const historyButton = await waitFor(() => within(summary).getByRole("button", { name: "History" }));
+    expect(historyButton).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(historyButton).toHaveFocus();
+    });
+    const diffButton = within(summary).getByRole("button", { name: "Diff" });
+    fireEvent.keyDown(historyButton, { key: "ArrowRight", code: "ArrowRight" });
+    await waitFor(() => {
+      expect(diffButton).toHaveFocus();
+    });
+  });
+
+  it("고급 액션은 열리면 첫 버튼으로 포커스가 이동한다", async () => {
+    render(<App />);
+
+    const inspectorButton = screen.getByLabelText("Inspector");
+    const inspectorCloseButton = screen.queryByLabelText("Inspector 닫기");
+
+    if (inspectorCloseButton) {
+      fireEvent.click(inspectorCloseButton);
+    }
+    fireEvent.click(inspectorButton);
+
+    await waitFor(() => {
+      expect(screen.getByRole("tablist", { name: "Inspector 탭" })).toBeInTheDocument();
+    });
+
+    const panel = document.querySelector("#inspector-tabpanel-summary");
+    expect(panel).toBeTruthy();
+    const summary = panel as HTMLElement;
+
+    const moreButton = within(summary).getByRole("button", { name: "더보기" });
+    fireEvent.keyDown(moreButton, { key: "Enter", code: "Enter" });
+
+    const historyButton = await waitFor(() => within(summary).getByRole("button", { name: "History" }));
+    await waitFor(() => {
+      expect(historyButton).toHaveFocus();
+    });
+  });
+
+  it("고급 액션 영역 밖을 클릭하면 패널이 닫힌다", async () => {
+    render(<App />);
+
+    const inspectorButton = screen.getByLabelText("Inspector");
+    const inspectorCloseButton = screen.queryByLabelText("Inspector 닫기");
+
+    if (inspectorCloseButton) {
+      fireEvent.click(inspectorCloseButton);
+    }
+    fireEvent.click(inspectorButton);
+
+    await waitFor(() => {
+      expect(screen.getByRole("tablist", { name: "Inspector 탭" })).toBeInTheDocument();
+    });
+
+    const panel = document.querySelector("#inspector-tabpanel-summary");
+    expect(panel).toBeTruthy();
+    const summary = panel as HTMLElement;
+
+    const moreButton = within(summary).getByRole("button", { name: "더보기" });
+    fireEvent.click(moreButton);
+    await waitFor(() => {
+      expect(within(summary).getByRole("button", { name: "Diff" })).toBeInTheDocument();
+    });
+
+    fireEvent.pointerDown(document.body);
+
+    await waitFor(() => {
+      expect(within(summary).queryByRole("button", { name: "Diff" })).toBeNull();
+    });
+  });
+
   it("Inspector는 Escape 키로 닫히고 포커스가 트리거로 되돌아간다", async () => {
     render(<App />);
 
