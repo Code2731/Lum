@@ -127,6 +127,29 @@ describe("TabContextMenu", () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
+  it("Home/End 키로 색상 포커스를 끝/처음으로 이동한다", () => {
+    render(
+      <TabContextMenu
+        {...baseProps}
+        onClose={vi.fn()}
+        onSetColor={vi.fn()}
+        onSetGroup={vi.fn()}
+      />,
+    );
+
+    const menu = document.querySelector('[role="menu"]');
+    if (!menu) throw new Error("탭 컨텍스트 메뉴를 찾지 못했습니다.");
+
+    const radios = document.querySelectorAll('[role="radio"][aria-label^="탭 색상"]');
+    expect(radios.length).toBeGreaterThanOrEqual(1);
+
+    fireEvent.keyDown(menu, { key: "End" });
+    expect(radios[radios.length - 1]).toHaveFocus();
+
+    fireEvent.keyDown(menu, { key: "Home" });
+    expect(radios[0]).toHaveFocus();
+  });
+
   it("그룹 입력 Enter에서 Enter 이벤트가 상위로 전파되지 않는다", () => {
     const onSetGroup = vi.fn();
     const onClose = vi.fn();

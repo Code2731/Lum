@@ -104,6 +104,30 @@ describe("TerminalContextMenu", () => {
     expect(screen.getByLabelText("열기")).toBeInTheDocument();
   });
 
+  it("Home/End 키로 메뉴 항목 포커스를 끝/처음으로 이동한다", () => {
+    render(
+      <TerminalContextMenu
+        {...baseProps}
+        isPathOrUrl={false}
+        onClose={vi.fn()}
+      />,
+    );
+
+    const menu = document.querySelector('[role="menu"]');
+    if (!menu) throw new Error("컨텍스트 메뉴를 찾지 못했습니다.");
+
+    const items = document.querySelectorAll('[role="menuitem"]');
+    expect(items.length).toBeGreaterThan(0);
+
+    fireEvent.keyDown(menu, { key: "ArrowDown" });
+    fireEvent.keyDown(menu, { key: "ArrowDown" });
+    fireEvent.keyDown(menu, { key: "Home" });
+    expect(items[0]).toHaveFocus();
+
+    fireEvent.keyDown(menu, { key: "End" });
+    expect(items[items.length - 1]).toHaveFocus();
+  });
+
   it("메뉴가 열리면 첫 항목에 포커스되고 닫힘 시 이전 포커스로 복귀한다", () => {
     const onClose = vi.fn();
     const App = () => {
