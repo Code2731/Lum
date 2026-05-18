@@ -2571,6 +2571,7 @@ const App: React.FC = () => {
                       <p className="text-white/45 uppercase tracking-[0.06em] text-[10px]">Quick Actions</p>
                       <div className={inspectorQuickGridClass}>
                         <button
+                          type="button"
                           onClick={() => setShowFileExplorer((prev) => {
                             const next = !prev;
                             invoke("save_ui_preferences", { showFileExplorer: next }).catch(() => {});
@@ -2582,6 +2583,7 @@ const App: React.FC = () => {
                           Project Bin
                         </button>
                         <button
+                          type="button"
                           onClick={() => {
                             setShowWorkspace(true);
                             loadWorkspaces();
@@ -2592,6 +2594,7 @@ const App: React.FC = () => {
                           Workspace
                         </button>
                         <button
+                          type="button"
                           onClick={() => openInspectorTab("rag")}
                           className="inline-flex w-full h-7 items-center gap-1.5 px-2 rounded-md text-[10.5px] border border-white/12 bg-white/[0.05] text-white/74 hover:text-white hover:bg-white/[0.1] transition-colors"
                         >
@@ -2599,49 +2602,70 @@ const App: React.FC = () => {
                           RAG
                         </button>
                         <button
+                          type="button"
+                          aria-controls="inspector-quick-actions-advanced"
+                          aria-expanded={showInspectorQuickActionsExpanded}
                           onClick={() => setShowInspectorQuickActionsExpanded((prev) => !prev)}
                           className="inline-flex w-full h-7 items-center gap-1.5 px-2 rounded-md text-[10.5px] border border-white/12 bg-white/[0.05] text-white/74 hover:text-white hover:bg-white/[0.1] transition-colors"
                         >
                           {showInspectorQuickActionsExpanded ? "축소" : "더보기"}
                         </button>
-                        {showInspectorQuickActionsExpanded && (
-                          <>
-                            <button
-                              onClick={() => setShowHistorySearch(true)}
-                              className="inline-flex w-full h-7 items-center gap-1.5 px-2 rounded-md text-[10.5px] border border-white/12 bg-white/[0.05] text-white/74 hover:text-white hover:bg-white/[0.1] transition-colors"
+                        <AnimatePresence initial={false}>
+                          {showInspectorQuickActionsExpanded && (
+                            <motion.div
+                              id="inspector-quick-actions-advanced"
+                              key="inspector-quick-actions-advanced"
+                              className="col-span-2"
+                              initial={{ opacity: 0, height: 0 }}
+                              animate={{ opacity: 1, height: "auto" }}
+                              exit={{ opacity: 0, height: 0 }}
+                              transition={{ duration: 0.16, ease: "easeOut" }}
+                              style={{ overflow: "hidden" }}
                             >
-                              <Search size={11} />
-                              History
-                            </button>
-                            <button
-                              onClick={() => setShowDiffReview(true)}
-                              className="inline-flex w-full h-7 items-center gap-1.5 px-2 rounded-md text-[10.5px] border border-white/12 bg-white/[0.05] text-white/74 hover:text-white hover:bg-white/[0.1] transition-colors"
-                            >
-                              <GitCompareArrows size={11} />
-                              Diff
-                            </button>
-                            <button
-                              onClick={focusFailedBlock}
-                              className="inline-flex w-full h-7 items-center gap-1.5 px-2 rounded-md text-[10.5px] border border-rose-300/30 bg-rose-400/12 text-rose-100 hover:bg-rose-400/20 transition-colors"
-                            >
-                              <AlertTriangle size={11} />
-                              Failed
-                            </button>
-                            <button
-                              onClick={() => openInspectorTab("scripts")}
-                              className="inline-flex w-full h-7 items-center gap-1.5 px-2 rounded-md text-[10.5px] border border-white/12 bg-white/[0.05] text-white/74 hover:text-white hover:bg-white/[0.1] transition-colors"
-                            >
-                              Scripts
-                            </button>
-                            <button
-                              onClick={() => openInspectorTab("sysmon")}
-                              className="inline-flex w-full h-7 items-center gap-1.5 px-2 rounded-md text-[10.5px] border border-white/12 bg-white/[0.05] text-white/74 hover:text-white hover:bg-white/[0.1] transition-colors"
-                            >
-                              <Activity size={11} />
-                              System
-                            </button>
-                          </>
-                        )}
+                              <div className={inspectorQuickGridClass}>
+                                <button
+                                  type="button"
+                                  onClick={() => setShowHistorySearch(true)}
+                                  className="inline-flex w-full h-7 items-center gap-1.5 px-2 rounded-md text-[10.5px] border border-white/12 bg-white/[0.05] text-white/74 hover:text-white hover:bg-white/[0.1] transition-colors"
+                                >
+                                  <Search size={11} />
+                                  History
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setShowDiffReview(true)}
+                                  className="inline-flex w-full h-7 items-center gap-1.5 px-2 rounded-md text-[10.5px] border border-white/12 bg-white/[0.05] text-white/74 hover:text-white hover:bg-white/[0.1] transition-colors"
+                                >
+                                  <GitCompareArrows size={11} />
+                                  Diff
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={focusFailedBlock}
+                                  className="inline-flex w-full h-7 items-center gap-1.5 px-2 rounded-md text-[10.5px] border border-rose-300/30 bg-rose-400/12 text-rose-100 hover:bg-rose-400/20 transition-colors"
+                                >
+                                  <AlertTriangle size={11} />
+                                  Failed
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => openInspectorTab("scripts")}
+                                  className="inline-flex w-full h-7 items-center gap-1.5 px-2 rounded-md text-[10.5px] border border-white/12 bg-white/[0.05] text-white/74 hover:text-white hover:bg-white/[0.1] transition-colors"
+                                >
+                                  Scripts
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => openInspectorTab("sysmon")}
+                                  className="inline-flex w-full h-7 items-center gap-1.5 px-2 rounded-md text-[10.5px] border border-white/12 bg-white/[0.05] text-white/74 hover:text-white hover:bg-white/[0.1] transition-colors"
+                                >
+                                  <Activity size={11} />
+                                  System
+                                </button>
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
                       </div>
                     </div>
                   </section>
