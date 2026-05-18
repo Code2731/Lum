@@ -29,6 +29,8 @@ vi.mock("react-simple-code-editor", () => ({
     value,
     onValueChange,
     onKeyDown,
+    onCompositionStart,
+    onCompositionEnd,
     placeholder,
     textareaId,
   }: any) => (
@@ -39,6 +41,8 @@ vi.mock("react-simple-code-editor", () => ({
       placeholder={placeholder}
       onChange={(e) => onValueChange(e.target.value)}
       onKeyDown={onKeyDown}
+      onCompositionStart={onCompositionStart}
+      onCompositionEnd={onCompositionEnd}
     />
   ),
 }));
@@ -176,6 +180,27 @@ describe("CommandInput Component", () => {
       await Promise.resolve();
     });
     expect(micButton).not.toBeDisabled();
+  });
+
+  it("IME 입력 중 Home/End는 히스토리 탐색을 트리거하면 안 된다", () => {
+    render(<CommandInput {...defaultProps} />);
+    const input = screen.getByTestId("mock-editor");
+
+    fireEvent.change(input, { target: { value: "first" } });
+    fireEvent.keyDown(input, { key: "Enter", code: "Enter" });
+    fireEvent.change(input, { target: { value: "second" } });
+    fireEvent.keyDown(input, { key: "Enter", code: "Enter" });
+
+    fireEvent.compositionStart(input);
+    fireEvent.change(input, { target: { value: "" } });
+    fireEvent.keyDown(input, { key: "Home", code: "Home" });
+    fireEvent.keyDown(input, { key: "End", code: "End" });
+
+    expect(input).toHaveValue("");
+
+    fireEvent.compositionEnd(input);
+    fireEvent.keyDown(input, { key: "Home", code: "Home" });
+    expect(input).toHaveValue("second");
   });
 
   it("Home/End에서 히스토리 항목의 최신/최초로 이동해야 함", () => {

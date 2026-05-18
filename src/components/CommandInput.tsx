@@ -23,6 +23,7 @@ const CommandInput = ({
   context,
 }: Props) => {
   const [value, setValue] = useState("");
+  const [isComposing, setIsComposing] = useState(false);
 
   const injectTranscript = (text: string) => {
     const t = text.trim();
@@ -137,7 +138,7 @@ const CommandInput = ({
       }
     }
 
-    if (e.key === "Home" && !value && history.length > 0) {
+    if (e.key === "Home" && !isComposing && !value && history.length > 0) {
       e.preventDefault();
       const first = 0;
       setHistoryIdx(first);
@@ -145,7 +146,7 @@ const CommandInput = ({
       return;
     }
 
-    if (e.key === "End" && !value && history.length > 0) {
+    if (e.key === "End" && !isComposing && !value && history.length > 0) {
       e.preventDefault();
       const last = history.length - 1;
       setHistoryIdx(last);
@@ -278,6 +279,8 @@ const CommandInput = ({
               textareaId="command-editor-textarea"
               placeholder={isAI ? "AI에게 질문하세요..." : ""}
               autoFocus
+              onCompositionStart={() => setIsComposing(true)}
+              onCompositionEnd={() => setIsComposing(false)}
             />
             {/* 고스트 텍스트 레이어 */}
             {!isAI && ghostText && value && (
