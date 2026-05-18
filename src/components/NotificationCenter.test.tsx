@@ -142,6 +142,53 @@ describe("NotificationCenter", () => {
     expect(document.activeElement).toBe(focusables[focusables.length - 1]);
   });
 
+  it("알림 센터에서 Home/End 키로 시작/끝으로 이동한다", () => {
+    const notifications: AppNotification[] = [
+      {
+        id: "1",
+        type: "agent",
+        title: "agent done",
+        body: "첫 번째 메시지",
+        timestamp: Date.now(),
+        read: false,
+      },
+      {
+        id: "2",
+        type: "command",
+        title: "command done",
+        body: "두 번째 메시지",
+        timestamp: Date.now(),
+        read: true,
+      },
+    ];
+
+    const { container } = render(
+      <NotificationCenter
+        notifications={notifications}
+        unreadCount={1}
+        onMarkAllRead={vi.fn()}
+        onDismiss={vi.fn()}
+        onClear={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    const focusables = Array.from(container.querySelectorAll("button")).filter((el) => !el.hasAttribute("disabled"));
+    expect(focusables.length).toBeGreaterThanOrEqual(4);
+
+    focusables[2]?.focus();
+    expect(document.activeElement).toBe(focusables[2]);
+
+    fireEvent.keyDown(focusables[2], { key: "Home" });
+    expect(document.activeElement).toBe(focusables[0]);
+
+    focusables[focusables.length - 1]?.focus();
+    expect(document.activeElement).toBe(focusables[focusables.length - 1]);
+
+    fireEvent.keyDown(focusables[focusables.length - 1], { key: "End" });
+    expect(document.activeElement).toBe(focusables[focusables.length - 1]);
+  });
+
   it("포커스는 Tab 키로도 순환 이동한다", () => {
     const notifications: AppNotification[] = [
       {
