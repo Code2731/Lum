@@ -614,7 +614,7 @@ const AppHeader: React.FC<Props> = ({
     };
   }, [showAdvancedOverflow, closeAdvancedOverflow]);
 
-  React.useEffect(() => {
+  React.useLayoutEffect(() => {
     if (!showAdvancedOverflow) return;
 
     const updatePlacement = () => {
@@ -678,7 +678,7 @@ const AppHeader: React.FC<Props> = ({
     };
   }, [showNotifCenter, closeNotifCenter]);
 
-  React.useEffect(() => {
+  React.useLayoutEffect(() => {
     if (!showNotifCenter) return;
 
     const updatePlacement = () => {
