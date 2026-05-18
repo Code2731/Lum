@@ -956,6 +956,15 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
       setInputHistorySelected(next);
       return;
     }
+    if (e.key === "Home" || e.key === "End") {
+      e.preventDefault();
+      if (filteredSubmittedInputHistory.length === 0) return;
+      const next = e.key === "Home" ? 0 : filteredSubmittedInputHistory.length - 1;
+      setInputHistorySelected(next);
+      setInputHistoryRangeAnchor(null);
+      setInputHistoryMultiSelected([]);
+      return;
+    }
     if (e.key === "Enter") {
       e.preventDefault();
       const target = filteredSubmittedInputHistory[inputHistorySelected];
@@ -1176,6 +1185,14 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     }
     if (e.key === "ArrowUp") {
       setMentionSelected((prev) => (prev - 1 + mentionItems.length) % mentionItems.length);
+      return true;
+    }
+    if (e.key === "Home") {
+      setMentionSelected(0);
+      return true;
+    }
+    if (e.key === "End") {
+      setMentionSelected(mentionItems.length - 1);
       return true;
     }
     if (e.key === "Escape") {
@@ -1645,6 +1662,16 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
         if (actionPaletteFiltered.length === 0) return 0;
         return (prev - 1 + actionPaletteFiltered.length) % actionPaletteFiltered.length;
       });
+      return;
+    }
+    if (e.key === "Home") {
+      e.preventDefault();
+      setActionPaletteSelected(0);
+      return;
+    }
+    if (e.key === "End") {
+      e.preventDefault();
+      setActionPaletteSelected(Math.max(0, actionPaletteFiltered.length - 1));
       return;
     }
     if (e.key === "Enter") {

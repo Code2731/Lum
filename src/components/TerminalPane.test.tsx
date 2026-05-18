@@ -305,6 +305,29 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(input).toHaveValue("alpha");
   });
 
+  it("Action Palette에서 Home/End로 항목 선택 포인트를 이동한다", () => {
+    const { container } = render(<TerminalPane id="tab-1" />);
+    const input = container.querySelector("input")!;
+
+    fireEvent.change(input, { target: { value: "ls -la" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+    fireEvent.keyDown(input, { key: "k", code: "KeyK", ctrlKey: true });
+    const paletteInput = screen.getByRole("textbox", { name: "action-palette-input" });
+
+    let items = screen.getAllByRole("button", { name: /^action-palette-item-/ });
+    expect(items[0]).toHaveClass("is-active");
+    fireEvent.keyDown(paletteInput, { key: "End" });
+    items = screen.getAllByRole("button", { name: /^action-palette-item-/ });
+    expect(items[items.length - 1]).toHaveClass("is-active");
+
+    fireEvent.keyDown(paletteInput, { key: "Home" });
+    items = screen.getAllByRole("button", { name: /^action-palette-item-/ });
+    expect(items[0]).toHaveClass("is-active");
+
+    fireEvent.keyDown(paletteInput, { key: "Escape" });
+    expect(screen.queryByText("ACTION PALETTE")).not.toBeInTheDocument();
+  });
+
   it("툴벨트 @ 파일 첨부 버튼으로 첨부 트리거를 삽입하고 목록 로드를 시작한다", async () => {
     invokeMock.mockImplementation((cmd: string, args?: { path?: string }) => {
       if (cmd === "load_app_config") {
@@ -369,6 +392,46 @@ describe("TerminalPane — 입력 라우팅", () => {
     fireEvent.click(itemButton);
 
     expect(input).toHaveValue("@README.md ");
+  });
+
+  it("멘션 패널에서 Home/End로 항목 선택 포인트를 이동한다", async () => {
+    invokeMock.mockImplementation((cmd: string, args?: { path?: string }) => {
+      if (cmd === "load_app_config") {
+        return Promise.resolve({
+          ui_show_input_toolbelt_tip: true,
+          ui_show_advanced_input_tools: true,
+          ui_show_backend_quick_tools: true,
+        });
+      }
+      if (cmd === "spawn_pty") return Promise.resolve();
+      if (cmd === "write_to_pty") return Promise.resolve();
+      if (cmd === "resize_pty") return Promise.resolve();
+      if (cmd === "list_directory" && args?.path === "/repo") {
+        return Promise.resolve([
+          { name: "alpha.md", path: "/repo/alpha.md", is_dir: false, size: 512 },
+          { name: "beta.md", path: "/repo/beta.md", is_dir: false, size: 512 },
+        ]);
+      }
+      return Promise.resolve();
+    });
+
+    const { container } = render(<TerminalPane id="tab-1" cwd="/repo" />);
+    const input = container.querySelector("input")!;
+
+    fireEvent.change(input, { target: { value: "분석해줘 @" } });
+    await waitFor(() => {
+      expect(screen.getByText("@alpha.md")).toBeInTheDocument();
+      expect(screen.getByText("@beta.md")).toBeInTheDocument();
+    });
+
+    const firstMention = screen.getByRole("button", { name: /@alpha\.md/ });
+    expect(firstMention).toHaveClass("is-active");
+
+    fireEvent.keyDown(input, { key: "End" });
+    expect(screen.getByRole("button", { name: /@beta\.md/ })).toHaveClass("is-active");
+
+    fireEvent.keyDown(input, { key: "Home" });
+    expect(screen.getByRole("button", { name: /@alpha\.md/ })).toHaveClass("is-active");
   });
 
   it("빈 디렉터리에서는 @ 파일 첨부 패널에 빈 상태 메시지가 표시된다", async () => {
@@ -688,6 +751,49 @@ describe("TerminalPane — 입력 라우팅", () => {
     const reopenSearch = screen.getByRole("textbox", { name: "input-history-search" });
     fireEvent.keyDown(reopenSearch, { key: "Escape" });
     expect(screen.queryByText("INPUT HISTORY")).not.toBeInTheDocument();
+  });
+
+  it("HISTORY 검색창에서 Home/End로 항목 선택 포인트를 이동한다", async () => {
+    render(<TerminalPane id="tab-1" />);
+    const input = screen.getByRole("textbox");
+
+    fireEvent.change(input, { target: { value: "ls -la" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+    await waitFor(() => {
+      expect(invokeMock).toHaveBeenCalledWith("write_to_pty", {
+        id: "tab-1",
+        data: "ls -la\r",
+      });
+    });
+    fireEvent.change(input, { target: { value: "npm test" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+    await waitFor(() => {
+      expect(invokeMock).toHaveBeenCalledWith("write_to_pty", {
+        id: "tab-1",
+        data: "npm test\r",
+      });
+    });
+    fireEvent.change(input, { target: { value: "pwd" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+    await waitFor(() => {
+      expect(invokeMock).toHaveBeenCalledWith("write_to_pty", {
+        id: "tab-1",
+        data: "pwd\r",
+      });
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "quick-input-history-open" }));
+    const search = screen.getByRole("textbox", { name: "input-history-search" });
+    let historyItems = screen.getAllByRole("button", { name: /^quick-input-history-item-\d+$/ });
+    expect(historyItems[0].parentElement).toHaveClass("lum-overlay-split-row is-active");
+
+    fireEvent.keyDown(search, { key: "End" });
+    historyItems = screen.getAllByRole("button", { name: /^quick-input-history-item-\d+$/ });
+    expect(historyItems[historyItems.length - 1].parentElement).toHaveClass("lum-overlay-split-row is-active");
+
+    fireEvent.keyDown(search, { key: "Home" });
+    historyItems = screen.getAllByRole("button", { name: /^quick-input-history-item-\d+$/ });
+    expect(historyItems[0].parentElement).toHaveClass("lum-overlay-split-row is-active");
   });
 
   it("HISTORY 검색창에서 Delete/Backspace 키로 선택 항목을 삭제한다", async () => {
