@@ -322,6 +322,40 @@ describe("App (LUM 터미널)", () => {
     });
   });
 
+  it("Quick Actions 더보기는 Escape로 닫히고 토글 버튼으로 포커스가 돌아간다", async () => {
+    render(<App />);
+
+    const inspectorButton = screen.getByLabelText("Inspector");
+    const inspectorCloseButton = screen.queryByLabelText("Inspector 닫기");
+
+    if (inspectorCloseButton) {
+      fireEvent.click(inspectorCloseButton);
+    }
+    fireEvent.click(inspectorButton);
+
+    await waitFor(() => {
+      expect(screen.getByRole("tablist", { name: "Inspector 탭" })).toBeInTheDocument();
+    });
+
+    const panel = document.querySelector("#inspector-tabpanel-summary");
+    expect(panel).toBeTruthy();
+    const summary = panel as HTMLElement;
+
+    const moreButton = within(summary).getByRole("button", { name: "더보기" });
+    fireEvent.click(moreButton);
+
+    await waitFor(() => {
+      expect(within(summary).getByRole("button", { name: "Diff" })).toBeInTheDocument();
+    });
+
+    fireEvent.keyDown(window, { key: "Escape" });
+
+    await waitFor(() => {
+      expect(within(summary).queryByRole("button", { name: "Diff" })).toBeNull();
+      expect(moreButton).toHaveFocus();
+    });
+  });
+
   it("Inspector는 Escape 키로 닫히고 포커스가 트리거로 되돌아간다", async () => {
     render(<App />);
 

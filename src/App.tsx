@@ -326,6 +326,8 @@ const App: React.FC = () => {
   });
   const [inspectorTab, setInspectorTab] = useState<InspectorTab>("summary");
   const inspectorToggleButtonRef = useRef<HTMLButtonElement>(null);
+  const inspectorQuickActionsToggleRef = useRef<HTMLButtonElement>(null);
+  const inspectorQuickActionsAdvancedRef = useRef<HTMLDivElement>(null);
   const [inspectorDensity, setInspectorDensity] = useState<InspectorDensity>(() => {
     try {
       return localStorage.getItem("lum.inspectorDensity") === "compact" ? "compact" : "cozy";
@@ -551,6 +553,20 @@ const App: React.FC = () => {
       inspectorTabRefs.current[nextTab]?.focus();
     });
   }, [inspectorTab, inspectorTabs, openInspectorTab]);
+
+  const closeInspectorQuickActions = useCallback((restoreFocus = true) => {
+    setShowInspectorQuickActionsExpanded(false);
+    if (restoreFocus) {
+      requestAnimationFrame(() => {
+        inspectorQuickActionsToggleRef.current?.focus();
+      });
+    }
+  }, []);
+
+  const handleInspectorQuickActionsToggle = useCallback(() => {
+    setShowInspectorQuickActionsExpanded((prev) => !prev);
+  }, []);
+
   useEffect(() => {
     const handleInspectorTabShortcut = (e: KeyboardEvent) => {
       if (!e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
@@ -587,6 +603,20 @@ const App: React.FC = () => {
     setShowSysmon(false);
     requestAnimationFrame(() => inspectorToggleButtonRef.current?.focus());
   }, [setShowRagPanel, setShowScriptPanel, setShowSysmon]);
+
+  useEffect(() => {
+    if (!showInspector && showInspectorQuickActionsExpanded) {
+      closeInspectorQuickActions(false);
+    }
+  }, [closeInspectorQuickActions, showInspector, showInspectorQuickActionsExpanded]);
+
+  useEffect(() => {
+    if (!showInspectorQuickActionsExpanded) return;
+    requestAnimationFrame(() => {
+      const first = inspectorQuickActionsAdvancedRef.current?.querySelector("button");
+      first?.focus();
+    });
+  }, [showInspectorQuickActionsExpanded]);
 
   useEffect(() => {
     if (showRagPanel) {
@@ -1397,6 +1427,11 @@ const App: React.FC = () => {
           closeInspectorCommandMenu(true);
           return;
         }
+        if (showInspectorQuickActionsExpanded) {
+          e.preventDefault();
+          closeInspectorQuickActions();
+          return;
+        }
         if (showInspector) {
           e.preventDefault();
           closeInspector();
@@ -1412,7 +1447,7 @@ const App: React.FC = () => {
       window.removeEventListener("keydown", captureHandler, { capture: true });
       window.removeEventListener("keydown", handler);
     };
-  }, [addTabWithReset, closeTabWithReset, toggleSplit, closeOverlays, activeTabIdRef, setShowCommitPanel, setShowHistorySearch, setShowDiffReview, setShowThemePanel, quickActions, ptyWriteRefs, activePaneIdRef, setShowWorkspace, loadWorkspaces, setShowPalette, navigateCommandBlock, focusFailedBlock, showInspector, closeInspector, openInspectorTab, inspectorCommandMenuIndex, closeInspectorCommandMenu]);
+  }, [addTabWithReset, closeTabWithReset, toggleSplit, closeOverlays, activeTabIdRef, setShowCommitPanel, setShowHistorySearch, setShowDiffReview, setShowThemePanel, quickActions, ptyWriteRefs, activePaneIdRef, setShowWorkspace, loadWorkspaces, setShowPalette, navigateCommandBlock, focusFailedBlock, showInspector, closeInspector, openInspectorTab, inspectorCommandMenuIndex, closeInspectorCommandMenu, showInspectorQuickActionsExpanded, closeInspectorQuickActions]);
 
   useEffect(() => {
     const onPointerDown = (e: MouseEvent) => {
@@ -2605,7 +2640,8 @@ const App: React.FC = () => {
                           type="button"
                           aria-controls="inspector-quick-actions-advanced"
                           aria-expanded={showInspectorQuickActionsExpanded}
-                          onClick={() => setShowInspectorQuickActionsExpanded((prev) => !prev)}
+                          ref={inspectorQuickActionsToggleRef}
+                          onClick={handleInspectorQuickActionsToggle}
                           className="inline-flex w-full h-7 items-center gap-1.5 px-2 rounded-md text-[10.5px] border border-white/12 bg-white/[0.05] text-white/74 hover:text-white hover:bg-white/[0.1] transition-colors"
                         >
                           {showInspectorQuickActionsExpanded ? "축소" : "더보기"}
@@ -2616,6 +2652,7 @@ const App: React.FC = () => {
                               id="inspector-quick-actions-advanced"
                               key="inspector-quick-actions-advanced"
                               className="col-span-2"
+                              ref={inspectorQuickActionsAdvancedRef}
                               initial={{ opacity: 0, height: 0 }}
                               animate={{ opacity: 1, height: "auto" }}
                               exit={{ opacity: 0, height: 0 }}
