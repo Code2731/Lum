@@ -151,13 +151,53 @@ type MermaidEdge = {
 const parseMermaidEdges = (code: string): MermaidEdge[] => {
   const edges: MermaidEdge[] = [];
   const seen = new Set<string>();
-  const arrowTokens = ["-->>", "<-->", "<-.->", "-.->", "==>", "<==", "-->", "<--", "->", "<-"];
+  const arrowTokens = ["-->>", "<-->", "<-.->", "-.->", "==>", "<==", "-->", "---", "<--", "->", "<-"];
   const lines = code.split("\n").map((l) => l.trim()).filter(Boolean);
 
   const escapeRegex = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const stripComment = (line: string) => {
+    let inSingle = false;
+    let inDouble = false;
+    let escaped = false;
+
+    for (let i = 0; i < line.length - 1; i += 1) {
+      const ch = line[i];
+      const next = line[i + 1];
+
+      if (escaped) {
+        escaped = false;
+        continue;
+      }
+
+      if (ch === "\\") {
+        escaped = true;
+        continue;
+      }
+
+      if (!inDouble && ch === "'") {
+        inSingle = !inSingle;
+        continue;
+      }
+      if (!inSingle && ch === "\"") {
+        inDouble = !inDouble;
+        continue;
+      }
+
+      if (!inSingle && !inDouble && ch === "%" && next === "%") {
+        const prev = i > 0 ? line[i - 1] : "";
+        const hasLeadingSpace = i === 0 || /\s/.test(prev);
+        if (!hasLeadingSpace) {
+          continue;
+        }
+        return line.slice(0, i).trimEnd();
+      }
+    }
+
+    return line;
+  };
 
   for (const line of lines) {
-    const trimmed = line.replace(/%%.*$/, "").trim();
+    const trimmed = stripComment(line).trim();
     if (!trimmed || trimmed.startsWith("%%")) {
       continue;
     }

@@ -210,6 +210,58 @@ describe("AIBlockStream", () => {
     expect(lines[0]).toHaveTextContent('"service.rs" --> "db.rs"');
   });
 
+  it("Mermaid 더블 대시 엣지도 텍스트로 보존한다", () => {
+    const mermaidMessage = [
+      "query_graph 결과:",
+      "```mermaid",
+      "flowchart LR",
+      "\"cli\" --- \"parser\"",
+      "\"cli\" ---|calls|\"backend\"",
+      "```",
+    ].join("\n");
+
+    const { container } = render(
+      <AIBlockStream
+        messages={[msg("assistant", mermaidMessage)]}
+        streaming={false}
+        error={null}
+        onClear={vi.fn()}
+        onExecute={vi.fn()}
+      />,
+    );
+
+    const lines = container.querySelectorAll("li");
+    expect(lines).toHaveLength(2);
+    expect(lines[0]).toHaveTextContent('"cli" --- "parser"');
+    expect(lines[1]).toHaveTextContent('"cli" --- "backend" (calls)');
+  });
+
+  it("노드명에 %%가 있어도 주석으로 제거하지 않는다", () => {
+    const mermaidMessage = [
+      "query_graph 결과:",
+      "```mermaid",
+      "flowchart LR",
+      "\"service%%.rs\" --> \"db.rs\"",
+      "\"cache\" -->|reads%%only| \"db.rs\"",
+      "```",
+    ].join("\n");
+
+    const { container } = render(
+      <AIBlockStream
+        messages={[msg("assistant", mermaidMessage)]}
+        streaming={false}
+        error={null}
+        onClear={vi.fn()}
+        onExecute={vi.fn()}
+      />,
+    );
+
+    const lines = container.querySelectorAll("li");
+    expect(lines).toHaveLength(2);
+    expect(lines[0]).toHaveTextContent('"service%%.rs" --> "db.rs"');
+    expect(lines[1]).toHaveTextContent('"cache" --> "db.rs" (reads%%only)');
+  });
+
   it("Mermaid 코드블록 엣지 없음 시 일반 코드 블록으로 보존된다", () => {
     const mermaidMessage = "query_graph 결과:\n```mermaid\nflowchart LR\nclassDef C fill:#f96\n```";
     const { container } = render(
