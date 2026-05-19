@@ -141,10 +141,58 @@ const AIChatPanel: React.FC<Props> = ({ messages, streaming, error, onSend, onCa
   );
 };
 
+type MermaidEdge = {
+  from: string;
+  to: string;
+  label?: string;
+};
+
+const parseMermaidEdges = (code: string): MermaidEdge[] => {
+  const edges: MermaidEdge[] = [];
+  const seen = new Set<string>();
+  const arrowTokens = ["-->>", "-.->", "==>", "-->", "->"];
+  const lines = code
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean);
+
+  for (const line of lines) {
+    const arrow = arrowTokens.find((token) => line.includes(token));
+    if (!arrow) continue;
+
+    const idx = line.indexOf(arrow);
+    const left = line.slice(0, idx).trim();
+    const rightRest = line.slice(idx + arrow.length).trim();
+    if (!left || !rightRest) continue;
+
+    let label: string | undefined;
+    let right = rightRest;
+    if (right.startsWith("|")) {
+      const end = right.indexOf("|", 1);
+      if (end > 1) {
+        label = right.slice(1, end).trim() || undefined;
+        right = right.slice(end + 1).trim();
+      }
+    }
+
+    if (!right) continue;
+    const key = `${left}|${arrow}|${label ?? ""}|${right}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+
+    edges.push({
+      from: left,
+      to: right,
+      ...(label ? { label } : {}),
+    });
+  }
+
+  return edges;
+};
+
 const MermaidCodeBlock: React.FC<{ code: string }> = ({ code }) => {
   const raw = code.trim();
-  const lines = raw.split("\n").map((l) => l.trim()).filter(Boolean);
-  const edges = lines.filter((line) => line.includes("-->"));
+  const edges = parseMermaidEdges(raw);
 
   if (edges.length === 0) {
     return (
@@ -159,7 +207,10 @@ const MermaidCodeBlock: React.FC<{ code: string }> = ({ code }) => {
       <div className="text-[10px] text-cyan-200 mb-1">Mermaid 텍스트 다이어그램</div>
       <ul className="pl-4 list-disc space-y-0.5 text-[10px] text-white/75">
         {edges.map((edge) => (
-          <li key={edge}>{edge}</li>
+          <li key={`${edge.from}-${edge.to}-${edge.label ?? ""}`}>
+            {edge.from} {" --> "} {edge.to}
+            {edge.label ? <span className="text-white/60">{` (${edge.label})`}</span> : null}
+          </li>
         ))}
       </ul>
     </div>
