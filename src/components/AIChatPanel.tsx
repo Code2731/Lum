@@ -207,17 +207,59 @@ const parseMermaidEdges = (code: string): MermaidEdge[] => {
     let label: string | undefined;
     let arrow = "";
 
+    const parseLabelAndTo = (text: string): { to: string; label?: string } => {
+      const trimmedText = text.trim();
+      if (!trimmedText.startsWith("|")) {
+        return { to: trimmedText };
+      }
+
+      let i = 1;
+      const labelChars: string[] = [];
+      let escaped = false;
+
+      for (; i < trimmedText.length; i += 1) {
+        const ch = trimmedText[i];
+        if (escaped) {
+          if (ch === "\\") {
+            labelChars.push("\\");
+          } else if (ch === "|") {
+            labelChars.push("|");
+          } else {
+            labelChars.push(ch);
+          }
+          escaped = false;
+          continue;
+        }
+
+        if (ch === "\\") {
+          escaped = true;
+          continue;
+        }
+
+        if (ch === "|") {
+          return {
+            label: labelChars.join("").trim(),
+            to: trimmedText.slice(i + 1).trim(),
+          };
+        }
+
+        labelChars.push(ch);
+      }
+
+      return { to: trimmedText };
+    };
+
     for (const candidate of arrowTokens) {
       const pattern = new RegExp(
-        `^(.*?)\\s*${escapeRegex(candidate)}\\s*(?:\\|([^|]+)\\|\\s*)?(.*)$`,
+        `^(.*?)\\s*${escapeRegex(candidate)}\\s*(.*)$`,
       );
       const match = pattern.exec(trimmed);
       if (!match) continue;
 
       from = match[1].trim();
-      const rawLabel = (match[2] ?? "").trim();
-      to = match[3].trim();
-      label = rawLabel.length > 0 ? rawLabel : undefined;
+      const parsed = parseLabelAndTo(match[2] ?? "");
+      to = parsed.to;
+      label = parsed.label && parsed.label.length > 0 ? parsed.label : undefined;
       arrow = candidate;
       break;
     }

@@ -262,6 +262,30 @@ describe("AIBlockStream", () => {
     expect(lines[1]).toHaveTextContent('"cache" --> "db.rs" (reads%%only)');
   });
 
+  it("라벨의 이스케이프된 | 문자도 정확히 표시한다", () => {
+    const mermaidMessage = [
+      "query_graph 결과:",
+      "```mermaid",
+      "flowchart LR",
+      "\"cache\" -->|cache\\|db| \"db.rs\"",
+      "```",
+    ].join("\n");
+
+    const { container } = render(
+      <AIBlockStream
+        messages={[msg("assistant", mermaidMessage)]}
+        streaming={false}
+        error={null}
+        onClear={vi.fn()}
+        onExecute={vi.fn()}
+      />,
+    );
+
+    const lines = container.querySelectorAll("li");
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).toHaveTextContent('"cache" --> "db.rs" (cache|db)');
+  });
+
   it("Mermaid 코드블록 엣지 없음 시 일반 코드 블록으로 보존된다", () => {
     const mermaidMessage = "query_graph 결과:\n```mermaid\nflowchart LR\nclassDef C fill:#f96\n```";
     const { container } = render(
