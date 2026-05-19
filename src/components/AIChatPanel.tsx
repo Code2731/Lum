@@ -221,7 +221,9 @@ const parseMermaidEdges = (code: string): MermaidEdge[] => {
       if (!inSingle && !inDouble && ch === "%" && next === "%") {
         const prev = i > 0 ? line[i - 1] : "";
         const hasLeadingSpace = i === 0 || isCommentBoundary(prev);
-        if (!hasLeadingSpace) {
+        const after = i + 2 < line.length ? line[i + 2] : "";
+        const hasTrailingSpace = i + 2 >= line.length || /\s/.test(after);
+        if (!hasLeadingSpace || !hasTrailingSpace) {
           continue;
         }
         return line.slice(0, i).trimEnd();

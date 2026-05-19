@@ -210,6 +210,57 @@ describe("AIBlockStream", () => {
     expect(lines[0]).toHaveTextContent('"service.rs" --> "db.rs"');
   });
 
+  it("공백 없이 붙은 mermaid 주석도 unquoted 노드에서 제거한다", () => {
+    const mermaidMessage = [
+      "query_graph 결과:",
+      "```mermaid",
+      "flowchart LR",
+      "service --> db.rs%% inline comment",
+      "```",
+    ].join("\n");
+
+    const { container } = render(
+      <AIBlockStream
+        messages={[msg("assistant", mermaidMessage)]}
+        streaming={false}
+        error={null}
+        onClear={vi.fn()}
+        onExecute={vi.fn()}
+      />,
+    );
+
+    const lines = container.querySelectorAll("li");
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).toHaveTextContent("service --> db.rs");
+  });
+
+  it("ID 내의 %%는 mermaid 주석으로 잘못 인식되지 않는다", () => {
+    const mermaidMessage = [
+      "query_graph 결과:",
+      "```mermaid",
+      "flowchart LR",
+      "\"service%%.rs\" --> db",
+      "A %% B",
+      "A --> B%%_id",
+      "```",
+    ].join("\n");
+
+    const { container } = render(
+      <AIBlockStream
+        messages={[msg("assistant", mermaidMessage)]}
+        streaming={false}
+        error={null}
+        onClear={vi.fn()}
+        onExecute={vi.fn()}
+      />,
+    );
+
+    const lines = container.querySelectorAll("li");
+    expect(lines).toHaveLength(2);
+    expect(lines[0]).toHaveTextContent('"service%%.rs" --> db');
+    expect(lines[1]).toHaveTextContent('A --> B%%_id');
+  });
+
   it("단일 따옴표 노드와 라벨의 %%는 주석 처리되지 않는다", () => {
     const mermaidMessage = [
       "query_graph 결과:",
