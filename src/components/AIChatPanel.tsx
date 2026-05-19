@@ -141,6 +141,31 @@ const AIChatPanel: React.FC<Props> = ({ messages, streaming, error, onSend, onCa
   );
 };
 
+const MermaidCodeBlock: React.FC<{ code: string }> = ({ code }) => {
+  const raw = code.trim();
+  const lines = raw.split("\n").map((l) => l.trim()).filter(Boolean);
+  const edges = lines.filter((line) => line.includes("-->"));
+
+  if (edges.length === 0) {
+    return (
+      <pre className="mt-1.5 mb-1.5 p-2 rounded-md bg-white/5 border border-white/8 overflow-x-auto font-mono text-white/70 text-[10px]">
+        <code>{raw}</code>
+      </pre>
+    );
+  }
+
+  return (
+    <div className="mt-1.5 mb-1.5 rounded-md border border-white/8 bg-white/5 p-2 overflow-x-auto">
+      <div className="text-[10px] text-cyan-200 mb-1">Mermaid 텍스트 다이어그램</div>
+      <ul className="pl-4 list-disc space-y-0.5 text-[10px] text-white/75">
+        {edges.map((edge) => (
+          <li key={edge}>{edge}</li>
+        ))}
+      </ul>
+    </div>
+  );
+};
+
 // ─── 실행 버튼이 붙은 코드블록 ──────────────────────────────────
 
 export const SHELL_LANGS = new Set(["bash", "sh", "shell", "zsh", "fish", "powershell", "ps1", ""]);
@@ -223,6 +248,10 @@ export const MessageBubble: React.FC<{
 
                 if (isBlock && onExecute && SHELL_LANGS.has(lang)) {
                   return <ExecCodeBlock code={codeStr} lang={lang} onExecute={onExecute} />;
+                }
+
+                if (isBlock && lang === "mermaid") {
+                  return <MermaidCodeBlock code={codeStr} />;
                 }
 
                 if (isBlock) {

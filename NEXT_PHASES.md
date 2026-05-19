@@ -22,10 +22,10 @@
 | 132 SKILL.md 표준 | 3일 명세 | ✅ **DONE** | `skills.rs:38-42` `when_to_use/quick_reference/procedure/pitfalls/verification` 5섹션, `:193` `split_frontmatter`, `:246` `parse_frontmatter_yaml`, `:295` 헤더 alias 매핑. |
 | 133 Reflexion 1턴 | 1주 명세 | ✅ **DONE** | `react_agent.rs:301` `run_reflexion`, `:1545` config 토글, `:1588/:1625/:1710` 통합. config.rs:111 `react_reflexion_enabled`. |
 | 134 Healing 자연어 | 3-4일 명세 | ✅ **DONE** | `react_agent.rs:381` `query_healing` + `analyze_failure_reasons` 도구. `inputRouter.ts:122-130,160-167,236` `HEALING_INTENT_KO/EN` + `detectHealingIntent` + 라우팅. `HealingDatasetPanel.tsx:182-186` reject 카드 amber `failure_reason` 노출. |
-| 135 Voice 입력 | 1~1.5주 명세 (cpal+whisper-rs) | 🟡 **PARTIAL** | `audio.rs:83-179` 외부 whisper(LUM_VOICE_STOP_CMD/`~/.lum_whisper/last_transcript.txt`) 호출. 임베디드 cpal+whisper-rs는 미구현 — 디자인이 외부 위임으로 의도적으로 갈라짐(가벼운 핵심 + 사용자가 STT 도구 선택). 명세대로 가려면 신규 페이즈 필요. |
+| 135 Voice 입력 | 1~1.5주 명세 (cpal+whisper-rs) | 🟡 **PARTIAL** | `audio.rs`에서 외부 훅 기반으로 `start_voice_recording`/`stop_voice_recording` 동작 자체는 구현되어 있음. 임베디드 cpal+whisper-rs는 별도 페이즈 필요. |
 | 136 Magentic 2-ledger | 2-3주 명세 | ✅ **DONE (136-A+B)** | `ProgressLedger` (inner) + `is_complex_goal/parse_task_plan/generate_task_plan` (outer). 복잡한 목표 → 사전계획 주입. L2 stuck → outer re-plan (최대 2회) → 강제ANSWER. 독립 orchestrator.rs 없이 react_agent_run에 통합. |
 
-**결론**: NEXT_PHASES.md(자연어 표면)는 작성 당시 거의 다 done이었음. 외부 리서치는 정확했지만 내부 감사 부족 — Codex 핸드오프 가치는 **136(Magentic) + 135 임베디드 STT** 두 항목뿐. 나머지는 **이미 done이므로 새로 구현 금지**. Code Intelligence 축은 `NEXT_PHASES_CODE_INTEL.md` 별도 문서 참조 — 그쪽이 실제 미완 항목 다수.
+**결론**: NEXT_PHASES.md(자연어 표면)는 작성 당시 거의 다 done이었음. 외부 리서치는 정확했지만 내부 감사 부족 — Codex 핸드오프 가치는 **135 임베디드 STT**가 유의미합니다. 나머지는 **이미 done**이므로 새로 구현은 최소화. Code Intelligence 축은 `NEXT_PHASES_CODE_INTEL.md` 별도 문서 참조 — 그쪽이 실제 미완 항목입니다.
 
 ---
 
@@ -40,7 +40,7 @@
 | 코딩 의도 감지 | AND 논리, ~75% | embedding/intent 분류기 | 중-높음 |
 | 자연어→도구 surface | ReAct 10개 + MCP 동적 | Claude Code ~40개, MCP 12k+ 생태계 | 높음 |
 | 실행 모델 | ReAct 단일 루프 | Plan/Act 분리 + 도구단위 auto-approve | 높음 |
-| 음성 입력 | `audio.rs` stub만 | Anthropic·OpenAI 2026-03 출하 | 높음 |
+| 음성 입력 | 외부 STT 훅으로 녹음/전사 인터페이스는 동작 | Anthropic·OpenAI 2026-03 출하 | 높음 |
 | 데스크톱 제어 | 구현 O, 프롬프트 노출 ✗ | LLM이 즉시 호출 | **즉시 닫힘** |
 | Skill 매칭 | HashSet 교집합 | embedding cosine + SKILL.md 표준 | 중간 |
 | Self-critique | 없음 | Reflexion 1턴 (HumanEval +11pp) | 중간 |
@@ -251,7 +251,7 @@
 
 ## 8. Phase 135 — Voice 입력 (chunk 기반) (1~1.5주) 🟡 PARTIAL — 외부 whisper 호출만 구현, 임베디드 cpal+whisper-rs 미구현 (디자인 의도적 분기)
 
-**근거**: 2026-03 Anthropic·OpenAI 코딩 agent voice mode 출하. LUM은 `audio.rs:1-10` stub만 있음.
+**근거**: 2026-03 Anthropic·OpenAI 코딩 agent voice mode 출하. LUM은 `audio.rs`의 `start_voice_recording`/`stop_voice_recording` 인터페이스가 동작하지만, 임베디드 마이크 캡처 경로는 미구현.
 
 ### 변경 범위
 - `src-tauri/src/audio.rs`
@@ -273,7 +273,7 @@
 
 ---
 
-## 9. Phase 136 — Magentic식 2-ledger Orchestrator (2-3주, 큰 투자) ❌ TODO
+## 9. Phase 136 — Magentic식 2-ledger Orchestrator (2-3주, 큰 투자) ✅ DONE
 
 **근거**: 단일 ReAct는 long-horizon (20+ 단계) 작업에서 stuck-loop 발생. Magentic-One의 outer(task ledger) + inner(progress ledger) 패턴이 2026 표준.
 
@@ -351,5 +351,5 @@
 - `src-tauri/src/commands/react_agent.rs:71-284` — ReAct 도구 + 프롬프트
 - `src-tauri/src/commands/skills.rs:92-135` — Skills 매칭
 - `src-tauri/src/desktop.rs:32-142` — 미노출 데스크톱 도구
-- `src-tauri/src/audio.rs:1-10` — voice stub
+- `src-tauri/src/audio.rs` — 외부 훅 기반 음성 입력 상태/전사 인터페이스(임베디드 캡처는 미구현)
 - `src-tauri/src/swarm.rs:1-100` — 비활성 P2P

@@ -86,4 +86,39 @@ describe("AIBlockStream", () => {
     // lucide Loader2는 animate-spin 클래스로 식별
     expect(container.querySelector(".animate-spin")).toBeTruthy();
   });
+
+  it("Mermaid 코드블록도 텍스트로 보존된다", () => {
+    const mermaidMessage = "query_graph 결과:\n```mermaid\nflowchart LR\n\"service.rs\" --> \"db.rs\"\n```";
+    const { container } = render(
+      <AIBlockStream
+        messages={[msg("assistant", mermaidMessage)]}
+        streaming={false}
+        error={null}
+        onClear={vi.fn()}
+        onExecute={vi.fn()}
+      />,
+    );
+
+    const summary = container.querySelector("ul");
+    expect(summary).not.toBeNull();
+    expect(container).toHaveTextContent("Mermaid 텍스트 다이어그램");
+    expect(container).toHaveTextContent("\"service.rs\" --> \"db.rs\"");
+  });
+
+  it("Mermaid 코드블록 엣지 없음 시 일반 코드 블록으로 보존된다", () => {
+    const mermaidMessage = "query_graph 결과:\n```mermaid\nflowchart LR\nclassDef C fill:#f96\n```";
+    const { container } = render(
+      <AIBlockStream
+        messages={[msg("assistant", mermaidMessage)]}
+        streaming={false}
+        error={null}
+        onClear={vi.fn()}
+        onExecute={vi.fn()}
+      />,
+    );
+
+    expect(container.querySelector("ul")).toBeNull();
+    expect(container).toHaveTextContent("classDef C fill:#f96");
+    expect(container.querySelector("pre")).toBeTruthy();
+  });
 });

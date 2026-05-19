@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 use std::sync::{Mutex, OnceLock};
 use tauri::Emitter;
 use tokio::process::Command as TokioCommand;
-use tokio::time::{timeout, Duration};
+use tokio::time::{Duration, timeout};
 
 #[derive(Debug, Default, Clone)]
 struct VoiceState {
@@ -230,9 +230,17 @@ async fn stop_voice_recording_inner() -> Result<String, String> {
                     DEFAULT_VOICE_STOP_CMD_TIMEOUT_MS,
                 ),
             )
-            .await?;
-            if !out.is_empty() {
-                return Ok(out);
+            .await;
+            match out {
+                Ok(out) if !out.is_empty() => return Ok(out),
+                Ok(_) => {}
+                Err(err) => {
+                    let path = transcript_file_path();
+                    if let Some(t) = read_transcript_file(&path, started_ms) {
+                        return Ok(t);
+                    }
+                    return Err(err);
+                }
             }
         }
     }
@@ -411,9 +419,11 @@ mod tests {
 
         let result = start_voice_recording_inner().await;
         assert!(result.is_err());
-        assert!(result
-            .unwrap_err()
-            .contains("LUM_VOICE_ERROR::START_HOOK_FAILED::"));
+        assert!(
+            result
+                .unwrap_err()
+                .contains("LUM_VOICE_ERROR::START_HOOK_FAILED::")
+        );
         assert_eq!(voice_recording_status().ok(), Some(false));
 
         std::env::remove_var("LUM_VOICE_START_CMD");
@@ -446,6 +456,43 @@ mod tests {
         }
         let result = stop_voice_recording_inner().await;
         assert_eq!(result.ok(), Some("git status".to_string()));
+        assert!(!path.exists(), "폴백 파일은 읽은 뒤 삭제되어야 합니다.");
+
+        std::env::remove_var("LUM_VOICE_STOP_CMD");
+        if let Some(home) = old_home {
+            std::env::set_var("HOME", home);
+        } else {
+            std::env::remove_var("HOME");
+        }
+        reset_state();
+    }
+
+    #[tokio::test]
+    async fn stop_cmd_실패해도_파일_폴백_가능() {
+        let _g = AUDIO_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        reset_state();
+        std::env::set_var("LUM_VOICE_STOP_CMD", "exit 1");
+
+        let tmp_home = std::env::temp_dir().join(format!(
+            "lum_voice_home_{}_{}",
+            std::process::id(),
+            now_ms()
+        ));
+        std::fs::create_dir_all(&tmp_home).unwrap();
+        let old_home = std::env::var("HOME").ok();
+        std::env::set_var("HOME", &tmp_home);
+
+        let path = transcript_file_path();
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent).unwrap();
+        }
+        std::fs::write(&path, "  fallback on error  ").unwrap();
+
+        if let Ok(mut s) = voice_state_lock().lock() {
+            s.recording = true;
+        }
+        let result = stop_voice_recording_inner().await;
+        assert_eq!(result.ok(), Some("fallback on error".to_string()));
         assert!(!path.exists(), "폴백 파일은 읽은 뒤 삭제되어야 합니다.");
 
         std::env::remove_var("LUM_VOICE_STOP_CMD");

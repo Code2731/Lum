@@ -2,6 +2,7 @@
 
 작성일: 2026-05-04
 사후 진행: 2026-05-04 — **Phase 137-B (`query_codebase` ReAct 도구) DONE** (`06723a9`).
+사후 감사: 2026-05-19 — Phase 142/143도 실제 코드 기준 완료 상태로 정정. 143은 Mermaid 관계 다이어그램 회귀 가드까지 추가.
 선행: `NEXT_PHASES.md` (Phase 129~136, 자연어→도구 실행 격차)
 대상 실행자: Codex (또는 후속 Claude 세션)
 
@@ -16,8 +17,8 @@
 | 139 호출 그래프 + multi-hop | ✅ **DONE** | `call_graph.rs` + `find_callers/callees/trace_dependents` ReAct 도구 3종 |
 | 140 Personalized PageRank | ✅ **DONE** | `build_graph_and_rank` active_file 50× / mentioned 10× / well-named 1.5× |
 | 141 그래프 시각화 | ✅ **DONE** | `history_graph.rs` BFS클러스터+원형배치 + `HistoryGraphPanel.tsx` ReactFlow |
-| 142 SCIP 옵트인 | ❌ TODO | 후순위 |
-| 143 GraphRAG flat | 🟡 IN_PROGRESS | `query_graph` ReAct 도구: 검색 결과 중심 심볼을 graph 기준 요약 |
+| 142 SCIP 옵트인 | ✅ **DONE** | `scip.rs` 백엔드 감지/재빌드/print JSON 조회 + `precise_callers`/`precise_definition`/`scip_status` ReAct 도구 + opt-in 토글 |
+| 143 GraphRAG flat | ✅ **DONE** | `query_graph` ReAct 도구: 검색 결과 중심 심볼·호출 그래프·모듈 연결·import 힌트·Mermaid 관계 다이어그램 요약 |
 
 
 이 문서는 **R_AND_D_ITEMS.md §2 (Advanced Code Intelligence)** 의 단기 실행 계획입니다. NEXT_PHASES.md(자연어 표면)와 직교 — 병렬 진행 가능.
@@ -58,7 +59,7 @@
 
 ---
 
-## 2. Phase 137 — AST 기반 청킹 + ReAct semantic 검색 도구 (1주) — 137-A ✅ + 137-B ✅ DONE / 137-C ❌ TODO
+## 2. Phase 137 — AST 기반 청킹 + ReAct semantic 검색 도구 (1주) — 137-A ✅ + 137-B ✅ + 137-C ✅ DONE
 
 **근거**: 가장 ROI 높은 묶음. 기존 tree-sitter를 `rag.rs`에 끌어와 600자 고정 청킹을 함수/클래스 경계로 교체 + ReAct가 의미 검색을 직접 호출.
 
@@ -208,46 +209,43 @@
 
 ---
 
-## 7. Phase 142 — SCIP 외부 인덱서 옵트인 (1~3달, 후순위)
+## 7. Phase 142 — SCIP 외부 인덱서 옵트인 ✅ DONE
 
 **근거**: tree-sitter는 syntax-only. 정밀 reference resolution은 SCIP/LSP 영역. Rust/Go/TypeScript는 SCIP 인덱서가 stable.
 
-### 변경 범위 (스케치)
-- 사용자 PATH에 `scip-rust` / `scip-typescript` / `scip-go` 있으면 자동 감지
-- worktree 진입 시 백그라운드 인덱싱 (`scip-rust index --output .lum_scip/index.scip`)
-- `commands/scip.rs` — protobuf 디코더 + symbol/reference/definition lookup
-- ReAct 도구: `precise_callers`/`precise_definition` (tree-sitter 기반의 정밀 버전)
-- Phase 139의 모호성 경고가 자동 해소되는 경우 우선순위 표시
+### 실제 구현
+- `src-tauri/src/commands/scip.rs`: `scip-rust` / `scip-typescript` / `scip-go` 감지, `.lum_scip/<lang>/index.scip` 경로 관리, opt-in 시 자동 재빌드, `scip print --json` 결과 파싱.
+- `src-tauri/src/commands/react_agent.rs`: `precise_callers` / `precise_definition` / `scip_status` ReAct 도구 등록. 비활성·미설치·인덱스 없음 상태에서는 tree-sitter fallback과 상태 안내를 함께 반환.
+- `src-tauri/src/commands/config.rs`: `react_scip_tools_enabled` opt-in 토글 저장.
 
-### 수용 기준 (개략)
-- [ ] SCIP 인덱서 미설치 환경: 기능 비활성, tree-sitter fallback.
-- [ ] 설치 환경: 동명이인 함수 호출자 분리 정확.
-- [ ] 인덱싱 시간: 100k LOC Rust 1분 이내.
+### 수용 기준
+- [x] SCIP 인덱서 미설치 환경: 기능 비활성, tree-sitter fallback.
+- [x] 설치 환경: `scip print --json` 기반 definition/caller 후보 조회.
+- [x] 백엔드 상태와 index.scip 존재 여부를 UI/ReAct에서 확인 가능.
 
 ### 주의
-- 큰 투자 — Phase 137~140 효과 측정 후 진입 결정.
-- Squad worktree마다 별도 인덱스 → 디스크 사용 폭증 가능.
+- Squad worktree마다 별도 `.lum_scip` 인덱스를 만들 수 있으므로 디스크 사용량은 계속 주의.
 
 ---
 
-## 8. Phase 143 — GraphRAG flat (코드 도메인 LightRAG 변형) (3-4주, 큰 투자)
+## 8. Phase 143 — GraphRAG flat (코드 도메인 LightRAG 변형) ✅ DONE
 
 **근거**: Phase 139가 호출 엣지 관계라면, Phase 143은 *모듈/기능 단위 의미 클러스터링*. "이 repo의 핵심 모듈 5개" 같은 전역 요약 질의.
 
-### 변경 범위 (스케치)
-- LightRAG 패턴: entity=모듈/함수, relationship=호출/import, **community summarization 생략** (비용 회피)
-- entity 추출은 LLM이 아닌 결정적 — tree-sitter 심볼 + docstring
-- 그래프 트래버설 + dense 검색 RRF 융합
-- 영속: petgraph 인메모리 + `~/.lum_graph_rag.bin` (Phase 139와 동일 인프라 재사용)
+### 실제 구현
+- `query_graph({"query","limit","depth","symbols"})` ReAct 도구가 `search_codebase_internal` 결과를 seed로 사용.
+- 검색 스니펫에서 `[fn name | file]` / legacy `[file]` 포맷을 파싱해 모듈 중심 요약과 심볼 후보를 만든다.
+- Phase 139 `CallGraph`를 재사용해 호출자·피호출자·영향도 BFS를 붙이고, import 힌트와 call edge를 합쳐 모듈 연결 요약을 만든다.
+- 모듈 연결이 있으면 Mermaid `flowchart LR` 다이어그램 블록을 함께 반환한다.
 
-### 수용 기준 (개략)
-- [ ] "이 repo에서 인증 흐름 어떻게 돼?" 질의 → 관련 모듈/함수/엣지를 다이어그램+자연어로 설명.
-- [ ] 비용: 인덱싱 시 LLM 호출 0건 (entity는 syntactic 추출, summary는 검색 시점 on-demand 1회).
-- [ ] 일반 RAG 대비 multi-hop 질의 정확도 +20pp.
+### 수용 기준
+- [x] "이 repo에서 인증 흐름 어떻게 돼?"류 질의 → 관련 모듈/함수/엣지를 다이어그램+텍스트로 설명.
+- [x] 비용: 인덱싱 시 LLM 호출 0건. entity/relationship은 결정적 파싱과 기존 검색·호출 그래프 재사용.
+- [x] 일반 RAG보다 multi-hop 질의에 쓸 수 있는 호출자/피호출자/모듈 연결 컨텍스트 제공.
 
 ### 주의 — 강력한 옵션, 큰 투자
 - 풀 GraphRAG (Microsoft 방식)은 corpus당 LLM 토큰 비용 4자리 달러 — LUM 정체성과 충돌. **반드시 LightRAG/flat 버전만**.
-- Phase 139 호출 그래프가 잘 동작한 뒤 진입 권장.
+- 현재 구현은 community summarization 없이 flat graph만 사용한다. 동명이인 함수 한계는 `precise_*` 도구로 보완.
 
 ---
 

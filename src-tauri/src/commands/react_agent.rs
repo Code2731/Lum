@@ -1,7 +1,7 @@
 // ReAct Agent — Think → Action → Observe 루프
 //
 // >> 프리픽스로 시작하는 태스크를 멀티턴 LLM + 도구 호출로 처리.
-// shell / read_file / list_dir / get_repo_map / git_diff / run_tests 6종 도구 지원.
+// shell / read_file / list_dir / get_repo_map / git_diff / run_tests / query_healing / analyze_failure_reasons / query_codebase / query_graph / find_callers / find_callees / trace_dependents / precise_* / scip_status / 데스크톱 제어 / MCP 도구를 지원.
 // 각 단계를 `react_event` Tauri 이벤트로 프론트엔드에 스트리밍.
 
 use crate::commands::ai::call_ai_with_backend;
@@ -14,7 +14,7 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
-use tauri::{command, AppHandle, Emitter, Manager};
+use tauri::{AppHandle, Emitter, Manager, command};
 use tokio::process::Command as TokioCommand;
 
 const REACT_EVENT: &str = "react_event";
@@ -360,7 +360,7 @@ fn flatten_mcp_tools(server: &str, value: &serde_json::Value) -> Vec<McpToolEntr
 /// 서버별로 2초 timeout — 한 서버가 느리거나 hang해도 ReAct 시작이 막히지 않음.
 /// 모든 서버를 병렬 호출 — 직렬 시 서버 N개 × 응답시간 vs 병렬 max(응답시간).
 async fn enumerate_mcp_tools(state: &tauri::State<'_, crate::mcp::McpState>) -> Vec<McpToolEntry> {
-    use tokio::time::{timeout, Duration};
+    use tokio::time::{Duration, timeout};
     let servers = crate::mcp::list_enabled_servers();
     let futs = servers.into_iter().map(|spec| {
         let name = spec.name.clone();
@@ -832,8 +832,8 @@ async fn recall_search_healing(
     .map_err(|e| e.to_string())
 }
 
-fn list_healing_records(
-) -> std::result::Result<Vec<crate::commands::healing_dataset::HealingRecord>, String> {
+fn list_healing_records()
+-> std::result::Result<Vec<crate::commands::healing_dataset::HealingRecord>, String> {
     #[cfg(test)]
     {
         let mut guard = healing_tool_mock_lock().lock().unwrap();
@@ -1439,6 +1439,37 @@ fn is_query_graph_file_like_path(raw: &str) -> bool {
         || (raw.len() >= 2 && raw.as_bytes().get(1).is_some_and(|b| *b == b':'))
 }
 
+fn escape_mermaid_label(raw: &str) -> String {
+    raw.replace('\\', "\\\\").replace('"', "\\\"")
+}
+
+fn format_query_graph_mermaid_lines(
+    sorted_links: &[((String, String), usize)],
+    file_display_map: &std::collections::HashMap<String, String>,
+    max_edges: usize,
+) -> Option<Vec<String>> {
+    if sorted_links.is_empty() {
+        return None;
+    }
+
+    let mut lines = vec![
+        "모듈 관계 다이어그램:".to_string(),
+        "```mermaid".to_string(),
+        "flowchart LR".to_string(),
+    ];
+    for ((from, to), _) in sorted_links.iter().take(max_edges) {
+        let from_label = file_display_map.get(from).unwrap_or(from);
+        let to_label = file_display_map.get(to).unwrap_or(to);
+        lines.push(format!(
+            "  \"{}\" --> \"{}\"",
+            escape_mermaid_label(from_label),
+            escape_mermaid_label(to_label)
+        ));
+    }
+    lines.push("```".to_string());
+    Some(lines)
+}
+
 fn format_graph_lines(
     symbol: &str,
     callers: &[crate::commands::call_graph::CallerInfo],
@@ -1756,8 +1787,8 @@ async fn run_query_graph_tool(args: &serde_json::Value, cwd: &str) -> String {
         sorted_links.sort_by(|a, b| {
             b.1.partial_cmp(&a.1)
                 .unwrap_or(std::cmp::Ordering::Equal)
-                .then_with(|| a.0 .0.cmp(&b.0 .0))
-                .then_with(|| a.0 .1.cmp(&b.0 .1))
+                .then_with(|| a.0.0.cmp(&b.0.0))
+                .then_with(|| a.0.1.cmp(&b.0.1))
         });
         out.push(format!("모듈 연결 요약 {}개:", sorted_links.len().min(12)));
         let mut has_links = false;
@@ -1775,6 +1806,13 @@ async fn run_query_graph_tool(args: &serde_json::Value, cwd: &str) -> String {
         }
         if !has_links {
             out.push("  - 탐지된 모듈 연결 없음".to_string());
+        }
+        if has_links {
+            if let Some(diagram) =
+                format_query_graph_mermaid_lines(&sorted_links, &file_display_map, 12)
+            {
+                out.extend(diagram);
+            }
         }
     }
 
@@ -1893,7 +1931,9 @@ fn run_precise_callers_tool(args: &serde_json::Value, cwd: &str, scip_enabled: b
 
     let result = crate::commands::scip::query_scip_callers(cwd, &symbol);
     if result.is_empty() {
-        return format!("`{symbol}` 정밀 caller 분석 결과가 없습니다. tree-sitter fallback으로 제공합니다.\n{fallback}\n{status_lines}");
+        return format!(
+            "`{symbol}` 정밀 caller 분석 결과가 없습니다. tree-sitter fallback으로 제공합니다.\n{fallback}\n{status_lines}"
+        );
     }
 
     let status = if indexed_count == 0 {
@@ -2243,11 +2283,7 @@ fn list_dir_tool(path: &str, cwd: &str) -> String {
                 .map(|e| {
                     let name = e.file_name().to_string_lossy().into_owned();
                     let is_dir = e.file_type().map(|ft| ft.is_dir()).unwrap_or(false);
-                    if is_dir {
-                        format!("{name}/")
-                    } else {
-                        name
-                    }
+                    if is_dir { format!("{name}/") } else { name }
                 })
                 .collect();
             lines.sort();
@@ -3368,6 +3404,19 @@ mod tests {
     }
 
     #[test]
+    fn build_prompt_includes_desktop_tools() {
+        let s = build_system_prompt(&[], &[]);
+        assert!(s.contains("데스크톱 제어 도구"));
+        assert!(s.contains("- screenshot({})"));
+        assert!(s.contains("- click({\"x\": 100, \"y\": 200"));
+        assert!(s.contains("- type({\"text\": \"입력할 텍스트\"})"));
+        assert!(s.contains("- scroll({\"x\": 100, \"y\": 200"));
+        assert!(s.contains("amount\": -120"));
+        assert!(s.contains("- key_combo({\"modifier\": \"cmd\", \"key\": \"k\"})"));
+        assert!(s.contains("설정에서 활성화된 경우에만 동작"));
+    }
+
+    #[test]
     fn phase142_scip_status_도구_형식_검증() {
         let out = run_scip_status_tool("/tmp");
         assert!(out.starts_with("SCIP 정밀 도구: "));
@@ -3952,6 +4001,75 @@ fn main_api() { service_api(); }
         assert!(out.contains("api.rs -> service.rs"), "{out}");
         assert!(out.contains("검색 심볼 간 호출 관계"), "{out}");
         clear_codebase_tool_mock();
+    }
+
+    #[tokio::test]
+    async fn phase143_query_graph_모듈연결_mermaid_다이어그램() {
+        let _g = CODEBASE_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        let td = TempDir::new("query-graph-module-links-mermaid");
+        std::fs::write(
+            td.path().join("service.rs"),
+            r#"
+use crate::db::query_user;
+fn service_api() {
+    query_user();
+}
+"#,
+        )
+        .unwrap();
+        std::fs::write(td.path().join("db.rs"), "fn query_user() {}\n").unwrap();
+
+        set_codebase_tool_mock(CodebaseToolMock {
+            search_result: Some(Ok(vec![
+                crate::commands::rag::SearchResult {
+                    content: "[fn service_api | service.rs]\nfn service_api() {}".to_string(),
+                    score: 0.95,
+                },
+                crate::commands::rag::SearchResult {
+                    content: "[fn query_user | db.rs]\nfn query_user() {}".to_string(),
+                    score: 0.90,
+                },
+            ])),
+        });
+
+        let out = run_query_graph_tool(
+            &serde_json::json!({"query": "service", "symbols": 2}),
+            &td.cwd(),
+        )
+        .await;
+        assert!(out.contains("```mermaid"), "{out}");
+        assert!(out.contains("flowchart LR"), "{out}");
+        assert!(out.contains("\"service.rs\" --> \"db.rs\""), "{out}");
+        clear_codebase_tool_mock();
+    }
+
+    #[test]
+    fn phase143_query_graph_모듈연결_mermaid_문자이스케이프() {
+        let links = vec![(
+            (
+                r#"src/"quote".rs"#.to_string(),
+                r#"src\slash" .rs"#.to_string(),
+            ),
+            4,
+        )];
+        let mut file_display_map = HashMap::new();
+        file_display_map.insert(
+            r#"src/"quote".rs"#.to_string(),
+            r#"src/"quote".rs"#.to_string(),
+        );
+        file_display_map.insert(
+            r#"src\slash" .rs"#.to_string(),
+            r#"src\slash" .rs"#.to_string(),
+        );
+
+        let lines = format_query_graph_mermaid_lines(&links, &file_display_map, 8)
+            .expect("연결이 있으면 다이어그램 생성");
+        assert!(
+            lines.contains(&"  \"src/\\\"quote\\\".rs\" --> \"src\\\\slash\\\" .rs\"".to_string())
+        );
+        assert!(lines.contains(&"```mermaid".to_string()));
+        assert!(lines.contains(&"flowchart LR".to_string()));
+        assert!(lines.contains(&"```".to_string()));
     }
 
     #[tokio::test]
@@ -4542,9 +4660,11 @@ fn sample() {}
         let out = apply_patch_tool(&args, &td.cwd());
         assert!(out.contains("매칭됩니다"), "{out}");
         // 원본 보존
-        assert!(std::fs::read_to_string(td.path().join("a.rs"))
-            .unwrap()
-            .contains("let x = 1;"));
+        assert!(
+            std::fs::read_to_string(td.path().join("a.rs"))
+                .unwrap()
+                .contains("let x = 1;")
+        );
     }
 
     #[test]
