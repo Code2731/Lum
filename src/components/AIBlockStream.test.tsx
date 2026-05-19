@@ -160,6 +160,56 @@ describe("AIBlockStream", () => {
     expect(lines[1]).toHaveTextContent('"service.rs" -->> "audit.rs"');
   });
 
+  it("Mermaid 역방향 화살표도 텍스트로 보여준다", () => {
+    const mermaidMessage = [
+      "query_graph 결과:",
+      "```mermaid",
+      "flowchart LR",
+      "\"reader.rs\" <-- \"parser.rs\"",
+      "\"reader.rs\" <-.->|calls| \"scanner.rs\"",
+      "```",
+    ].join("\n");
+
+    const { container } = render(
+      <AIBlockStream
+        messages={[msg("assistant", mermaidMessage)]}
+        streaming={false}
+        error={null}
+        onClear={vi.fn()}
+        onExecute={vi.fn()}
+      />,
+    );
+
+    const lines = container.querySelectorAll("li");
+    expect(lines).toHaveLength(2);
+    expect(lines[0]).toHaveTextContent('"reader.rs" <-- "parser.rs"');
+    expect(lines[1]).toHaveTextContent('"reader.rs" <-.-> "scanner.rs" (calls)');
+  });
+
+  it("Mermaid 엣지 주석은 렌더링 시 무시된다", () => {
+    const mermaidMessage = [
+      "query_graph 결과:",
+      "```mermaid",
+      "flowchart LR",
+      "\"service.rs\" --> \"db.rs\" %% inline comment",
+      "```",
+    ].join("\n");
+
+    const { container } = render(
+      <AIBlockStream
+        messages={[msg("assistant", mermaidMessage)]}
+        streaming={false}
+        error={null}
+        onClear={vi.fn()}
+        onExecute={vi.fn()}
+      />,
+    );
+
+    const lines = container.querySelectorAll("li");
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).toHaveTextContent('"service.rs" --> "db.rs"');
+  });
+
   it("Mermaid 코드블록 엣지 없음 시 일반 코드 블록으로 보존된다", () => {
     const mermaidMessage = "query_graph 결과:\n```mermaid\nflowchart LR\nclassDef C fill:#f96\n```";
     const { container } = render(

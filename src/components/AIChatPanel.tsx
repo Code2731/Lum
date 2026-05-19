@@ -151,7 +151,7 @@ type MermaidEdge = {
 const parseMermaidEdges = (code: string): MermaidEdge[] => {
   const edges: MermaidEdge[] = [];
   const seen = new Set<string>();
-  const arrowTokens = ["-->>", "-.->", "==>", "-->", "->"];
+  const arrowTokens = ["-->>", "<-->", "<-.->", "-.->", "==>", "<==", "-->", "<--", "->", "<-"];
   const lines = code.split("\n").map((l) => l.trim()).filter(Boolean);
 
   const escapeRegex = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
