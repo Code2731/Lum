@@ -131,6 +131,35 @@ describe("AIBlockStream", () => {
     expect(lines[1]).toHaveTextContent("\"service.rs\" --> \"db.rs\" (calls)");
   });
 
+  it("Mermaid 화살표 타입을 보존해 표시한다", () => {
+    const mermaidMessage = [
+      "query_graph 결과:",
+      "```mermaid",
+      "flowchart LR",
+      "\"service.rs\" -.-> \"db.rs\"",
+      "\"service.rs\" -->> \"audit.rs\"",
+      "\"service.rs\" -.-> \"db.rs\"",
+      "%% comment",
+      "classDef C fill:#f96",
+      "```",
+    ].join("\n");
+
+    const { container } = render(
+      <AIBlockStream
+        messages={[msg("assistant", mermaidMessage)]}
+        streaming={false}
+        error={null}
+        onClear={vi.fn()}
+        onExecute={vi.fn()}
+      />,
+    );
+
+    const lines = container.querySelectorAll("li");
+    expect(lines.length).toBe(2);
+    expect(lines[0]).toHaveTextContent('"service.rs" -.-> "db.rs"');
+    expect(lines[1]).toHaveTextContent('"service.rs" -->> "audit.rs"');
+  });
+
   it("Mermaid 코드블록 엣지 없음 시 일반 코드 블록으로 보존된다", () => {
     const mermaidMessage = "query_graph 결과:\n```mermaid\nflowchart LR\nclassDef C fill:#f96\n```";
     const { container } = render(

@@ -145,45 +145,56 @@ type MermaidEdge = {
   from: string;
   to: string;
   label?: string;
+  arrow: string;
 };
 
 const parseMermaidEdges = (code: string): MermaidEdge[] => {
   const edges: MermaidEdge[] = [];
   const seen = new Set<string>();
   const arrowTokens = ["-->>", "-.->", "==>", "-->", "->"];
-  const lines = code
-    .split("\n")
-    .map((l) => l.trim())
-    .filter(Boolean);
+  const lines = code.split("\n").map((l) => l.trim()).filter(Boolean);
+
+  const escapeRegex = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
   for (const line of lines) {
-    const arrow = arrowTokens.find((token) => line.includes(token));
-    if (!arrow) continue;
-
-    const idx = line.indexOf(arrow);
-    const left = line.slice(0, idx).trim();
-    const rightRest = line.slice(idx + arrow.length).trim();
-    if (!left || !rightRest) continue;
-
-    let label: string | undefined;
-    let right = rightRest;
-    if (right.startsWith("|")) {
-      const end = right.indexOf("|", 1);
-      if (end > 1) {
-        label = right.slice(1, end).trim() || undefined;
-        right = right.slice(end + 1).trim();
-      }
+    const trimmed = line.replace(/%%.*$/, "").trim();
+    if (!trimmed || trimmed.startsWith("%%")) {
+      continue;
     }
 
-    if (!right) continue;
-    const key = `${left}|${arrow}|${label ?? ""}|${right}`;
-    if (seen.has(key)) continue;
+    let from = "";
+    let to = "";
+    let label: string | undefined;
+    let arrow = "";
+
+    for (const candidate of arrowTokens) {
+      const pattern = new RegExp(
+        `^(.*?)\\s*${escapeRegex(candidate)}\\s*(?:\\|([^|]+)\\|\\s*)?(.*)$`,
+      );
+      const match = pattern.exec(trimmed);
+      if (!match) continue;
+
+      from = match[1].trim();
+      const rawLabel = (match[2] ?? "").trim();
+      to = match[3].trim();
+      label = rawLabel.length > 0 ? rawLabel : undefined;
+      arrow = candidate;
+      break;
+    }
+
+    if (!from || !to || !arrow) continue;
+
+    const key = `${from}|${arrow}|${label ?? ""}|${to}`;
+    if (seen.has(key)) {
+      continue;
+    }
     seen.add(key);
 
     edges.push({
-      from: left,
-      to: right,
-      ...(label ? { label } : {}),
+      from,
+      to,
+      label: label,
+      arrow,
     });
   }
 
@@ -207,8 +218,8 @@ const MermaidCodeBlock: React.FC<{ code: string }> = ({ code }) => {
       <div className="text-[10px] text-cyan-200 mb-1">Mermaid 텍스트 다이어그램</div>
       <ul className="pl-4 list-disc space-y-0.5 text-[10px] text-white/75">
         {edges.map((edge) => (
-          <li key={`${edge.from}-${edge.to}-${edge.label ?? ""}`}>
-            {edge.from} {" --> "} {edge.to}
+          <li key={`${edge.from}-${edge.to}-${edge.arrow}-${edge.label ?? ""}`}>
+            {edge.from} {edge.arrow} {edge.to}
             {edge.label ? <span className="text-white/60">{` (${edge.label})`}</span> : null}
           </li>
         ))}
