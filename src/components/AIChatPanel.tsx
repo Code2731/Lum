@@ -192,6 +192,9 @@ const parseMermaidEdges = (code: string): MermaidEdge[] => {
     let inDouble = false;
     let escaped = false;
 
+    const isCommentBoundary = (ch: string) =>
+      /\s/.test(ch) || ["\"", "'", ")", "]", "}", "`"].includes(ch);
+
     for (let i = 0; i < line.length - 1; i += 1) {
       const ch = line[i];
       const next = line[i + 1];
@@ -217,7 +220,7 @@ const parseMermaidEdges = (code: string): MermaidEdge[] => {
 
       if (!inSingle && !inDouble && ch === "%" && next === "%") {
         const prev = i > 0 ? line[i - 1] : "";
-        const hasLeadingSpace = i === 0 || /\s/.test(prev);
+        const hasLeadingSpace = i === 0 || isCommentBoundary(prev);
         if (!hasLeadingSpace) {
           continue;
         }

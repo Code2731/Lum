@@ -262,6 +262,30 @@ describe("AIBlockStream", () => {
     expect(lines[1]).toHaveTextContent('"cache" --> "db.rs" (reads%%only)');
   });
 
+  it("노드 뒤에 바로 붙은 mermaid 주석도 제거한다", () => {
+    const mermaidMessage = [
+      "query_graph 결과:",
+      "```mermaid",
+      "flowchart LR",
+      "\"service\" --> \"db.rs\"%% inline comment",
+      "```",
+    ].join("\n");
+
+    const { container } = render(
+      <AIBlockStream
+        messages={[msg("assistant", mermaidMessage)]}
+        streaming={false}
+        error={null}
+        onClear={vi.fn()}
+        onExecute={vi.fn()}
+      />,
+    );
+
+    const lines = container.querySelectorAll("li");
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).toHaveTextContent('"service" --> "db.rs"');
+  });
+
   it("라벨의 이스케이프된 | 문자도 정확히 표시한다", () => {
     const mermaidMessage = [
       "query_graph 결과:",
