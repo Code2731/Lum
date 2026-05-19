@@ -286,6 +286,46 @@ describe("AIBlockStream", () => {
     expect(lines[0]).toHaveTextContent('"cache" --> "db.rs" (cache|db)');
   });
 
+  it("Mermaid 모서리 형태 o/x 조합도 텍스트로 보존한다", () => {
+    const mermaidMessage = [
+      "query_graph 결과:",
+      "```mermaid",
+      "flowchart LR",
+      "\"cli\" --o \"engine\"",
+      "\"engine\" o--o \"cache\"",
+      "\"cache\" x--x \"disk\"",
+      "\"disk\" --x \"backend\"",
+      "\"backend\" x-- \"final\"",
+      "\"final\" --o|hot| \"ui\"",
+      "\"ui\" o--o|pipe|\"db\"",
+      "\"db\" <-o \"legacy\"",
+      "\"legacy\" o<-|old| \"oldest\"",
+      "```",
+    ].join("\n");
+
+    const { container } = render(
+      <AIBlockStream
+        messages={[msg("assistant", mermaidMessage)]}
+        streaming={false}
+        error={null}
+        onClear={vi.fn()}
+        onExecute={vi.fn()}
+      />,
+    );
+
+    const lines = container.querySelectorAll("li");
+    expect(lines).toHaveLength(9);
+    expect(lines[0]).toHaveTextContent('"cli" --o "engine"');
+    expect(lines[1]).toHaveTextContent('"engine" o--o "cache"');
+    expect(lines[2]).toHaveTextContent('"cache" x--x "disk"');
+    expect(lines[3]).toHaveTextContent('"disk" --x "backend"');
+    expect(lines[4]).toHaveTextContent('"backend" x-- "final"');
+    expect(lines[5]).toHaveTextContent('"final" --o "ui" (hot)');
+    expect(lines[6]).toHaveTextContent('"ui" o--o "db" (pipe)');
+    expect(lines[7]).toHaveTextContent('"db" <-o "legacy"');
+    expect(lines[8]).toHaveTextContent('"legacy" o<- "oldest" (old)');
+  });
+
   it("Mermaid 코드블록 엣지 없음 시 일반 코드 블록으로 보존된다", () => {
     const mermaidMessage = "query_graph 결과:\n```mermaid\nflowchart LR\nclassDef C fill:#f96\n```";
     const { container } = render(
