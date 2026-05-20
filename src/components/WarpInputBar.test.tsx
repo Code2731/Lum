@@ -401,10 +401,35 @@ describe("WarpInputBar — dumb input, 라우팅은 상위에서", () => {
     const stopBtn = getByLabelText("음성 녹음 중지");
     await act(async () => {
       fireEvent.click(stopBtn);
+      await new Promise((resolve) => setTimeout(resolve, 40));
     });
     expect(invokeMock).toHaveBeenCalledWith("stop_voice_recording", undefined);
     expect(input).toHaveValue("git status");
     expect(onChange).toHaveBeenLastCalledWith("git status");
+  });
+
+  it("stop 반환값과 voice_transcript 이벤트가 동시에 와도 중복 주입하지 않음", async () => {
+    invokeMock.mockImplementation(async (cmd: string) => {
+      if (cmd === "start_voice_recording") return;
+      if (cmd === "stop_voice_recording") return "git status";
+      return;
+    });
+    const { getByLabelText, input, onChange } = setup();
+
+    await act(async () => {
+      fireEvent.click(getByLabelText("음성 녹음 시작"));
+    });
+
+    await act(async () => {
+      fireEvent.click(getByLabelText("음성 녹음 중지"));
+      const cb = voiceListeners[voiceListeners.length - 1];
+      cb?.({ payload: "git status" });
+      await new Promise((resolve) => setTimeout(resolve, 40));
+    });
+
+    expect(input).toHaveValue("git status");
+    const sameCalls = onChange.mock.calls.filter(([v]) => v === "git status");
+    expect(sameCalls).toHaveLength(1);
   });
 
   it("마이크 시작 실패 시 오류 배지 표시", async () => {

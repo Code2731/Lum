@@ -26,6 +26,8 @@ export function useVoiceInput({
   const [voiceError, setVoiceError] = useState<string | null>(null);
   const onTranscriptRef = useRef(onTranscript);
   const lastTranscriptRef = useRef<{ text: string; ts: number } | null>(null);
+  const awaitingStopEventRef = useRef(false);
+  const stopEventReceivedRef = useRef(false);
 
   useEffect(() => {
     onTranscriptRef.current = onTranscript;
@@ -52,6 +54,9 @@ export function useVoiceInput({
     let unlistenState: (() => void) | null = null;
 
     listen<string>("voice_transcript", (event) => {
+      if (awaitingStopEventRef.current) {
+        stopEventReceivedRef.current = true;
+      }
       emitTranscript(event.payload ?? "");
       setIsRecording(false);
       setVoiceError(null);
@@ -82,9 +87,18 @@ export function useVoiceInput({
     setVoiceBusy(true);
     try {
       if (isRecording) {
+        awaitingStopEventRef.current = true;
+        stopEventReceivedRef.current = false;
         setIsRecording(false);
         const transcript = await invoke<string>("stop_voice_recording");
-        emitTranscript(transcript ?? "");
+        // 백엔드는 성공 시 voice_transcript 이벤트를 emit한다.
+        // 이벤트 누락 환경(테스트 목 등)만 반환값으로 보완해 중복 주입을 막는다.
+        await new Promise<void>((resolve) => {
+          setTimeout(() => resolve(), 30);
+        });
+        if (!stopEventReceivedRef.current) {
+          emitTranscript(transcript ?? "");
+        }
         setVoiceError(null);
       } else {
         await invoke("start_voice_recording");
@@ -95,6 +109,8 @@ export function useVoiceInput({
       setIsRecording(false);
       setVoiceError(parseVoiceError(e));
     } finally {
+      awaitingStopEventRef.current = false;
+      stopEventReceivedRef.current = false;
       setVoiceBusy(false);
     }
   }, [emitTranscript, enabled, isRecording, voiceBusy]);
@@ -106,4 +122,3 @@ export function useVoiceInput({
     handleMicToggle,
   };
 }
-
