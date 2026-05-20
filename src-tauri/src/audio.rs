@@ -17,6 +17,15 @@ fn voice_state_lock() -> &'static Mutex<VoiceState> {
     VOICE_STATE.get_or_init(|| Mutex::new(VoiceState::default()))
 }
 
+fn set_voice_state(recording: bool, started_ms: u64) -> Result<(), String> {
+    let mut state = voice_state_lock()
+        .lock()
+        .map_err(|_| voice_error("STATE_LOCK_POISONED", "voice state lock poisoned"))?;
+    state.recording = recording;
+    state.started_ms = started_ms;
+    Ok(())
+}
+
 fn now_ms() -> u64 {
     std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
@@ -241,7 +250,7 @@ async fn run_voice_hook_capture(hook: &VoiceHook, timeout_ms: u64) -> Result<Str
 /// - 내부적으로 recording=true 상태만 관리
 async fn start_voice_recording_inner() -> Result<(), String> {
     {
-        let mut state = voice_state_lock()
+        let state = voice_state_lock()
             .lock()
             .map_err(|_| voice_error("STATE_LOCK_POISONED", "voice state lock poisoned"))?;
         if state.recording {
@@ -250,9 +259,8 @@ async fn start_voice_recording_inner() -> Result<(), String> {
                 "이미 음성 녹음이 진행 중입니다.",
             ));
         }
-        state.recording = true;
-        state.started_ms = now_ms();
     }
+    set_voice_state(true, now_ms())?;
 
     // 이전 세션의 잔여 전사 파일을 남기면 잘못된 텍스트가 재사용될 수 있어 정리.
     let _ = std::fs::remove_file(transcript_file_path());
@@ -264,11 +272,7 @@ async fn start_voice_recording_inner() -> Result<(), String> {
         );
         if let Err(e) = run_voice_hook_capture(&hook, timeout_ms).await {
             // 외부 훅 실패면 녹음 상태 롤백.
-            let mut state = voice_state_lock()
-                .lock()
-                .map_err(|_| voice_error("STATE_LOCK_POISONED", "voice state lock poisoned"))?;
-            state.recording = false;
-            state.started_ms = 0;
+            set_voice_state(false, 0)?;
             return Err(voice_error(
                 "START_HOOK_FAILED",
                 format!("음성 시작 훅 실패: {e}"),
@@ -313,7 +317,7 @@ pub fn voice_recording_status() -> Result<bool, String> {
 /// 없으면 명확한 에러 반환.
 async fn stop_voice_recording_inner() -> Result<String, String> {
     let started_ms = {
-        let mut state = voice_state_lock()
+        let state = voice_state_lock()
             .lock()
             .map_err(|_| voice_error("STATE_LOCK_POISONED", "voice state lock poisoned"))?;
         if !state.recording {
@@ -322,13 +326,13 @@ async fn stop_voice_recording_inner() -> Result<String, String> {
                 "현재 진행 중인 음성 녹음이 없습니다.",
             ));
         }
-        let started_ms = state.started_ms;
-        state.recording = false;
-        state.started_ms = 0;
-        started_ms
+        state.started_ms
     };
+    set_voice_state(false, 0)?;
+    let mut attempted_stop_hook = false;
 
     if let Some(hook) = resolve_voice_hook("LUM_VOICE_STOP_CMD", "stop") {
+        attempted_stop_hook = true;
         let out = run_voice_hook_capture(
             &hook,
             parse_voice_timeout_ms(
@@ -347,6 +351,7 @@ async fn stop_voice_recording_inner() -> Result<String, String> {
                 {
                     return Ok(t);
                 }
+                let _ = set_voice_state(true, started_ms);
                 return Err(err);
             }
         }
@@ -355,6 +360,10 @@ async fn stop_voice_recording_inner() -> Result<String, String> {
     let path = transcript_file_path();
     if let Some(t) = wait_transcript_file(&path, started_ms, voice_transcript_wait_ms()).await {
         return Ok(t);
+    }
+
+    if attempted_stop_hook {
+        let _ = set_voice_state(true, started_ms);
     }
 
     Err(voice_error(
@@ -367,8 +376,9 @@ async fn stop_voice_recording_inner() -> Result<String, String> {
 #[tauri::command]
 pub async fn stop_voice_recording(app: tauri::AppHandle) -> Result<String, String> {
     let result = stop_voice_recording_inner().await;
-    // 실패 케이스에서도 녹음 종료 상태를 전파해 UI를 일관되게 유지한다.
-    let _ = app.emit("voice_recording_state", false);
+    // stop 훅 실패 시 rollback될 수 있어 실제 상태를 재조회해 emit.
+    let recording_on = voice_recording_status().unwrap_or(false);
+    let _ = app.emit("voice_recording_state", recording_on);
     if let Ok(text) = &result {
         let _ = app.emit("voice_transcript", text.clone());
     }
@@ -664,6 +674,11 @@ mod tests {
                 .contains("LUM_VOICE_ERROR::TRANSCRIPT_NOT_FOUND::"),
             "transcript missing 에러 코드가 포함되어야 함"
         );
+        assert_eq!(
+            voice_recording_status().ok(),
+            Some(false),
+            "stop 훅이 없고 transcript도 없으면 녹음 종료 상태를 유지"
+        );
     }
 
     #[test]
@@ -723,6 +738,28 @@ mod tests {
 
         let _ = std::fs::remove_file(script_path);
         restore_home(old_home);
+        reset_state();
+    }
+
+    #[tokio::test]
+    async fn stop_hook_실패_및_폴백없음이면_녹음상태_복구() {
+        let _g = AUDIO_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        reset_state();
+        std::env::set_var("LUM_VOICE_STOP_CMD", "exit 1");
+
+        if let Ok(mut s) = voice_state_lock().lock() {
+            s.recording = true;
+            s.started_ms = now_ms();
+        }
+        let result = stop_voice_recording_inner().await;
+        assert!(result.is_err());
+        assert_eq!(
+            voice_recording_status().ok(),
+            Some(true),
+            "stop 훅 실패+폴백없음이면 사용자가 재시도할 수 있게 recording=true로 복구"
+        );
+
+        std::env::remove_var("LUM_VOICE_STOP_CMD");
         reset_state();
     }
 
