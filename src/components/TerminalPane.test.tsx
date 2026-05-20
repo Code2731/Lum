@@ -1615,7 +1615,7 @@ describe("TerminalPane — 입력 라우팅", () => {
 
     fireEvent.change(input, { target: { value: "   @xllm 로그    요약해줘   " } });
     fireEvent.keyDown(input, { key: "G", ctrlKey: true, shiftKey: true });
-    expect(input).toHaveValue("로그    요약해줘");
+    expect(input).toHaveValue("   로그    요약해줘");
 
     fireEvent.keyDown(input, { key: "T", ctrlKey: true, shiftKey: true });
     expect(input).toHaveValue("로그    요약해줘");
@@ -1838,6 +1838,15 @@ describe("TerminalPane — 입력 라우팅", () => {
     fireEvent.click(screen.getByRole("button", { name: "quick-backend-auto" }));
     expect(input).toHaveValue("@gemini 로그 요약해줘");
     expect(screen.getByText("AI @GEMINI")).toBeInTheDocument();
+  });
+
+  it("선행 공백 + @backend 입력도 AUTO 해제 시 공백을 보존한다", () => {
+    const { container } = render(<TerminalPane id="tab-1" />);
+    const input = container.querySelector("input")!;
+    fireEvent.change(input, { target: { value: "   @xllm 로그 요약해줘" } });
+
+    fireEvent.click(screen.getByRole("button", { name: "quick-backend-auto" }));
+    expect(input).toHaveValue("   로그 요약해줘");
   });
 
   it("! 강제 shell → 자연어여도 PTY", async () => {

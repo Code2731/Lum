@@ -9,6 +9,9 @@ describe("applyBackendPrefixToInput", () => {
   it("일반 문장 앞에 backend prefix를 붙인다", () => {
     expect(applyBackendPrefixToInput("로그 요약해줘", "local")).toBe("@local 로그 요약해줘");
   });
+  it("선행 공백이 있으면 공백 위치를 보존해 prefix를 붙인다", () => {
+    expect(applyBackendPrefixToInput("   로그 요약해줘", "local")).toBe("   @local 로그 요약해줘");
+  });
 
   it("기존 backend prefix를 교체하고 본문은 유지한다", () => {
     expect(applyBackendPrefixToInput("@ollama src/utils.ts 수정", "xllm")).toBe("@xllm src/utils.ts 수정");
@@ -31,6 +34,9 @@ describe("applyBackendPrefixToInput", () => {
 describe("clearBackendPrefixFromInput", () => {
   it("backend prefix를 제거하고 본문을 반환한다", () => {
     expect(clearBackendPrefixFromInput("@local 로그 요약해줘")).toBe("로그 요약해줘");
+  });
+  it("선행 공백이 있으면 공백 위치를 보존해 prefix를 제거한다", () => {
+    expect(clearBackendPrefixFromInput("   @local 로그 요약해줘")).toBe("   로그 요약해줘");
   });
 
   it("backend prefix만 있으면 빈 문자열로 된다", () => {

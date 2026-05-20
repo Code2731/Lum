@@ -18,6 +18,7 @@ function splitFirstToken(raw: string): { token: string; rest: string } {
  * 기존 @backend prefix가 있으면 본문을 유지한 채 prefix만 교체한다.
  */
 export function applyBackendPrefixToInput(raw: string, backend: AiBackend): string {
+  const leading = raw.match(/^\s*/)?.[0] ?? "";
   const src = raw.trimStart();
   let body = src.trim();
 
@@ -31,7 +32,7 @@ export function applyBackendPrefixToInput(raw: string, backend: AiBackend): stri
     }
   }
 
-  return body ? `@${backend} ${body}` : `@${backend} `;
+  return body ? `${leading}@${backend} ${body}` : `${leading}@${backend} `;
 }
 
 /**
@@ -39,12 +40,13 @@ export function applyBackendPrefixToInput(raw: string, backend: AiBackend): stri
  * backend prefix가 없으면 원본 문자열을 그대로 반환한다.
  */
 export function clearBackendPrefixFromInput(raw: string): string {
+  const leading = raw.match(/^\s*/)?.[0] ?? "";
   const src = raw.trimStart();
   if (!src.startsWith("@")) return raw;
   const stripped = src.slice(1).trimStart();
   const { token, rest } = splitFirstToken(stripped);
   if (!BACKEND_ALIAS.has(token)) return raw;
-  return rest;
+  return `${leading}${rest}`;
 }
 
 /**
