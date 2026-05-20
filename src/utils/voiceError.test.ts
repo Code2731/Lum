@@ -25,4 +25,11 @@ describe("parseVoiceError", () => {
     );
     expect(msg).toContain("음성 처리 명령이 제한 시간 내에 끝나지 않았습니다.");
   });
+
+  it("전환 중 에러 코드를 사용자 친화 메시지로 변환한다", () => {
+    const msg = parseVoiceError(
+      "LUM_VOICE_ERROR::TRANSITION_IN_PROGRESS::이전 음성 녹음 종료 처리 중입니다.",
+    );
+    expect(msg).toContain("이전 음성 녹음 종료 처리가 아직 진행 중입니다.");
+  });
 });

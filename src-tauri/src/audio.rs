@@ -9,6 +9,7 @@ use tokio::time::{timeout, Duration};
 struct VoiceState {
     recording: bool,
     started_ms: u64,
+    stopping: bool,
 }
 
 static VOICE_STATE: OnceLock<Mutex<VoiceState>> = OnceLock::new();
@@ -23,6 +24,17 @@ fn set_voice_state(recording: bool, started_ms: u64) -> Result<(), String> {
         .map_err(|_| voice_error("STATE_LOCK_POISONED", "voice state lock poisoned"))?;
     state.recording = recording;
     state.started_ms = started_ms;
+    state.stopping = false;
+    Ok(())
+}
+
+fn finish_stop(recording: bool, started_ms: u64) -> Result<(), String> {
+    let mut state = voice_state_lock()
+        .lock()
+        .map_err(|_| voice_error("STATE_LOCK_POISONED", "voice state lock poisoned"))?;
+    state.recording = recording;
+    state.started_ms = started_ms;
+    state.stopping = false;
     Ok(())
 }
 
@@ -30,6 +42,12 @@ fn mark_recording_started() -> Result<u64, String> {
     let mut state = voice_state_lock()
         .lock()
         .map_err(|_| voice_error("STATE_LOCK_POISONED", "voice state lock poisoned"))?;
+    if state.stopping {
+        return Err(voice_error(
+            "TRANSITION_IN_PROGRESS",
+            "이전 음성 녹음 종료 처리 중입니다. 잠시 후 다시 시도하세요.",
+        ));
+    }
     if state.recording {
         return Err(voice_error(
             "ALREADY_RECORDING",
@@ -46,6 +64,12 @@ fn mark_recording_stopped() -> Result<u64, String> {
     let mut state = voice_state_lock()
         .lock()
         .map_err(|_| voice_error("STATE_LOCK_POISONED", "voice state lock poisoned"))?;
+    if state.stopping {
+        return Err(voice_error(
+            "TRANSITION_IN_PROGRESS",
+            "이전 음성 녹음 종료 처리 중입니다. 잠시 후 다시 시도하세요.",
+        ));
+    }
     if !state.recording {
         return Err(voice_error(
             "NOT_RECORDING",
@@ -55,6 +79,7 @@ fn mark_recording_stopped() -> Result<u64, String> {
     let started_ms = state.started_ms;
     state.recording = false;
     state.started_ms = 0;
+    state.stopping = true;
     Ok(started_ms)
 }
 
@@ -351,16 +376,20 @@ async fn stop_voice_recording_inner() -> Result<String, String> {
         )
         .await;
         match out {
-            Ok(out) if !out.is_empty() => return Ok(out),
+            Ok(out) if !out.is_empty() => {
+                finish_stop(false, 0)?;
+                return Ok(out);
+            }
             Ok(_) => {}
             Err(err) => {
                 let path = transcript_file_path();
                 if let Some(t) =
                     wait_transcript_file(&path, started_ms, voice_transcript_wait_ms()).await
                 {
+                    finish_stop(false, 0)?;
                     return Ok(t);
                 }
-                let _ = set_voice_state(true, started_ms);
+                finish_stop(true, started_ms)?;
                 return Err(err);
             }
         }
@@ -368,9 +397,11 @@ async fn stop_voice_recording_inner() -> Result<String, String> {
 
     let path = transcript_file_path();
     if let Some(t) = wait_transcript_file(&path, started_ms, voice_transcript_wait_ms()).await {
+        finish_stop(false, 0)?;
         return Ok(t);
     }
 
+    finish_stop(false, 0)?;
     Err(voice_error(
         "TRANSCRIPT_NOT_FOUND",
         "음성 인식 결과를 찾지 못했습니다. LUM_VOICE_STOP_CMD, ~/.lum_whisper/stop.(sh|cmd) 또는 ~/.lum_whisper/last_transcript.txt를 설정하세요.",
@@ -403,6 +434,7 @@ mod tests {
         if let Ok(mut s) = voice_state_lock().lock() {
             s.recording = false;
             s.started_ms = 0;
+            s.stopping = false;
         }
     }
 
@@ -824,6 +856,52 @@ mod tests {
 
         std::env::remove_var("LUM_VOICE_TRANSCRIPT_WAIT_MS");
         restore_home(old_home);
+        reset_state();
+    }
+
+    #[tokio::test]
+    async fn stop_전환중_start_요청은_차단() {
+        let _g = AUDIO_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        reset_state();
+        let slow_cmd = if cfg!(windows) {
+            "ping -n 2 127.0.0.1 >NUL"
+        } else {
+            "sleep 1"
+        };
+        std::env::set_var("LUM_VOICE_STOP_CMD", slow_cmd);
+
+        if let Ok(mut s) = voice_state_lock().lock() {
+            s.recording = true;
+            s.started_ms = now_ms();
+            s.stopping = false;
+        }
+
+        let stop_task = tokio::spawn(async { stop_voice_recording_inner().await });
+        let mut seen_stopping = false;
+        for _ in 0..30 {
+            if let Ok(s) = voice_state_lock().lock() {
+                if s.stopping {
+                    seen_stopping = true;
+                    break;
+                }
+            }
+            tokio::time::sleep(Duration::from_millis(20)).await;
+        }
+        assert!(
+            seen_stopping,
+            "stop 전환 상태(stopping=true)가 관측되어야 함"
+        );
+
+        let start_result = start_voice_recording_inner().await;
+        assert!(
+            start_result
+                .unwrap_err()
+                .contains("LUM_VOICE_ERROR::TRANSITION_IN_PROGRESS::"),
+            "stop 전환 중 start는 차단되어야 함"
+        );
+
+        let _ = stop_task.await;
+        std::env::remove_var("LUM_VOICE_STOP_CMD");
         reset_state();
     }
 }
