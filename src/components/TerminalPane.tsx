@@ -1313,8 +1313,10 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
   const toggleForceAiPrefix = useCallback(() => {
     const current = warpInputRef.current?.getValue() ?? inputBuffer;
     const isForceAi = hasForceAiPrefix(current);
+    const leading = current.match(/^\s*/)?.[0] ?? "";
     const base = clearForceAiPrefix(clearQuickModePrefix(current));
-    const next = isForceAi ? base : `@${base}`;
+    const bodyAfterLeading = base.slice(leading.length);
+    const next = isForceAi ? base : `${leading}@${bodyAfterLeading}`;
     warpInputRef.current?.setValue(next);
     warpInputRef.current?.focus();
   }, [clearForceAiPrefix, clearQuickModePrefix, hasForceAiPrefix, inputBuffer]);

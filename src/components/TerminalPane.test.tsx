@@ -1717,6 +1717,18 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(forceAiButton).toHaveAttribute("aria-pressed", "false");
   });
 
+  it("선행 공백 입력에서 force-ai 토글 ON 시 @ 위치를 보존한다", () => {
+    const { container } = render(<TerminalPane id="tab-1" />);
+    const input = container.querySelector("input")!;
+    const forceAiButton = screen.getByRole("button", { name: "quick-mode-force-ai" });
+
+    fireEvent.change(input, { target: { value: "   로그 요약해줘" } });
+    fireEvent.click(forceAiButton);
+
+    expect(input).toHaveValue("   @로그 요약해줘");
+    expect(forceAiButton).toHaveAttribute("aria-pressed", "true");
+  });
+
   it("선행 공백 + quick mode prefix도 토글로 정상 해제된다", () => {
     const { container } = render(<TerminalPane id="tab-1" />);
     const input = container.querySelector("input")!;
