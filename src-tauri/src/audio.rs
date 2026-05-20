@@ -26,6 +26,38 @@ fn set_voice_state(recording: bool, started_ms: u64) -> Result<(), String> {
     Ok(())
 }
 
+fn mark_recording_started() -> Result<u64, String> {
+    let mut state = voice_state_lock()
+        .lock()
+        .map_err(|_| voice_error("STATE_LOCK_POISONED", "voice state lock poisoned"))?;
+    if state.recording {
+        return Err(voice_error(
+            "ALREADY_RECORDING",
+            "이미 음성 녹음이 진행 중입니다.",
+        ));
+    }
+    let started_ms = now_ms();
+    state.recording = true;
+    state.started_ms = started_ms;
+    Ok(started_ms)
+}
+
+fn mark_recording_stopped() -> Result<u64, String> {
+    let mut state = voice_state_lock()
+        .lock()
+        .map_err(|_| voice_error("STATE_LOCK_POISONED", "voice state lock poisoned"))?;
+    if !state.recording {
+        return Err(voice_error(
+            "NOT_RECORDING",
+            "현재 진행 중인 음성 녹음이 없습니다.",
+        ));
+    }
+    let started_ms = state.started_ms;
+    state.recording = false;
+    state.started_ms = 0;
+    Ok(started_ms)
+}
+
 fn now_ms() -> u64 {
     std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
@@ -249,18 +281,7 @@ async fn run_voice_hook_capture(hook: &VoiceHook, timeout_ms: u64) -> Result<Str
 /// - 미설정 시 `~/.lum_whisper/start.(sh|cmd)`가 있으면 자동 실행
 /// - 내부적으로 recording=true 상태만 관리
 async fn start_voice_recording_inner() -> Result<(), String> {
-    {
-        let state = voice_state_lock()
-            .lock()
-            .map_err(|_| voice_error("STATE_LOCK_POISONED", "voice state lock poisoned"))?;
-        if state.recording {
-            return Err(voice_error(
-                "ALREADY_RECORDING",
-                "이미 음성 녹음이 진행 중입니다.",
-            ));
-        }
-    }
-    set_voice_state(true, now_ms())?;
+    let started_ms = mark_recording_started()?;
 
     // 이전 세션의 잔여 전사 파일을 남기면 잘못된 텍스트가 재사용될 수 있어 정리.
     let _ = std::fs::remove_file(transcript_file_path());
@@ -279,6 +300,9 @@ async fn start_voice_recording_inner() -> Result<(), String> {
             ));
         }
     }
+
+    // started_ms는 실패 롤백/디버깅 추적용으로 내부에서만 사용.
+    let _ = started_ms;
 
     Ok(())
 }
@@ -316,19 +340,7 @@ pub fn voice_recording_status() -> Result<bool, String> {
 /// 3) `~/.lum_whisper/last_transcript.txt` 파일
 /// 없으면 명확한 에러 반환.
 async fn stop_voice_recording_inner() -> Result<String, String> {
-    let started_ms = {
-        let state = voice_state_lock()
-            .lock()
-            .map_err(|_| voice_error("STATE_LOCK_POISONED", "voice state lock poisoned"))?;
-        if !state.recording {
-            return Err(voice_error(
-                "NOT_RECORDING",
-                "현재 진행 중인 음성 녹음이 없습니다.",
-            ));
-        }
-        state.started_ms
-    };
-    set_voice_state(false, 0)?;
+    let started_ms = mark_recording_stopped()?;
     if let Some(hook) = resolve_voice_hook("LUM_VOICE_STOP_CMD", "stop") {
         let out = run_voice_hook_capture(
             &hook,
