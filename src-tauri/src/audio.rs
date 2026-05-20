@@ -355,7 +355,9 @@ pub fn voice_recording_status() -> Result<bool, String> {
     let state = voice_state_lock()
         .lock()
         .map_err(|_| voice_error("STATE_LOCK_POISONED", "voice state lock poisoned"))?;
-    Ok(state.recording)
+    // stop 전환 중(stopping=true)에도 프론트는 녹음 active로 취급해야
+    // 마이크 버튼이 중간 상태에서 깜빡이며 잘못된 재시도를 유도하지 않는다.
+    Ok(state.recording || state.stopping)
 }
 
 /// 음성 입력 중지 + 텍스트 반환.
@@ -495,6 +497,15 @@ mod tests {
             s.recording = true;
         }
         assert_eq!(voice_recording_status().ok(), Some(true));
+        if let Ok(mut s) = voice_state_lock().lock() {
+            s.recording = false;
+            s.stopping = true;
+        }
+        assert_eq!(
+            voice_recording_status().ok(),
+            Some(true),
+            "stop 전환 중에는 active로 보여야 함"
+        );
         reset_state();
     }
 
