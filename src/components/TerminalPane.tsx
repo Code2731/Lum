@@ -520,7 +520,8 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
   }, []);
 
   const updateGhost = useCallback((buf: string) => {
-    if (buf.startsWith("# ") || buf.startsWith("? ") || buf.startsWith(">>")) {
+    const trimmedBuf = buf.trimStart();
+    if (/^#\s/.test(trimmedBuf) || /^\?\s/.test(trimmedBuf) || trimmedBuf.startsWith(">>")) {
       if (ghostTextRef.current !== null) {
         ghostTextRef.current = null;
         setGhostText(null);
@@ -1065,13 +1066,14 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
       setMentionSelected(0);
     }
 
-    if (buf.startsWith("# ")) {
+    const trimmedBuf = buf.trimStart();
+    if (/^#\s/.test(trimmedBuf)) {
       clearExplain();
-      triggerAiCompletion(buf);
-    } else if (buf.startsWith("? ")) {
+      triggerAiCompletion(trimmedBuf);
+    } else if (/^\?\s/.test(trimmedBuf)) {
       clearAiGhost();
-      triggerExplain(buf);
-    } else if (buf.startsWith(">>")) {
+      triggerExplain(trimmedBuf);
+    } else if (trimmedBuf.startsWith(">>")) {
       clearAiGhost();
       clearExplain();
       if (ghostTextRef.current !== null) { ghostTextRef.current = null; setGhostText(null); }

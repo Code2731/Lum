@@ -198,6 +198,54 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(screen.getByText("WHY PREFIX #")).toBeInTheDocument();
   });
 
+  it("선행 공백 + # 탭 입력도 AI 명령 제안 호출 시 prefix를 제외한 prompt를 전달한다", async () => {
+    invokeMock.mockImplementation((cmd: string) => {
+      if (cmd === "load_app_config") return Promise.resolve({});
+      if (cmd === "spawn_pty") return Promise.resolve();
+      if (cmd === "write_to_pty") return Promise.resolve();
+      if (cmd === "resize_pty") return Promise.resolve();
+      if (cmd === "get_project_context") return Promise.resolve("");
+      if (cmd === "get_recent_history") return Promise.resolve([]);
+      if (cmd === "generate_ai_command") return Promise.resolve(JSON.stringify({ command: "ls -la" }));
+      return Promise.resolve();
+    });
+    const { container } = render(<TerminalPane id="tab-1" />);
+    const input = container.querySelector("input")!;
+    fireEvent.change(input, { target: { value: "   #\t로그 요약해줘" } });
+
+    await waitFor(() => {
+      const call = invokeMock.mock.calls.find(
+        ([cmd, args]) =>
+          cmd === "generate_ai_command"
+          && (args as { prompt?: string } | undefined)?.prompt === "로그 요약해줘",
+      );
+      expect(call).toBeTruthy();
+    }, { timeout: 2500 });
+  });
+
+  it("선행 공백 + ? 탭 입력도 explain 호출 시 prefix를 제외한 command를 전달한다", async () => {
+    invokeMock.mockImplementation((cmd: string) => {
+      if (cmd === "load_app_config") return Promise.resolve({});
+      if (cmd === "spawn_pty") return Promise.resolve();
+      if (cmd === "write_to_pty") return Promise.resolve();
+      if (cmd === "resize_pty") return Promise.resolve();
+      if (cmd === "explain_command") return Promise.resolve("ok");
+      return Promise.resolve();
+    });
+    const { container } = render(<TerminalPane id="tab-1" />);
+    const input = container.querySelector("input")!;
+    fireEvent.change(input, { target: { value: "   ?\tgit status" } });
+
+    await waitFor(() => {
+      const call = invokeMock.mock.calls.find(
+        ([cmd, args]) =>
+          cmd === "explain_command"
+          && (args as { command?: string } | undefined)?.command === "git status",
+      );
+      expect(call).toBeTruthy();
+    }, { timeout: 2500 });
+  });
+
   it("툴벨트에 backend 단축키 안내 문구가 노출된다", () => {
     render(<TerminalPane id="tab-1" />);
     expect(
