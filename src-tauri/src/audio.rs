@@ -85,7 +85,7 @@ fn resolve_voice_hook(env_key: &str, kind: &str) -> Option<VoiceHook> {
 }
 
 /// 전사 파일을 읽고, 유효한 텍스트면 반환 후 파일 삭제.
-/// 빈 텍스트면 None.
+/// 빈 텍스트면 None(파일 유지 — 외부 STT의 지연 쓰기 허용).
 fn read_transcript_file(path: &Path, min_modified_ms: u64) -> Option<String> {
     let Some(text) = std::fs::read_to_string(path)
         .ok()
@@ -117,10 +117,15 @@ fn read_transcript_file(path: &Path, min_modified_ms: u64) -> Option<String> {
         }
     };
 
-    let _ = std::fs::remove_file(path);
-    if text.is_empty() || !is_fresh {
+    if !is_fresh {
+        let _ = std::fs::remove_file(path);
+        None
+    } else if text.is_empty() {
+        // 빈 파일은 즉시 삭제하지 않는다.
+        // 일부 STT 파이프라인은 파일을 먼저 만들고 나중에 내용을 채운다.
         None
     } else {
+        let _ = std::fs::remove_file(path);
         Some(text)
     }
 }
@@ -460,6 +465,24 @@ mod tests {
         let out = read_transcript_file(&f, 0);
         assert_eq!(out.as_deref(), Some("git status"));
         assert!(!f.exists(), "읽은 뒤 파일이 삭제되어야 함");
+        let _ = std::fs::remove_dir_all(&base);
+    }
+
+    #[test]
+    fn read_transcript_file_빈파일은_삭제하지_않음() {
+        let _g = AUDIO_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        let base = std::env::temp_dir().join(format!(
+            "lum_voice_test_empty_{}_{}",
+            std::process::id(),
+            now_ms()
+        ));
+        std::fs::create_dir_all(&base).unwrap();
+        let f = base.join("last_transcript.txt");
+        std::fs::write(&f, "   ").unwrap();
+        let out = read_transcript_file(&f, 0);
+        assert!(out.is_none(), "빈 텍스트는 transcript로 취급하지 않아야 함");
+        assert!(f.exists(), "빈 파일은 지연 쓰기를 위해 유지되어야 함");
+        let _ = std::fs::remove_file(&f);
         let _ = std::fs::remove_dir_all(&base);
     }
 
