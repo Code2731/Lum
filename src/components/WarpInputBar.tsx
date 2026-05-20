@@ -65,6 +65,11 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
     const isExplain    = /^\?\s/.test(trimmedInput);
     const isForceShell = trimmedInput.startsWith("!") && !isHeavy;
     const isForceAI    = trimmedInput.startsWith("@");
+    const isVisuallyEmpty = input.trim() === "";
+    const activeBackend = detectBackendPrefixFromInput(input);
+    const isBackendOnly =
+      activeBackend !== null && clearBackendPrefixFromInput(input).trim() === "";
+    const isEffectivelyEmpty = isVisuallyEmpty || isBackendOnly;
     const activeHeavy  = isHeavy;
     // 첫 토큰에서 `ls` 등 shell 냄새 풍기면 $, 아니면 기본값을 "AI 모드"로 표시 (★)
     const firstTok = trimmedInput.split(/\s+/)[0] ?? "";
@@ -76,7 +81,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
       isExplain    ? "#3fb950" :
       isForceShell ? "#d29922" :
       isForceAI    ? "#bc8cff" :
-      input === "" ? "#58a6ff" :
+      isVisuallyEmpty ? "#58a6ff" :
       looksShell   ? "#3fb950" : "#58a6ff";
     const promptChar =
       activeHeavy  ? "!!" :
@@ -85,9 +90,8 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
       isExplain    ? "?" :
       isForceShell ? "!" :
       isForceAI    ? "@" :
-      input === "" ? "✨" :
+      isVisuallyEmpty ? "✨" :
       looksShell   ? "$" : "✨";
-    const activeBackend = detectBackendPrefixFromInput(input);
     const activeBackendLabel = activeBackend ? activeBackend.toUpperCase() : null;
     const activeBackendStyle = activeBackend === "local"
       ? { color: "rgba(121,192,255,0.95)", border: "1px solid rgba(88,166,255,0.35)", background: "rgba(88,166,255,0.12)" }
@@ -150,12 +154,6 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
         e.stopPropagation();
         return;
       }
-      const backendInInput = detectBackendPrefixFromInput(input);
-      const isBackendOnly =
-        backendInInput !== null && clearBackendPrefixFromInput(input).trim() === "";
-      const isVisuallyEmpty = input.trim() === "";
-      const isEffectivelyEmpty = isVisuallyEmpty || isBackendOnly;
-
       const mod = e.metaKey || e.ctrlKey;
       if (mod && !e.altKey) {
         if (e.key === "." || e.code === "Period") {
@@ -493,7 +491,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
               lineHeight: 1.4,
             }}
           >
-            {input === "" ? (
+            {isVisuallyEmpty ? (
               <span style={{ color: "rgba(255,255,255,0.28)" }}>
                 자연어는 AI · 명령어는 자동 실행 · !강제shell · @강제AI(@local/@ollama/@xllm/@sglang/@gemini) · &gt;&gt;에이전트 · Cmd/Ctrl+1~4/0 · `/. 정순환 · Shift+`/, 역순환
               </span>
@@ -546,7 +544,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
           />
           </div>
 
-          {input === "" && (
+          {isVisuallyEmpty && (
             <span
               title="Enter 실행 · Esc 클리어 · Cmd/Ctrl+` 또는 Cmd/Ctrl+. 정순환 · Cmd/Ctrl+Shift+` 또는 Cmd/Ctrl+, 역순환 · Cmd/Ctrl+0 backend 해제"
               style={{

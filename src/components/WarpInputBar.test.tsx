@@ -165,6 +165,13 @@ describe("WarpInputBar — dumb input, 라우팅은 상위에서", () => {
     expect(screen.getByText(/@sglang/)).toBeInTheDocument();
   });
 
+  it("공백만 입력된 상태에서도 빈 입력 도움말을 유지한다", () => {
+    const { input } = setup();
+    fireEvent.change(input, { target: { value: "   " } });
+    expect(screen.getByText(/Cmd\/Ctrl\+1~4\/0/)).toBeInTheDocument();
+    expect(screen.getByText("Enter 실행")).toBeInTheDocument();
+  });
+
   it("onChange 한 글자씩 호출", () => {
     const { input, onChange } = setup();
     fireEvent.change(input, { target: { value: "l" } });
