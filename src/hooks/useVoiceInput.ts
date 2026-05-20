@@ -116,7 +116,6 @@ export function useVoiceInput({
       if (isRecording) {
         awaitingStopEventRef.current = true;
         stopEventReceivedRef.current = false;
-        setIsRecording(false);
         const transcript = await invoke<string>("stop_voice_recording");
         // 백엔드는 성공 시 voice_transcript 이벤트를 emit한다.
         // 이벤트 누락 환경(테스트 목 등)만 반환값으로 보완해 중복 주입을 막는다.

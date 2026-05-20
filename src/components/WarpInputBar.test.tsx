@@ -408,6 +408,37 @@ describe("WarpInputBar — dumb input, 라우팅은 상위에서", () => {
     expect(onChange).toHaveBeenLastCalledWith("git status");
   });
 
+  it("중지 처리 대기 중에는 녹음중 라벨을 유지한다", async () => {
+    let resolveStop: ((value: string) => void) | null = null;
+    invokeMock.mockImplementation((cmd: string) => {
+      if (cmd === "start_voice_recording") return Promise.resolve(undefined);
+      if (cmd === "stop_voice_recording") {
+        return new Promise<string>((resolve) => {
+          resolveStop = resolve;
+        });
+      }
+      return Promise.resolve(undefined);
+    });
+    const { getByLabelText } = setup();
+
+    await act(async () => {
+      fireEvent.click(getByLabelText("음성 녹음 시작"));
+    });
+    expect(getByLabelText("음성 녹음 중지")).toBeInTheDocument();
+
+    await act(async () => {
+      fireEvent.click(getByLabelText("음성 녹음 중지"));
+    });
+    // stop 대기 중엔 start로 깜빡이지 않고 중지 라벨 유지
+    const pendingStopBtn = getByLabelText("음성 녹음 중지");
+    expect(pendingStopBtn).toBeDisabled();
+
+    await act(async () => {
+      resolveStop?.("done");
+      await Promise.resolve();
+    });
+  });
+
   it("stop 반환값과 voice_transcript 이벤트가 동시에 와도 중복 주입하지 않음", async () => {
     invokeMock.mockImplementation(async (cmd: string) => {
       if (cmd === "start_voice_recording") return;
@@ -473,6 +504,8 @@ describe("WarpInputBar — dumb input, 라우팅은 상위에서", () => {
     await act(async () => {
       fireEvent.click(getByLabelText("음성 녹음 중지"));
       await new Promise((resolve) => setTimeout(resolve, 40));
+      const stateCb = voiceStateListeners[voiceStateListeners.length - 1];
+      stateCb?.({ payload: false });
     });
 
     // 세션 B 시작
