@@ -1717,6 +1717,19 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(forceAiButton).toHaveAttribute("aria-pressed", "false");
   });
 
+  it("선행 공백 + quick mode prefix도 토글로 정상 해제된다", () => {
+    const { container } = render(<TerminalPane id="tab-1" />);
+    const input = container.querySelector("input")!;
+    const shellButton = screen.getByRole("button", { name: "quick-mode-shell" });
+
+    fireEvent.change(input, { target: { value: "   !로그 요약해줘" } });
+    expect(shellButton).toHaveAttribute("aria-pressed", "true");
+
+    fireEvent.click(shellButton);
+    expect(input).toHaveValue("   로그 요약해줘");
+    expect(shellButton).toHaveAttribute("aria-pressed", "false");
+  });
+
   it("툴벨트 이전/다음 버튼으로 backend를 순환한다", () => {
     const { container } = render(<TerminalPane id="tab-1" />);
     const input = container.querySelector("input")!;

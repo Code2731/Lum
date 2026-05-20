@@ -1272,11 +1272,11 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
   }, [backendTrail.last, inputBuffer]);
   const clearQuickModePrefix = useCallback((raw: string) => (
     raw
-      .replace(/^!!\s?/, "")
-      .replace(/^>>\s?/, "")
-      .replace(/^\?\s?/, "")
-      .replace(/^#\s?/, "")
-      .replace(/^!\s?/, "")
+      .replace(/^(\s*)!!\s?/, "$1")
+      .replace(/^(\s*)>>\s?/, "$1")
+      .replace(/^(\s*)\?\s?/, "$1")
+      .replace(/^(\s*)#\s?/, "$1")
+      .replace(/^(\s*)!\s?/, "$1")
   ), []);
   const clearForceAiPrefix = useCallback((raw: string) => {
     if (detectBackendPrefixFromInput(raw)) return clearBackendPrefixFromInput(raw);
@@ -1287,23 +1287,25 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
   ), []);
   const toggleQuickModePrefix = useCallback((mode: "shell" | "agent" | "explain" | "aiCmd" | "heavy") => {
     const current = warpInputRef.current?.getValue() ?? inputBuffer;
-    const isHeavy = /^!!\s?/.test(current);
-    const isShell = /^!(?!\!)/.test(current);
-    const isAgent = /^>>\s?/.test(current);
-    const isExplain = /^\?\s?/.test(current);
-    const isAiCmd = /^#\s?/.test(current);
+    const leading = current.match(/^\s*/)?.[0] ?? "";
+    const isHeavy = /^\s*!!\s?/.test(current);
+    const isShell = /^\s*!(?!\!)/.test(current);
+    const isAgent = /^\s*>>\s?/.test(current);
+    const isExplain = /^\s*\?\s?/.test(current);
+    const isAiCmd = /^\s*#\s?/.test(current);
     const body = clearQuickModePrefix(current);
+    const bodyAfterLeading = body.slice(leading.length);
     let next = current;
     if (mode === "heavy") {
-      next = isHeavy ? body : `!! ${body}`;
+      next = isHeavy ? body : `${leading}!! ${bodyAfterLeading}`;
     } else if (mode === "shell") {
-      next = isShell ? body : `!${body}`;
+      next = isShell ? body : `${leading}!${bodyAfterLeading}`;
     } else if (mode === "agent") {
-      next = isAgent ? body : `>> ${body}`;
+      next = isAgent ? body : `${leading}>> ${bodyAfterLeading}`;
     } else if (mode === "explain") {
-      next = isExplain ? body : `? ${body}`;
+      next = isExplain ? body : `${leading}? ${bodyAfterLeading}`;
     } else {
-      next = isAiCmd ? body : `# ${body}`;
+      next = isAiCmd ? body : `${leading}# ${bodyAfterLeading}`;
     }
     warpInputRef.current?.setValue(next);
     warpInputRef.current?.focus();
@@ -1426,11 +1428,11 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
   const prevBackendLabel = backendTrail.prev
     ? `BACK @${backendTrail.prev.toUpperCase()}`
     : "BACK @-";
-  const quickModeShellActive = /^!(?!\!)/.test(inputBuffer);
-  const quickModeHeavyActive = /^!!\s?/.test(inputBuffer);
-  const quickModeAgentActive = /^>>\s?/.test(inputBuffer);
-  const quickModeExplainActive = /^\?\s?/.test(inputBuffer);
-  const quickModeAiCmdActive = /^#\s?/.test(inputBuffer);
+  const quickModeShellActive = /^\s*!(?!\!)/.test(inputBuffer);
+  const quickModeHeavyActive = /^\s*!!\s?/.test(inputBuffer);
+  const quickModeAgentActive = /^\s*>>\s?/.test(inputBuffer);
+  const quickModeExplainActive = /^\s*\?\s?/.test(inputBuffer);
+  const quickModeAiCmdActive = /^\s*#\s?/.test(inputBuffer);
   const quickModeForceAiActive = hasForceAiPrefix(inputBuffer);
   const canNormalizeToPlain = toPlainInput(inputBuffer) !== inputBuffer;
   const canTrimInput = inputBuffer !== inputBuffer.trim();
