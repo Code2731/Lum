@@ -1725,6 +1725,19 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(explainBtn).toHaveAttribute("aria-pressed", "false");
   });
 
+  it("공백 없는 #/? 입력에서 quick mode 버튼을 누르면 마커를 중첩하지 않고 정규화한다", () => {
+    const { container } = render(<TerminalPane id="tab-1" />);
+    const input = container.querySelector("input")!;
+
+    fireEvent.change(input, { target: { value: "#로그 요약해줘" } });
+    fireEvent.click(screen.getByRole("button", { name: "quick-mode-ai-cmd" }));
+    expect(input).toHaveValue("# 로그 요약해줘");
+
+    fireEvent.change(input, { target: { value: "?로그 요약해줘" } });
+    fireEvent.click(screen.getByRole("button", { name: "quick-mode-explain" }));
+    expect(input).toHaveValue("? 로그 요약해줘");
+  });
+
   it("선행 공백 + @ 강제 AI 입력도 force-ai 토글로 정상 해제된다", () => {
     const { container } = render(<TerminalPane id="tab-1" />);
     const input = container.querySelector("input")!;

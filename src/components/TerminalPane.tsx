@@ -1303,9 +1303,11 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     } else if (mode === "agent") {
       next = isAgent ? body : `${leading}>> ${bodyAfterLeading}`;
     } else if (mode === "explain") {
-      next = isExplain ? body : `${leading}? ${bodyAfterLeading}`;
+      const explainBody = bodyAfterLeading.replace(/^\?\s*/, "");
+      next = isExplain ? body : `${leading}? ${explainBody}`;
     } else {
-      next = isAiCmd ? body : `${leading}# ${bodyAfterLeading}`;
+      const aiCmdBody = bodyAfterLeading.replace(/^#\s*/, "");
+      next = isAiCmd ? body : `${leading}# ${aiCmdBody}`;
     }
     warpInputRef.current?.setValue(next);
     warpInputRef.current?.focus();
