@@ -154,6 +154,7 @@ const parseMermaidEdges = (code: string): MermaidEdge[] => {
   const arrowTokens = [
     "-->>",
     "<-->",
+    "<->",
     "<-.->",
     "-.->",
     "==>",
