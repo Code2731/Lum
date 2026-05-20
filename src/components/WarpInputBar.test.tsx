@@ -272,6 +272,13 @@ describe("WarpInputBar — dumb input, 라우팅은 상위에서", () => {
     expect(input).toHaveValue("");
   });
 
+  it("선행 공백 + backend-only 입력에서 Escape는 한 번에 전체 클리어", () => {
+    const { input } = setup();
+    fireEvent.change(input, { target: { value: "   @local   " } });
+    fireEvent.keyDown(input, { key: "Escape" });
+    expect(input).toHaveValue("");
+  });
+
   it("Cmd/Ctrl+1로 @local 프리픽스 적용", () => {
     const { input } = setup();
     fireEvent.change(input, { target: { value: "로그 요약해줘" } });

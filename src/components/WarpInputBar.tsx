@@ -280,7 +280,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
         const backend = detectBackendPrefixFromInput(input);
         if (backend) {
           const rest = clearBackendPrefixFromInput(input);
-          if (rest !== "") {
+          if (rest.trim() !== "") {
             const keep = `@${backend} `;
             setInput(keep);
             onChange?.(keep);
