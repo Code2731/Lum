@@ -150,7 +150,11 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
         e.stopPropagation();
         return;
       }
+      const backendInInput = detectBackendPrefixFromInput(input);
+      const isBackendOnly =
+        backendInInput !== null && clearBackendPrefixFromInput(input).trim() === "";
       const isVisuallyEmpty = input.trim() === "";
+      const isEffectivelyEmpty = isVisuallyEmpty || isBackendOnly;
 
       const mod = e.metaKey || e.ctrlKey;
       if (mod && !e.altKey) {
@@ -234,7 +238,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
         return;
       }
 
-      if (e.key === "c" && (e.ctrlKey || e.metaKey) && isVisuallyEmpty) {
+      if (e.key === "c" && (e.ctrlKey || e.metaKey) && isEffectivelyEmpty) {
         // 빈 입력일 때 Ctrl+C → PTY SIGINT
         e.preventDefault();
         onInterrupt?.();
@@ -259,7 +263,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
         return;
       }
 
-      if (e.key === "Home" && isVisuallyEmpty && history.current.length > 0) {
+      if (e.key === "Home" && isEffectivelyEmpty && history.current.length > 0) {
         e.preventDefault();
         historyIdx.current = 0;
         const v = history.current[historyIdx.current] ?? "";
@@ -268,7 +272,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
         return;
       }
 
-      if (e.key === "End" && isVisuallyEmpty && history.current.length > 0) {
+      if (e.key === "End" && isEffectivelyEmpty && history.current.length > 0) {
         e.preventDefault();
         historyIdx.current = history.current.length - 1;
         const v = history.current[historyIdx.current] ?? "";

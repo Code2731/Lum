@@ -208,6 +208,13 @@ describe("WarpInputBar — dumb input, 라우팅은 상위에서", () => {
     expect(onInterrupt).toHaveBeenCalled();
   });
 
+  it("backend prefix-only 상태의 Ctrl+C도 onInterrupt", () => {
+    const { input, onInterrupt } = setup();
+    fireEvent.change(input, { target: { value: "@local " } });
+    fireEvent.keyDown(input, { key: "c", ctrlKey: true });
+    expect(onInterrupt).toHaveBeenCalled();
+  });
+
   it("Tab → onTab(buf) 호출, true 반환 시 preventDefault", () => {
     const onTab = vi.fn(() => true);
     const { input } = setup({ onTab });
@@ -260,6 +267,23 @@ describe("WarpInputBar — dumb input, 라우팅은 상위에서", () => {
     expect(input).toHaveValue("first");
 
     fireEvent.change(input, { target: { value: "   " } });
+    fireEvent.keyDown(input, { key: "End" });
+    expect(input).toHaveValue("second");
+  });
+
+  it("backend prefix-only 상태에서도 Home/End 히스토리 이동", () => {
+    const { input, onSubmit } = setup();
+    fireEvent.change(input, { target: { value: "first" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+    fireEvent.change(input, { target: { value: "second" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+    expect(onSubmit).toHaveBeenCalledTimes(2);
+
+    fireEvent.change(input, { target: { value: "@local " } });
+    fireEvent.keyDown(input, { key: "Home" });
+    expect(input).toHaveValue("first");
+
+    fireEvent.change(input, { target: { value: "@local " } });
     fireEvent.keyDown(input, { key: "End" });
     expect(input).toHaveValue("second");
   });
