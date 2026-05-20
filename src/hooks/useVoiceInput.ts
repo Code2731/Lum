@@ -106,7 +106,14 @@ export function useVoiceInput({
         setVoiceError(null);
       }
     } catch (e) {
-      setIsRecording(false);
+      // IPC/훅 오류 시 프론트 추정 상태(false)로 고정하면
+      // 실제 백엔드 녹음 상태와 어긋날 수 있어 재조회로 동기화.
+      try {
+        const on = await invoke<boolean>("voice_recording_status");
+        setIsRecording(Boolean(on));
+      } catch {
+        setIsRecording(false);
+      }
       setVoiceError(parseVoiceError(e));
     } finally {
       awaitingStopEventRef.current = false;

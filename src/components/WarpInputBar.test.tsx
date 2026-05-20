@@ -448,6 +448,37 @@ describe("WarpInputBar — dumb input, 라우팅은 상위에서", () => {
     expect(getByLabelText("음성 녹음 시작")).toBeInTheDocument();
   });
 
+  it("마이크 중지 실패 시 voice_recording_status 재조회로 상태를 동기화", async () => {
+    let recording = false;
+    invokeMock.mockImplementation(async (cmd: string) => {
+      if (cmd === "voice_recording_status") return recording;
+      if (cmd === "start_voice_recording") {
+        recording = true;
+        return;
+      }
+      if (cmd === "stop_voice_recording") {
+        // 실제 백엔드는 stop 실패/IPC 실패 시에도 녹음이 유지될 수 있다.
+        recording = true;
+        throw new Error("transport failed");
+      }
+      return;
+    });
+    const { getByLabelText, findByText } = setup();
+
+    await act(async () => {
+      fireEvent.click(getByLabelText("음성 녹음 시작"));
+    });
+    expect(getByLabelText("음성 녹음 중지")).toBeInTheDocument();
+
+    await act(async () => {
+      fireEvent.click(getByLabelText("음성 녹음 중지"));
+      await Promise.resolve();
+    });
+
+    expect(await findByText(/음성 입력 오류:/)).toBeInTheDocument();
+    expect(getByLabelText("음성 녹음 중지")).toBeInTheDocument();
+  });
+
   it("마운트 시 voice_recording_status 조회", async () => {
     setup();
     expect(invokeMock).toHaveBeenCalledWith("voice_recording_status", undefined);
