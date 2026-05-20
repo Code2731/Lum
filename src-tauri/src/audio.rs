@@ -32,6 +32,7 @@ fn voice_error(code: &str, message: impl AsRef<str>) -> String {
 
 const DEFAULT_VOICE_START_CMD_TIMEOUT_MS: u64 = 8_000;
 const DEFAULT_VOICE_STOP_CMD_TIMEOUT_MS: u64 = 12_000;
+const DEFAULT_VOICE_TRANSCRIPT_WAIT_MS: u64 = 2_000;
 const TRANSCRIPT_STALE_TOLERANCE_MS: u64 = 1_000;
 
 fn parse_voice_timeout_ms(env_key: &str, default_ms: u64) -> u64 {
@@ -40,6 +41,13 @@ fn parse_voice_timeout_ms(env_key: &str, default_ms: u64) -> u64 {
         .and_then(|raw| raw.trim().parse::<u64>().ok())
         .filter(|value| *value > 0)
         .unwrap_or(default_ms)
+}
+
+fn voice_transcript_wait_ms() -> u64 {
+    parse_voice_timeout_ms(
+        "LUM_VOICE_TRANSCRIPT_WAIT_MS",
+        DEFAULT_VOICE_TRANSCRIPT_WAIT_MS,
+    )
 }
 
 fn transcript_file_path() -> PathBuf {
@@ -114,6 +122,28 @@ fn read_transcript_file(path: &Path, min_modified_ms: u64) -> Option<String> {
         None
     } else {
         Some(text)
+    }
+}
+
+/// 전사 파일이 외부 프로세스에서 늦게 생성될 수 있어 짧게 폴링 대기.
+async fn wait_transcript_file(path: &Path, min_modified_ms: u64, wait_ms: u64) -> Option<String> {
+    if let Some(text) = read_transcript_file(path, min_modified_ms) {
+        return Some(text);
+    }
+    if wait_ms == 0 {
+        return None;
+    }
+
+    let deadline = std::time::Instant::now() + Duration::from_millis(wait_ms);
+    let poll = Duration::from_millis(100);
+    loop {
+        tokio::time::sleep(poll).await;
+        if let Some(text) = read_transcript_file(path, min_modified_ms) {
+            return Some(text);
+        }
+        if std::time::Instant::now() >= deadline {
+            return None;
+        }
     }
 }
 
@@ -307,7 +337,9 @@ async fn stop_voice_recording_inner() -> Result<String, String> {
             Ok(_) => {}
             Err(err) => {
                 let path = transcript_file_path();
-                if let Some(t) = read_transcript_file(&path, started_ms) {
+                if let Some(t) =
+                    wait_transcript_file(&path, started_ms, voice_transcript_wait_ms()).await
+                {
                     return Ok(t);
                 }
                 return Err(err);
@@ -316,7 +348,7 @@ async fn stop_voice_recording_inner() -> Result<String, String> {
     }
 
     let path = transcript_file_path();
-    if let Some(t) = read_transcript_file(&path, started_ms) {
+    if let Some(t) = wait_transcript_file(&path, started_ms, voice_transcript_wait_ms()).await {
         return Ok(t);
     }
 
@@ -667,6 +699,37 @@ mod tests {
         assert_eq!(result.ok(), Some("scripted transcript".to_string()));
 
         let _ = std::fs::remove_file(script_path);
+        restore_home(old_home);
+        reset_state();
+    }
+
+    #[tokio::test]
+    async fn stop_지연_전사파일_대기_후_반환() {
+        let _g = AUDIO_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        reset_state();
+        std::env::remove_var("LUM_VOICE_STOP_CMD");
+        std::env::set_var("LUM_VOICE_TRANSCRIPT_WAIT_MS", "1200");
+        let (_tmp_home, old_home) = with_temp_home("delayed_transcript_wait");
+
+        let path = transcript_file_path();
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent).unwrap();
+        }
+        let path_for_writer = path.clone();
+        tokio::spawn(async move {
+            tokio::time::sleep(Duration::from_millis(150)).await;
+            let _ = std::fs::write(path_for_writer, "  delayed transcript ok  ");
+        });
+
+        if let Ok(mut s) = voice_state_lock().lock() {
+            s.recording = true;
+            s.started_ms = now_ms();
+        }
+
+        let result = stop_voice_recording_inner().await;
+        assert_eq!(result.ok(), Some("delayed transcript ok".to_string()));
+
+        std::env::remove_var("LUM_VOICE_TRANSCRIPT_WAIT_MS");
         restore_home(old_home);
         reset_state();
     }
