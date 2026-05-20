@@ -1680,6 +1680,19 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(input).toHaveValue("로그 요약해줘");
   });
 
+  it("PLAIN 정리는 공백 없는 #/? bare 마커도 제거한다", () => {
+    const { container } = render(<TerminalPane id="tab-1" />);
+    const input = container.querySelector("input")!;
+
+    fireEvent.change(input, { target: { value: "#로그 요약해줘" } });
+    fireEvent.keyDown(input, { key: "G", ctrlKey: true, shiftKey: true });
+    expect(input).toHaveValue("로그 요약해줘");
+
+    fireEvent.change(input, { target: { value: "?git status" } });
+    fireEvent.keyDown(input, { key: "G", ctrlKey: true, shiftKey: true });
+    expect(input).toHaveValue("git status");
+  });
+
   it("입력 단축키 Cmd/Ctrl+Shift+H/Y/J/U로 모드 프리픽스를 토글한다", () => {
     const { container } = render(<TerminalPane id="tab-1" />);
     const input = container.querySelector("input")!;

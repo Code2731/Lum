@@ -1276,8 +1276,8 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     raw
       .replace(/^(\s*)!!\s?/, "$1")
       .replace(/^(\s*)>>\s?/, "$1")
-      .replace(/^(\s*)\?\s+/, "$1")
-      .replace(/^(\s*)#\s+/, "$1")
+      .replace(/^(\s*)\?\s*/, "$1")
+      .replace(/^(\s*)#\s*/, "$1")
       .replace(/^(\s*)!\s?/, "$1")
   ), []);
   const clearForceAiPrefix = useCallback((raw: string) => {
