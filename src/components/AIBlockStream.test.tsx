@@ -234,6 +234,34 @@ describe("AIBlockStream", () => {
     expect(lines[0].textContent).toBe("service --> db.rs");
   });
 
+  it("라벨 내부의 %%는 공백이 있어도 주석으로 인식되지 않는다", () => {
+    const mermaidMessage = [
+      "query_graph 결과:",
+      "```mermaid",
+      "flowchart LR",
+      "\"api\" -->|cache%% only| \"storage\"",
+      "\"api\" -->|path%% and| \"storage\" %% inline comment",
+      "\"api\" -->|path\\\\%% only| \"storage\"",
+      "```",
+    ].join("\n");
+
+    const { container } = render(
+      <AIBlockStream
+        messages={[msg("assistant", mermaidMessage)]}
+        streaming={false}
+        error={null}
+        onClear={vi.fn()}
+        onExecute={vi.fn()}
+      />,
+    );
+
+    const lines = container.querySelectorAll("li");
+    expect(lines).toHaveLength(3);
+    expect(lines[0]).toHaveTextContent('"api" --> "storage" (cache%% only)');
+    expect(lines[1]).toHaveTextContent('"api" --> "storage" (path%% and)');
+    expect(lines[2]).toHaveTextContent('"api" --> "storage" (path\\%% only)');
+  });
+
   it("ID 내의 %%는 mermaid 주석으로 잘못 인식되지 않는다", () => {
     const mermaidMessage = [
       "query_graph 결과:",

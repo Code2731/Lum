@@ -190,6 +190,7 @@ const parseMermaidEdges = (code: string): MermaidEdge[] => {
   const stripComment = (line: string) => {
     let inSingle = false;
     let inDouble = false;
+    let inLabel = false;
     let escaped = false;
 
     for (let i = 0; i < line.length - 1; i += 1) {
@@ -215,13 +216,20 @@ const parseMermaidEdges = (code: string): MermaidEdge[] => {
         continue;
       }
 
-      if (!inSingle && !inDouble && ch === "%" && next === "%") {
-        const after = i + 2 < line.length ? line[i + 2] : "";
-        const hasTrailingSpace = i + 2 >= line.length || /\s/.test(after);
-        if (!hasTrailingSpace) {
+      if (!inSingle && !inDouble) {
+        if (ch === "|") {
+          inLabel = !inLabel;
           continue;
         }
-        return line.slice(0, i).trimEnd();
+
+        if (ch === "%" && next === "%" && !inLabel) {
+          const after = i + 2 < line.length ? line[i + 2] : "";
+          const hasTrailingSpace = i + 2 >= line.length || /\s/.test(after);
+          if (!hasTrailingSpace) {
+            continue;
+          }
+          return line.slice(0, i).trimEnd();
+        }
       }
     }
 
