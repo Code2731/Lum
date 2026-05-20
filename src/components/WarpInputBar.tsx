@@ -58,15 +58,16 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
     }, []);
 
     // 시각적 prompt char — 라우팅 로직은 상위에서
-    const isHeavy      = input.trimStart().startsWith("!!");
-    const isAgent      = input.startsWith(">>");
-    const isAICmd      = input.startsWith("# ");
-    const isExplain    = input.startsWith("? ");
-    const isForceShell = input.startsWith("!") && !isHeavy;
-    const isForceAI    = input.startsWith("@");
+    const trimmedInput = input.trimStart();
+    const isHeavy      = trimmedInput.startsWith("!!");
+    const isAgent      = trimmedInput.startsWith(">>");
+    const isAICmd      = /^#\s/.test(trimmedInput);
+    const isExplain    = /^\?\s/.test(trimmedInput);
+    const isForceShell = trimmedInput.startsWith("!") && !isHeavy;
+    const isForceAI    = trimmedInput.startsWith("@");
     const activeHeavy  = isHeavy;
     // 첫 토큰에서 `ls` 등 shell 냄새 풍기면 $, 아니면 기본값을 "AI 모드"로 표시 (★)
-    const firstTok = input.trimStart().split(/\s+/)[0] ?? "";
+    const firstTok = trimmedInput.split(/\s+/)[0] ?? "";
     const looksShell = /^[a-z][a-z0-9._-]*$/i.test(firstTok) && firstTok.length <= 20;
     const promptColor =
       activeHeavy  ? "#bc8cff" :
@@ -315,12 +316,12 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
     });
 
     const body =
-      isHeavy      ? input.trimStart().slice(2).trimStart() :
-      isAgent      ? input.replace(/^>>\s?/, "") :
-      isAICmd      ? input.slice(2) :
-      isExplain    ? input.slice(2) :
-      isForceShell ? input.slice(1).trimStart() :
-      isForceAI    ? input.slice(1).trimStart() :
+      isHeavy      ? trimmedInput.slice(2).trimStart() :
+      isAgent      ? trimmedInput.replace(/^>>\s?/, "") :
+      isAICmd      ? trimmedInput.slice(2) :
+      isExplain    ? trimmedInput.slice(2) :
+      isForceShell ? trimmedInput.slice(1).trimStart() :
+      isForceAI    ? trimmedInput.slice(1).trimStart() :
       null;
 
     return (

@@ -194,10 +194,10 @@ export function routeInput(raw: string): Route {
   if (trimmed.startsWith(">>")) {
     return { type: "agent", task: trimmed.replace(/^>>\s*/, "").trim() };
   }
-  if (trimmed.startsWith("# ")) {
+  if (/^#\s/.test(trimmed)) {
     return { type: "aiCmd", prompt: trimmed.slice(2).trim() };
   }
-  if (trimmed.startsWith("? ")) {
+  if (/^\?\s/.test(trimmed)) {
     return { type: "explain", command: trimmed.slice(2).trim() };
   }
 

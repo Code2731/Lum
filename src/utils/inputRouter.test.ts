@@ -89,6 +89,16 @@ describe("routeInput — 기본: 자연어=AI, CLI 감지 시 shell", () => {
         prompt: "파일 개수 세줘",
       });
     });
+    it("#/? 뒤 탭도 prefix 구분자로 인식", () => {
+      expect(routeInput("#\t파일 개수 세줘")).toEqual({
+        type: "aiCmd",
+        prompt: "파일 개수 세줘",
+      });
+      expect(routeInput("?\tgit rebase")).toEqual({
+        type: "explain",
+        command: "git rebase",
+      });
+    });
     it("? 명령어 설명", () => {
       expect(routeInput("? git rebase")).toEqual({
         type: "explain",
