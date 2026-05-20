@@ -30,6 +30,8 @@ describe("parseVoiceError", () => {
     const msg = parseVoiceError(
       "LUM_VOICE_ERROR::TRANSITION_IN_PROGRESS::이전 음성 녹음 종료 처리 중입니다.",
     );
-    expect(msg).toContain("이전 음성 녹음 종료 처리가 아직 진행 중입니다.");
+    expect(msg).toBe(
+      "이전 음성 녹음 종료 처리가 아직 진행 중입니다. 잠시 후 다시 시도해 주세요.",
+    );
   });
 });

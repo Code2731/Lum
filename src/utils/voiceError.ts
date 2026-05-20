@@ -27,7 +27,13 @@ export function parseVoiceError(raw: unknown): string {
     const message = CODE_MESSAGES[code] ?? "음성 입력 처리 중 오류가 발생했습니다.";
     const extra = (detail ?? "").trim();
     if (!extra) return message;
-    if (code === "ALREADY_RECORDING" || code === "NOT_RECORDING") return message;
+    if (
+      code === "ALREADY_RECORDING"
+      || code === "NOT_RECORDING"
+      || code === "TRANSITION_IN_PROGRESS"
+    ) {
+      return message;
+    }
     return `${message} (${extra})`;
   }
 
