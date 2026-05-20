@@ -16,6 +16,8 @@ interface UseVoiceInputResult {
   handleMicToggle: () => Promise<void>;
 }
 
+const STOP_FALLBACK_DUP_GUARD_MS = 4_000;
+
 export function useVoiceInput({
   enabled = true,
   dedupeMs = 500,
@@ -28,6 +30,7 @@ export function useVoiceInput({
   const lastTranscriptRef = useRef<{ text: string; ts: number } | null>(null);
   const awaitingStopEventRef = useRef(false);
   const stopEventReceivedRef = useRef(false);
+  const stopFallbackGuardRef = useRef<{ text: string; ts: number } | null>(null);
 
   useEffect(() => {
     onTranscriptRef.current = onTranscript;
@@ -54,10 +57,24 @@ export function useVoiceInput({
     let unlistenState: (() => void) | null = null;
 
     listen<string>("voice_transcript", (event) => {
+      const payload = (event.payload ?? "").trim();
+      const fallbackGuard = stopFallbackGuardRef.current;
+      if (fallbackGuard) {
+        const age = Date.now() - fallbackGuard.ts;
+        if (age >= STOP_FALLBACK_DUP_GUARD_MS) {
+          stopFallbackGuardRef.current = null;
+        } else if (payload && payload === fallbackGuard.text) {
+          // stop 반환값 fallback 뒤 지연 도착한 동일 이벤트는 중복 주입을 막는다.
+          stopFallbackGuardRef.current = null;
+          setIsRecording(false);
+          setVoiceError(null);
+          return;
+        }
+      }
       if (awaitingStopEventRef.current) {
         stopEventReceivedRef.current = true;
       }
-      emitTranscript(event.payload ?? "");
+      emitTranscript(payload);
       setIsRecording(false);
       setVoiceError(null);
     })
@@ -97,13 +114,18 @@ export function useVoiceInput({
           setTimeout(() => resolve(), 30);
         });
         if (!stopEventReceivedRef.current) {
-          emitTranscript(transcript ?? "");
+          const text = (transcript ?? "").trim();
+          if (text) {
+            emitTranscript(text);
+            stopFallbackGuardRef.current = { text, ts: Date.now() };
+          }
         }
         setVoiceError(null);
       } else {
         await invoke("start_voice_recording");
         setIsRecording(true);
         setVoiceError(null);
+        stopFallbackGuardRef.current = null;
       }
     } catch (e) {
       // IPC/훅 오류 시 프론트 추정 상태(false)로 고정하면
