@@ -14,6 +14,11 @@ describe("applyBackendPrefixToInput", () => {
     expect(applyBackendPrefixToInput("@ollama src/utils.ts 수정", "xllm")).toBe("@xllm src/utils.ts 수정");
   });
 
+  it("backend 뒤 탭/개행 구분자도 본문으로 인식한다", () => {
+    expect(applyBackendPrefixToInput("@ollama\tsrc/utils.ts 수정", "xllm")).toBe("@xllm src/utils.ts 수정");
+    expect(applyBackendPrefixToInput("@ollama\nsrc/utils.ts 수정", "xllm")).toBe("@xllm src/utils.ts 수정");
+  });
+
   it("backend prefix만 있던 경우 공백 유지", () => {
     expect(applyBackendPrefixToInput("@gemini", "local")).toBe("@local ");
   });
@@ -30,6 +35,11 @@ describe("clearBackendPrefixFromInput", () => {
 
   it("backend prefix만 있으면 빈 문자열로 된다", () => {
     expect(clearBackendPrefixFromInput("@ollama")).toBe("");
+  });
+
+  it("backend 뒤 탭/개행 구분자도 제거한다", () => {
+    expect(clearBackendPrefixFromInput("@local\t로그 요약해줘")).toBe("로그 요약해줘");
+    expect(clearBackendPrefixFromInput("@local\n로그 요약해줘")).toBe("로그 요약해줘");
   });
 
   it("backend prefix가 없으면 원본을 유지한다", () => {
@@ -51,6 +61,11 @@ describe("detectBackendPrefixFromInput", () => {
     expect(detectBackendPrefixFromInput("@embedded hi")).toBe("local");
     expect(detectBackendPrefixFromInput("@sglang hi")).toBe("xllm");
     expect(detectBackendPrefixFromInput("@cloud hi")).toBe("gemini");
+  });
+
+  it("backend 뒤 탭/개행 구분자도 감지한다", () => {
+    expect(detectBackendPrefixFromInput("@local\thi")).toBe("local");
+    expect(detectBackendPrefixFromInput("@cloud\nhi")).toBe("gemini");
   });
 
   it("backend prefix가 아니면 null", () => {

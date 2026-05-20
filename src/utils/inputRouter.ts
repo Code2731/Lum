@@ -38,11 +38,11 @@ const BACKEND_KEYWORDS: Record<string, AiBackend> = {
  * 아니면 null (호출자가 기존 `@` 동작=강제 AI 챗으로 폴백).
  */
 function parseBackendPrefix(stripped: string): { backend: AiBackend; rest: string } | null {
-  const space = stripped.indexOf(" ");
-  const firstToken = (space === -1 ? stripped : stripped.slice(0, space)).toLowerCase();
+  const firstWs = stripped.search(/\s/);
+  const firstToken = (firstWs === -1 ? stripped : stripped.slice(0, firstWs)).toLowerCase();
   const backend = BACKEND_KEYWORDS[firstToken];
   if (!backend) return null;
-  const rest = space === -1 ? "" : stripped.slice(space + 1).trim();
+  const rest = firstWs === -1 ? "" : stripped.slice(firstWs + 1).trim();
   return { backend, rest };
 }
 

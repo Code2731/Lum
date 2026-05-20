@@ -262,6 +262,19 @@ describe("routeInput — 기본: 자연어=AI, CLI 감지 시 shell", () => {
       });
     });
 
+    it("@backend 뒤 탭/개행 구분자도 backend 강제로 인식", () => {
+      expect(routeInput("@local\tfix the bug in login flow")).toEqual({
+        type: "agent",
+        task: "fix the bug in login flow",
+        backend: "local",
+      });
+      expect(routeInput("@cloud\nexplain this")).toEqual({
+        type: "ai",
+        question: "explain this",
+        backend: "gemini",
+      });
+    });
+
     it("@local만 단독 입력 → 빈 ai (백엔드만 토글)", () => {
       expect(routeInput("@local")).toEqual({
         type: "ai",

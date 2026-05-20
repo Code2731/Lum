@@ -2,6 +2,17 @@ import type { AiBackend } from "./inputRouter";
 
 const BACKEND_ALIAS = new Set(["local", "embedded", "ollama", "xllm", "sglang", "gemini", "cloud"]);
 
+function splitFirstToken(raw: string): { token: string; rest: string } {
+  const firstWs = raw.search(/\s/);
+  if (firstWs === -1) {
+    return { token: raw.toLowerCase(), rest: "" };
+  }
+  return {
+    token: raw.slice(0, firstWs).toLowerCase(),
+    rest: raw.slice(firstWs + 1).trim(),
+  };
+}
+
 /**
  * 입력 문자열에 backend prefix(@local/@ollama/@xllm/@sglang/@gemini)를 적용한다.
  * 기존 @backend prefix가 있으면 본문을 유지한 채 prefix만 교체한다.
@@ -12,10 +23,9 @@ export function applyBackendPrefixToInput(raw: string, backend: AiBackend): stri
 
   if (src.startsWith("@")) {
     const stripped = src.slice(1).trimStart();
-    const firstSpace = stripped.indexOf(" ");
-    const firstToken = (firstSpace === -1 ? stripped : stripped.slice(0, firstSpace)).toLowerCase();
-    if (BACKEND_ALIAS.has(firstToken)) {
-      body = firstSpace === -1 ? "" : stripped.slice(firstSpace + 1).trim();
+    const { token, rest } = splitFirstToken(stripped);
+    if (BACKEND_ALIAS.has(token)) {
+      body = rest;
     } else {
       body = stripped.trim();
     }
@@ -32,11 +42,9 @@ export function clearBackendPrefixFromInput(raw: string): string {
   const src = raw.trimStart();
   if (!src.startsWith("@")) return raw;
   const stripped = src.slice(1).trimStart();
-  const firstSpace = stripped.indexOf(" ");
-  const firstToken = (firstSpace === -1 ? stripped : stripped.slice(0, firstSpace)).toLowerCase();
-  if (!BACKEND_ALIAS.has(firstToken)) return raw;
-  if (firstSpace === -1) return "";
-  return stripped.slice(firstSpace + 1).trim();
+  const { token, rest } = splitFirstToken(stripped);
+  if (!BACKEND_ALIAS.has(token)) return raw;
+  return rest;
 }
 
 /**
@@ -47,11 +55,10 @@ export function detectBackendPrefixFromInput(raw: string): AiBackend | null {
   const src = raw.trimStart();
   if (!src.startsWith("@")) return null;
   const stripped = src.slice(1).trimStart();
-  const firstSpace = stripped.indexOf(" ");
-  const firstToken = (firstSpace === -1 ? stripped : stripped.slice(0, firstSpace)).toLowerCase();
-  if (!BACKEND_ALIAS.has(firstToken)) return null;
-  if (firstToken === "embedded") return "local";
-  if (firstToken === "sglang") return "xllm";
-  if (firstToken === "cloud") return "gemini";
-  return firstToken as AiBackend;
+  const { token } = splitFirstToken(stripped);
+  if (!BACKEND_ALIAS.has(token)) return null;
+  if (token === "embedded") return "local";
+  if (token === "sglang") return "xllm";
+  if (token === "cloud") return "gemini";
+  return token as AiBackend;
 }
