@@ -231,7 +231,7 @@ describe("AIBlockStream", () => {
 
     const lines = container.querySelectorAll("li");
     expect(lines).toHaveLength(1);
-    expect(lines[0]).toHaveTextContent("service --> db.rs");
+    expect(lines[0].textContent).toBe("service --> db.rs");
   });
 
   it("ID 내의 %%는 mermaid 주석으로 잘못 인식되지 않는다", () => {
