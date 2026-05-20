@@ -1901,8 +1901,8 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     let reason = "WHY DEFAULT";
     if (trimmed.startsWith("!!")) reason = "WHY PREFIX !!";
     else if (trimmed.startsWith(">>")) reason = "WHY PREFIX >>";
-    else if (trimmed.startsWith("?")) reason = "WHY PREFIX ?";
-    else if (trimmed.startsWith("#")) reason = "WHY PREFIX #";
+    else if (/^\?\s/.test(trimmed)) reason = "WHY PREFIX ?";
+    else if (/^#\s/.test(trimmed)) reason = "WHY PREFIX #";
     else if (trimmed.startsWith("@") && forcedBackend === null) reason = "WHY PREFIX @";
     else if (forcedBackend) reason = `WHY BACKEND @${forcedBackend.toUpperCase()}`;
     else if (route.type === "shell") reason = "WHY HEURISTIC CLI";

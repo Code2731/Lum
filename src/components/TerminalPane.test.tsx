@@ -188,6 +188,14 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(screen.getByText("AGENT @LOCAL")).toBeInTheDocument();
     expect(screen.getByText("BACKEND FORCED @LOCAL")).toBeInTheDocument();
     expect(screen.getByText("WHY BACKEND @LOCAL")).toBeInTheDocument();
+
+    fireEvent.change(input, { target: { value: "#로그 요약해줘" } });
+    expect(screen.getByText("AI AUTO")).toBeInTheDocument();
+    expect(screen.getByText("WHY HEURISTIC INTENT")).toBeInTheDocument();
+
+    fireEvent.change(input, { target: { value: "# 로그 요약해줘" } });
+    expect(screen.getByText("AI CMD #")).toBeInTheDocument();
+    expect(screen.getByText("WHY PREFIX #")).toBeInTheDocument();
   });
 
   it("툴벨트에 backend 단축키 안내 문구가 노출된다", () => {
