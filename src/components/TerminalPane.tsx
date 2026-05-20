@@ -1274,8 +1274,8 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     raw
       .replace(/^(\s*)!!\s?/, "$1")
       .replace(/^(\s*)>>\s?/, "$1")
-      .replace(/^(\s*)\?\s?/, "$1")
-      .replace(/^(\s*)#\s?/, "$1")
+      .replace(/^(\s*)\?\s+/, "$1")
+      .replace(/^(\s*)#\s+/, "$1")
       .replace(/^(\s*)!\s?/, "$1")
   ), []);
   const clearForceAiPrefix = useCallback((raw: string) => {
@@ -1291,8 +1291,8 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     const isHeavy = /^\s*!!\s?/.test(current);
     const isShell = /^\s*!(?!\!)/.test(current);
     const isAgent = /^\s*>>\s?/.test(current);
-    const isExplain = /^\s*\?\s?/.test(current);
-    const isAiCmd = /^\s*#\s?/.test(current);
+    const isExplain = /^\s*\?\s+/.test(current);
+    const isAiCmd = /^\s*#\s+/.test(current);
     const body = clearQuickModePrefix(current);
     const bodyAfterLeading = body.slice(leading.length);
     let next = current;
@@ -1433,8 +1433,8 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
   const quickModeShellActive = /^\s*!(?!\!)/.test(inputBuffer);
   const quickModeHeavyActive = /^\s*!!\s?/.test(inputBuffer);
   const quickModeAgentActive = /^\s*>>\s?/.test(inputBuffer);
-  const quickModeExplainActive = /^\s*\?\s?/.test(inputBuffer);
-  const quickModeAiCmdActive = /^\s*#\s?/.test(inputBuffer);
+  const quickModeExplainActive = /^\s*\?\s+/.test(inputBuffer);
+  const quickModeAiCmdActive = /^\s*#\s+/.test(inputBuffer);
   const quickModeForceAiActive = hasForceAiPrefix(inputBuffer);
   const canNormalizeToPlain = toPlainInput(inputBuffer) !== inputBuffer;
   const canTrimInput = inputBuffer !== inputBuffer.trim();

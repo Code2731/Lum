@@ -1704,6 +1704,19 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(screen.getByRole("button", { name: "quick-mode-heavy" })).toHaveAttribute("aria-pressed", "false");
   });
 
+  it("공백 없는 #/? 입력은 quick mode 활성으로 취급하지 않는다", () => {
+    const { container } = render(<TerminalPane id="tab-1" />);
+    const input = container.querySelector("input")!;
+    const explainBtn = screen.getByRole("button", { name: "quick-mode-explain" });
+    const aiCmdBtn = screen.getByRole("button", { name: "quick-mode-ai-cmd" });
+
+    fireEvent.change(input, { target: { value: "#로그 요약해줘" } });
+    expect(aiCmdBtn).toHaveAttribute("aria-pressed", "false");
+
+    fireEvent.change(input, { target: { value: "?로그 요약해줘" } });
+    expect(explainBtn).toHaveAttribute("aria-pressed", "false");
+  });
+
   it("선행 공백 + @ 강제 AI 입력도 force-ai 토글로 정상 해제된다", () => {
     const { container } = render(<TerminalPane id="tab-1" />);
     const input = container.querySelector("input")!;
