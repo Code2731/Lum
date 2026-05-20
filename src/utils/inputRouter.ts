@@ -204,6 +204,7 @@ export function routeInput(raw: string): Route {
   // 2. override: `!` → 강제 shell, `@` → 강제 AI / `@<backend>` → 백엔드 강제
   if (trimmed.startsWith("!")) {
     const stripped = trimmed.slice(1).trimStart();
+    if (!stripped) return { type: "empty" };
     return { type: "shell", command: stripped };
   }
   if (trimmed.startsWith("@")) {
