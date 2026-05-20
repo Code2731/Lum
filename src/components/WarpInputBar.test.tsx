@@ -77,6 +77,14 @@ describe("WarpInputBar — dumb input, 라우팅은 상위에서", () => {
     expect(input).toHaveValue("@local ");
   });
 
+  it("선행 공백 + @backend 단독 입력도 실행하지 않고 canonical prefix로 정규화", () => {
+    const { input, onSubmit } = setup();
+    fireEvent.change(input, { target: { value: "   @embedded" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+    expect(onSubmit).not.toHaveBeenCalled();
+    expect(input).toHaveValue("@local ");
+  });
+
   it("@sglang 단독 입력 + Enter는 @xllm으로 정규화", () => {
     const { input, onSubmit } = setup();
     fireEvent.change(input, { target: { value: "@sglang" } });

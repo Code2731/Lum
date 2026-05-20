@@ -201,7 +201,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
         // @backend 단독 입력은 실행하지 않고 "입력 준비 상태"를 유지.
         // alias(@embedded/@cloud)는 canonical(@local/@gemini)로 정규화.
         const backend = detectBackendPrefixFromInput(input);
-        if (backend && clearBackendPrefixFromInput(input) === "") {
+        if (backend && clearBackendPrefixFromInput(input).trim() === "") {
           const normalized = `@${backend} `;
           setInput(normalized);
           onChange?.(normalized);
