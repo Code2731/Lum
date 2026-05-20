@@ -1280,8 +1280,11 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
   ), []);
   const clearForceAiPrefix = useCallback((raw: string) => {
     if (detectBackendPrefixFromInput(raw)) return clearBackendPrefixFromInput(raw);
-    return raw.replace(/^@\s?/, "");
+    return raw.replace(/^(\s*)@\s?/, "$1");
   }, []);
+  const hasForceAiPrefix = useCallback((raw: string) => (
+    detectBackendPrefixFromInput(raw) === null && /^\s*@\s?/.test(raw)
+  ), []);
   const toggleQuickModePrefix = useCallback((mode: "shell" | "agent" | "explain" | "aiCmd" | "heavy") => {
     const current = warpInputRef.current?.getValue() ?? inputBuffer;
     const isHeavy = /^!!\s?/.test(current);
@@ -1307,13 +1310,12 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
   }, [clearQuickModePrefix, inputBuffer]);
   const toggleForceAiPrefix = useCallback(() => {
     const current = warpInputRef.current?.getValue() ?? inputBuffer;
-    const hasBackend = detectBackendPrefixFromInput(current) !== null;
-    const isForceAi = !hasBackend && /^@\s?/.test(current);
+    const isForceAi = hasForceAiPrefix(current);
     const base = clearForceAiPrefix(clearQuickModePrefix(current));
     const next = isForceAi ? base : `@${base}`;
     warpInputRef.current?.setValue(next);
     warpInputRef.current?.focus();
-  }, [clearForceAiPrefix, clearQuickModePrefix, inputBuffer]);
+  }, [clearForceAiPrefix, clearQuickModePrefix, hasForceAiPrefix, inputBuffer]);
   const toPlainInput = useCallback((raw: string) => {
     let next = raw;
     for (let i = 0; i < 3; i += 1) {
@@ -1429,8 +1431,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
   const quickModeAgentActive = /^>>\s?/.test(inputBuffer);
   const quickModeExplainActive = /^\?\s?/.test(inputBuffer);
   const quickModeAiCmdActive = /^#\s?/.test(inputBuffer);
-  const quickModeForceAiActive =
-    detectBackendPrefixFromInput(inputBuffer) === null && /^@\s?/.test(inputBuffer);
+  const quickModeForceAiActive = hasForceAiPrefix(inputBuffer);
   const canNormalizeToPlain = toPlainInput(inputBuffer) !== inputBuffer;
   const canTrimInput = inputBuffer !== inputBuffer.trim();
   const canSquashInputSpaces = /\s{2,}/.test(inputBuffer);
