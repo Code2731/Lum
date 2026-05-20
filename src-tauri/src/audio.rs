@@ -329,10 +329,7 @@ async fn stop_voice_recording_inner() -> Result<String, String> {
         state.started_ms
     };
     set_voice_state(false, 0)?;
-    let mut attempted_stop_hook = false;
-
     if let Some(hook) = resolve_voice_hook("LUM_VOICE_STOP_CMD", "stop") {
-        attempted_stop_hook = true;
         let out = run_voice_hook_capture(
             &hook,
             parse_voice_timeout_ms(
@@ -360,10 +357,6 @@ async fn stop_voice_recording_inner() -> Result<String, String> {
     let path = transcript_file_path();
     if let Some(t) = wait_transcript_file(&path, started_ms, voice_transcript_wait_ms()).await {
         return Ok(t);
-    }
-
-    if attempted_stop_hook {
-        let _ = set_voice_state(true, started_ms);
     }
 
     Err(voice_error(
@@ -757,6 +750,34 @@ mod tests {
             voice_recording_status().ok(),
             Some(true),
             "stop 훅 실패+폴백없음이면 사용자가 재시도할 수 있게 recording=true로 복구"
+        );
+
+        std::env::remove_var("LUM_VOICE_STOP_CMD");
+        reset_state();
+    }
+
+    #[tokio::test]
+    async fn stop_hook_성공_하지만_transcript_없으면_녹음종료_유지() {
+        let _g = AUDIO_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        reset_state();
+        std::env::set_var("LUM_VOICE_STOP_CMD", "exit 0");
+
+        if let Ok(mut s) = voice_state_lock().lock() {
+            s.recording = true;
+            s.started_ms = now_ms();
+        }
+        let result = stop_voice_recording_inner().await;
+        assert!(result.is_err());
+        assert!(
+            result
+                .unwrap_err()
+                .contains("LUM_VOICE_ERROR::TRANSCRIPT_NOT_FOUND::"),
+            "transcript missing 에러 코드가 포함되어야 함"
+        );
+        assert_eq!(
+            voice_recording_status().ok(),
+            Some(false),
+            "stop 훅 성공 후 transcript가 없어도 녹음은 종료 상태여야 함"
         );
 
         std::env::remove_var("LUM_VOICE_STOP_CMD");
