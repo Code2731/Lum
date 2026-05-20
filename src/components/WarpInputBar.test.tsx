@@ -69,6 +69,21 @@ describe("WarpInputBar — dumb input, 라우팅은 상위에서", () => {
     expect(input).toHaveValue("");
   });
 
+  it("빈 입력 Enter는 onSubmit을 호출하지 않는다", () => {
+    const { input, onSubmit } = setup();
+    fireEvent.keyDown(input, { key: "Enter" });
+    expect(onSubmit).not.toHaveBeenCalled();
+    expect(input).toHaveValue("");
+  });
+
+  it("공백만 입력된 Enter도 onSubmit을 호출하지 않는다", () => {
+    const { input, onSubmit } = setup();
+    fireEvent.change(input, { target: { value: "   " } });
+    fireEvent.keyDown(input, { key: "Enter" });
+    expect(onSubmit).not.toHaveBeenCalled();
+    expect(input).toHaveValue("");
+  });
+
   it("@backend 단독 입력 + Enter는 실행하지 않고 입력을 유지", () => {
     const { input, onSubmit } = setup();
     fireEvent.change(input, { target: { value: "@local" } });

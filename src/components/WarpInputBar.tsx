@@ -204,11 +204,15 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
         e.preventDefault();
         // @backend 단독 입력은 실행하지 않고 "입력 준비 상태"를 유지.
         // alias(@embedded/@cloud)는 canonical(@local/@gemini)로 정규화.
-        const backend = detectBackendPrefixFromInput(input);
-        if (backend && clearBackendPrefixFromInput(input).trim() === "") {
-          const normalized = `@${backend} `;
+        if (activeBackend && isBackendOnly) {
+          const normalized = `@${activeBackend} `;
           setInput(normalized);
           onChange?.(normalized);
+          return;
+        }
+        if (isVisuallyEmpty) {
+          setInput("");
+          onChange?.("");
           return;
         }
         const trimmed = input.trim();
@@ -218,8 +222,8 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
         }
         onSubmit(input);
         // @backend 질의/태스크 실행 후에는 같은 backend prefix를 유지해 연속 작업 속도를 높인다.
-        if (backend) {
-          const keep = `@${backend} `;
+        if (activeBackend) {
+          const keep = `@${activeBackend} `;
           setInput(keep);
           onChange?.(keep);
         } else {
