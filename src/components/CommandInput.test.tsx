@@ -102,6 +102,20 @@ describe("CommandInput Component", () => {
     expect(input).toHaveValue(""); // 제출 후 초기화
   });
 
+  it("IME 조합 중 Enter는 제출을 트리거하지 않아야 함", () => {
+    render(<CommandInput {...defaultProps} />);
+    const input = screen.getByTestId("mock-editor");
+
+    fireEvent.change(input, { target: { value: "안녕" } });
+    fireEvent.compositionStart(input);
+    fireEvent.keyDown(input, { key: "Enter", code: "Enter" });
+    expect(mockSubmit).not.toHaveBeenCalled();
+
+    fireEvent.compositionEnd(input);
+    fireEvent.keyDown(input, { key: "Enter", code: "Enter" });
+    expect(mockSubmit).toHaveBeenCalledWith("안녕", "shell");
+  });
+
   it("AI 명령어 입력 시 슬래시(/)가 제거된 상태로 제출되어야 함", () => {
     render(<CommandInput {...defaultProps} />);
     const input = screen.getByTestId("mock-editor");

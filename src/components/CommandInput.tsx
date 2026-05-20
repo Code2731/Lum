@@ -73,6 +73,10 @@ const CommandInput = ({
   };
 
   const onKeyDown = async (e: React.KeyboardEvent) => {
+    if (isComposing || e.nativeEvent.isComposing) {
+      return;
+    }
+
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       submit();
