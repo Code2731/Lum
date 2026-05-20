@@ -27,6 +27,7 @@ export function useVoiceInput({
   const [voiceBusy, setVoiceBusy] = useState(false);
   const [voiceError, setVoiceError] = useState<string | null>(null);
   const onTranscriptRef = useRef(onTranscript);
+  const isRecordingRef = useRef(false);
   const lastTranscriptRef = useRef<{ text: string; ts: number } | null>(null);
   const awaitingStopEventRef = useRef(false);
   const stopEventReceivedRef = useRef(false);
@@ -35,6 +36,10 @@ export function useVoiceInput({
   useEffect(() => {
     onTranscriptRef.current = onTranscript;
   }, [onTranscript]);
+
+  useEffect(() => {
+    isRecordingRef.current = isRecording;
+  }, [isRecording]);
 
   const emitTranscript = useCallback((raw: string) => {
     const text = raw.trim();
@@ -57,6 +62,11 @@ export function useVoiceInput({
     let unlistenState: (() => void) | null = null;
 
     listen<string>("voice_transcript", (event) => {
+      // 이전 세션의 늦은 transcript 이벤트가 새 녹음 세션을 깨지 않도록 차단.
+      // 정상 stop 흐름에서는 awaitingStopEvent=true 상태에서만 transcript를 처리한다.
+      if (!awaitingStopEventRef.current && isRecordingRef.current) {
+        return;
+      }
       const payload = (event.payload ?? "").trim();
       const fallbackGuard = stopFallbackGuardRef.current;
       if (fallbackGuard) {

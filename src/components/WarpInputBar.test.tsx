@@ -457,6 +457,42 @@ describe("WarpInputBar — dumb input, 라우팅은 상위에서", () => {
     expect(sameCalls).toHaveLength(1);
   });
 
+  it("새 녹음 세션 시작 후 이전 세션의 지연 transcript 이벤트는 무시", async () => {
+    invokeMock.mockImplementation(async (cmd: string) => {
+      if (cmd === "start_voice_recording") return;
+      if (cmd === "stop_voice_recording") return "old transcript";
+      if (cmd === "voice_recording_status") return false;
+      return;
+    });
+    const { getByLabelText, onChange } = setup();
+
+    // 세션 A: stop fallback으로 old transcript 1회 주입
+    await act(async () => {
+      fireEvent.click(getByLabelText("음성 녹음 시작"));
+    });
+    await act(async () => {
+      fireEvent.click(getByLabelText("음성 녹음 중지"));
+      await new Promise((resolve) => setTimeout(resolve, 40));
+    });
+
+    // 세션 B 시작
+    await act(async () => {
+      fireEvent.click(getByLabelText("음성 녹음 시작"));
+    });
+    expect(getByLabelText("음성 녹음 중지")).toBeInTheDocument();
+
+    // 세션 A의 늦은 이벤트 도착 가정
+    await act(async () => {
+      const cb = voiceListeners[voiceListeners.length - 1];
+      cb?.({ payload: "old transcript" });
+    });
+
+    // 새 세션 유지 + 추가 주입 없음
+    expect(getByLabelText("음성 녹음 중지")).toBeInTheDocument();
+    const sameCalls = onChange.mock.calls.filter(([v]) => v === "old transcript");
+    expect(sameCalls).toHaveLength(1);
+  });
+
   it("마이크 시작 실패 시 오류 배지 표시", async () => {
     invokeMock.mockImplementation(async (cmd: string) => {
       if (cmd === "start_voice_recording") throw new Error("mic permission denied");
