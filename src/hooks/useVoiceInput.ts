@@ -71,8 +71,9 @@ export function useVoiceInput({
 
     let unlistenTranscript: (() => void) | null = null;
     let unlistenState: (() => void) | null = null;
+    let disposed = false;
 
-    listen<string>("voice_transcript", (event) => {
+    const transcriptPromise = listen<string>("voice_transcript", (event) => {
       if (!mountedRef.current) return;
       // 이전 세션의 늦은 transcript 이벤트가 새 녹음 세션을 깨지 않도록 차단.
       // 정상 stop 흐름에서는 awaitingStopEvent=true 상태에서만 transcript를 처리한다.
@@ -102,24 +103,35 @@ export function useVoiceInput({
       setVoiceError(null);
     })
       .then((off) => {
+        if (disposed) {
+          off();
+          return;
+        }
         unlistenTranscript = off;
       })
       .catch(() => {});
 
-    listen<boolean>("voice_recording_state", (event) => {
+    const statePromise = listen<boolean>("voice_recording_state", (event) => {
       const on = Boolean(event.payload);
       if (!mountedRef.current) return;
       setIsRecording(on);
       if (on) setVoiceError(null);
     })
       .then((off) => {
+        if (disposed) {
+          off();
+          return;
+        }
         unlistenState = off;
       })
       .catch(() => {});
 
     return () => {
+      disposed = true;
       unlistenTranscript?.();
       unlistenState?.();
+      void transcriptPromise;
+      void statePromise;
     };
   }, [enabled, emitTranscript]);
 

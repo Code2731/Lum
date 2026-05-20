@@ -18,7 +18,12 @@ vi.mock("@tauri-apps/api/event", () => ({
     if (event === "voice_recording_state") {
       voiceStateListeners.push(cb as (event: { payload: boolean }) => void);
     }
-    return () => {};
+    return () => {
+      const idx = voiceListeners.indexOf(cb as (event: { payload: string }) => void);
+      if (idx >= 0) voiceListeners.splice(idx, 1);
+      const sidx = voiceStateListeners.indexOf(cb as (event: { payload: boolean }) => void);
+      if (sidx >= 0) voiceStateListeners.splice(sidx, 1);
+    };
   }),
 }));
 
@@ -115,6 +120,17 @@ describe("CommandInput Component", () => {
       cb?.({ payload: "npm test" });
     });
     expect(input).toHaveValue("npm test");
+  });
+
+  it("unmount 이후 voice_transcript 이벤트는 무시되어야 함", async () => {
+    const { unmount } = render(<CommandInput {...defaultProps} />);
+    const before = voiceListeners.length;
+    expect(before).toBeGreaterThan(0);
+    unmount();
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(voiceListeners.length).toBeLessThan(before);
   });
 
   it("마운트 시 voice_recording_status를 조회해야 함", () => {
