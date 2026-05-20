@@ -613,6 +613,19 @@ describe("WarpInputBar — dumb input, 라우팅은 상위에서", () => {
     consoleErrorSpy.mockRestore();
   });
 
+  it("unmount 이후 voice_transcript 이벤트는 입력 주입을 발생시키지 않음", async () => {
+    const { onChange, unmount } = setup();
+    const beforeCalls = onChange.mock.calls.length;
+    unmount();
+
+    await act(async () => {
+      const cb = voiceListeners[voiceListeners.length - 1];
+      cb?.({ payload: "should not inject" });
+    });
+
+    expect(onChange.mock.calls.length).toBe(beforeCalls);
+  });
+
   it("voice_transcript 이벤트 수신 시 입력창에 주입", async () => {
     const { input, onChange } = setup();
     await act(async () => {

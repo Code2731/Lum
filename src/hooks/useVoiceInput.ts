@@ -73,6 +73,7 @@ export function useVoiceInput({
     let unlistenState: (() => void) | null = null;
 
     listen<string>("voice_transcript", (event) => {
+      if (!mountedRef.current) return;
       // 이전 세션의 늦은 transcript 이벤트가 새 녹음 세션을 깨지 않도록 차단.
       // 정상 stop 흐름에서는 awaitingStopEvent=true 상태에서만 transcript를 처리한다.
       if (!awaitingStopEventRef.current && isRecordingRef.current) {
@@ -97,7 +98,6 @@ export function useVoiceInput({
         stopEventReceivedRef.current = true;
       }
       emitTranscript(payload);
-      if (!mountedRef.current) return;
       setIsRecording(false);
       setVoiceError(null);
     })
