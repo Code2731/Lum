@@ -578,6 +578,41 @@ describe("WarpInputBar — dumb input, 라우팅은 상위에서", () => {
     expect(invokeMock).toHaveBeenCalledWith("voice_recording_status", undefined);
   });
 
+  it("중지 처리 대기 중 unmount 되어도 비동기 정리에서 예외가 없어야 함", async () => {
+    let resolveStop: ((value: string) => void) | null = null;
+    invokeMock.mockImplementation((cmd: string) => {
+      if (cmd === "start_voice_recording") return Promise.resolve(undefined);
+      if (cmd === "stop_voice_recording") {
+        return new Promise<string>((resolve) => {
+          resolveStop = resolve;
+        });
+      }
+      if (cmd === "voice_recording_status") return Promise.resolve(false);
+      return Promise.resolve(undefined);
+    });
+    const consoleErrorSpy = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    const { getByLabelText, unmount } = setup();
+
+    await act(async () => {
+      fireEvent.click(getByLabelText("음성 녹음 시작"));
+    });
+    await act(async () => {
+      fireEvent.click(getByLabelText("음성 녹음 중지"));
+    });
+
+    unmount();
+    await act(async () => {
+      resolveStop?.("done");
+      await Promise.resolve();
+      await new Promise((resolve) => setTimeout(resolve, 40));
+    });
+
+    expect(consoleErrorSpy).not.toHaveBeenCalled();
+    consoleErrorSpy.mockRestore();
+  });
+
   it("voice_transcript 이벤트 수신 시 입력창에 주입", async () => {
     const { input, onChange } = setup();
     await act(async () => {

@@ -26,6 +26,7 @@ export function useVoiceInput({
   const [isRecording, setIsRecording] = useState(false);
   const [voiceBusy, setVoiceBusy] = useState(false);
   const [voiceError, setVoiceError] = useState<string | null>(null);
+  const mountedRef = useRef(true);
   const onTranscriptRef = useRef(onTranscript);
   const isRecordingRef = useRef(false);
   const lastTranscriptRef = useRef<{ text: string; ts: number } | null>(null);
@@ -36,6 +37,13 @@ export function useVoiceInput({
   useEffect(() => {
     onTranscriptRef.current = onTranscript;
   }, [onTranscript]);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     isRecordingRef.current = isRecording;
@@ -55,7 +63,10 @@ export function useVoiceInput({
     if (!enabled) return;
 
     invoke<boolean>("voice_recording_status")
-      .then((on) => setIsRecording(Boolean(on)))
+      .then((on) => {
+        if (!mountedRef.current) return;
+        setIsRecording(Boolean(on));
+      })
       .catch(() => {});
 
     let unlistenTranscript: (() => void) | null = null;
@@ -76,6 +87,7 @@ export function useVoiceInput({
         } else if (payload && payload === fallbackGuard.text) {
           // stop 반환값 fallback 뒤 지연 도착한 동일 이벤트는 중복 주입을 막는다.
           stopFallbackGuardRef.current = null;
+          if (!mountedRef.current) return;
           setIsRecording(false);
           setVoiceError(null);
           return;
@@ -85,6 +97,7 @@ export function useVoiceInput({
         stopEventReceivedRef.current = true;
       }
       emitTranscript(payload);
+      if (!mountedRef.current) return;
       setIsRecording(false);
       setVoiceError(null);
     })
@@ -95,6 +108,7 @@ export function useVoiceInput({
 
     listen<boolean>("voice_recording_state", (event) => {
       const on = Boolean(event.payload);
+      if (!mountedRef.current) return;
       setIsRecording(on);
       if (on) setVoiceError(null);
     })
@@ -129,9 +143,11 @@ export function useVoiceInput({
             stopFallbackGuardRef.current = { text, ts: Date.now() };
           }
         }
+        if (!mountedRef.current) return;
         setVoiceError(null);
       } else {
         await invoke("start_voice_recording");
+        if (!mountedRef.current) return;
         setIsRecording(true);
         setVoiceError(null);
         stopFallbackGuardRef.current = null;
@@ -141,14 +157,18 @@ export function useVoiceInput({
       // 실제 백엔드 녹음 상태와 어긋날 수 있어 재조회로 동기화.
       try {
         const on = await invoke<boolean>("voice_recording_status");
+        if (!mountedRef.current) return;
         setIsRecording(Boolean(on));
       } catch {
+        if (!mountedRef.current) return;
         setIsRecording(false);
       }
+      if (!mountedRef.current) return;
       setVoiceError(parseVoiceError(e));
     } finally {
       awaitingStopEventRef.current = false;
       stopEventReceivedRef.current = false;
+      if (!mountedRef.current) return;
       setVoiceBusy(false);
     }
   }, [emitTranscript, enabled, isRecording, voiceBusy]);
