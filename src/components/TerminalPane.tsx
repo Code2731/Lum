@@ -1041,7 +1041,11 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
 
     const mentionMatch = /(?:^|\s)@([^\s@]*)$/.exec(buf);
     const isForcePrefix = buf.trimStart().startsWith("@");
-    const startsWithMention = mentionMatch?.index === 0;
+    const leadingWs = buf.length - buf.trimStart().length;
+    const mentionTokenStart = mentionMatch
+      ? mentionMatch.index + (mentionMatch[0].startsWith(" ") ? 1 : 0)
+      : -1;
+    const startsWithMention = mentionTokenStart === leadingWs;
     const isForceMentionOpen = isForcePrefix && startsWithMention && forceMentionAttachRef.current;
     if (mentionMatch && (!isForcePrefix || !startsWithMention || isForceMentionOpen)) {
       setMentionQuery((mentionMatch[1] ?? "").toLowerCase());

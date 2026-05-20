@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, fireEvent, waitFor, screen } from "@testing-library/react";
+import { render, fireEvent, waitFor, screen, act } from "@testing-library/react";
 
 const invokeMock = vi.fn();
 
@@ -408,6 +408,40 @@ describe("TerminalPane — 입력 라우팅", () => {
     fireEvent.click(itemButton);
 
     expect(input).toHaveValue("@README.md ");
+  });
+
+  it("선행 공백 + @backend 입력은 멘션 패널을 열지 않는다", async () => {
+    invokeMock.mockImplementation((cmd: string, args?: { path?: string }) => {
+      if (cmd === "load_app_config") {
+        return Promise.resolve({
+          ui_show_input_toolbelt_tip: true,
+          ui_show_advanced_input_tools: true,
+          ui_show_backend_quick_tools: true,
+        });
+      }
+      if (cmd === "spawn_pty") return Promise.resolve();
+      if (cmd === "write_to_pty") return Promise.resolve();
+      if (cmd === "resize_pty") return Promise.resolve();
+      if (cmd === "list_directory" && args?.path === "/repo") {
+        return Promise.resolve([
+          { name: "README.md", path: "/repo/README.md", is_dir: false, size: 512 },
+        ]);
+      }
+      return Promise.resolve();
+    });
+
+    const { container } = render(<TerminalPane id="tab-1" cwd="/repo" />);
+    const input = container.querySelector("input")!;
+    await act(async () => {
+      fireEvent.change(input, { target: { value: "   @local" } });
+      await Promise.resolve();
+    });
+
+    const listCalls = invokeMock.mock.calls.filter(
+      ([cmd, args]) => cmd === "list_directory" && (args as { path?: string } | undefined)?.path === "/repo",
+    );
+    expect(listCalls).toHaveLength(0);
+    expect(screen.queryByText(/컨텍스트 첨부/)).not.toBeInTheDocument();
   });
 
   it("멘션 패널에서 Home/End로 항목 선택 포인트를 이동한다", async () => {
