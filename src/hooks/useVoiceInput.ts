@@ -27,6 +27,7 @@ export function useVoiceInput({
   const [voiceBusy, setVoiceBusy] = useState(false);
   const [voiceError, setVoiceError] = useState<string | null>(null);
   const mountedRef = useRef(true);
+  const voiceBusyRef = useRef(false);
   const onTranscriptRef = useRef(onTranscript);
   const isRecordingRef = useRef(false);
   const lastTranscriptRef = useRef<{ text: string; ts: number } | null>(null);
@@ -136,7 +137,8 @@ export function useVoiceInput({
   }, [enabled, emitTranscript]);
 
   const handleMicToggle = useCallback(async () => {
-    if (!enabled || voiceBusy) return;
+    if (!enabled || voiceBusyRef.current) return;
+    voiceBusyRef.current = true;
     setVoiceBusy(true);
     try {
       if (isRecording) {
@@ -180,10 +182,11 @@ export function useVoiceInput({
     } finally {
       awaitingStopEventRef.current = false;
       stopEventReceivedRef.current = false;
+      voiceBusyRef.current = false;
       if (!mountedRef.current) return;
       setVoiceBusy(false);
     }
-  }, [emitTranscript, enabled, isRecording, voiceBusy]);
+  }, [emitTranscript, enabled, isRecording]);
 
   return {
     isRecording,

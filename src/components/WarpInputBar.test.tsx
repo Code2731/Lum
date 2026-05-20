@@ -439,6 +439,34 @@ describe("WarpInputBar — dumb input, 라우팅은 상위에서", () => {
     });
   });
 
+  it("같은 프레임 연속 클릭에서도 마이크 시작은 1회만 호출", async () => {
+    let resolveStart: (() => void) | null = null;
+    invokeMock.mockImplementation((cmd: string) => {
+      if (cmd === "start_voice_recording") {
+        return new Promise<void>((resolve) => {
+          resolveStart = resolve;
+        });
+      }
+      return Promise.resolve(undefined);
+    });
+    const { getByLabelText } = setup();
+
+    await act(async () => {
+      const startBtn = getByLabelText("음성 녹음 시작");
+      fireEvent.click(startBtn);
+      fireEvent.click(startBtn);
+      await Promise.resolve();
+    });
+
+    const startCalls = invokeMock.mock.calls.filter(([cmd]) => cmd === "start_voice_recording");
+    expect(startCalls).toHaveLength(1);
+
+    await act(async () => {
+      resolveStart?.();
+      await Promise.resolve();
+    });
+  });
+
   it("stop 반환값과 voice_transcript 이벤트가 동시에 와도 중복 주입하지 않음", async () => {
     invokeMock.mockImplementation(async (cmd: string) => {
       if (cmd === "start_voice_recording") return;
