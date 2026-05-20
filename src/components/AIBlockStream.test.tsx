@@ -337,6 +337,32 @@ describe("AIBlockStream", () => {
     expect(lines[1]).toHaveTextContent('"cli" --- "backend" (calls)');
   });
 
+  it("Mermaid 희소 화살표(<-.->, <==)도 텍스트로 보존한다", () => {
+    const mermaidMessage = [
+      "query_graph 결과:",
+      "```mermaid",
+      "flowchart LR",
+      "\"engine\" <-.-> \"frontend\"",
+      "\"frontend\" <== \"backend\"",
+      "```",
+    ].join("\n");
+
+    const { container } = render(
+      <AIBlockStream
+        messages={[msg("assistant", mermaidMessage)]}
+        streaming={false}
+        error={null}
+        onClear={vi.fn()}
+        onExecute={vi.fn()}
+      />,
+    );
+
+    const lines = container.querySelectorAll("li");
+    expect(lines).toHaveLength(2);
+    expect(lines[0]).toHaveTextContent('"engine" <-.-> "frontend"');
+    expect(lines[1]).toHaveTextContent('"frontend" <== "backend"');
+  });
+
   it("노드명에 %%가 있어도 주석으로 제거하지 않는다", () => {
     const mermaidMessage = [
       "query_graph 결과:",
