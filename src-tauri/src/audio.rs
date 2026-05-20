@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 use std::sync::{Mutex, OnceLock};
 use tauri::Emitter;
 use tokio::process::Command as TokioCommand;
-use tokio::time::{Duration, timeout};
+use tokio::time::{timeout, Duration};
 
 #[derive(Debug, Default, Clone)]
 struct VoiceState {
@@ -46,6 +46,34 @@ fn transcript_file_path() -> PathBuf {
     platform::home_dir()
         .join(".lum_whisper")
         .join("last_transcript.txt")
+}
+
+fn default_voice_hook_script_path(kind: &str) -> PathBuf {
+    let ext = if cfg!(windows) { "cmd" } else { "sh" };
+    platform::home_dir()
+        .join(".lum_whisper")
+        .join(format!("{kind}.{ext}"))
+}
+
+#[derive(Debug, Clone)]
+enum VoiceHook {
+    Shell(String),
+    Script(PathBuf),
+}
+
+fn resolve_voice_hook(env_key: &str, kind: &str) -> Option<VoiceHook> {
+    if let Ok(cmd) = std::env::var(env_key) {
+        let trimmed = cmd.trim();
+        if !trimmed.is_empty() {
+            return Some(VoiceHook::Shell(trimmed.to_string()));
+        }
+    }
+    let script = default_voice_hook_script_path(kind);
+    if script.is_file() {
+        Some(VoiceHook::Script(script))
+    } else {
+        None
+    }
 }
 
 /// 전사 파일을 읽고, 유효한 텍스트면 반환 후 파일 삭제.
@@ -125,9 +153,56 @@ async fn run_shell_capture(cmd: &str, timeout_ms: u64) -> Result<String, String>
     Ok(String::from_utf8_lossy(&out.stdout).trim().to_string())
 }
 
+async fn run_script_capture(path: &Path, timeout_ms: u64) -> Result<String, String> {
+    let command = if cfg!(windows) {
+        TokioCommand::new("cmd").arg("/C").arg(path).output()
+    } else {
+        TokioCommand::new("sh").arg(path).output()
+    };
+
+    let out = if timeout_ms == 0 {
+        command
+            .await
+            .map_err(|e| voice_error("COMMAND_EXEC_FAILED", format!("스크립트 실행 실패: {e}")))?
+    } else {
+        timeout(Duration::from_millis(timeout_ms), command)
+            .await
+            .map_err(|_| {
+                voice_error(
+                    "COMMAND_TIMEOUT",
+                    format!(
+                        "스크립트 실행이 시간 제한을 초과했습니다 ({timeout_ms}ms): {}",
+                        path.display()
+                    ),
+                )
+            })?
+            .map_err(|e| voice_error("COMMAND_EXEC_FAILED", format!("스크립트 실행 실패: {e}")))?
+    };
+    if !out.status.success() {
+        let stderr = String::from_utf8_lossy(&out.stderr).trim().to_string();
+        return Err(if stderr.is_empty() {
+            voice_error(
+                "COMMAND_EXIT_NON_ZERO",
+                format!("스크립트가 비정상 종료되었습니다: {}", path.display()),
+            )
+        } else {
+            voice_error("COMMAND_STDERR", format!("스크립트 실행 오류: {stderr}"))
+        });
+    }
+    Ok(String::from_utf8_lossy(&out.stdout).trim().to_string())
+}
+
+async fn run_voice_hook_capture(hook: &VoiceHook, timeout_ms: u64) -> Result<String, String> {
+    match hook {
+        VoiceHook::Shell(cmd) => run_shell_capture(cmd, timeout_ms).await,
+        VoiceHook::Script(path) => run_script_capture(path, timeout_ms).await,
+    }
+}
+
 /// 음성 입력 시작.
 /// 현재 구현은 상태 머신 + 외부 훅 오케스트레이션:
 /// - `LUM_VOICE_START_CMD`가 있으면 실행 (예: 외부 녹음 프로세스 시작)
+/// - 미설정 시 `~/.lum_whisper/start.(sh|cmd)`가 있으면 자동 실행
 /// - 내부적으로 recording=true 상태만 관리
 async fn start_voice_recording_inner() -> Result<(), String> {
     {
@@ -147,25 +222,22 @@ async fn start_voice_recording_inner() -> Result<(), String> {
     // 이전 세션의 잔여 전사 파일을 남기면 잘못된 텍스트가 재사용될 수 있어 정리.
     let _ = std::fs::remove_file(transcript_file_path());
 
-    if let Ok(cmd) = std::env::var("LUM_VOICE_START_CMD") {
-        let trimmed = cmd.trim();
-        if !trimmed.is_empty() {
-            let timeout_ms = parse_voice_timeout_ms(
-                "LUM_VOICE_START_CMD_TIMEOUT_MS",
-                DEFAULT_VOICE_START_CMD_TIMEOUT_MS,
-            );
-            if let Err(e) = run_shell_capture(trimmed, timeout_ms).await {
-                // 외부 훅 실패면 녹음 상태 롤백.
-                let mut state = voice_state_lock()
-                    .lock()
-                    .map_err(|_| voice_error("STATE_LOCK_POISONED", "voice state lock poisoned"))?;
-                state.recording = false;
-                state.started_ms = 0;
-                return Err(voice_error(
-                    "START_HOOK_FAILED",
-                    format!("음성 시작 훅 실패: {e}"),
-                ));
-            }
+    if let Some(hook) = resolve_voice_hook("LUM_VOICE_START_CMD", "start") {
+        let timeout_ms = parse_voice_timeout_ms(
+            "LUM_VOICE_START_CMD_TIMEOUT_MS",
+            DEFAULT_VOICE_START_CMD_TIMEOUT_MS,
+        );
+        if let Err(e) = run_voice_hook_capture(&hook, timeout_ms).await {
+            // 외부 훅 실패면 녹음 상태 롤백.
+            let mut state = voice_state_lock()
+                .lock()
+                .map_err(|_| voice_error("STATE_LOCK_POISONED", "voice state lock poisoned"))?;
+            state.recording = false;
+            state.started_ms = 0;
+            return Err(voice_error(
+                "START_HOOK_FAILED",
+                format!("음성 시작 훅 실패: {e}"),
+            ));
         }
     }
 
@@ -201,7 +273,8 @@ pub fn voice_recording_status() -> Result<bool, String> {
 /// 음성 입력 중지 + 텍스트 반환.
 /// 우선순위:
 /// 1) `LUM_VOICE_STOP_CMD` stdout (외부 STT 파이프라인)
-/// 2) `~/.lum_whisper/last_transcript.txt` 파일
+/// 2) `~/.lum_whisper/stop.(sh|cmd)` stdout
+/// 3) `~/.lum_whisper/last_transcript.txt` 파일
 /// 없으면 명확한 에러 반환.
 async fn stop_voice_recording_inner() -> Result<String, String> {
     let started_ms = {
@@ -220,27 +293,24 @@ async fn stop_voice_recording_inner() -> Result<String, String> {
         started_ms
     };
 
-    if let Ok(cmd) = std::env::var("LUM_VOICE_STOP_CMD") {
-        let trimmed = cmd.trim();
-        if !trimmed.is_empty() {
-            let out = run_shell_capture(
-                trimmed,
-                parse_voice_timeout_ms(
-                    "LUM_VOICE_STOP_CMD_TIMEOUT_MS",
-                    DEFAULT_VOICE_STOP_CMD_TIMEOUT_MS,
-                ),
-            )
-            .await;
-            match out {
-                Ok(out) if !out.is_empty() => return Ok(out),
-                Ok(_) => {}
-                Err(err) => {
-                    let path = transcript_file_path();
-                    if let Some(t) = read_transcript_file(&path, started_ms) {
-                        return Ok(t);
-                    }
-                    return Err(err);
+    if let Some(hook) = resolve_voice_hook("LUM_VOICE_STOP_CMD", "stop") {
+        let out = run_voice_hook_capture(
+            &hook,
+            parse_voice_timeout_ms(
+                "LUM_VOICE_STOP_CMD_TIMEOUT_MS",
+                DEFAULT_VOICE_STOP_CMD_TIMEOUT_MS,
+            ),
+        )
+        .await;
+        match out {
+            Ok(out) if !out.is_empty() => return Ok(out),
+            Ok(_) => {}
+            Err(err) => {
+                let path = transcript_file_path();
+                if let Some(t) = read_transcript_file(&path, started_ms) {
+                    return Ok(t);
                 }
+                return Err(err);
             }
         }
     }
@@ -252,7 +322,7 @@ async fn stop_voice_recording_inner() -> Result<String, String> {
 
     Err(voice_error(
         "TRANSCRIPT_NOT_FOUND",
-        "음성 인식 결과를 찾지 못했습니다. LUM_VOICE_STOP_CMD 또는 ~/.lum_whisper/last_transcript.txt를 설정하세요.",
+        "음성 인식 결과를 찾지 못했습니다. LUM_VOICE_STOP_CMD, ~/.lum_whisper/stop.(sh|cmd) 또는 ~/.lum_whisper/last_transcript.txt를 설정하세요.",
     ))
 }
 
@@ -281,6 +351,27 @@ mod tests {
         if let Ok(mut s) = voice_state_lock().lock() {
             s.recording = false;
             s.started_ms = 0;
+        }
+    }
+
+    fn with_temp_home(prefix: &str) -> (PathBuf, Option<String>) {
+        let tmp_home = std::env::temp_dir().join(format!(
+            "lum_voice_{}_{}_{}",
+            prefix,
+            std::process::id(),
+            now_ms()
+        ));
+        std::fs::create_dir_all(&tmp_home).unwrap();
+        let old_home = std::env::var("HOME").ok();
+        std::env::set_var("HOME", &tmp_home);
+        (tmp_home, old_home)
+    }
+
+    fn restore_home(old_home: Option<String>) {
+        if let Some(home) = old_home {
+            std::env::set_var("HOME", home);
+        } else {
+            std::env::remove_var("HOME");
         }
     }
 
@@ -419,11 +510,9 @@ mod tests {
 
         let result = start_voice_recording_inner().await;
         assert!(result.is_err());
-        assert!(
-            result
-                .unwrap_err()
-                .contains("LUM_VOICE_ERROR::START_HOOK_FAILED::")
-        );
+        assert!(result
+            .unwrap_err()
+            .contains("LUM_VOICE_ERROR::START_HOOK_FAILED::"));
         assert_eq!(voice_recording_status().ok(), Some(false));
 
         std::env::remove_var("LUM_VOICE_START_CMD");
@@ -520,5 +609,65 @@ mod tests {
                 .contains("LUM_VOICE_ERROR::TRANSCRIPT_NOT_FOUND::"),
             "transcript missing 에러 코드가 포함되어야 함"
         );
+    }
+
+    #[test]
+    fn resolve_voice_hook_env_우선() {
+        let _g = AUDIO_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        std::env::set_var("LUM_VOICE_START_CMD", "echo from_env");
+        let hook = resolve_voice_hook("LUM_VOICE_START_CMD", "start");
+        match hook {
+            Some(VoiceHook::Shell(cmd)) => assert_eq!(cmd, "echo from_env"),
+            _ => panic!("env hook should be selected first"),
+        }
+        std::env::remove_var("LUM_VOICE_START_CMD");
+    }
+
+    #[test]
+    fn resolve_voice_hook_기본_script_탐지() {
+        let _g = AUDIO_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        std::env::remove_var("LUM_VOICE_START_CMD");
+        let (_tmp_home, old_home) = with_temp_home("hook_script_detect");
+
+        let script_path = default_voice_hook_script_path("start");
+        if let Some(parent) = script_path.parent() {
+            std::fs::create_dir_all(parent).unwrap();
+        }
+        std::fs::write(&script_path, "echo start_ok").unwrap();
+
+        let hook = resolve_voice_hook("LUM_VOICE_START_CMD", "start");
+        match hook {
+            Some(VoiceHook::Script(path)) => assert_eq!(path, script_path),
+            _ => panic!("default script hook should be detected"),
+        }
+
+        let _ = std::fs::remove_file(script_path);
+        restore_home(old_home);
+    }
+
+    #[tokio::test]
+    async fn stop_default_script_출력_반환() {
+        let _g = AUDIO_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        reset_state();
+        std::env::remove_var("LUM_VOICE_STOP_CMD");
+        let (_tmp_home, old_home) = with_temp_home("stop_default_script");
+
+        let script_path = default_voice_hook_script_path("stop");
+        if let Some(parent) = script_path.parent() {
+            std::fs::create_dir_all(parent).unwrap();
+        }
+        std::fs::write(&script_path, "echo scripted transcript").unwrap();
+
+        if let Ok(mut s) = voice_state_lock().lock() {
+            s.recording = true;
+            s.started_ms = now_ms();
+        }
+
+        let result = stop_voice_recording_inner().await;
+        assert_eq!(result.ok(), Some("scripted transcript".to_string()));
+
+        let _ = std::fs::remove_file(script_path);
+        restore_home(old_home);
+        reset_state();
     }
 }
