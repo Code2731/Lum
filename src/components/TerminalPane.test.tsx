@@ -1466,7 +1466,7 @@ describe("TerminalPane — 입력 라우팅", () => {
 
     fireEvent.change(input, { target: { value: "@local " } });
     fireEvent.click(screen.getByRole("button", { name: "quick-input-swap" }));
-    expect(screen.getByRole("button", { name: "quick-input-recall" })).toHaveTextContent("RECALL @local");
+    expect(screen.getByRole("button", { name: "quick-input-recall" })).toHaveTextContent("RECALL");
     expect(screen.getByRole("button", { name: "quick-input-rerun" })).toHaveAttribute("disabled");
   });
 

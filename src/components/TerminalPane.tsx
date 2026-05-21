@@ -1474,7 +1474,9 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     mentionLoading;
   const canClearInputQuick = inputBuffer !== "" || hasClearableOverlay;
   const canResetAllQuick = inputBuffer !== "" || clearedInputStack.length > 0 || lastSubmittedInput !== "";
-  const lastSubmittedPreview = compactInputPreview(lastSubmittedInput);
+  const lastSubmittedPreview = compactInputPreview(
+    hasExecutableRecallRoute(lastSubmittedInput) ? lastSubmittedInput : "",
+  );
   const recallButtonLabel = lastSubmittedPreview ? `RECALL ${lastSubmittedPreview}` : "RECALL";
   const rerunButtonLabel = lastSubmittedPreview ? `RERUN ${lastSubmittedPreview}` : "RERUN";
   const historyButtonLabel = submittedInputHistory.length > 0 ? `HISTORY ${submittedInputHistory.length}` : "HISTORY";
