@@ -1582,9 +1582,9 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     return base ? `${last} ${base}` : last;
   }, []);
   const mergeSubmittedInputQuick = useCallback(() => {
-    if (!lastSubmittedInput) return;
+    if (normalizedLastSubmittedCandidate === "") return;
     const current = warpInputRef.current?.getValue() ?? inputBuffer;
-    const next = computeMergeRecallNext(current, lastSubmittedInput);
+    const next = computeMergeRecallNext(current, normalizedLastSubmittedCandidate);
     if (!next) {
       warpInputRef.current?.focus();
       return;
@@ -1593,11 +1593,11 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     warpInputRef.current?.setValue(next);
     warpInputRef.current?.focus();
     setInputBuffer(next);
-  }, [computeMergeRecallNext, inputBuffer, lastSubmittedInput, pushUndoSnapshot]);
+  }, [computeMergeRecallNext, inputBuffer, normalizedLastSubmittedCandidate, pushUndoSnapshot]);
   const prependSubmittedInputQuick = useCallback(() => {
-    if (!lastSubmittedInput) return;
+    if (normalizedLastSubmittedCandidate === "") return;
     const current = warpInputRef.current?.getValue() ?? inputBuffer;
-    const next = computePrependRecallNext(current, lastSubmittedInput);
+    const next = computePrependRecallNext(current, normalizedLastSubmittedCandidate);
     if (!next) {
       warpInputRef.current?.focus();
       return;
@@ -1606,9 +1606,13 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     warpInputRef.current?.setValue(next);
     warpInputRef.current?.focus();
     setInputBuffer(next);
-  }, [computePrependRecallNext, inputBuffer, lastSubmittedInput, pushUndoSnapshot]);
-  const canMergeRecall = !!lastSubmittedInput && computeMergeRecallNext(inputBuffer, lastSubmittedInput) !== null;
-  const canPrependRecall = !!lastSubmittedInput && computePrependRecallNext(inputBuffer, lastSubmittedInput) !== null;
+  }, [computePrependRecallNext, inputBuffer, normalizedLastSubmittedCandidate, pushUndoSnapshot]);
+  const canMergeRecall =
+    normalizedLastSubmittedCandidate !== "" &&
+    computeMergeRecallNext(inputBuffer, normalizedLastSubmittedCandidate) !== null;
+  const canPrependRecall =
+    normalizedLastSubmittedCandidate !== "" &&
+    computePrependRecallNext(inputBuffer, normalizedLastSubmittedCandidate) !== null;
   const actionPaletteActions = useMemo(() => ([
     {
       id: "history_open",

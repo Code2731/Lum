@@ -1435,6 +1435,24 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(screen.getByRole("button", { name: "quick-input-rerun" })).toHaveAttribute("disabled");
   });
 
+  it("SWAP으로 RECALL이 비실행 입력이 되면 MERGE/PREPEND도 비활성화된다", async () => {
+    const { container } = render(<TerminalPane id="tab-1" />);
+    const input = container.querySelector("input")!;
+
+    submitInput(container, "pwd");
+    await waitFor(() => {
+      expect(invokeMock).toHaveBeenCalledWith("write_to_pty", {
+        id: "tab-1",
+        data: "pwd\r",
+      });
+    });
+
+    fireEvent.change(input, { target: { value: "@local " } });
+    fireEvent.click(screen.getByRole("button", { name: "quick-input-swap" }));
+    expect(screen.getByRole("button", { name: "quick-input-merge-recall" })).toHaveAttribute("disabled");
+    expect(screen.getByRole("button", { name: "quick-input-prepend-recall" })).toHaveAttribute("disabled");
+  });
+
   it("RECALL/SWAP/SET RECALL은 no-op 상태에서 비활성화된다", async () => {
     const { container } = render(<TerminalPane id="tab-1" />);
     const input = container.querySelector("input")!;
