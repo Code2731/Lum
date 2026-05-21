@@ -119,6 +119,20 @@ describe("App (LUM 터미널)", () => {
     expect(screen.queryByPlaceholderText(/자연어로 검색/)).not.toBeInTheDocument();
   });
 
+  it("Ctrl+,는 터미널 테마 패널을 연다", async () => {
+    render(<App />);
+
+    fireEvent.keyDown(window, { key: ",", ctrlKey: true });
+    expect(await screen.findByText("터미널 테마 설정")).toBeInTheDocument();
+  });
+
+  it("Ctrl+Shift+<는 터미널 테마 단축키로 처리되지 않는다", () => {
+    render(<App />);
+
+    fireEvent.keyDown(window, { key: "<", ctrlKey: true, shiftKey: true, code: "Comma" });
+    expect(screen.queryByText("터미널 테마 설정")).not.toBeInTheDocument();
+  });
+
   it("Ctrl+Shift+T는 새 탭 단축키로 처리되지 않는다", () => {
     render(<App />);
     const beforeCount = screen.getAllByTestId(/^terminal-pane-/).length;

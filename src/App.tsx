@@ -1467,7 +1467,7 @@ const App: React.FC = () => {
       if (mod && e.shiftKey && key === "r") { e.preventDefault(); setShowDiffReview(true); }
       if (mod && e.shiftKey && key === "l") { e.preventDefault(); setShowScriptPanel(v => { if (!v) scriptLib.loadScripts(); return !v; }); }
       if (mod && e.shiftKey && key === "m") { e.preventDefault(); setShowSysmon(v => !v); }
-      if (mod && e.key === ",") { e.preventDefault(); setShowThemePanel(true); }
+      if (mod && !e.shiftKey && !e.altKey && e.key === ",") { e.preventDefault(); setShowThemePanel(true); }
       if (mod && !e.shiftKey && !e.altKey && key === "i") {
         e.preventDefault();
         if (showInspector) {
