@@ -1797,10 +1797,12 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
         return true;
       }
       if (lowered === "k") {
+        if (!canClearInputQuick) return false;
         clearInputQuick();
         return true;
       }
       if (lowered === "z") {
+        if (clearedInputStack.length === 0) return false;
         restoreInputQuick();
         return true;
       }
@@ -1810,6 +1812,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
         return true;
       }
       if (lowered === "l") {
+        if (!canCleanInput) return false;
         cleanInputQuick();
         return true;
       }
@@ -1834,10 +1837,12 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
         return true;
       }
       if (lowered === "x") {
+        if (!canResetAllQuick) return false;
         resetAllInputStateQuick();
         return true;
       }
       if (lowered === "d") {
+        if (clearedInputStack.length === 0) return false;
         forgetUndoStackQuick();
         return true;
       }
@@ -1852,22 +1857,27 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
         return true;
       }
       if (lowered === "b") {
+        if (!canRestorePrevBackendQuick) return false;
         restorePrevBackendQuickPrefix();
         return true;
       }
       if (lowered === "n") {
+        if (!canRestoreLastBackendQuick) return false;
         restoreLastBackendQuickPrefix();
         return true;
       }
       if (lowered === "g") {
+        if (!canNormalizeToPlain) return false;
         normalizeInputToPlain();
         return true;
       }
       if (lowered === "t") {
+        if (!canTrimInput) return false;
         trimInputQuick();
         return true;
       }
       if (lowered === "q") {
+        if (!canSquashInputSpaces) return false;
         squashInputSpacesQuick();
         return true;
       }
@@ -1908,15 +1918,23 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
   }, [
     applyBackendQuickPrefix,
     cleanInputQuick,
+    canCleanInput,
+    canClearInputQuick,
     canMergeRecall,
     canPrependRecall,
     canRecallSubmittedInput,
     canRerunSubmittedInput,
+    canResetAllQuick,
+    canRestoreLastBackendQuick,
+    canRestorePrevBackendQuick,
     canSetRecallFromCurrent,
+    canSquashInputSpaces,
     canSwapSubmittedInput,
+    canTrimInput,
     clearBackendQuickPrefix,
     clearInputHistoryMultiSelection,
     clearInputQuick,
+    clearedInputStack.length,
     cycleBackendQuickPrefix,
     forgetUndoStackQuick,
     forgetSubmittedInputQuick,
@@ -1928,6 +1946,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     restoreLastBackendQuickPrefix,
     restorePrevBackendQuickPrefix,
     handleInterrupt,
+    canNormalizeToPlain,
     normalizeInputToPlain,
     resetAllInputStateQuick,
     restoreInputQuick,

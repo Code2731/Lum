@@ -1723,6 +1723,8 @@ describe("TerminalPane — 입력 라우팅", () => {
     fireEvent.keyDown(input, { key: "D", ctrlKey: true, shiftKey: true });
     expect(screen.getByRole("button", { name: "quick-input-undo" })).toHaveTextContent("UNDO");
     expect(screen.getByRole("button", { name: "quick-input-forget-undo" })).toHaveAttribute("disabled");
+    const consumedNoopD = fireEvent.keyDown(input, { key: "D", ctrlKey: true, shiftKey: true });
+    expect(consumedNoopD).toBe(true);
 
     fireEvent.change(input, { target: { value: "다시 입력" } });
     expect(screen.getByRole("button", { name: "quick-input-reset-all" })).not.toHaveAttribute("disabled");
