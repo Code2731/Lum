@@ -1102,7 +1102,7 @@ const WarpListView: React.FC<Props> = ({
         }
         return;
       }
-      if (mod && e.key === "/") {
+      if (mod && !e.altKey && (e.key === "/" || e.code === "Slash")) {
         e.preventDefault();
         setShowShortcutHelp((prev) => !prev);
         return;
