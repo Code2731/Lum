@@ -1805,6 +1805,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
         return true;
       }
       if (lowered === "r") {
+        if (!canRecallSubmittedInput) return false;
         recallSubmittedInputQuick();
         return true;
       }
@@ -1813,18 +1814,22 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
         return true;
       }
       if (lowered === "m") {
+        if (!canMergeRecall) return false;
         mergeSubmittedInputQuick();
         return true;
       }
       if (lowered === "p") {
+        if (!canPrependRecall) return false;
         prependSubmittedInputQuick();
         return true;
       }
       if (lowered === "s") {
+        if (!canSetRecallFromCurrent) return false;
         setRecallFromCurrentQuick();
         return true;
       }
       if (lowered === "f") {
+        if (!lastSubmittedInput) return false;
         forgetSubmittedInputQuick();
         return true;
       }
@@ -1837,10 +1842,12 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
         return true;
       }
       if (lowered === "e") {
+        if (!canRerunSubmittedInput) return false;
         rerunSubmittedInputQuick();
         return true;
       }
       if (lowered === "w") {
+        if (!canSwapSubmittedInput) return false;
         swapWithSubmittedInputQuick();
         return true;
       }
@@ -1901,6 +1908,12 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
   }, [
     applyBackendQuickPrefix,
     cleanInputQuick,
+    canMergeRecall,
+    canPrependRecall,
+    canRecallSubmittedInput,
+    canRerunSubmittedInput,
+    canSetRecallFromCurrent,
+    canSwapSubmittedInput,
     clearBackendQuickPrefix,
     clearInputHistoryMultiSelection,
     clearInputQuick,
@@ -1923,6 +1936,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     shortcutHelpOpen,
     inputHistoryOpen,
     inputHistoryMultiSelected.length,
+    lastSubmittedInput,
     swapWithSubmittedInputQuick,
     toggleForceAiPrefix,
     toggleQuickModePrefix,

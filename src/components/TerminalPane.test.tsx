@@ -1488,9 +1488,31 @@ describe("TerminalPane — 입력 라우팅", () => {
     });
 
     fireEvent.change(input, { target: { value: "@local " } });
-    fireEvent.keyDown(input, { key: "W", ctrlKey: true, shiftKey: true });
+    const consumed = fireEvent.keyDown(input, { key: "W", ctrlKey: true, shiftKey: true });
+    expect(consumed).toBe(true);
     expect(screen.getByRole("button", { name: "quick-input-recall" })).toHaveTextContent("RECALL pwd");
     expect(input).toHaveValue("@local ");
+  });
+
+  it("RECALL 비활성 상태의 Cmd/Ctrl+Shift+R은 입력을 소비하지 않는다", async () => {
+    const { container } = render(<TerminalPane id="tab-1" />);
+    const input = container.querySelector("input")!;
+
+    submitInput(container, "ls -la");
+    await waitFor(() => {
+      expect(invokeMock).toHaveBeenCalledWith("write_to_pty", {
+        id: "tab-1",
+        data: "ls -la\r",
+      });
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "quick-input-recall" }));
+    expect(input).toHaveValue("ls -la");
+    expect(screen.getByRole("button", { name: "quick-input-recall" })).toHaveAttribute("disabled");
+
+    const consumed = fireEvent.keyDown(input, { key: "R", ctrlKey: true, shiftKey: true });
+    expect(consumed).toBe(true);
+    expect(input).toHaveValue("ls -la");
   });
 
   it("RECALL/SWAP/SET RECALL은 no-op 상태에서 비활성화된다", async () => {
