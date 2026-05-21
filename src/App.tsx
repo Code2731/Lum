@@ -1423,7 +1423,8 @@ const App: React.FC = () => {
   useEffect(() => {
     const captureHandler = (e: KeyboardEvent) => {
       if (isTextInputTarget(e.target)) return;
-      if (e.ctrlKey && e.key === "r" && viewModeRef.current === "terminal") {
+      const key = e.key.toLowerCase();
+      if (e.ctrlKey && key === "r" && viewModeRef.current === "terminal") {
         e.preventDefault();
         e.stopPropagation();
         setShowHistorySearch(true);
@@ -1434,11 +1435,12 @@ const App: React.FC = () => {
     const handler = (e: KeyboardEvent) => {
       if (isTextInputTarget(e.target)) return;
       const mod = e.metaKey || e.ctrlKey;
-      if (mod && !e.shiftKey && e.key === "k") {
+      const key = e.key.toLowerCase();
+      if (mod && !e.shiftKey && key === "k") {
         e.preventDefault();
         setShowPalette(v => !v);
       }
-      if (mod && !e.shiftKey && e.key === "b") {
+      if (mod && !e.shiftKey && key === "b") {
         e.preventDefault();
         setShowFileExplorer(v => {
           const next = !v;
@@ -1446,27 +1448,27 @@ const App: React.FC = () => {
           return next;
         });
       }
-      if (mod && e.shiftKey && e.key === "k") {
+      if (mod && e.shiftKey && key === "k") {
         e.preventDefault();
         setShowAiBar((v) => {
           if (!v) setTimeout(() => aiInputRef.current?.focus(), 50);
           return !v;
         });
       }
-      if (mod && e.key === "t") { e.preventDefault(); addTabWithReset(); }
-      if (mod && e.key === "w") {
+      if (mod && key === "t") { e.preventDefault(); addTabWithReset(); }
+      if (mod && key === "w") {
         e.preventDefault();
         closeTabWithReset(activeTabIdRef.current, { stopPropagation: () => {} } as React.MouseEvent);
       }
-      if (mod && e.shiftKey && e.key === "d") { e.preventDefault(); toggleSplit("h"); }
-      if (mod && e.shiftKey && e.key === "e") { e.preventDefault(); toggleSplit("v"); }
-      if (mod && e.shiftKey && e.key === "g") { e.preventDefault(); setShowCommitPanel(true); }
-      if (mod && e.shiftKey && e.key === "h") { e.preventDefault(); setShowSshModal(true); }
-      if (mod && e.shiftKey && e.key === "r") { e.preventDefault(); setShowDiffReview(true); }
-      if (mod && e.shiftKey && e.key === "l") { e.preventDefault(); setShowScriptPanel(v => { if (!v) scriptLib.loadScripts(); return !v; }); }
-      if (mod && e.shiftKey && e.key === "m") { e.preventDefault(); setShowSysmon(v => !v); }
+      if (mod && e.shiftKey && key === "d") { e.preventDefault(); toggleSplit("h"); }
+      if (mod && e.shiftKey && key === "e") { e.preventDefault(); toggleSplit("v"); }
+      if (mod && e.shiftKey && key === "g") { e.preventDefault(); setShowCommitPanel(true); }
+      if (mod && e.shiftKey && key === "h") { e.preventDefault(); setShowSshModal(true); }
+      if (mod && e.shiftKey && key === "r") { e.preventDefault(); setShowDiffReview(true); }
+      if (mod && e.shiftKey && key === "l") { e.preventDefault(); setShowScriptPanel(v => { if (!v) scriptLib.loadScripts(); return !v; }); }
+      if (mod && e.shiftKey && key === "m") { e.preventDefault(); setShowSysmon(v => !v); }
       if (mod && e.key === ",") { e.preventDefault(); setShowThemePanel(true); }
-      if (mod && !e.shiftKey && !e.altKey && (e.key === "i" || e.key === "I")) {
+      if (mod && !e.shiftKey && !e.altKey && key === "i") {
         e.preventDefault();
         if (showInspector) {
           closeInspector();
@@ -1474,11 +1476,11 @@ const App: React.FC = () => {
           openInspectorTab("summary");
         }
       }
-      if (mod && e.shiftKey && e.key === "q") { e.preventDefault(); setShowQuickBar(v => !v); }
+      if (mod && e.shiftKey && key === "q") { e.preventDefault(); setShowQuickBar(v => !v); }
       if (mod && e.shiftKey && e.key === "ArrowUp") { e.preventDefault(); navigateCommandBlock(-1); }
       if (mod && e.shiftKey && e.key === "ArrowDown") { e.preventDefault(); navigateCommandBlock(1); }
-      if (mod && e.shiftKey && (e.key === "f" || e.key === "F")) { e.preventDefault(); focusFailedBlock(); }
-      if (mod && e.shiftKey && (e.key === "s" || e.key === "o")) { e.preventDefault(); setShowWorkspace(true); loadWorkspaces(); }
+      if (mod && e.shiftKey && key === "f") { e.preventDefault(); focusFailedBlock(); }
+      if (mod && e.shiftKey && (key === "s" || key === "o")) { e.preventDefault(); setShowWorkspace(true); loadWorkspaces(); }
       // Cmd/Ctrl+1~9 — Quick Actions 단축키
       if (mod && !e.shiftKey && /^[1-9]$/.test(e.key)) {
         const n = Number(e.key);

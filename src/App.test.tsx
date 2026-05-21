@@ -88,6 +88,13 @@ describe("App (LUM 터미널)", () => {
     expect(screen.getByText("Esc 또는 Cmd/Ctrl+Shift+K 로 닫기")).toBeInTheDocument();
   });
 
+  it("Shift 조합에서 key가 대문자여도 AI 바 단축키가 동작한다", () => {
+    render(<App />);
+
+    fireEvent.keyDown(window, { key: "K", ctrlKey: true, shiftKey: true });
+    expect(screen.getByPlaceholderText("AI에게 질문하세요… (Enter 전송 · Esc 닫기)")).toBeInTheDocument();
+  });
+
   it("AI Chat 버튼은 제거됨 — AI는 WarpInputBar로 통합", () => {
     render(<App />);
     expect(screen.queryByLabelText("AI Chat (Cmd+Shift+A)")).toBeNull();
