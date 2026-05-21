@@ -1440,7 +1440,7 @@ const App: React.FC = () => {
         e.preventDefault();
         setShowPalette(v => !v);
       }
-      if (mod && !e.shiftKey && key === "b") {
+      if (mod && !e.shiftKey && !e.altKey && key === "b") {
         e.preventDefault();
         setShowFileExplorer(v => {
           const next = !v;
