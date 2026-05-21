@@ -874,6 +874,21 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(screen.getByRole("button", { name: "quick-input-recall" })).toHaveTextContent("RECALL ls -la");
   });
 
+  it("HISTORY DEL 후 선두 비실행 항목을 건너뛰고 RECALL 대상을 갱신한다", async () => {
+    localStorage.setItem("lum_input_submit_history", JSON.stringify(["@local ", "pwd", "ls -la"]));
+    render(<TerminalPane id="tab-1" />);
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "quick-input-recall" })).toHaveTextContent("RECALL pwd");
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "quick-input-history-open" }));
+    fireEvent.click(screen.getByRole("button", { name: "quick-input-history-remove-1" }));
+
+    expect(screen.getByRole("button", { name: "quick-input-recall" })).toHaveTextContent("RECALL ls -la");
+    expect(screen.getByRole("button", { name: "quick-input-rerun" })).not.toHaveAttribute("disabled");
+  });
+
   it("HISTORY 검색창에서 필터 후 Enter/Escape 키로 복원/닫기를 처리한다", async () => {
     const { container } = render(<TerminalPane id="tab-1" />);
     const input = container.querySelector("input")!;

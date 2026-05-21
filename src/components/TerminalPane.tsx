@@ -151,6 +151,17 @@ const compactInputPreview = (raw?: string): string => {
   return `${oneLine.slice(0, 16)}…`;
 };
 
+const hasExecutableRecallRoute = (raw: string): boolean => {
+  const normalized = raw.trim();
+  if (normalized === "") return false;
+  const route = routeInput(raw);
+  if (route.type === "empty" || route.type === "aiCmd" || route.type === "explain") return false;
+  if (route.type === "ai" && route.question === "") return false;
+  if (route.type === "agent" && route.task === "") return false;
+  if (route.type === "heavy" && route.prompt === "") return false;
+  return true;
+};
+
 interface ModeButtonProps {
   label: string;
   title: string;
@@ -870,7 +881,8 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
       const next = prev.filter((item) => !removeSet.has(item));
       persistInputHistory(next);
       if (lastSubmittedInput && removeSet.has(lastSubmittedInput)) {
-        setLastSubmittedInput(next[0] ?? "");
+        const nextRecall = next.find((item) => hasExecutableRecallRoute(item)) ?? "";
+        setLastSubmittedInput(nextRecall);
       }
       return next;
     });
@@ -1469,12 +1481,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
   const undoButtonLabel = clearedInputStack.length > 0 ? `UNDO ${clearedInputStack.length}` : "UNDO";
   const getRecallCandidate = useCallback((raw: string): string => {
     const normalized = raw.trim();
-    if (normalized === "") return "";
-    const route = routeInput(raw);
-    if (route.type === "empty" || route.type === "aiCmd" || route.type === "explain") return "";
-    if (route.type === "ai" && route.question === "") return "";
-    if (route.type === "agent" && route.task === "") return "";
-    if (route.type === "heavy" && route.prompt === "") return "";
+    if (!hasExecutableRecallRoute(raw)) return "";
     return normalized;
   }, []);
   const normalizedRecallCandidate = getRecallCandidate(inputBuffer);
