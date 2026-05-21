@@ -1479,7 +1479,7 @@ const App: React.FC = () => {
       if (mod && e.shiftKey && e.key === "ArrowDown") { e.preventDefault(); navigateCommandBlock(1); }
       if (mod && e.shiftKey && (e.key === "f" || e.key === "F")) { e.preventDefault(); focusFailedBlock(); }
       if (mod && e.shiftKey && (e.key === "s" || e.key === "o")) { e.preventDefault(); setShowWorkspace(true); loadWorkspaces(); }
-      // Cmd+1~9 — Quick Actions 단축키
+      // Cmd/Ctrl+1~9 — Quick Actions 단축키
       if (mod && !e.shiftKey && /^[1-9]$/.test(e.key)) {
         const n = Number(e.key);
         const action = quickActions.find(a => a.shortcut === n);
@@ -1788,16 +1788,16 @@ const App: React.FC = () => {
           ))}
           <button
             onClick={addTabWithReset}
-            aria-label="새 탭 (Cmd+T)"
-            title="새 탭 (Cmd+T)"
+            aria-label="새 탭 (Cmd/Ctrl+T)"
+            title="새 탭 (Cmd/Ctrl+T)"
             className="px-2 py-1.5 text-white/35 hover:text-white/75 hover:bg-white/5 transition-colors shrink-0 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring focus-visible:bg-white/5"
           >
             <Plus size={13} />
           </button>
           <button
             onClick={() => setShowSshModal(true)}
-            aria-label="SSH 연결 (Cmd+Shift+H)"
-            title="SSH 연결 (Cmd+Shift+H)"
+            aria-label="SSH 연결 (Cmd/Ctrl+Shift+H)"
+            title="SSH 연결 (Cmd/Ctrl+Shift+H)"
             className="px-2 py-1.5 text-white/35 hover:text-white/75 hover:bg-white/5 transition-colors shrink-0 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring focus-visible:bg-white/5"
           >
             <Lock size={13} />
@@ -1806,9 +1806,9 @@ const App: React.FC = () => {
           <div className="ml-auto flex items-center gap-0.5 px-2 shrink-0">
             <button
               onClick={() => toggleSplit("h")}
-              aria-label="수평 분할 (Cmd+Shift+D)"
+              aria-label="수평 분할 (Cmd/Ctrl+Shift+D)"
               aria-pressed={activeTab?.splitDir === "h"}
-              title="수평 분할 (Cmd+Shift+D)"
+              title="수평 분할 (Cmd/Ctrl+Shift+D)"
               className={`p-1.5 rounded-md transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring ${
                 activeTab?.splitDir === "h"
                   ? "text-accent bg-accent/10"
@@ -1819,9 +1819,9 @@ const App: React.FC = () => {
             </button>
             <button
               onClick={() => toggleSplit("v")}
-              aria-label="수직 분할 (Cmd+Shift+E)"
+              aria-label="수직 분할 (Cmd/Ctrl+Shift+E)"
               aria-pressed={activeTab?.splitDir === "v"}
-              title="수직 분할 (Cmd+Shift+E)"
+              title="수직 분할 (Cmd/Ctrl+Shift+E)"
               className={`p-1.5 rounded-md transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring ${
                 activeTab?.splitDir === "v"
                   ? "text-accent bg-accent/10"

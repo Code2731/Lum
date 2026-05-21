@@ -72,12 +72,12 @@ describe("App (LUM 터미널)", () => {
 
   it("새 탭 버튼이 툴바에 있어야 함", () => {
     render(<App />);
-    expect(screen.getByLabelText("새 탭 (Cmd+T)")).toBeInTheDocument();
+    expect(screen.getByLabelText("새 탭 (Cmd/Ctrl+T)")).toBeInTheDocument();
   });
 
   it("SSH 연결 버튼이 툴바에 있어야 함", () => {
     render(<App />);
-    expect(screen.getByLabelText("SSH 연결 (Cmd+Shift+H)")).toBeInTheDocument();
+    expect(screen.getByLabelText("SSH 연결 (Cmd/Ctrl+Shift+H)")).toBeInTheDocument();
   });
 
   it("AI Chat 버튼은 제거됨 — AI는 WarpInputBar로 통합", () => {
