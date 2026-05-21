@@ -2141,7 +2141,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
             }}
           >
             <span className="lum-toolbelt-secondary-hint" style={{ fontSize: UI_TEXT_MICRO, color: "rgba(182,218,255,0.95)", lineHeight: 1.35 }}>
-              TIP · Cmd/Ctrl+1~4 backend 전환 · Shift+A @첨부 · Shift+B/N BACK/LAST · Shift+K/Z/R/L/M/P 입력 편집
+              TIP · Cmd/Ctrl+1~4 backend 전환 · Cmd/Ctrl+Shift+A @첨부 · Cmd/Ctrl+Shift+B/N BACK/LAST · Cmd/Ctrl+Shift+K/Z/R/L/M/P 입력 편집
             </span>
             <button
               type="button"
@@ -2599,10 +2599,10 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
             </span>
             <span
               className="lum-toolbelt-secondary-hint"
-              title="Cmd/Ctrl+1~4 토글 · 0 해제 · `/. 정순환 · Shift+`/, 역순환 · Shift+A @첨부 · Shift+B/N BACK/LAST · Shift+K/Z/R/L/M/P 편집 단축키"
+              title="Cmd/Ctrl+1~4/0 지정·해제 · Cmd/Ctrl+./, 순환 · Cmd/Ctrl+Shift+←/→ 역순환 · Cmd/Ctrl+Shift+A @첨부 · Cmd/Ctrl+Shift+B/N BACK/LAST · Cmd/Ctrl+Shift+K/Z/R/L/M/P 편집"
               style={{ fontSize: UI_TEXT_MICRO, color: "rgba(255,255,255,0.58)", flexShrink: 0 }}
             >
-              Cmd/Ctrl+1~4 토글 · 0 해제 · `/. 정순환 · Shift+`/, 역순환 · Shift+A @첨부 · Shift+B/N BACK/LAST · Shift+K/Z/R/L/M/P 편집 단축키
+              Cmd/Ctrl+1~4/0 지정·해제 · Cmd/Ctrl+./, 순환 · Cmd/Ctrl+Shift+←/→ 역순환 · Cmd/Ctrl+Shift+A @첨부 · Cmd/Ctrl+Shift+B/N BACK/LAST · Cmd/Ctrl+Shift+K/Z/R/L/M/P 편집
             </span>
               </>
             )}
@@ -3303,13 +3303,13 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
             </button>
           </div>
           <div className="lum-cheatsheet-grid">
-            <span>Cmd/Ctrl+/ · 치트시트 토글</span><span>Shift+C · 인터럽트</span>
-            <span>Shift+1~4/0 · backend 지정/해제</span><span>Shift+←/→ · backend 순환</span>
-            <span>Shift+B/N · BACK/LAST</span><span>Shift+O · AUTO 토글</span>
-            <span>Shift+K/Z/R · CLEAR/UNDO/RECALL</span><span>Shift+S/F · SET/FORGET RECALL</span>
-            <span>Shift+E/W · RERUN/SWAP</span><span>Shift+M/P · MERGE/PREPEND</span>
-            <span>Shift+G/T/Q/L · PLAIN/TRIM/SQUASH/CLEAN</span><span>Shift+A · @ 첨부</span>
-            <span>Shift+H/Y/J/U/V/I · 모드 토글</span><span>Esc · 오버레이 닫기</span>
+            <span>Cmd/Ctrl+/ · 치트시트 토글</span><span>Cmd/Ctrl+Shift+C · 인터럽트</span>
+            <span>Cmd/Ctrl+Shift+1~4/0 · backend 지정/해제</span><span>Cmd/Ctrl+Shift+←/→ · backend 순환</span>
+            <span>Cmd/Ctrl+Shift+B/N · BACK/LAST</span><span>Cmd/Ctrl+Shift+O · AUTO 토글</span>
+            <span>Cmd/Ctrl+Shift+K/Z/R · CLEAR/UNDO/RECALL</span><span>Cmd/Ctrl+Shift+S/F · SET/FORGET RECALL</span>
+            <span>Cmd/Ctrl+Shift+E/W · RERUN/SWAP</span><span>Cmd/Ctrl+Shift+M/P · MERGE/PREPEND</span>
+            <span>Cmd/Ctrl+Shift+G/T/Q/L · PLAIN/TRIM/SQUASH/CLEAN</span><span>Cmd/Ctrl+Shift+A · @ 첨부</span>
+            <span>Cmd/Ctrl+Shift+H/Y/J/U/V/I · 모드 토글</span><span>Esc · 오버레이 닫기</span>
           </div>
         </div>
       )}
