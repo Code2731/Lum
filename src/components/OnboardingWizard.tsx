@@ -395,7 +395,7 @@ const OnboardingWizard: React.FC<Props> = ({ onComplete }) => {
                 <h1 className="text-base font-bold">설정 완료!</h1>
                 <p className="text-sm text-white/40 mt-1.5 leading-relaxed">
                   LUM이 준비됐습니다.<br />
-                  <span className="font-mono text-white/60">Cmd+K</span> — AI 바&nbsp;&nbsp;
+                  <span className="font-mono text-white/60">Cmd/Ctrl+Shift+K</span> — AI 바&nbsp;&nbsp;
                   <span className="font-mono text-white/60">#</span> — 자연어 명령 변환
                 </p>
               </div>

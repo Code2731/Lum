@@ -128,6 +128,23 @@ describe("OnboardingWizard", () => {
     await waitFor(() => expect(onComplete).toHaveBeenCalledOnce());
   });
 
+  it("완료 단계 안내는 AI 바 단축키를 Cmd/Ctrl+Shift+K로 표기한다", async () => {
+    render(<OnboardingWizard onComplete={vi.fn()} />);
+
+    fireEvent.click(screen.getByText("시작하기"));
+    await waitFor(() => expect(screen.getByText("다음")).not.toBeDisabled());
+    fireEvent.click(screen.getByText("다음"));
+    await waitFor(() => screen.getByText("성능 모드 선택"));
+    fireEvent.click(screen.getByText("다음"));
+    await waitFor(() => screen.getByText(/TabbyAPI (연결됨|미연결)/));
+    fireEvent.click(screen.getByText("다음"));
+    await waitFor(() => screen.getByText("AI 모델 준비"));
+    fireEvent.click(screen.getByText("다음"));
+
+    expect(await screen.findByText("설정 완료!")).toBeInTheDocument();
+    expect(screen.getByText("Cmd/Ctrl+Shift+K")).toBeInTheDocument();
+  });
+
   it("Safe 모드 클릭 시 save_safety_mode invoke 호출", async () => {
     const { invoke } = await import("@tauri-apps/api/core");
     vi.mocked(invoke).mockClear();
