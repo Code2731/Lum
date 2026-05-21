@@ -21,7 +21,10 @@ const AIChatPanel: React.FC<Props> = ({ messages, streaming, error, onSend, onCa
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    const bottom = bottomRef.current;
+    if (bottom && typeof bottom.scrollIntoView === "function") {
+      bottom.scrollIntoView({ behavior: "smooth" });
+    }
   }, [messages]);
 
   const handleSubmit = useCallback(() => {
@@ -35,6 +38,11 @@ const AIChatPanel: React.FC<Props> = ({ messages, streaming, error, onSend, onCa
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSubmit();
+      return;
+    }
+    if (e.key === "Escape") {
+      e.preventDefault();
+      onClose();
     }
   };
 
@@ -60,6 +68,7 @@ const AIChatPanel: React.FC<Props> = ({ messages, streaming, error, onSend, onCa
         )}
         <button
           onClick={onClose}
+          aria-label="AI 채팅 닫기"
           className="text-white/25 hover:text-white/60 transition-colors p-0.5 rounded"
         >
           <X size={11} />
@@ -135,7 +144,7 @@ const AIChatPanel: React.FC<Props> = ({ messages, streaming, error, onSend, onCa
             </button>
           )}
         </div>
-        <p className="text-[9px] text-white/15 text-center mt-1">Cmd+Shift+A 로 닫기</p>
+        <p className="text-[9px] text-white/15 text-center mt-1">Esc 로 닫기</p>
       </div>
     </div>
   );
