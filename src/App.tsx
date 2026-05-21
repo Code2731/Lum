@@ -1436,7 +1436,7 @@ const App: React.FC = () => {
       if (isTextInputTarget(e.target)) return;
       const mod = e.metaKey || e.ctrlKey;
       const key = e.key.toLowerCase();
-      if (mod && !e.shiftKey && key === "k") {
+      if (mod && !e.shiftKey && !e.altKey && key === "k") {
         e.preventDefault();
         setShowPalette(v => !v);
       }

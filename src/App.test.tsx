@@ -104,6 +104,20 @@ describe("App (LUM 터미널)", () => {
     expect(await screen.findByPlaceholderText(/자연어로 검색/)).toBeInTheDocument();
   });
 
+  it("Ctrl+K는 커맨드 팔레트를 연다", async () => {
+    render(<App />);
+
+    fireEvent.keyDown(window, { key: "k", ctrlKey: true });
+    expect(await screen.findByPlaceholderText(/탭, 워크스페이스, 액션, 히스토리 검색/)).toBeInTheDocument();
+  });
+
+  it("Ctrl+Alt+K는 커맨드 팔레트 단축키로 처리되지 않는다", () => {
+    render(<App />);
+
+    fireEvent.keyDown(window, { key: "k", ctrlKey: true, altKey: true });
+    expect(screen.queryByPlaceholderText(/탭, 워크스페이스, 액션, 히스토리 검색/)).not.toBeInTheDocument();
+  });
+
   it("Ctrl+Alt+R은 히스토리 검색 단축키로 처리되지 않는다", () => {
     render(<App />);
 
