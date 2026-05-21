@@ -1241,6 +1241,8 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     () => detectBackendPrefixFromInput(inputBuffer),
     [inputBuffer],
   );
+  const isBackendOnlyInput =
+    activeBackendPrefix !== null && clearBackendPrefixFromInput(inputBuffer).trim() === "";
   const [backendTrail, setBackendTrail] = useState<{ last: AiBackend; prev: AiBackend | null }>({
     last: "local",
     prev: null,
@@ -1957,6 +1959,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
   const inputFocusCompact =
     warpInputFocused &&
     inputBuffer.trim() !== "" &&
+    !isBackendOnlyInput &&
     !toolbeltCustomizeOpen &&
     !actionPaletteOpen &&
     !inputHistoryOpen &&
