@@ -1502,7 +1502,9 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
   const canRecallSubmittedInput =
     normalizedLastSubmittedCandidate !== "" && normalizedRecallCandidate !== normalizedLastSubmittedCandidate;
   const canSwapSubmittedInput =
-    normalizedLastSubmittedCandidate !== "" && normalizedRecallCandidate !== normalizedLastSubmittedCandidate;
+    normalizedLastSubmittedCandidate !== "" &&
+    normalizedRecallCandidate !== "" &&
+    normalizedRecallCandidate !== normalizedLastSubmittedCandidate;
   const triggerMentionAttach = useCallback(() => {
     forceMentionAttachRef.current = true;
     const current = warpInputRef.current?.getValue() ?? inputBuffer;
