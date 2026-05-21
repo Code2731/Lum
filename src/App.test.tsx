@@ -97,6 +97,13 @@ describe("App (LUM 터미널)", () => {
     expect(screen.getByPlaceholderText("AI에게 질문하세요… (Enter 전송 · Esc 닫기)")).toBeInTheDocument();
   });
 
+  it("Ctrl+Alt+Shift+K는 AI 바 단축키로 처리되지 않는다", () => {
+    render(<App />);
+
+    fireEvent.keyDown(window, { key: "K", ctrlKey: true, altKey: true, shiftKey: true });
+    expect(screen.queryByPlaceholderText("AI에게 질문하세요… (Enter 전송 · Esc 닫기)")).not.toBeInTheDocument();
+  });
+
   it("Ctrl+R은 히스토리 검색을 연다", async () => {
     render(<App />);
 
@@ -198,6 +205,13 @@ describe("App (LUM 터미널)", () => {
     fireEvent.keyDown(window, { key: "R", ctrlKey: true, shiftKey: true });
     expect(await screen.findByText("AI Diff Reviewer")).toBeInTheDocument();
     expect(screen.queryByPlaceholderText(/자연어로 검색/)).not.toBeInTheDocument();
+  });
+
+  it("Ctrl+Alt+Shift+R은 Diff 리뷰 단축키로 처리되지 않는다", () => {
+    render(<App />);
+
+    fireEvent.keyDown(window, { key: "R", ctrlKey: true, altKey: true, shiftKey: true });
+    expect(screen.queryByText("AI Diff Reviewer")).not.toBeInTheDocument();
   });
 
   it("Ctrl+,는 터미널 테마 패널을 연다", async () => {
