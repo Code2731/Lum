@@ -309,6 +309,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
   const [mentionSelected, setMentionSelected] = useState(0);
   const [clearedInputStack, setClearedInputStack] = useState<string[]>([]);
   const [lastSubmittedInput, setLastSubmittedInput] = useState("");
+  const recallHydratedRef = useRef(false);
   const [submittedInputHistory, setSubmittedInputHistory] = useState<string[]>(() => {
     try {
       const raw = localStorage.getItem(INPUT_HISTORY_KEY);
@@ -1478,6 +1479,15 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
   }, []);
   const normalizedRecallCandidate = getRecallCandidate(inputBuffer);
   const normalizedLastSubmittedCandidate = getRecallCandidate(lastSubmittedInput);
+  useEffect(() => {
+    if (recallHydratedRef.current) return;
+    recallHydratedRef.current = true;
+    if (lastSubmittedInput !== "") return;
+    const first = submittedInputHistory[0] ?? "";
+    if (first === "") return;
+    if (getRecallCandidate(first) === "") return;
+    setLastSubmittedInput(first);
+  }, [getRecallCandidate, lastSubmittedInput, submittedInputHistory]);
   const canSetRecallFromCurrent =
     normalizedRecallCandidate !== "" && normalizedRecallCandidate !== normalizedLastSubmittedCandidate;
   const canRerunSubmittedInput = normalizedLastSubmittedCandidate !== "";

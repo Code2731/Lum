@@ -773,6 +773,16 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(input).toHaveValue("ls -la");
   });
 
+  it("저장된 실행 입력 히스토리가 있으면 초기 렌더에서 RECALL/RERUN이 활성화된다", async () => {
+    localStorage.setItem("lum_input_submit_history", JSON.stringify(["pwd"]));
+    render(<TerminalPane id="tab-1" />);
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "quick-input-recall" })).not.toHaveAttribute("disabled");
+      expect(screen.getByRole("button", { name: "quick-input-rerun" })).not.toHaveAttribute("disabled");
+    });
+  });
+
   it("툴벨트 HISTORY 패널에서 실행 입력을 선택해 복원한다", async () => {
     const { container } = render(<TerminalPane id="tab-1" />);
     const input = container.querySelector("input")!;
