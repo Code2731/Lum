@@ -1050,16 +1050,17 @@ const WarpListView: React.FC<Props> = ({
     const onWindowKeyDown = (e: KeyboardEvent) => {
       if (isTypingTarget(e.target)) return;
       const mod = e.metaKey || e.ctrlKey;
+      const key = e.key.toLowerCase();
       const isRedoKey = (e.altKey && e.shiftKey) || (mod && e.shiftKey);
       const isUndoKey = e.altKey || mod;
-      if (isRedoKey && (e.key === "z" || e.key === "Z")) {
+      if (isRedoKey && key === "z") {
         if (onRedoRetryCompareQueueChange && canRedoRetryCompareQueueChange) {
           e.preventDefault();
           onRedoRetryCompareQueueChange();
         }
         return;
       }
-      if (isUndoKey && (e.key === "z" || e.key === "Z")) {
+      if (isUndoKey && key === "z") {
         if (onUndoRetryCompareQueueChange && canUndoRetryCompareQueueChange) {
           e.preventDefault();
           onUndoRetryCompareQueueChange();
@@ -1094,7 +1095,7 @@ const WarpListView: React.FC<Props> = ({
         }
         return;
       }
-      if (e.altKey && (e.key === "q" || e.key === "Q")) {
+      if (e.altKey && key === "q") {
         if (queueSearchInputRef.current) {
           e.preventDefault();
           queueSearchInputRef.current.focus();
@@ -1111,42 +1112,42 @@ const WarpListView: React.FC<Props> = ({
         setShowShortcutHelp((prev) => !prev);
         return;
       }
-      if (e.altKey && (e.key === "f" || e.key === "F")) {
+      if (e.altKey && key === "f") {
         if (timelineSearchInputRef.current) {
           e.preventDefault();
           timelineSearchInputRef.current.focus();
         }
         return;
       }
-      if (mod && (e.key === "f" || e.key === "F")) {
+      if (mod && !e.shiftKey && key === "f") {
         if (timelineSearchInputRef.current) {
           e.preventDefault();
           timelineSearchInputRef.current.focus();
         }
         return;
       }
-      if (e.altKey && (e.key === "k" || e.key === "K")) {
+      if (e.altKey && key === "k") {
         if (retryCompareQueueItems.length > 0) {
           e.preventDefault();
           setQueuePanelCollapsed((prev) => !prev);
         }
         return;
       }
-      if (e.altKey && (e.key === "r" || e.key === "R")) {
+      if (e.altKey && key === "r") {
         if (timelineViewCustomized) {
           e.preventDefault();
           resetTimelineViewFilters();
         }
         return;
       }
-      if (mod && (e.key === "r" || e.key === "R")) {
+      if (mod && !e.shiftKey && key === "r") {
         if (timelineViewCustomized) {
           e.preventDefault();
           resetTimelineViewFilters();
         }
         return;
       }
-      if (e.altKey && (e.key === "a" || e.key === "A")) {
+      if (e.altKey && key === "a") {
         if (e.shiftKey) {
           if (selectedTimelineIds.length > 0) {
             e.preventDefault();
@@ -1160,7 +1161,7 @@ const WarpListView: React.FC<Props> = ({
         }
         return;
       }
-      if (mod && (e.key === "a" || e.key === "A")) {
+      if (mod && key === "a") {
         if (e.shiftKey) {
           if (selectedTimelineIds.length > 0) {
             e.preventDefault();
@@ -1174,7 +1175,7 @@ const WarpListView: React.FC<Props> = ({
         }
         return;
       }
-      if (e.altKey && (e.key === "c" || e.key === "C")) {
+      if (e.altKey && key === "c") {
         if (e.shiftKey) {
           if (timelineFiltered.length > 0) {
             e.preventDefault();
@@ -1188,7 +1189,7 @@ const WarpListView: React.FC<Props> = ({
         }
         return;
       }
-      if (mod && (e.key === "c" || e.key === "C")) {
+      if (mod && key === "c") {
         if (e.shiftKey) {
           if (timelineFiltered.length > 0) {
             e.preventDefault();
@@ -1202,7 +1203,7 @@ const WarpListView: React.FC<Props> = ({
         }
         return;
       }
-      if (mod && (e.key === "k" || e.key === "K")) {
+      if (mod && !e.shiftKey && key === "k") {
         if (onClearCompareResults) {
           e.preventDefault();
           onClearCompareResults();
@@ -1212,7 +1213,7 @@ const WarpListView: React.FC<Props> = ({
         }
         return;
       }
-      if (mod && (e.key === "l" || e.key === "L")) {
+      if (mod && !e.shiftKey && key === "l") {
         if (timelineQuery.trim() !== "") {
           e.preventDefault();
           setTimelineQuery("");
@@ -1231,7 +1232,7 @@ const WarpListView: React.FC<Props> = ({
         }
         return;
       }
-      if (e.altKey && (e.key === "s" || e.key === "S")) {
+      if (e.altKey && key === "s") {
         if (comparedTimeline.length > 0) {
           e.preventDefault();
           setTimelineSortMode((prev) => (prev === "recent" ? "delta" : "recent"));
@@ -1250,28 +1251,28 @@ const WarpListView: React.FC<Props> = ({
         else setTimelineRiskFilter("all");
         return;
       }
-      if (e.altKey && (e.key === "i" || e.key === "I")) {
+      if (e.altKey && key === "i") {
         if (timelineFiltered.length > 0) {
           e.preventDefault();
           invertTimelineFilteredSelection();
         }
         return;
       }
-      if (e.altKey && !e.shiftKey && (e.key === "o" || e.key === "O" || e.code === "KeyO")) {
+      if (e.altKey && !e.shiftKey && (key === "o" || e.code === "KeyO")) {
         if (selectedTimelineIds.length > 0) {
           e.preventDefault();
           toggleTimelineSelectedOnly();
         }
         return;
       }
-      if (e.altKey && (e.key === "h" || e.key === "H")) {
+      if (e.altKey && key === "h") {
         if (timelineFiltered.length > 0) {
           e.preventDefault();
           selectHighRiskTimelineFiltered();
         }
         return;
       }
-      if (e.altKey && (e.key === "j" || e.key === "J")) {
+      if (e.altKey && key === "j") {
         if (e.shiftKey) {
           if (selectedTimelineIds.length > 0) {
             e.preventDefault();
@@ -1285,7 +1286,7 @@ const WarpListView: React.FC<Props> = ({
         }
         return;
       }
-      if (mod && (e.key === "j" || e.key === "J")) {
+      if (mod && key === "j") {
         if (e.shiftKey) {
           if (selectedTimelineIds.length > 0) {
             e.preventDefault();
@@ -1299,70 +1300,70 @@ const WarpListView: React.FC<Props> = ({
         }
         return;
       }
-      if (e.altKey && e.shiftKey && (e.key === "u" || e.key === "U")) {
+      if (e.altKey && e.shiftKey && key === "u") {
         if (timelinePinnedIds.size > 0) {
           e.preventDefault();
           clearPinnedTimeline();
         }
         return;
       }
-      if (mod && e.shiftKey && (e.key === "u" || e.key === "U")) {
+      if (mod && e.shiftKey && key === "u") {
         if (timelinePinnedIds.size > 0) {
           e.preventDefault();
           clearPinnedTimeline();
         }
         return;
       }
-      if (e.altKey && (e.key === "m" || e.key === "M")) {
+      if (e.altKey && key === "m") {
         if (timelinePinnedIds.size > 0) {
           e.preventDefault();
           setTimelinePinnedOnly((prev) => !prev);
         }
         return;
       }
-      if (mod && (e.key === "m" || e.key === "M")) {
+      if (mod && !e.shiftKey && key === "m") {
         if (timelinePinnedIds.size > 0) {
           e.preventDefault();
           setTimelinePinnedOnly((prev) => !prev);
         }
         return;
       }
-      if (e.altKey && e.shiftKey && (e.key === "p" || e.key === "P")) {
+      if (e.altKey && e.shiftKey && key === "p") {
         if (timelineFiltered.length > 0) {
           e.preventDefault();
           pinFilteredTimeline();
         }
         return;
       }
-      if (e.altKey && e.shiftKey && (e.key === "o" || e.key === "O")) {
+      if (e.altKey && e.shiftKey && key === "o") {
         if (timelineFiltered.length > 0) {
           e.preventDefault();
           unpinFilteredTimeline();
         }
         return;
       }
-      if (mod && e.shiftKey && (e.key === "p" || e.key === "P")) {
+      if (mod && e.shiftKey && key === "p") {
         if (timelineFiltered.length > 0) {
           e.preventDefault();
           pinFilteredTimeline();
         }
         return;
       }
-      if (mod && e.shiftKey && (e.key === "o" || e.key === "O")) {
+      if (mod && e.shiftKey && key === "o") {
         if (timelineFiltered.length > 0) {
           e.preventDefault();
           unpinFilteredTimeline();
         }
         return;
       }
-      if (e.altKey && (e.key === "d" || e.key === "D")) {
+      if (e.altKey && key === "d") {
         if (onResetRetryCompareCompletedCount) {
           e.preventDefault();
           onResetRetryCompareCompletedCount();
         }
         return;
       }
-      if (e.altKey && (e.key === "p" || e.key === "P")) {
+      if (e.altKey && key === "p") {
         if (onToggleRetryCompareQueuePaused) {
           e.preventDefault();
           onToggleRetryCompareQueuePaused();
