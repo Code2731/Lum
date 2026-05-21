@@ -237,6 +237,12 @@ describe("WarpInputBar — dumb input, 라우팅은 상위에서", () => {
     expect(onInterrupt).toHaveBeenCalled();
   });
 
+  it("빈 입력 Ctrl+Shift+C도 onInterrupt", () => {
+    const { input, onInterrupt } = setup();
+    fireEvent.keyDown(input, { key: "C", ctrlKey: true, shiftKey: true });
+    expect(onInterrupt).toHaveBeenCalled();
+  });
+
   it("Tab → onTab(buf) 호출, true 반환 시 preventDefault", () => {
     const onTab = vi.fn(() => true);
     const { input } = setup({ onTab });

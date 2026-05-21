@@ -240,7 +240,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
         return;
       }
 
-      if (e.key === "c" && (e.ctrlKey || e.metaKey) && isEffectivelyEmpty) {
+      if (e.key.toLowerCase() === "c" && (e.ctrlKey || e.metaKey) && isEffectivelyEmpty) {
         // 빈 입력일 때 Ctrl+C → PTY SIGINT
         e.preventDefault();
         onInterrupt?.();
