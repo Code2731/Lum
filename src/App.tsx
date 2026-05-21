@@ -1455,8 +1455,8 @@ const App: React.FC = () => {
           return !v;
         });
       }
-      if (mod && key === "t") { e.preventDefault(); addTabWithReset(); }
-      if (mod && key === "w") {
+      if (mod && !e.shiftKey && !e.altKey && key === "t") { e.preventDefault(); addTabWithReset(); }
+      if (mod && !e.shiftKey && !e.altKey && key === "w") {
         e.preventDefault();
         closeTabWithReset(activeTabIdRef.current, { stopPropagation: () => {} } as React.MouseEvent);
       }

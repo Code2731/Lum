@@ -112,6 +112,32 @@ describe("App (LUM 터미널)", () => {
     expect(screen.queryByPlaceholderText(/자연어로 검색/)).not.toBeInTheDocument();
   });
 
+  it("Ctrl+Shift+T는 새 탭 단축키로 처리되지 않는다", () => {
+    render(<App />);
+    const beforeCount = screen.getAllByTestId(/^terminal-pane-/).length;
+
+    fireEvent.keyDown(window, { key: "T", ctrlKey: true, shiftKey: true });
+
+    const afterCount = screen.getAllByTestId(/^terminal-pane-/).length;
+    expect(afterCount).toBe(beforeCount);
+  });
+
+  it("Ctrl+Shift+W는 탭 닫기 단축키로 처리되지 않는다", async () => {
+    render(<App />);
+    fireEvent.click(screen.getByLabelText("새 탭 (Cmd/Ctrl+T)"));
+
+    await waitFor(() => {
+      expect(screen.getAllByTestId(/^terminal-pane-/).length).toBeGreaterThan(1);
+    });
+    const beforeCount = screen.getAllByTestId(/^terminal-pane-/).length;
+
+    fireEvent.keyDown(window, { key: "W", ctrlKey: true, shiftKey: true });
+
+    await waitFor(() => {
+      expect(screen.getAllByTestId(/^terminal-pane-/).length).toBe(beforeCount);
+    });
+  });
+
   it("AI Chat 버튼은 제거됨 — AI는 WarpInputBar로 통합", () => {
     render(<App />);
     expect(screen.queryByLabelText("AI Chat (Cmd+Shift+A)")).toBeNull();
