@@ -1271,6 +1271,21 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(input).toHaveValue("echo custom command");
   });
 
+  it("backend prefix-only 입력은 SET RECALL 대상으로 저장하지 않는다", () => {
+    const { container } = render(<TerminalPane id="tab-1" />);
+    const input = container.querySelector("input")!;
+
+    fireEvent.change(input, { target: { value: "@local " } });
+    expect(screen.getByRole("button", { name: "quick-input-set-recall" })).toHaveAttribute("disabled");
+
+    fireEvent.click(screen.getByRole("button", { name: "quick-input-set-recall" }));
+    fireEvent.keyDown(input, { key: "S", ctrlKey: true, shiftKey: true });
+
+    expect(screen.getByRole("button", { name: "quick-input-recall" })).toHaveTextContent("RECALL");
+    expect(screen.getByRole("button", { name: "quick-input-recall" })).toHaveAttribute("disabled");
+    expect(screen.getByRole("button", { name: "quick-input-rerun" })).toHaveAttribute("disabled");
+  });
+
   it("툴벨트 FORGET RECALL 버튼으로 직전 실행 입력 기록을 비운다", async () => {
     const { container } = render(<TerminalPane id="tab-1" />);
     expect(screen.getByRole("button", { name: "quick-input-forget-recall" })).toHaveAttribute("disabled");

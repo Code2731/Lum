@@ -1464,7 +1464,17 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
   const rerunButtonLabel = lastSubmittedPreview ? `RERUN ${lastSubmittedPreview}` : "RERUN";
   const historyButtonLabel = submittedInputHistory.length > 0 ? `HISTORY ${submittedInputHistory.length}` : "HISTORY";
   const undoButtonLabel = clearedInputStack.length > 0 ? `UNDO ${clearedInputStack.length}` : "UNDO";
-  const normalizedRecallCandidate = inputBuffer.trim();
+  const getRecallCandidate = useCallback((raw: string): string => {
+    const normalized = raw.trim();
+    if (normalized === "") return "";
+    const route = routeInput(raw);
+    if (route.type === "empty" || route.type === "aiCmd" || route.type === "explain") return "";
+    if (route.type === "ai" && route.question === "") return "";
+    if (route.type === "agent" && route.task === "") return "";
+    if (route.type === "heavy" && route.prompt === "") return "";
+    return normalized;
+  }, []);
+  const normalizedRecallCandidate = getRecallCandidate(inputBuffer);
   const canSetRecallFromCurrent =
     normalizedRecallCandidate !== "" && normalizedRecallCandidate !== lastSubmittedInput;
   const canRecallSubmittedInput = !!lastSubmittedInput && inputBuffer !== lastSubmittedInput;
@@ -1525,11 +1535,11 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
   }, [inputBuffer, lastSubmittedInput, pushUndoSnapshot]);
   const setRecallFromCurrentQuick = useCallback(() => {
     const current = warpInputRef.current?.getValue() ?? inputBuffer;
-    const normalized = current.trim();
+    const normalized = getRecallCandidate(current);
     if (normalized === "") return;
     recordSubmittedInput(normalized);
     warpInputRef.current?.focus();
-  }, [inputBuffer, recordSubmittedInput]);
+  }, [getRecallCandidate, inputBuffer, recordSubmittedInput]);
   const swapWithSubmittedInputQuick = useCallback(() => {
     if (!lastSubmittedInput) return;
     const current = warpInputRef.current?.getValue() ?? inputBuffer;
