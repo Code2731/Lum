@@ -1147,7 +1147,7 @@ const WarpListView: React.FC<Props> = ({
         }
         return;
       }
-      if (e.altKey && key === "a") {
+      if (e.altKey && !mod && key === "a") {
         if (e.shiftKey) {
           if (selectedTimelineIds.length > 0) {
             e.preventDefault();
@@ -1161,7 +1161,7 @@ const WarpListView: React.FC<Props> = ({
         }
         return;
       }
-      if (mod && key === "a") {
+      if (mod && !e.altKey && key === "a") {
         if (e.shiftKey) {
           if (selectedTimelineIds.length > 0) {
             e.preventDefault();
