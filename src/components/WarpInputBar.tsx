@@ -365,7 +365,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
               display: "flex",
               alignItems: "center",
               alignContent: "flex-start",
-              gap: 6,
+              columnGap: 6,
               rowGap: compactContextChips ? 3 : 0,
               flexWrap: compactContextChips ? "wrap" : "nowrap",
               overflowX: "auto",
