@@ -21,12 +21,13 @@ export function classifyTerminalKey(
   if (e.type !== "keydown") return { kind: "passthrough" };
   const mod = e.metaKey || e.ctrlKey;
   if (!mod) return { kind: "passthrough" };
+  const key = e.key.toLowerCase();
 
-  if (e.key === "f") return { kind: "search" };
-  if (e.key === "c") {
+  if (key === "f") return { kind: "search" };
+  if (key === "c") {
     return selection ? { kind: "copy", selection } : { kind: "passthrough" };
   }
-  if (e.key === "v") return { kind: "paste" };
+  if (key === "v") return { kind: "paste" };
 
   return { kind: "passthrough" };
 }

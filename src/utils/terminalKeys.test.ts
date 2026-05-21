@@ -20,6 +20,11 @@ describe("classifyTerminalKey", () => {
     expect(r).toEqual({ kind: "copy", selection: "hello" });
   });
 
+  it("Ctrl+Shift+C with selection도 copy로 처리한다", () => {
+    const r = classifyTerminalKey(k({ key: "C", ctrlKey: true }), "hello");
+    expect(r).toEqual({ kind: "copy", selection: "hello" });
+  });
+
   it("Ctrl+C without selection → passthrough (xterm SIGINT 그대로)", () => {
     const r = classifyTerminalKey(k({ key: "c", ctrlKey: true }), "");
     expect(r).toEqual({ kind: "passthrough" });
@@ -30,8 +35,16 @@ describe("classifyTerminalKey", () => {
     expect(classifyTerminalKey(k({ key: "v", ctrlKey: true }), "abc")).toEqual({ kind: "paste" });
   });
 
+  it("Ctrl+Shift+V도 paste로 처리한다", () => {
+    expect(classifyTerminalKey(k({ key: "V", ctrlKey: true }), "")).toEqual({ kind: "paste" });
+  });
+
   it("Ctrl+F → search", () => {
     expect(classifyTerminalKey(k({ key: "f", ctrlKey: true }), "")).toEqual({ kind: "search" });
+  });
+
+  it("Ctrl+Shift+F도 search로 처리한다", () => {
+    expect(classifyTerminalKey(k({ key: "F", ctrlKey: true }), "")).toEqual({ kind: "search" });
   });
 
   it("modifier 없는 c/v/f → passthrough (일반 입력)", () => {
