@@ -1482,7 +1482,7 @@ const App: React.FC = () => {
       if (mod && e.shiftKey && key === "f") { e.preventDefault(); focusFailedBlock(); }
       if (mod && e.shiftKey && (key === "s" || key === "o")) { e.preventDefault(); setShowWorkspace(true); loadWorkspaces(); }
       // Cmd/Ctrl+1~9 — Quick Actions 단축키
-      if (mod && !e.shiftKey && /^[1-9]$/.test(e.key)) {
+      if (mod && !e.shiftKey && !e.altKey && /^[1-9]$/.test(e.key)) {
         const n = Number(e.key);
         const action = quickActions.find(a => a.shortcut === n);
         if (action) {

@@ -146,6 +146,45 @@ describe("App (LUM 터미널)", () => {
     expect(afterVisible).toBe(beforeVisible);
   });
 
+  it("Quick Action 단축키는 Ctrl+숫자만 소비하고 Ctrl+Alt+숫자는 소비하지 않는다", async () => {
+    const baseImpl = invoke.getMockImplementation();
+    if (!baseImpl) throw new Error("invoke mock implementation not found");
+    invoke.mockImplementation((cmd: string, ...args: unknown[]) => {
+      if (cmd === "load_app_config") {
+        return Promise.resolve({
+          quick_actions: [{ id: "qa-1", label: "List", command: "ls", shortcut: 1 }],
+        });
+      }
+      return baseImpl(cmd, ...args);
+    });
+
+    try {
+      render(<App />);
+      await waitFor(() => {
+        expect(invoke).toHaveBeenCalledWith("load_app_config");
+      });
+
+      await waitFor(() => {
+        const consumed = !window.dispatchEvent(new KeyboardEvent("keydown", {
+          key: "1",
+          ctrlKey: true,
+          cancelable: true,
+        }));
+        expect(consumed).toBe(true);
+      });
+
+      const consumedWithAlt = !window.dispatchEvent(new KeyboardEvent("keydown", {
+        key: "1",
+        ctrlKey: true,
+        altKey: true,
+        cancelable: true,
+      }));
+      expect(consumedWithAlt).toBe(false);
+    } finally {
+      invoke.mockImplementation(baseImpl);
+    }
+  });
+
   it("Ctrl+Alt+R은 히스토리 검색 단축키로 처리되지 않는다", () => {
     render(<App />);
 
