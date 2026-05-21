@@ -2344,7 +2344,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               aria-label="quick-input-set-recall"
               onClick={setRecallFromCurrentQuick}
               disabled={!canSetRecallFromCurrent}
-              title={canSetRecallFromCurrent ? "현재 입력을 RECALL 대상으로 저장 (Cmd/Ctrl+Shift+S)" : "저장할 입력이 없거나 RECALL과 동일해 비활성화"}
+              title={canSetRecallFromCurrent ? "현재 입력을 RECALL 대상으로 저장 (Cmd/Ctrl+Shift+S)" : "저장 가능한 입력이 없거나 RECALL과 동일해 비활성화"}
               style={{
                 fontSize: 10,
                 color: canSetRecallFromCurrent ? "rgba(255,244,214,0.95)" : "rgba(255,255,255,0.42)",
@@ -2470,7 +2470,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               aria-label="quick-input-merge-recall"
               onClick={mergeSubmittedInputQuick}
               disabled={!canMergeRecall}
-              title={canMergeRecall ? "현재 입력 뒤에 직전 실행 입력 붙이기 (Cmd/Ctrl+Shift+M)" : "붙일 실행 입력이 없어 비활성화"}
+              title={canMergeRecall ? "현재 입력 뒤에 직전 실행 입력 붙이기 (Cmd/Ctrl+Shift+M)" : "붙일 실행 입력이 없거나 이미 포함돼 비활성화"}
               style={{
                 fontSize: 10,
                 color: canMergeRecall ? "rgba(215,228,255,0.96)" : "rgba(255,255,255,0.42)",
@@ -2490,7 +2490,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               aria-label="quick-input-prepend-recall"
               onClick={prependSubmittedInputQuick}
               disabled={!canPrependRecall}
-              title={canPrependRecall ? "현재 입력 앞에 직전 실행 입력 붙이기 (Cmd/Ctrl+Shift+P)" : "붙일 실행 입력이 없어 비활성화"}
+              title={canPrependRecall ? "현재 입력 앞에 직전 실행 입력 붙이기 (Cmd/Ctrl+Shift+P)" : "붙일 실행 입력이 없거나 이미 포함돼 비활성화"}
               style={{
                 fontSize: 10,
                 color: canPrependRecall ? "rgba(215,228,255,0.96)" : "rgba(255,255,255,0.42)",
