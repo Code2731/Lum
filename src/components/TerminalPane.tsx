@@ -1797,87 +1797,87 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
         return true;
       }
       if (lowered === "k") {
-        if (!canClearInputQuick) return false;
+        if (!canClearInputQuick) return true;
         clearInputQuick();
         return true;
       }
       if (lowered === "z") {
-        if (clearedInputStack.length === 0) return false;
+        if (clearedInputStack.length === 0) return true;
         restoreInputQuick();
         return true;
       }
       if (lowered === "r") {
-        if (!canRecallSubmittedInput) return false;
+        if (!canRecallSubmittedInput) return true;
         recallSubmittedInputQuick();
         return true;
       }
       if (lowered === "l") {
-        if (!canCleanInput) return false;
+        if (!canCleanInput) return true;
         cleanInputQuick();
         return true;
       }
       if (lowered === "m") {
-        if (!canMergeRecall) return false;
+        if (!canMergeRecall) return true;
         mergeSubmittedInputQuick();
         return true;
       }
       if (lowered === "p") {
-        if (!canPrependRecall) return false;
+        if (!canPrependRecall) return true;
         prependSubmittedInputQuick();
         return true;
       }
       if (lowered === "s") {
-        if (!canSetRecallFromCurrent) return false;
+        if (!canSetRecallFromCurrent) return true;
         setRecallFromCurrentQuick();
         return true;
       }
       if (lowered === "f") {
-        if (!lastSubmittedInput) return false;
+        if (!lastSubmittedInput) return true;
         forgetSubmittedInputQuick();
         return true;
       }
       if (lowered === "x") {
-        if (!canResetAllQuick) return false;
+        if (!canResetAllQuick) return true;
         resetAllInputStateQuick();
         return true;
       }
       if (lowered === "d") {
-        if (clearedInputStack.length === 0) return false;
+        if (clearedInputStack.length === 0) return true;
         forgetUndoStackQuick();
         return true;
       }
       if (lowered === "e") {
-        if (!canRerunSubmittedInput) return false;
+        if (!canRerunSubmittedInput) return true;
         rerunSubmittedInputQuick();
         return true;
       }
       if (lowered === "w") {
-        if (!canSwapSubmittedInput) return false;
+        if (!canSwapSubmittedInput) return true;
         swapWithSubmittedInputQuick();
         return true;
       }
       if (lowered === "b") {
-        if (!canRestorePrevBackendQuick) return false;
+        if (!canRestorePrevBackendQuick) return true;
         restorePrevBackendQuickPrefix();
         return true;
       }
       if (lowered === "n") {
-        if (!canRestoreLastBackendQuick) return false;
+        if (!canRestoreLastBackendQuick) return true;
         restoreLastBackendQuickPrefix();
         return true;
       }
       if (lowered === "g") {
-        if (!canNormalizeToPlain) return false;
+        if (!canNormalizeToPlain) return true;
         normalizeInputToPlain();
         return true;
       }
       if (lowered === "t") {
-        if (!canTrimInput) return false;
+        if (!canTrimInput) return true;
         trimInputQuick();
         return true;
       }
       if (lowered === "q") {
-        if (!canSquashInputSpaces) return false;
+        if (!canSquashInputSpaces) return true;
         squashInputSpacesQuick();
         return true;
       }
