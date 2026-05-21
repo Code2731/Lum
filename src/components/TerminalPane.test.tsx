@@ -1287,6 +1287,23 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(screen.getByRole("button", { name: "quick-input-set-recall" })).toHaveAttribute("disabled");
   });
 
+  it("공백만 다른 동일 입력에서는 RECALL/SWAP도 비활성화된다", async () => {
+    const { container } = render(<TerminalPane id="tab-1" />);
+    const input = container.querySelector("input")!;
+
+    submitInput(container, "  echo hello  ");
+    await waitFor(() => {
+      expect(invokeMock).toHaveBeenCalledWith("write_to_pty", {
+        id: "tab-1",
+        data: "echo hello\r",
+      });
+    });
+
+    fireEvent.change(input, { target: { value: "echo hello" } });
+    expect(screen.getByRole("button", { name: "quick-input-recall" })).toHaveAttribute("disabled");
+    expect(screen.getByRole("button", { name: "quick-input-swap" })).toHaveAttribute("disabled");
+  });
+
   it("backend prefix-only 입력은 SET RECALL 대상으로 저장하지 않는다", () => {
     const { container } = render(<TerminalPane id="tab-1" />);
     const input = container.querySelector("input")!;

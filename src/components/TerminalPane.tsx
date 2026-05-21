@@ -1481,8 +1481,10 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
   const canSetRecallFromCurrent =
     normalizedRecallCandidate !== "" && normalizedRecallCandidate !== normalizedLastSubmittedCandidate;
   const canRerunSubmittedInput = normalizedLastSubmittedCandidate !== "";
-  const canRecallSubmittedInput = !!lastSubmittedInput && inputBuffer !== lastSubmittedInput;
-  const canSwapSubmittedInput = !!lastSubmittedInput && inputBuffer !== lastSubmittedInput;
+  const canRecallSubmittedInput =
+    normalizedLastSubmittedCandidate !== "" && normalizedRecallCandidate !== normalizedLastSubmittedCandidate;
+  const canSwapSubmittedInput =
+    normalizedLastSubmittedCandidate !== "" && normalizedRecallCandidate !== normalizedLastSubmittedCandidate;
   const triggerMentionAttach = useCallback(() => {
     forceMentionAttachRef.current = true;
     const current = warpInputRef.current?.getValue() ?? inputBuffer;
@@ -1526,7 +1528,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     setClearedInputStack([]);
   }, [clearedInputStack]);
   const recallSubmittedInputQuick = useCallback(() => {
-    if (!lastSubmittedInput) return;
+    if (!canRecallSubmittedInput) return;
     const current = warpInputRef.current?.getValue() ?? inputBuffer;
     if (current === lastSubmittedInput) {
       warpInputRef.current?.focus();
@@ -1536,7 +1538,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     warpInputRef.current?.setValue(lastSubmittedInput);
     warpInputRef.current?.focus();
     setInputBuffer(lastSubmittedInput);
-  }, [inputBuffer, lastSubmittedInput, pushUndoSnapshot]);
+  }, [canRecallSubmittedInput, inputBuffer, lastSubmittedInput, pushUndoSnapshot]);
   const setRecallFromCurrentQuick = useCallback(() => {
     const current = warpInputRef.current?.getValue() ?? inputBuffer;
     const normalized = getRecallCandidate(current);
@@ -1545,7 +1547,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     warpInputRef.current?.focus();
   }, [getRecallCandidate, inputBuffer, recordSubmittedInput]);
   const swapWithSubmittedInputQuick = useCallback(() => {
-    if (!lastSubmittedInput) return;
+    if (!canSwapSubmittedInput) return;
     const current = warpInputRef.current?.getValue() ?? inputBuffer;
     if (current === lastSubmittedInput) {
       warpInputRef.current?.focus();
@@ -1556,7 +1558,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     warpInputRef.current?.focus();
     setInputBuffer(lastSubmittedInput);
     setLastSubmittedInput(current);
-  }, [inputBuffer, lastSubmittedInput, pushUndoSnapshot]);
+  }, [canSwapSubmittedInput, inputBuffer, lastSubmittedInput, pushUndoSnapshot]);
   const rerunSubmittedInputQuick = useCallback(() => {
     if (!canRerunSubmittedInput) return;
     handleSubmit(lastSubmittedInput);
