@@ -104,6 +104,18 @@ describe("TerminalContextMenu", () => {
     expect(screen.getByLabelText("열기")).toBeInTheDocument();
   });
 
+  it("복사 항목은 Cmd/Ctrl+C 단축키 힌트를 표시한다", () => {
+    render(
+      <TerminalContextMenu
+        {...baseProps}
+        isPathOrUrl={false}
+        onClose={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("Cmd/Ctrl+C")).toBeInTheDocument();
+  });
+
   it("Home/End 키로 메뉴 항목 포커스를 끝/처음으로 이동한다", () => {
     render(
       <TerminalContextMenu

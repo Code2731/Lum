@@ -46,7 +46,7 @@ const TerminalContextMenu: React.FC<Props> = ({
   const [position, setPosition] = useState(() => clampMenuPos(x, y, MENU_WIDTH, fallbackHeight));
 
   const menuItems = [
-    { label: "복사", shortcut: "⌘C", action: onCopy },
+    { label: "복사", shortcut: "Cmd/Ctrl+C", action: onCopy },
     { label: "명령어로 실행", shortcut: null, action: onRun },
     { label: "AI로 설명", shortcut: "?", action: onExplain },
     { label: "웹에서 검색", shortcut: null, action: onWebSearch },
