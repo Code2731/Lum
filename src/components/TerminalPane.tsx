@@ -2450,7 +2450,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               aria-label="quick-input-swap"
               onClick={swapWithSubmittedInputQuick}
               disabled={!canSwapSubmittedInput}
-              title={canSwapSubmittedInput ? "현재 입력과 직전 실행 입력 교환 (Cmd/Ctrl+Shift+W)" : "교환할 실행 입력이 없거나 현재 입력과 동일해 비활성화"}
+              title={canSwapSubmittedInput ? "현재 입력과 직전 실행 입력 교환 (Cmd/Ctrl+Shift+W)" : "교환 가능한 상태가 아니어서 비활성화 (실행 입력 없음/현재 입력 비실행/동일 입력)"}
               style={{
                 fontSize: 10,
                 color: canSwapSubmittedInput ? "rgba(220,247,225,0.96)" : "rgba(255,255,255,0.42)",
