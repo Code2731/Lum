@@ -54,7 +54,7 @@ const CommandBlockBar: React.FC<Props> = ({
         {block.command || "…"}
       </span>
       <IconButton
-        tooltip="이전 블록 (⌘⇧↑)"
+        tooltip="이전 블록 (Cmd/Ctrl+Shift+↑)"
         onClick={onPrev}
         disabled={!canPrev}
         className="p-1 rounded text-white/30 hover:text-white/70 hover:bg-white/10 transition-colors shrink-0 disabled:opacity-30"
@@ -62,7 +62,7 @@ const CommandBlockBar: React.FC<Props> = ({
         <ChevronLeft size={11} />
       </IconButton>
       <IconButton
-        tooltip="다음 블록 (⌘⇧↓)"
+        tooltip="다음 블록 (Cmd/Ctrl+Shift+↓)"
         onClick={onNext}
         disabled={!canNext}
         className="p-1 rounded text-white/30 hover:text-white/70 hover:bg-white/10 transition-colors shrink-0 disabled:opacity-30"
