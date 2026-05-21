@@ -80,6 +80,14 @@ describe("App (LUM 터미널)", () => {
     expect(screen.getByLabelText("SSH 연결 (Cmd/Ctrl+Shift+H)")).toBeInTheDocument();
   });
 
+  it("AI 바 도움말은 실제 닫기 단축키(Esc, Cmd/Ctrl+Shift+K)를 표시한다", async () => {
+    render(<App />);
+
+    fireEvent.keyDown(window, { key: "k", ctrlKey: true, shiftKey: true });
+    expect(screen.getByPlaceholderText("AI에게 질문하세요… (Enter 전송 · Esc 닫기)")).toBeInTheDocument();
+    expect(screen.getByText("Esc 또는 Cmd/Ctrl+Shift+K 로 닫기")).toBeInTheDocument();
+  });
+
   it("AI Chat 버튼은 제거됨 — AI는 WarpInputBar로 통합", () => {
     render(<App />);
     expect(screen.queryByLabelText("AI Chat (Cmd+Shift+A)")).toBeNull();

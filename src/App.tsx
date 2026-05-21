@@ -2870,7 +2870,7 @@ const App: React.FC = () => {
                 />
                 {isProcessing && <Loader2 size={12} className="animate-spin text-white/40 shrink-0" />}
               </div>
-              <p className="text-[10px] text-white/30 text-center mt-1.5 tracking-wide">⌘K 로 닫기</p>
+              <p className="text-[10px] text-white/30 text-center mt-1.5 tracking-wide">Esc 또는 Cmd/Ctrl+Shift+K 로 닫기</p>
             </div>
           </motion.div>
         )}
