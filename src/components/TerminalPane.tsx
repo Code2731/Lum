@@ -1480,6 +1480,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
   const normalizedLastSubmittedCandidate = getRecallCandidate(lastSubmittedInput);
   const canSetRecallFromCurrent =
     normalizedRecallCandidate !== "" && normalizedRecallCandidate !== normalizedLastSubmittedCandidate;
+  const canRerunSubmittedInput = normalizedLastSubmittedCandidate !== "";
   const canRecallSubmittedInput = !!lastSubmittedInput && inputBuffer !== lastSubmittedInput;
   const canSwapSubmittedInput = !!lastSubmittedInput && inputBuffer !== lastSubmittedInput;
   const triggerMentionAttach = useCallback(() => {
@@ -1557,9 +1558,9 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     setLastSubmittedInput(current);
   }, [inputBuffer, lastSubmittedInput, pushUndoSnapshot]);
   const rerunSubmittedInputQuick = useCallback(() => {
-    if (!lastSubmittedInput) return;
+    if (!canRerunSubmittedInput) return;
     handleSubmit(lastSubmittedInput);
-  }, [handleSubmit, lastSubmittedInput]);
+  }, [canRerunSubmittedInput, handleSubmit, lastSubmittedInput]);
   const forgetSubmittedInputQuick = useCallback(() => {
     if (!lastSubmittedInput) return;
     setLastSubmittedInput("");
@@ -1623,7 +1624,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     { id: "clear", label: "Clear Input", keywords: "clear", run: clearInputQuick, disabled: !canClearInputQuick },
     { id: "undo", label: "Undo Clear", keywords: "undo restore", run: restoreInputQuick, disabled: clearedInputStack.length === 0 },
     { id: "recall", label: "Recall Last Input", keywords: "recall", run: recallSubmittedInputQuick, disabled: !canRecallSubmittedInput },
-    { id: "rerun", label: "Rerun Last Input", keywords: "rerun repeat", run: rerunSubmittedInputQuick, disabled: !lastSubmittedInput },
+    { id: "rerun", label: "Rerun Last Input", keywords: "rerun repeat", run: rerunSubmittedInputQuick, disabled: !canRerunSubmittedInput },
     { id: "reset", label: "Reset Input State", keywords: "reset", run: resetAllInputStateQuick, disabled: !canResetAllQuick },
     { id: "backend_auto", label: "Backend Auto Toggle", keywords: "backend auto", run: clearBackendQuickPrefix, disabled: false },
     { id: "backend_back", label: "Backend Back", keywords: "backend back", run: restorePrevBackendQuickPrefix, disabled: !canRestorePrevBackendQuick },
@@ -1631,13 +1632,13 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
   ]), [
     canClearInputQuick,
     canRecallSubmittedInput,
+    canRerunSubmittedInput,
     canResetAllQuick,
     canRestoreLastBackendQuick,
     canRestorePrevBackendQuick,
     clearBackendQuickPrefix,
     clearInputQuick,
     clearedInputStack.length,
-    lastSubmittedInput,
     submittedInputHistory.length,
     recallSubmittedInputQuick,
     rerunSubmittedInputQuick,
@@ -2323,17 +2324,17 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               type="button"
               aria-label="quick-input-rerun"
               onClick={rerunSubmittedInputQuick}
-              disabled={!lastSubmittedInput}
-              title={lastSubmittedInput ? `직전 실행 입력 즉시 재실행 (Cmd/Ctrl+Shift+E): ${lastSubmittedInput}` : "재실행할 입력이 없어 비활성화"}
+              disabled={!canRerunSubmittedInput}
+              title={canRerunSubmittedInput ? `직전 실행 입력 즉시 재실행 (Cmd/Ctrl+Shift+E): ${lastSubmittedInput}` : "재실행 가능한 실행 입력이 없어 비활성화"}
               style={{
                 fontSize: 10,
-                color: lastSubmittedInput ? "rgba(255,234,199,0.95)" : "rgba(255,255,255,0.42)",
-                border: lastSubmittedInput ? "1px solid rgba(227,179,65,0.62)" : "1px solid rgba(255,255,255,0.18)",
-                background: lastSubmittedInput ? "rgba(227,179,65,0.18)" : "rgba(255,255,255,0.06)",
+                color: canRerunSubmittedInput ? "rgba(255,234,199,0.95)" : "rgba(255,255,255,0.42)",
+                border: canRerunSubmittedInput ? "1px solid rgba(227,179,65,0.62)" : "1px solid rgba(255,255,255,0.18)",
+                background: canRerunSubmittedInput ? "rgba(227,179,65,0.18)" : "rgba(255,255,255,0.06)",
                 borderRadius: 999,
                 padding: "1px 7px",
                 lineHeight: 1.25,
-                cursor: lastSubmittedInput ? "pointer" : "not-allowed",
+                cursor: canRerunSubmittedInput ? "pointer" : "not-allowed",
                 flexShrink: 0,
               }}
             >
