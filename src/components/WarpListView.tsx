@@ -1213,7 +1213,7 @@ const WarpListView: React.FC<Props> = ({
         }
         return;
       }
-      if (mod && !e.shiftKey && key === "l") {
+      if (mod && !e.shiftKey && !e.altKey && key === "l") {
         if (timelineQuery.trim() !== "") {
           e.preventDefault();
           setTimelineQuery("");
