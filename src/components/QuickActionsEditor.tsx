@@ -17,7 +17,7 @@ interface Props {
 
 const SHORTCUT_OPTIONS = [
   { label: "없음", value: undefined },
-  ...[1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => ({ label: `⌘${n}`, value: n })),
+  ...[1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => ({ label: `Cmd/Ctrl+${n}`, value: n })),
 ];
 
 const QuickActionsEditor: React.FC<Props> = ({
