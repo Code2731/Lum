@@ -2281,7 +2281,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               type="button"
               aria-label="quick-input-stop"
               onClick={handleInterrupt}
-              title="현재 실행 인터럽트 (Ctrl/Cmd+C, Cmd/Ctrl+Shift+C)"
+              title="현재 실행 인터럽트 (Cmd/Ctrl+C, Cmd/Ctrl+Shift+C)"
               style={{
                 fontSize: 10,
                 color: "rgba(255,225,222,0.96)",
