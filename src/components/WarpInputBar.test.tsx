@@ -175,8 +175,8 @@ describe("WarpInputBar — dumb input, 라우팅은 상위에서", () => {
   it("빈 입력 도움말에 backend 단축키가 노출된다", () => {
     setup();
     expect(screen.getByText(/Cmd\/Ctrl\+1~4\/0/)).toBeInTheDocument();
-    expect(screen.getByText(/`\/\./)).toBeInTheDocument();
-    expect(screen.getByText(/Shift\+`\/,/)).toBeInTheDocument();
+    expect(screen.getByText(/Cmd\/Ctrl\+`\/\./)).toBeInTheDocument();
+    expect(screen.getByText(/Cmd\/Ctrl\+Shift\+`\/,/)).toBeInTheDocument();
     expect(screen.getByText(/@sglang/)).toBeInTheDocument();
   });
 
