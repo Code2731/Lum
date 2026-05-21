@@ -1477,8 +1477,9 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     return normalized;
   }, []);
   const normalizedRecallCandidate = getRecallCandidate(inputBuffer);
+  const normalizedLastSubmittedCandidate = getRecallCandidate(lastSubmittedInput);
   const canSetRecallFromCurrent =
-    normalizedRecallCandidate !== "" && normalizedRecallCandidate !== lastSubmittedInput;
+    normalizedRecallCandidate !== "" && normalizedRecallCandidate !== normalizedLastSubmittedCandidate;
   const canRecallSubmittedInput = !!lastSubmittedInput && inputBuffer !== lastSubmittedInput;
   const canSwapSubmittedInput = !!lastSubmittedInput && inputBuffer !== lastSubmittedInput;
   const triggerMentionAttach = useCallback(() => {
