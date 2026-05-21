@@ -1483,10 +1483,9 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     if (recallHydratedRef.current) return;
     recallHydratedRef.current = true;
     if (lastSubmittedInput !== "") return;
-    const first = submittedInputHistory[0] ?? "";
-    if (first === "") return;
-    if (getRecallCandidate(first) === "") return;
-    setLastSubmittedInput(first);
+    const firstExecutable = submittedInputHistory.find((entry) => getRecallCandidate(entry) !== "") ?? "";
+    if (firstExecutable === "") return;
+    setLastSubmittedInput(firstExecutable);
   }, [getRecallCandidate, lastSubmittedInput, submittedInputHistory]);
   const canSetRecallFromCurrent =
     normalizedRecallCandidate !== "" && normalizedRecallCandidate !== normalizedLastSubmittedCandidate;

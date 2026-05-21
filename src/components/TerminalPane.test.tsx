@@ -783,6 +783,16 @@ describe("TerminalPane — 입력 라우팅", () => {
     });
   });
 
+  it("저장 히스토리 선두가 비실행 항목이어도 실행 가능한 다음 항목으로 RECALL을 복원한다", async () => {
+    localStorage.setItem("lum_input_submit_history", JSON.stringify(["@local ", "pwd"]));
+    render(<TerminalPane id="tab-1" />);
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "quick-input-recall" })).toHaveTextContent("RECALL pwd");
+      expect(screen.getByRole("button", { name: "quick-input-rerun" })).not.toHaveAttribute("disabled");
+    });
+  });
+
   it("툴벨트 HISTORY 패널에서 실행 입력을 선택해 복원한다", async () => {
     const { container } = render(<TerminalPane id="tab-1" />);
     const input = container.querySelector("input")!;
