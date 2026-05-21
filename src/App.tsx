@@ -1424,7 +1424,7 @@ const App: React.FC = () => {
     const captureHandler = (e: KeyboardEvent) => {
       if (isTextInputTarget(e.target)) return;
       const key = e.key.toLowerCase();
-      if (e.ctrlKey && !e.shiftKey && key === "r" && viewModeRef.current === "terminal") {
+      if (e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey && key === "r" && viewModeRef.current === "terminal") {
         e.preventDefault();
         e.stopPropagation();
         setShowHistorySearch(true);

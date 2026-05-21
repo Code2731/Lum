@@ -104,6 +104,13 @@ describe("App (LUM 터미널)", () => {
     expect(await screen.findByPlaceholderText(/자연어로 검색/)).toBeInTheDocument();
   });
 
+  it("Ctrl+Alt+R은 히스토리 검색 단축키로 처리되지 않는다", () => {
+    render(<App />);
+
+    fireEvent.keyDown(window, { key: "r", ctrlKey: true, altKey: true });
+    expect(screen.queryByPlaceholderText(/자연어로 검색/)).not.toBeInTheDocument();
+  });
+
   it("Ctrl+Shift+R은 히스토리 검색 대신 Diff 리뷰를 연다", async () => {
     render(<App />);
 
