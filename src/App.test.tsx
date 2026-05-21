@@ -8,6 +8,8 @@ vi.mock("@tauri-apps/api/core", () => ({
     if (cmd === "check_onboarding_complete") return Promise.resolve(true);
     if (cmd === "check_xllm_status") return Promise.resolve(false);
     if (cmd === "load_session") return Promise.reject("no session");
+    if (cmd === "get_recent_history") return Promise.resolve([]);
+    if (cmd === "search_history") return Promise.resolve([]);
     if (cmd === "get_hardware_specs") return Promise.resolve({
       total_memory_gb: 16,
       available_memory_gb: 8,
@@ -93,6 +95,21 @@ describe("App (LUM 터미널)", () => {
 
     fireEvent.keyDown(window, { key: "K", ctrlKey: true, shiftKey: true });
     expect(screen.getByPlaceholderText("AI에게 질문하세요… (Enter 전송 · Esc 닫기)")).toBeInTheDocument();
+  });
+
+  it("Ctrl+R은 히스토리 검색을 연다", async () => {
+    render(<App />);
+
+    fireEvent.keyDown(window, { key: "r", ctrlKey: true });
+    expect(await screen.findByPlaceholderText(/자연어로 검색/)).toBeInTheDocument();
+  });
+
+  it("Ctrl+Shift+R은 히스토리 검색 대신 Diff 리뷰를 연다", async () => {
+    render(<App />);
+
+    fireEvent.keyDown(window, { key: "R", ctrlKey: true, shiftKey: true });
+    expect(await screen.findByText("AI Diff Reviewer")).toBeInTheDocument();
+    expect(screen.queryByPlaceholderText(/자연어로 검색/)).not.toBeInTheDocument();
   });
 
   it("AI Chat 버튼은 제거됨 — AI는 WarpInputBar로 통합", () => {
