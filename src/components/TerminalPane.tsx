@@ -1500,7 +1500,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     normalizedRecallCandidate !== "" && normalizedRecallCandidate !== normalizedLastSubmittedCandidate;
   const canRerunSubmittedInput = normalizedLastSubmittedCandidate !== "";
   const canRecallSubmittedInput =
-    normalizedLastSubmittedCandidate !== "" && normalizedRecallCandidate !== normalizedLastSubmittedCandidate;
+    normalizedLastSubmittedCandidate !== "" && inputBuffer !== lastSubmittedInput;
   const canSwapSubmittedInput =
     normalizedLastSubmittedCandidate !== "" &&
     normalizedRecallCandidate !== "" &&
