@@ -150,6 +150,30 @@ describe("TabContextMenu", () => {
     expect(radios[0]).toHaveFocus();
   });
 
+  it("g는 그룹 입력으로 포커스를 이동하고 Ctrl+Shift+G는 소비하지 않는다", () => {
+    render(
+      <TabContextMenu
+        {...baseProps}
+        onClose={vi.fn()}
+        onSetColor={vi.fn()}
+        onSetGroup={vi.fn()}
+      />,
+    );
+
+    const menu = screen.getByRole("menu", { hidden: true });
+    const groupInput = screen.getByPlaceholderText("예: backend, deploy…");
+    const firstColor = screen.getAllByRole("radio", { hidden: true })[0];
+    firstColor.focus();
+    expect(firstColor).toHaveFocus();
+
+    fireEvent.keyDown(menu, { key: "G", ctrlKey: true, shiftKey: true });
+    expect(firstColor).toHaveFocus();
+    expect(groupInput).not.toHaveFocus();
+
+    fireEvent.keyDown(menu, { key: "g" });
+    expect(groupInput).toHaveFocus();
+  });
+
   it("그룹 입력 Enter에서 Enter 이벤트가 상위로 전파되지 않는다", () => {
     const onSetGroup = vi.fn();
     const onClose = vi.fn();

@@ -95,6 +95,7 @@ const TabContextMenu: React.FC<Props> = ({
   }, [activeColorIndex]);
 
   const handleMenuKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    const key = e.key.toLowerCase();
     if (e.key === "Tab") {
       e.stopPropagation();
       return;
@@ -144,7 +145,7 @@ const TabContextMenu: React.FC<Props> = ({
       return;
     }
 
-    if (e.key === "g" || e.key === "G") {
+    if (!e.metaKey && !e.ctrlKey && !e.altKey && key === "g") {
       e.preventDefault();
       inputRef.current?.focus();
     }
