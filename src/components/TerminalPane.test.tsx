@@ -1494,7 +1494,7 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(input).toHaveValue("@local ");
   });
 
-  it("RECALL 비활성 상태의 Cmd/Ctrl+Shift+R은 입력을 소비하지 않는다", async () => {
+  it("RECALL 비활성 상태의 Cmd/Ctrl+Shift+R도 키 입력을 소비한다", async () => {
     const { container } = render(<TerminalPane id="tab-1" />);
     const input = container.querySelector("input")!;
 
