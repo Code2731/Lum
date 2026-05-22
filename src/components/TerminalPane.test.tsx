@@ -356,6 +356,25 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(input).toHaveValue("");
   });
 
+  it("입력 단축키 Cmd/Ctrl+Alt+Shift+K는 Action Palette를 열지 않는다", () => {
+    const { container } = render(<TerminalPane id="tab-1" />);
+    const input = container.querySelector("input")!;
+    fireEvent.change(input, { target: { value: "echo done" } });
+
+    fireEvent.keyDown(input, { key: "K", ctrlKey: true, shiftKey: true, altKey: true });
+    expect(screen.queryByText("ACTION PALETTE")).not.toBeInTheDocument();
+    expect(input).toHaveValue("echo done");
+  });
+
+  it("입력 단축키 Cmd/Ctrl+Alt+1은 backend quick prefix를 토글하지 않는다", () => {
+    const { container } = render(<TerminalPane id="tab-1" />);
+    const input = container.querySelector("input")!;
+    fireEvent.change(input, { target: { value: "로그 요약해줘" } });
+
+    fireEvent.keyDown(input, { key: "1", code: "Digit1", ctrlKey: true, altKey: true });
+    expect(input).toHaveValue("로그 요약해줘");
+  });
+
   it("입력 단축키 Cmd/Ctrl+Alt+/는 단축키 치트시트를 열지 않는다", () => {
     const { container } = render(<TerminalPane id="tab-1" />);
     const input = container.querySelector("input")!;
