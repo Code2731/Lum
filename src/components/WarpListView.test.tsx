@@ -2654,6 +2654,51 @@ describe("WarpListView delta actions", () => {
     expect(copied).not.toContain("npm test");
   });
 
+  it("Δ Timeline 선택 항목 복사 단축키는 Ctrl+Alt+C 조합에서 동작하지 않는다", () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText },
+      configurable: true,
+    });
+    render(
+      <WarpListView
+        blocks={[
+          ...blocks,
+          {
+            id: "b3",
+            command: "pnpm lint",
+            output: "ok",
+            exitCode: 0,
+            startedAt: now - 2000,
+            endedAt: now - 1000,
+          },
+        ]}
+        compareResultByBlock={{
+          b2: {
+            added: 1,
+            removed: 1,
+            preview: "test changed",
+            addedLines: ["new line"],
+            removedLines: ["old line"],
+            comparedAt: now,
+          },
+          b3: {
+            added: 2,
+            removed: 0,
+            preview: "lint fixed",
+            addedLines: ["a", "b"],
+            removedLines: [],
+            comparedAt: now - 3000,
+          },
+        }}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Δ Timeline (2)" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "pnpm lint 선택" }));
+    fireEvent.keyDown(window, { key: "c", ctrlKey: true, altKey: true });
+    expect(writeText).toHaveBeenCalledTimes(0);
+  });
+
   it("Δ Timeline 전체 복사 단축키(Alt+Shift+C)", () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     Object.defineProperty(navigator, "clipboard", {
