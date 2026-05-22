@@ -16,6 +16,8 @@ interface Props {
   context: { cwd: string; git_branch: string | null };
 }
 
+const VOICE_ERROR_FONT_SIZE = 11;
+
 const CommandInput = ({
   onCommandSubmit,
   selectedModel,
@@ -240,7 +242,7 @@ const CommandInput = ({
               margin: "0 10px 6px 10px",
               padding: "4px 8px",
               borderRadius: 6,
-              fontSize: 11,
+              fontSize: VOICE_ERROR_FONT_SIZE,
               lineHeight: 1.3,
               color: "#ff7b72",
               background: "rgba(248,81,73,0.12)",
