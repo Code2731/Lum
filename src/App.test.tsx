@@ -106,6 +106,38 @@ describe("App (LUM 터미널)", () => {
     expect(screen.getByPlaceholderText("AI에게 질문하세요… (Enter 전송 · Esc 닫기)")).toBeInTheDocument();
   });
 
+  it("Cmd/Ctrl+Shift+D는 수평 분할 토글이 동작한다", async () => {
+    render(<App />);
+    const splitBtn = screen.getByLabelText("수평 분할 (Cmd/Ctrl+Shift+D)");
+    const before = splitBtn.getAttribute("aria-pressed");
+
+    fireEvent.keyDown(window, { key: "D", metaKey: true, shiftKey: true });
+    await waitFor(() => {
+      expect(splitBtn).toHaveAttribute("aria-pressed", before === "true" ? "false" : "true");
+    });
+
+    fireEvent.keyDown(window, { key: "d", metaKey: true, shiftKey: true });
+    await waitFor(() => {
+      expect(splitBtn).toHaveAttribute("aria-pressed", before ?? "false");
+    });
+  });
+
+  it("Cmd/Ctrl+Shift+E는 수직 분할 토글이 동작한다", async () => {
+    render(<App />);
+    const splitBtn = screen.getByLabelText("수직 분할 (Cmd/Ctrl+Shift+E)");
+    const before = splitBtn.getAttribute("aria-pressed");
+
+    fireEvent.keyDown(window, { key: "E", metaKey: true, shiftKey: true });
+    await waitFor(() => {
+      expect(splitBtn).toHaveAttribute("aria-pressed", before === "true" ? "false" : "true");
+    });
+
+    fireEvent.keyDown(window, { key: "e", metaKey: true, shiftKey: true });
+    await waitFor(() => {
+      expect(splitBtn).toHaveAttribute("aria-pressed", before ?? "false");
+    });
+  });
+
   it("Ctrl+Alt+Shift+K는 AI 바 단축키로 처리되지 않는다", () => {
     render(<App />);
 
@@ -488,6 +520,19 @@ describe("App (LUM 터미널)", () => {
     expect(screen.queryByText("AI Diff Reviewer")).not.toBeInTheDocument();
   });
 
+  it("Cmd/Ctrl+Shift+G는 커밋 패널이 열리고, Alt 조합은 처리되지 않는다", async () => {
+    render(<App />);
+
+    fireEvent.keyDown(window, { key: "G", metaKey: true, shiftKey: true });
+    expect(await screen.findByText("AI 커밋 메시지 생성")).toBeInTheDocument();
+
+    const beforeCount = screen.getAllByText("AI 커밋 메시지 생성").length;
+    fireEvent.keyDown(window, { key: "G", metaKey: true, shiftKey: true, altKey: true });
+    await waitFor(() => {
+      expect(screen.getAllByText("AI 커밋 메시지 생성").length).toBe(beforeCount);
+    });
+  });
+
   it("Cmd+I는 Inspector 요약 탭을 연다", async () => {
     render(<App />);
 
@@ -550,6 +595,54 @@ describe("App (LUM 터미널)", () => {
 
     fireEvent.keyDown(window, { key: "q", ctrlKey: true, altKey: true, shiftKey: true });
     expect(screen.getByText("빠른 실행 없음 · 오른쪽 설정에서 추가")).toBeInTheDocument();
+  });
+
+  it("Cmd+Shift+L로 스크립트 패널이 열리고, Ctrl/Cmd+Shift+H는 SSH 모달로 동작한다", async () => {
+    const baseImpl = mockedInvoke.getMockImplementation() as
+      ((cmd: string, args?: unknown, options?: unknown) => Promise<unknown>);
+    if (!baseImpl) throw new Error("invoke mock implementation not found");
+
+    mockedInvoke.mockImplementation((cmd: string, ...args: unknown[]) => {
+      if (cmd === "list_scripts") return Promise.resolve([]);
+      if (cmd === "load_app_config") return Promise.resolve({});
+      return baseImpl(cmd, args[0], args[1]);
+    });
+
+    try {
+      render(<App />);
+
+      fireEvent.keyDown(window, { key: "L", metaKey: true, shiftKey: true });
+      expect(await screen.findByText("스크립트 라이브러리")).toBeInTheDocument();
+    } finally {
+      mockedInvoke.mockImplementation(baseImpl);
+    }
+  });
+
+  it("Cmd+Shift+H는 SSH 연결 모달이 열리고, Alt 조합은 처리되지 않는다", async () => {
+    const baseImpl = mockedInvoke.getMockImplementation() as
+      ((cmd: string, args?: unknown, options?: unknown) => Promise<unknown>);
+    if (!baseImpl) throw new Error("invoke mock implementation not found");
+
+    mockedInvoke.mockImplementation((cmd: string, ...args: unknown[]) => {
+      if (cmd === "list_ssh_profiles") return Promise.resolve([]);
+      if (cmd === "load_app_config") return Promise.resolve({});
+      return baseImpl(cmd, args[0], args[1]);
+    });
+
+    try {
+      render(<App />);
+
+      fireEvent.keyDown(window, { key: "H", metaKey: true, shiftKey: true });
+      expect(await screen.findByText("SSH 연결")).toBeInTheDocument();
+
+      const beforeCount = screen.getAllByText("SSH 연결").length;
+      fireEvent.keyDown(window, { key: "H", metaKey: true, shiftKey: true, altKey: true });
+      await waitFor(() => {
+        expect(screen.getAllByText("SSH 연결").length).toBe(beforeCount);
+      });
+    } finally {
+      mockedInvoke.mockImplementation(baseImpl);
+    }
   });
 
   it("AI Chat 버튼은 제거됨 — AI는 WarpInputBar로 통합", () => {
