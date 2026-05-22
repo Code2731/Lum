@@ -184,7 +184,7 @@ const TerminalContextMenu: React.FC<Props> = ({
     >
       {/* 선택 텍스트 미리보기 */}
       <div className="px-3 py-1.5 mb-0.5 border-b border-white/5">
-        <p className="text-[9px] font-mono text-white/25 truncate">{preview}</p>
+        <p className="text-xs font-mono text-white/25 truncate">{preview}</p>
       </div>
 
       <div className="px-1 space-y-0.5">
@@ -198,7 +198,7 @@ const TerminalContextMenu: React.FC<Props> = ({
             onClick={() => closeOrAction(index)}
             aria-label={entry.label}
             tabIndex={activeIndex === index ? 0 : -1}
-            className={`w-full flex items-center gap-2.5 px-3 py-1.5 text-[11px] text-left transition-colors rounded-md
+            className={`w-full flex items-center gap-2.5 px-3 py-1.5 text-sm text-left transition-colors rounded-md
               focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent focus-visible:ring-offset-1 focus-visible:ring-offset-[#161b22]
             `}
           >
@@ -210,7 +210,7 @@ const TerminalContextMenu: React.FC<Props> = ({
               {entry.label === "열기" ? <ExternalLink size={11} /> : null}
             </span>
             <span className="flex-1">{entry.label}</span>
-            {entry.shortcut && <span className="text-white/20 text-[9px] shrink-0">{entry.shortcut}</span>}
+            {entry.shortcut && <span className="text-white/20 text-xs shrink-0">{entry.shortcut}</span>}
           </button>
         ))}
       </div>
