@@ -213,6 +213,30 @@ describe("App (LUM 터미널)", () => {
     expect(await screen.findByPlaceholderText(/자연어로 검색/)).toBeInTheDocument();
   });
 
+  it("리스트 뷰에서는 Ctrl+R이 히스토리 검색을 열지 않는다", async () => {
+    render(<App />);
+
+    fireEvent.click(screen.getByLabelText("리스트"));
+    await waitFor(() => {
+      expect(screen.getByLabelText("리스트")).toHaveAttribute("aria-pressed", "true");
+    });
+
+    fireEvent.keyDown(window, { key: "r", ctrlKey: true });
+    expect(screen.queryByPlaceholderText(/자연어로 검색/)).not.toBeInTheDocument();
+  });
+
+  it("캔버스 뷰에서는 Ctrl+R이 히스토리 검색을 열지 않는다", async () => {
+    render(<App />);
+
+    fireEvent.click(screen.getByLabelText("캔버스"));
+    await waitFor(() => {
+      expect(screen.getByLabelText("캔버스")).toHaveAttribute("aria-pressed", "true");
+    });
+
+    fireEvent.keyDown(window, { key: "r", ctrlKey: true });
+    expect(screen.queryByPlaceholderText(/자연어로 검색/)).not.toBeInTheDocument();
+  });
+
   it("Cmd+R은 히스토리 검색 단축키로 처리되지 않는다", () => {
     render(<App />);
 
