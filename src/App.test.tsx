@@ -542,6 +542,32 @@ describe("App (LUM 터미널)", () => {
     }
   });
 
+  it("글로벌 단축키는 입력 필드 포커스 시 동작하지 않는다(Ctrl/Cmd)", async () => {
+    render(<App />);
+    const input = document.createElement("input");
+    document.body.appendChild(input);
+    try {
+      const beforePanes = screen.getAllByTestId(/^terminal-pane-/).length;
+
+      input.focus();
+      expect(document.activeElement).toBe(input);
+
+      fireEvent.keyDown(input, { key: "k", ctrlKey: true, shiftKey: true });
+      expect(screen.queryByPlaceholderText("AI에게 질문하세요… (Enter 전송 · Esc 닫기)")).not.toBeInTheDocument();
+
+      fireEvent.keyDown(input, { key: "b", ctrlKey: true });
+      expect(screen.getAllByTestId(/^terminal-pane-/).length).toBe(beforePanes);
+
+      fireEvent.keyDown(input, { key: "t", metaKey: true });
+      expect(screen.getAllByTestId(/^terminal-pane-/).length).toBe(beforePanes);
+
+      fireEvent.keyDown(input, { key: "r", metaKey: true });
+      expect(screen.queryByPlaceholderText(/자연어로 검색/)).not.toBeInTheDocument();
+    } finally {
+      input.remove();
+    }
+  });
+
   it("Inspector 닫기 버튼은 트리거 버튼으로 포커스를 되돌린다", async () => {
     render(<App />);
 
