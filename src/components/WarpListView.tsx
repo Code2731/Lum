@@ -1462,28 +1462,28 @@ const WarpListView: React.FC<Props> = ({
           {comparedCount > 0 && (
             <>
               <span
-                className="text-[10px] px-2 py-0.5 rounded border border-cyan-400/20 bg-cyan-400/10 text-cyan-100/90 tabular-nums"
+                className="text-xs px-2 py-0.5 rounded border border-cyan-400/20 bg-cyan-400/10 text-cyan-100/90 tabular-nums"
                 title="현재 표시 중인 비교 블록의 누적 변화량"
               >
                 Σ +{comparedTotals.added}/-{comparedTotals.removed}
               </span>
               {retryCompareQueueDepth > 0 && (
                 <span
-                  className="text-[10px] px-2 py-0.5 rounded border border-emerald-300/30 bg-emerald-300/12 text-emerald-100 tabular-nums"
+                  className="text-xs px-2 py-0.5 rounded border border-emerald-300/30 bg-emerald-300/12 text-emerald-100 tabular-nums"
                   title="Retry+Compare 진행 대기/실행 건수"
                 >
                   Queue {retryCompareQueueDepth}
                 </span>
               )}
               {(retryCompareInFlight || retryCompareQueueWaiting > 0) && (
-                <span className="text-[10px] text-white/45 tabular-nums">
+                <span className="text-xs text-white/45 tabular-nums">
                   {retryCompareInFlight ? "실행 중" : "대기"} · wait {retryCompareQueueWaiting}
                 </span>
               )}
               {onToggleRetryCompareQueuePaused && (
                 <button
                   type="button"
-                  className={`text-[10px] px-2 py-0.5 rounded border ${
+                  className={`text-xs px-2 py-0.5 rounded border ${
                     retryCompareQueuePaused
                       ? "border-amber-300/40 bg-amber-300/14 text-amber-100"
                       : "border-white/15 text-white/70 hover:bg-white/[0.08]"
@@ -1497,7 +1497,7 @@ const WarpListView: React.FC<Props> = ({
               {retryCompareCompletedCount > 0 && (
                 <button
                   type="button"
-                  className="text-[10px] px-2 py-0.5 rounded border border-white/15 text-white/60 hover:bg-white/[0.08] tabular-nums"
+                  className="text-xs px-2 py-0.5 rounded border border-white/15 text-white/60 hover:bg-white/[0.08] tabular-nums"
                   onClick={() => onResetRetryCompareCompletedCount?.()}
                   title="완료 카운트 리셋 (Alt+D)"
                 >
@@ -1506,7 +1506,7 @@ const WarpListView: React.FC<Props> = ({
               )}
               {retryCompareInFlight && retryCompareCurrentCommand && (
                 <span
-                  className="max-w-[220px] truncate text-[10px] text-emerald-100/90"
+                  className="max-w-[220px] truncate text-xs text-emerald-100/90"
                   title={retryCompareCurrentCommand}
                 >
                   {retryCompareCurrentCommand}
@@ -1518,7 +1518,7 @@ const WarpListView: React.FC<Props> = ({
                   type="button"
                   onClick={toggleTimelinePanel}
                   title="Cmd/Ctrl+Shift+Y"
-                  className="text-[10px] px-2 py-0.5 rounded border border-cyan-400/30 text-cyan-200/90 hover:bg-cyan-400/15"
+                  className="text-xs px-2 py-0.5 rounded border border-cyan-400/30 text-cyan-200/90 hover:bg-cyan-400/15"
                 >
                   Δ Timeline ({comparedCount})
                 </button>
@@ -1537,7 +1537,7 @@ const WarpListView: React.FC<Props> = ({
                           }}
                           onClick={(e) => e.stopPropagation()}
                         >
-                    <div className="px-2.5 py-1.5 border-b border-white/10 text-[10px] text-cyan-200">
+                    <div className="px-2.5 py-1.5 border-b border-white/10 text-xs text-cyan-200">
                       최근 비교 히스토리
                     </div>
                     <div className="px-2 py-1.5 border-b border-white/10 space-y-1.5">
@@ -1552,7 +1552,7 @@ const WarpListView: React.FC<Props> = ({
                           setTimelineQuery("");
                         }}
                         placeholder="타임라인 검색 (command/preview)"
-                        className="w-full bg-[#0f151f] border border-white/10 rounded px-2 py-1 text-[10px] text-white/80 placeholder:text-white/30 outline-none focus-visible:ring-1 focus-visible:ring-cyan-300/45"
+                        className="w-full bg-[#0f151f] border border-white/10 rounded px-2 py-1 text-xs text-white/80 placeholder:text-white/30 outline-none focus-visible:ring-1 focus-visible:ring-cyan-300/45"
                       />
                       <div className="flex items-center gap-1.5">
                         <RiskChip
@@ -1589,7 +1589,7 @@ const WarpListView: React.FC<Props> = ({
                           {timelineQuery.trim() !== "" && (
                             <button
                               type="button"
-                              className="text-[10px] px-1.5 py-0.5 rounded border border-cyan-300/30 bg-cyan-300/12 text-cyan-100 hover:bg-cyan-300/20"
+                              className="text-xs px-1.5 py-0.5 rounded border border-cyan-300/30 bg-cyan-300/12 text-cyan-100 hover:bg-cyan-300/20"
                               onClick={() => setTimelineQuery("")}
                               title="검색 필터 해제"
                             >
@@ -1599,7 +1599,7 @@ const WarpListView: React.FC<Props> = ({
                           {timelineRiskFilter !== "all" && (
                             <button
                               type="button"
-                              className="text-[10px] px-1.5 py-0.5 rounded border border-rose-300/30 bg-rose-300/12 text-rose-100 hover:bg-rose-300/20"
+                              className="text-xs px-1.5 py-0.5 rounded border border-rose-300/30 bg-rose-300/12 text-rose-100 hover:bg-rose-300/20"
                               onClick={() => setTimelineRiskFilter("all")}
                               title="위험도 필터 해제"
                             >
@@ -1609,7 +1609,7 @@ const WarpListView: React.FC<Props> = ({
                           {timelinePinnedOnly && (
                             <button
                               type="button"
-                              className="text-[10px] px-1.5 py-0.5 rounded border border-amber-300/30 bg-amber-300/12 text-amber-100 hover:bg-amber-300/20"
+                              className="text-xs px-1.5 py-0.5 rounded border border-amber-300/30 bg-amber-300/12 text-amber-100 hover:bg-amber-300/20"
                               onClick={() => setTimelinePinnedOnly(false)}
                               title="핀만 해제"
                             >
@@ -1619,7 +1619,7 @@ const WarpListView: React.FC<Props> = ({
                           {timelineSelectedOnly && (
                             <button
                               type="button"
-                              className="text-[10px] px-1.5 py-0.5 rounded border border-cyan-300/30 bg-cyan-300/12 text-cyan-100 hover:bg-cyan-300/20"
+                              className="text-xs px-1.5 py-0.5 rounded border border-cyan-300/30 bg-cyan-300/12 text-cyan-100 hover:bg-cyan-300/20"
                               onClick={() => setTimelineSelectedOnly(false)}
                               title="선택만 해제"
                             >
@@ -1629,7 +1629,7 @@ const WarpListView: React.FC<Props> = ({
                           {timelineSortMode !== "recent" && (
                             <button
                               type="button"
-                              className="text-[10px] px-1.5 py-0.5 rounded border border-white/20 bg-white/[0.08] text-white/80 hover:bg-white/[0.14]"
+                              className="text-xs px-1.5 py-0.5 rounded border border-white/20 bg-white/[0.08] text-white/80 hover:bg-white/[0.14]"
                               onClick={() => setTimelineSortMode("recent")}
                               title="정렬 초기화"
                             >
@@ -1639,12 +1639,12 @@ const WarpListView: React.FC<Props> = ({
                         </div>
                       )}
                       <div className="flex items-center gap-1.5">
-                        <span className="text-[10px] text-white/48 tabular-nums">
+                        <span className="text-xs text-white/48 tabular-nums">
                           선택 {selectedTimelineIds.length}
                         </span>
                         <button
                           type="button"
-                          className={`text-[10px] px-2 py-0.5 rounded border ${
+                          className={`text-xs px-2 py-0.5 rounded border ${
                             showShortcutHelp
                               ? "border-cyan-300/40 bg-cyan-300/14 text-cyan-100"
                               : "border-white/15 text-white/70 hover:bg-white/[0.08]"
@@ -1656,7 +1656,7 @@ const WarpListView: React.FC<Props> = ({
                         </button>
                         <button
                           type="button"
-                          className="text-[10px] px-2 py-0.5 rounded border border-white/15 text-white/70 hover:bg-white/[0.08] disabled:opacity-40"
+                          className="text-xs px-2 py-0.5 rounded border border-white/15 text-white/70 hover:bg-white/[0.08] disabled:opacity-40"
                           onClick={resetTimelineViewFilters}
                           disabled={!timelineViewCustomized}
                           title="Alt+R / Cmd/Ctrl+R"
@@ -1665,7 +1665,7 @@ const WarpListView: React.FC<Props> = ({
                         </button>
                         <button
                           type="button"
-                          className="text-[10px] px-2 py-0.5 rounded border border-white/15 text-white/70 hover:bg-white/[0.08] disabled:opacity-40"
+                          className="text-xs px-2 py-0.5 rounded border border-white/15 text-white/70 hover:bg-white/[0.08] disabled:opacity-40"
                           onClick={selectAllTimelineFiltered}
                           disabled={timelineFiltered.length === 0}
                           title="Alt+A"
@@ -1674,7 +1674,7 @@ const WarpListView: React.FC<Props> = ({
                         </button>
                         <button
                           type="button"
-                          className="text-[10px] px-2 py-0.5 rounded border border-white/15 text-white/70 hover:bg-white/[0.08] disabled:opacity-40"
+                          className="text-xs px-2 py-0.5 rounded border border-white/15 text-white/70 hover:bg-white/[0.08] disabled:opacity-40"
                           onClick={clearTimelineSelection}
                           disabled={timelineSelectedIds.size === 0}
                           title="Alt+Shift+A"
@@ -1683,7 +1683,7 @@ const WarpListView: React.FC<Props> = ({
                         </button>
                         <button
                           type="button"
-                          className="text-[10px] px-2 py-0.5 rounded border border-white/15 text-white/70 hover:bg-white/[0.08] disabled:opacity-40"
+                          className="text-xs px-2 py-0.5 rounded border border-white/15 text-white/70 hover:bg-white/[0.08] disabled:opacity-40"
                           onClick={invertTimelineFilteredSelection}
                           disabled={timelineFiltered.length === 0}
                           title="Alt+I"
@@ -1692,7 +1692,7 @@ const WarpListView: React.FC<Props> = ({
                         </button>
                         <button
                           type="button"
-                          className={`text-[10px] px-2 py-0.5 rounded border ${
+                          className={`text-xs px-2 py-0.5 rounded border ${
                             timelineSelectedOnly
                               ? "border-cyan-300/45 bg-cyan-300/18 text-cyan-100"
                               : "border-white/15 text-white/70 hover:bg-white/[0.08]"
@@ -1705,7 +1705,7 @@ const WarpListView: React.FC<Props> = ({
                         </button>
                         <button
                           type="button"
-                          className="text-[10px] px-2 py-0.5 rounded border border-rose-300/30 text-rose-200 hover:bg-rose-300/12 disabled:opacity-40"
+                          className="text-xs px-2 py-0.5 rounded border border-rose-300/30 text-rose-200 hover:bg-rose-300/12 disabled:opacity-40"
                           onClick={selectHighRiskTimelineFiltered}
                           disabled={timelineFiltered.length === 0}
                           title="Alt+H"
@@ -1714,7 +1714,7 @@ const WarpListView: React.FC<Props> = ({
                         </button>
                         <button
                           type="button"
-                          className="text-[10px] px-2 py-0.5 rounded border border-white/15 text-white/70 hover:bg-white/[0.08] disabled:opacity-40"
+                          className="text-xs px-2 py-0.5 rounded border border-white/15 text-white/70 hover:bg-white/[0.08] disabled:opacity-40"
                           onClick={() => {
                             navigator.clipboard.writeText(buildAllDiffsText(selectedTimelineItems)).catch(() => {});
                           }}
@@ -1725,7 +1725,7 @@ const WarpListView: React.FC<Props> = ({
                         {onRetrySelectedWithDiff && (
                           <button
                             type="button"
-                            className="text-[10px] px-2 py-0.5 rounded border border-cyan-300/30 text-cyan-200 hover:bg-cyan-300/12 disabled:opacity-40"
+                            className="text-xs px-2 py-0.5 rounded border border-cyan-300/30 text-cyan-200 hover:bg-cyan-300/12 disabled:opacity-40"
                             onClick={() => {
                               onRetrySelectedWithDiff(selectedTimelineItems.map((item) => item.block));
                             }}
@@ -1737,7 +1737,7 @@ const WarpListView: React.FC<Props> = ({
                         {onClearRetryCompareQueue && (
                           <button
                             type="button"
-                            className="text-[10px] px-2 py-0.5 rounded border border-rose-300/30 text-rose-200 hover:bg-rose-300/12 disabled:opacity-40"
+                            className="text-xs px-2 py-0.5 rounded border border-rose-300/30 text-rose-200 hover:bg-rose-300/12 disabled:opacity-40"
                             onClick={onClearRetryCompareQueue}
                             disabled={retryCompareQueueWaiting === 0}
                           >
@@ -1746,7 +1746,7 @@ const WarpListView: React.FC<Props> = ({
                         )}
                         <button
                           type="button"
-                          className="text-[10px] px-2 py-0.5 rounded border border-amber-300/30 text-amber-200 hover:bg-amber-300/12 disabled:opacity-40"
+                          className="text-xs px-2 py-0.5 rounded border border-amber-300/30 text-amber-200 hover:bg-amber-300/12 disabled:opacity-40"
                           onClick={pinSelectedTimeline}
                           disabled={timelineSelectedIds.size === 0}
                           title="Alt+J"
@@ -1755,7 +1755,7 @@ const WarpListView: React.FC<Props> = ({
                         </button>
                         <button
                           type="button"
-                          className="text-[10px] px-2 py-0.5 rounded border border-amber-300/30 text-amber-200 hover:bg-amber-300/12 disabled:opacity-40"
+                          className="text-xs px-2 py-0.5 rounded border border-amber-300/30 text-amber-200 hover:bg-amber-300/12 disabled:opacity-40"
                           onClick={unpinSelectedTimeline}
                           disabled={timelineSelectedIds.size === 0}
                           title="Alt+Shift+J"
@@ -1764,7 +1764,7 @@ const WarpListView: React.FC<Props> = ({
                         </button>
                         <button
                           type="button"
-                          className="text-[10px] px-2 py-0.5 rounded border border-amber-300/30 text-amber-200 hover:bg-amber-300/12 disabled:opacity-40"
+                          className="text-xs px-2 py-0.5 rounded border border-amber-300/30 text-amber-200 hover:bg-amber-300/12 disabled:opacity-40"
                           onClick={pinFilteredTimeline}
                           title="Alt+Shift+P / Cmd/Ctrl+Shift+P"
                           disabled={timelineFiltered.length === 0}
@@ -1773,7 +1773,7 @@ const WarpListView: React.FC<Props> = ({
                         </button>
                         <button
                           type="button"
-                          className="text-[10px] px-2 py-0.5 rounded border border-amber-300/30 text-amber-200 hover:bg-amber-300/12 disabled:opacity-40"
+                          className="text-xs px-2 py-0.5 rounded border border-amber-300/30 text-amber-200 hover:bg-amber-300/12 disabled:opacity-40"
                           onClick={unpinFilteredTimeline}
                           title="Alt+Shift+O / Cmd/Ctrl+Shift+O"
                           disabled={timelineFiltered.length === 0}
@@ -1782,7 +1782,7 @@ const WarpListView: React.FC<Props> = ({
                         </button>
                         <button
                           type="button"
-                          className={`text-[10px] px-2 py-0.5 rounded border ${
+                          className={`text-xs px-2 py-0.5 rounded border ${
                             timelinePinnedOnly
                               ? "border-amber-300/45 bg-amber-300/18 text-amber-100"
                               : "border-white/15 text-white/70 hover:bg-white/[0.08]"
@@ -1795,7 +1795,7 @@ const WarpListView: React.FC<Props> = ({
                         </button>
                         <button
                           type="button"
-                          className="text-[10px] px-2 py-0.5 rounded border border-amber-300/30 text-amber-200 hover:bg-amber-300/12 disabled:opacity-40"
+                          className="text-xs px-2 py-0.5 rounded border border-amber-300/30 text-amber-200 hover:bg-amber-300/12 disabled:opacity-40"
                           onClick={clearPinnedTimeline}
                           title="Alt+Shift+U / Cmd/Ctrl+Shift+U"
                           disabled={timelinePinnedIds.size === 0}
@@ -1804,7 +1804,7 @@ const WarpListView: React.FC<Props> = ({
                         </button>
                         <button
                           type="button"
-                          className={`text-[10px] px-2 py-0.5 rounded border ${
+                          className={`text-xs px-2 py-0.5 rounded border ${
                             timelineSortMode === "delta"
                               ? "border-cyan-300/45 bg-cyan-300/18 text-cyan-100"
                               : "border-white/15 text-white/70 hover:bg-white/[0.08]"
@@ -1816,7 +1816,7 @@ const WarpListView: React.FC<Props> = ({
                         </button>
                         <button
                           type="button"
-                          className="text-[10px] px-2 py-0.5 rounded border border-white/15 text-white/70 hover:bg-white/[0.08] disabled:opacity-40"
+                          className="text-xs px-2 py-0.5 rounded border border-white/15 text-white/70 hover:bg-white/[0.08] disabled:opacity-40"
                           onClick={() => navigateSelectedTimeline(1)}
                           title="Alt+Enter"
                           disabled={selectedTimelineIds.length === 0}
@@ -1825,7 +1825,7 @@ const WarpListView: React.FC<Props> = ({
                         </button>
                         <button
                           type="button"
-                          className="text-[10px] px-2 py-0.5 rounded border border-white/15 text-white/70 hover:bg-white/[0.08] disabled:opacity-40"
+                          className="text-xs px-2 py-0.5 rounded border border-white/15 text-white/70 hover:bg-white/[0.08] disabled:opacity-40"
                           onClick={() => navigateSelectedTimeline(-1)}
                           title="Alt+↑"
                           disabled={selectedTimelineIds.length === 0}
@@ -1834,7 +1834,7 @@ const WarpListView: React.FC<Props> = ({
                         </button>
                         <button
                           type="button"
-                          className="text-[10px] px-2 py-0.5 rounded border border-white/15 text-white/70 hover:bg-white/[0.08] disabled:opacity-40"
+                          className="text-xs px-2 py-0.5 rounded border border-white/15 text-white/70 hover:bg-white/[0.08] disabled:opacity-40"
                           onClick={() => navigateSelectedTimeline(1)}
                           title="Alt+↓"
                           disabled={selectedTimelineIds.length === 0}
@@ -1844,7 +1844,7 @@ const WarpListView: React.FC<Props> = ({
                         {onExplainAllDiffs && (
                           <button
                             type="button"
-                            className="text-[10px] px-2 py-0.5 rounded border border-cyan-300/30 text-cyan-200 hover:bg-cyan-300/12 disabled:opacity-40"
+                            className="text-xs px-2 py-0.5 rounded border border-cyan-300/30 text-cyan-200 hover:bg-cyan-300/12 disabled:opacity-40"
                             onClick={() => {
                               onExplainAllDiffs(buildAllDiffsText(selectedTimelineItems));
                               closeTimelinePanel(false);
@@ -1856,7 +1856,7 @@ const WarpListView: React.FC<Props> = ({
                         )}
                         <button
                           type="button"
-                          className="text-[10px] px-2 py-0.5 rounded border border-white/15 text-white/70 hover:bg-white/[0.08]"
+                          className="text-xs px-2 py-0.5 rounded border border-white/15 text-white/70 hover:bg-white/[0.08]"
                           onClick={() => {
                             navigator.clipboard.writeText(buildAllDiffsText(timelineFiltered)).catch(() => {});
                           }}
@@ -1867,7 +1867,7 @@ const WarpListView: React.FC<Props> = ({
                         {onExplainAllDiffs && (
                           <button
                             type="button"
-                            className="text-[10px] px-2 py-0.5 rounded border border-cyan-300/30 text-cyan-200 hover:bg-cyan-300/12 disabled:opacity-40"
+                            className="text-xs px-2 py-0.5 rounded border border-cyan-300/30 text-cyan-200 hover:bg-cyan-300/12 disabled:opacity-40"
                             onClick={() => {
                               onExplainAllDiffs(buildAllDiffsText(timelineFiltered));
                               closeTimelinePanel(false);
@@ -1880,7 +1880,7 @@ const WarpListView: React.FC<Props> = ({
                         {onClearCompareResults && (
                           <button
                             type="button"
-                            className="ml-auto text-[10px] px-2 py-0.5 rounded border border-rose-300/30 text-rose-200 hover:bg-rose-300/12"
+                            className="ml-auto text-xs px-2 py-0.5 rounded border border-rose-300/30 text-rose-200 hover:bg-rose-300/12"
                             onClick={() => {
                               onClearCompareResults();
                               closeDeltaPopover(false);
@@ -1894,7 +1894,7 @@ const WarpListView: React.FC<Props> = ({
                         )}
                       </div>
                       {showShortcutHelp && (
-                        <div className="rounded border border-cyan-300/20 bg-cyan-400/[0.08] px-2 py-1.5 text-[10px] text-cyan-100/90 space-y-0.5">
+                        <div className="rounded border border-cyan-300/20 bg-cyan-400/[0.08] px-2 py-1.5 text-xs text-cyan-100/90 space-y-0.5">
                           <div><span className="text-cyan-50">Cmd/Ctrl+Shift+Y</span> 타임라인 열기/닫기</div>
                           <div><span className="text-cyan-50">Alt+Enter / Alt+↑ / Alt+↓</span> 선택 Jump/이동</div>
                           <div><span className="text-cyan-50">Alt+/ / Cmd/Ctrl+/</span> 단축키 도움말 토글</div>
@@ -1926,12 +1926,12 @@ const WarpListView: React.FC<Props> = ({
                     </div>
                     {retryCompareQueueItems.length > 0 && (
                       <div className="px-2 py-1.5 border-b border-white/10 space-y-1">
-                        <div className="flex items-center gap-1.5 text-[10px] text-white/55">
+                        <div className="flex items-center gap-1.5 text-xs text-white/55">
                           <span>Retry+Compare Queue</span>
                           <span className="tabular-nums">표시 {filteredQueueItems.length}/{retryCompareQueueItems.length}</span>
                           <button
                             type="button"
-                            className="ml-auto text-[10px] px-1.5 py-0.5 rounded border border-white/15 text-white/70 hover:bg-white/[0.08]"
+                            className="ml-auto text-xs px-1.5 py-0.5 rounded border border-white/15 text-white/70 hover:bg-white/[0.08]"
                             onClick={() => setQueuePanelCollapsed((prev) => !prev)}
                             title="Alt+K"
                           >
@@ -1952,12 +1952,12 @@ const WarpListView: React.FC<Props> = ({
                                   setQueueQuery("");
                                 }}
                                 placeholder="큐 검색 (command)"
-                                className="flex-1 bg-[#0f151f] border border-white/10 rounded px-2 py-1 text-[10px] text-white/80 placeholder:text-white/30 outline-none focus-visible:ring-1 focus-visible:ring-cyan-300/45"
+                                className="flex-1 bg-[#0f151f] border border-white/10 rounded px-2 py-1 text-xs text-white/80 placeholder:text-white/30 outline-none focus-visible:ring-1 focus-visible:ring-cyan-300/45"
                               />
                               {queueQuery.trim() !== "" && (
                                 <button
                                   type="button"
-                                  className="text-[10px] px-1.5 py-1 rounded border border-white/15 text-white/70 hover:bg-white/[0.08]"
+                                  className="text-xs px-1.5 py-1 rounded border border-white/15 text-white/70 hover:bg-white/[0.08]"
                                   onClick={() => setQueueQuery("")}
                                 >
                                   지우기
@@ -1966,7 +1966,7 @@ const WarpListView: React.FC<Props> = ({
                               {onUndoRetryCompareQueueChange && (
                                 <button
                                   type="button"
-                                  className="text-[10px] px-1.5 py-1 rounded border border-amber-300/30 text-amber-200 hover:bg-amber-300/12 disabled:opacity-40"
+                                  className="text-xs px-1.5 py-1 rounded border border-amber-300/30 text-amber-200 hover:bg-amber-300/12 disabled:opacity-40"
                                   onClick={onUndoRetryCompareQueueChange}
                                   title="Alt+Z / Cmd/Ctrl+Z"
                                   disabled={!canUndoRetryCompareQueueChange}
@@ -1977,7 +1977,7 @@ const WarpListView: React.FC<Props> = ({
                               {onRedoRetryCompareQueueChange && (
                                 <button
                                   type="button"
-                                  className="text-[10px] px-1.5 py-1 rounded border border-cyan-300/30 text-cyan-200 hover:bg-cyan-300/12 disabled:opacity-40"
+                                  className="text-xs px-1.5 py-1 rounded border border-cyan-300/30 text-cyan-200 hover:bg-cyan-300/12 disabled:opacity-40"
                                   onClick={onRedoRetryCompareQueueChange}
                                   title="Alt+Shift+Z / Cmd/Ctrl+Shift+Z"
                                   disabled={!canRedoRetryCompareQueueChange}
@@ -1988,7 +1988,7 @@ const WarpListView: React.FC<Props> = ({
                               {onRemoveFilteredRetryCompareQueueItems && (
                                 <button
                                   type="button"
-                                  className="text-[10px] px-1.5 py-1 rounded border border-rose-300/30 text-rose-200 hover:bg-rose-300/12 disabled:opacity-40"
+                                  className="text-xs px-1.5 py-1 rounded border border-rose-300/30 text-rose-200 hover:bg-rose-300/12 disabled:opacity-40"
                                   onClick={() => {
                                     onRemoveFilteredRetryCompareQueueItems(filteredQueueItems.map((x) => x.id));
                                   }}
@@ -2001,7 +2001,7 @@ const WarpListView: React.FC<Props> = ({
                               {onPrioritizeFilteredRetryCompareQueueItems && (
                                 <button
                                   type="button"
-                                  className="text-[10px] px-1.5 py-1 rounded border border-emerald-300/30 text-emerald-200 hover:bg-emerald-300/12 disabled:opacity-40"
+                                  className="text-xs px-1.5 py-1 rounded border border-emerald-300/30 text-emerald-200 hover:bg-emerald-300/12 disabled:opacity-40"
                                   onClick={() => {
                                     onPrioritizeFilteredRetryCompareQueueItems(filteredQueueItems.map((x) => x.id));
                                   }}
@@ -2014,7 +2014,7 @@ const WarpListView: React.FC<Props> = ({
                               {onPromoteFilteredRetryCompareQueueItems && (
                                 <button
                                   type="button"
-                                  className="text-[10px] px-1.5 py-1 rounded border border-cyan-300/30 text-cyan-200 hover:bg-cyan-300/12 disabled:opacity-40"
+                                  className="text-xs px-1.5 py-1 rounded border border-cyan-300/30 text-cyan-200 hover:bg-cyan-300/12 disabled:opacity-40"
                                   onClick={() => {
                                     onPromoteFilteredRetryCompareQueueItems(filteredQueueItems.map((x) => x.id));
                                   }}
@@ -2027,7 +2027,7 @@ const WarpListView: React.FC<Props> = ({
                               {onDemoteFilteredRetryCompareQueueItems && (
                                 <button
                                   type="button"
-                                  className="text-[10px] px-1.5 py-1 rounded border border-cyan-300/30 text-cyan-200 hover:bg-cyan-300/12 disabled:opacity-40"
+                                  className="text-xs px-1.5 py-1 rounded border border-cyan-300/30 text-cyan-200 hover:bg-cyan-300/12 disabled:opacity-40"
                                   onClick={() => {
                                     onDemoteFilteredRetryCompareQueueItems(filteredQueueItems.map((x) => x.id));
                                   }}
@@ -2044,17 +2044,17 @@ const WarpListView: React.FC<Props> = ({
                                   key={item.id}
                                   className="flex items-center gap-1.5 rounded border border-white/10 bg-white/[0.03] px-1.5 py-1"
                                 >
-                                  <span className="text-[10px] text-white/45 tabular-nums shrink-0">
+                                  <span className="text-xs text-white/45 tabular-nums shrink-0">
                                     {idx + 1}
                                   </span>
-                                  <span className="text-[10px] text-white/75 font-mono truncate flex-1" title={item.command}>
+                                  <span className="text-xs text-white/75 font-mono truncate flex-1" title={item.command}>
                                     {item.command}
                                   </span>
                                   {onPrioritizeRetryCompareQueueItem && (
                                     <button
                                       type="button"
                                       aria-label={`queue-next-${idx + 1}`}
-                                      className="text-[10px] px-1 py-0.5 rounded border border-emerald-300/30 text-emerald-200 hover:bg-emerald-300/12"
+                                      className="text-xs px-1 py-0.5 rounded border border-emerald-300/30 text-emerald-200 hover:bg-emerald-300/12"
                                       onClick={() => onPrioritizeRetryCompareQueueItem(item.id)}
                                     >
                                       다음
@@ -2064,7 +2064,7 @@ const WarpListView: React.FC<Props> = ({
                                     <button
                                       type="button"
                                       aria-label={`queue-promote-${idx + 1}`}
-                                      className="text-[10px] px-1 py-0.5 rounded border border-cyan-300/30 text-cyan-200 hover:bg-cyan-300/12"
+                                      className="text-xs px-1 py-0.5 rounded border border-cyan-300/30 text-cyan-200 hover:bg-cyan-300/12"
                                       onClick={() => onPromoteRetryCompareQueueItem(item.id)}
                                     >
                                       맨앞
@@ -2074,7 +2074,7 @@ const WarpListView: React.FC<Props> = ({
                                     <button
                                       type="button"
                                       aria-label={`queue-up-${idx + 1}`}
-                                      className="text-[10px] px-1 py-0.5 rounded border border-cyan-300/30 text-cyan-200 hover:bg-cyan-300/12"
+                                      className="text-xs px-1 py-0.5 rounded border border-cyan-300/30 text-cyan-200 hover:bg-cyan-300/12"
                                       onClick={() => onMoveUpRetryCompareQueueItem(item.id)}
                                     >
                                       ↑
@@ -2084,7 +2084,7 @@ const WarpListView: React.FC<Props> = ({
                                     <button
                                       type="button"
                                       aria-label={`queue-down-${idx + 1}`}
-                                      className="text-[10px] px-1 py-0.5 rounded border border-cyan-300/30 text-cyan-200 hover:bg-cyan-300/12"
+                                      className="text-xs px-1 py-0.5 rounded border border-cyan-300/30 text-cyan-200 hover:bg-cyan-300/12"
                                       onClick={() => onMoveDownRetryCompareQueueItem(item.id)}
                                     >
                                       ↓
@@ -2094,7 +2094,7 @@ const WarpListView: React.FC<Props> = ({
                                     <button
                                       type="button"
                                       aria-label={`queue-demote-${idx + 1}`}
-                                      className="text-[10px] px-1 py-0.5 rounded border border-cyan-300/30 text-cyan-200 hover:bg-cyan-300/12"
+                                      className="text-xs px-1 py-0.5 rounded border border-cyan-300/30 text-cyan-200 hover:bg-cyan-300/12"
                                       onClick={() => onDemoteRetryCompareQueueItem(item.id)}
                                     >
                                       맨뒤
@@ -2104,7 +2104,7 @@ const WarpListView: React.FC<Props> = ({
                                     <button
                                       type="button"
                                       aria-label={`queue-remove-${idx + 1}`}
-                                      className="text-[10px] px-1 py-0.5 rounded border border-rose-300/30 text-rose-200 hover:bg-rose-300/12"
+                                      className="text-xs px-1 py-0.5 rounded border border-rose-300/30 text-rose-200 hover:bg-rose-300/12"
                                       onClick={() => onRemoveRetryCompareQueueItem(item.id)}
                                     >
                                       제거
@@ -2113,7 +2113,7 @@ const WarpListView: React.FC<Props> = ({
                                 </div>
                               ))}
                               {filteredQueueItems.length === 0 && (
-                                <div className="text-[10px] text-white/45 px-1 py-1">큐 검색 결과가 없습니다.</div>
+                                <div className="text-xs text-white/45 px-1 py-1">큐 검색 결과가 없습니다.</div>
                               )}
                             </div>
                           </>
@@ -2134,16 +2134,16 @@ const WarpListView: React.FC<Props> = ({
                               onChange={() => toggleTimelineSelection(block.id)}
                               className="size-3 accent-cyan-300"
                             />
-                            <div className="text-[10px] text-white/80 font-mono truncate">
+                            <div className="text-xs text-white/80 font-mono truncate">
                               $ {block.command}
                             </div>
                             {timelinePinnedIds.has(block.id) && (
-                              <span className="text-[9px] px-1 py-0.5 rounded border border-amber-300/30 bg-amber-300/14 text-amber-100">
+                              <span className="text-xs px-1 py-0.5 rounded border border-amber-300/30 bg-amber-300/14 text-amber-100">
                                 PIN
                               </span>
                             )}
                           </div>
-                          <div className="mt-0.5 text-[10px] text-cyan-200/90 tabular-nums">
+                          <div className="mt-0.5 text-xs text-cyan-200/90 tabular-nums">
                             Δ +{compare.added}/-{compare.removed}
                             <span className="ml-1.5 text-white/45">
                               {new Date(compare.comparedAt).toLocaleTimeString()}
@@ -2153,12 +2153,12 @@ const WarpListView: React.FC<Props> = ({
                             </span>
                           </div>
                           {compare.preview && (
-                            <div className="mt-0.5 text-[10px] text-white/50 truncate">{compare.preview}</div>
+                            <div className="mt-0.5 text-xs text-white/50 truncate">{compare.preview}</div>
                           )}
                           <div className="mt-1 flex items-center gap-1.5">
                             <button
                               type="button"
-                              className="text-[10px] px-2 py-0.5 rounded border border-white/15 text-white/70 hover:bg-white/[0.08]"
+                              className="text-xs px-2 py-0.5 rounded border border-white/15 text-white/70 hover:bg-white/[0.08]"
                               onClick={() => {
                                 setExpanded((prev) => {
                                   const next = new Set(prev);
@@ -2174,7 +2174,7 @@ const WarpListView: React.FC<Props> = ({
                             {onExecute && block.command.trim() && (
                               <button
                                 type="button"
-                                className="text-[10px] px-2 py-0.5 rounded border border-emerald-300/30 text-emerald-200 hover:bg-emerald-300/12"
+                                className="text-xs px-2 py-0.5 rounded border border-emerald-300/30 text-emerald-200 hover:bg-emerald-300/12"
                                 onClick={() => {
                                   onExecute(block.command + "\r");
                                   closeTimelinePanel(false);
@@ -2186,7 +2186,7 @@ const WarpListView: React.FC<Props> = ({
                             {onRetryWithDiff && (
                               <button
                                 type="button"
-                                className="text-[10px] px-2 py-0.5 rounded border border-cyan-300/30 text-cyan-200 hover:bg-cyan-300/12"
+                                className="text-xs px-2 py-0.5 rounded border border-cyan-300/30 text-cyan-200 hover:bg-cyan-300/12"
                                 onClick={() => {
                                   onRetryWithDiff(block);
                                   closeTimelinePanel(false);
@@ -2197,7 +2197,7 @@ const WarpListView: React.FC<Props> = ({
                             )}
                             <button
                               type="button"
-                              className="text-[10px] px-2 py-0.5 rounded border border-white/15 text-white/70 hover:bg-white/[0.08]"
+                              className="text-xs px-2 py-0.5 rounded border border-white/15 text-white/70 hover:bg-white/[0.08]"
                               onClick={() => {
                                 navigator.clipboard.writeText(buildDiffText(block.command, compare)).catch(() => {});
                               }}
@@ -2207,7 +2207,7 @@ const WarpListView: React.FC<Props> = ({
                             {onExplainDiff && (
                               <button
                                 type="button"
-                                className="text-[10px] px-2 py-0.5 rounded border border-cyan-300/30 text-cyan-200 hover:bg-cyan-300/12"
+                                className="text-xs px-2 py-0.5 rounded border border-cyan-300/30 text-cyan-200 hover:bg-cyan-300/12"
                                 onClick={() => {
                                   onExplainDiff(buildDiffText(block.command, compare));
                                 }}
@@ -2219,7 +2219,7 @@ const WarpListView: React.FC<Props> = ({
                         </div>
                       ))}
                       {timelineFiltered.length === 0 && (
-                        <div className="text-[10px] text-white/50 px-1 py-1">검색 결과가 없습니다.</div>
+                        <div className="text-xs text-white/50 px-1 py-1">검색 결과가 없습니다.</div>
                       )}
                     </div>
                         </div>,
@@ -2231,7 +2231,7 @@ const WarpListView: React.FC<Props> = ({
                 type="button"
                 onClick={() => navigateCompared(-1)}
                 title="Cmd/Ctrl+Shift+["
-                className="text-[10px] px-2 py-0.5 rounded border border-cyan-400/30 text-cyan-200/90 hover:bg-cyan-400/15"
+                className="text-xs px-2 py-0.5 rounded border border-cyan-400/30 text-cyan-200/90 hover:bg-cyan-400/15"
               >
                 Prev Δ
               </button>
@@ -2239,13 +2239,13 @@ const WarpListView: React.FC<Props> = ({
                 type="button"
                 onClick={() => navigateCompared(1)}
                 title="Cmd/Ctrl+Shift+]"
-                className="text-[10px] px-2 py-0.5 rounded border border-cyan-400/30 text-cyan-200/90 hover:bg-cyan-400/15"
+                className="text-xs px-2 py-0.5 rounded border border-cyan-400/30 text-cyan-200/90 hover:bg-cyan-400/15"
               >
                 Next Δ
               </button>
             </>
           )}
-          <span className="ml-auto text-[10px] text-white/34 tabular-nums">
+          <span className="ml-auto text-xs text-white/34 tabular-nums">
             표시 {filtered.length}
           </span>
         </div>
@@ -2253,7 +2253,7 @@ const WarpListView: React.FC<Props> = ({
 
       {filtered.length === 0 && (
         <div className="rounded-xl border border-white/10 bg-white/[0.02] px-3 py-4">
-          <p className="text-[11px] text-white/55">
+          <p className="text-sm text-white/55">
             현재 조건에 맞는 블록이 없습니다.
           </p>
           <div className="mt-2 flex items-center gap-2">
@@ -2261,7 +2261,7 @@ const WarpListView: React.FC<Props> = ({
               <button
                 type="button"
                 onClick={() => setStatusFilter("all")}
-                className="text-[10px] px-2 py-1 rounded border border-white/15 text-white/70 hover:bg-white/[0.08]"
+                className="text-xs px-2 py-1 rounded border border-white/15 text-white/70 hover:bg-white/[0.08]"
               >
                 필터 초기화
               </button>
@@ -2270,7 +2270,7 @@ const WarpListView: React.FC<Props> = ({
               <button
                 type="button"
                 onClick={() => setQuery("")}
-                className="text-[10px] px-2 py-1 rounded border border-white/15 text-white/70 hover:bg-white/[0.08]"
+                className="text-xs px-2 py-1 rounded border border-white/15 text-white/70 hover:bg-white/[0.08]"
               >
                 검색 지우기
               </button>
@@ -2309,13 +2309,13 @@ const WarpListView: React.FC<Props> = ({
                 <XCircle size={11} className="text-red-400 shrink-0" />
               )}
 
-              <span className="flex-1 min-w-0 text-[11px] font-mono truncate">
+              <span className="flex-1 min-w-0 text-sm font-mono truncate">
                 <span className="text-white/25 mr-1">$</span>
                 {b.command ? <SyntaxCmd cmd={b.command} /> : <span className="text-white/30">…</span>}
               </span>
 
               {dur && (
-                <span className="flex items-center gap-0.5 text-[9px] text-white/20 shrink-0 tabular-nums">
+                <span className="flex items-center gap-0.5 text-xs text-white/20 shrink-0 tabular-nums">
                   <Clock size={8} />
                   {dur}
                 </span>
@@ -2325,7 +2325,7 @@ const WarpListView: React.FC<Props> = ({
                   <button
                     type="button"
                     ref={(el) => { deltaButtonRefs.current[b.id] = el; }}
-                    className="text-[9px] tabular-nums px-1 py-0.5 rounded border border-cyan-300/25 bg-cyan-300/10 text-cyan-200 hover:bg-cyan-300/20"
+                    className="text-xs tabular-nums px-1 py-0.5 rounded border border-cyan-300/25 bg-cyan-300/10 text-cyan-200 hover:bg-cyan-300/20"
                     title={compare.preview || "출력 변경 요약"}
                     onClick={(e) => {
                       e.stopPropagation();
@@ -2349,13 +2349,13 @@ const WarpListView: React.FC<Props> = ({
                             }}
                             onClick={(e) => e.stopPropagation()}
                           >
-                      <div className="px-2.5 py-1.5 border-b border-white/10 text-[10px] text-cyan-200 tabular-nums">
+                      <div className="px-2.5 py-1.5 border-b border-white/10 text-xs text-cyan-200 tabular-nums">
                         Retry Compare · +{compare.added} / -{compare.removed}
                       </div>
                       <div className="px-2 py-1.5 border-b border-white/10 flex items-center gap-1.5">
                         <button
                           type="button"
-                          className="text-[10px] px-2 py-0.5 rounded border border-white/15 text-white/75 hover:bg-white/[0.08]"
+                          className="text-xs px-2 py-0.5 rounded border border-white/15 text-white/75 hover:bg-white/[0.08]"
                           onClick={() => {
                             navigator.clipboard.writeText(buildDiffText(b.command, compare)).catch(() => {});
                           }}
@@ -2365,7 +2365,7 @@ const WarpListView: React.FC<Props> = ({
                         {onExplainDiff && (
                           <button
                             type="button"
-                            className="text-[10px] px-2 py-0.5 rounded border border-cyan-300/30 text-cyan-200 hover:bg-cyan-300/12"
+                            className="text-xs px-2 py-0.5 rounded border border-cyan-300/30 text-cyan-200 hover:bg-cyan-300/12"
                             onClick={() => {
                               onExplainDiff(buildDiffText(b.command, compare));
                             }}
@@ -2377,22 +2377,22 @@ const WarpListView: React.FC<Props> = ({
                       <div className="max-h-56 overflow-y-auto p-2 space-y-2">
                         {compare.addedLines.length > 0 && (
                           <div>
-                            <div className="text-[10px] text-emerald-300 mb-1">Added</div>
-                            <pre className="text-[10px] font-mono whitespace-pre-wrap text-emerald-100/90 bg-emerald-500/[0.08] border border-emerald-400/20 rounded p-1.5">
+                            <div className="text-xs text-emerald-300 mb-1">Added</div>
+                            <pre className="text-xs font-mono whitespace-pre-wrap text-emerald-100/90 bg-emerald-500/[0.08] border border-emerald-400/20 rounded p-1.5">
                               {compare.addedLines.map((l) => `+ ${l}`).join("\n")}
                             </pre>
                           </div>
                         )}
                         {compare.removedLines.length > 0 && (
                           <div>
-                            <div className="text-[10px] text-rose-300 mb-1">Removed</div>
-                            <pre className="text-[10px] font-mono whitespace-pre-wrap text-rose-100/90 bg-rose-500/[0.08] border border-rose-400/20 rounded p-1.5">
+                            <div className="text-xs text-rose-300 mb-1">Removed</div>
+                            <pre className="text-xs font-mono whitespace-pre-wrap text-rose-100/90 bg-rose-500/[0.08] border border-rose-400/20 rounded p-1.5">
                               {compare.removedLines.map((l) => `- ${l}`).join("\n")}
                             </pre>
                           </div>
                         )}
                         {compare.addedLines.length === 0 && compare.removedLines.length === 0 && (
-                          <div className="text-[10px] text-white/55">라인 변화가 감지되지 않았습니다.</div>
+                          <div className="text-xs text-white/55">라인 변화가 감지되지 않았습니다.</div>
                         )}
                       </div>
                           </div>,
@@ -2403,7 +2403,7 @@ const WarpListView: React.FC<Props> = ({
               )}
 
               {b.endedAt && (
-                <span className="text-[9px] text-white/15 shrink-0 tabular-nums">
+                <span className="text-xs text-white/15 shrink-0 tabular-nums">
                   {new Date(b.endedAt).toLocaleTimeString()}
                 </span>
               )}
@@ -2555,7 +2555,7 @@ const WarpListView: React.FC<Props> = ({
                             aria-label="Copy Both (Alt+C)"
                             aria-keyshortcuts="Alt+C"
                             title="Alt+C"
-                            className="w-full px-2.5 py-1.5 text-left text-[11px] text-white/78 hover:bg-white/[0.08] flex items-center justify-between gap-2"
+                            className="w-full px-2.5 py-1.5 text-left text-sm text-white/78 hover:bg-white/[0.08] flex items-center justify-between gap-2"
                             tabIndex={menuOpenId === b.id && menuActiveIndex === 0 ? 0 : -1}
                             ref={(el) => {
                               setMenuItemRef(b.id, 0, el);
@@ -2567,7 +2567,7 @@ const WarpListView: React.FC<Props> = ({
                             }}
                           >
                             <span>Copy Both</span>
-                            <span className="text-[10px] text-white/35 tabular-nums">Alt+C</span>
+                            <span className="text-xs text-white/35 tabular-nums">Alt+C</span>
                           </button>
                           <button
                             type="button"
@@ -2575,7 +2575,7 @@ const WarpListView: React.FC<Props> = ({
                             aria-label="Find Within Block (Alt+F)"
                             aria-keyshortcuts="Alt+F"
                             title="Alt+F"
-                            className="w-full px-2.5 py-1.5 text-left text-[11px] text-white/78 hover:bg-white/[0.08] flex items-center justify-between gap-2"
+                            className="w-full px-2.5 py-1.5 text-left text-sm text-white/78 hover:bg-white/[0.08] flex items-center justify-between gap-2"
                             tabIndex={menuOpenId === b.id && menuActiveIndex === 1 ? 0 : -1}
                             ref={(el) => {
                               setMenuItemRef(b.id, 1, el);
@@ -2584,7 +2584,7 @@ const WarpListView: React.FC<Props> = ({
                             onClick={() => openFindWithin(b.id)}
                           >
                             <span>Find Within Block</span>
-                            <span className="text-[10px] text-white/35 tabular-nums">Alt+F</span>
+                            <span className="text-xs text-white/35 tabular-nums">Alt+F</span>
                           </button>
                           <button
                             type="button"
@@ -2592,7 +2592,7 @@ const WarpListView: React.FC<Props> = ({
                             aria-label="Share Snapshot (Alt+S)"
                             aria-keyshortcuts="Alt+S"
                             title="Alt+S"
-                            className="w-full px-2.5 py-1.5 text-left text-[11px] text-white/78 hover:bg-white/[0.08] flex items-center justify-between gap-2"
+                            className="w-full px-2.5 py-1.5 text-left text-sm text-white/78 hover:bg-white/[0.08] flex items-center justify-between gap-2"
                             tabIndex={menuOpenId === b.id && menuActiveIndex === 2 ? 0 : -1}
                             ref={(el) => {
                               setMenuItemRef(b.id, 2, el);
@@ -2616,7 +2616,7 @@ const WarpListView: React.FC<Props> = ({
                               <Share2 size={11} />
                               Share Snapshot
                             </span>
-                            <span className="text-[10px] text-white/35 tabular-nums">Alt+S</span>
+                            <span className="text-xs text-white/35 tabular-nums">Alt+S</span>
                           </button>
                           {onRetryWithDiff && (
                             <button
@@ -2625,7 +2625,7 @@ const WarpListView: React.FC<Props> = ({
                               aria-label="Retry and Compare (Alt+R)"
                               aria-keyshortcuts="Alt+R"
                               title="Alt+R"
-                              className="w-full px-2.5 py-1.5 text-left text-[11px] text-white/78 hover:bg-white/[0.08] flex items-center justify-between gap-2"
+                              className="w-full px-2.5 py-1.5 text-left text-sm text-white/78 hover:bg-white/[0.08] flex items-center justify-between gap-2"
                               tabIndex={menuOpenId === b.id && menuActiveIndex === 3 ? 0 : -1}
                               ref={(el) => {
                                 setMenuItemRef(b.id, 3, el);
@@ -2640,22 +2640,22 @@ const WarpListView: React.FC<Props> = ({
                                 <RotateCcw size={11} />
                                 Retry + Compare
                               </span>
-                              <span className="text-[10px] text-white/35 tabular-nums">Alt+R</span>
+                              <span className="text-xs text-white/35 tabular-nums">Alt+R</span>
                             </button>
                           )}
                           {compare && (
                             <div className="px-2.5 py-1.5 border-t border-white/10">
-                              <div className="text-[10px] text-cyan-200/90 tabular-nums">
+                              <div className="text-xs text-cyan-200/90 tabular-nums">
                                 Δ +{compare.added}/-{compare.removed}
                               </div>
                               {compare.preview && (
-                                <div className="text-[10px] text-white/50 leading-relaxed mt-0.5 break-words">
+                                <div className="text-xs text-white/50 leading-relaxed mt-0.5 break-words">
                                   {compare.preview}
                                 </div>
                               )}
                             </div>
                           )}
-                          <div className="px-2.5 py-1 border-t border-white/10 text-[10px] text-white/35">
+                          <div className="px-2.5 py-1 border-t border-white/10 text-xs text-white/35">
                             ↑/↓ 이동 · Enter 실행 · Esc 닫기
                           </div>
                         </div>,
@@ -2691,14 +2691,14 @@ const WarpListView: React.FC<Props> = ({
                       moveCursor(e.shiftKey ? -1 : 1);
                     }}
                     placeholder="블록 내 검색"
-                    className="flex-1 bg-transparent border-none outline-none text-[10px] text-white/80 placeholder:text-white/30"
+                    className="flex-1 bg-transparent border-none outline-none text-xs text-white/80 placeholder:text-white/30"
                     onClick={(e) => e.stopPropagation()}
                   />
                   {localQuery.trim() && (
                     <>
                       <button
                         type="button"
-                        className="text-[10px] px-1 py-0.5 rounded border border-white/14 text-white/58 hover:text-white/80 hover:bg-white/[0.08]"
+                        className="text-xs px-1 py-0.5 rounded border border-white/14 text-white/58 hover:text-white/80 hover:bg-white/[0.08]"
                         onClick={(e) => {
                           e.stopPropagation();
                           moveCursor(-1);
@@ -2708,7 +2708,7 @@ const WarpListView: React.FC<Props> = ({
                       </button>
                       <button
                         type="button"
-                        className="text-[10px] px-1 py-0.5 rounded border border-white/14 text-white/58 hover:text-white/80 hover:bg-white/[0.08]"
+                        className="text-xs px-1 py-0.5 rounded border border-white/14 text-white/58 hover:text-white/80 hover:bg-white/[0.08]"
                         onClick={(e) => {
                           e.stopPropagation();
                           moveCursor(1);
@@ -2716,7 +2716,7 @@ const WarpListView: React.FC<Props> = ({
                       >
                         Next
                       </button>
-                      <span className="text-[10px] text-amber-200/80 tabular-nums min-w-[44px] text-right">
+                      <span className="text-xs text-amber-200/80 tabular-nums min-w-[44px] text-right">
                         {matchCount > 0 ? `${cursor + 1}/${matchCount}` : "0/0"}
                       </span>
                     </>
@@ -2724,7 +2724,7 @@ const WarpListView: React.FC<Props> = ({
                 </div>
                 <pre
                   ref={(el) => { outputRefs.current[b.id] = el; }}
-                  className="px-3 py-2 text-[10px] font-mono text-white/40 whitespace-pre-wrap max-h-52 overflow-y-auto leading-relaxed bg-[#0d1117]"
+                  className="px-3 py-2 text-xs font-mono text-white/40 whitespace-pre-wrap max-h-52 overflow-y-auto leading-relaxed bg-[#0d1117]"
                 >
                   {renderHighlightedWithCursor(b.output.trim(), localQuery, cursor)}
                 </pre>
@@ -2764,7 +2764,7 @@ const FilterChip: React.FC<{
       type="button"
       onClick={onClick}
       title={title}
-      className={`px-2 py-0.5 rounded-md text-[10px] border transition-colors ${
+      className={`px-2 py-0.5 rounded-md text-xs border transition-colors ${
         active
           ? activeClass
           : "border-white/14 text-white/48 bg-white/[0.04] hover:text-white/72 hover:bg-white/[0.08]"
@@ -2795,7 +2795,7 @@ const RiskChip: React.FC<{
       type="button"
       onClick={onClick}
       title={title}
-      className={`px-2 py-0.5 rounded text-[10px] border ${active ? activeClass : "border-white/14 text-white/50 hover:bg-white/[0.08]"}`}
+      className={`px-2 py-0.5 rounded text-xs border ${active ? activeClass : "border-white/14 text-white/50 hover:bg-white/[0.08]"}`}
     >
       {label}
     </button>
@@ -2809,7 +2809,7 @@ const RiskBadge: React.FC<{ risk: TimelineRisk }> = ({ risk }) => {
       ? "border-amber-400/35 bg-amber-400/14 text-amber-100"
       : "border-emerald-400/35 bg-emerald-400/14 text-emerald-100";
   const label = risk === "high" ? "HIGH" : risk === "medium" ? "MED" : "LOW";
-  return <span className={`text-[9px] px-1 py-0.5 rounded border ${cls}`}>{label}</span>;
+  return <span className={`text-xs px-1 py-0.5 rounded border ${cls}`}>{label}</span>;
 };
 
 export default WarpListView;

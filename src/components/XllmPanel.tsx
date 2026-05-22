@@ -82,7 +82,7 @@ const XllmPanel: React.FC<Props> = ({ onClose }) => {
 
           {/* GPU 안전 모드 + VRAM Cap */}
           <section className="space-y-2">
-            <label className="text-[10px] text-white/40 uppercase tracking-wider flex items-center gap-1.5">
+            <label className="text-xs text-white/40 uppercase tracking-wider flex items-center gap-1.5">
               <Zap size={9} /> GPU VRAM 안전 모드
             </label>
             <div className="flex gap-1.5">
@@ -97,14 +97,14 @@ const XllmPanel: React.FC<Props> = ({ onClose }) => {
                       try { await invoke("save_safety_mode", { mode: m }); } catch {}
                       setConfig((c) => ({ ...c, safety_mode: m, vram_cap_override: undefined }));
                     }}
-                    className={`flex-1 px-2 py-1.5 rounded-lg border text-[11px] transition-colors ${
+                    className={`flex-1 px-2 py-1.5 rounded-lg border text-sm transition-colors ${
                       selected
                         ? "bg-accent/15 border-accent/40 text-white"
                         : "bg-white/3 border-white/5 text-white/55 hover:bg-white/5"
                     }`}
                   >
                     <div className="font-medium">{m === "safe" ? "Safe" : m === "balanced" ? "Balanced" : "Max"}</div>
-                    <div className="text-[9px] text-white/40 font-mono mt-0.5">{pct}%</div>
+                    <div className="text-xs text-white/40 font-mono mt-0.5">{pct}%</div>
                   </button>
                 );
               })}
@@ -112,7 +112,7 @@ const XllmPanel: React.FC<Props> = ({ onClose }) => {
 
             {/* VRAM Cap 오버라이드 슬라이더 */}
             <div className="bg-white/3 border border-white/5 rounded-lg p-2.5 space-y-1.5">
-              <div className="flex items-center justify-between text-[10px]">
+              <div className="flex items-center justify-between text-xs">
                 <span className="text-white/40">VRAM Cap 오버라이드</span>
                 <span className="font-mono text-white/70">{vramCapPct}%</span>
               </div>
@@ -127,7 +127,7 @@ const XllmPanel: React.FC<Props> = ({ onClose }) => {
                   try { await invoke("save_vram_cap_override", { cap }); } catch {}
                 }}
               />
-              <div className="flex justify-between text-[9px] text-white/25 font-mono">
+              <div className="flex justify-between text-xs text-white/25 font-mono">
                 <span>50%</span><span>95%</span>
               </div>
               {config.vram_cap_override !== undefined && (
@@ -136,29 +136,29 @@ const XllmPanel: React.FC<Props> = ({ onClose }) => {
                     setConfig((c) => ({ ...c, vram_cap_override: undefined }));
                     try { await invoke("save_vram_cap_override", { cap: null }); } catch {}
                   }}
-                  className="text-[10px] text-white/40 hover:text-white/70 transition-colors"
+                  className="text-xs text-white/40 hover:text-white/70 transition-colors"
                 >
                   기본값으로 복원
                 </button>
               )}
             </div>
-            <p className="text-[10px] text-white/30 leading-relaxed">
+            <p className="text-xs text-white/30 leading-relaxed">
               서버 재시작 시 반영 — config.yml의 autosplit_reserve + max_seq_len 동적 계산.
             </p>
           </section>
 
           {/* Phase 72: 모델 capability 토글 */}
           <section className="space-y-2">
-            <label className="text-[10px] text-white/40 uppercase tracking-wider flex items-center gap-1.5">
+            <label className="text-xs text-white/40 uppercase tracking-wider flex items-center gap-1.5">
               <Sparkles size={9} /> 모델 기능 토글
-              <span className="ml-auto text-[9px] text-white/30 font-normal normal-case">모델이 지원할 때만 유효</span>
+              <span className="ml-auto text-xs text-white/30 font-normal normal-case">모델이 지원할 때만 유효</span>
             </label>
 
             {/* 비전 */}
             <label className="flex items-center justify-between gap-2 px-3 py-2 bg-white/3 border border-white/5 rounded-lg cursor-pointer hover:bg-white/5 transition-colors">
               <div className="flex items-center gap-2">
-                <span className="text-[11px] text-purple-300/90">👁 비전 (이미지 입력)</span>
-                <span className="text-[9px] text-white/30">Qwen3.5-VL, Gemma VL 등</span>
+                <span className="text-sm text-purple-300/90">👁 비전 (이미지 입력)</span>
+                <span className="text-xs text-white/30">Qwen3.5-VL, Gemma VL 등</span>
               </div>
               <Switch
                 checked={config.vision_enabled ?? false}
@@ -173,8 +173,8 @@ const XllmPanel: React.FC<Props> = ({ onClose }) => {
             {/* 추론 표시 */}
             <label className="flex items-center justify-between gap-2 px-3 py-2 bg-white/3 border border-white/5 rounded-lg cursor-pointer hover:bg-white/5 transition-colors">
               <div className="flex items-center gap-2">
-                <span className="text-[11px] text-cyan-300/90">🧠 추론 토큰 표시</span>
-                <span className="text-[9px] text-white/30">DeepSeek R1, EXAONE Deep 등</span>
+                <span className="text-sm text-cyan-300/90">🧠 추론 토큰 표시</span>
+                <span className="text-xs text-white/30">DeepSeek R1, EXAONE Deep 등</span>
               </div>
               <Switch
                 checked={config.show_reasoning ?? true}
@@ -186,8 +186,8 @@ const XllmPanel: React.FC<Props> = ({ onClose }) => {
               />
             </label>
 
-            <p className="text-[10px] text-white/30 leading-relaxed">
-              끄면 추론 모델의 <code className="px-1 bg-white/5 rounded text-[9px]">&lt;think&gt;</code> 체인이 UI에 안 보이고 최종 답만 표시됩니다.
+            <p className="text-xs text-white/30 leading-relaxed">
+              끄면 추론 모델의 <code className="px-1 bg-white/5 rounded text-xs">&lt;think&gt;</code> 체인이 UI에 안 보이고 최종 답만 표시됩니다.
             </p>
           </section>
 
@@ -199,7 +199,7 @@ const XllmPanel: React.FC<Props> = ({ onClose }) => {
         {/* 하단 — 상태 메시지 + 저장 버튼 */}
         <div className="flex items-center gap-3 px-4 py-3 border-t border-white/5 shrink-0">
           {statusMsg && (
-            <span className="text-[11px] text-white/50 truncate flex-1">{statusMsg}</span>
+            <span className="text-sm text-white/50 truncate flex-1">{statusMsg}</span>
           )}
           <button
             onClick={handleSave}
@@ -281,9 +281,9 @@ const OllamaSection: React.FC = () => {
   return (
     <section className={`space-y-2 border rounded-lg p-3 transition-colors ${enabled ? "border-orange-400/20 bg-orange-400/5" : "border-white/5 bg-white/2"}`}>
       <div className="flex items-center gap-2">
-        <h3 className="flex items-center gap-1.5 text-[11px] font-semibold text-orange-300/90 uppercase tracking-wider flex-1">
+        <h3 className="flex items-center gap-1.5 text-sm font-semibold text-orange-300/90 uppercase tracking-wider flex-1">
           🦙 Ollama 백엔드
-          {enabled && <span className={`text-[9px] font-mono ${statusColor}`}>{statusLabel}</span>}
+          {enabled && <span className={`text-xs font-mono ${statusColor}`}>{statusLabel}</span>}
         </h3>
         <Switch
           checked={enabled}
@@ -300,24 +300,24 @@ const OllamaSection: React.FC = () => {
           className="scale-75"
         />
       </div>
-      <p className="text-[10px] text-white/40 leading-relaxed">
+      <p className="text-xs text-white/40 leading-relaxed">
         {enabled ? "embedded 미로드 시 자동 폴백. xLLM보다 우선." : "꺼짐 — embedded / xLLM / Gemini 순으로 폴백."}
       </p>
 
       {enabled && (<>
         <div className="space-y-1">
-          <span className="text-[10px] text-white/35">서버 URL</span>
+          <span className="text-xs text-white/35">서버 URL</span>
           <div className="flex gap-1.5">
             <Input
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               placeholder="http://localhost:11434"
-              className="flex-1 font-mono text-[11px] focus:border-orange-400/40"
+              className="flex-1 font-mono text-sm focus:border-orange-400/40"
             />
             <button
               onClick={checkStatus}
               disabled={checking}
-              className="px-2.5 py-1 rounded border border-orange-400/30 bg-orange-500/10 hover:bg-orange-500/20 text-[11px] text-orange-200 disabled:opacity-40 transition-colors whitespace-nowrap"
+              className="px-2.5 py-1 rounded border border-orange-400/30 bg-orange-500/10 hover:bg-orange-500/20 text-sm text-orange-200 disabled:opacity-40 transition-colors whitespace-nowrap"
             >
               {checking ? "확인 중..." : "연결 확인"}
             </button>
@@ -325,7 +325,7 @@ const OllamaSection: React.FC = () => {
         </div>
 
         <div className="space-y-1">
-          <span className="text-[10px] text-white/35">모델</span>
+          <span className="text-xs text-white/35">모델</span>
           <Select value={model} onValueChange={setModel} disabled={checking}>
             <SelectTrigger className="w-full">
               <SelectValue placeholder={checking ? "목록 조회 중..." : status === "unknown" ? "연결 확인 후 선택" : status === "offline" ? "서버 오프라인" : "(모델 선택)"} />
@@ -345,8 +345,8 @@ const OllamaSection: React.FC = () => {
             </SelectContent>
           </Select>
           {status === "offline" && (
-            <p className="text-[10px] text-red-400/80">
-              Ollama 서버 미응답 — <code className="text-[9px]">ollama serve</code> 실행 후 재확인
+            <p className="text-xs text-red-400/80">
+              Ollama 서버 미응답 — <code className="text-xs">ollama serve</code> 실행 후 재확인
             </p>
           )}
         </div>
@@ -355,15 +355,15 @@ const OllamaSection: React.FC = () => {
           <button
             onClick={handleSave}
             disabled={saving}
-            className="flex items-center gap-1.5 px-3 py-1 rounded bg-orange-500/15 hover:bg-orange-500/25 border border-orange-400/25 text-[11px] text-orange-200 disabled:opacity-40 transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1 rounded bg-orange-500/15 hover:bg-orange-500/25 border border-orange-400/25 text-sm text-orange-200 disabled:opacity-40 transition-colors"
         >
           {saving ? <Loader2 size={10} className="animate-spin" /> : null}
           저장
         </button>
-        {msg && <span className="text-[10px] text-white/50">{msg}</span>}
+        {msg && <span className="text-xs text-white/50">{msg}</span>}
         </div>
       </>)}
-      {msg && !enabled && <span className="text-[10px] text-white/50">{msg}</span>}
+      {msg && !enabled && <span className="text-xs text-white/50">{msg}</span>}
     </section>
   );
 };
@@ -446,14 +446,14 @@ const LanDiscoverySection: React.FC = () => {
   return (
     <section className="space-y-2 border border-cyan-400/20 rounded-lg p-3 bg-cyan-400/5">
       <div className="flex items-center justify-between gap-2">
-        <label className="text-[10px] text-cyan-200/85 uppercase tracking-wider flex items-center gap-1.5">
+        <label className="text-xs text-cyan-200/85 uppercase tracking-wider flex items-center gap-1.5">
           <Wifi size={10} /> LAN LLM 서버 검색
-          <span className="ml-1 text-[9px] text-white/30 font-normal normal-case">/24 스캔 + 시그니처 분류</span>
+          <span className="ml-1 text-xs text-white/30 font-normal normal-case">/24 스캔 + 시그니처 분류</span>
         </label>
         <button
           onClick={scan}
           disabled={scanning}
-          className="flex items-center gap-1.5 px-2.5 py-1 rounded border border-cyan-400/30 bg-cyan-500/10 hover:bg-cyan-500/20 text-[11px] text-cyan-100 disabled:opacity-40 transition-colors"
+          className="flex items-center gap-1.5 px-2.5 py-1 rounded border border-cyan-400/30 bg-cyan-500/10 hover:bg-cyan-500/20 text-sm text-cyan-100 disabled:opacity-40 transition-colors"
         >
           {scanning ? <Loader2 size={11} className="animate-spin" /> : <RefreshCw size={11} />}
           {scanning ? "스캔 중…" : "검색"}
@@ -486,16 +486,16 @@ const LanDiscoverySection: React.FC = () => {
                 }`}
               >
                 <div className="flex items-center gap-2">
-                  <span className={`text-[9px] px-1.5 py-0.5 rounded border tabular-nums ${KIND_TONE[s.kind]}`}>
+                  <span className={`text-xs px-1.5 py-0.5 rounded border tabular-nums ${KIND_TONE[s.kind]}`}>
                     {KIND_LABEL[s.kind]}
                   </span>
-                  <span className="font-mono text-[11px] text-white/85 truncate flex-1">{s.url}</span>
+                  <span className="font-mono text-sm text-white/85 truncate flex-1">{s.url}</span>
                   <span className="text-[9.5px] text-white/35 tabular-nums shrink-0">{s.latency_ms}ms</span>
                   <button
                     onClick={() => apply(s)}
                     disabled={applied}
                     title="이 서버를 backend로 사용"
-                    className={`flex items-center gap-1 px-2 py-0.5 rounded text-[10px] transition-colors ${
+                    className={`flex items-center gap-1 px-2 py-0.5 rounded text-xs transition-colors ${
                       applied
                         ? "text-emerald-300 bg-emerald-500/15 border border-emerald-400/30"
                         : "text-white/75 bg-white/5 hover:bg-white/10 border border-white/10"
@@ -670,16 +670,16 @@ const EmbeddedInferenceDebug: React.FC = () => {
 
   return (
     <section className="space-y-2 border border-purple-400/20 rounded-lg p-3 bg-purple-400/5">
-      <h3 className="flex items-center gap-1.5 text-[11px] font-semibold text-purple-300/90 uppercase tracking-wider">
+      <h3 className="flex items-center gap-1.5 text-sm font-semibold text-purple-300/90 uppercase tracking-wider">
         🧪 임베디드 추론
-        <span className={`ml-auto text-[9px] font-mono truncate max-w-[220px] ${loadedKey ? "text-green-400" : "text-white/40"}`}
+        <span className={`ml-auto text-xs font-mono truncate max-w-[220px] ${loadedKey ? "text-green-400" : "text-white/40"}`}
           title={loadedKey ?? undefined}>
           {loadedKey
             ? `● ${loadedFilename}${loadedLoraName ? ` +L:${loadedLoraName}` : ""}${isqLoaded ? ` [${isqLoaded}]` : ""}`
             : "○ 미로드"}
         </span>
       </h3>
-      <p className="text-[10px] text-white/40 leading-relaxed">
+      <p className="text-xs text-white/40 leading-relaxed">
         <code className="font-mono text-white/55">npm run tauri:dev:cuda</code> 빌드 전용.
         다른 모델 선택 후 로드하면 VRAM 교체(핫스왑).
       </p>
@@ -693,7 +693,7 @@ const EmbeddedInferenceDebug: React.FC = () => {
           setModelDir(dir);
           setGgufFile(file);
         }}
-        className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded border border-purple-400/30 bg-purple-500/10 hover:bg-purple-500/20 text-[11px] text-purple-200 transition-colors"
+        className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded border border-purple-400/30 bg-purple-500/10 hover:bg-purple-500/20 text-sm text-purple-200 transition-colors"
       >
         <FolderOpen size={12} /> 📂 GGUF 파일 직접 선택 (임의 경로)
       </button>
@@ -702,7 +702,7 @@ const EmbeddedInferenceDebug: React.FC = () => {
       {candidates.length > 0 && (
         <>
           <div className="space-y-1">
-            <span className="text-[10px] text-white/35">저장 경로 모델 ({candidates.length}개)</span>
+            <span className="text-xs text-white/35">저장 경로 모델 ({candidates.length}개)</span>
             <Select
               value={isStandardDir ? modelDir : ""}
               onValueChange={(v) => {
@@ -723,7 +723,7 @@ const EmbeddedInferenceDebug: React.FC = () => {
           </div>
           {fileOptions.length > 0 && (
             <div className="space-y-1">
-              <span className="text-[10px] text-white/35">GGUF 파일</span>
+              <span className="text-xs text-white/35">GGUF 파일</span>
               <Select value={ggufFile} onValueChange={setGgufFile}>
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="(파일 선택)" />
@@ -742,7 +742,7 @@ const EmbeddedInferenceDebug: React.FC = () => {
       {/* ISQ 양자화 타입 — safetensors(BF16) 모드일 때만 표시 */}
       {isSafetensorsMode && (
         <div className="space-y-1">
-          <span className="text-[10px] text-white/35">ISQ 양자화 타입</span>
+          <span className="text-xs text-white/35">ISQ 양자화 타입</span>
           <Select value={isqType} onValueChange={setIsqType}>
             <SelectTrigger className="w-full">
               <SelectValue />
@@ -765,13 +765,13 @@ const EmbeddedInferenceDebug: React.FC = () => {
               <SelectItem value="HQQ8">HQQ8 — 8비트 고정밀 (CUDA)</SelectItem>
             </SelectContent>
           </Select>
-          <p className="text-[10px] text-white/30">BF16 원본 → ISQ 즉석 양자화. Auto = 플랫폼 최적 자동 선택 (CUDA: Q*K, Metal: AFQ*).</p>
+          <p className="text-xs text-white/30">BF16 원본 → ISQ 즉석 양자화. Auto = 플랫폼 최적 자동 선택 (CUDA: Q*K, Metal: AFQ*).</p>
         </div>
       )}
 
       {/* LoRA 어댑터 (선택) */}
       <div className="space-y-1">
-        <span className="text-[10px] text-white/35">LoRA 어댑터 <span className="text-white/25">(선택)</span></span>
+        <span className="text-xs text-white/35">LoRA 어댑터 <span className="text-white/25">(선택)</span></span>
         <Select
           value={loraSelectValue}
           onValueChange={(v) => {
@@ -795,20 +795,20 @@ const EmbeddedInferenceDebug: React.FC = () => {
             value={loraPath}
             onChange={(e) => setLoraPath(e.target.value)}
             placeholder="예: username/lora-adapter 또는 C:\models\lora"
-            className="font-mono text-[11px] focus:border-purple-400/40"
+            className="font-mono text-sm focus:border-purple-400/40"
           />
         )}
       </div>
 
       {/* 직접 선택된 경로 표시 */}
       {modelDir && !isStandardDir && (
-        <p className="text-[10px] font-mono text-purple-300/70 truncate" title={`${modelDir}/${ggufFile}`}>
+        <p className="text-xs font-mono text-purple-300/70 truncate" title={`${modelDir}/${ggufFile}`}>
           📂 {ggufFile || "(파일 미선택)"}
         </p>
       )}
 
       {candidates.length === 0 && (
-        <p className="text-[10px] text-white/40">
+        <p className="text-xs text-white/40">
           저장 경로에 GGUF 없음. 위 버튼으로 임의 경로 선택 또는 모델 관리 탭에서 다운로드.
         </p>
       )}
@@ -817,7 +817,7 @@ const EmbeddedInferenceDebug: React.FC = () => {
         <button
           onClick={onLoad}
           disabled={busy !== null || !modelDir.trim() || (!isSafetensorsMode && !ggufFile.trim())}
-          className="flex-1 px-3 py-1.5 rounded bg-purple-500/20 hover:bg-purple-500/30 border border-purple-400/30 text-[11px] text-purple-200 disabled:opacity-40 transition-colors"
+          className="flex-1 px-3 py-1.5 rounded bg-purple-500/20 hover:bg-purple-500/30 border border-purple-400/30 text-sm text-purple-200 disabled:opacity-40 transition-colors"
         >
           {busy === "load"
             ? `🔄 로드 중... ${loadElapsed}초`
@@ -832,21 +832,21 @@ const EmbeddedInferenceDebug: React.FC = () => {
             tooltip="VRAM에서 모델 해제"
             onClick={onUnload}
             disabled={busy !== null}
-            className="px-3 py-1.5 rounded bg-red-500/15 hover:bg-red-500/25 border border-red-400/20 text-[11px] text-red-300 disabled:opacity-40 transition-colors"
+            className="px-3 py-1.5 rounded bg-red-500/15 hover:bg-red-500/25 border border-red-400/20 text-sm text-red-300 disabled:opacity-40 transition-colors"
           >
             {busy === "unload" ? "해제 중..." : "🗑 언로드"}
           </IconButton>
         )}
       </div>
       {busy === "load" && loadStage && (
-        <p className="text-[10px] font-mono text-purple-300/60 truncate">{loadStage}</p>
+        <p className="text-xs font-mono text-purple-300/60 truncate">{loadStage}</p>
       )}
 
       <div className="space-y-1 pt-1">
-        <span className="text-[10px] text-white/35">프롬프트</span>
+        <span className="text-xs text-white/35">프롬프트</span>
         <Textarea
           rows={2}
-          className="text-[11px] font-mono focus:border-purple-400/50"
+          className="text-sm font-mono focus:border-purple-400/50"
           placeholder="Hello, world!"
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
@@ -856,7 +856,7 @@ const EmbeddedInferenceDebug: React.FC = () => {
         <button
           onClick={onInfer}
           disabled={busy !== null || !prompt.trim() || !loadedKey}
-          className="flex-1 px-3 py-1.5 rounded bg-purple-500/20 hover:bg-purple-500/30 border border-purple-400/30 text-[11px] text-purple-200 disabled:opacity-40 transition-colors"
+          className="flex-1 px-3 py-1.5 rounded bg-purple-500/20 hover:bg-purple-500/30 border border-purple-400/30 text-sm text-purple-200 disabled:opacity-40 transition-colors"
         >
           {busy === "infer" ? "🔴 토큰 스트림 중..." : "💬 임베디드 추론 (스트리밍)"}
         </button>
@@ -864,7 +864,7 @@ const EmbeddedInferenceDebug: React.FC = () => {
           <IconButton
             tooltip="추론 중단"
             onClick={onCancelInfer}
-            className="px-3 py-1.5 rounded bg-red-500/15 hover:bg-red-500/25 border border-red-400/20 text-[11px] text-red-300 transition-colors"
+            className="px-3 py-1.5 rounded bg-red-500/15 hover:bg-red-500/25 border border-red-400/20 text-sm text-red-300 transition-colors"
           >
             ⛔ 중단
           </IconButton>
@@ -872,7 +872,7 @@ const EmbeddedInferenceDebug: React.FC = () => {
       </div>
 
       {response && (
-        <div className="bg-black/30 border border-white/5 rounded p-2 text-[11px] font-mono text-white/80 max-h-48 overflow-y-auto whitespace-pre-wrap">
+        <div className="bg-black/30 border border-white/5 rounded p-2 text-sm font-mono text-white/80 max-h-48 overflow-y-auto whitespace-pre-wrap">
           {response}
         </div>
       )}

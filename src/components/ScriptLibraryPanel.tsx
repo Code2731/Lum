@@ -42,14 +42,14 @@ const ScriptLibraryPanel: React.FC<Props> = ({
       setSaving(false);
     }
   };
-  const panelTextClass = compact ? "text-[10px]" : "text-xs";
+  const panelTextClass = compact ? "text-xs" : "text-xs";
   const headerPadClass = compact ? "px-2.5 py-1.5" : "px-3 py-2";
   const cardPadClass = compact ? "px-2 py-1.5" : "px-2.5 py-2";
   const listPadClass = compact ? "px-2 py-1.5" : "px-2 py-2";
   const formSpaceClass = compact ? "space-y-1" : "space-y-1.5";
-  const titleTextClass = compact ? "text-[10px]" : "text-[11px]";
-  const bodyTextClass = compact ? "text-[10px]" : "text-[11px]";
-  const captionTextClass = compact ? "text-[9px]" : "text-[10px]";
+  const titleTextClass = compact ? "text-xs" : "text-sm";
+  const bodyTextClass = compact ? "text-xs" : "text-sm";
+  const captionTextClass = compact ? "text-xs" : "text-xs";
 
   return (
     <div className={`lum-sidepanel flex flex-col h-full border-l border-white/10 ${panelTextClass}`}>
@@ -99,14 +99,14 @@ const ScriptLibraryPanel: React.FC<Props> = ({
           <div className="flex gap-1.5 justify-end">
             <button
               onClick={() => setCreating(false)}
-              className="px-2 py-1 text-[10px] text-white/44 hover:text-white/68 transition-colors"
+              className="px-2 py-1 text-xs text-white/44 hover:text-white/68 transition-colors"
             >
               취소
             </button>
             <button
               disabled={saving || !newName.trim() || !newCmds.trim()}
               onClick={handleCreate}
-              className="flex items-center gap-1 px-2.5 py-1 text-[10px] rounded-md border border-accent/35 bg-accent/18 text-accent hover:bg-accent/30 disabled:opacity-40 transition-colors font-medium"
+              className="flex items-center gap-1 px-2.5 py-1 text-xs rounded-md border border-accent/35 bg-accent/18 text-accent hover:bg-accent/30 disabled:opacity-40 transition-colors font-medium"
             >
               <Plus size={9} />
               저장
@@ -161,7 +161,7 @@ const ScriptLibraryPanel: React.FC<Props> = ({
                 </ConfirmDeleteDialog>
                 <button
                   onClick={() => onRun(sc.commands)}
-                  className="flex items-center gap-1 px-2 py-0.5 text-[10px] rounded-md border border-accent/30 bg-accent/14 text-accent hover:bg-accent/24 transition-colors font-medium"
+                  className="flex items-center gap-1 px-2 py-0.5 text-xs rounded-md border border-accent/30 bg-accent/14 text-accent hover:bg-accent/24 transition-colors font-medium"
                 >
                   <Play size={9} />
                   실행
@@ -172,12 +172,12 @@ const ScriptLibraryPanel: React.FC<Props> = ({
             <div className={compact ? "px-2 pb-1" : "px-2.5 pb-2"}>
               <div className="rounded-md border border-white/[0.08] bg-black/28 px-2 py-1 space-y-0.5">
                 {sc.commands.slice(0, 3).map((cmd, i) => (
-                  <p key={i} className="text-[9px] font-mono text-white/30 truncate">
+                  <p key={i} className="text-xs font-mono text-white/30 truncate">
                     <span className="text-white/15">$</span> {cmd}
                   </p>
                 ))}
                 {sc.commands.length > 3 && (
-                  <p className="text-[9px] text-white/15">…+{sc.commands.length - 3}개 더</p>
+                  <p className="text-xs text-white/15">…+{sc.commands.length - 3}개 더</p>
                 )}
               </div>
             </div>

@@ -182,7 +182,7 @@ const McpPanel: React.FC<Props> = ({ onClose }) => {
           <div className="flex items-center gap-2">
             <PlugZap size={14} className="text-accent" />
             <DialogTitle className="text-[13px] font-semibold text-white/90">MCP 서버</DialogTitle>
-            <span className="text-[10px] text-white/35">· Model Context Protocol</span>
+            <span className="text-xs text-white/35">· Model Context Protocol</span>
           </div>
           <IconButton tooltip="새로고침" onClick={loadServers}
             className="p-1 rounded border border-white/[0.1] text-white/40 hover:text-white/78 hover:bg-white/[0.08] mr-8">
@@ -195,8 +195,8 @@ const McpPanel: React.FC<Props> = ({ onClose }) => {
           {recommended.length > 0 && (
             <div className="p-3 rounded-lg border border-white/10 bg-white/[0.03] space-y-2.5">
               <div className="flex items-center justify-between">
-                <div className="text-[11px] text-white/76 font-semibold">추천 서버 (원클릭 설치)</div>
-                <span className="text-[10px] text-white/35">{recommended.length}개</span>
+                <div className="text-sm text-white/76 font-semibold">추천 서버 (원클릭 설치)</div>
+                <span className="text-xs text-white/35">{recommended.length}개</span>
               </div>
               <div className="space-y-1.5">
                 {recommended.map((rec) => {
@@ -209,28 +209,28 @@ const McpPanel: React.FC<Props> = ({ onClose }) => {
                     >
                       <div className="flex items-center justify-between gap-2">
                         <div className="min-w-0">
-                          <div className="text-[11px] text-white/85 font-medium">
+                          <div className="text-sm text-white/85 font-medium">
                             {rec.title}
-                            <span className="ml-1 text-[10px] text-white/35 font-mono">({rec.name})</span>
+                            <span className="ml-1 text-xs text-white/35 font-mono">({rec.name})</span>
                           </div>
-                          <div className="text-[10px] text-white/45 truncate">
+                          <div className="text-xs text-white/45 truncate">
                             {rec.description}
                           </div>
                         </div>
                         <button
                           onClick={() => installRecommended(rec)}
                           disabled={busy}
-                          className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-accent/35 bg-accent/18 hover:bg-accent/30 text-accent text-[10px] disabled:opacity-50"
+                          className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-accent/35 bg-accent/18 hover:bg-accent/30 text-accent text-xs disabled:opacity-50"
                         >
                           {busy ? <Loader2 size={10} className="animate-spin" /> : <Download size={10} />}
                           {installed ? "재설치" : "설치"}
                         </button>
                       </div>
-                      <div className="mt-1 text-[9px] text-white/30 font-mono break-all">
+                      <div className="mt-1 text-xs text-white/30 font-mono break-all">
                         {rec.command} {rec.args.join(" ")}
                       </div>
                       {(rec.env_required.length > 0 || rec.env_optional.length > 0) && (
-                        <div className="mt-1 text-[9px] text-amber-300/80">
+                        <div className="mt-1 text-xs text-amber-300/80">
                           env: [
                           {rec.env_required.map((k) => `${k}*`).join(", ")}
                           {rec.env_required.length > 0 && rec.env_optional.length > 0 ? ", " : ""}
@@ -239,7 +239,7 @@ const McpPanel: React.FC<Props> = ({ onClose }) => {
                         </div>
                       )}
                       {rec.note && (
-                        <div className="mt-1 text-[9px] text-white/35">{rec.note}</div>
+                        <div className="mt-1 text-xs text-white/35">{rec.note}</div>
                       )}
                     </div>
                   );
@@ -254,7 +254,7 @@ const McpPanel: React.FC<Props> = ({ onClose }) => {
               <button
                 onClick={installPresets}
                 disabled={installing}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-accent/35 bg-accent/18 hover:bg-accent/30 text-accent text-[11px] transition-colors disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-accent/35 bg-accent/18 hover:bg-accent/30 text-accent text-sm transition-colors disabled:opacity-50"
               >
                 {installing ? <Loader2 size={11} className="animate-spin" /> : <Download size={11} />}
                 공식 프리셋 설치 (filesystem · playwright · git)
@@ -280,7 +280,7 @@ const McpPanel: React.FC<Props> = ({ onClose }) => {
                       {s.name}
                     </span>
                     {s.description && (
-                      <span className="text-[10px] text-white/30 ml-1 truncate">· {s.description}</span>
+                      <span className="text-xs text-white/30 ml-1 truncate">· {s.description}</span>
                     )}
                   </button>
                   <label className="flex items-center gap-1.5 cursor-pointer">
@@ -289,7 +289,7 @@ const McpPanel: React.FC<Props> = ({ onClose }) => {
                       onCheckedChange={() => toggleEnabled(s)}
                       className="scale-75"
                     />
-                    <span className="text-[10px] text-white/40">{s.enabled ? "활성" : "꺼짐"}</span>
+                    <span className="text-xs text-white/40">{s.enabled ? "활성" : "꺼짐"}</span>
                   </label>
                   <IconButton
                     tooltip="제거"
@@ -307,19 +307,19 @@ const McpPanel: React.FC<Props> = ({ onClose }) => {
 
                 {isExpanded && (
                   <div className="border-t border-white/8 p-3 space-y-2 bg-black/12">
-                    <div className="font-mono text-[10px] text-white/40 break-all">
+                    <div className="font-mono text-xs text-white/40 break-all">
                       <span className="text-white/30">$ </span>
                       {s.command} {s.args.join(" ")}
                     </div>
 
                     {rt.loading && (
-                      <div className="flex items-center gap-1.5 text-[11px] text-white/50">
+                      <div className="flex items-center gap-1.5 text-sm text-white/50">
                         <Loader2 size={11} className="animate-spin" /> 툴 목록 조회 중…
                       </div>
                     )}
 
                     {err && (
-                      <div className="flex items-start gap-1.5 px-2 py-1.5 bg-red-500/10 border border-red-500/20 rounded text-[11px] text-red-300">
+                      <div className="flex items-start gap-1.5 px-2 py-1.5 bg-red-500/10 border border-red-500/20 rounded text-sm text-red-300">
                         <AlertTriangle size={11} className="mt-0.5 shrink-0" />
                         <div className="font-mono whitespace-pre-wrap break-all">{err}</div>
                       </div>
@@ -327,17 +327,17 @@ const McpPanel: React.FC<Props> = ({ onClose }) => {
 
                     {serverTools && serverTools.length > 0 && (
                       <div className="space-y-1">
-                        <div className="text-[10px] text-white/40 uppercase tracking-wide flex items-center gap-1">
+                        <div className="text-xs text-white/40 uppercase tracking-wide flex items-center gap-1">
                           <CheckCircle2 size={10} className="text-green-400" /> {serverTools.length}개 툴
                         </div>
                         {serverTools.map((t) => (
-                          <div key={t.name} className="px-2 py-1.5 bg-white/[0.04] border border-white/[0.08] rounded text-[11px]">
+                          <div key={t.name} className="px-2 py-1.5 bg-white/[0.04] border border-white/[0.08] rounded text-sm">
                             <div className="flex items-center gap-1.5">
                               <Play size={9} className="text-accent/60" />
                               <span className="font-mono text-accent/90">{t.name}</span>
                             </div>
                             {t.description && (
-                              <div className="text-[10px] text-white/40 mt-0.5 ml-4">
+                              <div className="text-xs text-white/40 mt-0.5 ml-4">
                                 {t.description}
                               </div>
                             )}
@@ -347,7 +347,7 @@ const McpPanel: React.FC<Props> = ({ onClose }) => {
                     )}
 
                     {serverTools && serverTools.length === 0 && !err && (
-                      <div className="text-[11px] text-white/30 italic">툴 없음</div>
+                      <div className="text-sm text-white/30 italic">툴 없음</div>
                     )}
                   </div>
                 )}
@@ -361,20 +361,20 @@ const McpPanel: React.FC<Props> = ({ onClose }) => {
               <div className="text-[12px] font-medium text-accent">새 서버 추가</div>
               <Input placeholder="서버 이름 (고유)" value={addForm.name}
                 onChange={(e) => setAddForm({ ...addForm, name: e.target.value })}
-                className="text-[11px] font-mono" />
+                className="text-sm font-mono" />
               <Input placeholder="command (예: npx)" value={addForm.command}
                 onChange={(e) => setAddForm({ ...addForm, command: e.target.value })}
-                className="text-[11px] font-mono" />
+                className="text-sm font-mono" />
               <Input placeholder="args (공백 구분)" value={addForm.args.join(" ")}
                 onChange={(e) => setAddForm({ ...addForm, args: e.target.value.split(/\s+/).filter(Boolean) })}
-                className="text-[11px] font-mono" />
+                className="text-sm font-mono" />
               <Input placeholder="설명 (선택)" value={addForm.description ?? ""}
                 onChange={(e) => setAddForm({ ...addForm, description: e.target.value })}
-                className="text-[11px]" />
+                className="text-sm" />
               <div className="flex justify-end gap-2">
                 <button
                   onClick={() => setAddForm(null)}
-                  className="px-3 py-1 rounded text-[11px] text-white/50 hover:text-white/80"
+                  className="px-3 py-1 rounded text-sm text-white/50 hover:text-white/80"
                 >
                   취소
                 </button>
@@ -385,7 +385,7 @@ const McpPanel: React.FC<Props> = ({ onClose }) => {
                     setAddForm(null);
                   }}
                   disabled={!addForm.name || !addForm.command}
-                  className="px-3 py-1 rounded-md border border-accent/35 bg-accent/18 hover:bg-accent/30 text-accent text-[11px] disabled:opacity-40"
+                  className="px-3 py-1 rounded-md border border-accent/35 bg-accent/18 hover:bg-accent/30 text-accent text-sm disabled:opacity-40"
                 >
                   저장
                 </button>
@@ -394,14 +394,14 @@ const McpPanel: React.FC<Props> = ({ onClose }) => {
           ) : (
             <button
               onClick={() => setAddForm({ name: "", command: "", args: [], env: {}, enabled: true })}
-              className="w-full flex items-center justify-center gap-1.5 py-2 rounded border border-dashed border-white/[0.22] text-white/45 hover:text-white/76 hover:border-white/35 text-[11px] transition-colors bg-white/[0.02]"
+              className="w-full flex items-center justify-center gap-1.5 py-2 rounded border border-dashed border-white/[0.22] text-white/45 hover:text-white/76 hover:border-white/35 text-sm transition-colors bg-white/[0.02]"
             >
               <Plus size={12} />
               서버 수동 추가
             </button>
           )}
 
-          <p className="text-[10px] text-white/25 leading-relaxed pt-2">
+          <p className="text-xs text-white/25 leading-relaxed pt-2">
             MCP = Model Context Protocol. 활성화된 서버의 툴은 AI가 스크린샷/파일/Git 등을 호출할 수 있게 해줍니다.
             <br />
             <b>Phase 74</b>: 서버 등록 + 툴 조회만 동작. AI 자동 호출은 이후 Phase에서 통합 예정.

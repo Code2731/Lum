@@ -44,7 +44,7 @@ function ProcTable({
 
         return (
           <div key={`${p.pid}-${mode}`} className="flex items-center gap-2">
-            <span className="w-[100px] text-[10px] font-mono text-white/56 truncate shrink-0">
+            <span className="w-[100px] text-xs font-mono text-white/56 truncate shrink-0">
               {p.name}
             </span>
             <div className="flex-1 h-1 bg-white/[0.09] rounded-full overflow-hidden">
@@ -53,7 +53,7 @@ function ProcTable({
                 style={{ width: `${barPct}%` }}
               />
             </div>
-            <span className="text-[10px] font-mono text-white/46 w-16 text-right shrink-0">
+            <span className="text-xs font-mono text-white/46 w-16 text-right shrink-0">
               {label}
             </span>
           </div>
@@ -65,7 +65,7 @@ function ProcTable({
 
 const SystemMonitorPanel: React.FC<Props> = ({ onClose, compact = false }) => {
   const stats = useSystemMonitor(true);
-  const panelTextClass = compact ? "text-[10px]" : "text-xs";
+  const panelTextClass = compact ? "text-xs" : "text-xs";
   const headerPadClass = compact ? "px-2.5 py-1.5" : "px-3 py-2";
   const bodyPadClass = compact
     ? "flex-1 overflow-y-auto px-2 py-2 space-y-3 min-h-0"
@@ -77,9 +77,9 @@ const SystemMonitorPanel: React.FC<Props> = ({ onClose, compact = false }) => {
       {/* 헤더 */}
       <div className={`flex items-center gap-2 ${headerPadClass} border-b border-white/10 bg-white/[0.02] shrink-0`}>
         <Cpu size={13} className="text-accent shrink-0" />
-        <span className="text-[11px] font-semibold text-white/86 flex-1">시스템 모니터</span>
+        <span className="text-sm font-semibold text-white/86 flex-1">시스템 모니터</span>
         {stats && (
-          <span className="flex items-center gap-1 text-[9px] text-white/28">
+          <span className="flex items-center gap-1 text-xs text-white/28">
             <RefreshCw size={8} className="animate-spin" style={{ animationDuration: "2s" }} />
             2초
           </span>
@@ -94,7 +94,7 @@ const SystemMonitorPanel: React.FC<Props> = ({ onClose, compact = false }) => {
       </div>
 
       {!stats ? (
-        <div className="flex-1 flex items-center justify-center text-[11px] text-white/24">
+        <div className="flex-1 flex items-center justify-center text-sm text-white/24">
           수집 중…
         </div>
       ) : (
@@ -102,13 +102,13 @@ const SystemMonitorPanel: React.FC<Props> = ({ onClose, compact = false }) => {
           {/* CPU */}
           <section className={sectionGapClass}>
             <div className="flex items-center justify-between">
-              <span className="flex items-center gap-1.5 text-[10px] font-semibold text-white/50 uppercase tracking-wider">
+              <span className="flex items-center gap-1.5 text-xs font-semibold text-white/50 uppercase tracking-wider">
                 <Cpu size={10} />
                 CPU
               </span>
-              <span className="text-[11px] font-mono font-semibold text-white/86">
+              <span className="text-sm font-mono font-semibold text-white/86">
                 {stats.cpu_usage.toFixed(1)}%
-                <span className="text-[9px] text-white/25 ml-1">/ {stats.cpu_count}코어</span>
+                <span className="text-xs text-white/25 ml-1">/ {stats.cpu_count}코어</span>
               </span>
             </div>
             <GaugeBar pct={stats.cpu_usage} color={color(stats.cpu_usage)} />
@@ -117,22 +117,22 @@ const SystemMonitorPanel: React.FC<Props> = ({ onClose, compact = false }) => {
           {/* 메모리 */}
           <section className={sectionGapClass}>
             <div className="flex items-center justify-between">
-              <span className="flex items-center gap-1.5 text-[10px] font-semibold text-white/50 uppercase tracking-wider">
+              <span className="flex items-center gap-1.5 text-xs font-semibold text-white/50 uppercase tracking-wider">
                 <MemoryStick size={10} />
                 메모리
               </span>
-              <span className="text-[11px] font-mono font-semibold text-white/86">
+              <span className="text-sm font-mono font-semibold text-white/86">
                 {stats.memory_used_gb} GB
-                <span className="text-[9px] text-white/25 ml-1">/ {stats.memory_total_gb} GB</span>
+                <span className="text-xs text-white/25 ml-1">/ {stats.memory_total_gb} GB</span>
               </span>
             </div>
             <GaugeBar pct={stats.memory_percent} color={color(stats.memory_percent)} />
-            <p className="text-[9px] text-white/25 text-right">{stats.memory_percent.toFixed(0)}% 사용</p>
+            <p className="text-xs text-white/25 text-right">{stats.memory_percent.toFixed(0)}% 사용</p>
           </section>
 
           {/* 프로세스 — CPU */}
           <section className={sectionGapClass}>
-            <p className="text-[10px] font-semibold text-white/40 uppercase tracking-wider">
+            <p className="text-xs font-semibold text-white/40 uppercase tracking-wider">
               CPU 상위 프로세스
             </p>
             <ProcTable procs={stats.top_cpu} mode="cpu" />
@@ -140,7 +140,7 @@ const SystemMonitorPanel: React.FC<Props> = ({ onClose, compact = false }) => {
 
           {/* 프로세스 — 메모리 */}
           <section className={sectionGapClass}>
-            <p className="text-[10px] font-semibold text-white/40 uppercase tracking-wider">
+            <p className="text-xs font-semibold text-white/40 uppercase tracking-wider">
               메모리 상위 프로세스
             </p>
             <ProcTable procs={stats.top_mem} mode="mem" />
