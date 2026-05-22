@@ -778,7 +778,7 @@ const AppHeader: React.FC<Props> = ({
         <div data-tauri-drag-region className="flex items-center gap-1 min-w-0 overflow-hidden mr-1">
           <div
             data-tauri-drag-region
-            className={`text-[11px] px-2 py-1 rounded-md truncate max-w-[148px] border ${
+            className={`text-sm px-2 py-1 rounded-md truncate max-w-[148px] border ${
               fastEmpty
                 ? "bg-white/[0.04] border-white/10 text-white/35 italic"
                 : "bg-emerald-400/10 border-emerald-400/25 text-emerald-300"
@@ -794,7 +794,7 @@ const AppHeader: React.FC<Props> = ({
           {heavyEnabled && heavy && (
             <div
               data-tauri-drag-region
-              className="text-[11px] px-2 py-1 rounded-md bg-amber-400/10 border border-amber-400/25 text-amber-200 truncate max-w-[148px]"
+              className="text-sm px-2 py-1 rounded-md bg-amber-400/10 border border-amber-400/25 text-amber-200 truncate max-w-[148px]"
               title={`Heavy Track (mistral.rs): ${heavyModelId}`}
             >
               HEAVY · {heavy}
@@ -929,10 +929,10 @@ const AppHeader: React.FC<Props> = ({
                 >
                   {hasUnseenAdvanced && (
                     <div className="px-2 py-1.5 mb-1 border-b border-white/10">
-                      <p className="text-[9px] font-semibold tracking-[0.06em] text-amber-300 uppercase">
+                      <p className="text-xs font-semibold tracking-[0.06em] text-amber-300 uppercase">
                         NEW FEATURE
                       </p>
-                      <p className="text-[10px] text-white/65 mt-0.5">
+                      <p className="text-xs text-white/65 mt-0.5">
                         신규 기능 {unseenAdvancedCount}개를 확인해 보세요.
                       </p>
                     </div>
@@ -952,7 +952,7 @@ const AppHeader: React.FC<Props> = ({
                   ))}
                   {compactMode && (
                     <>
-                      <p className="px-2 py-1.5 text-[9px] font-semibold tracking-[0.06em] text-white/50 uppercase">
+                      <p className="px-2 py-1.5 text-xs font-semibold tracking-[0.06em] text-white/50 uppercase">
                         QUICK ACCESS
                       </p>
                       {compactQuickAccessActions.map((action) => (
@@ -1100,12 +1100,12 @@ const AdvancedRow: React.FC<{
     type="button"
     role="menuitem"
     onClick={onClick}
-    className="w-full flex items-center gap-2 px-2 py-1.5 rounded text-[11px] text-white/75 hover:text-white hover:bg-white/[0.07] transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+        className="w-full flex items-center gap-2 px-2 py-1.5 rounded text-sm text-white/75 hover:text-white hover:bg-white/[0.07] transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
   >
     <span className="shrink-0 text-white/50">{icon}</span>
     <span className="flex-1 text-left">{label}</span>
     {isNew && (
-      <span className="text-[9px] font-semibold tracking-wide px-1.5 py-0.5 rounded bg-amber-400/15 text-amber-300 border border-amber-400/30">
+        <span className="text-xs font-semibold tracking-wide px-1.5 py-0.5 rounded bg-amber-400/15 text-amber-300 border border-amber-400/30">
         NEW
       </span>
     )}

@@ -59,12 +59,12 @@ const SquadPanel: React.FC<Props> = ({
         <div className="flex items-center gap-2.5 px-5 py-4 border-b border-white/8 shrink-0">
           <Users size={15} className="text-accent" />
           <DialogTitle className="text-sm font-semibold">Worktree Squad</DialogTitle>
-          <span className="text-[10px] text-white/35 ml-1">병렬 작업 격리</span>
+          <span className="text-xs text-white/35 ml-1">병렬 작업 격리</span>
         </div>
 
         {/* 새 squad 생성 폼 */}
         <div className="px-5 py-4 border-b border-white/8 shrink-0 space-y-2">
-          <p className="text-[10px] text-white/35">새 Squad 만들기 — 별도 git worktree + 브랜치에 격리</p>
+          <p className="text-xs text-white/35">새 Squad 만들기 — 별도 git worktree + 브랜치에 격리</p>
           <Input
             value={task}
             onChange={(e) => setTask(e.target.value)}
@@ -92,10 +92,10 @@ const SquadPanel: React.FC<Props> = ({
             </Button>
           </div>
           {currentCwd && (
-            <p className="text-[10px] text-white/30 font-mono truncate">repo 위치: {shortPath(currentCwd)}</p>
+            <p className="text-xs text-white/30 font-mono truncate">repo 위치: {shortPath(currentCwd)}</p>
           )}
           {createError && (
-            <p className="text-[11px] text-red-400 bg-red-500/10 border border-red-400/20 rounded px-2 py-1">
+            <p className="text-sm text-red-400 bg-red-500/10 border border-red-400/20 rounded px-2 py-1">
               {createError}
             </p>
           )}
@@ -107,7 +107,7 @@ const SquadPanel: React.FC<Props> = ({
             <p className="text-xs text-white/40 text-center py-6">로딩 중…</p>
           )}
           {!loading && error && (
-            <p className="text-[11px] text-red-400 text-center py-4">{error}</p>
+            <p className="text-sm text-red-400 text-center py-4">{error}</p>
           )}
           {!loading && !error && squads.length === 0 && (
             <p className="text-xs text-white/35 text-center py-6">활성 Squad가 없습니다.</p>
@@ -121,7 +121,7 @@ const SquadPanel: React.FC<Props> = ({
               >
                 <div className="flex-1 min-w-0">
                   <div className="text-xs text-white/85 font-medium truncate">{s.task}</div>
-                  <div className="flex items-center gap-2 mt-0.5 text-[10px] text-white/35">
+                  <div className="flex items-center gap-2 mt-0.5 text-xs text-white/35">
                     <GitBranch size={9} />
                     <span className="font-mono truncate">{s.branch}</span>
                     <span>·</span>

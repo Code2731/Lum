@@ -45,14 +45,14 @@ const WorkspacePanel: React.FC<Props> = ({
 
         {/* 현재 세션 저장 */}
         <div className="px-5 py-4 border-b border-white/8 shrink-0">
-          <p className="text-[10px] text-white/35 mb-2">현재 세션 저장</p>
+          <p className="text-xs text-white/35 mb-2">현재 세션 저장</p>
           <div className="flex gap-2">
             <div className="flex-1 bg-white/3 border border-white/7 rounded-xl px-3 py-2">
               <div className="flex gap-1 flex-wrap mb-2">
                 {currentTabs.map(t => (
                   <span
                     key={t.id}
-                    className={`flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md ${
+                    className={`flex items-center gap-1 text-xs px-1.5 py-0.5 rounded-md ${
                       t.id === activeTabId ? "bg-accent/15 text-accent" : "bg-white/5 text-white/40"
                     }`}
                   >
@@ -102,14 +102,14 @@ const WorkspacePanel: React.FC<Props> = ({
                   <p className="text-xs font-medium text-white/80 truncate">{ws.name}</p>
                   <div className="flex items-center gap-1 mt-0.5">
                     <Clock size={9} className="text-white/20" />
-                    <span className="text-[10px] text-white/30">{fmtDate(ws.created_at)}</span>
-                    <span className="text-[10px] text-white/20 ml-1">탭 {ws.tabs.length}개</span>
+                    <span className="text-xs text-white/30">{fmtDate(ws.created_at)}</span>
+                    <span className="text-xs text-white/20 ml-1">탭 {ws.tabs.length}개</span>
                   </div>
                 </div>
                 <div className="flex gap-1">
                   <button
                     onClick={() => { onRestore(ws); onClose(); }}
-                    className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-accent/15 text-accent hover:bg-accent/25 transition-colors text-[10px] font-medium"
+                    className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-accent/15 text-accent hover:bg-accent/25 transition-colors text-xs font-medium"
                   >
                     <FolderOpen size={10} /> 불러오기
                   </button>
@@ -130,7 +130,7 @@ const WorkspacePanel: React.FC<Props> = ({
                 {ws.tabs.map(t => (
                   <span
                     key={t.id}
-                    className="flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded bg-white/4 text-white/35"
+                    className="flex items-center gap-1 text-xs px-1.5 py-0.5 rounded bg-white/4 text-white/35"
                   >
                     <TerminalSquare size={7} />
                     {t.title}

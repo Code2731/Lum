@@ -49,7 +49,7 @@ const CommandPalette: React.FC<Props> = ({
                 <div className="flex-1 min-w-0">
                   <p className="text-white/85 truncate">{t.title}</p>
                   {t.cwd && (
-                    <p className="text-[10px] text-white/30 font-mono truncate">{shortPath(t.cwd)}</p>
+                    <p className="text-xs text-white/30 font-mono truncate">{shortPath(t.cwd)}</p>
                   )}
                 </div>
               </CommandItem>
@@ -68,7 +68,7 @@ const CommandPalette: React.FC<Props> = ({
                 <Layers size={12} className="text-purple-400 shrink-0" />
                 <div className="flex-1 min-w-0">
                   <p className="text-white/85 truncate">{ws.name}</p>
-                  <p className="text-[10px] text-white/30 truncate">탭 {ws.tabs.length}개</p>
+                  <p className="text-xs text-white/30 truncate">탭 {ws.tabs.length}개</p>
                 </div>
               </CommandItem>
             ))}
@@ -86,7 +86,7 @@ const CommandPalette: React.FC<Props> = ({
                 <Zap size={12} className="text-yellow-400 shrink-0" />
                 <div className="flex-1 min-w-0">
                   <p className="text-white/85 truncate">{a.label}</p>
-                  <p className="text-[10px] text-white/30 font-mono truncate">{a.command}</p>
+                  <p className="text-xs text-white/30 font-mono truncate">{a.command}</p>
                 </div>
               </CommandItem>
             ))}

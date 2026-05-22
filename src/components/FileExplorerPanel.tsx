@@ -75,7 +75,7 @@ export default function FileExplorerPanel({ cwd, onClose, onCdTo, onOpenFile }: 
   return (
     <div className="lum-explorer flex flex-col h-full border-r border-white/10">
       <div className="flex items-center justify-between px-3 py-2 border-b border-white/10">
-        <div className="flex items-center gap-1.5 text-[11px] text-white/78 font-semibold tracking-wide">
+        <div className="flex items-center gap-1.5 text-sm text-white/78 font-semibold tracking-wide">
           <Folder size={12} className="text-accent" />
           파일 탐색기
         </div>
@@ -101,12 +101,12 @@ export default function FileExplorerPanel({ cwd, onClose, onCdTo, onOpenFile }: 
           <RefreshCw size={11} />
         </IconButton>
         <IconButton tooltip="터미널을 이 폴더로 이동" onClick={() => onCdTo(currentPath)}
-          className="ml-auto px-2 py-0.5 rounded-md border border-accent/35 bg-accent/14 hover:bg-accent/24 text-accent text-[10px]">
+          className="ml-auto px-2 py-0.5 rounded-md border border-accent/35 bg-accent/14 hover:bg-accent/24 text-accent text-xs">
           여기로 cd
         </IconButton>
       </div>
 
-      <div className="px-3 py-1.5 text-[10px] text-white/45 font-mono truncate border-b border-white/8 bg-black/10" title={currentPath}>
+      <div className="px-3 py-1.5 text-xs text-white/45 font-mono truncate border-b border-white/8 bg-black/10" title={currentPath}>
         {segments.length === 0 ? "/" : segments.map((s, i) => (
           <span key={i}>
             <span>{s}</span>
@@ -116,14 +116,14 @@ export default function FileExplorerPanel({ cwd, onClose, onCdTo, onOpenFile }: 
       </div>
 
       <div className="flex-1 overflow-y-auto">
-        {loading && <div className="text-[10px] text-white/34 px-3 py-2">읽는 중…</div>}
+        {loading && <div className="text-xs text-white/34 px-3 py-2">읽는 중…</div>}
         {error && (
-          <div className="text-[10px] text-red-300 px-3 py-2 bg-red-500/10 border border-red-500/25 m-2 rounded-md">
+          <div className="text-xs text-red-300 px-3 py-2 bg-red-500/10 border border-red-500/25 m-2 rounded-md">
             {error}
           </div>
         )}
         {!loading && !error && entries.length === 0 && (
-          <div className="text-[10px] text-white/25 px-3 py-2">빈 폴더</div>
+          <div className="text-xs text-white/25 px-3 py-2">빈 폴더</div>
         )}
         {entries.map((e) => (
           <div
@@ -131,7 +131,7 @@ export default function FileExplorerPanel({ cwd, onClose, onCdTo, onOpenFile }: 
             onClick={() => handleEntryClick(e, false)}
             onDoubleClick={() => handleEntryClick(e, true)}
             title={e.is_dir ? "더블클릭: 이 폴더로 cd / 클릭: 열기" : "더블클릭: 파일 열기"}
-            className="lum-explorer-row flex items-center gap-1.5 px-3 py-1.5 text-[11px] hover:bg-white/[0.06] cursor-pointer text-white/72 border-b border-transparent hover:border-white/[0.06]"
+            className="lum-explorer-row flex items-center gap-1.5 px-3 py-1.5 text-sm hover:bg-white/[0.06] cursor-pointer text-white/72 border-b border-transparent hover:border-white/[0.06]"
           >
             {e.is_dir ? (
               <FolderOpen size={12} className="text-yellow-300/75 shrink-0" />
@@ -139,7 +139,7 @@ export default function FileExplorerPanel({ cwd, onClose, onCdTo, onOpenFile }: 
               <File size={12} className="text-white/40 shrink-0" />
             )}
             <span className="flex-1 truncate">{e.name}</span>
-            {!e.is_dir && <span className="text-[9px] text-white/30 shrink-0">{formatSize(e.size)}</span>}
+            {!e.is_dir && <span className="text-xs text-white/30 shrink-0">{formatSize(e.size)}</span>}
           </div>
         ))}
       </div>

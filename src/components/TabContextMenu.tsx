@@ -173,13 +173,13 @@ const TabContextMenu: React.FC<Props> = ({
       <div className="px-3 pt-3 pb-2">
         <div className="flex items-center gap-1.5 mb-2">
           <Palette size={11} className="text-white/30" />
-          <span className="text-[10px] text-white/30">탭 색상</span>
+          <span className="text-xs text-white/30">탭 색상</span>
           {currentColor && (
             <button
               type="button"
               aria-label="탭 색상 초기화"
               onClick={() => { onSetColor(tabId, undefined); onClose(); }}
-              className="ml-auto text-[9px] text-white/25 hover:text-white/60 transition-colors"
+              className="ml-auto text-xs text-white/25 hover:text-white/60 transition-colors"
             >
               초기화
             </button>
@@ -224,13 +224,13 @@ const TabContextMenu: React.FC<Props> = ({
       <div className="px-3 py-2.5">
         <div className="flex items-center gap-1.5 mb-1.5">
           <Tag size={11} className="text-white/30" />
-          <span className="text-[10px] text-white/30">그룹 이름</span>
+          <span className="text-xs text-white/30">그룹 이름</span>
           {currentGroup && (
             <button
               type="button"
               aria-label="탭 그룹 초기화"
               onClick={() => { onSetGroup(tabId, undefined); onClose(); }}
-              className="ml-auto text-[9px] text-white/25 hover:text-white/60 transition-colors"
+              className="ml-auto text-xs text-white/25 hover:text-white/60 transition-colors"
             >
               <X size={9} />
             </button>
@@ -240,7 +240,7 @@ const TabContextMenu: React.FC<Props> = ({
           ref={inputRef}
           defaultValue={currentGroup ?? ""}
           placeholder="예: backend, deploy…"
-          className="w-full bg-white/5 border border-white/8 rounded-lg px-2 py-1 text-[11px] text-white/70 placeholder:text-white/20 outline-none focus:border-accent/40"
+          className="w-full bg-white/5 border border-white/8 rounded-lg px-2 py-1 text-sm text-white/70 placeholder:text-white/20 outline-none focus:border-accent/40"
           onKeyDown={e => {
             if (e.key === "Enter") {
               e.preventDefault();
@@ -259,7 +259,7 @@ const TabContextMenu: React.FC<Props> = ({
           }}
           onClick={e => e.stopPropagation()}
         />
-        <p className="text-[9px] text-white/20 mt-1">Enter로 적용</p>
+        <p className="text-xs text-white/20 mt-1">Enter로 적용</p>
       </div>
     </div>
   );
