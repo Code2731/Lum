@@ -1251,7 +1251,7 @@ const WarpListView: React.FC<Props> = ({
         else setTimelineRiskFilter("all");
         return;
       }
-      if (e.altKey && key === "i") {
+      if (e.altKey && !mod && key === "i") {
         if (timelineFiltered.length > 0) {
           e.preventDefault();
           invertTimelineFilteredSelection();
