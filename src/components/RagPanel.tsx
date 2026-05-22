@@ -123,12 +123,12 @@ const RagPanel: React.FC<Props> = ({ model, onClose, compact = false }) => {
   }, [query, model]);
 
   const swarmSearching = swarmQueryId !== null;
-  const panelTextClass = compact ? "text-[10px]" : "text-xs";
+  const panelTextClass = compact ? "text-xs" : "text-xs";
   const headerPadClass = compact ? "px-2.5 py-1.5" : "px-3 py-2";
   const bodyPadClass = compact ? "flex-1 overflow-y-auto p-2 space-y-3" : "flex-1 overflow-y-auto p-3 space-y-4";
   const sectionGapClass = compact ? "space-y-1.5" : "space-y-2";
-  const titleSizeClass = compact ? "text-[10px]" : "text-[11px]";
-  const bodyInputTextClass = compact ? "text-[10px]" : "text-[11px]";
+  const titleSizeClass = compact ? "text-xs" : "text-sm";
+  const bodyInputTextClass = compact ? "text-xs" : "text-sm";
 
   return (
     <div className={`lum-sidepanel flex flex-col h-full text-white ${panelTextClass}`}>
@@ -150,7 +150,7 @@ const RagPanel: React.FC<Props> = ({ model, onClose, compact = false }) => {
       <div className={bodyPadClass}>
         {/* 인덱싱 섹션 */}
         <section className={sectionGapClass}>
-          <p className="text-[10px] text-white/45 font-semibold uppercase tracking-wider">프로젝트 인덱싱</p>
+          <p className="text-xs text-white/45 font-semibold uppercase tracking-wider">프로젝트 인덱싱</p>
           <div className="flex gap-2">
             <div className="relative flex-1">
               <FolderOpen size={11} className="absolute left-2 top-1/2 -translate-y-1/2 text-white/30" />
@@ -178,7 +178,7 @@ const RagPanel: React.FC<Props> = ({ model, onClose, compact = false }) => {
             </button>
           </div>
           {indexStatus && (
-            <p className={`text-[10px] ${indexStatus.ok ? "text-green-400" : "text-red-400"}`}>
+            <p className={`text-xs ${indexStatus.ok ? "text-green-400" : "text-red-400"}`}>
               {indexStatus.ok
                 ? `${indexStatus.files}개 파일 · ${indexStatus.chunks}개 청크 인덱싱 완료`
                 : `인덱싱 실패 — ${indexStatus.error}`}
@@ -188,7 +188,7 @@ const RagPanel: React.FC<Props> = ({ model, onClose, compact = false }) => {
 
         {/* 검색 섹션 */}
         <section className={sectionGapClass}>
-          <p className="text-[10px] text-white/45 font-semibold uppercase tracking-wider">코드베이스 검색</p>
+          <p className="text-xs text-white/45 font-semibold uppercase tracking-wider">코드베이스 검색</p>
           <div className="flex gap-2">
             <div className="relative flex-1">
               <Search size={11} className="absolute left-2 top-1/2 -translate-y-1/2 text-white/30" />
@@ -229,7 +229,7 @@ const RagPanel: React.FC<Props> = ({ model, onClose, compact = false }) => {
         {/* 로컬 검색 결과 */}
         {results.length > 0 && (
           <section className={compact ? "space-y-1" : "space-y-1.5"}>
-            <p className="text-[10px] text-white/40 font-medium uppercase tracking-wider">로컬 결과</p>
+            <p className="text-xs text-white/40 font-medium uppercase tracking-wider">로컬 결과</p>
             {results.map((r, i) => (
               <ResultCard key={i} content={r.content} score={r.score} />
             ))}
@@ -239,12 +239,12 @@ const RagPanel: React.FC<Props> = ({ model, onClose, compact = false }) => {
         {/* 스웜 검색 결과 */}
         {swarmResults.length > 0 && (
           <section className={compact ? "space-y-1" : "space-y-1.5"}>
-            <p className="text-[10px] text-white/40 font-medium uppercase tracking-wider">
+            <p className="text-xs text-white/40 font-medium uppercase tracking-wider">
               스웜 결과 ({swarmResults.length}개 피어)
             </p>
             {swarmResults.map((peer, i) => (
               <div key={i} className="space-y-1">
-                <p className="text-[10px] text-purple-300/70 font-mono truncate">{peer.peer_id.slice(0, 20)}…</p>
+                <p className="text-xs text-purple-300/70 font-mono truncate">{peer.peer_id.slice(0, 20)}…</p>
                 {peer.results.map((r, j) => (
                   <ResultCard key={j} content={r} score={0} swarm />
                 ))}
@@ -254,7 +254,7 @@ const RagPanel: React.FC<Props> = ({ model, onClose, compact = false }) => {
         )}
 
         {results.length === 0 && swarmResults.length === 0 && !isSearching && query && (
-          <p className="text-[10px] text-white/24 text-center py-4">검색 결과가 없습니다.</p>
+          <p className="text-xs text-white/24 text-center py-4">검색 결과가 없습니다.</p>
         )}
       </div>
     </div>
@@ -275,13 +275,13 @@ const ResultCard: React.FC<{ content: string; score: number; swarm?: boolean }> 
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5 min-w-0">
           <FileCode size={10} className={swarm ? "text-purple-400 shrink-0" : "text-accent shrink-0"} />
-          <span className="font-mono text-[10px] text-white/66 truncate">{header}</span>
+          <span className="font-mono text-xs text-white/66 truncate">{header}</span>
         </div>
         {score > 0 && (
-          <span className="text-[9px] text-white/38 shrink-0">{(score * 100).toFixed(0)}%</span>
+          <span className="text-xs text-white/38 shrink-0">{(score * 100).toFixed(0)}%</span>
         )}
       </div>
-      <pre className="text-[10px] text-white/56 leading-relaxed line-clamp-3 whitespace-pre-wrap font-mono">
+      <pre className="text-xs text-white/56 leading-relaxed line-clamp-3 whitespace-pre-wrap font-mono">
         {body}
       </pre>
     </div>

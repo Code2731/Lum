@@ -131,7 +131,7 @@ const StepRow: React.FC<{ step: ReactStep; idx: number }> = ({ step }) => {
     return (
       <div className="flex items-center gap-1.5 py-0.5 px-1">
         {KIND_ICON[step.kind]}
-        <span className="text-[10px] text-white/25 font-mono">
+        <span className="text-xs text-white/25 font-mono">
           {step.content}
         </span>
       </div>
@@ -150,12 +150,12 @@ const StepRow: React.FC<{ step: ReactStep; idx: number }> = ({ step }) => {
       {KIND_ICON[step.kind]}
       <div className="flex-1 min-w-0">
         {step.kind === "action" && step.tool && (
-          <span className="text-[9px] font-mono text-yellow-500/60 mr-1">
+          <span className="text-xs font-mono text-yellow-500/60 mr-1">
             [{step.tool}]
           </span>
         )}
         <span
-          className={`text-[11px] leading-relaxed ${KIND_COLOR[step.kind]} ${
+          className={`text-sm leading-relaxed ${KIND_COLOR[step.kind]} ${
             step.kind === "observation" || step.kind === "action"
               ? "font-mono"
               : ""
@@ -173,11 +173,11 @@ const ChangeRow: React.FC<{ change: ChangeInfo }> = ({ change }) => {
   return (
     <div className="flex items-center gap-2 py-1 px-1.5 rounded bg-white/2 hover:bg-white/4 transition-colors">
       {KIND_ICON_FILE[change.kind]}
-      <span className="text-[10px] text-white/40 font-medium shrink-0 w-7">
+      <span className="text-xs text-white/40 font-medium shrink-0 w-7">
         {KIND_LABEL_FILE[change.kind]}
       </span>
       <span
-        className={`text-[9px] font-mono px-1.5 py-0.5 rounded border ${risk.bg} ${risk.fg} ${risk.border} shrink-0`}
+        className={`text-xs font-mono px-1.5 py-0.5 rounded border ${risk.bg} ${risk.fg} ${risk.border} shrink-0`}
         title={
           change.risk === "high"
             ? "빌드/설정 파일 — 신중 검토 필요"
@@ -189,7 +189,7 @@ const ChangeRow: React.FC<{ change: ChangeInfo }> = ({ change }) => {
         {risk.label}
       </span>
       <span
-        className="text-[11px] font-mono text-white/70 truncate flex-1 min-w-0"
+        className="text-sm font-mono text-white/70 truncate flex-1 min-w-0"
         title={change.path}
       >
         {change.rel_path}
@@ -396,10 +396,10 @@ const ReactAgentPanel: React.FC<Props> = ({
       {/* ── 헤더 ─────────────────────────────────────────── */}
       <div className="flex items-center gap-2 px-3 py-2.5 border-b border-white/5 bg-white/3 shrink-0">
         <Bot size={13} className="text-accent shrink-0" />
-        <span className="text-[11px] font-semibold text-accent">
+        <span className="text-sm font-semibold text-accent">
           ReAct 에이전트
         </span>
-        <span className="text-[10px] text-white/30 ml-1 truncate flex-1">
+        <span className="text-xs text-white/30 ml-1 truncate flex-1">
           {goal}
         </span>
         <button
@@ -426,7 +426,7 @@ const ReactAgentPanel: React.FC<Props> = ({
           <AlertTriangle size={11} className="text-white/40 shrink-0" />
         )}
         <span
-          className={`text-[11px] font-medium ${
+          className={`text-sm font-medium ${
             status === "done"
               ? "text-green-400"
               : status === "error"
@@ -439,13 +439,13 @@ const ReactAgentPanel: React.FC<Props> = ({
           {STATUS_LABEL[status]}
         </span>
         {isActive && currentStep > 0 && (
-          <span className="text-[10px] text-white/30 ml-auto">
+          <span className="text-xs text-white/30 ml-auto">
             {currentStep} / 25 단계
           </span>
         )}
         {!isActive && hasChanges && (
           <span
-            className={`text-[10px] ml-auto font-medium ${
+            className={`text-xs ml-auto font-medium ${
               highRiskCount > 0 ? "text-red-300" : "text-white/50"
             }`}
             title={
@@ -460,7 +460,7 @@ const ReactAgentPanel: React.FC<Props> = ({
         )}
         <button
           onClick={toggleDesktopTools}
-          className={`ml-2 px-2 py-0.5 rounded border text-[9px] font-medium transition-colors ${
+          className={`ml-2 px-2 py-0.5 rounded border text-xs font-medium transition-colors ${
             desktopToolsEnabled
               ? "border-cyan-500/30 bg-cyan-500/10 text-cyan-300 hover:bg-cyan-500/20"
               : "border-white/10 bg-white/5 text-white/40 hover:bg-white/10"
@@ -472,7 +472,7 @@ const ReactAgentPanel: React.FC<Props> = ({
         <button
           onClick={toggleScipTools}
           disabled={availableScipBackends === 0}
-          className={`ml-2 px-2 py-0.5 rounded border text-[9px] font-medium transition-colors ${
+          className={`ml-2 px-2 py-0.5 rounded border text-xs font-medium transition-colors ${
             availableScipBackends === 0
               ? "border-white/10 bg-white/5 text-white/30 cursor-not-allowed"
               : isScipEnabled
@@ -490,7 +490,7 @@ const ReactAgentPanel: React.FC<Props> = ({
         <button
           onClick={runScipRebuild}
           disabled={scipRebuildDisabled}
-          className={`ml-2 px-2 py-0.5 rounded border text-[9px] font-medium transition-colors ${
+          className={`ml-2 px-2 py-0.5 rounded border text-xs font-medium transition-colors ${
             scipRebuildDisabled
               ? "border-white/10 bg-white/5 text-white/30 cursor-not-allowed"
               : "border-cyan-500/30 bg-cyan-500/10 text-cyan-300 hover:bg-cyan-500/20"
@@ -507,13 +507,13 @@ const ReactAgentPanel: React.FC<Props> = ({
                 ? `${scipRebuildTargetLanguageLabel} 인덱스 생성(누락분)`
                 : `${scipRebuildTargetLanguageLabel} 인덱스 생성`}
         </button>
-        <label className="ml-2 px-2 py-0.5 rounded border border-white/10 bg-white/5 text-[9px] text-white/65 inline-flex items-center gap-1">
+        <label className="ml-2 px-2 py-0.5 rounded border border-white/10 bg-white/5 text-xs text-white/65 inline-flex items-center gap-1">
           <span>언어:</span>
           <select
             value={scipRebuildTargetLanguage}
             onChange={(e) => setScipRebuildTargetLanguage(e.target.value)}
             disabled={isScipRebuildInProgress}
-            className="bg-transparent text-[10px] border-none outline-none text-white/75"
+            className="bg-transparent text-xs border-none outline-none text-white/75"
             title="재빌드할 SCIP 언어를 선택하세요"
           >
             <option value="all">전체</option>
@@ -528,7 +528,7 @@ const ReactAgentPanel: React.FC<Props> = ({
             ))}
           </select>
         </label>
-        <label className="ml-2 px-2 py-0.5 rounded border border-white/10 bg-white/5 text-[9px] text-white/65 inline-flex items-center gap-1">
+        <label className="ml-2 px-2 py-0.5 rounded border border-white/10 bg-white/5 text-xs text-white/65 inline-flex items-center gap-1">
           <input
             type="checkbox"
             checked={scipRebuildForce}
@@ -541,7 +541,7 @@ const ReactAgentPanel: React.FC<Props> = ({
       </div>
 
       {scipRebuildMessage && (
-        <div className="px-3 py-1.5 text-[10px] text-white/55 border-b border-white/5 bg-white/2">
+        <div className="px-3 py-1.5 text-xs text-white/55 border-b border-white/5 bg-white/2">
           {scipRebuildMessage}
         </div>
       )}
@@ -560,27 +560,27 @@ const ReactAgentPanel: React.FC<Props> = ({
               size={10}
               className="animate-spin text-accent/60 shrink-0"
             />
-            <span className="text-[10px] text-white/30">생각 중...</span>
+            <span className="text-xs text-white/30">생각 중...</span>
           </div>
         )}
         {status === "idle" && (
           <div className="flex flex-col items-center justify-center gap-1 py-8 text-white/25">
             <Bot size={20} />
-            <span className="text-[11px]">에이전트 시작 대기 중</span>
+            <span className="text-sm">에이전트 시작 대기 중</span>
           </div>
         )}
       </div>
 
       {isPlanDone && state.plannedTools.length > 0 && (
         <div className="shrink-0 border-t border-white/5 bg-cyan-500/5 px-3 py-2">
-          <div className="text-[10px] text-cyan-200/80 mb-1">
+          <div className="text-xs text-cyan-200/80 mb-1">
             Plan에서 제안된 도구
           </div>
           <div className="flex flex-wrap gap-1">
             {state.plannedTools.map((tool) => (
               <span
                 key={tool}
-                className="px-1.5 py-0.5 rounded border border-cyan-400/20 bg-cyan-500/10 text-[10px] text-cyan-200/90 font-mono"
+                className="px-1.5 py-0.5 rounded border border-cyan-400/20 bg-cyan-500/10 text-xs text-cyan-200/90 font-mono"
               >
                 {tool}
               </span>
@@ -594,11 +594,11 @@ const ReactAgentPanel: React.FC<Props> = ({
         <div className="shrink-0 border-t border-white/5 bg-white/2 max-h-[180px] overflow-y-auto">
           <div className="sticky top-0 flex items-center gap-1.5 px-3 py-1.5 bg-white/3 border-b border-white/5">
             <FileEdit size={10} className="text-cyan-400" />
-            <span className="text-[10px] font-semibold text-white/60">
+            <span className="text-xs font-semibold text-white/60">
               변경 파일 ({changes.length})
             </span>
             {highRiskCount > 0 && (
-              <span className="text-[9px] text-red-300 font-medium ml-1">
+              <span className="text-xs text-red-300 font-medium ml-1">
                 · High {highRiskCount}
               </span>
             )}
@@ -613,7 +613,7 @@ const ReactAgentPanel: React.FC<Props> = ({
 
       {/* ── undo 결과 리포트 ──────────────────────────── */}
       {undoReport && (
-        <div className="shrink-0 border-t border-white/5 px-3 py-2 bg-white/2 text-[10px] space-y-0.5">
+        <div className="shrink-0 border-t border-white/5 px-3 py-2 bg-white/2 text-xs space-y-0.5">
           {undoReport.restored.length > 0 && (
             <div className="text-green-300/80">
               복원 {undoReport.restored.length}개
@@ -635,7 +635,7 @@ const ReactAgentPanel: React.FC<Props> = ({
       {/* ── 액션 버튼 ─────────────────────────────────────── */}
       <div className="shrink-0 border-t border-white/5 px-3 py-2.5 flex items-center justify-end gap-2">
         {isPlanDone && (
-          <div className="mr-auto flex items-center gap-2 text-[10px] text-white/55">
+          <div className="mr-auto flex items-center gap-2 text-xs text-white/55">
             <span className="text-cyan-300/80 font-medium">Plan 완료</span>
             <span className="text-white/35">
               도구 {state.plannedTools.length}개
@@ -645,7 +645,7 @@ const ReactAgentPanel: React.FC<Props> = ({
         {isActive && (
           <button
             onClick={onCancel}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] rounded-md bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors"
           >
             <Square size={11} />
             중단
@@ -655,7 +655,7 @@ const ReactAgentPanel: React.FC<Props> = ({
           <button
             onClick={onUndo}
             disabled={undoing}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] rounded-md bg-amber-500/10 text-amber-300 hover:bg-amber-500/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md bg-amber-500/10 text-amber-300 hover:bg-amber-500/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             title="이번 ReAct run의 모든 파일 변경을 되돌림"
           >
             {undoing ? (
@@ -668,7 +668,7 @@ const ReactAgentPanel: React.FC<Props> = ({
         )}
         {isPlanDone && (
           <>
-            <label className="flex items-center gap-1.5 px-2 py-1 rounded border border-white/10 bg-white/5 text-[10px] text-white/65">
+            <label className="flex items-center gap-1.5 px-2 py-1 rounded border border-white/10 bg-white/5 text-xs text-white/65">
               <input
                 type="checkbox"
                 checked={autoApprovePlanTools}
@@ -691,7 +691,7 @@ const ReactAgentPanel: React.FC<Props> = ({
                 }
                 onRunAct(wl);
               }}
-              className="px-3 py-1.5 text-[11px] rounded-md bg-cyan-500/15 text-cyan-300 hover:bg-cyan-500/25 transition-colors"
+              className="px-3 py-1.5 text-sm rounded-md bg-cyan-500/15 text-cyan-300 hover:bg-cyan-500/25 transition-colors"
             >
               실행
             </button>
@@ -702,7 +702,7 @@ const ReactAgentPanel: React.FC<Props> = ({
           status === "cancelled") && (
           <button
             onClick={onClose}
-            className="px-3 py-1.5 text-[11px] rounded-md bg-white/8 text-white/60 hover:bg-white/12 hover:text-white/80 transition-colors"
+            className="px-3 py-1.5 text-sm rounded-md bg-white/8 text-white/60 hover:bg-white/12 hover:text-white/80 transition-colors"
           >
             닫기
           </button>

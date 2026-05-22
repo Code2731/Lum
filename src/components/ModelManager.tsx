@@ -248,12 +248,12 @@ const ModelManager: React.FC<Props> = ({ onClose }) => {
             mistralLocal.length === 0 ? (
               <div className="text-center text-white/30 py-12 text-sm">
                 설치된 모델이 없습니다.
-                <div className="text-[10px] text-white/20 mt-1">다운로드 탭에서 mistral.rs용 모델을 받으세요.</div>
+                <div className="text-xs text-white/20 mt-1">다운로드 탭에서 mistral.rs용 모델을 받으세요.</div>
               </div>
             ) : (
               <>
                 {loadMsg && (
-                  <div className="mb-2 px-3 py-2 rounded text-[11px] bg-white/5 border border-white/10">{loadMsg}</div>
+                  <div className="mb-2 px-3 py-2 rounded text-sm bg-white/5 border border-white/10">{loadMsg}</div>
                 )}
 
                 {mistralLocal.map((m) => {
@@ -271,13 +271,13 @@ const ModelManager: React.FC<Props> = ({ onClose }) => {
                           <div className="flex items-center gap-1.5 flex-wrap">
                             <div className="text-xs font-medium truncate">{m.repo_id}</div>
                             {isCoding && (
-                              <span className="shrink-0 text-[9px] px-1.5 py-0.5 bg-blue-400/15 text-blue-300 rounded-full">💻 코딩</span>
+                              <span className="shrink-0 text-xs px-1.5 py-0.5 bg-blue-400/15 text-blue-300 rounded-full">💻 코딩</span>
                             )}
                             {isDoc && (
-                              <span className="shrink-0 text-[9px] px-1.5 py-0.5 bg-purple-400/15 text-purple-300 rounded-full">📄 문서</span>
+                              <span className="shrink-0 text-xs px-1.5 py-0.5 bg-purple-400/15 text-purple-300 rounded-full">📄 문서</span>
                             )}
                           </div>
-                          <div className="text-[10px] text-white/40 mt-0.5">
+                          <div className="text-xs text-white/40 mt-0.5">
                             {formatMb(m.size_mb)} · <span className="text-white/30 font-mono">{safeName}</span>
                           </div>
                         </div>
@@ -300,11 +300,11 @@ const ModelManager: React.FC<Props> = ({ onClose }) => {
                       </div>
 
                       <div className="flex items-center gap-1.5 pl-0.5">
-                        <span className="text-[10px] text-white/30">역할:</span>
+                        <span className="text-xs text-white/30">역할:</span>
                         <button
                           onClick={() => assignRole("coding", m.repo_id)}
                           disabled={isCoding}
-                          className={`px-2 py-0.5 rounded text-[10px] transition-colors ${
+                          className={`px-2 py-0.5 rounded text-xs transition-colors ${
                             isCoding
                               ? "bg-blue-400/20 text-blue-300 cursor-default"
                               : "bg-white/5 hover:bg-blue-400/10 text-white/50 hover:text-blue-300"
@@ -315,7 +315,7 @@ const ModelManager: React.FC<Props> = ({ onClose }) => {
                         <button
                           onClick={() => assignRole("doc", m.repo_id)}
                           disabled={isDoc}
-                          className={`px-2 py-0.5 rounded text-[10px] transition-colors ${
+                          className={`px-2 py-0.5 rounded text-xs transition-colors ${
                             isDoc
                               ? "bg-purple-400/20 text-purple-300 cursor-default"
                               : "bg-white/5 hover:bg-purple-400/10 text-white/50 hover:text-purple-300"
@@ -335,7 +335,7 @@ const ModelManager: React.FC<Props> = ({ onClose }) => {
               <div className="mb-3">
                 <button
                   onClick={() => setShowToken((v) => !v)}
-                  className="text-[10px] text-white/30 hover:text-white/50 transition-colors"
+                  className="text-xs text-white/30 hover:text-white/50 transition-colors"
                 >
                   {showToken ? "▾" : "▸"} 게이티드/비공개 모델 (HuggingFace 토큰 필요)
                 </button>
@@ -354,9 +354,9 @@ const ModelManager: React.FC<Props> = ({ onClose }) => {
 
               {/* 📁 모델 저장 경로 설정 */}
               <div className="p-2.5 bg-white/3 rounded-lg border border-white/8 space-y-1.5">
-                <p className="text-[10px] text-white/50 font-medium">📁 모델 저장 경로</p>
+                <p className="text-xs text-white/50 font-medium">📁 모델 저장 경로</p>
                 <div className="flex items-center gap-1.5">
-                  <span className="flex-1 text-[10px] font-mono text-white/60 truncate" title={modelDownloadDir ?? undefined}>
+                  <span className="flex-1 text-xs font-mono text-white/60 truncate" title={modelDownloadDir ?? undefined}>
                     {modelDownloadDir ?? "~/.lum_mistral_models (기본값)"}
                   </span>
                   <button
@@ -364,14 +364,14 @@ const ModelManager: React.FC<Props> = ({ onClose }) => {
                       const picked = await invoke<string | null>("pick_model_dir");
                       if (picked) await handleSaveDownloadDir(picked);
                     }}
-                    className="flex items-center gap-1 px-2 py-1 rounded bg-white/5 hover:bg-white/10 border border-white/10 text-[10px] text-white/60 hover:text-white/80 transition-colors shrink-0"
+                    className="flex items-center gap-1 px-2 py-1 rounded bg-white/5 hover:bg-white/10 border border-white/10 text-xs text-white/60 hover:text-white/80 transition-colors shrink-0"
                   >
                     <FolderOpen size={10} /> 변경
                   </button>
                   {modelDownloadDir && (
                     <button
                       onClick={() => handleSaveDownloadDir(null)}
-                      className="px-2 py-1 rounded bg-white/5 hover:bg-white/10 border border-white/10 text-[10px] text-white/40 hover:text-white/60 transition-colors shrink-0"
+                      className="px-2 py-1 rounded bg-white/5 hover:bg-white/10 border border-white/10 text-xs text-white/40 hover:text-white/60 transition-colors shrink-0"
                     >
                       기본값
                     </button>
@@ -382,12 +382,12 @@ const ModelManager: React.FC<Props> = ({ onClose }) => {
               {/* 🚀 HuggingFace 모델 — mistral.rs용 (BF16 + GGUF) */}
               <div className="p-3 bg-purple-500/5 rounded-lg border border-purple-400/20 mb-1 space-y-2">
                 <div className="flex items-center justify-between">
-                  <p className="text-[10px] text-purple-300 font-medium">🚀 HuggingFace 모델 (mistral.rs)</p>
-                  <span className="text-[9px] text-white/30 font-mono truncate max-w-[180px]" title={modelDownloadDir ?? undefined}>
+                  <p className="text-xs text-purple-300 font-medium">🚀 HuggingFace 모델 (mistral.rs)</p>
+                  <span className="text-xs text-white/30 font-mono truncate max-w-[180px]" title={modelDownloadDir ?? undefined}>
                     → {modelDownloadDir ? shortPath(modelDownloadDir) : "~/.lum_mistral_models/"}
                   </span>
                 </div>
-                <p className="text-[9px] text-white/40">
+                <p className="text-xs text-white/40">
                   BF16 원본·GGUF 양자화 모두 OK. mistral.rs가 ISQ로 즉석 양자화. (예: <code>Qwen/Qwen3-8B</code>)
                 </p>
                 <div className="flex gap-2">
@@ -427,11 +427,11 @@ const ModelManager: React.FC<Props> = ({ onClose }) => {
 
                 {/* 한국어 토큰 효율 안내 */}
                 <details className="group">
-                  <summary className="cursor-pointer text-[10px] text-yellow-400/60 hover:text-yellow-400/90 transition-colors list-none flex items-center gap-1">
+                  <summary className="cursor-pointer text-xs text-yellow-400/60 hover:text-yellow-400/90 transition-colors list-none flex items-center gap-1">
                     <span className="group-open:rotate-90 transition-transform inline-block">▸</span>
                     🇰🇷 한국어 토큰 효율 — 모델 고르는 법
                   </summary>
-                  <div className="mt-1.5 p-2.5 bg-yellow-400/5 border border-yellow-400/15 rounded-lg space-y-1.5 text-[10px] text-white/60 leading-relaxed">
+                  <div className="mt-1.5 p-2.5 bg-yellow-400/5 border border-yellow-400/15 rounded-lg space-y-1.5 text-xs text-white/60 leading-relaxed">
                     <p><span className="text-yellow-300/80 font-medium">tokenizer.json 확인:</span> "안녕하세요"처럼 한국어 단어가 합쳐진 토큰이 많을수록 같은 문장에 토큰을 적게 씀 → 빠르고 저렴.</p>
                     <p><span className="text-yellow-300/80 font-medium">SentencePiece 우위:</span> 최근 연구에서 SentencePiece 기반 한국어 서브워드가 BPE보다 효율적. EXAONE·EEVE·Bllossom 계열이 대표.</p>
                     <p><span className="text-yellow-300/80 font-medium">EEVE-Korean 10.8B:</span> 기본 Llama 어휘(32K) → 102K로 확장. 한국어 토큰 수 약 <span className="text-emerald-400/80">30~40% 절감</span>. 아래 프리셋 <code className="bg-white/10 px-1 rounded">🇰🇷⚡ 토큰 최적화</code> 참고.</p>
@@ -443,18 +443,18 @@ const ModelManager: React.FC<Props> = ({ onClose }) => {
                 {catalog.heavy_presets.length > 0 && (
                   <div>
                     <div className="flex items-center justify-between mb-1">
-                      <p className="text-[9px] text-white/40">추천 프리셋 (클릭 → 받기):</p>
+                      <p className="text-xs text-white/40">추천 프리셋 (클릭 → 받기):</p>
                       <IconButton
                         tooltip="각 모델의 HF 리포지토리가 살아있는지 일괄 확인"
                         onClick={refreshRepoStatus}
                         disabled={isRefreshing || catalogLoading}
-                        className="flex items-center gap-1 text-[10px] text-cyan-400/70 hover:text-cyan-400 transition-colors disabled:opacity-40"
+                        className="flex items-center gap-1 text-xs text-cyan-400/70 hover:text-cyan-400 transition-colors disabled:opacity-40"
                       >
                         {isRefreshing ? "🔄 조회 중..." : "🔄 갱신"}
                       </IconButton>
                     </div>
                     {refreshMsg && (
-                      <div className="text-[10px] text-white/50 mb-1 px-1">{refreshMsg}</div>
+                      <div className="text-xs text-white/50 mb-1 px-1">{refreshMsg}</div>
                     )}
                     <div className="flex flex-wrap gap-1">
                       {catalog.heavy_presets.map((p) => {
@@ -473,7 +473,7 @@ const ModelManager: React.FC<Props> = ({ onClose }) => {
                             }}
                             disabled={!isThisDownloading && (mistralBusy || isDead)}
                             title={isDead ? "리포지토리 404 — 다운로드 불가" : isThisDownloading ? "클릭하여 취소" : `${p.id}${p.gguf_file ? ` / ${p.gguf_file}` : ""} (${p.size})`}
-                            className={`text-[10px] px-2 py-0.5 rounded transition-colors disabled:opacity-30 ${
+                            className={`text-xs px-2 py-0.5 rounded transition-colors disabled:opacity-30 ${
                               isThisDownloading ? "bg-red-500/20 text-red-300 border border-red-400/30 animate-pulse" :
                               installed ? "bg-emerald-500/15 text-emerald-300 border border-emerald-400/25" :
                               isDead ? "bg-red-500/10 text-red-300/70 border border-red-400/20 line-through" :
@@ -496,18 +496,18 @@ const ModelManager: React.FC<Props> = ({ onClose }) => {
                 {/* 다운로드 로그 패널 */}
                 {(mistralBusy || mistralLog.length > 0) && (
                   <div className="space-y-1">
-                    <div className="flex items-center justify-between text-[10px] text-white/40">
+                    <div className="flex items-center justify-between text-xs text-white/40">
                       <span>📋 mistral.rs 로그 ({mistralLog.length}줄)</span>
                       {mistralLog.length > 0 && (
                         <button
                           onClick={() => setMistralLog([])}
-                          className="text-white/30 hover:text-white/60 transition-colors text-[9px]"
+                          className="text-white/30 hover:text-white/60 transition-colors text-xs"
                         >
                           지우기
                         </button>
                       )}
                     </div>
-                    <div className="bg-black/40 border border-purple-400/15 rounded p-2 max-h-32 overflow-y-auto font-mono text-[10px] leading-tight">
+                    <div className="bg-black/40 border border-purple-400/15 rounded p-2 max-h-32 overflow-y-auto font-mono text-xs leading-tight">
                       {mistralLog.map((line, idx) => (
                         <div key={idx} className={line.startsWith("❌") ? "text-red-400" : line.startsWith("✅") ? "text-emerald-400" : line.startsWith("📥") ? "text-purple-300" : "text-white/60"}>
                           {line}
@@ -522,7 +522,7 @@ const ModelManager: React.FC<Props> = ({ onClose }) => {
               <div className="flex items-center gap-3 px-1 pt-1">
                 <button
                   onClick={() => openUrl("https://huggingface.co/models?pipeline_tag=text-generation&sort=trending")}
-                  className="flex items-center gap-1 text-[10px] text-white/30 hover:text-white/60 transition-colors"
+                  className="flex items-center gap-1 text-xs text-white/30 hover:text-white/60 transition-colors"
                   title="HuggingFace 전체 모델 검색"
                 >
                   <ExternalLink size={9} />
