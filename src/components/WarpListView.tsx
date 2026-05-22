@@ -1300,14 +1300,14 @@ const WarpListView: React.FC<Props> = ({
         }
         return;
       }
-      if (e.altKey && e.shiftKey && key === "u") {
+      if (e.altKey && !mod && e.shiftKey && key === "u") {
         if (timelinePinnedIds.size > 0) {
           e.preventDefault();
           clearPinnedTimeline();
         }
         return;
       }
-      if (mod && e.shiftKey && key === "u") {
+      if (mod && !e.altKey && e.shiftKey && key === "u") {
         if (timelinePinnedIds.size > 0) {
           e.preventDefault();
           clearPinnedTimeline();
