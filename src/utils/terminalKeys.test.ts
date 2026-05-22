@@ -66,6 +66,18 @@ describe("classifyTerminalKey", () => {
     });
   });
 
+  it("Meta+Alt+F/C/V는 passthrough (단축키 충돌 방지)", () => {
+    expect(classifyTerminalKey(k({ key: "f", metaKey: true, altKey: true }), "")).toEqual({
+      kind: "passthrough",
+    });
+    expect(classifyTerminalKey(k({ key: "c", metaKey: true, altKey: true }), "hello")).toEqual({
+      kind: "passthrough",
+    });
+    expect(classifyTerminalKey(k({ key: "v", metaKey: true, altKey: true }), "")).toEqual({
+      kind: "passthrough",
+    });
+  });
+
   it("keyup은 무조건 passthrough — keydown만 처리", () => {
     expect(classifyTerminalKey(k({ key: "c", ctrlKey: true, type: "keyup" }), "x")).toEqual({
       kind: "passthrough",
