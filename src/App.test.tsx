@@ -711,6 +711,53 @@ describe("App (LUM 터미널)", () => {
     });
   });
 
+  it("Cmd/Ctrl+Shift+F에서 Alt가 함께면 실패 블록 포커스 단축키가 처리되지 않는다", () => {
+    setMockCommandBlocks([
+      {
+        id: "cmd-1",
+        command: "cmd for fail",
+        output: "exit 1",
+        exitCode: 1,
+        startedAt: 1,
+        endedAt: 2,
+      },
+    ]);
+
+    render(<App />);
+
+    expect(screen.getByText("1/1")).toBeInTheDocument();
+    fireEvent.keyDown(window, { key: "f", metaKey: true, shiftKey: true, altKey: true });
+    expect(screen.getByText("1/1")).toBeInTheDocument();
+  });
+
+  it("Cmd/Ctrl+Shift+ArrowUp/ArrowDown에서 Alt가 함께면 블록 네비게이션 단축키가 처리되지 않는다", () => {
+    setMockCommandBlocks([
+      {
+        id: "cmd-1",
+        command: "echo one",
+        output: "one output",
+        exitCode: 0,
+        startedAt: 1,
+        endedAt: 2,
+      },
+      {
+        id: "cmd-2",
+        command: "echo two",
+        output: "two output",
+        exitCode: 0,
+        startedAt: 3,
+        endedAt: 4,
+      },
+    ]);
+
+    render(<App />);
+
+    expect(screen.getByText("2/2")).toBeInTheDocument();
+    fireEvent.keyDown(window, { key: "ArrowDown", metaKey: true, shiftKey: true, altKey: true });
+    fireEvent.keyDown(window, { key: "ArrowUp", metaKey: true, shiftKey: true, altKey: true });
+    expect(screen.getByText("2/2")).toBeInTheDocument();
+  });
+
   it("Cmd/Ctrl+Shift+O는 워크스페이스 패널을 열고, Alt 조합은 처리되지 않는다", async () => {
     const baseImpl = mockedInvoke.getMockImplementation() as
       ((cmd: string, args?: unknown, options?: unknown) => Promise<unknown>);
