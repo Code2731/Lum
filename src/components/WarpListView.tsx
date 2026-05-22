@@ -1240,7 +1240,7 @@ const WarpListView: React.FC<Props> = ({
         return;
       }
       if (
-        (e.altKey || mod)
+        ((e.altKey && !mod) || (mod && !e.altKey))
         && (e.key === "0" || e.key === "1" || e.key === "2" || e.key === "3"
           || e.code === "Digit0" || e.code === "Digit1" || e.code === "Digit2" || e.code === "Digit3")
       ) {
