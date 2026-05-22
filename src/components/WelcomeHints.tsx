@@ -24,20 +24,20 @@ export default function WelcomeHints({ onClose }: Props) {
         </div>
 
         <div className="px-4 py-4 space-y-2">
-          <p className="text-[11px] text-white/50 mb-3">
+          <p className="text-sm text-white/50 mb-3">
             이 터미널은 AI 기능을 내장하고 있습니다. 아래 단축키로 바로 사용하세요.
           </p>
           {HINTS.map(({ icon: Icon, keys, desc }) => (
             <div key={keys} className="flex items-center gap-3 px-2 py-1.5 rounded hover:bg-white/3">
               <Icon size={13} className="text-accent/70 shrink-0" />
-              <code className="text-[11px] font-mono px-2 py-0.5 bg-white/8 rounded text-white/80 min-w-[90px] text-center">
+              <code className="text-sm font-mono px-2 py-0.5 bg-white/8 rounded text-white/80 min-w-[90px] text-center">
                 {keys}
               </code>
-              <span className="text-[11px] text-white/70">{desc}</span>
+              <span className="text-sm text-white/70">{desc}</span>
             </div>
           ))}
 
-          <div className="mt-3 pt-3 border-t border-white/5 text-[10px] text-white/40">
+          <div className="mt-3 pt-3 border-t border-white/5 text-xs text-white/40">
             💡 자연어 예시: <code className="text-white/55">#현재 폴더의 큰 파일 찾기</code>
           </div>
         </div>
@@ -45,7 +45,7 @@ export default function WelcomeHints({ onClose }: Props) {
         <div className="px-4 py-3 border-t border-white/8 flex justify-end">
           <button
             onClick={onClose}
-            className="px-3 py-1.5 rounded bg-accent/20 hover:bg-accent/30 text-accent text-[11px] font-medium"
+            className="px-3 py-1.5 rounded bg-accent/20 hover:bg-accent/30 text-accent text-sm font-medium"
           >
             시작하기
           </button>

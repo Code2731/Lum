@@ -22,7 +22,7 @@ const EnvSuggestionToast: React.FC<Props> = ({ suggestions, onExecute, onDismiss
       {/* 헤더 */}
       <div className="flex items-center gap-2 px-3 py-2 border-b border-white/5 bg-white/3">
         <Layers size={12} className="text-accent shrink-0" />
-        <span className="text-[11px] font-semibold text-white/70 flex-1">환경 파일 감지됨</span>
+        <span className="text-sm font-semibold text-white/70 flex-1">환경 파일 감지됨</span>
         <button
           onClick={onDismiss}
           className="text-white/25 hover:text-white/60 transition-colors p-0.5 rounded"
@@ -41,16 +41,16 @@ const EnvSuggestionToast: React.FC<Props> = ({ suggestions, onExecute, onDismiss
               key={s.file}
               className="flex items-center gap-2 px-2.5 py-2 rounded-lg bg-white/3 border border-white/5"
             >
-              <span className={`text-[9px] px-1.5 py-0.5 rounded border font-medium shrink-0 ${colorCls}`}>
+              <span className={`text-xs px-1.5 py-0.5 rounded border font-medium shrink-0 ${colorCls}`}>
                 {s.runtime}
               </span>
               <div className="flex-1 min-w-0">
-                <p className="text-[10px] text-white/50 truncate">{s.description}</p>
-                <p className="text-[10px] font-mono text-white/30 truncate mt-0.5">$ {s.cmd}</p>
+                <p className="text-xs text-white/50 truncate">{s.description}</p>
+                <p className="text-xs font-mono text-white/30 truncate mt-0.5">$ {s.cmd}</p>
               </div>
               <button
                 onClick={() => onExecute(s.cmd)}
-                className="shrink-0 flex items-center gap-1 px-2 py-1 rounded text-[10px] bg-accent/15 text-accent hover:bg-accent/25 transition-colors font-medium"
+                className="shrink-0 flex items-center gap-1 px-2 py-1 rounded text-xs bg-accent/15 text-accent hover:bg-accent/25 transition-colors font-medium"
               >
                 <Play size={9} />
                 실행

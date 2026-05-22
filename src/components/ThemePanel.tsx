@@ -47,7 +47,7 @@ const ThemePanel: React.FC<Props> = ({ appearance, onSave, onClose }) => {
                     <div style={{ background: theme.magenta }} className="h-1 w-6 rounded-full opacity-60" />
                   </div>
                   <div style={{ background: theme.background }} className="px-1.5 py-1 border-t border-white/5">
-                    <span className="text-[9px]" style={{ color: theme.foreground }}>
+                      <span className="text-xs" style={{ color: theme.foreground }}>
                       {name.split(" ")[0]}
                     </span>
                   </div>
@@ -76,7 +76,7 @@ const ThemePanel: React.FC<Props> = ({ appearance, onSave, onClose }) => {
               value={[local.fontSize]}
               onValueChange={([v]) => setLocal(l => ({ ...l, fontSize: v }))}
             />
-            <div className="flex justify-between text-[10px] text-white/20 mt-0.5">
+            <div className="flex justify-between text-xs text-white/20 mt-0.5">
               <span>10px</span><span>20px</span>
             </div>
           </div>

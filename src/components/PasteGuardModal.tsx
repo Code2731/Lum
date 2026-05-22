@@ -40,12 +40,12 @@ const PasteGuardModal: React.FC<Props> = ({ match, onConfirm, onCancel }) => {
             </span>
           </div>
           <div className="bg-white/3 border border-white/7 rounded-xl px-3 py-2.5">
-            <p className="text-[11px] text-white/40 mb-1">붙여넣을 내용</p>
+            <p className="text-sm text-white/40 mb-1">붙여넣을 내용</p>
             <pre className="text-xs text-white/70 font-mono whitespace-pre-wrap break-all line-clamp-4">
               {match.pattern}{match.pattern.length >= 80 ? "…" : ""}
             </pre>
           </div>
-          <DialogDescription className="text-[11px] text-white/35">
+          <DialogDescription className="text-sm text-white/35">
             이 커맨드를 그대로 실행하시겠습니까?
           </DialogDescription>
         </div>

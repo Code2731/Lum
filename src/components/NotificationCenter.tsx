@@ -157,7 +157,7 @@ const NotificationCenter: React.FC<Props> = ({
       {/* 헤더 */}
       <div className="flex items-center gap-2 px-3 py-2 border-b border-white/5 shrink-0">
         <Bell size={12} className="text-accent shrink-0" />
-        <span className="text-[11px] font-semibold text-white/80 flex-1">알림 센터</span>
+        <span className="text-sm font-semibold text-white/80 flex-1">알림 센터</span>
         {unreadCount > 0 && (
           <IconButton tooltip="모두 읽음" onClick={onMarkAllRead}
             aria-label="모든 알림 읽음 처리"
@@ -194,7 +194,7 @@ const NotificationCenter: React.FC<Props> = ({
         {notifications.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-2 py-12 text-white/20">
             <Bell size={24} />
-            <p className="text-[11px]">알림이 없습니다</p>
+            <p className="text-sm">알림이 없습니다</p>
           </div>
         ) : (
           <div className="p-2 space-y-1">
@@ -209,11 +209,11 @@ const NotificationCenter: React.FC<Props> = ({
                   {TYPE_ICON[n.type]}
                 </span>
                 <div className="flex-1 min-w-0">
-                  <p className={`text-[11px] font-medium ${n.read ? "text-white/45" : "text-white/75"}`}>
+                  <p className={`text-sm font-medium ${n.read ? "text-white/45" : "text-white/75"}`}>
                     {n.title}
                   </p>
-                  <p className="text-[10px] text-white/35 mt-0.5 break-words leading-relaxed">{n.body}</p>
-                  <p className="text-[9px] text-white/20 mt-1">{timeAgo(n.timestamp)}</p>
+                  <p className="text-xs text-white/35 mt-0.5 break-words leading-relaxed">{n.body}</p>
+                  <p className="text-xs text-white/20 mt-1">{timeAgo(n.timestamp)}</p>
                 </div>
                 <button
                   type="button"

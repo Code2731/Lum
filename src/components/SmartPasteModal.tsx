@@ -87,7 +87,7 @@ const SmartPasteModal: React.FC<Props> = ({
             </DialogHeader>
 
             <div className="rounded-md bg-white/3 border border-accent/30 p-3">
-              <p className="text-[10px] text-accent/70 mb-1.5 uppercase tracking-wider font-semibold">현재 명령어</p>
+              <p className="text-xs text-accent/70 mb-1.5 uppercase tracking-wider font-semibold">현재 명령어</p>
               <p className="font-mono text-sm text-white/85 break-all">
                 <span className="text-white/30">$ </span>{lines[currentIdx]}
               </p>
@@ -95,7 +95,7 @@ const SmartPasteModal: React.FC<Props> = ({
 
             {currentIdx + 1 < lines.length && (
               <div className="space-y-1">
-                <p className="text-[10px] text-white/35 uppercase tracking-wider font-semibold">
+                <p className="text-xs text-white/35 uppercase tracking-wider font-semibold">
                   다음 ({lines.length - currentIdx - 1}개)
                 </p>
                 {lines.slice(currentIdx + 1, currentIdx + 4).map((l, i) => (
