@@ -214,6 +214,32 @@ describe("App (LUM 터미널)", () => {
     expect(screen.queryByText("AI Diff Reviewer")).not.toBeInTheDocument();
   });
 
+  it("Ctrl+Alt 단축키는 App 전역 단축키로 소비되지 않는다", () => {
+    render(<App />);
+
+    const cases: Array<{ key: string; shiftKey?: boolean; code?: string }> = [
+      { key: "i" },
+      { key: ",", code: "Comma" },
+      { key: "d" },
+      { key: "q", shiftKey: true },
+      { key: "1" },
+      { key: "ArrowUp", shiftKey: true },
+    ];
+
+    for (const c of cases) {
+      const event = new KeyboardEvent("keydown", {
+        key: c.key,
+        code: c.code,
+        ctrlKey: true,
+        altKey: true,
+        shiftKey: c.shiftKey ?? false,
+        cancelable: true,
+      });
+      const consumed = !window.dispatchEvent(event);
+      expect(consumed).toBe(false);
+    }
+  });
+
   it("Ctrl+,는 터미널 테마 패널을 연다", async () => {
     render(<App />);
 
