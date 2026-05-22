@@ -533,6 +533,78 @@ describe("App (LUM 터미널)", () => {
     });
   });
 
+  it("Cmd/Ctrl+Shift+S는 워크스페이스 패널을 열고, Ctrl/Cmd+Alt+Shift+S는 처리되지 않는다", async () => {
+    const baseImpl = mockedInvoke.getMockImplementation() as
+      ((cmd: string, args?: unknown, options?: unknown) => Promise<unknown>);
+    if (!baseImpl) throw new Error("invoke mock implementation not found");
+
+    mockedInvoke.mockImplementation((cmd: string, ...args: unknown[]) => {
+      if (cmd === "load_app_config") {
+        return Promise.resolve({});
+      }
+      if (cmd === "list_workspaces") {
+        return Promise.resolve([]);
+      }
+      return baseImpl(cmd, args[0], args[1]);
+    });
+
+    try {
+      render(<App />);
+
+      fireEvent.keyDown(window, { key: "S", metaKey: true, shiftKey: true });
+      expect(await screen.findByText("현재 세션 저장")).toBeInTheDocument();
+      expect(screen.getByText("워크스페이스")).toBeInTheDocument();
+
+      const beforeCount = screen.getAllByText("현재 세션 저장").length;
+      fireEvent.keyDown(window, { key: "S", metaKey: true, shiftKey: true, altKey: true });
+      await waitFor(() => {
+        expect(screen.getAllByText("현재 세션 저장").length).toBe(beforeCount);
+      });
+    } finally {
+      mockedInvoke.mockImplementation(baseImpl);
+    }
+  });
+
+  it("Cmd/Ctrl+Shift+M는 시스템 모니터 패널을 열고, Alt 조합은 처리되지 않는다", async () => {
+    const baseImpl = mockedInvoke.getMockImplementation() as
+      ((cmd: string, args?: unknown, options?: unknown) => Promise<unknown>);
+    if (!baseImpl) throw new Error("invoke mock implementation not found");
+
+    mockedInvoke.mockImplementation((cmd: string, ...args: unknown[]) => {
+      if (cmd === "get_system_stats") {
+        return Promise.resolve({
+          cpu_usage: 18.5,
+          memory_used_gb: 6.3,
+          memory_total_gb: 16,
+          memory_percent: 39.375,
+          cpu_count: 12,
+          top_cpu: [],
+          top_mem: [],
+        });
+      }
+      if (cmd === "load_app_config") {
+        return Promise.resolve({});
+      }
+      return baseImpl(cmd, args[0], args[1]);
+    });
+
+    try {
+      render(<App />);
+
+      fireEvent.keyDown(window, { key: "M", metaKey: true, shiftKey: true });
+      expect(await screen.findByText("시스템 모니터")).toBeInTheDocument();
+      expect(screen.getByText("18.5%")).toBeInTheDocument();
+
+      const beforeCount = screen.getAllByText("시스템 모니터").length;
+      fireEvent.keyDown(window, { key: "M", metaKey: true, shiftKey: true, altKey: true });
+      await waitFor(() => {
+        expect(screen.getAllByText("시스템 모니터").length).toBe(beforeCount);
+      });
+    } finally {
+      mockedInvoke.mockImplementation(baseImpl);
+    }
+  });
+
   it("Cmd+I는 Inspector 요약 탭을 연다", async () => {
     render(<App />);
 
