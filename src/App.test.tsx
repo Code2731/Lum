@@ -99,10 +99,24 @@ describe("App (LUM 터미널)", () => {
     expect(screen.getByPlaceholderText("AI에게 질문하세요… (Enter 전송 · Esc 닫기)")).toBeInTheDocument();
   });
 
+  it("Cmd+Shift+K는 AI 바를 연다", () => {
+    render(<App />);
+
+    fireEvent.keyDown(window, { key: "K", metaKey: true, shiftKey: true });
+    expect(screen.getByPlaceholderText("AI에게 질문하세요… (Enter 전송 · Esc 닫기)")).toBeInTheDocument();
+  });
+
   it("Ctrl+Alt+Shift+K는 AI 바 단축키로 처리되지 않는다", () => {
     render(<App />);
 
     fireEvent.keyDown(window, { key: "K", ctrlKey: true, altKey: true, shiftKey: true });
+    expect(screen.queryByPlaceholderText("AI에게 질문하세요… (Enter 전송 · Esc 닫기)")).not.toBeInTheDocument();
+  });
+
+  it("Cmd+Alt+Shift+K는 AI 바 단축키로 처리되지 않는다", () => {
+    render(<App />);
+
+    fireEvent.keyDown(window, { key: "K", metaKey: true, altKey: true, shiftKey: true });
     expect(screen.queryByPlaceholderText("AI에게 질문하세요… (Enter 전송 · Esc 닫기)")).not.toBeInTheDocument();
   });
 
@@ -111,6 +125,13 @@ describe("App (LUM 터미널)", () => {
 
     fireEvent.keyDown(window, { key: "r", ctrlKey: true });
     expect(await screen.findByPlaceholderText(/자연어로 검색/)).toBeInTheDocument();
+  });
+
+  it("Cmd+R은 히스토리 검색 단축키로 처리되지 않는다", () => {
+    render(<App />);
+
+    fireEvent.keyDown(window, { key: "r", metaKey: true });
+    expect(screen.queryByPlaceholderText(/자연어로 검색/)).not.toBeInTheDocument();
   });
 
   it("Ctrl+K는 커맨드 팔레트를 연다", async () => {
@@ -152,11 +173,39 @@ describe("App (LUM 터미널)", () => {
     });
   });
 
+  it("Cmd+B는 파일 탐색기 토글을 실행한다", async () => {
+    render(<App />);
+    const initiallyVisible = screen.queryByTestId("file-explorer-mock") !== null;
+
+    fireEvent.keyDown(window, { key: "b", metaKey: true });
+
+    await waitFor(() => {
+      if (initiallyVisible) {
+        expect(screen.queryByTestId("file-explorer-mock")).not.toBeInTheDocument();
+      } else {
+        expect(screen.getByTestId("file-explorer-mock")).toBeInTheDocument();
+      }
+    });
+    expect(invoke).toHaveBeenCalledWith("save_ui_preferences", {
+      showFileExplorer: !initiallyVisible,
+    });
+  });
+
   it("Ctrl+Alt+B는 파일 탐색기 단축키로 처리되지 않는다", () => {
     render(<App />);
     const beforeVisible = screen.queryByTestId("file-explorer-mock") !== null;
 
     fireEvent.keyDown(window, { key: "b", ctrlKey: true, altKey: true });
+
+    const afterVisible = screen.queryByTestId("file-explorer-mock") !== null;
+    expect(afterVisible).toBe(beforeVisible);
+  });
+
+  it("Cmd+Alt+B는 파일 탐색기 단축키로 처리되지 않는다", () => {
+    render(<App />);
+    const beforeVisible = screen.queryByTestId("file-explorer-mock") !== null;
+
+    fireEvent.keyDown(window, { key: "b", metaKey: true, altKey: true });
 
     const afterVisible = screen.queryByTestId("file-explorer-mock") !== null;
     expect(afterVisible).toBe(beforeVisible);
