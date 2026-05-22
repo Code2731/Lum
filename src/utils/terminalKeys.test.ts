@@ -1,11 +1,12 @@
 import { describe, it, expect } from "vitest";
 import { classifyTerminalKey } from "./terminalKeys";
 
-const k = (over: Partial<{ type: string; key: string; ctrlKey: boolean; metaKey: boolean }>) => ({
+const k = (over: Partial<{ type: string; key: string; ctrlKey: boolean; metaKey: boolean; altKey: boolean }>) => ({
   type: "keydown",
   key: "",
   ctrlKey: false,
   metaKey: false,
+  altKey: false,
   ...over,
 });
 
@@ -51,6 +52,18 @@ describe("classifyTerminalKey", () => {
     expect(classifyTerminalKey(k({ key: "c" }), "sel")).toEqual({ kind: "passthrough" });
     expect(classifyTerminalKey(k({ key: "v" }), "")).toEqual({ kind: "passthrough" });
     expect(classifyTerminalKey(k({ key: "f" }), "")).toEqual({ kind: "passthrough" });
+  });
+
+  it("Ctrl+Alt+F/C/V는 passthrough (단축키 충돌 방지)", () => {
+    expect(classifyTerminalKey(k({ key: "f", ctrlKey: true, altKey: true }), "")).toEqual({
+      kind: "passthrough",
+    });
+    expect(classifyTerminalKey(k({ key: "c", ctrlKey: true, altKey: true }), "hello")).toEqual({
+      kind: "passthrough",
+    });
+    expect(classifyTerminalKey(k({ key: "v", ctrlKey: true, altKey: true }), "")).toEqual({
+      kind: "passthrough",
+    });
   });
 
   it("keyup은 무조건 passthrough — keydown만 처리", () => {

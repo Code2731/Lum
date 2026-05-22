@@ -15,12 +15,12 @@ export type KeyAction =
   | { kind: "passthrough" };
 
 export function classifyTerminalKey(
-  e: { type: string; key: string; ctrlKey: boolean; metaKey: boolean },
+  e: { type: string; key: string; ctrlKey: boolean; metaKey: boolean; altKey: boolean },
   selection: string,
 ): KeyAction {
   if (e.type !== "keydown") return { kind: "passthrough" };
   const mod = e.metaKey || e.ctrlKey;
-  if (!mod) return { kind: "passthrough" };
+  if (!mod || e.altKey) return { kind: "passthrough" };
   const key = e.key.toLowerCase();
 
   if (key === "f") return { kind: "search" };
