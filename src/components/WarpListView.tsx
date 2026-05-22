@@ -1314,14 +1314,14 @@ const WarpListView: React.FC<Props> = ({
         }
         return;
       }
-      if (e.altKey && key === "m") {
+      if (e.altKey && !mod && key === "m") {
         if (timelinePinnedIds.size > 0) {
           e.preventDefault();
           setTimelinePinnedOnly((prev) => !prev);
         }
         return;
       }
-      if (mod && !e.shiftKey && key === "m") {
+      if (mod && !e.shiftKey && !e.altKey && key === "m") {
         if (timelinePinnedIds.size > 0) {
           e.preventDefault();
           setTimelinePinnedOnly((prev) => !prev);
