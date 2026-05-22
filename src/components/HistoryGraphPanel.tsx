@@ -76,6 +76,11 @@ const PALETTE = [
   "#3b82f6", "#a855f7", "#22c55e", "#eab308", "#f43f5e",
 ];
 
+const HISTORY_NODE_FONT_SIZE = 11;
+const CLUSTER_LABEL_FONT_SIZE = 13;
+const CLUSTER_COUNT_FONT_SIZE = 11;
+const LEGEND_FONT_SIZE = 11;
+
 function clusterColor(clusterId: number): string {
   return PALETTE[clusterId % PALETTE.length];
 }
@@ -112,7 +117,7 @@ function HistoryNode({ data }: NodeProps) {
         padding: "4px 8px",
         maxWidth: 160,
         cursor: "pointer",
-        fontSize: 11,
+        fontSize: HISTORY_NODE_FONT_SIZE,
         color: "#e2e8f0",
         lineHeight: 1.3,
       }}
@@ -135,7 +140,7 @@ function ClusterLabelNode({ data }: NodeProps) {
       style={{
         background: "transparent",
         color: d.color,
-        fontSize: 13,
+        fontSize: CLUSTER_LABEL_FONT_SIZE,
         fontWeight: 600,
         letterSpacing: "0.02em",
         textShadow: "0 1px 4px #000a",
@@ -144,7 +149,7 @@ function ClusterLabelNode({ data }: NodeProps) {
       }}
     >
       {d.label}
-      <span style={{ opacity: 0.6, fontWeight: 400, fontSize: 11, marginLeft: 4 }}>
+      <span style={{ opacity: 0.6, fontWeight: 400, fontSize: CLUSTER_COUNT_FONT_SIZE, marginLeft: 4 }}>
         ({d.count})
       </span>
     </div>
@@ -307,7 +312,7 @@ export function HistoryGraphPanel({ onClose }: Props) {
                     border: "1px solid #30363d",
                     borderRadius: 6,
                     padding: "6px 10px",
-                    fontSize: 11,
+                    fontSize: LEGEND_FONT_SIZE,
                     color: "#94a3b8",
                     lineHeight: 1.8,
                   }}
