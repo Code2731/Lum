@@ -425,6 +425,22 @@ describe("App (LUM 터미널)", () => {
     });
   });
 
+  it("Cmd+W는 탭 닫기 단축키로 처리된다", async () => {
+    render(<App />);
+    fireEvent.click(screen.getByLabelText("새 탭 (Cmd/Ctrl+T)"));
+
+    await waitFor(() => {
+      expect(screen.getAllByTestId(/^terminal-pane-/).length).toBeGreaterThan(1);
+    });
+    const beforeCount = screen.getAllByTestId(/^terminal-pane-/).length;
+
+    fireEvent.keyDown(window, { key: "W", metaKey: true });
+
+    await waitFor(() => {
+      expect(screen.getAllByTestId(/^terminal-pane-/).length).toBe(beforeCount - 1);
+    });
+  });
+
   it("Ctrl+Alt+W는 탭 닫기 단축키로 처리되지 않는다", async () => {
     render(<App />);
     fireEvent.click(screen.getByLabelText("새 탭 (Cmd/Ctrl+T)"));
@@ -435,6 +451,22 @@ describe("App (LUM 터미널)", () => {
     const beforeCount = screen.getAllByTestId(/^terminal-pane-/).length;
 
     fireEvent.keyDown(window, { key: "W", ctrlKey: true, altKey: true });
+
+    await waitFor(() => {
+      expect(screen.getAllByTestId(/^terminal-pane-/).length).toBe(beforeCount);
+    });
+  });
+
+  it("Cmd+Alt+W는 탭 닫기 단축키로 처리되지 않는다", async () => {
+    render(<App />);
+    fireEvent.click(screen.getByLabelText("새 탭 (Cmd/Ctrl+T)"));
+
+    await waitFor(() => {
+      expect(screen.getAllByTestId(/^terminal-pane-/).length).toBeGreaterThan(1);
+    });
+    const beforeCount = screen.getAllByTestId(/^terminal-pane-/).length;
+
+    fireEvent.keyDown(window, { key: "W", metaKey: true, altKey: true });
 
     await waitFor(() => {
       expect(screen.getAllByTestId(/^terminal-pane-/).length).toBe(beforeCount);
@@ -454,6 +486,49 @@ describe("App (LUM 터미널)", () => {
 
     fireEvent.keyDown(window, { key: "R", metaKey: true, altKey: true, shiftKey: true });
     expect(screen.queryByText("AI Diff Reviewer")).not.toBeInTheDocument();
+  });
+
+  it("Cmd+I는 Inspector 요약 탭을 연다", async () => {
+    render(<App />);
+
+    fireEvent.keyDown(window, { key: "i", metaKey: true });
+    expect(await screen.findByText("개요")).toBeInTheDocument();
+  });
+
+  it("Cmd+Alt+I는 Inspector 토글로 처리되지 않는다", async () => {
+    render(<App />);
+    const inspectorButton = screen.getByLabelText("Inspector");
+    const before = inspectorButton.getAttribute("aria-pressed");
+
+    fireEvent.keyDown(window, { key: "i", metaKey: true, altKey: true });
+    await waitFor(() => {
+      expect(inspectorButton).toHaveAttribute("aria-pressed", before ?? "false");
+    });
+  });
+
+  it("Cmd+Shift+I는 Inspector 토글로 처리되지 않는다", async () => {
+    render(<App />);
+    const inspectorButton = screen.getByLabelText("Inspector");
+    const before = inspectorButton.getAttribute("aria-pressed");
+
+    fireEvent.keyDown(window, { key: "I", metaKey: true, shiftKey: true });
+    await waitFor(() => {
+      expect(inspectorButton).toHaveAttribute("aria-pressed", before ?? "false");
+    });
+  });
+
+  it("Cmd+,는 터미널 테마 패널을 연다", async () => {
+    render(<App />);
+
+    fireEvent.keyDown(window, { key: ",", metaKey: true });
+    expect(await screen.findByText("터미널 테마 설정")).toBeInTheDocument();
+  });
+
+  it("Cmd+Shift+<는 터미널 테마 단축키로 처리되지 않는다", () => {
+    render(<App />);
+
+    fireEvent.keyDown(window, { key: "<", metaKey: true, shiftKey: true, code: "Comma" });
+    expect(screen.queryByText("터미널 테마 설정")).not.toBeInTheDocument();
   });
 
   it("AI Chat 버튼은 제거됨 — AI는 WarpInputBar로 통합", () => {
