@@ -917,6 +917,30 @@ describe("App (LUM 터미널)", () => {
     expect(screen.getByText("1/1")).toBeInTheDocument();
   });
 
+  it("Cmd/Ctrl+Shift+D는 Alt가 함께면 split 토글이 처리되지 않는다", () => {
+    render(<App />);
+    const splitBtn = screen.getByLabelText("수평 분할 (Cmd/Ctrl+Shift+D)");
+    const before = splitBtn.getAttribute("aria-pressed");
+
+    fireEvent.keyDown(window, { key: "d", metaKey: true, shiftKey: true, altKey: true });
+    expect(splitBtn).toHaveAttribute("aria-pressed", before ?? "false");
+
+    fireEvent.keyDown(window, { key: "D", ctrlKey: true, shiftKey: true, altKey: true });
+    expect(splitBtn).toHaveAttribute("aria-pressed", before ?? "false");
+  });
+
+  it("Cmd/Ctrl+Shift+E는 Alt가 함께면 수직 분할 토글이 처리되지 않는다", () => {
+    render(<App />);
+    const splitBtn = screen.getByLabelText("수직 분할 (Cmd/Ctrl+Shift+E)");
+    const before = splitBtn.getAttribute("aria-pressed");
+
+    fireEvent.keyDown(window, { key: "e", metaKey: true, shiftKey: true, altKey: true });
+    expect(splitBtn).toHaveAttribute("aria-pressed", before ?? "false");
+
+    fireEvent.keyDown(window, { key: "E", ctrlKey: true, shiftKey: true, altKey: true });
+    expect(splitBtn).toHaveAttribute("aria-pressed", before ?? "false");
+  });
+
   it("Cmd/Ctrl+Shift+ArrowUp/ArrowDown에서 Alt가 함께면 블록 네비게이션 단축키가 처리되지 않는다", () => {
     setMockCommandBlocks([
       {
@@ -1077,6 +1101,15 @@ describe("App (LUM 터미널)", () => {
     expect(screen.getByText("빠른 실행 없음 · 오른쪽 설정에서 추가")).toBeInTheDocument();
 
     fireEvent.keyDown(window, { key: "q", ctrlKey: true, altKey: true, shiftKey: true });
+    expect(screen.getByText("빠른 실행 없음 · 오른쪽 설정에서 추가")).toBeInTheDocument();
+  });
+
+  it("Cmd+Alt+Shift+Q는 Quick Actions 바 단축키로 처리되지 않는다", () => {
+    render(<App />);
+
+    expect(screen.getByText("빠른 실행 없음 · 오른쪽 설정에서 추가")).toBeInTheDocument();
+
+    fireEvent.keyDown(window, { key: "q", metaKey: true, altKey: true, shiftKey: true });
     expect(screen.getByText("빠른 실행 없음 · 오른쪽 설정에서 추가")).toBeInTheDocument();
   });
 
