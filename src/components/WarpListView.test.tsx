@@ -2329,6 +2329,40 @@ describe("WarpListView delta actions", () => {
     expect(document.activeElement).toBe(input);
   });
 
+  it("Retry+Compare 큐 검색 포커스 단축키는 Ctrl+Alt+Q 조합에서 동작하지 않는다", () => {
+    render(
+      <WarpListView
+        blocks={blocks}
+        retryCompareQueueDepth={2}
+        retryCompareQueueWaiting={2}
+        retryCompareQueueItems={[
+          { id: "q1", command: "npm test" },
+          { id: "q2", command: "pnpm lint" },
+        ]}
+        compareResultByBlock={{
+          b2: {
+            added: 1,
+            removed: 1,
+            preview: "test changed",
+            addedLines: ["new line"],
+            removedLines: ["old line"],
+            comparedAt: now,
+          },
+        }}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Δ Timeline (1)" }));
+    const queueInput = screen.getByPlaceholderText("큐 검색 (command)");
+    const timelineInput = screen.getByPlaceholderText("타임라인 검색 (command/preview)");
+    timelineInput.focus();
+    expect(document.activeElement).toBe(timelineInput);
+
+    fireEvent.keyDown(window, { key: "q", ctrlKey: true, altKey: true });
+
+    expect(document.activeElement).toBe(timelineInput);
+    expect(document.activeElement).not.toBe(queueInput);
+  });
+
   it("Retry+Compare 큐 검색창 ESC로 검색어 초기화", () => {
     render(
       <WarpListView

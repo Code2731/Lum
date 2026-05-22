@@ -1095,7 +1095,7 @@ const WarpListView: React.FC<Props> = ({
         }
         return;
       }
-      if (e.altKey && key === "q") {
+      if (e.altKey && !mod && key === "q") {
         if (queueSearchInputRef.current) {
           e.preventDefault();
           queueSearchInputRef.current.focus();
