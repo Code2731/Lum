@@ -1051,8 +1051,8 @@ const WarpListView: React.FC<Props> = ({
       if (isTypingTarget(e.target)) return;
       const mod = e.metaKey || e.ctrlKey;
       const key = e.key.toLowerCase();
-      const isRedoKey = (e.altKey && e.shiftKey) || (mod && e.shiftKey);
-      const isUndoKey = e.altKey || mod;
+      const isRedoKey = (e.altKey && e.shiftKey && !mod) || (mod && e.shiftKey && !e.altKey);
+      const isUndoKey = (e.altKey && !mod) || (mod && !e.altKey);
       if (isRedoKey && key === "z") {
         if (onRedoRetryCompareQueueChange && canRedoRetryCompareQueueChange) {
           e.preventDefault();
