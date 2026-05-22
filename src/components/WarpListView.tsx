@@ -816,7 +816,7 @@ const WarpListView: React.FC<Props> = ({
   useEffect(() => {
     const onWindowKeyDown = (e: KeyboardEvent) => {
       const mod = e.metaKey || e.ctrlKey;
-      if (!mod || !e.shiftKey) return;
+      if (!mod || !e.shiftKey || e.altKey) return;
       if (e.key !== "[" && e.key !== "]") return;
       if (isTypingTarget(e.target)) return;
       if (filteredComparedIds.length === 0) return;
@@ -829,7 +829,7 @@ const WarpListView: React.FC<Props> = ({
   useEffect(() => {
     const onWindowKeyDown = (e: KeyboardEvent) => {
       const mod = e.metaKey || e.ctrlKey;
-      if (!mod || !e.shiftKey) return;
+      if (!mod || !e.shiftKey || e.altKey) return;
       if (e.key.toLowerCase() !== "c") return;
       if (isTypingTarget(e.target)) return;
       if (comparedCount === 0) return;
@@ -842,7 +842,7 @@ const WarpListView: React.FC<Props> = ({
   useEffect(() => {
     const onWindowKeyDown = (e: KeyboardEvent) => {
       const mod = e.metaKey || e.ctrlKey;
-      if (!mod || !e.shiftKey) return;
+      if (!mod || !e.shiftKey || e.altKey) return;
       if (e.key.toLowerCase() !== "y") return;
       if (isTypingTarget(e.target)) return;
       if (comparedCount === 0) return;

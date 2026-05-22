@@ -162,6 +162,48 @@ describe("WarpListView delta actions", () => {
     expect(screen.getByText(/Retry Compare/)).toBeInTheDocument();
   });
 
+  it("Cmd/Ctrl+Alt+Shift+[ ] 단축키는 비교 블록 탐색이 동작하지 않는다", () => {
+    render(
+      <WarpListView
+        blocks={[
+          ...blocks,
+          {
+            id: "b3",
+            command: "npm run build",
+            output: "another",
+            exitCode: 0,
+            startedAt: now - 2000,
+            endedAt: now - 1000,
+          },
+        ]}
+        compareResultByBlock={{
+          b2: {
+            added: 1,
+            removed: 1,
+            preview: "",
+            addedLines: ["new line"],
+            removedLines: ["old line"],
+            comparedAt: now,
+          },
+          b3: {
+            added: 2,
+            removed: 0,
+            preview: "",
+            addedLines: ["a", "b"],
+            removedLines: [],
+            comparedAt: now,
+          },
+        }}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Δ +1/-1" }));
+    expect(screen.getByText("Retry Compare · +1 / -1")).toBeInTheDocument();
+    fireEvent.keyDown(window, { key: "]", ctrlKey: true, shiftKey: true, altKey: true });
+    expect(screen.getByText("Retry Compare · +1 / -1")).toBeInTheDocument();
+    expect(screen.queryByText("Retry Compare · +2 / -0")).not.toBeInTheDocument();
+  });
+
   it("Δ 팝오버는 바깥 클릭으로 닫힘", () => {
     render(
       <WarpListView
@@ -810,6 +852,40 @@ describe("WarpListView delta actions", () => {
     expect(screen.getByText("표시 2")).toBeInTheDocument();
   });
 
+  it("Cmd/Ctrl+Alt+Shift+C로 compared 필터 토글이 동작하지 않는다", () => {
+    render(
+      <WarpListView
+        blocks={[
+          ...blocks,
+          {
+            id: "b3",
+            command: "npm run build",
+            output: "another",
+            exitCode: 0,
+            startedAt: now - 2000,
+            endedAt: now - 1000,
+          },
+        ]}
+        compareResultByBlock={{
+          b2: {
+            added: 1,
+            removed: 1,
+            preview: "",
+            addedLines: ["new line"],
+            removedLines: ["old line"],
+            comparedAt: now,
+          },
+        }}
+      />,
+    );
+
+    expect(screen.getByText("표시 2")).toBeInTheDocument();
+    fireEvent.keyDown(window, { key: "c", ctrlKey: true, shiftKey: true });
+    expect(screen.getByText("표시 1")).toBeInTheDocument();
+    fireEvent.keyDown(window, { key: "c", ctrlKey: true, altKey: true, shiftKey: true });
+    expect(screen.getByText("표시 1")).toBeInTheDocument();
+  });
+
   it("Cmd/Ctrl+Shift+Y로 Δ Timeline 토글", () => {
     render(
       <WarpListView
@@ -831,6 +907,29 @@ describe("WarpListView delta actions", () => {
     expect(screen.getByText("최근 비교 히스토리")).toBeInTheDocument();
     fireEvent.keyDown(window, { key: "y", ctrlKey: true, shiftKey: true });
     expect(screen.queryByText("최근 비교 히스토리")).not.toBeInTheDocument();
+  });
+
+  it("Cmd/Ctrl+Alt+Shift+Y로 Δ Timeline 토글이 동작하지 않는다", () => {
+    render(
+      <WarpListView
+        blocks={blocks}
+        compareResultByBlock={{
+          b2: {
+            added: 1,
+            removed: 1,
+            preview: "",
+            addedLines: ["new line"],
+            removedLines: ["old line"],
+            comparedAt: now,
+          },
+        }}
+      />,
+    );
+
+    fireEvent.keyDown(window, { key: "y", ctrlKey: true, shiftKey: true });
+    expect(screen.getByText("최근 비교 히스토리")).toBeInTheDocument();
+    fireEvent.keyDown(window, { key: "y", ctrlKey: true, altKey: true, shiftKey: true });
+    expect(screen.getByText("최근 비교 히스토리")).toBeInTheDocument();
   });
 
   it("Cmd/Ctrl+Shift+Y로 닫을 때 타임라인 버튼으로 포커스 복귀", async () => {
