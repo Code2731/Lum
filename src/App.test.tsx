@@ -1160,6 +1160,30 @@ describe("App (LUM 터미널)", () => {
     }
   });
 
+  it("Cmd/Ctrl+Shift+L에서 Alt가 함께면 스크립트 패널 토글이 처리되지 않는다", async () => {
+    const baseImpl = mockedInvoke.getMockImplementation() as
+      ((cmd: string, args?: unknown, options?: unknown) => Promise<unknown>);
+    if (!baseImpl) throw new Error("invoke mock implementation not found");
+
+    mockedInvoke.mockImplementation((cmd: string, ...args: unknown[]) => {
+      if (cmd === "list_scripts") return Promise.resolve([]);
+      if (cmd === "load_app_config") return Promise.resolve({});
+      return baseImpl(cmd, args[0], args[1]);
+    });
+
+    try {
+      render(<App />);
+
+      fireEvent.keyDown(window, { key: "L", metaKey: true, shiftKey: true, altKey: true });
+      expect(screen.queryByText("스크립트 라이브러리")).not.toBeInTheDocument();
+
+      fireEvent.keyDown(window, { key: "L", ctrlKey: true, shiftKey: true, altKey: true });
+      expect(screen.queryByText("스크립트 라이브러리")).not.toBeInTheDocument();
+    } finally {
+      mockedInvoke.mockImplementation(baseImpl);
+    }
+  });
+
   it("Ctrl+Shift+L로도 스크립트 패널이 열린다", async () => {
     const baseImpl = mockedInvoke.getMockImplementation() as
       ((cmd: string, args?: unknown, options?: unknown) => Promise<unknown>);
