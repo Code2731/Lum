@@ -71,7 +71,7 @@ const CommitPanel: React.FC<Props> = ({ model, onExecute, onClose }) => {
         <div className="p-4 space-y-3">
           {/* 저장소 경로 */}
           <div className="space-y-1">
-            <label className="text-[10px] text-white/40 uppercase tracking-wider">
+            <label className="text-xs text-white/40 uppercase tracking-wider">
               저장소 경로
             </label>
             <div className="flex gap-2">
@@ -112,7 +112,7 @@ const CommitPanel: React.FC<Props> = ({ model, onExecute, onClose }) => {
 
           {/* 에러 */}
           {error && (
-            <p className="text-[11px] text-red-400 bg-red-500/10 border border-red-500/20 rounded px-3 py-2">
+            <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded px-3 py-2">
               {error}
             </p>
           )}
@@ -120,7 +120,7 @@ const CommitPanel: React.FC<Props> = ({ model, onExecute, onClose }) => {
           {/* AI 생성 메시지 */}
           {message && (
             <div className="space-y-2">
-              <label className="text-[10px] text-white/40 uppercase tracking-wider">
+              <label className="text-xs text-white/40 uppercase tracking-wider">
                 AI 생성 메시지
               </label>
               <Textarea

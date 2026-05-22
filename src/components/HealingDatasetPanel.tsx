@@ -90,11 +90,11 @@ const HealingDatasetPanel: React.FC<Props> = ({ onClose }) => {
         <div className="flex items-center gap-2.5 px-5 py-4 border-b border-white/8 shrink-0">
           <Sparkles size={15} className="text-accent" />
           <DialogTitle className="text-sm font-semibold">Auto-Heal 학습 데이터셋</DialogTitle>
-          <span className="text-[10px] text-white/35 ml-1">로컬 LoRA fine-tune용</span>
+          <span className="text-xs text-white/35 ml-1">로컬 LoRA fine-tune용</span>
         </div>
 
         <div className="px-5 py-3 border-b border-white/8 shrink-0 flex items-center gap-2 flex-wrap">
-          <div className="flex items-center gap-3 text-[11px] text-white/60">
+          <div className="flex items-center gap-3 text-sm text-white/60">
             <span>총 <span className="tabular-nums text-white/85 font-semibold">{records.length}</span>개</span>
             <span className="flex items-center gap-1 text-emerald-300">
               <Check size={11} /> <span className="tabular-nums">{approveCount}</span>
@@ -126,14 +126,14 @@ const HealingDatasetPanel: React.FC<Props> = ({ onClose }) => {
         </div>
 
         {exportInfo && (
-          <div className="px-5 py-2 bg-accent/10 border-b border-accent/20 text-[11px] text-white/80 shrink-0">
+          <div className="px-5 py-2 bg-accent/10 border-b border-accent/20 text-sm text-white/80 shrink-0">
             ✓ <span className="tabular-nums font-semibold">{exportInfo.count}</span>개 라인 export 완료 →
             <span className="ml-1 font-mono text-white/60">{exportInfo.path}</span>
           </div>
         )}
 
         {error && (
-          <div className="px-5 py-2 text-[11px] text-rose-300 bg-rose-500/10 border-b border-rose-400/20 shrink-0">
+          <div className="px-5 py-2 text-sm text-rose-300 bg-rose-500/10 border-b border-rose-400/20 shrink-0">
             {error}
           </div>
         )}
@@ -144,7 +144,7 @@ const HealingDatasetPanel: React.FC<Props> = ({ onClose }) => {
             <div className="text-center py-8 text-xs text-white/35 space-y-1.5">
               <Wrench size={20} className="mx-auto text-white/20" />
               <p>아직 수집된 결정이 없습니다.</p>
-              <p className="text-[10px] text-white/25">자동치유 제안을 승인/거부할 때마다 여기에 누적됩니다.</p>
+              <p className="text-xs text-white/25">자동치유 제안을 승인/거부할 때마다 여기에 누적됩니다.</p>
             </div>
           )}
 
@@ -157,12 +157,12 @@ const HealingDatasetPanel: React.FC<Props> = ({ onClose }) => {
                   <XIcon size={11} className="text-rose-300 shrink-0" />
                 )}
                 <span className="truncate flex-1 text-white/85 font-mono">{r.suggestion || "(빈 제안)"}</span>
-                <span className={`text-[10px] px-1.5 py-0.5 rounded ${SAFETY_TONE[r.safety_level]}`}>
+                <span className={`text-xs px-1.5 py-0.5 rounded ${SAFETY_TONE[r.safety_level]}`}>
                   {r.safety_level}
                 </span>
-                <span className="text-[10px] text-white/30 tabular-nums shrink-0">{fmtShortDate(r.ts_ms, "ms")}</span>
+                <span className="text-xs text-white/30 tabular-nums shrink-0">{fmtShortDate(r.ts_ms, "ms")}</span>
               </summary>
-              <div className="px-3 pb-2.5 pt-0.5 space-y-1.5 text-[11px] border-t border-white/5">
+              <div className="px-3 pb-2.5 pt-0.5 space-y-1.5 text-sm border-t border-white/5">
                 <div>
                   <span className="text-white/35">에러:</span>
                   <pre className="mt-0.5 text-white/70 font-mono whitespace-pre-wrap text-[10.5px] bg-black/20 rounded px-2 py-1.5 max-h-24 overflow-y-auto">{r.error}</pre>
@@ -180,12 +180,12 @@ const HealingDatasetPanel: React.FC<Props> = ({ onClose }) => {
                   </div>
                 )}
                 {r.decision === "reject" && r.failure_reason && (
-                  <div className="flex items-start gap-1.5 text-[11px] text-amber-200 bg-amber-500/10 border border-amber-400/25 rounded px-2 py-1.5">
+                  <div className="flex items-start gap-1.5 text-sm text-amber-200 bg-amber-500/10 border border-amber-400/25 rounded px-2 py-1.5">
                     <span className="text-amber-300 font-medium shrink-0">거부 사유:</span>
                     <span className="leading-relaxed">{r.failure_reason}</span>
                   </div>
                 )}
-                <div className="flex items-center gap-2 text-[10px] text-white/30">
+                <div className="flex items-center gap-2 text-xs text-white/30">
                   <span>모델: {r.model}</span>
                 </div>
               </div>

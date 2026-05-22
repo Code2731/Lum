@@ -26,7 +26,7 @@ const MarkdownViewerPanel: React.FC<Props> = ({ path, title, content, loading, e
     <div className="lum-markdown-viewer flex flex-col h-full border-l border-white/10 bg-[#0d1117]/95 min-w-[320px] max-w-[480px]">
       <div className="flex items-center gap-2 px-3 py-2 border-b border-white/10 shrink-0">
         <Eye size={13} className="text-cyan-300 shrink-0" />
-        <span className="text-[11px] font-semibold text-white/85 truncate" title={title}>
+        <span className="text-sm font-semibold text-white/85 truncate" title={title}>
           {title}
         </span>
         <button
@@ -38,26 +38,26 @@ const MarkdownViewerPanel: React.FC<Props> = ({ path, title, content, loading, e
         </button>
       </div>
 
-      <div className="px-3 py-2 border-b border-white/10 bg-white/[0.02] text-[10px] text-white/45 font-mono truncate" title={normalizedPath}>
+      <div className="px-3 py-2 border-b border-white/10 bg-white/[0.02] text-xs text-white/45 font-mono truncate" title={normalizedPath}>
         <FileText size={11} className="inline-block mr-1 align-[-1px] text-white/40" />
         {normalizedPath}
       </div>
 
       <div className="flex-1 overflow-auto p-3">
         {loading ? (
-          <div className="text-[10px] text-white/45">마크다운 문서를 읽고 있습니다…</div>
+          <div className="text-xs text-white/45">마크다운 문서를 읽고 있습니다…</div>
         ) : error ? (
-          <div className="flex items-start gap-1.5 p-2 rounded-md border border-red-500/30 bg-red-500/12 text-red-200 text-[10px]">
+          <div className="flex items-start gap-1.5 p-2 rounded-md border border-red-500/30 bg-red-500/12 text-red-200 text-xs">
             <FileWarning size={12} className="mt-0.5 shrink-0" />
             <p className="leading-relaxed">{error}</p>
           </div>
         ) : (
-          <article className="lum-markdown-doc prose prose-invert max-w-none text-[11px] text-white/84 leading-relaxed">
+          <article className="lum-markdown-doc prose prose-invert max-w-none text-sm text-white/84 leading-relaxed">
             <ReactMarkdown
               components={{
                 h1: ({ children }) => <h1 className="mt-0 mb-2 text-base font-semibold text-white">{children}</h1>,
                 h2: ({ children }) => <h2 className="mt-3 mb-1.5 text-sm font-semibold text-cyan-100">{children}</h2>,
-                h3: ({ children }) => <h3 className="mt-2.5 mb-1 text-[11px] font-semibold text-white">{children}</h3>,
+                h3: ({ children }) => <h3 className="mt-2.5 mb-1 text-sm font-semibold text-white">{children}</h3>,
                 p: ({ children }) => <p className="mb-2 leading-relaxed">{children}</p>,
                 ul: ({ children }) => <ul className="pl-4 list-disc space-y-1 mb-2 marker:text-cyan-200">{children}</ul>,
                 ol: ({ children }) => <ol className="pl-4 list-decimal space-y-1 mb-2 marker:text-cyan-200">{children}</ol>,
@@ -74,14 +74,14 @@ const MarkdownViewerPanel: React.FC<Props> = ({ path, title, content, loading, e
                   className?: string;
                 }) => {
                   if (inline || !className?.startsWith("language-")) {
-                    return <code className="px-1 py-0.5 rounded bg-white/12 text-[10px] font-mono text-cyan-100">{children}</code>;
+                    return <code className="px-1 py-0.5 rounded bg-white/12 text-xs font-mono text-cyan-100">{children}</code>;
                   }
                   const code = String(children)
                     .replace(/^\n/, "")
                     .replace(/\n$/, "");
                   return (
                     <pre className="mb-3 mt-2 rounded-md border border-white/12 bg-white/4 p-2 overflow-x-auto">
-                      <code className="text-[10px] font-mono text-white/75 whitespace-pre-wrap">{code}</code>
+                      <code className="text-xs font-mono text-white/75 whitespace-pre-wrap">{code}</code>
                     </pre>
                   );
                 },
@@ -103,7 +103,7 @@ const MarkdownViewerPanel: React.FC<Props> = ({ path, title, content, loading, e
                 },
                 table: ({ children }) => (
                   <div className="overflow-x-auto -mx-2 px-2 mb-2">
-                    <table className="min-w-full text-[10px] border-collapse">{children}</table>
+                    <table className="min-w-full text-xs border-collapse">{children}</table>
                   </div>
                 ),
                 th: ({ children }) => (

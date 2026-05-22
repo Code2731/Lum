@@ -55,7 +55,7 @@ const STATUS_LABEL: Record<AgentState["status"], string> = {
 const RiskBadge: React.FC<{ risk: AgentStep["risk"] }> = ({ risk }) => {
   const cfg = RISK_CONFIG[risk];
   return (
-    <span className={`text-[9px] px-1.5 py-0.5 rounded font-medium ${cfg.className}`}>
+    <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${cfg.className}`}>
       {cfg.label}
     </span>
   );
@@ -70,11 +70,11 @@ const CompletedStepRow: React.FC<{ step: CompletedStep }> = ({ step }) => {
       ) : (
         <XCircle size={12} className="text-red-400 mt-0.5 shrink-0" />
       )}
-      <span className="font-mono text-[11px] text-white/60 truncate">
+      <span className="font-mono text-sm text-white/60 truncate">
         $ {step.cmd}
       </span>
       {step.exitCode !== null && step.exitCode !== 0 && (
-        <span className="text-[9px] text-red-400 shrink-0">({step.exitCode})</span>
+        <span className="text-xs text-red-400 shrink-0">({step.exitCode})</span>
       )}
     </div>
   );
@@ -91,8 +91,8 @@ const AgentPanel: React.FC<Props> = ({ state, onApprove, onCancel, onClose, onSa
       {/* ── 헤더 ─────────────────────────────────────────── */}
       <div className="flex items-center gap-2 px-3 py-2.5 border-b border-white/5 bg-white/3 shrink-0">
         <Bot size={13} className="text-accent shrink-0" />
-        <span className="text-[11px] font-semibold text-accent">에이전트 태스크</span>
-        <span className="text-[10px] text-white/30 ml-1 truncate flex-1">{task}</span>
+        <span className="text-sm font-semibold text-accent">에이전트 태스크</span>
+        <span className="text-xs text-white/30 ml-1 truncate flex-1">{task}</span>
         <button
           onClick={onClose}
           className="ml-auto text-white/30 hover:text-white/70 transition-colors shrink-0"
@@ -120,7 +120,7 @@ const AgentPanel: React.FC<Props> = ({ state, onApprove, onCancel, onClose, onSa
           <ChevronRight size={11} className="text-yellow-400 shrink-0" />
         )}
         <span
-          className={`text-[11px] font-medium ${
+          className={`text-sm font-medium ${
             status === "done"
               ? "text-green-400"
               : status === "failed"
@@ -135,7 +135,7 @@ const AgentPanel: React.FC<Props> = ({ state, onApprove, onCancel, onClose, onSa
           {STATUS_LABEL[status]}
         </span>
         {(status === "executing" || status === "observing") && totalSteps > 0 && (
-          <span className="text-[10px] text-white/30 ml-auto">
+          <span className="text-xs text-white/30 ml-auto">
             {Math.min(currentStepIdx + 1, totalSteps)} / {totalSteps}
           </span>
         )}
@@ -155,20 +155,20 @@ const AgentPanel: React.FC<Props> = ({ state, onApprove, onCancel, onClose, onSa
         {/* 승인 대기 — 계획 목록 표시 */}
         {status === "awaiting_approval" && (
           <div className="p-3 space-y-1">
-            <p className="text-[10px] text-white/30 mb-2 uppercase tracking-wider">실행 계획</p>
+            <p className="text-xs text-white/30 mb-2 uppercase tracking-wider">실행 계획</p>
             {plan.map((step, idx) => (
               <div
                 key={step.id}
                 className="flex items-start gap-2 p-2 rounded-lg bg-white/3 border border-white/5"
               >
-                <span className="text-[10px] text-white/30 font-mono w-4 shrink-0 mt-0.5">
+                <span className="text-xs text-white/30 font-mono w-4 shrink-0 mt-0.5">
                   {idx + 1}.
                 </span>
                 <div className="flex-1 min-w-0">
-                  <div className="font-mono text-[11px] text-white/80 truncate">
+                  <div className="font-mono text-sm text-white/80 truncate">
                     $ {step.cmd}
                   </div>
-                  <div className="text-[10px] text-white/40 mt-0.5">{step.description}</div>
+                  <div className="text-xs text-white/40 mt-0.5">{step.description}</div>
                 </div>
                 <RiskBadge risk={step.risk} />
               </div>
@@ -184,20 +184,20 @@ const AgentPanel: React.FC<Props> = ({ state, onApprove, onCancel, onClose, onSa
               <div className="p-2.5 rounded-lg bg-accent/5 border border-accent/20">
                 <div className="flex items-center gap-2 mb-1">
                   <Loader2 size={11} className="animate-spin text-accent shrink-0" />
-                  <span className="text-[10px] text-accent font-medium">
+                  <span className="text-xs text-accent font-medium">
                     {status === "observing" ? "AI 관찰 중..." : `단계 ${currentStepIdx + 1} 실행 중`}
                   </span>
                   <RiskBadge risk={currentStep.risk} />
                 </div>
-                <div className="font-mono text-[11px] text-white/70">$ {currentStep.cmd}</div>
-                <div className="text-[10px] text-white/35 mt-0.5">{currentStep.description}</div>
+                <div className="font-mono text-sm text-white/70">$ {currentStep.cmd}</div>
+                <div className="text-xs text-white/35 mt-0.5">{currentStep.description}</div>
               </div>
             )}
 
             {/* 완료된 단계 목록 */}
             {completed.length > 0 && (
               <div>
-                <p className="text-[10px] text-white/25 uppercase tracking-wider mb-1">완료된 단계</p>
+                <p className="text-xs text-white/25 uppercase tracking-wider mb-1">완료된 단계</p>
                 <div className="space-y-0.5">
                   {completed.map((c) => (
                     <CompletedStepRow key={c.id} step={c} />
@@ -217,7 +217,7 @@ const AgentPanel: React.FC<Props> = ({ state, onApprove, onCancel, onClose, onSa
             </div>
             {completed.length > 0 && (
               <div>
-                <p className="text-[10px] text-white/25 uppercase tracking-wider mb-1">실행된 단계</p>
+                <p className="text-xs text-white/25 uppercase tracking-wider mb-1">실행된 단계</p>
                 <div className="space-y-0.5">
                   {completed.map((c) => (
                     <CompletedStepRow key={c.id} step={c} />
@@ -237,7 +237,7 @@ const AgentPanel: React.FC<Props> = ({ state, onApprove, onCancel, onClose, onSa
             </div>
             {completed.length > 0 && (
               <div>
-                <p className="text-[10px] text-white/25 uppercase tracking-wider mb-1">실행된 단계</p>
+                <p className="text-xs text-white/25 uppercase tracking-wider mb-1">실행된 단계</p>
                 <div className="space-y-0.5">
                   {completed.map((c) => (
                     <CompletedStepRow key={c.id} step={c} />
@@ -263,13 +263,13 @@ const AgentPanel: React.FC<Props> = ({ state, onApprove, onCancel, onClose, onSa
           <>
             <button
               onClick={onCancel}
-              className="px-3 py-1.5 text-[11px] rounded-md text-white/50 hover:text-white/80 hover:bg-white/5 transition-colors"
+              className="px-3 py-1.5 text-sm rounded-md text-white/50 hover:text-white/80 hover:bg-white/5 transition-colors"
             >
               취소
             </button>
             <button
               onClick={onApprove}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] rounded-md bg-accent/20 text-accent hover:bg-accent/30 transition-colors font-medium"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md bg-accent/20 text-accent hover:bg-accent/30 transition-colors font-medium"
             >
               <Play size={11} />
               실행 시작
@@ -280,7 +280,7 @@ const AgentPanel: React.FC<Props> = ({ state, onApprove, onCancel, onClose, onSa
         {(status === "executing" || status === "observing") && (
           <button
             onClick={onCancel}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] rounded-md bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors"
           >
             <Square size={11} />
             중단
@@ -290,7 +290,7 @@ const AgentPanel: React.FC<Props> = ({ state, onApprove, onCancel, onClose, onSa
         {status === "done" && onSaveScript && completed.length > 0 && (
           <button
             onClick={() => onSaveScript(completed.map((c) => c.cmd))}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] rounded-md bg-white/5 text-white/50 hover:bg-white/10 hover:text-white/70 transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md bg-white/5 text-white/50 hover:bg-white/10 hover:text-white/70 transition-colors"
           >
             <BookOpen size={11} />
             스크립트 저장
@@ -299,7 +299,7 @@ const AgentPanel: React.FC<Props> = ({ state, onApprove, onCancel, onClose, onSa
         {(status === "done" || status === "failed" || status === "cancelled") && (
           <button
             onClick={onClose}
-            className="px-3 py-1.5 text-[11px] rounded-md bg-white/8 text-white/60 hover:bg-white/12 hover:text-white/80 transition-colors"
+            className="px-3 py-1.5 text-sm rounded-md bg-white/8 text-white/60 hover:bg-white/12 hover:text-white/80 transition-colors"
           >
             닫기
           </button>
