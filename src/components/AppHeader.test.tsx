@@ -307,8 +307,8 @@ describe("AppHeader", () => {
 
     const originalGetBoundingClientRect = Element.prototype.getBoundingClientRect;
     const spy = vi.spyOn(Element.prototype, "getBoundingClientRect")
-      .mockImplementation(function () {
-        const element = this as Element;
+      .mockImplementation(function (this: Element) {
+        const element = this;
         if (
           element instanceof HTMLButtonElement
           && (element.textContent?.includes("고급 기능") || element.textContent?.includes("기능 메뉴"))

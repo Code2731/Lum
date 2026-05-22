@@ -55,8 +55,10 @@ vi.mock("./components/TerminalPane", () => ({
 }));
 
 describe("App (LUM 터미널)", () => {
+  const mockedInvoke = vi.mocked(invoke);
+
   beforeEach(() => {
-    invoke.mockClear();
+    mockedInvoke.mockClear();
   });
 
   it("Phase 66 이후 헤더에 LUM 텍스트 로고 제거됨 — 아이콘만 사용", () => {
@@ -154,15 +156,16 @@ describe("App (LUM 터미널)", () => {
   });
 
   it("Quick Action 단축키는 Ctrl+숫자만 소비하고 Ctrl+Alt+숫자는 소비하지 않는다", async () => {
-    const baseImpl = invoke.getMockImplementation();
+    const baseImpl = mockedInvoke.getMockImplementation() as
+      ((cmd: string, args?: unknown, options?: unknown) => Promise<unknown>);
     if (!baseImpl) throw new Error("invoke mock implementation not found");
-    invoke.mockImplementation((cmd: string, ...args: unknown[]) => {
+    mockedInvoke.mockImplementation((cmd: string, ...args: unknown[]) => {
       if (cmd === "load_app_config") {
         return Promise.resolve({
           quick_actions: [{ id: "qa-1", label: "List", command: "ls", shortcut: 1 }],
         });
       }
-      return baseImpl(cmd, ...args);
+      return baseImpl(cmd, args[0], args[1]);
     });
 
     try {
@@ -188,7 +191,7 @@ describe("App (LUM 터미널)", () => {
       }));
       expect(consumedWithAlt).toBe(false);
     } finally {
-      invoke.mockImplementation(baseImpl);
+      mockedInvoke.mockImplementation(baseImpl);
     }
   });
 
