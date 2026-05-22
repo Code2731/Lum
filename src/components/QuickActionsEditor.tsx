@@ -114,7 +114,7 @@ const QuickActionsEditor: React.FC<Props> = ({
 
         {/* 새 액션 추가 */}
         <div className="px-5 py-4 border-t border-white/8 shrink-0">
-          <p className="text-[10px] text-white/30 mb-2">새 액션 추가</p>
+          <p className="text-xs text-white/30 mb-2">새 액션 추가</p>
           <div className="flex items-center gap-2">
             <Input value={newLabel} onChange={e => setNewLabel(e.target.value)}
               onKeyDown={(e) => {

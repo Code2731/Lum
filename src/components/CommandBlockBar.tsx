@@ -46,7 +46,7 @@ const CommandBlockBar: React.FC<Props> = ({
       <span className={`text-xs font-mono font-medium shrink-0 tabular-nums ${success ? "text-green-400" : "text-red-400"}`}>
         {success ? "exit 0" : `exit ${block.exitCode ?? "?"}`}
       </span>
-      <span className="text-[10px] text-white/30 font-mono shrink-0 tabular-nums">
+      <span className="text-xs text-white/30 font-mono shrink-0 tabular-nums">
         {blockIndex + 1}/{blockTotal}
       </span>
       <span className="font-mono text-xs text-white/55 truncate flex-1 min-w-0">

@@ -70,7 +70,7 @@ const InfiniteCanvas: React.FC<Props> = ({ blocks, onNodeMove }) => {
         <Background gap={20} color="#ffffff10" />
         <Controls />
         <Panel position="top-right" className="bg-black/50 p-2 rounded-lg border border-white/10">
-           <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-white/40">
+           <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-white/40">
               <LayoutGrid size={12} />
               <span>Spatial Workspace (v2.0 PoC)</span>
            </div>

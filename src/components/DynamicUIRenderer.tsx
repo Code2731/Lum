@@ -83,7 +83,7 @@ const DynamicUIRenderer: React.FC<Props> = ({ code }) => {
 
   return (
     <div className="dynamic-ui-wrapper border border-white/10 rounded-lg overflow-hidden my-4">
-      <div className="bg-white/5 px-3 py-1 flex items-center justify-between text-[10px] uppercase tracking-wider font-bold">
+      <div className="bg-white/5 px-3 py-1 flex items-center justify-between text-xs uppercase tracking-wider font-bold">
         <div className="flex items-center gap-2">
           {error ? <ShieldAlert size={12} className="text-red-400" /> : <ShieldCheck size={12} className="text-green-400" />}
           <span>Sandboxed AI Native UI</span>

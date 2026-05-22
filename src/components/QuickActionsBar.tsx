@@ -36,7 +36,7 @@ const QuickActionsBar: React.FC<Props> = ({
           >
             {a.label}
             {a.shortcut != null && (
-              <span className="text-[10px] text-white/36 group-hover:text-accent/80 font-mono">
+              <span className="text-xs text-white/36 group-hover:text-accent/80 font-mono">
                 Cmd/Ctrl+{a.shortcut}
               </span>
             )}
