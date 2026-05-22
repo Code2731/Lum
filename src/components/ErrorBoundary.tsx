@@ -36,13 +36,13 @@ export class ErrorBoundary extends React.Component<Props, State> {
           {this.props.label ? `${this.props.label} ` : ""}렌더링 오류
         </p>
         {this.state.error?.message && (
-          <pre className="text-[10px] text-white/20 font-mono text-center max-w-xs break-all whitespace-pre-wrap">
+          <pre className="text-xs text-white/20 font-mono text-center max-w-xs break-all whitespace-pre-wrap">
             {this.state.error.message}
           </pre>
         )}
         <button
           onClick={this.reset}
-          className="text-[11px] px-3 py-1.5 rounded-lg bg-white/8 hover:bg-white/15 transition-colors"
+          className="text-sm px-3 py-1.5 rounded-lg bg-white/8 hover:bg-white/15 transition-colors"
         >
           다시 시도
         </button>

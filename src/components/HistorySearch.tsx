@@ -113,10 +113,10 @@ const HistorySearch: React.FC<Props> = ({ model, onSelect, onClose }) => {
                       ) : (
                         <XCircle size={11} className="text-red-400/70 shrink-0" />
                       )}
-                      <span className="font-mono text-[12px] text-white/80 truncate flex-1">
+                      <span className="font-mono text-sm text-white/80 truncate flex-1">
                         {entry.command}
                       </span>
-                      <span className="text-[10px] text-white/25 shrink-0 tabular-nums">
+                      <span className="text-xs text-white/25 shrink-0 tabular-nums">
                         {relativeTime(entry.timestamp)}
                       </span>
                     </CommandItem>
