@@ -14,6 +14,8 @@ export interface WarpInputBarHandle {
   getValue: () => string;
 }
 
+const WARP_SMALL_FONT_SIZE = 10;
+
 interface Props {
   fontFamily: string;
   fontSize: number;
@@ -394,7 +396,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
                 style={{
                   order: chipOrder,
                   flexShrink: 0,
-                  fontSize: 10,
+                  fontSize: WARP_SMALL_FONT_SIZE,
                   lineHeight: 1.2,
                   padding: compactContextChips ? "1px 6px" : "2px 7px",
                   borderRadius: 999,
@@ -434,7 +436,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
               position: "absolute",
               top: -24,
               right: 10,
-              fontSize: 10,
+              fontSize: WARP_SMALL_FONT_SIZE,
               color: "#ff7b72",
               background: "rgba(248,81,73,0.12)",
               border: "1px solid rgba(248,81,73,0.25)",
@@ -558,7 +560,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
               title="Enter 실행 · Esc 클리어 · Cmd/Ctrl+` 또는 Cmd/Ctrl+. 정순환 · Cmd/Ctrl+Shift+` 또는 Cmd/Ctrl+, 역순환 · Cmd/Ctrl+0 backend 해제"
               style={{
                 flexShrink: 0,
-                fontSize: 10,
+                fontSize: WARP_SMALL_FONT_SIZE,
                 color: "rgba(255,255,255,0.3)",
                 border: "1px solid rgba(255,255,255,0.12)",
                 borderRadius: 6,
@@ -576,7 +578,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
               onClick={clearBackendPrefix}
               style={{
                 flexShrink: 0,
-                fontSize: 10,
+                fontSize: WARP_SMALL_FONT_SIZE,
                 color: activeBackendStyle.color,
                 border: activeBackendStyle.border,
                 borderRadius: 6,
