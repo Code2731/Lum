@@ -529,6 +529,16 @@ describe("App (LUM 터미널)", () => {
     expect(afterCount).toBe(beforeCount);
   });
 
+  it("Cmd+Alt+T는 새 탭 단축키로 처리되지 않는다", () => {
+    render(<App />);
+    const beforeCount = screen.getAllByTestId(/^terminal-pane-/).length;
+
+    fireEvent.keyDown(window, { key: "T", metaKey: true, altKey: true });
+
+    const afterCount = screen.getAllByTestId(/^terminal-pane-/).length;
+    expect(afterCount).toBe(beforeCount);
+  });
+
   it("Ctrl+Shift+W는 탭 닫기 단축키로 처리되지 않는다", async () => {
     render(<App />);
     fireEvent.click(screen.getByLabelText("새 탭 (Cmd/Ctrl+T)"));
@@ -603,6 +613,22 @@ describe("App (LUM 터미널)", () => {
     const beforeCount = screen.getAllByTestId(/^terminal-pane-/).length;
 
     fireEvent.keyDown(window, { key: "W", metaKey: true, shiftKey: true });
+
+    await waitFor(() => {
+      expect(screen.getAllByTestId(/^terminal-pane-/).length).toBe(beforeCount);
+    });
+  });
+
+  it("Ctrl+Alt+Shift+W는 탭 닫기 단축키로 처리되지 않는다", async () => {
+    render(<App />);
+    fireEvent.click(screen.getByLabelText("새 탭 (Cmd/Ctrl+T)"));
+
+    await waitFor(() => {
+      expect(screen.getAllByTestId(/^terminal-pane-/).length).toBeGreaterThan(1);
+    });
+    const beforeCount = screen.getAllByTestId(/^terminal-pane-/).length;
+
+    fireEvent.keyDown(window, { key: "W", ctrlKey: true, altKey: true, shiftKey: true });
 
     await waitFor(() => {
       expect(screen.getAllByTestId(/^terminal-pane-/).length).toBe(beforeCount);
