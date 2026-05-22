@@ -30,7 +30,7 @@ const CommandDialog = ({ children, title = "커맨드 팔레트", ...props }: Co
   <Dialog {...props}>
     <DialogContent className="overflow-hidden p-0 sm:max-w-[600px] gap-0 border-white/10">
       <DialogTitle className="sr-only">{title}</DialogTitle>
-      <Command className="[&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-[10px] [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-wider [&_[cmdk-group-heading]]:text-white/30">
+      <Command className="[&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-wider [&_[cmdk-group-heading]]:text-white/30">
         {children}
       </Command>
     </DialogContent>
@@ -124,7 +124,7 @@ const CommandShortcut = ({
 }: React.HTMLAttributes<HTMLSpanElement>) => (
   <span
     className={cn(
-      "ml-auto text-[10px] tracking-widest text-white/30",
+      "ml-auto text-xs tracking-widest text-white/30",
       className,
     )}
     {...props}

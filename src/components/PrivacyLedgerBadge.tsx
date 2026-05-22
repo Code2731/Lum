@@ -264,7 +264,7 @@ const PrivacyLedgerBadge: React.FC<Props> = ({ state, isAllOnDevice, onReset }) 
                   type="button"
                   onClick={closePopover}
                   aria-label="Privacy Ledger 상세 닫기"
-                  className="inline-flex items-center gap-1 text-[11px] text-white/45 hover:text-white/85 transition-colors rounded px-1.5 py-0.5 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  className="inline-flex items-center gap-1 text-sm text-white/45 hover:text-white/85 transition-colors rounded px-1.5 py-0.5 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                 >
                   <X size={11} />
                   닫기
@@ -274,7 +274,7 @@ const PrivacyLedgerBadge: React.FC<Props> = ({ state, isAllOnDevice, onReset }) 
                   onClick={() => onResetRef.current()}
                   title="이번 세션 카운터 초기화"
                   aria-label="세션 카운터 초기화"
-                  className="inline-flex items-center gap-1 text-[11px] text-white/45 hover:text-white/85 transition-colors rounded px-1.5 py-0.5 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  className="inline-flex items-center gap-1 text-sm text-white/45 hover:text-white/85 transition-colors rounded px-1.5 py-0.5 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                 >
                   <RotateCcw size={10} />
                   초기화
@@ -283,10 +283,10 @@ const PrivacyLedgerBadge: React.FC<Props> = ({ state, isAllOnDevice, onReset }) 
             </div>
 
             <div className="px-3 py-2.5 border-b border-white/5">
-              <div className="text-[11px] text-white/50">전체 AI 호출</div>
+              <div className="text-sm text-white/50">전체 AI 호출</div>
               <div className="flex items-baseline gap-2 mt-0.5">
                 <span className="text-lg font-semibold tabular-nums text-white/90">{state.total}</span>
-                <span className="text-[11px] text-white/50">
+                <span className="text-sm text-white/50">
                   · 클라우드 <span className="tabular-nums">{state.onlineCalls}</span>건 ({pct(state.onlineCalls, state.total)})
                 </span>
               </div>
@@ -297,7 +297,7 @@ const PrivacyLedgerBadge: React.FC<Props> = ({ state, isAllOnDevice, onReset }) 
                 const s = state.perBackend[b];
                 const ratio = pct(s.count, state.total);
                 return (
-                  <div key={b} className="flex items-center justify-between text-[11px]">
+                  <div key={b} className="flex items-center justify-between text-sm">
                     <div className="flex items-center gap-1.5 min-w-0">
                       <span className={cn("w-1.5 h-1.5 rounded-full shrink-0", BACKEND_DOT[b])} />
                       <span className="text-white/70 truncate">{BACKEND_LABEL[b]}</span>
@@ -316,8 +316,8 @@ const PrivacyLedgerBadge: React.FC<Props> = ({ state, isAllOnDevice, onReset }) 
 
             {state.last && (
               <div className="px-3 py-2 border-t border-white/5 bg-white/2">
-                <div className="text-[10px] uppercase tracking-wide text-white/40 font-semibold">최근 호출</div>
-                <div className="flex items-center gap-2 mt-1 text-[11px] text-white/70">
+                <div className="text-xs uppercase tracking-wide text-white/40 font-semibold">최근 호출</div>
+                <div className="flex items-center gap-2 mt-1 text-sm text-white/70">
                   <span className={cn("w-1.5 h-1.5 rounded-full shrink-0", BACKEND_DOT[state.last.backend])} />
                   <span className="font-medium">{BACKEND_LABEL[state.last.backend]}</span>
                   {state.last.online ? (
@@ -327,7 +327,7 @@ const PrivacyLedgerBadge: React.FC<Props> = ({ state, isAllOnDevice, onReset }) 
                   )}
                 </div>
                 {state.last.model && (
-                  <div className="mt-0.5 text-[10px] text-white/45 truncate" title={state.last.model}>
+                  <div className="mt-0.5 text-xs text-white/45 truncate" title={state.last.model}>
                     {state.last.model}
                   </div>
                 )}

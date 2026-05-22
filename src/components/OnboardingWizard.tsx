@@ -137,7 +137,7 @@ const OnboardingWizard: React.FC<Props> = ({ onComplete }) => {
             />
           ))}
         </div>
-        <p className="px-6 pt-2 text-[10px] text-white/25 uppercase tracking-wider">
+        <p className="px-6 pt-2 text-xs text-white/25 uppercase tracking-wider">
           {STEPS[step]}
         </p>
 
@@ -197,7 +197,7 @@ const OnboardingWizard: React.FC<Props> = ({ onComplete }) => {
                       <Row label="추천 모델" value={specs.recommended_model} accent mono />
                     </div>
                   </div>
-                  <p className="text-[11px] text-white/25 leading-relaxed">
+                  <p className="text-sm text-white/25 leading-relaxed">
                     {specs.recommendation_reason}
                   </p>
                 </div>
@@ -244,14 +244,14 @@ const OnboardingWizard: React.FC<Props> = ({ onComplete }) => {
                           <span className={`text-sm font-medium ${selected ? "text-white" : "text-white/70"}`}>
                             {meta.label}
                           </span>
-                          <span className="text-[11px] text-white/40 font-mono">{meta.pct}%</span>
+                          <span className="text-sm text-white/40 font-mono">{meta.pct}%</span>
                           {m === "balanced" && (
-                            <span className="text-[9px] px-1.5 py-0.5 rounded bg-accent/15 text-accent border border-accent/30">
+                            <span className="text-xs px-1.5 py-0.5 rounded bg-accent/15 text-accent border border-accent/30">
                               권장
                             </span>
                           )}
                         </div>
-                        <p className="text-[11px] text-white/40 mt-0.5 leading-relaxed">
+                        <p className="text-sm text-white/40 mt-0.5 leading-relaxed">
                           {meta.desc}
                         </p>
                       </div>
@@ -299,7 +299,7 @@ const OnboardingWizard: React.FC<Props> = ({ onComplete }) => {
               </div>
 
               {xllmOnline === false && (
-                <div className="bg-white/2 border border-white/5 rounded-xl p-4 space-y-3 text-[11px]">
+                <div className="bg-white/2 border border-white/5 rounded-xl p-4 space-y-3 text-sm">
                   <p className="text-white/50 font-medium">TabbyAPI 설치 및 실행</p>
                   <CodeBlock>pip install tabbyapi</CodeBlock>
                   <CodeBlock>tabbyapi --model-dir ~/tabby/models --port 5000</CodeBlock>
@@ -340,7 +340,7 @@ const OnboardingWizard: React.FC<Props> = ({ onComplete }) => {
               ) : (
                 <div className="space-y-3">
                   <div className="space-y-1">
-                    <p className="text-[10px] text-white/30">HuggingFace 레포지토리 ID</p>
+                    <p className="text-xs text-white/30">HuggingFace 레포지토리 ID</p>
                     <input
                       className="w-full bg-white/5 border border-white/10 rounded px-3 py-1.5 text-[12px] font-mono outline-none focus:border-accent/50 transition-colors"
                       placeholder="author/model-name"
@@ -368,7 +368,7 @@ const OnboardingWizard: React.FC<Props> = ({ onComplete }) => {
                           style={{ width: `${dlPercent ?? 0}%` }}
                         />
                       </div>
-                      <p className="text-[11px] text-white/40 font-mono truncate">
+                      <p className="text-sm text-white/40 font-mono truncate">
                         {dlProgress.file} {dlPercent !== null ? `${dlPercent}%` : ""}
                         {dlProgress.total > 0 &&
                           ` · ${(dlProgress.downloaded / 1024 / 1024).toFixed(0)} / ${(dlProgress.total / 1024 / 1024).toFixed(0)} MB`}
@@ -423,14 +423,14 @@ const Row: React.FC<{
 }> = ({ label, value, accent, mono }) => (
   <div className="flex items-center justify-between gap-2">
     <span className="text-white/40 shrink-0">{label}</span>
-    <span className={`truncate text-right ${mono ? "font-mono text-[11px]" : ""} ${accent ? "text-accent" : ""}`}>
+    <span className={`truncate text-right ${mono ? "font-mono text-sm" : ""} ${accent ? "text-accent" : ""}`}>
       {value}
     </span>
   </div>
 );
 
 const CodeBlock: React.FC<{ children: string }> = ({ children }) => (
-  <pre className="bg-black/40 rounded px-3 py-1.5 font-mono text-white/70 text-[11px] select-all whitespace-pre-wrap">
+  <pre className="bg-black/40 rounded px-3 py-1.5 font-mono text-white/70 text-sm select-all whitespace-pre-wrap">
     {children}
   </pre>
 );

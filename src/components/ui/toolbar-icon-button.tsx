@@ -131,10 +131,10 @@ export const ToolbarIconButton = React.forwardRef<HTMLButtonElement, ToolbarIcon
       <TooltipContent side="bottom" className="flex items-center gap-2">
         <span>{label}</span>
         {badge && badgeLabel && (
-          <span className="text-[10px] text-accent">[{badgeLabel}]</span>
+          <span className="text-xs text-accent">[{badgeLabel}]</span>
         )}
         {shortcut && (
-          <kbd className="text-[10px] text-white/50 border border-white/15 rounded px-1 py-px font-mono leading-none">
+          <kbd className="text-xs text-white/50 border border-white/15 rounded px-1 py-px font-mono leading-none">
             {shortcut}
           </kbd>
         )}
