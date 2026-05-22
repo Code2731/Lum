@@ -392,7 +392,7 @@ export const ExecCodeBlock: React.FC<{ code: string; lang: string; onExecute: (c
         <Play size={8} />
         {ran ? "전송됨" : "실행"}
       </IconButton>
-      {lang && <span className="absolute bottom-1.5 right-1.5 text-[8px] text-white/20 font-mono">{lang}</span>}
+      {lang && <span className="absolute bottom-1.5 right-1.5 text-xs text-white/20 font-mono">{lang}</span>}
     </div>
   );
 };
@@ -407,9 +407,9 @@ export const MessageBubble: React.FC<{
   const isUser = msg.role === "user";
 
   // compact: sidebar용 11px, non-compact: 스트림용 14px
-  const bodyText = compact ? "text-sm" : "text-[14px]";
-  const codeText = compact ? "text-xs" : "text-[13px]";
-  const inlineCodeText = compact ? "text-xs" : "text-[12.5px]";
+  const bodyText = compact ? "text-xs" : "text-sm";
+  const codeText = compact ? "text-xs" : "text-sm";
+  const inlineCodeText = compact ? "text-xs" : "text-sm";
   const iconSize = compact ? 11 : 14;
 
   if (isUser) {
@@ -466,9 +466,9 @@ export const MessageBubble: React.FC<{
               ul: ({ children }) => <ul className="pl-4 space-y-0.5 list-disc marker:text-white/30">{children}</ul>,
               ol: ({ children }) => <ol className="pl-4 space-y-0.5 list-decimal marker:text-white/30">{children}</ol>,
               li: ({ children }) => <li className="leading-relaxed">{children}</li>,
-              h1: ({ children }) => <h1 className={`font-semibold mt-2 mb-1 ${compact ? "text-[12px]" : "text-[16px]"}`}>{children}</h1>,
-              h2: ({ children }) => <h2 className={`font-semibold mt-2 mb-1 ${compact ? "text-[11.5px]" : "text-[15px]"}`}>{children}</h2>,
-              h3: ({ children }) => <h3 className={`font-semibold mt-1.5 mb-0.5 ${compact ? "text-sm" : "text-[14.5px]"}`}>{children}</h3>,
+              h1: ({ children }) => <h1 className={`font-semibold mt-2 mb-1 ${compact ? "text-xs" : "text-base"}`}>{children}</h1>,
+              h2: ({ children }) => <h2 className={`font-semibold mt-2 mb-1 ${compact ? "text-xs" : "text-base"}`}>{children}</h2>,
+              h3: ({ children }) => <h3 className="font-semibold mt-1.5 mb-0.5 text-sm">{children}</h3>,
             }}
           >
             {msg.content}

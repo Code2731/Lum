@@ -165,7 +165,7 @@ const HealingDatasetPanel: React.FC<Props> = ({ onClose }) => {
               <div className="px-3 pb-2.5 pt-0.5 space-y-1.5 text-sm border-t border-white/5">
                 <div>
                   <span className="text-white/35">에러:</span>
-                  <pre className="mt-0.5 text-white/70 font-mono whitespace-pre-wrap text-[10.5px] bg-black/20 rounded px-2 py-1.5 max-h-24 overflow-y-auto">{r.error}</pre>
+                  <pre className="mt-0.5 text-white/70 font-mono whitespace-pre-wrap text-xs bg-black/20 rounded px-2 py-1.5 max-h-24 overflow-y-auto">{r.error}</pre>
                 </div>
                 {r.analysis && (
                   <div>
@@ -176,7 +176,7 @@ const HealingDatasetPanel: React.FC<Props> = ({ onClose }) => {
                 {r.applied_command && r.applied_command !== r.suggestion && (
                   <div>
                     <span className="text-white/35">실제 실행:</span>
-                    <pre className="mt-0.5 text-emerald-200 font-mono whitespace-pre-wrap text-[10.5px] bg-emerald-500/5 rounded px-2 py-1.5">{r.applied_command}</pre>
+                    <pre className="mt-0.5 text-emerald-200 font-mono whitespace-pre-wrap text-xs bg-emerald-500/5 rounded px-2 py-1.5">{r.applied_command}</pre>
                   </div>
                 )}
                 {r.decision === "reject" && r.failure_reason && (

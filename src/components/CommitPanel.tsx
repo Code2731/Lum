@@ -82,7 +82,7 @@ const CommitPanel: React.FC<Props> = ({ model, onExecute, onClose }) => {
                 />
                 <input
                   ref={pathInputRef}
-                  className="w-full bg-white/5 border border-white/10 rounded px-2.5 py-1.5 pl-7 text-[12px] font-mono outline-none focus:border-accent/50 transition-colors"
+                  className="w-full bg-white/5 border border-white/10 rounded px-2.5 py-1.5 pl-7 text-xs font-mono outline-none focus:border-accent/50 transition-colors"
                   placeholder="/Users/you/MyProject  (비우면 홈 디렉토리)"
                   value={repoPath}
                   onChange={(e) => setRepoPath(e.target.value)}

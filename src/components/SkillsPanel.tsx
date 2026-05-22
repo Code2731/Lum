@@ -240,7 +240,7 @@ const SkillList: React.FC<{
                 ) : null}
               </div>
               {s.description && (
-                <p className="text-[11.5px] text-white/55 mt-0.5 line-clamp-2">{s.description}</p>
+                <p className="text-sm text-white/55 mt-0.5 line-clamp-2">{s.description}</p>
               )}
               {s.triggers.length > 0 && (
                 <div className="flex flex-wrap gap-1 mt-1.5">

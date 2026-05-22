@@ -461,13 +461,13 @@ const LanDiscoverySection: React.FC = () => {
       </div>
 
       {error && (
-        <div className="text-[10.5px] text-rose-300 bg-rose-500/10 border border-rose-400/20 rounded px-2.5 py-1.5">
+        <div className="text-xs text-rose-300 bg-rose-500/10 border border-rose-400/20 rounded px-2.5 py-1.5">
           {error}
         </div>
       )}
 
       {!scanning && results.length === 0 && !error && (
-        <p className="text-[10.5px] text-white/35 leading-relaxed">
+        <p className="text-xs text-white/35 leading-relaxed">
           버튼 클릭 시 같은 서브넷의 알려진 포트(11434/1234/8080/8081/5000)를 동시에 probe합니다.
           1~3초 소요. 사용자 트리거만 — 자동 스캔 안 함.
         </p>
@@ -490,7 +490,7 @@ const LanDiscoverySection: React.FC = () => {
                     {KIND_LABEL[s.kind]}
                   </span>
                   <span className="font-mono text-sm text-white/85 truncate flex-1">{s.url}</span>
-                  <span className="text-[9.5px] text-white/35 tabular-nums shrink-0">{s.latency_ms}ms</span>
+                  <span className="text-xs text-white/35 tabular-nums shrink-0">{s.latency_ms}ms</span>
                   <button
                     onClick={() => apply(s)}
                     disabled={applied}
@@ -507,12 +507,12 @@ const LanDiscoverySection: React.FC = () => {
                 {s.models.length > 0 && (
                   <div className="mt-1 flex flex-wrap gap-1">
                     {s.models.slice(0, 6).map((m, i) => (
-                      <span key={i} className="text-[9.5px] px-1.5 py-0.5 rounded bg-white/5 text-white/55 font-mono">
+                      <span key={i} className="text-xs px-1.5 py-0.5 rounded bg-white/5 text-white/55 font-mono">
                         {m}
                       </span>
                     ))}
                     {s.models.length > 6 && (
-                      <span className="text-[9.5px] text-white/30">+{s.models.length - 6}개 더</span>
+                      <span className="text-xs text-white/30">+{s.models.length - 6}개 더</span>
                     )}
                   </div>
                 )}

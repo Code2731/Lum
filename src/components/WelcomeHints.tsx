@@ -20,7 +20,7 @@ export default function WelcomeHints({ onClose }: Props) {
       <DialogContent className="sm:max-w-[460px] gap-0 p-0 overflow-hidden border-white/10 rounded-xl bg-[#141824]">
         <div className="flex items-center gap-2 px-4 py-3 border-b border-white/8">
           <Sparkles size={14} className="text-accent" />
-          <DialogTitle className="text-[13px] font-semibold text-white/90">LUM — AI 터미널 힌트</DialogTitle>
+          <DialogTitle className="text-sm font-semibold text-white/90">LUM — AI 터미널 힌트</DialogTitle>
         </div>
 
         <div className="px-4 py-4 space-y-2">

@@ -976,7 +976,7 @@ const AppHeader: React.FC<Props> = ({
                         toggleToolbarAdvanced();
                         setShowAdvancedOverflow(false);
                       }}
-                      className="w-full text-left px-2 py-1.5 rounded text-[10.5px] text-white/55 hover:text-white/85 hover:bg-white/5 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                      className="w-full text-left px-2 py-1.5 rounded text-xs text-white/55 hover:text-white/85 hover:bg-white/5 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                     >
                       툴바에 항상 표시 (고급 기능 펼치기)
                     </button>

@@ -361,7 +361,7 @@ const RunRow: React.FC<{
             )}
           </div>
 
-          <pre className="text-white/72 font-mono whitespace-pre-wrap text-[10.5px] bg-black/28 border border-white/[0.08] rounded-md px-2 py-1.5 max-h-44 overflow-y-auto">
+          <pre className="text-white/72 font-mono whitespace-pre-wrap text-xs bg-black/28 border border-white/[0.08] rounded-md px-2 py-1.5 max-h-44 overflow-y-auto">
             {lines.length === 0 ? <span className="text-white/30">(로그 없음)</span> : lines.join("\n")}
           </pre>
 

@@ -217,7 +217,7 @@ const OnboardingWizard: React.FC<Props> = ({ onComplete }) => {
                 <span className="text-sm font-medium">성능 모드 선택</span>
               </div>
 
-              <p className="text-[12px] text-white/50 leading-relaxed">
+              <p className="text-xs text-white/50 leading-relaxed">
                 GPU 메모리 사용량 상한을 설정합니다. 낮을수록 안정적이지만 컨텍스트가 짧아집니다.
                 언제든 설정에서 변경 가능합니다.
               </p>
@@ -342,7 +342,7 @@ const OnboardingWizard: React.FC<Props> = ({ onComplete }) => {
                   <div className="space-y-1">
                     <p className="text-xs text-white/30">HuggingFace 레포지토리 ID</p>
                     <input
-                      className="w-full bg-white/5 border border-white/10 rounded px-3 py-1.5 text-[12px] font-mono outline-none focus:border-accent/50 transition-colors"
+                      className="w-full bg-white/5 border border-white/10 rounded px-3 py-1.5 text-xs font-mono outline-none focus:border-accent/50 transition-colors"
                       placeholder="author/model-name"
                       value={repoId}
                       onChange={(e) => setRepoId(e.target.value)}

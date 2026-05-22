@@ -148,7 +148,7 @@ const AgentPanel: React.FC<Props> = ({ state, onApprove, onCancel, onClose, onSa
         {status === "planning" && (
           <div className="flex flex-col items-center justify-center gap-2 py-8 text-white/40">
             <Loader2 size={20} className="animate-spin" />
-            <span className="text-[12px]">AI가 실행 계획을 수립하고 있습니다...</span>
+            <span className="text-xs">AI가 실행 계획을 수립하고 있습니다...</span>
           </div>
         )}
 
@@ -213,7 +213,7 @@ const AgentPanel: React.FC<Props> = ({ state, onApprove, onCancel, onClose, onSa
           <div className="p-4 space-y-3">
             <div className="flex items-center gap-2">
               <CheckCircle2 size={16} className="text-green-400 shrink-0" />
-              <span className="text-[12px] text-green-400 font-medium">{message || "태스크가 완료되었습니다."}</span>
+              <span className="text-xs text-green-400 font-medium">{message || "태스크가 완료되었습니다."}</span>
             </div>
             {completed.length > 0 && (
               <div>
@@ -233,7 +233,7 @@ const AgentPanel: React.FC<Props> = ({ state, onApprove, onCancel, onClose, onSa
           <div className="p-4 space-y-3">
             <div className="flex items-start gap-2">
               <XCircle size={16} className="text-red-400 shrink-0 mt-0.5" />
-              <span className="text-[12px] text-red-400 leading-relaxed">{message || "태스크 실행 중 오류가 발생했습니다."}</span>
+              <span className="text-xs text-red-400 leading-relaxed">{message || "태스크 실행 중 오류가 발생했습니다."}</span>
             </div>
             {completed.length > 0 && (
               <div>
@@ -252,7 +252,7 @@ const AgentPanel: React.FC<Props> = ({ state, onApprove, onCancel, onClose, onSa
         {status === "cancelled" && (
           <div className="p-4 flex items-center gap-2 text-white/40">
             <AlertTriangle size={14} className="shrink-0" />
-            <span className="text-[12px]">{message || "취소되었습니다."}</span>
+            <span className="text-xs">{message || "취소되었습니다."}</span>
           </div>
         )}
       </div>

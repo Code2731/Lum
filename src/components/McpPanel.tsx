@@ -181,7 +181,7 @@ const McpPanel: React.FC<Props> = ({ onClose }) => {
         <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 bg-white/[0.02]">
           <div className="flex items-center gap-2">
             <PlugZap size={14} className="text-accent" />
-            <DialogTitle className="text-[13px] font-semibold text-white/90">MCP 서버</DialogTitle>
+            <DialogTitle className="text-sm font-semibold text-white/90">MCP 서버</DialogTitle>
             <span className="text-xs text-white/35">· Model Context Protocol</span>
           </div>
           <IconButton tooltip="새로고침" onClick={loadServers}
@@ -250,7 +250,7 @@ const McpPanel: React.FC<Props> = ({ onClose }) => {
 
           {servers.length === 0 && !loadingList && (
             <div className="p-4 bg-white/[0.03] border border-white/[0.1] rounded-lg text-center space-y-2">
-              <p className="text-[12px] text-white/60">등록된 MCP 서버가 없습니다.</p>
+              <p className="text-xs text-white/60">등록된 MCP 서버가 없습니다.</p>
               <button
                 onClick={installPresets}
                 disabled={installing}
@@ -272,7 +272,7 @@ const McpPanel: React.FC<Props> = ({ onClose }) => {
                 <div className="flex items-center gap-2 px-3 py-2">
                   <button
                     onClick={() => expandAndLoadTools(s.name)}
-                    className="flex items-center gap-1 flex-1 text-left text-[12px] hover:text-white transition-colors"
+                    className="flex items-center gap-1 flex-1 text-left text-xs hover:text-white transition-colors"
                   >
                     {isExpanded ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
                     <Plug size={11} className={s.enabled ? "text-accent" : "text-white/30"} />
@@ -358,7 +358,7 @@ const McpPanel: React.FC<Props> = ({ onClose }) => {
           {/* 서버 추가 */}
           {addForm ? (
             <div className="p-3 rounded-lg border border-accent/35 bg-accent/8 space-y-2">
-              <div className="text-[12px] font-medium text-accent">새 서버 추가</div>
+              <div className="text-xs font-medium text-accent">새 서버 추가</div>
               <Input placeholder="서버 이름 (고유)" value={addForm.name}
                 onChange={(e) => setAddForm({ ...addForm, name: e.target.value })}
                 className="text-sm font-mono" />

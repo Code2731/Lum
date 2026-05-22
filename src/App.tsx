@@ -1569,8 +1569,8 @@ const App: React.FC = () => {
   const lastCmdBlock = cmdBlocks[cmdBlocks.length - 1] ?? null;
   const isInspectorCompact = inspectorDensity === "compact";
   const inspectorSummaryWrapClass = isInspectorCompact
-    ? "h-full overflow-y-auto p-2 space-y-1.5 text-[10px]"
-    : "h-full overflow-y-auto p-3 space-y-2 text-[11px]";
+    ? "h-full overflow-y-auto p-2 space-y-1.5 text-xs"
+    : "h-full overflow-y-auto p-3 space-y-2 text-sm";
   const inspectorCardPadClass = isInspectorCompact ? "px-2 py-1.5" : "px-2.5 py-2";
   const inspectorCardTightClass = `rounded-lg border border-white/10 bg-white/[0.03] ${inspectorCardPadClass} space-y-1`;
   const inspectorCardRegularClass = `rounded-lg border border-white/10 bg-white/[0.03] ${inspectorCardPadClass} ${isInspectorCompact ? "space-y-1" : "space-y-1.5"}`;
@@ -1725,7 +1725,7 @@ const App: React.FC = () => {
               )}
               <TabIconComponent icon={tab.icon} />
               {tab.group && (
-                <span className="text-[10px] uppercase tracking-wider text-white/35 font-semibold">{tab.group}</span>
+                <span className="text-xs uppercase tracking-wider text-white/35 font-semibold">{tab.group}</span>
               )}
               {renamingTabId === tab.id ? (
                 <input
@@ -1754,7 +1754,7 @@ const App: React.FC = () => {
                   {tab.title}
                   {tabGitInfo[tab.id]?.branch && (
                     <span
-                      className={`ml-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md border text-[10px] ${
+                      className={`ml-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md border text-xs ${
                         tab.id === activeTabId
                           ? "border-cyan-300/35 bg-cyan-400/12 text-cyan-200"
                           : "border-white/15 bg-white/[0.04] text-white/60"
@@ -1768,7 +1768,7 @@ const App: React.FC = () => {
                       <GitBranch size={10} />
                       <span>{tabGitInfo[tab.id]!.branch}</span>
                       {tabGitInfo[tab.id]!.changed > 0 && (
-                        <span className="text-[9px] px-1 rounded bg-amber-400/22 text-amber-200">
+                        <span className="text-xs px-1 rounded bg-amber-400/22 text-amber-200">
                           {tabGitInfo[tab.id]!.changed}
                         </span>
                       )}
@@ -2220,10 +2220,10 @@ const App: React.FC = () => {
             <div className="h-full flex flex-col">
               <div className="px-2.5 py-2 border-b border-white/10 bg-white/[0.02] shrink-0">
                 <div className="flex items-center justify-between gap-2 mb-2">
-                  <span className="text-[11px] tracking-[0.06em] uppercase text-white/65 font-semibold">Inspector</span>
+                  <span className="text-sm tracking-[0.06em] uppercase text-white/65 font-semibold">Inspector</span>
                   <button
                     onClick={() => setInspectorDensity((prev) => (prev === "cozy" ? "compact" : "cozy"))}
-                    className={`px-1.5 py-0.5 rounded border text-[10px] transition-colors ${
+                    className={`px-1.5 py-0.5 rounded border text-xs transition-colors ${
                       inspectorDensity === "compact"
                         ? "border-cyan-300/35 bg-cyan-400/16 text-cyan-100"
                         : "border-white/[0.1] bg-white/[0.05] text-white/58 hover:text-white/80"
@@ -2267,7 +2267,7 @@ const App: React.FC = () => {
                           openInspectorTab(tab.id);
                         }
                       }}
-                      className={`px-2 py-1 rounded-md text-[10.5px] border transition-colors ${
+                      className={`px-2 py-1 rounded-md text-xs border transition-colors ${
                         inspectorTab === tab.id
                           ? "border-cyan-300/35 bg-cyan-400/16 text-cyan-100"
                           : "border-white/10 bg-white/[0.04] text-white/58 hover:text-white/82"
@@ -2275,7 +2275,7 @@ const App: React.FC = () => {
                       title={`Alt+${tab.shortcut} : ${tab.label}`}
                     >
                       <span>{tab.label}</span>
-                      <span className="ml-1 inline-flex text-[9px] text-white/35">({tab.shortcut})</span>
+                      <span className="ml-1 inline-flex text-xs text-white/35">({tab.shortcut})</span>
                     </button>
                   ))}
                 </div>
@@ -2292,13 +2292,13 @@ const App: React.FC = () => {
                   >
                     <div className={inspectorCardTightClass}>
                       <div className="flex items-center justify-between gap-2">
-                        <p className="text-white/45 uppercase tracking-[0.06em] text-[10px]">Workspace</p>
+                        <p className="text-white/45 uppercase tracking-[0.06em] text-xs">Workspace</p>
                         {activeTabGitInfo?.branch && (
-                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md border border-cyan-300/30 bg-cyan-400/12 text-cyan-100 text-[10px]">
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md border border-cyan-300/30 bg-cyan-400/12 text-cyan-100 text-xs">
                             <GitBranch size={10} />
                             {activeTabGitInfo.branch}
                             {activeTabGitInfo.changed > 0 && (
-                              <span className="px-1 rounded bg-amber-400/22 text-amber-200 text-[9px]">
+                              <span className="px-1 rounded bg-amber-400/22 text-amber-200 text-xs">
                                 {activeTabGitInfo.changed}
                               </span>
                             )}
@@ -2309,12 +2309,12 @@ const App: React.FC = () => {
                       <p className="text-white/55 font-mono break-all">{activeTab?.cwd ?? "cwd 없음"}</p>
                     </div>
                     <div className={inspectorCardTightClass}>
-                      <p className="text-white/45 uppercase tracking-[0.06em] text-[10px]">Model</p>
+                      <p className="text-white/45 uppercase tracking-[0.06em] text-xs">Model</p>
                       <p className="text-white/82 break-all">{selectedModel}</p>
                     </div>
                     {inspectorHasNoActivity && (
                       <div className={inspectorCardRegularClass}>
-                        <p className="text-white/45 uppercase tracking-[0.06em] text-[10px]">INSPECTOR</p>
+                        <p className="text-white/45 uppercase tracking-[0.06em] text-xs">INSPECTOR</p>
                         <p className="text-white/72">
                           터미널에서 최근 명령을 실행하면 여기에서 실패 블록·추천 커맨드·최근 기록을 확인할 수 있습니다.
                         </p>
@@ -2323,61 +2323,61 @@ const App: React.FC = () => {
                     {!inspectorHasNoActivity && (
                       <div className={inspectorCardRegularClass}>
                         <div className="flex items-center justify-between gap-2">
-                          <p className="text-white/45 uppercase tracking-[0.06em] text-[10px]">Failed Block</p>
-                          <span className="text-[10px] text-rose-200/80">{inspectorFailedBlocks.length}개</span>
+                          <p className="text-white/45 uppercase tracking-[0.06em] text-xs">Failed Block</p>
+                          <span className="text-xs text-rose-200/80">{inspectorFailedBlocks.length}개</span>
                         </div>
                         {inspectorFocusedFailedBlock ? (
                           <div className="rounded-md border border-rose-300/25 bg-rose-400/8 px-2 py-1.5 space-y-1">
                             <div className="flex items-center justify-between gap-2">
                               <p className="text-rose-100/90 truncate">{inspectorFocusedFailedBlock.command}</p>
-                              <span className="text-[9px] px-1.5 py-0.5 rounded bg-rose-400/20 text-rose-100">
+                              <span className="text-xs px-1.5 py-0.5 rounded bg-rose-400/20 text-rose-100">
                                 ERR {inspectorFocusedFailedBlock.exitCode}
                               </span>
                             </div>
                             {inspectorFocusedFailedBlock.outputTail && (
-                              <p className="text-[10px] text-rose-100/75 font-mono break-words">
+                              <p className="text-xs text-rose-100/75 font-mono break-words">
                                 {inspectorFocusedFailedBlock.outputTail}
                               </p>
                             )}
                             <div className="flex flex-wrap items-center gap-1.5">
                               <button
                                 onClick={focusFailedBlock}
-                                className="inline-flex w-[84px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-rose-300/35 bg-rose-400/14 text-[9px] text-rose-100 hover:bg-rose-400/22 transition-colors"
+                                className="inline-flex w-[84px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-rose-300/35 bg-rose-400/14 text-xs text-rose-100 hover:bg-rose-400/22 transition-colors"
                               >
                                 <AlertTriangle size={9} />
                                 NEXT FAIL
                               </button>
                               <button
                                 onClick={() => analyzeInspectorFailedBlock(inspectorFocusedFailedBlock.id)}
-                                className="inline-flex w-[88px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-cyan-300/35 bg-cyan-400/14 text-[9px] text-cyan-100 hover:bg-cyan-400/24 transition-colors"
+                                className="inline-flex w-[88px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-cyan-300/35 bg-cyan-400/14 text-xs text-cyan-100 hover:bg-cyan-400/24 transition-colors"
                               >
                                 <Search size={9} />
                                 AI ANALYZE
                               </button>
                               <button
                                 onClick={() => copyInspectorFailedOutput(inspectorFocusedFailedBlock.id)}
-                                className="inline-flex w-[76px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-white/20 bg-white/[0.05] text-[9px] text-white/75 hover:text-white hover:bg-white/[0.12] transition-colors"
+                                className="inline-flex w-[76px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-white/20 bg-white/[0.05] text-xs text-white/75 hover:text-white hover:bg-white/[0.12] transition-colors"
                               >
                                 <Copy size={9} />
                                 COPY LOG
                               </button>
                               <button
                                 onClick={() => copyInspectorAnalyzePrompt(inspectorFocusedFailedBlock.id)}
-                                className="inline-flex w-[92px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-cyan-300/30 bg-cyan-400/10 text-[9px] text-cyan-100 hover:bg-cyan-400/20 transition-colors"
+                                className="inline-flex w-[92px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-cyan-300/30 bg-cyan-400/10 text-xs text-cyan-100 hover:bg-cyan-400/20 transition-colors"
                               >
                                 <Copy size={9} />
                                 COPY PROMPT
                               </button>
                               <button
                                 onClick={() => loadInspectorAnalyzePromptToAiBar(inspectorFocusedFailedBlock.id)}
-                                className="inline-flex w-[92px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-accent/35 bg-accent/14 text-[9px] text-accent hover:bg-accent/24 transition-colors"
+                                className="inline-flex w-[92px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-accent/35 bg-accent/14 text-xs text-accent hover:bg-accent/24 transition-colors"
                               >
                                 <Search size={9} />
                                 LOAD PROMPT
                               </button>
                               <button
                                 onClick={() => selectInspectorBlock(inspectorFocusedFailedBlock.id)}
-                                className="inline-flex w-[60px] justify-center items-center px-1.5 py-0.5 rounded border border-white/18 bg-white/[0.05] text-[9px] text-white/75 hover:text-white hover:bg-white/[0.11] transition-colors"
+                                className="inline-flex w-[60px] justify-center items-center px-1.5 py-0.5 rounded border border-white/18 bg-white/[0.05] text-xs text-white/75 hover:text-white hover:bg-white/[0.11] transition-colors"
                               >
                                 SELECT
                               </button>
@@ -2391,12 +2391,12 @@ const App: React.FC = () => {
                     {!inspectorHasNoActivity && (
                       <div className={inspectorCardRegularClass}>
                         <div className="flex items-center justify-between gap-2">
-                          <p className="text-white/45 uppercase tracking-[0.06em] text-[10px]">Last AI Analyze</p>
+                          <p className="text-white/45 uppercase tracking-[0.06em] text-xs">Last AI Analyze</p>
                           {inspectorAnalyzeCache && (
                             <div className="flex items-center gap-1">
                               <button
                                 onClick={copyInspectorAnalyzeResult}
-                                className="inline-flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded border border-white/18 bg-white/[0.05] text-white/72 hover:text-white hover:bg-white/[0.1] transition-colors"
+                                className="inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded border border-white/18 bg-white/[0.05] text-white/72 hover:text-white hover:bg-white/[0.1] transition-colors"
                               >
                                 <Copy size={9} />
                                 COPY
@@ -2406,7 +2406,7 @@ const App: React.FC = () => {
                                   setInspectorAnalyzeCache(null);
                                   closeInspectorCommandMenu();
                                 }}
-                                className="text-[9px] px-1.5 py-0.5 rounded border border-white/18 bg-white/[0.05] text-white/70 hover:text-white hover:bg-white/[0.1] transition-colors"
+                                className="text-xs px-1.5 py-0.5 rounded border border-white/18 bg-white/[0.05] text-white/70 hover:text-white hover:bg-white/[0.1] transition-colors"
                               >
                                 CLEAR
                               </button>
@@ -2425,21 +2425,21 @@ const App: React.FC = () => {
                             <div className="flex items-center justify-between gap-2">
                               <p className="text-white/82 truncate">{inspectorAnalyzeCache.command}</p>
                               {inspectorAnalyzeCache.status === "streaming" ? (
-                                <span className="inline-flex items-center gap-1 text-[9px] text-cyan-100">
+                                <span className="inline-flex items-center gap-1 text-xs text-cyan-100">
                                   <Loader2 size={9} className="animate-spin" />
                                   STREAMING
                                 </span>
                               ) : inspectorAnalyzeCache.status === "error" ? (
-                                <span className="text-[9px] px-1.5 py-0.5 rounded bg-rose-400/20 text-rose-100">
+                                <span className="text-xs px-1.5 py-0.5 rounded bg-rose-400/20 text-rose-100">
                                   ERROR
                                 </span>
                               ) : (
-                                <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-400/20 text-emerald-100">
+                                <span className="text-xs px-1.5 py-0.5 rounded bg-emerald-400/20 text-emerald-100">
                                   DONE
                                 </span>
                               )}
                             </div>
-                            <p className={`text-[10px] font-mono break-words ${
+                            <p className={`text-xs font-mono break-words ${
                               inspectorAnalyzeCache.status === "error" ? "text-rose-100/80" : "text-cyan-100/78"
                             }`}>
                               {inspectorAnalyzeCache.result || "응답을 기다리는 중..."}
@@ -2447,8 +2447,8 @@ const App: React.FC = () => {
                             {inspectorAnalyzeCache.status === "done" && inspectorAnalyzeCache.suggestedCommands.length > 0 && (
                               <div className="space-y-1">
                                 <div className="flex items-center justify-between gap-2">
-                                  <p className="text-[9px] uppercase tracking-[0.06em] text-cyan-100/70">Suggested Commands</p>
-                                  <p className="text-[9px] text-cyan-100/62">
+                                  <p className="text-xs uppercase tracking-[0.06em] text-cyan-100/70">Suggested Commands</p>
+                                  <p className="text-xs text-cyan-100/62">
                                     {isInspectorCompact ? "R 실행 · MORE→C/L" : "R 실행 · C 복사 · L 로드"}
                                   </p>
                                 </div>
@@ -2493,17 +2493,17 @@ const App: React.FC = () => {
                                       }}
                                     >
                                       <div className="flex items-center gap-1.5">
-                                        <span className="inline-flex items-center justify-center min-w-4 h-4 rounded bg-cyan-400/20 text-[9px] text-cyan-100">
+                                        <span className="inline-flex items-center justify-center min-w-4 h-4 rounded bg-cyan-400/20 text-xs text-cyan-100">
                                           {idx + 1}
                                         </span>
-                                        <p className="min-w-0 flex-1 text-[10px] font-mono text-cyan-100/92 truncate" title={cmd}>
+                                        <p className="min-w-0 flex-1 text-xs font-mono text-cyan-100/92 truncate" title={cmd}>
                                           {cmd}
                                         </p>
                                         {isInspectorCompact ? (
                                           <div className="flex items-center gap-1 shrink-0">
                                             <button
                                               onClick={() => applyInspectorAnalyzeCommand(idx)}
-                                              className="inline-flex w-[68px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-emerald-300/35 bg-emerald-400/16 text-[9px] text-emerald-100 hover:bg-emerald-400/26 transition-colors"
+                                              className="inline-flex w-[68px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-emerald-300/35 bg-emerald-400/16 text-xs text-emerald-100 hover:bg-emerald-400/26 transition-colors"
                                               title={`${idx + 1}번 커맨드 실행 (R)`}
                                             >
                                               <TerminalSquare size={9} />
@@ -2525,7 +2525,7 @@ const App: React.FC = () => {
                                               }}
                                               aria-expanded={inspectorCommandMenuIndex === idx}
                                               aria-controls={`inspector-command-menu-${idx}`}
-                                              className="inline-flex w-[58px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-white/20 bg-white/[0.05] text-[9px] text-white/75 hover:text-white hover:bg-white/[0.12] transition-colors"
+                                              className="inline-flex w-[58px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-white/20 bg-white/[0.05] text-xs text-white/75 hover:text-white hover:bg-white/[0.12] transition-colors"
                                               title={`${idx + 1}번 추가 액션 (C/L 단축키 활성화)`}
                                             >
                                               <MoreHorizontal size={9} />
@@ -2536,7 +2536,7 @@ const App: React.FC = () => {
                                           <div className="flex items-center gap-1 shrink-0">
                                             <button
                                               onClick={() => copyInspectorSuggestedCommand(idx)}
-                                              className="inline-flex w-[58px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-white/22 bg-white/[0.05] text-[9px] text-white/76 hover:text-white hover:bg-white/[0.12] transition-colors"
+                                              className="inline-flex w-[58px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-white/22 bg-white/[0.05] text-xs text-white/76 hover:text-white hover:bg-white/[0.12] transition-colors"
                                               title={`${idx + 1}번 커맨드 복사 (C)`}
                                             >
                                               <Copy size={9} />
@@ -2544,7 +2544,7 @@ const App: React.FC = () => {
                                             </button>
                                             <button
                                               onClick={() => loadInspectorSuggestedCommandToAiBar(idx)}
-                                              className="inline-flex w-[58px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-accent/35 bg-accent/14 text-[9px] text-accent hover:bg-accent/24 transition-colors"
+                                              className="inline-flex w-[58px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-accent/35 bg-accent/14 text-xs text-accent hover:bg-accent/24 transition-colors"
                                               title={`${idx + 1}번 커맨드 AI 입력바 로드 (L)`}
                                             >
                                               <Search size={9} />
@@ -2552,7 +2552,7 @@ const App: React.FC = () => {
                                             </button>
                                             <button
                                               onClick={() => applyInspectorAnalyzeCommand(idx)}
-                                              className="inline-flex w-[58px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-emerald-300/35 bg-emerald-400/16 text-[9px] text-emerald-100 hover:bg-emerald-400/26 transition-colors"
+                                              className="inline-flex w-[58px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-emerald-300/35 bg-emerald-400/16 text-xs text-emerald-100 hover:bg-emerald-400/26 transition-colors"
                                               title={`${idx + 1}번 커맨드 실행 (R)`}
                                             >
                                               <TerminalSquare size={9} />
@@ -2573,7 +2573,7 @@ const App: React.FC = () => {
                                             ref={(el) => { inspectorMenuFirstActionRefs.current[idx] = el; }}
                                             role="menuitem"
                                             onClick={() => copyInspectorSuggestedCommand(idx)}
-                                            className="inline-flex w-[72px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-white/22 bg-white/[0.05] text-[9px] text-white/76 hover:text-white hover:bg-white/[0.12] transition-colors"
+                                            className="inline-flex w-[72px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-white/22 bg-white/[0.05] text-xs text-white/76 hover:text-white hover:bg-white/[0.12] transition-colors"
                                             title={`${idx + 1}번 커맨드 복사 (C)`}
                                           >
                                             <Copy size={9} />
@@ -2582,7 +2582,7 @@ const App: React.FC = () => {
                                           <button
                                             role="menuitem"
                                             onClick={() => loadInspectorSuggestedCommandToAiBar(idx)}
-                                            className="inline-flex w-[72px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-accent/35 bg-accent/14 text-[9px] text-accent hover:bg-accent/24 transition-colors"
+                                            className="inline-flex w-[72px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-accent/35 bg-accent/14 text-xs text-accent hover:bg-accent/24 transition-colors"
                                             title={`${idx + 1}번 커맨드 AI 입력바 로드 (L)`}
                                           >
                                             <Search size={9} />
@@ -2600,7 +2600,7 @@ const App: React.FC = () => {
                                 <button
                                   onClick={() => applyInspectorAnalyzeCommand(0)}
                                   title="첫 번째 추천 커맨드 실행 (R)"
-                                  className="inline-flex w-[74px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-emerald-300/35 bg-emerald-400/16 text-[9px] text-emerald-100 hover:bg-emerald-400/26 transition-colors"
+                                  className="inline-flex w-[74px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-emerald-300/35 bg-emerald-400/16 text-xs text-emerald-100 hover:bg-emerald-400/26 transition-colors"
                                 >
                                   <TerminalSquare size={9} />
                                   RUN #1
@@ -2608,7 +2608,7 @@ const App: React.FC = () => {
                                 <button
                                   onClick={copyInspectorAnalyzeResult}
                                   title="분석 결과 전체 복사"
-                                  className="inline-flex w-[64px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-white/20 bg-white/[0.05] text-[9px] text-white/76 hover:text-white hover:bg-white/[0.12] transition-colors"
+                                  className="inline-flex w-[64px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-white/20 bg-white/[0.05] text-xs text-white/76 hover:text-white hover:bg-white/[0.12] transition-colors"
                                 >
                                   <Copy size={9} />
                                   COPY
@@ -2621,10 +2621,10 @@ const App: React.FC = () => {
                     )}
                     {!inspectorHasNoActivity && inspectorRecentBlocks.length > 0 && (
                       <div className={inspectorCardRegularClass}>
-                        <p className="text-white/45 uppercase tracking-[0.06em] text-[10px]">Recent Blocks</p>
+                        <p className="text-white/45 uppercase tracking-[0.06em] text-xs">Recent Blocks</p>
                         {inspectorRecentBlocks.map((block) => (
                           <div key={block.id} className="flex items-start gap-2 rounded-md border border-white/[0.08] bg-black/20 px-2 py-1.5">
-                            <span className={`mt-0.5 inline-flex items-center justify-center text-[9px] px-1.5 py-0.5 rounded ${
+                            <span className={`mt-0.5 inline-flex items-center justify-center text-xs px-1.5 py-0.5 rounded ${
                               block.exitCode === 0 || block.exitCode == null
                                 ? "bg-emerald-400/16 text-emerald-200"
                                 : "bg-rose-400/18 text-rose-200"
@@ -2633,25 +2633,25 @@ const App: React.FC = () => {
                             </span>
                             <div className="min-w-0 flex-1">
                               <p className="text-white/80 truncate">{block.command}</p>
-                              <p className="text-white/44 text-[10px] inline-flex items-center gap-1 mt-0.5">
+                              <p className="text-white/44 text-xs inline-flex items-center gap-1 mt-0.5">
                                 <Clock3 size={10} />
                                 {formatDurationMs(block.durationMs)}
                               </p>
                               {block.outputTail && (
-                                <p className="text-[10px] text-white/36 font-mono truncate mt-0.5">{block.outputTail}</p>
+                                <p className="text-xs text-white/36 font-mono truncate mt-0.5">{block.outputTail}</p>
                               )}
                             </div>
                             <div className="flex items-center gap-1 shrink-0">
                               <button
                                 onClick={() => selectInspectorBlock(block.id)}
-                                className="inline-flex w-[56px] justify-center items-center px-1.5 py-0.5 rounded border border-white/12 bg-white/[0.05] text-[9px] text-white/68 hover:text-white hover:bg-white/[0.11] transition-colors"
+                                className="inline-flex w-[56px] justify-center items-center px-1.5 py-0.5 rounded border border-white/12 bg-white/[0.05] text-xs text-white/68 hover:text-white hover:bg-white/[0.11] transition-colors"
                                 title="이 블록 선택"
                               >
                                 SEL
                               </button>
                               <button
                                 onClick={() => rerunInspectorBlock(block.command)}
-                                className="inline-flex w-[64px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-cyan-300/30 bg-cyan-400/14 text-[9px] text-cyan-100 hover:bg-cyan-400/24 transition-colors"
+                                className="inline-flex w-[64px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-cyan-300/30 bg-cyan-400/14 text-xs text-cyan-100 hover:bg-cyan-400/24 transition-colors"
                                 title="명령 재실행"
                               >
                                 <RotateCcw size={9} />
@@ -2660,7 +2660,7 @@ const App: React.FC = () => {
                               {block.exitCode !== 0 && block.exitCode != null && (
                                 <button
                                   onClick={() => loadInspectorAnalyzePromptToAiBar(block.id)}
-                                  className="inline-flex w-[68px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-accent/35 bg-accent/14 text-[9px] text-accent hover:bg-accent/24 transition-colors"
+                                  className="inline-flex w-[68px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-accent/35 bg-accent/14 text-xs text-accent hover:bg-accent/24 transition-colors"
                                   title="실패 분석 프롬프트 로드"
                                 >
                                   <Search size={9} />
@@ -2673,7 +2673,7 @@ const App: React.FC = () => {
                       </div>
                     )}
                     <div className={inspectorCardRegularClass}>
-                      <p className="text-white/45 uppercase tracking-[0.06em] text-[10px]">Quick Actions</p>
+                      <p className="text-white/45 uppercase tracking-[0.06em] text-xs">Quick Actions</p>
                       <div className={inspectorQuickGridClass}>
                         <button
                           type="button"
@@ -2682,7 +2682,7 @@ const App: React.FC = () => {
                             invoke("save_ui_preferences", { showFileExplorer: next }).catch(() => {});
                             return next;
                           })}
-                          className="inline-flex w-full h-7 items-center gap-1.5 px-2 rounded-md text-[10.5px] border border-white/12 bg-white/[0.05] text-white/74 hover:text-white hover:bg-white/[0.1] transition-colors"
+                          className="inline-flex w-full h-7 items-center gap-1.5 px-2 rounded-md text-xs border border-white/12 bg-white/[0.05] text-white/74 hover:text-white hover:bg-white/[0.1] transition-colors"
                         >
                           <FolderTree size={11} />
                           Project Bin
@@ -2693,7 +2693,7 @@ const App: React.FC = () => {
                             setShowWorkspace(true);
                             loadWorkspaces();
                           }}
-                          className="inline-flex w-full h-7 items-center gap-1.5 px-2 rounded-md text-[10.5px] border border-white/12 bg-white/[0.05] text-white/74 hover:text-white hover:bg-white/[0.1] transition-colors"
+                          className="inline-flex w-full h-7 items-center gap-1.5 px-2 rounded-md text-xs border border-white/12 bg-white/[0.05] text-white/74 hover:text-white hover:bg-white/[0.1] transition-colors"
                         >
                           <Layers size={11} />
                           Workspace
@@ -2701,7 +2701,7 @@ const App: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => openInspectorTab("rag")}
-                          className="inline-flex w-full h-7 items-center gap-1.5 px-2 rounded-md text-[10.5px] border border-white/12 bg-white/[0.05] text-white/74 hover:text-white hover:bg-white/[0.1] transition-colors"
+                          className="inline-flex w-full h-7 items-center gap-1.5 px-2 rounded-md text-xs border border-white/12 bg-white/[0.05] text-white/74 hover:text-white hover:bg-white/[0.1] transition-colors"
                         >
                           <Library size={11} />
                           RAG
@@ -2714,7 +2714,7 @@ const App: React.FC = () => {
                           ref={inspectorQuickActionsToggleRef}
                           onKeyDown={handleInspectorQuickActionsToggleKeyDown}
                           onClick={handleInspectorQuickActionsToggle}
-                          className="inline-flex w-full h-7 items-center gap-1.5 px-2 rounded-md text-[10.5px] border border-white/12 bg-white/[0.05] text-white/74 hover:text-white hover:bg-white/[0.1] transition-colors"
+                          className="inline-flex w-full h-7 items-center gap-1.5 px-2 rounded-md text-xs border border-white/12 bg-white/[0.05] text-white/74 hover:text-white hover:bg-white/[0.1] transition-colors"
                         >
                           {showInspectorQuickActionsExpanded ? "축소" : "더보기"}
                         </button>
@@ -2737,7 +2737,7 @@ const App: React.FC = () => {
                                 <button
                                   type="button"
                                   onClick={() => setShowHistorySearch(true)}
-                                  className="inline-flex w-full h-7 items-center gap-1.5 px-2 rounded-md text-[10.5px] border border-white/12 bg-white/[0.05] text-white/74 hover:text-white hover:bg-white/[0.1] transition-colors"
+                                  className="inline-flex w-full h-7 items-center gap-1.5 px-2 rounded-md text-xs border border-white/12 bg-white/[0.05] text-white/74 hover:text-white hover:bg-white/[0.1] transition-colors"
                                 >
                                   <Search size={11} />
                                   History
@@ -2745,7 +2745,7 @@ const App: React.FC = () => {
                                 <button
                                   type="button"
                                   onClick={() => setShowDiffReview(true)}
-                                  className="inline-flex w-full h-7 items-center gap-1.5 px-2 rounded-md text-[10.5px] border border-white/12 bg-white/[0.05] text-white/74 hover:text-white hover:bg-white/[0.1] transition-colors"
+                                  className="inline-flex w-full h-7 items-center gap-1.5 px-2 rounded-md text-xs border border-white/12 bg-white/[0.05] text-white/74 hover:text-white hover:bg-white/[0.1] transition-colors"
                                 >
                                   <GitCompareArrows size={11} />
                                   Diff
@@ -2753,7 +2753,7 @@ const App: React.FC = () => {
                                 <button
                                   type="button"
                                   onClick={focusFailedBlock}
-                                  className="inline-flex w-full h-7 items-center gap-1.5 px-2 rounded-md text-[10.5px] border border-rose-300/30 bg-rose-400/12 text-rose-100 hover:bg-rose-400/20 transition-colors"
+                                  className="inline-flex w-full h-7 items-center gap-1.5 px-2 rounded-md text-xs border border-rose-300/30 bg-rose-400/12 text-rose-100 hover:bg-rose-400/20 transition-colors"
                                 >
                                   <AlertTriangle size={11} />
                                   Failed
@@ -2761,14 +2761,14 @@ const App: React.FC = () => {
                                 <button
                                   type="button"
                                   onClick={() => openInspectorTab("scripts")}
-                                  className="inline-flex w-full h-7 items-center gap-1.5 px-2 rounded-md text-[10.5px] border border-white/12 bg-white/[0.05] text-white/74 hover:text-white hover:bg-white/[0.1] transition-colors"
+                                  className="inline-flex w-full h-7 items-center gap-1.5 px-2 rounded-md text-xs border border-white/12 bg-white/[0.05] text-white/74 hover:text-white hover:bg-white/[0.1] transition-colors"
                                 >
                                   Scripts
                                 </button>
                                 <button
                                   type="button"
                                   onClick={() => openInspectorTab("sysmon")}
-                                  className="inline-flex w-full h-7 items-center gap-1.5 px-2 rounded-md text-[10.5px] border border-white/12 bg-white/[0.05] text-white/74 hover:text-white hover:bg-white/[0.1] transition-colors"
+                                  className="inline-flex w-full h-7 items-center gap-1.5 px-2 rounded-md text-xs border border-white/12 bg-white/[0.05] text-white/74 hover:text-white hover:bg-white/[0.1] transition-colors"
                                 >
                                   <Activity size={11} />
                                   System
@@ -2872,7 +2872,7 @@ const App: React.FC = () => {
                 />
                 {isProcessing && <Loader2 size={12} className="animate-spin text-white/40 shrink-0" />}
               </div>
-              <p className="text-[10px] text-white/30 text-center mt-1.5 tracking-wide">Esc 또는 Cmd/Ctrl+Shift+K 로 닫기</p>
+              <p className="text-xs text-white/30 text-center mt-1.5 tracking-wide">Esc 또는 Cmd/Ctrl+Shift+K 로 닫기</p>
             </div>
           </motion.div>
         )}

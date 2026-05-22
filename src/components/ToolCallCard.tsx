@@ -78,7 +78,7 @@ const ToolCallCard: React.FC<Props> = ({ call, onAskAIWithResult, visionEnabled 
   return (
     <div className="my-2 rounded-lg border border-accent/25 bg-accent/[0.03] overflow-hidden">
       <div className="flex items-center justify-between px-3 py-1.5 bg-accent/5 border-b border-accent/10">
-        <div className="flex items-center gap-2 text-[12px]">
+        <div className="flex items-center gap-2 text-xs">
           <Wrench size={12} className="text-accent/70" />
           <span className="font-mono text-accent/90">{call.server}</span>
           <span className="text-white/30">·</span>

@@ -226,7 +226,7 @@ const RecallRow: React.FC<{
         <span className="text-xs text-white/30 tabular-nums shrink-0">{fmtShortDate(entry.ts_ms, "ms")}</span>
       </summary>
       <div className="px-3 pb-2.5 pt-0.5 space-y-1.5 text-sm border-t border-white/5">
-        <pre className="text-white/70 font-mono whitespace-pre-wrap text-[10.5px] bg-black/20 rounded px-2 py-1.5 max-h-32 overflow-y-auto">{entry.snippet}</pre>
+        <pre className="text-white/70 font-mono whitespace-pre-wrap text-xs bg-black/20 rounded px-2 py-1.5 max-h-32 overflow-y-auto">{entry.snippet}</pre>
         {entry.metadata !== null && typeof entry.metadata === "object" && Object.keys(entry.metadata as object).length > 0 && (
           <pre className="text-white/40 font-mono text-xs bg-white/3 rounded px-2 py-1 overflow-x-auto">{JSON.stringify(entry.metadata, null, 2)}</pre>
         )}

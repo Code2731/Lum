@@ -89,7 +89,7 @@ const EditBlockCard: React.FC<Props> = ({ block, cwd, onAskAIForFix }) => {
   return (
     <div className="my-2 rounded-lg border border-accent/20 bg-white/[0.02] overflow-hidden">
       <div className="flex items-center justify-between px-3 py-1.5 bg-accent/5 border-b border-accent/10">
-        <div className="flex items-center gap-2 text-[12px]">
+        <div className="flex items-center gap-2 text-xs">
           <FileCode size={13} className="text-accent/70" />
           <span className="font-mono text-accent/90">{block.file}</span>
           <span className="text-white/30 text-sm">
