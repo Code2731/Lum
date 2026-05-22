@@ -230,6 +230,12 @@ describe("WarpInputBar — dumb input, 라우팅은 상위에서", () => {
     expect(onInterrupt).toHaveBeenCalled();
   });
 
+  it("빈 입력 Ctrl+Alt+C는 onInterrupt하지 않는다", () => {
+    const { input, onInterrupt } = setup();
+    fireEvent.keyDown(input, { key: "c", ctrlKey: true, altKey: true });
+    expect(onInterrupt).not.toHaveBeenCalled();
+  });
+
   it("backend prefix-only 상태의 Ctrl+C도 onInterrupt", () => {
     const { input, onInterrupt } = setup();
     fireEvent.change(input, { target: { value: "@local " } });
