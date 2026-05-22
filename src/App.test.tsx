@@ -127,6 +127,13 @@ describe("App (LUM 터미널)", () => {
     expect(screen.queryByPlaceholderText(/탭, 워크스페이스, 액션, 히스토리 검색/)).not.toBeInTheDocument();
   });
 
+  it("Cmd/Ctrl+Alt+K는 커맨드 팔레트 단축키로 처리되지 않는다", () => {
+    render(<App />);
+
+    fireEvent.keyDown(window, { key: "k", metaKey: true, altKey: true });
+    expect(screen.queryByPlaceholderText(/탭, 워크스페이스, 액션, 히스토리 검색/)).not.toBeInTheDocument();
+  });
+
   it("Ctrl+B는 파일 탐색기 토글을 실행한다", async () => {
     render(<App />);
     const initiallyVisible = screen.queryByTestId("file-explorer-mock") !== null;
