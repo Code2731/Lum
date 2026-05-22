@@ -531,6 +531,27 @@ describe("App (LUM 터미널)", () => {
     expect(screen.queryByText("터미널 테마 설정")).not.toBeInTheDocument();
   });
 
+  it("Cmd/Ctrl+Shift+Q는 Quick Actions 바를 토글한다", () => {
+    render(<App />);
+
+    expect(screen.getByText("빠른 실행 없음 · 오른쪽 설정에서 추가")).toBeInTheDocument();
+
+    fireEvent.keyDown(window, { key: "q", metaKey: true, shiftKey: true });
+    expect(screen.queryByText("빠른 실행 없음 · 오른쪽 설정에서 추가")).not.toBeInTheDocument();
+
+    fireEvent.keyDown(window, { key: "q", metaKey: true, shiftKey: true });
+    expect(screen.getByText("빠른 실행 없음 · 오른쪽 설정에서 추가")).toBeInTheDocument();
+  });
+
+  it("Ctrl+Alt+Shift+Q는 Quick Actions 바 단축키로 처리되지 않는다", () => {
+    render(<App />);
+
+    expect(screen.getByText("빠른 실행 없음 · 오른쪽 설정에서 추가")).toBeInTheDocument();
+
+    fireEvent.keyDown(window, { key: "q", ctrlKey: true, altKey: true, shiftKey: true });
+    expect(screen.getByText("빠른 실행 없음 · 오른쪽 설정에서 추가")).toBeInTheDocument();
+  });
+
   it("AI Chat 버튼은 제거됨 — AI는 WarpInputBar로 통합", () => {
     render(<App />);
     expect(screen.queryByLabelText("AI Chat (Cmd+Shift+A)")).toBeNull();
