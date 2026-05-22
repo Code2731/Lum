@@ -1370,17 +1370,17 @@ const WarpListView: React.FC<Props> = ({
         }
         return;
       }
-      if (e.altKey && e.key === "ArrowUp") {
+      if (e.altKey && !mod && e.key === "ArrowUp") {
         e.preventDefault();
         navigateSelectedTimeline(-1);
         return;
       }
-      if (e.altKey && e.key === "ArrowDown") {
+      if (e.altKey && !mod && e.key === "ArrowDown") {
         e.preventDefault();
         navigateSelectedTimeline(1);
         return;
       }
-      if (e.altKey && e.key === "Enter") {
+      if (e.altKey && !mod && e.key === "Enter") {
         e.preventDefault();
         navigateSelectedTimeline(1);
         return;
