@@ -1328,28 +1328,28 @@ const WarpListView: React.FC<Props> = ({
         }
         return;
       }
-      if (e.altKey && e.shiftKey && key === "p") {
+      if (e.altKey && !mod && e.shiftKey && key === "p") {
         if (timelineFiltered.length > 0) {
           e.preventDefault();
           pinFilteredTimeline();
         }
         return;
       }
-      if (e.altKey && e.shiftKey && key === "o") {
+      if (e.altKey && !mod && e.shiftKey && key === "o") {
         if (timelineFiltered.length > 0) {
           e.preventDefault();
           unpinFilteredTimeline();
         }
         return;
       }
-      if (mod && e.shiftKey && key === "p") {
+      if (mod && !e.altKey && e.shiftKey && key === "p") {
         if (timelineFiltered.length > 0) {
           e.preventDefault();
           pinFilteredTimeline();
         }
         return;
       }
-      if (mod && e.shiftKey && key === "o") {
+      if (mod && !e.altKey && e.shiftKey && key === "o") {
         if (timelineFiltered.length > 0) {
           e.preventDefault();
           unpinFilteredTimeline();
