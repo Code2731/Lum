@@ -1133,14 +1133,14 @@ const WarpListView: React.FC<Props> = ({
         }
         return;
       }
-      if (e.altKey && key === "r") {
+      if (e.altKey && !mod && key === "r") {
         if (timelineViewCustomized) {
           e.preventDefault();
           resetTimelineViewFilters();
         }
         return;
       }
-      if (mod && !e.shiftKey && key === "r") {
+      if (mod && !e.shiftKey && !e.altKey && key === "r") {
         if (timelineViewCustomized) {
           e.preventDefault();
           resetTimelineViewFilters();
