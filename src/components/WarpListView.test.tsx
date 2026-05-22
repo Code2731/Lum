@@ -3565,6 +3565,28 @@ describe("WarpListView delta actions", () => {
     expect(screen.getByText("PIN")).toBeInTheDocument();
   });
 
+  it("Δ Timeline 선택 항목 핀 단축키는 Ctrl+Alt+J 조합에서 동작하지 않는다", () => {
+    render(
+      <WarpListView
+        blocks={blocks}
+        compareResultByBlock={{
+          b2: {
+            added: 1,
+            removed: 1,
+            preview: "test changed",
+            addedLines: ["new line"],
+            removedLines: ["old line"],
+            comparedAt: now,
+          },
+        }}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Δ Timeline (1)" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "npm test 선택" }));
+    fireEvent.keyDown(window, { key: "j", ctrlKey: true, altKey: true });
+    expect(screen.queryByText("PIN")).not.toBeInTheDocument();
+  });
+
   it("Δ Timeline 선택 항목 핀해제 단축키(Ctrl+Shift+J)", () => {
     render(
       <WarpListView
