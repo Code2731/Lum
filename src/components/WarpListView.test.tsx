@@ -2098,6 +2098,31 @@ describe("WarpListView delta actions", () => {
     expect(onToggleRetryCompareQueuePaused).toHaveBeenCalledTimes(1);
   });
 
+  it("Retry+Compare 큐 일시정지 단축키는 Ctrl+Alt+P 조합에서 동작하지 않는다", () => {
+    const onToggleRetryCompareQueuePaused = vi.fn();
+    render(
+      <WarpListView
+        blocks={blocks}
+        retryCompareQueueDepth={2}
+        retryCompareQueueWaiting={2}
+        onToggleRetryCompareQueuePaused={onToggleRetryCompareQueuePaused}
+        compareResultByBlock={{
+          b2: {
+            added: 1,
+            removed: 1,
+            preview: "test changed",
+            addedLines: ["new line"],
+            removedLines: ["old line"],
+            comparedAt: now,
+          },
+        }}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Δ Timeline (1)" }));
+    fireEvent.keyDown(window, { key: "p", ctrlKey: true, altKey: true });
+    expect(onToggleRetryCompareQueuePaused).toHaveBeenCalledTimes(0);
+  });
+
   it("Retry+Compare 큐 상세 목록/개별 제거", () => {
     const onRemoveRetryCompareQueueItem = vi.fn();
     const onPromoteRetryCompareQueueItem = vi.fn();
@@ -2570,6 +2595,30 @@ describe("WarpListView delta actions", () => {
     fireEvent.click(screen.getByRole("button", { name: "Δ Timeline (1)" }));
     fireEvent.keyDown(window, { key: "d", altKey: true });
     expect(onResetRetryCompareCompletedCount).toHaveBeenCalledTimes(1);
+  });
+
+  it("Retry+Compare 완료 카운트 리셋 단축키는 Ctrl+Alt+D 조합에서 동작하지 않는다", () => {
+    const onResetRetryCompareCompletedCount = vi.fn();
+    render(
+      <WarpListView
+        blocks={blocks}
+        retryCompareCompletedCount={5}
+        onResetRetryCompareCompletedCount={onResetRetryCompareCompletedCount}
+        compareResultByBlock={{
+          b2: {
+            added: 1,
+            removed: 1,
+            preview: "test changed",
+            addedLines: ["new line"],
+            removedLines: ["old line"],
+            comparedAt: now,
+          },
+        }}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Δ Timeline (1)" }));
+    fireEvent.keyDown(window, { key: "d", ctrlKey: true, altKey: true });
+    expect(onResetRetryCompareCompletedCount).toHaveBeenCalledTimes(0);
   });
 
   it("Δ Timeline 선택 후 Copy Selected가 선택 항목만 복사", () => {

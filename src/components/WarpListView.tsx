@@ -1356,14 +1356,14 @@ const WarpListView: React.FC<Props> = ({
         }
         return;
       }
-      if (e.altKey && key === "d") {
+      if (e.altKey && !mod && key === "d") {
         if (onResetRetryCompareCompletedCount) {
           e.preventDefault();
           onResetRetryCompareCompletedCount();
         }
         return;
       }
-      if (e.altKey && key === "p") {
+      if (e.altKey && !mod && key === "p") {
         if (onToggleRetryCompareQueuePaused) {
           e.preventDefault();
           onToggleRetryCompareQueuePaused();
