@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { invoke } from "@tauri-apps/api/core";
+import { useCommandBlocks } from "./hooks/useCommandBlocks";
 import App from "./App";
 
 vi.mock("@tauri-apps/api/core", () => ({
@@ -54,11 +55,32 @@ vi.mock("./components/TerminalPane", () => ({
   ),
 }));
 
+vi.mock("./hooks/useCommandBlocks", () => ({
+  useCommandBlocks: vi.fn(),
+}));
+
 describe("App (LUM 터미널)", () => {
   const mockedInvoke = vi.mocked(invoke);
+  const mockedUseCommandBlocks = vi.mocked(useCommandBlocks);
+
+  const setMockCommandBlocks = (blocks: Array<{
+    id: string;
+    command: string;
+    output: string;
+    exitCode: number | null;
+    startedAt: number;
+    endedAt: number | null;
+  }>) => {
+    mockedUseCommandBlocks.mockReturnValue({
+      blocks,
+      feedRaw: vi.fn(),
+      clearBlocks: vi.fn(),
+    });
+  };
 
   beforeEach(() => {
     mockedInvoke.mockClear();
+    setMockCommandBlocks([]);
   });
 
   it("Phase 66 이후 헤더에 LUM 텍스트 로고 제거됨 — 아이콘만 사용", () => {
@@ -599,6 +621,122 @@ describe("App (LUM 터미널)", () => {
       fireEvent.keyDown(window, { key: "M", metaKey: true, shiftKey: true, altKey: true });
       await waitFor(() => {
         expect(screen.getAllByText("시스템 모니터").length).toBe(beforeCount);
+      });
+    } finally {
+      mockedInvoke.mockImplementation(baseImpl);
+    }
+  });
+
+  it("Cmd/Ctrl+Shift+F는 실패 블록을 순환 포커스한다", async () => {
+    setMockCommandBlocks([
+      {
+        id: "cmd-1",
+        command: "echo ok",
+        output: "ok output",
+        exitCode: 0,
+        startedAt: 1,
+        endedAt: 2,
+      },
+      {
+        id: "cmd-2",
+        command: "npm run test",
+        output: "exit 1",
+        exitCode: 1,
+        startedAt: 3,
+        endedAt: 4,
+      },
+      {
+        id: "cmd-3",
+        command: "make build",
+        output: "exit 2",
+        exitCode: 2,
+        startedAt: 5,
+        endedAt: 6,
+      },
+    ]);
+
+    render(<App />);
+
+    fireEvent.keyDown(window, { key: "f", metaKey: true, shiftKey: true });
+    expect(await screen.findByText("3/3")).toBeInTheDocument();
+    expect(screen.getByLabelText("이전 블록 (Cmd/Ctrl+Shift+↑)")).not.toBeDisabled();
+    expect(screen.getByLabelText("다음 블록 (Cmd/Ctrl+Shift+↓)")).toBeDisabled();
+
+    fireEvent.keyDown(window, { key: "f", metaKey: true, shiftKey: true });
+    await waitFor(() => {
+      expect(screen.getByText("2/3")).toBeInTheDocument();
+      expect(screen.getByLabelText("이전 블록 (Cmd/Ctrl+Shift+↑)")).not.toBeDisabled();
+      expect(screen.getByLabelText("다음 블록 (Cmd/Ctrl+Shift+↓)")).not.toBeDisabled();
+    });
+  });
+
+  it("Cmd/Ctrl+Shift+ArrowUp/ArrowDown는 커맨드 블록 선택 인덱스를 이동한다", async () => {
+    setMockCommandBlocks([
+      {
+        id: "cmd-1",
+        command: "echo one",
+        output: "one output",
+        exitCode: 0,
+        startedAt: 10,
+        endedAt: 11,
+      },
+      {
+        id: "cmd-2",
+        command: "echo two",
+        output: "two output",
+        exitCode: 0,
+        startedAt: 12,
+        endedAt: 13,
+      },
+      {
+        id: "cmd-3",
+        command: "echo three",
+        output: "three output",
+        exitCode: 0,
+        startedAt: 14,
+        endedAt: 15,
+      },
+    ]);
+
+    render(<App />);
+
+    fireEvent.keyDown(window, { key: "ArrowDown", metaKey: true, shiftKey: true });
+    expect(await screen.findByText("3/3")).toBeInTheDocument();
+    expect(screen.getByLabelText("다음 블록 (Cmd/Ctrl+Shift+↓)")).toBeDisabled();
+
+    fireEvent.keyDown(window, { key: "ArrowUp", metaKey: true, shiftKey: true });
+    await waitFor(() => {
+      expect(screen.getByText("2/3")).toBeInTheDocument();
+      expect(screen.getByLabelText("다음 블록 (Cmd/Ctrl+Shift+↓)")).not.toBeDisabled();
+    });
+  });
+
+  it("Cmd/Ctrl+Shift+O는 워크스페이스 패널을 열고, Alt 조합은 처리되지 않는다", async () => {
+    const baseImpl = mockedInvoke.getMockImplementation() as
+      ((cmd: string, args?: unknown, options?: unknown) => Promise<unknown>);
+    if (!baseImpl) throw new Error("invoke mock implementation not found");
+
+    mockedInvoke.mockImplementation((cmd: string, ...args: unknown[]) => {
+      if (cmd === "load_app_config") {
+        return Promise.resolve({});
+      }
+      if (cmd === "list_workspaces") {
+        return Promise.resolve([]);
+      }
+      return baseImpl(cmd, args[0], args[1]);
+    });
+
+    try {
+      render(<App />);
+
+      fireEvent.keyDown(window, { key: "O", metaKey: true, shiftKey: true });
+      expect(await screen.findByText("현재 세션 저장")).toBeInTheDocument();
+      expect(screen.getByText("워크스페이스")).toBeInTheDocument();
+
+      const beforeCount = screen.getAllByText("현재 세션 저장").length;
+      fireEvent.keyDown(window, { key: "O", metaKey: true, shiftKey: true, altKey: true });
+      await waitFor(() => {
+        expect(screen.getAllByText("현재 세션 저장").length).toBe(beforeCount);
       });
     } finally {
       mockedInvoke.mockImplementation(baseImpl);
