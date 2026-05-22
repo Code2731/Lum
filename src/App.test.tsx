@@ -144,6 +144,22 @@ describe("App (LUM 터미널)", () => {
     });
   });
 
+  it("Ctrl+Shift+D는 수평 분할 토글이 동작한다", async () => {
+    render(<App />);
+    const splitBtn = screen.getByLabelText("수평 분할 (Cmd/Ctrl+Shift+D)");
+    const before = splitBtn.getAttribute("aria-pressed");
+
+    fireEvent.keyDown(window, { key: "D", ctrlKey: true, shiftKey: true });
+    await waitFor(() => {
+      expect(splitBtn).toHaveAttribute("aria-pressed", before === "true" ? "false" : "true");
+    });
+
+    fireEvent.keyDown(window, { key: "d", ctrlKey: true, shiftKey: true });
+    await waitFor(() => {
+      expect(splitBtn).toHaveAttribute("aria-pressed", before ?? "false");
+    });
+  });
+
   it("Cmd/Ctrl+Shift+E는 수직 분할 토글이 동작한다", async () => {
     render(<App />);
     const splitBtn = screen.getByLabelText("수직 분할 (Cmd/Ctrl+Shift+E)");
@@ -155,6 +171,22 @@ describe("App (LUM 터미널)", () => {
     });
 
     fireEvent.keyDown(window, { key: "e", metaKey: true, shiftKey: true });
+    await waitFor(() => {
+      expect(splitBtn).toHaveAttribute("aria-pressed", before ?? "false");
+    });
+  });
+
+  it("Ctrl+Shift+E는 수직 분할 토글이 동작한다", async () => {
+    render(<App />);
+    const splitBtn = screen.getByLabelText("수직 분할 (Cmd/Ctrl+Shift+E)");
+    const before = splitBtn.getAttribute("aria-pressed");
+
+    fireEvent.keyDown(window, { key: "E", ctrlKey: true, shiftKey: true });
+    await waitFor(() => {
+      expect(splitBtn).toHaveAttribute("aria-pressed", before === "true" ? "false" : "true");
+    });
+
+    fireEvent.keyDown(window, { key: "e", ctrlKey: true, shiftKey: true });
     await waitFor(() => {
       expect(splitBtn).toHaveAttribute("aria-pressed", before ?? "false");
     });
@@ -555,6 +587,19 @@ describe("App (LUM 터미널)", () => {
     });
   });
 
+  it("Ctrl+Shift+G는 커밋 패널을 열고, Alt 조합은 처리되지 않는다", async () => {
+    render(<App />);
+
+    fireEvent.keyDown(window, { key: "G", ctrlKey: true, shiftKey: true });
+    expect(await screen.findByText("AI 커밋 메시지 생성")).toBeInTheDocument();
+
+    const beforeCount = screen.getAllByText("AI 커밋 메시지 생성").length;
+    fireEvent.keyDown(window, { key: "G", ctrlKey: true, shiftKey: true, altKey: true });
+    await waitFor(() => {
+      expect(screen.getAllByText("AI 커밋 메시지 생성").length).toBe(beforeCount);
+    });
+  });
+
   it("Cmd/Ctrl+Shift+S는 워크스페이스 패널을 열고, Ctrl/Cmd+Alt+Shift+S는 처리되지 않는다", async () => {
     const baseImpl = mockedInvoke.getMockImplementation() as
       ((cmd: string, args?: unknown, options?: unknown) => Promise<unknown>);
@@ -581,6 +626,15 @@ describe("App (LUM 터미널)", () => {
       fireEvent.keyDown(window, { key: "S", metaKey: true, shiftKey: true, altKey: true });
       await waitFor(() => {
         expect(screen.getAllByText("현재 세션 저장").length).toBe(beforeCount);
+      });
+
+      fireEvent.keyDown(window, { key: "S", ctrlKey: true, shiftKey: true });
+      expect(await screen.findByText("현재 세션 저장")).toBeInTheDocument();
+      const beforeCountWithCtrl = screen.getAllByText("현재 세션 저장").length;
+
+      fireEvent.keyDown(window, { key: "S", ctrlKey: true, shiftKey: true, altKey: true });
+      await waitFor(() => {
+        expect(screen.getAllByText("현재 세션 저장").length).toBe(beforeCountWithCtrl);
       });
     } finally {
       mockedInvoke.mockImplementation(baseImpl);
@@ -627,6 +681,46 @@ describe("App (LUM 터미널)", () => {
     }
   });
 
+  it("Ctrl+Shift+M는 시스템 모니터 패널을 열고, Alt 조합은 처리되지 않는다", async () => {
+    const baseImpl = mockedInvoke.getMockImplementation() as
+      ((cmd: string, args?: unknown, options?: unknown) => Promise<unknown>);
+    if (!baseImpl) throw new Error("invoke mock implementation not found");
+
+    mockedInvoke.mockImplementation((cmd: string, ...args: unknown[]) => {
+      if (cmd === "get_system_stats") {
+        return Promise.resolve({
+          cpu_usage: 21.0,
+          memory_used_gb: 6.9,
+          memory_total_gb: 16,
+          memory_percent: 43.125,
+          cpu_count: 12,
+          top_cpu: [],
+          top_mem: [],
+        });
+      }
+      if (cmd === "load_app_config") {
+        return Promise.resolve({});
+      }
+      return baseImpl(cmd, args[0], args[1]);
+    });
+
+    try {
+      render(<App />);
+
+      fireEvent.keyDown(window, { key: "M", ctrlKey: true, shiftKey: true });
+      expect(await screen.findByText("시스템 모니터")).toBeInTheDocument();
+      expect(screen.getByText("21.0%")).toBeInTheDocument();
+
+      const beforeCount = screen.getAllByText("시스템 모니터").length;
+      fireEvent.keyDown(window, { key: "M", ctrlKey: true, shiftKey: true, altKey: true });
+      await waitFor(() => {
+        expect(screen.getAllByText("시스템 모니터").length).toBe(beforeCount);
+      });
+    } finally {
+      mockedInvoke.mockImplementation(baseImpl);
+    }
+  });
+
   it("Cmd/Ctrl+Shift+F는 실패 블록을 순환 포커스한다", async () => {
     setMockCommandBlocks([
       {
@@ -663,6 +757,48 @@ describe("App (LUM 터미널)", () => {
     expect(screen.getByLabelText("다음 블록 (Cmd/Ctrl+Shift+↓)")).toBeDisabled();
 
     fireEvent.keyDown(window, { key: "f", metaKey: true, shiftKey: true });
+    await waitFor(() => {
+      expect(screen.getByText("2/3")).toBeInTheDocument();
+      expect(screen.getByLabelText("이전 블록 (Cmd/Ctrl+Shift+↑)")).not.toBeDisabled();
+      expect(screen.getByLabelText("다음 블록 (Cmd/Ctrl+Shift+↓)")).not.toBeDisabled();
+    });
+  });
+
+  it("Ctrl+Shift+F도 실패 블록을 순환 포커스한다", async () => {
+    setMockCommandBlocks([
+      {
+        id: "cmd-1",
+        command: "echo ok",
+        output: "ok output",
+        exitCode: 0,
+        startedAt: 1,
+        endedAt: 2,
+      },
+      {
+        id: "cmd-2",
+        command: "npm run test",
+        output: "exit 1",
+        exitCode: 1,
+        startedAt: 3,
+        endedAt: 4,
+      },
+      {
+        id: "cmd-3",
+        command: "make build",
+        output: "exit 2",
+        exitCode: 2,
+        startedAt: 5,
+        endedAt: 6,
+      },
+    ]);
+
+    render(<App />);
+
+    fireEvent.keyDown(window, { key: "f", ctrlKey: true, shiftKey: true });
+    expect(await screen.findByText("3/3")).toBeInTheDocument();
+    expect(screen.getByLabelText("이전 블록 (Cmd/Ctrl+Shift+↑)")).not.toBeDisabled();
+
+    fireEvent.keyDown(window, { key: "f", ctrlKey: true, shiftKey: true });
     await waitFor(() => {
       expect(screen.getByText("2/3")).toBeInTheDocument();
       expect(screen.getByLabelText("이전 블록 (Cmd/Ctrl+Shift+↑)")).not.toBeDisabled();
@@ -727,6 +863,7 @@ describe("App (LUM 터미널)", () => {
 
     expect(screen.getByText("1/1")).toBeInTheDocument();
     fireEvent.keyDown(window, { key: "f", metaKey: true, shiftKey: true, altKey: true });
+    fireEvent.keyDown(window, { key: "f", ctrlKey: true, shiftKey: true, altKey: true });
     expect(screen.getByText("1/1")).toBeInTheDocument();
   });
 
@@ -872,6 +1009,18 @@ describe("App (LUM 터미널)", () => {
     expect(screen.getByText("빠른 실행 없음 · 오른쪽 설정에서 추가")).toBeInTheDocument();
   });
 
+  it("Ctrl+Shift+Q도 Quick Actions 바를 토글한다", () => {
+    render(<App />);
+
+    expect(screen.getByText("빠른 실행 없음 · 오른쪽 설정에서 추가")).toBeInTheDocument();
+
+    fireEvent.keyDown(window, { key: "q", ctrlKey: true, shiftKey: true });
+    expect(screen.queryByText("빠른 실행 없음 · 오른쪽 설정에서 추가")).not.toBeInTheDocument();
+
+    fireEvent.keyDown(window, { key: "q", ctrlKey: true, shiftKey: true });
+    expect(screen.getByText("빠른 실행 없음 · 오른쪽 설정에서 추가")).toBeInTheDocument();
+  });
+
   it("Ctrl+Alt+Shift+Q는 Quick Actions 바 단축키로 처리되지 않는다", () => {
     render(<App />);
 
@@ -902,6 +1051,27 @@ describe("App (LUM 터미널)", () => {
     }
   });
 
+  it("Ctrl+Shift+L로도 스크립트 패널이 열린다", async () => {
+    const baseImpl = mockedInvoke.getMockImplementation() as
+      ((cmd: string, args?: unknown, options?: unknown) => Promise<unknown>);
+    if (!baseImpl) throw new Error("invoke mock implementation not found");
+
+    mockedInvoke.mockImplementation((cmd: string, ...args: unknown[]) => {
+      if (cmd === "list_scripts") return Promise.resolve([]);
+      if (cmd === "load_app_config") return Promise.resolve({});
+      return baseImpl(cmd, args[0], args[1]);
+    });
+
+    try {
+      render(<App />);
+
+      fireEvent.keyDown(window, { key: "L", ctrlKey: true, shiftKey: true });
+      expect(await screen.findByText("스크립트 라이브러리")).toBeInTheDocument();
+    } finally {
+      mockedInvoke.mockImplementation(baseImpl);
+    }
+  });
+
   it("Cmd+Shift+H는 SSH 연결 모달이 열리고, Alt 조합은 처리되지 않는다", async () => {
     const baseImpl = mockedInvoke.getMockImplementation() as
       ((cmd: string, args?: unknown, options?: unknown) => Promise<unknown>);
@@ -923,6 +1093,15 @@ describe("App (LUM 터미널)", () => {
       fireEvent.keyDown(window, { key: "H", metaKey: true, shiftKey: true, altKey: true });
       await waitFor(() => {
         expect(screen.getAllByText("SSH 연결").length).toBe(beforeCount);
+      });
+
+      fireEvent.keyDown(window, { key: "H", ctrlKey: true, shiftKey: true });
+      expect(await screen.findByText("SSH 연결")).toBeInTheDocument();
+
+      const beforeCountWithCtrl = screen.getAllByText("SSH 연결").length;
+      fireEvent.keyDown(window, { key: "H", ctrlKey: true, shiftKey: true, altKey: true });
+      await waitFor(() => {
+        expect(screen.getAllByText("SSH 연결").length).toBe(beforeCountWithCtrl);
       });
     } finally {
       mockedInvoke.mockImplementation(baseImpl);
