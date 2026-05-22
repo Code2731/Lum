@@ -785,6 +785,15 @@ describe("App (LUM 터미널)", () => {
       await waitFor(() => {
         expect(screen.getAllByText("현재 세션 저장").length).toBe(beforeCount);
       });
+
+      fireEvent.keyDown(window, { key: "O", ctrlKey: true, shiftKey: true });
+      expect(await screen.findByText("현재 세션 저장")).toBeInTheDocument();
+
+      const beforeCountWithCtrl = screen.getAllByText("현재 세션 저장").length;
+      fireEvent.keyDown(window, { key: "O", ctrlKey: true, shiftKey: true, altKey: true });
+      await waitFor(() => {
+        expect(screen.getAllByText("현재 세션 저장").length).toBe(beforeCountWithCtrl);
+      });
     } finally {
       mockedInvoke.mockImplementation(baseImpl);
     }
@@ -797,12 +806,30 @@ describe("App (LUM 터미널)", () => {
     expect(await screen.findByText("개요")).toBeInTheDocument();
   });
 
+  it("Ctrl+I는 Inspector 요약 탭을 연다", async () => {
+    render(<App />);
+
+    fireEvent.keyDown(window, { key: "i", ctrlKey: true });
+    expect(await screen.findByText("개요")).toBeInTheDocument();
+  });
+
   it("Cmd+Alt+I는 Inspector 토글로 처리되지 않는다", async () => {
     render(<App />);
     const inspectorButton = screen.getByLabelText("Inspector");
     const before = inspectorButton.getAttribute("aria-pressed");
 
     fireEvent.keyDown(window, { key: "i", metaKey: true, altKey: true });
+    await waitFor(() => {
+      expect(inspectorButton).toHaveAttribute("aria-pressed", before ?? "false");
+    });
+  });
+
+  it("Ctrl+Alt+I는 Inspector 토글로 처리되지 않는다", async () => {
+    render(<App />);
+    const inspectorButton = screen.getByLabelText("Inspector");
+    const before = inspectorButton.getAttribute("aria-pressed");
+
+    fireEvent.keyDown(window, { key: "i", ctrlKey: true, altKey: true });
     await waitFor(() => {
       expect(inspectorButton).toHaveAttribute("aria-pressed", before ?? "false");
     });
