@@ -89,14 +89,14 @@ const ToolCallCard: React.FC<Props> = ({ call, onAskAIWithResult, visionEnabled 
             <>
               <button
                 onClick={run}
-                className="flex items-center gap-1 px-2 py-0.5 rounded bg-accent/20 hover:bg-accent/30 text-accent text-[11px] transition-colors"
+                className="flex items-center gap-1 px-2 py-0.5 rounded bg-accent/20 hover:bg-accent/30 text-accent text-sm transition-colors"
               >
                 <Play size={10} />
                 실행
               </button>
               <button
                 onClick={() => setStatus("rejected")}
-                className="flex items-center gap-1 px-2 py-0.5 rounded text-white/40 hover:text-white/70 hover:bg-white/5 text-[11px] transition-colors"
+                className="flex items-center gap-1 px-2 py-0.5 rounded text-white/40 hover:text-white/70 hover:bg-white/5 text-sm transition-colors"
               >
                 <X size={10} />
                 거부
@@ -104,20 +104,20 @@ const ToolCallCard: React.FC<Props> = ({ call, onAskAIWithResult, visionEnabled 
             </>
           )}
           {status === "running" && (
-            <span className="flex items-center gap-1 text-accent/70 text-[11px]">
+            <span className="flex items-center gap-1 text-accent/70 text-sm">
               <Loader2 size={11} className="animate-spin" />
               실행 중…
             </span>
           )}
           {status === "done" && (
-            <span className="flex items-center gap-1 text-green-400 text-[11px]">
+            <span className="flex items-center gap-1 text-green-400 text-sm">
               <Check size={11} />
               완료
             </span>
           )}
-          {status === "rejected" && <span className="text-white/30 text-[11px]">거부됨</span>}
+          {status === "rejected" && <span className="text-white/30 text-sm">거부됨</span>}
           {status === "error" && (
-            <span className="flex items-center gap-1 text-red-400 text-[11px]">
+            <span className="flex items-center gap-1 text-red-400 text-sm">
               <AlertTriangle size={11} />
               실패
             </span>
@@ -125,7 +125,7 @@ const ToolCallCard: React.FC<Props> = ({ call, onAskAIWithResult, visionEnabled 
         </div>
       </div>
 
-      <div className="px-3 py-2 space-y-1.5 text-[11px]">
+      <div className="px-3 py-2 space-y-1.5 text-sm">
         <button
           onClick={() => setExpandedArgs((v) => !v)}
           className="flex items-center gap-1 text-white/40 hover:text-white/70 transition-colors"
@@ -134,7 +134,7 @@ const ToolCallCard: React.FC<Props> = ({ call, onAskAIWithResult, visionEnabled 
           인자 {argsParseError && <span className="text-red-400 ml-1">⚠ JSON 파싱 실패</span>}
         </button>
         {expandedArgs && (
-          <pre className="font-mono text-[10px] bg-black/30 border border-white/5 rounded p-2 overflow-x-auto whitespace-pre-wrap">
+          <pre className="font-mono text-xs bg-black/30 border border-white/5 rounded p-2 overflow-x-auto whitespace-pre-wrap">
             {JSON.stringify(call.args, null, 2)}
           </pre>
         )}
@@ -142,7 +142,7 @@ const ToolCallCard: React.FC<Props> = ({ call, onAskAIWithResult, visionEnabled 
         {error && (
           <div className="flex items-start gap-1.5 px-2 py-1.5 bg-red-500/10 border border-red-500/20 rounded text-red-300">
             <AlertTriangle size={11} className="mt-0.5 shrink-0" />
-            <div className="font-mono whitespace-pre-wrap break-all text-[10px]">{error}</div>
+            <div className="font-mono whitespace-pre-wrap break-all text-xs">{error}</div>
           </div>
         )}
 
@@ -163,7 +163,7 @@ const ToolCallCard: React.FC<Props> = ({ call, onAskAIWithResult, visionEnabled 
                     return (
                       <pre
                         key={i}
-                        className="font-mono text-[10px] bg-black/30 border border-white/5 rounded p-2 overflow-x-auto whitespace-pre-wrap max-h-64 overflow-y-auto"
+                        className="font-mono text-xs bg-black/30 border border-white/5 rounded p-2 overflow-x-auto whitespace-pre-wrap max-h-64 overflow-y-auto"
                       >
                         {b.text}
                       </pre>
@@ -177,7 +177,7 @@ const ToolCallCard: React.FC<Props> = ({ call, onAskAIWithResult, visionEnabled 
                           alt="MCP tool result"
                           className="max-w-full max-h-96 block"
                         />
-                        <div className="px-2 py-1 text-[9px] text-white/30 border-t border-white/5 font-mono">
+                        <div className="px-2 py-1 text-xs text-white/30 border-t border-white/5 font-mono">
                           {b.mimeType}
                         </div>
                       </div>
@@ -186,7 +186,7 @@ const ToolCallCard: React.FC<Props> = ({ call, onAskAIWithResult, visionEnabled 
                   return (
                     <pre
                       key={i}
-                      className="font-mono text-[10px] bg-black/30 border border-white/5 rounded p-2 overflow-x-auto whitespace-pre-wrap max-h-48 overflow-y-auto"
+                      className="font-mono text-xs bg-black/30 border border-white/5 rounded p-2 overflow-x-auto whitespace-pre-wrap max-h-48 overflow-y-auto"
                     >
                       {JSON.stringify(b.value, null, 2)}
                     </pre>
@@ -197,7 +197,7 @@ const ToolCallCard: React.FC<Props> = ({ call, onAskAIWithResult, visionEnabled 
             {onAskAIWithResult && (
               <button
                 onClick={sendResultToAI}
-                className="w-full flex items-center justify-center gap-1 px-2 py-1 rounded bg-accent/15 hover:bg-accent/25 text-accent text-[10px] transition-colors"
+                className="w-full flex items-center justify-center gap-1 px-2 py-1 rounded bg-accent/15 hover:bg-accent/25 text-accent text-xs transition-colors"
               >
                 <Send size={10} />
                 {parsed.hasImage

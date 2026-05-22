@@ -68,9 +68,9 @@ const RecallPanel: React.FC<Props> = ({ model, onInjectToChat, onClose }) => {
         <div className="flex items-center gap-2.5 px-5 py-4 border-b border-white/8 shrink-0">
           <Library size={15} className="text-accent" />
           <DialogTitle className="text-sm font-semibold">메모리 검색</DialogTitle>
-          <span className="text-[10px] text-white/35 ml-1">로컬 영구 저장 — 클라우드 전송 없음</span>
+          <span className="text-xs text-white/35 ml-1">로컬 영구 저장 — 클라우드 전송 없음</span>
           {stats && (
-            <span className="ml-auto text-[10px] text-white/40 tabular-nums">총 {totalEntries.toLocaleString()}건</span>
+            <span className="ml-auto text-xs text-white/40 tabular-nums">총 {totalEntries.toLocaleString()}건</span>
           )}
         </div>
 
@@ -115,7 +115,7 @@ const RecallPanel: React.FC<Props> = ({ model, onInjectToChat, onClose }) => {
                   onClick={() => toggleSource(src)}
                   aria-pressed={active}
                   className={cn(
-                    "inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded border transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+                    "inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded border transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
                     active
                       ? meta.tone
                       : "text-white/40 border-white/10 hover:text-white/70 hover:border-white/20",
@@ -138,7 +138,7 @@ const RecallPanel: React.FC<Props> = ({ model, onInjectToChat, onClose }) => {
                 onClick={() => setTimeIdx(i)}
                 aria-pressed={timeIdx === i}
                 className={cn(
-                  "inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded border transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+                  "inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded border transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
                   timeIdx === i
                     ? "text-accent bg-accent/10 border-accent/30"
                     : "text-white/40 border-white/10 hover:text-white/70 hover:border-white/20",
@@ -152,7 +152,7 @@ const RecallPanel: React.FC<Props> = ({ model, onInjectToChat, onClose }) => {
         </div>
 
         {error && (
-          <div className="px-5 py-2 text-[11px] text-rose-300 bg-rose-500/10 border-b border-rose-400/20 shrink-0">
+          <div className="px-5 py-2 text-sm text-rose-300 bg-rose-500/10 border-b border-rose-400/20 shrink-0">
             {error}
           </div>
         )}
@@ -164,7 +164,7 @@ const RecallPanel: React.FC<Props> = ({ model, onInjectToChat, onClose }) => {
               <Library size={20} className="mx-auto text-white/20" />
               <p>{query.trim() ? "결과 없음" : "쿼리를 입력하세요"}</p>
               {!query.trim() && (
-                <p className="text-[10px] text-white/25">자연어로 과거 명령·치유·메모리를 검색합니다.</p>
+                <p className="text-xs text-white/25">자연어로 과거 명령·치유·메모리를 검색합니다.</p>
               )}
             </div>
           )}
@@ -180,7 +180,7 @@ const RecallPanel: React.FC<Props> = ({ model, onInjectToChat, onClose }) => {
 
         {/* 잊혀질 권리 풋터 */}
         {stats && totalEntries > 0 && (
-          <div className="px-5 py-2.5 border-t border-white/8 shrink-0 flex items-center justify-between text-[10px] text-white/40">
+          <div className="px-5 py-2.5 border-t border-white/8 shrink-0 flex items-center justify-between text-xs text-white/40">
             <span>오래된 데이터를 잊을 수 있습니다 (GDPR-style 잊혀질 권리)</span>
             <ConfirmDeleteDialog
               itemName="1달 이전 데이터"
@@ -215,27 +215,27 @@ const RecallRow: React.FC<{
   return (
     <details className="group rounded-lg bg-white/3 border border-white/7 overflow-hidden">
       <summary className="px-3 py-2 cursor-pointer flex items-center gap-2 text-xs hover:bg-white/3">
-        <span className={cn("inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded border shrink-0", meta.tone)}>
+        <span className={cn("inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded border shrink-0", meta.tone)}>
           {meta.icon}
           {meta.label}
         </span>
         <span className="truncate flex-1 text-white/85 font-mono">{entry.title}</span>
-        <span className="text-[10px] text-emerald-300 tabular-nums shrink-0" title={`유사도 ${(entry.score * 100).toFixed(0)}%`}>
+        <span className="text-xs text-emerald-300 tabular-nums shrink-0" title={`유사도 ${(entry.score * 100).toFixed(0)}%`}>
           {(entry.score * 100).toFixed(0)}%
         </span>
-        <span className="text-[10px] text-white/30 tabular-nums shrink-0">{fmtShortDate(entry.ts_ms, "ms")}</span>
+        <span className="text-xs text-white/30 tabular-nums shrink-0">{fmtShortDate(entry.ts_ms, "ms")}</span>
       </summary>
-      <div className="px-3 pb-2.5 pt-0.5 space-y-1.5 text-[11px] border-t border-white/5">
+      <div className="px-3 pb-2.5 pt-0.5 space-y-1.5 text-sm border-t border-white/5">
         <pre className="text-white/70 font-mono whitespace-pre-wrap text-[10.5px] bg-black/20 rounded px-2 py-1.5 max-h-32 overflow-y-auto">{entry.snippet}</pre>
         {entry.metadata !== null && typeof entry.metadata === "object" && Object.keys(entry.metadata as object).length > 0 && (
-          <pre className="text-white/40 font-mono text-[10px] bg-white/3 rounded px-2 py-1 overflow-x-auto">{JSON.stringify(entry.metadata, null, 2)}</pre>
+          <pre className="text-white/40 font-mono text-xs bg-white/3 rounded px-2 py-1 overflow-x-auto">{JSON.stringify(entry.metadata, null, 2)}</pre>
         )}
         <div className="flex items-center gap-2 pt-1">
           {onInject && (
             <button
               type="button"
               onClick={onInject}
-              className="inline-flex items-center gap-1 text-[10px] text-accent hover:text-accent/80 rounded px-1.5 py-0.5 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              className="inline-flex items-center gap-1 text-xs text-accent hover:text-accent/80 rounded px-1.5 py-0.5 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             >
               <ArrowUpRight size={10} />
               AI 챗에 주입
@@ -248,7 +248,7 @@ const RecallRow: React.FC<{
           >
             <button
               type="button"
-              className="inline-flex items-center gap-1 text-[10px] text-white/40 hover:text-rose-300 rounded px-1.5 py-0.5 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              className="inline-flex items-center gap-1 text-xs text-white/40 hover:text-rose-300 rounded px-1.5 py-0.5 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             >
               <Trash2 size={10} />
               잊기

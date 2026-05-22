@@ -126,7 +126,7 @@ const SkillsPanel: React.FC<Props> = ({ onClose }) => {
         <div className="flex items-center gap-2.5 px-5 py-4 border-b border-white/10 bg-white/[0.02] shrink-0">
           <Library size={15} className="text-accent" />
           <DialogTitle className="text-sm font-semibold">Skills — 절차 라이브러리</DialogTitle>
-          <span className="text-[10px] text-white/35 ml-1">자연어 매칭 → ReAct에 자동 주입</span>
+          <span className="text-xs text-white/35 ml-1">자연어 매칭 → ReAct에 자동 주입</span>
           <button
             type="button"
             onClick={onClose}
@@ -148,7 +148,7 @@ const SkillsPanel: React.FC<Props> = ({ onClose }) => {
                 className="h-7 pl-7 text-xs"
               />
             </div>
-            <span className="text-[11px] text-white/45 tabular-nums">
+            <span className="text-sm text-white/45 tabular-nums">
               {visibleSkills.length} / {skills.length}
             </span>
             <Button size="sm" className="h-7 gap-1.5 text-xs border border-accent/35 bg-accent/20 hover:bg-accent/30" onClick={startNew}>
@@ -172,7 +172,7 @@ const SkillsPanel: React.FC<Props> = ({ onClose }) => {
         )}
 
         {error && (
-          <div className="px-5 py-2 text-[11px] text-rose-300 bg-rose-500/10 border-b border-rose-400/20 shrink-0">
+          <div className="px-5 py-2 text-sm text-rose-300 bg-rose-500/10 border-b border-rose-400/20 shrink-0">
             {error}
           </div>
         )}
@@ -215,7 +215,7 @@ const SkillList: React.FC<{
       <div className="text-center py-10 text-xs text-white/35 space-y-2">
         <Sparkles size={20} className="mx-auto text-white/20" />
         <p>저장된 Skill이 없습니다.</p>
-        <p className="text-[10px] text-white/25 leading-relaxed">
+        <p className="text-xs text-white/25 leading-relaxed">
           반복적으로 풀던 문제 절차를 저장해두면<br />
           다음에 ReAct가 자연어 매칭으로 자동 호출합니다.
         </p>
@@ -231,12 +231,12 @@ const SkillList: React.FC<{
               <div className="flex items-center gap-2">
                 <span className="text-sm font-medium text-white/90">{s.name}</span>
                 {s.success_count > 0 && (
-                  <span className="text-[10px] text-emerald-300/85 bg-emerald-500/10 px-1.5 py-0.5 rounded tabular-nums">
+                  <span className="text-xs text-emerald-300/85 bg-emerald-500/10 px-1.5 py-0.5 rounded tabular-nums">
                     ✓ {s.success_count}
                   </span>
                 )}
                 {s.last_used_ms ? (
-                  <span className="text-[10px] text-white/30">{fmtShortDate(s.last_used_ms, "ms")}</span>
+                  <span className="text-xs text-white/30">{fmtShortDate(s.last_used_ms, "ms")}</span>
                 ) : null}
               </div>
               {s.description && (
@@ -245,7 +245,7 @@ const SkillList: React.FC<{
               {s.triggers.length > 0 && (
                 <div className="flex flex-wrap gap-1 mt-1.5">
                   {s.triggers.map((t, i) => (
-                    <span key={i} className="text-[10px] px-1.5 py-0.5 rounded bg-accent/10 text-accent/85 border border-accent/15">
+                    <span key={i} className="text-xs px-1.5 py-0.5 rounded bg-accent/10 text-accent/85 border border-accent/15">
                       {t}
                     </span>
                   ))}
@@ -256,7 +256,7 @@ const SkillList: React.FC<{
               <button
                 type="button"
                 onClick={() => onEdit(s)}
-                className="text-[11px] px-2 py-1 rounded border border-white/[0.12] text-white/65 hover:text-white hover:bg-white/[0.08] transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                className="text-sm px-2 py-1 rounded border border-white/[0.12] text-white/65 hover:text-white hover:bg-white/[0.08] transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               >
                 편집
               </button>
@@ -293,7 +293,7 @@ const SkillEditor: React.FC<{
   return (
     <div className="px-5 py-4 space-y-3 bg-white/[0.01]">
       <div>
-        <label className="text-[11px] text-white/55 mb-1 block">이름 *</label>
+        <label className="text-sm text-white/55 mb-1 block">이름 *</label>
         <Input
           value={draft.name}
           onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))}
@@ -302,7 +302,7 @@ const SkillEditor: React.FC<{
         />
       </div>
       <div>
-        <label className="text-[11px] text-white/55 mb-1 block">한 줄 설명</label>
+        <label className="text-sm text-white/55 mb-1 block">한 줄 설명</label>
         <Input
           value={draft.description}
           onChange={(e) => setDraft((d) => ({ ...d, description: e.target.value }))}
@@ -311,7 +311,7 @@ const SkillEditor: React.FC<{
         />
       </div>
       <div>
-        <label className="text-[11px] text-white/55 mb-1 block">트리거 키워드 (쉼표로 구분)</label>
+        <label className="text-sm text-white/55 mb-1 block">트리거 키워드 (쉼표로 구분)</label>
         <Input
           value={triggerInput}
           onChange={(e) => setDraft((d) => ({
@@ -321,12 +321,12 @@ const SkillEditor: React.FC<{
           placeholder="rebase, 충돌, conflict"
           className="h-8 text-xs"
         />
-        <p className="text-[10px] text-white/30 mt-1">
+        <p className="text-xs text-white/30 mt-1">
           자연어 goal과 단어가 겹칠수록 ReAct가 이 Skill을 우선 로드합니다.
         </p>
       </div>
       <div>
-        <label className="text-[11px] text-white/55 mb-1 block">절차 (Markdown)</label>
+        <label className="text-sm text-white/55 mb-1 block">절차 (Markdown)</label>
         <Textarea
           value={draft.procedure}
           onChange={(e) => setDraft((d) => ({ ...d, procedure: e.target.value }))}
@@ -336,7 +336,7 @@ const SkillEditor: React.FC<{
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <div>
-          <label className="text-[11px] text-white/55 mb-1 block">When to Use</label>
+          <label className="text-sm text-white/55 mb-1 block">When to Use</label>
           <Textarea
             value={draft.when_to_use ?? ""}
             onChange={(e) => setDraft((d) => ({ ...d, when_to_use: e.target.value }))}
@@ -345,7 +345,7 @@ const SkillEditor: React.FC<{
           />
         </div>
         <div>
-          <label className="text-[11px] text-white/55 mb-1 block">Quick Reference</label>
+          <label className="text-sm text-white/55 mb-1 block">Quick Reference</label>
           <Textarea
             value={draft.quick_reference ?? ""}
             onChange={(e) => setDraft((d) => ({ ...d, quick_reference: e.target.value }))}
@@ -354,7 +354,7 @@ const SkillEditor: React.FC<{
           />
         </div>
         <div>
-          <label className="text-[11px] text-white/55 mb-1 block">Pitfalls</label>
+          <label className="text-sm text-white/55 mb-1 block">Pitfalls</label>
           <Textarea
             value={draft.pitfalls ?? ""}
             onChange={(e) => setDraft((d) => ({ ...d, pitfalls: e.target.value }))}
@@ -363,7 +363,7 @@ const SkillEditor: React.FC<{
           />
         </div>
         <div>
-          <label className="text-[11px] text-white/55 mb-1 block">Verification</label>
+          <label className="text-sm text-white/55 mb-1 block">Verification</label>
           <Textarea
             value={draft.verification ?? ""}
             onChange={(e) => setDraft((d) => ({ ...d, verification: e.target.value }))}
@@ -373,7 +373,7 @@ const SkillEditor: React.FC<{
         </div>
       </div>
       {error && (
-        <div className="text-[11px] text-rose-300 bg-rose-500/10 border border-rose-400/20 rounded px-2.5 py-1.5">
+        <div className="text-sm text-rose-300 bg-rose-500/10 border border-rose-400/20 rounded px-2.5 py-1.5">
           {error}
         </div>
       )}

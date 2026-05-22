@@ -98,7 +98,7 @@ const LoraForgePanel: React.FC<Props> = ({ onLoadAdapter, onRevealPath, onClose 
         <div className="flex items-center gap-2.5 px-5 py-4 border-b border-white/10 bg-white/[0.02] shrink-0">
           <Hammer size={15} className="text-accent" />
           <DialogTitle className="text-sm font-semibold">LoRA Forge</DialogTitle>
-          <span className="text-[10px] text-white/35 ml-1">healing 데이터셋으로 내 모델 학습</span>
+          <span className="text-xs text-white/35 ml-1">healing 데이터셋으로 내 모델 학습</span>
           <button
             type="button"
             onClick={onClose}
@@ -112,7 +112,7 @@ const LoraForgePanel: React.FC<Props> = ({ onLoadAdapter, onRevealPath, onClose 
         {runtimes && (
           <div
             className={cn(
-              "px-5 py-2 border-b shrink-0 text-[11px] flex items-center gap-2",
+              "px-5 py-2 border-b shrink-0 text-sm flex items-center gap-2",
               runtimes.mlx_lm || runtimes.axolotl
                 ? "bg-emerald-500/5 border-emerald-400/15 text-emerald-200"
                 : "bg-amber-500/5 border-amber-400/20 text-amber-200",
@@ -124,7 +124,7 @@ const LoraForgePanel: React.FC<Props> = ({ onLoadAdapter, onRevealPath, onClose 
               <AlertTriangle size={12} />
             )}
             <span>{runtimes.hint}</span>
-            <span className="ml-auto text-[10px] text-white/40">
+            <span className="ml-auto text-xs text-white/40">
               mlx-lm {runtimes.mlx_lm ? "✓" : "✗"} · axolotl {runtimes.axolotl ? "✓" : "✗"}
             </span>
           </div>
@@ -142,7 +142,7 @@ const LoraForgePanel: React.FC<Props> = ({ onLoadAdapter, onRevealPath, onClose 
         {/* 학습 시작 폼 */}
         <div className="px-5 py-3.5 border-b border-white/10 bg-white/[0.015] shrink-0 space-y-2.5">
           <div className="space-y-1">
-            <Label htmlFor="forge-task" className="text-[10px] text-white/55">작업 이름</Label>
+            <Label htmlFor="forge-task" className="text-xs text-white/55">작업 이름</Label>
             <Input
               id="forge-task"
               value={task}
@@ -155,7 +155,7 @@ const LoraForgePanel: React.FC<Props> = ({ onLoadAdapter, onRevealPath, onClose 
 
           <div className="grid grid-cols-2 gap-2">
             <div className="space-y-1">
-              <Label className="text-[10px] text-white/55">런타임</Label>
+              <Label className="text-xs text-white/55">런타임</Label>
               <div className="flex gap-1">
                 {(["mlx-lm", "axolotl"] as const).map((rt) => {
                   const have = rt === "mlx-lm" ? runtimes?.mlx_lm : runtimes?.axolotl;
@@ -167,7 +167,7 @@ const LoraForgePanel: React.FC<Props> = ({ onLoadAdapter, onRevealPath, onClose 
                       onClick={() => setRuntime(rt)}
                       aria-pressed={active}
                       className={cn(
-                        "flex-1 h-8 rounded-md text-[11px] border transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+                        "flex-1 h-8 rounded-md text-sm border transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
                         active
                           ? "text-accent bg-accent/10 border-accent/30"
                           : "text-white/55 border-white/10 hover:text-white/85 hover:border-white/20",
@@ -182,7 +182,7 @@ const LoraForgePanel: React.FC<Props> = ({ onLoadAdapter, onRevealPath, onClose 
             </div>
 
             <div className="space-y-1">
-              <Label htmlFor="forge-base" className="text-[10px] text-white/55">베이스 모델 (HF id 또는 로컬 경로)</Label>
+              <Label htmlFor="forge-base" className="text-xs text-white/55">베이스 모델 (HF id 또는 로컬 경로)</Label>
               <Input
                 id="forge-base"
                 value={baseModel}
@@ -195,7 +195,7 @@ const LoraForgePanel: React.FC<Props> = ({ onLoadAdapter, onRevealPath, onClose 
 
           <div className="grid grid-cols-3 gap-2">
             <div className="space-y-1">
-              <Label htmlFor="forge-iters" className="text-[10px] text-white/55">iters (1–10000)</Label>
+              <Label htmlFor="forge-iters" className="text-xs text-white/55">iters (1–10000)</Label>
               <Input
                 id="forge-iters"
                 type="number"
@@ -208,7 +208,7 @@ const LoraForgePanel: React.FC<Props> = ({ onLoadAdapter, onRevealPath, onClose 
               />
             </div>
             <div className="space-y-1">
-              <Label htmlFor="forge-rank" className="text-[10px] text-white/55">lora rank (2–64)</Label>
+              <Label htmlFor="forge-rank" className="text-xs text-white/55">lora rank (2–64)</Label>
               <Input
                 id="forge-rank"
                 type="number"
@@ -221,7 +221,7 @@ const LoraForgePanel: React.FC<Props> = ({ onLoadAdapter, onRevealPath, onClose 
               />
             </div>
             <div className="space-y-1">
-              <Label htmlFor="forge-lr" className="text-[10px] text-white/55">learning rate</Label>
+              <Label htmlFor="forge-lr" className="text-xs text-white/55">learning rate</Label>
               <Input
                 id="forge-lr"
                 type="number"
@@ -237,7 +237,7 @@ const LoraForgePanel: React.FC<Props> = ({ onLoadAdapter, onRevealPath, onClose 
           </div>
 
           <div className="flex items-center gap-2 pt-0.5">
-            <p className="text-[10px] text-white/35 flex-1">
+            <p className="text-xs text-white/35 flex-1">
               데이터셋 미지정 시 healing chatml export(승인된 결정만)를 자동 생성하여 학습.
             </p>
                 <Button
@@ -253,14 +253,14 @@ const LoraForgePanel: React.FC<Props> = ({ onLoadAdapter, onRevealPath, onClose 
           </div>
 
           {submitError && (
-            <p className="text-[11px] text-rose-300 bg-rose-500/10 border border-rose-400/20 rounded px-2 py-1.5">
+            <p className="text-sm text-rose-300 bg-rose-500/10 border border-rose-400/20 rounded px-2 py-1.5">
               {submitError}
             </p>
           )}
         </div>
 
         {error && (
-          <div className="px-5 py-2 text-[11px] text-rose-300 bg-rose-500/10 border-b border-rose-400/20 shrink-0">
+          <div className="px-5 py-2 text-sm text-rose-300 bg-rose-500/10 border-b border-rose-400/20 shrink-0">
             {error}
           </div>
         )}
@@ -271,7 +271,7 @@ const LoraForgePanel: React.FC<Props> = ({ onLoadAdapter, onRevealPath, onClose 
             <div className="text-center py-12 text-xs text-white/35 space-y-1.5">
               <Hammer size={20} className="mx-auto text-white/20" />
               <p>아직 학습 실행 기록이 없습니다.</p>
-              <p className="text-[10px] text-white/25">위 폼에서 task를 입력하고 Forge를 누르면 시작합니다.</p>
+              <p className="text-xs text-white/25">위 폼에서 task를 입력하고 Forge를 누르면 시작합니다.</p>
             </div>
           )}
           {runs.map((r) => (
@@ -322,13 +322,13 @@ const RunRow: React.FC<{
         onClick={onToggle}
         className="w-full px-3 py-2 flex items-center gap-2 text-xs hover:bg-white/[0.06] text-left focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
       >
-        <span className={cn("inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded border shrink-0", meta.tone)}>
+        <span className={cn("inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded border shrink-0", meta.tone)}>
           {meta.icon}
           {meta.label}
         </span>
         {run.auto && (
           <span
-            className="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded border shrink-0 text-cyan-300 bg-cyan-400/10 border-cyan-400/25"
+            className="inline-flex items-center gap-0.5 text-xs px-1.5 py-0.5 rounded border shrink-0 text-cyan-300 bg-cyan-400/10 border-cyan-400/25"
             title="approve 누적으로 자동 트리거된 학습"
           >
             <Zap size={10} />
@@ -336,19 +336,19 @@ const RunRow: React.FC<{
           </span>
         )}
         <span className="truncate flex-1 text-white/85 font-medium">{run.task}</span>
-        <span className="text-[10px] text-white/45 font-mono shrink-0">{run.runtime}</span>
-        <span className="text-[10px] text-white/45 tabular-nums shrink-0">
+        <span className="text-xs text-white/45 font-mono shrink-0">{run.runtime}</span>
+        <span className="text-xs text-white/45 tabular-nums shrink-0">
           {run.iters} iters · r{run.lora_rank}
         </span>
-        <span className="text-[10px] text-white/30 tabular-nums shrink-0 inline-flex items-center gap-0.5">
+        <span className="text-xs text-white/30 tabular-nums shrink-0 inline-flex items-center gap-0.5">
           <Clock size={9} />
           {fmtShortDate(run.ts_started_ms, "ms")}
         </span>
       </button>
 
       {isOpen && (
-        <div className="px-3 pb-2.5 pt-0.5 space-y-1.5 text-[11px] border-t border-white/[0.08]">
-          <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 text-[10px] text-white/55">
+        <div className="px-3 pb-2.5 pt-0.5 space-y-1.5 text-sm border-t border-white/[0.08]">
+          <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 text-xs text-white/55">
             <span>모델: <span className="font-mono text-white/75">{run.base_model}</span></span>
             <span>lr: <span className="tabular-nums">{run.learning_rate}</span></span>
             <span className="col-span-2 truncate" title={run.dataset_path}>데이터: <span className="font-mono text-white/65">{run.dataset_path}</span></span>
@@ -370,7 +370,7 @@ const RunRow: React.FC<{
               <button
                 type="button"
                 onClick={onCancel}
-                className="inline-flex items-center gap-1 text-[10px] text-amber-300 hover:text-amber-200 rounded px-1.5 py-0.5 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                className="inline-flex items-center gap-1 text-xs text-amber-300 hover:text-amber-200 rounded px-1.5 py-0.5 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               >
                 <XIcon size={10} /> 취소
               </button>
@@ -386,7 +386,7 @@ const RunRow: React.FC<{
                       : "현재 추론 모델에 LoRA 어댑터로 로드"
                   }
                   className={cn(
-                    "inline-flex items-center gap-1 text-[10px] rounded px-1.5 py-0.5 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+                    "inline-flex items-center gap-1 text-xs rounded px-1.5 py-0.5 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
                     loadable === false
                       ? "text-white/25 cursor-not-allowed"
                       : "text-accent hover:text-accent/80",
@@ -400,7 +400,7 @@ const RunRow: React.FC<{
               <button
                 type="button"
                 onClick={onReveal}
-                className="inline-flex items-center gap-1 text-[10px] text-white/45 hover:text-white/80 rounded px-1.5 py-0.5 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                className="inline-flex items-center gap-1 text-xs text-white/45 hover:text-white/80 rounded px-1.5 py-0.5 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               >
                 <FolderOpen size={10} /> 출력 폴더
               </button>
@@ -408,7 +408,7 @@ const RunRow: React.FC<{
             <button
               type="button"
               onClick={() => navigator.clipboard?.writeText(run.output_dir)}
-              className="inline-flex items-center gap-1 text-[10px] text-white/45 hover:text-white/80 rounded px-1.5 py-0.5 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              className="inline-flex items-center gap-1 text-xs text-white/45 hover:text-white/80 rounded px-1.5 py-0.5 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             >
               <Copy size={10} /> 경로 복사
             </button>
@@ -420,7 +420,7 @@ const RunRow: React.FC<{
             >
               <button
                 type="button"
-                className="inline-flex items-center gap-1 text-[10px] text-white/40 hover:text-rose-300 rounded px-1.5 py-0.5 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                className="inline-flex items-center gap-1 text-xs text-white/40 hover:text-rose-300 rounded px-1.5 py-0.5 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               >
                 <Trash2 size={10} /> 삭제
               </button>
@@ -506,7 +506,7 @@ const AutoTrainCard: React.FC<AutoCardProps> = ({
       <div className="flex items-center gap-2">
         <Sparkles size={13} className="text-cyan-300" />
         <span className="text-xs font-semibold text-white/85">자동 학습 루프</span>
-        <span className="text-[10px] text-white/40">approve 누적 시 백그라운드 학습</span>
+        <span className="text-xs text-white/40">approve 누적 시 백그라운드 학습</span>
         <span className="ml-auto" />
         <Switch
           checked={enabled}
@@ -519,7 +519,7 @@ const AutoTrainCard: React.FC<AutoCardProps> = ({
       </div>
 
       {autoStatus && (
-        <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 text-[11px] text-white/55">
+        <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 text-sm text-white/55">
           <span>
             미학습 approve:{" "}
             <span className="tabular-nums font-semibold text-white/85">
@@ -542,7 +542,7 @@ const AutoTrainCard: React.FC<AutoCardProps> = ({
               <span className="text-emerald-300">트리거 준비됨</span>
             )}
           </span>
-          <span className="col-span-2 text-[10px] text-white/35">
+          <span className="col-span-2 text-xs text-white/35">
             cursor: {autoStatus.cursor_ms > 0 ? fmtShortDate(autoStatus.cursor_ms, "ms") : "(아직 학습 이력 없음)"}
           </span>
         </div>
@@ -551,7 +551,7 @@ const AutoTrainCard: React.FC<AutoCardProps> = ({
       {enabled && (
         <div className="grid grid-cols-3 gap-2 pt-1">
           <div className="space-y-1">
-            <Label htmlFor="auto-threshold" className="text-[10px] text-white/55">
+            <Label htmlFor="auto-threshold" className="text-xs text-white/55">
               threshold
             </Label>
             <Input
@@ -566,7 +566,7 @@ const AutoTrainCard: React.FC<AutoCardProps> = ({
             />
           </div>
           <div className="col-span-2 space-y-1">
-            <Label htmlFor="auto-base" className="text-[10px] text-white/55">
+            <Label htmlFor="auto-base" className="text-xs text-white/55">
               자동 학습 베이스 모델 (필수)
             </Label>
             <Input
@@ -587,15 +587,15 @@ const AutoTrainCard: React.FC<AutoCardProps> = ({
                 persist({ autoLoad: v });
               }}
             />
-            <Label htmlFor="auto-load" className="text-[11px] text-white/65 cursor-pointer">
+            <Label htmlFor="auto-load" className="text-sm text-white/65 cursor-pointer">
               학습 완료 시 호환 어댑터를 즉시 hot-swap (mistralrs 호환 형식만)
             </Label>
           </div>
         </div>
       )}
 
-      {saving && <p className="text-[10px] text-white/35">저장 중…</p>}
-      {saveError && <p className="text-[10px] text-rose-300 bg-rose-500/10 border border-rose-400/20 rounded px-2 py-1">{saveError}</p>}
+      {saving && <p className="text-xs text-white/35">저장 중…</p>}
+      {saveError && <p className="text-xs text-rose-300 bg-rose-500/10 border border-rose-400/20 rounded px-2 py-1">{saveError}</p>}
 
       {recentEvents.length > 0 && (
         <div className="space-y-1 pt-0.5">
@@ -603,7 +603,7 @@ const AutoTrainCard: React.FC<AutoCardProps> = ({
             <div
               key={ev.ts_ms}
               className={cn(
-                "flex items-center gap-2 text-[10px] px-2 py-1 rounded border",
+                "flex items-center gap-2 text-xs px-2 py-1 rounded border",
                 AUTO_PHASE_TONE[ev.phase],
               )}
             >

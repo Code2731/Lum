@@ -66,7 +66,7 @@ const SshConnectModal: React.FC<Props> = ({ onConnect, onClose }) => {
 
         {profiles.length > 0 && (
           <div className="px-5 pt-4 space-y-1.5">
-            <p className="text-[10px] text-white/40 uppercase tracking-wider flex items-center gap-1">
+            <p className="text-xs text-white/40 uppercase tracking-wider flex items-center gap-1">
               <Bookmark size={9} />
               저장된 프로필
             </p>
@@ -79,7 +79,7 @@ const SshConnectModal: React.FC<Props> = ({ onConnect, onClose }) => {
                 >
                   <Server size={11} className="text-accent/70 shrink-0" />
                   <span className="text-xs font-medium text-white/80 flex-1 truncate">{p.label}</span>
-                  <span className="text-[10px] text-white/30 font-mono truncate">
+                  <span className="text-xs text-white/30 font-mono truncate">
                     {p.username}@{p.host}:{p.port}
                   </span>
                   <ConfirmDeleteDialog
@@ -107,7 +107,7 @@ const SshConnectModal: React.FC<Props> = ({ onConnect, onClose }) => {
         <form onSubmit={handleSubmit} className="px-5 py-4 space-y-3">
           <div className="flex gap-2">
             <div className="flex-1 space-y-1">
-              <label className="text-[10px] text-white/40 uppercase tracking-wider">호스트</label>
+              <label className="text-xs text-white/40 uppercase tracking-wider">호스트</label>
               <div className="relative">
                 <Server size={11} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-white/30" />
                 <Input
@@ -121,7 +121,7 @@ const SshConnectModal: React.FC<Props> = ({ onConnect, onClose }) => {
               </div>
             </div>
             <div className="w-20 space-y-1">
-              <label className="text-[10px] text-white/40 uppercase tracking-wider">포트</label>
+              <label className="text-xs text-white/40 uppercase tracking-wider">포트</label>
               <Input
                 value={port}
                 onChange={e => setPort(e.target.value)}
@@ -132,7 +132,7 @@ const SshConnectModal: React.FC<Props> = ({ onConnect, onClose }) => {
           </div>
 
           <div className="space-y-1">
-            <label className="text-[10px] text-white/40 uppercase tracking-wider">사용자명</label>
+            <label className="text-xs text-white/40 uppercase tracking-wider">사용자명</label>
             <div className="relative">
               <User size={11} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-white/30" />
               <Input
@@ -146,7 +146,7 @@ const SshConnectModal: React.FC<Props> = ({ onConnect, onClose }) => {
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-[10px] text-white/40 uppercase tracking-wider">인증 방식</label>
+            <label className="text-xs text-white/40 uppercase tracking-wider">인증 방식</label>
             <div className="flex gap-2">
               {(["agent", "key"] as const).map((type) => (
                 <button
@@ -167,7 +167,7 @@ const SshConnectModal: React.FC<Props> = ({ onConnect, onClose }) => {
 
           {authType === "key" && (
             <div className="space-y-1">
-              <label className="text-[10px] text-white/40 uppercase tracking-wider">개인 키 경로</label>
+              <label className="text-xs text-white/40 uppercase tracking-wider">개인 키 경로</label>
               <div className="relative">
                 <Key size={11} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-white/30" />
                 <Input
@@ -181,7 +181,7 @@ const SshConnectModal: React.FC<Props> = ({ onConnect, onClose }) => {
           )}
 
           {authType === "agent" && (
-            <p className="text-[10px] text-white/30">
+            <p className="text-xs text-white/30">
               SSH 에이전트 키 또는 ~/.ssh/config 프로필을 사용합니다. 비밀번호 인증이 필요하면 터미널에서 직접 입력하세요.
             </p>
           )}
@@ -193,7 +193,7 @@ const SshConnectModal: React.FC<Props> = ({ onConnect, onClose }) => {
 
           {saveProfile && (
             <div className="space-y-1">
-              <label className="text-[10px] text-white/40 uppercase tracking-wider">프로필 이름 (선택)</label>
+              <label className="text-xs text-white/40 uppercase tracking-wider">프로필 이름 (선택)</label>
               <Input
                 value={profileLabel}
                 onChange={e => setProfileLabel(e.target.value)}

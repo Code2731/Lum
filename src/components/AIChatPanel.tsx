@@ -51,7 +51,7 @@ const AIChatPanel: React.FC<Props> = ({ messages, streaming, error, onSend, onCa
       {/* 헤더 */}
       <div className="flex items-center gap-2 px-3 py-2 border-b border-white/5 shrink-0">
         <Bot size={13} className="text-accent shrink-0" />
-        <span className="text-[11px] font-semibold text-white/80 flex-1">AI Chat</span>
+        <span className="text-sm font-semibold text-white/80 flex-1">AI Chat</span>
         {messages.length > 0 && (
           <IconButton
             tooltip="대화 초기화"
@@ -77,7 +77,7 @@ const AIChatPanel: React.FC<Props> = ({ messages, streaming, error, onSend, onCa
 
       {/* 에러 배너 */}
       {error && (
-        <div className="shrink-0 px-3 py-1.5 bg-red-500/10 border-b border-red-500/20 text-[10px] text-red-400 leading-relaxed">
+        <div className="shrink-0 px-3 py-1.5 bg-red-500/10 border-b border-red-500/20 text-xs text-red-400 leading-relaxed">
           {error}
         </div>
       )}
@@ -87,12 +87,12 @@ const AIChatPanel: React.FC<Props> = ({ messages, streaming, error, onSend, onCa
         {messages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full gap-2 text-white/20 py-12">
             <Bot size={28} />
-            <p className="text-[11px] text-center leading-relaxed">
+            <p className="text-sm text-center leading-relaxed">
               터미널 컨텍스트를 인식합니다.
               <br />
               질문이나 명령어 작성을 도와드립니다.
             </p>
-            <div className="text-[10px] text-white/15 space-y-0.5 mt-1 text-center">
+            <div className="text-xs text-white/15 space-y-0.5 mt-1 text-center">
               <p># 자연어 → 명령어 변환 (터미널)</p>
               <p>? 명령어 설명 (터미널)</p>
               <p>&gt;&gt; 에이전트 태스크 (터미널)</p>
@@ -109,7 +109,7 @@ const AIChatPanel: React.FC<Props> = ({ messages, streaming, error, onSend, onCa
           messages[messages.length - 1]?.content === "" && (
             <div className="flex items-center gap-1.5 text-white/30">
               <Loader2 size={11} className="animate-spin" />
-              <span className="text-[10px]">응답 생성 중…</span>
+              <span className="text-xs">응답 생성 중…</span>
             </div>
           )}
 
@@ -126,7 +126,7 @@ const AIChatPanel: React.FC<Props> = ({ messages, streaming, error, onSend, onCa
             disabled={streaming}
             rows={1}
             placeholder="질문하세요… (Enter 전송 · Shift+Enter 줄바꿈)"
-            className="flex-1 bg-transparent border-none px-0 py-0 text-[11px] text-white/80 placeholder-white/20 leading-relaxed max-h-24 disabled:opacity-40"
+            className="flex-1 bg-transparent border-none px-0 py-0 text-sm text-white/80 placeholder-white/20 leading-relaxed max-h-24 disabled:opacity-40"
             style={{ fieldSizing: "content" } as React.CSSProperties}
           />
           {streaming ? (
@@ -144,7 +144,7 @@ const AIChatPanel: React.FC<Props> = ({ messages, streaming, error, onSend, onCa
             </button>
           )}
         </div>
-        <p className="text-[9px] text-white/15 text-center mt-1">Esc 로 닫기</p>
+        <p className="text-xs text-white/15 text-center mt-1">Esc 로 닫기</p>
       </div>
     </div>
   );
@@ -339,7 +339,7 @@ const MermaidCodeBlock: React.FC<{ code: string }> = ({ code }) => {
 
   if (edges.length === 0) {
     return (
-      <pre className="mt-1.5 mb-1.5 p-2 rounded-md bg-white/5 border border-white/8 overflow-x-auto font-mono text-white/70 text-[10px]">
+      <pre className="mt-1.5 mb-1.5 p-2 rounded-md bg-white/5 border border-white/8 overflow-x-auto font-mono text-white/70 text-xs">
         <code>{raw}</code>
       </pre>
     );
@@ -347,8 +347,8 @@ const MermaidCodeBlock: React.FC<{ code: string }> = ({ code }) => {
 
   return (
     <div className="mt-1.5 mb-1.5 rounded-md border border-white/8 bg-white/5 p-2 overflow-x-auto">
-      <div className="text-[10px] text-cyan-200 mb-1">Mermaid 텍스트 다이어그램</div>
-      <ul className="pl-4 list-disc space-y-0.5 text-[10px] text-white/75">
+      <div className="text-xs text-cyan-200 mb-1">Mermaid 텍스트 다이어그램</div>
+      <ul className="pl-4 list-disc space-y-0.5 text-xs text-white/75">
         {edges.map((edge) => (
           <li key={`${edge.from}-${edge.to}-${edge.arrow}-${edge.label ?? ""}`}>
             {edge.from} {edge.arrow} {edge.to}
@@ -377,13 +377,13 @@ export const ExecCodeBlock: React.FC<{ code: string; lang: string; onExecute: (c
 
   return (
     <div className="relative mt-1.5 mb-1.5 group">
-      <pre className="p-2 pr-16 rounded-md bg-white/5 border border-white/8 overflow-x-auto text-[10px] font-mono text-white/60">
+      <pre className="p-2 pr-16 rounded-md bg-white/5 border border-white/8 overflow-x-auto text-xs font-mono text-white/60">
         <code>{code}</code>
       </pre>
       <IconButton
         tooltip="터미널에서 실행"
         onClick={handleRun}
-        className={`absolute top-1.5 right-1.5 flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-medium transition-colors ${
+        className={`absolute top-1.5 right-1.5 flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium transition-colors ${
           ran
             ? "bg-green-500/20 text-green-400"
             : "bg-white/8 hover:bg-accent/20 text-white/40 hover:text-accent"
@@ -407,9 +407,9 @@ export const MessageBubble: React.FC<{
   const isUser = msg.role === "user";
 
   // compact: sidebar용 11px, non-compact: 스트림용 14px
-  const bodyText = compact ? "text-[11px]" : "text-[14px]";
-  const codeText = compact ? "text-[10px]" : "text-[13px]";
-  const inlineCodeText = compact ? "text-[10px]" : "text-[12.5px]";
+  const bodyText = compact ? "text-sm" : "text-[14px]";
+  const codeText = compact ? "text-xs" : "text-[13px]";
+  const inlineCodeText = compact ? "text-xs" : "text-[12.5px]";
   const iconSize = compact ? 11 : 14;
 
   if (isUser) {
@@ -468,7 +468,7 @@ export const MessageBubble: React.FC<{
               li: ({ children }) => <li className="leading-relaxed">{children}</li>,
               h1: ({ children }) => <h1 className={`font-semibold mt-2 mb-1 ${compact ? "text-[12px]" : "text-[16px]"}`}>{children}</h1>,
               h2: ({ children }) => <h2 className={`font-semibold mt-2 mb-1 ${compact ? "text-[11.5px]" : "text-[15px]"}`}>{children}</h2>,
-              h3: ({ children }) => <h3 className={`font-semibold mt-1.5 mb-0.5 ${compact ? "text-[11px]" : "text-[14.5px]"}`}>{children}</h3>,
+              h3: ({ children }) => <h3 className={`font-semibold mt-1.5 mb-0.5 ${compact ? "text-sm" : "text-[14.5px]"}`}>{children}</h3>,
             }}
           >
             {msg.content}
