@@ -1126,7 +1126,7 @@ const WarpListView: React.FC<Props> = ({
         }
         return;
       }
-      if (e.altKey && key === "k") {
+      if (e.altKey && !mod && key === "k") {
         if (retryCompareQueueItems.length > 0) {
           e.preventDefault();
           setQueuePanelCollapsed((prev) => !prev);
