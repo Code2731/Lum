@@ -29,6 +29,8 @@ interface VisualData {
 }
 
 const DEFAULT_COLORS = ["#00d4aa", "#a78bfa", "#58a6ff", "#f85149", "#d29922"];
+const CHART_AXIS_FONT_SIZE = 10;
+const CHART_LEGEND_FONT_SIZE = "11px";
 
 const VisualChart = ({ visualData }: { visualData: VisualData }) => {
   const { chartType, data, config } = visualData;
@@ -40,13 +42,13 @@ const VisualChart = ({ visualData }: { visualData: VisualData }) => {
         return (
           <LineChart data={data} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#30363d" />
-            <XAxis dataKey={config.xKey} stroke="#8b949e" fontSize={10} />
-            <YAxis stroke="#8b949e" fontSize={10} />
+            <XAxis dataKey={config.xKey} stroke="#8b949e" fontSize={CHART_AXIS_FONT_SIZE} />
+            <YAxis stroke="#8b949e" fontSize={CHART_AXIS_FONT_SIZE} />
             <Tooltip
               contentStyle={{ backgroundColor: "#161b22", border: "1px solid #30363d" }}
-              itemStyle={{ fontSize: "11px" }}
+              itemStyle={{ fontSize: CHART_LEGEND_FONT_SIZE }}
             />
-            <Legend wrapperStyle={{ fontSize: "11px" }} />
+            <Legend wrapperStyle={{ fontSize: CHART_LEGEND_FONT_SIZE }} />
             {config.yKeys.map((key, index) => (
               <Line
                 key={key}
@@ -64,13 +66,13 @@ const VisualChart = ({ visualData }: { visualData: VisualData }) => {
         return (
           <BarChart data={data} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#30363d" />
-            <XAxis dataKey={config.xKey} stroke="#8b949e" fontSize={10} />
-            <YAxis stroke="#8b949e" fontSize={10} />
+            <XAxis dataKey={config.xKey} stroke="#8b949e" fontSize={CHART_AXIS_FONT_SIZE} />
+            <YAxis stroke="#8b949e" fontSize={CHART_AXIS_FONT_SIZE} />
             <Tooltip
               contentStyle={{ backgroundColor: "#161b22", border: "1px solid #30363d" }}
-              itemStyle={{ fontSize: "11px" }}
+              itemStyle={{ fontSize: CHART_LEGEND_FONT_SIZE }}
             />
-            <Legend wrapperStyle={{ fontSize: "11px" }} />
+            <Legend wrapperStyle={{ fontSize: CHART_LEGEND_FONT_SIZE }} />
             {config.yKeys.map((key, index) => (
               <Bar
                 key={key}
@@ -85,13 +87,13 @@ const VisualChart = ({ visualData }: { visualData: VisualData }) => {
         return (
           <AreaChart data={data} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#30363d" />
-            <XAxis dataKey={config.xKey} stroke="#8b949e" fontSize={10} />
-            <YAxis stroke="#8b949e" fontSize={10} />
+            <XAxis dataKey={config.xKey} stroke="#8b949e" fontSize={CHART_AXIS_FONT_SIZE} />
+            <YAxis stroke="#8b949e" fontSize={CHART_AXIS_FONT_SIZE} />
             <Tooltip
               contentStyle={{ backgroundColor: "#161b22", border: "1px solid #30363d" }}
-              itemStyle={{ fontSize: "11px" }}
+              itemStyle={{ fontSize: CHART_LEGEND_FONT_SIZE }}
             />
-            <Legend wrapperStyle={{ fontSize: "11px" }} />
+            <Legend wrapperStyle={{ fontSize: CHART_LEGEND_FONT_SIZE }} />
             {config.yKeys.map((key, index) => (
               <Area
                 key={key}
@@ -114,7 +116,7 @@ const VisualChart = ({ visualData }: { visualData: VisualData }) => {
               cx="50%"
               cy="50%"
               outerRadius={60}
-              label={{ fontSize: 10, fill: "#8b949e" }}
+              label={{ fontSize: CHART_AXIS_FONT_SIZE, fill: "#8b949e" }}
             >
               {data.map((_, index) => (
                 <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
@@ -122,9 +124,9 @@ const VisualChart = ({ visualData }: { visualData: VisualData }) => {
             </Pie>
             <Tooltip
               contentStyle={{ backgroundColor: "#161b22", border: "1px solid #30363d" }}
-              itemStyle={{ fontSize: "11px" }}
+              itemStyle={{ fontSize: CHART_LEGEND_FONT_SIZE }}
             />
-            <Legend wrapperStyle={{ fontSize: "11px" }} />
+            <Legend wrapperStyle={{ fontSize: CHART_LEGEND_FONT_SIZE }} />
           </PieChart>
         );
       default:
