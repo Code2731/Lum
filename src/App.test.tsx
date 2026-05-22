@@ -340,6 +340,16 @@ describe("App (LUM 터미널)", () => {
     expect(afterCount).toBe(beforeCount);
   });
 
+  it("Cmd+T는 새 탭 단축키로 처리된다", () => {
+    render(<App />);
+    const beforeCount = screen.getAllByTestId(/^terminal-pane-/).length;
+
+    fireEvent.keyDown(window, { key: "t", metaKey: true });
+
+    const afterCount = screen.getAllByTestId(/^terminal-pane-/).length;
+    expect(afterCount).toBe(beforeCount + 1);
+  });
+
   it("Ctrl+Alt+T는 새 탭 단축키로 처리되지 않는다", () => {
     render(<App />);
     const beforeCount = screen.getAllByTestId(/^terminal-pane-/).length;
@@ -380,6 +390,21 @@ describe("App (LUM 터미널)", () => {
     await waitFor(() => {
       expect(screen.getAllByTestId(/^terminal-pane-/).length).toBe(beforeCount);
     });
+  });
+
+  it("Cmd+Shift+R은 Diff 리뷰를 연다", async () => {
+    render(<App />);
+
+    fireEvent.keyDown(window, { key: "R", metaKey: true, shiftKey: true });
+    expect(await screen.findByText("AI Diff Reviewer")).toBeInTheDocument();
+    expect(screen.queryByPlaceholderText(/자연어로 검색/)).not.toBeInTheDocument();
+  });
+
+  it("Cmd+Alt+Shift+R은 Diff 리뷰 단축키로 처리되지 않는다", () => {
+    render(<App />);
+
+    fireEvent.keyDown(window, { key: "R", metaKey: true, altKey: true, shiftKey: true });
+    expect(screen.queryByText("AI Diff Reviewer")).not.toBeInTheDocument();
   });
 
   it("AI Chat 버튼은 제거됨 — AI는 WarpInputBar로 통합", () => {
