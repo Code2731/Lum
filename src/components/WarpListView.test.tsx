@@ -3689,6 +3689,49 @@ describe("WarpListView delta actions", () => {
     expect(screen.getByText("Retry Compare · +1 / -1")).toBeInTheDocument();
   });
 
+  it("Δ Timeline 선택 항목 탐색은 Ctrl+Alt+Enter 조합에서 동작하지 않는다", () => {
+    render(
+      <WarpListView
+        blocks={[
+          ...blocks,
+          {
+            id: "b3",
+            command: "pnpm lint",
+            output: "ok",
+            exitCode: 0,
+            startedAt: now - 2000,
+            endedAt: now - 1000,
+          },
+        ]}
+        compareResultByBlock={{
+          b2: {
+            added: 1,
+            removed: 1,
+            preview: "test changed",
+            addedLines: ["new line"],
+            removedLines: ["old line"],
+            comparedAt: now,
+          },
+          b3: {
+            added: 2,
+            removed: 0,
+            preview: "lint fixed",
+            addedLines: ["a", "b"],
+            removedLines: [],
+            comparedAt: now - 3000,
+          },
+        }}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Δ Timeline (2)" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "npm test 선택" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "pnpm lint 선택" }));
+
+    fireEvent.keyDown(window, { key: "Enter", ctrlKey: true, altKey: true });
+    expect(screen.queryByText("Retry Compare · +1 / -1")).not.toBeInTheDocument();
+    expect(screen.queryByText("Retry Compare · +2 / -0")).not.toBeInTheDocument();
+  });
+
   it("Δ Timeline에서 선택 항목 핀/핀해제", () => {
     render(
       <WarpListView
@@ -4504,6 +4547,29 @@ describe("WarpListView delta actions", () => {
     fireEvent.click(screen.getByRole("button", { name: "Δ Timeline (1)" }));
     fireEvent.keyDown(window, { key: "k", ctrlKey: true });
     expect(onClearCompareResults).toHaveBeenCalledTimes(1);
+  });
+
+  it("Δ Timeline 비교 초기화 단축키는 Ctrl+Alt+K 조합에서 동작하지 않는다", () => {
+    const onClearCompareResults = vi.fn();
+    render(
+      <WarpListView
+        blocks={blocks}
+        onClearCompareResults={onClearCompareResults}
+        compareResultByBlock={{
+          b2: {
+            added: 1,
+            removed: 1,
+            preview: "test changed",
+            addedLines: ["new line"],
+            removedLines: ["old line"],
+            comparedAt: now,
+          },
+        }}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Δ Timeline (1)" }));
+    fireEvent.keyDown(window, { key: "k", ctrlKey: true, altKey: true });
+    expect(onClearCompareResults).not.toHaveBeenCalled();
   });
 
   it("비교 누적 요약 Σ +N/-M 표시", () => {

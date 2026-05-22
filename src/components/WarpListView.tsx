@@ -1203,7 +1203,7 @@ const WarpListView: React.FC<Props> = ({
         }
         return;
       }
-      if (mod && !e.shiftKey && key === "k") {
+      if (mod && !e.shiftKey && !e.altKey && key === "k") {
         if (onClearCompareResults) {
           e.preventDefault();
           onClearCompareResults();
@@ -1225,7 +1225,7 @@ const WarpListView: React.FC<Props> = ({
         }
         return;
       }
-      if (mod && e.key === "Enter") {
+      if (mod && !e.altKey && e.key === "Enter") {
         if (selectedTimelineIds.length > 0) {
           e.preventDefault();
           navigateSelectedTimeline(e.shiftKey ? -1 : 1);
