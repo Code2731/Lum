@@ -1119,7 +1119,7 @@ const WarpListView: React.FC<Props> = ({
         }
         return;
       }
-      if (mod && !e.shiftKey && key === "f") {
+      if (mod && !e.shiftKey && !e.altKey && key === "f") {
         if (timelineSearchInputRef.current) {
           e.preventDefault();
           timelineSearchInputRef.current.focus();
