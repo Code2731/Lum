@@ -346,6 +346,39 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(screen.queryByText("ACTION PALETTE")).not.toBeInTheDocument();
   });
 
+  it("입력 단축키 Cmd/Ctrl+Alt+K는 Action Palette를 열지 않는다", () => {
+    const { container } = render(<TerminalPane id="tab-1" />);
+    const input = container.querySelector("input")!;
+    expect(screen.queryByText("ACTION PALETTE")).not.toBeInTheDocument();
+
+    fireEvent.keyDown(input, { key: "k", code: "KeyK", ctrlKey: true, altKey: true });
+    expect(screen.queryByText("ACTION PALETTE")).not.toBeInTheDocument();
+    expect(input).toHaveValue("");
+  });
+
+  it("입력 단축키 Cmd/Ctrl+Alt+/는 단축키 치트시트를 열지 않는다", () => {
+    const { container } = render(<TerminalPane id="tab-1" />);
+    const input = container.querySelector("input")!;
+    expect(screen.queryByText("SHORTCUT CHEATSHEET")).not.toBeInTheDocument();
+
+    fireEvent.keyDown(input, { key: "/", code: "Slash", ctrlKey: true, altKey: true });
+    expect(screen.queryByText("SHORTCUT CHEATSHEET")).not.toBeInTheDocument();
+    expect(input).toHaveValue("");
+  });
+
+  it("입력 단축키 Cmd/Ctrl+Alt+Shift+C는 인터럽트를 전송하지 않는다", () => {
+    const { container } = render(<TerminalPane id="tab-1" />);
+    const input = container.querySelector("input")!;
+    fireEvent.change(input, { target: { value: "sleep 30" } });
+
+    fireEvent.keyDown(input, { key: "C", ctrlKey: true, shiftKey: true, altKey: true });
+    expect(input).toHaveValue("sleep 30");
+    const interruptCalls = invokeMock.mock.calls.filter(
+      ([cmd, args]) => cmd === "write_to_pty" && (args as { data?: string } | undefined)?.data === "\u0003",
+    );
+    expect(interruptCalls.length).toBe(0);
+  });
+
   it("Action Palette 검색 후 Enter로 액션을 실행한다", () => {
     const { container } = render(<TerminalPane id="tab-1" />);
     const input = container.querySelector("input")!;
