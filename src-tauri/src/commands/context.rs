@@ -54,6 +54,12 @@ fn append_file(path: &Path, buf: &mut String, total: &mut usize) {
     if *total >= MAX_CTX_CHARS {
         return;
     }
+    if std::fs::symlink_metadata(path)
+        .map(|m| m.file_type().is_symlink())
+        .unwrap_or(false)
+    {
+        return;
+    }
     let ext = path
         .extension()
         .and_then(|e| e.to_str())
@@ -82,6 +88,12 @@ fn append_file(path: &Path, buf: &mut String, total: &mut usize) {
 /// 디렉토리를 재귀 탐색하며 buf에 추가
 fn append_dir(dir: &Path, buf: &mut String, total: &mut usize) {
     if *total >= MAX_CTX_CHARS {
+        return;
+    }
+    if std::fs::symlink_metadata(dir)
+        .map(|m| m.file_type().is_symlink())
+        .unwrap_or(false)
+    {
         return;
     }
     let name = dir.file_name().and_then(|n| n.to_str()).unwrap_or("");
@@ -204,14 +216,14 @@ pub fn read_text_file(path: String, cwd: Option<String>) -> Result<String, Strin
         return Err(format!("파일이 아닙니다: {}", resolved.display()));
     }
 
-    let metadata = std::fs::metadata(&resolved).map_err(|e| format!("메타데이터 확인 실패: {e}"))?;
+    let metadata =
+        std::fs::metadata(&resolved).map_err(|e| format!("메타데이터 확인 실패: {e}"))?;
     if metadata.len() > MAX_READ_TEXT_FILE_BYTES as u64 {
         return Err(format!("파일이 너무 큽니다: {} bytes", metadata.len()));
     }
 
     std::fs::read_to_string(&resolved).map_err(|e| format!("읽기 실패: {e}"))
 }
-
 
 /// 경로(파일 or 디렉토리)를 읽어 AI 컨텍스트 문자열로 반환.
 /// path가 상대 경로이면 cwd 기준으로 해석.
@@ -371,6 +383,70 @@ pub fn parent_directory(path: String) -> Option<String> {
     PathBuf::from(&path)
         .parent()
         .map(|p| p.to_string_lossy().into_owned())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::atomic::{AtomicU64, Ordering};
+
+    static TEMP_COUNTER: AtomicU64 = AtomicU64::new(0);
+
+    struct TempDir {
+        path: PathBuf,
+    }
+
+    impl TempDir {
+        fn new(label: &str) -> Self {
+            let id = TEMP_COUNTER.fetch_add(1, Ordering::SeqCst);
+            let nonce = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos();
+            let path = std::env::temp_dir().join(format!(
+                "lum_context_{label}_{}_{}_{}",
+                std::process::id(),
+                nonce,
+                id
+            ));
+            std::fs::create_dir_all(&path).unwrap();
+            Self { path }
+        }
+
+        fn path(&self) -> &Path {
+            &self.path
+        }
+    }
+
+    impl Drop for TempDir {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_dir_all(&self.path);
+        }
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn read_path_for_context_프로젝트_밖_symlink는_따라가지_않음() {
+        let project = TempDir::new("project");
+        let outside = TempDir::new("outside");
+        std::fs::write(project.path().join("inside.rs"), "fn visible() {}").unwrap();
+        std::fs::write(outside.path().join("secret.rs"), "fn leaked_secret() {}").unwrap();
+        std::os::unix::fs::symlink(outside.path(), project.path().join("linked_dir")).unwrap();
+        std::os::unix::fs::symlink(
+            outside.path().join("secret.rs"),
+            project.path().join("linked_file.rs"),
+        )
+        .unwrap();
+
+        let out = read_path_for_context(
+            project.path().to_string_lossy().to_string(),
+            Some(project.path().to_string_lossy().to_string()),
+        )
+        .unwrap();
+
+        assert!(out.contains("fn visible()"));
+        assert!(!out.contains("leaked_secret"), "{out}");
+    }
 }
 
 fn read_cargo_context(dir: &Path) -> Option<String> {
