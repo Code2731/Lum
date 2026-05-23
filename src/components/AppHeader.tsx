@@ -121,6 +121,7 @@ const POPUP_FALLBACK_WIDTH = {
   notif: 320,
 };
 const POPUP_FALLBACK_HEIGHT = 440;
+const POPUP_MIN_HEIGHT = 96;
 const POPUP_EDGE_GUTTER = 8;
 
 const AppHeader: React.FC<Props> = ({
@@ -392,8 +393,11 @@ const AppHeader: React.FC<Props> = ({
     const spaceAbove = triggerRect.top - POPUP_GUTTER;
     const spaceBelow = window.innerHeight - triggerRect.bottom - POPUP_GUTTER;
     const preferredSpace = placement === "up" ? spaceAbove : spaceBelow;
-    const safeSpace = Math.max(96, preferredSpace - 4);
-    return Math.min(POPUP_ESTIMATE_HEIGHT, safeSpace);
+    const availableHeight = Math.max(0, window.innerHeight - POPUP_EDGE_GUTTER * 2);
+    const availableSpace = Math.max(0, preferredSpace - 4);
+    const minHeight = Math.min(POPUP_MIN_HEIGHT, availableHeight);
+    const safeHeight = Math.max(minHeight, Math.min(availableHeight, availableSpace));
+    return Math.max(minHeight, Math.min(POPUP_ESTIMATE_HEIGHT, safeHeight));
   };
   const measurePopupPlacement = React.useCallback((trigger: HTMLElement | null, panelRef?: React.RefObject<HTMLDivElement | null>): PopupPlacement => {
     if (typeof window === "undefined" || !trigger) return "down";
@@ -402,11 +406,23 @@ const AppHeader: React.FC<Props> = ({
     const spaceAbove = rect.top - POPUP_GUTTER;
     const spaceBelow = window.innerHeight - rect.bottom - POPUP_GUTTER;
     const panelRectHeight = panelRef?.current?.getBoundingClientRect().height;
+    const availableHeight = Math.max(0, window.innerHeight - POPUP_EDGE_GUTTER * 2);
+    const minHeight = Math.min(POPUP_MIN_HEIGHT, availableHeight);
     const panelHeight = (typeof panelRectHeight === "number" && Number.isFinite(panelRectHeight) && panelRectHeight > 0)
-      ? Math.min(panelRectHeight, POPUP_ESTIMATE_HEIGHT)
-      : POPUP_ESTIMATE_HEIGHT;
+      ? Math.min(panelRectHeight, POPUP_ESTIMATE_HEIGHT, availableHeight)
+      : Math.min(POPUP_ESTIMATE_HEIGHT, availableHeight);
     const canOpenUp = spaceAbove >= panelHeight;
     const canOpenDown = spaceBelow >= panelHeight;
+
+    if (spaceAbove < minHeight && spaceBelow < minHeight) {
+      return spaceAbove > spaceBelow ? "up" : "down";
+    }
+    if (spaceAbove < minHeight) {
+      return "down";
+    }
+    if (spaceBelow < minHeight) {
+      return "up";
+    }
 
     if (canOpenUp && canOpenDown) {
       return spaceAbove > spaceBelow ? "up" : "down";
@@ -913,7 +929,7 @@ const AppHeader: React.FC<Props> = ({
                   maxHeight: `${advancedOverflowMaxHeight}px`,
                   ...advancedOverflowPanelStyle,
                 }}
-                className="fixed z-50 w-64 max-h-[min(440px,calc(100vh-3.5rem))] overflow-y-auto rounded-xl border border-white/[0.12] bg-[#0f1620] shadow-xl p-2 space-y-0.5 text-white"
+                className="fixed z-[1200] w-64 max-h-[min(440px,calc(100vh-3.5rem))] overflow-y-auto rounded-xl border border-white/[0.12] bg-[#0f1620] shadow-xl p-2 space-y-0.5 text-white"
               >
                 {hasUnseenAdvanced && (
                   <div className="px-2 py-1.5 mb-1 border-b border-white/10">

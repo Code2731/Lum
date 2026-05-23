@@ -210,4 +210,49 @@ describe("PrivacyLedgerBadge", () => {
 
     expect(trigger).toHaveFocus();
   });
+
+  it("작은 창 높이에서 팝오버 높이가 뷰포트 여백을 넘지 않는다", () => {
+    const onReset = vi.fn();
+    const originalInnerHeight = window.innerHeight;
+
+    renderWithProvider(
+      <PrivacyLedgerBadge
+        state={defaultState}
+        isAllOnDevice
+        onReset={onReset}
+      />,
+    );
+
+    const trigger = screen.getByRole("button", { name: /Privacy Ledger/ });
+    Object.defineProperty(window, "innerHeight", {
+      configurable: true,
+      value: 180,
+    });
+    Object.defineProperty(trigger, "getBoundingClientRect", {
+      configurable: true,
+      value: () => ({
+        x: 620,
+        y: 2,
+        top: 2,
+        left: 620,
+        right: 650,
+        bottom: 30,
+        width: 30,
+        height: 28,
+        toJSON: () => ({}),
+      } as DOMRect),
+    });
+
+    fireEvent.click(trigger);
+
+    const popover = screen.getByRole("dialog", { name: "Privacy Ledger 상세" });
+    const maxHeight = Number.parseFloat(popover.style.maxHeight || "0");
+    expect(maxHeight).toBeGreaterThan(0);
+    expect(maxHeight).toBeLessThanOrEqual(164);
+
+    Object.defineProperty(window, "innerHeight", {
+      configurable: true,
+      value: originalInnerHeight,
+    });
+  });
 });

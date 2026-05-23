@@ -101,13 +101,23 @@ const PrivacyLedgerBadge: React.FC<Props> = ({
     y: -9999,
     width: 288,
   });
-  const [popupMaxHeight, setPopupMaxHeight] = useState(440);
-  const popoverId = React.useId();
-  const onResetRef = useRef(onReset);
-  onResetRef.current = onReset;
   const POPUP_EDGE_GUTTER = 8;
   const POPUP_FALLBACK_WIDTH = 288; // w-72
   const POPUP_FALLBACK_HEIGHT = 440;
+  const POPUP_MIN_HEIGHT = 96;
+  const [popupMaxHeight, setPopupMaxHeight] = useState(() => {
+    const availableHeight = Math.max(
+      0,
+      window.innerHeight - POPUP_EDGE_GUTTER * 2,
+    );
+    return Math.max(
+      Math.min(POPUP_MIN_HEIGHT, availableHeight || POPUP_MIN_HEIGHT),
+      Math.min(POPUP_FALLBACK_HEIGHT, availableHeight),
+    );
+  });
+  const popoverId = React.useId();
+  const onResetRef = useRef(onReset);
+  onResetRef.current = onReset;
   const clampValue = (value: number, min: number, max: number): number => {
     return Math.max(min, Math.min(value, max));
   };
@@ -121,7 +131,11 @@ const PrivacyLedgerBadge: React.FC<Props> = ({
     const spaceBelow =
       window.innerHeight - triggerRect.bottom - POPUP_EDGE_GUTTER;
     const preferredSpace = placement === "up" ? spaceAbove : spaceBelow;
-    return Math.min(POPUP_FALLBACK_HEIGHT, Math.max(96, preferredSpace - 4));
+    const availableHeight = Math.max(0, window.innerHeight - POPUP_EDGE_GUTTER * 2);
+    const availableSpace = Math.max(0, preferredSpace - 4);
+    const minHeight = Math.min(POPUP_MIN_HEIGHT, availableHeight);
+    const safeHeight = Math.max(minHeight, Math.min(availableHeight, availableSpace));
+    return Math.max(minHeight, Math.min(POPUP_FALLBACK_HEIGHT, safeHeight));
   };
 
   const measurePlacement = React.useCallback(
@@ -131,12 +145,14 @@ const PrivacyLedgerBadge: React.FC<Props> = ({
       }
       const triggerRect = trigger.getBoundingClientRect();
       const panelRectHeight = popRef.current?.getBoundingClientRect().height;
+      const availableHeight = Math.max(0, window.innerHeight - POPUP_EDGE_GUTTER * 2);
+      const minHeight = Math.min(POPUP_MIN_HEIGHT, availableHeight);
       const panelHeight =
         typeof panelRectHeight === "number" &&
         Number.isFinite(panelRectHeight) &&
         panelRectHeight > 0
-          ? Math.min(panelRectHeight, POPUP_FALLBACK_HEIGHT)
-          : POPUP_FALLBACK_HEIGHT;
+          ? Math.min(panelRectHeight, POPUP_FALLBACK_HEIGHT, availableHeight)
+          : Math.min(POPUP_FALLBACK_HEIGHT, availableHeight);
       const spaceAbove = triggerRect.top - POPUP_EDGE_GUTTER;
       const spaceBelow =
         window.innerHeight - triggerRect.bottom - POPUP_EDGE_GUTTER;
@@ -150,6 +166,16 @@ const PrivacyLedgerBadge: React.FC<Props> = ({
       }
       if (canOpenUp) return "up";
       if (canOpenDown) return "down";
+
+      if (spaceAbove < minHeight && spaceBelow < minHeight) {
+        return spaceAbove > spaceBelow ? "up" : "down";
+      }
+      if (spaceAbove < minHeight) {
+        return "down";
+      }
+      if (spaceBelow < minHeight) {
+        return "up";
+      }
       return spaceAbove > spaceBelow ? "up" : "down";
     },
     [],
@@ -270,16 +296,11 @@ const PrivacyLedgerBadge: React.FC<Props> = ({
 
   const openPopover = React.useCallback(() => {
     setOpen(true);
-    requestAnimationFrame(() => {
-      updatePlacement();
-    });
-  }, [updatePlacement]);
+  }, []);
 
-  useEffect(() => {
+  React.useLayoutEffect(() => {
     if (!open) return;
-    const raf = requestAnimationFrame(() => {
-      updatePlacement();
-    });
+    updatePlacement();
     const handler = (e: MouseEvent) => {
       const target = e.target as Node;
       if (
@@ -306,7 +327,6 @@ const PrivacyLedgerBadge: React.FC<Props> = ({
       document.removeEventListener("keydown", keyHandler, { capture: true });
       window.removeEventListener("resize", updatePlacement);
       window.removeEventListener("scroll", updatePlacement, true);
-      cancelAnimationFrame(raf);
     };
   }, [open, closePopover, updatePlacement]);
 

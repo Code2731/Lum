@@ -359,6 +359,47 @@ describe("AppHeader", () => {
     }
   });
 
+  it("고급 메뉴는 작은 창 높이에서도 높이가 뷰포트 여백을 넘지 않는다", async () => {
+    const props = buildProps() as any;
+    const HeaderHarness = () => {
+      const [showAdvancedOverflow, setShowAdvancedOverflow] = React.useState(true);
+      return (
+        <AppHeader
+          {...props}
+          showAdvancedOverflow={showAdvancedOverflow}
+          setShowAdvancedOverflow={setShowAdvancedOverflow}
+        />
+      );
+    };
+
+    const originalInnerHeight = window.innerHeight;
+    Object.defineProperty(window, "innerHeight", {
+      configurable: true,
+      value: 180,
+    });
+
+    render(<HeaderHarness />);
+    const button = await screen.findByRole("button", { name: ADVANCED_BUTTON_NAME });
+    Object.defineProperty(button, "getBoundingClientRect", {
+      configurable: true,
+      value: () => domRect(130, 620, 30, 28),
+    });
+
+    fireEvent(window, new Event("resize"));
+
+    const menu = await screen.findByRole("menu", { name: "고급 기능 메뉴" });
+    await waitFor(() => {
+      const maxHeight = Number.parseFloat(menu.style.maxHeight || "0");
+      expect(maxHeight).toBeLessThanOrEqual(164);
+      expect(maxHeight).toBeGreaterThan(0);
+    });
+
+    Object.defineProperty(window, "innerHeight", {
+      configurable: true,
+      value: originalInnerHeight,
+    });
+  });
+
   it("툴바 버튼은 shortcut 속성을 aria-keyshortcuts로 노출한다", () => {
     render(<AppHeader {...buildProps()} />);
 
