@@ -232,20 +232,8 @@ const PrivacyLedgerBadge: React.FC<Props> = ({
 
     const triggerRect = triggerRef.current.getBoundingClientRect();
     const nextPlacement = measurePlacement(triggerRef.current);
-    const currentPopupHeight =
-      popRef.current?.getBoundingClientRect().height ?? POPUP_FALLBACK_HEIGHT;
-    const panelHeight = Math.max(
-      96,
-      Math.min(
-        typeof currentPopupHeight === "number" &&
-          Number.isFinite(currentPopupHeight) &&
-          currentPopupHeight > 0
-          ? currentPopupHeight
-          : POPUP_FALLBACK_HEIGHT,
-        POPUP_FALLBACK_HEIGHT,
-      ),
-    );
     const nextHeight = clampPopupHeight(nextPlacement, triggerRect);
+    const panelHeight = nextHeight;
     const panelWidth = Math.min(
       Math.max(
         POPUP_FALLBACK_WIDTH,
