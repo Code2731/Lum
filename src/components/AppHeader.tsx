@@ -3,6 +3,7 @@
 // state는 App.tsx가 소유, 여기는 props로 받아 렌더 + 상호작용만.
 
 import React from "react";
+import { createPortal } from "react-dom";
 import { invoke } from "@tauri-apps/api/core";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -381,7 +382,6 @@ const AppHeader: React.FC<Props> = ({
   const [notifCenterMaxHeight, setNotifCenterMaxHeight] = React.useState(440);
   const [advancedOverflowPosition, setAdvancedOverflowPosition] = React.useState<PopupPosition>({ x: 0, y: 0 });
   const [notifCenterPosition, setNotifCenterPosition] = React.useState<PopupPosition>({ x: 0, y: 0 });
-  const [hasAdvancedPosition, setHasAdvancedPosition] = React.useState(false);
   const [hasNotifCenterPosition, setHasNotifCenterPosition] = React.useState(false);
   const ADVANCED_OVERFLOW_PANEL_ID = "advanced-overflow-panel";
   const NOTIF_CENTER_PANEL_ID = "notification-center-panel";
@@ -467,9 +467,9 @@ const AppHeader: React.FC<Props> = ({
     left: `${advancedOverflowPosition.x}px`,
     top: `${advancedOverflowPosition.y}px`,
     width: typeof advancedOverflowPosition.width === "number" ? `${advancedOverflowPosition.width}px` : undefined,
-    opacity: hasAdvancedPosition ? 1 : 0,
-    visibility: hasAdvancedPosition ? "visible" : "hidden",
-    pointerEvents: hasAdvancedPosition ? "auto" : "none",
+    opacity: 1,
+    visibility: "visible",
+    pointerEvents: "auto",
   };
 
   const advancedOverflowPanelOrigin = advancedOverflowPlacement === "up" ? "bottom right" : "top right";
@@ -552,7 +552,6 @@ const AppHeader: React.FC<Props> = ({
   }, []);
 
   const closeAdvancedOverflow = React.useCallback(() => {
-    setHasAdvancedPosition(false);
     setShowAdvancedOverflow(false);
     requestAnimationFrame(() => {
       advancedOverflowButtonRef.current?.focus();
@@ -569,7 +568,6 @@ const AppHeader: React.FC<Props> = ({
 
   const toggleAdvancedOverflow = React.useCallback(() => {
     setShowNotifCenter(false);
-    setHasAdvancedPosition(false);
     setShowAdvancedOverflow((prev) => {
       return !prev;
     });
@@ -626,7 +624,7 @@ const AppHeader: React.FC<Props> = ({
         setMaxHeight: setAdvancedOverflowMaxHeight,
         setPosition: setAdvancedOverflowPosition,
         fallbackWidth: POPUP_FALLBACK_WIDTH.advanced,
-        onReady: () => setHasAdvancedPosition(true),
+        onReady: () => {},
       });
     };
 
@@ -902,89 +900,87 @@ const AppHeader: React.FC<Props> = ({
             >
               <SlidersHorizontal size={14} />
             </ToolbarIconButton>
-            <AnimatePresence>
-              {showAdvancedOverflow && (
-                <motion.div
-                  ref={advancedOverflowPanelRef}
-                  id={ADVANCED_OVERFLOW_PANEL_ID}
-                  key="advanced-overflow"
-                  role="menu"
-                  aria-label="고급 기능 메뉴"
-                  onKeyDown={(e) => {
-                    const handled = handlePopupTabTrap(e, advancedOverflowPanelRef)
-                      || handlePopupArrowNav(e, advancedOverflowPanelRef);
-                    if (handled) {
-                      e.stopPropagation();
-                    }
-                  }}
-                  initial={{ opacity: 0, scale: 0.96, y: advancedOverflowPanelOffsetY }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.96, y: advancedOverflowPanelOffsetY }}
-                  transition={{ duration: 0.15, ease: "easeOut" }}
-                  style={{
-                    transformOrigin: advancedOverflowPanelOrigin,
-                    maxHeight: `${advancedOverflowMaxHeight}px`,
-                    ...advancedOverflowPanelStyle,
-                  }}
-                  className="fixed z-50 w-64 max-h-[min(440px,calc(100vh-3.5rem))] overflow-y-auto rounded-xl border border-white/[0.12] bg-[#0f1620]/95 backdrop-blur-md shadow-xl p-2 space-y-0.5"
-                >
-                  {hasUnseenAdvanced && (
-                    <div className="px-2 py-1.5 mb-1 border-b border-white/10">
-                      <p className="text-xs font-semibold tracking-[0.06em] text-amber-300 uppercase">
-                        NEW FEATURE
-                      </p>
-                      <p className="text-xs text-white/65 mt-0.5">
-                        신규 기능 {unseenAdvancedCount}개를 확인해 보세요.
-                      </p>
-                    </div>
-                  )}
-                  {orderedOverflowActions.map((action) => (
-                    <AdvancedRow
-                      key={`advanced-overflow-${action.id}`}
-                      icon={action.icon(SMALL_ICON_SIZE)}
-                      label={action.label}
-                      badge={action.badge}
-                      isNew={action.newFeatureId ? isNew(action.newFeatureId) : false}
-                      onClick={() => {
-                        setShowAdvancedOverflow(false);
-                        action.onActivate();
-                      }}
-                    />
-                  ))}
-                  {compactMode && (
-                    <>
-                      <p className="px-2 py-1.5 text-xs font-semibold tracking-[0.06em] text-white/50 uppercase">
-                        QUICK ACCESS
-                      </p>
-                      {compactQuickAccessActions.map((action) => (
-                        <AdvancedRow
-                          key={`quick-access-${action.id}`}
-                          icon={action.icon(SMALL_ICON_SIZE)}
-                          label={action.label}
-                          onClick={() => {
-                            setShowAdvancedOverflow(false);
-                            action.onActivate();
-                          }}
-                        />
-                      ))}
-                    </>
-                  )}
-                  <div className="h-px bg-white/8 my-1" />
-                  {!compactMode && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        toggleToolbarAdvanced();
-                        setShowAdvancedOverflow(false);
-                      }}
-                      className="w-full text-left px-2 py-1.5 rounded text-xs text-white/55 hover:text-white/85 hover:bg-white/5 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                    >
-                      툴바에 항상 표시 (고급 기능 펼치기)
-                    </button>
-                  )}
-                </motion.div>
-              )}
-            </AnimatePresence>
+            {(showAdvancedOverflow && typeof document !== "undefined") ? createPortal(
+              <motion.div
+                ref={advancedOverflowPanelRef}
+                id={ADVANCED_OVERFLOW_PANEL_ID}
+                role="menu"
+                aria-label="고급 기능 메뉴"
+                onKeyDown={(e) => {
+                  const handled = handlePopupTabTrap(e, advancedOverflowPanelRef)
+                    || handlePopupArrowNav(e, advancedOverflowPanelRef);
+                  if (handled) {
+                    e.stopPropagation();
+                  }
+                }}
+                initial={{ opacity: 0, scale: 0.96, y: advancedOverflowPanelOffsetY }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.96, y: advancedOverflowPanelOffsetY }}
+                transition={{ duration: 0.15, ease: "easeOut" }}
+                style={{
+                  transformOrigin: advancedOverflowPanelOrigin,
+                  maxHeight: `${advancedOverflowMaxHeight}px`,
+                  ...advancedOverflowPanelStyle,
+                }}
+                className="fixed z-50 w-64 max-h-[min(440px,calc(100vh-3.5rem))] overflow-y-auto rounded-xl border border-white/[0.12] bg-[#0f1620] shadow-xl p-2 space-y-0.5 text-white"
+              >
+                {hasUnseenAdvanced && (
+                  <div className="px-2 py-1.5 mb-1 border-b border-white/10">
+                    <p className="text-xs font-semibold tracking-[0.06em] text-amber-300 uppercase">
+                      NEW FEATURE
+                    </p>
+                    <p className="text-xs text-white/65 mt-0.5">
+                      신규 기능 {unseenAdvancedCount}개를 확인해 보세요.
+                    </p>
+                  </div>
+                )}
+                {orderedOverflowActions.map((action) => (
+                  <AdvancedRow
+                    key={`advanced-overflow-${action.id}`}
+                    icon={action.icon(SMALL_ICON_SIZE)}
+                    label={action.label}
+                    badge={action.badge}
+                    isNew={action.newFeatureId ? isNew(action.newFeatureId) : false}
+                    onClick={() => {
+                      setShowAdvancedOverflow(false);
+                      action.onActivate();
+                    }}
+                  />
+                ))}
+                {compactMode && (
+                  <>
+                    <p className="px-2 py-1.5 text-xs font-semibold tracking-[0.06em] text-white/50 uppercase">
+                      QUICK ACCESS
+                    </p>
+                    {compactQuickAccessActions.map((action) => (
+                      <AdvancedRow
+                        key={`quick-access-${action.id}`}
+                        icon={action.icon(SMALL_ICON_SIZE)}
+                        label={action.label}
+                        onClick={() => {
+                          setShowAdvancedOverflow(false);
+                          action.onActivate();
+                        }}
+                      />
+                    ))}
+                  </>
+                )}
+                <div className="h-px bg-white/8 my-1" />
+                {!compactMode && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      toggleToolbarAdvanced();
+                      setShowAdvancedOverflow(false);
+                    }}
+                    className="w-full text-left px-2 py-1.5 rounded text-xs text-white/55 hover:text-white/85 hover:bg-white/5 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  >
+                    툴바에 항상 표시 (고급 기능 펼치기)
+                  </button>
+                )}
+              </motion.div>,
+              document.body,
+            ) : null}
           </div>
         )}
         {toolbarShowAdvanced && !compactMode && (
