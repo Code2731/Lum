@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import type { AiBackend } from "../utils/inputRouter";
@@ -132,6 +132,7 @@ export function useAIChat(model: string, getTerminalContext: () => string) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [streaming, setStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const requestIdRef = useRef(0);
 
   const sendMessage = useCallback(
     async (
@@ -189,11 +190,15 @@ export function useAIChat(model: string, getTerminalContext: () => string) {
         { id: assistantId, role: "assistant", content: "", timestamp: Date.now() },
       ]);
 
+      const requestId = requestIdRef.current + 1;
+      requestIdRef.current = requestId;
+
       setStreaming(true);
       setError(null);
 
       let tokenCount = 0;
       const unlisten = await listen<string>(XLLM_TOKEN_EVENT, (event) => {
+        if (requestIdRef.current !== requestId) return;
         tokenCount++;
         if (tokenCount === 1) console.log("[AI] first token received");
         const token = event.payload.replace(/<\|im_end\|>|<\|endoftext\|>|<\|im_start\|>/g, "");
@@ -224,21 +229,26 @@ export function useAIChat(model: string, getTerminalContext: () => string) {
           const raw = e as { message?: string };
           return raw.message ?? JSON.stringify(e);
         })();
-        setError(msg);
-        setMessages((prev) =>
-          prev.map((m) =>
-            m.id === assistantId ? { ...m, content: `❌ ${msg}` } : m,
-          ),
-        );
+        if (requestIdRef.current === requestId) {
+          setError(msg);
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === assistantId ? { ...m, content: `❌ ${msg}` } : m,
+            ),
+          );
+        }
       } finally {
         unlisten();
-        setStreaming(false);
+        if (requestIdRef.current === requestId) {
+          setStreaming(false);
+        }
       }
     },
     [model, messages, streaming, getTerminalContext],
   );
 
   const cancel = useCallback(() => {
+    requestIdRef.current += 1;
     invoke("cancel_ai_stream").catch(() => {});
     setStreaming(false);
   }, []);
