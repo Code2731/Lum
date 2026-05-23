@@ -14,7 +14,7 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
-use tauri::{AppHandle, Emitter, Manager, command};
+use tauri::{command, AppHandle, Emitter, Manager};
 use tokio::process::Command as TokioCommand;
 
 const REACT_EVENT: &str = "react_event";
@@ -390,7 +390,7 @@ fn flatten_mcp_tools(server: &str, value: &serde_json::Value) -> Vec<McpToolEntr
 /// 서버별로 2초 timeout — 한 서버가 느리거나 hang해도 ReAct 시작이 막히지 않음.
 /// 모든 서버를 병렬 호출 — 직렬 시 서버 N개 × 응답시간 vs 병렬 max(응답시간).
 async fn enumerate_mcp_tools(state: &tauri::State<'_, crate::mcp::McpState>) -> Vec<McpToolEntry> {
-    use tokio::time::{Duration, timeout};
+    use tokio::time::{timeout, Duration};
     let servers = crate::mcp::list_enabled_servers();
     let futs = servers.into_iter().map(|spec| {
         let name = spec.name.clone();
@@ -862,8 +862,8 @@ async fn recall_search_healing(
     .map_err(|e| e.to_string())
 }
 
-fn list_healing_records()
--> std::result::Result<Vec<crate::commands::healing_dataset::HealingRecord>, String> {
+fn list_healing_records(
+) -> std::result::Result<Vec<crate::commands::healing_dataset::HealingRecord>, String> {
     #[cfg(test)]
     {
         let mut guard = healing_tool_mock_lock().lock().unwrap();
@@ -1817,8 +1817,8 @@ async fn run_query_graph_tool(args: &serde_json::Value, cwd: &str) -> String {
         sorted_links.sort_by(|a, b| {
             b.1.partial_cmp(&a.1)
                 .unwrap_or(std::cmp::Ordering::Equal)
-                .then_with(|| a.0.0.cmp(&b.0.0))
-                .then_with(|| a.0.1.cmp(&b.0.1))
+                .then_with(|| a.0 .0.cmp(&b.0 .0))
+                .then_with(|| a.0 .1.cmp(&b.0 .1))
         });
         out.push(format!("모듈 연결 요약 {}개:", sorted_links.len().min(12)));
         let mut has_links = false;
@@ -2313,7 +2313,11 @@ fn list_dir_tool(path: &str, cwd: &str) -> String {
                 .map(|e| {
                     let name = e.file_name().to_string_lossy().into_owned();
                     let is_dir = e.file_type().map(|ft| ft.is_dir()).unwrap_or(false);
-                    if is_dir { format!("{name}/") } else { name }
+                    if is_dir {
+                        format!("{name}/")
+                    } else {
+                        name
+                    }
                 })
                 .collect();
             lines.sort();
@@ -4722,11 +4726,9 @@ fn sample() {}
         let out = apply_patch_tool(&args, &td.cwd());
         assert!(out.contains("매칭됩니다"), "{out}");
         // 원본 보존
-        assert!(
-            std::fs::read_to_string(td.path().join("a.rs"))
-                .unwrap()
-                .contains("let x = 1;")
-        );
+        assert!(std::fs::read_to_string(td.path().join("a.rs"))
+            .unwrap()
+            .contains("let x = 1;"));
     }
 
     #[test]
