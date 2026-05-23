@@ -623,6 +623,16 @@ const AppHeader: React.FC<Props> = ({
   React.useLayoutEffect(() => {
     if (!showAdvancedOverflow) return;
 
+    let raf = requestAnimationFrame(() => updatePopupPlacement({
+      trigger: advancedOverflowButtonRef.current,
+      panelRef: advancedOverflowPanelRef,
+      setPlacement: setAdvancedOverflowPlacement,
+      setMaxHeight: setAdvancedOverflowMaxHeight,
+      setPosition: setAdvancedOverflowPosition,
+      fallbackWidth: POPUP_FALLBACK_WIDTH.advanced,
+      onReady: () => {},
+    }));
+
     const updatePlacement = () => {
       updatePopupPlacement({
         trigger: advancedOverflowButtonRef.current,
@@ -653,6 +663,7 @@ const AppHeader: React.FC<Props> = ({
     window.addEventListener("scroll", updatePlacement, true);
     return () => {
       observer?.disconnect();
+      cancelAnimationFrame(raf);
       window.removeEventListener("resize", updatePlacement);
       window.removeEventListener("scroll", updatePlacement, true);
     };
@@ -687,6 +698,16 @@ const AppHeader: React.FC<Props> = ({
   React.useLayoutEffect(() => {
     if (!showNotifCenter) return;
 
+    let raf = requestAnimationFrame(() => updatePopupPlacement({
+      trigger: notifCenterButtonRef.current,
+      panelRef: notifCenterPanelRef,
+      setPlacement: setNotifCenterPlacement,
+      setMaxHeight: setNotifCenterMaxHeight,
+      setPosition: setNotifCenterPosition,
+      fallbackWidth: POPUP_FALLBACK_WIDTH.notif,
+      onReady: () => {},
+    }));
+
     const updatePlacement = () => {
       updatePopupPlacement({
         trigger: notifCenterButtonRef.current,
@@ -717,6 +738,7 @@ const AppHeader: React.FC<Props> = ({
     window.addEventListener("scroll", updatePlacement, true);
     return () => {
       observer?.disconnect();
+      cancelAnimationFrame(raf);
       window.removeEventListener("resize", updatePlacement);
       window.removeEventListener("scroll", updatePlacement, true);
     };
@@ -928,8 +950,10 @@ const AppHeader: React.FC<Props> = ({
                   transformOrigin: advancedOverflowPanelOrigin,
                   maxHeight: `${advancedOverflowMaxHeight}px`,
                   ...advancedOverflowPanelStyle,
+                  opacity: 1,
+                  backgroundColor: "#0f1620",
                 }}
-                className="fixed z-[1200] w-64 max-h-[min(440px,calc(100vh-3.5rem))] overflow-y-auto rounded-xl border border-white/[0.12] bg-[#0f1620] shadow-xl p-2 space-y-0.5 text-white"
+                className="fixed z-[1200] w-64 overflow-y-auto rounded-xl border border-white/[0.12] shadow-xl p-2 space-y-0.5 text-white"
               >
                 {hasUnseenAdvanced && (
                   <div className="px-2 py-1.5 mb-1 border-b border-white/10">

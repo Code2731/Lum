@@ -373,8 +373,10 @@ const PrivacyLedgerBadge: React.FC<Props> = ({
         ...popupStyle,
         transformOrigin: popupOrigin,
         maxHeight: `${popupMaxHeight}px`,
+        opacity: 1,
+        backgroundColor: "#161b22",
       }}
-      className="fixed w-72 max-h-[min(440px,calc(100vh-3.5rem))] flex flex-col bg-[#161b22] border border-white/10 rounded-xl shadow-2xl z-[1200] overflow-hidden"
+      className="fixed w-72 flex flex-col border border-white/10 rounded-xl shadow-2xl z-[1200] overflow-hidden"
       id={popoverId}
       role="dialog"
       aria-label="Privacy Ledger 상세"
