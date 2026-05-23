@@ -28,6 +28,8 @@ export const FONT_FAMILIES = [
   "Consolas",
 ] as const;
 
+const DEFAULT_TERMINAL_FONT_SIZE = 13;
+
 export const THEMES: Record<string, XtermTheme> = {
   "GitHub Dark": {
     background: "#0d1117", foreground: "#c9d1d9",
@@ -83,7 +85,7 @@ export const THEMES: Record<string, XtermTheme> = {
 
 const DEFAULT_APPEARANCE: TerminalAppearance = {
   themeName: "GitHub Dark",
-  fontSize: 13,
+  fontSize: DEFAULT_TERMINAL_FONT_SIZE,
   fontFamily: "JetBrains Mono",
 };
 
