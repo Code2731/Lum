@@ -16,6 +16,7 @@ import { Switch } from "@/components/ui/switch";
 import { useLoraForge, type ForgeRun, type ForgeStatus, type AutoEvent } from "../hooks/useLoraForge";
 import { fmtShortDate } from "../utils";
 import { cn } from "@/lib/utils";
+import { SMALL_ICON_SIZE } from "../constants/ui";
 
 interface Props {
   onLoadAdapter?: (run: ForgeRun) => void;
@@ -504,7 +505,7 @@ const AutoTrainCard: React.FC<AutoCardProps> = ({
   return (
     <div className="px-5 py-3 border-b border-white/10 shrink-0 bg-cyan-500/[0.03] space-y-2.5">
       <div className="flex items-center gap-2">
-        <Sparkles size={13} className="text-cyan-300" />
+        <Sparkles size={SMALL_ICON_SIZE} className="text-cyan-300" />
         <span className="text-xs font-semibold text-white/85">자동 학습 루프</span>
         <span className="text-xs text-white/40">approve 누적 시 백그라운드 학습</span>
         <span className="ml-auto" />

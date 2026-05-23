@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { IconButton } from "@/components/ui/icon-button";
+import { SMALL_ICON_SIZE } from "../constants/ui";
 
 interface DownloadProgress {
   file: string;
@@ -168,13 +169,13 @@ const OnboardingWizard: React.FC<Props> = ({ onComplete }) => {
           {step === 1 && (
             <>
               <div className="flex items-center gap-2">
-                <Cpu size={13} className="text-accent" />
+                <Cpu size={SMALL_ICON_SIZE} className="text-accent" />
                 <span className="text-sm font-medium">하드웨어 자동 분석</span>
               </div>
 
               {!specs ? (
                 <div className="flex-1 flex items-center justify-center gap-2 text-white/30 text-sm">
-                  <Loader2 size={13} className="animate-spin" /> 스캔 중…
+                  <Loader2 size={SMALL_ICON_SIZE} className="animate-spin" /> 스캔 중…
                 </div>
               ) : (
                 <div className="space-y-3 flex-1">
@@ -213,7 +214,7 @@ const OnboardingWizard: React.FC<Props> = ({ onComplete }) => {
           {step === 2 && (
             <>
               <div className="flex items-center gap-2">
-                <Shield size={13} className="text-accent" />
+                <Shield size={SMALL_ICON_SIZE} className="text-accent" />
                 <span className="text-sm font-medium">성능 모드 선택</span>
               </div>
 
@@ -270,7 +271,7 @@ const OnboardingWizard: React.FC<Props> = ({ onComplete }) => {
           {step === 3 && (
             <>
               <div className="flex items-center gap-2">
-                <TerminalSquare size={13} className="text-accent" />
+                <TerminalSquare size={SMALL_ICON_SIZE} className="text-accent" />
                 <span className="text-sm font-medium">xLLM 서버 확인</span>
               </div>
 
@@ -325,7 +326,7 @@ const OnboardingWizard: React.FC<Props> = ({ onComplete }) => {
           {step === 4 && (
             <>
               <div className="flex items-center gap-2">
-                <Package size={13} className="text-accent" />
+                <Package size={SMALL_ICON_SIZE} className="text-accent" />
                 <span className="text-sm font-medium">AI 모델 준비</span>
               </div>
 
@@ -335,7 +336,7 @@ const OnboardingWizard: React.FC<Props> = ({ onComplete }) => {
                 </div>
               ) : hasModel ? (
                 <div className="flex items-center gap-2 text-sm text-green-400">
-                  <CheckCircle2 size={13} /> 모델이 이미 설치되어 있습니다
+                  <CheckCircle2 size={SMALL_ICON_SIZE} /> 모델이 이미 설치되어 있습니다
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -441,7 +442,7 @@ const NextBtn: React.FC<{ onClick: () => void; disabled?: boolean }> = ({ onClic
     disabled={disabled}
     className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-accent/20 text-accent hover:bg-accent/30 disabled:opacity-40 transition-colors text-sm"
   >
-    다음 <ChevronRight size={13} />
+    다음 <ChevronRight size={SMALL_ICON_SIZE} />
   </button>
 );
 

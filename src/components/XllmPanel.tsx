@@ -13,6 +13,7 @@ import { Slider } from "@/components/ui/slider";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { shortPath, parsePathComponents, parseLoadedKey } from "../utils";
+import { SMALL_ICON_SIZE } from "../constants/ui";
 
 interface AppConfig {
   coding_model?: string;
@@ -74,7 +75,7 @@ const XllmPanel: React.FC<Props> = ({ onClose }) => {
       <DialogContent className="sm:max-w-lg top-[12%] translate-y-0 max-h-[80vh] flex flex-col gap-0 p-0 overflow-hidden border-white/10 rounded-xl">
         {/* 헤더 */}
         <div className="flex items-center gap-2 px-4 py-3 border-b border-white/5 shrink-0">
-          <SlidersHorizontal size={13} className="text-accent shrink-0" />
+          <SlidersHorizontal size={SMALL_ICON_SIZE} className="text-accent shrink-0" />
           <DialogTitle className="text-xs font-semibold">xLLM 실전 최적화 설정</DialogTitle>
         </div>
 

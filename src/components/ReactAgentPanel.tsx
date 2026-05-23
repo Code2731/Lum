@@ -24,6 +24,7 @@ import type {
   ChangeRisk,
   ChangeKind,
 } from "../hooks/useReactAgent";
+import { SMALL_ICON_SIZE } from "../constants/ui";
 
 interface ScipBackend {
   language: string;
@@ -395,7 +396,7 @@ const ReactAgentPanel: React.FC<Props> = ({
     <div className="w-[540px] max-h-[80vh] flex flex-col bg-[#161b22] border border-white/10 rounded-xl shadow-2xl overflow-hidden">
       {/* ── 헤더 ─────────────────────────────────────────── */}
       <div className="flex items-center gap-2 px-3 py-2.5 border-b border-white/5 bg-white/3 shrink-0">
-        <Bot size={13} className="text-accent shrink-0" />
+        <Bot size={SMALL_ICON_SIZE} className="text-accent shrink-0" />
         <span className="text-sm font-semibold text-accent">
           ReAct 에이전트
         </span>

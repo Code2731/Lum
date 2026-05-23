@@ -8,6 +8,7 @@ import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete";
 import { IconButton } from "@/components/ui/icon-button";
 import { Input } from "@/components/ui/input";
 import { shortPath } from "../utils";
+import { SMALL_ICON_SIZE } from "../constants/ui";
 
 interface MistralLocalModel {
   repo_id: string;
@@ -293,7 +294,7 @@ const ModelManager: React.FC<Props> = ({ onClose }) => {
                               className="p-1.5 rounded text-white/30 hover:text-red-400 hover:bg-red-400/10 transition-colors disabled:opacity-50"
                               title="모델 삭제"
                             >
-                              <Trash2 size={13} />
+                              <Trash2 size={SMALL_ICON_SIZE} />
                             </button>
                           </ConfirmDeleteDialog>
                         </div>

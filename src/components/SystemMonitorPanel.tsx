@@ -1,6 +1,7 @@
 import React from "react";
 import { X, Cpu, MemoryStick, RefreshCw } from "lucide-react";
 import { useSystemMonitor, type SystemStats } from "../hooks/useSystemMonitor";
+import { SMALL_ICON_SIZE } from "../constants/ui";
 
 interface Props {
   onClose: () => void;
@@ -76,7 +77,7 @@ const SystemMonitorPanel: React.FC<Props> = ({ onClose, compact = false }) => {
     <div className={`lum-sidepanel flex flex-col h-full border-l border-white/10 ${panelTextClass}`}>
       {/* 헤더 */}
       <div className={`flex items-center gap-2 ${headerPadClass} border-b border-white/10 bg-white/[0.02] shrink-0`}>
-        <Cpu size={13} className="text-accent shrink-0" />
+        <Cpu size={SMALL_ICON_SIZE} className="text-accent shrink-0" />
         <span className="text-sm font-semibold text-white/86 flex-1">시스템 모니터</span>
         {stats && (
           <span className="flex items-center gap-1 text-xs text-white/28">

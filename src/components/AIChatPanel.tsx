@@ -4,6 +4,7 @@ import { Bot, User, Trash2, X, Loader2, Send, Play, StopCircle } from "lucide-re
 import { IconButton } from "@/components/ui/icon-button";
 import { Textarea } from "@/components/ui/textarea";
 import type { ChatMessage } from "../hooks/useAIChat";
+import { SMALL_ICON_SIZE } from "../constants/ui";
 
 interface Props {
   messages: ChatMessage[];
@@ -50,7 +51,7 @@ const AIChatPanel: React.FC<Props> = ({ messages, streaming, error, onSend, onCa
     <div className="flex flex-col flex-1 min-h-0 bg-[#0d1117] border-l border-white/5">
       {/* 헤더 */}
       <div className="flex items-center gap-2 px-3 py-2 border-b border-white/5 shrink-0">
-        <Bot size={13} className="text-accent shrink-0" />
+        <Bot size={SMALL_ICON_SIZE} className="text-accent shrink-0" />
         <span className="text-sm font-semibold text-white/80 flex-1">AI Chat</span>
         {messages.length > 0 && (
           <IconButton
@@ -132,7 +133,7 @@ const AIChatPanel: React.FC<Props> = ({ messages, streaming, error, onSend, onCa
           {streaming ? (
             <IconButton tooltip="응답 중단" onClick={onCancel}
               className="shrink-0 p-1 rounded text-red-400 hover:text-red-300 transition-colors">
-              <StopCircle size={13} />
+              <StopCircle size={SMALL_ICON_SIZE} />
             </IconButton>
           ) : (
             <button
@@ -140,7 +141,7 @@ const AIChatPanel: React.FC<Props> = ({ messages, streaming, error, onSend, onCa
               disabled={!input.trim()}
               className="shrink-0 p-1 rounded text-accent hover:text-accent/80 disabled:opacity-30 transition-colors"
             >
-              <Send size={13} />
+              <Send size={SMALL_ICON_SIZE} />
             </button>
           )}
         </div>

@@ -4,6 +4,7 @@ import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete";
 import { IconButton } from "@/components/ui/icon-button";
 import { Textarea } from "@/components/ui/textarea";
 import type { Script } from "../hooks/useScriptLibrary";
+import { SMALL_ICON_SIZE } from "../constants/ui";
 
 interface Props {
   scripts: Script[];
@@ -55,7 +56,7 @@ const ScriptLibraryPanel: React.FC<Props> = ({
     <div className={`lum-sidepanel flex flex-col h-full border-l border-white/10 ${panelTextClass}`}>
       {/* 헤더 */}
       <div className={`flex items-center gap-2 ${headerPadClass} border-b border-white/10 bg-white/[0.02] shrink-0`}>
-        <BookOpen size={13} className="text-accent shrink-0" />
+        <BookOpen size={SMALL_ICON_SIZE} className="text-accent shrink-0" />
         <span className={`${titleTextClass} font-semibold text-white/86 flex-1`}>스크립트 라이브러리</span>
         <IconButton
           tooltip="새 스크립트 추가"

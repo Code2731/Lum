@@ -15,6 +15,7 @@ import { ToolbarIconButton, ToolbarSeparator } from "@/components/ui/toolbar-ico
 import WindowControls from "./WindowControls";
 import PrivacyLedgerBadge from "./PrivacyLedgerBadge";
 import NotificationCenter from "./NotificationCenter";
+import { SMALL_ICON_SIZE } from "../constants/ui";
 import type { usePanelVisibility } from "../hooks/usePanelVisibility";
 import type { useSquads } from "../hooks/useSquads";
 import type { usePrivacyLedger } from "../hooks/usePrivacyLedger";
@@ -187,7 +188,7 @@ const AppHeader: React.FC<Props> = ({
     {
       id: "healing",
       label: "Auto-Heal 학습 데이터셋",
-      icon: (size) => <Sparkles size={size} className={size <= 13 ? "text-cyan-300" : undefined} />,
+      icon: (size) => <Sparkles size={size} className={size <= SMALL_ICON_SIZE ? "text-cyan-300" : undefined} />,
       active: showHealingDataset,
       newFeatureId: "healing",
       onActivate: () => {
@@ -207,7 +208,7 @@ const AppHeader: React.FC<Props> = ({
     {
       id: "recall",
       label: "메모리 검색 (history/healing/memory)",
-      icon: (size) => <Library size={size} className={size <= 13 ? "text-cyan-300" : undefined} />,
+      icon: (size) => <Library size={size} className={size <= SMALL_ICON_SIZE ? "text-cyan-300" : undefined} />,
       active: showRecall,
       newFeatureId: "recall",
       onActivate: () => {
@@ -219,7 +220,7 @@ const AppHeader: React.FC<Props> = ({
     {
       id: "lora",
       label: "LoRA Forge — 내 데이터로 모델 학습",
-      icon: (size) => <Hammer size={size} className={size <= 13 ? "text-cyan-300" : undefined} />,
+      icon: (size) => <Hammer size={size} className={size <= SMALL_ICON_SIZE ? "text-cyan-300" : undefined} />,
       active: showLoraForge,
       newFeatureId: "lora",
       onActivate: () => {
@@ -231,7 +232,7 @@ const AppHeader: React.FC<Props> = ({
     {
       id: "skills",
       label: "Skills — 절차 라이브러리",
-      icon: (size) => <BookMarked size={size} className={size <= 13 ? "text-cyan-300" : undefined} />,
+      icon: (size) => <BookMarked size={size} className={size <= SMALL_ICON_SIZE ? "text-cyan-300" : undefined} />,
       active: showSkills,
       newFeatureId: "skills",
       onActivate: () => {
@@ -940,7 +941,7 @@ const AppHeader: React.FC<Props> = ({
                   {orderedOverflowActions.map((action) => (
                     <AdvancedRow
                       key={`advanced-overflow-${action.id}`}
-                      icon={action.icon(13)}
+                      icon={action.icon(SMALL_ICON_SIZE)}
                       label={action.label}
                       badge={action.badge}
                       isNew={action.newFeatureId ? isNew(action.newFeatureId) : false}
@@ -958,7 +959,7 @@ const AppHeader: React.FC<Props> = ({
                       {compactQuickAccessActions.map((action) => (
                         <AdvancedRow
                           key={`quick-access-${action.id}`}
-                          icon={action.icon(13)}
+                          icon={action.icon(SMALL_ICON_SIZE)}
                           label={action.label}
                           onClick={() => {
                             setShowAdvancedOverflow(false);

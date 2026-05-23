@@ -13,6 +13,7 @@ import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete";
 import { useRecall, type RecallEntry, type RecallSource } from "../hooks/useRecall";
 import { fmtShortDate } from "../utils";
 import { cn } from "@/lib/utils";
+import { SMALL_ICON_SIZE } from "../constants/ui";
 
 interface Props {
   model: string;
@@ -77,7 +78,7 @@ const RecallPanel: React.FC<Props> = ({ model, onInjectToChat, onClose }) => {
         {/* 검색 입력 */}
         <div className="px-5 py-3 border-b border-white/8 shrink-0 space-y-2">
           <div className="flex items-center gap-2">
-            <Search size={13} className="text-white/40 shrink-0" />
+            <Search size={SMALL_ICON_SIZE} className="text-white/40 shrink-0" />
             <Input
               autoFocus
               value={query}

@@ -1,5 +1,6 @@
 import { Sparkles, Hash, HelpCircle, Search, GitBranch, FolderTree, Command } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { SMALL_ICON_SIZE } from "../constants/ui";
 
 interface Props {
   onClose: () => void;
@@ -29,7 +30,7 @@ export default function WelcomeHints({ onClose }: Props) {
           </p>
           {HINTS.map(({ icon: Icon, keys, desc }) => (
             <div key={keys} className="flex items-center gap-3 px-2 py-1.5 rounded hover:bg-white/3">
-              <Icon size={13} className="text-accent/70 shrink-0" />
+              <Icon size={SMALL_ICON_SIZE} className="text-accent/70 shrink-0" />
               <code className="text-sm font-mono px-2 py-0.5 bg-white/8 rounded text-white/80 min-w-[90px] text-center">
                 {keys}
               </code>

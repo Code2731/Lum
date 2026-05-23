@@ -3,6 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { GitCommit, Loader2, Copy, Play, FolderOpen } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { SMALL_ICON_SIZE } from "../constants/ui";
 
 interface Props {
   model: string;
@@ -64,7 +65,7 @@ const CommitPanel: React.FC<Props> = ({ model, onExecute, onClose }) => {
       <DialogContent className="sm:max-w-xl top-[20%] translate-y-0 gap-0 p-0 overflow-hidden border-white/10 rounded-xl">
         {/* 헤더 */}
         <div className="flex items-center gap-2 px-4 py-3 border-b border-white/5">
-          <GitCommit size={13} className="text-accent shrink-0" />
+          <GitCommit size={SMALL_ICON_SIZE} className="text-accent shrink-0" />
           <DialogTitle className="text-xs font-semibold">AI 커밋 메시지 생성</DialogTitle>
         </div>
 

@@ -12,6 +12,7 @@ import {
   BookOpen,
 } from "lucide-react";
 import type { AgentState, AgentStep, CompletedStep } from "../hooks/useAgentLoop";
+import { SMALL_ICON_SIZE } from "../constants/ui";
 
 interface Props {
   state: AgentState;
@@ -90,7 +91,7 @@ const AgentPanel: React.FC<Props> = ({ state, onApprove, onCancel, onClose, onSa
     <div className="w-[520px] max-h-[80vh] flex flex-col bg-[#161b22] border border-white/10 rounded-xl shadow-2xl overflow-hidden">
       {/* ── 헤더 ─────────────────────────────────────────── */}
       <div className="flex items-center gap-2 px-3 py-2.5 border-b border-white/5 bg-white/3 shrink-0">
-        <Bot size={13} className="text-accent shrink-0" />
+        <Bot size={SMALL_ICON_SIZE} className="text-accent shrink-0" />
         <span className="text-sm font-semibold text-accent">에이전트 태스크</span>
         <span className="text-xs text-white/30 ml-1 truncate flex-1">{task}</span>
         <button

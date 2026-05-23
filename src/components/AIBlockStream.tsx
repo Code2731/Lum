@@ -8,6 +8,7 @@ import { parseEditBlocks } from "../utils/editBlockParser";
 import { parseToolCalls } from "../utils/toolCallParser";
 import ToolCallCard from "./ToolCallCard";
 import { IconButton } from "@/components/ui/icon-button";
+import { SMALL_ICON_SIZE } from "../constants/ui";
 
 interface Props {
   messages: ChatMessage[];
@@ -140,7 +141,7 @@ const AIBlockStream: React.FC<Props> = ({ messages, streaming, error, onClear, o
         style={{ position: "sticky", top: 0, background: "#0d1117", zIndex: 1 }}
       >
         <div className="flex items-center gap-2 text-xs text-white/50">
-          <Sparkles size={13} className="text-accent" />
+          <Sparkles size={SMALL_ICON_SIZE} className="text-accent" />
           <span>AI 대화</span>
           <span className="text-white/25">· {messages.length}개 메시지</span>
           {streaming && <Loader2 size={12} className="animate-spin text-accent/70 ml-1" />}

@@ -1,6 +1,7 @@
 import React, { useMemo } from "react";
 import ReactMarkdown from "react-markdown";
 import { Eye, FileText, FileWarning, X } from "lucide-react";
+import { SMALL_ICON_SIZE } from "../constants/ui";
 
 interface Props {
   path: string;
@@ -25,7 +26,7 @@ const MarkdownViewerPanel: React.FC<Props> = ({ path, title, content, loading, e
   return (
     <div className="lum-markdown-viewer flex flex-col h-full border-l border-white/10 bg-[#0d1117]/95 min-w-[320px] max-w-[480px]">
       <div className="flex items-center gap-2 px-3 py-2 border-b border-white/10 shrink-0">
-        <Eye size={13} className="text-cyan-300 shrink-0" />
+        <Eye size={SMALL_ICON_SIZE} className="text-cyan-300 shrink-0" />
         <span className="text-sm font-semibold text-white/85 truncate" title={title}>
           {title}
         </span>

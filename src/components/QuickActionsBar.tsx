@@ -3,6 +3,7 @@ import { Plus, Settings2, Zap } from "lucide-react";
 import { IconButton } from "@/components/ui/icon-button";
 import type { QuickAction } from "../hooks/useQuickActions";
 import QuickActionsEditor from "./QuickActionsEditor";
+import { SMALL_ICON_SIZE } from "../constants/ui";
 
 interface Props {
   actions: QuickAction[];
@@ -49,8 +50,8 @@ const QuickActionsBar: React.FC<Props> = ({
           className="ml-auto p-1.5 rounded-md border border-white/[0.12] text-white/45 hover:text-white/80 hover:bg-white/[0.08] transition-colors shrink-0"
         >
           {actions.length === 0
-            ? <Plus size={13} />
-            : <Settings2 size={13} />
+            ? <Plus size={SMALL_ICON_SIZE} />
+            : <Settings2 size={SMALL_ICON_SIZE} />
           }
         </IconButton>
       </div>

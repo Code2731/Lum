@@ -4,6 +4,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { IconButton } from "@/components/ui/icon-button";
 import type { EditBlock } from "../utils/editBlockParser";
 import TestResultCard from "./TestResultCard";
+import { SMALL_ICON_SIZE } from "../constants/ui";
 
 interface Props {
   block: EditBlock;
@@ -90,7 +91,7 @@ const EditBlockCard: React.FC<Props> = ({ block, cwd, onAskAIForFix }) => {
     <div className="my-2 rounded-lg border border-accent/20 bg-white/[0.02] overflow-hidden">
       <div className="flex items-center justify-between px-3 py-1.5 bg-accent/5 border-b border-accent/10">
         <div className="flex items-center gap-2 text-xs">
-          <FileCode size={13} className="text-accent/70" />
+          <FileCode size={SMALL_ICON_SIZE} className="text-accent/70" />
           <span className="font-mono text-accent/90">{block.file}</span>
           <span className="text-white/30 text-sm">
             −{searchLines} / +{replaceLines}
