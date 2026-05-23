@@ -285,7 +285,11 @@ const PrivacyLedgerBadge: React.FC<Props> = ({
       updatePlacement();
     });
     const handler = (e: MouseEvent) => {
-      if (popRef.current && !popRef.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      if (
+        (popRef.current && !popRef.current.contains(target)) &&
+        (triggerRef.current && !triggerRef.current.contains(target))
+      ) {
         closePopover();
       }
     };
