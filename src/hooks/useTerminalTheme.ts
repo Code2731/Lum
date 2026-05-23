@@ -28,7 +28,7 @@ export const FONT_FAMILIES = [
   "Consolas",
 ] as const;
 
-const DEFAULT_TERMINAL_FONT_SIZE = 13;
+export const DEFAULT_TERMINAL_FONT_SIZE = 13;
 
 export const THEMES: Record<string, XtermTheme> = {
   "GitHub Dark": {

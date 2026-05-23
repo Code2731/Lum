@@ -25,6 +25,7 @@ import {
 import type { ChatMessage } from "../hooks/useAIChat";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import type { XtermTheme } from "../hooks/useTerminalTheme";
+import { DEFAULT_TERMINAL_FONT_SIZE } from "../hooks/useTerminalTheme";
 import type { DangerMatch } from "../utils/pasteGuard";
 import type { SshProfile } from "../hooks/useTabManager";
 import { IconButton } from "@/components/ui/icon-button";
@@ -293,7 +294,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     const term = termRef.current;
     const fit = fitAddonRef.current;
     if (!term || !fit) return;
-    term.options.fontSize = fontSize ?? 13;
+    term.options.fontSize = fontSize ?? DEFAULT_TERMINAL_FONT_SIZE;
     try { fit.fit(); } catch {}
     invoke("resize_pty", { id, cols: term.cols, rows: term.rows }).catch(() => {});
   }, [fontSize, id]);
@@ -624,7 +625,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
       : FONT_FAMILY;
     const term = new Terminal({
       fontFamily: initFontFamily,
-      fontSize: fontSizeRef.current ?? 13,
+      fontSize: fontSizeRef.current ?? DEFAULT_TERMINAL_FONT_SIZE,
       lineHeight: 1.4,
       cursorBlink: true,
       cursorStyle: "bar",
@@ -3009,7 +3010,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
         <WarpInputBar
           ref={warpInputRef}
           fontFamily={fontFamily ? `"${fontFamily}", ${FONT_FAMILY}` : FONT_FAMILY}
-          fontSize={fontSize ?? 13}
+          fontSize={fontSize ?? DEFAULT_TERMINAL_FONT_SIZE}
           onSubmit={handleSubmit}
           onInterrupt={handleInterrupt}
           onKeyDownIntercept={handleInputKeyDownIntercept}

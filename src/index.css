@@ -41,6 +41,8 @@
   --lum-ui-text-micro: 10px;
   --lum-ui-text-label: 11px;
   --lum-ui-text-body: 12px;
+  --lum-ui-text-caption: 10.5px;
+  --lum-ui-text-nav-icon: 14px;
 
   background-color: var(--terminal-dark);
   color: white;
@@ -406,7 +408,7 @@ body {
 
 .lum-overlay-empty {
   padding: 10px 12px;
-  font-size: 11px;
+  font-size: var(--lum-ui-text-label);
   color: rgba(255, 255, 255, 0.55);
 }
 
@@ -549,7 +551,7 @@ body {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 5px 12px;
-  font-size: 10.5px;
+  font-size: var(--lum-ui-text-caption);
   line-height: 1.45;
 }
 
@@ -594,7 +596,7 @@ body {
   border: none;
   color: rgba(255, 255, 255, 0.28);
   cursor: pointer;
-  font-size: 11px;
+  font-size: var(--lum-ui-text-label);
   padding: 0 2px;
   line-height: 1.2;
   transition: color 120ms ease;
@@ -673,7 +675,7 @@ body {
 }
 
 .lum-searchbar-nav {
-  font-size: 14px;
+  font-size: var(--lum-ui-text-nav-icon);
   width: 16px;
   text-align: center;
   line-height: 1;
@@ -852,7 +854,7 @@ body {
   align-items: center;
   justify-content: space-between;
   font-family: 'JetBrains Mono', monospace;
-  font-size: 11px;
+  font-size: var(--lum-ui-text-label);
   color: #fff;
   cursor: grab;
 }
@@ -860,7 +862,7 @@ body {
 .node-output {
   padding: 14px;
   font-family: 'JetBrains Mono', monospace;
-  font-size: 12px;
+  font-size: var(--lum-ui-text-body);
   line-height: 1.6;
   color: #c9d1d9;
   white-space: pre-wrap;

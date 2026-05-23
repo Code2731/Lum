@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, fireEvent, act, screen } from "@testing-library/react";
 import { createRef } from "react";
 import WarpInputBar, { type WarpInputBarHandle } from "./WarpInputBar";
+import { DEFAULT_TERMINAL_FONT_SIZE } from "../hooks/useTerminalTheme";
 
 const invokeMock = vi.fn();
 const voiceListeners: Array<(event: { payload: string }) => void> = [];
@@ -38,7 +39,7 @@ function setup(overrides: Partial<React.ComponentProps<typeof WarpInputBar>> = {
     <WarpInputBar
       ref={ref}
       fontFamily="monospace"
-      fontSize={13}
+      fontSize={DEFAULT_TERMINAL_FONT_SIZE}
       onSubmit={onSubmit}
       onInterrupt={onInterrupt}
       onTab={onTab}
