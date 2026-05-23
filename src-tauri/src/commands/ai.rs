@@ -699,6 +699,17 @@ mod tests {
             other => panic!("unexpected error type: {other}"),
         }
     }
+
+    #[test]
+    fn list_xllm_models_첫_url_실패하면_다음_후보를_시도한다() {
+        let models = list_xllm_models_from_candidate_results(vec![
+            Err(LumError::Network("connection refused".into())),
+            Ok(serde_json::json!({"data":[{"id":"qwen-coder"}]})),
+        ])
+        .unwrap();
+
+        assert_eq!(models, vec!["qwen-coder".to_string()]);
+    }
 }
 
 /// xLLM 서버 상태 확인 — /v1/models 엔드포인트로 핑
@@ -734,38 +745,78 @@ pub async fn list_xllm_models() -> Result<Vec<String>> {
         .build()
         .map_err(|e| LumError::Network(e.to_string()))?;
 
+    list_xllm_models_from_candidates(&client, &candidate_urls, xllm_api_key.as_ref()).await
+}
+
+async fn list_xllm_models_from_candidates(
+    client: &reqwest::Client,
+    candidate_urls: &[String],
+    xllm_api_key: Option<&String>,
+) -> Result<Vec<String>> {
     let mut last_err: Option<LumError> = None;
-    for base_url in candidate_urls {
+    let total = candidate_urls.len();
+    for (idx, base_url) in candidate_urls.iter().enumerate() {
         let mut req = client
             .get(format!("{}/v1/models", base_url))
             .timeout(std::time::Duration::from_secs(5));
 
-        if let Some(configured_key) = xllm_api_key.as_ref() {
+        if let Some(configured_key) = xllm_api_key {
             req = req.header("x-api-key", configured_key);
         }
 
-        let res_json: Result<serde_json::Value> = req
-            .send()
-            .await
-            .map_err(|e| LumError::Network(e.to_string()))?
+        let response = match req.send().await {
+            Ok(response) => response,
+            Err(e) if idx + 1 < total => {
+                last_err = Some(LumError::Network(format!(
+                    "xLLM 모델 조회 연결 실패 ({}): {}",
+                    base_url, e
+                )));
+                continue;
+            }
+            Err(e) => return Err(LumError::Network(e.to_string())),
+        };
+
+        let res_json: Result<serde_json::Value> = response
             .json()
             .await
             .map_err(|e| LumError::AiEngine(e.to_string()));
 
         if let Ok(res_json) = res_json {
-            let models = res_json["data"]
-                .as_array()
-                .map(|arr| {
-                    arr.iter()
-                        .filter_map(|m| m["id"].as_str().map(|s| s.to_string()))
-                        .collect()
-                })
-                .unwrap_or_default();
-
-            return Ok(models);
+            return Ok(parse_xllm_models_json(&res_json));
         }
 
-        last_err = Some(LumError::Network("xLLM 모델 조회 응답 파싱 실패".into()));
+        last_err = Some(LumError::AiEngine(format!(
+            "xLLM 모델 조회 응답 파싱 실패 ({base_url})"
+        )));
+    }
+
+    Err(last_err.unwrap_or_else(|| {
+        LumError::Network("xLLM 모델 조회 실패: 사용 가능한 URL 후보가 없습니다".into())
+    }))
+}
+
+fn parse_xllm_models_json(res_json: &serde_json::Value) -> Vec<String> {
+    res_json["data"]
+        .as_array()
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|m| m["id"].as_str().map(|s| s.to_string()))
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+#[cfg(test)]
+fn list_xllm_models_from_candidate_results(
+    results: Vec<Result<serde_json::Value>>,
+) -> Result<Vec<String>> {
+    let mut last_err: Option<LumError> = None;
+
+    for result in results {
+        match result {
+            Ok(res_json) => return Ok(parse_xllm_models_json(&res_json)),
+            Err(err) => last_err = Some(err),
+        }
     }
 
     Err(last_err.unwrap_or_else(|| {
