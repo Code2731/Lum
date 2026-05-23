@@ -382,6 +382,7 @@ const AppHeader: React.FC<Props> = ({
   const [notifCenterMaxHeight, setNotifCenterMaxHeight] = React.useState(440);
   const [advancedOverflowPosition, setAdvancedOverflowPosition] = React.useState<PopupPosition>({ x: 0, y: 0 });
   const [notifCenterPosition, setNotifCenterPosition] = React.useState<PopupPosition>({ x: 0, y: 0 });
+  const [hasAdvancedOverflowPosition, setHasAdvancedOverflowPosition] = React.useState(false);
   const [hasNotifCenterPosition, setHasNotifCenterPosition] = React.useState(false);
   const ADVANCED_OVERFLOW_PANEL_ID = "advanced-overflow-panel";
   const NOTIF_CENTER_PANEL_ID = "notification-center-panel";
@@ -467,9 +468,9 @@ const AppHeader: React.FC<Props> = ({
     left: `${advancedOverflowPosition.x}px`,
     top: `${advancedOverflowPosition.y}px`,
     width: typeof advancedOverflowPosition.width === "number" ? `${advancedOverflowPosition.width}px` : undefined,
-    opacity: 1,
-    visibility: "visible",
-    pointerEvents: "auto",
+    opacity: hasAdvancedOverflowPosition ? 1 : 0,
+    visibility: hasAdvancedOverflowPosition ? "visible" : "hidden",
+    pointerEvents: hasAdvancedOverflowPosition ? "auto" : "none",
   };
 
   const advancedOverflowPanelOrigin = advancedOverflowPlacement === "up" ? "bottom right" : "top right";
@@ -553,6 +554,7 @@ const AppHeader: React.FC<Props> = ({
 
   const closeAdvancedOverflow = React.useCallback(() => {
     setShowAdvancedOverflow(false);
+    setHasAdvancedOverflowPosition(false);
     requestAnimationFrame(() => {
       advancedOverflowButtonRef.current?.focus();
     });
@@ -615,6 +617,7 @@ const AppHeader: React.FC<Props> = ({
 
   React.useLayoutEffect(() => {
     if (!showAdvancedOverflow) return;
+    setHasAdvancedOverflowPosition(false);
 
     const updatePlacement = () => {
       updatePopupPlacement({
@@ -624,7 +627,7 @@ const AppHeader: React.FC<Props> = ({
         setMaxHeight: setAdvancedOverflowMaxHeight,
         setPosition: setAdvancedOverflowPosition,
         fallbackWidth: POPUP_FALLBACK_WIDTH.advanced,
-        onReady: () => {},
+        onReady: () => setHasAdvancedOverflowPosition(true),
       });
     };
 
