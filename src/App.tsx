@@ -226,7 +226,7 @@ const App: React.FC = () => {
       .catch(() => {});
   }, []);
 
-  // 앱 시작 시 마지막으로 사용한 임베디드 모델이 있으면 자동 복원 시도.
+  // 앱 시작 시 마지막 모델(있으면) 또는 로컬 설치 모델(없으면) 자동 복원 시도.
   const restoreLastEmbeddedModel = useCallback(async () => {
     try {
       const restored = await invoke<boolean>("restore_last_embedded_model");

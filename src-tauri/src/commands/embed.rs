@@ -207,19 +207,42 @@ const DISABLED_MSG: &str =
 const DISABLED_MSG: &str =
     "embedded-ai feature 비활성 — scripts/cargo-check-cuda.bat 또는 npm run tauri:dev:cuda";
 
-/// 저장된 `mistral_last_embed_key`를 기준으로 임베디드 모델 자동 복원.
-/// 복원 대상이 없거나 포맷이 유효하지 않으면 `Ok(false)`로 처리해 앱 시작 시 안전하게 건너뛴다.
+/// 마지막 로드 모델이 없거나 포맷이 맞지 않으면, 로컬에 설치된 첫 번째 mistral 모델을 기본 복원 대상으로 사용.
+fn pick_default_local_embed_key() -> Option<ParsedEmbedKey> {
+    list_embed_candidates().into_iter().find_map(|candidate| {
+        if let Some(gguf_file) = candidate.gguf_files.first() {
+            return Some(ParsedEmbedKey::Gguf {
+                model_dir: candidate.folder,
+                gguf_file: gguf_file.clone(),
+            });
+        }
+        if candidate.has_safetensors {
+            return Some(ParsedEmbedKey::Isq {
+                model_path: candidate.folder,
+                isq_type: "Auto4".to_string(),
+            });
+        }
+        None
+    })
+}
+
+/// 저장된 `mistral_last_embed_key` 또는 로컬 설치 모델 기준으로 임베디드 모델 자동 복원.
+/// 저장된 키가 없으면 로컬 모델(모델 폴더 정렬 1순위) 기본 복원으로 시도.
 #[tauri::command]
 pub async fn restore_last_embedded_model(app: tauri::AppHandle) -> Result<bool, String> {
     #[cfg(feature = "embedded-ai")]
     {
         let config = crate::commands::config::load_config().map_err(|e| e.to_string())?;
-        let key = match config.mistral_last_embed_key {
-            Some(ref k) if !k.trim().is_empty() => k.clone(),
-            Some(_) | None => return Ok(false),
+        let parsed = config
+            .mistral_last_embed_key
+            .as_deref()
+            .and_then(|k| ParsedEmbedKey::parse(k));
+        let target = match parsed {
+            Some(p) => Some(p),
+            None => pick_default_local_embed_key(),
         };
 
-        match ParsedEmbedKey::parse(&key) {
+        match target {
             Some(ParsedEmbedKey::Lora {
                 model_dir,
                 gguf_file,
