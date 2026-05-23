@@ -5,8 +5,8 @@
 #![cfg(feature = "embedded-ai")]
 
 use mistralrs::{
-    GgufLoraModelBuilder, GgufModelBuilder, IsqBits, IsqSetting, Model, ResponseOk,
-    TextMessageRole, TextMessages, TextModelBuilder,
+    GgufLoraModelBuilder, GgufModelBuilder, IsqSetting, Model, ResponseOk, TextMessageRole,
+    TextMessages, TextModelBuilder,
 };
 use mistralrs_core::Ordering as LoraOrdering;
 use std::sync::atomic::{AtomicBool, Ordering};

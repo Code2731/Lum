@@ -49,6 +49,10 @@ case "${choice}" in
     echo "Embedded AI 기반 개발 서버 실행 중..."
     case "$(uname -s)" in
       Darwin)
+        export CLANG_MODULE_CACHE_PATH="$PWD/src-tauri/target/clang-module-cache"
+        export LUM_METAL_MODULE_CACHE="$CLANG_MODULE_CACHE_PATH"
+        mkdir -p "$CLANG_MODULE_CACHE_PATH"
+        export PATH="$PWD/scripts/xcrun-shims:$PATH"
         npm run tauri:dev:metal
         ;;
       *)

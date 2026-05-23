@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+real_xcrun="/usr/bin/xcrun"
+
+# Xcode 26 계열에서 Metal Toolchain asset이 내려받혀도 `xcrun metal` wrapper가
+# 등록 상태를 못 찾는 경우가 있어, 임베디드 AI 빌드에서만 실제 metal binary로 우회한다.
+metal_bin="${LUM_METAL_BIN:-}"
+if [[ -z "${metal_bin}" ]]; then
+  for candidate in \
+    "${HOME}/Library/Developer/Toolchains/Metal.xctoolchain/usr/bin/metal" \
+    "/Volumes/MetalToolchainCryptex/Metal.xctoolchain/usr/bin/metal" \
+    "/Applications/Xcode.app/Contents/Developer/Toolchains/Metal.xctoolchain/usr/bin/metal"
+  do
+    if [[ -x "${candidate}" ]]; then
+      metal_bin="${candidate}"
+      break
+    fi
+  done
+fi
+
+metal_args=()
+found_metal=0
+args=("$@")
+idx=0
+while [[ ${idx} -lt ${#args[@]} ]]; do
+  arg="${args[$idx]}"
+  if [[ ${found_metal} -eq 1 ]]; then
+    metal_args+=("${arg}")
+  elif [[ "${arg}" == "metal" ]]; then
+    found_metal=1
+  elif [[ "${arg}" == "--sdk" || "${arg}" == "-sdk" || "${arg}" == "--toolchain" || "${arg}" == "-toolchain" ]]; then
+    idx=$((idx + 1))
+  fi
+  idx=$((idx + 1))
+done
+
+if [[ ${found_metal} -eq 1 && -n "${metal_bin}" ]]; then
+  module_cache="${LUM_METAL_MODULE_CACHE:-${CLANG_MODULE_CACHE_PATH:-}}"
+  if [[ -n "${module_cache}" ]]; then
+    mkdir -p "${module_cache}"
+    metal_args=("-fmodules-cache-path=${module_cache}" "${metal_args[@]}")
+  fi
+  exec "${metal_bin}" "${metal_args[@]}"
+fi
+
+exec "${real_xcrun}" "$@"

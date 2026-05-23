@@ -360,7 +360,7 @@ pub async fn embed_load_lora(
             save_last_embed_key(&format!("{model_dir}/{gguf_file}+lora:{lora_adapter}"));
             Ok(r)
         })?;
-        result
+        Ok(result)
     }
     #[cfg(not(feature = "embedded-ai"))]
     {
