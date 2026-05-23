@@ -19,7 +19,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { AnimatePresence, motion } from "framer-motion";
 import {
-  Zap, Cpu, Loader2, TerminalSquare,
+  Zap, Cpu, Loader2, TerminalSquare, Square,
   Package, Plus, X, Columns2, Rows2, ArrowUpCircle,
   GitBranch, Container, Lock, FolderTree, Clock3, Search, GitCompareArrows, Library, Activity, Layers, AlertTriangle, RotateCcw, Copy, MoreHorizontal,
 } from "lucide-react";
@@ -191,7 +191,12 @@ function summarizeAssistantResult(content: string, maxChars = 520): string {
 
 const App: React.FC = () => {
   const { blocks, addBlock, updateBlock, moveBlock } = useTerminalBlocks();
-  const { isProcessing, analyzeError, streamAICommand } = useAIProcessing();
+  const {
+    isProcessing,
+    analyzeError,
+    streamAICommand,
+    cancelStreamAICommand,
+  } = useAIProcessing();
   const { specs, loading: specsLoading } = useHardwareSpecs();
   const { blocks: cmdBlocks, feedRaw } = useCommandBlocks();
   useCommandNotifier(cmdBlocks);
@@ -2817,6 +2822,7 @@ const App: React.FC = () => {
                       e.preventDefault();
                       e.stopPropagation();
                       handleAiSubmit();
+                      return;
                     }
                     if (e.key === "Escape") {
                       e.preventDefault();
@@ -2826,6 +2832,16 @@ const App: React.FC = () => {
                   }}
                 />
                 {isProcessing && <Loader2 size={12} className="animate-spin text-white/40 shrink-0" />}
+                {isProcessing && (
+                  <button
+                    type="button"
+                    aria-label="AI 응답 중지"
+                    onClick={cancelStreamAICommand}
+                    className="p-1 rounded border border-red-400/25 bg-red-500/10 text-red-200/80 hover:bg-red-500/20 hover:text-red-100 transition-colors"
+                  >
+                    <Square size={12} />
+                  </button>
+                )}
               </div>
               <p className="text-xs text-white/30 text-center mt-1.5 tracking-wide">Esc 또는 Cmd/Ctrl+Shift+K 로 닫기</p>
             </div>

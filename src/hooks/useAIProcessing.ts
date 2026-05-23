@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 
@@ -6,6 +6,15 @@ const XLLM_TOKEN_EVENT = "xllm_token";
 
 export const useAIProcessing = () => {
   const [isProcessing, setIsProcessing] = useState(false);
+  const requestIdRef = useRef(0);
+  const unlistenRef = useRef<(() => void) | null>(null);
+
+  const clearCurrentStreamListener = useCallback(() => {
+    if (unlistenRef.current) {
+      unlistenRef.current();
+      unlistenRef.current = null;
+    }
+  }, []);
 
   const processAICommand = useCallback(async (
     prompt: string,
@@ -71,21 +80,36 @@ export const useAIProcessing = () => {
     context: string,
     onToken: (accumulated: string) => void,
   ): Promise<void> => {
+    clearCurrentStreamListener();
+
+    requestIdRef.current += 1;
+    const requestId = requestIdRef.current;
     setIsProcessing(true);
     let accumulated = "";
 
     const unlisten = await listen<string>(XLLM_TOKEN_EVENT, (event) => {
+      if (requestIdRef.current !== requestId) return;
       accumulated += event.payload.replace(/<\|im_end\|>|<\|endoftext\|>|<\|im_start\|>/g, "");
       onToken(accumulated);
     });
+    unlistenRef.current = unlisten;
 
     try {
       await invoke<string>("stream_ai_command", { prompt, model, context });
     } finally {
-      unlisten();
-      setIsProcessing(false);
+      if (requestIdRef.current === requestId) {
+        clearCurrentStreamListener();
+        setIsProcessing(false);
+      }
     }
-  }, []);
+  }, [clearCurrentStreamListener]);
+
+  const cancelStreamAICommand = useCallback(() => {
+    requestIdRef.current += 1;
+    clearCurrentStreamListener();
+    invoke("cancel_ai_stream").catch(() => {});
+    setIsProcessing(false);
+  }, [clearCurrentStreamListener]);
 
   return {
     isProcessing,
@@ -93,5 +117,6 @@ export const useAIProcessing = () => {
     analyzeError,
     verifyVisionGoal,
     streamAICommand,
+    cancelStreamAICommand,
   };
 };
