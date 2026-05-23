@@ -230,12 +230,16 @@ async fn try_embedded_inference_stream(
     images: &[String],
     cancel: &Arc<AtomicBool>,
     show_reasoning: bool,
+    allow_fallback: bool,
 ) -> Option<Result<String>> {
     if !images.is_empty() {
         return None;
     }
     if !embedded_can_serve(images) {
         if embedded_engine_busy() {
+            if allow_fallback {
+                return None;
+            }
             return Some(Err(LumError::AiEngine(
                 "임베디드 mistral.rs 모델을 로딩 중입니다. 로드 완료 후 다시 시도하세요."
                     .to_string(),
@@ -245,6 +249,13 @@ async fn try_embedded_inference_stream(
             Ok(true) => {}
             Ok(false) => return None,
             Err(e) => {
+                if allow_fallback {
+                    let _ = app.emit(
+                        "embed_load_progress",
+                        format!("⚠️ 임베디드 모델 자동 복원 실패 (fallback): {e}"),
+                    );
+                    return None;
+                }
                 return Some(Err(LumError::AiEngine(format!(
                     "임베디드 mistral.rs 모델 자동 로드 실패: {e}"
                 ))));
@@ -271,6 +282,7 @@ async fn try_embedded_inference_stream(
     _images: &[String],
     _cancel: &Arc<AtomicBool>,
     _show_reasoning: bool,
+    _allow_fallback: bool,
 ) -> Option<Result<String>> {
     None
 }
@@ -985,6 +997,7 @@ pub async fn stream_ai_command(
                     &imgs,
                     &cancel_flag,
                     show_reasoning,
+                    false,
                 )
                 .await
                 {
@@ -1094,7 +1107,14 @@ pub async fn stream_ai_command(
         // 임베디드 GGUF 로드돼있으면 토큰별 스트리밍 — HTTP 우회.
         let show_reasoning = config.show_reasoning.unwrap_or(true);
         if let Some(result) =
-            try_embedded_inference_stream(&app, &full_prompt, &imgs, &cancel_flag, show_reasoning)
+            try_embedded_inference_stream(
+                &app,
+                &full_prompt,
+                &imgs,
+                &cancel_flag,
+                show_reasoning,
+                true,
+            )
                 .await
         {
             if result.is_ok() {
