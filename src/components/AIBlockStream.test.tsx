@@ -87,6 +87,22 @@ describe("AIBlockStream", () => {
     expect(container.querySelector(".animate-spin")).toBeTruthy();
   });
 
+  it("스트리밍 중 응답 중지 버튼 → onCancel 호출", () => {
+    const onCancel = vi.fn();
+    render(
+      <AIBlockStream
+        messages={[msg("user", "hi")]}
+        streaming={true}
+        error={null}
+        onClear={vi.fn()}
+        onCancel={onCancel}
+        onExecute={vi.fn()}
+      />,
+    );
+    fireEvent.click(screen.getByLabelText("응답 중지"));
+    expect(onCancel).toHaveBeenCalled();
+  });
+
   it("Mermaid 코드블록도 텍스트로 보존된다", () => {
     const mermaidMessage = "query_graph 결과:\n```mermaid\nflowchart LR\n\"service.rs\" --> \"db.rs\"\n```";
     const { container } = render(

@@ -54,7 +54,6 @@ import { extractInspectorAnalyzeCommands } from "./utils/inspectorAnalyze";
 import { getRovingMenuNextIndex } from "./utils/menuRoving";
 import { resolveInspectorMenuHotkey } from "./utils/inspectorMenuHotkeys";
 import type {
-  RetryCompareRuntimeCache,
   RetryCompareResult,
   RetryCompareTask,
 } from "./utils/retryCompare";
@@ -1876,6 +1875,7 @@ const App: React.FC = () => {
                             aiStreaming={aiChat.streaming}
                             aiError={aiChat.error}
                             onClearAI={aiChat.clear}
+                            onCancelAI={aiChat.cancel}
                             visionEnabled={visionEnabled}
                             showReasoning={showReasoning}
                             onToggleReasoning={toggleReasoning}
@@ -1910,6 +1910,7 @@ const App: React.FC = () => {
                             aiStreaming={aiChat.streaming}
                             aiError={aiChat.error}
                             onClearAI={aiChat.clear}
+                            onCancelAI={aiChat.cancel}
                             visionEnabled={visionEnabled}
                             showReasoning={showReasoning}
                             onToggleReasoning={toggleReasoning}
@@ -1938,6 +1939,7 @@ const App: React.FC = () => {
                         aiStreaming={aiChat.streaming}
                         aiError={aiChat.error}
                         onClearAI={aiChat.clear}
+                        onCancelAI={aiChat.cancel}
                         visionEnabled={visionEnabled}
                         showReasoning={showReasoning}
                         onToggleReasoning={toggleReasoning}

@@ -75,6 +75,7 @@ interface Props {
   aiStreaming?: boolean;
   aiError?: string | null;
   onClearAI?: () => void;
+  onCancelAI?: () => void;
   visionEnabled?: boolean;
   showReasoning?: boolean;
   onToggleReasoning?: () => void;
@@ -200,7 +201,7 @@ const ModeButton: React.FC<ModeButtonProps> = ({ label, title, active, activeCol
   </IconButton>
 );
 
-const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme, fontSize, fontFamily, onOutput, onCwdChange, onReady, onAgentTrigger, onAskAI, aiMessages, aiStreaming, aiError, onClearAI, visionEnabled, showReasoning, onToggleReasoning }) => {
+const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme, fontSize, fontFamily, onOutput, onCwdChange, onReady, onAgentTrigger, onAskAI, aiMessages, aiStreaming, aiError, onClearAI, onCancelAI, visionEnabled, showReasoning, onToggleReasoning }) => {
   // 입력 모드 토글 상태 — Heavy(Phase 85b 제거)는 dead, reasoning은 App.tsx props 통해 글로벌 상태 연동
   const [visionMode, setVisionMode] = useState(visionEnabled ?? false);
   const [terminalVisible, setTerminalVisible] = useState(false);
@@ -237,13 +238,15 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
   const onCwdChangeRef = useRef(onCwdChange);
   const onAgentTriggerRef = useRef(onAgentTrigger);
   const onAskAIRef = useRef(onAskAI);
+  const onCancelAIRef = useRef(onCancelAI);
   useEffect(() => {
     onOutputRef.current = onOutput;
     onReadyRef.current = onReady;
     onCwdChangeRef.current = onCwdChange;
     onAgentTriggerRef.current = onAgentTrigger;
     onAskAIRef.current = onAskAI;
-  }, [onOutput, onReady, onCwdChange, onAgentTrigger, onAskAI]);
+    onCancelAIRef.current = onCancelAI;
+  }, [onOutput, onReady, onCwdChange, onAgentTrigger, onAskAI, onCancelAI]);
 
   // ── Search (Cmd+F) ─────────────────────────────────────────────────────
   const [searchOpen, setSearchOpen] = useState(false);
@@ -1053,6 +1056,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
   }, [id, clearAllOverlays, recordSubmittedInput]);
 
   const handleInterrupt = useCallback(() => {
+    onCancelAIRef.current?.();
     invoke("write_to_pty", { id, data: "\x03" }).catch(() => {});
   }, [id]);
 
@@ -2097,6 +2101,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
             streaming={aiStreaming ?? false}
             error={aiError ?? null}
             onClear={onClearAI ?? (() => {})}
+            onCancel={onCancelAI}
             onExecute={(cmd) => invoke("write_to_pty", { id, data: cmd + "\r" }).catch(() => {})}
             cwd={cwd}
             fullHeight

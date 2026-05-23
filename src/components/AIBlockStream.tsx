@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback } from "react";
-import { Loader2, X, Sparkles } from "lucide-react";
+import { Loader2, Square, X, Sparkles } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 import type { ChatMessage } from "../hooks/useAIChat";
 import { MessageBubble } from "./AIChatPanel";
@@ -15,6 +15,7 @@ interface Props {
   streaming: boolean;
   error: string | null;
   onClear: () => void;
+  onCancel?: () => void;
   onExecute: (cmd: string) => void;
   cwd?: string;
   /** true면 부모 flex 컨테이너의 남은 공간을 전부 차지 (xterm 자리 대체) */
@@ -40,7 +41,7 @@ const persistFontSize = (size: number) => {
   invoke("save_ui_preferences", { aiChatFontSize: size }).catch(() => {});
 };
 
-const AIBlockStream: React.FC<Props> = ({ messages, streaming, error, onClear, onExecute, cwd, fullHeight, onAskAIForFix, visionEnabled }) => {
+const AIBlockStream: React.FC<Props> = ({ messages, streaming, error, onClear, onCancel, onExecute, cwd, fullHeight, onAskAIForFix, visionEnabled }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const pinnedToBottomRef = useRef(true);
 
@@ -147,6 +148,15 @@ const AIBlockStream: React.FC<Props> = ({ messages, streaming, error, onClear, o
           {streaming && <Loader2 size={12} className="animate-spin text-accent/70 ml-1" />}
         </div>
         <div className="flex items-center gap-1">
+          {streaming && (
+            <IconButton
+              tooltip="응답 중지"
+              onClick={onCancel}
+              className="p-1 rounded text-red-300/70 hover:text-red-200 hover:bg-red-500/10 transition-colors"
+            >
+              <Square size={13} />
+            </IconButton>
+          )}
           <IconButton
             tooltip="폰트 크기 초기화 (Ctrl+휠로 조절)"
             onClick={() => {
