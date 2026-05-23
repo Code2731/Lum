@@ -23,7 +23,7 @@ cat <<'EOF'
 실행 모드 선택:
 1) Standard Dev (기본)
 2) Standard Dev (native/NoDevServer, 바인딩 이슈 우회)
-3) Standard Dev + 임베디드 AI (CUDA)
+3) Standard Dev + 임베디드 AI (macOS Metal / Linux CUDA)
 4) Exit
 ----------------------------------------
 EOF
@@ -47,7 +47,14 @@ case "${choice}" in
     ;;
   3)
     echo "Embedded AI 기반 개발 서버 실행 중..."
-    npm run tauri:dev:cuda
+    case "$(uname -s)" in
+      Darwin)
+        npm run tauri:dev:metal
+        ;;
+      *)
+        npm run tauri -- dev --features embedded-ai
+        ;;
+    esac
     ;;
   4|*)
     echo "종료"
