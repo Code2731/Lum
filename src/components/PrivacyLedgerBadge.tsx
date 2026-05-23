@@ -294,13 +294,21 @@ const PrivacyLedgerBadge: React.FC<Props> = ({
     setPopupMaxHeight(nextHeight);
   }, [measurePlacement]);
 
+  React.useLayoutEffect(() => {
+    if (!open) return;
+
+    updatePlacement();
+
+    let raf = requestAnimationFrame(updatePlacement);
+    return () => cancelAnimationFrame(raf);
+  }, [open, updatePlacement]);
+
   const openPopover = React.useCallback(() => {
     setOpen(true);
   }, []);
 
   React.useLayoutEffect(() => {
     if (!open) return;
-    updatePlacement();
     const handler = (e: MouseEvent) => {
       const target = e.target as Node;
       if (
