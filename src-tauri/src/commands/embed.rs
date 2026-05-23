@@ -6,7 +6,7 @@
 
 use serde::Serialize;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 enum ParsedEmbedKey {
     Gguf {
         model_dir: String,
@@ -209,6 +209,48 @@ pub const DISABLED_MSG: &str =
 
 /// 마지막 로드 모델이 없거나 포맷이 맞지 않으면, 로컬에 설치된 첫 번째 mistral 모델을 기본 복원 대상으로 사용.
 fn pick_default_local_embed_key() -> Option<ParsedEmbedKey> {
+    pick_default_local_embed_key_with_hint(None)
+}
+
+fn pick_default_local_embed_key_with_hint(hint: Option<&str>) -> Option<ParsedEmbedKey> {
+    let hint = hint.map(|h| h.trim().to_lowercase()).filter(|h| !h.is_empty());
+    let candidates = list_embed_candidates();
+    if candidates.is_empty() {
+        return None;
+    }
+
+    if let Some(hint) = hint {
+        let hint = hint;
+        for candidate in candidates.iter() {
+            let haystack = format!(
+                "{} {}",
+                candidate.folder.to_lowercase(),
+                candidate.folder_label.to_lowercase()
+            )
+            .replace(['/', '\\'], " ");
+            let folder_match = candidate
+                .gguf_files
+                .iter()
+                .any(|f| f.to_lowercase().contains(&hint));
+            if haystack.contains(&hint) || folder_match {
+                let key = if let Some(gguf_file) = candidate.gguf_files.first() {
+                    ParsedEmbedKey::Gguf {
+                        model_dir: candidate.folder.clone(),
+                        gguf_file: gguf_file.clone(),
+                    }
+                } else if candidate.has_safetensors {
+                    ParsedEmbedKey::Isq {
+                        model_path: candidate.folder.clone(),
+                        isq_type: "Auto4".to_string(),
+                    }
+                } else {
+                    continue;
+                };
+                return Some(key);
+            }
+        }
+    }
+
     list_embed_candidates().into_iter().find_map(|candidate| {
         if let Some(gguf_file) = candidate.gguf_files.first() {
             return Some(ParsedEmbedKey::Gguf {
@@ -233,14 +275,58 @@ pub async fn restore_last_embedded_model(app: tauri::AppHandle) -> Result<bool, 
     #[cfg(feature = "embedded-ai")]
     {
         let config = crate::commands::config::load_config().map_err(|e| e.to_string())?;
-        let parsed = config
-            .mistral_last_embed_key
+        let saved_key = config.mistral_last_embed_key.clone();
+        let preferred_hint = config
+            .coding_model
             .as_deref()
-            .and_then(|k| ParsedEmbedKey::parse(k));
-        let target = match parsed {
-            Some(p) => Some(p),
-            None => pick_default_local_embed_key(),
-        };
+            .or(config.doc_model.as_deref())
+            .map(|s| s.to_string());
+        let preferred_hint_ref = preferred_hint.as_deref();
+
+    let mut tried_saved_key = false;
+    let mut saved_key_loaded = false;
+    if let Some(target) = saved_key
+        .as_deref()
+        .and_then(|k| ParsedEmbedKey::parse(k))
+    {
+            tried_saved_key = true;
+            match target {
+                ParsedEmbedKey::Lora {
+                    model_dir,
+                    gguf_file,
+                    lora_adapter,
+                } => {
+                    if let Ok(()) = embed_load_lora(app.clone(), model_dir, gguf_file, lora_adapter).await {
+                        saved_key_loaded = true;
+                        return Ok(true);
+                    }
+                }
+                ParsedEmbedKey::Isq { model_path, isq_type } => {
+                    if let Ok(()) = embed_load_normal(app.clone(), model_path, isq_type).await {
+                        saved_key_loaded = true;
+                        return Ok(true);
+                    }
+                }
+                ParsedEmbedKey::Gguf {
+                    model_dir,
+                    gguf_file,
+                } => {
+                    if let Ok(()) = embed_load_gguf(app.clone(), model_dir, gguf_file).await {
+                        saved_key_loaded = true;
+                        return Ok(true);
+                    }
+                }
+            }
+        }
+
+        let target = pick_default_local_embed_key_with_hint(preferred_hint_ref);
+
+        if tried_saved_key && !saved_key_loaded {
+            let _ = app.emit(
+                "embed_load_progress",
+                "⚠️ 저장 키 복원 실패 — 로컬 모델 재탐색으로 전환".to_string(),
+            );
+        }
 
         match target {
             Some(ParsedEmbedKey::Lora {
