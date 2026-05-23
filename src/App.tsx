@@ -233,8 +233,8 @@ const App: React.FC = () => {
       if (restored) {
         await refreshLoadedModel();
       }
-    } catch {
-      // 임베디드 모델이 비활성 빌드거나 설정이 비정상일 때는 조용히 스킵.
+    } catch (error) {
+      console.warn("embedded model restore failed", error);
     }
   }, [refreshLoadedModel]);
 

@@ -76,6 +76,12 @@ pub fn loaded_key() -> Option<String> {
         .and_then(|g| g.as_ref().map(|s| s.key.clone()))
 }
 
+/// 모델 로드가 진행 중이면 엔진 Mutex가 잠겨 있다. 이때 HTTP 폴백으로 흘리면
+/// 사용자는 xLLM 오류를 보게 되므로 라우터가 "로딩 중" 상태를 구분할 수 있게 한다.
+pub fn engine_busy() -> bool {
+    engine_mutex().try_lock().is_err()
+}
+
 /// 현재 로드된 모델의 Arc 클론. 락은 함수 종료 시 즉시 해제 — 긴 추론 중
 /// `loaded_key()` UI 폴링 차단 방지. 미로드면 명확한 한국어 에러.
 async fn current_model() -> Result<Arc<Model>, String> {

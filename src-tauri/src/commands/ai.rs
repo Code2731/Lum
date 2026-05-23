@@ -187,11 +187,25 @@ fn embedded_can_serve(images: &[String]) -> bool {
     images.is_empty() && crate::commands::mistralrs_inline::loaded_key().is_some()
 }
 
+#[cfg(feature = "embedded-ai")]
+fn embedded_engine_busy() -> bool {
+    crate::commands::mistralrs_inline::engine_busy()
+}
+
 /// 임베디드 mistralrs가 로드돼있고 이미지 입력이 없으면 in-process 추론 시도.
 /// `Some(result)` = 임베디드 사용 (성공/실패 무관 — 폴백 안 함), `None` = HTTP 폴백 필요.
 #[cfg(feature = "embedded-ai")]
 async fn try_embedded_inference(prompt: &str, images: &[String]) -> Option<Result<String>> {
+    if !images.is_empty() {
+        return None;
+    }
     if !embedded_can_serve(images) {
+        if embedded_engine_busy() {
+            return Some(Err(LumError::AiEngine(
+                "임베디드 mistral.rs 모델을 로딩 중입니다. 로드 완료 후 다시 시도하세요."
+                    .to_string(),
+            )));
+        }
         return None;
     }
     Some(
@@ -216,8 +230,25 @@ async fn try_embedded_inference_stream(
     cancel: &Arc<AtomicBool>,
     show_reasoning: bool,
 ) -> Option<Result<String>> {
-    if !embedded_can_serve(images) {
+    if !images.is_empty() {
         return None;
+    }
+    if !embedded_can_serve(images) {
+        if embedded_engine_busy() {
+            return Some(Err(LumError::AiEngine(
+                "임베디드 mistral.rs 모델을 로딩 중입니다. 로드 완료 후 다시 시도하세요."
+                    .to_string(),
+            )));
+        }
+        match crate::commands::embed::restore_last_embedded_model(app.clone()).await {
+            Ok(true) => {}
+            Ok(false) => return None,
+            Err(e) => {
+                return Some(Err(LumError::AiEngine(format!(
+                    "임베디드 mistral.rs 모델 자동 로드 실패: {e}"
+                ))));
+            }
+        }
     }
     Some(
         crate::commands::mistralrs_inline::infer_stream(
