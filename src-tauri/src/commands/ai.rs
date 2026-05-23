@@ -65,6 +65,17 @@ fn emit_route(
     );
 }
 
+fn local_embed_unavailable_message() -> &'static str {
+    #[cfg(feature = "embedded-ai")]
+    {
+        "임베디드 mistral.rs 모델이 로드되지 않았습니다. 모델을 로드한 뒤 다시 시도하세요."
+    }
+    #[cfg(not(feature = "embedded-ai"))]
+    {
+        crate::commands::embed::DISABLED_MSG
+    }
+}
+
 #[cfg(feature = "embedded-ai")]
 fn embedded_loaded_key() -> Option<String> {
     crate::commands::mistralrs_inline::loaded_key()
@@ -423,7 +434,7 @@ pub async fn call_ai_with_backend(
                 return result;
             }
             Err(LumError::AiEngine(
-                "local backend 강제 요청이지만 임베디드 모델이 로드되지 않았습니다.".to_string(),
+                local_embed_unavailable_message().to_string(),
             ))
         }
         "ollama" => {
@@ -1014,8 +1025,7 @@ pub async fn stream_ai_command(
                     return result;
                 }
                 return Err(LumError::AiEngine(
-                    "local backend 강제 요청이지만 임베디드 모델이 로드되지 않았습니다."
-                        .to_string(),
+                    local_embed_unavailable_message().to_string(),
                 ));
             }
             "ollama" => {
@@ -1060,7 +1070,17 @@ pub async fn stream_ai_command(
                     );
                     return Ok(_text);
                 }
-                return result.map(|(text, _)| text);
+                return match result {
+                    Ok((text, _)) => Ok(text),
+                    Err(err) if is_network_error(&err) => {
+                        let xllm_urls = config.xllm_url_candidates();
+                        Err(LumError::Network(format!(
+                            "{err} · 후보 주소: {}",
+                            xllm_urls.join(", "),
+                        )))
+                    }
+                    Err(err) => Err(err),
+                };
             }
             "gemini" | "cloud" => {
                 if !model.starts_with("gemini") {
@@ -1106,16 +1126,15 @@ pub async fn stream_ai_command(
     } else {
         // 임베디드 GGUF 로드돼있으면 토큰별 스트리밍 — HTTP 우회.
         let show_reasoning = config.show_reasoning.unwrap_or(true);
-        if let Some(result) =
-            try_embedded_inference_stream(
-                &app,
-                &full_prompt,
-                &imgs,
-                &cancel_flag,
-                show_reasoning,
-                true,
-            )
-                .await
+        if let Some(result) = try_embedded_inference_stream(
+            &app,
+            &full_prompt,
+            &imgs,
+            &cancel_flag,
+            show_reasoning,
+            true,
+        )
+        .await
         {
             if result.is_ok() {
                 emit_route(
@@ -1166,7 +1185,17 @@ pub async fn stream_ai_command(
             );
             return Ok(_text);
         }
-        return result.map(|(text, _)| text);
+        return match result {
+            Ok((text, _)) => Ok(text),
+            Err(err) if is_network_error(&err) => {
+                let xllm_urls = config.xllm_url_candidates();
+                Err(LumError::Network(format!(
+                    "{err} · 후보 주소: {}",
+                    xllm_urls.join(", "),
+                )))
+            }
+            Err(err) => Err(err),
+        };
     }
 }
 

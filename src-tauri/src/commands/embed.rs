@@ -201,10 +201,10 @@ pub fn list_lora_candidates() -> Vec<LoraCandidate> {
 
 // 플랫폼별로 권장 dev 명령이 다름 — macOS=metal, Windows/Linux=cuda.
 #[cfg(target_os = "macos")]
-const DISABLED_MSG: &str =
+pub const DISABLED_MSG: &str =
     "embedded-ai feature 비활성 — npm run tauri:dev:metal (macOS Apple Silicon)";
 #[cfg(not(target_os = "macos"))]
-const DISABLED_MSG: &str =
+pub const DISABLED_MSG: &str =
     "embedded-ai feature 비활성 — scripts/cargo-check-cuda.bat 또는 npm run tauri:dev:cuda";
 
 /// 마지막 로드 모델이 없거나 포맷이 맞지 않으면, 로컬에 설치된 첫 번째 mistral 모델을 기본 복원 대상으로 사용.
