@@ -5,7 +5,12 @@ use serde::{Deserialize, Serialize};
 const CONFIG_FILE: &str = ".lum_config.json";
 
 /// xLLM(TabbyAPI) 기본 주소 — 로컬 실행 기본값
-pub const XLLM_DEFAULT_URL: &str = "http://127.0.0.1:5000";
+pub const XLLM_DEFAULT_URL: &str = "http://127.0.0.1:8080";
+pub const XLLM_DEFAULT_URLS: [&str; 2] = ["http://127.0.0.1:8080", "http://127.0.0.1:5000"];
+
+fn normalize_xllm_url(value: &str) -> String {
+    value.trim().trim_end_matches('/').to_string()
+}
 
 #[derive(Debug, Serialize, Deserialize, Default, Clone)]
 pub struct AppConfig {
@@ -14,7 +19,7 @@ pub struct AppConfig {
     pub font_family: Option<String>,
     pub opacity: Option<f64>,
     pub accent_color: Option<String>,
-    /// xLLM(TabbyAPI) 서버 주소 (기본값: http://127.0.0.1:5000)
+    /// xLLM(TabbyAPI) 서버 주소 (기본값: http://127.0.0.1:8080)
     pub xllm_base_url: Option<String>,
     /// xLLM API 키 — 로컬 사용 시 불필요, 원격 서버 시 설정
     pub xllm_api_key: Option<String>,
@@ -153,14 +158,34 @@ pub struct QuickAction {
 
 impl AppConfig {
     /// 추론 서버 URL — 임베디드 모델 미로드 시 또는 macOS에서 mlx-lm 외부 서버를 쓸 때 사용.
-    /// xllm_base_url config가 있으면 그 값, 없으면 기본 127.0.0.1:8080 (mlx-lm/TabbyAPI 관행 포트).
+    /// xllm_base_url config가 있으면 그 값, 없으면 기본 후보(8080/5000)에서 순서대로 사용.
     pub fn xllm_url(&self) -> String {
-        self.xllm_base_url
+        self.xllm_url_candidates()
+            .into_iter()
+            .next()
+            .unwrap_or_else(|| XLLM_DEFAULT_URL.to_string())
+    }
+
+    /// xLLM 후보 URL 목록. 사용자 override가 있으면 단일 값으로 고정.
+    pub fn xllm_url_candidates(&self) -> Vec<String> {
+        let mut urls: Vec<String> = self
+            .xllm_base_url
             .as_deref()
-            .map(str::trim)
+            .map(normalize_xllm_url)
             .filter(|s| !s.is_empty())
-            .map(|s| s.trim_end_matches('/').to_string())
-            .unwrap_or_else(|| "http://127.0.0.1:8080".to_string())
+            .into_iter()
+            .collect();
+
+        if urls.is_empty() {
+            urls.extend(
+                XLLM_DEFAULT_URLS
+                    .iter()
+                    .map(|u| u.to_string())
+                    .collect::<Vec<_>>(),
+            );
+        }
+
+        urls
     }
 
     /// 호환성용 alias — call site 정리 후 제거 예정.
@@ -551,5 +576,29 @@ mod tests {
         assert!((cfg.vram_utilization() - 0.50).abs() < 1e-6);
         cfg.vram_cap_override = Some(0.99); // above 0.95 → clamped to 0.95
         assert!((cfg.vram_utilization() - 0.95).abs() < 1e-6);
+    }
+
+    #[test]
+    fn xllm_url_candidates는_기본_우선순위를_반영한다() {
+        let cfg = AppConfig::default();
+        assert_eq!(
+            cfg.xllm_url_candidates(),
+            vec![
+                XLLM_DEFAULT_URL.to_string(),
+                "http://127.0.0.1:5000".to_string()
+            ]
+        );
+        assert_eq!(cfg.xllm_url(), XLLM_DEFAULT_URL.to_string());
+    }
+
+    #[test]
+    fn xllm_url_candidates는_사용자_설정_단일값만_사용한다() {
+        let mut cfg = AppConfig::default();
+        cfg.xllm_base_url = Some("https://example.com/xllm/".to_string());
+        assert_eq!(
+            cfg.xllm_url_candidates(),
+            vec!["https://example.com/xllm".to_string()]
+        );
+        assert_eq!(cfg.xllm_url(), "https://example.com/xllm".to_string());
     }
 }

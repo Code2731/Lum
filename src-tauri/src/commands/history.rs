@@ -1,4 +1,4 @@
-use crate::commands::config::load_config;
+use crate::commands::config::{load_config, XLLM_DEFAULT_URL};
 use crate::commands::rag::embed;
 use crate::memory::cosine_similarity;
 use serde::{Deserialize, Serialize};
@@ -54,7 +54,7 @@ pub async fn add_history_entry(
         .unwrap_or_default();
     let base_url = load_config()
         .map(|c| c.xllm_url())
-        .unwrap_or_else(|_| "http://127.0.0.1:5000".to_string());
+        .unwrap_or_else(|_| XLLM_DEFAULT_URL.to_string());
     let embedding = embed(&client, &base_url, &model, &command)
         .await
         .unwrap_or_default();
@@ -95,7 +95,7 @@ pub async fn search_history(
         .unwrap_or_default();
     let base_url = load_config()
         .map(|c| c.xllm_url())
-        .unwrap_or_else(|_| "http://127.0.0.1:5000".to_string());
+        .unwrap_or_else(|_| XLLM_DEFAULT_URL.to_string());
     let q_emb = embed(&client, &base_url, &model, &query)
         .await
         .ok_or_else(|| "임베딩 생성 실패".to_string())?;

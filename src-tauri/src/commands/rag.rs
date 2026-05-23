@@ -1,5 +1,5 @@
 use crate::commands::bm25::{rrf_fuse, Bm25Index};
-use crate::commands::config::load_config;
+use crate::commands::config::{load_config, XLLM_DEFAULT_URL};
 use crate::commands::lang_detect::{detect_source_lang, language_grammar, SourceLang};
 use crate::memory::{cosine_similarity, MemoryEntry, SemanticMemory};
 use futures::future::join_all;
@@ -154,7 +154,7 @@ pub async fn embed_auto(
     }
     let base_url = load_config()
         .map(|c| c.xllm_url())
-        .unwrap_or_else(|_| "http://127.0.0.1:5000".to_string());
+        .unwrap_or_else(|_| XLLM_DEFAULT_URL.to_string());
     embed(client, &base_url, xllm_model, text).await
 }
 

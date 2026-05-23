@@ -49,8 +49,9 @@ const SetupWizard: React.FC<Props> = ({
                 TabbyAPI (xLLM) 설치 가이드
               </a>
               <p className="setup-hint">
-                설치 후 <code>python main.py</code>로 실행하면{" "}
-                <code>http://127.0.0.1:5000</code>에서 자동으로 연결됩니다.
+                설치 후 <code>python main.py</code>로 실행하면 기본적으로
+                <code>http://127.0.0.1:8080</code>에서 자동으로 연결을 시도합니다.
+                (구형 환경에서는 <code>5000</code>도 사용되니 포트가 다르면 해당 값으로 맞춰 주세요.)
               </p>
               <button
                 className="setup-btn"

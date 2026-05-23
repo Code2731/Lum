@@ -290,7 +290,36 @@ pub async fn call_ai(client: &reqwest::Client, model: &str, prompt: &str) -> Res
 /// xLLM HTTP 단일 응답 호출. (fallback 없음)
 async fn call_xllm_http(client: &reqwest::Client, prompt: &str) -> Result<String> {
     let config = load_config()?;
-    let base_url = config.xllm_url();
+    let candidate_urls = config.xllm_url_candidates();
+
+    let mut last_network_error: Option<LumError> = None;
+    let total = candidate_urls.len();
+
+    for (idx, base_url) in candidate_urls.iter().enumerate() {
+        match call_xllm_http_once(client, &config, base_url, prompt).await {
+            Ok(v) => return Ok(v),
+            Err(err) if is_network_error(&err) && idx + 1 < total => {
+                last_network_error = Some(err);
+            }
+            Err(err) => return Err(err),
+        }
+    }
+
+    Err(last_network_error.unwrap_or_else(|| {
+        LumError::Network("xLLM 서버 연결 실패: 사용 가능한 후보 URL이 없습니다".into())
+    }))
+}
+
+fn is_network_error(err: &LumError) -> bool {
+    matches!(err, LumError::Network(_))
+}
+
+async fn call_xllm_http_once(
+    client: &reqwest::Client,
+    config: &AppConfig,
+    base_url: &str,
+    prompt: &str,
+) -> Result<String> {
     let url = format!("{}/v1/chat/completions", base_url);
 
     // 서버의 실제 로드된 모델 ID 사용 (MLX-LM·TabbyAPI 공통)
@@ -298,7 +327,7 @@ async fn call_xllm_http(client: &reqwest::Client, prompt: &str) -> Result<String
     let body = xllm_body(&config, &actual_model, prompt, false, &[]);
 
     let mut req = client.post(&url).json(&body);
-    if let Some(key) = config.xllm_api_key {
+    if let Some(key) = config.xllm_api_key.as_ref() {
         req = req.header("x-api-key", key);
     }
 
@@ -380,6 +409,43 @@ pub async fn call_ai_with_backend(
 /// OpenAI 호환 SSE 스트리밍 호출 — TabbyAPI · mistral.rs 공용
 /// api_key: x-api-key 헤더 (TabbyAPI 전용, mistral.rs는 None)
 async fn call_compat_stream(
+    app: &tauri::AppHandle,
+    client: &reqwest::Client,
+    prompt: &str,
+    images: &[String],
+    base_urls: &[String],
+    api_key: Option<String>,
+    cancel: &Arc<AtomicBool>,
+) -> Result<(String, String)> {
+    let mut last_network_error: Option<LumError> = None;
+    let total = base_urls.len();
+
+    for (idx, base_url) in base_urls.iter().enumerate() {
+        match call_compat_stream_one(
+            app,
+            client,
+            prompt,
+            images,
+            base_url,
+            api_key.clone(),
+            cancel,
+        )
+        .await
+        {
+            Ok(v) => return Ok((v, base_url.clone())),
+            Err(err) if is_network_error(&err) && idx + 1 < total => {
+                last_network_error = Some(err);
+            }
+            Err(err) => return Err(err),
+        }
+    }
+
+    Err(last_network_error.unwrap_or_else(|| {
+        LumError::Network("xLLM 서버에 연결할 수 없습니다: 사용 가능한 후보 URL이 없습니다".into())
+    }))
+}
+
+async fn call_compat_stream_one(
     app: &tauri::AppHandle,
     client: &reqwest::Client,
     prompt: &str,
@@ -608,51 +674,72 @@ mod tests {
 #[command]
 pub async fn check_xllm_status() -> Result<bool> {
     let config = load_config()?;
-    let url = format!("{}/v1/models", config.xllm_url());
+    let candidate_urls = config.xllm_url_candidates();
 
     let client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(3))
         .build()
         .map_err(|e| LumError::Network(e.to_string()))?;
 
-    Ok(client.get(&url).send().await.is_ok())
+    for base_url in candidate_urls {
+        let url = format!("{}/v1/models", base_url);
+        if client.get(&url).send().await.is_ok() {
+            return Ok(true);
+        }
+    }
+
+    Ok(false)
 }
 
 /// xLLM에서 로드된 모델 목록 조회
 #[command]
 pub async fn list_xllm_models() -> Result<Vec<String>> {
     let config = load_config()?;
-    let url = format!("{}/v1/models", config.xllm_url());
+    let candidate_urls = config.xllm_url_candidates();
+    let xllm_api_key = config.xllm_api_key;
 
     let client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(5))
         .build()
         .map_err(|e| LumError::Network(e.to_string()))?;
 
-    let mut req = client.get(&url);
-    if let Some(key) = &config.xllm_api_key {
-        req = req.header("x-api-key", key);
+    let mut last_err: Option<LumError> = None;
+    for base_url in candidate_urls {
+        let mut req = client
+            .get(format!("{}/v1/models", base_url))
+            .timeout(std::time::Duration::from_secs(5));
+
+        if let Some(configured_key) = xllm_api_key.as_ref() {
+            req = req.header("x-api-key", configured_key);
+        }
+
+        let res_json: Result<serde_json::Value> = req
+            .send()
+            .await
+            .map_err(|e| LumError::Network(e.to_string()))?
+            .json()
+            .await
+            .map_err(|e| LumError::AiEngine(e.to_string()));
+
+        if let Ok(res_json) = res_json {
+            let models = res_json["data"]
+                .as_array()
+                .map(|arr| {
+                    arr.iter()
+                        .filter_map(|m| m["id"].as_str().map(|s| s.to_string()))
+                        .collect()
+                })
+                .unwrap_or_default();
+
+            return Ok(models);
+        }
+
+        last_err = Some(LumError::Network("xLLM 모델 조회 응답 파싱 실패".into()));
     }
 
-    let res_json: serde_json::Value = req
-        .send()
-        .await
-        .map_err(|e| LumError::Network(e.to_string()))?
-        .json()
-        .await
-        .map_err(|e| LumError::AiEngine(e.to_string()))?;
-
-    // OpenAI 호환 모델 목록: data[].id
-    let models = res_json["data"]
-        .as_array()
-        .map(|arr| {
-            arr.iter()
-                .filter_map(|m| m["id"].as_str().map(|s| s.to_string()))
-                .collect()
-        })
-        .unwrap_or_default();
-
-    Ok(models)
+    Err(last_err.unwrap_or_else(|| {
+        LumError::Network("xLLM 모델 조회 실패: 사용 가능한 URL 후보가 없습니다".into())
+    }))
 }
 
 // ─── Gemini ──────────────────────────────────────────────────────────────────
@@ -845,18 +932,18 @@ pub async fn stream_ai_command(
                 ));
             }
             "xllm" | "sglang" => {
-                let xllm_url = config.xllm_url();
+                let xllm_urls = config.xllm_url_candidates();
                 let result = call_compat_stream(
                     &app,
                     &client,
                     &full_prompt,
                     &imgs,
-                    &xllm_url,
+                    &xllm_urls,
                     config.xllm_api_key.clone(),
                     &cancel_flag,
                 )
                 .await;
-                if result.is_ok() {
+                if let Ok((_text, xllm_url)) = result {
                     emit_route(
                         &app,
                         "xllm",
@@ -865,8 +952,9 @@ pub async fn stream_ai_command(
                         prompt_chars,
                         started.elapsed().as_millis() as u64,
                     );
+                    return Ok(_text);
                 }
-                return result;
+                return result.map(|(text, _)| text);
             }
             "gemini" | "cloud" => {
                 if !model.starts_with("gemini") {
@@ -943,18 +1031,18 @@ pub async fn stream_ai_command(
             }
             return result;
         }
-        let xllm_url = config.xllm_url();
+        let xllm_urls = config.xllm_url_candidates();
         let result = call_compat_stream(
             &app,
             &client,
             &full_prompt,
             &imgs,
-            &xllm_url,
+            &xllm_urls,
             config.xllm_api_key.clone(),
             &cancel_flag,
         )
         .await;
-        if result.is_ok() {
+        if let Ok((_text, xllm_url)) = result {
             emit_route(
                 &app,
                 "xllm",
@@ -963,8 +1051,9 @@ pub async fn stream_ai_command(
                 prompt_chars,
                 started.elapsed().as_millis() as u64,
             );
+            return Ok(_text);
         }
-        result
+        return result.map(|(text, _)| text);
     }
 }
 

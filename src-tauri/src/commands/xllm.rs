@@ -43,35 +43,19 @@ fn detect_mlx_loaded_model() -> Option<String> {
     None // Windows는 TabbyAPI 기본이라 /v1/model 폴백이 정확
 }
 
-/// 현재 로드된 모델 정보 조회.
-/// Apple Silicon(MLX-LM): ps 파서로 --model 인자 읽기
-/// TabbyAPI: /v1/model(단수) 먼저 — 실제 로드된 모델만 반환.
-///   /v1/models(복수)는 디렉토리의 모든 모델을 MRU 순으로 반환해 첫 엔트리가
-///   로드된 모델과 다른 문제가 있어 fallback으로만 사용.
-#[tauri::command]
-pub async fn get_xllm_model_info() -> Result<XllmModelInfo> {
-    let config = load_config()?;
-    let base_url = config.xllm_url();
+fn is_network_error(err: &LumError) -> bool {
+    matches!(err, LumError::Network(_))
+}
 
-    // MLX-LM 먼저 시도 (ps --model)
-    if let Some(model) = detect_mlx_loaded_model() {
-        return Ok(XllmModelInfo {
-            id: model,
-            max_seq_len: None,
-            cache_mode: None,
-            rope_scale: None,
-        });
-    }
-
-    let client = reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(5))
-        .build()
-        .map_err(|e| LumError::Network(e.to_string()))?;
-
+async fn fetch_xllm_model_info_one(
+    client: &reqwest::Client,
+    base_url: &str,
+    xllm_api_key: Option<&String>,
+) -> Result<XllmModelInfo> {
     // 1차: /v1/model (단수) — 실제 로드된 모델만 반환
     let model_url = format!("{}/v1/model", base_url);
     let mut req = client.get(&model_url);
-    if let Some(key) = &config.xllm_api_key {
+    if let Some(key) = xllm_api_key {
         req = req.header("x-api-key", key);
     }
     if let Ok(resp) = req.send().await {
@@ -86,7 +70,6 @@ pub async fn get_xllm_model_info() -> Result<XllmModelInfo> {
                     rope_scale: json["parameters"]["rope_scale"].as_f64().map(|v| v as f32),
                 });
             }
-            // detail: "No models are currently loaded." → unknown
             if json.get("detail").is_some() {
                 return Ok(XllmModelInfo {
                     id: "unknown".to_string(),
@@ -98,10 +81,10 @@ pub async fn get_xllm_model_info() -> Result<XllmModelInfo> {
         }
     }
 
-    // 2차 폴백: /v1/models 첫 엔트리 (mistral.rs/MLX 호환용 — TabbyAPI에선 부정확)
+    // 2차 폴백: /v1/models 첫 엔트리
     let models_url = format!("{}/v1/models", base_url);
     let mut req2 = client.get(&models_url);
-    if let Some(key) = &config.xllm_api_key {
+    if let Some(key) = xllm_api_key {
         req2 = req2.header("x-api-key", key);
     }
     let res: serde_json::Value = req2
@@ -118,12 +101,104 @@ pub async fn get_xllm_model_info() -> Result<XllmModelInfo> {
         .and_then(|f| f["id"].as_str())
         .unwrap_or("unknown")
         .to_string();
+
     Ok(XllmModelInfo {
         id,
         max_seq_len: None,
         cache_mode: None,
         rope_scale: None,
     })
+}
+
+async fn fetch_xllm_model_info(
+    client: &reqwest::Client,
+    base_urls: &[String],
+    xllm_api_key: Option<&String>,
+) -> Result<XllmModelInfo> {
+    let mut last_network_error: Option<LumError> = None;
+    let total = base_urls.len();
+
+    for (idx, base_url) in base_urls.iter().enumerate() {
+        match fetch_xllm_model_info_one(client, base_url, xllm_api_key).await {
+            Ok(info) => return Ok(info),
+            Err(err) if is_network_error(&err) && idx + 1 < total => {
+                last_network_error = Some(err);
+            }
+            Err(err) => return Err(err),
+        }
+    }
+
+    Err(last_network_error.unwrap_or_else(|| {
+        LumError::Network("xLLM 모델 조회에 사용 가능한 후보 URL이 없습니다".into())
+    }))
+}
+
+async fn post_xllm_with_candidates(
+    client: &reqwest::Client,
+    base_urls: &[String],
+    path: &str,
+    body: serde_json::Value,
+    xllm_api_key: Option<&String>,
+    xllm_admin_key: Option<&String>,
+) -> Result<reqwest::Response> {
+    let mut last_network_error: Option<LumError> = None;
+    let total = base_urls.len();
+
+    for (idx, base_url) in base_urls.iter().enumerate() {
+        let url = format!("{}/{}", base_url, path);
+        let mut req = client.post(&url).json(&body);
+        if let Some(key) = xllm_api_key {
+            req = req.header("x-api-key", key);
+        }
+        if let Some(key) = xllm_admin_key {
+            req = req.header("x-admin-key", key);
+        }
+
+        match req.send().await {
+            Ok(resp) => return Ok(resp),
+            Err(err) if idx + 1 < total => {
+                last_network_error = Some(LumError::Network(err.to_string()));
+            }
+            Err(err) => {
+                return Err(LumError::Network(format!(
+                    "xLLM post 요청 실패 ({}): {}",
+                    url, err
+                )))
+            }
+        }
+    }
+
+    Err(last_network_error.unwrap_or_else(|| {
+        LumError::Network("xLLM post 요청에 사용 가능한 후보 URL이 없습니다".into())
+    }))
+}
+
+/// 현재 로드된 모델 정보 조회.
+/// Apple Silicon(MLX-LM): ps 파서로 --model 인자 읽기
+/// TabbyAPI: /v1/model(단수) 먼저 — 실제 로드된 모델만 반환.
+///   /v1/models(복수)는 디렉토리의 모든 모델을 MRU 순으로 반환해 첫 엔트리가
+///   로드된 모델과 다른 문제가 있어 fallback으로만 사용.
+#[tauri::command]
+pub async fn get_xllm_model_info() -> Result<XllmModelInfo> {
+    let config = load_config()?;
+    let base_urls = config.xllm_url_candidates();
+
+    // MLX-LM 먼저 시도 (ps --model)
+    if let Some(model) = detect_mlx_loaded_model() {
+        return Ok(XllmModelInfo {
+            id: model,
+            max_seq_len: None,
+            cache_mode: None,
+            rope_scale: None,
+        });
+    }
+
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(5))
+        .build()
+        .map_err(|e| LumError::Network(e.to_string()))?;
+
+    fetch_xllm_model_info(&client, &base_urls, config.xllm_api_key.as_ref()).await
 }
 
 /// ② 모델 전환 (TabbyAPI POST /v1/model/load)
@@ -137,7 +212,7 @@ pub async fn switch_xllm_model(
     max_seq_len: Option<u32>,
 ) -> Result<String> {
     let config = load_config()?;
-    let url = format!("{}/v1/model/load", config.xllm_url());
+    let base_urls = config.xllm_url_candidates();
     let client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(300)) // 큰 모델은 3~5분 소요
         .build()
@@ -152,18 +227,15 @@ pub async fn switch_xllm_model(
     let msl = max_seq_len.or(config.max_seq_len).unwrap_or(8192);
     body["max_seq_len"] = serde_json::Value::Number(msl.into());
 
-    let mut req = client.post(&url).json(&body);
-    if let Some(key) = &config.xllm_api_key {
-        req = req.header("x-api-key", key);
-    }
-    if let Some(key) = &config.xllm_admin_key {
-        req = req.header("x-admin-key", key);
-    }
-
-    let resp = req
-        .send()
-        .await
-        .map_err(|e| LumError::Network(e.to_string()))?;
+    let resp = post_xllm_with_candidates(
+        &client,
+        &base_urls,
+        "v1/model/load",
+        body,
+        config.xllm_api_key.as_ref(),
+        config.xllm_admin_key.as_ref(),
+    )
+    .await?;
 
     if !resp.status().is_success() {
         let status = resp.status();
@@ -242,17 +314,17 @@ pub async fn switch_xllm_model(
 #[tauri::command]
 pub async fn unload_xllm_model() -> Result<String> {
     let config = load_config()?;
-    let url = format!("{}/v1/model/unload", config.xllm_url());
+    let base_urls = config.xllm_url_candidates();
     let client = reqwest::Client::new();
-
-    let mut req = client.post(&url).json(&serde_json::json!({}));
-    if let Some(key) = &config.xllm_admin_key {
-        req = req.header("x-admin-key", key);
-    }
-
-    req.send()
-        .await
-        .map_err(|e| LumError::Network(e.to_string()))?;
+    let _resp = post_xllm_with_candidates(
+        &client,
+        &base_urls,
+        "v1/model/unload",
+        serde_json::json!({}),
+        None,
+        config.xllm_admin_key.as_ref(),
+    )
+    .await?;
 
     Ok("모델 언로드 완료".to_string())
 }
