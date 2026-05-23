@@ -123,6 +123,23 @@ const CODING_CONTEXT_KO = ["버그", "에러", "오류", "테스트", "함수", 
 const CODING_CONTEXT_EN = ["bug", "error", "test", "function", "file", "refactor"];
 const HEALING_INTENT_KO = ["거부 케이스", "실패 패턴", "내가 거부한", "거부한 케이스"];
 const HEALING_INTENT_EN = ["rejected", "rejection", "failure pattern", "rejected case"];
+const CODE_REVIEW_INTENT_KO = [
+  "코드 리뷰",
+  "프로젝트 리뷰",
+  "리포 리뷰",
+  "레포 리뷰",
+  "문제점 리뷰",
+  "버그 찾아",
+  "버그 찾",
+];
+const CODE_REVIEW_INTENT_EN = [
+  "code review",
+  "project review",
+  "review this project",
+  "review this repo",
+  "review the repo",
+  "find bugs",
+];
 
 // 정규식은 module 로드 시 1회 컴파일 — 매 routeInput 호출마다 RegExp 재생성 회피.
 // 영어 동사 활용형(s/ed/ing) + 명사 복수형(s?) 지원.
@@ -130,6 +147,9 @@ const CODING_VERB_RE_EN = CODING_VERBS_EN.map((v) => new RegExp(`\\b${v}(s|ed|in
 const CODING_NOUN_RE_EN = CODING_NOUNS_EN.map((n) => new RegExp(`\\b${n}s?\\b`));
 const CODING_CONTEXT_RE_EN = CODING_CONTEXT_EN.map((w) => new RegExp(`\\b${w}s?\\b`));
 const HEALING_INTENT_RE_EN = HEALING_INTENT_EN.map(
+  (w) => new RegExp(`\\b${w.replace(/\s+/g, "\\s+")}\\b`),
+);
+const CODE_REVIEW_INTENT_RE_EN = CODE_REVIEW_INTENT_EN.map(
   (w) => new RegExp(`\\b${w.replace(/\s+/g, "\\s+")}\\b`),
 );
 
@@ -165,6 +185,16 @@ function detectHealingIntent(text: string): boolean {
   return (
     HEALING_INTENT_KO.some((w) => text.includes(w))
     || HEALING_INTENT_RE_EN.some((re) => re.test(lower))
+  );
+}
+
+/** 코드/프로젝트 리뷰는 수정 의도가 없어도 파일 탐색 도구가 필요한 읽기 전용 agent 작업이다. */
+function detectCodeReviewIntent(text: string): boolean {
+  if (!text) return false;
+  const lower = text.toLowerCase();
+  return (
+    CODE_REVIEW_INTENT_KO.some((w) => text.includes(w))
+    || CODE_REVIEW_INTENT_RE_EN.some((re) => re.test(lower))
   );
 }
 
@@ -220,6 +250,10 @@ export function routeInput(raw: string): Route {
       if (rest.startsWith(">>")) {
         return { type: "agent", task: rest.replace(/^>>\s*/, "").trim(), backend };
       }
+      // 리뷰 의도도 파일 탐색 도구가 필요하므로 backend를 유지한 채 agent로 보낸다.
+      if (detectCodeReviewIntent(rest)) {
+        return { type: "agent", task: rest, backend };
+      }
       // backend 명시했더라도 코딩 의도 있으면 agent로 (둘 다 backend 필드 받음).
       if (detectCodingIntent(rest)) {
         return { type: "agent", task: rest, backend };
@@ -229,27 +263,32 @@ export function routeInput(raw: string): Route {
     return { type: "ai", question: stripped };
   }
 
-  // 3. shell 특수문자 시작 → shell
+  // 3. 리뷰 의도는 CLI 판정보다 우선 — "code review ..."를 VS Code 실행으로 오인하지 않음.
+  if (detectCodeReviewIntent(trimmed)) {
+    return { type: "agent", task: trimmed };
+  }
+
+  // 4. shell 특수문자 시작 → shell
   if (startsWithShellPrefix(trimmed)) {
     return { type: "shell", command: trimmed };
   }
 
-  // 4. 첫 토큰이 알려진 CLI → shell
+  // 5. 첫 토큰이 알려진 CLI → shell
   const firstToken = trimmed.split(/\s+/)[0];
   if (isKnownShellCommand(firstToken)) {
     return { type: "shell", command: trimmed };
   }
 
-  // 5. (Phase 124) 자연어이지만 코딩 의도 감지 → 자동 agent 라우팅
+  // 6. Healing 조회 의도 → 자동 agent 라우팅
   if (detectHealingIntent(trimmed)) {
     return { type: "agent", task: trimmed };
   }
 
-  // 6. (Phase 124) 자연어이지만 코딩 의도 감지 → 자동 agent 라우팅
+  // 7. (Phase 124) 자연어이지만 코딩 의도 감지 → 자동 agent 라우팅
   if (detectCodingIntent(trimmed)) {
     return { type: "agent", task: trimmed };
   }
 
-  // 7. 그 외 전부 AI (기본값 — 단순 질문/대화)
+  // 8. 그 외 전부 AI (기본값 — 단순 질문/대화)
   return { type: "ai", question: trimmed };
 }

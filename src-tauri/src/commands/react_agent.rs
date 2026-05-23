@@ -284,6 +284,36 @@ ANSWER: <사용자에게 전달할 최종 답변>
 - 변경 후 run_tests 실행해 회귀 검증 — 실패 시 OBSERVATION 분석 → 추가 apply_patch로 자가 수정
 - 신규 디렉터리 필요 시 shell로 mkdir 먼저, 그 다음 write_file"#;
 
+const REVIEW_MODE_PROMPT: &str = r#"
+리뷰 모드:
+- 목표가 코드/프로젝트 리뷰이면 파일을 수정하지 말고 read-only 분석만 수행한다.
+- 우선 list_dir/get_repo_map/git_diff/read_file/query_graph를 사용해 구조, 변경점, 위험 지점을 확인한다.
+- shell/write_file/apply_patch/delete_file/데스크톱 제어 도구는 사용하지 않는다.
+- 최종 답변은 심각도 순으로 버그·회귀 위험·누락 테스트를 먼저 제시하고, 파일/영역 근거를 붙인다."#;
+
+fn is_review_goal(goal: &str) -> bool {
+    let lower = goal.to_lowercase();
+    let ko_hits = [
+        "코드 리뷰",
+        "프로젝트 리뷰",
+        "리포 리뷰",
+        "레포 리뷰",
+        "문제점 리뷰",
+        "버그 찾아",
+        "버그 찾",
+    ];
+    let en_hits = [
+        "code review",
+        "project review",
+        "review this project",
+        "review this repo",
+        "review the repo",
+        "find bugs",
+    ];
+    ko_hits.iter().any(|needle| goal.contains(needle))
+        || en_hits.iter().any(|needle| lower.contains(needle))
+}
+
 /// Phase 121: 활성 MCP 서버/도구 목록을 동적으로 시스템 프롬프트에 주입.
 /// Phase 127: 자연어 goal과 매칭된 Skill markdown도 함께 주입.
 /// mcp_tools/skills 비었으면 해당 섹션 생략 — 토큰 낭비 방지.
@@ -2458,11 +2488,22 @@ fn react_backup_dir(cwd: &Path) -> Vec<PathBuf> {
 fn pick_react_backup_dir(cwd: &Path) -> Option<PathBuf> {
     for dir in react_backup_dir(cwd) {
         let _ = std::fs::remove_dir_all(&dir);
-        if std::fs::create_dir_all(&dir).is_ok() {
+        if std::fs::create_dir_all(&dir).is_ok() && backup_dir_is_writable(&dir) {
             return Some(dir);
         }
     }
     None
+}
+
+fn backup_dir_is_writable(dir: &Path) -> bool {
+    let probe = dir.join(".write_probe");
+    match std::fs::write(&probe, b"ok") {
+        Ok(()) => {
+            let _ = std::fs::remove_file(probe);
+            true
+        }
+        Err(_) => false,
+    }
 }
 
 /// 새 ReAct run 시작 시 호출 — 기존 백업 dir 삭제 후 재생성, cwd 정규화 보관.
@@ -2923,6 +2964,17 @@ pub async fn react_agent_run(
         "{}\n\n목표: {goal}\n\nCWD: {effective_cwd}",
         build_system_prompt(&mcp_tools, &skills)
     );
+    if is_review_goal(&goal) {
+        conversation.push_str("\n\n");
+        conversation.push_str(REVIEW_MODE_PROMPT);
+        emit_event(
+            &app,
+            "status",
+            "리뷰 모드 — read-only 분석 도구만 사용",
+            None,
+            Some(0),
+        );
+    }
     // 사용자 명시 opt-in 토글. 기본 false — 활성화 전에는 ReAct가 화면/입력 제어 불가.
     let desktop_tools_enabled = loaded_config
         .as_ref()
@@ -3367,6 +3419,16 @@ mod tests {
         assert!(!is_whitelisted_in_act(ReactMode::Act, "shell", Some(&wl)));
         assert!(is_whitelisted_in_act(ReactMode::Plan, "shell", Some(&wl)));
         assert!(is_whitelisted_in_act(ReactMode::Act, "shell", None));
+    }
+
+    #[test]
+    fn review_goal_감지() {
+        assert!(is_review_goal("프로젝트 리뷰 해줘"));
+        assert!(is_review_goal("코드 리뷰 해줘"));
+        assert!(is_review_goal("review this project"));
+        assert!(is_review_goal("code review this repo"));
+        assert!(!is_review_goal("로그인 버그 고쳐줘"));
+        assert!(!is_review_goal("안녕"));
     }
 
     #[test]

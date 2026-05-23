@@ -182,6 +182,16 @@ describe("routeInput — 기본: 자연어=AI, CLI 감지 시 shell", () => {
       expect(routeInput(input)).toEqual({ type: "agent", task: input });
     });
 
+    it.each([
+      "프로젝트 리뷰 해줘",
+      "코드 리뷰 해줘",
+      "이 프로젝트 문제점 리뷰해줘",
+      "review this project",
+      "code review this repo",
+    ])("코드/프로젝트 리뷰 의도 '%s' → agent", (input) => {
+      expect(routeInput(input)).toEqual({ type: "agent", task: input });
+    });
+
     describe("우선순위 — 명시적 prefix 우선", () => {
       it("@ override는 코딩 의도 있어도 ai로", () => {
         // "@ 코드 추가해" — 코딩 의도지만 사용자가 명시적으로 ai 요청.
@@ -212,6 +222,14 @@ describe("routeInput — 기본: 자연어=AI, CLI 감지 시 shell", () => {
       expect(routeInput("@local utils.ts에 add 함수 추가해줘")).toEqual({
         type: "agent",
         task: "utils.ts에 add 함수 추가해줘",
+        backend: "local",
+      });
+    });
+
+    it("@local 리뷰 의도 → agent + backend=local", () => {
+      expect(routeInput("@local 프로젝트 리뷰 해줘")).toEqual({
+        type: "agent",
+        task: "프로젝트 리뷰 해줘",
         backend: "local",
       });
     });
