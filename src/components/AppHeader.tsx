@@ -382,8 +382,6 @@ const AppHeader: React.FC<Props> = ({
   const [notifCenterMaxHeight, setNotifCenterMaxHeight] = React.useState(440);
   const [advancedOverflowPosition, setAdvancedOverflowPosition] = React.useState<PopupPosition>({ x: 0, y: 0 });
   const [notifCenterPosition, setNotifCenterPosition] = React.useState<PopupPosition>({ x: 0, y: 0 });
-  const [hasAdvancedOverflowPosition, setHasAdvancedOverflowPosition] = React.useState(false);
-  const [hasNotifCenterPosition, setHasNotifCenterPosition] = React.useState(false);
   const ADVANCED_OVERFLOW_PANEL_ID = "advanced-overflow-panel";
   const NOTIF_CENTER_PANEL_ID = "notification-center-panel";
   const POPUP_GUTTER = 8;
@@ -468,9 +466,6 @@ const AppHeader: React.FC<Props> = ({
     left: `${advancedOverflowPosition.x}px`,
     top: `${advancedOverflowPosition.y}px`,
     width: typeof advancedOverflowPosition.width === "number" ? `${advancedOverflowPosition.width}px` : undefined,
-    opacity: hasAdvancedOverflowPosition ? 1 : 0,
-    visibility: hasAdvancedOverflowPosition ? "visible" : "hidden",
-    pointerEvents: hasAdvancedOverflowPosition ? "auto" : "none",
   };
 
   const advancedOverflowPanelOrigin = advancedOverflowPlacement === "up" ? "bottom right" : "top right";
@@ -480,9 +475,6 @@ const AppHeader: React.FC<Props> = ({
     left: `${notifCenterPosition.x}px`,
     top: `${notifCenterPosition.y}px`,
     width: typeof notifCenterPosition.width === "number" ? `${notifCenterPosition.width}px` : undefined,
-    opacity: hasNotifCenterPosition ? 1 : 0,
-    visibility: hasNotifCenterPosition ? "visible" : "hidden",
-    pointerEvents: hasNotifCenterPosition ? "auto" : "none",
   };
   const notifCenterPanelOrigin = notifCenterPlacement === "up" ? "bottom right" : "top right";
   const notifCenterPanelOffsetY = notifCenterPlacement === "up" ? 4 : -4;
@@ -554,14 +546,12 @@ const AppHeader: React.FC<Props> = ({
 
   const closeAdvancedOverflow = React.useCallback(() => {
     setShowAdvancedOverflow(false);
-    setHasAdvancedOverflowPosition(false);
     requestAnimationFrame(() => {
       advancedOverflowButtonRef.current?.focus();
     });
   }, [setShowAdvancedOverflow]);
 
   const closeNotifCenter = React.useCallback(() => {
-    setHasNotifCenterPosition(false);
     setShowNotifCenter(false);
     requestAnimationFrame(() => {
       notifCenterButtonRef.current?.focus();
@@ -577,7 +567,6 @@ const AppHeader: React.FC<Props> = ({
 
   const toggleNotifCenter = React.useCallback(() => {
     setShowAdvancedOverflow(false);
-    setHasNotifCenterPosition(false);
     setShowNotifCenter((prev) => {
       const next = !prev;
       if (next) notifCenter.markAllRead();
@@ -617,7 +606,6 @@ const AppHeader: React.FC<Props> = ({
 
   React.useLayoutEffect(() => {
     if (!showAdvancedOverflow) return;
-    setHasAdvancedOverflowPosition(false);
 
     const updatePlacement = () => {
       updatePopupPlacement({
@@ -627,7 +615,7 @@ const AppHeader: React.FC<Props> = ({
         setMaxHeight: setAdvancedOverflowMaxHeight,
         setPosition: setAdvancedOverflowPosition,
         fallbackWidth: POPUP_FALLBACK_WIDTH.advanced,
-        onReady: () => setHasAdvancedOverflowPosition(true),
+        onReady: () => {},
       });
     };
 
@@ -691,7 +679,7 @@ const AppHeader: React.FC<Props> = ({
         setMaxHeight: setNotifCenterMaxHeight,
         setPosition: setNotifCenterPosition,
         fallbackWidth: POPUP_FALLBACK_WIDTH.notif,
-        onReady: () => setHasNotifCenterPosition(true),
+        onReady: () => {},
       });
     };
 

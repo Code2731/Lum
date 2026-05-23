@@ -102,7 +102,6 @@ const PrivacyLedgerBadge: React.FC<Props> = ({
     width: 288,
   });
   const [popupMaxHeight, setPopupMaxHeight] = useState(440);
-  const [isPopupMeasured, setIsPopupMeasured] = useState(false);
   const popoverId = React.useId();
   const onResetRef = useRef(onReset);
   onResetRef.current = onReset;
@@ -164,7 +163,6 @@ const PrivacyLedgerBadge: React.FC<Props> = ({
   };
 
   const closePopover = React.useCallback(() => {
-    setIsPopupMeasured(false);
     setOpen(false);
     triggerRef.current?.focus();
   }, []);
@@ -268,12 +266,10 @@ const PrivacyLedgerBadge: React.FC<Props> = ({
     setPlacement(nextPlacement);
     setPopupPos({ x: clampedX, y: clampedY, width: panelWidth });
     setPopupMaxHeight(nextHeight);
-    setIsPopupMeasured(true);
   }, [measurePlacement]);
 
   const openPopover = React.useCallback(() => {
     setOpen(true);
-    setIsPopupMeasured(false);
     requestAnimationFrame(() => {
       updatePlacement();
     });
@@ -330,8 +326,6 @@ const PrivacyLedgerBadge: React.FC<Props> = ({
     top: `${popupPos.y}px`,
     width:
       typeof popupPos.width === "number" ? `${popupPos.width}px` : undefined,
-    opacity: isPopupMeasured ? 1 : 0,
-    pointerEvents: isPopupMeasured ? "auto" : "none",
   };
   const popover = (
     <motion.div

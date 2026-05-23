@@ -341,7 +341,7 @@ describe("AppHeader", () => {
       render(<HeaderHarness />);
       const menu = await screen.findByRole("menu", { name: "고급 기능 메뉴" });
       await waitFor(() => {
-        expect(menu.style.visibility).toBe("visible");
+        expect(menu).toBeInTheDocument();
       });
 
       const top = Number.parseFloat(menu.style.top || "0");
