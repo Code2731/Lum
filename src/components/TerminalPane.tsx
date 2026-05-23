@@ -124,6 +124,11 @@ const LEGACY_TOOLBELT_BACKEND_KEY = TOOLBELT_BACKEND_KEY;
 
 const DEFAULT_MODEL = "Qwen2.5-Coder-7B-Instruct-EXL2-4bpw";
 const UI_TEXT_MICRO = "var(--lum-ui-text-micro)";
+const MICRO_FONT_SIZE = 10;
+const SMALL_FONT_SIZE = 11;
+const BASE_FONT_SIZE = 12;
+const TITLE_FONT_SIZE = 14;
+const HERO_FONT_SIZE = 36;
 
 const compactPath = (path?: string): string => {
   if (!path) return "루트";
@@ -2102,11 +2107,11 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
             flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
             gap: 16, color: "rgba(255,255,255,0.18)", userSelect: "none",
           }}>
-            <div style={{ fontSize: 36, opacity: 0.5 }}>✨</div>
+            <div style={{ fontSize: HERO_FONT_SIZE, opacity: 0.5 }}>✨</div>
             <div style={{ textAlign: "center", lineHeight: 1.8 }}>
-              <div style={{ fontSize: 14, color: "rgba(255,255,255,0.35)", marginBottom: 6 }}>LUM AI 터미널</div>
-              <div style={{ fontSize: 12 }}>자연어로 질문하거나 명령어를 입력하세요</div>
-              <div style={{ fontSize: 11, marginTop: 8, opacity: 0.6 }}>
+              <div style={{ fontSize: TITLE_FONT_SIZE, color: "rgba(255,255,255,0.35)", marginBottom: 6 }}>LUM AI 터미널</div>
+              <div style={{ fontSize: BASE_FONT_SIZE }}>자연어로 질문하거나 명령어를 입력하세요</div>
+              <div style={{ fontSize: SMALL_FONT_SIZE, marginTop: 8, opacity: 0.6 }}>
                 <span style={{ color: "#58a6ff" }}>#</span> AI 명령 제안 &nbsp;·&nbsp;
                 <span style={{ color: "#3fb950" }}>?</span> 명령어 설명 &nbsp;·&nbsp;
                 <span style={{ color: "#ff7b72" }}>{">>"}</span> 에이전트
@@ -2148,7 +2153,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               aria-label="dismiss-input-toolbelt-tip"
               onClick={dismissInputTip}
               style={{
-                fontSize: 10,
+                fontSize: MICRO_FONT_SIZE,
                 color: "rgba(255,255,255,0.88)",
                 border: "1px solid rgba(255,255,255,0.22)",
                 background: "rgba(255,255,255,0.08)",
@@ -2202,7 +2207,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               aria-label="toolbelt-customize-toggle"
               onClick={() => setToolbeltCustomizeOpen((open) => !open)}
               style={{
-                fontSize: 10,
+                fontSize: MICRO_FONT_SIZE,
                 color: toolbeltCustomizeOpen ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.76)",
                 border: toolbeltCustomizeOpen ? "1px solid rgba(121,192,255,0.58)" : "1px solid rgba(255,255,255,0.24)",
                 background: toolbeltCustomizeOpen ? "rgba(88,166,255,0.18)" : "rgba(255,255,255,0.08)",
@@ -2224,7 +2229,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               onClick={triggerMentionAttach}
               title="파일 첨부 트리거 삽입 (@, Cmd/Ctrl+Shift+A)"
               style={{
-                fontSize: 10,
+                fontSize: MICRO_FONT_SIZE,
                 color: "rgba(121,192,255,0.9)",
                 border: "1px solid rgba(121,192,255,0.34)",
                 background: "rgba(121,192,255,0.12)",
@@ -2244,7 +2249,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               disabled={!canClearInputQuick}
               title={canClearInputQuick ? "입력/오버레이 빠른 초기화 (Esc, Cmd/Ctrl+Shift+K)" : "지울 입력/오버레이가 없어 비활성화"}
               style={{
-                fontSize: 10,
+                fontSize: MICRO_FONT_SIZE,
                 color: canClearInputQuick ? "rgba(255,255,255,0.88)" : "rgba(255,255,255,0.42)",
                 border: canClearInputQuick ? "1px solid rgba(255,255,255,0.28)" : "1px solid rgba(255,255,255,0.18)",
                 background: canClearInputQuick ? "rgba(255,255,255,0.1)" : "rgba(255,255,255,0.06)",
@@ -2264,7 +2269,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               disabled={!canResetAllQuick}
               title={canResetAllQuick ? "입력/UNDO/RECALL 상태 전체 초기화 (Cmd/Ctrl+Shift+X)" : "초기화할 상태가 없어 비활성화"}
               style={{
-                fontSize: 10,
+                fontSize: MICRO_FONT_SIZE,
                 color: canResetAllQuick ? "rgba(255,225,222,0.95)" : "rgba(255,255,255,0.42)",
                 border: canResetAllQuick ? "1px solid rgba(255,123,114,0.58)" : "1px solid rgba(255,255,255,0.18)",
                 background: canResetAllQuick ? "rgba(255,123,114,0.14)" : "rgba(255,255,255,0.06)",
@@ -2283,7 +2288,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               onClick={handleInterrupt}
               title="현재 실행 인터럽트 (Cmd/Ctrl+C, Cmd/Ctrl+Shift+C)"
               style={{
-                fontSize: 10,
+                fontSize: MICRO_FONT_SIZE,
                 color: "rgba(255,225,222,0.96)",
                 border: "1px solid rgba(255,123,114,0.56)",
                 background: "rgba(255,123,114,0.16)",
@@ -2303,7 +2308,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               disabled={clearedInputStack.length === 0}
               title={clearedInputStack.length > 0 ? "직전 CLEAR 입력 복원 (Cmd/Ctrl+Shift+Z)" : "복원할 입력이 없어 비활성화"}
               style={{
-                fontSize: 10,
+                fontSize: MICRO_FONT_SIZE,
                 color: clearedInputStack.length > 0 ? "rgba(220,247,225,0.96)" : "rgba(255,255,255,0.42)",
                 border: clearedInputStack.length > 0 ? "1px solid rgba(63,185,80,0.6)" : "1px solid rgba(255,255,255,0.18)",
                 background: clearedInputStack.length > 0 ? "rgba(63,185,80,0.18)" : "rgba(255,255,255,0.06)",
@@ -2323,7 +2328,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               disabled={clearedInputStack.length === 0}
               title={clearedInputStack.length > 0 ? "CLEAR 복원 이력 비우기 (Cmd/Ctrl+Shift+D)" : "비울 복원 이력이 없어 비활성화"}
               style={{
-                fontSize: 10,
+                fontSize: MICRO_FONT_SIZE,
                 color: clearedInputStack.length > 0 ? "rgba(255,225,222,0.95)" : "rgba(255,255,255,0.42)",
                 border: clearedInputStack.length > 0 ? "1px solid rgba(255,123,114,0.58)" : "1px solid rgba(255,255,255,0.18)",
                 background: clearedInputStack.length > 0 ? "rgba(255,123,114,0.14)" : "rgba(255,255,255,0.06)",
@@ -2346,7 +2351,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               disabled={!canSetRecallFromCurrent}
               title={canSetRecallFromCurrent ? "현재 입력을 RECALL 대상으로 저장 (Cmd/Ctrl+Shift+S)" : "저장 가능한 입력이 없거나 RECALL과 동일해 비활성화"}
               style={{
-                fontSize: 10,
+                fontSize: MICRO_FONT_SIZE,
                 color: canSetRecallFromCurrent ? "rgba(255,244,214,0.95)" : "rgba(255,255,255,0.42)",
                 border: canSetRecallFromCurrent ? "1px solid rgba(227,179,65,0.6)" : "1px solid rgba(255,255,255,0.18)",
                 background: canSetRecallFromCurrent ? "rgba(227,179,65,0.16)" : "rgba(255,255,255,0.06)",
@@ -2366,7 +2371,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               disabled={!canRecallSubmittedInput}
               title={canRecallSubmittedInput ? `직전 실행 입력 복원 (Cmd/Ctrl+Shift+R): ${lastSubmittedInput}` : "복원할 실행 입력이 없거나 현재 입력과 동일해 비활성화"}
               style={{
-                fontSize: 10,
+                fontSize: MICRO_FONT_SIZE,
                 color: canRecallSubmittedInput ? "rgba(255,244,214,0.95)" : "rgba(255,255,255,0.42)",
                 border: canRecallSubmittedInput ? "1px solid rgba(227,179,65,0.6)" : "1px solid rgba(255,255,255,0.18)",
                 background: canRecallSubmittedInput ? "rgba(227,179,65,0.16)" : "rgba(255,255,255,0.06)",
@@ -2386,7 +2391,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               disabled={!canRerunSubmittedInput}
               title={canRerunSubmittedInput ? `직전 실행 입력 즉시 재실행 (Cmd/Ctrl+Shift+E): ${lastSubmittedInput}` : "재실행 가능한 실행 입력이 없어 비활성화"}
               style={{
-                fontSize: 10,
+                fontSize: MICRO_FONT_SIZE,
                 color: canRerunSubmittedInput ? "rgba(255,234,199,0.95)" : "rgba(255,255,255,0.42)",
                 border: canRerunSubmittedInput ? "1px solid rgba(227,179,65,0.62)" : "1px solid rgba(255,255,255,0.18)",
                 background: canRerunSubmittedInput ? "rgba(227,179,65,0.18)" : "rgba(255,255,255,0.06)",
@@ -2412,7 +2417,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               disabled={submittedInputHistory.length === 0}
               title={submittedInputHistory.length > 0 ? "실행 입력 히스토리 열기/닫기" : "표시할 실행 입력 히스토리가 없어 비활성화"}
               style={{
-                fontSize: 10,
+                fontSize: MICRO_FONT_SIZE,
                 color: submittedInputHistory.length > 0 ? "rgba(215,228,255,0.96)" : "rgba(255,255,255,0.42)",
                 border: submittedInputHistory.length > 0 ? "1px solid rgba(121,192,255,0.62)" : "1px solid rgba(255,255,255,0.18)",
                 background: submittedInputHistory.length > 0 ? "rgba(121,192,255,0.16)" : "rgba(255,255,255,0.06)",
@@ -2432,7 +2437,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               disabled={!lastSubmittedInput}
               title={lastSubmittedInput ? "직전 실행 입력 기록 비우기 (Cmd/Ctrl+Shift+F)" : "비울 실행 입력이 없어 비활성화"}
               style={{
-                fontSize: 10,
+                fontSize: MICRO_FONT_SIZE,
                 color: lastSubmittedInput ? "rgba(255,225,222,0.95)" : "rgba(255,255,255,0.42)",
                 border: lastSubmittedInput ? "1px solid rgba(255,123,114,0.58)" : "1px solid rgba(255,255,255,0.18)",
                 background: lastSubmittedInput ? "rgba(255,123,114,0.14)" : "rgba(255,255,255,0.06)",
@@ -2452,7 +2457,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               disabled={!canSwapSubmittedInput}
               title={canSwapSubmittedInput ? "현재 입력과 직전 실행 입력 교환 (Cmd/Ctrl+Shift+W)" : "교환 가능한 상태가 아니어서 비활성화 (실행 입력 없음/현재 입력 비실행/동일 입력)"}
               style={{
-                fontSize: 10,
+                fontSize: MICRO_FONT_SIZE,
                 color: canSwapSubmittedInput ? "rgba(220,247,225,0.96)" : "rgba(255,255,255,0.42)",
                 border: canSwapSubmittedInput ? "1px solid rgba(63,185,80,0.62)" : "1px solid rgba(255,255,255,0.18)",
                 background: canSwapSubmittedInput ? "rgba(63,185,80,0.16)" : "rgba(255,255,255,0.06)",
@@ -2472,7 +2477,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               disabled={!canMergeRecall}
               title={canMergeRecall ? "현재 입력 뒤에 직전 실행 입력 붙이기 (Cmd/Ctrl+Shift+M)" : "붙일 실행 입력이 없거나 이미 포함돼 비활성화"}
               style={{
-                fontSize: 10,
+                fontSize: MICRO_FONT_SIZE,
                 color: canMergeRecall ? "rgba(215,228,255,0.96)" : "rgba(255,255,255,0.42)",
                 border: canMergeRecall ? "1px solid rgba(121,192,255,0.6)" : "1px solid rgba(255,255,255,0.18)",
                 background: canMergeRecall ? "rgba(121,192,255,0.16)" : "rgba(255,255,255,0.06)",
@@ -2492,7 +2497,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               disabled={!canPrependRecall}
               title={canPrependRecall ? "현재 입력 앞에 직전 실행 입력 붙이기 (Cmd/Ctrl+Shift+P)" : "붙일 실행 입력이 없거나 이미 포함돼 비활성화"}
               style={{
-                fontSize: 10,
+                fontSize: MICRO_FONT_SIZE,
                 color: canPrependRecall ? "rgba(215,228,255,0.96)" : "rgba(255,255,255,0.42)",
                 border: canPrependRecall ? "1px solid rgba(121,192,255,0.6)" : "1px solid rgba(255,255,255,0.18)",
                 background: canPrependRecall ? "rgba(121,192,255,0.16)" : "rgba(255,255,255,0.06)",
@@ -2512,7 +2517,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               disabled={!canNormalizeToPlain}
               title={canNormalizeToPlain ? "강제 프리픽스 제거 후 일반 입력으로 전환 (Cmd/Ctrl+Shift+G)" : "제거할 프리픽스가 없어 비활성화"}
               style={{
-                fontSize: 10,
+                fontSize: MICRO_FONT_SIZE,
                 color: canNormalizeToPlain ? "rgba(215,228,255,0.96)" : "rgba(255,255,255,0.42)",
                 border: canNormalizeToPlain ? "1px solid rgba(88,166,255,0.6)" : "1px solid rgba(255,255,255,0.18)",
                 background: canNormalizeToPlain ? "rgba(88,166,255,0.18)" : "rgba(255,255,255,0.06)",
@@ -2532,7 +2537,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               disabled={!canTrimInput}
               title={canTrimInput ? "입력 앞뒤 공백 정리 (Cmd/Ctrl+Shift+T)" : "정리할 공백이 없어 비활성화"}
               style={{
-                fontSize: 10,
+                fontSize: MICRO_FONT_SIZE,
                 color: canTrimInput ? "rgba(220,247,225,0.96)" : "rgba(255,255,255,0.42)",
                 border: canTrimInput ? "1px solid rgba(63,185,80,0.62)" : "1px solid rgba(255,255,255,0.18)",
                 background: canTrimInput ? "rgba(63,185,80,0.16)" : "rgba(255,255,255,0.06)",
@@ -2552,7 +2557,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               disabled={!canSquashInputSpaces}
               title={canSquashInputSpaces ? "연속 공백을 한 칸으로 압축 (Cmd/Ctrl+Shift+Q)" : "압축할 연속 공백이 없어 비활성화"}
               style={{
-                fontSize: 10,
+                fontSize: MICRO_FONT_SIZE,
                 color: canSquashInputSpaces ? "rgba(220,247,225,0.96)" : "rgba(255,255,255,0.42)",
                 border: canSquashInputSpaces ? "1px solid rgba(63,185,80,0.62)" : "1px solid rgba(255,255,255,0.18)",
                 background: canSquashInputSpaces ? "rgba(63,185,80,0.16)" : "rgba(255,255,255,0.06)",
@@ -2572,7 +2577,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               disabled={!canCleanInput}
               title={canCleanInput ? "앞뒤 공백 제거 + 연속 공백 압축 (Cmd/Ctrl+Shift+L)" : "정리할 공백이 없어 비활성화"}
               style={{
-                fontSize: 10,
+                fontSize: MICRO_FONT_SIZE,
                 color: canCleanInput ? "rgba(220,247,225,0.96)" : "rgba(255,255,255,0.42)",
                 border: canCleanInput ? "1px solid rgba(63,185,80,0.62)" : "1px solid rgba(255,255,255,0.18)",
                 background: canCleanInput ? "rgba(63,185,80,0.16)" : "rgba(255,255,255,0.06)",
@@ -2614,7 +2619,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               onClick={() => toggleQuickModePrefix("heavy")}
               title="Heavy 추론 접두어 토글 (!!, Cmd/Ctrl+Shift+H)"
               style={{
-                fontSize: 10,
+                fontSize: MICRO_FONT_SIZE,
                 color: quickModeHeavyActive ? "rgba(255,220,212,0.96)" : "rgba(255,255,255,0.86)",
                 border: quickModeHeavyActive ? "1px solid rgba(255,123,114,0.64)" : "1px solid rgba(255,255,255,0.24)",
                 background: quickModeHeavyActive ? "rgba(255,123,114,0.2)" : "rgba(255,255,255,0.08)",
@@ -2634,7 +2639,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               onClick={() => toggleQuickModePrefix("shell")}
               title="강제 shell 접두어 토글 (!, Cmd/Ctrl+Shift+Y)"
               style={{
-                fontSize: 10,
+                fontSize: MICRO_FONT_SIZE,
                 color: quickModeShellActive ? "rgba(255,245,219,0.96)" : "rgba(255,255,255,0.86)",
                 border: quickModeShellActive ? "1px solid rgba(227,179,65,0.64)" : "1px solid rgba(255,255,255,0.24)",
                 background: quickModeShellActive ? "rgba(227,179,65,0.22)" : "rgba(255,255,255,0.08)",
@@ -2654,7 +2659,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               onClick={() => toggleQuickModePrefix("agent")}
               title="강제 agent 접두어 토글 (>>, Cmd/Ctrl+Shift+J)"
               style={{
-                fontSize: 10,
+                fontSize: MICRO_FONT_SIZE,
                 color: quickModeAgentActive ? "rgba(255,225,222,0.96)" : "rgba(255,255,255,0.86)",
                 border: quickModeAgentActive ? "1px solid rgba(255,123,114,0.64)" : "1px solid rgba(255,255,255,0.24)",
                 background: quickModeAgentActive ? "rgba(255,123,114,0.2)" : "rgba(255,255,255,0.08)",
@@ -2674,7 +2679,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               onClick={() => toggleQuickModePrefix("explain")}
               title="강제 explain 접두어 토글 (?, Cmd/Ctrl+Shift+U)"
               style={{
-                fontSize: 10,
+                fontSize: MICRO_FONT_SIZE,
                 color: quickModeExplainActive ? "rgba(220,247,225,0.96)" : "rgba(255,255,255,0.86)",
                 border: quickModeExplainActive ? "1px solid rgba(63,185,80,0.64)" : "1px solid rgba(255,255,255,0.24)",
                 background: quickModeExplainActive ? "rgba(63,185,80,0.2)" : "rgba(255,255,255,0.08)",
@@ -2694,7 +2699,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               onClick={() => toggleQuickModePrefix("aiCmd")}
               title="AI 명령 제안 접두어 토글 (#, Cmd/Ctrl+Shift+V)"
               style={{
-                fontSize: 10,
+                fontSize: MICRO_FONT_SIZE,
                 color: quickModeAiCmdActive ? "rgba(215,228,255,0.96)" : "rgba(255,255,255,0.86)",
                 border: quickModeAiCmdActive ? "1px solid rgba(88,166,255,0.66)" : "1px solid rgba(255,255,255,0.24)",
                 background: quickModeAiCmdActive ? "rgba(88,166,255,0.22)" : "rgba(255,255,255,0.08)",
@@ -2714,7 +2719,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               onClick={toggleForceAiPrefix}
               title="강제 AI 챗 접두어 토글 (@, Cmd/Ctrl+Shift+I)"
               style={{
-                fontSize: 10,
+                fontSize: MICRO_FONT_SIZE,
                 color: quickModeForceAiActive ? "rgba(215,228,255,0.96)" : "rgba(255,255,255,0.86)",
                 border: quickModeForceAiActive ? "1px solid rgba(121,192,255,0.66)" : "1px solid rgba(255,255,255,0.24)",
                 background: quickModeForceAiActive ? "rgba(121,192,255,0.22)" : "rgba(255,255,255,0.08)",
@@ -2735,7 +2740,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               onClick={() => cycleBackendQuickPrefix(-1)}
               title="이전 backend 순환 (Cmd/Ctrl+Shift+` 또는 Cmd/Ctrl+, 또는 Cmd/Ctrl+Shift+←)"
               style={{
-                fontSize: 10,
+                fontSize: MICRO_FONT_SIZE,
                 color: "rgba(255,255,255,0.86)",
                 border: "1px solid rgba(255,255,255,0.24)",
                 background: "rgba(255,255,255,0.08)",
@@ -2754,7 +2759,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               onClick={() => cycleBackendQuickPrefix(1)}
               title="다음 backend 순환 (Cmd/Ctrl+` 또는 Cmd/Ctrl+. 또는 Cmd/Ctrl+Shift+→)"
               style={{
-                fontSize: 10,
+                fontSize: MICRO_FONT_SIZE,
                 color: "rgba(255,255,255,0.86)",
                 border: "1px solid rgba(255,255,255,0.24)",
                 background: "rgba(255,255,255,0.08)",
@@ -2774,7 +2779,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               onClick={clearBackendQuickPrefix}
               title="백엔드 강제 해제 (Cmd/Ctrl+0 or Cmd/Ctrl+Shift+O) · AUTO 상태에서 다시 누르면 LAST 복원"
               style={{
-                fontSize: 10,
+                fontSize: MICRO_FONT_SIZE,
                 color: activeBackendPrefix === null ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.82)",
                 border: activeBackendPrefix === null ? "1px solid rgba(255,255,255,0.45)" : "1px solid rgba(255,255,255,0.25)",
                 background: activeBackendPrefix === null ? "rgba(255,255,255,0.16)" : "rgba(255,255,255,0.08)",
@@ -2798,7 +2803,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
                   : "직전 backend 기록이 없거나 현재 backend와 동일해 비활성화"
               }
               style={{
-                fontSize: 10,
+                fontSize: MICRO_FONT_SIZE,
                 color: canRestorePrevBackendQuick ? "rgba(255,255,255,0.92)" : "rgba(255,255,255,0.42)",
                 border: canRestorePrevBackendQuick ? "1px solid rgba(255,255,255,0.34)" : "1px solid rgba(255,255,255,0.18)",
                 background: canRestorePrevBackendQuick ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.06)",
@@ -2818,7 +2823,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               disabled={!canRestoreLastBackendQuick}
               title={canRestoreLastBackendQuick ? "마지막으로 사용한 backend 복원 (Cmd/Ctrl+Shift+N)" : "이미 마지막 backend 상태라 비활성화"}
               style={{
-                fontSize: 10,
+                fontSize: MICRO_FONT_SIZE,
                 color: canRestoreLastBackendQuick ? "rgba(210,168,255,0.95)" : "rgba(255,255,255,0.42)",
                 border: canRestoreLastBackendQuick ? "1px solid rgba(188,140,255,0.4)" : "1px solid rgba(255,255,255,0.18)",
                 background: canRestoreLastBackendQuick ? "rgba(188,140,255,0.14)" : "rgba(255,255,255,0.06)",
@@ -2838,7 +2843,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               onClick={() => applyBackendQuickPrefix("local")}
               title="로컬 백엔드로 전환/해제 토글 (Cmd/Ctrl+1)"
               style={{
-                fontSize: 10,
+                fontSize: MICRO_FONT_SIZE,
                 color: "rgba(121,192,255,0.95)",
                 border: activeBackendPrefix === "local" ? "1px solid rgba(88,166,255,0.75)" : "1px solid rgba(88,166,255,0.35)",
                 background: activeBackendPrefix === "local" ? "rgba(88,166,255,0.24)" : "rgba(88,166,255,0.12)",
@@ -2858,7 +2863,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               onClick={() => applyBackendQuickPrefix("ollama")}
               title="Ollama 백엔드로 전환/해제 토글 (Cmd/Ctrl+2)"
               style={{
-                fontSize: 10,
+                fontSize: MICRO_FONT_SIZE,
                 color: "rgba(111,227,132,0.95)",
                 border: activeBackendPrefix === "ollama" ? "1px solid rgba(63,185,80,0.72)" : "1px solid rgba(63,185,80,0.35)",
                 background: activeBackendPrefix === "ollama" ? "rgba(63,185,80,0.24)" : "rgba(63,185,80,0.12)",
@@ -2878,7 +2883,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               onClick={() => applyBackendQuickPrefix("xllm")}
               title="xLLM 백엔드로 전환/해제 토글 (Cmd/Ctrl+3)"
               style={{
-                fontSize: 10,
+                fontSize: MICRO_FONT_SIZE,
                 color: "rgba(121,192,255,0.95)",
                 border: activeBackendPrefix === "xllm" ? "1px solid rgba(121,192,255,0.72)" : "1px solid rgba(121,192,255,0.35)",
                 background: activeBackendPrefix === "xllm" ? "rgba(121,192,255,0.24)" : "rgba(121,192,255,0.12)",
@@ -2898,7 +2903,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               onClick={() => applyBackendQuickPrefix("gemini")}
               title="Gemini 백엔드로 전환/해제 토글 (Cmd/Ctrl+4)"
               style={{
-                fontSize: 10,
+                fontSize: MICRO_FONT_SIZE,
                 color: "rgba(233,194,105,0.96)",
                 border: activeBackendPrefix === "gemini" ? "1px solid rgba(227,179,65,0.72)" : "1px solid rgba(227,179,65,0.35)",
                 background: activeBackendPrefix === "gemini" ? "rgba(227,179,65,0.24)" : "rgba(227,179,65,0.12)",
@@ -2968,7 +2973,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               aria-label="toolbelt-toggle-advanced"
               onClick={toggleAdvancedInputTools}
               style={{
-                fontSize: 10,
+                fontSize: MICRO_FONT_SIZE,
                 color: showAdvancedInputTools ? "rgba(220,247,225,0.96)" : "rgba(255,255,255,0.68)",
                 border: showAdvancedInputTools ? "1px solid rgba(63,185,80,0.62)" : "1px solid rgba(255,255,255,0.22)",
                 background: showAdvancedInputTools ? "rgba(63,185,80,0.18)" : "rgba(255,255,255,0.08)",
@@ -2985,7 +2990,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               aria-label="toolbelt-toggle-backend"
               onClick={toggleBackendQuickTools}
               style={{
-                fontSize: 10,
+                fontSize: MICRO_FONT_SIZE,
                 color: showBackendQuickTools ? "rgba(215,228,255,0.96)" : "rgba(255,255,255,0.68)",
                 border: showBackendQuickTools ? "1px solid rgba(121,192,255,0.62)" : "1px solid rgba(255,255,255,0.22)",
                 background: showBackendQuickTools ? "rgba(121,192,255,0.18)" : "rgba(255,255,255,0.08)",
@@ -3321,7 +3326,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
             position: "absolute",
             left: PANE_PADDING_X,
             bottom: 40,
-            fontSize: 11,
+            fontSize: SMALL_FONT_SIZE,
             fontFamily: FONT_FAMILY,
             color: "rgba(201,209,217,0.35)",
             pointerEvents: "none",
@@ -3355,23 +3360,23 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
             maxWidth: "90%",
           }}
         >
-          <span style={{ fontSize: 10, color: aiCmdError ? "#ff7b72" : "#58a6ff", fontFamily: FONT_FAMILY, opacity: 0.9 }}>
+          <span style={{ fontSize: MICRO_FONT_SIZE, color: aiCmdError ? "#ff7b72" : "#58a6ff", fontFamily: FONT_FAMILY, opacity: 0.9 }}>
             {aiCmdError ? "⚠ AI" : "⚡ AI"}
           </span>
           {aiLoading ? (
-            <span style={{ fontSize: 11, color: "rgba(88,166,255,0.5)", fontFamily: FONT_FAMILY }}>
+            <span style={{ fontSize: SMALL_FONT_SIZE, color: "rgba(88,166,255,0.5)", fontFamily: FONT_FAMILY }}>
               생성 중…
             </span>
           ) : aiCmdError ? (
-            <span style={{ fontSize: 11, color: "rgba(255,123,114,0.85)", fontFamily: FONT_FAMILY, whiteSpace: "pre-wrap" }}>
+            <span style={{ fontSize: SMALL_FONT_SIZE, color: "rgba(255,123,114,0.85)", fontFamily: FONT_FAMILY, whiteSpace: "pre-wrap" }}>
               {aiCmdError}
             </span>
           ) : (
             <>
-              <span style={{ fontSize: 12, color: "rgba(88,166,255,0.85)", fontFamily: FONT_FAMILY, whiteSpace: "pre" }}>
+              <span style={{ fontSize: BASE_FONT_SIZE, color: "rgba(88,166,255,0.85)", fontFamily: FONT_FAMILY, whiteSpace: "pre" }}>
                 {aiGhost?.cmd}
               </span>
-              <span style={{ fontSize: 10, color: "rgba(255,255,255,0.25)", fontFamily: FONT_FAMILY }}>
+              <span style={{ fontSize: MICRO_FONT_SIZE, color: "rgba(255,255,255,0.25)", fontFamily: FONT_FAMILY }}>
                 Tab
               </span>
             </>
