@@ -3,13 +3,14 @@
 // 한 번이라도 나갔으면 ☁️. 클릭하면 백엔드별 통계 + 마지막 호출 정보 popover.
 
 import React, { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Cloud, ShieldCheck, RotateCcw, X } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import type { LedgerState, Backend } from "../hooks/usePrivacyLedger";
 import { cn } from "@/lib/utils";
 
@@ -496,7 +497,7 @@ const PrivacyLedgerBadge: React.FC<Props> = ({
         <TooltipContent side="bottom">{tooltipText}</TooltipContent>
       </Tooltip>
 
-      <AnimatePresence>{open && popover}</AnimatePresence>
+      {open && (typeof document === "undefined" ? popover : createPortal(popover, document.body))}
     </div>
   );
 };

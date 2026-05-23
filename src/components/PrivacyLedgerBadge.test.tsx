@@ -1,7 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
-import { fireEvent, render } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import type { ReactElement } from "react";
 import PrivacyLedgerBadge from "./PrivacyLedgerBadge";
 import type { LedgerState } from "../hooks/usePrivacyLedger";
+
+const renderWithProvider = (ui: ReactElement) => {
+  return render(<TooltipProvider>{ui}</TooltipProvider>);
+};
 
 describe("PrivacyLedgerBadge", () => {
   const defaultState: LedgerState = {
@@ -18,7 +24,7 @@ describe("PrivacyLedgerBadge", () => {
 
   it("버튼을 눌러 배지를 열고 Escape로 닫을 수 있다", () => {
     const onReset = vi.fn();
-    const { getByRole, queryByText } = render(
+    renderWithProvider(
       <PrivacyLedgerBadge
         state={defaultState}
         isAllOnDevice
@@ -26,9 +32,9 @@ describe("PrivacyLedgerBadge", () => {
       />,
     );
 
-    const button = getByRole("button", { name: /Privacy Ledger/ });
+    const button = screen.getByRole("button", { name: /Privacy Ledger/ });
     fireEvent.click(button);
-    expect(queryByText("전체 AI 호출")).toBeInTheDocument();
+    expect(screen.getByText("전체 AI 호출")).toBeInTheDocument();
 
     fireEvent.keyDown(document.body, { key: "Escape" });
     expect(button).toHaveAttribute("aria-pressed", "false");
@@ -60,17 +66,17 @@ describe("PrivacyLedgerBadge", () => {
       },
     };
 
-    const { getByRole, queryByText } = render(
+    renderWithProvider(
       <PrivacyLedgerBadge
         state={state}
         isAllOnDevice={false}
         onReset={onReset}
       />,
     );
-    const button = getByRole("button", { name: /Privacy Ledger/ });
+    const button = screen.getByRole("button", { name: /Privacy Ledger/ });
     fireEvent.click(button);
 
-    const reset = queryByText("초기화");
+    const reset = screen.getByText("초기화");
     expect(reset).toBeInTheDocument();
   });
 
@@ -98,7 +104,7 @@ describe("PrivacyLedgerBadge", () => {
       },
     };
 
-    const { getByRole, queryAllByRole } = render(
+    renderWithProvider(
       <PrivacyLedgerBadge
         state={state}
         isAllOnDevice={false}
@@ -106,14 +112,14 @@ describe("PrivacyLedgerBadge", () => {
       />,
     );
 
-    const trigger = getByRole("button", { name: /Privacy Ledger/ });
+    const trigger = screen.getByRole("button", { name: /Privacy Ledger/ });
     fireEvent.click(trigger);
 
-    const buttons = queryAllByRole("button").filter((btn) => btn !== trigger);
+    const buttons = screen.getAllByRole("button").filter((btn) => btn !== trigger);
     expect(buttons.length).toBeGreaterThanOrEqual(2);
 
-    const closeButton = getByRole("button", { name: "Privacy Ledger 상세 닫기" });
-    const resetButton = getByRole("button", { name: "세션 카운터 초기화" });
+    const closeButton = screen.getByRole("button", { name: "Privacy Ledger 상세 닫기" });
+    const resetButton = screen.getByRole("button", { name: "세션 카운터 초기화" });
     const closeButtonNode = closeButton as HTMLButtonElement;
 
     closeButtonNode.focus();
@@ -154,7 +160,7 @@ describe("PrivacyLedgerBadge", () => {
       },
     };
 
-    const { getByRole, queryAllByRole } = render(
+    renderWithProvider(
       <PrivacyLedgerBadge
         state={state}
         isAllOnDevice={false}
@@ -162,14 +168,14 @@ describe("PrivacyLedgerBadge", () => {
       />,
     );
 
-    const trigger = getByRole("button", { name: /Privacy Ledger/ });
+    const trigger = screen.getByRole("button", { name: /Privacy Ledger/ });
     fireEvent.click(trigger);
 
-    const buttons = queryAllByRole("button").filter((btn) => btn !== trigger);
+    const buttons = screen.getAllByRole("button").filter((btn) => btn !== trigger);
     expect(buttons.length).toBeGreaterThanOrEqual(2);
 
-    const closeButton = getByRole("button", { name: "Privacy Ledger 상세 닫기" });
-    const resetButton = getByRole("button", { name: "세션 카운터 초기화" });
+    const closeButton = screen.getByRole("button", { name: "Privacy Ledger 상세 닫기" });
+    const resetButton = screen.getByRole("button", { name: "세션 카운터 초기화" });
 
     resetButton.focus();
     fireEvent.keyDown(resetButton, { key: "Home" });
@@ -183,7 +189,7 @@ describe("PrivacyLedgerBadge", () => {
 
   it("바깥 영역 클릭으로 닫으면 트리거로 포커스가 돌아간다", () => {
     const onReset = vi.fn();
-    const { getByRole } = render(
+    renderWithProvider(
       <PrivacyLedgerBadge
         state={defaultState}
         isAllOnDevice
@@ -191,13 +197,13 @@ describe("PrivacyLedgerBadge", () => {
       />,
     );
 
-    const trigger = getByRole("button", { name: /Privacy Ledger/ });
+    const trigger = screen.getByRole("button", { name: /Privacy Ledger/ });
     trigger.focus();
     expect(trigger).toHaveFocus();
 
     fireEvent.click(trigger);
 
-    const reset = getByRole("button", { name: "세션 카운터 초기화" });
+    const reset = screen.getByRole("button", { name: "세션 카운터 초기화" });
     expect(reset).toBeInTheDocument();
 
     fireEvent.mouseDown(document.body);
