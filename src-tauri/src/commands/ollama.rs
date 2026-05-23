@@ -8,6 +8,7 @@ use std::sync::{
 use tauri::{command, Emitter};
 
 const XLLM_TOKEN_EVENT: &str = "xllm_token";
+const STREAM_POLL_TIMEOUT_MS: u64 = 250;
 
 /// Ollama 서버 연결 여부 확인 — /api/version 핑
 #[command]
@@ -99,11 +100,22 @@ pub async fn ollama_stream(
     let mut full_text = String::new();
     let mut line_buf = String::new();
 
-    while let Some(chunk) = byte_stream.next().await {
+    while !cancel.load(Ordering::Relaxed) {
+        let chunk = tokio::time::timeout(
+            std::time::Duration::from_millis(STREAM_POLL_TIMEOUT_MS),
+            byte_stream.next(),
+        )
+        .await;
+        let bytes = match chunk {
+            Ok(Some(Ok(bytes))) => bytes,
+            Ok(Some(Err(e))) => return Err(LumError::AiEngine(e.to_string())),
+            Ok(None) => break,
+            Err(_) => continue,
+        };
+
         if cancel.load(Ordering::Relaxed) {
             break;
         }
-        let bytes = chunk.map_err(|e| LumError::AiEngine(e.to_string()))?;
         line_buf.push_str(&String::from_utf8_lossy(&bytes));
 
         while let Some(nl) = line_buf.find('\n') {

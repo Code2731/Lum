@@ -10,6 +10,7 @@ use tauri::{command, Emitter};
 
 const XLLM_TOKEN_EVENT: &str = "xllm_token";
 const SSE_MAX_LINE_BUF: usize = 64 * 1024;
+const STREAM_POLL_TIMEOUT_MS: u64 = 250;
 
 // Phase 115 — Privacy Ledger 이벤트 이름. 프론트 usePrivacyLedger 훅이 구독.
 const AI_ROUTE_EVENT: &str = "ai_route_event";
@@ -521,11 +522,21 @@ async fn call_compat_stream_one(
     let mut full_text = String::new();
     let mut line_buf = String::new();
 
-    while let Some(chunk) = byte_stream.next().await {
+    while !cancel.load(Ordering::Relaxed) {
+        let chunk = tokio::time::timeout(
+            std::time::Duration::from_millis(STREAM_POLL_TIMEOUT_MS),
+            byte_stream.next(),
+        )
+        .await;
+        let bytes = match chunk {
+            Ok(Some(Ok(bytes))) => bytes,
+            Ok(Some(Err(e))) => return Err(LumError::AiEngine(e.to_string())),
+            Ok(None) => break,
+            Err(_) => continue,
+        };
         if cancel.load(Ordering::Relaxed) {
             break;
         }
-        let bytes = chunk.map_err(|e| LumError::AiEngine(e.to_string()))?;
         line_buf.push_str(&String::from_utf8_lossy(&bytes));
 
         if line_buf.len() > SSE_MAX_LINE_BUF {
