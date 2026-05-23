@@ -6,6 +6,89 @@
 
 use serde::Serialize;
 
+#[derive(Debug)]
+enum ParsedEmbedKey {
+    Gguf {
+        model_dir: String,
+        gguf_file: String,
+    },
+    Lora {
+        model_dir: String,
+        gguf_file: String,
+        lora_adapter: String,
+    },
+    Isq {
+        model_path: String,
+        isq_type: String,
+    },
+}
+
+impl ParsedEmbedKey {
+    /// 저장된 키 문자열을 로드 방식으로 복원한다.
+    /// - `{model_dir}/{gguf}+lora:{lora_adapter}`
+    /// - `{model_dir}/{gguf}+isq:{isq}`
+    /// - `{model_dir}/{gguf}`
+    fn parse(raw: &str) -> Option<Self> {
+        let key = raw.trim();
+        if key.is_empty() {
+            return None;
+        }
+
+        if let Some((base, lora_adapter)) = key.split_once("+lora:") {
+            let (model_dir, gguf_file) = split_model_file(base)?;
+            if lora_adapter.trim().is_empty() || gguf_file.trim().is_empty() {
+                return None;
+            }
+            return Some(Self::Lora {
+                model_dir,
+                gguf_file,
+                lora_adapter: lora_adapter.trim().to_string(),
+            });
+        }
+
+        if let Some((base, isq_type)) = key.split_once("+isq:") {
+            if isq_type.trim().is_empty() {
+                return None;
+            }
+            return Some(Self::Isq {
+                model_path: base.trim().to_string(),
+                isq_type: isq_type.trim().to_string(),
+            });
+        }
+
+        let (model_dir, gguf_file) = split_model_file(key)?;
+        Some(Self::Gguf {
+            model_dir,
+            gguf_file,
+        })
+    }
+}
+
+fn split_model_file(model_ref: &str) -> Option<(String, String)> {
+    let slash = model_ref.rfind('/');
+    let backslash = model_ref.rfind('\\');
+    let idx = slash.max(backslash)?;
+    if idx + 1 >= model_ref.len() {
+        return None;
+    }
+    let model_dir = model_ref[..idx].trim().to_string();
+    let gguf_file = model_ref[idx + 1..].trim().to_string();
+    if model_dir.is_empty() || gguf_file.is_empty() {
+        None
+    } else {
+        Some((model_dir, gguf_file))
+    }
+}
+
+fn save_last_embed_key(key: &str) {
+    let mut config = match crate::commands::config::load_config() {
+        Ok(c) => c,
+        Err(_) => return,
+    };
+    config.mistral_last_embed_key = Some(key.to_string());
+    let _ = crate::commands::config::save_config(&config);
+}
+
 #[derive(Serialize)]
 pub struct EmbedCandidate {
     pub folder: String,
@@ -124,6 +207,49 @@ const DISABLED_MSG: &str =
 const DISABLED_MSG: &str =
     "embedded-ai feature 비활성 — scripts/cargo-check-cuda.bat 또는 npm run tauri:dev:cuda";
 
+/// 저장된 `mistral_last_embed_key`를 기준으로 임베디드 모델 자동 복원.
+/// 복원 대상이 없거나 포맷이 유효하지 않으면 `Ok(false)`로 처리해 앱 시작 시 안전하게 건너뛴다.
+#[tauri::command]
+pub async fn restore_last_embedded_model(app: tauri::AppHandle) -> Result<bool, String> {
+    #[cfg(feature = "embedded-ai")]
+    {
+        let config = crate::commands::config::load_config().map_err(|e| e.to_string())?;
+        let key = match config.mistral_last_embed_key {
+            Some(ref k) if !k.trim().is_empty() => k.clone(),
+            Some(_) | None => return Ok(false),
+        };
+
+        match ParsedEmbedKey::parse(&key) {
+            Some(ParsedEmbedKey::Lora {
+                model_dir,
+                gguf_file,
+                lora_adapter,
+            }) => {
+                let _ = embed_load_lora(app, model_dir, gguf_file, lora_adapter).await?;
+            }
+            Some(ParsedEmbedKey::Isq {
+                model_path,
+                isq_type,
+            }) => {
+                let _ = embed_load_normal(app, model_path, isq_type).await?;
+            }
+            Some(ParsedEmbedKey::Gguf {
+                model_dir,
+                gguf_file,
+            }) => {
+                let _ = embed_load_gguf(app, model_dir, gguf_file).await?;
+            }
+            None => return Ok(false),
+        }
+        Ok(true)
+    }
+    #[cfg(not(feature = "embedded-ai"))]
+    {
+        let _ = app;
+        Err(DISABLED_MSG.to_string())
+    }
+}
+
 /// GGUF 모델 로드. 이미 같은 파일이면 스킵, 다른 모델이면 VRAM 해제 후 핫스왑.
 #[tauri::command]
 pub async fn embed_load_gguf(
@@ -133,7 +259,12 @@ pub async fn embed_load_gguf(
 ) -> Result<String, String> {
     #[cfg(feature = "embedded-ai")]
     {
-        crate::commands::mistralrs_inline::load_model(&app, &model_dir, &gguf_file).await
+        let result =
+            crate::commands::mistralrs_inline::load_model(&app, &model_dir, &gguf_file).await;
+        if result.is_ok() {
+            save_last_embed_key(&format!("{model_dir}/{gguf_file}"));
+        }
+        result
     }
     #[cfg(not(feature = "embedded-ai"))]
     {
@@ -195,13 +326,18 @@ pub async fn embed_load_lora(
 ) -> Result<String, String> {
     #[cfg(feature = "embedded-ai")]
     {
-        crate::commands::mistralrs_inline::load_model_with_lora(
+        let result = crate::commands::mistralrs_inline::load_model_with_lora(
             &app,
             &model_dir,
             &gguf_file,
             &lora_adapter,
         )
         .await
+        .and_then(|r| {
+            save_last_embed_key(&format!("{model_dir}/{gguf_file}+lora:{lora_adapter}"));
+            Ok(r)
+        })?;
+        result
     }
     #[cfg(not(feature = "embedded-ai"))]
     {
@@ -252,7 +388,12 @@ pub async fn embed_load_normal(
     #[cfg(feature = "embedded-ai")]
     {
         let isq = parse_isq_setting(&isq_type)?;
-        crate::commands::mistralrs_inline::load_model_normal(&app, &model_path, isq).await
+        let result =
+            crate::commands::mistralrs_inline::load_model_normal(&app, &model_path, isq).await;
+        if result.is_ok() {
+            save_last_embed_key(&format!("{model_path}+isq:{isq_type}"));
+        }
+        result
     }
     #[cfg(not(feature = "embedded-ai"))]
     {
@@ -301,5 +442,59 @@ pub async fn embed_infer_stream(
     {
         let _ = (app, prompt, cancel_flag);
         Err(DISABLED_MSG.to_string())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_embed_key_gguf() {
+        let parsed = ParsedEmbedKey::parse("/models/Qwen/Q4.gguf").unwrap();
+        let ParsedEmbedKey::Gguf {
+            model_dir,
+            gguf_file,
+        } = parsed
+        else {
+            panic!("GGUF 키 파싱 실패");
+        };
+        assert_eq!(model_dir, "/models/Qwen");
+        assert_eq!(gguf_file, "Q4.gguf");
+    }
+
+    #[test]
+    fn parse_embed_key_lora() {
+        let parsed = ParsedEmbedKey::parse("/models/Qwen/Q4.gguf+lora:/lora/adapter").unwrap();
+        let ParsedEmbedKey::Lora {
+            model_dir,
+            gguf_file,
+            lora_adapter,
+        } = parsed
+        else {
+            panic!("LoRA 키 파싱 실패");
+        };
+        assert_eq!(model_dir, "/models/Qwen");
+        assert_eq!(gguf_file, "Q4.gguf");
+        assert_eq!(lora_adapter, "/lora/adapter");
+    }
+
+    #[test]
+    fn parse_embed_key_isq() {
+        let parsed = ParsedEmbedKey::parse("/models/bf16-model+isq:Auto4").unwrap();
+        let ParsedEmbedKey::Isq {
+            model_path,
+            isq_type,
+        } = parsed
+        else {
+            panic!("ISQ 키 파싱 실패");
+        };
+        assert_eq!(model_path, "/models/bf16-model");
+        assert_eq!(isq_type, "Auto4");
+    }
+
+    #[test]
+    fn parse_embed_key_invalid() {
+        assert!(ParsedEmbedKey::parse(" ").is_none());
     }
 }

@@ -276,6 +276,7 @@ pub fn run() {
             commands::embed::embed_load_gguf,
             commands::embed::embed_load_normal,
             commands::embed::embed_load_lora,
+            commands::embed::restore_last_embedded_model,
             commands::embed::embed_unload,
             commands::embed::embed_status,
             commands::embed::embed_loaded_info,

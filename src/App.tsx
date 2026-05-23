@@ -226,13 +226,26 @@ const App: React.FC = () => {
       .catch(() => {});
   }, []);
 
+  // 앱 시작 시 마지막으로 사용한 임베디드 모델이 있으면 자동 복원 시도.
+  const restoreLastEmbeddedModel = useCallback(async () => {
+    try {
+      const restored = await invoke<boolean>("restore_last_embedded_model");
+      if (restored) {
+        await refreshLoadedModel();
+      }
+    } catch {
+      // 임베디드 모델이 비활성 빌드거나 설정이 비정상일 때는 조용히 스킵.
+    }
+  }, [refreshLoadedModel]);
+
   useEffect(() => {
     refreshLoadedModel();
     refreshHeavyConfig();
+    void restoreLastEmbeddedModel();
     // 폴링은 30초마다 안전망용으로만 (이벤트가 주된 갱신)
     const t = setInterval(refreshLoadedModel, 30000);
     return () => clearInterval(t);
-  }, [refreshLoadedModel, refreshHeavyConfig]);
+  }, [refreshLoadedModel, refreshHeavyConfig, restoreLastEmbeddedModel]);
 
   // 임베디드 모델 로드/언로드 이벤트(Phase 89) + 설정 저장 시 즉시 갱신.
   useEffect(() => {

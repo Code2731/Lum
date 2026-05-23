@@ -67,6 +67,11 @@ pub struct AppConfig {
 
     /// 모델 다운로드 저장 경로 — None이면 기본값 `~/.lum_mistral_models` 사용
     pub model_download_dir: Option<String>,
+    /// 마지막으로 로드된 mistral.rs 임베디드 모델 키(복원용)
+    /// GGUF: "<model_dir>/<gguf_filename>"
+    /// LoRA: "<model_dir>/<gguf_filename>+lora:<lora_adapter>"
+    /// BF16 + ISQ: "<model_path>+isq:<isq_type>"
+    pub mistral_last_embed_key: Option<String>,
 
     // ── Ollama 백엔드 (선택) ────────────────────────────────────────────────
     /// Ollama 서버 주소 (기본값: http://localhost:11434)
