@@ -2710,13 +2710,6 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               <>
             <span
               className="lum-toolbelt-secondary-hint"
-              title="@local/@ollama/@xllm/@sglang/@gemini"
-              style={{ fontSize: UI_TEXT_MICRO, color: "rgba(227,179,65,0.78)", flexShrink: 0 }}
-            >
-              @local/@ollama/@xllm/@sglang/@gemini
-            </span>
-            <span
-              className="lum-toolbelt-secondary-hint"
               title={inputDockNarrow
                 ? "Cmd/Ctrl+1~4/0 · Cmd/Ctrl+./, · Cmd/Ctrl+Shift+←/→"
                 : "Cmd/Ctrl+1~4/0 지정·해제 · Cmd/Ctrl+./, 순환 · Cmd/Ctrl+Shift+←/→ 역순환 · Cmd/Ctrl+Shift+A @첨부 · Cmd/Ctrl+Shift+B/N BACK/LAST · Cmd/Ctrl+Shift+K/Z/R/L/M/P 편집"}
