@@ -317,4 +317,31 @@ describe("NotificationCenter", () => {
       expect(initialFocusTarget).toHaveFocus();
     });
   });
+
+  it("최대 높이 prop이 전달되면 스타일에 반영된다", () => {
+    const notifications: AppNotification[] = [
+      {
+        id: "1",
+        type: "command",
+        title: "cmd",
+        body: "테스트 메시지",
+        timestamp: Date.now(),
+        read: false,
+      },
+    ];
+
+    const { container } = render(
+      <NotificationCenter
+        notifications={notifications}
+        unreadCount={1}
+        maxHeight={180}
+        onMarkAllRead={vi.fn()}
+        onDismiss={vi.fn()}
+        onClear={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    expect(container.firstChild).toHaveStyle({ maxHeight: "180px" });
+  });
 });

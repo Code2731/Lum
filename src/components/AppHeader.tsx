@@ -1152,6 +1152,7 @@ const AppHeader: React.FC<Props> = ({
                 <NotificationCenter
                   notifications={notifCenter.notifications}
                   unreadCount={notifCenter.unreadCount}
+                  maxHeight={notifCenterMaxHeight}
                   onMarkAllRead={notifCenter.markAllRead}
                   onDismiss={notifCenter.dismiss}
                   onClear={notifCenter.clear}

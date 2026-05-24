@@ -7,6 +7,7 @@ interface Props {
   notifications: AppNotification[];
   unreadCount: number;
   panelId?: string;
+  maxHeight?: number;
   onMarkAllRead: () => void;
   onDismiss: (id: string) => void;
   onClear: () => void;
@@ -38,7 +39,15 @@ function timeAgo(ts: number): string {
 }
 
 const NotificationCenter: React.FC<Props> = ({
-  notifications, unreadCount, panelId, onMarkAllRead, onDismiss, onClear, onClose, closeOnDocument = true,
+  notifications,
+  unreadCount,
+  panelId,
+  maxHeight,
+  onMarkAllRead,
+  onDismiss,
+  onClear,
+  onClose,
+  closeOnDocument = true,
 }) => {
   const panelRef = useRef<HTMLDivElement>(null);
   const onCloseRef = useRef(onClose);
@@ -146,7 +155,12 @@ const NotificationCenter: React.FC<Props> = ({
       role="dialog"
       aria-label="알림 센터"
       ref={panelRef}
-      className={`${popupPositionClass} w-80 max-h-[min(440px,calc(100vh-3.5rem))] flex flex-col bg-[#161b22] border border-white/10 rounded-xl shadow-2xl z-50 overflow-hidden`}
+      className={`${popupPositionClass} w-80 flex flex-col bg-[#161b22] border border-white/10 rounded-xl shadow-2xl z-50 overflow-hidden`}
+      style={{
+        maxHeight: typeof maxHeight === "number" && maxHeight > 0
+          ? `${maxHeight}px`
+          : "min(440px,calc(100vh-3.5rem))",
+      }}
       onKeyDown={(e) => {
         const handled = handlePopupTabTrap(e) || handlePopupArrowNav(e);
         if (handled) {
