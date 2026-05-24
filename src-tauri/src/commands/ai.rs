@@ -11,6 +11,8 @@ use tauri::{command, Emitter};
 const XLLM_TOKEN_EVENT: &str = "xllm_token";
 const SSE_MAX_LINE_BUF: usize = 64 * 1024;
 const STREAM_POLL_TIMEOUT_MS: u64 = 250;
+const EMBEDDED_READY_TIMEOUT_MS: u64 = 6_000;
+const EMBEDDED_READY_POLL_MS: u64 = 120;
 
 // Phase 115 — Privacy Ledger 이벤트 이름. 프론트 usePrivacyLedger 훅이 구독.
 const AI_ROUTE_EVENT: &str = "ai_route_event";
@@ -206,9 +208,10 @@ fn embedded_engine_busy() -> bool {
 
 #[cfg(feature = "embedded-ai")]
 async fn wait_for_embedded_ready() {
-    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(2);
+    let deadline = std::time::Instant::now()
+        + std::time::Duration::from_millis(EMBEDDED_READY_TIMEOUT_MS);
     while embedded_engine_busy() && std::time::Instant::now() < deadline {
-        tokio::time::sleep(std::time::Duration::from_millis(120)).await;
+        tokio::time::sleep(std::time::Duration::from_millis(EMBEDDED_READY_POLL_MS)).await;
     }
 }
 
