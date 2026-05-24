@@ -57,17 +57,29 @@ async function isHealthyViteServer(baseUrl) {
   }
 }
 
-async function isPortInUse(baseUrl) {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 1200);
-  try {
-    await fetch(baseUrl, { signal: controller.signal });
-    return true;
-  } catch {
-    return false;
-  } finally {
-    clearTimeout(timeout);
+function stopPids(pids) {
+  for (const pid of pids) {
+    try {
+      process.kill(pid, "SIGTERM");
+    } catch {
+      // Ignore failures; if stop fails, next health check/start will surface it.
+    }
   }
+}
+
+async function wait(ms) {
+  await new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function waitForHealthy(baseUrl, maxMs = 3000) {
+  const start = Date.now();
+  while (Date.now() - start < maxMs) {
+    if (await isHealthyViteServer(baseUrl)) {
+      return true;
+    }
+    await wait(200);
+  }
+  return false;
 }
 
 async function main() {
@@ -78,8 +90,12 @@ async function main() {
 
   const listenerType = classifyListener(DEV_PORT);
   if (listenerType === "vite") {
-    console.log(`[tauri-before-dev] Reusing existing Vite server at ${DEV_URL}`);
-    process.exit(0);
+    const vitePids = getListeningPids(DEV_PORT).filter((pid) => isViteProcess(pid));
+    stopPids(vitePids);
+    if (await waitForHealthy(DEV_URL, 1500)) {
+      console.log(`[tauri-before-dev] Reusing existing Vite server at ${DEV_URL}`);
+      process.exit(0);
+    }
   }
 
   if (listenerType === "other") {

@@ -5,6 +5,7 @@ import { fileURLToPath, URL } from "node:url";
 
 // @ts-expect-error process is a nodejs global
 const host = process.env.TAURI_DEV_HOST;
+const resolvedHost = host || "127.0.0.1";
 
 export default defineConfig(async () => ({
   plugins: [react(), tailwindcss()],
@@ -43,7 +44,7 @@ export default defineConfig(async () => ({
   server: {
     port: 1420,
     strictPort: true,
-    host: host || false,
+    host: resolvedHost,
     hmr: host
       ? {
           protocol: "ws",
