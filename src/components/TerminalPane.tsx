@@ -441,6 +441,8 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
           try {
             localStorage.setItem(TOOLBELT_COMPACT_KEY, cfg.ui_compact_input_toolbelt ? "1" : "0");
           } catch {}
+        } else {
+          patch.uiCompactInputToolbelt = compactInputToolbelt;
         }
 
         if (Object.keys(patch).length > 0) {
@@ -456,13 +458,14 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
           showInputToolbeltTip: legacy.showInput,
           showAdvancedInputTools: legacy.showAdvanced,
           showBackendQuickTools: legacy.showBackend,
+          uiCompactInputToolbelt: compactInputToolbelt,
         }).catch(() => {});
         clearLegacyToolbeltSettings();
       }
     })();
 
     return () => { mounted = false; };
-  }, []);
+  }, [compactInputToolbelt]);
   const [toolbeltCustomizeOpen, setToolbeltCustomizeOpen] = useState(false);
   const [warpInputFocused, setWarpInputFocused] = useState(false);
   const [inputDockHeight, setInputDockHeight] = useState(70);
@@ -2084,6 +2087,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
       try {
         localStorage.setItem(TOOLBELT_COMPACT_KEY, next ? "1" : "0");
       } catch {}
+      invoke("save_ui_preferences", { uiCompactInputToolbelt: next }).catch(() => {});
       return next;
     });
   }, []);
@@ -2162,7 +2166,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
           gap: 6,
         }}
       >
-        {showInputTip && !inputFocusCompact && (
+        {showInputTip && !inputFocusCompact && !compactInputToolbelt && (
           <div
             style={{
               display: "flex",
@@ -2222,37 +2226,41 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               scrollbarWidth: "none",
             }}
           >
-            <span
-              className="lum-toolbelt-eyebrow"
-              style={{
-                fontSize: UI_TEXT_MICRO,
-                color: "rgba(255,255,255,0.5)",
-                letterSpacing: "0.08em",
-                textTransform: "uppercase",
-                flexShrink: 0,
-              }}
-            >
-              INPUT TOOLBELT
-            </span>
-            <button
-              type="button"
-              aria-label="toolbelt-customize-toggle"
-              onClick={() => setToolbeltCustomizeOpen((open) => !open)}
-              style={{
-                fontSize: MICRO_FONT_SIZE,
-                color: toolbeltCustomizeOpen ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.76)",
-                border: toolbeltCustomizeOpen ? "1px solid rgba(121,192,255,0.58)" : "1px solid rgba(255,255,255,0.24)",
-                background: toolbeltCustomizeOpen ? "rgba(88,166,255,0.18)" : "rgba(255,255,255,0.08)",
-                borderRadius: 999,
-                padding: "1px 7px",
-                lineHeight: 1.25,
-                cursor: "pointer",
-                flexShrink: 0,
-              }}
-              title="툴벨트 커스터마이징"
-            >
-              CUSTOMIZE
-            </button>
+            {!compactInputToolbelt && (
+              <>
+                <span
+                  className="lum-toolbelt-eyebrow"
+                  style={{
+                    fontSize: UI_TEXT_MICRO,
+                    color: "rgba(255,255,255,0.5)",
+                    letterSpacing: "0.08em",
+                    textTransform: "uppercase",
+                    flexShrink: 0,
+                  }}
+                >
+                  INPUT TOOLBELT
+                </span>
+                <button
+                  type="button"
+                  aria-label="toolbelt-customize-toggle"
+                  onClick={() => setToolbeltCustomizeOpen((open) => !open)}
+                  style={{
+                    fontSize: MICRO_FONT_SIZE,
+                    color: toolbeltCustomizeOpen ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.76)",
+                    border: toolbeltCustomizeOpen ? "1px solid rgba(121,192,255,0.58)" : "1px solid rgba(255,255,255,0.24)",
+                    background: toolbeltCustomizeOpen ? "rgba(88,166,255,0.18)" : "rgba(255,255,255,0.08)",
+                    borderRadius: 999,
+                    padding: "1px 7px",
+                    lineHeight: 1.25,
+                    cursor: "pointer",
+                    flexShrink: 0,
+                  }}
+                  title="툴벨트 커스터마이징"
+                >
+                  CUSTOMIZE
+                </button>
+              </>
+            )}
             <button
               type="button"
               aria-label="toolbelt-toggle-compact"
@@ -2272,8 +2280,8 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
             >
               {compactInputToolbelt ? "MORE" : "BASIC"}
             </button>
-            {inputFocusCompact && <span className="lum-toolbelt-section-tag">FOCUS</span>}
-            <span className="lum-toolbelt-section-tag">CORE</span>
+            {!compactInputToolbelt && inputFocusCompact && <span className="lum-toolbelt-section-tag">FOCUS</span>}
+            {!compactInputToolbelt && <span className="lum-toolbelt-section-tag">CORE</span>}
             <button
               type="button"
               aria-label="quick-mention-trigger"
@@ -3034,7 +3042,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
             />
           </div>
         </div>
-        {toolbeltCustomizeOpen && (
+        {!compactInputToolbelt && toolbeltCustomizeOpen && (
           <div
             style={{
               display: "flex",
