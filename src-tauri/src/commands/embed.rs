@@ -213,7 +213,9 @@ fn pick_default_local_embed_key() -> Option<ParsedEmbedKey> {
 }
 
 fn pick_default_local_embed_key_with_hint(hint: Option<&str>) -> Option<ParsedEmbedKey> {
-    let hint = hint.map(|h| h.trim().to_lowercase()).filter(|h| !h.is_empty());
+    let hint = hint
+        .map(|h| h.trim().to_lowercase())
+        .filter(|h| !h.is_empty());
     let candidates = list_embed_candidates();
     if candidates.is_empty() {
         return None;
@@ -283,12 +285,9 @@ pub async fn restore_last_embedded_model(app: tauri::AppHandle) -> Result<bool, 
             .map(|s| s.to_string());
         let preferred_hint_ref = preferred_hint.as_deref();
 
-    let mut tried_saved_key = false;
-    let mut saved_key_loaded = false;
-    if let Some(target) = saved_key
-        .as_deref()
-        .and_then(|k| ParsedEmbedKey::parse(k))
-    {
+        let mut tried_saved_key = false;
+        let mut saved_key_loaded = false;
+        if let Some(target) = saved_key.as_deref().and_then(|k| ParsedEmbedKey::parse(k)) {
             tried_saved_key = true;
             match target {
                 ParsedEmbedKey::Lora {
@@ -296,12 +295,17 @@ pub async fn restore_last_embedded_model(app: tauri::AppHandle) -> Result<bool, 
                     gguf_file,
                     lora_adapter,
                 } => {
-                    if let Ok(()) = embed_load_lora(app.clone(), model_dir, gguf_file, lora_adapter).await {
+                    if let Ok(()) =
+                        embed_load_lora(app.clone(), model_dir, gguf_file, lora_adapter).await
+                    {
                         saved_key_loaded = true;
                         return Ok(true);
                     }
                 }
-                ParsedEmbedKey::Isq { model_path, isq_type } => {
+                ParsedEmbedKey::Isq {
+                    model_path,
+                    isq_type,
+                } => {
                     if let Ok(()) = embed_load_normal(app.clone(), model_path, isq_type).await {
                         saved_key_loaded = true;
                         return Ok(true);
