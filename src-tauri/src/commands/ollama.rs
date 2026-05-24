@@ -9,6 +9,7 @@ use tauri::{command, Emitter};
 
 const XLLM_TOKEN_EVENT: &str = "xllm_token";
 const STREAM_POLL_TIMEOUT_MS: u64 = 250;
+const CONNECT_CANCEL_POLL_MS: u64 = 60;
 
 /// Ollama 서버 연결 여부 확인 — /api/version 핑
 #[command]
@@ -79,12 +80,25 @@ pub async fn ollama_stream(
         .build()
         .map_err(|e| LumError::Network(e.to_string()))?;
 
-    let response = client
-        .post(&url)
-        .json(&body)
-        .send()
-        .await
-        .map_err(|e| LumError::Network(format!("Ollama 연결 실패 ({}): {}", base_url, e)))?;
+    if cancel.load(Ordering::Relaxed) {
+        return Ok(String::new());
+    }
+    let send_fut = client.post(&url).json(&body).send();
+    tokio::pin!(send_fut);
+    let response = loop {
+        tokio::select! {
+            result = &mut send_fut => {
+                let response = result
+                    .map_err(|e| LumError::Network(format!("Ollama 연결 실패 ({}): {}", base_url, e)))?;
+                break response;
+            }
+            _ = tokio::time::sleep(std::time::Duration::from_millis(CONNECT_CANCEL_POLL_MS)) => {
+                if cancel.load(Ordering::Relaxed) {
+                    return Ok(String::new());
+                }
+            }
+        }
+    };
 
     if !response.status().is_success() {
         let status = response.status();

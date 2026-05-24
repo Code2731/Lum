@@ -11,6 +11,7 @@ use tauri::{command, Emitter};
 const XLLM_TOKEN_EVENT: &str = "xllm_token";
 const SSE_MAX_LINE_BUF: usize = 64 * 1024;
 const STREAM_POLL_TIMEOUT_MS: u64 = 250;
+const CONNECT_CANCEL_POLL_MS: u64 = 60;
 const EMBEDDED_READY_TIMEOUT_MS: u64 = 6_000;
 const EMBEDDED_READY_POLL_MS: u64 = 120;
 
@@ -553,12 +554,29 @@ async fn call_compat_stream_one(
         req = req.header("x-api-key", key);
     }
 
-    let response = req.send().await.map_err(|e| {
-        LumError::Network(format!(
-            "xLLM 서버에 연결할 수 없습니다 ({}): {}",
-            base_url, e
-        ))
-    })?;
+    if cancel.load(Ordering::Relaxed) {
+        return Ok(String::new());
+    }
+    let send_fut = req.send();
+    tokio::pin!(send_fut);
+    let response = loop {
+        tokio::select! {
+            result = &mut send_fut => {
+                let response = result.map_err(|e| {
+                    LumError::Network(format!(
+                        "xLLM 서버에 연결할 수 없습니다 ({}): {}",
+                        base_url, e
+                    ))
+                })?;
+                break response;
+            }
+            _ = tokio::time::sleep(std::time::Duration::from_millis(CONNECT_CANCEL_POLL_MS)) => {
+                if cancel.load(Ordering::Relaxed) {
+                    return Ok(String::new());
+                }
+            }
+        }
+    };
 
     if !response.status().is_success() {
         let status = response.status();
