@@ -222,6 +222,25 @@ test.describe("LUM 스모크 테스트", () => {
     await expect(notifPanel).toBeHidden();
   });
 
+  test("Privacy Ledger 패널도 뷰포트 안에서 정상 표시된다", async ({ page }) => {
+    await page.setViewportSize({ width: 860, height: 520 });
+    await waitForApp(page);
+
+    const privacyButton = page.getByRole("button", {
+      name: /Privacy Ledger — AI 호출 없음/,
+    });
+    await expect(privacyButton).toBeVisible();
+    await privacyButton.click();
+
+    const ledgerPanel = page.getByRole("dialog", { name: "Privacy Ledger 상세" });
+    await expect(ledgerPanel).toBeVisible();
+    await expect(ledgerPanel.getByRole("button", { name: "Privacy Ledger 상세 닫기" })).toBeVisible();
+    await expectInViewport(page, "[role='dialog'][aria-label='Privacy Ledger 상세']");
+
+    await page.keyboard.press("Escape");
+    await expect(ledgerPanel).toBeHidden();
+  });
+
   test("고급 기능과 알림 센터는 키보드로도 상호 배타적으로 열리고 포커스가 복구된다", async ({ page }) => {
     await page.setViewportSize({ width: 860, height: 520 });
     await waitForApp(page);

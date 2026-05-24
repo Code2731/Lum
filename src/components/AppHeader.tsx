@@ -959,7 +959,7 @@ const AppHeader: React.FC<Props> = ({
                   opacity: 1,
                   backgroundColor: "#0f1620",
                 }}
-                className="fixed z-[1300] w-64 overflow-y-auto rounded-xl border border-white/[0.12] bg-[#0f1620] shadow-xl p-2 space-y-0.5 text-white pointer-events-auto"
+                className="fixed z-[1400] w-64 overflow-y-auto rounded-xl border border-white/[0.12] bg-[#0f1620] shadow-xl p-2 space-y-0.5 text-white pointer-events-auto"
               >
                 {hasUnseenAdvanced && (
                   <div className="px-2 py-1.5 mb-1 border-b border-white/10">
@@ -1101,7 +1101,7 @@ const AppHeader: React.FC<Props> = ({
                   ...notifCenterPanelStyle,
                   opacity: 1,
                 }}
-                className="fixed w-80 h-fit z-[1300] pointer-events-auto bg-[#0f1620] border border-white/[0.12] rounded-xl shadow-xl"
+                className="fixed w-80 h-fit z-[1400] pointer-events-auto bg-[#0f1620] border border-white/[0.12] rounded-xl shadow-xl"
               >
                 <NotificationCenter
                   notifications={notifCenter.notifications}

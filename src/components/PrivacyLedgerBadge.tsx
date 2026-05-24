@@ -376,7 +376,7 @@ const PrivacyLedgerBadge: React.FC<Props> = ({
         opacity: 1,
         backgroundColor: "#161b22",
       }}
-      className="fixed w-72 flex flex-col border border-white/10 rounded-xl shadow-2xl z-[1200] overflow-hidden"
+      className="fixed w-72 flex flex-col border border-white/10 rounded-xl shadow-2xl z-[1400] overflow-hidden"
       id={popoverId}
       role="dialog"
       aria-label="Privacy Ledger 상세"
