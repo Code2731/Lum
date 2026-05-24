@@ -249,9 +249,9 @@ describe("TerminalPane — 입력 라우팅", () => {
 
   it("툴벨트에 backend 단축키 안내 문구가 노출된다", () => {
     render(<TerminalPane id="tab-1" />);
-    expect(
-      screen.getByText("Cmd/Ctrl+1~4/0 지정·해제 · Cmd/Ctrl+./, 순환 · Cmd/Ctrl+Shift+←/→ 역순환 · Cmd/Ctrl+Shift+A @첨부 · Cmd/Ctrl+Shift+B/N BACK/LAST · Cmd/Ctrl+Shift+K/Z/R/L/M/P 편집"),
-    ).toBeInTheDocument();
+    const fullHint = "Cmd/Ctrl+1~4/0 지정·해제 · Cmd/Ctrl+./, 순환 · Cmd/Ctrl+Shift+←/→ 역순환 · Cmd/Ctrl+Shift+A @첨부 · Cmd/Ctrl+Shift+B/N BACK/LAST · Cmd/Ctrl+Shift+K/Z/R/L/M/P 편집";
+    const compactHint = "Cmd/Ctrl+1~4/0 · Cmd/Ctrl+./, · Cmd/Ctrl+Shift+←/→";
+    expect(screen.queryByText(fullHint) || screen.queryByText(compactHint)).toBeTruthy();
   });
 
   it("입력 툴벨트 TIP 배너는 기본 노출되고 닫으면 사라진다", () => {

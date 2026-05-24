@@ -2248,18 +2248,20 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
           >
             {!compactInputToolbelt && (
               <>
-                <span
-                  className="lum-toolbelt-eyebrow"
-                  style={{
-                    fontSize: UI_TEXT_MICRO,
-                    color: "rgba(255,255,255,0.5)",
-                    letterSpacing: "0.08em",
-                    textTransform: "uppercase",
-                    flexShrink: 0,
-                  }}
-                >
-                  INPUT TOOLBELT
-                </span>
+                {!inputDockCompact && (
+                  <span
+                    className="lum-toolbelt-eyebrow"
+                    style={{
+                      fontSize: UI_TEXT_MICRO,
+                      color: "rgba(255,255,255,0.5)",
+                      letterSpacing: "0.08em",
+                      textTransform: "uppercase",
+                      flexShrink: 0,
+                    }}
+                  >
+                    INPUT TOOLBELT
+                  </span>
+                )}
                 <button
                   type="button"
                   aria-label="toolbelt-customize-toggle"
@@ -2716,10 +2718,14 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
             </span>
             <span
               className="lum-toolbelt-secondary-hint"
-              title="Cmd/Ctrl+1~4/0 지정·해제 · Cmd/Ctrl+./, 순환 · Cmd/Ctrl+Shift+←/→ 역순환 · Cmd/Ctrl+Shift+A @첨부 · Cmd/Ctrl+Shift+B/N BACK/LAST · Cmd/Ctrl+Shift+K/Z/R/L/M/P 편집"
+              title={inputDockNarrow
+                ? "Cmd/Ctrl+1~4/0 · Cmd/Ctrl+./, · Cmd/Ctrl+Shift+←/→"
+                : "Cmd/Ctrl+1~4/0 지정·해제 · Cmd/Ctrl+./, 순환 · Cmd/Ctrl+Shift+←/→ 역순환 · Cmd/Ctrl+Shift+A @첨부 · Cmd/Ctrl+Shift+B/N BACK/LAST · Cmd/Ctrl+Shift+K/Z/R/L/M/P 편집"}
               style={{ fontSize: UI_TEXT_MICRO, color: "rgba(255,255,255,0.58)", flexShrink: 0 }}
             >
-              Cmd/Ctrl+1~4/0 지정·해제 · Cmd/Ctrl+./, 순환 · Cmd/Ctrl+Shift+←/→ 역순환 · Cmd/Ctrl+Shift+A @첨부 · Cmd/Ctrl+Shift+B/N BACK/LAST · Cmd/Ctrl+Shift+K/Z/R/L/M/P 편집
+              {inputDockNarrow
+                ? "Cmd/Ctrl+1~4/0 · Cmd/Ctrl+./, · Cmd/Ctrl+Shift+←/→"
+                : "Cmd/Ctrl+1~4/0 지정·해제 · Cmd/Ctrl+./, 순환 · Cmd/Ctrl+Shift+←/→ 역순환 · Cmd/Ctrl+Shift+A @첨부 · Cmd/Ctrl+Shift+B/N BACK/LAST · Cmd/Ctrl+Shift+K/Z/R/L/M/P 편집"}
             </span>
               </>
             )}
