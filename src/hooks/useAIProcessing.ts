@@ -96,6 +96,9 @@ export const useAIProcessing = () => {
 
     try {
       await invoke("reset_ai_stream").catch(() => {});
+      if (requestIdRef.current !== requestId) {
+        return;
+      }
       await invoke<string>("stream_ai_command", { prompt, model, context });
     } finally {
       if (requestIdRef.current === requestId) {

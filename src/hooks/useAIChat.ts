@@ -225,13 +225,16 @@ export function useAIChat(model: string, getTerminalContext: () => string) {
       });
       unlistenRef.current = unlisten;
 
-      try {
-        console.log("[AI] invoking stream_ai_command, context len:", context.length);
-        await invoke("reset_ai_stream").catch(() => {});
-        await invoke("stream_ai_command", {
-          prompt: text,
-          model,
-          context,
+    try {
+      console.log("[AI] invoking stream_ai_command, context len:", context.length);
+      await invoke("reset_ai_stream").catch(() => {});
+      if (requestIdRef.current !== requestId) {
+        return;
+      }
+      await invoke("stream_ai_command", {
+        prompt: text,
+        model,
+        context,
           images: images && images.length > 0 ? images : null,
           engine: engine ?? null,
           backend: backend ?? null,
