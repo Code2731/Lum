@@ -147,6 +147,22 @@ const getViewportBounds = (): ViewportBounds => {
   };
 };
 
+const getPopupMaxHeight = (viewportHeight: number): number => {
+  const ratioHeight = Math.floor(viewportHeight * POPUP_FALLBACK_HEIGHT_RATIO);
+  return Math.max(1, Math.min(ratioHeight, viewportHeight));
+};
+
+const getPopupAvailableSpace = (
+  triggerRect: DOMRect,
+  placement: PopupPlacement,
+  viewport: ViewportBounds,
+): number => {
+  const spaceAbove = triggerRect.top - viewport.top - POPUP_EDGE_GUTTER;
+  const spaceBelow = viewport.top + viewport.height - triggerRect.bottom - POPUP_EDGE_GUTTER;
+  const preferredSpace = placement === "up" ? spaceAbove : spaceBelow;
+  return Math.max(1, Math.floor(preferredSpace - 4));
+};
+
 const AppHeader: React.FC<Props> = ({
   specs, specsLoading,
   viewMode, setViewMode,
@@ -420,17 +436,9 @@ const AppHeader: React.FC<Props> = ({
   const clampPopupHeight = (placement: PopupPlacement, triggerRect: DOMRect | null): number => {
     if (!triggerRect) return POPUP_ESTIMATE_HEIGHT;
     const viewport = getViewportBounds();
-    const spaceAbove = triggerRect.top - viewport.top - POPUP_GUTTER;
-    const spaceBelow = viewport.top + viewport.height - triggerRect.bottom - POPUP_GUTTER;
-    const preferredSpace = placement === "up" ? spaceAbove : spaceBelow;
-    const availableHeight = Math.max(
-      POPUP_MIN_HEIGHT,
-      Math.floor(viewport.height * POPUP_FALLBACK_HEIGHT_RATIO - POPUP_EDGE_GUTTER * 2),
-    );
-    const availableSpace = Math.max(0, preferredSpace - 4);
-    const minHeight = Math.min(POPUP_MIN_HEIGHT, availableHeight);
-    const safeHeight = Math.max(minHeight, Math.min(availableHeight, availableSpace));
-    return Math.max(minHeight, Math.min(availableHeight, safeHeight));
+    const availableHeight = getPopupMaxHeight(viewport.height);
+    const availableSpace = getPopupAvailableSpace(triggerRect, placement, viewport);
+    return Math.max(1, Math.min(availableHeight, availableSpace));
   };
   const measurePopupPlacement = React.useCallback((trigger: HTMLElement | null, panelRef?: React.RefObject<HTMLDivElement | null>): PopupPlacement => {
     if (typeof window === "undefined" || !trigger) return "down";
@@ -440,10 +448,7 @@ const AppHeader: React.FC<Props> = ({
     const spaceAbove = rect.top - viewport.top - POPUP_GUTTER;
     const spaceBelow = viewport.top + viewport.height - rect.bottom - POPUP_GUTTER;
     const panelRectHeight = panelRef?.current?.getBoundingClientRect().height;
-    const availableHeight = Math.max(
-      POPUP_MIN_HEIGHT,
-      Math.floor(viewport.height * POPUP_FALLBACK_HEIGHT_RATIO - POPUP_EDGE_GUTTER * 2),
-    );
+    const availableHeight = getPopupMaxHeight(viewport.height);
     const minHeight = Math.min(POPUP_MIN_HEIGHT, availableHeight);
     const panelHeight = (typeof panelRectHeight === "number" && Number.isFinite(panelRectHeight) && panelRectHeight > 0)
       ? Math.min(panelRectHeight, availableHeight)

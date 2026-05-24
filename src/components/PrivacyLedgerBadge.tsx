@@ -88,10 +88,18 @@ const getViewportBounds = (): ViewportBounds => {
 };
 
 const getPopupMaxHeight = (viewportHeight: number): number => {
-  return Math.max(
-    POPUP_MIN_HEIGHT,
-    Math.floor(viewportHeight * POPUP_FALLBACK_HEIGHT_RATIO),
-  );
+  return Math.max(1, Math.floor(viewportHeight * POPUP_FALLBACK_HEIGHT_RATIO));
+};
+
+const getPopupAvailableSpace = (
+  triggerRect: DOMRect,
+  placement: PopupPlacement,
+  viewport: ViewportBounds,
+): number => {
+  const spaceAbove = triggerRect.top - viewport.top - POPUP_EDGE_GUTTER;
+  const spaceBelow = viewport.top + viewport.height - triggerRect.bottom - POPUP_EDGE_GUTTER;
+  const preferredSpace = placement === "up" ? spaceAbove : spaceBelow;
+  return Math.max(1, Math.floor(preferredSpace - 4));
 };
 
 function classify(
@@ -152,18 +160,9 @@ const PrivacyLedgerBadge: React.FC<Props> = ({
   ): number => {
     if (!triggerRect) return getPopupMaxHeight(getViewportBounds().height);
     const viewport = getViewportBounds();
-    const viewportTop = viewport.top;
-    const spaceAbove = triggerRect.top - viewportTop - POPUP_EDGE_GUTTER;
-    const spaceBelow = viewport.top + viewport.height - triggerRect.bottom - POPUP_EDGE_GUTTER;
-    const preferredSpace = placement === "up" ? spaceAbove : spaceBelow;
-    const availableHeight = Math.max(
-      POPUP_MIN_HEIGHT,
-      Math.floor(viewport.height * POPUP_FALLBACK_HEIGHT_RATIO - POPUP_EDGE_GUTTER * 2),
-    );
-    const availableSpace = Math.max(0, preferredSpace - 4);
-    const minHeight = Math.min(POPUP_MIN_HEIGHT, availableHeight);
-    const safeHeight = Math.max(minHeight, Math.min(availableHeight, availableSpace));
-    return Math.max(minHeight, Math.min(getPopupMaxHeight(viewport.height), safeHeight));
+    const availableHeight = getPopupMaxHeight(viewport.height);
+    const availableSpace = getPopupAvailableSpace(triggerRect, placement, viewport);
+    return Math.max(1, Math.min(availableHeight, availableSpace));
   };
 
   const measurePlacement = React.useCallback(
@@ -172,13 +171,9 @@ const PrivacyLedgerBadge: React.FC<Props> = ({
         return "down";
       }
       const viewport = getViewportBounds();
-      const viewportTop = viewport.top;
       const triggerRect = trigger.getBoundingClientRect();
       const panelRectHeight = popRef.current?.getBoundingClientRect().height;
-      const availableHeight = Math.max(
-        POPUP_MIN_HEIGHT,
-        Math.floor(viewport.height * POPUP_FALLBACK_HEIGHT_RATIO - POPUP_EDGE_GUTTER * 2),
-      );
+      const availableHeight = getPopupMaxHeight(viewport.height);
       const minHeight = Math.min(POPUP_MIN_HEIGHT, availableHeight);
       const panelHeight =
         typeof panelRectHeight === "number" &&
@@ -186,8 +181,8 @@ const PrivacyLedgerBadge: React.FC<Props> = ({
         panelRectHeight > 0
           ? Math.min(panelRectHeight, getPopupMaxHeight(viewport.height), availableHeight)
           : Math.min(getPopupMaxHeight(viewport.height), availableHeight);
-      const spaceAbove = triggerRect.top - viewportTop - POPUP_EDGE_GUTTER;
-      const spaceBelow = viewportTop + viewport.height - triggerRect.bottom - POPUP_EDGE_GUTTER;
+      const spaceAbove = triggerRect.top - viewport.top - POPUP_EDGE_GUTTER;
+      const spaceBelow = viewport.top + viewport.height - triggerRect.bottom - POPUP_EDGE_GUTTER;
       const canOpenUp =
         spaceAbove >= panelHeight;
       const canOpenDown =
