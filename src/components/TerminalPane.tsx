@@ -2055,12 +2055,12 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
   ];
   const compactInputChips: Array<{ id: string; label: string; tone: "neutral" | "accent" | "success" | "warn" }> = [
     { id: "route", label: routeMeta.label, tone: routeMeta.tone },
-    {
-      id: "backend",
-      label: activeBackendPrefix ? `@${activeBackendPrefix.toUpperCase()}` : "AUTO",
-      tone: activeBackendPrefix ? "warn" : "neutral",
-    },
-    { id: "term", label: terminalVisible ? "TERM ON" : "TERM OFF", tone: terminalVisible ? "success" : "warn" },
+    ...(activeBackendPrefix
+      ? [{ id: "backend", label: `@${activeBackendPrefix.toUpperCase()}`, tone: "warn" as const }]
+      : []),
+    ...(!terminalVisible
+      ? [{ id: "term", label: "TERM OFF", tone: "warn" as const }]
+      : []),
   ];
   const visibleInputChips = compactInputToolbelt
     ? compactInputChips
