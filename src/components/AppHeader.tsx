@@ -673,7 +673,13 @@ const AppHeader: React.FC<Props> = ({
     if (!showNotifCenter) return;
 
     const handleClose = (e: PointerEvent) => {
-      if (notifCenterPopupRef.current && !notifCenterPopupRef.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      if (
+        notifCenterPopupRef.current
+        && !notifCenterPopupRef.current.contains(target)
+        && notifCenterPanelRef.current
+        && !notifCenterPanelRef.current.contains(target)
+      ) {
         closeNotifCenter();
       }
     };
@@ -1071,8 +1077,8 @@ const AppHeader: React.FC<Props> = ({
           >
             <Bell size={14} />
           </ToolbarIconButton>
-          <AnimatePresence>
-            {showNotifCenter && (
+          {showNotifCenter && createPortal(
+            <AnimatePresence>
               <motion.div
                 ref={notifCenterPanelRef}
                 key="notif-center"
@@ -1095,7 +1101,7 @@ const AppHeader: React.FC<Props> = ({
                   ...notifCenterPanelStyle,
                   opacity: 1,
                 }}
-                className="fixed w-80 h-fit z-[1300] pointer-events-auto bg-[#0f1620]"
+                className="fixed w-80 h-fit z-[1300] pointer-events-auto bg-[#0f1620] border border-white/[0.12] rounded-xl shadow-xl"
               >
                 <NotificationCenter
                   notifications={notifCenter.notifications}
@@ -1108,8 +1114,9 @@ const AppHeader: React.FC<Props> = ({
                   closeOnDocument={false}
                 />
               </motion.div>
-            )}
-          </AnimatePresence>
+            </AnimatePresence>,
+            document.body,
+          )}
         </div>
       </div>
     </header>
