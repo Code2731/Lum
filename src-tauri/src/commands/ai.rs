@@ -994,9 +994,13 @@ pub async fn stream_ai_command(
     let prompt_chars = full_prompt.len();
     let started = std::time::Instant::now();
 
-    let _ = engine;
     let config = load_config()?;
     let forced_backend = backend.as_deref().map(|b| b.trim().to_lowercase());
+    let forced_engine = engine.as_deref().map(|e| e.trim().to_lowercase());
+    let force_local_engine = matches!(
+        forced_engine.as_deref(),
+        Some("heavy") | Some("local") | Some("embedded")
+    );
 
     if let Some(forced) = forced_backend.as_deref() {
         match forced {
@@ -1110,7 +1114,7 @@ pub async fn stream_ai_command(
         }
     }
 
-    if model.starts_with("gemini") {
+    if model.starts_with("gemini") && !force_local_engine {
         let single_image = imgs.first().map(|s| s.as_str());
         let result = call_gemini(&client, &model, &full_prompt, single_image).await?;
         emit_route(
@@ -1124,6 +1128,34 @@ pub async fn stream_ai_command(
         let _ = app.emit(XLLM_TOKEN_EVENT, result.clone());
         Ok(result)
     } else {
+        if force_local_engine {
+            let show_reasoning = config.show_reasoning.unwrap_or(true);
+            if let Some(result) = try_embedded_inference_stream(
+                &app,
+                &full_prompt,
+                &imgs,
+                &cancel_flag,
+                show_reasoning,
+                false,
+            )
+            .await
+            {
+                if result.is_ok() {
+                    emit_route(
+                        &app,
+                        "embedded",
+                        false,
+                        embedded_loaded_key(),
+                        prompt_chars,
+                        started.elapsed().as_millis() as u64,
+                    );
+                }
+                return result;
+            }
+            return Err(LumError::AiEngine(
+                local_embed_unavailable_message().to_string(),
+            ));
+        }
         // 임베디드 GGUF 로드돼있으면 토큰별 스트리밍 — HTTP 우회.
         let show_reasoning = config.show_reasoning.unwrap_or(true);
         if let Some(result) = try_embedded_inference_stream(
