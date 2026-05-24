@@ -396,12 +396,22 @@ async fn call_xllm_http(client: &reqwest::Client, prompt: &str) -> Result<String
     }
 
     Err(last_network_error.unwrap_or_else(|| {
-        LumError::Network("xLLM 서버 연결 실패: 사용 가능한 후보 URL이 없습니다".into())
+        LumError::Network(append_candidate_urls_hint(
+            "xLLM 서버 연결 실패",
+            &candidate_urls,
+        ))
     }))
 }
 
 fn is_network_error(err: &LumError) -> bool {
     matches!(err, LumError::Network(_))
+}
+
+fn append_candidate_urls_hint(message: &str, candidate_urls: &[String]) -> String {
+    if candidate_urls.is_empty() {
+        return format!("{message}: 사용 가능한 후보 URL이 없습니다");
+    }
+    format!("{message} · 후보 주소: {}", candidate_urls.join(", "))
 }
 
 async fn call_xllm_http_once(
@@ -531,7 +541,10 @@ async fn call_compat_stream(
     }
 
     Err(last_network_error.unwrap_or_else(|| {
-        LumError::Network("xLLM 서버에 연결할 수 없습니다: 사용 가능한 후보 URL이 없습니다".into())
+        LumError::Network(append_candidate_urls_hint(
+            "xLLM 서버에 연결할 수 없습니다",
+            base_urls,
+        ))
     }))
 }
 
@@ -777,6 +790,18 @@ mod tests {
         assert!(is_remote_url(
             "https://generativelanguage.googleapis.com/v1beta"
         ));
+    }
+
+    #[test]
+    fn append_candidate_urls_hint_joins_candidates_for_network_error() {
+        let candidates = vec![
+            "http://127.0.0.1:8080".to_string(),
+            "http://localhost:11434".to_string(),
+        ];
+        let msg = append_candidate_urls_hint("xLLM 서버에 연결할 수 없습니다", &candidates);
+        assert!(msg.contains("http://127.0.0.1:8080"));
+        assert!(msg.contains("http://localhost:11434"));
+        assert!(msg.contains("xLLM 서버에 연결할 수 없습니다"));
     }
 
     #[tokio::test]
