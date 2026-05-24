@@ -253,6 +253,40 @@ async fn try_embedded_inference(_prompt: &str, _images: &[String]) -> Option<Res
     None
 }
 
+#[cfg(feature = "embedded-ai")]
+async fn try_embedded_inference_or_restore(
+    app: &tauri::AppHandle,
+    prompt: &str,
+    images: &[String],
+) -> Option<Result<String>> {
+    if !images.is_empty() {
+        return None;
+    }
+    if let Some(result) = try_embedded_inference(prompt, images).await {
+        return Some(result);
+    }
+
+    match crate::commands::embed::restore_last_embedded_model(app.clone()).await {
+        Ok(true) => {
+            Some(
+                crate::commands::mistralrs_inline::infer_once(prompt)
+                    .await
+                    .map_err(|e| LumError::AiEngine(format!("embedded inference failed: {e}"))),
+            )
+        }
+        _ => None,
+    }
+}
+
+#[cfg(not(feature = "embedded-ai"))]
+async fn try_embedded_inference_or_restore(
+    _app: &tauri::AppHandle,
+    _prompt: &str,
+    _images: &[String],
+) -> Option<Result<String>> {
+    None
+}
+
 /// 임베디드 mistralrs가 로드돼있으면 토큰별 스트리밍 추론. `xllm_token` 이벤트로 emit.
 /// `cancel`이 true가 되면 stream drop으로 추론 중단.
 #[cfg(feature = "embedded-ai")]
@@ -363,8 +397,17 @@ async fn try_ollama_stream(
 
 /// 단일 응답 호출. embedded → Ollama → (gemini-* 모델이면 Gemini, 아니면 xLLM HTTP) 순서.
 /// ReAct Agent 등 비스트리밍 멀티턴 루프에서 사용.
-pub async fn call_ai(client: &reqwest::Client, model: &str, prompt: &str) -> Result<String> {
-    if let Some(result) = try_embedded_inference(prompt, &[]).await {
+pub async fn call_ai(
+    client: &reqwest::Client,
+    model: &str,
+    prompt: &str,
+    app: Option<&tauri::AppHandle>,
+) -> Result<String> {
+    let embedded_result = match app {
+        Some(app) => try_embedded_inference_or_restore(app, prompt, &[]).await,
+        None => try_embedded_inference(prompt, &[]).await,
+    };
+    if let Some(result) = embedded_result {
         return result;
     }
     if let Some(result) = try_ollama_once(prompt).await {
@@ -470,7 +513,7 @@ pub async fn call_ai_with_backend(
     backend: Option<&str>,
 ) -> Result<String> {
     let Some(raw) = backend else {
-        return call_ai(client, model, prompt).await;
+        return call_ai(client, model, prompt, None).await;
     };
     let forced = raw.trim().to_lowercase();
     match forced.as_str() {
@@ -1010,6 +1053,7 @@ async fn call_gemini(
 /// - 그 외 → xLLM 로컬 서버 (API 키 불필요)
 #[command]
 pub async fn generate_ai_command(
+    app: tauri::AppHandle,
     prompt: String,
     model: String,
     context: String,
@@ -1025,7 +1069,7 @@ pub async fn generate_ai_command(
     if model.starts_with("gemini") {
         call_gemini(&client, &model, &full_prompt, image_data.as_deref()).await
     } else {
-        call_xllm(&client, &model, &full_prompt).await
+        call_ai(&client, &model, &full_prompt, Some(&app)).await
     }
 }
 
@@ -1325,6 +1369,7 @@ pub fn cancel_ai_stream(cancel_flag: tauri::State<'_, AiStreamCancel>) {
 /// 에러 분석
 #[command]
 pub async fn analyze_error(
+    app: tauri::AppHandle,
     command: String,
     stderr: String,
     model: String,
@@ -1336,7 +1381,7 @@ pub async fn analyze_error(
          {{\"analysis\": \"...\", \"suggestion\": \"fixed command\"}}",
         command, stderr, context
     );
-    generate_ai_command(prompt, model, context, None).await
+    generate_ai_command(app, prompt, model, context, None).await
 }
 
 /// 시각적 목표 달성 검증 (Gemini 멀티모달 전용)
