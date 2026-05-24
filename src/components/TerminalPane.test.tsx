@@ -94,6 +94,11 @@ function submitInput(container: HTMLElement, value: string) {
   fireEvent.keyDown(input, { key: "Enter" });
 }
 
+const TOOLBELT_TIP_FULL =
+  "TIP · Cmd/Ctrl+1~4 backend 전환 · Cmd/Ctrl+Shift+A @첨부 · Cmd/Ctrl+Shift+B/N BACK/LAST · Cmd/Ctrl+Shift+K/Z/R/L/M/P 입력 편집";
+const TOOLBELT_TIP_NARROW =
+  "TIP · Cmd/Ctrl+1~4 backend · Shift+A @첨부 · Shift+B/N BACK/LAST · Shift+K/Z/R/L/M/P 편집";
+
 describe("TerminalPane — 입력 라우팅", () => {
   it("알려진 CLI (ls) → write_to_pty", async () => {
     const { container } = render(<TerminalPane id="tab-1" />);
@@ -256,9 +261,10 @@ describe("TerminalPane — 입력 라우팅", () => {
 
   it("입력 툴벨트 TIP 배너는 기본 노출되고 닫으면 사라진다", () => {
     render(<TerminalPane id="tab-1" />);
-    expect(screen.getByText(/TIP · Cmd\/Ctrl\+1~4 backend 전환 · Cmd\/Ctrl\+Shift\+A @첨부 · Cmd\/Ctrl\+Shift\+B\/N BACK\/LAST · Cmd\/Ctrl\+Shift\+K\/Z\/R\/L\/M\/P 입력 편집/)).toBeInTheDocument();
+    expect(screen.queryByText(TOOLBELT_TIP_FULL) || screen.queryByText(TOOLBELT_TIP_NARROW)).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "dismiss-input-toolbelt-tip" }));
-    expect(screen.queryByText(/TIP · Cmd\/Ctrl\+1~4 backend 전환 · Cmd\/Ctrl\+Shift\+A @첨부 · Cmd\/Ctrl\+Shift\+B\/N BACK\/LAST · Cmd\/Ctrl\+Shift\+K\/Z\/R\/L\/M\/P 입력 편집/)).not.toBeInTheDocument();
+    expect(screen.queryByText(TOOLBELT_TIP_FULL)).not.toBeInTheDocument();
+    expect(screen.queryByText(TOOLBELT_TIP_NARROW)).not.toBeInTheDocument();
   });
 
   it("설정 값 기반으로 툴벨트 표시가 반영된다", async () => {
@@ -281,7 +287,8 @@ describe("TerminalPane — 입력 라우팅", () => {
     render(<TerminalPane id="tab-1" />);
 
     await waitFor(() => {
-      expect(screen.queryByText(/TIP · Cmd\/Ctrl\+1~4 backend 전환 · Shift\+A @첨부 · Shift\+B\/N BACK\/LAST · Shift\+K\/Z\/R\/L\/M\/P 입력 편집/)).not.toBeInTheDocument();
+      expect(screen.queryByText(TOOLBELT_TIP_FULL)).not.toBeInTheDocument();
+      expect(screen.queryByText(TOOLBELT_TIP_NARROW)).not.toBeInTheDocument();
       expect(screen.queryByRole("button", { name: "quick-input-merge-recall" })).not.toBeInTheDocument();
       expect(screen.queryByRole("button", { name: "quick-backend-local" })).not.toBeInTheDocument();
     });
@@ -368,7 +375,8 @@ describe("TerminalPane — 입력 라우팅", () => {
       expect(localStorage.getItem("lum_input_toolbelt_tip_dismissed")).toBeNull();
       expect(localStorage.getItem("lum_toolbelt_show_advanced")).toBeNull();
       expect(localStorage.getItem("lum_toolbelt_show_backend")).toBeNull();
-      expect(screen.queryByText(/TIP · Cmd\/Ctrl\+1~4 backend 전환 · Cmd\/Ctrl\+Shift\+A @첨부 · Cmd\/Ctrl\+Shift\+B\/N BACK\/LAST · Cmd\/Ctrl\+Shift\+K\/Z\/R\/L\/M\/P 입력 편집/)).not.toBeInTheDocument();
+      expect(screen.queryByText(TOOLBELT_TIP_FULL)).not.toBeInTheDocument();
+      expect(screen.queryByText(TOOLBELT_TIP_NARROW)).not.toBeInTheDocument();
       expect(screen.queryByRole("button", { name: "quick-input-merge-recall" })).not.toBeInTheDocument();
       expect(screen.queryByRole("button", { name: "quick-backend-local" })).not.toBeInTheDocument();
     });

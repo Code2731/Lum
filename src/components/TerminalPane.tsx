@@ -2074,6 +2074,9 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     !inputHistoryOpen &&
     !mentionOpen &&
     !shortcutHelpOpen;
+  const inputToolbeltTipText = inputDockNarrow
+    ? "TIP · Cmd/Ctrl+1~4 backend · Shift+A @첨부 · Shift+B/N BACK/LAST · Shift+K/Z/R/L/M/P 편집"
+    : "TIP · Cmd/Ctrl+1~4 backend 전환 · Cmd/Ctrl+Shift+A @첨부 · Cmd/Ctrl+Shift+B/N BACK/LAST · Cmd/Ctrl+Shift+K/Z/R/L/M/P 입력 편집";
   const dismissInputTip = useCallback(() => {
     setShowInputTip(false);
     try {
@@ -2200,9 +2203,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
             }}
           >
             <span className="lum-toolbelt-secondary-hint" style={{ fontSize: UI_TEXT_MICRO, color: "rgba(182,218,255,0.95)", lineHeight: 1.35 }}>
-              {compactInputToolbelt
-                ? "TIP · 간단 모드: 핵심 버튼만 표시 · MORE로 전체 툴 펼치기"
-                : "TIP · Cmd/Ctrl+1~4 backend 전환 · Cmd/Ctrl+Shift+A @첨부 · Cmd/Ctrl+Shift+B/N BACK/LAST · Cmd/Ctrl+Shift+K/Z/R/L/M/P 입력 편집"}
+              {inputToolbeltTipText}
             </span>
             <button
               type="button"
