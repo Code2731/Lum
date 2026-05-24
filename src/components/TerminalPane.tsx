@@ -1680,6 +1680,9 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     { id: "recall", label: "Recall Last Input", keywords: "recall", run: recallSubmittedInputQuick, disabled: !canRecallSubmittedInput },
     { id: "rerun", label: "Rerun Last Input", keywords: "rerun repeat", run: rerunSubmittedInputQuick, disabled: !canRerunSubmittedInput },
     { id: "reset", label: "Reset Input State", keywords: "reset", run: resetAllInputStateQuick, disabled: !canResetAllQuick },
+    { id: "toggle_terminal", label: "Toggle Terminal View", keywords: "terminal view", run: () => setTerminalVisible((v) => !v), disabled: false },
+    { id: "toggle_vision", label: "Toggle Vision Mode", keywords: "vision image", run: () => setVisionMode((v) => !v), disabled: false },
+    { id: "toggle_reasoning", label: "Toggle Reasoning View", keywords: "reasoning think", run: () => onToggleReasoning?.(), disabled: false },
     { id: "mention_attach", label: "Attach File Mention", keywords: "mention attach file @", run: triggerMentionAttach, disabled: false },
     { id: "backend_auto", label: "Backend Auto Toggle", keywords: "backend auto", run: clearBackendQuickPrefix, disabled: false },
     { id: "backend_back", label: "Backend Back", keywords: "backend back", run: restorePrevBackendQuickPrefix, disabled: !canRestorePrevBackendQuick },
@@ -1701,6 +1704,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     restoreInputQuick,
     restoreLastBackendQuickPrefix,
     restorePrevBackendQuickPrefix,
+    onToggleReasoning,
     triggerMentionAttach,
     setInputHistoryMultiSelected,
     setInputHistoryOpen,
@@ -3025,38 +3029,40 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               </>
             )}
           </div>
-          <div
-            className={`lum-mode-row ${inputDockNarrow ? "lum-mode-row--narrow" : ""}`}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: inputDockNarrow ? "flex-end" : "flex-start",
-              gap: 6,
-              width: inputDockNarrow ? "100%" : "auto",
-            }}
-          >
-            <ModeButton
-              label={compactInputToolbelt ? "TERM" : "터미널"}
-              title="터미널 표시/숨김 (shell 명령 실행 시 자동 표시)"
-              active={terminalVisible}
-              activeColor="#e3b341"
-              onClick={() => setTerminalVisible(v => !v)}
-            />
-            <ModeButton
-              label={compactInputToolbelt ? "VIS" : "Vision"}
-              title="비전 모드 — 이미지 첨부 활성화"
-              active={visionMode}
-              activeColor="#58a6ff"
-              onClick={() => setVisionMode(v => !v)}
-            />
-            <ModeButton
-              label={compactInputToolbelt ? "REAS" : "추론"}
-              title="추론 체인 표시 — <think> 블록 보이기 (전역 설정 토글)"
-              active={!!showReasoning}
-              activeColor="#3fb950"
-              onClick={() => onToggleReasoning?.()}
-            />
-          </div>
+          {!compactInputToolbelt && (
+            <div
+              className={`lum-mode-row ${inputDockNarrow ? "lum-mode-row--narrow" : ""}`}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: inputDockNarrow ? "flex-end" : "flex-start",
+                gap: 6,
+                width: inputDockNarrow ? "100%" : "auto",
+              }}
+            >
+              <ModeButton
+                label="터미널"
+                title="터미널 표시/숨김 (shell 명령 실행 시 자동 표시)"
+                active={terminalVisible}
+                activeColor="#e3b341"
+                onClick={() => setTerminalVisible(v => !v)}
+              />
+              <ModeButton
+                label="Vision"
+                title="비전 모드 — 이미지 첨부 활성화"
+                active={visionMode}
+                activeColor="#58a6ff"
+                onClick={() => setVisionMode(v => !v)}
+              />
+              <ModeButton
+                label="추론"
+                title="추론 체인 표시 — <think> 블록 보이기 (전역 설정 토글)"
+                active={!!showReasoning}
+                activeColor="#3fb950"
+                onClick={() => onToggleReasoning?.()}
+              />
+            </div>
+          )}
         </div>
         {!compactInputToolbelt && toolbeltCustomizeOpen && (
           <div

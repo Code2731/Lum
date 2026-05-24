@@ -315,6 +315,9 @@ describe("TerminalPane — 입력 라우팅", () => {
       expect(screen.queryByRole("button", { name: "quick-backend-local" })).not.toBeInTheDocument();
       expect(screen.queryByRole("button", { name: "quick-mode-shell" })).not.toBeInTheDocument();
       expect(screen.queryByRole("button", { name: "quick-input-merge-recall" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "터미널 표시/숨김 (shell 명령 실행 시 자동 표시)" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "비전 모드 — 이미지 첨부 활성화" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "추론 체인 표시 — <think> 블록 보이기 (전역 설정 토글)" })).not.toBeInTheDocument();
       expect(screen.queryByText("WHY EMPTY")).not.toBeInTheDocument();
       expect(screen.queryByText(/MODEL /)).not.toBeInTheDocument();
       expect(screen.queryByText(/CWD /)).not.toBeInTheDocument();
@@ -325,6 +328,9 @@ describe("TerminalPane — 입력 라우팅", () => {
     fireEvent.click(screen.getByRole("button", { name: "quick-input-action-palette" }));
     await waitFor(() => {
       expect(screen.getByRole("button", { name: "action-palette-item-mention_attach" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "action-palette-item-toggle_terminal" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "action-palette-item-toggle_vision" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "action-palette-item-toggle_reasoning" })).toBeInTheDocument();
     });
   });
 
