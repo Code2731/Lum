@@ -4,7 +4,7 @@
   "version": "0.3.0",
   "identifier": "com.namhyunjun.tauri-app",
   "build": {
-    "beforeDevCommand": "npm run dev",
+    "beforeDevCommand": "node scripts/tauri-before-dev.mjs",
     "devUrl": "http://localhost:1420",
     "beforeBuildCommand": "npm run build",
     "frontendDist": "../dist"
