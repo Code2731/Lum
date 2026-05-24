@@ -497,10 +497,14 @@ const AppHeader: React.FC<Props> = ({
 
     const triggerRect = options.trigger.getBoundingClientRect();
     const panelRect = options.panelRef?.current?.getBoundingClientRect();
+    const viewport = getViewportBounds();
     const panelWidth = (panelRect?.width && Number.isFinite(panelRect.width) && panelRect.width > 0)
       ? panelRect.width
       : options.fallbackWidth;
-    const safeViewportWidth = Math.max(POPUP_EDGE_GUTTER * 2 + 1, window.innerWidth - POPUP_EDGE_GUTTER * 2);
+    const safeViewportWidth = Math.max(
+      POPUP_EDGE_GUTTER * 2 + 1,
+      viewport.width - POPUP_EDGE_GUTTER * 2,
+    );
     const clampedPanelWidth = Math.min(panelWidth, safeViewportWidth);
     const panelHeight = nextHeight;
 
@@ -509,7 +513,6 @@ const AppHeader: React.FC<Props> = ({
       : triggerRect.bottom + POPUP_EDGE_GUTTER;
 
     const nextX = triggerRect.right - clampedPanelWidth;
-    const viewport = getViewportBounds();
     const viewportSafeTop = viewport.top + VIEWPORT_FALLBACK_GUTTER;
     const viewportSafeLeft = viewport.left + VIEWPORT_FALLBACK_GUTTER;
     const maxTop = Math.max(
