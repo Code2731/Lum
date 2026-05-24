@@ -4,42 +4,51 @@ const DEV_URL = "http://127.0.0.1:1420";
 const VITE_MARKER = "/@vite/client";
 const DEV_PORT = 1420;
 
-function getListeningPids(port) {
+function getListeners(port) {
   if (process.platform === "win32") return [];
   try {
     const out = execFileSync(
       "lsof",
-      ["-nP", `-iTCP:${port}`, "-sTCP:LISTEN", "-t"],
+      ["-nP", `-iTCP:${port}`, "-sTCP:LISTEN", "-Fpc"],
       { encoding: "utf8" }
-    ).trim();
+    );
     if (!out) return [];
-    return out
-      .split("\n")
-      .map((line) => Number(line.trim()))
-      .filter((pid) => Number.isInteger(pid) && pid > 0);
+    const lines = out.split("\n");
+    const listeners = [];
+    let currentPid = null;
+    let currentCommand = "";
+    for (const line of lines) {
+      if (!line) continue;
+      if (line.startsWith("p")) {
+        if (currentPid !== null) {
+          listeners.push({ pid: currentPid, command: currentCommand });
+        }
+        const parsed = Number(line.slice(1).trim());
+        currentPid = Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+        currentCommand = "";
+      } else if (line.startsWith("c")) {
+        currentCommand = line.slice(1).trim();
+      }
+    }
+    if (currentPid !== null) {
+      listeners.push({ pid: currentPid, command: currentCommand });
+    }
+    return listeners;
   } catch {
     return [];
   }
 }
 
-function isViteProcess(pid) {
-  try {
-    const cmd = execFileSync("ps", ["-p", String(pid), "-o", "command="], {
-      encoding: "utf8",
-    }).trim();
-    return cmd.includes("vite");
-  } catch {
-    return false;
-  }
-}
-
 function classifyListener(port) {
-  const pids = getListeningPids(port);
-  if (pids.length === 0) return "none";
-  if (pids.every((pid) => isViteProcess(pid))) {
-    return "vite";
+  const listeners = getListeners(port);
+  if (listeners.length === 0) return { type: "none", listeners: [] };
+  const allNodeLike = listeners.every(
+    ({ command }) => command === "node" || command === "vite"
+  );
+  if (allNodeLike) {
+    return { type: "node-like", listeners };
   }
-  return "other";
+  return { type: "other", listeners };
 }
 
 async function isHealthyViteServer(baseUrl) {
@@ -88,14 +97,10 @@ async function main() {
     process.exit(0);
   }
 
-  const listenerType = classifyListener(DEV_PORT);
-  if (listenerType === "vite") {
-    const vitePids = getListeningPids(DEV_PORT).filter((pid) => isViteProcess(pid));
-    stopPids(vitePids);
-    if (await waitForHealthy(DEV_URL, 1500)) {
-      console.log(`[tauri-before-dev] Reusing existing Vite server at ${DEV_URL}`);
-      process.exit(0);
-    }
+  const { type: listenerType, listeners } = classifyListener(DEV_PORT);
+  if (listenerType === "node-like") {
+    stopPids(listeners.map((entry) => entry.pid));
+    await wait(500);
   }
 
   if (listenerType === "other") {
