@@ -4,30 +4,40 @@ const DEV_URL = "http://127.0.0.1:1420";
 const VITE_MARKER = "/@vite/client";
 const DEV_PORT = 1420;
 
-function getListeningCommands(port) {
+function getListeningPids(port) {
   if (process.platform === "win32") return [];
   try {
     const out = execFileSync(
       "lsof",
-      ["-nP", `-iTCP:${port}`, "-sTCP:LISTEN", "-Fpc"],
+      ["-nP", `-iTCP:${port}`, "-sTCP:LISTEN", "-t"],
       { encoding: "utf8" }
-    );
+    ).trim();
     if (!out) return [];
     return out
       .split("\n")
-      .filter((line) => line.startsWith("c"))
-      .map((line) => line.slice(1).trim())
-      .filter(Boolean);
+      .map((line) => Number(line.trim()))
+      .filter((pid) => Number.isInteger(pid) && pid > 0);
   } catch {
     return [];
   }
 }
 
+function isViteProcess(pid) {
+  try {
+    const cmd = execFileSync("ps", ["-p", String(pid), "-o", "command="], {
+      encoding: "utf8",
+    }).trim();
+    return cmd.includes("vite");
+  } catch {
+    return false;
+  }
+}
+
 function classifyListener(port) {
-  const commands = getListeningCommands(port);
-  if (commands.length === 0) return "none";
-  if (commands.some((cmd) => cmd.includes("vite") || cmd === "node")) {
-    return "vite-like";
+  const pids = getListeningPids(port);
+  if (pids.length === 0) return "none";
+  if (pids.every((pid) => isViteProcess(pid))) {
+    return "vite";
   }
   return "other";
 }
@@ -67,7 +77,7 @@ async function main() {
   }
 
   const listenerType = classifyListener(DEV_PORT);
-  if (listenerType === "vite-like") {
+  if (listenerType === "vite") {
     console.log(`[tauri-before-dev] Reusing existing Vite server at ${DEV_URL}`);
     process.exit(0);
   }
