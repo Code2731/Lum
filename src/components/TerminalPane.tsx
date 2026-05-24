@@ -2303,7 +2303,6 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               {compactInputToolbelt ? "MORE" : "BASIC"}
             </button>
             {!compactInputToolbelt && inputFocusCompact && <span className="lum-toolbelt-section-tag">FOCUS</span>}
-            {!compactInputToolbelt && <span className="lum-toolbelt-section-tag">CORE</span>}
             {!compactInputToolbelt && (
               <button
                 type="button"
@@ -2459,7 +2458,6 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
             )}
             {showAdvancedInputTools && !compactInputToolbelt && (
               <>
-            <span className="lum-toolbelt-section-tag">EDIT</span>
             <button
               type="button"
               aria-label="quick-input-set-recall"
@@ -2710,7 +2708,6 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
             )}
             {showBackendQuickTools && !compactInputToolbelt && (
               <>
-            <span className="lum-toolbelt-section-tag">BACKEND</span>
             <span
               className="lum-toolbelt-secondary-hint"
               title="@local/@ollama/@xllm/@sglang/@gemini"
@@ -2731,7 +2728,6 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
             </span>
               </>
             )}
-            {!compactInputToolbelt && <span className="lum-toolbelt-section-tag">ROUTE</span>}
             {!compactInputToolbelt && (
               <>
             <button
