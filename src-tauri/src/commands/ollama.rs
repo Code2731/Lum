@@ -128,6 +128,9 @@ pub async fn ollama_stream(
             if let Ok(json) = serde_json::from_str::<serde_json::Value>(&line) {
                 if let Some(token) = json["message"]["content"].as_str() {
                     if !token.is_empty() {
+                        if cancel.load(Ordering::Relaxed) {
+                            break;
+                        }
                         full_text.push_str(token);
                         let _ = app.emit(XLLM_TOKEN_EVENT, token.to_string());
                     }
@@ -135,6 +138,9 @@ pub async fn ollama_stream(
                 if json["done"].as_bool().unwrap_or(false) {
                     return Ok(full_text);
                 }
+            }
+            if cancel.load(Ordering::Relaxed) {
+                break;
             }
         }
     }

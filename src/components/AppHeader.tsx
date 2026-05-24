@@ -953,7 +953,7 @@ const AppHeader: React.FC<Props> = ({
                   opacity: 1,
                   backgroundColor: "#0f1620",
                 }}
-                className="fixed z-[1200] w-64 overflow-y-auto rounded-xl border border-white/[0.12] shadow-xl p-2 space-y-0.5 text-white"
+                className="fixed z-[1300] w-64 overflow-y-auto rounded-xl border border-white/[0.12] bg-[#0f1620] shadow-xl p-2 space-y-0.5 text-white pointer-events-auto"
               >
                 {hasUnseenAdvanced && (
                   <div className="px-2 py-1.5 mb-1 border-b border-white/10">
@@ -1073,29 +1073,30 @@ const AppHeader: React.FC<Props> = ({
           </ToolbarIconButton>
           <AnimatePresence>
             {showNotifCenter && (
-                <motion.div
-                  ref={notifCenterPanelRef}
-                  key="notif-center"
+              <motion.div
+                ref={notifCenterPanelRef}
+                key="notif-center"
                 role="menu"
                 aria-label="알림 센터"
-                  onKeyDown={(e) => {
-                    const handled = handlePopupTabTrap(e, notifCenterPanelRef)
-                      || handlePopupArrowNav(e, notifCenterPanelRef);
-                    if (handled) {
-                      e.stopPropagation();
-                    }
-                  }}
-                  initial={{ opacity: 0, scale: 0.96, y: notifCenterPanelOffsetY }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.96, y: notifCenterPanelOffsetY }}
-                  transition={{ duration: 0.15, ease: "easeOut" }}
-                  style={{
-                    transformOrigin: notifCenterPanelOrigin,
-                    maxHeight: `${notifCenterMaxHeight}px`,
-                    ...notifCenterPanelStyle,
-                  }}
-                  className="fixed w-80 h-fit z-50"
-                >
+                onKeyDown={(e) => {
+                  const handled = handlePopupTabTrap(e, notifCenterPanelRef)
+                    || handlePopupArrowNav(e, notifCenterPanelRef);
+                  if (handled) {
+                    e.stopPropagation();
+                  }
+                }}
+                initial={{ opacity: 0, scale: 0.96, y: notifCenterPanelOffsetY }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.96, y: notifCenterPanelOffsetY }}
+                transition={{ duration: 0.15, ease: "easeOut" }}
+                style={{
+                  transformOrigin: notifCenterPanelOrigin,
+                  maxHeight: `${notifCenterMaxHeight}px`,
+                  ...notifCenterPanelStyle,
+                  opacity: 1,
+                }}
+                className="fixed w-80 h-fit z-[1300] pointer-events-auto bg-[#0f1620]"
+              >
                 <NotificationCenter
                   notifications={notifCenter.notifications}
                   unreadCount={notifCenter.unreadCount}

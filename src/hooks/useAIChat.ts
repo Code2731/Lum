@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import type { AiBackend } from "../utils/inputRouter";
@@ -133,6 +133,20 @@ export function useAIChat(model: string, getTerminalContext: () => string) {
   const [streaming, setStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const requestIdRef = useRef(0);
+  const unlistenRef = useRef<(() => void) | null>(null);
+
+  const clearCurrentListener = useCallback(() => {
+    if (unlistenRef.current) {
+      unlistenRef.current();
+      unlistenRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      clearCurrentListener();
+    };
+  }, [clearCurrentListener]);
 
   const sendMessage = useCallback(
     async (
@@ -195,6 +209,7 @@ export function useAIChat(model: string, getTerminalContext: () => string) {
 
       setStreaming(true);
       setError(null);
+      clearCurrentListener();
 
       let tokenCount = 0;
       const unlisten = await listen<string>(XLLM_TOKEN_EVENT, (event) => {
@@ -208,6 +223,7 @@ export function useAIChat(model: string, getTerminalContext: () => string) {
           ),
         );
       });
+      unlistenRef.current = unlisten;
 
       try {
         console.log("[AI] invoking stream_ai_command, context len:", context.length);
@@ -238,20 +254,21 @@ export function useAIChat(model: string, getTerminalContext: () => string) {
           );
         }
       } finally {
-        unlisten();
+        clearCurrentListener();
         if (requestIdRef.current === requestId) {
           setStreaming(false);
         }
       }
     },
-    [model, messages, streaming, getTerminalContext],
+    [model, messages, streaming, getTerminalContext, clearCurrentListener],
   );
 
   const cancel = useCallback(() => {
+    clearCurrentListener();
     requestIdRef.current += 1;
     invoke("cancel_ai_stream").catch(() => {});
     setStreaming(false);
-  }, []);
+  }, [clearCurrentListener]);
 
   const clear = useCallback(() => {
     setMessages([]);

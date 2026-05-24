@@ -581,6 +581,9 @@ async fn call_compat_stream_one(
                     // content가 있으면 그대로 전달
                     if let Some(t) = delta["content"].as_str() {
                         if !t.is_empty() {
+                            if cancel.load(Ordering::Relaxed) {
+                                break;
+                            }
                             full_text.push_str(t);
                             let _ = app.emit(XLLM_TOKEN_EVENT, t.to_string());
                         }
@@ -591,6 +594,9 @@ async fn call_compat_stream_one(
                         .or_else(|| delta["reasoning_content"].as_str())
                     {
                         if !t.is_empty() {
+                            if cancel.load(Ordering::Relaxed) {
+                                break;
+                            }
                             full_text.push_str(t);
                             if config.show_reasoning.unwrap_or(true) {
                                 let _ = app.emit(XLLM_TOKEN_EVENT, t.to_string());
@@ -598,6 +604,9 @@ async fn call_compat_stream_one(
                         }
                     }
                 }
+            }
+            if cancel.load(Ordering::Relaxed) {
+                break;
             }
         }
     }
