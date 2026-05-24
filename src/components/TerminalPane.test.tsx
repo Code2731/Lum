@@ -315,6 +315,7 @@ describe("TerminalPane — 입력 라우팅", () => {
       expect(screen.queryByRole("button", { name: "quick-backend-local" })).not.toBeInTheDocument();
       expect(screen.queryByRole("button", { name: "quick-mode-shell" })).not.toBeInTheDocument();
       expect(screen.queryByRole("button", { name: "quick-input-merge-recall" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "quick-input-undo" })).not.toBeInTheDocument();
       expect(screen.queryByRole("button", { name: "터미널 표시/숨김 (shell 명령 실행 시 자동 표시)" })).not.toBeInTheDocument();
       expect(screen.queryByRole("button", { name: "비전 모드 — 이미지 첨부 활성화" })).not.toBeInTheDocument();
       expect(screen.queryByRole("button", { name: "추론 체인 표시 — <think> 블록 보이기 (전역 설정 토글)" })).not.toBeInTheDocument();
@@ -323,6 +324,7 @@ describe("TerminalPane — 입력 라우팅", () => {
       expect(screen.queryByText(/CWD /)).not.toBeInTheDocument();
       expect(screen.getByText("AUTO")).toBeInTheDocument();
       expect(screen.getByText("TERM OFF")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "quick-input-action-palette" })).toHaveTextContent("TOOLS");
     });
 
     fireEvent.click(screen.getByRole("button", { name: "quick-input-action-palette" }));
