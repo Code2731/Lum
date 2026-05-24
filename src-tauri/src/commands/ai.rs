@@ -2,6 +2,7 @@ use crate::commands::config::{load_config, AppConfig};
 use crate::error::{LumError, Result};
 use futures_util::StreamExt;
 use serde::{Deserialize, Serialize};
+use std::error::Error;
 use std::sync::{
     atomic::{AtomicBool, Ordering},
     Arc,
@@ -455,6 +456,38 @@ fn append_candidate_urls_hint(message: &str, candidate_urls: &[String]) -> Strin
     format!("{message} · 후보 주소: {}", candidate_urls.join(", "))
 }
 
+fn summarize_xllm_request_error(base_url: &str, action: &str, err: &reqwest::Error) -> String {
+    let state = if err.is_connect() {
+        "연결 실패 (서버 미실행 가능성)"
+    } else if err.is_timeout() {
+        "요청 시간 초과"
+    } else if err.is_request() {
+        "요청 구성 오류"
+    } else {
+        "요청 처리 실패"
+    };
+
+    let detail = err
+        .source()
+        .and_then(|source| {
+            let raw = source.to_string();
+            if raw.trim().is_empty() {
+                None
+            } else {
+                Some(raw)
+            }
+        })
+        .filter(|raw| !raw.contains(base_url))
+        .map_or_else(
+            || state.to_string(),
+            |raw| format!("{state}: {raw}"),
+        );
+
+    format!(
+        "xLLM {action} 요청 실패 ({base_url}) - {detail}. 서버 주소와 API 경로를 확인하세요",
+    )
+}
+
 async fn call_xllm_http_once(
     client: &reqwest::Client,
     config: &AppConfig,
@@ -475,7 +508,7 @@ async fn call_xllm_http_once(
     let res_json: serde_json::Value = req
         .send()
         .await
-        .map_err(|e| LumError::Network(format!("xLLM 서버 연결 실패 ({}): {}", base_url, e)))?
+        .map_err(|e| LumError::Network(summarize_xllm_request_error(base_url, "단건", &e)))?
         .json()
         .await
         .map_err(|e| LumError::AiEngine(e.to_string()))?;
@@ -622,10 +655,7 @@ async fn call_compat_stream_one(
         tokio::select! {
             result = &mut send_fut => {
                 let response = result.map_err(|e| {
-                    LumError::Network(format!(
-                        "xLLM 서버에 연결할 수 없습니다 ({}): {}",
-                        base_url, e
-                    ))
+                    LumError::Network(summarize_xllm_request_error(base_url, "스트리밍", &e))
                 })?;
                 break response;
             }
@@ -933,9 +963,10 @@ async fn list_xllm_models_from_candidates(
         let response = match req.send().await {
             Ok(response) => response,
             Err(e) if idx + 1 < total => {
-                last_err = Some(LumError::Network(format!(
-                    "xLLM 모델 조회 연결 실패 ({}): {}",
-                    base_url, e
+                last_err = Some(LumError::Network(summarize_xllm_request_error(
+                    base_url,
+                    "모델 조회",
+                    &e,
                 )));
                 continue;
             }
