@@ -5,6 +5,8 @@
 //! lib.rs의 invoke_handler가 cfg 분기 없이 항상 같은 entry로 등록 가능.
 
 use serde::Serialize;
+#[cfg(feature = "embedded-ai")]
+use tauri::Emitter;
 
 #[derive(Debug, Clone)]
 enum ParsedEmbedKey {
@@ -295,7 +297,7 @@ pub async fn restore_last_embedded_model(app: tauri::AppHandle) -> Result<bool, 
                     gguf_file,
                     lora_adapter,
                 } => {
-                    if let Ok(()) =
+                    if let Ok(_) =
                         embed_load_lora(app.clone(), model_dir, gguf_file, lora_adapter).await
                     {
                         saved_key_loaded = true;
@@ -306,7 +308,7 @@ pub async fn restore_last_embedded_model(app: tauri::AppHandle) -> Result<bool, 
                     model_path,
                     isq_type,
                 } => {
-                    if let Ok(()) = embed_load_normal(app.clone(), model_path, isq_type).await {
+                    if let Ok(_) = embed_load_normal(app.clone(), model_path, isq_type).await {
                         saved_key_loaded = true;
                         return Ok(true);
                     }
@@ -315,7 +317,7 @@ pub async fn restore_last_embedded_model(app: tauri::AppHandle) -> Result<bool, 
                     model_dir,
                     gguf_file,
                 } => {
-                    if let Ok(()) = embed_load_gguf(app.clone(), model_dir, gguf_file).await {
+                    if let Ok(_) = embed_load_gguf(app.clone(), model_dir, gguf_file).await {
                         saved_key_loaded = true;
                         return Ok(true);
                     }
