@@ -1676,6 +1676,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
       disabled: submittedInputHistory.length === 0,
     },
     { id: "clear", label: "Clear Input", keywords: "clear", run: clearInputQuick, disabled: !canClearInputQuick },
+    { id: "interrupt", label: "Interrupt Running Task", keywords: "interrupt stop cancel", run: handleInterrupt, disabled: false },
     { id: "undo", label: "Undo Clear", keywords: "undo restore", run: restoreInputQuick, disabled: clearedInputStack.length === 0 },
     { id: "recall", label: "Recall Last Input", keywords: "recall", run: recallSubmittedInputQuick, disabled: !canRecallSubmittedInput },
     { id: "rerun", label: "Rerun Last Input", keywords: "rerun repeat", run: rerunSubmittedInputQuick, disabled: !canRerunSubmittedInput },
@@ -1697,6 +1698,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     clearBackendQuickPrefix,
     clearInputQuick,
     clearedInputStack.length,
+    handleInterrupt,
     submittedInputHistory.length,
     recallSubmittedInputQuick,
     rerunSubmittedInputQuick,
@@ -2363,25 +2365,27 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
                 RESET
               </button>
             )}
-            <button
-              type="button"
-              aria-label="quick-input-stop"
-              onClick={handleInterrupt}
-              title="현재 실행 인터럽트 (Cmd/Ctrl+C, Cmd/Ctrl+Shift+C)"
-              style={{
-                fontSize: MICRO_FONT_SIZE,
-                color: "rgba(255,225,222,0.96)",
-                border: "1px solid rgba(255,123,114,0.56)",
-                background: "rgba(255,123,114,0.16)",
-                borderRadius: 999,
-                padding: "1px 7px",
-                lineHeight: 1.25,
-                cursor: "pointer",
-                flexShrink: 0,
-              }}
-            >
-              STOP
-            </button>
+            {!compactInputToolbelt && (
+              <button
+                type="button"
+                aria-label="quick-input-stop"
+                onClick={handleInterrupt}
+                title="현재 실행 인터럽트 (Cmd/Ctrl+C, Cmd/Ctrl+Shift+C)"
+                style={{
+                  fontSize: MICRO_FONT_SIZE,
+                  color: "rgba(255,225,222,0.96)",
+                  border: "1px solid rgba(255,123,114,0.56)",
+                  background: "rgba(255,123,114,0.16)",
+                  borderRadius: 999,
+                  padding: "1px 7px",
+                  lineHeight: 1.25,
+                  cursor: "pointer",
+                  flexShrink: 0,
+                }}
+              >
+                STOP
+              </button>
+            )}
             {!compactInputToolbelt && (
               <button
                 type="button"
