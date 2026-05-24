@@ -95,6 +95,7 @@ export const useAIProcessing = () => {
     unlistenRef.current = unlisten;
 
     try {
+      await invoke("reset_ai_stream").catch(() => {});
       await invoke<string>("stream_ai_command", { prompt, model, context });
     } finally {
       if (requestIdRef.current === requestId) {

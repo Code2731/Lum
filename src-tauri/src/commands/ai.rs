@@ -1093,8 +1093,6 @@ pub async fn stream_ai_command(
     active_file: Option<String>,
     cancel_flag: tauri::State<'_, AiStreamCancel>,
 ) -> Result<String> {
-    cancel_flag.store(false, Ordering::Relaxed);
-
     let client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(120))
         .build()
@@ -1367,6 +1365,11 @@ pub async fn stream_ai_command(
 #[command]
 pub fn cancel_ai_stream(cancel_flag: tauri::State<'_, AiStreamCancel>) {
     cancel_flag.store(true, Ordering::Relaxed);
+}
+
+#[command]
+pub fn reset_ai_stream(cancel_flag: tauri::State<'_, AiStreamCancel>) {
+    cancel_flag.store(false, Ordering::Relaxed);
 }
 
 /// 에러 분석

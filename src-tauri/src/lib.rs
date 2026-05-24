@@ -116,6 +116,7 @@ pub fn run() {
             commands::ai::generate_ai_command,
             commands::ai::stream_ai_command,
             commands::ai::cancel_ai_stream,
+            commands::ai::reset_ai_stream,
             commands::ai::analyze_error,
             commands::ai::explain_command,
             commands::ai::verify_vision_goal,

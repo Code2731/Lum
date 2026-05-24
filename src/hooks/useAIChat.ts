@@ -227,6 +227,7 @@ export function useAIChat(model: string, getTerminalContext: () => string) {
 
       try {
         console.log("[AI] invoking stream_ai_command, context len:", context.length);
+        await invoke("reset_ai_stream").catch(() => {});
         await invoke("stream_ai_command", {
           prompt: text,
           model,
