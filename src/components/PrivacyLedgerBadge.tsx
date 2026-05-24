@@ -108,7 +108,7 @@ const PrivacyLedgerBadge: React.FC<Props> = ({
   const [popupMaxHeight, setPopupMaxHeight] = useState(() => {
     const availableHeight = Math.max(
       0,
-      window.innerHeight - POPUP_EDGE_GUTTER * 2,
+      (window.visualViewport?.height ?? window.innerHeight) - POPUP_EDGE_GUTTER * 2,
     );
     return Math.max(
       Math.min(POPUP_MIN_HEIGHT, availableHeight || POPUP_MIN_HEIGHT),
@@ -127,11 +127,12 @@ const PrivacyLedgerBadge: React.FC<Props> = ({
     triggerRect: DOMRect | null,
   ): number => {
     if (!triggerRect) return POPUP_FALLBACK_HEIGHT;
-    const spaceAbove = triggerRect.top - POPUP_EDGE_GUTTER;
-    const spaceBelow =
-      window.innerHeight - triggerRect.bottom - POPUP_EDGE_GUTTER;
+    const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
+    const viewportTop = window.visualViewport?.offsetTop ?? 0;
+    const spaceAbove = triggerRect.top - viewportTop - POPUP_EDGE_GUTTER;
+    const spaceBelow = viewportTop + viewportHeight - triggerRect.bottom - POPUP_EDGE_GUTTER;
     const preferredSpace = placement === "up" ? spaceAbove : spaceBelow;
-    const availableHeight = Math.max(0, window.innerHeight - POPUP_EDGE_GUTTER * 2);
+    const availableHeight = Math.max(0, viewportHeight - POPUP_EDGE_GUTTER * 2);
     const availableSpace = Math.max(0, preferredSpace - 4);
     const minHeight = Math.min(POPUP_MIN_HEIGHT, availableHeight);
     const safeHeight = Math.max(minHeight, Math.min(availableHeight, availableSpace));
@@ -143,9 +144,11 @@ const PrivacyLedgerBadge: React.FC<Props> = ({
       if (typeof window === "undefined" || !trigger) {
         return "down";
       }
+      const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
+      const viewportTop = window.visualViewport?.offsetTop ?? 0;
       const triggerRect = trigger.getBoundingClientRect();
       const panelRectHeight = popRef.current?.getBoundingClientRect().height;
-      const availableHeight = Math.max(0, window.innerHeight - POPUP_EDGE_GUTTER * 2);
+      const availableHeight = Math.max(0, viewportHeight - POPUP_EDGE_GUTTER * 2);
       const minHeight = Math.min(POPUP_MIN_HEIGHT, availableHeight);
       const panelHeight =
         typeof panelRectHeight === "number" &&
@@ -153,9 +156,8 @@ const PrivacyLedgerBadge: React.FC<Props> = ({
         panelRectHeight > 0
           ? Math.min(panelRectHeight, POPUP_FALLBACK_HEIGHT, availableHeight)
           : Math.min(POPUP_FALLBACK_HEIGHT, availableHeight);
-      const spaceAbove = triggerRect.top - POPUP_EDGE_GUTTER;
-      const spaceBelow =
-        window.innerHeight - triggerRect.bottom - POPUP_EDGE_GUTTER;
+      const spaceAbove = triggerRect.top - viewportTop - POPUP_EDGE_GUTTER;
+      const spaceBelow = viewportTop + viewportHeight - triggerRect.bottom - POPUP_EDGE_GUTTER;
       const canOpenUp =
         spaceAbove >= Math.min(panelHeight, POPUP_FALLBACK_HEIGHT);
       const canOpenDown =
@@ -265,28 +267,34 @@ const PrivacyLedgerBadge: React.FC<Props> = ({
       ),
       Math.max(
         POPUP_EDGE_GUTTER * 2 + 1,
-        window.innerWidth - POPUP_EDGE_GUTTER * 2,
+        (window.visualViewport?.width ?? window.innerWidth) - POPUP_EDGE_GUTTER * 2,
       ),
     );
+    const viewportWidth = window.visualViewport?.width ?? window.innerWidth;
+    const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
+    const viewportTop = window.visualViewport?.offsetTop ?? 0;
+    const viewportLeft = window.visualViewport?.offsetLeft ?? 0;
     const nextY =
       nextPlacement === "up"
         ? triggerRect.top - nextHeight - POPUP_EDGE_GUTTER
         : triggerRect.bottom + POPUP_EDGE_GUTTER;
     const nextX = triggerRect.right - panelWidth;
+    const safeTop = viewportTop + POPUP_EDGE_GUTTER;
+    const safeLeft = viewportLeft + POPUP_EDGE_GUTTER;
     const clampedX = clampValue(
       nextX,
-      POPUP_EDGE_GUTTER,
+      safeLeft,
       Math.max(
-        POPUP_EDGE_GUTTER,
-        window.innerWidth - panelWidth - POPUP_EDGE_GUTTER,
+        safeLeft,
+        viewportLeft + viewportWidth - panelWidth - POPUP_EDGE_GUTTER,
       ),
     );
     const clampedY = clampValue(
       nextY,
-      POPUP_EDGE_GUTTER,
+      safeTop,
       Math.max(
-        POPUP_EDGE_GUTTER,
-        window.innerHeight - panelHeight - POPUP_EDGE_GUTTER,
+        safeTop,
+        viewportTop + viewportHeight - panelHeight - POPUP_EDGE_GUTTER,
       ),
     );
     setPlacement(nextPlacement);

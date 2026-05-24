@@ -123,6 +123,29 @@ const POPUP_FALLBACK_WIDTH = {
 const POPUP_FALLBACK_HEIGHT = 440;
 const POPUP_MIN_HEIGHT = 96;
 const POPUP_EDGE_GUTTER = 8;
+const VIEWPORT_FALLBACK_GUTTER = 8;
+
+type ViewportBounds = {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+};
+
+const getViewportBounds = (): ViewportBounds => {
+  const vv = typeof window !== "undefined" ? window.visualViewport : null;
+  const width = vv?.width ?? window.innerWidth;
+  const height = vv?.height ?? window.innerHeight;
+  const left = vv?.offsetLeft ?? 0;
+  const top = vv?.offsetTop ?? 0;
+
+  return {
+    left: Number.isFinite(left) ? left : 0,
+    top: Number.isFinite(top) ? top : 0,
+    width: Math.max(1, Math.floor(Number.isFinite(width) ? width : 1)),
+    height: Math.max(1, Math.floor(Number.isFinite(height) ? height : 1)),
+  };
+};
 
 const AppHeader: React.FC<Props> = ({
   specs, specsLoading,
@@ -390,10 +413,11 @@ const AppHeader: React.FC<Props> = ({
   const popupFocusables = "a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex='-1'])";
   const clampPopupHeight = (placement: PopupPlacement, triggerRect: DOMRect | null): number => {
     if (!triggerRect) return POPUP_ESTIMATE_HEIGHT;
-    const spaceAbove = triggerRect.top - POPUP_GUTTER;
-    const spaceBelow = window.innerHeight - triggerRect.bottom - POPUP_GUTTER;
+    const viewport = getViewportBounds();
+    const spaceAbove = triggerRect.top - viewport.top - POPUP_GUTTER;
+    const spaceBelow = viewport.top + viewport.height - triggerRect.bottom - POPUP_GUTTER;
     const preferredSpace = placement === "up" ? spaceAbove : spaceBelow;
-    const availableHeight = Math.max(0, window.innerHeight - POPUP_EDGE_GUTTER * 2);
+    const availableHeight = Math.max(0, viewport.height - POPUP_EDGE_GUTTER * 2);
     const availableSpace = Math.max(0, preferredSpace - 4);
     const minHeight = Math.min(POPUP_MIN_HEIGHT, availableHeight);
     const safeHeight = Math.max(minHeight, Math.min(availableHeight, availableSpace));
@@ -402,11 +426,12 @@ const AppHeader: React.FC<Props> = ({
   const measurePopupPlacement = React.useCallback((trigger: HTMLElement | null, panelRef?: React.RefObject<HTMLDivElement | null>): PopupPlacement => {
     if (typeof window === "undefined" || !trigger) return "down";
 
+    const viewport = getViewportBounds();
     const rect = trigger.getBoundingClientRect();
-    const spaceAbove = rect.top - POPUP_GUTTER;
-    const spaceBelow = window.innerHeight - rect.bottom - POPUP_GUTTER;
+    const spaceAbove = rect.top - viewport.top - POPUP_GUTTER;
+    const spaceBelow = viewport.top + viewport.height - rect.bottom - POPUP_GUTTER;
     const panelRectHeight = panelRef?.current?.getBoundingClientRect().height;
-    const availableHeight = Math.max(0, window.innerHeight - POPUP_EDGE_GUTTER * 2);
+    const availableHeight = Math.max(0, viewport.height - POPUP_EDGE_GUTTER * 2);
     const minHeight = Math.min(POPUP_MIN_HEIGHT, availableHeight);
     const panelHeight = (typeof panelRectHeight === "number" && Number.isFinite(panelRectHeight) && panelRectHeight > 0)
       ? Math.min(panelRectHeight, POPUP_ESTIMATE_HEIGHT, availableHeight)
@@ -467,12 +492,21 @@ const AppHeader: React.FC<Props> = ({
       : triggerRect.bottom + POPUP_EDGE_GUTTER;
 
     const nextX = triggerRect.right - clampedPanelWidth;
-    const maxTop = Math.max(POPUP_EDGE_GUTTER, window.innerHeight - panelHeight - POPUP_EDGE_GUTTER);
-    const maxLeft = Math.max(POPUP_EDGE_GUTTER, window.innerWidth - clampedPanelWidth - POPUP_EDGE_GUTTER);
+    const viewport = getViewportBounds();
+    const viewportSafeTop = viewport.top + VIEWPORT_FALLBACK_GUTTER;
+    const viewportSafeLeft = viewport.left + VIEWPORT_FALLBACK_GUTTER;
+    const maxTop = Math.max(
+      viewportSafeTop,
+      viewport.top + viewport.height - panelHeight - POPUP_EDGE_GUTTER,
+    );
+    const maxLeft = Math.max(
+      viewportSafeLeft,
+      viewport.left + viewport.width - clampedPanelWidth - POPUP_EDGE_GUTTER,
+    );
 
     options.setPosition({
-      x: clampValue(nextX, POPUP_EDGE_GUTTER, maxLeft),
-      y: clampValue(nextY, POPUP_EDGE_GUTTER, maxTop),
+      x: clampValue(nextX, viewportSafeLeft, maxLeft),
+      y: clampValue(nextY, viewportSafeTop, maxTop),
       width: clampedPanelWidth,
     });
     options.onReady();
