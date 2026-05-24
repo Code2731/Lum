@@ -119,6 +119,7 @@ const PANE_PADDING_Y = 6;
 const INPUT_TIP_DISMISSED_KEY = "lum_input_toolbelt_tip_dismissed";
 const TOOLBELT_ADVANCED_KEY = "lum_toolbelt_show_advanced";
 const TOOLBELT_BACKEND_KEY = "lum_toolbelt_show_backend";
+const TOOLBELT_COMPACT_KEY = "lum_toolbelt_compact";
 const INPUT_HISTORY_KEY = "lum_input_submit_history";
 const LEGACY_TOOLBELT_TIP_KEY = INPUT_TIP_DISMISSED_KEY;
 const LEGACY_TOOLBELT_ADVANCED_KEY = TOOLBELT_ADVANCED_KEY;
@@ -362,6 +363,13 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
       return true;
     }
   });
+  const [compactInputToolbelt, setCompactInputToolbelt] = useState(() => {
+    try {
+      return localStorage.getItem(TOOLBELT_COMPACT_KEY) === "1";
+    } catch {
+      return false;
+    }
+  });
   useEffect(() => {
     const clearLegacyToolbeltSettings = () => {
       try {
@@ -405,6 +413,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
           ui_show_input_toolbelt_tip?: boolean;
           ui_show_advanced_input_tools?: boolean;
           ui_show_backend_quick_tools?: boolean;
+          ui_compact_input_toolbelt?: boolean;
         }>("load_app_config");
         if (!mounted) return;
 
@@ -426,6 +435,12 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
         } else {
           patch.showBackendQuickTools = legacy.showBackend;
           setShowBackendQuickTools(legacy.showBackend);
+        }
+        if (typeof cfg.ui_compact_input_toolbelt === "boolean") {
+          setCompactInputToolbelt(cfg.ui_compact_input_toolbelt);
+          try {
+            localStorage.setItem(TOOLBELT_COMPACT_KEY, cfg.ui_compact_input_toolbelt ? "1" : "0");
+          } catch {}
         }
 
         if (Object.keys(patch).length > 0) {
@@ -1157,7 +1172,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     const observer = new ResizeObserver(() => update());
     observer.observe(dock);
     return () => observer.disconnect();
-  }, [showInputTip, showAdvancedInputTools, showBackendQuickTools, toolbeltCustomizeOpen]);
+  }, [showInputTip, showAdvancedInputTools, showBackendQuickTools, toolbeltCustomizeOpen, compactInputToolbelt]);
 
   const attachMentionToken = useCallback((tokenPath: string) => {
     forceMentionAttachRef.current = false;
@@ -2063,6 +2078,15 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
       return next;
     });
   }, []);
+  const toggleCompactInputToolbelt = useCallback(() => {
+    setCompactInputToolbelt((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem(TOOLBELT_COMPACT_KEY, next ? "1" : "0");
+      } catch {}
+      return next;
+    });
+  }, []);
 
   return (
     <div
@@ -2152,7 +2176,9 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
             }}
           >
             <span className="lum-toolbelt-secondary-hint" style={{ fontSize: UI_TEXT_MICRO, color: "rgba(182,218,255,0.95)", lineHeight: 1.35 }}>
-              TIP · Cmd/Ctrl+1~4 backend 전환 · Cmd/Ctrl+Shift+A @첨부 · Cmd/Ctrl+Shift+B/N BACK/LAST · Cmd/Ctrl+Shift+K/Z/R/L/M/P 입력 편집
+              {compactInputToolbelt
+                ? "TIP · 간단 모드: 핵심 버튼만 표시 · MORE로 전체 툴 펼치기"
+                : "TIP · Cmd/Ctrl+1~4 backend 전환 · Cmd/Ctrl+Shift+A @첨부 · Cmd/Ctrl+Shift+B/N BACK/LAST · Cmd/Ctrl+Shift+K/Z/R/L/M/P 입력 편집"}
             </span>
             <button
               type="button"
@@ -2227,6 +2253,25 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
             >
               CUSTOMIZE
             </button>
+            <button
+              type="button"
+              aria-label="toolbelt-toggle-compact"
+              onClick={toggleCompactInputToolbelt}
+              style={{
+                fontSize: MICRO_FONT_SIZE,
+                color: compactInputToolbelt ? "rgba(220,247,225,0.96)" : "rgba(255,255,255,0.76)",
+                border: compactInputToolbelt ? "1px solid rgba(63,185,80,0.62)" : "1px solid rgba(255,255,255,0.24)",
+                background: compactInputToolbelt ? "rgba(63,185,80,0.16)" : "rgba(255,255,255,0.08)",
+                borderRadius: 999,
+                padding: "1px 7px",
+                lineHeight: 1.25,
+                cursor: "pointer",
+                flexShrink: 0,
+              }}
+              title="간단/전체 툴벨트 토글"
+            >
+              {compactInputToolbelt ? "MORE" : "BASIC"}
+            </button>
             {inputFocusCompact && <span className="lum-toolbelt-section-tag">FOCUS</span>}
             <span className="lum-toolbelt-section-tag">CORE</span>
             <button
@@ -2268,26 +2313,28 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
             >
               CLEAR
             </button>
-            <button
-              type="button"
-              aria-label="quick-input-reset-all"
-              onClick={resetAllInputStateQuick}
-              disabled={!canResetAllQuick}
-              title={canResetAllQuick ? "입력/UNDO/RECALL 상태 전체 초기화 (Cmd/Ctrl+Shift+X)" : "초기화할 상태가 없어 비활성화"}
-              style={{
-                fontSize: MICRO_FONT_SIZE,
-                color: canResetAllQuick ? "rgba(255,225,222,0.95)" : "rgba(255,255,255,0.42)",
-                border: canResetAllQuick ? "1px solid rgba(255,123,114,0.58)" : "1px solid rgba(255,255,255,0.18)",
-                background: canResetAllQuick ? "rgba(255,123,114,0.14)" : "rgba(255,255,255,0.06)",
-                borderRadius: 999,
-                padding: "1px 7px",
-                lineHeight: 1.25,
-                cursor: canResetAllQuick ? "pointer" : "not-allowed",
-                flexShrink: 0,
-              }}
-            >
-              RESET
-            </button>
+            {!compactInputToolbelt && (
+              <button
+                type="button"
+                aria-label="quick-input-reset-all"
+                onClick={resetAllInputStateQuick}
+                disabled={!canResetAllQuick}
+                title={canResetAllQuick ? "입력/UNDO/RECALL 상태 전체 초기화 (Cmd/Ctrl+Shift+X)" : "초기화할 상태가 없어 비활성화"}
+                style={{
+                  fontSize: MICRO_FONT_SIZE,
+                  color: canResetAllQuick ? "rgba(255,225,222,0.95)" : "rgba(255,255,255,0.42)",
+                  border: canResetAllQuick ? "1px solid rgba(255,123,114,0.58)" : "1px solid rgba(255,255,255,0.18)",
+                  background: canResetAllQuick ? "rgba(255,123,114,0.14)" : "rgba(255,255,255,0.06)",
+                  borderRadius: 999,
+                  padding: "1px 7px",
+                  lineHeight: 1.25,
+                  cursor: canResetAllQuick ? "pointer" : "not-allowed",
+                  flexShrink: 0,
+                }}
+              >
+                RESET
+              </button>
+            )}
             <button
               type="button"
               aria-label="quick-input-stop"
@@ -2329,25 +2376,50 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
             </button>
             <button
               type="button"
-              aria-label="quick-input-forget-undo"
-              onClick={forgetUndoStackQuick}
-              disabled={clearedInputStack.length === 0}
-              title={clearedInputStack.length > 0 ? "CLEAR 복원 이력 비우기 (Cmd/Ctrl+Shift+D)" : "비울 복원 이력이 없어 비활성화"}
+              aria-label="quick-input-action-palette"
+              onClick={() => {
+                setActionPaletteOpen(true);
+                setActionPaletteQuery("");
+                setActionPaletteSelected(0);
+              }}
+              title="Action Palette 열기 (Cmd/Ctrl+K)"
               style={{
                 fontSize: MICRO_FONT_SIZE,
-                color: clearedInputStack.length > 0 ? "rgba(255,225,222,0.95)" : "rgba(255,255,255,0.42)",
-                border: clearedInputStack.length > 0 ? "1px solid rgba(255,123,114,0.58)" : "1px solid rgba(255,255,255,0.18)",
-                background: clearedInputStack.length > 0 ? "rgba(255,123,114,0.14)" : "rgba(255,255,255,0.06)",
+                color: "rgba(215,228,255,0.96)",
+                border: "1px solid rgba(121,192,255,0.5)",
+                background: "rgba(121,192,255,0.16)",
                 borderRadius: 999,
                 padding: "1px 7px",
                 lineHeight: 1.25,
-                cursor: clearedInputStack.length > 0 ? "pointer" : "not-allowed",
+                cursor: "pointer",
                 flexShrink: 0,
               }}
             >
-              FORGET
+              PALETTE
             </button>
-            {showAdvancedInputTools && (
+            {!compactInputToolbelt && (
+              <button
+                type="button"
+                aria-label="quick-input-forget-undo"
+                onClick={forgetUndoStackQuick}
+                disabled={clearedInputStack.length === 0}
+                title={clearedInputStack.length > 0 ? "CLEAR 복원 이력 비우기 (Cmd/Ctrl+Shift+D)" : "비울 복원 이력이 없어 비활성화"}
+                style={{
+                  fontSize: MICRO_FONT_SIZE,
+                  color: clearedInputStack.length > 0 ? "rgba(255,225,222,0.95)" : "rgba(255,255,255,0.42)",
+                  border: clearedInputStack.length > 0 ? "1px solid rgba(255,123,114,0.58)" : "1px solid rgba(255,255,255,0.18)",
+                  background: clearedInputStack.length > 0 ? "rgba(255,123,114,0.14)" : "rgba(255,255,255,0.06)",
+                  borderRadius: 999,
+                  padding: "1px 7px",
+                  lineHeight: 1.25,
+                  cursor: clearedInputStack.length > 0 ? "pointer" : "not-allowed",
+                  flexShrink: 0,
+                }}
+              >
+                FORGET
+              </button>
+            )}
+            {showAdvancedInputTools && !compactInputToolbelt && (
               <>
             <span className="lum-toolbelt-section-tag">EDIT</span>
             <button
@@ -2598,7 +2670,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
             </button>
               </>
             )}
-            {showBackendQuickTools && (
+            {showBackendQuickTools && !compactInputToolbelt && (
               <>
             <span className="lum-toolbelt-section-tag">BACKEND</span>
             <span
@@ -2617,7 +2689,9 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
             </span>
               </>
             )}
-            <span className="lum-toolbelt-section-tag">ROUTE</span>
+            {!compactInputToolbelt && <span className="lum-toolbelt-section-tag">ROUTE</span>}
+            {!compactInputToolbelt && (
+              <>
             <button
               type="button"
               aria-label="quick-mode-heavy"
@@ -2922,6 +2996,8 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
             >
               @gemini
             </button>
+              </>
+            )}
               </>
             )}
           </div>

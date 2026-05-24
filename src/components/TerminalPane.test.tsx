@@ -75,6 +75,7 @@ beforeEach(() => {
         ui_show_input_toolbelt_tip: true,
         ui_show_advanced_input_tools: true,
         ui_show_backend_quick_tools: true,
+        ui_compact_input_toolbelt: false,
       });
     }
     if (cmd === "spawn_pty") return Promise.resolve();
@@ -283,6 +284,36 @@ describe("TerminalPane — 입력 라우팅", () => {
       expect(screen.queryByText(/TIP · Cmd\/Ctrl\+1~4 backend 전환 · Shift\+A @첨부 · Shift\+B\/N BACK\/LAST · Shift\+K\/Z\/R\/L\/M\/P 입력 편집/)).not.toBeInTheDocument();
       expect(screen.queryByRole("button", { name: "quick-input-merge-recall" })).not.toBeInTheDocument();
       expect(screen.queryByRole("button", { name: "quick-backend-local" })).not.toBeInTheDocument();
+    });
+  });
+
+  it("간단 모드에서는 입력 툴벨트가 핵심 버튼만 노출된다", async () => {
+    invokeMock.mockImplementation((cmd: string) => {
+      if (cmd === "load_app_config") {
+        return Promise.resolve({
+          ui_show_input_toolbelt_tip: true,
+          ui_show_advanced_input_tools: true,
+          ui_show_backend_quick_tools: true,
+          ui_compact_input_toolbelt: true,
+        });
+      }
+      if (cmd === "spawn_pty") return Promise.resolve();
+      if (cmd === "write_to_pty") return Promise.resolve();
+      if (cmd === "resize_pty") return Promise.resolve();
+      if (cmd === "get_project_context") return Promise.resolve("");
+      if (cmd === "get_recent_history") return Promise.resolve([]);
+      if (cmd === "generate_ai_command") return Promise.resolve(JSON.stringify({ command: "ls -la" }));
+      return Promise.resolve();
+    });
+
+    render(<TerminalPane id="tab-1" />);
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "toolbelt-toggle-compact" })).toHaveTextContent("MORE");
+      expect(screen.getByRole("button", { name: "quick-input-action-palette" })).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "quick-backend-local" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "quick-mode-shell" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "quick-input-merge-recall" })).not.toBeInTheDocument();
     });
   });
 
