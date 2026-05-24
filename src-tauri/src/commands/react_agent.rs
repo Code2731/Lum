@@ -170,13 +170,14 @@ fn format_plan(steps: &[String]) -> String {
 
 /// 목표에 대한 단계별 계획을 LLM에서 생성.
 async fn generate_task_plan(
+    app: &AppHandle,
     client: &reqwest::Client,
     goal: &str,
     backend: Option<&str>,
     model: &str,
 ) -> std::result::Result<String, String> {
     call_ai_with_backend(
-        None,
+        Some(app),
         client,
         model,
         &format!(
@@ -489,6 +490,7 @@ fn reflexion_needs_retry(text: &str) -> bool {
 }
 
 async fn run_reflexion(
+    app: &AppHandle,
     client: &reqwest::Client,
     conversation: &str,
     goal: &str,
@@ -500,7 +502,7 @@ async fn run_reflexion(
     let prompt = format!(
         "{conversation}\n\n[시스템-Reflexion]\n목표: {goal}\n현재 결론 후보: {candidate}\n지금까지의 과정으로 목표 달성 여부와 회귀 위험을 60자 이내 한 줄로 평가하세요.\n형식: ok: ... 또는 fail: ... 또는 risk_high: ..."
     );
-    let fut = call_ai_with_backend(None, client, model, &prompt, backend);
+    let fut = call_ai_with_backend(Some(app), client, model, &prompt, backend);
     match tokio::time::timeout(std::time::Duration::from_secs(REFLEXION_TIMEOUT_SECS), fut).await {
         Ok(Ok(resp)) => {
             let line = resp
@@ -3042,8 +3044,14 @@ pub async fn react_agent_run(
             None,
             None,
         );
-        if let Ok(plan_resp) =
-            generate_task_plan(&client, &goal, forced_backend.as_deref(), &effective_model).await
+        if let Ok(plan_resp) = generate_task_plan(
+            &app,
+            &client,
+            &goal,
+            forced_backend.as_deref(),
+            &effective_model,
+        )
+        .await
         {
             let steps_list = parse_task_plan(&plan_resp);
             if !steps_list.is_empty() {
@@ -3104,6 +3112,7 @@ pub async fn react_agent_run(
             if let Some(answer) = parse_answer(&response) {
                 if reflexion_enabled {
                     if let Some(reflect) = run_reflexion(
+                        &app,
                         &client,
                         &conversation,
                         &goal,
@@ -3148,6 +3157,7 @@ pub async fn react_agent_run(
                 let candidate = response.trim();
                 if reflexion_enabled {
                     if let Some(reflect) = run_reflexion(
+                        &app,
                         &client,
                         &conversation,
                         &goal,
@@ -3213,6 +3223,7 @@ pub async fn react_agent_run(
                             Some(step + 1),
                         );
                         if let Ok(plan_resp) = generate_task_plan(
+                            &app,
                             &client,
                             &goal,
                             forced_backend.as_deref(),
@@ -3303,6 +3314,7 @@ pub async fn react_agent_run(
         // 최대 단계 초과 — reflexion에서 위험 감지되면 딱 1턴 추가 허용.
         if reflexion_enabled && !extra_turn_granted {
             if let Some(reflect) = run_reflexion(
+                &app,
                 &client,
                 &conversation,
                 &goal,
