@@ -311,6 +311,7 @@ describe("TerminalPane — 입력 라우팅", () => {
     await waitFor(() => {
       expect(screen.getByRole("button", { name: "toolbelt-toggle-compact" })).toHaveTextContent("MORE");
       expect(screen.getByRole("button", { name: "quick-input-action-palette" })).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "quick-mention-trigger" })).not.toBeInTheDocument();
       expect(screen.queryByRole("button", { name: "quick-backend-local" })).not.toBeInTheDocument();
       expect(screen.queryByRole("button", { name: "quick-mode-shell" })).not.toBeInTheDocument();
       expect(screen.queryByRole("button", { name: "quick-input-merge-recall" })).not.toBeInTheDocument();
@@ -319,6 +320,11 @@ describe("TerminalPane — 입력 라우팅", () => {
       expect(screen.queryByText(/CWD /)).not.toBeInTheDocument();
       expect(screen.getByText("AUTO")).toBeInTheDocument();
       expect(screen.getByText("TERM OFF")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "quick-input-action-palette" }));
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "action-palette-item-mention_attach" })).toBeInTheDocument();
     });
   });
 

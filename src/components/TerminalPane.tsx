@@ -1680,6 +1680,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     { id: "recall", label: "Recall Last Input", keywords: "recall", run: recallSubmittedInputQuick, disabled: !canRecallSubmittedInput },
     { id: "rerun", label: "Rerun Last Input", keywords: "rerun repeat", run: rerunSubmittedInputQuick, disabled: !canRerunSubmittedInput },
     { id: "reset", label: "Reset Input State", keywords: "reset", run: resetAllInputStateQuick, disabled: !canResetAllQuick },
+    { id: "mention_attach", label: "Attach File Mention", keywords: "mention attach file @", run: triggerMentionAttach, disabled: false },
     { id: "backend_auto", label: "Backend Auto Toggle", keywords: "backend auto", run: clearBackendQuickPrefix, disabled: false },
     { id: "backend_back", label: "Backend Back", keywords: "backend back", run: restorePrevBackendQuickPrefix, disabled: !canRestorePrevBackendQuick },
     { id: "backend_last", label: "Backend Last", keywords: "backend last", run: restoreLastBackendQuickPrefix, disabled: !canRestoreLastBackendQuick },
@@ -1700,6 +1701,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     restoreInputQuick,
     restoreLastBackendQuickPrefix,
     restorePrevBackendQuickPrefix,
+    triggerMentionAttach,
     setInputHistoryMultiSelected,
     setInputHistoryOpen,
     setInputHistoryQuery,
@@ -2294,25 +2296,27 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
             </button>
             {!compactInputToolbelt && inputFocusCompact && <span className="lum-toolbelt-section-tag">FOCUS</span>}
             {!compactInputToolbelt && <span className="lum-toolbelt-section-tag">CORE</span>}
-            <button
-              type="button"
-              aria-label="quick-mention-trigger"
-              onClick={triggerMentionAttach}
-              title="파일 첨부 트리거 삽입 (@, Cmd/Ctrl+Shift+A)"
-              style={{
-                fontSize: MICRO_FONT_SIZE,
-                color: "rgba(121,192,255,0.9)",
-                border: "1px solid rgba(121,192,255,0.34)",
-                background: "rgba(121,192,255,0.12)",
-                borderRadius: 999,
-                padding: "1px 7px",
-                lineHeight: 1.25,
-                cursor: "pointer",
-                flexShrink: 0,
-              }}
-            >
-              @ 파일 첨부
-            </button>
+            {!compactInputToolbelt && (
+              <button
+                type="button"
+                aria-label="quick-mention-trigger"
+                onClick={triggerMentionAttach}
+                title="파일 첨부 트리거 삽입 (@, Cmd/Ctrl+Shift+A)"
+                style={{
+                  fontSize: MICRO_FONT_SIZE,
+                  color: "rgba(121,192,255,0.9)",
+                  border: "1px solid rgba(121,192,255,0.34)",
+                  background: "rgba(121,192,255,0.12)",
+                  borderRadius: 999,
+                  padding: "1px 7px",
+                  lineHeight: 1.25,
+                  cursor: "pointer",
+                  flexShrink: 0,
+                }}
+              >
+                @ 파일 첨부
+              </button>
+            )}
             <button
               type="button"
               aria-label="quick-input-clear"
