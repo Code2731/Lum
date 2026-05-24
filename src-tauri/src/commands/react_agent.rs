@@ -176,6 +176,7 @@ async fn generate_task_plan(
     model: &str,
 ) -> std::result::Result<String, String> {
     call_ai_with_backend(
+        None,
         client,
         model,
         &format!(
@@ -499,7 +500,7 @@ async fn run_reflexion(
     let prompt = format!(
         "{conversation}\n\n[시스템-Reflexion]\n목표: {goal}\n현재 결론 후보: {candidate}\n지금까지의 과정으로 목표 달성 여부와 회귀 위험을 60자 이내 한 줄로 평가하세요.\n형식: ok: ... 또는 fail: ... 또는 risk_high: ..."
     );
-    let fut = call_ai_with_backend(client, model, &prompt, backend);
+    let fut = call_ai_with_backend(None, client, model, &prompt, backend);
     match tokio::time::timeout(std::time::Duration::from_secs(REFLEXION_TIMEOUT_SECS), fut).await {
         Ok(Ok(resp)) => {
             let line = resp
@@ -3078,6 +3079,7 @@ pub async fn react_agent_run(
 
             // 로컬 전용 — embedded GGUF 우선, 미로드면 xLLM HTTP (127.0.0.1:8080)
             let response = match call_ai_with_backend(
+                Some(&app),
                 &client,
                 &effective_model,
                 &conversation,
@@ -3238,6 +3240,7 @@ pub async fn react_agent_run(
                         ledger.recovery_l2()
                     );
                     if let Ok(final_resp) = call_ai_with_backend(
+                        Some(&app),
                         &client,
                         &effective_model,
                         &force_prompt,

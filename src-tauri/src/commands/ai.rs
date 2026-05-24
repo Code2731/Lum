@@ -209,8 +209,8 @@ fn embedded_engine_busy() -> bool {
 
 #[cfg(feature = "embedded-ai")]
 async fn wait_for_embedded_ready() {
-    let deadline = std::time::Instant::now()
-        + std::time::Duration::from_millis(EMBEDDED_READY_TIMEOUT_MS);
+    let deadline =
+        std::time::Instant::now() + std::time::Duration::from_millis(EMBEDDED_READY_TIMEOUT_MS);
     while embedded_engine_busy() && std::time::Instant::now() < deadline {
         tokio::time::sleep(std::time::Duration::from_millis(EMBEDDED_READY_POLL_MS)).await;
     }
@@ -267,13 +267,11 @@ async fn try_embedded_inference_or_restore(
     }
 
     match crate::commands::embed::restore_last_embedded_model(app.clone()).await {
-        Ok(true) => {
-            Some(
-                crate::commands::mistralrs_inline::infer_once(prompt)
-                    .await
-                    .map_err(|e| LumError::AiEngine(format!("embedded inference failed: {e}"))),
-            )
-        }
+        Ok(true) => Some(
+            crate::commands::mistralrs_inline::infer_once(prompt)
+                .await
+                .map_err(|e| LumError::AiEngine(format!("embedded inference failed: {e}"))),
+        ),
         _ => None,
     }
 }
@@ -507,6 +505,7 @@ pub async fn call_xllm(client: &reqwest::Client, _model: &str, prompt: &str) -> 
 /// - None: 기존 fallback 순서 유지 (embedded → ollama → gemini/xllm)
 /// - Some(local|embedded|ollama|xllm|sglang|gemini|cloud): 해당 백엔드만 시도
 pub async fn call_ai_with_backend(
+    app: Option<&tauri::AppHandle>,
     client: &reqwest::Client,
     model: &str,
     prompt: &str,
@@ -518,7 +517,11 @@ pub async fn call_ai_with_backend(
     let forced = raw.trim().to_lowercase();
     match forced.as_str() {
         "local" | "embedded" => {
-            if let Some(result) = try_embedded_inference(prompt, &[]).await {
+            let embedded_result = match app {
+                Some(app) => try_embedded_inference_or_restore(app, prompt, &[]).await,
+                None => try_embedded_inference(prompt, &[]).await,
+            };
+            if let Some(result) = embedded_result {
                 return result;
             }
             Err(LumError::AiEngine(
@@ -852,7 +855,7 @@ mod tests {
         let client = reqwest::Client::builder()
             .build()
             .expect("client should build");
-        let err = call_ai_with_backend(&client, "", "hello", Some("unsupported"))
+        let err = call_ai_with_backend(None, &client, "", "hello", Some("unsupported"))
             .await
             .expect_err("unknown backend should fail");
         match err {
