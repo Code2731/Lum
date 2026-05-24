@@ -314,6 +314,9 @@ describe("TerminalPane — 입력 라우팅", () => {
       expect(screen.queryByRole("button", { name: "quick-backend-local" })).not.toBeInTheDocument();
       expect(screen.queryByRole("button", { name: "quick-mode-shell" })).not.toBeInTheDocument();
       expect(screen.queryByRole("button", { name: "quick-input-merge-recall" })).not.toBeInTheDocument();
+      expect(screen.queryByText("WHY EMPTY")).not.toBeInTheDocument();
+      expect(screen.queryByText(/MODEL /)).not.toBeInTheDocument();
+      expect(screen.queryByText(/CWD /)).not.toBeInTheDocument();
     });
   });
 

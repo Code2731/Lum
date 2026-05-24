@@ -2045,6 +2045,9 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     { id: "model", label: `MODEL ${compactModel(modelRef.current)}`, tone: "neutral" },
     { id: "term", label: terminalVisible ? "터미널 ON" : "터미널 OFF", tone: terminalVisible ? "success" : "warn" },
   ];
+  const visibleInputChips = compactInputToolbelt
+    ? inputChips.filter((chip) => chip.id === "route" || chip.id === "backend" || chip.id === "term")
+    : inputChips;
   const inputFocusCompact =
     warpInputFocused &&
     inputBuffer.trim() !== "" &&
@@ -3106,8 +3109,8 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
           onTab={handleTab}
           onChange={handleInputChange}
           onFocusChange={setWarpInputFocused}
-          contextChips={inputChips}
-          compactContextChips={inputFocusCompact}
+          contextChips={visibleInputChips}
+          compactContextChips={inputFocusCompact || compactInputToolbelt}
         />
       </div>
 
