@@ -2045,8 +2045,17 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     { id: "model", label: `MODEL ${compactModel(modelRef.current)}`, tone: "neutral" },
     { id: "term", label: terminalVisible ? "터미널 ON" : "터미널 OFF", tone: terminalVisible ? "success" : "warn" },
   ];
+  const compactInputChips: Array<{ id: string; label: string; tone: "neutral" | "accent" | "success" | "warn" }> = [
+    { id: "route", label: routeMeta.label, tone: routeMeta.tone },
+    {
+      id: "backend",
+      label: activeBackendPrefix ? `@${activeBackendPrefix.toUpperCase()}` : "AUTO",
+      tone: activeBackendPrefix ? "warn" : "neutral",
+    },
+    { id: "term", label: terminalVisible ? "TERM ON" : "TERM OFF", tone: terminalVisible ? "success" : "warn" },
+  ];
   const visibleInputChips = compactInputToolbelt
-    ? inputChips.filter((chip) => chip.id === "route" || chip.id === "backend" || chip.id === "term")
+    ? compactInputChips
     : inputChips;
   const inputFocusCompact =
     warpInputFocused &&

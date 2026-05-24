@@ -504,7 +504,9 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
           >
             {isVisuallyEmpty ? (
               <span style={{ color: "rgba(255,255,255,0.28)" }}>
-                자연어는 AI · 명령어는 자동 실행 · !강제shell · @강제AI(@local/@ollama/@xllm/@sglang/@gemini) · &gt;&gt;에이전트 · Cmd/Ctrl+1~4/0 · Cmd/Ctrl+`/. 정순환 · Cmd/Ctrl+Shift+`/, 역순환
+                {compactContextChips
+                  ? "자연어=AI · 명령어=실행 · !/@/>>/#/?"
+                  : "자연어는 AI · 명령어는 자동 실행 · !강제shell · @강제AI(@local/@ollama/@xllm/@sglang/@gemini) · >>에이전트 · Cmd/Ctrl+1~4/0 · Cmd/Ctrl+`/. 정순환 · Cmd/Ctrl+Shift+`/, 역순환"}
               </span>
             ) : body !== null ? (
               <span style={{ color: TOKEN_COLORS.text }}>{body}</span>
