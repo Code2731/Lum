@@ -3032,21 +3032,21 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
             }}
           >
             <ModeButton
-              label="터미널"
+              label={compactInputToolbelt ? "TERM" : "터미널"}
               title="터미널 표시/숨김 (shell 명령 실행 시 자동 표시)"
               active={terminalVisible}
               activeColor="#e3b341"
               onClick={() => setTerminalVisible(v => !v)}
             />
             <ModeButton
-              label="Vision"
+              label={compactInputToolbelt ? "VIS" : "Vision"}
               title="비전 모드 — 이미지 첨부 활성화"
               active={visionMode}
               activeColor="#58a6ff"
               onClick={() => setVisionMode(v => !v)}
             />
             <ModeButton
-              label="추론"
+              label={compactInputToolbelt ? "REAS" : "추론"}
               title="추론 체인 표시 — <think> 블록 보이기 (전역 설정 토글)"
               active={!!showReasoning}
               activeColor="#3fb950"

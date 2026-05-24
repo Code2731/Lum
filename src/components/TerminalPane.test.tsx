@@ -317,6 +317,8 @@ describe("TerminalPane — 입력 라우팅", () => {
       expect(screen.queryByText("WHY EMPTY")).not.toBeInTheDocument();
       expect(screen.queryByText(/MODEL /)).not.toBeInTheDocument();
       expect(screen.queryByText(/CWD /)).not.toBeInTheDocument();
+      expect(screen.getByText("AUTO")).toBeInTheDocument();
+      expect(screen.getByText("TERM OFF")).toBeInTheDocument();
     });
   });
 
