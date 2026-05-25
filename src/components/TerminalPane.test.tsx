@@ -336,7 +336,7 @@ describe("TerminalPane — 입력 라우팅", () => {
     render(<TerminalPane id="tab-1" />);
 
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: "toolbelt-toggle-compact" })).toHaveTextContent("MORE");
+      expect(screen.getByRole("button", { name: "toolbelt-toggle-compact" })).toHaveTextContent("FULL");
       expect(screen.getByRole("button", { name: "quick-input-action-palette" })).toBeInTheDocument();
       expect(screen.queryByRole("button", { name: "quick-input-clear" })).not.toBeInTheDocument();
       expect(screen.queryByRole("button", { name: "quick-mention-trigger" })).not.toBeInTheDocument();
