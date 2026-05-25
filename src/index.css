@@ -158,21 +158,6 @@ body {
   min-height: 22px;
 }
 
-.lum-mode-row--narrow {
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-  padding-top: 4px;
-}
-
-.lum-mode-row--narrow .lum-mode-toggle {
-  flex: 1;
-  justify-content: center;
-  min-height: 26px;
-}
-
-.lum-input-dock--focus .lum-mode-row--narrow {
-  border-top-color: rgba(88, 166, 255, 0.2);
-}
-
 .lum-toolbelt-rail--focus button:not([aria-pressed="true"]):not(:hover) {
   opacity: 0.86;
 }
@@ -181,8 +166,7 @@ body {
   filter: brightness(1.08);
 }
 
-.lum-toolbelt-rail button:focus-visible,
-.lum-mode-toggle:focus-visible {
+.lum-toolbelt-rail button:focus-visible {
   outline: none;
   box-shadow:
     0 0 0 1px rgba(13, 17, 23, 0.95),
@@ -220,10 +204,6 @@ body {
 
 .lum-toolbelt-rail button:disabled {
   opacity: 0.56;
-}
-
-.lum-mode-toggle[aria-pressed="true"] {
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.2), 0 0 10px rgba(88, 166, 255, 0.24);
 }
 
 .lum-input-dock:focus-within .lum-toolbelt-secondary-hint {
@@ -687,9 +667,6 @@ body {
     padding-bottom: 3px !important;
   }
 
-  .lum-mode-row--narrow .lum-mode-toggle {
-    min-height: 32px;
-  }
 }
 
 @media (max-width: 860px) {
@@ -720,7 +697,6 @@ body {
   .lum-input-dock,
   .lum-toolbelt-rail button,
   .lum-toolbelt-secondary-hint,
-  .lum-mode-toggle,
   .lum-overlay-panel,
   .lum-overlay-close,
   .lum-inline-popup,

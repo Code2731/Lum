@@ -170,38 +170,6 @@ const hasExecutableRecallRoute = (raw: string): boolean => {
   return true;
 };
 
-interface ModeButtonProps {
-  label: string;
-  title: string;
-  active: boolean;
-  activeColor: string;
-  onClick: () => void;
-}
-const ModeButton: React.FC<ModeButtonProps> = ({ label, title, active, activeColor, onClick }) => (
-  <IconButton
-    tooltip={title}
-    onClick={onClick}
-    aria-pressed={active}
-    className="lum-mode-toggle"
-    style={{
-      background: active ? `${activeColor}1f` : "rgba(255,255,255,0.02)",
-      border: `1px solid ${active ? activeColor + "66" : "rgba(255,255,255,0.12)"}`,
-      borderRadius: 999,
-      color: active ? activeColor : "rgba(255,255,255,0.58)",
-      fontSize: UI_TEXT_MICRO,
-      fontWeight: active ? 700 : 400,
-      padding: "2px 10px",
-      cursor: "pointer",
-      lineHeight: "16px",
-      boxShadow: active ? `0 0 0 1px ${activeColor}44` : "none",
-      transition: "all 120ms",
-      whiteSpace: "nowrap",
-    }}
-  >
-    {label}
-  </IconButton>
-);
-
 const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme, fontSize, fontFamily, onOutput, onCwdChange, onReady, onAgentTrigger, onAskAI, aiMessages, aiStreaming, aiError, onClearAI, onCancelAI, visionEnabled, showReasoning, onToggleReasoning }) => {
   // 입력 모드 토글 상태 — Heavy(Phase 85b 제거)는 dead, reasoning은 App.tsx props 통해 글로벌 상태 연동
   const [visionMode, setVisionMode] = useState(visionEnabled ?? false);
@@ -3010,40 +2978,6 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               </>
             )}
           </div>
-          {!compactInputToolbelt && (
-            <div
-              className={`lum-mode-row ${inputDockNarrow ? "lum-mode-row--narrow" : ""}`}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: inputDockNarrow ? "flex-end" : "flex-start",
-                gap: 6,
-                width: inputDockNarrow ? "100%" : "auto",
-              }}
-            >
-              <ModeButton
-                label="터미널"
-                title="터미널 표시/숨김 (shell 명령 실행 시 자동 표시)"
-                active={terminalVisible}
-                activeColor="#e3b341"
-                onClick={() => setTerminalVisible(v => !v)}
-              />
-              <ModeButton
-                label="Vision"
-                title="비전 모드 — 이미지 첨부 활성화"
-                active={visionMode}
-                activeColor="#58a6ff"
-                onClick={() => setVisionMode(v => !v)}
-              />
-              <ModeButton
-                label="추론"
-                title="추론 체인 표시 — <think> 블록 보이기 (전역 설정 토글)"
-                active={!!showReasoning}
-                activeColor="#3fb950"
-                onClick={() => onToggleReasoning?.()}
-              />
-            </div>
-          )}
         </div>
         {!compactInputToolbelt && toolbeltCustomizeOpen && (
           <div
