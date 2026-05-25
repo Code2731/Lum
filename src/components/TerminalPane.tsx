@@ -2742,7 +2742,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
                 flexShrink: 0,
               }}
             >
-              !! Heavy
+              !!
             </button>
             <button
               type="button"
@@ -2762,7 +2762,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
                 flexShrink: 0,
               }}
             >
-              ! Shell
+              !
             </button>
             <button
               type="button"
@@ -2782,7 +2782,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
                 flexShrink: 0,
               }}
             >
-              {">>"} Agent
+              {">>"}
             </button>
             <button
               type="button"
@@ -2802,7 +2802,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
                 flexShrink: 0,
               }}
             >
-              ? Explain
+              ?
             </button>
             <button
               type="button"
@@ -2822,7 +2822,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
                 flexShrink: 0,
               }}
             >
-              # Cmd
+              #
             </button>
             <button
               type="button"
@@ -2842,7 +2842,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
                 flexShrink: 0,
               }}
             >
-              @ AI
+              @
             </button>
             {showBackendQuickTools && (
               <>
