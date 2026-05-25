@@ -252,11 +252,12 @@ describe("TerminalPane — 입력 라우팅", () => {
     }, { timeout: 2500 });
   });
 
-  it("툴벨트에 backend 단축키 안내 문구가 노출된다", () => {
+  it("툴벨트에 backend 단축키 안내 문구를 기본 노출하지 않는다", () => {
     render(<TerminalPane id="tab-1" />);
     const fullHint = "Cmd/Ctrl+1~4/0 지정·해제 · Cmd/Ctrl+./, 순환 · Cmd/Ctrl+Shift+←/→ 역순환 · Cmd/Ctrl+Shift+A @첨부 · Cmd/Ctrl+Shift+B/N BACK/LAST · Cmd/Ctrl+Shift+K/Z/R/L/M/P 편집";
     const compactHint = "Cmd/Ctrl+1~4/0 · Cmd/Ctrl+./, · Cmd/Ctrl+Shift+←/→";
-    expect(screen.queryByText(fullHint) || screen.queryByText(compactHint)).toBeTruthy();
+    expect(screen.queryByText(fullHint)).not.toBeInTheDocument();
+    expect(screen.queryByText(compactHint)).not.toBeInTheDocument();
   });
 
   it("입력 툴벨트 TIP 배너는 기본 비노출이다", async () => {
