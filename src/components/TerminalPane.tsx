@@ -2053,9 +2053,6 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
   ];
   const compactInputChips: Array<{ id: string; label: string; tone: "neutral" | "accent" | "success" | "warn" }> = [
     { id: "route", label: routeMeta.label, tone: routeMeta.tone },
-    ...(!terminalVisible
-      ? [{ id: "term", label: "TERM OFF", tone: "warn" as const }]
-      : []),
   ];
   const visibleInputChips = compactInputToolbelt
     ? compactInputChips
