@@ -2992,7 +2992,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
                 cursor: "pointer",
               }}
             >
-              EDIT {showAdvancedInputTools ? "ON" : "OFF"}
+              EDIT
             </button>
             <button
               type="button"
@@ -3009,7 +3009,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
                 cursor: "pointer",
               }}
             >
-              BACKEND {showBackendQuickTools ? "ON" : "OFF"}
+              BACKEND
             </button>
           </div>
         )}
