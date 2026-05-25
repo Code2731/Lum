@@ -2226,7 +2226,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
                   }}
                   title="툴벨트 커스터마이징"
                 >
-                  SET
+                  CFG
                 </button>
               </>
             )}
@@ -2992,7 +2992,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
                 cursor: "pointer",
               }}
             >
-              고급 편집 {showAdvancedInputTools ? "ON" : "OFF"}
+              EDIT {showAdvancedInputTools ? "ON" : "OFF"}
             </button>
             <button
               type="button"
@@ -3009,7 +3009,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
                 cursor: "pointer",
               }}
             >
-              백엔드 버튼 {showBackendQuickTools ? "ON" : "OFF"}
+              BACKEND {showBackendQuickTools ? "ON" : "OFF"}
             </button>
           </div>
         )}
