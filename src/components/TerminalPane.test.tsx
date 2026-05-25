@@ -332,7 +332,7 @@ describe("TerminalPane — 입력 라우팅", () => {
       expect(screen.queryByText(/MODEL /)).not.toBeInTheDocument();
       expect(screen.queryByText(/CWD /)).not.toBeInTheDocument();
       expect(screen.queryByText("AUTO")).not.toBeInTheDocument();
-      expect(screen.getByText("TERM OFF")).toBeInTheDocument();
+      expect(screen.queryByText("TERM OFF")).not.toBeInTheDocument();
       expect(screen.getByRole("button", { name: "quick-input-action-palette" })).toHaveTextContent("TOOLS");
     });
 

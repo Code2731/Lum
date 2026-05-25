@@ -2052,11 +2052,11 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     { id: "term", label: terminalVisible ? "터미널 ON" : "터미널 OFF", tone: terminalVisible ? "success" : "warn" },
   ];
   const compactInputChips: Array<{ id: string; label: string; tone: "neutral" | "accent" | "success" | "warn" }> = [
-    { id: "route", label: routeMeta.label, tone: routeMeta.tone },
   ];
   const visibleInputChips = compactInputToolbelt
     ? compactInputChips
     : inputChips;
+
   const inputFocusCompact =
     warpInputFocused &&
     inputBuffer.trim() !== "" &&
