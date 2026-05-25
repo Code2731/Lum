@@ -2286,28 +2286,6 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
             {!compactInputToolbelt && (
               <button
                 type="button"
-                aria-label="quick-input-reset-all"
-                onClick={resetAllInputStateQuick}
-                disabled={!canResetAllQuick}
-                title={canResetAllQuick ? "입력/UNDO/RECALL 상태 전체 초기화 (Cmd/Ctrl+Shift+X)" : "초기화할 상태가 없어 비활성화"}
-                style={{
-                  fontSize: MICRO_FONT_SIZE,
-                  color: canResetAllQuick ? "rgba(255,225,222,0.95)" : "rgba(255,255,255,0.42)",
-                  border: canResetAllQuick ? "1px solid rgba(255,123,114,0.58)" : "1px solid rgba(255,255,255,0.18)",
-                  background: canResetAllQuick ? "rgba(255,123,114,0.14)" : "rgba(255,255,255,0.06)",
-                  borderRadius: 999,
-                  padding: "1px 7px",
-                  lineHeight: 1.25,
-                  cursor: canResetAllQuick ? "pointer" : "not-allowed",
-                  flexShrink: 0,
-                }}
-              >
-                RST
-              </button>
-            )}
-            {!compactInputToolbelt && (
-              <button
-                type="button"
                 aria-label="quick-input-undo"
                 onClick={restoreInputQuick}
                 disabled={clearedInputStack.length === 0}

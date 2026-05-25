@@ -785,10 +785,10 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(screen.getByRole("button", { name: "quick-input-undo" })).toHaveAttribute("disabled");
   });
 
-  it("툴벨트 RESET 버튼으로 입력/UNDO/RECALL 상태를 한 번에 초기화한다", async () => {
+  it("Action Palette RESET으로 입력/UNDO/RECALL 상태를 한 번에 초기화한다", async () => {
     const { container } = render(<TerminalPane id="tab-1" />);
     const input = container.querySelector("input")!;
-    expect(screen.getByRole("button", { name: "quick-input-reset-all" })).toHaveAttribute("disabled");
+    expect(screen.queryByRole("button", { name: "quick-input-reset-all" })).not.toBeInTheDocument();
 
     submitInput(container, "ls -la");
     await waitFor(() => {
@@ -802,14 +802,15 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(screen.getByRole("button", { name: "quick-input-undo" })).not.toHaveAttribute("disabled");
     expect(screen.getByRole("button", { name: "quick-input-recall" })).not.toHaveAttribute("disabled");
 
-    fireEvent.click(screen.getByRole("button", { name: "quick-input-reset-all" }));
+    fireEvent.click(screen.getByRole("button", { name: "quick-input-action-palette" }));
+    fireEvent.click(screen.getByRole("button", { name: "action-palette-item-reset" }));
     expect(input).toHaveValue("");
     expect(screen.getByRole("button", { name: "quick-input-undo" })).toHaveTextContent("UNDO");
     expect(screen.getByRole("button", { name: "quick-input-undo" })).toHaveAttribute("disabled");
     expect(screen.getByRole("button", { name: "quick-input-recall" })).toHaveTextContent("RECALL");
     expect(screen.getByRole("button", { name: "quick-input-recall" })).toHaveAttribute("disabled");
     expect(screen.getByRole("button", { name: "quick-input-rerun" })).toHaveAttribute("disabled");
-    expect(screen.getByRole("button", { name: "quick-input-reset-all" })).toHaveAttribute("disabled");
+    expect(screen.queryByRole("button", { name: "quick-input-reset-all" })).not.toBeInTheDocument();
   });
 
   it("툴벨트 UNDO는 다중 CLEAR 이력을 LIFO 순서로 복원한다", () => {
@@ -1872,10 +1873,10 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(consumedNoopD).toBe(false);
 
     fireEvent.change(input, { target: { value: "다시 입력" } });
-    expect(screen.getByRole("button", { name: "quick-input-reset-all" })).not.toHaveAttribute("disabled");
+    expect(screen.queryByRole("button", { name: "quick-input-reset-all" })).not.toBeInTheDocument();
     fireEvent.keyDown(input, { key: "X", ctrlKey: true, shiftKey: true });
     expect(input).toHaveValue("");
-    expect(screen.getByRole("button", { name: "quick-input-reset-all" })).toHaveAttribute("disabled");
+    expect(screen.queryByRole("button", { name: "quick-input-reset-all" })).not.toBeInTheDocument();
   });
 
   it("입력 단축키 Cmd/Ctrl+Shift+E/W로 RERUN/SWAP을 실행한다", async () => {
