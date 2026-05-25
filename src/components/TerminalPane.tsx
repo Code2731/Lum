@@ -2898,7 +2898,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
                 flexShrink: 0,
               }}
             >
-              @local
+              @l
             </button>
             <button
               type="button"
@@ -2918,7 +2918,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
                 flexShrink: 0,
               }}
             >
-              @ollama
+              @o
             </button>
             <button
               type="button"
@@ -2938,7 +2938,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
                 flexShrink: 0,
               }}
             >
-              @xllm
+              @x
             </button>
             <button
               type="button"
@@ -2958,7 +2958,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
                 flexShrink: 0,
               }}
             >
-              @gemini
+              @g
             </button>
               </>
             )}
