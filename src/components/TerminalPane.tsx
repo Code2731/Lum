@@ -2289,7 +2289,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
                   flexShrink: 0,
                 }}
               >
-                CLEAR
+                CLR
               </button>
             )}
             {!compactInputToolbelt && (
@@ -2311,7 +2311,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
                   flexShrink: 0,
                 }}
               >
-                RESET
+                RST
               </button>
             )}
             {!compactInputToolbelt && (
@@ -2399,7 +2399,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
                   flexShrink: 0,
                 }}
               >
-                FORGET
+                DROP
               </button>
             )}
             {showAdvancedInputTools && !compactInputToolbelt && (
