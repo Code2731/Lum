@@ -2281,7 +2281,6 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
             >
               {compactInputToolbelt ? "MORE" : "BASIC"}
             </button>
-            {!compactInputToolbelt && inputFocusCompact && <span className="lum-toolbelt-section-tag">FOCUS</span>}
             {!compactInputToolbelt && (
               <button
                 type="button"

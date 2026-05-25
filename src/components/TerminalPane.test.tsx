@@ -1497,13 +1497,15 @@ describe("TerminalPane — 입력 라우팅", () => {
   it("backend prefix-only 입력에서는 FOCUS 툴벨트 압축을 켜지 않는다", () => {
     const { container } = render(<TerminalPane id="tab-1" />);
     const input = container.querySelector("input")!;
+    const toolbeltRail = container.querySelector(".lum-toolbelt-rail");
+    expect(toolbeltRail).toBeTruthy();
 
     fireEvent.focus(input);
     fireEvent.change(input, { target: { value: "@local " } });
-    expect(screen.queryByText("FOCUS")).not.toBeInTheDocument();
+    expect(toolbeltRail).not.toHaveClass("lum-toolbelt-rail--focus");
 
     fireEvent.change(input, { target: { value: "pwd" } });
-    expect(screen.getByText("FOCUS")).toBeInTheDocument();
+    expect(toolbeltRail).toHaveClass("lum-toolbelt-rail--focus");
   });
 
   it("툴벨트 FORGET RECALL 버튼으로 직전 실행 입력 기록을 비운다", async () => {
