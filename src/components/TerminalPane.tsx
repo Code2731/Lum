@@ -2280,7 +2280,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
                   }}
                   title="툴벨트 커스터마이징"
                 >
-                  CUSTOMIZE
+                  SET
                 </button>
               </>
             )}
@@ -2322,7 +2322,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
                   flexShrink: 0,
                 }}
               >
-                @ 파일 첨부
+                @ 첨부
               </button>
             )}
             {!compactInputToolbelt && (
