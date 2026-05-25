@@ -2628,7 +2628,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
                 flexShrink: 0,
               }}
             >
-              SQUASH
+              SQ
             </button>
             <button
               type="button"
@@ -2648,7 +2648,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
                 flexShrink: 0,
               }}
             >
-              CLEAN
+              CL
             </button>
               </>
             )}
