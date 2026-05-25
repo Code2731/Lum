@@ -2732,26 +2732,6 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
             </button>
             <button
               type="button"
-              aria-label="quick-backend-ollama"
-              aria-pressed={activeBackendPrefix === "ollama"}
-              onClick={() => applyBackendQuickPrefix("ollama")}
-              title="Ollama 백엔드로 전환/해제 토글 (Cmd/Ctrl+2)"
-              style={{
-                fontSize: MICRO_FONT_SIZE,
-                color: "rgba(111,227,132,0.95)",
-                border: activeBackendPrefix === "ollama" ? "1px solid rgba(63,185,80,0.72)" : "1px solid rgba(63,185,80,0.35)",
-                background: activeBackendPrefix === "ollama" ? "rgba(63,185,80,0.24)" : "rgba(63,185,80,0.12)",
-                borderRadius: 999,
-                padding: "1px 7px",
-                lineHeight: 1.25,
-                cursor: "pointer",
-                flexShrink: 0,
-              }}
-            >
-              @o
-            </button>
-            <button
-              type="button"
               aria-label="quick-backend-xllm"
               aria-pressed={activeBackendPrefix === "xllm"}
               onClick={() => applyBackendQuickPrefix("xllm")}
@@ -2769,26 +2749,6 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               }}
             >
               @x
-            </button>
-            <button
-              type="button"
-              aria-label="quick-backend-gemini"
-              aria-pressed={activeBackendPrefix === "gemini"}
-              onClick={() => applyBackendQuickPrefix("gemini")}
-              title="Gemini 백엔드로 전환/해제 토글 (Cmd/Ctrl+4)"
-              style={{
-                fontSize: MICRO_FONT_SIZE,
-                color: "rgba(233,194,105,0.96)",
-                border: activeBackendPrefix === "gemini" ? "1px solid rgba(227,179,65,0.72)" : "1px solid rgba(227,179,65,0.35)",
-                background: activeBackendPrefix === "gemini" ? "rgba(227,179,65,0.24)" : "rgba(227,179,65,0.12)",
-                borderRadius: 999,
-                padding: "1px 7px",
-                lineHeight: 1.25,
-                cursor: "pointer",
-                flexShrink: 0,
-              }}
-            >
-              @g
             </button>
               </>
             )}

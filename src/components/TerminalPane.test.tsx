@@ -1913,8 +1913,8 @@ describe("TerminalPane — 입력 라우팅", () => {
     const input = container.querySelector("input")!;
     fireEvent.change(input, { target: { value: "로그 요약해줘" } });
 
-    fireEvent.click(screen.getByRole("button", { name: "quick-backend-local" }));
-    fireEvent.click(screen.getByRole("button", { name: "quick-backend-gemini" }));
+    fireEvent.keyDown(input, { key: "1", code: "Digit1", ctrlKey: true, shiftKey: true });
+    fireEvent.keyDown(input, { key: "4", code: "Digit4", ctrlKey: true, shiftKey: true });
     expect(input).toHaveValue("@gemini 로그 요약해줘");
 
     fireEvent.keyDown(input, { key: "B", ctrlKey: true, shiftKey: true });
@@ -2179,6 +2179,12 @@ describe("TerminalPane — 입력 라우팅", () => {
   it("툴벨트에서 AUTO backend 버튼은 노출하지 않는다", () => {
     render(<TerminalPane id="tab-1" />);
     expect(screen.queryByRole("button", { name: "quick-backend-auto" })).not.toBeInTheDocument();
+  });
+
+  it("툴벨트에서 OLLAMA/GEMINI backend 버튼은 노출하지 않는다", () => {
+    render(<TerminalPane id="tab-1" />);
+    expect(screen.queryByRole("button", { name: "quick-backend-ollama" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "quick-backend-gemini" })).not.toBeInTheDocument();
   });
 
   it("선행 공백 + @backend 입력도 AUTO 해제 시 공백을 보존한다", () => {
