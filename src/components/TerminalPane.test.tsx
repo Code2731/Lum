@@ -2188,12 +2188,12 @@ describe("TerminalPane — 입력 라우팅", () => {
     const input = container.querySelector("input")!;
     fireEvent.change(input, { target: { value: "로그 요약해줘" } });
 
-    expect(screen.getByRole("button", { name: "quick-backend-last" })).toHaveTextContent("L@LOCAL");
+    expect(screen.getByRole("button", { name: "quick-backend-last" })).toHaveTextContent("L@L");
     expect(screen.getByRole("button", { name: "quick-backend-last" })).not.toHaveAttribute("disabled");
 
     fireEvent.click(screen.getByRole("button", { name: "quick-backend-xllm" }));
     expect(input).toHaveValue("@xllm 로그 요약해줘");
-    expect(screen.getByRole("button", { name: "quick-backend-last" })).toHaveTextContent("L@XLLM");
+    expect(screen.getByRole("button", { name: "quick-backend-last" })).toHaveTextContent("L@X");
     expect(screen.getByRole("button", { name: "quick-backend-last" })).toHaveAttribute("disabled");
 
     fireEvent.click(screen.getByRole("button", { name: "quick-backend-auto" }));
@@ -2215,11 +2215,11 @@ describe("TerminalPane — 입력 라우팅", () => {
     fireEvent.click(screen.getByRole("button", { name: "quick-backend-local" }));
     fireEvent.click(screen.getByRole("button", { name: "quick-backend-gemini" }));
     expect(input).toHaveValue("@gemini 로그 요약해줘");
-    expect(screen.getByRole("button", { name: "quick-backend-back" })).toHaveTextContent("B@LOCAL");
+    expect(screen.getByRole("button", { name: "quick-backend-back" })).toHaveTextContent("B@L");
 
     fireEvent.click(screen.getByRole("button", { name: "quick-backend-back" }));
     expect(input).toHaveValue("@local 로그 요약해줘");
-    expect(screen.getByRole("button", { name: "quick-backend-back" })).toHaveTextContent("B@GEMINI");
+    expect(screen.getByRole("button", { name: "quick-backend-back" })).toHaveTextContent("B@G");
   });
 
   it("툴벨트 AUTO 버튼으로 backend 강제 프리픽스를 해제하고, AUTO 상태 재클릭 시 LAST를 복원", async () => {

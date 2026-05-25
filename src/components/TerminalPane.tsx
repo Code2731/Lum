@@ -1441,9 +1441,21 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     () => applyBackendPrefixToInput(inputBuffer, backendTrail.last) !== inputBuffer,
     [backendTrail.last, inputBuffer],
   );
-  const lastBackendLabel = `L@${backendTrail.last.toUpperCase()}`;
+  const backendShortLabel = (backend: AiBackend) => {
+    switch (backend) {
+      case "local":
+        return "L";
+      case "ollama":
+        return "O";
+      case "xllm":
+        return "X";
+      case "gemini":
+        return "G";
+    }
+  };
+  const lastBackendLabel = `L@${backendShortLabel(backendTrail.last)}`;
   const prevBackendLabel = backendTrail.prev
-    ? `B@${backendTrail.prev.toUpperCase()}`
+    ? `B@${backendShortLabel(backendTrail.prev)}`
     : "B@-";
   const quickModeShellActive = /^\s*!(?!\!)/.test(inputBuffer);
   const quickModeHeavyActive = /^\s*!!\s?/.test(inputBuffer);
