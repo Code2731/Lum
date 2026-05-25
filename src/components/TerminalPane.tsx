@@ -2049,8 +2049,6 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
         : "BACKEND AUTO (LOCAL→OLLAMA→XLLM→GEMINI)",
       tone: activeBackendPrefix ? "warn" : "neutral",
     },
-    { id: "cwd", label: `CWD ${compactPath(cwd)}`, tone: "neutral" },
-    { id: "model", label: `MODEL ${compactModel(modelRef.current)}`, tone: "neutral" },
     { id: "term", label: terminalVisible ? "터미널 ON" : "터미널 OFF", tone: terminalVisible ? "success" : "warn" },
   ];
   const compactInputChips: Array<{ id: string; label: string; tone: "neutral" | "accent" | "success" | "warn" }> = [
