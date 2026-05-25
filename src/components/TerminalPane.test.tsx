@@ -259,12 +259,31 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(screen.queryByText(fullHint) || screen.queryByText(compactHint)).toBeTruthy();
   });
 
-  it("입력 툴벨트 TIP 배너는 기본 노출되고 닫으면 사라진다", () => {
+  it("입력 툴벨트 TIP 배너는 기본 비노출이다", async () => {
+    invokeMock.mockImplementation((cmd: string) => {
+      if (cmd === "load_app_config") {
+        return Promise.resolve({
+          ui_show_advanced_input_tools: true,
+          ui_show_backend_quick_tools: true,
+          ui_compact_input_toolbelt: false,
+        });
+      }
+      if (cmd === "spawn_pty") return Promise.resolve();
+      if (cmd === "write_to_pty") return Promise.resolve();
+      if (cmd === "resize_pty") return Promise.resolve();
+      if (cmd === "get_project_context") return Promise.resolve("");
+      if (cmd === "get_recent_history") return Promise.resolve([]);
+      if (cmd === "generate_ai_command") return Promise.resolve(JSON.stringify({ command: "ls -la" }));
+      return Promise.resolve();
+    });
+
     render(<TerminalPane id="tab-1" />);
-    expect(screen.queryByText(TOOLBELT_TIP_FULL) || screen.queryByText(TOOLBELT_TIP_NARROW)).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "dismiss-input-toolbelt-tip" }));
-    expect(screen.queryByText(TOOLBELT_TIP_FULL)).not.toBeInTheDocument();
-    expect(screen.queryByText(TOOLBELT_TIP_NARROW)).not.toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(screen.queryByText(TOOLBELT_TIP_FULL)).not.toBeInTheDocument();
+      expect(screen.queryByText(TOOLBELT_TIP_NARROW)).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "dismiss-input-toolbelt-tip" })).not.toBeInTheDocument();
+    });
   });
 
   it("설정 값 기반으로 툴벨트 표시가 반영된다", async () => {

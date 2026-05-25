@@ -344,9 +344,9 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
   });
   const [showInputTip, setShowInputTip] = useState(() => {
     try {
-      return localStorage.getItem(LEGACY_TOOLBELT_TIP_KEY) !== "1";
+      return localStorage.getItem(LEGACY_TOOLBELT_TIP_KEY) === "0";
     } catch {
-      return true;
+      return false;
     }
   });
   const [showAdvancedInputTools, setShowAdvancedInputTools] = useState(() => {
@@ -383,9 +383,9 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     const readLegacySettings = () => {
       const showInput = (() => {
         try {
-          return localStorage.getItem(LEGACY_TOOLBELT_TIP_KEY) !== "1";
+          return localStorage.getItem(LEGACY_TOOLBELT_TIP_KEY) === "0";
         } catch {
-          return true;
+          return false;
         }
       })();
       const showAdvanced = (() => {
