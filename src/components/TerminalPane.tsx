@@ -2226,7 +2226,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
                   }}
                   title="툴벨트 커스터마이징"
                 >
-                  CFG
+                  C
                 </button>
               </>
             )}
@@ -2992,7 +2992,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
                 cursor: "pointer",
               }}
             >
-              ADV
+              A
             </button>
             <button
               type="button"
@@ -3009,7 +3009,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
                 cursor: "pointer",
               }}
             >
-              BE
+              B
             </button>
           </div>
         )}
