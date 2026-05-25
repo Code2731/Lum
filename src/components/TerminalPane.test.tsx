@@ -560,7 +560,8 @@ describe("TerminalPane — 입력 라우팅", () => {
     const input = container.querySelector("input")!;
     fireEvent.change(input, { target: { value: "분석해줘" } });
 
-    fireEvent.click(screen.getByRole("button", { name: "quick-mention-trigger" }));
+    fireEvent.click(screen.getByRole("button", { name: "quick-input-action-palette" }));
+    fireEvent.click(screen.getByRole("button", { name: "action-palette-item-mention_attach" }));
     expect(input).toHaveValue("분석해줘 @");
 
     await waitFor(() => {
@@ -592,7 +593,8 @@ describe("TerminalPane — 입력 라우팅", () => {
     const input = container.querySelector("input")!;
     expect(input).toHaveValue("");
 
-    fireEvent.click(screen.getByRole("button", { name: "quick-mention-trigger" }));
+    fireEvent.click(screen.getByRole("button", { name: "quick-input-action-palette" }));
+    fireEvent.click(screen.getByRole("button", { name: "action-palette-item-mention_attach" }));
     expect(input).toHaveValue("@");
     await waitFor(() => expect(screen.getByText(/컨텍스트 첨부/)).toBeInTheDocument());
 
@@ -695,7 +697,8 @@ describe("TerminalPane — 입력 라우팅", () => {
     const { container } = render(<TerminalPane id="tab-1" cwd="/repo-empty" />);
     const input = container.querySelector("input")!;
 
-    fireEvent.click(screen.getByRole("button", { name: "quick-mention-trigger" }));
+    fireEvent.click(screen.getByRole("button", { name: "quick-input-action-palette" }));
+    fireEvent.click(screen.getByRole("button", { name: "action-palette-item-mention_attach" }));
     expect(input).toHaveValue("@");
     await waitFor(() => expect(screen.getByText("일치하는 항목이 없습니다.")).toBeInTheDocument());
   });
@@ -719,7 +722,8 @@ describe("TerminalPane — 입력 라우팅", () => {
     const { container } = render(<TerminalPane id="tab-1" cwd="/repo-empty" />);
     const input = container.querySelector("input")!;
 
-    fireEvent.click(screen.getByRole("button", { name: "quick-mention-trigger" }));
+    fireEvent.click(screen.getByRole("button", { name: "quick-input-action-palette" }));
+    fireEvent.click(screen.getByRole("button", { name: "action-palette-item-mention_attach" }));
     expect(input).toHaveValue("@");
     await waitFor(() => expect(screen.getByText("일치하는 항목이 없습니다.")).toBeInTheDocument());
 

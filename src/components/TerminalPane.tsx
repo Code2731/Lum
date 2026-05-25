@@ -2264,27 +2264,6 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
             {!compactInputToolbelt && (
               <button
                 type="button"
-                aria-label="quick-mention-trigger"
-                onClick={triggerMentionAttach}
-                title="파일 첨부 트리거 삽입 (@, Cmd/Ctrl+Shift+A)"
-                style={{
-                  fontSize: MICRO_FONT_SIZE,
-                  color: "rgba(121,192,255,0.9)",
-                  border: "1px solid rgba(121,192,255,0.34)",
-                  background: "rgba(121,192,255,0.12)",
-                  borderRadius: 999,
-                  padding: "1px 7px",
-                  lineHeight: 1.25,
-                  cursor: "pointer",
-                  flexShrink: 0,
-                }}
-              >
-                @ 첨부
-              </button>
-            )}
-            {!compactInputToolbelt && (
-              <button
-                type="button"
                 aria-label="quick-input-clear"
                 onClick={clearInputQuick}
                 disabled={!canClearInputQuick}
