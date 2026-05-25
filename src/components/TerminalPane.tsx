@@ -351,23 +351,23 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
   });
   const [showAdvancedInputTools, setShowAdvancedInputTools] = useState(() => {
     try {
-      return localStorage.getItem(LEGACY_TOOLBELT_ADVANCED_KEY) !== "0";
+      return localStorage.getItem(LEGACY_TOOLBELT_ADVANCED_KEY) === "1";
     } catch {
-      return true;
+      return false;
     }
   });
   const [showBackendQuickTools, setShowBackendQuickTools] = useState(() => {
     try {
-      return localStorage.getItem(LEGACY_TOOLBELT_BACKEND_KEY) !== "0";
+      return localStorage.getItem(LEGACY_TOOLBELT_BACKEND_KEY) === "1";
     } catch {
-      return true;
+      return false;
     }
   });
   const [compactInputToolbelt, setCompactInputToolbelt] = useState(() => {
     try {
-      return localStorage.getItem(TOOLBELT_COMPACT_KEY) === "1";
+      return localStorage.getItem(TOOLBELT_COMPACT_KEY) !== "0";
     } catch {
-      return false;
+      return true;
     }
   });
   useEffect(() => {
@@ -390,16 +390,16 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
       })();
       const showAdvanced = (() => {
         try {
-          return localStorage.getItem(LEGACY_TOOLBELT_ADVANCED_KEY) !== "0";
+          return localStorage.getItem(LEGACY_TOOLBELT_ADVANCED_KEY) === "1";
         } catch {
-          return true;
+          return false;
         }
       })();
       const showBackend = (() => {
         try {
-          return localStorage.getItem(LEGACY_TOOLBELT_BACKEND_KEY) !== "0";
+          return localStorage.getItem(LEGACY_TOOLBELT_BACKEND_KEY) === "1";
         } catch {
-          return true;
+          return false;
         }
       })();
       return { showInput, showAdvanced, showBackend };
