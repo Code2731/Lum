@@ -2378,7 +2378,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
                 flexShrink: 0,
               }}
             >
-              CMDK
+              K
             </button>
             {!compactInputToolbelt && (
               <button

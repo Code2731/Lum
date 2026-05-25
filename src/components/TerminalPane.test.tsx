@@ -354,7 +354,7 @@ describe("TerminalPane — 입력 라우팅", () => {
       expect(screen.queryByText(/CWD /)).not.toBeInTheDocument();
       expect(screen.queryByText("AUTO")).not.toBeInTheDocument();
       expect(screen.queryByText("TERM OFF")).not.toBeInTheDocument();
-      expect(screen.getByRole("button", { name: "quick-input-action-palette" })).toHaveTextContent("CMDK");
+      expect(screen.getByRole("button", { name: "quick-input-action-palette" })).toHaveTextContent("K");
     });
 
     fireEvent.click(screen.getByRole("button", { name: "quick-input-action-palette" }));
