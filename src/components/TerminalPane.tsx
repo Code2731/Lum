@@ -2992,7 +2992,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
                 cursor: "pointer",
               }}
             >
-              EDIT
+              ADV
             </button>
             <button
               type="button"
@@ -3009,7 +3009,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
                 cursor: "pointer",
               }}
             >
-              BACKEND
+              BE
             </button>
           </div>
         )}
