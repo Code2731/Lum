@@ -2434,7 +2434,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
                 flexShrink: 0,
               }}
             >
-              SET RECALL
+              SR
             </button>
             <button
               type="button"
@@ -2520,7 +2520,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
                 flexShrink: 0,
               }}
             >
-              FORGET RECALL
+              FR
             </button>
             <button
               type="button"
