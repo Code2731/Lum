@@ -2834,7 +2834,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
                 flexShrink: 0,
               }}
             >
-              AUTO
+              A
             </button>
             <button
               type="button"
