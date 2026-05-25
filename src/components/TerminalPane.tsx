@@ -2728,44 +2728,6 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               <>
             <button
               type="button"
-              aria-label="quick-backend-prev"
-              onClick={() => cycleBackendQuickPrefix(-1)}
-              title="이전 backend 순환 (Cmd/Ctrl+Shift+` 또는 Cmd/Ctrl+, 또는 Cmd/Ctrl+Shift+←)"
-              style={{
-                fontSize: MICRO_FONT_SIZE,
-                color: "rgba(255,255,255,0.86)",
-                border: "1px solid rgba(255,255,255,0.24)",
-                background: "rgba(255,255,255,0.08)",
-                borderRadius: 999,
-                padding: "1px 6px",
-                lineHeight: 1.25,
-                cursor: "pointer",
-                flexShrink: 0,
-              }}
-            >
-              ◀
-            </button>
-            <button
-              type="button"
-              aria-label="quick-backend-next"
-              onClick={() => cycleBackendQuickPrefix(1)}
-              title="다음 backend 순환 (Cmd/Ctrl+` 또는 Cmd/Ctrl+. 또는 Cmd/Ctrl+Shift+→)"
-              style={{
-                fontSize: MICRO_FONT_SIZE,
-                color: "rgba(255,255,255,0.86)",
-                border: "1px solid rgba(255,255,255,0.24)",
-                background: "rgba(255,255,255,0.08)",
-                borderRadius: 999,
-                padding: "1px 6px",
-                lineHeight: 1.25,
-                cursor: "pointer",
-                flexShrink: 0,
-              }}
-            >
-              ▶
-            </button>
-            <button
-              type="button"
               aria-label="quick-backend-auto"
               aria-pressed={activeBackendPrefix === null}
               onClick={clearBackendQuickPrefix}

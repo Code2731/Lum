@@ -2143,25 +2143,10 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(shellButton).toHaveAttribute("aria-pressed", "false");
   });
 
-  it("툴벨트 이전/다음 버튼으로 backend를 순환한다", () => {
-    const { container } = render(<TerminalPane id="tab-1" />);
-    const input = container.querySelector("input")!;
-    fireEvent.change(input, { target: { value: "로그 요약해줘" } });
-
-    fireEvent.click(screen.getByRole("button", { name: "quick-backend-next" }));
-    expect(input).toHaveValue("@local 로그 요약해줘");
-
-    fireEvent.click(screen.getByRole("button", { name: "quick-backend-next" }));
-    expect(input).toHaveValue("@ollama 로그 요약해줘");
-
-    fireEvent.click(screen.getByRole("button", { name: "quick-backend-prev" }));
-    expect(input).toHaveValue("@local 로그 요약해줘");
-
-    fireEvent.click(screen.getByRole("button", { name: "quick-backend-prev" }));
-    expect(input).toHaveValue("로그 요약해줘");
-
-    fireEvent.click(screen.getByRole("button", { name: "quick-backend-prev" }));
-    expect(input).toHaveValue("@gemini 로그 요약해줘");
+  it("툴벨트에서 backend 순환 화살표 버튼은 노출하지 않는다", () => {
+    render(<TerminalPane id="tab-1" />);
+    expect(screen.queryByRole("button", { name: "quick-backend-prev" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "quick-backend-next" })).not.toBeInTheDocument();
   });
 
   it("툴벨트 quick backend 버튼으로 입력 프리픽스를 즉시 전환", async () => {
