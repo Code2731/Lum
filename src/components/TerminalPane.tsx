@@ -2712,26 +2712,6 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               <>
             <button
               type="button"
-              aria-label="quick-backend-auto"
-              aria-pressed={activeBackendPrefix === null}
-              onClick={clearBackendQuickPrefix}
-              title="백엔드 강제 해제 (Cmd/Ctrl+0 or Cmd/Ctrl+Shift+O) · AUTO 상태에서 다시 누르면 LAST 복원"
-              style={{
-                fontSize: MICRO_FONT_SIZE,
-                color: activeBackendPrefix === null ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.82)",
-                border: activeBackendPrefix === null ? "1px solid rgba(255,255,255,0.45)" : "1px solid rgba(255,255,255,0.25)",
-                background: activeBackendPrefix === null ? "rgba(255,255,255,0.16)" : "rgba(255,255,255,0.08)",
-                borderRadius: 999,
-                padding: "1px 7px",
-                lineHeight: 1.25,
-                cursor: "pointer",
-                flexShrink: 0,
-              }}
-            >
-              A
-            </button>
-            <button
-              type="button"
               aria-label="quick-backend-local"
               aria-pressed={activeBackendPrefix === "local"}
               onClick={() => applyBackendQuickPrefix("local")}

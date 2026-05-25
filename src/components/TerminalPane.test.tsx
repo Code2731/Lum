@@ -1920,7 +1920,7 @@ describe("TerminalPane — 입력 라우팅", () => {
     fireEvent.keyDown(input, { key: "B", ctrlKey: true, shiftKey: true });
     expect(input).toHaveValue("@local 로그 요약해줘");
 
-    fireEvent.click(screen.getByRole("button", { name: "quick-backend-auto" }));
+    fireEvent.keyDown(input, { key: "O", ctrlKey: true, shiftKey: true });
     expect(input).toHaveValue("로그 요약해줘");
     fireEvent.keyDown(input, { key: "N", ctrlKey: true, shiftKey: true });
     expect(input).toHaveValue("@local 로그 요약해줘");
@@ -2158,7 +2158,6 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(input).toHaveValue("@local 로그 요약해줘");
     expect(screen.getByText("AI @LOCAL")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "quick-backend-local" })).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByRole("button", { name: "quick-backend-auto" })).toHaveAttribute("aria-pressed", "false");
 
     fireEvent.click(screen.getByRole("button", { name: "quick-backend-xllm" }));
     expect(input).toHaveValue("@xllm 로그 요약해줘");
@@ -2169,7 +2168,6 @@ describe("TerminalPane — 입력 라우팅", () => {
     fireEvent.click(screen.getByRole("button", { name: "quick-backend-xllm" }));
     expect(input).toHaveValue("로그 요약해줘");
     expect(screen.getByText("AI AUTO")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "quick-backend-auto" })).toHaveAttribute("aria-pressed", "true");
   });
 
   it("툴벨트에서 BACK/LAST backend 버튼은 노출하지 않는다", () => {
@@ -2178,19 +2176,9 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(screen.queryByRole("button", { name: "quick-backend-last" })).not.toBeInTheDocument();
   });
 
-  it("툴벨트 AUTO 버튼으로 backend 강제 프리픽스를 해제하고, AUTO 상태 재클릭 시 LAST를 복원", async () => {
-    const { container } = render(<TerminalPane id="tab-1" />);
-    const input = container.querySelector("input")!;
-    fireEvent.change(input, { target: { value: "@gemini 로그 요약해줘" } });
-    fireEvent.click(screen.getByRole("button", { name: "quick-backend-auto" }));
-    expect(input).toHaveValue("로그 요약해줘");
-    expect(screen.getByText("AI AUTO")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "quick-backend-auto" })).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByRole("button", { name: "quick-backend-gemini" })).toHaveAttribute("aria-pressed", "false");
-
-    fireEvent.click(screen.getByRole("button", { name: "quick-backend-auto" }));
-    expect(input).toHaveValue("@gemini 로그 요약해줘");
-    expect(screen.getByText("AI @GEMINI")).toBeInTheDocument();
+  it("툴벨트에서 AUTO backend 버튼은 노출하지 않는다", () => {
+    render(<TerminalPane id="tab-1" />);
+    expect(screen.queryByRole("button", { name: "quick-backend-auto" })).not.toBeInTheDocument();
   });
 
   it("선행 공백 + @backend 입력도 AUTO 해제 시 공백을 보존한다", () => {
@@ -2198,7 +2186,7 @@ describe("TerminalPane — 입력 라우팅", () => {
     const input = container.querySelector("input")!;
     fireEvent.change(input, { target: { value: "   @xllm 로그 요약해줘" } });
 
-    fireEvent.click(screen.getByRole("button", { name: "quick-backend-auto" }));
+    fireEvent.click(screen.getByRole("button", { name: "clear-backend-badge" }));
     expect(input).toHaveValue("   로그 요약해줘");
   });
 
