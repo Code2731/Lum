@@ -2247,7 +2247,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               }}
               title="간단/전체 툴벨트 토글"
             >
-              {compactInputToolbelt ? "FULL" : "MIN"}
+              {compactInputToolbelt ? "F" : "M"}
             </button>
             {!compactInputToolbelt && (
               <button
