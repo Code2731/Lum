@@ -1441,22 +1441,6 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     () => applyBackendPrefixToInput(inputBuffer, backendTrail.last) !== inputBuffer,
     [backendTrail.last, inputBuffer],
   );
-  const backendShortLabel = (backend: AiBackend) => {
-    switch (backend) {
-      case "local":
-        return "L";
-      case "ollama":
-        return "O";
-      case "xllm":
-        return "X";
-      case "gemini":
-        return "G";
-    }
-  };
-  const lastBackendLabel = `L@${backendShortLabel(backendTrail.last)}`;
-  const prevBackendLabel = backendTrail.prev
-    ? `B@${backendShortLabel(backendTrail.prev)}`
-    : "B@-";
   const quickModeShellActive = /^\s*!(?!\!)/.test(inputBuffer);
   const quickModeHeavyActive = /^\s*!!\s?/.test(inputBuffer);
   const quickModeAgentActive = /^\s*>>\s?/.test(inputBuffer);
@@ -2745,50 +2729,6 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               }}
             >
               A
-            </button>
-            <button
-              type="button"
-              aria-label="quick-backend-back"
-              onClick={restorePrevBackendQuickPrefix}
-              disabled={!canRestorePrevBackendQuick}
-              title={
-                canRestorePrevBackendQuick
-                  ? "직전 backend로 복귀 (Cmd/Ctrl+Shift+B)"
-                  : "직전 backend 기록이 없거나 현재 backend와 동일해 비활성화"
-              }
-              style={{
-                fontSize: MICRO_FONT_SIZE,
-                color: canRestorePrevBackendQuick ? "rgba(255,255,255,0.92)" : "rgba(255,255,255,0.42)",
-                border: canRestorePrevBackendQuick ? "1px solid rgba(255,255,255,0.34)" : "1px solid rgba(255,255,255,0.18)",
-                background: canRestorePrevBackendQuick ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.06)",
-                borderRadius: 999,
-                padding: "1px 7px",
-                lineHeight: 1.25,
-                cursor: canRestorePrevBackendQuick ? "pointer" : "not-allowed",
-                flexShrink: 0,
-              }}
-            >
-              {prevBackendLabel}
-            </button>
-            <button
-              type="button"
-              aria-label="quick-backend-last"
-              onClick={restoreLastBackendQuickPrefix}
-              disabled={!canRestoreLastBackendQuick}
-              title={canRestoreLastBackendQuick ? "마지막으로 사용한 backend 복원 (Cmd/Ctrl+Shift+N)" : "이미 마지막 backend 상태라 비활성화"}
-              style={{
-                fontSize: MICRO_FONT_SIZE,
-                color: canRestoreLastBackendQuick ? "rgba(210,168,255,0.95)" : "rgba(255,255,255,0.42)",
-                border: canRestoreLastBackendQuick ? "1px solid rgba(188,140,255,0.4)" : "1px solid rgba(255,255,255,0.18)",
-                background: canRestoreLastBackendQuick ? "rgba(188,140,255,0.14)" : "rgba(255,255,255,0.06)",
-                borderRadius: 999,
-                padding: "1px 7px",
-                lineHeight: 1.25,
-                cursor: canRestoreLastBackendQuick ? "pointer" : "not-allowed",
-                flexShrink: 0,
-              }}
-            >
-              {lastBackendLabel}
             </button>
             <button
               type="button"

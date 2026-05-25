@@ -2172,43 +2172,10 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(screen.getByRole("button", { name: "quick-backend-auto" })).toHaveAttribute("aria-pressed", "true");
   });
 
-  it("툴벨트 LAST 버튼으로 마지막 backend를 복원한다", () => {
-    const { container } = render(<TerminalPane id="tab-1" />);
-    const input = container.querySelector("input")!;
-    fireEvent.change(input, { target: { value: "로그 요약해줘" } });
-
-    expect(screen.getByRole("button", { name: "quick-backend-last" })).toHaveTextContent("L@L");
-    expect(screen.getByRole("button", { name: "quick-backend-last" })).not.toHaveAttribute("disabled");
-
-    fireEvent.click(screen.getByRole("button", { name: "quick-backend-xllm" }));
-    expect(input).toHaveValue("@xllm 로그 요약해줘");
-    expect(screen.getByRole("button", { name: "quick-backend-last" })).toHaveTextContent("L@X");
-    expect(screen.getByRole("button", { name: "quick-backend-last" })).toHaveAttribute("disabled");
-
-    fireEvent.click(screen.getByRole("button", { name: "quick-backend-auto" }));
-    expect(input).toHaveValue("로그 요약해줘");
-    expect(screen.getByRole("button", { name: "quick-backend-last" })).not.toHaveAttribute("disabled");
-
-    fireEvent.click(screen.getByRole("button", { name: "quick-backend-last" }));
-    expect(input).toHaveValue("@xllm 로그 요약해줘");
-  });
-
-  it("툴벨트 BACK 버튼으로 직전 backend를 왕복 전환한다", () => {
-    const { container } = render(<TerminalPane id="tab-1" />);
-    const input = container.querySelector("input")!;
-    fireEvent.change(input, { target: { value: "로그 요약해줘" } });
-
-    expect(screen.getByRole("button", { name: "quick-backend-back" })).toHaveAttribute("disabled");
-    expect(screen.getByRole("button", { name: "quick-backend-back" })).toHaveTextContent("B@-");
-
-    fireEvent.click(screen.getByRole("button", { name: "quick-backend-local" }));
-    fireEvent.click(screen.getByRole("button", { name: "quick-backend-gemini" }));
-    expect(input).toHaveValue("@gemini 로그 요약해줘");
-    expect(screen.getByRole("button", { name: "quick-backend-back" })).toHaveTextContent("B@L");
-
-    fireEvent.click(screen.getByRole("button", { name: "quick-backend-back" }));
-    expect(input).toHaveValue("@local 로그 요약해줘");
-    expect(screen.getByRole("button", { name: "quick-backend-back" })).toHaveTextContent("B@G");
+  it("툴벨트에서 BACK/LAST backend 버튼은 노출하지 않는다", () => {
+    render(<TerminalPane id="tab-1" />);
+    expect(screen.queryByRole("button", { name: "quick-backend-back" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "quick-backend-last" })).not.toBeInTheDocument();
   });
 
   it("툴벨트 AUTO 버튼으로 backend 강제 프리픽스를 해제하고, AUTO 상태 재클릭 시 LAST를 복원", async () => {
