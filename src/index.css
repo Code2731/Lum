@@ -117,13 +117,6 @@ body {
   transition: background 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
 }
 
-.lum-toolbelt-eyebrow {
-  font-size: var(--lum-ui-text-micro);
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
 .lum-toolbelt-section-tag {
   font-size: var(--lum-ui-text-micro);
   font-weight: 600;
@@ -159,10 +152,6 @@ body {
 
 .lum-input-dock--narrow {
   gap: 6px;
-}
-
-.lum-input-dock--focus .lum-toolbelt-eyebrow {
-  opacity: 0.7;
 }
 
 .lum-input-dock--focus {
