@@ -2207,7 +2207,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               scrollbarWidth: "none",
             }}
           >
-            {!compactInputToolbelt && (
+            {!compactInputToolbelt && showAdvancedInputTools && (
               <>
                 <button
                   type="button"
@@ -2774,7 +2774,9 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
             >
               @
             </button>
-            {showBackendQuickTools && (
+              </>
+            )}
+            {!compactInputToolbelt && showBackendQuickTools && (
               <>
             <button
               type="button"
@@ -2958,8 +2960,6 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
             >
               @gemini
             </button>
-              </>
-            )}
               </>
             )}
           </div>

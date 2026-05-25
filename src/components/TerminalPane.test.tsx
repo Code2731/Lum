@@ -310,6 +310,7 @@ describe("TerminalPane — 입력 라우팅", () => {
       expect(screen.queryByText(TOOLBELT_TIP_FULL)).not.toBeInTheDocument();
       expect(screen.queryByText(TOOLBELT_TIP_NARROW)).not.toBeInTheDocument();
       expect(screen.queryByRole("button", { name: "quick-input-merge-recall" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "quick-mode-shell" })).not.toBeInTheDocument();
       expect(screen.queryByRole("button", { name: "quick-backend-local" })).not.toBeInTheDocument();
     });
   });
