@@ -2652,7 +2652,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
             </button>
               </>
             )}
-            {!compactInputToolbelt && (
+            {!compactInputToolbelt && showAdvancedInputTools && (
               <>
             <button
               type="button"
