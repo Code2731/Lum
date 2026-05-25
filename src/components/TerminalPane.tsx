@@ -1441,10 +1441,10 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     () => applyBackendPrefixToInput(inputBuffer, backendTrail.last) !== inputBuffer,
     [backendTrail.last, inputBuffer],
   );
-  const lastBackendLabel = `LAST @${backendTrail.last.toUpperCase()}`;
+  const lastBackendLabel = `L@${backendTrail.last.toUpperCase()}`;
   const prevBackendLabel = backendTrail.prev
-    ? `BACK @${backendTrail.prev.toUpperCase()}`
-    : "BACK @-";
+    ? `B@${backendTrail.prev.toUpperCase()}`
+    : "B@-";
   const quickModeShellActive = /^\s*!(?!\!)/.test(inputBuffer);
   const quickModeHeavyActive = /^\s*!!\s?/.test(inputBuffer);
   const quickModeAgentActive = /^\s*>>\s?/.test(inputBuffer);
