@@ -863,12 +863,11 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(screen.getByRole("button", { name: "quick-input-undo" })).toHaveTextContent("UNDO 1");
   });
 
-  it("툴벨트 STOP 버튼으로 AI 스트림 취소와 인터럽트(SIGINT)를 전송한다", async () => {
+  it("Action Palette 인터럽트로 AI 스트림 취소와 인터럽트(SIGINT)를 전송한다", async () => {
     const onCancelAI = vi.fn();
     render(<TerminalPane id="tab-1" onCancelAI={onCancelAI} />);
-    const stopButton = screen.getByRole("button", { name: "quick-input-stop" });
-    expect(stopButton).toHaveAttribute("title", "현재 실행 인터럽트 (Cmd/Ctrl+C, Cmd/Ctrl+Shift+C)");
-    fireEvent.click(stopButton);
+    fireEvent.click(screen.getByRole("button", { name: "quick-input-action-palette" }));
+    fireEvent.click(screen.getByRole("button", { name: "action-palette-item-interrupt" }));
     expect(onCancelAI).toHaveBeenCalled();
     await waitFor(() => {
       expect(invokeMock).toHaveBeenCalledWith("write_to_pty", {
