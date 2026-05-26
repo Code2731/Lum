@@ -1405,7 +1405,6 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     mentionLoading;
   const canClearInputQuick = inputBuffer !== "" || hasClearableOverlay;
   const canResetAllQuick = inputBuffer !== "" || clearedInputStack.length > 0 || lastSubmittedInput !== "";
-  const undoButtonLabel = clearedInputStack.length > 0 ? `UNDO ${clearedInputStack.length}` : "UNDO";
   const getRecallCandidate = useCallback((raw: string): string => {
     const normalized = raw.trim();
     if (!hasExecutableRecallRoute(raw)) return "";
@@ -2189,28 +2188,6 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
                 }}
               >
                 CLR
-              </button>
-            )}
-            {!compactInputToolbelt && (
-              <button
-                type="button"
-                aria-label="quick-input-undo"
-                onClick={restoreInputQuick}
-                disabled={clearedInputStack.length === 0}
-                title={clearedInputStack.length > 0 ? "직전 CLEAR 입력 복원 (Cmd/Ctrl+Shift+Z)" : "복원할 입력이 없어 비활성화"}
-                style={{
-                  fontSize: MICRO_FONT_SIZE,
-                  color: clearedInputStack.length > 0 ? "rgba(220,247,225,0.96)" : "rgba(255,255,255,0.42)",
-                  border: clearedInputStack.length > 0 ? "1px solid rgba(63,185,80,0.6)" : "1px solid rgba(255,255,255,0.18)",
-                  background: clearedInputStack.length > 0 ? "rgba(63,185,80,0.18)" : "rgba(255,255,255,0.06)",
-                  borderRadius: 999,
-                  padding: "1px 7px",
-                  lineHeight: 1.25,
-                  cursor: clearedInputStack.length > 0 ? "pointer" : "not-allowed",
-                  flexShrink: 0,
-                }}
-              >
-                {undoButtonLabel}
               </button>
             )}
             <button

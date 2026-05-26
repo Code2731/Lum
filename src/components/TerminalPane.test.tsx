@@ -104,6 +104,11 @@ function openInputHistoryPanel() {
   fireEvent.click(screen.getByRole("button", { name: "action-palette-item-history_open" }));
 }
 
+function ensureFullToolbelt() {
+  if (screen.queryByRole("button", { name: "quick-input-clear" })) return;
+  fireEvent.click(screen.getByRole("button", { name: "toolbelt-toggle-compact" }));
+}
+
 function expectHistoryActionDisabled() {
   openActionPalette();
   expect(screen.getByRole("button", { name: "action-palette-item-history_open" })).toHaveAttribute("disabled");
@@ -122,6 +127,16 @@ function expectRecallActionDisabled() {
 function expectRecallActionEnabled() {
   openActionPalette();
   expect(screen.getByRole("button", { name: "action-palette-item-recall" })).not.toHaveAttribute("disabled");
+}
+
+function expectUndoActionDisabled() {
+  openActionPalette();
+  expect(screen.getByRole("button", { name: "action-palette-item-undo" })).toHaveAttribute("disabled");
+}
+
+function expectUndoActionEnabled() {
+  openActionPalette();
+  expect(screen.getByRole("button", { name: "action-palette-item-undo" })).not.toHaveAttribute("disabled");
 }
 
 const TOOLBELT_TIP_FULL =
@@ -785,33 +800,32 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(input).toHaveValue("분석해줘 @");
   });
 
-  it("툴벨트 CLEAR/UNDO 버튼으로 입력 초기화 후 즉시 복원할 수 있다", () => {
+  it("툴벨트 CLEAR 후 UNDO 단축키로 입력을 즉시 복원할 수 있다", () => {
     const { container } = render(<TerminalPane id="tab-1" />);
     const input = container.querySelector("input")!;
+    ensureFullToolbelt();
     expect(screen.getByRole("button", { name: "quick-input-clear" })).toHaveAttribute("disabled");
 
     fireEvent.change(input, { target: { value: "@xllm # 로그 요약해줘" } });
     expect(input).toHaveValue("@xllm # 로그 요약해줘");
     expect(screen.getByRole("button", { name: "quick-input-clear" })).not.toHaveAttribute("disabled");
-    expect(screen.getByRole("button", { name: "quick-input-undo" })).toHaveTextContent("UNDO");
-    expect(screen.getByRole("button", { name: "quick-input-undo" })).toHaveAttribute("disabled");
+    expectUndoActionDisabled();
 
     fireEvent.click(screen.getByRole("button", { name: "quick-input-clear" }));
     expect(input).toHaveValue("");
     expect(screen.getByRole("button", { name: "quick-input-clear" })).toHaveAttribute("disabled");
     expect(screen.getByText("AUTO 라우팅")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "quick-input-undo" })).toHaveTextContent("UNDO 1");
-    expect(screen.getByRole("button", { name: "quick-input-undo" })).not.toHaveAttribute("disabled");
+    expectUndoActionEnabled();
 
-    fireEvent.click(screen.getByRole("button", { name: "quick-input-undo" }));
+    fireEvent.keyDown(input, { key: "Z", ctrlKey: true, shiftKey: true });
     expect(input).toHaveValue("@xllm # 로그 요약해줘");
-    expect(screen.getByRole("button", { name: "quick-input-undo" })).toHaveTextContent("UNDO");
-    expect(screen.getByRole("button", { name: "quick-input-undo" })).toHaveAttribute("disabled");
+    expectUndoActionDisabled();
   });
 
   it("Action Palette RESET으로 입력/UNDO/RECALL 상태를 한 번에 초기화한다", async () => {
     const { container } = render(<TerminalPane id="tab-1" />);
     const input = container.querySelector("input")!;
+    ensureFullToolbelt();
     expect(screen.queryByRole("button", { name: "quick-input-reset-all" })).not.toBeInTheDocument();
 
     submitInput(container, "ls -la");
@@ -823,72 +837,73 @@ describe("TerminalPane — 입력 라우팅", () => {
     });
     fireEvent.change(input, { target: { value: "temp" } });
     fireEvent.click(screen.getByRole("button", { name: "quick-input-clear" }));
-    expect(screen.getByRole("button", { name: "quick-input-undo" })).not.toHaveAttribute("disabled");
+    expectUndoActionEnabled();
     expectRecallActionEnabled();
 
     fireEvent.click(screen.getByRole("button", { name: "quick-input-action-palette" }));
     fireEvent.click(screen.getByRole("button", { name: "action-palette-item-reset" }));
     expect(input).toHaveValue("");
-    expect(screen.getByRole("button", { name: "quick-input-undo" })).toHaveTextContent("UNDO");
-    expect(screen.getByRole("button", { name: "quick-input-undo" })).toHaveAttribute("disabled");
+    expectUndoActionDisabled();
     expectRecallActionDisabled();
     openActionPalette();
     expect(screen.getByRole("button", { name: "action-palette-item-rerun" })).toHaveAttribute("disabled");
     expect(screen.queryByRole("button", { name: "quick-input-reset-all" })).not.toBeInTheDocument();
   });
 
-  it("툴벨트 UNDO는 다중 CLEAR 이력을 LIFO 순서로 복원한다", () => {
+  it("UNDO 단축키는 다중 CLEAR 이력을 LIFO 순서로 복원한다", () => {
     const { container } = render(<TerminalPane id="tab-1" />);
     const input = container.querySelector("input")!;
+    ensureFullToolbelt();
 
     fireEvent.change(input, { target: { value: "first" } });
     fireEvent.click(screen.getByRole("button", { name: "quick-input-clear" }));
     fireEvent.change(input, { target: { value: "second" } });
     fireEvent.click(screen.getByRole("button", { name: "quick-input-clear" }));
-    expect(screen.getByRole("button", { name: "quick-input-undo" })).toHaveTextContent("UNDO 2");
+    expectUndoActionEnabled();
 
-    fireEvent.click(screen.getByRole("button", { name: "quick-input-undo" }));
+    fireEvent.keyDown(input, { key: "Z", ctrlKey: true, shiftKey: true });
     expect(input).toHaveValue("second");
-    expect(screen.getByRole("button", { name: "quick-input-undo" })).toHaveTextContent("UNDO 1");
 
     fireEvent.click(screen.getByRole("button", { name: "quick-input-clear" }));
-    fireEvent.click(screen.getByRole("button", { name: "quick-input-undo" }));
+    fireEvent.keyDown(input, { key: "Z", ctrlKey: true, shiftKey: true });
     expect(input).toHaveValue("second");
-    expect(screen.getByRole("button", { name: "quick-input-undo" })).toHaveTextContent("UNDO 1");
 
-    fireEvent.click(screen.getByRole("button", { name: "quick-input-undo" }));
+    fireEvent.keyDown(input, { key: "Z", ctrlKey: true, shiftKey: true });
     expect(input).toHaveValue("first");
-    expect(screen.getByRole("button", { name: "quick-input-undo" })).toHaveAttribute("disabled");
+    expectUndoActionDisabled();
   });
 
   it("입력 단축키 FORGET으로 CLEAR 복원 이력을 비운다", () => {
     const { container } = render(<TerminalPane id="tab-1" />);
     const input = container.querySelector("input")!;
     fireEvent.click(screen.getByRole("button", { name: "toolbelt-toggle-compact" }));
-    expect(screen.getByRole("button", { name: "quick-input-undo" })).toHaveAttribute("disabled");
+    expectUndoActionDisabled();
 
     fireEvent.change(input, { target: { value: "alpha" } });
     fireEvent.click(screen.getByRole("button", { name: "quick-input-clear" }));
     fireEvent.change(input, { target: { value: "beta" } });
     fireEvent.click(screen.getByRole("button", { name: "quick-input-clear" }));
-    expect(screen.getByRole("button", { name: "quick-input-undo" })).toHaveTextContent("UNDO 2");
+    expectUndoActionEnabled();
 
     fireEvent.keyDown(input, { key: "D", ctrlKey: true, shiftKey: true });
-    expect(screen.getByRole("button", { name: "quick-input-undo" })).toHaveTextContent("UNDO");
-    expect(screen.getByRole("button", { name: "quick-input-undo" })).toHaveAttribute("disabled");
+    expectUndoActionDisabled();
   });
 
   it("동일 입력을 연속 CLEAR해도 UNDO 스택은 중복 저장하지 않는다", () => {
     const { container } = render(<TerminalPane id="tab-1" />);
     const input = container.querySelector("input")!;
+    ensureFullToolbelt();
 
     fireEvent.change(input, { target: { value: "same" } });
     fireEvent.click(screen.getByRole("button", { name: "quick-input-clear" }));
-    expect(screen.getByRole("button", { name: "quick-input-undo" })).toHaveTextContent("UNDO 1");
+    expectUndoActionEnabled();
 
     fireEvent.change(input, { target: { value: "same" } });
     fireEvent.click(screen.getByRole("button", { name: "quick-input-clear" }));
-    expect(screen.getByRole("button", { name: "quick-input-undo" })).toHaveTextContent("UNDO 1");
+    expectUndoActionEnabled();
+    fireEvent.keyDown(input, { key: "Z", ctrlKey: true, shiftKey: true });
+    expect(input).toHaveValue("same");
+    expectUndoActionDisabled();
   });
 
   it("Action Palette 인터럽트로 AI 스트림 취소와 인터럽트(SIGINT)를 전송한다", async () => {
@@ -1465,9 +1480,9 @@ describe("TerminalPane — 입력 라우팅", () => {
     fireEvent.change(input, { target: { value: "pwd" } });
     fireEvent.keyDown(input, { key: "R", ctrlKey: true, shiftKey: true });
     expect(input).toHaveValue("ls -la");
-    expect(screen.getByRole("button", { name: "quick-input-undo" })).toHaveTextContent("UNDO 1");
+    expectUndoActionEnabled();
 
-    fireEvent.click(screen.getByRole("button", { name: "quick-input-undo" }));
+    fireEvent.keyDown(input, { key: "Z", ctrlKey: true, shiftKey: true });
     expect(input).toHaveValue("pwd");
   });
 
@@ -1849,7 +1864,7 @@ describe("TerminalPane — 입력 라우팅", () => {
     fireEvent.change(input, { target: { value: "pwd" } });
     fireEvent.keyDown(input, { key: "K", ctrlKey: true, shiftKey: true });
     expect(input).toHaveValue("");
-    expect(screen.getByRole("button", { name: "quick-input-undo" })).toHaveTextContent("UNDO 1");
+    expectUndoActionEnabled();
 
     fireEvent.keyDown(input, { key: "Z", ctrlKey: true, shiftKey: true });
     expect(input).toHaveValue("pwd");
@@ -1905,14 +1920,14 @@ describe("TerminalPane — 입력 라우팅", () => {
   it("입력 단축키 Cmd/Ctrl+Shift+X/D로 RESET/FORGET(UNDO)을 실행한다", () => {
     const { container } = render(<TerminalPane id="tab-1" />);
     const input = container.querySelector("input")!;
-    fireEvent.click(screen.getByRole("button", { name: "toolbelt-toggle-compact" }));
+    ensureFullToolbelt();
 
     fireEvent.change(input, { target: { value: "temp" } });
     fireEvent.click(screen.getByRole("button", { name: "quick-input-clear" }));
-    expect(screen.getByRole("button", { name: "quick-input-undo" })).toHaveTextContent("UNDO 1");
+    expectUndoActionEnabled();
 
     fireEvent.keyDown(input, { key: "D", ctrlKey: true, shiftKey: true });
-    expect(screen.getByRole("button", { name: "quick-input-undo" })).toHaveTextContent("UNDO");
+    expectUndoActionDisabled();
     const consumedNoopD = fireEvent.keyDown(input, { key: "D", ctrlKey: true, shiftKey: true });
     expect(consumedNoopD).toBe(false);
 
