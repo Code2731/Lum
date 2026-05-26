@@ -13,7 +13,9 @@ const XLLM_TOKEN_EVENT: &str = "xllm_token";
 const SSE_MAX_LINE_BUF: usize = 64 * 1024;
 const STREAM_POLL_TIMEOUT_MS: u64 = 250;
 const CONNECT_CANCEL_POLL_MS: u64 = 60;
+#[cfg(feature = "embedded-ai")]
 const EMBEDDED_READY_TIMEOUT_MS: u64 = 6_000;
+#[cfg(feature = "embedded-ai")]
 const EMBEDDED_READY_POLL_MS: u64 = 120;
 
 // Phase 115 — Privacy Ledger 이벤트 이름. 프론트 usePrivacyLedger 훅이 구독.
