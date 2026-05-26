@@ -2710,46 +2710,26 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
             )}
             {!compactInputToolbelt && showBackendQuickTools && (
               <>
-            <button
-              type="button"
-              aria-label="quick-backend-local"
-              aria-pressed={activeBackendPrefix === "local"}
-              onClick={() => applyBackendQuickPrefix("local")}
-              title="로컬 백엔드로 전환/해제 토글 (Cmd/Ctrl+1)"
-              style={{
-                fontSize: MICRO_FONT_SIZE,
-                color: "rgba(121,192,255,0.95)",
-                border: activeBackendPrefix === "local" ? "1px solid rgba(88,166,255,0.75)" : "1px solid rgba(88,166,255,0.35)",
-                background: activeBackendPrefix === "local" ? "rgba(88,166,255,0.24)" : "rgba(88,166,255,0.12)",
-                borderRadius: 999,
-                padding: "1px 7px",
-                lineHeight: 1.25,
-                cursor: "pointer",
-                flexShrink: 0,
-              }}
-            >
-              @l
-            </button>
-            <button
-              type="button"
-              aria-label="quick-backend-xllm"
-              aria-pressed={activeBackendPrefix === "xllm"}
-              onClick={() => applyBackendQuickPrefix("xllm")}
-              title="xLLM 백엔드로 전환/해제 토글 (Cmd/Ctrl+3)"
-              style={{
-                fontSize: MICRO_FONT_SIZE,
-                color: "rgba(121,192,255,0.95)",
-                border: activeBackendPrefix === "xllm" ? "1px solid rgba(121,192,255,0.72)" : "1px solid rgba(121,192,255,0.35)",
-                background: activeBackendPrefix === "xllm" ? "rgba(121,192,255,0.24)" : "rgba(121,192,255,0.12)",
-                borderRadius: 999,
-                padding: "1px 7px",
-                lineHeight: 1.25,
-                cursor: "pointer",
-                flexShrink: 0,
-              }}
-            >
-              @x
-            </button>
+                <button
+                  type="button"
+                  aria-label="quick-backend-local"
+                  aria-pressed={activeBackendPrefix === "local"}
+                  onClick={() => applyBackendQuickPrefix("local")}
+                  title="로컬 백엔드로 전환/해제 토글 (Cmd/Ctrl+1)"
+                  style={{
+                    fontSize: MICRO_FONT_SIZE,
+                    color: "rgba(121,192,255,0.95)",
+                    border: activeBackendPrefix === "local" ? "1px solid rgba(88,166,255,0.75)" : "1px solid rgba(88,166,255,0.35)",
+                    background: activeBackendPrefix === "local" ? "rgba(88,166,255,0.24)" : "rgba(88,166,255,0.12)",
+                    borderRadius: 999,
+                    padding: "1px 7px",
+                    lineHeight: 1.25,
+                    cursor: "pointer",
+                    flexShrink: 0,
+                  }}
+                >
+                  @l
+                </button>
               </>
             )}
           </div>

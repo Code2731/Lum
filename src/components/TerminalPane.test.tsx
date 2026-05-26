@@ -2154,18 +2154,16 @@ describe("TerminalPane — 입력 라우팅", () => {
     const input = container.querySelector("input")!;
     fireEvent.change(input, { target: { value: "로그 요약해줘" } });
 
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "quick-backend-local" })).toBeInTheDocument();
+    });
     fireEvent.click(screen.getByRole("button", { name: "quick-backend-local" }));
     expect(input).toHaveValue("@local 로그 요약해줘");
     expect(screen.getByText("AI @LOCAL")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "quick-backend-local" })).toHaveAttribute("aria-pressed", "true");
 
-    fireEvent.click(screen.getByRole("button", { name: "quick-backend-xllm" }));
-    expect(input).toHaveValue("@xllm 로그 요약해줘");
-    expect(screen.getByText("AI @XLLM")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "quick-backend-xllm" })).toHaveAttribute("aria-pressed", "true");
-
     // 같은 backend 버튼을 한 번 더 누르면 AUTO로 해제된다.
-    fireEvent.click(screen.getByRole("button", { name: "quick-backend-xllm" }));
+    fireEvent.click(screen.getByRole("button", { name: "quick-backend-local" }));
     expect(input).toHaveValue("로그 요약해줘");
     expect(screen.getByText("AI AUTO")).toBeInTheDocument();
   });
@@ -2181,8 +2179,9 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(screen.queryByRole("button", { name: "quick-backend-auto" })).not.toBeInTheDocument();
   });
 
-  it("툴벨트에서 OLLAMA/GEMINI backend 버튼은 노출하지 않는다", () => {
+  it("툴벨트에서 XLLM/OLLAMA/GEMINI backend 버튼은 노출하지 않는다", () => {
     render(<TerminalPane id="tab-1" />);
+    expect(screen.queryByRole("button", { name: "quick-backend-xllm" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "quick-backend-ollama" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "quick-backend-gemini" })).not.toBeInTheDocument();
   });
