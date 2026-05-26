@@ -8,15 +8,33 @@ fn session_path() -> PathBuf {
 }
 
 #[derive(Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct SessionSshProfile {
+    pub host: String,
+    pub port: u16,
+    pub username: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub key_path: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
 pub struct SessionTab {
     pub id: String,
     pub title: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub split_dir: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub cwd: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub split_cwd: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub icon: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub color: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub group: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ssh_profile: Option<SessionSshProfile>,
 }
 
 #[derive(Serialize, Deserialize)]

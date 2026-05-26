@@ -54,7 +54,13 @@ interface Props {
   saveAppearance: ReturnType<typeof useTerminalTheme>["saveAppearance"];
   // workspace
   workspaces: ReturnType<typeof useWorkspace>["workspaces"];
-  wsTabs: { id: string; title: string; cwd: string; split_dir: "h" | "v" | undefined }[];
+  wsTabs: {
+    id: string;
+    title: string;
+    cwd: string;
+    split_dir: "h" | "v" | undefined;
+    split_cwd?: string;
+  }[];
   wsLoading: boolean;
   saveWorkspace: ReturnType<typeof useWorkspace>["saveWorkspace"];
   deleteWorkspace: ReturnType<typeof useWorkspace>["deleteWorkspace"];

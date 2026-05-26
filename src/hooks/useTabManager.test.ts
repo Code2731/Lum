@@ -1,6 +1,7 @@
-import { describe, it, expect, vi } from "vitest";
-import { renderHook, act } from "@testing-library/react";
-import { useTabManager } from "./useTabManager";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { renderHook, act, waitFor } from "@testing-library/react";
+import { invoke } from "@tauri-apps/api/core";
+import { useTabManager, splitId } from "./useTabManager";
 
 vi.mock("@tauri-apps/api/core", () => ({
   invoke: vi.fn().mockImplementation((cmd: string) => {
@@ -10,6 +11,20 @@ vi.mock("@tauri-apps/api/core", () => ({
 }));
 
 describe("useTabManager", () => {
+  const invokeMock = vi.mocked(invoke);
+
+  beforeEach(() => {
+    invokeMock.mockReset();
+    invokeMock.mockImplementation((cmd: string) => {
+      if (cmd === "load_session") return Promise.reject("no session");
+      return Promise.resolve(null);
+    });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("초기 상태 — 탭 1개, 활성 탭 설정됨", () => {
     const { result } = renderHook(() => useTabManager());
     expect(result.current.tabs).toHaveLength(1);
@@ -81,5 +96,115 @@ describe("useTabManager", () => {
     act(() => result.current.addTab());
     const titles = result.current.tabs.map((t) => t.title);
     expect(titles.every((t) => /^Shell \d+$/.test(t))).toBe(true);
+  });
+
+  it("split pane CWD는 splitId 경로로 별도 저장된다", () => {
+    const { result } = renderHook(() => useTabManager());
+    const baseId = result.current.tabs[0].id;
+
+    act(() => result.current.updateTabCwd(baseId, "/repo/main"));
+    act(() => result.current.toggleSplit("h"));
+    act(() => result.current.updateTabCwd(splitId(baseId), "/repo/split"));
+
+    expect(result.current.tabs[0].cwd).toBe("/repo/main");
+    expect(result.current.tabs[0].splitCwd).toBe("/repo/split");
+  });
+
+  it("split 해제 시 splitCwd는 정리된다", () => {
+    const { result } = renderHook(() => useTabManager());
+    const baseId = result.current.tabs[0].id;
+
+    act(() => result.current.toggleSplit("h"));
+    act(() => result.current.updateTabCwd(splitId(baseId), "/repo/split"));
+    expect(result.current.tabs[0].splitCwd).toBe("/repo/split");
+
+    act(() => result.current.toggleSplit("h"));
+    expect(result.current.tabs[0].splitDir).toBeUndefined();
+    expect(result.current.tabs[0].splitCwd).toBeUndefined();
+  });
+
+  it("save_session payload에 cwd/split_cwd/ssh_profile이 포함된다", async () => {
+    vi.useFakeTimers();
+    const { result } = renderHook(() => useTabManager());
+    const baseId = result.current.tabs[0].id;
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    act(() => result.current.updateTabCwd(baseId, "/repo/main"));
+    act(() => result.current.toggleSplit("h"));
+    act(() => result.current.updateTabCwd(splitId(baseId), "/repo/split"));
+    act(() => {
+      result.current.createSshTab({
+        host: "example.com",
+        port: 22,
+        username: "dev",
+        keyPath: "~/.ssh/id_ed25519",
+      });
+    });
+
+    await act(async () => {
+      vi.advanceTimersByTime(1200);
+      await Promise.resolve();
+    });
+
+    const saveCall = invokeMock.mock.calls.find(([cmd]) => cmd === "save_session");
+    expect(saveCall).toBeDefined();
+    const payload = (saveCall?.[1] as { data: { tabs: Array<Record<string, unknown>> } }).data;
+    const mainTab = payload.tabs.find((t) => t.id === baseId);
+    const sshTab = payload.tabs.find((t) => t.id !== baseId);
+
+    expect(mainTab?.cwd).toBe("/repo/main");
+    expect(mainTab?.split_cwd).toBe("/repo/split");
+    expect(mainTab?.split_dir).toBe("h");
+    expect(sshTab?.ssh_profile).toEqual({
+      host: "example.com",
+      port: 22,
+      username: "dev",
+      keyPath: "~/.ssh/id_ed25519",
+    });
+  });
+
+  it("load_session 복원 시 cwd/split_cwd/ssh_profile을 복원한다", async () => {
+    invokeMock.mockImplementation((cmd: string) => {
+      if (cmd === "load_session") {
+        return Promise.resolve({
+          version: 1,
+          active_tab_id: "tab-1",
+          tabs: [
+            {
+              id: "tab-1",
+              title: "Shell 1",
+              split_dir: "h",
+              cwd: "/repo/main",
+              split_cwd: "/repo/split",
+              ssh_profile: {
+                host: "example.com",
+                port: 22,
+                username: "dev",
+                keyPath: "~/.ssh/id_ed25519",
+              },
+            },
+          ],
+        });
+      }
+      return Promise.resolve(null);
+    });
+
+    const { result } = renderHook(() => useTabManager());
+
+    await waitFor(() => {
+      expect(result.current.tabs[0]?.cwd).toBe("/repo/main");
+    });
+
+    expect(result.current.tabs[0]?.splitDir).toBe("h");
+    expect(result.current.tabs[0]?.splitCwd).toBe("/repo/split");
+    expect(result.current.tabs[0]?.sshProfile).toEqual({
+      host: "example.com",
+      port: 22,
+      username: "dev",
+      keyPath: "~/.ssh/id_ed25519",
+    });
   });
 });

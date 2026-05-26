@@ -1578,7 +1578,13 @@ const App: React.FC = () => {
   const focusedCmdIndex = focusedCmdBlock ? cmdBlocks.findIndex((b) => b.id === focusedCmdBlock.id) : -1;
   const inspectorHasNoActivity = cmdBlocks.length === 0 && !inspectorAnalyzeCache;
   const showBlockBar = focusedCmdBlock !== null && focusedCmdBlock.id !== dismissedBlockId && !healingError;
-  const wsTabs = tabs.map(t => ({ id: t.id, title: t.title, cwd: t.cwd ?? "", split_dir: t.splitDir }));
+  const wsTabs = tabs.map(t => ({
+    id: t.id,
+    title: t.title,
+    cwd: t.cwd ?? "",
+    split_dir: t.splitDir,
+    split_cwd: t.splitCwd,
+  }));
   const contextTab = tabCtxMenu ? tabs.find(t => t.id === tabCtxMenu.tabId) : undefined;
 
   const handleSshConnect = useCallback((profile: SshProfile) => {
@@ -1588,7 +1594,13 @@ const App: React.FC = () => {
 
   const handleRestoreWorkspace = useCallback((ws: import("./hooks/useWorkspace").Workspace) => {
     restoreTabs(
-      ws.tabs.map(t => ({ id: t.id, title: t.title, cwd: t.cwd, splitDir: t.split_dir as "h" | "v" | undefined })),
+      ws.tabs.map(t => ({
+        id: t.id,
+        title: t.title,
+        cwd: t.cwd,
+        splitDir: t.split_dir as "h" | "v" | undefined,
+        splitCwd: t.split_cwd,
+      })),
       ws.active_tab_id,
     );
   }, [restoreTabs]);
@@ -1935,7 +1947,7 @@ const App: React.FC = () => {
                         <ErrorBoundary label="터미널">
                           <TerminalPane
                             id={splitId(tab.id)}
-                            cwd={tab.cwd}
+                            cwd={tab.splitCwd ?? tab.cwd}
                             sshProfile={tab.sshProfile}
                             model={selectedModel}
                             xtermTheme={xtermTheme}

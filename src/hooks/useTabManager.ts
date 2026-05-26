@@ -29,13 +29,24 @@ export interface Tab {
   title: string;
   splitDir?: SplitDir;
   cwd?: string;
+  splitCwd?: string;
   icon?: TabIcon;
   color?: TabColor;
   group?: string;
   sshProfile?: SshProfile;
 }
 
-interface SessionTab { id: string; title: string; split_dir?: string; color?: string; group?: string }
+interface SessionTab {
+  id: string;
+  title: string;
+  split_dir?: string;
+  cwd?: string;
+  split_cwd?: string;
+  icon?: string;
+  color?: string;
+  group?: string;
+  ssh_profile?: SshProfile;
+}
 interface SessionData { version: number; tabs: SessionTab[]; active_tab_id: string }
 
 let tabCounter = 1;
@@ -68,8 +79,12 @@ export function useTabManager(onTabChange?: () => void) {
           id: t.id,
           title: t.title,
           splitDir: (t.split_dir as SplitDir | undefined) ?? undefined,
+          cwd: t.cwd,
+          splitCwd: t.split_cwd,
+          icon: t.icon as TabIcon | undefined,
           color: (t.color as TabColor | undefined) ?? undefined,
           group: t.group,
+          sshProfile: t.ssh_profile,
         }));
         setTabs(restored);
         const activeId =
@@ -92,7 +107,17 @@ export function useTabManager(onTabChange?: () => void) {
     sessionSaveTimerRef.current = setTimeout(() => {
       const data: SessionData = {
         version: 1,
-        tabs: tabs.map((t) => ({ id: t.id, title: t.title, split_dir: t.splitDir, color: t.color, group: t.group })),
+        tabs: tabs.map((t) => ({
+          id: t.id,
+          title: t.title,
+          split_dir: t.splitDir,
+          cwd: t.cwd,
+          split_cwd: t.splitCwd,
+          icon: t.icon,
+          color: t.color,
+          group: t.group,
+          ssh_profile: t.sshProfile,
+        })),
         active_tab_id: activeTabId,
       };
       invoke("save_session", { data }).catch(() => {});
@@ -167,7 +192,15 @@ export function useTabManager(onTabChange?: () => void) {
   }, []);
 
   const updateTabCwd = useCallback((id: string, cwd: string, icon?: TabIcon) => {
-    setTabs(prev => prev.map(t => t.id === id ? { ...t, cwd, icon: icon ?? t.icon } : t));
+    setTabs((prev) => prev.map((t) => {
+      if (t.id === id) {
+        return { ...t, cwd, icon: icon ?? t.icon };
+      }
+      if (splitId(t.id) === id) {
+        return { ...t, splitCwd: cwd };
+      }
+      return t;
+    }));
   }, []);
 
   const updateTab = useCallback((id: string, patch: Partial<Tab>) => {
@@ -187,7 +220,7 @@ export function useTabManager(onTabChange?: () => void) {
         ptyWriteRefs.current.delete(splitId(tabId));
         setActivePaneId(tabId);
       }
-      return prev.map((t) => (t.id === tabId ? { ...t, splitDir: nextDir } : t));
+      return prev.map((t) => (t.id === tabId ? { ...t, splitDir: nextDir, splitCwd: nextDir ? t.splitCwd : undefined } : t));
     });
   }, []);
 
