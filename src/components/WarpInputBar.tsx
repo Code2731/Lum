@@ -148,6 +148,21 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
       setInput(next);
       onChange?.(next);
     };
+    const visibleContextChips = React.useMemo(() => {
+      if (!compactContextChips) return contextChips;
+      const primaryIds = new Set(["route", "backend", "term"]);
+      const primary = contextChips.filter((chip) => primaryIds.has(chip.id));
+      const extraCount = contextChips.length - primary.length;
+      if (extraCount <= 0) return primary;
+      return [
+        ...primary,
+        {
+          id: "__extra_count__",
+          label: `+${extraCount} more`,
+          tone: "neutral" as const,
+        },
+      ];
+    }, [compactContextChips, contextChips]);
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
       if (isComposing || e.nativeEvent.isComposing) return;
@@ -353,19 +368,19 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
           borderTop: `1px solid ${isFocused ? "rgba(88,166,255,0.64)" : "rgba(255,255,255,0.14)"}`,
           borderBottom: "1px solid rgba(255,255,255,0.05)",
           boxShadow: isFocused ? "0 -10px 28px rgba(88,166,255,0.12)" : "inset 0 1px 0 rgba(255,255,255,0.02)",
-          padding: contextChips.length > 0 ? (compactContextChips ? "4px 10px" : "6px 12px") : "0 12px",
+          padding: visibleContextChips.length > 0 ? (compactContextChips ? "4px 10px" : "6px 12px") : "0 12px",
           display: "flex",
           flexDirection: "column",
           justifyContent: "center",
-          gap: contextChips.length > 0 ? (compactContextChips ? 3 : 5) : 0,
-          minHeight: contextChips.length > 0 ? (compactContextChips ? 48 : 56) : 40,
+          gap: visibleContextChips.length > 0 ? (compactContextChips ? 3 : 5) : 0,
+          minHeight: visibleContextChips.length > 0 ? (compactContextChips ? 48 : 56) : 40,
           cursor: "text",
           boxSizing: "border-box",
           position: "relative",
           transition: "border-color 120ms",
         }}
       >
-        {contextChips.length > 0 && (
+        {visibleContextChips.length > 0 && (
           <div
             style={{
               width: "100%",
@@ -379,8 +394,9 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
               scrollbarWidth: "none",
             }}
           >
-            {contextChips.map((chip) => {
+            {visibleContextChips.map((chip) => {
               const primaryChip = chip.id === "route" || chip.id === "backend" || chip.id === "term";
+              const summaryChip = chip.id === "__extra_count__";
               const chipOrder = !compactContextChips
                 ? 0
                 : chip.id === "route"
@@ -415,11 +431,11 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
                     chip.tone === "success" ? "rgba(63,185,80,0.12)" :
                     chip.tone === "warn" ? "rgba(227,179,65,0.12)" :
                     "rgba(255,255,255,0.04)",
-                  opacity: compactContextChips && !primaryChip ? 0.52 : 1,
-                  maxWidth: compactContextChips && !primaryChip ? 132 : undefined,
-                  overflow: compactContextChips && !primaryChip ? "hidden" : undefined,
-                  textOverflow: compactContextChips && !primaryChip ? "ellipsis" : undefined,
-                  whiteSpace: compactContextChips && !primaryChip ? "nowrap" : undefined,
+                  opacity: compactContextChips && summaryChip ? 0.72 : 1,
+                  maxWidth: compactContextChips && summaryChip ? 96 : undefined,
+                  overflow: compactContextChips && summaryChip ? "hidden" : undefined,
+                  textOverflow: compactContextChips && summaryChip ? "ellipsis" : undefined,
+                  whiteSpace: compactContextChips && summaryChip ? "nowrap" : undefined,
                   boxShadow: compactContextChips && primaryChip ? "0 0 0 1px rgba(255,255,255,0.12)" : "none",
                 }}
               >
@@ -506,7 +522,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
               <span style={{ color: "rgba(255,255,255,0.28)" }}>
                 {compactContextChips
                   ? "자연어=AI · 명령어=실행 · !/@/>>/#/?"
-                  : "자연어는 AI · 명령어는 자동 실행 · !강제shell · @강제AI(@local/@ollama/@xllm/@sglang/@gemini) · >>에이전트 · Cmd/Ctrl+1~4/0 · Cmd/Ctrl+`/. 정순환 · Cmd/Ctrl+Shift+`/, 역순환"}
+                  : "자연어는 AI · 명령어는 실행 · !/@/>>/#/? · backend @local/@ollama/@xllm/@gemini"}
               </span>
             ) : body !== null ? (
               <span style={{ color: TOKEN_COLORS.text }}>{body}</span>
@@ -557,22 +573,6 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
           />
           </div>
 
-          {isVisuallyEmpty && (
-            <span
-              title="Enter 실행 · Esc 클리어 · Cmd/Ctrl+` 또는 Cmd/Ctrl+. 정순환 · Cmd/Ctrl+Shift+` 또는 Cmd/Ctrl+, 역순환 · Cmd/Ctrl+0 backend 해제"
-              style={{
-                flexShrink: 0,
-                fontSize: WARP_SMALL_FONT_SIZE,
-                color: "rgba(255,255,255,0.3)",
-                border: "1px solid rgba(255,255,255,0.12)",
-                borderRadius: 6,
-                padding: "1px 6px",
-                lineHeight: 1.2,
-              }}
-            >
-              Enter 실행
-            </span>
-          )}
           {activeBackendLabel && (
             <button
               type="button"

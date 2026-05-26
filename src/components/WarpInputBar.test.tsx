@@ -173,19 +173,36 @@ describe("WarpInputBar — dumb input, 라우팅은 상위에서", () => {
     expect(onSubmit).toHaveBeenCalledWith("현재 디렉토리 파일 개수");
   });
 
-  it("빈 입력 도움말에 backend 단축키가 노출된다", () => {
+  it("빈 입력 도움말은 간결한 라우팅/백엔드 안내를 노출한다", () => {
     setup();
-    expect(screen.getByText(/Cmd\/Ctrl\+1~4\/0/)).toBeInTheDocument();
-    expect(screen.getByText(/Cmd\/Ctrl\+`\/\./)).toBeInTheDocument();
-    expect(screen.getByText(/Cmd\/Ctrl\+Shift\+`\/,/)).toBeInTheDocument();
-    expect(screen.getByText(/@sglang/)).toBeInTheDocument();
+    expect(screen.getByText(/자연어는 AI · 명령어는 실행/)).toBeInTheDocument();
+    expect(screen.getByText(/backend @local\/@ollama\/@xllm\/@gemini/)).toBeInTheDocument();
   });
 
   it("공백만 입력된 상태에서도 빈 입력 도움말을 유지한다", () => {
     const { input } = setup();
     fireEvent.change(input, { target: { value: "   " } });
-    expect(screen.getByText(/Cmd\/Ctrl\+1~4\/0/)).toBeInTheDocument();
-    expect(screen.getByText("Enter 실행")).toBeInTheDocument();
+    expect(screen.getByText(/자연어는 AI · 명령어는 실행/)).toBeInTheDocument();
+  });
+
+  it("compactContextChips=true면 컨텍스트 칩을 핵심 + 요약으로 축약한다", () => {
+    setup({
+      compactContextChips: true,
+      contextChips: [
+        { id: "route", label: "AI" },
+        { id: "backend", label: "@local" },
+        { id: "term", label: "Terminal 1" },
+        { id: "project", label: "Lum" },
+        { id: "git", label: "main" },
+      ],
+    });
+
+    expect(screen.getByText("AI")).toBeInTheDocument();
+    expect(screen.getByText("@local")).toBeInTheDocument();
+    expect(screen.getByText("Terminal 1")).toBeInTheDocument();
+    expect(screen.getByText("+2 more")).toBeInTheDocument();
+    expect(screen.queryByText("Lum")).not.toBeInTheDocument();
+    expect(screen.queryByText("main")).not.toBeInTheDocument();
   });
 
   it("onChange 한 글자씩 호출", () => {
