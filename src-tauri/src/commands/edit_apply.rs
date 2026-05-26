@@ -484,12 +484,12 @@ bar
     }
 
     #[test]
-    fn extract_file_path_공백_있으면_None() {
+    fn extract_file_path_공백_있으면_none() {
         assert_eq!(extract_file_path("this is not a path"), None);
     }
 
     #[test]
-    fn extract_file_path_확장자_슬래시_없으면_None() {
+    fn extract_file_path_확장자_슬래시_없으면_none() {
         assert_eq!(extract_file_path("justaword"), None);
     }
 }
