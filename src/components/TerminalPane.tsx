@@ -2168,28 +2168,6 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
             >
               {compactInputToolbelt ? "F" : "M"}
             </button>
-            {!compactInputToolbelt && (
-              <button
-                type="button"
-                aria-label="quick-input-clear"
-                onClick={clearInputQuick}
-                disabled={!canClearInputQuick}
-                title={canClearInputQuick ? "입력/오버레이 빠른 초기화 (Esc, Cmd/Ctrl+Shift+K)" : "지울 입력/오버레이가 없어 비활성화"}
-                style={{
-                  fontSize: MICRO_FONT_SIZE,
-                  color: canClearInputQuick ? "rgba(255,255,255,0.88)" : "rgba(255,255,255,0.42)",
-                  border: canClearInputQuick ? "1px solid rgba(255,255,255,0.28)" : "1px solid rgba(255,255,255,0.18)",
-                  background: canClearInputQuick ? "rgba(255,255,255,0.1)" : "rgba(255,255,255,0.06)",
-                  borderRadius: 999,
-                  padding: "1px 7px",
-                  lineHeight: 1.25,
-                  cursor: canClearInputQuick ? "pointer" : "not-allowed",
-                  flexShrink: 0,
-                }}
-              >
-                CLR
-              </button>
-            )}
             <button
               type="button"
               aria-label="quick-input-action-palette"

@@ -105,8 +105,13 @@ function openInputHistoryPanel() {
 }
 
 function ensureFullToolbelt() {
-  if (screen.queryByRole("button", { name: "quick-input-clear" })) return;
-  fireEvent.click(screen.getByRole("button", { name: "toolbelt-toggle-compact" }));
+  const compactToggle = screen.getByRole("button", { name: "toolbelt-toggle-compact" });
+  if (compactToggle.textContent?.includes("M")) return;
+  fireEvent.click(compactToggle);
+}
+
+function clearInputWithShortcut(input: HTMLInputElement) {
+  fireEvent.keyDown(input, { key: "K", ctrlKey: true, shiftKey: true });
 }
 
 function expectHistoryActionDisabled() {
@@ -137,6 +142,16 @@ function expectUndoActionDisabled() {
 function expectUndoActionEnabled() {
   openActionPalette();
   expect(screen.getByRole("button", { name: "action-palette-item-undo" })).not.toHaveAttribute("disabled");
+}
+
+function expectClearActionDisabled() {
+  openActionPalette();
+  expect(screen.getByRole("button", { name: "action-palette-item-clear" })).toHaveAttribute("disabled");
+}
+
+function expectClearActionEnabled() {
+  openActionPalette();
+  expect(screen.getByRole("button", { name: "action-palette-item-clear" })).not.toHaveAttribute("disabled");
 }
 
 const TOOLBELT_TIP_FULL =
@@ -533,7 +548,7 @@ describe("TerminalPane — 입력 라우팅", () => {
     const { container } = render(<TerminalPane id="tab-1" />);
     const input = container.querySelector("input")!;
     fireEvent.change(input, { target: { value: "alpha" } });
-    fireEvent.click(screen.getByRole("button", { name: "quick-input-clear" }));
+    clearInputWithShortcut(input);
     expect(input).toHaveValue("");
 
     fireEvent.keyDown(input, { key: "k", code: "KeyK", ctrlKey: true });
@@ -804,16 +819,16 @@ describe("TerminalPane — 입력 라우팅", () => {
     const { container } = render(<TerminalPane id="tab-1" />);
     const input = container.querySelector("input")!;
     ensureFullToolbelt();
-    expect(screen.getByRole("button", { name: "quick-input-clear" })).toHaveAttribute("disabled");
+    expectClearActionDisabled();
 
     fireEvent.change(input, { target: { value: "@xllm # 로그 요약해줘" } });
     expect(input).toHaveValue("@xllm # 로그 요약해줘");
-    expect(screen.getByRole("button", { name: "quick-input-clear" })).not.toHaveAttribute("disabled");
+    expectClearActionEnabled();
     expectUndoActionDisabled();
 
-    fireEvent.click(screen.getByRole("button", { name: "quick-input-clear" }));
+    clearInputWithShortcut(input);
     expect(input).toHaveValue("");
-    expect(screen.getByRole("button", { name: "quick-input-clear" })).toHaveAttribute("disabled");
+    expectClearActionDisabled();
     expect(screen.getByText("AUTO 라우팅")).toBeInTheDocument();
     expectUndoActionEnabled();
 
@@ -836,7 +851,7 @@ describe("TerminalPane — 입력 라우팅", () => {
       });
     });
     fireEvent.change(input, { target: { value: "temp" } });
-    fireEvent.click(screen.getByRole("button", { name: "quick-input-clear" }));
+    clearInputWithShortcut(input);
     expectUndoActionEnabled();
     expectRecallActionEnabled();
 
@@ -856,15 +871,15 @@ describe("TerminalPane — 입력 라우팅", () => {
     ensureFullToolbelt();
 
     fireEvent.change(input, { target: { value: "first" } });
-    fireEvent.click(screen.getByRole("button", { name: "quick-input-clear" }));
+    clearInputWithShortcut(input);
     fireEvent.change(input, { target: { value: "second" } });
-    fireEvent.click(screen.getByRole("button", { name: "quick-input-clear" }));
+    clearInputWithShortcut(input);
     expectUndoActionEnabled();
 
     fireEvent.keyDown(input, { key: "Z", ctrlKey: true, shiftKey: true });
     expect(input).toHaveValue("second");
 
-    fireEvent.click(screen.getByRole("button", { name: "quick-input-clear" }));
+    clearInputWithShortcut(input);
     fireEvent.keyDown(input, { key: "Z", ctrlKey: true, shiftKey: true });
     expect(input).toHaveValue("second");
 
@@ -880,9 +895,9 @@ describe("TerminalPane — 입력 라우팅", () => {
     expectUndoActionDisabled();
 
     fireEvent.change(input, { target: { value: "alpha" } });
-    fireEvent.click(screen.getByRole("button", { name: "quick-input-clear" }));
+    clearInputWithShortcut(input);
     fireEvent.change(input, { target: { value: "beta" } });
-    fireEvent.click(screen.getByRole("button", { name: "quick-input-clear" }));
+    clearInputWithShortcut(input);
     expectUndoActionEnabled();
 
     fireEvent.keyDown(input, { key: "D", ctrlKey: true, shiftKey: true });
@@ -895,11 +910,11 @@ describe("TerminalPane — 입력 라우팅", () => {
     ensureFullToolbelt();
 
     fireEvent.change(input, { target: { value: "same" } });
-    fireEvent.click(screen.getByRole("button", { name: "quick-input-clear" }));
+    clearInputWithShortcut(input);
     expectUndoActionEnabled();
 
     fireEvent.change(input, { target: { value: "same" } });
-    fireEvent.click(screen.getByRole("button", { name: "quick-input-clear" }));
+    clearInputWithShortcut(input);
     expectUndoActionEnabled();
     fireEvent.keyDown(input, { key: "Z", ctrlKey: true, shiftKey: true });
     expect(input).toHaveValue("same");
@@ -1923,7 +1938,7 @@ describe("TerminalPane — 입력 라우팅", () => {
     ensureFullToolbelt();
 
     fireEvent.change(input, { target: { value: "temp" } });
-    fireEvent.click(screen.getByRole("button", { name: "quick-input-clear" }));
+    clearInputWithShortcut(input);
     expectUndoActionEnabled();
 
     fireEvent.keyDown(input, { key: "D", ctrlKey: true, shiftKey: true });
