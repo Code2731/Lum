@@ -391,7 +391,6 @@ describe("TerminalPane — 입력 라우팅", () => {
       expect(invokeMock).toHaveBeenCalledWith("save_ui_preferences", {
         showInputToolbeltTip: false,
         showAdvancedInputTools: false,
-        showBackendQuickTools: false,
       });
       expect(localStorage.getItem("lum_input_toolbelt_tip_dismissed")).toBeNull();
       expect(localStorage.getItem("lum_toolbelt_show_advanced")).toBeNull();
@@ -733,23 +732,24 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(screen.getByText("일치하는 항목이 없습니다.")).toBeInTheDocument();
   });
 
-  it("툴벨트 커스터마이징으로 고급 편집/백엔드 버튼 표시를 토글한다", () => {
+  it("툴벨트 커스터마이징으로 고급 편집 버튼 표시를 토글한다", async () => {
     render(<TerminalPane id="tab-1" />);
-
-    expect(screen.getByRole("button", { name: "quick-input-merge-recall" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "quick-backend-local" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "toolbelt-toggle-compact" }));
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "quick-input-merge-recall" })).toBeInTheDocument();
+    });
 
     fireEvent.click(screen.getByRole("button", { name: "toolbelt-customize-toggle" }));
     fireEvent.click(screen.getByRole("button", { name: "toolbelt-toggle-advanced" }));
-    fireEvent.click(screen.getByRole("button", { name: "toolbelt-toggle-backend" }));
 
-    expect(screen.queryByRole("button", { name: "quick-input-merge-recall" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "quick-backend-local" })).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.queryByRole("button", { name: "quick-input-merge-recall" })).not.toBeInTheDocument();
+    });
 
     fireEvent.click(screen.getByRole("button", { name: "toolbelt-toggle-advanced" }));
-    fireEvent.click(screen.getByRole("button", { name: "toolbelt-toggle-backend" }));
-    expect(screen.getByRole("button", { name: "quick-input-merge-recall" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "quick-backend-local" })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "quick-input-merge-recall" })).toBeInTheDocument();
+    });
   });
 
   it("입력 단축키 Cmd/Ctrl+Shift+A로 @ 파일 첨부 트리거를 삽입한다", () => {
@@ -2149,23 +2149,9 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(screen.queryByRole("button", { name: "quick-backend-next" })).not.toBeInTheDocument();
   });
 
-  it("툴벨트 quick backend 버튼으로 입력 프리픽스를 즉시 전환", async () => {
-    const { container } = render(<TerminalPane id="tab-1" />);
-    const input = container.querySelector("input")!;
-    fireEvent.change(input, { target: { value: "로그 요약해줘" } });
-
-    await waitFor(() => {
-      expect(screen.getByRole("button", { name: "quick-backend-local" })).toBeInTheDocument();
-    });
-    fireEvent.click(screen.getByRole("button", { name: "quick-backend-local" }));
-    expect(input).toHaveValue("@local 로그 요약해줘");
-    expect(screen.getByText("AI @LOCAL")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "quick-backend-local" })).toHaveAttribute("aria-pressed", "true");
-
-    // 같은 backend 버튼을 한 번 더 누르면 AUTO로 해제된다.
-    fireEvent.click(screen.getByRole("button", { name: "quick-backend-local" }));
-    expect(input).toHaveValue("로그 요약해줘");
-    expect(screen.getByText("AI AUTO")).toBeInTheDocument();
+  it("툴벨트에서 LOCAL backend 버튼은 노출하지 않는다", () => {
+    render(<TerminalPane id="tab-1" />);
+    expect(screen.queryByRole("button", { name: "quick-backend-local" })).not.toBeInTheDocument();
   });
 
   it("툴벨트에서 BACK/LAST backend 버튼은 노출하지 않는다", () => {

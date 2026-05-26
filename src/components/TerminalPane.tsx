@@ -118,12 +118,10 @@ const PANE_PADDING_X = 10;
 const PANE_PADDING_Y = 6;
 const INPUT_TIP_DISMISSED_KEY = "lum_input_toolbelt_tip_dismissed";
 const TOOLBELT_ADVANCED_KEY = "lum_toolbelt_show_advanced";
-const TOOLBELT_BACKEND_KEY = "lum_toolbelt_show_backend";
 const TOOLBELT_COMPACT_KEY = "lum_toolbelt_compact";
 const INPUT_HISTORY_KEY = "lum_input_submit_history";
 const LEGACY_TOOLBELT_TIP_KEY = INPUT_TIP_DISMISSED_KEY;
 const LEGACY_TOOLBELT_ADVANCED_KEY = TOOLBELT_ADVANCED_KEY;
-const LEGACY_TOOLBELT_BACKEND_KEY = TOOLBELT_BACKEND_KEY;
 
 const DEFAULT_MODEL = "Qwen2.5-Coder-7B-Instruct-EXL2-4bpw";
 const UI_TEXT_MICRO = "var(--lum-ui-text-micro)";
@@ -324,13 +322,6 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
       return false;
     }
   });
-  const [showBackendQuickTools, setShowBackendQuickTools] = useState(() => {
-    try {
-      return localStorage.getItem(LEGACY_TOOLBELT_BACKEND_KEY) === "1";
-    } catch {
-      return false;
-    }
-  });
   const [compactInputToolbelt, setCompactInputToolbelt] = useState(() => {
     try {
       return localStorage.getItem(TOOLBELT_COMPACT_KEY) !== "0";
@@ -343,7 +334,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
       try {
         localStorage.removeItem(LEGACY_TOOLBELT_TIP_KEY);
         localStorage.removeItem(LEGACY_TOOLBELT_ADVANCED_KEY);
-        localStorage.removeItem(LEGACY_TOOLBELT_BACKEND_KEY);
+        localStorage.removeItem("lum_toolbelt_show_backend");
       } catch {
         /* noop */
       }
@@ -363,14 +354,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
           return false;
         }
       })();
-      const showBackend = (() => {
-        try {
-          return localStorage.getItem(LEGACY_TOOLBELT_BACKEND_KEY) === "1";
-        } catch {
-          return false;
-        }
-      })();
-      return { showInput, showAdvanced, showBackend };
+      return { showInput, showAdvanced };
     };
 
     let mounted = true;
@@ -398,12 +382,6 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
           patch.showAdvancedInputTools = legacy.showAdvanced;
           setShowAdvancedInputTools(legacy.showAdvanced);
         }
-        if (typeof cfg.ui_show_backend_quick_tools === "boolean") {
-          setShowBackendQuickTools(cfg.ui_show_backend_quick_tools);
-        } else {
-          patch.showBackendQuickTools = legacy.showBackend;
-          setShowBackendQuickTools(legacy.showBackend);
-        }
         if (typeof cfg.ui_compact_input_toolbelt === "boolean") {
           setCompactInputToolbelt(cfg.ui_compact_input_toolbelt);
           try {
@@ -421,11 +399,9 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
         if (!mounted) return;
         setShowInputTip(legacy.showInput);
         setShowAdvancedInputTools(legacy.showAdvanced);
-        setShowBackendQuickTools(legacy.showBackend);
         invoke("save_ui_preferences", {
           showInputToolbeltTip: legacy.showInput,
           showAdvancedInputTools: legacy.showAdvanced,
-          showBackendQuickTools: legacy.showBackend,
           uiCompactInputToolbelt: compactInputToolbelt,
         }).catch(() => {});
         clearLegacyToolbeltSettings();
@@ -1143,7 +1119,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     const observer = new ResizeObserver(() => update());
     observer.observe(dock);
     return () => observer.disconnect();
-  }, [showInputTip, showAdvancedInputTools, showBackendQuickTools, toolbeltCustomizeOpen, compactInputToolbelt]);
+  }, [showInputTip, showAdvancedInputTools, toolbeltCustomizeOpen, compactInputToolbelt]);
 
   const attachMentionToken = useCallback((tokenPath: string) => {
     forceMentionAttachRef.current = false;
@@ -2050,16 +2026,6 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
       return next;
     });
   }, []);
-  const toggleBackendQuickTools = useCallback(() => {
-    setShowBackendQuickTools((prev) => {
-      const next = !prev;
-      try {
-        localStorage.setItem(TOOLBELT_BACKEND_KEY, next ? "1" : "0");
-      } catch {}
-      invoke("save_ui_preferences", { showBackendQuickTools: next }).catch(() => {});
-      return next;
-    });
-  }, []);
   const toggleCompactInputToolbelt = useCallback(() => {
     setCompactInputToolbelt((prev) => {
       const next = !prev;
@@ -2708,30 +2674,6 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
             </button>
               </>
             )}
-            {!compactInputToolbelt && showBackendQuickTools && (
-              <>
-                <button
-                  type="button"
-                  aria-label="quick-backend-local"
-                  aria-pressed={activeBackendPrefix === "local"}
-                  onClick={() => applyBackendQuickPrefix("local")}
-                  title="로컬 백엔드로 전환/해제 토글 (Cmd/Ctrl+1)"
-                  style={{
-                    fontSize: MICRO_FONT_SIZE,
-                    color: "rgba(121,192,255,0.95)",
-                    border: activeBackendPrefix === "local" ? "1px solid rgba(88,166,255,0.75)" : "1px solid rgba(88,166,255,0.35)",
-                    background: activeBackendPrefix === "local" ? "rgba(88,166,255,0.24)" : "rgba(88,166,255,0.12)",
-                    borderRadius: 999,
-                    padding: "1px 7px",
-                    lineHeight: 1.25,
-                    cursor: "pointer",
-                    flexShrink: 0,
-                  }}
-                >
-                  @l
-                </button>
-              </>
-            )}
           </div>
         </div>
         {!compactInputToolbelt && toolbeltCustomizeOpen && (
@@ -2763,23 +2705,6 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               }}
             >
               A
-            </button>
-            <button
-              type="button"
-              aria-label="toolbelt-toggle-backend"
-              onClick={toggleBackendQuickTools}
-              style={{
-                fontSize: MICRO_FONT_SIZE,
-                color: showBackendQuickTools ? "rgba(215,228,255,0.96)" : "rgba(255,255,255,0.68)",
-                border: showBackendQuickTools ? "1px solid rgba(121,192,255,0.62)" : "1px solid rgba(255,255,255,0.22)",
-                background: showBackendQuickTools ? "rgba(121,192,255,0.18)" : "rgba(255,255,255,0.08)",
-                borderRadius: 999,
-                padding: "1px 7px",
-                lineHeight: 1.25,
-                cursor: "pointer",
-              }}
-            >
-              B
             </button>
           </div>
         )}
