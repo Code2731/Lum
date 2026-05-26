@@ -1439,7 +1439,6 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     hasExecutableRecallRoute(lastSubmittedInput) ? lastSubmittedInput : "",
   );
   const recallButtonLabel = lastSubmittedPreview ? `RECALL ${lastSubmittedPreview}` : "RECALL";
-  const rerunButtonLabel = lastSubmittedPreview ? `RERUN ${lastSubmittedPreview}` : "RERUN";
   const historyButtonLabel = submittedInputHistory.length > 0 ? `HISTORY ${submittedInputHistory.length}` : "HISTORY";
   const undoButtonLabel = clearedInputStack.length > 0 ? `UNDO ${clearedInputStack.length}` : "UNDO";
   const getRecallCandidate = useCallback((raw: string): string => {
@@ -2324,26 +2323,6 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               }}
             >
               {recallButtonLabel}
-            </button>
-            <button
-              type="button"
-              aria-label="quick-input-rerun"
-              onClick={rerunSubmittedInputQuick}
-              disabled={!canRerunSubmittedInput}
-              title={canRerunSubmittedInput ? `직전 실행 입력 즉시 재실행 (Cmd/Ctrl+Shift+E): ${lastSubmittedInput}` : "재실행 가능한 실행 입력이 없어 비활성화"}
-              style={{
-                fontSize: MICRO_FONT_SIZE,
-                color: canRerunSubmittedInput ? "rgba(255,234,199,0.95)" : "rgba(255,255,255,0.42)",
-                border: canRerunSubmittedInput ? "1px solid rgba(227,179,65,0.62)" : "1px solid rgba(255,255,255,0.18)",
-                background: canRerunSubmittedInput ? "rgba(227,179,65,0.18)" : "rgba(255,255,255,0.06)",
-                borderRadius: 999,
-                padding: "1px 7px",
-                lineHeight: 1.25,
-                cursor: canRerunSubmittedInput ? "pointer" : "not-allowed",
-                flexShrink: 0,
-              }}
-            >
-              {rerunButtonLabel}
             </button>
             <button
               type="button"
