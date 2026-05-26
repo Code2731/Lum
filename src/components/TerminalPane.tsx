@@ -1618,6 +1618,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     { id: "toggle_vision", label: "Toggle Vision Mode", keywords: "vision image", run: () => setVisionMode((v) => !v), disabled: false },
     { id: "toggle_reasoning", label: "Toggle Reasoning View", keywords: "reasoning think", run: () => onToggleReasoning?.(), disabled: false },
     { id: "mention_attach", label: "Attach File Mention", keywords: "mention attach file @", run: triggerMentionAttach, disabled: false },
+    { id: "plain", label: "Normalize to Plain Input", keywords: "plain normalize prefix", run: normalizeInputToPlain, disabled: !canNormalizeToPlain },
     { id: "trim", label: "Trim Input", keywords: "trim whitespace", run: trimInputQuick, disabled: !canTrimInput },
     { id: "squash", label: "Squash Spaces", keywords: "squash spaces", run: squashInputSpacesQuick, disabled: !canSquashInputSpaces },
     { id: "clean", label: "Clean Input (Trim + Squash)", keywords: "clean trim squash", run: cleanInputQuick, disabled: !canCleanInput },
@@ -1643,9 +1644,11 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     handleInterrupt,
     toggleQuickModePrefix,
     toggleForceAiPrefix,
+    normalizeInputToPlain,
     trimInputQuick,
     squashInputSpacesQuick,
     cleanInputQuick,
+    canNormalizeToPlain,
     canTrimInput,
     canSquashInputSpaces,
     canCleanInput,
@@ -2452,26 +2455,6 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               }}
             >
               PREPEND
-            </button>
-            <button
-              type="button"
-              aria-label="quick-input-plain"
-              onClick={normalizeInputToPlain}
-              disabled={!canNormalizeToPlain}
-              title={canNormalizeToPlain ? "강제 프리픽스 제거 후 일반 입력으로 전환 (Cmd/Ctrl+Shift+G)" : "제거할 프리픽스가 없어 비활성화"}
-              style={{
-                fontSize: MICRO_FONT_SIZE,
-                color: canNormalizeToPlain ? "rgba(215,228,255,0.96)" : "rgba(255,255,255,0.42)",
-                border: canNormalizeToPlain ? "1px solid rgba(88,166,255,0.6)" : "1px solid rgba(255,255,255,0.18)",
-                background: canNormalizeToPlain ? "rgba(88,166,255,0.18)" : "rgba(255,255,255,0.06)",
-                borderRadius: 999,
-                padding: "1px 7px",
-                lineHeight: 1.25,
-                cursor: canNormalizeToPlain ? "pointer" : "not-allowed",
-                flexShrink: 0,
-              }}
-            >
-              PLAIN
             </button>
               </>
             )}

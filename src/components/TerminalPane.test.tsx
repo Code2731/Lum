@@ -1727,18 +1727,14 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(screen.getByRole("button", { name: "quick-input-prepend-recall" })).toHaveAttribute("disabled");
   });
 
-  it("툴벨트 PLAIN 버튼으로 강제 프리픽스를 제거하고 일반 입력으로 전환한다", () => {
+  it("입력 단축키 Cmd/Ctrl+Shift+G로 강제 프리픽스를 제거하고 일반 입력으로 전환한다", () => {
     const { container } = render(<TerminalPane id="tab-1" />);
     const input = container.querySelector("input")!;
-    expect(screen.getByRole("button", { name: "quick-input-plain" })).toHaveAttribute("disabled");
 
     fireEvent.change(input, { target: { value: "@xllm # 로그 요약해줘" } });
-    expect(screen.getByRole("button", { name: "quick-input-plain" })).not.toHaveAttribute("disabled");
 
-    fireEvent.click(screen.getByRole("button", { name: "quick-input-plain" }));
+    fireEvent.keyDown(input, { key: "G", ctrlKey: true, shiftKey: true });
     expect(input).toHaveValue("로그 요약해줘");
-    expect(screen.getByRole("button", { name: "quick-input-plain" })).toHaveAttribute("disabled");
-    expect(screen.getByText("AI AUTO")).toBeInTheDocument();
   });
 
   it("입력 단축키 Cmd/Ctrl+Shift+T로 입력 앞뒤 공백을 정리한다", () => {
@@ -1782,14 +1778,19 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(input).toHaveValue("   echo    hello   world   ");
   });
 
-  it("Action Palette에서 Trim/Squash/Clean 액션을 제공한다", () => {
+  it("Action Palette에서 Plain/Trim/Squash/Clean 액션을 제공한다", () => {
     const { container } = render(<TerminalPane id="tab-1" />);
     const input = container.querySelector("input")!;
 
-    fireEvent.change(input, { target: { value: "   echo    hello   world   " } });
+    fireEvent.change(input, { target: { value: "   @xllm echo    hello   world   " } });
     fireEvent.click(screen.getByRole("button", { name: "quick-input-action-palette" }));
+    expect(screen.getByRole("button", { name: "action-palette-item-plain" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "action-palette-item-trim" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "action-palette-item-squash" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "action-palette-item-plain" }));
+    expect(input.value).toContain("echo    hello   world");
+
+    fireEvent.click(screen.getByRole("button", { name: "quick-input-action-palette" }));
     fireEvent.click(screen.getByRole("button", { name: "action-palette-item-clean" }));
     expect(input).toHaveValue("echo hello world");
   });
