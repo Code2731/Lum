@@ -114,12 +114,6 @@ pub struct AppConfig {
     pub ui_hints_shown: Option<bool>,
     /// 입력 툴벨트 TIP 노출 여부. 기본 true.
     pub ui_show_input_toolbelt_tip: Option<bool>,
-    /// 고급 입력 도구(편집 전용) 표시 여부. 기본 true.
-    pub ui_show_advanced_input_tools: Option<bool>,
-    /// 백엔드 퀵 전환 버튼 표시 여부. 기본 true.
-    pub ui_show_backend_quick_tools: Option<bool>,
-    /// 입력 툴벨트 간단 모드. true면 핵심 버튼만 노출. 기본 true.
-    pub ui_compact_input_toolbelt: Option<bool>,
     /// 툴바를 단순 모드로 렌더링할지 여부. 기본 false.
     pub ui_compact_toolbar: Option<bool>,
     /// AI 채팅 패널 폰트 크기(px, 10~24). 기본 14.
@@ -232,11 +226,7 @@ pub fn save_config(config: &AppConfig) -> Result<()> {
 /// 프론트엔드에서 설정 조회
 #[tauri::command]
 pub fn load_app_config() -> Result<AppConfig> {
-    let mut config = load_config()?;
-    if config.ui_compact_input_toolbelt.is_none() {
-        config.ui_compact_input_toolbelt = Some(true);
-    }
-    Ok(config)
+    load_config()
 }
 
 #[tauri::command]
@@ -443,9 +433,6 @@ pub fn save_ui_preferences(
     hints_shown: Option<bool>,
     ai_chat_font_size: Option<u32>,
     show_input_toolbelt_tip: Option<bool>,
-    show_advanced_input_tools: Option<bool>,
-    show_backend_quick_tools: Option<bool>,
-    ui_compact_input_toolbelt: Option<bool>,
     ui_compact_toolbar: Option<bool>,
 ) -> Result<()> {
     let mut config = load_config()?;
@@ -469,15 +456,6 @@ pub fn save_ui_preferences(
     }
     if show_input_toolbelt_tip.is_some() {
         config.ui_show_input_toolbelt_tip = show_input_toolbelt_tip;
-    }
-    if show_advanced_input_tools.is_some() {
-        config.ui_show_advanced_input_tools = show_advanced_input_tools;
-    }
-    if show_backend_quick_tools.is_some() {
-        config.ui_show_backend_quick_tools = show_backend_quick_tools;
-    }
-    if ui_compact_input_toolbelt.is_some() {
-        config.ui_compact_input_toolbelt = ui_compact_input_toolbelt;
     }
     if ui_compact_toolbar.is_some() {
         config.ui_compact_toolbar = ui_compact_toolbar;
