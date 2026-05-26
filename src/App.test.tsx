@@ -128,6 +128,43 @@ describe("App (LUM 터미널)", () => {
     expect(screen.getByPlaceholderText("AI에게 질문하세요… (Enter 전송 · Esc 닫기)")).toBeInTheDocument();
   });
 
+  it("AI 입력바 전송 중에는 유지되고 Stop으로 취소할 수 있다", async () => {
+    let resolveStream: (() => void) | null = null;
+    const baseImpl = mockedInvoke.getMockImplementation();
+    mockedInvoke.mockImplementation((cmd: string) => {
+      if (cmd === "stream_ai_command") {
+        return new Promise<void>((resolve) => {
+          resolveStream = resolve;
+        });
+      }
+      if (cmd === "cancel_ai_stream") {
+        resolveStream?.();
+        resolveStream = null;
+        return Promise.resolve();
+      }
+      return baseImpl ? baseImpl(cmd) : Promise.resolve("{}");
+    });
+
+    render(<App />);
+
+    fireEvent.keyDown(window, { key: "K", ctrlKey: true, shiftKey: true });
+    const aiInput = screen.getByPlaceholderText("AI에게 질문하세요… (Enter 전송 · Esc 닫기)");
+    fireEvent.change(aiInput, { target: { value: "로그 요약해줘" } });
+    fireEvent.keyDown(aiInput, { key: "Enter" });
+
+    expect(screen.getByPlaceholderText("AI에게 질문하세요… (Enter 전송 · Esc 닫기)")).toBeInTheDocument();
+    expect(screen.getByLabelText("AI 응답 중지")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByLabelText("AI 응답 중지"));
+
+    await waitFor(() => {
+      expect(
+        screen.queryByPlaceholderText("AI에게 질문하세요… (Enter 전송 · Esc 닫기)"),
+      ).not.toBeInTheDocument();
+    });
+    expect(mockedInvoke).toHaveBeenCalledWith("cancel_ai_stream");
+  });
+
   it("Cmd/Ctrl+Shift+D는 수평 분할 토글이 동작한다", async () => {
     render(<App />);
     const splitBtn = screen.getByLabelText("수평 분할 (Cmd/Ctrl+Shift+D)");

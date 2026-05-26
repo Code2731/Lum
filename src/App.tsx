@@ -773,6 +773,8 @@ const App: React.FC = () => {
   const [retryCompareCompletedCount, setRetryCompareCompletedCount] = useState(() => loadRetryCompareRuntimeCache().completedCount);
   const [retryCompareByBlock, setRetryCompareByBlock] = useState<Record<string, RetryCompareResult>>(() => loadRetryCompareCache());
   const aiInputRef = useRef<HTMLInputElement>(null);
+  const aiBarRunSeqRef = useRef(0);
+  const aiBarCancelledRunsRef = useRef<Set<number>>(new Set());
   const viewModeRef = useRef(viewMode);
   viewModeRef.current = viewMode;
 
@@ -1353,18 +1355,51 @@ const App: React.FC = () => {
   const handleAiSubmit = useCallback(async () => {
     const cmd = aiInput.trim();
     if (!cmd) return;
+    const runId = aiBarRunSeqRef.current + 1;
+    aiBarRunSeqRef.current = runId;
+    aiBarCancelledRunsRef.current.delete(runId);
     setAiInput("");
-    setShowAiBar(false);
     const blockId = addBlock({ command: cmd, type: "ai" });
+    let latestOutput = "";
     try {
       await streamAICommand(cmd, selectedModel, "", (accumulated) => {
+        latestOutput = accumulated;
         updateBlock(blockId, { output: accumulated, status: "executing" });
       });
+      if (aiBarCancelledRunsRef.current.has(runId)) {
+        const cancelledMessage = latestOutput.trim()
+          ? `${latestOutput}\n\n[사용자에 의해 중지됨]`
+          : "[사용자에 의해 중지됨]";
+        updateBlock(blockId, { output: cancelledMessage, status: "completed" });
+        return;
+      }
       updateBlock(blockId, { status: "completed" });
+      setShowAiBar(false);
     } catch (err) {
+      if (aiBarCancelledRunsRef.current.has(runId)) {
+        const cancelledMessage = latestOutput.trim()
+          ? `${latestOutput}\n\n[사용자에 의해 중지됨]`
+          : "[사용자에 의해 중지됨]";
+        updateBlock(blockId, { output: cancelledMessage, status: "completed" });
+        return;
+      }
       updateBlock(blockId, { output: `Error: ${err}`, status: "error" });
+      setAiInput(cmd);
+      setShowAiBar(true);
+      setTimeout(() => aiInputRef.current?.focus(), 50);
+    } finally {
+      aiBarCancelledRunsRef.current.delete(runId);
     }
   }, [aiInput, selectedModel, addBlock, updateBlock, streamAICommand]);
+
+  const handleAiBarCancel = useCallback(() => {
+    const currentRunId = aiBarRunSeqRef.current;
+    if (currentRunId > 0) {
+      aiBarCancelledRunsRef.current.add(currentRunId);
+    }
+    cancelStreamAICommand();
+    setShowAiBar(false);
+  }, [cancelStreamAICommand]);
 
   // 탭 전환 시 healing 초기화
   const addTabWithReset = useCallback(() => { resetHealing(); addTab(); }, [resetHealing, addTab]);
@@ -2836,7 +2871,7 @@ const App: React.FC = () => {
                   <button
                     type="button"
                     aria-label="AI 응답 중지"
-                    onClick={cancelStreamAICommand}
+                    onClick={handleAiBarCancel}
                     className="p-1 rounded border border-red-400/25 bg-red-500/10 text-red-200/80 hover:bg-red-500/20 hover:text-red-100 transition-colors"
                   >
                     <Square size={12} />
