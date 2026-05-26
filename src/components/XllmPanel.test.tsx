@@ -13,17 +13,30 @@ vi.mock("@tauri-apps/api/event", () => ({
 }));
 
 function mockInvoke() {
+  mockInvokeWith({});
+}
+
+function mockInvokeWith(overrides: {
+  configBackend?: string;
+  infoRequested?: string;
+  infoActive?: string;
+  infoSupported?: string[];
+}) {
+  const configBackend = overrides.configBackend ?? "zvec";
+  const infoRequested = overrides.infoRequested ?? "zvec";
+  const infoActive = overrides.infoActive ?? "local-cosine";
+  const infoSupported = overrides.infoSupported ?? ["local-cosine", "zvec"];
   invokeMock.mockImplementation((cmd: string, args?: unknown) => {
     if (cmd === "load_app_config") {
       return Promise.resolve({
-        recall_vector_backend: "zvec",
+        recall_vector_backend: configBackend,
       });
     }
     if (cmd === "recall_backend_info") {
       return Promise.resolve({
-        requested: "zvec",
-        active: "local-cosine",
-        supported: ["local-cosine", "zvec"],
+        requested: infoRequested,
+        active: infoActive,
+        supported: infoSupported,
       });
     }
     if (cmd === "save_recall_vector_backend") {
@@ -63,12 +76,32 @@ describe("XllmPanel", () => {
   it("Recall 백엔드 저장 클릭 시 save_recall_vector_backend를 호출한다", async () => {
     render(<XllmPanel onClose={vi.fn()} />);
 
-    const saveButton = await screen.findByRole("button", { name: "저장" });
+    const saveButton = await screen.findByTitle("Recall 백엔드 저장");
     fireEvent.click(saveButton);
 
     await waitFor(() => {
       expect(invokeMock).toHaveBeenCalledWith("save_recall_vector_backend", {
         backend: "zvec",
+      });
+    });
+  });
+
+  it("지원 목록에 없는 설정값은 active 백엔드로 정규화해서 저장한다", async () => {
+    invokeMock.mockReset();
+    mockInvokeWith({
+      configBackend: "custom-db",
+      infoRequested: "custom-db",
+      infoActive: "local-cosine",
+      infoSupported: ["local-cosine", "zvec"],
+    });
+    render(<XllmPanel onClose={vi.fn()} />);
+
+    const saveButton = await screen.findByTitle("Recall 백엔드 저장");
+    fireEvent.click(saveButton);
+
+    await waitFor(() => {
+      expect(invokeMock).toHaveBeenCalledWith("save_recall_vector_backend", {
+        backend: "local-cosine",
       });
     });
   });

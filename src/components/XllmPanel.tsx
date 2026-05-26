@@ -36,6 +36,16 @@ interface RecallBackendInfo {
   supported: string[];
 }
 
+function normalizeRecallBackend(
+  value: string | null | undefined,
+  supported: string[],
+  fallback: string,
+): string {
+  const v = value?.trim();
+  if (!v) return fallback;
+  return supported.includes(v) ? v : fallback;
+}
+
 type SafetyMode = "safe" | "balanced" | "max";
 const MODE_DEFAULTS: Record<SafetyMode, number> = { safe: 0.70, balanced: 0.80, max: 0.90 };
 
@@ -241,11 +251,14 @@ const RecallBackendSection: React.FC = () => {
         invoke<AppConfig>("load_app_config"),
         invoke<RecallBackendInfo>("recall_backend_info"),
       ]);
-      const picked = cfg.recall_vector_backend?.trim() || "local-cosine";
-      setSelected(picked);
-      setActive(info.active || "local-cosine");
-      setRequested(info.requested?.trim() || null);
-      if (info.supported?.length) setSupported(info.supported);
+      const activeName = info.active?.trim() || "local-cosine";
+      const supportedNames = info.supported?.length ? info.supported : ["local-cosine", "zvec"];
+      const requestedName = info.requested?.trim() || null;
+      const picked = cfg.recall_vector_backend?.trim() || requestedName || activeName;
+      setSelected(normalizeRecallBackend(picked, supportedNames, activeName));
+      setActive(activeName);
+      setRequested(requestedName);
+      setSupported(supportedNames);
       setMsg(null);
     } catch {
       setMsg("상태 조회 실패");
@@ -312,6 +325,7 @@ const RecallBackendSection: React.FC = () => {
         <button
           onClick={save}
           disabled={saving || loading}
+          title="Recall 백엔드 저장"
           className="px-3 py-1 rounded bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-400/25 text-sm text-emerald-200 disabled:opacity-40 transition-colors"
         >
           {saving ? "저장 중..." : "저장"}
@@ -319,6 +333,7 @@ const RecallBackendSection: React.FC = () => {
         <button
           onClick={refresh}
           disabled={saving || loading}
+          title="Recall 백엔드 상태 새로고침"
           className="px-2.5 py-1 rounded border border-white/10 bg-white/5 hover:bg-white/10 text-sm text-white/70 disabled:opacity-40 transition-colors"
         >
           {loading ? "새로고침 중..." : "새로고침"}
