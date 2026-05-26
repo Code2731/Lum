@@ -737,9 +737,9 @@ describe("TerminalPane — 입력 라우팅", () => {
     fireEvent.click(screen.getByRole("button", { name: "toolbelt-toggle-compact" }));
     await waitFor(() => {
       expect(screen.getByRole("button", { name: "quick-input-merge-recall" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "toolbelt-toggle-advanced" })).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByRole("button", { name: "toolbelt-customize-toggle" }));
     fireEvent.click(screen.getByRole("button", { name: "toolbelt-toggle-advanced" }));
 
     await waitFor(() => {

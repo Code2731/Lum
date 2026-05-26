@@ -410,7 +410,6 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
 
     return () => { mounted = false; };
   }, [compactInputToolbelt]);
-  const [toolbeltCustomizeOpen, setToolbeltCustomizeOpen] = useState(false);
   const [warpInputFocused, setWarpInputFocused] = useState(false);
   const [inputDockHeight, setInputDockHeight] = useState(70);
   const [inputDockWidth, setInputDockWidth] = useState(960);
@@ -1119,7 +1118,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     const observer = new ResizeObserver(() => update());
     observer.observe(dock);
     return () => observer.disconnect();
-  }, [showInputTip, showAdvancedInputTools, toolbeltCustomizeOpen, compactInputToolbelt]);
+  }, [showInputTip, showAdvancedInputTools, compactInputToolbelt]);
 
   const attachMentionToken = useCallback((tokenPath: string) => {
     forceMentionAttachRef.current = false;
@@ -2001,7 +2000,6 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     warpInputFocused &&
     inputBuffer.trim() !== "" &&
     !isBackendOnlyInput &&
-    !toolbeltCustomizeOpen &&
     !actionPaletteOpen &&
     !inputHistoryOpen &&
     !mentionOpen &&
@@ -2169,29 +2167,6 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               scrollbarWidth: "none",
             }}
           >
-            {!compactInputToolbelt && showAdvancedInputTools && (
-              <>
-                <button
-                  type="button"
-                  aria-label="toolbelt-customize-toggle"
-                  onClick={() => setToolbeltCustomizeOpen((open) => !open)}
-                  style={{
-                    fontSize: MICRO_FONT_SIZE,
-                    color: toolbeltCustomizeOpen ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.76)",
-                    border: toolbeltCustomizeOpen ? "1px solid rgba(121,192,255,0.58)" : "1px solid rgba(255,255,255,0.24)",
-                    background: toolbeltCustomizeOpen ? "rgba(88,166,255,0.18)" : "rgba(255,255,255,0.08)",
-                    borderRadius: 999,
-                    padding: "1px 7px",
-                    lineHeight: 1.25,
-                    cursor: "pointer",
-                    flexShrink: 0,
-                  }}
-                  title="툴벨트 커스터마이징"
-                >
-                  C
-                </button>
-              </>
-            )}
             <button
               type="button"
               aria-label="toolbelt-toggle-compact"
@@ -2211,6 +2186,27 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
             >
               {compactInputToolbelt ? "F" : "M"}
             </button>
+            {!compactInputToolbelt && (
+              <button
+                type="button"
+                aria-label="toolbelt-toggle-advanced"
+                onClick={toggleAdvancedInputTools}
+                style={{
+                  fontSize: MICRO_FONT_SIZE,
+                  color: showAdvancedInputTools ? "rgba(220,247,225,0.96)" : "rgba(255,255,255,0.68)",
+                  border: showAdvancedInputTools ? "1px solid rgba(63,185,80,0.62)" : "1px solid rgba(255,255,255,0.22)",
+                  background: showAdvancedInputTools ? "rgba(63,185,80,0.18)" : "rgba(255,255,255,0.08)",
+                  borderRadius: 999,
+                  padding: "1px 7px",
+                  lineHeight: 1.25,
+                  cursor: "pointer",
+                  flexShrink: 0,
+                }}
+                title="고급 툴 표시/숨김"
+              >
+                A
+              </button>
+            )}
             {!compactInputToolbelt && (
               <button
                 type="button"
@@ -2676,39 +2672,6 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
             )}
           </div>
         </div>
-        {!compactInputToolbelt && toolbeltCustomizeOpen && (
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              flexWrap: "wrap",
-              padding: "6px 8px",
-              border: "1px solid rgba(121,192,255,0.24)",
-              borderRadius: 9,
-              background: "rgba(88,166,255,0.08)",
-            }}
-          >
-            <button
-              type="button"
-              aria-label="toolbelt-toggle-advanced"
-              onClick={toggleAdvancedInputTools}
-              style={{
-                fontSize: MICRO_FONT_SIZE,
-                color: showAdvancedInputTools ? "rgba(220,247,225,0.96)" : "rgba(255,255,255,0.68)",
-                border: showAdvancedInputTools ? "1px solid rgba(63,185,80,0.62)" : "1px solid rgba(255,255,255,0.22)",
-                background: showAdvancedInputTools ? "rgba(63,185,80,0.18)" : "rgba(255,255,255,0.08)",
-                borderRadius: 999,
-                padding: "1px 7px",
-                lineHeight: 1.25,
-                cursor: "pointer",
-              }}
-            >
-              A
-            </button>
-          </div>
-        )}
-
         {/* Warp 입력바 — 입력 필드, 라우팅은 handleSubmit */}
         <WarpInputBar
           ref={warpInputRef}
