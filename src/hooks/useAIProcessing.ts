@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 
@@ -8,6 +8,7 @@ export const useAIProcessing = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const requestIdRef = useRef(0);
   const unlistenRef = useRef<(() => void) | null>(null);
+  const isStreamingRef = useRef(false);
 
   const clearCurrentStreamListener = useCallback(() => {
     if (unlistenRef.current) {
@@ -15,6 +16,19 @@ export const useAIProcessing = () => {
       unlistenRef.current = null;
     }
   }, []);
+
+  useEffect(() => {
+    return () => {
+      if (!isStreamingRef.current) {
+        clearCurrentStreamListener();
+        return;
+      }
+      requestIdRef.current += 1;
+      clearCurrentStreamListener();
+      invoke("cancel_ai_stream").catch(() => {});
+      isStreamingRef.current = false;
+    };
+  }, [clearCurrentStreamListener]);
 
   const processAICommand = useCallback(async (
     prompt: string,
@@ -84,6 +98,7 @@ export const useAIProcessing = () => {
 
     requestIdRef.current += 1;
     const requestId = requestIdRef.current;
+    isStreamingRef.current = true;
     setIsProcessing(true);
     let accumulated = "";
 
@@ -103,6 +118,7 @@ export const useAIProcessing = () => {
     } finally {
       if (requestIdRef.current === requestId) {
         clearCurrentStreamListener();
+        isStreamingRef.current = false;
         setIsProcessing(false);
       }
     }
@@ -112,6 +128,7 @@ export const useAIProcessing = () => {
     requestIdRef.current += 1;
     clearCurrentStreamListener();
     invoke("cancel_ai_stream").catch(() => {});
+    isStreamingRef.current = false;
     setIsProcessing(false);
   }, [clearCurrentStreamListener]);
 

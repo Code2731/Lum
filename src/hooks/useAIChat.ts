@@ -134,6 +134,7 @@ export function useAIChat(model: string, getTerminalContext: () => string) {
   const [error, setError] = useState<string | null>(null);
   const requestIdRef = useRef(0);
   const unlistenRef = useRef<(() => void) | null>(null);
+  const isStreamingRef = useRef(false);
 
   const clearCurrentListener = useCallback(() => {
     if (unlistenRef.current) {
@@ -144,6 +145,11 @@ export function useAIChat(model: string, getTerminalContext: () => string) {
 
   useEffect(() => {
     return () => {
+      if (isStreamingRef.current) {
+        requestIdRef.current += 1;
+        invoke("cancel_ai_stream").catch(() => {});
+        isStreamingRef.current = false;
+      }
       clearCurrentListener();
     };
   }, [clearCurrentListener]);
@@ -207,6 +213,7 @@ export function useAIChat(model: string, getTerminalContext: () => string) {
       const requestId = requestIdRef.current + 1;
       requestIdRef.current = requestId;
 
+      isStreamingRef.current = true;
       setStreaming(true);
       setError(null);
       clearCurrentListener();
@@ -260,6 +267,7 @@ export function useAIChat(model: string, getTerminalContext: () => string) {
       } finally {
         clearCurrentListener();
         if (requestIdRef.current === requestId) {
+          isStreamingRef.current = false;
           setStreaming(false);
         }
       }
@@ -271,6 +279,7 @@ export function useAIChat(model: string, getTerminalContext: () => string) {
     clearCurrentListener();
     requestIdRef.current += 1;
     invoke("cancel_ai_stream").catch(() => {});
+    isStreamingRef.current = false;
     setStreaming(false);
   }, [clearCurrentListener]);
 

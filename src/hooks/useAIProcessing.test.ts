@@ -61,4 +61,34 @@ describe("useAIProcessing — 스트리밍 취소 경합 방지", () => {
     expect(invokeMock.mock.calls.some(([cmd]) => cmd === "stream_ai_command")).toBe(false);
     expect(result.current.isProcessing).toBe(false);
   });
+
+  it("unmount 시 진행 중인 스트림을 cancel_ai_stream으로 정리한다", async () => {
+    let releaseStream: (() => void) | null = null;
+    invokeMock.mockImplementation(async (cmd: string) => {
+      if (cmd === "reset_ai_stream") return;
+      if (cmd === "stream_ai_command") {
+        return new Promise<void>((resolve) => {
+          releaseStream = resolve;
+        });
+      }
+      if (cmd === "cancel_ai_stream") {
+        releaseStream?.();
+        return;
+      }
+      return;
+    });
+
+    const { result, unmount } = renderHook(() => useAIProcessing());
+    const streamPromise = act(async () => {
+      await result.current.streamAICommand("안녕", "model", "", () => {});
+    });
+
+    await waitFor(() => {
+      expect(invokeMock.mock.calls.some(([cmd]) => cmd === "stream_ai_command")).toBe(true);
+    });
+    unmount();
+    await streamPromise;
+
+    expect(invokeMock.mock.calls.some(([cmd]) => cmd === "cancel_ai_stream")).toBe(true);
+  });
 });
