@@ -1439,7 +1439,6 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     hasExecutableRecallRoute(lastSubmittedInput) ? lastSubmittedInput : "",
   );
   const recallButtonLabel = lastSubmittedPreview ? `RECALL ${lastSubmittedPreview}` : "RECALL";
-  const historyButtonLabel = submittedInputHistory.length > 0 ? `HISTORY ${submittedInputHistory.length}` : "HISTORY";
   const undoButtonLabel = clearedInputStack.length > 0 ? `UNDO ${clearedInputStack.length}` : "UNDO";
   const getRecallCandidate = useCallback((raw: string): string => {
     const normalized = raw.trim();
@@ -2323,32 +2322,6 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               }}
             >
               {recallButtonLabel}
-            </button>
-            <button
-              type="button"
-              aria-label="quick-input-history-open"
-              onClick={() => {
-                setInputHistoryOpen((open) => !open);
-                setInputHistoryQuery("");
-                setInputHistorySelected(0);
-                setInputHistoryRangeAnchor(null);
-                setInputHistoryMultiSelected([]);
-              }}
-              disabled={submittedInputHistory.length === 0}
-              title={submittedInputHistory.length > 0 ? "실행 입력 히스토리 열기/닫기" : "표시할 실행 입력 히스토리가 없어 비활성화"}
-              style={{
-                fontSize: MICRO_FONT_SIZE,
-                color: submittedInputHistory.length > 0 ? "rgba(215,228,255,0.96)" : "rgba(255,255,255,0.42)",
-                border: submittedInputHistory.length > 0 ? "1px solid rgba(121,192,255,0.62)" : "1px solid rgba(255,255,255,0.18)",
-                background: submittedInputHistory.length > 0 ? "rgba(121,192,255,0.16)" : "rgba(255,255,255,0.06)",
-                borderRadius: 999,
-                padding: "1px 7px",
-                lineHeight: 1.25,
-                cursor: submittedInputHistory.length > 0 ? "pointer" : "not-allowed",
-                flexShrink: 0,
-              }}
-            >
-              {historyButtonLabel}
             </button>
               </>
             )}

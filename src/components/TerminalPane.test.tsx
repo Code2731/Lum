@@ -99,6 +99,21 @@ function openActionPalette() {
   fireEvent.click(screen.getByRole("button", { name: "quick-input-action-palette" }));
 }
 
+function openInputHistoryPanel() {
+  openActionPalette();
+  fireEvent.click(screen.getByRole("button", { name: "action-palette-item-history_open" }));
+}
+
+function expectHistoryActionDisabled() {
+  openActionPalette();
+  expect(screen.getByRole("button", { name: "action-palette-item-history_open" })).toHaveAttribute("disabled");
+}
+
+function expectHistoryActionEnabled() {
+  openActionPalette();
+  expect(screen.getByRole("button", { name: "action-palette-item-history_open" })).not.toHaveAttribute("disabled");
+}
+
 function ensureRecallButtonVisible() {
   if (screen.queryByRole("button", { name: "quick-input-recall" })) return;
   fireEvent.click(screen.getByRole("button", { name: "toolbelt-toggle-compact" }));
@@ -962,7 +977,7 @@ describe("TerminalPane — 입력 라우팅", () => {
   it("툴벨트 HISTORY 패널에서 실행 입력을 선택해 복원한다", async () => {
     const { container } = render(<TerminalPane id="tab-1" />);
     const input = container.querySelector("input")!;
-    expect(screen.getByRole("button", { name: "quick-input-history-open" })).toHaveAttribute("disabled");
+    expectHistoryActionDisabled();
 
     submitInput(container, "ls -la");
     await waitFor(() => {
@@ -979,9 +994,8 @@ describe("TerminalPane — 입력 라우팅", () => {
       });
     });
 
-    const historyOpen = screen.getByRole("button", { name: "quick-input-history-open" });
-    expect(historyOpen).not.toHaveAttribute("disabled");
-    fireEvent.click(historyOpen);
+    expectHistoryActionEnabled();
+    openInputHistoryPanel();
     expect(screen.getByText("INPUT HISTORY")).toBeInTheDocument();
     expect(screen.getByLabelText("input-history-shortcuts")).toHaveTextContent("Del/Backspace 삭제");
     expect(screen.getByLabelText("input-history-shortcuts")).toHaveTextContent("Shift+↑/↓ 범위 선택");
@@ -1003,10 +1017,10 @@ describe("TerminalPane — 입력 라우팅", () => {
       });
     });
 
-    fireEvent.click(screen.getByRole("button", { name: "quick-input-history-open" }));
+    openInputHistoryPanel();
     fireEvent.click(screen.getByRole("button", { name: "quick-input-history-clear" }));
     expect(screen.getByText("기록된 실행 입력이 없습니다.")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "quick-input-history-open" })).toHaveTextContent("HISTORY");
+    expectHistoryActionDisabled();
   });
 
   it("HISTORY DEL로 개별 실행 입력을 삭제하고 RECALL 대상을 갱신한다", async () => {
@@ -1031,12 +1045,12 @@ describe("TerminalPane — 입력 라우팅", () => {
       });
     });
 
-    fireEvent.click(screen.getByRole("button", { name: "quick-input-history-open" }));
+    openInputHistoryPanel();
     expect(screen.getByRole("button", { name: "quick-input-history-item-0" })).toHaveTextContent("pwd");
     fireEvent.click(screen.getByRole("button", { name: "quick-input-history-remove-0" }));
 
     expect(screen.getByRole("button", { name: "quick-input-history-item-0" })).toHaveTextContent("ls -la");
-    expect(screen.getByRole("button", { name: "quick-input-history-open" })).toHaveTextContent("HISTORY 1");
+    expectHistoryActionEnabled();
     expect(screen.getByRole("button", { name: "quick-input-recall" })).toHaveTextContent("RECALL ls -la");
   });
 
@@ -1048,7 +1062,7 @@ describe("TerminalPane — 입력 라우팅", () => {
       expect(screen.getByRole("button", { name: "quick-input-recall" })).toHaveTextContent("RECALL pwd");
     });
 
-    fireEvent.click(screen.getByRole("button", { name: "quick-input-history-open" }));
+    openInputHistoryPanel();
     fireEvent.click(screen.getByRole("button", { name: "quick-input-history-remove-1" }));
 
     expect(screen.getByRole("button", { name: "quick-input-recall" })).toHaveTextContent("RECALL ls -la");
@@ -1075,7 +1089,7 @@ describe("TerminalPane — 입력 라우팅", () => {
       });
     });
 
-    fireEvent.click(screen.getByRole("button", { name: "quick-input-history-open" }));
+    openInputHistoryPanel();
     const search = screen.getByRole("textbox", { name: "input-history-search" });
     fireEvent.change(search, { target: { value: "npm" } });
     expect(screen.getByRole("button", { name: "quick-input-history-item-0" })).toHaveTextContent("npm test");
@@ -1084,7 +1098,7 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(screen.queryByText("INPUT HISTORY")).not.toBeInTheDocument();
     expect(input).toHaveValue("npm test");
 
-    fireEvent.click(screen.getByRole("button", { name: "quick-input-history-open" }));
+    openInputHistoryPanel();
     const reopenSearch = screen.getByRole("textbox", { name: "input-history-search" });
     fireEvent.keyDown(reopenSearch, { key: "Escape" });
     expect(screen.queryByText("INPUT HISTORY")).not.toBeInTheDocument();
@@ -1119,7 +1133,7 @@ describe("TerminalPane — 입력 라우팅", () => {
       });
     });
 
-    fireEvent.click(screen.getByRole("button", { name: "quick-input-history-open" }));
+    openInputHistoryPanel();
     const search = screen.getByRole("textbox", { name: "input-history-search" });
     let historyItems = screen.getAllByRole("button", { name: /^quick-input-history-item-\d+$/ });
     expect(historyItems[0].parentElement).toHaveClass("lum-overlay-split-row is-active");
@@ -1154,7 +1168,7 @@ describe("TerminalPane — 입력 라우팅", () => {
       });
     });
 
-    fireEvent.click(screen.getByRole("button", { name: "quick-input-history-open" }));
+    openInputHistoryPanel();
     const search = screen.getByRole("textbox", { name: "input-history-search" });
     fireEvent.change(search, { target: { value: "zzz-no-match" } });
     expect(screen.getByText("기록된 실행 입력이 없습니다.")).toBeInTheDocument();
@@ -1191,7 +1205,7 @@ describe("TerminalPane — 입력 라우팅", () => {
       });
     });
 
-    fireEvent.click(screen.getByRole("button", { name: "quick-input-history-open" }));
+    openInputHistoryPanel();
     const search = screen.getByRole("textbox", { name: "input-history-search" });
     fireEvent.change(search, { target: { value: "p" } });
     expect(screen.getByRole("button", { name: "quick-input-history-item-0" })).toHaveTextContent("pwd");
@@ -1204,7 +1218,7 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(screen.getByRole("button", { name: "quick-input-history-item-0" })).toHaveTextContent("ls -la");
     fireEvent.keyDown(search, { key: "Backspace" });
     expect(screen.queryByRole("button", { name: "quick-input-history-item-0" })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "quick-input-history-open" })).toHaveTextContent("HISTORY 1");
+    expectHistoryActionEnabled();
   });
 
   it("HISTORY 검색창에서 Shift+Arrow + Delete로 범위를 일괄 삭제한다", async () => {
@@ -1238,7 +1252,7 @@ describe("TerminalPane — 입력 라우팅", () => {
       });
     });
 
-    fireEvent.click(screen.getByRole("button", { name: "quick-input-history-open" }));
+    openInputHistoryPanel();
     const search = screen.getByRole("textbox", { name: "input-history-search" });
     expect(screen.getByRole("button", { name: "quick-input-history-item-0" })).toHaveTextContent("pwd");
     expect(screen.getByRole("button", { name: "quick-input-history-item-1" })).toHaveTextContent("npm test");
@@ -1253,7 +1267,7 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(screen.queryByLabelText("input-history-selected-count")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "quick-input-history-item-1" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "quick-input-history-item-0" })).toHaveTextContent("ls -la");
-    expect(screen.getByRole("button", { name: "quick-input-history-open" })).toHaveTextContent("HISTORY 1");
+    expectHistoryActionEnabled();
     expect(screen.getByRole("button", { name: "quick-input-recall" })).toHaveTextContent("RECALL ls -la");
   });
 
@@ -1288,7 +1302,7 @@ describe("TerminalPane — 입력 라우팅", () => {
       });
     });
 
-    fireEvent.click(screen.getByRole("button", { name: "quick-input-history-open" }));
+    openInputHistoryPanel();
     const search = screen.getByRole("textbox", { name: "input-history-search" });
     fireEvent.click(screen.getByRole("button", { name: "quick-input-history-item-1" }), { shiftKey: true });
 
@@ -1298,7 +1312,7 @@ describe("TerminalPane — 입력 라우팅", () => {
     fireEvent.keyDown(search, { key: "Delete" });
     expect(screen.queryByLabelText("input-history-selected-count")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "quick-input-history-item-0" })).toHaveTextContent("ls -la");
-    expect(screen.getByRole("button", { name: "quick-input-history-open" })).toHaveTextContent("HISTORY 1");
+    expectHistoryActionEnabled();
   });
 
   it("HISTORY 검색창에서 Cmd/Ctrl+A로 필터 결과 전체 선택 후 Delete로 일괄 삭제한다", async () => {
@@ -1332,7 +1346,7 @@ describe("TerminalPane — 입력 라우팅", () => {
       });
     });
 
-    fireEvent.click(screen.getByRole("button", { name: "quick-input-history-open" }));
+    openInputHistoryPanel();
     const search = screen.getByRole("textbox", { name: "input-history-search" });
     fireEvent.change(search, { target: { value: "p" } });
 
@@ -1343,7 +1357,7 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(screen.queryByLabelText("input-history-selected-count")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "quick-input-history-item-0" })).not.toBeInTheDocument();
     expect(screen.getByText("기록된 실행 입력이 없습니다.")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "quick-input-history-open" })).toHaveTextContent("HISTORY 1");
+    expectHistoryActionEnabled();
     expect(screen.getByRole("button", { name: "quick-input-recall" })).toHaveTextContent("RECALL ls -la");
   });
 
@@ -1378,7 +1392,7 @@ describe("TerminalPane — 입력 라우팅", () => {
       });
     });
 
-    fireEvent.click(screen.getByRole("button", { name: "quick-input-history-open" }));
+    openInputHistoryPanel();
     const search = screen.getByRole("textbox", { name: "input-history-search" });
 
     fireEvent.keyDown(search, { key: "ArrowDown", shiftKey: true });
@@ -1424,7 +1438,7 @@ describe("TerminalPane — 입력 라우팅", () => {
       });
     });
 
-    fireEvent.click(screen.getByRole("button", { name: "quick-input-history-open" }));
+    openInputHistoryPanel();
     const search = screen.getByRole("textbox", { name: "input-history-search" });
 
     fireEvent.keyDown(search, { key: "ArrowDown", shiftKey: true });
