@@ -105,9 +105,7 @@ function openInputHistoryPanel() {
 }
 
 function ensureFullToolbelt() {
-  const compactToggle = screen.getByRole("button", { name: "toolbelt-toggle-compact" });
-  if (compactToggle.textContent?.includes("M")) return;
-  fireEvent.click(compactToggle);
+  return;
 }
 
 function clearInputWithShortcut(input: HTMLInputElement) {
@@ -375,7 +373,7 @@ describe("TerminalPane — 입력 라우팅", () => {
     });
   });
 
-  it("간단 모드에서는 입력 툴벨트가 핵심 버튼만 노출된다", async () => {
+  it("간단 모드에서는 툴벨트 토글 없이 핵심 액션 버튼만 노출된다", async () => {
     invokeMock.mockImplementation((cmd: string) => {
       if (cmd === "load_app_config") {
         return Promise.resolve({
@@ -397,7 +395,7 @@ describe("TerminalPane — 입력 라우팅", () => {
     render(<TerminalPane id="tab-1" />);
 
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: "toolbelt-toggle-compact" })).toHaveTextContent("F");
+      expect(screen.queryByRole("button", { name: "toolbelt-toggle-compact" })).not.toBeInTheDocument();
       expect(screen.getByRole("button", { name: "quick-input-action-palette" })).toBeInTheDocument();
       expect(screen.queryByRole("button", { name: "quick-input-clear" })).not.toBeInTheDocument();
       expect(screen.queryByRole("button", { name: "quick-mention-trigger" })).not.toBeInTheDocument();
@@ -798,7 +796,6 @@ describe("TerminalPane — 입력 라우팅", () => {
 
   it("전체 툴벨트에서는 고급 토글/인라인 RECALL 없이 액션 팔레트만 사용한다", async () => {
     render(<TerminalPane id="tab-1" />);
-    fireEvent.click(screen.getByRole("button", { name: "toolbelt-toggle-compact" }));
     await waitFor(() => {
       expect(screen.queryByRole("button", { name: "quick-input-recall" })).not.toBeInTheDocument();
       expectRecallActionDisabled();
@@ -891,7 +888,6 @@ describe("TerminalPane — 입력 라우팅", () => {
   it("입력 단축키 FORGET으로 CLEAR 복원 이력을 비운다", () => {
     const { container } = render(<TerminalPane id="tab-1" />);
     const input = container.querySelector("input")!;
-    fireEvent.click(screen.getByRole("button", { name: "toolbelt-toggle-compact" }));
     expectUndoActionDisabled();
 
     fireEvent.change(input, { target: { value: "alpha" } });

@@ -310,9 +310,9 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
   });
   const [compactInputToolbelt, setCompactInputToolbelt] = useState(() => {
     try {
-      return localStorage.getItem(TOOLBELT_COMPACT_KEY) !== "0";
+      return localStorage.getItem(TOOLBELT_COMPACT_KEY) === "1";
     } catch {
-      return true;
+      return false;
     }
   });
   useEffect(() => {
@@ -2006,17 +2006,6 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     } catch {}
     invoke("save_ui_preferences", { showInputToolbeltTip: false }).catch(() => {});
   }, []);
-  const toggleCompactInputToolbelt = useCallback(() => {
-    setCompactInputToolbelt((prev) => {
-      const next = !prev;
-      try {
-        localStorage.setItem(TOOLBELT_COMPACT_KEY, next ? "1" : "0");
-      } catch {}
-      invoke("save_ui_preferences", { uiCompactInputToolbelt: next }).catch(() => {});
-      return next;
-    });
-  }, []);
-
   return (
     <div
       ref={outerRef}
@@ -2149,25 +2138,6 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               scrollbarWidth: "none",
             }}
           >
-            <button
-              type="button"
-              aria-label="toolbelt-toggle-compact"
-              onClick={toggleCompactInputToolbelt}
-              style={{
-                fontSize: MICRO_FONT_SIZE,
-                color: compactInputToolbelt ? "rgba(220,247,225,0.96)" : "rgba(255,255,255,0.76)",
-                border: compactInputToolbelt ? "1px solid rgba(63,185,80,0.62)" : "1px solid rgba(255,255,255,0.24)",
-                background: compactInputToolbelt ? "rgba(63,185,80,0.16)" : "rgba(255,255,255,0.08)",
-                borderRadius: 999,
-                padding: "1px 7px",
-                lineHeight: 1.25,
-                cursor: "pointer",
-                flexShrink: 0,
-              }}
-              title="간단/전체 툴벨트 토글"
-            >
-              {compactInputToolbelt ? "F" : "M"}
-            </button>
             <button
               type="button"
               aria-label="quick-input-action-palette"
