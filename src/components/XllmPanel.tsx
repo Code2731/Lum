@@ -3,7 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import {
   SlidersHorizontal, Loader2,
-  Zap, Sparkles, FolderOpen, Wifi, RefreshCw, Check,
+  Zap, Sparkles, FolderOpen, Wifi, RefreshCw, Check, Database,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { IconButton } from "@/components/ui/icon-button";
@@ -27,6 +27,13 @@ interface AppConfig {
   show_reasoning?: boolean;
   ollama_base_url?: string;
   ollama_model?: string;
+  recall_vector_backend?: string;
+}
+
+interface RecallBackendInfo {
+  requested?: string | null;
+  active: string;
+  supported: string[];
 }
 
 type SafetyMode = "safe" | "balanced" | "max";
@@ -192,6 +199,7 @@ const XllmPanel: React.FC<Props> = ({ onClose }) => {
             </p>
           </section>
 
+          <RecallBackendSection />
           <OllamaSection />
           <LanDiscoverySection />
           <EmbeddedInferenceDebug />
@@ -213,6 +221,117 @@ const XllmPanel: React.FC<Props> = ({ onClose }) => {
         </div>
       </DialogContent>
     </Dialog>
+  );
+};
+
+// ── Phase 131: Recall 벡터 백엔드 선택 ─────────────────────────────────────
+const RecallBackendSection: React.FC = () => {
+  const [selected, setSelected] = useState("local-cosine");
+  const [active, setActive] = useState("local-cosine");
+  const [requested, setRequested] = useState<string | null>(null);
+  const [supported, setSupported] = useState<string[]>(["local-cosine", "zvec"]);
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [cfg, info] = await Promise.all([
+        invoke<AppConfig>("load_app_config"),
+        invoke<RecallBackendInfo>("recall_backend_info"),
+      ]);
+      const picked = cfg.recall_vector_backend?.trim() || "local-cosine";
+      setSelected(picked);
+      setActive(info.active || "local-cosine");
+      setRequested(info.requested?.trim() || null);
+      if (info.supported?.length) setSupported(info.supported);
+      setMsg(null);
+    } catch {
+      setMsg("상태 조회 실패");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
+
+  const save = useCallback(async () => {
+    setSaving(true);
+    setMsg(null);
+    try {
+      await invoke("save_recall_vector_backend", {
+        backend: selected || null,
+      });
+      await refresh();
+      setMsg("저장 완료");
+    } catch (e) {
+      setMsg(`저장 실패: ${e}`);
+    } finally {
+      setSaving(false);
+    }
+  }, [refresh, selected]);
+
+  const activeChanged = active !== selected;
+
+  return (
+    <section className="space-y-2 border border-emerald-400/20 rounded-lg p-3 bg-emerald-500/5">
+      <div className="flex items-center gap-2">
+        <label className="text-xs text-emerald-200/85 uppercase tracking-wider flex items-center gap-1.5 flex-1">
+          <Database size={10} /> Recall 벡터 백엔드
+        </label>
+        <span className="text-xs font-mono text-emerald-300/80 px-1.5 py-0.5 rounded border border-emerald-400/25 bg-emerald-500/10">
+          active: {active}
+        </span>
+      </div>
+
+      <div className="space-y-1">
+        <span className="text-xs text-white/35">백엔드 선택</span>
+        <Select value={selected} onValueChange={setSelected} disabled={loading || saving}>
+          <SelectTrigger className="w-full">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {supported.map((name) => (
+              <SelectItem key={name} value={name}>
+                {name === "zvec" ? "zvec (proxy)" : name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <p className="text-xs text-white/35 leading-relaxed">
+        현재 구현은 <code className="px-1 bg-white/5 rounded text-xs">local-cosine</code>가 실제 엔진이며,
+        <code className="px-1 bg-white/5 rounded text-xs ml-1">zvec</code> 키는 교체용 호환 슬롯입니다.
+      </p>
+
+      <div className="flex items-center gap-2">
+        <button
+          onClick={save}
+          disabled={saving || loading}
+          className="px-3 py-1 rounded bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-400/25 text-sm text-emerald-200 disabled:opacity-40 transition-colors"
+        >
+          {saving ? "저장 중..." : "저장"}
+        </button>
+        <button
+          onClick={refresh}
+          disabled={saving || loading}
+          className="px-2.5 py-1 rounded border border-white/10 bg-white/5 hover:bg-white/10 text-sm text-white/70 disabled:opacity-40 transition-colors"
+        >
+          {loading ? "새로고침 중..." : "새로고침"}
+        </button>
+        {msg && <span className="text-xs text-white/50 truncate">{msg}</span>}
+      </div>
+
+      {activeChanged && (
+        <p className="text-xs text-amber-300/85">
+          요청값: <code className="font-mono">{requested ?? "없음"}</code> / 실행값: <code className="font-mono">{active}</code>
+        </p>
+      )}
+    </section>
   );
 };
 
