@@ -118,10 +118,17 @@ const NotificationCenter: React.FC<Props> = ({
   useEffect(() => {
     if (!closeOnDocument) return;
 
-    const handler = (e: MouseEvent) => {
-      if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
+    const handleOutsidePointer = (target: EventTarget | null) => {
+      if (panelRef.current && !panelRef.current.contains(target as Node)) {
         onCloseRef.current();
       }
+    };
+    const mouseHandler = (e: MouseEvent) => {
+      handleOutsidePointer(e.target);
+    };
+    const touchHandler = (e: TouchEvent) => {
+      const touchTarget = e.touches[0]?.target ?? e.target;
+      handleOutsidePointer(touchTarget);
     };
     const keyHandler = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
@@ -131,10 +138,12 @@ const NotificationCenter: React.FC<Props> = ({
         onCloseRef.current();
       }
     };
-    document.addEventListener("mousedown", handler);
+    document.addEventListener("mousedown", mouseHandler);
+    document.addEventListener("touchstart", touchHandler);
     document.addEventListener("keydown", keyHandler, { capture: true });
     return () => {
-      document.removeEventListener("mousedown", handler);
+      document.removeEventListener("mousedown", mouseHandler);
+      document.removeEventListener("touchstart", touchHandler);
       document.removeEventListener("keydown", keyHandler, { capture: true });
     };
   }, [closeOnDocument]); // 리스너는 한 번만 등록, 최신 onClose는 ref를 통해 참조

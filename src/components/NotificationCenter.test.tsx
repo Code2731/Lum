@@ -66,6 +66,22 @@ describe("NotificationCenter", () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
+  it("터치 시작으로도 바깥 영역 탭 시 패널이 닫힌다", () => {
+    const onClose = vi.fn();
+    render(
+      <div>
+        <div>outside</div>
+        <NotificationCenter
+          {...baseProps}
+          onClose={onClose}
+        />
+      </div>,
+    );
+
+    fireEvent.touchStart(document.body);
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
   it("알림 삭제 버튼이 있으면 타입이 맞게 렌더링된다", () => {
     const notifications: AppNotification[] = [
       {
