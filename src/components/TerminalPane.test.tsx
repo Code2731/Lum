@@ -363,6 +363,7 @@ describe("TerminalPane — 입력 라우팅", () => {
       expect(screen.getByRole("button", { name: "action-palette-item-interrupt" })).toBeInTheDocument();
       expect(screen.getByRole("button", { name: "action-palette-item-mention_attach" })).toBeInTheDocument();
       expect(screen.getByRole("button", { name: "action-palette-item-swap_recall" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "action-palette-item-merge_recall" })).toBeInTheDocument();
       expect(screen.getByRole("button", { name: "action-palette-item-prepend_recall" })).toBeInTheDocument();
       expect(screen.getByRole("button", { name: "action-palette-item-toggle_terminal" })).toBeInTheDocument();
       expect(screen.getByRole("button", { name: "action-palette-item-toggle_vision" })).toBeInTheDocument();
@@ -738,19 +739,19 @@ describe("TerminalPane — 입력 라우팅", () => {
     render(<TerminalPane id="tab-1" />);
     fireEvent.click(screen.getByRole("button", { name: "toolbelt-toggle-compact" }));
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: "quick-input-merge-recall" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "quick-input-set-recall" })).toBeInTheDocument();
       expect(screen.getByRole("button", { name: "toolbelt-toggle-advanced" })).toBeInTheDocument();
     });
 
     fireEvent.click(screen.getByRole("button", { name: "toolbelt-toggle-advanced" }));
 
     await waitFor(() => {
-      expect(screen.queryByRole("button", { name: "quick-input-merge-recall" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "quick-input-set-recall" })).not.toBeInTheDocument();
     });
 
     fireEvent.click(screen.getByRole("button", { name: "toolbelt-toggle-advanced" }));
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: "quick-input-merge-recall" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "quick-input-set-recall" })).toBeInTheDocument();
     });
   });
 
@@ -1690,10 +1691,9 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(screen.getByRole("button", { name: "quick-input-set-recall" })).not.toHaveAttribute("disabled");
   });
 
-  it("툴벨트 MERGE 버튼으로 현재 입력 뒤에 직전 실행 입력을 붙인다", async () => {
+  it("입력 단축키 Cmd/Ctrl+Shift+M으로 현재 입력 뒤에 직전 실행 입력을 붙인다", async () => {
     const { container } = render(<TerminalPane id="tab-1" />);
     const input = container.querySelector("input")!;
-    expect(screen.getByRole("button", { name: "quick-input-merge-recall" })).toHaveAttribute("disabled");
 
     submitInput(container, "ls -la");
     await waitFor(() => {
@@ -1702,12 +1702,10 @@ describe("TerminalPane — 입력 라우팅", () => {
         data: "ls -la\r",
       });
     });
-    expect(screen.getByRole("button", { name: "quick-input-merge-recall" })).not.toHaveAttribute("disabled");
 
     fireEvent.change(input, { target: { value: "echo done" } });
-    fireEvent.click(screen.getByRole("button", { name: "quick-input-merge-recall" }));
+    fireEvent.keyDown(input, { key: "M", ctrlKey: true, shiftKey: true });
     expect(input).toHaveValue("echo done ls -la");
-    expect(screen.getByRole("button", { name: "quick-input-merge-recall" })).toHaveAttribute("disabled");
   });
 
   it("입력 단축키 Cmd/Ctrl+Shift+P로 현재 입력 앞에 직전 실행 입력을 붙인다", async () => {

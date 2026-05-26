@@ -1614,6 +1614,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     { id: "recall", label: "Recall Last Input", keywords: "recall", run: recallSubmittedInputQuick, disabled: !canRecallSubmittedInput },
     { id: "rerun", label: "Rerun Last Input", keywords: "rerun repeat", run: rerunSubmittedInputQuick, disabled: !canRerunSubmittedInput },
     { id: "swap_recall", label: "Swap Current/Recall Input", keywords: "swap recall", run: swapWithSubmittedInputQuick, disabled: !canSwapSubmittedInput },
+    { id: "merge_recall", label: "Merge Recall Input", keywords: "merge recall", run: mergeSubmittedInputQuick, disabled: !canMergeRecall },
     { id: "prepend_recall", label: "Prepend Recall Input", keywords: "prepend recall", run: prependSubmittedInputQuick, disabled: !canPrependRecall },
     { id: "reset", label: "Reset Input State", keywords: "reset", run: resetAllInputStateQuick, disabled: !canResetAllQuick },
     { id: "toggle_terminal", label: "Toggle Terminal View", keywords: "terminal view", run: () => setTerminalVisible((v) => !v), disabled: false },
@@ -1638,6 +1639,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     canRecallSubmittedInput,
     canRerunSubmittedInput,
     canSwapSubmittedInput,
+    canMergeRecall,
     canPrependRecall,
     canResetAllQuick,
     canRestoreLastBackendQuick,
@@ -1660,6 +1662,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     recallSubmittedInputQuick,
     rerunSubmittedInputQuick,
     swapWithSubmittedInputQuick,
+    mergeSubmittedInputQuick,
     prependSubmittedInputQuick,
     resetAllInputStateQuick,
     restoreInputQuick,
@@ -2401,26 +2404,6 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               }}
             >
               FR
-            </button>
-            <button
-              type="button"
-              aria-label="quick-input-merge-recall"
-              onClick={mergeSubmittedInputQuick}
-              disabled={!canMergeRecall}
-              title={canMergeRecall ? "현재 입력 뒤에 직전 실행 입력 붙이기 (Cmd/Ctrl+Shift+M)" : "붙일 실행 입력이 없거나 이미 포함돼 비활성화"}
-              style={{
-                fontSize: MICRO_FONT_SIZE,
-                color: canMergeRecall ? "rgba(215,228,255,0.96)" : "rgba(255,255,255,0.42)",
-                border: canMergeRecall ? "1px solid rgba(121,192,255,0.6)" : "1px solid rgba(255,255,255,0.18)",
-                background: canMergeRecall ? "rgba(121,192,255,0.16)" : "rgba(255,255,255,0.06)",
-                borderRadius: 999,
-                padding: "1px 7px",
-                lineHeight: 1.25,
-                cursor: canMergeRecall ? "pointer" : "not-allowed",
-                flexShrink: 0,
-              }}
-            >
-              MERGE
             </button>
               </>
             )}
