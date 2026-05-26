@@ -317,9 +317,9 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
   });
   const [showAdvancedInputTools, setShowAdvancedInputTools] = useState(() => {
     try {
-      return localStorage.getItem(LEGACY_TOOLBELT_ADVANCED_KEY) === "1";
+      return localStorage.getItem(LEGACY_TOOLBELT_ADVANCED_KEY) !== "0";
     } catch {
-      return false;
+      return true;
     }
   });
   const [compactInputToolbelt, setCompactInputToolbelt] = useState(() => {
@@ -349,9 +349,9 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
       })();
       const showAdvanced = (() => {
         try {
-          return localStorage.getItem(LEGACY_TOOLBELT_ADVANCED_KEY) === "1";
+          return localStorage.getItem(LEGACY_TOOLBELT_ADVANCED_KEY) !== "0";
         } catch {
-          return false;
+          return true;
         }
       })();
       return { showInput, showAdvanced };
@@ -2041,16 +2041,6 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     } catch {}
     invoke("save_ui_preferences", { showInputToolbeltTip: false }).catch(() => {});
   }, []);
-  const toggleAdvancedInputTools = useCallback(() => {
-    setShowAdvancedInputTools((prev) => {
-      const next = !prev;
-      try {
-        localStorage.setItem(TOOLBELT_ADVANCED_KEY, next ? "1" : "0");
-      } catch {}
-      invoke("save_ui_preferences", { showAdvancedInputTools: next }).catch(() => {});
-      return next;
-    });
-  }, []);
   const toggleCompactInputToolbelt = useCallback(() => {
     setCompactInputToolbelt((prev) => {
       const next = !prev;
@@ -2213,27 +2203,6 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
             >
               {compactInputToolbelt ? "F" : "M"}
             </button>
-            {!compactInputToolbelt && (
-              <button
-                type="button"
-                aria-label="toolbelt-toggle-advanced"
-                onClick={toggleAdvancedInputTools}
-                style={{
-                  fontSize: MICRO_FONT_SIZE,
-                  color: showAdvancedInputTools ? "rgba(220,247,225,0.96)" : "rgba(255,255,255,0.68)",
-                  border: showAdvancedInputTools ? "1px solid rgba(63,185,80,0.62)" : "1px solid rgba(255,255,255,0.22)",
-                  background: showAdvancedInputTools ? "rgba(63,185,80,0.18)" : "rgba(255,255,255,0.08)",
-                  borderRadius: 999,
-                  padding: "1px 7px",
-                  lineHeight: 1.25,
-                  cursor: "pointer",
-                  flexShrink: 0,
-                }}
-                title="고급 툴 표시/숨김"
-              >
-                A
-              </button>
-            )}
             {!compactInputToolbelt && (
               <button
                 type="button"

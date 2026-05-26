@@ -765,23 +765,12 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(screen.getByText("일치하는 항목이 없습니다.")).toBeInTheDocument();
   });
 
-  it("툴벨트 커스터마이징으로 고급 편집 버튼 표시를 토글한다", async () => {
+  it("전체 툴벨트에서는 고급 토글 버튼 없이 RECALL을 바로 표시한다", async () => {
     render(<TerminalPane id="tab-1" />);
     fireEvent.click(screen.getByRole("button", { name: "toolbelt-toggle-compact" }));
     await waitFor(() => {
       expect(screen.getByRole("button", { name: "quick-input-recall" })).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: "toolbelt-toggle-advanced" })).toBeInTheDocument();
-    });
-
-    fireEvent.click(screen.getByRole("button", { name: "toolbelt-toggle-advanced" }));
-
-    await waitFor(() => {
-      expect(screen.queryByRole("button", { name: "quick-input-recall" })).not.toBeInTheDocument();
-    });
-
-    fireEvent.click(screen.getByRole("button", { name: "toolbelt-toggle-advanced" }));
-    await waitFor(() => {
-      expect(screen.getByRole("button", { name: "quick-input-recall" })).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "toolbelt-toggle-advanced" })).not.toBeInTheDocument();
     });
   });
 
