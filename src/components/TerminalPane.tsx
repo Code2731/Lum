@@ -1618,6 +1618,9 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     { id: "toggle_vision", label: "Toggle Vision Mode", keywords: "vision image", run: () => setVisionMode((v) => !v), disabled: false },
     { id: "toggle_reasoning", label: "Toggle Reasoning View", keywords: "reasoning think", run: () => onToggleReasoning?.(), disabled: false },
     { id: "mention_attach", label: "Attach File Mention", keywords: "mention attach file @", run: triggerMentionAttach, disabled: false },
+    { id: "trim", label: "Trim Input", keywords: "trim whitespace", run: trimInputQuick, disabled: !canTrimInput },
+    { id: "squash", label: "Squash Spaces", keywords: "squash spaces", run: squashInputSpacesQuick, disabled: !canSquashInputSpaces },
+    { id: "clean", label: "Clean Input (Trim + Squash)", keywords: "clean trim squash", run: cleanInputQuick, disabled: !canCleanInput },
     { id: "mode_heavy", label: "Toggle Heavy Mode (!!)", keywords: "mode heavy !!", run: () => toggleQuickModePrefix("heavy"), disabled: false },
     { id: "mode_shell", label: "Toggle Shell Mode (!)", keywords: "mode shell !", run: () => toggleQuickModePrefix("shell"), disabled: false },
     { id: "mode_agent", label: "Toggle Agent Mode (>>)", keywords: "mode agent >>", run: () => toggleQuickModePrefix("agent"), disabled: false },
@@ -1640,6 +1643,12 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     handleInterrupt,
     toggleQuickModePrefix,
     toggleForceAiPrefix,
+    trimInputQuick,
+    squashInputSpacesQuick,
+    cleanInputQuick,
+    canTrimInput,
+    canSquashInputSpaces,
+    canCleanInput,
     submittedInputHistory.length,
     recallSubmittedInputQuick,
     rerunSubmittedInputQuick,
@@ -2463,66 +2472,6 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               }}
             >
               PLAIN
-            </button>
-            <button
-              type="button"
-              aria-label="quick-input-trim"
-              onClick={trimInputQuick}
-              disabled={!canTrimInput}
-              title={canTrimInput ? "입력 앞뒤 공백 정리 (Cmd/Ctrl+Shift+T)" : "정리할 공백이 없어 비활성화"}
-              style={{
-                fontSize: MICRO_FONT_SIZE,
-                color: canTrimInput ? "rgba(220,247,225,0.96)" : "rgba(255,255,255,0.42)",
-                border: canTrimInput ? "1px solid rgba(63,185,80,0.62)" : "1px solid rgba(255,255,255,0.18)",
-                background: canTrimInput ? "rgba(63,185,80,0.16)" : "rgba(255,255,255,0.06)",
-                borderRadius: 999,
-                padding: "1px 7px",
-                lineHeight: 1.25,
-                cursor: canTrimInput ? "pointer" : "not-allowed",
-                flexShrink: 0,
-              }}
-            >
-              TRIM
-            </button>
-            <button
-              type="button"
-              aria-label="quick-input-squash"
-              onClick={squashInputSpacesQuick}
-              disabled={!canSquashInputSpaces}
-              title={canSquashInputSpaces ? "연속 공백을 한 칸으로 압축 (Cmd/Ctrl+Shift+Q)" : "압축할 연속 공백이 없어 비활성화"}
-              style={{
-                fontSize: MICRO_FONT_SIZE,
-                color: canSquashInputSpaces ? "rgba(220,247,225,0.96)" : "rgba(255,255,255,0.42)",
-                border: canSquashInputSpaces ? "1px solid rgba(63,185,80,0.62)" : "1px solid rgba(255,255,255,0.18)",
-                background: canSquashInputSpaces ? "rgba(63,185,80,0.16)" : "rgba(255,255,255,0.06)",
-                borderRadius: 999,
-                padding: "1px 7px",
-                lineHeight: 1.25,
-                cursor: canSquashInputSpaces ? "pointer" : "not-allowed",
-                flexShrink: 0,
-              }}
-            >
-              SQ
-            </button>
-            <button
-              type="button"
-              aria-label="quick-input-clean"
-              onClick={cleanInputQuick}
-              disabled={!canCleanInput}
-              title={canCleanInput ? "앞뒤 공백 제거 + 연속 공백 압축 (Cmd/Ctrl+Shift+L)" : "정리할 공백이 없어 비활성화"}
-              style={{
-                fontSize: MICRO_FONT_SIZE,
-                color: canCleanInput ? "rgba(220,247,225,0.96)" : "rgba(255,255,255,0.42)",
-                border: canCleanInput ? "1px solid rgba(63,185,80,0.62)" : "1px solid rgba(255,255,255,0.18)",
-                background: canCleanInput ? "rgba(63,185,80,0.16)" : "rgba(255,255,255,0.06)",
-                borderRadius: 999,
-                padding: "1px 7px",
-                lineHeight: 1.25,
-                cursor: canCleanInput ? "pointer" : "not-allowed",
-                flexShrink: 0,
-              }}
-            >
-              CL
             </button>
               </>
             )}

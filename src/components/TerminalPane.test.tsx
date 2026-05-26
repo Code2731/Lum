@@ -1741,56 +1741,57 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(screen.getByText("AI AUTO")).toBeInTheDocument();
   });
 
-  it("툴벨트 TRIM 버튼으로 입력 앞뒤 공백을 정리한다", () => {
+  it("입력 단축키 Cmd/Ctrl+Shift+T로 입력 앞뒤 공백을 정리한다", () => {
     const { container } = render(<TerminalPane id="tab-1" />);
     const input = container.querySelector("input")!;
-    expect(screen.getByRole("button", { name: "quick-input-trim" })).toHaveAttribute("disabled");
 
     fireEvent.change(input, { target: { value: "   @xllm 로그 요약해줘   " } });
-    expect(screen.getByRole("button", { name: "quick-input-trim" })).not.toHaveAttribute("disabled");
 
-    fireEvent.click(screen.getByRole("button", { name: "quick-input-trim" }));
+    fireEvent.keyDown(input, { key: "T", ctrlKey: true, shiftKey: true });
     expect(input).toHaveValue("@xllm 로그 요약해줘");
-    expect(screen.getByRole("button", { name: "quick-input-trim" })).toHaveAttribute("disabled");
   });
 
-  it("툴벨트 SQUASH 버튼으로 연속 공백을 한 칸으로 압축한다", () => {
+  it("입력 단축키 Cmd/Ctrl+Shift+Q로 연속 공백을 한 칸으로 압축한다", () => {
     const { container } = render(<TerminalPane id="tab-1" />);
     const input = container.querySelector("input")!;
-    expect(screen.getByRole("button", { name: "quick-input-squash" })).toHaveAttribute("disabled");
 
     fireEvent.change(input, { target: { value: "echo    hello   world" } });
-    expect(screen.getByRole("button", { name: "quick-input-squash" })).not.toHaveAttribute("disabled");
 
-    fireEvent.click(screen.getByRole("button", { name: "quick-input-squash" }));
+    fireEvent.keyDown(input, { key: "Q", ctrlKey: true, shiftKey: true });
     expect(input).toHaveValue("echo hello world");
-    expect(screen.getByRole("button", { name: "quick-input-squash" })).toHaveAttribute("disabled");
   });
 
-  it("툴벨트 CLEAN 버튼으로 trim+squash를 한 번에 수행한다", () => {
+  it("입력 단축키 Cmd/Ctrl+Shift+L로 trim+squash를 한 번에 수행한다", () => {
     const { container } = render(<TerminalPane id="tab-1" />);
     const input = container.querySelector("input")!;
-    expect(screen.getByRole("button", { name: "quick-input-clean" })).toHaveAttribute("disabled");
 
     fireEvent.change(input, { target: { value: "   echo    hello   world   " } });
-    expect(screen.getByRole("button", { name: "quick-input-clean" })).not.toHaveAttribute("disabled");
 
-    fireEvent.click(screen.getByRole("button", { name: "quick-input-clean" }));
+    fireEvent.keyDown(input, { key: "L", ctrlKey: true, shiftKey: true });
     expect(input).toHaveValue("echo hello world");
-    expect(screen.getByRole("button", { name: "quick-input-clean" })).toHaveAttribute("disabled");
   });
 
-  it("툴벨트 CLEAN으로 바뀐 입력은 UNDO로 원복할 수 있다", () => {
+  it("CLEAN 단축키로 바뀐 입력은 UNDO로 원복할 수 있다", () => {
     const { container } = render(<TerminalPane id="tab-1" />);
     const input = container.querySelector("input")!;
     fireEvent.change(input, { target: { value: "   echo    hello   world   " } });
 
-    fireEvent.click(screen.getByRole("button", { name: "quick-input-clean" }));
+    fireEvent.keyDown(input, { key: "L", ctrlKey: true, shiftKey: true });
     expect(input).toHaveValue("echo hello world");
-    expect(screen.getByRole("button", { name: "quick-input-undo" })).toHaveTextContent("UNDO 1");
-
-    fireEvent.click(screen.getByRole("button", { name: "quick-input-undo" }));
+    fireEvent.keyDown(input, { key: "Z", ctrlKey: true, shiftKey: true });
     expect(input).toHaveValue("   echo    hello   world   ");
+  });
+
+  it("Action Palette에서 Trim/Squash/Clean 액션을 제공한다", () => {
+    const { container } = render(<TerminalPane id="tab-1" />);
+    const input = container.querySelector("input")!;
+
+    fireEvent.change(input, { target: { value: "   echo    hello   world   " } });
+    fireEvent.click(screen.getByRole("button", { name: "quick-input-action-palette" }));
+    expect(screen.getByRole("button", { name: "action-palette-item-trim" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "action-palette-item-squash" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "action-palette-item-clean" }));
+    expect(input).toHaveValue("echo hello world");
   });
 
   it("입력 단축키 Cmd/Ctrl+Shift+K/Z/R로 CLEAR/UNDO/RECALL을 실행한다", async () => {
