@@ -82,6 +82,7 @@ fn split_model_file(model_ref: &str) -> Option<(String, String)> {
     }
 }
 
+#[cfg(feature = "embedded-ai")]
 fn save_last_embed_key(key: &str) {
     let mut config = match crate::commands::config::load_config() {
         Ok(c) => c,
@@ -210,10 +211,12 @@ pub const DISABLED_MSG: &str =
     "embedded-ai feature 비활성 — scripts/cargo-check-cuda.bat 또는 npm run tauri:dev:cuda";
 
 /// 마지막 로드 모델이 없거나 포맷이 맞지 않으면, 로컬에 설치된 첫 번째 mistral 모델을 기본 복원 대상으로 사용.
+#[cfg(feature = "embedded-ai")]
 fn pick_default_local_embed_key() -> Option<ParsedEmbedKey> {
     pick_default_local_embed_key_with_hint(None)
 }
 
+#[cfg(feature = "embedded-ai")]
 fn pick_default_local_embed_key_with_hint(hint: Option<&str>) -> Option<ParsedEmbedKey> {
     let hint = hint
         .map(|h| h.trim().to_lowercase())
