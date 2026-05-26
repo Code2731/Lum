@@ -73,9 +73,6 @@ beforeEach(() => {
     if (cmd === "load_app_config") {
       return Promise.resolve({
         ui_show_input_toolbelt_tip: true,
-        ui_show_advanced_input_tools: true,
-        ui_show_backend_quick_tools: true,
-        ui_compact_input_toolbelt: false,
       });
     }
     if (cmd === "spawn_pty") return Promise.resolve();
@@ -260,7 +257,7 @@ describe("TerminalPane — 입력 라우팅", () => {
 
   it("선행 공백 + # 탭 입력도 AI 명령 제안 호출 시 prefix를 제외한 prompt를 전달한다", async () => {
     invokeMock.mockImplementation((cmd: string) => {
-      if (cmd === "load_app_config") return Promise.resolve({ ui_compact_input_toolbelt: false });
+      if (cmd === "load_app_config") return Promise.resolve({});
       if (cmd === "spawn_pty") return Promise.resolve();
       if (cmd === "write_to_pty") return Promise.resolve();
       if (cmd === "resize_pty") return Promise.resolve();
@@ -285,7 +282,7 @@ describe("TerminalPane — 입력 라우팅", () => {
 
   it("선행 공백 + ? 탭 입력도 explain 호출 시 prefix를 제외한 command를 전달한다", async () => {
     invokeMock.mockImplementation((cmd: string) => {
-      if (cmd === "load_app_config") return Promise.resolve({ ui_compact_input_toolbelt: false });
+      if (cmd === "load_app_config") return Promise.resolve({});
       if (cmd === "spawn_pty") return Promise.resolve();
       if (cmd === "write_to_pty") return Promise.resolve();
       if (cmd === "resize_pty") return Promise.resolve();
@@ -318,9 +315,6 @@ describe("TerminalPane — 입력 라우팅", () => {
     invokeMock.mockImplementation((cmd: string) => {
       if (cmd === "load_app_config") {
         return Promise.resolve({
-          ui_show_advanced_input_tools: true,
-          ui_show_backend_quick_tools: true,
-          ui_compact_input_toolbelt: false,
         });
       }
       if (cmd === "spawn_pty") return Promise.resolve();
@@ -346,8 +340,6 @@ describe("TerminalPane — 입력 라우팅", () => {
       if (cmd === "load_app_config") {
         return Promise.resolve({
           ui_show_input_toolbelt_tip: false,
-          ui_show_advanced_input_tools: false,
-          ui_show_backend_quick_tools: false,
         });
       }
       if (cmd === "spawn_pty") return Promise.resolve();
@@ -374,9 +366,6 @@ describe("TerminalPane — 입력 라우팅", () => {
       if (cmd === "load_app_config") {
         return Promise.resolve({
           ui_show_input_toolbelt_tip: true,
-          ui_show_advanced_input_tools: true,
-          ui_show_backend_quick_tools: true,
-          ui_compact_input_toolbelt: true,
         });
       }
       if (cmd === "spawn_pty") return Promise.resolve();
@@ -435,7 +424,7 @@ describe("TerminalPane — 입력 라우팅", () => {
       localStorage.setItem("lum_toolbelt_show_backend", "0");
     } catch {}
     invokeMock.mockImplementation((cmd: string) => {
-      if (cmd === "load_app_config") return Promise.resolve({ ui_compact_input_toolbelt: false });
+      if (cmd === "load_app_config") return Promise.resolve({});
       if (cmd === "spawn_pty") return Promise.resolve();
       if (cmd === "write_to_pty") return Promise.resolve();
       if (cmd === "resize_pty") return Promise.resolve();
@@ -599,8 +588,6 @@ describe("TerminalPane — 입력 라우팅", () => {
       if (cmd === "load_app_config") {
         return Promise.resolve({
           ui_show_input_toolbelt_tip: true,
-          ui_show_advanced_input_tools: true,
-          ui_show_backend_quick_tools: true,
         });
       }
       if (cmd === "spawn_pty") return Promise.resolve();
@@ -632,8 +619,6 @@ describe("TerminalPane — 입력 라우팅", () => {
       if (cmd === "load_app_config") {
         return Promise.resolve({
           ui_show_input_toolbelt_tip: true,
-          ui_show_advanced_input_tools: true,
-          ui_show_backend_quick_tools: true,
         });
       }
       if (cmd === "spawn_pty") return Promise.resolve();
@@ -667,8 +652,6 @@ describe("TerminalPane — 입력 라우팅", () => {
       if (cmd === "load_app_config") {
         return Promise.resolve({
           ui_show_input_toolbelt_tip: true,
-          ui_show_advanced_input_tools: true,
-          ui_show_backend_quick_tools: true,
         });
       }
       if (cmd === "spawn_pty") return Promise.resolve();
@@ -701,8 +684,6 @@ describe("TerminalPane — 입력 라우팅", () => {
       if (cmd === "load_app_config") {
         return Promise.resolve({
           ui_show_input_toolbelt_tip: true,
-          ui_show_advanced_input_tools: true,
-          ui_show_backend_quick_tools: true,
         });
       }
       if (cmd === "spawn_pty") return Promise.resolve();
@@ -741,8 +722,6 @@ describe("TerminalPane — 입력 라우팅", () => {
       if (cmd === "load_app_config") {
         return Promise.resolve({
           ui_show_input_toolbelt_tip: true,
-          ui_show_advanced_input_tools: true,
-          ui_show_backend_quick_tools: true,
         });
       }
       if (cmd === "spawn_pty") return Promise.resolve();
@@ -766,8 +745,6 @@ describe("TerminalPane — 입력 라우팅", () => {
       if (cmd === "load_app_config") {
         return Promise.resolve({
           ui_show_input_toolbelt_tip: true,
-          ui_show_advanced_input_tools: true,
-          ui_show_backend_quick_tools: true,
         });
       }
       if (cmd === "spawn_pty") return Promise.resolve();
@@ -2301,8 +2278,6 @@ describe("TerminalPane — 입력 라우팅", () => {
       if (cmd === "load_app_config") {
         return Promise.resolve({
           ui_show_input_toolbelt_tip: true,
-          ui_show_advanced_input_tools: true,
-          ui_show_backend_quick_tools: true,
         });
       }
       if (cmd === "spawn_pty") return Promise.resolve();
@@ -2335,8 +2310,6 @@ describe("TerminalPane — 입력 라우팅", () => {
       if (cmd === "load_app_config") {
         return Promise.resolve({
           ui_show_input_toolbelt_tip: true,
-          ui_show_advanced_input_tools: true,
-          ui_show_backend_quick_tools: true,
         });
       }
       if (cmd === "spawn_pty") return Promise.resolve();

@@ -117,10 +117,8 @@ const THEME = {
 const PANE_PADDING_X = 10;
 const PANE_PADDING_Y = 6;
 const INPUT_TIP_DISMISSED_KEY = "lum_input_toolbelt_tip_dismissed";
-const TOOLBELT_ADVANCED_KEY = "lum_toolbelt_show_advanced";
 const INPUT_HISTORY_KEY = "lum_input_submit_history";
 const LEGACY_TOOLBELT_TIP_KEY = INPUT_TIP_DISMISSED_KEY;
-const LEGACY_TOOLBELT_ADVANCED_KEY = TOOLBELT_ADVANCED_KEY;
 
 const DEFAULT_MODEL = "Qwen2.5-Coder-7B-Instruct-EXL2-4bpw";
 const UI_TEXT_MICRO = "var(--lum-ui-text-micro)";
@@ -311,7 +309,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     const clearLegacyToolbeltSettings = () => {
       try {
         localStorage.removeItem(LEGACY_TOOLBELT_TIP_KEY);
-        localStorage.removeItem(LEGACY_TOOLBELT_ADVANCED_KEY);
+        localStorage.removeItem("lum_toolbelt_show_advanced");
         localStorage.removeItem("lum_toolbelt_show_backend");
       } catch {
         /* noop */
@@ -334,7 +332,6 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
       try {
         const cfg = await invoke<{
           ui_show_input_toolbelt_tip?: boolean;
-          ui_show_backend_quick_tools?: boolean;
         }>("load_app_config");
         if (!mounted) return;
 
