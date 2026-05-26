@@ -1611,6 +1611,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     { id: "clear", label: "Clear Input", keywords: "clear", run: clearInputQuick, disabled: !canClearInputQuick },
     { id: "interrupt", label: "Interrupt Running Task", keywords: "interrupt stop cancel", run: handleInterrupt, disabled: false },
     { id: "undo", label: "Undo Clear", keywords: "undo restore", run: restoreInputQuick, disabled: clearedInputStack.length === 0 },
+    { id: "set_recall", label: "Set Recall From Current Input", keywords: "set recall save current", run: setRecallFromCurrentQuick, disabled: !canSetRecallFromCurrent },
     { id: "recall", label: "Recall Last Input", keywords: "recall", run: recallSubmittedInputQuick, disabled: !canRecallSubmittedInput },
     { id: "rerun", label: "Rerun Last Input", keywords: "rerun repeat", run: rerunSubmittedInputQuick, disabled: !canRerunSubmittedInput },
     { id: "forget_recall", label: "Forget Recall Input", keywords: "forget recall drop", run: forgetSubmittedInputQuick, disabled: !lastSubmittedInput },
@@ -1637,6 +1638,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     { id: "backend_last", label: "Backend Last", keywords: "backend last", run: restoreLastBackendQuickPrefix, disabled: !canRestoreLastBackendQuick },
   ]), [
     canClearInputQuick,
+    canSetRecallFromCurrent,
     canRecallSubmittedInput,
     canRerunSubmittedInput,
     lastSubmittedInput,
@@ -1661,6 +1663,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     canSquashInputSpaces,
     canCleanInput,
     submittedInputHistory.length,
+    setRecallFromCurrentQuick,
     recallSubmittedInputQuick,
     rerunSubmittedInputQuick,
     forgetSubmittedInputQuick,
@@ -2302,26 +2305,6 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
             </button>
             {showAdvancedInputTools && !compactInputToolbelt && (
               <>
-            <button
-              type="button"
-              aria-label="quick-input-set-recall"
-              onClick={setRecallFromCurrentQuick}
-              disabled={!canSetRecallFromCurrent}
-              title={canSetRecallFromCurrent ? "현재 입력을 RECALL 대상으로 저장 (Cmd/Ctrl+Shift+S)" : "저장 가능한 입력이 없거나 RECALL과 동일해 비활성화"}
-              style={{
-                fontSize: MICRO_FONT_SIZE,
-                color: canSetRecallFromCurrent ? "rgba(255,244,214,0.95)" : "rgba(255,255,255,0.42)",
-                border: canSetRecallFromCurrent ? "1px solid rgba(227,179,65,0.6)" : "1px solid rgba(255,255,255,0.18)",
-                background: canSetRecallFromCurrent ? "rgba(227,179,65,0.16)" : "rgba(255,255,255,0.06)",
-                borderRadius: 999,
-                padding: "1px 7px",
-                lineHeight: 1.25,
-                cursor: canSetRecallFromCurrent ? "pointer" : "not-allowed",
-                flexShrink: 0,
-              }}
-            >
-              SR
-            </button>
             <button
               type="button"
               aria-label="quick-input-recall"
