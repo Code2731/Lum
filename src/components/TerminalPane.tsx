@@ -1613,6 +1613,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     { id: "undo", label: "Undo Clear", keywords: "undo restore", run: restoreInputQuick, disabled: clearedInputStack.length === 0 },
     { id: "recall", label: "Recall Last Input", keywords: "recall", run: recallSubmittedInputQuick, disabled: !canRecallSubmittedInput },
     { id: "rerun", label: "Rerun Last Input", keywords: "rerun repeat", run: rerunSubmittedInputQuick, disabled: !canRerunSubmittedInput },
+    { id: "swap_recall", label: "Swap Current/Recall Input", keywords: "swap recall", run: swapWithSubmittedInputQuick, disabled: !canSwapSubmittedInput },
     { id: "reset", label: "Reset Input State", keywords: "reset", run: resetAllInputStateQuick, disabled: !canResetAllQuick },
     { id: "toggle_terminal", label: "Toggle Terminal View", keywords: "terminal view", run: () => setTerminalVisible((v) => !v), disabled: false },
     { id: "toggle_vision", label: "Toggle Vision Mode", keywords: "vision image", run: () => setVisionMode((v) => !v), disabled: false },
@@ -1635,6 +1636,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     canClearInputQuick,
     canRecallSubmittedInput,
     canRerunSubmittedInput,
+    canSwapSubmittedInput,
     canResetAllQuick,
     canRestoreLastBackendQuick,
     canRestorePrevBackendQuick,
@@ -1655,6 +1657,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     submittedInputHistory.length,
     recallSubmittedInputQuick,
     rerunSubmittedInputQuick,
+    swapWithSubmittedInputQuick,
     resetAllInputStateQuick,
     restoreInputQuick,
     restoreLastBackendQuickPrefix,
@@ -2395,26 +2398,6 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               }}
             >
               FR
-            </button>
-            <button
-              type="button"
-              aria-label="quick-input-swap"
-              onClick={swapWithSubmittedInputQuick}
-              disabled={!canSwapSubmittedInput}
-              title={canSwapSubmittedInput ? "현재 입력과 직전 실행 입력 교환 (Cmd/Ctrl+Shift+W)" : "교환 가능한 상태가 아니어서 비활성화 (실행 입력 없음/현재 입력 비실행/동일 입력)"}
-              style={{
-                fontSize: MICRO_FONT_SIZE,
-                color: canSwapSubmittedInput ? "rgba(220,247,225,0.96)" : "rgba(255,255,255,0.42)",
-                border: canSwapSubmittedInput ? "1px solid rgba(63,185,80,0.62)" : "1px solid rgba(255,255,255,0.18)",
-                background: canSwapSubmittedInput ? "rgba(63,185,80,0.16)" : "rgba(255,255,255,0.06)",
-                borderRadius: 999,
-                padding: "1px 7px",
-                lineHeight: 1.25,
-                cursor: canSwapSubmittedInput ? "pointer" : "not-allowed",
-                flexShrink: 0,
-              }}
-            >
-              SWAP
             </button>
             <button
               type="button"
