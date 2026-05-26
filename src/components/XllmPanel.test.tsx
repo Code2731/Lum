@@ -1,0 +1,75 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import XllmPanel from "./XllmPanel";
+
+const invokeMock = vi.fn();
+
+vi.mock("@tauri-apps/api/core", () => ({
+  invoke: (cmd: string, args?: unknown) => invokeMock(cmd, args),
+}));
+
+vi.mock("@tauri-apps/api/event", () => ({
+  listen: vi.fn(async () => () => {}),
+}));
+
+function mockInvoke() {
+  invokeMock.mockImplementation((cmd: string, args?: unknown) => {
+    if (cmd === "load_app_config") {
+      return Promise.resolve({
+        recall_vector_backend: "zvec",
+      });
+    }
+    if (cmd === "recall_backend_info") {
+      return Promise.resolve({
+        requested: "zvec",
+        active: "local-cosine",
+        supported: ["local-cosine", "zvec"],
+      });
+    }
+    if (cmd === "save_recall_vector_backend") {
+      return Promise.resolve(args ?? {});
+    }
+    if (cmd === "list_embed_candidates") {
+      return Promise.resolve([]);
+    }
+    if (cmd === "list_lora_candidates") {
+      return Promise.resolve([]);
+    }
+    if (cmd === "embed_loaded_info") {
+      return Promise.resolve(null);
+    }
+    if (cmd === "save_xllm_settings") {
+      return Promise.resolve({});
+    }
+    return Promise.resolve({});
+  });
+}
+
+describe("XllmPanel", () => {
+  beforeEach(() => {
+    invokeMock.mockReset();
+    mockInvoke();
+  });
+
+  it("Recall 백엔드 섹션에서 active 상태를 표시한다", async () => {
+    render(<XllmPanel onClose={vi.fn()} />);
+
+    await waitFor(() => {
+      expect(invokeMock).toHaveBeenCalledWith("recall_backend_info", undefined);
+      expect(screen.getByText("active: local-cosine")).toBeInTheDocument();
+    });
+  });
+
+  it("Recall 백엔드 저장 클릭 시 save_recall_vector_backend를 호출한다", async () => {
+    render(<XllmPanel onClose={vi.fn()} />);
+
+    const saveButton = await screen.findByRole("button", { name: "저장" });
+    fireEvent.click(saveButton);
+
+    await waitFor(() => {
+      expect(invokeMock).toHaveBeenCalledWith("save_recall_vector_backend", {
+        backend: "zvec",
+      });
+    });
+  });
+});
