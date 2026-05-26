@@ -837,22 +837,21 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(screen.getByRole("button", { name: "quick-input-undo" })).toHaveAttribute("disabled");
   });
 
-  it("툴벨트 FORGET 버튼으로 CLEAR 복원 이력을 비운다", () => {
+  it("입력 단축키 FORGET으로 CLEAR 복원 이력을 비운다", () => {
     const { container } = render(<TerminalPane id="tab-1" />);
     const input = container.querySelector("input")!;
-    expect(screen.getByRole("button", { name: "quick-input-forget-undo" })).toHaveAttribute("disabled");
+    fireEvent.click(screen.getByRole("button", { name: "toolbelt-toggle-compact" }));
+    expect(screen.getByRole("button", { name: "quick-input-undo" })).toHaveAttribute("disabled");
 
     fireEvent.change(input, { target: { value: "alpha" } });
     fireEvent.click(screen.getByRole("button", { name: "quick-input-clear" }));
     fireEvent.change(input, { target: { value: "beta" } });
     fireEvent.click(screen.getByRole("button", { name: "quick-input-clear" }));
     expect(screen.getByRole("button", { name: "quick-input-undo" })).toHaveTextContent("UNDO 2");
-    expect(screen.getByRole("button", { name: "quick-input-forget-undo" })).not.toHaveAttribute("disabled");
 
-    fireEvent.click(screen.getByRole("button", { name: "quick-input-forget-undo" }));
+    fireEvent.keyDown(input, { key: "D", ctrlKey: true, shiftKey: true });
     expect(screen.getByRole("button", { name: "quick-input-undo" })).toHaveTextContent("UNDO");
     expect(screen.getByRole("button", { name: "quick-input-undo" })).toHaveAttribute("disabled");
-    expect(screen.getByRole("button", { name: "quick-input-forget-undo" })).toHaveAttribute("disabled");
   });
 
   it("동일 입력을 연속 CLEAR해도 UNDO 스택은 중복 저장하지 않는다", () => {
@@ -1860,15 +1859,14 @@ describe("TerminalPane — 입력 라우팅", () => {
   it("입력 단축키 Cmd/Ctrl+Shift+X/D로 RESET/FORGET(UNDO)을 실행한다", () => {
     const { container } = render(<TerminalPane id="tab-1" />);
     const input = container.querySelector("input")!;
+    fireEvent.click(screen.getByRole("button", { name: "toolbelt-toggle-compact" }));
 
     fireEvent.change(input, { target: { value: "temp" } });
     fireEvent.click(screen.getByRole("button", { name: "quick-input-clear" }));
     expect(screen.getByRole("button", { name: "quick-input-undo" })).toHaveTextContent("UNDO 1");
-    expect(screen.getByRole("button", { name: "quick-input-forget-undo" })).not.toHaveAttribute("disabled");
 
     fireEvent.keyDown(input, { key: "D", ctrlKey: true, shiftKey: true });
     expect(screen.getByRole("button", { name: "quick-input-undo" })).toHaveTextContent("UNDO");
-    expect(screen.getByRole("button", { name: "quick-input-forget-undo" })).toHaveAttribute("disabled");
     const consumedNoopD = fireEvent.keyDown(input, { key: "D", ctrlKey: true, shiftKey: true });
     expect(consumedNoopD).toBe(false);
 

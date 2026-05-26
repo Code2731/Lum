@@ -2274,28 +2274,6 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
             >
               K
             </button>
-            {!compactInputToolbelt && (
-              <button
-                type="button"
-                aria-label="quick-input-forget-undo"
-                onClick={forgetUndoStackQuick}
-                disabled={clearedInputStack.length === 0}
-                title={clearedInputStack.length > 0 ? "CLEAR 복원 이력 비우기 (Cmd/Ctrl+Shift+D)" : "비울 복원 이력이 없어 비활성화"}
-                style={{
-                  fontSize: MICRO_FONT_SIZE,
-                  color: clearedInputStack.length > 0 ? "rgba(255,225,222,0.95)" : "rgba(255,255,255,0.42)",
-                  border: clearedInputStack.length > 0 ? "1px solid rgba(255,123,114,0.58)" : "1px solid rgba(255,255,255,0.18)",
-                  background: clearedInputStack.length > 0 ? "rgba(255,123,114,0.14)" : "rgba(255,255,255,0.06)",
-                  borderRadius: 999,
-                  padding: "1px 7px",
-                  lineHeight: 1.25,
-                  cursor: clearedInputStack.length > 0 ? "pointer" : "not-allowed",
-                  flexShrink: 0,
-                }}
-              >
-                DROP
-              </button>
-            )}
             {showAdvancedInputTools && !compactInputToolbelt && (
               <>
             <button
