@@ -1613,6 +1613,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     { id: "undo", label: "Undo Clear", keywords: "undo restore", run: restoreInputQuick, disabled: clearedInputStack.length === 0 },
     { id: "recall", label: "Recall Last Input", keywords: "recall", run: recallSubmittedInputQuick, disabled: !canRecallSubmittedInput },
     { id: "rerun", label: "Rerun Last Input", keywords: "rerun repeat", run: rerunSubmittedInputQuick, disabled: !canRerunSubmittedInput },
+    { id: "forget_recall", label: "Forget Recall Input", keywords: "forget recall drop", run: forgetSubmittedInputQuick, disabled: !lastSubmittedInput },
     { id: "swap_recall", label: "Swap Current/Recall Input", keywords: "swap recall", run: swapWithSubmittedInputQuick, disabled: !canSwapSubmittedInput },
     { id: "merge_recall", label: "Merge Recall Input", keywords: "merge recall", run: mergeSubmittedInputQuick, disabled: !canMergeRecall },
     { id: "prepend_recall", label: "Prepend Recall Input", keywords: "prepend recall", run: prependSubmittedInputQuick, disabled: !canPrependRecall },
@@ -1638,6 +1639,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     canClearInputQuick,
     canRecallSubmittedInput,
     canRerunSubmittedInput,
+    lastSubmittedInput,
     canSwapSubmittedInput,
     canMergeRecall,
     canPrependRecall,
@@ -1661,6 +1663,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     submittedInputHistory.length,
     recallSubmittedInputQuick,
     rerunSubmittedInputQuick,
+    forgetSubmittedInputQuick,
     swapWithSubmittedInputQuick,
     mergeSubmittedInputQuick,
     prependSubmittedInputQuick,
@@ -2384,26 +2387,6 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               }}
             >
               {historyButtonLabel}
-            </button>
-            <button
-              type="button"
-              aria-label="quick-input-forget-recall"
-              onClick={forgetSubmittedInputQuick}
-              disabled={!lastSubmittedInput}
-              title={lastSubmittedInput ? "직전 실행 입력 기록 비우기 (Cmd/Ctrl+Shift+F)" : "비울 실행 입력이 없어 비활성화"}
-              style={{
-                fontSize: MICRO_FONT_SIZE,
-                color: lastSubmittedInput ? "rgba(255,225,222,0.95)" : "rgba(255,255,255,0.42)",
-                border: lastSubmittedInput ? "1px solid rgba(255,123,114,0.58)" : "1px solid rgba(255,255,255,0.18)",
-                background: lastSubmittedInput ? "rgba(255,123,114,0.14)" : "rgba(255,255,255,0.06)",
-                borderRadius: 999,
-                padding: "1px 7px",
-                lineHeight: 1.25,
-                cursor: lastSubmittedInput ? "pointer" : "not-allowed",
-                flexShrink: 0,
-              }}
-            >
-              FR
             </button>
               </>
             )}

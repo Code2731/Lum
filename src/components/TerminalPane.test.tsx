@@ -362,6 +362,7 @@ describe("TerminalPane — 입력 라우팅", () => {
       expect(screen.getByRole("button", { name: "action-palette-item-clear" })).toBeInTheDocument();
       expect(screen.getByRole("button", { name: "action-palette-item-interrupt" })).toBeInTheDocument();
       expect(screen.getByRole("button", { name: "action-palette-item-mention_attach" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "action-palette-item-forget_recall" })).toBeInTheDocument();
       expect(screen.getByRole("button", { name: "action-palette-item-swap_recall" })).toBeInTheDocument();
       expect(screen.getByRole("button", { name: "action-palette-item-merge_recall" })).toBeInTheDocument();
       expect(screen.getByRole("button", { name: "action-palette-item-prepend_recall" })).toBeInTheDocument();
@@ -1517,9 +1518,9 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(toolbeltRail).toHaveClass("lum-toolbelt-rail--focus");
   });
 
-  it("툴벨트 FORGET RECALL 버튼으로 직전 실행 입력 기록을 비운다", async () => {
+  it("입력 단축키 Cmd/Ctrl+Shift+F로 직전 실행 입력 기록을 비운다", async () => {
     const { container } = render(<TerminalPane id="tab-1" />);
-    expect(screen.getByRole("button", { name: "quick-input-forget-recall" })).toHaveAttribute("disabled");
+    const input = container.querySelector("input")!;
 
     submitInput(container, "ls -la");
     await waitFor(() => {
@@ -1529,13 +1530,11 @@ describe("TerminalPane — 입력 라우팅", () => {
       });
     });
     expect(screen.getByRole("button", { name: "quick-input-recall" })).toHaveTextContent("RECALL ls -la");
-    expect(screen.getByRole("button", { name: "quick-input-forget-recall" })).not.toHaveAttribute("disabled");
 
-    fireEvent.click(screen.getByRole("button", { name: "quick-input-forget-recall" }));
+    fireEvent.keyDown(input, { key: "F", ctrlKey: true, shiftKey: true });
     expect(screen.getByRole("button", { name: "quick-input-recall" })).toHaveTextContent("RECALL");
     expect(screen.getByRole("button", { name: "quick-input-recall" })).toHaveAttribute("disabled");
     expect(screen.getByRole("button", { name: "quick-input-rerun" })).toHaveAttribute("disabled");
-    expect(screen.getByRole("button", { name: "quick-input-forget-recall" })).toHaveAttribute("disabled");
   });
 
   it("실행되지 않는 # 입력은 RECALL 대상을 덮어쓰지 않는다", async () => {
@@ -1847,13 +1846,18 @@ describe("TerminalPane — 입력 라우팅", () => {
 
     fireEvent.change(input, { target: { value: "  echo shortcut  " } });
     fireEvent.keyDown(input, { key: "S", ctrlKey: true, shiftKey: true });
-    expect(screen.getByRole("button", { name: "quick-input-recall" })).toHaveTextContent("RECALL echo shortcut");
-    expect(screen.getByRole("button", { name: "quick-input-rerun" })).not.toHaveAttribute("disabled");
+
+    fireEvent.keyDown(input, { key: "E", ctrlKey: true, shiftKey: true });
+    expect(invokeMock).toHaveBeenCalledWith("write_to_pty", {
+      id: "tab-1",
+      data: "echo shortcut\r",
+    });
+    const writeCountAfterSet = invokeMock.mock.calls.filter((c) => c[0] === "write_to_pty").length;
 
     fireEvent.keyDown(input, { key: "F", ctrlKey: true, shiftKey: true });
-    expect(screen.getByRole("button", { name: "quick-input-recall" })).toHaveTextContent("RECALL");
-    expect(screen.getByRole("button", { name: "quick-input-recall" })).toHaveAttribute("disabled");
-    expect(screen.getByRole("button", { name: "quick-input-rerun" })).toHaveAttribute("disabled");
+    fireEvent.keyDown(input, { key: "E", ctrlKey: true, shiftKey: true });
+    const writeCountAfterForget = invokeMock.mock.calls.filter((c) => c[0] === "write_to_pty").length;
+    expect(writeCountAfterForget).toBe(writeCountAfterSet);
   });
 
   it("입력 단축키 Cmd/Ctrl+Shift+X/D로 RESET/FORGET(UNDO)을 실행한다", () => {
