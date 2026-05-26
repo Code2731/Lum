@@ -423,7 +423,6 @@ describe("TerminalPane — 입력 라우팅", () => {
     await waitFor(() => {
       expect(invokeMock).toHaveBeenCalledWith("save_ui_preferences", {
         showInputToolbeltTip: false,
-        showAdvancedInputTools: false,
       });
       expect(localStorage.getItem("lum_input_toolbelt_tip_dismissed")).toBeNull();
       expect(localStorage.getItem("lum_toolbelt_show_advanced")).toBeNull();

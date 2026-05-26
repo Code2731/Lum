@@ -315,13 +315,6 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
       return false;
     }
   });
-  const [showAdvancedInputTools, setShowAdvancedInputTools] = useState(() => {
-    try {
-      return localStorage.getItem(LEGACY_TOOLBELT_ADVANCED_KEY) !== "0";
-    } catch {
-      return true;
-    }
-  });
   const [compactInputToolbelt, setCompactInputToolbelt] = useState(() => {
     try {
       return localStorage.getItem(TOOLBELT_COMPACT_KEY) !== "0";
@@ -347,14 +340,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
           return false;
         }
       })();
-      const showAdvanced = (() => {
-        try {
-          return localStorage.getItem(LEGACY_TOOLBELT_ADVANCED_KEY) !== "0";
-        } catch {
-          return true;
-        }
-      })();
-      return { showInput, showAdvanced };
+      return { showInput };
     };
 
     let mounted = true;
@@ -363,7 +349,6 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
       try {
         const cfg = await invoke<{
           ui_show_input_toolbelt_tip?: boolean;
-          ui_show_advanced_input_tools?: boolean;
           ui_show_backend_quick_tools?: boolean;
           ui_compact_input_toolbelt?: boolean;
         }>("load_app_config");
@@ -375,12 +360,6 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
         } else {
           patch.showInputToolbeltTip = legacy.showInput;
           setShowInputTip(legacy.showInput);
-        }
-        if (typeof cfg.ui_show_advanced_input_tools === "boolean") {
-          setShowAdvancedInputTools(cfg.ui_show_advanced_input_tools);
-        } else {
-          patch.showAdvancedInputTools = legacy.showAdvanced;
-          setShowAdvancedInputTools(legacy.showAdvanced);
         }
         if (typeof cfg.ui_compact_input_toolbelt === "boolean") {
           setCompactInputToolbelt(cfg.ui_compact_input_toolbelt);
@@ -398,10 +377,8 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
       } catch {
         if (!mounted) return;
         setShowInputTip(legacy.showInput);
-        setShowAdvancedInputTools(legacy.showAdvanced);
         invoke("save_ui_preferences", {
           showInputToolbeltTip: legacy.showInput,
-          showAdvancedInputTools: legacy.showAdvanced,
           uiCompactInputToolbelt: compactInputToolbelt,
         }).catch(() => {});
         clearLegacyToolbeltSettings();
@@ -1118,7 +1095,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     const observer = new ResizeObserver(() => update());
     observer.observe(dock);
     return () => observer.disconnect();
-  }, [showInputTip, showAdvancedInputTools, compactInputToolbelt]);
+  }, [showInputTip, compactInputToolbelt]);
 
   const attachMentionToken = useCallback((tokenPath: string) => {
     forceMentionAttachRef.current = false;
@@ -2270,7 +2247,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
             >
               K
             </button>
-            {showAdvancedInputTools && !compactInputToolbelt && (
+            {!compactInputToolbelt && (
               <>
             <button
               type="button"
