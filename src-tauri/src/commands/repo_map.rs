@@ -105,7 +105,6 @@ fn reference_query(l: Lang) -> &'static str {
 struct Symbol {
     name: String,
     kind: String, // "fn" | "class" | ...
-    file: PathBuf,
     line: usize,
 }
 
@@ -145,7 +144,6 @@ fn parse_file(path: &Path, lang: Lang) -> Option<(Vec<Symbol>, Vec<String>)> {
             defs.push(Symbol {
                 name: name.to_string(),
                 kind,
-                file: path.to_path_buf(),
                 line: cap.node.start_position().row + 1,
             });
         }
@@ -468,7 +466,6 @@ mod tests {
             vec![Symbol {
                 name: "popular_fn".into(),
                 kind: "fn".into(),
-                file: a.clone(),
                 line: 1,
             }],
         );
@@ -477,7 +474,6 @@ mod tests {
             vec![Symbol {
                 name: "other_fn".into(),
                 kind: "fn".into(),
-                file: b.clone(),
                 line: 1,
             }],
         );
@@ -505,10 +501,9 @@ mod tests {
         let active: PathBuf = "active.rs".into();
         let other: PathBuf = "other.rs".into();
 
-        let make_sym = |name: &str, file: &PathBuf| Symbol {
+        let make_sym = |name: &str, _file: &PathBuf| Symbol {
             name: name.into(),
             kind: "fn".into(),
-            file: file.clone(),
             line: 1,
         };
 
@@ -531,10 +526,9 @@ mod tests {
         let a: PathBuf = "a.rs".into();
         let b: PathBuf = "b.rs".into();
 
-        let make_sym = |name: &str, file: &PathBuf| Symbol {
+        let make_sym = |name: &str, _file: &PathBuf| Symbol {
             name: name.into(),
             kind: "fn".into(),
-            file: file.clone(),
             line: 1,
         };
 
@@ -555,10 +549,9 @@ mod tests {
         let a: PathBuf = "a.rs".into();
         let b: PathBuf = "b.rs".into();
         let mut defs = HashMap::new();
-        let sym = |name: &str, file: &PathBuf| Symbol {
+        let sym = |name: &str, _file: &PathBuf| Symbol {
             name: name.into(),
             kind: "fn".into(),
-            file: file.clone(),
             line: 1,
         };
         defs.insert(a.clone(), vec![sym("fa", &a)]);
@@ -585,7 +578,6 @@ mod tests {
             vec![Symbol {
                 name: "my_fn".into(),
                 kind: "fn".into(),
-                file: file.clone(),
                 line: 10,
             }],
         );
