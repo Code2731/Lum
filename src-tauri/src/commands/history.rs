@@ -1,6 +1,6 @@
 use crate::commands::config::{load_config, XLLM_DEFAULT_URL};
 use crate::commands::rag::embed;
-use crate::memory::cosine_similarity;
+use crate::commands::recall_backend;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -89,6 +89,8 @@ pub async fn search_history(
     model: String,
     limit: usize,
 ) -> Result<Vec<HistoryEntry>, String> {
+    let requested_backend = load_config().ok().and_then(|c| c.recall_vector_backend);
+    let vector_backend = recall_backend::resolve_backend(requested_backend.as_deref());
     let client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(30))
         .build()
@@ -105,7 +107,7 @@ pub async fn search_history(
         .entries
         .iter()
         .filter(|e| !e.embedding.is_empty())
-        .map(|e| (cosine_similarity(&q_emb, &e.embedding), e))
+        .map(|e| (vector_backend.similarity(&q_emb, &e.embedding), e))
         .filter(|(s, _)| *s > 0.25)
         .collect();
     scored.sort_by(|a, b| b.0.total_cmp(&a.0));

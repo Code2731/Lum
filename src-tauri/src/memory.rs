@@ -1,3 +1,4 @@
+use crate::commands::{config::load_config, recall_backend};
 use crate::platform;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -100,12 +101,14 @@ pub fn forget_before(ts_s: u64) -> Result<usize, String> {
 
 #[tauri::command]
 pub async fn search_memory(query_embedding: Vec<f32>, limit: usize) -> Result<Vec<String>, String> {
+    let requested_backend = load_config().ok().and_then(|c| c.recall_vector_backend);
+    let vector_backend = recall_backend::resolve_backend(requested_backend.as_deref());
     let memory = SemanticMemory::load();
     let mut scored: Vec<(f32, String)> = memory
         .entries
         .iter()
         .map(|entry| {
-            let score = cosine_similarity(&query_embedding, &entry.embedding);
+            let score = vector_backend.similarity(&query_embedding, &entry.embedding);
             (score, entry.content.clone())
         })
         .filter(|(score, _)| *score > 0.7) // 유사도 임계값
