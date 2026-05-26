@@ -1416,12 +1416,6 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     () => applyBackendPrefixToInput(inputBuffer, backendTrail.last) !== inputBuffer,
     [backendTrail.last, inputBuffer],
   );
-  const quickModeShellActive = /^\s*!(?!\!)/.test(inputBuffer);
-  const quickModeHeavyActive = /^\s*!!\s?/.test(inputBuffer);
-  const quickModeAgentActive = /^\s*>>\s?/.test(inputBuffer);
-  const quickModeExplainActive = /^\s*\?\s+/.test(inputBuffer);
-  const quickModeAiCmdActive = /^\s*#\s+/.test(inputBuffer);
-  const quickModeForceAiActive = hasForceAiPrefix(inputBuffer);
   const canNormalizeToPlain = toPlainInput(inputBuffer) !== inputBuffer;
   const canTrimInput = inputBuffer !== inputBuffer.trim();
   const canSquashInputSpaces = /\s{2,}/.test(inputBuffer);
@@ -1624,6 +1618,12 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     { id: "toggle_vision", label: "Toggle Vision Mode", keywords: "vision image", run: () => setVisionMode((v) => !v), disabled: false },
     { id: "toggle_reasoning", label: "Toggle Reasoning View", keywords: "reasoning think", run: () => onToggleReasoning?.(), disabled: false },
     { id: "mention_attach", label: "Attach File Mention", keywords: "mention attach file @", run: triggerMentionAttach, disabled: false },
+    { id: "mode_heavy", label: "Toggle Heavy Mode (!!)", keywords: "mode heavy !!", run: () => toggleQuickModePrefix("heavy"), disabled: false },
+    { id: "mode_shell", label: "Toggle Shell Mode (!)", keywords: "mode shell !", run: () => toggleQuickModePrefix("shell"), disabled: false },
+    { id: "mode_agent", label: "Toggle Agent Mode (>>)", keywords: "mode agent >>", run: () => toggleQuickModePrefix("agent"), disabled: false },
+    { id: "mode_explain", label: "Toggle Explain Mode (?)", keywords: "mode explain ?", run: () => toggleQuickModePrefix("explain"), disabled: false },
+    { id: "mode_ai_cmd", label: "Toggle AI Cmd Mode (#)", keywords: "mode ai cmd #", run: () => toggleQuickModePrefix("aiCmd"), disabled: false },
+    { id: "mode_force_ai", label: "Toggle Force AI Mode (@)", keywords: "mode force ai @", run: toggleForceAiPrefix, disabled: false },
     { id: "backend_auto", label: "Backend Auto Toggle", keywords: "backend auto", run: clearBackendQuickPrefix, disabled: false },
     { id: "backend_back", label: "Backend Back", keywords: "backend back", run: restorePrevBackendQuickPrefix, disabled: !canRestorePrevBackendQuick },
     { id: "backend_last", label: "Backend Last", keywords: "backend last", run: restoreLastBackendQuickPrefix, disabled: !canRestoreLastBackendQuick },
@@ -1638,6 +1638,8 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     clearInputQuick,
     clearedInputStack.length,
     handleInterrupt,
+    toggleQuickModePrefix,
+    toggleForceAiPrefix,
     submittedInputHistory.length,
     recallSubmittedInputQuick,
     rerunSubmittedInputQuick,
@@ -2521,130 +2523,6 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               }}
             >
               CL
-            </button>
-              </>
-            )}
-            {!compactInputToolbelt && showAdvancedInputTools && (
-              <>
-            <button
-              type="button"
-              aria-label="quick-mode-heavy"
-              aria-pressed={quickModeHeavyActive}
-              onClick={() => toggleQuickModePrefix("heavy")}
-              title="Heavy 추론 접두어 토글 (!!, Cmd/Ctrl+Shift+H)"
-              style={{
-                fontSize: MICRO_FONT_SIZE,
-                color: quickModeHeavyActive ? "rgba(255,220,212,0.96)" : "rgba(255,255,255,0.86)",
-                border: quickModeHeavyActive ? "1px solid rgba(255,123,114,0.64)" : "1px solid rgba(255,255,255,0.24)",
-                background: quickModeHeavyActive ? "rgba(255,123,114,0.2)" : "rgba(255,255,255,0.08)",
-                borderRadius: 999,
-                padding: "1px 7px",
-                lineHeight: 1.25,
-                cursor: "pointer",
-                flexShrink: 0,
-              }}
-            >
-              !!
-            </button>
-            <button
-              type="button"
-              aria-label="quick-mode-shell"
-              aria-pressed={quickModeShellActive}
-              onClick={() => toggleQuickModePrefix("shell")}
-              title="강제 shell 접두어 토글 (!, Cmd/Ctrl+Shift+Y)"
-              style={{
-                fontSize: MICRO_FONT_SIZE,
-                color: quickModeShellActive ? "rgba(255,245,219,0.96)" : "rgba(255,255,255,0.86)",
-                border: quickModeShellActive ? "1px solid rgba(227,179,65,0.64)" : "1px solid rgba(255,255,255,0.24)",
-                background: quickModeShellActive ? "rgba(227,179,65,0.22)" : "rgba(255,255,255,0.08)",
-                borderRadius: 999,
-                padding: "1px 7px",
-                lineHeight: 1.25,
-                cursor: "pointer",
-                flexShrink: 0,
-              }}
-            >
-              !
-            </button>
-            <button
-              type="button"
-              aria-label="quick-mode-agent"
-              aria-pressed={quickModeAgentActive}
-              onClick={() => toggleQuickModePrefix("agent")}
-              title="강제 agent 접두어 토글 (>>, Cmd/Ctrl+Shift+J)"
-              style={{
-                fontSize: MICRO_FONT_SIZE,
-                color: quickModeAgentActive ? "rgba(255,225,222,0.96)" : "rgba(255,255,255,0.86)",
-                border: quickModeAgentActive ? "1px solid rgba(255,123,114,0.64)" : "1px solid rgba(255,255,255,0.24)",
-                background: quickModeAgentActive ? "rgba(255,123,114,0.2)" : "rgba(255,255,255,0.08)",
-                borderRadius: 999,
-                padding: "1px 7px",
-                lineHeight: 1.25,
-                cursor: "pointer",
-                flexShrink: 0,
-              }}
-            >
-              {">>"}
-            </button>
-            <button
-              type="button"
-              aria-label="quick-mode-explain"
-              aria-pressed={quickModeExplainActive}
-              onClick={() => toggleQuickModePrefix("explain")}
-              title="강제 explain 접두어 토글 (?, Cmd/Ctrl+Shift+U)"
-              style={{
-                fontSize: MICRO_FONT_SIZE,
-                color: quickModeExplainActive ? "rgba(220,247,225,0.96)" : "rgba(255,255,255,0.86)",
-                border: quickModeExplainActive ? "1px solid rgba(63,185,80,0.64)" : "1px solid rgba(255,255,255,0.24)",
-                background: quickModeExplainActive ? "rgba(63,185,80,0.2)" : "rgba(255,255,255,0.08)",
-                borderRadius: 999,
-                padding: "1px 7px",
-                lineHeight: 1.25,
-                cursor: "pointer",
-                flexShrink: 0,
-              }}
-            >
-              ?
-            </button>
-            <button
-              type="button"
-              aria-label="quick-mode-ai-cmd"
-              aria-pressed={quickModeAiCmdActive}
-              onClick={() => toggleQuickModePrefix("aiCmd")}
-              title="AI 명령 제안 접두어 토글 (#, Cmd/Ctrl+Shift+V)"
-              style={{
-                fontSize: MICRO_FONT_SIZE,
-                color: quickModeAiCmdActive ? "rgba(215,228,255,0.96)" : "rgba(255,255,255,0.86)",
-                border: quickModeAiCmdActive ? "1px solid rgba(88,166,255,0.66)" : "1px solid rgba(255,255,255,0.24)",
-                background: quickModeAiCmdActive ? "rgba(88,166,255,0.22)" : "rgba(255,255,255,0.08)",
-                borderRadius: 999,
-                padding: "1px 7px",
-                lineHeight: 1.25,
-                cursor: "pointer",
-                flexShrink: 0,
-              }}
-            >
-              #
-            </button>
-            <button
-              type="button"
-              aria-label="quick-mode-force-ai"
-              aria-pressed={quickModeForceAiActive}
-              onClick={toggleForceAiPrefix}
-              title="강제 AI 챗 접두어 토글 (@, Cmd/Ctrl+Shift+I)"
-              style={{
-                fontSize: MICRO_FONT_SIZE,
-                color: quickModeForceAiActive ? "rgba(215,228,255,0.96)" : "rgba(255,255,255,0.86)",
-                border: quickModeForceAiActive ? "1px solid rgba(121,192,255,0.66)" : "1px solid rgba(255,255,255,0.24)",
-                background: quickModeForceAiActive ? "rgba(121,192,255,0.22)" : "rgba(255,255,255,0.08)",
-                borderRadius: 999,
-                padding: "1px 7px",
-                lineHeight: 1.25,
-                cursor: "pointer",
-                flexShrink: 0,
-              }}
-            >
-              @
             </button>
               </>
             )}

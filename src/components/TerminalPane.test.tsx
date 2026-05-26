@@ -2027,79 +2027,64 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(input).toHaveValue("@로그 요약해줘");
   });
 
-  it("툴벨트 !/>>/? 버튼으로 입력 모드 프리픽스를 토글한다", () => {
+  it("액션 팔레트 모드 액션으로 입력 모드 프리픽스를 토글한다", () => {
     const { container } = render(<TerminalPane id="tab-1" />);
     const input = container.querySelector("input")!;
+    const runPaletteAction = (id: string) => {
+      fireEvent.click(screen.getByRole("button", { name: "quick-input-action-palette" }));
+      fireEvent.click(screen.getByRole("button", { name: `action-palette-item-${id}` }));
+    };
     fireEvent.change(input, { target: { value: "로그 요약해줘" } });
 
-    fireEvent.click(screen.getByRole("button", { name: "quick-mode-agent" }));
+    runPaletteAction("mode_agent");
     expect(input).toHaveValue(">> 로그 요약해줘");
-    expect(screen.getByRole("button", { name: "quick-mode-agent" })).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByText("AGENT AUTO")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "quick-mode-agent" }));
+    runPaletteAction("mode_agent");
     expect(input).toHaveValue("로그 요약해줘");
-    expect(screen.getByRole("button", { name: "quick-mode-agent" })).toHaveAttribute("aria-pressed", "false");
 
-    fireEvent.click(screen.getByRole("button", { name: "quick-mode-shell" }));
+    runPaletteAction("mode_shell");
     expect(input).toHaveValue("!로그 요약해줘");
-    expect(screen.getByRole("button", { name: "quick-mode-shell" })).toHaveAttribute("aria-pressed", "true");
 
-    fireEvent.click(screen.getByRole("button", { name: "quick-mode-explain" }));
+    runPaletteAction("mode_explain");
     expect(input).toHaveValue("? 로그 요약해줘");
-    expect(screen.getByRole("button", { name: "quick-mode-shell" })).toHaveAttribute("aria-pressed", "false");
-    expect(screen.getByRole("button", { name: "quick-mode-explain" })).toHaveAttribute("aria-pressed", "true");
 
-    fireEvent.click(screen.getByRole("button", { name: "quick-mode-ai-cmd" }));
+    runPaletteAction("mode_ai_cmd");
     expect(input).toHaveValue("# 로그 요약해줘");
-    expect(screen.getByRole("button", { name: "quick-mode-ai-cmd" })).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByRole("button", { name: "quick-mode-explain" })).toHaveAttribute("aria-pressed", "false");
-    expect(screen.getByText("AI CMD #")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "quick-mode-force-ai" }));
+    runPaletteAction("mode_force_ai");
     expect(input).toHaveValue("@로그 요약해줘");
-    expect(screen.getByRole("button", { name: "quick-mode-force-ai" })).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByRole("button", { name: "quick-mode-ai-cmd" })).toHaveAttribute("aria-pressed", "false");
-    expect(screen.getByText("AI AUTO")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "quick-mode-force-ai" }));
+    runPaletteAction("mode_force_ai");
     expect(input).toHaveValue("로그 요약해줘");
-    expect(screen.getByRole("button", { name: "quick-mode-force-ai" })).toHaveAttribute("aria-pressed", "false");
 
-    fireEvent.click(screen.getByRole("button", { name: "quick-mode-heavy" }));
+    runPaletteAction("mode_heavy");
     expect(input).toHaveValue("!! 로그 요약해줘");
-    expect(screen.getByRole("button", { name: "quick-mode-heavy" })).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByRole("button", { name: "quick-mode-shell" })).toHaveAttribute("aria-pressed", "false");
-    expect(screen.getByText("HEAVY !!")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "quick-mode-heavy" }));
+    runPaletteAction("mode_heavy");
     expect(input).toHaveValue("로그 요약해줘");
-    expect(screen.getByRole("button", { name: "quick-mode-heavy" })).toHaveAttribute("aria-pressed", "false");
   });
 
   it("공백 없는 #/? 입력은 quick mode 활성으로 취급하지 않는다", () => {
     const { container } = render(<TerminalPane id="tab-1" />);
     const input = container.querySelector("input")!;
-    const explainBtn = screen.getByRole("button", { name: "quick-mode-explain" });
-    const aiCmdBtn = screen.getByRole("button", { name: "quick-mode-ai-cmd" });
 
     fireEvent.change(input, { target: { value: "#로그 요약해줘" } });
-    expect(aiCmdBtn).toHaveAttribute("aria-pressed", "false");
+    expect(screen.queryByText("AI CMD #")).not.toBeInTheDocument();
 
     fireEvent.change(input, { target: { value: "?로그 요약해줘" } });
-    expect(explainBtn).toHaveAttribute("aria-pressed", "false");
+    expect(screen.queryByText("EXPLAIN ?")).not.toBeInTheDocument();
   });
 
-  it("공백 없는 #/? 입력에서 quick mode 버튼을 누르면 마커를 중첩하지 않고 정규화한다", () => {
+  it("공백 없는 #/? 입력에서 모드 토글 단축키를 누르면 마커를 중첩하지 않고 정규화한다", () => {
     const { container } = render(<TerminalPane id="tab-1" />);
     const input = container.querySelector("input")!;
 
     fireEvent.change(input, { target: { value: "#로그 요약해줘" } });
-    fireEvent.click(screen.getByRole("button", { name: "quick-mode-ai-cmd" }));
+    fireEvent.keyDown(input, { key: "V", ctrlKey: true, shiftKey: true });
     expect(input).toHaveValue("# 로그 요약해줘");
 
     fireEvent.change(input, { target: { value: "?로그 요약해줘" } });
-    fireEvent.click(screen.getByRole("button", { name: "quick-mode-explain" }));
+    fireEvent.keyDown(input, { key: "U", ctrlKey: true, shiftKey: true });
     expect(input).toHaveValue("? 로그 요약해줘");
   });
 
@@ -2108,37 +2093,27 @@ describe("TerminalPane — 입력 라우팅", () => {
     const input = container.querySelector("input")!;
     fireEvent.change(input, { target: { value: "   @로그 요약해줘" } });
 
-    const forceAiButton = screen.getByRole("button", { name: "quick-mode-force-ai" });
-    expect(forceAiButton).toHaveAttribute("aria-pressed", "true");
-
-    fireEvent.click(forceAiButton);
+    fireEvent.keyDown(input, { key: "I", ctrlKey: true, shiftKey: true });
     expect(input).toHaveValue("   로그 요약해줘");
-    expect(forceAiButton).toHaveAttribute("aria-pressed", "false");
   });
 
   it("선행 공백 입력에서 force-ai 토글 ON 시 @ 위치를 보존한다", () => {
     const { container } = render(<TerminalPane id="tab-1" />);
     const input = container.querySelector("input")!;
-    const forceAiButton = screen.getByRole("button", { name: "quick-mode-force-ai" });
 
     fireEvent.change(input, { target: { value: "   로그 요약해줘" } });
-    fireEvent.click(forceAiButton);
+    fireEvent.keyDown(input, { key: "I", ctrlKey: true, shiftKey: true });
 
     expect(input).toHaveValue("   @로그 요약해줘");
-    expect(forceAiButton).toHaveAttribute("aria-pressed", "true");
   });
 
   it("선행 공백 + quick mode prefix도 토글로 정상 해제된다", () => {
     const { container } = render(<TerminalPane id="tab-1" />);
     const input = container.querySelector("input")!;
-    const shellButton = screen.getByRole("button", { name: "quick-mode-shell" });
 
     fireEvent.change(input, { target: { value: "   !로그 요약해줘" } });
-    expect(shellButton).toHaveAttribute("aria-pressed", "true");
-
-    fireEvent.click(shellButton);
+    fireEvent.keyDown(input, { key: "Y", ctrlKey: true, shiftKey: true });
     expect(input).toHaveValue("   로그 요약해줘");
-    expect(shellButton).toHaveAttribute("aria-pressed", "false");
   });
 
   it("툴벨트에서 backend 순환 화살표 버튼은 노출하지 않는다", () => {
