@@ -1614,6 +1614,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     { id: "recall", label: "Recall Last Input", keywords: "recall", run: recallSubmittedInputQuick, disabled: !canRecallSubmittedInput },
     { id: "rerun", label: "Rerun Last Input", keywords: "rerun repeat", run: rerunSubmittedInputQuick, disabled: !canRerunSubmittedInput },
     { id: "swap_recall", label: "Swap Current/Recall Input", keywords: "swap recall", run: swapWithSubmittedInputQuick, disabled: !canSwapSubmittedInput },
+    { id: "prepend_recall", label: "Prepend Recall Input", keywords: "prepend recall", run: prependSubmittedInputQuick, disabled: !canPrependRecall },
     { id: "reset", label: "Reset Input State", keywords: "reset", run: resetAllInputStateQuick, disabled: !canResetAllQuick },
     { id: "toggle_terminal", label: "Toggle Terminal View", keywords: "terminal view", run: () => setTerminalVisible((v) => !v), disabled: false },
     { id: "toggle_vision", label: "Toggle Vision Mode", keywords: "vision image", run: () => setVisionMode((v) => !v), disabled: false },
@@ -1637,6 +1638,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     canRecallSubmittedInput,
     canRerunSubmittedInput,
     canSwapSubmittedInput,
+    canPrependRecall,
     canResetAllQuick,
     canRestoreLastBackendQuick,
     canRestorePrevBackendQuick,
@@ -1658,6 +1660,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     recallSubmittedInputQuick,
     rerunSubmittedInputQuick,
     swapWithSubmittedInputQuick,
+    prependSubmittedInputQuick,
     resetAllInputStateQuick,
     restoreInputQuick,
     restoreLastBackendQuickPrefix,
@@ -2418,26 +2421,6 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
               }}
             >
               MERGE
-            </button>
-            <button
-              type="button"
-              aria-label="quick-input-prepend-recall"
-              onClick={prependSubmittedInputQuick}
-              disabled={!canPrependRecall}
-              title={canPrependRecall ? "현재 입력 앞에 직전 실행 입력 붙이기 (Cmd/Ctrl+Shift+P)" : "붙일 실행 입력이 없거나 이미 포함돼 비활성화"}
-              style={{
-                fontSize: MICRO_FONT_SIZE,
-                color: canPrependRecall ? "rgba(215,228,255,0.96)" : "rgba(255,255,255,0.42)",
-                border: canPrependRecall ? "1px solid rgba(121,192,255,0.6)" : "1px solid rgba(255,255,255,0.18)",
-                background: canPrependRecall ? "rgba(121,192,255,0.16)" : "rgba(255,255,255,0.06)",
-                borderRadius: 999,
-                padding: "1px 7px",
-                lineHeight: 1.25,
-                cursor: canPrependRecall ? "pointer" : "not-allowed",
-                flexShrink: 0,
-              }}
-            >
-              PREPEND
             </button>
               </>
             )}

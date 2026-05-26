@@ -363,6 +363,7 @@ describe("TerminalPane — 입력 라우팅", () => {
       expect(screen.getByRole("button", { name: "action-palette-item-interrupt" })).toBeInTheDocument();
       expect(screen.getByRole("button", { name: "action-palette-item-mention_attach" })).toBeInTheDocument();
       expect(screen.getByRole("button", { name: "action-palette-item-swap_recall" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "action-palette-item-prepend_recall" })).toBeInTheDocument();
       expect(screen.getByRole("button", { name: "action-palette-item-toggle_terminal" })).toBeInTheDocument();
       expect(screen.getByRole("button", { name: "action-palette-item-toggle_vision" })).toBeInTheDocument();
       expect(screen.getByRole("button", { name: "action-palette-item-toggle_reasoning" })).toBeInTheDocument();
@@ -1709,10 +1710,9 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(screen.getByRole("button", { name: "quick-input-merge-recall" })).toHaveAttribute("disabled");
   });
 
-  it("툴벨트 PREPEND 버튼으로 현재 입력 앞에 직전 실행 입력을 붙인다", async () => {
+  it("입력 단축키 Cmd/Ctrl+Shift+P로 현재 입력 앞에 직전 실행 입력을 붙인다", async () => {
     const { container } = render(<TerminalPane id="tab-1" />);
     const input = container.querySelector("input")!;
-    expect(screen.getByRole("button", { name: "quick-input-prepend-recall" })).toHaveAttribute("disabled");
 
     submitInput(container, "ls -la");
     await waitFor(() => {
@@ -1721,12 +1721,10 @@ describe("TerminalPane — 입력 라우팅", () => {
         data: "ls -la\r",
       });
     });
-    expect(screen.getByRole("button", { name: "quick-input-prepend-recall" })).not.toHaveAttribute("disabled");
 
     fireEvent.change(input, { target: { value: "echo done" } });
-    fireEvent.click(screen.getByRole("button", { name: "quick-input-prepend-recall" }));
+    fireEvent.keyDown(input, { key: "P", ctrlKey: true, shiftKey: true });
     expect(input).toHaveValue("ls -la echo done");
-    expect(screen.getByRole("button", { name: "quick-input-prepend-recall" })).toHaveAttribute("disabled");
   });
 
   it("입력 단축키 Cmd/Ctrl+Shift+G로 강제 프리픽스를 제거하고 일반 입력으로 전환한다", () => {
