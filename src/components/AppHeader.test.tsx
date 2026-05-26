@@ -400,6 +400,60 @@ describe("AppHeader", () => {
     });
   });
 
+  it("visualViewport 높이가 0이어도 고급 메뉴 높이는 innerHeight로 계산한다", async () => {
+    const props = buildProps() as any;
+    const HeaderHarness = () => {
+      const [showAdvancedOverflow, setShowAdvancedOverflow] = React.useState(true);
+      return (
+        <AppHeader
+          {...props}
+          showAdvancedOverflow={showAdvancedOverflow}
+          setShowAdvancedOverflow={setShowAdvancedOverflow}
+        />
+      );
+    };
+
+    const originalInnerHeight = window.innerHeight;
+    const originalVisualViewport = window.visualViewport;
+    Object.defineProperty(window, "innerHeight", {
+      configurable: true,
+      value: 720,
+    });
+    Object.defineProperty(window, "visualViewport", {
+      configurable: true,
+      value: {
+        width: 0,
+        height: 0,
+        offsetLeft: 0,
+        offsetTop: 0,
+      },
+    });
+
+    render(<HeaderHarness />);
+    const button = await screen.findByRole("button", { name: ADVANCED_BUTTON_NAME });
+    Object.defineProperty(button, "getBoundingClientRect", {
+      configurable: true,
+      value: () => domRect(8, 620, 30, 28),
+    });
+
+    fireEvent(window, new Event("resize"));
+
+    const menu = await screen.findByRole("menu", { name: "고급 기능 메뉴" });
+    await waitFor(() => {
+      const maxHeight = Number.parseFloat(menu.style.maxHeight || "0");
+      expect(maxHeight).toBeGreaterThan(300);
+    });
+
+    Object.defineProperty(window, "innerHeight", {
+      configurable: true,
+      value: originalInnerHeight,
+    });
+    Object.defineProperty(window, "visualViewport", {
+      configurable: true,
+      value: originalVisualViewport,
+    });
+  });
+
   it("툴바 버튼은 shortcut 속성을 aria-keyshortcuts로 노출한다", () => {
     render(<AppHeader {...buildProps()} />);
 

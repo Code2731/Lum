@@ -74,8 +74,16 @@ const clampValue = (value: number, min: number, max: number): number => {
 
 const getViewportBounds = (): ViewportBounds => {
   const vv = typeof window !== "undefined" ? window.visualViewport : null;
-  const width = vv?.width ?? window.innerWidth;
-  const height = vv?.height ?? window.innerHeight;
+  const rawWidth = vv?.width;
+  const rawHeight = vv?.height;
+  const width =
+    typeof rawWidth === "number" && Number.isFinite(rawWidth) && rawWidth > 1
+      ? rawWidth
+      : window.innerWidth;
+  const height =
+    typeof rawHeight === "number" && Number.isFinite(rawHeight) && rawHeight > 1
+      ? rawHeight
+      : window.innerHeight;
   const left = vv?.offsetLeft ?? 0;
   const top = vv?.offsetTop ?? 0;
 

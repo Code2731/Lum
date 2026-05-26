@@ -255,4 +255,62 @@ describe("PrivacyLedgerBadge", () => {
       value: originalInnerHeight,
     });
   });
+
+  it("visualViewport 높이가 0이어도 innerHeight를 폴백으로 사용한다", () => {
+    const onReset = vi.fn();
+    const originalInnerHeight = window.innerHeight;
+    const originalVisualViewport = window.visualViewport;
+
+    Object.defineProperty(window, "innerHeight", {
+      configurable: true,
+      value: 720,
+    });
+    Object.defineProperty(window, "visualViewport", {
+      configurable: true,
+      value: {
+        width: 0,
+        height: 0,
+        offsetLeft: 0,
+        offsetTop: 0,
+      },
+    });
+
+    renderWithProvider(
+      <PrivacyLedgerBadge
+        state={defaultState}
+        isAllOnDevice
+        onReset={onReset}
+      />,
+    );
+
+    const trigger = screen.getByRole("button", { name: /Privacy Ledger/ });
+    Object.defineProperty(trigger, "getBoundingClientRect", {
+      configurable: true,
+      value: () => ({
+        x: 620,
+        y: 8,
+        top: 8,
+        left: 620,
+        right: 650,
+        bottom: 36,
+        width: 30,
+        height: 28,
+        toJSON: () => ({}),
+      } as DOMRect),
+    });
+
+    fireEvent.click(trigger);
+    const popover = screen.getByRole("dialog", { name: "Privacy Ledger 상세" });
+    const maxHeight = Number.parseFloat(popover.style.maxHeight || "0");
+    expect(maxHeight).toBeGreaterThan(300);
+
+    Object.defineProperty(window, "innerHeight", {
+      configurable: true,
+      value: originalInnerHeight,
+    });
+    Object.defineProperty(window, "visualViewport", {
+      configurable: true,
+      value: originalVisualViewport,
+    });
+  });
 });
