@@ -26,12 +26,28 @@ fn normalize_backend_name(raw: &str) -> String {
     raw.trim().to_ascii_lowercase().replace('_', "-")
 }
 
+/// 사용자 입력 백엔드 키를 지원 키로 정규화.
+/// None/빈 문자열은 None, 미지원 값은 안전 기본값(local-cosine)으로 교정.
+pub fn normalize_requested_backend_key(raw: Option<&str>) -> Option<String> {
+    let Some(raw_name) = raw else {
+        return None;
+    };
+    let name = normalize_backend_name(raw_name);
+    if name.is_empty() {
+        return None;
+    }
+    match name.as_str() {
+        "local-cosine" | "cosine" | "default" => Some("local-cosine".into()),
+        // zvec 키는 프록시 슬롯으로 유지(현재 엔진은 local-cosine 폴백).
+        "zvec" => Some("zvec".into()),
+        _ => Some("local-cosine".into()),
+    }
+}
+
 /// 설정값이 비었거나 알 수 없으면 안전한 기본 백엔드(local-cosine)로 폴백.
 pub fn resolve_backend(requested: Option<&str>) -> Box<dyn RecallVectorBackend> {
-    match requested.map(normalize_backend_name).as_deref() {
-        Some("local-cosine") | Some("cosine") | Some("default") | Some("zvec") | None => {
-            Box::<LocalCosineBackend>::default()
-        }
+    match normalize_requested_backend_key(requested).as_deref() {
+        Some("local-cosine") | Some("zvec") | None => Box::<LocalCosineBackend>::default(),
         Some(_) => Box::<LocalCosineBackend>::default(),
     }
 }
@@ -45,11 +61,14 @@ pub struct RecallBackendInfo {
 
 #[tauri::command]
 pub fn recall_backend_info() -> RecallBackendInfo {
-    let requested = load_config()
+    let requested_raw = load_config()
         .ok()
         .and_then(|c| c.recall_vector_backend)
-        .map(|s| s.trim().to_string())
-        .filter(|s| !s.is_empty());
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .map(str::to_string);
+    let requested = normalize_requested_backend_key(requested_raw.as_deref());
     let backend = resolve_backend(requested.as_deref());
     RecallBackendInfo {
         requested,
@@ -75,5 +94,23 @@ mod tests {
             let backend = resolve_backend(Some(name));
             assert_eq!(backend.name(), "local-cosine");
         }
+    }
+
+    #[test]
+    fn normalize_requested_backend_key_works() {
+        assert_eq!(normalize_requested_backend_key(None), None);
+        assert_eq!(normalize_requested_backend_key(Some("  ")), None);
+        assert_eq!(
+            normalize_requested_backend_key(Some("LOCAL_COSINE")).as_deref(),
+            Some("local-cosine")
+        );
+        assert_eq!(
+            normalize_requested_backend_key(Some("zvec")).as_deref(),
+            Some("zvec")
+        );
+        assert_eq!(
+            normalize_requested_backend_key(Some("custom-db")).as_deref(),
+            Some("local-cosine")
+        );
     }
 }

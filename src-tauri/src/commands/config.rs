@@ -514,9 +514,8 @@ pub fn save_react_tool_whitelist(whitelist: Vec<String>) -> Result<()> {
 #[tauri::command]
 pub fn save_recall_vector_backend(backend: Option<String>) -> Result<()> {
     let mut config = load_config()?;
-    config.recall_vector_backend = backend
-        .map(|s| s.trim().to_string())
-        .filter(|s| !s.is_empty());
+    config.recall_vector_backend =
+        crate::commands::recall_backend::normalize_requested_backend_key(backend.as_deref());
     save_config(&config)
 }
 
