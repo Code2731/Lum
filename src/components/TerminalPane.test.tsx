@@ -104,10 +104,6 @@ function openInputHistoryPanel() {
   fireEvent.click(screen.getByRole("button", { name: "action-palette-item-history_open" }));
 }
 
-function ensureFullToolbelt() {
-  return;
-}
-
 function clearInputWithShortcut(input: HTMLInputElement) {
   fireEvent.keyDown(input, { key: "K", ctrlKey: true, shiftKey: true });
 }
@@ -407,11 +403,12 @@ describe("TerminalPane — 입력 라우팅", () => {
       expect(screen.queryByRole("button", { name: "터미널 표시/숨김 (shell 명령 실행 시 자동 표시)" })).not.toBeInTheDocument();
       expect(screen.queryByRole("button", { name: "비전 모드 — 이미지 첨부 활성화" })).not.toBeInTheDocument();
       expect(screen.queryByRole("button", { name: "추론 체인 표시 — <think> 블록 보이기 (전역 설정 토글)" })).not.toBeInTheDocument();
-      expect(screen.queryByText("WHY EMPTY")).not.toBeInTheDocument();
+      expect(screen.getByText("AUTO 라우팅")).toBeInTheDocument();
+      expect(screen.getByText("WHY EMPTY")).toBeInTheDocument();
+      expect(screen.getByText("BACKEND AUTO (LOCAL→OLLAMA→XLLM→GEMINI)")).toBeInTheDocument();
+      expect(screen.getByText("터미널 OFF")).toBeInTheDocument();
       expect(screen.queryByText(/MODEL /)).not.toBeInTheDocument();
       expect(screen.queryByText(/CWD /)).not.toBeInTheDocument();
-      expect(screen.queryByText("AUTO")).not.toBeInTheDocument();
-      expect(screen.queryByText("TERM OFF")).not.toBeInTheDocument();
       expect(screen.getByRole("button", { name: "quick-input-action-palette" })).toHaveTextContent("K");
     });
 
@@ -815,7 +812,6 @@ describe("TerminalPane — 입력 라우팅", () => {
   it("툴벨트 CLEAR 후 UNDO 단축키로 입력을 즉시 복원할 수 있다", () => {
     const { container } = render(<TerminalPane id="tab-1" />);
     const input = container.querySelector("input")!;
-    ensureFullToolbelt();
     expectClearActionDisabled();
 
     fireEvent.change(input, { target: { value: "@xllm # 로그 요약해줘" } });
@@ -837,7 +833,6 @@ describe("TerminalPane — 입력 라우팅", () => {
   it("Action Palette RESET으로 입력/UNDO/RECALL 상태를 한 번에 초기화한다", async () => {
     const { container } = render(<TerminalPane id="tab-1" />);
     const input = container.querySelector("input")!;
-    ensureFullToolbelt();
     expect(screen.queryByRole("button", { name: "quick-input-reset-all" })).not.toBeInTheDocument();
 
     submitInput(container, "ls -la");
@@ -865,7 +860,6 @@ describe("TerminalPane — 입력 라우팅", () => {
   it("UNDO 단축키는 다중 CLEAR 이력을 LIFO 순서로 복원한다", () => {
     const { container } = render(<TerminalPane id="tab-1" />);
     const input = container.querySelector("input")!;
-    ensureFullToolbelt();
 
     fireEvent.change(input, { target: { value: "first" } });
     clearInputWithShortcut(input);
@@ -903,7 +897,6 @@ describe("TerminalPane — 입력 라우팅", () => {
   it("동일 입력을 연속 CLEAR해도 UNDO 스택은 중복 저장하지 않는다", () => {
     const { container } = render(<TerminalPane id="tab-1" />);
     const input = container.querySelector("input")!;
-    ensureFullToolbelt();
 
     fireEvent.change(input, { target: { value: "same" } });
     clearInputWithShortcut(input);
@@ -1931,7 +1924,6 @@ describe("TerminalPane — 입력 라우팅", () => {
   it("입력 단축키 Cmd/Ctrl+Shift+X/D로 RESET/FORGET(UNDO)을 실행한다", () => {
     const { container } = render(<TerminalPane id="tab-1" />);
     const input = container.querySelector("input")!;
-    ensureFullToolbelt();
 
     fireEvent.change(input, { target: { value: "temp" } });
     clearInputWithShortcut(input);

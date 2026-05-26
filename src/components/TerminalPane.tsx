@@ -118,7 +118,6 @@ const PANE_PADDING_X = 10;
 const PANE_PADDING_Y = 6;
 const INPUT_TIP_DISMISSED_KEY = "lum_input_toolbelt_tip_dismissed";
 const TOOLBELT_ADVANCED_KEY = "lum_toolbelt_show_advanced";
-const TOOLBELT_COMPACT_KEY = "lum_toolbelt_compact";
 const INPUT_HISTORY_KEY = "lum_input_submit_history";
 const LEGACY_TOOLBELT_TIP_KEY = INPUT_TIP_DISMISSED_KEY;
 const LEGACY_TOOLBELT_ADVANCED_KEY = TOOLBELT_ADVANCED_KEY;
@@ -308,13 +307,6 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
       return false;
     }
   });
-  const [compactInputToolbelt, setCompactInputToolbelt] = useState(() => {
-    try {
-      return localStorage.getItem(TOOLBELT_COMPACT_KEY) === "1";
-    } catch {
-      return false;
-    }
-  });
   useEffect(() => {
     const clearLegacyToolbeltSettings = () => {
       try {
@@ -343,7 +335,6 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
         const cfg = await invoke<{
           ui_show_input_toolbelt_tip?: boolean;
           ui_show_backend_quick_tools?: boolean;
-          ui_compact_input_toolbelt?: boolean;
         }>("load_app_config");
         if (!mounted) return;
 
@@ -354,15 +345,6 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
           patch.showInputToolbeltTip = legacy.showInput;
           setShowInputTip(legacy.showInput);
         }
-        if (typeof cfg.ui_compact_input_toolbelt === "boolean") {
-          setCompactInputToolbelt(cfg.ui_compact_input_toolbelt);
-          try {
-            localStorage.setItem(TOOLBELT_COMPACT_KEY, cfg.ui_compact_input_toolbelt ? "1" : "0");
-          } catch {}
-        } else {
-          patch.uiCompactInputToolbelt = compactInputToolbelt;
-        }
-
         if (Object.keys(patch).length > 0) {
           invoke("save_ui_preferences", patch).catch(() => {});
         }
@@ -372,14 +354,13 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
         setShowInputTip(legacy.showInput);
         invoke("save_ui_preferences", {
           showInputToolbeltTip: legacy.showInput,
-          uiCompactInputToolbelt: compactInputToolbelt,
         }).catch(() => {});
         clearLegacyToolbeltSettings();
       }
     })();
 
     return () => { mounted = false; };
-  }, [compactInputToolbelt]);
+  }, []);
   const [warpInputFocused, setWarpInputFocused] = useState(false);
   const [inputDockHeight, setInputDockHeight] = useState(70);
   const [inputDockWidth, setInputDockWidth] = useState(960);
@@ -1088,7 +1069,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     const observer = new ResizeObserver(() => update());
     observer.observe(dock);
     return () => observer.disconnect();
-  }, [showInputTip, compactInputToolbelt]);
+  }, [showInputTip]);
 
   const attachMentionToken = useCallback((tokenPath: string) => {
     forceMentionAttachRef.current = false;
@@ -1982,11 +1963,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     },
     { id: "term", label: terminalVisible ? "터미널 ON" : "터미널 OFF", tone: terminalVisible ? "success" : "warn" },
   ];
-  const compactInputChips: Array<{ id: string; label: string; tone: "neutral" | "accent" | "success" | "warn" }> = [
-  ];
-  const visibleInputChips = compactInputToolbelt
-    ? compactInputChips
-    : inputChips;
+  const visibleInputChips = inputChips;
 
   const inputFocusCompact =
     warpInputFocused &&
@@ -2080,7 +2057,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
           gap: 6,
         }}
       >
-        {showInputTip && !inputFocusCompact && !compactInputToolbelt && (
+        {showInputTip && !inputFocusCompact && (
           <div
             style={{
               display: "flex",
@@ -2175,7 +2152,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
           onChange={handleInputChange}
           onFocusChange={setWarpInputFocused}
           contextChips={visibleInputChips}
-          compactContextChips={inputFocusCompact || compactInputToolbelt}
+          compactContextChips={inputFocusCompact}
         />
       </div>
 
