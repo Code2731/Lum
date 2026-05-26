@@ -150,13 +150,6 @@ const compactModel = (raw?: string): string => {
     .replace(/-\d+bit$/i, "")
     .slice(0, 26);
 };
-const compactInputPreview = (raw?: string): string => {
-  if (!raw) return "";
-  const oneLine = raw.replace(/\s+/g, " ").trim();
-  if (oneLine.length <= 16) return oneLine;
-  return `${oneLine.slice(0, 16)}…`;
-};
-
 const hasExecutableRecallRoute = (raw: string): boolean => {
   const normalized = raw.trim();
   if (normalized === "") return false;
@@ -1412,10 +1405,6 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     mentionLoading;
   const canClearInputQuick = inputBuffer !== "" || hasClearableOverlay;
   const canResetAllQuick = inputBuffer !== "" || clearedInputStack.length > 0 || lastSubmittedInput !== "";
-  const lastSubmittedPreview = compactInputPreview(
-    hasExecutableRecallRoute(lastSubmittedInput) ? lastSubmittedInput : "",
-  );
-  const recallButtonLabel = lastSubmittedPreview ? `RECALL ${lastSubmittedPreview}` : "RECALL";
   const undoButtonLabel = clearedInputStack.length > 0 ? `UNDO ${clearedInputStack.length}` : "UNDO";
   const getRecallCandidate = useCallback((raw: string): string => {
     const normalized = raw.trim();
@@ -2247,30 +2236,6 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
             >
               K
             </button>
-            {!compactInputToolbelt && (
-              <>
-            <button
-              type="button"
-              aria-label="quick-input-recall"
-              onClick={recallSubmittedInputQuick}
-              disabled={!canRecallSubmittedInput}
-              title={canRecallSubmittedInput ? `직전 실행 입력 복원 (Cmd/Ctrl+Shift+R): ${lastSubmittedInput}` : "복원할 실행 입력이 없거나 현재 입력과 동일해 비활성화"}
-              style={{
-                fontSize: MICRO_FONT_SIZE,
-                color: canRecallSubmittedInput ? "rgba(255,244,214,0.95)" : "rgba(255,255,255,0.42)",
-                border: canRecallSubmittedInput ? "1px solid rgba(227,179,65,0.6)" : "1px solid rgba(255,255,255,0.18)",
-                background: canRecallSubmittedInput ? "rgba(227,179,65,0.16)" : "rgba(255,255,255,0.06)",
-                borderRadius: 999,
-                padding: "1px 7px",
-                lineHeight: 1.25,
-                cursor: canRecallSubmittedInput ? "pointer" : "not-allowed",
-                flexShrink: 0,
-              }}
-            >
-              {recallButtonLabel}
-            </button>
-              </>
-            )}
           </div>
         </div>
         {/* Warp 입력바 — 입력 필드, 라우팅은 handleSubmit */}
