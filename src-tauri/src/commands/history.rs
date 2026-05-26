@@ -89,7 +89,7 @@ pub async fn search_history(
     model: String,
     limit: usize,
 ) -> Result<Vec<HistoryEntry>, String> {
-    let requested_backend = load_config().ok().and_then(|c| c.recall_vector_backend);
+    let requested_backend = recall_backend::load_requested_backend_key();
     let vector_backend = recall_backend::resolve_backend(requested_backend.as_deref());
     let client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(30))

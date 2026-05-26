@@ -8,7 +8,7 @@
 use crate::commands::healing_dataset::{list_healing_dataset, HealingRecord};
 use crate::commands::history::{search_history_raw, HistoryEntry};
 use crate::commands::rag::embed_auto;
-use crate::commands::{config::load_config, recall_backend};
+use crate::commands::recall_backend;
 use crate::error::{LumError, Result};
 use crate::memory::SemanticMemory;
 use serde::{Deserialize, Serialize};
@@ -124,7 +124,7 @@ pub async fn recall_search(
             .collect(),
     };
     // 벡터 검색 경로를 프록시로 감싸 DB/엔진 교체 지점을 단일화.
-    let requested_backend = load_config().ok().and_then(|c| c.recall_vector_backend);
+    let requested_backend = recall_backend::load_requested_backend_key();
     let vector_backend = recall_backend::resolve_backend(requested_backend.as_deref());
 
     let client = reqwest::Client::builder()

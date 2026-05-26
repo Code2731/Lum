@@ -44,6 +44,18 @@ pub fn normalize_requested_backend_key(raw: Option<&str>) -> Option<String> {
     }
 }
 
+/// 설정 파일에서 요청 백엔드 키를 읽어 정규화해서 반환.
+pub fn load_requested_backend_key() -> Option<String> {
+    let requested_raw = load_config()
+        .ok()
+        .and_then(|c| c.recall_vector_backend)
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .map(str::to_string);
+    normalize_requested_backend_key(requested_raw.as_deref())
+}
+
 /// 설정값이 비었거나 알 수 없으면 안전한 기본 백엔드(local-cosine)로 폴백.
 pub fn resolve_backend(requested: Option<&str>) -> Box<dyn RecallVectorBackend> {
     match normalize_requested_backend_key(requested).as_deref() {
@@ -61,14 +73,7 @@ pub struct RecallBackendInfo {
 
 #[tauri::command]
 pub fn recall_backend_info() -> RecallBackendInfo {
-    let requested_raw = load_config()
-        .ok()
-        .and_then(|c| c.recall_vector_backend)
-        .as_deref()
-        .map(str::trim)
-        .filter(|s| !s.is_empty())
-        .map(str::to_string);
-    let requested = normalize_requested_backend_key(requested_raw.as_deref());
+    let requested = load_requested_backend_key();
     let backend = resolve_backend(requested.as_deref());
     RecallBackendInfo {
         requested,
