@@ -203,6 +203,7 @@ pub fn run() {
             commands::recall::recall_forget,
             commands::recall::recall_forget_before,
             commands::recall::recall_stats,
+            commands::recall_backend::recall_backend_info,
             // Phase 119 — LoRA Forge (인앱 로컬 파인튜닝)
             commands::lora_forge::lora_forge_runtimes,
             commands::lora_forge::lora_forge_start,
@@ -227,6 +228,8 @@ pub fn run() {
             commands::config::save_react_reflexion_enabled,
             // Phase 129 — ReAct Plan/Act 도구 화이트리스트
             commands::config::save_react_tool_whitelist,
+            // Phase 131 — Recall 벡터 백엔드 프록시 설정
+            commands::config::save_recall_vector_backend,
             // Phase 127 — Skills 시스템 (자연어 → 사용자 저장 절차 자동 매칭)
             commands::skills::skill_list,
             commands::skills::skill_save,

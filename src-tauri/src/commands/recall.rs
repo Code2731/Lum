@@ -8,8 +8,9 @@
 use crate::commands::healing_dataset::{list_healing_dataset, HealingRecord};
 use crate::commands::history::{search_history_raw, HistoryEntry};
 use crate::commands::rag::embed_auto;
+use crate::commands::{config::load_config, recall_backend};
 use crate::error::{LumError, Result};
-use crate::memory::{cosine_similarity, SemanticMemory};
+use crate::memory::SemanticMemory;
 use serde::{Deserialize, Serialize};
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -122,6 +123,9 @@ pub async fn recall_search(
             .map(|s| s.to_string())
             .collect(),
     };
+    // 벡터 검색 경로를 프록시로 감싸 DB/엔진 교체 지점을 단일화.
+    let requested_backend = load_config().ok().and_then(|c| c.recall_vector_backend);
+    let vector_backend = recall_backend::resolve_backend(requested_backend.as_deref());
 
     let client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(30))
@@ -144,7 +148,7 @@ pub async fn recall_search(
             if !in_window(ts_ms) || h.embedding.is_empty() {
                 continue;
             }
-            let score = cosine_similarity(&q_emb, &h.embedding);
+            let score = vector_backend.similarity(&q_emb, &h.embedding);
             if score > SCORE_THRESHOLD {
                 hits.push(history_to_entry(h, score));
             }
@@ -158,7 +162,7 @@ pub async fn recall_search(
             if !in_window(ts_ms) || e.embedding.is_empty() {
                 continue;
             }
-            let score = cosine_similarity(&q_emb, &e.embedding);
+            let score = vector_backend.similarity(&q_emb, &e.embedding);
             if score > SCORE_THRESHOLD {
                 hits.push(RecallEntry {
                     id: format!("memory:{}", e.timestamp),
@@ -190,7 +194,7 @@ pub async fn recall_search(
                 continue;
             }
             let score = if !h.embedding.is_empty() {
-                cosine_similarity(&q_emb, &h.embedding)
+                vector_backend.similarity(&q_emb, &h.embedding)
             } else if fallback_failed {
                 continue;
             } else {
@@ -199,7 +203,7 @@ pub async fn recall_search(
                     continue;
                 }
                 match embed_auto(&client, &model, &text).await {
-                    Some(emb) => cosine_similarity(&q_emb, &emb),
+                    Some(emb) => vector_backend.similarity(&q_emb, &emb),
                     None => {
                         fallback_failed = true;
                         continue;

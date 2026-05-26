@@ -132,6 +132,10 @@ pub struct AppConfig {
     // ── Phase 129: ReAct 도구 화이트리스트 ───────────────────────────────────
     /// Act 모드에서 자동 승인할 도구 목록. None이면 수동 승인 흐름(런타임 전달 whitelist 우선).
     pub react_tool_whitelist: Option<Vec<String>>,
+    // ── Phase 131: Recall 벡터 백엔드 프록시 ─────────────────────────────────
+    /// Recall 검색 벡터 백엔드 ID. 기본 local-cosine.
+    /// 향후 zVec 등 외부 DB 어댑터를 붙일 때 동일 키로 교체 가능.
+    pub recall_vector_backend: Option<String>,
 }
 
 impl AppConfig {
@@ -503,6 +507,16 @@ pub fn save_react_tool_whitelist(whitelist: Vec<String>) -> Result<()> {
         .filter(|s| !s.is_empty())
         .collect();
     config.react_tool_whitelist = if list.is_empty() { None } else { Some(list) };
+    save_config(&config)
+}
+
+/// Phase 131: Recall 벡터 백엔드 저장 (예: "local-cosine", "zvec")
+#[tauri::command]
+pub fn save_recall_vector_backend(backend: Option<String>) -> Result<()> {
+    let mut config = load_config()?;
+    config.recall_vector_backend = backend
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty());
     save_config(&config)
 }
 
