@@ -44,18 +44,27 @@ function normalizeRecallBackend(
   supported: string[],
   fallback: string,
 ): string {
-  const v = value?.trim();
+  const v = canonicalizeRecallBackendName(value);
   if (v && supported.includes(v)) return v;
-  if (supported.includes(fallback)) return fallback;
+  const fallbackName = canonicalizeRecallBackendName(fallback);
+  if (fallbackName && supported.includes(fallbackName)) return fallbackName;
   if (supported.length > 0) return supported[0];
   return "local-cosine";
+}
+
+function canonicalizeRecallBackendName(raw: string | null | undefined): string {
+  const name = raw?.trim().toLowerCase().replace(/_/g, "-") ?? "";
+  if (!name) return "";
+  if (name === "z-vec") return "zvec";
+  if (name === "localcosine" || name === "cosine" || name === "default") return "local-cosine";
+  return name;
 }
 
 function sanitizeRecallBackendList(rawList: string[] | null | undefined): string[] {
   const unique: string[] = [];
   const seen = new Set<string>();
   for (const raw of rawList ?? []) {
-    const name = raw.trim();
+    const name = canonicalizeRecallBackendName(raw);
     if (!name || seen.has(name)) continue;
     seen.add(name);
     unique.push(name);
