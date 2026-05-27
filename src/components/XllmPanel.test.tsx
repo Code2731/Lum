@@ -357,6 +357,32 @@ describe("XllmPanel", () => {
     });
   });
 
+  it("legacy LOCAL_COSINE raw 상태도 저장은 비활성화되고 기본값으로 override 제거가 가능하다", async () => {
+    invokeMock.mockReset();
+    mockInvokeWith({
+      configBackend: " LOCAL_COSINE ",
+      infoRequestedRaw: " LOCAL_COSINE ",
+      infoRequested: "local-cosine",
+      infoActive: "local-cosine",
+      infoSupported: ["local-cosine", "zvec"],
+      infoRequestedAdjusted: true,
+      infoActiveMatchesRequested: true,
+    });
+    render(<XllmPanel onClose={vi.fn()} />);
+
+    const saveButton = await screen.findByTestId("recall-backend-save");
+    const resetButton = await screen.findByTestId("recall-backend-reset");
+    expect(saveButton).toBeDisabled();
+    expect(resetButton).toBeEnabled();
+
+    fireEvent.click(resetButton);
+    await waitFor(() => {
+      expect(invokeMock).toHaveBeenCalledWith("save_recall_vector_backend", {
+        backend: null,
+      });
+    });
+  });
+
   it("custom-db 정규화 상태에서는 저장은 비활성화되지만 기본값으로 override 제거는 가능하다", async () => {
     invokeMock.mockReset();
     mockInvokeWith({
