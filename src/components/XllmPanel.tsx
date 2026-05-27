@@ -320,6 +320,7 @@ const RecallBackendSection: React.FC = () => {
 
   // 경고는 서버가 계산한 persisted 상태를 기준으로만 표시한다.
   const activeChanged = !activeMatchesRequested;
+  const isDefaultConfigured = requestedRaw == null;
 
   return (
     <section className="space-y-2 border border-emerald-400/20 rounded-lg p-3 bg-emerald-500/5">
@@ -364,7 +365,7 @@ const RecallBackendSection: React.FC = () => {
         </button>
         <button
           onClick={resetToDefault}
-          disabled={saving || loading}
+          disabled={saving || loading || isDefaultConfigured}
           title="Recall 백엔드 기본값 사용"
           className="px-2.5 py-1 rounded border border-emerald-400/25 bg-emerald-500/8 hover:bg-emerald-500/15 text-sm text-emerald-200 disabled:opacity-40 transition-colors"
         >

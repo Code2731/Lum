@@ -17,18 +17,18 @@ function mockInvoke() {
 }
 
 function mockInvokeWith(overrides: {
-  configBackend?: string;
-  infoRequested?: string;
-  infoRequestedRaw?: string;
-  infoActive?: string;
+  configBackend?: string | null;
+  infoRequested?: string | null;
+  infoRequestedRaw?: string | null;
+  infoActive?: string | null;
   infoSupported?: string[];
   infoRequestedAdjusted?: boolean;
   infoActiveMatchesRequested?: boolean;
 }) {
-  const configBackend = overrides.configBackend ?? "zvec";
-  const infoRequested = overrides.infoRequested ?? "zvec";
-  const infoRequestedRaw = overrides.infoRequestedRaw ?? infoRequested;
-  const infoActive = overrides.infoActive ?? "local-cosine";
+  const configBackend = overrides.configBackend === undefined ? "zvec" : overrides.configBackend;
+  const infoRequested = overrides.infoRequested === undefined ? "zvec" : overrides.infoRequested;
+  const infoRequestedRaw = overrides.infoRequestedRaw === undefined ? infoRequested : overrides.infoRequestedRaw;
+  const infoActive = overrides.infoActive === undefined ? "local-cosine" : overrides.infoActive;
   const infoSupported = overrides.infoSupported ?? ["local-cosine", "zvec"];
   const infoRequestedAdjusted =
     overrides.infoRequestedAdjusted ?? infoRequestedRaw !== infoRequested;
@@ -36,9 +36,13 @@ function mockInvokeWith(overrides: {
     overrides.infoActiveMatchesRequested ?? infoRequested === infoActive;
   invokeMock.mockImplementation((cmd: string, args?: unknown) => {
     if (cmd === "load_app_config") {
-      return Promise.resolve({
-        recall_vector_backend: configBackend,
-      });
+      return Promise.resolve(
+        configBackend === null
+          ? {}
+          : {
+              recall_vector_backend: configBackend,
+            },
+      );
     }
     if (cmd === "recall_backend_info") {
       return Promise.resolve({
@@ -151,5 +155,22 @@ describe("XllmPanel", () => {
         backend: null,
       });
     });
+  });
+
+  it("이미 기본값 상태면 기본값 버튼이 비활성화된다", async () => {
+    invokeMock.mockReset();
+    mockInvokeWith({
+      configBackend: null,
+      infoRequestedRaw: null,
+      infoRequested: null,
+      infoActive: "local-cosine",
+      infoSupported: ["local-cosine", "zvec"],
+      infoRequestedAdjusted: false,
+      infoActiveMatchesRequested: true,
+    });
+    render(<XllmPanel onClose={vi.fn()} />);
+
+    const resetButton = await screen.findByTitle("Recall 백엔드 기본값 사용");
+    expect(resetButton).toBeDisabled();
   });
 });
