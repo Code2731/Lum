@@ -66,6 +66,7 @@ pub fn resolve_backend(requested: Option<&str>) -> Box<dyn RecallVectorBackend> 
 
 #[derive(Serialize)]
 pub struct RecallBackendInfo {
+    pub requested_raw: Option<String>,
     pub requested: Option<String>,
     pub active: String,
     pub supported: Vec<String>,
@@ -73,9 +74,17 @@ pub struct RecallBackendInfo {
 
 #[tauri::command]
 pub fn recall_backend_info() -> RecallBackendInfo {
-    let requested = load_requested_backend_key();
+    let requested_raw = load_config()
+        .ok()
+        .and_then(|c| c.recall_vector_backend)
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .map(str::to_string);
+    let requested = normalize_requested_backend_key(requested_raw.as_deref());
     let backend = resolve_backend(requested.as_deref());
     RecallBackendInfo {
+        requested_raw,
         requested,
         active: backend.name().to_string(),
         // `zvec`는 호환 키로 예약(현재 구현은 local-cosine 폴백).

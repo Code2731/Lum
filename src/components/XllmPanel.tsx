@@ -31,6 +31,7 @@ interface AppConfig {
 }
 
 interface RecallBackendInfo {
+  requested_raw?: string | null;
   requested?: string | null;
   active: string;
   supported: string[];
@@ -243,6 +244,7 @@ const XllmPanel: React.FC<Props> = ({ onClose }) => {
 const RecallBackendSection: React.FC = () => {
   const [selected, setSelected] = useState("local-cosine");
   const [active, setActive] = useState("local-cosine");
+  const [requestedRaw, setRequestedRaw] = useState<string | null>(null);
   const [requested, setRequested] = useState<string | null>(null);
   const [supported, setSupported] = useState<string[]>(["local-cosine", "zvec"]);
   const [loading, setLoading] = useState(false);
@@ -259,9 +261,11 @@ const RecallBackendSection: React.FC = () => {
       const activeName = info.active?.trim() || "local-cosine";
       const supportedNames = info.supported?.length ? info.supported : ["local-cosine", "zvec"];
       const requestedName = info.requested?.trim() || null;
+      const requestedRawName = info.requested_raw?.trim() || null;
       const picked = cfg.recall_vector_backend?.trim() || requestedName || activeName;
       setSelected(normalizeRecallBackend(picked, supportedNames, activeName));
       setActive(activeName);
+      setRequestedRaw(requestedRawName);
       setRequested(requestedName);
       setSupported(supportedNames);
       setMsg(null);
@@ -293,6 +297,7 @@ const RecallBackendSection: React.FC = () => {
   }, [refresh, selected]);
 
   const activeChanged = active !== selected;
+  const requestedAdjusted = !!requestedRaw && requestedRaw !== selected;
 
   return (
     <section className="space-y-2 border border-emerald-400/20 rounded-lg p-3 bg-emerald-500/5">
@@ -346,9 +351,9 @@ const RecallBackendSection: React.FC = () => {
         {msg && <span className="text-xs text-white/50 truncate">{msg}</span>}
       </div>
 
-      {activeChanged && (
+      {(activeChanged || requestedAdjusted) && (
         <p className="text-xs text-amber-300/85">
-          요청값: <code className="font-mono">{requested ?? "없음"}</code> / 실행값: <code className="font-mono">{active}</code>
+          원본 요청값: <code className="font-mono">{requestedRaw ?? "없음"}</code> / 정규화 요청값: <code className="font-mono">{requested ?? "없음"}</code> / 실행값: <code className="font-mono">{active}</code>
         </p>
       )}
     </section>

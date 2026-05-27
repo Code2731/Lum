@@ -19,11 +19,13 @@ function mockInvoke() {
 function mockInvokeWith(overrides: {
   configBackend?: string;
   infoRequested?: string;
+  infoRequestedRaw?: string;
   infoActive?: string;
   infoSupported?: string[];
 }) {
   const configBackend = overrides.configBackend ?? "zvec";
   const infoRequested = overrides.infoRequested ?? "zvec";
+  const infoRequestedRaw = overrides.infoRequestedRaw ?? infoRequested;
   const infoActive = overrides.infoActive ?? "local-cosine";
   const infoSupported = overrides.infoSupported ?? ["local-cosine", "zvec"];
   invokeMock.mockImplementation((cmd: string, args?: unknown) => {
@@ -34,6 +36,7 @@ function mockInvokeWith(overrides: {
     }
     if (cmd === "recall_backend_info") {
       return Promise.resolve({
+        requested_raw: infoRequestedRaw,
         requested: infoRequested,
         active: infoActive,
         supported: infoSupported,
@@ -90,7 +93,8 @@ describe("XllmPanel", () => {
     invokeMock.mockReset();
     mockInvokeWith({
       configBackend: "custom-db",
-      infoRequested: "custom-db",
+      infoRequestedRaw: "custom-db",
+      infoRequested: "local-cosine",
       infoActive: "local-cosine",
       infoSupported: ["local-cosine", "zvec"],
     });
@@ -103,6 +107,7 @@ describe("XllmPanel", () => {
       expect(invokeMock).toHaveBeenCalledWith("save_recall_vector_backend", {
         backend: "local-cosine",
       });
+      expect(screen.getByText("원본 요청값:", { exact: false })).toBeInTheDocument();
     });
   });
 
@@ -110,7 +115,8 @@ describe("XllmPanel", () => {
     invokeMock.mockReset();
     mockInvokeWith({
       configBackend: "custom-db",
-      infoRequested: "custom-db",
+      infoRequestedRaw: "custom-db",
+      infoRequested: "local-cosine",
       infoActive: "custom-active",
       infoSupported: ["zvec"],
     });
