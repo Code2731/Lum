@@ -321,6 +321,8 @@ const RecallBackendSection: React.FC = () => {
   // 경고는 서버가 계산한 persisted 상태를 기준으로만 표시한다.
   const activeChanged = !activeMatchesRequested;
   const isDefaultConfigured = requestedRaw == null;
+  const selectedStoredValue = selected === "local-cosine" ? null : selected;
+  const isSaveNoop = selectedStoredValue === (requestedRaw ?? null);
 
   return (
     <section className="space-y-2 border border-emerald-400/20 rounded-lg p-3 bg-emerald-500/5">
@@ -357,7 +359,7 @@ const RecallBackendSection: React.FC = () => {
       <div className="flex items-center gap-2">
         <button
           onClick={save}
-          disabled={saving || loading}
+          disabled={saving || loading || isSaveNoop}
           title="Recall 백엔드 저장"
           className="px-3 py-1 rounded bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-400/25 text-sm text-emerald-200 disabled:opacity-40 transition-colors"
         >

@@ -89,6 +89,16 @@ describe("XllmPanel", () => {
   });
 
   it("Recall 백엔드 저장 클릭 시 save_recall_vector_backend를 호출한다", async () => {
+    invokeMock.mockReset();
+    mockInvokeWith({
+      configBackend: "zvec",
+      infoRequestedRaw: null,
+      infoRequested: null,
+      infoActive: "local-cosine",
+      infoSupported: ["local-cosine", "zvec"],
+      infoRequestedAdjusted: false,
+      infoActiveMatchesRequested: true,
+    });
     render(<XllmPanel onClose={vi.fn()} />);
 
     const saveButton = await screen.findByTitle("Recall 백엔드 저장");
@@ -195,5 +205,39 @@ describe("XllmPanel", () => {
 
     const resetButton = await screen.findByTitle("Recall 백엔드 기본값 사용");
     expect(resetButton).toBeDisabled();
+  });
+
+  it("이미 기본값 상태면 저장 버튼도 비활성화된다", async () => {
+    invokeMock.mockReset();
+    mockInvokeWith({
+      configBackend: null,
+      infoRequestedRaw: null,
+      infoRequested: null,
+      infoActive: "local-cosine",
+      infoSupported: ["local-cosine", "zvec"],
+      infoRequestedAdjusted: false,
+      infoActiveMatchesRequested: true,
+    });
+    render(<XllmPanel onClose={vi.fn()} />);
+
+    const saveButton = await screen.findByTitle("Recall 백엔드 저장");
+    expect(saveButton).toBeDisabled();
+  });
+
+  it("이미 zvec 상태면 저장 버튼이 비활성화된다", async () => {
+    invokeMock.mockReset();
+    mockInvokeWith({
+      configBackend: "zvec",
+      infoRequestedRaw: "zvec",
+      infoRequested: "zvec",
+      infoActive: "local-cosine",
+      infoSupported: ["local-cosine", "zvec"],
+      infoRequestedAdjusted: false,
+      infoActiveMatchesRequested: false,
+    });
+    render(<XllmPanel onClose={vi.fn()} />);
+
+    const saveButton = await screen.findByTitle("Recall 백엔드 저장");
+    expect(saveButton).toBeDisabled();
   });
 });
