@@ -105,4 +105,24 @@ describe("XllmPanel", () => {
       });
     });
   });
+
+  it("active/fallback도 지원 목록에 없으면 첫 supported 값으로 저장한다", async () => {
+    invokeMock.mockReset();
+    mockInvokeWith({
+      configBackend: "custom-db",
+      infoRequested: "custom-db",
+      infoActive: "custom-active",
+      infoSupported: ["zvec"],
+    });
+    render(<XllmPanel onClose={vi.fn()} />);
+
+    const saveButton = await screen.findByTitle("Recall 백엔드 저장");
+    fireEvent.click(saveButton);
+
+    await waitFor(() => {
+      expect(invokeMock).toHaveBeenCalledWith("save_recall_vector_backend", {
+        backend: "zvec",
+      });
+    });
+  });
 });

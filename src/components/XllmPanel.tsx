@@ -42,8 +42,10 @@ function normalizeRecallBackend(
   fallback: string,
 ): string {
   const v = value?.trim();
-  if (!v) return fallback;
-  return supported.includes(v) ? v : fallback;
+  if (v && supported.includes(v)) return v;
+  if (supported.includes(fallback)) return fallback;
+  if (supported.length > 0) return supported[0];
+  return "local-cosine";
 }
 
 type SafetyMode = "safe" | "balanced" | "max";
