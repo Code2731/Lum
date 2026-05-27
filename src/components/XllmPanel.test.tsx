@@ -202,6 +202,29 @@ describe("XllmPanel", () => {
     expect(resetButton).toBeDisabled();
   });
 
+  it("비활성화된 기본값 버튼 클릭은 save_recall_vector_backend를 호출하지 않는다", async () => {
+    invokeMock.mockReset();
+    mockInvokeWith({
+      configBackend: null,
+      infoRequestedRaw: null,
+      infoRequested: null,
+      infoActive: "local-cosine",
+      infoSupported: ["local-cosine", "zvec"],
+      infoRequestedAdjusted: false,
+      infoActiveMatchesRequested: true,
+    });
+    render(<XllmPanel onClose={vi.fn()} />);
+
+    const resetButton = await screen.findByTestId("recall-backend-reset");
+    expect(resetButton).toBeDisabled();
+    fireEvent.click(resetButton);
+
+    const saveCalls = invokeMock.mock.calls.filter(
+      (c) => c[0] === "save_recall_vector_backend",
+    );
+    expect(saveCalls.length).toBe(0);
+  });
+
   it("이미 기본값 상태면 저장 버튼도 비활성화된다", async () => {
     invokeMock.mockReset();
     mockInvokeWith({
@@ -217,6 +240,29 @@ describe("XllmPanel", () => {
 
     const saveButton = await screen.findByTestId("recall-backend-save");
     expect(saveButton).toBeDisabled();
+  });
+
+  it("비활성화된 저장 버튼 클릭은 save_recall_vector_backend를 호출하지 않는다", async () => {
+    invokeMock.mockReset();
+    mockInvokeWith({
+      configBackend: null,
+      infoRequestedRaw: null,
+      infoRequested: null,
+      infoActive: "local-cosine",
+      infoSupported: ["local-cosine", "zvec"],
+      infoRequestedAdjusted: false,
+      infoActiveMatchesRequested: true,
+    });
+    render(<XllmPanel onClose={vi.fn()} />);
+
+    const saveButton = await screen.findByTestId("recall-backend-save");
+    expect(saveButton).toBeDisabled();
+    fireEvent.click(saveButton);
+
+    const saveCalls = invokeMock.mock.calls.filter(
+      (c) => c[0] === "save_recall_vector_backend",
+    );
+    expect(saveCalls.length).toBe(0);
   });
 
   it("이미 zvec 상태면 저장 버튼이 비활성화된다", async () => {
