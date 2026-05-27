@@ -252,4 +252,28 @@ describe("XllmPanel", () => {
     const saveButton = await screen.findByTitle("Recall 백엔드 저장");
     expect(saveButton).toBeDisabled();
   });
+
+  it("legacy local-cosine raw 상태에서는 기본값 버튼으로 override 제거가 가능하다", async () => {
+    invokeMock.mockReset();
+    mockInvokeWith({
+      configBackend: "local-cosine",
+      infoRequestedRaw: "local-cosine",
+      infoRequested: "local-cosine",
+      infoActive: "local-cosine",
+      infoSupported: ["local-cosine", "zvec"],
+      infoRequestedAdjusted: false,
+      infoActiveMatchesRequested: true,
+    });
+    render(<XllmPanel onClose={vi.fn()} />);
+
+    const resetButton = await screen.findByTitle("Recall 백엔드 기본값 사용");
+    expect(resetButton).toBeEnabled();
+    fireEvent.click(resetButton);
+
+    await waitFor(() => {
+      expect(invokeMock).toHaveBeenCalledWith("save_recall_vector_backend", {
+        backend: null,
+      });
+    });
+  });
 });
