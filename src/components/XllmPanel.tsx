@@ -307,8 +307,8 @@ const RecallBackendSection: React.FC = () => {
       setActiveMatchesRequested(info.active_matches_requested !== false);
       setSupported(supportedNames);
       setMsg(null);
-    } catch {
-      setMsg("상태 조회 실패");
+    } catch (e) {
+      setMsg(`상태 조회 실패: ${formatErrorMessage(e)}`);
     } finally {
       setLoading(false);
     }
