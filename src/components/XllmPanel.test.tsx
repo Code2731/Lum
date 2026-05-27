@@ -530,4 +530,78 @@ describe("XllmPanel", () => {
 
     expect(await screen.findByText("저장 실패: 저장 API 오류")).toBeInTheDocument();
   });
+
+  it("LAN 검색 실패 시 객체 오류를 사람이 읽을 수 있는 메시지로 노출한다", async () => {
+    invokeMock.mockReset();
+    invokeMock.mockImplementation((cmd: string, args?: unknown) => {
+      if (cmd === "load_app_config") return Promise.resolve({});
+      if (cmd === "recall_backend_info") {
+        return Promise.resolve({
+          requested_raw: null,
+          requested: null,
+          active: "local-cosine",
+          supported: ["local-cosine", "zvec"],
+          requested_adjusted: false,
+          active_matches_requested: true,
+        });
+      }
+      if (cmd === "discover_lan_llm_servers") return Promise.reject({ message: "LAN 탐색 API 오류" });
+      if (cmd === "save_recall_vector_backend") return Promise.resolve(args ?? {});
+      if (cmd === "save_xllm_settings") return Promise.resolve({});
+      if (cmd === "list_embed_candidates") return Promise.resolve([]);
+      if (cmd === "list_lora_candidates") return Promise.resolve([]);
+      if (cmd === "embed_loaded_info") return Promise.resolve(null);
+      return Promise.resolve({});
+    });
+
+    render(<XllmPanel onClose={vi.fn()} />);
+
+    const discoverButton = await screen.findByRole("button", { name: "검색" });
+    fireEvent.click(discoverButton);
+
+    expect(await screen.findByText("검색 실패: LAN 탐색 API 오류")).toBeInTheDocument();
+  });
+
+  it("LAN 서버 적용 실패 시 객체 오류를 사람이 읽을 수 있는 메시지로 노출한다", async () => {
+    invokeMock.mockReset();
+    invokeMock.mockImplementation((cmd: string, args?: unknown) => {
+      if (cmd === "load_app_config") return Promise.resolve({});
+      if (cmd === "recall_backend_info") {
+        return Promise.resolve({
+          requested_raw: null,
+          requested: null,
+          active: "local-cosine",
+          supported: ["local-cosine", "zvec"],
+          requested_adjusted: false,
+          active_matches_requested: true,
+        });
+      }
+      if (cmd === "discover_lan_llm_servers") {
+        return Promise.resolve([{
+          ip: "127.0.0.2",
+          port: 1234,
+          kind: "open_ai_compat",
+          url: "http://127.0.0.2:1234",
+          models: ["qwen2.5-coder-7b"],
+          latency_ms: 12,
+        }]);
+      }
+      if (cmd === "save_xllm_base_url") return Promise.reject({ message: "백엔드 적용 오류" });
+      if (cmd === "save_recall_vector_backend") return Promise.resolve(args ?? {});
+      if (cmd === "save_xllm_settings") return Promise.resolve({});
+      if (cmd === "list_embed_candidates") return Promise.resolve([]);
+      if (cmd === "list_lora_candidates") return Promise.resolve([]);
+      if (cmd === "embed_loaded_info") return Promise.resolve(null);
+      return Promise.resolve({});
+    });
+
+    render(<XllmPanel onClose={vi.fn()} />);
+
+    const discoverButton = await screen.findByRole("button", { name: "검색" });
+    fireEvent.click(discoverButton);
+    const applyButton = await screen.findByRole("button", { name: "사용" });
+    fireEvent.click(applyButton);
+
+    expect(await screen.findByText("적용 실패: 백엔드 적용 오류")).toBeInTheDocument();
+  });
 });

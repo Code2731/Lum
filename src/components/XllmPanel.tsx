@@ -634,7 +634,7 @@ const LanDiscoverySection: React.FC = () => {
       const list = await invoke<DiscoveredServer[]>("discover_lan_llm_servers");
       setResults(list);
     } catch (e) {
-      setError(String(e));
+      setError(`검색 실패: ${formatErrorMessage(e)}`);
     } finally {
       setScanning(false);
     }
@@ -653,7 +653,7 @@ const LanDiscoverySection: React.FC = () => {
       }
       setAppliedKey(`${s.ip}:${s.port}`);
     } catch (e) {
-      setError(String(e));
+      setError(`적용 실패: ${formatErrorMessage(e)}`);
     }
   }, []);
 
