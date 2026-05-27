@@ -444,4 +444,24 @@ describe("XllmPanel", () => {
       expect(afterCalls).toBeGreaterThan(initialCalls);
     });
   });
+
+  it("recall backend 상태 조회 실패 시 오류 메시지를 표시하고 저장 액션은 비활성화된다", async () => {
+    invokeMock.mockReset();
+    invokeMock.mockImplementation((cmd: string, args?: unknown) => {
+      if (cmd === "load_app_config") return Promise.resolve({});
+      if (cmd === "recall_backend_info") return Promise.reject(new Error("boom"));
+      if (cmd === "save_recall_vector_backend") return Promise.resolve(args ?? {});
+      if (cmd === "list_embed_candidates") return Promise.resolve([]);
+      if (cmd === "list_lora_candidates") return Promise.resolve([]);
+      if (cmd === "embed_loaded_info") return Promise.resolve(null);
+      if (cmd === "save_xllm_settings") return Promise.resolve({});
+      return Promise.resolve({});
+    });
+
+    render(<XllmPanel onClose={vi.fn()} />);
+
+    expect(await screen.findByText("상태 조회 실패")).toBeInTheDocument();
+    expect(screen.getByTestId("recall-backend-save")).toBeDisabled();
+    expect(screen.getByTestId("recall-backend-reset")).toBeDisabled();
+  });
 });
