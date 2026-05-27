@@ -37,9 +37,9 @@ pub fn normalize_requested_backend_key(raw: Option<&str>) -> Option<String> {
         return None;
     }
     match name.as_str() {
-        "local-cosine" | "cosine" | "default" => Some("local-cosine".into()),
+        "local-cosine" | "localcosine" | "cosine" | "default" => Some("local-cosine".into()),
         // zvec 키는 프록시 슬롯으로 유지(현재 엔진은 local-cosine 폴백).
-        "zvec" => Some("zvec".into()),
+        "zvec" | "z-vec" => Some("zvec".into()),
         _ => Some("local-cosine".into()),
     }
 }
@@ -121,6 +121,14 @@ mod tests {
         assert_eq!(
             normalize_requested_backend_key(Some("zvec")).as_deref(),
             Some("zvec")
+        );
+        assert_eq!(
+            normalize_requested_backend_key(Some("z-vec")).as_deref(),
+            Some("zvec")
+        );
+        assert_eq!(
+            normalize_requested_backend_key(Some("localcosine")).as_deref(),
+            Some("local-cosine")
         );
         assert_eq!(
             normalize_requested_backend_key(Some("custom-db")).as_deref(),
