@@ -131,4 +131,17 @@ describe("XllmPanel", () => {
       });
     });
   });
+
+  it("기본값 버튼 클릭 시 backend null로 저장한다", async () => {
+    render(<XllmPanel onClose={vi.fn()} />);
+
+    const resetButton = await screen.findByTitle("Recall 백엔드 기본값 사용");
+    fireEvent.click(resetButton);
+
+    await waitFor(() => {
+      expect(invokeMock).toHaveBeenCalledWith("save_recall_vector_backend", {
+        backend: null,
+      });
+    });
+  });
 });

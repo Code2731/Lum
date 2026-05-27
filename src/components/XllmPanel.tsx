@@ -296,6 +296,22 @@ const RecallBackendSection: React.FC = () => {
     }
   }, [refresh, selected]);
 
+  const resetToDefault = useCallback(async () => {
+    setSaving(true);
+    setMsg(null);
+    try {
+      await invoke("save_recall_vector_backend", {
+        backend: null,
+      });
+      await refresh();
+      setMsg("기본값 적용");
+    } catch (e) {
+      setMsg(`기본값 복원 실패: ${e}`);
+    } finally {
+      setSaving(false);
+    }
+  }, [refresh]);
+
   // 경고는 "현재 서버 상태" 기준으로만 표시한다.
   // selected(사용자 임시 선택값)와 분리해, 저장 전 편집 상태에서 과잉 경고가 뜨지 않게 한다.
   const requestedAdjusted = !!requestedRaw && requestedRaw !== (requested ?? null);
@@ -341,6 +357,14 @@ const RecallBackendSection: React.FC = () => {
           className="px-3 py-1 rounded bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-400/25 text-sm text-emerald-200 disabled:opacity-40 transition-colors"
         >
           {saving ? "저장 중..." : "저장"}
+        </button>
+        <button
+          onClick={resetToDefault}
+          disabled={saving || loading}
+          title="Recall 백엔드 기본값 사용"
+          className="px-2.5 py-1 rounded border border-emerald-400/25 bg-emerald-500/8 hover:bg-emerald-500/15 text-sm text-emerald-200 disabled:opacity-40 transition-colors"
+        >
+          기본값
         </button>
         <button
           onClick={refresh}
