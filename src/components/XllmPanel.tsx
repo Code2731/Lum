@@ -291,7 +291,7 @@ const RecallBackendSection: React.FC = () => {
     setMsg(null);
     try {
       await invoke("save_recall_vector_backend", {
-        backend: selected || null,
+        backend: selected === "local-cosine" ? null : (selected || null),
       });
       await refresh();
       setMsg("저장 완료");
