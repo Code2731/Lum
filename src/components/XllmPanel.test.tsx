@@ -148,7 +148,7 @@ describe("XllmPanel", () => {
 
     const saveButton = await screen.findByTestId("recall-backend-save");
     expect(saveButton).toBeDisabled();
-    expect(screen.getByText("원본 요청값:", { exact: false })).toBeInTheDocument();
+    expect(screen.getByTestId("recall-backend-warning")).toBeInTheDocument();
   });
 
   it("active/fallback도 지원 목록에 없으면 첫 supported 값으로 저장한다", async () => {
@@ -301,5 +301,22 @@ describe("XllmPanel", () => {
         backend: null,
       });
     });
+  });
+
+  it("정상 기본 상태에서는 경고 배너가 표시되지 않는다", async () => {
+    invokeMock.mockReset();
+    mockInvokeWith({
+      configBackend: null,
+      infoRequestedRaw: null,
+      infoRequested: null,
+      infoActive: "local-cosine",
+      infoSupported: ["local-cosine", "zvec"],
+      infoRequestedAdjusted: false,
+      infoActiveMatchesRequested: true,
+    });
+    render(<XllmPanel onClose={vi.fn()} />);
+
+    await screen.findByTestId("recall-backend-save");
+    expect(screen.queryByTestId("recall-backend-warning")).toBeNull();
   });
 });

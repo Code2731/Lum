@@ -389,7 +389,7 @@ const RecallBackendSection: React.FC = () => {
       </div>
 
       {(activeChanged || requestedAdjusted) && (
-        <p className="text-xs text-amber-300/85">
+        <p data-testid="recall-backend-warning" className="text-xs text-amber-300/85">
           원본 요청값: <code className="font-mono">{requestedRaw ?? "없음"}</code> / 정규화 요청값: <code className="font-mono">{requested ?? "없음"}</code> / 실행값: <code className="font-mono">{active}</code>
         </p>
       )}
