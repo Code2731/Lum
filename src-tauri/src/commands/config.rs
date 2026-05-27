@@ -637,5 +637,21 @@ mod tests {
             normalize_recall_backend_for_storage(Some("z-vec")).as_deref(),
             Some("zvec")
         );
+        assert_eq!(
+            normalize_recall_backend_for_storage(Some("  Z_VEC  ")).as_deref(),
+            Some("zvec")
+        );
+    }
+
+    #[test]
+    fn normalize_recall_backend_for_storage_별칭과_공백을_기본값으로_정규화() {
+        assert_eq!(
+            normalize_recall_backend_for_storage(Some(" LOCAL_COSINE ")),
+            None
+        );
+        assert_eq!(
+            normalize_recall_backend_for_storage(Some(" default ")),
+            None
+        );
     }
 }
