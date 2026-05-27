@@ -168,4 +168,23 @@ mod tests {
         assert!(!info.active_matches_requested);
         assert_eq!(info.active, "local-cosine");
     }
+
+    #[test]
+    fn build_backend_info_defaults_when_raw_missing() {
+        let info = build_backend_info(None);
+        assert_eq!(info.requested_raw, None);
+        assert_eq!(info.requested, None);
+        assert_eq!(info.active, "local-cosine");
+        assert!(!info.requested_adjusted);
+        assert!(info.active_matches_requested);
+    }
+
+    #[test]
+    fn build_backend_info_marks_adjusted_for_localcosine_alias() {
+        let info = build_backend_info(Some("localcosine".into()));
+        assert_eq!(info.requested_raw.as_deref(), Some("localcosine"));
+        assert_eq!(info.requested.as_deref(), Some("local-cosine"));
+        assert!(info.requested_adjusted);
+        assert!(info.active_matches_requested);
+    }
 }
