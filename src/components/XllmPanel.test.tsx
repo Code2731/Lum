@@ -282,6 +282,23 @@ describe("XllmPanel", () => {
     expect(saveButton).toBeDisabled();
   });
 
+  it("supported 목록에 공백이 섞여도 zvec 키를 정규화해 저장 noop을 유지한다", async () => {
+    invokeMock.mockReset();
+    mockInvokeWith({
+      configBackend: "zvec",
+      infoRequestedRaw: "zvec",
+      infoRequested: "zvec",
+      infoActive: "local-cosine",
+      infoSupported: ["  zvec  "],
+      infoRequestedAdjusted: false,
+      infoActiveMatchesRequested: false,
+    });
+    render(<XllmPanel onClose={vi.fn()} />);
+
+    const saveButton = await screen.findByTestId("recall-backend-save");
+    expect(saveButton).toBeDisabled();
+  });
+
   it("legacy local-cosine raw 상태도 저장 버튼이 비활성화된다", async () => {
     invokeMock.mockReset();
     mockInvokeWith({

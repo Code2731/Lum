@@ -51,6 +51,19 @@ function normalizeRecallBackend(
   return "local-cosine";
 }
 
+function sanitizeRecallBackendList(rawList: string[] | null | undefined): string[] {
+  const unique: string[] = [];
+  const seen = new Set<string>();
+  for (const raw of rawList ?? []) {
+    const name = raw.trim();
+    if (!name || seen.has(name)) continue;
+    seen.add(name);
+    unique.push(name);
+  }
+  if (unique.length > 0) return unique;
+  return ["local-cosine", "zvec"];
+}
+
 type SafetyMode = "safe" | "balanced" | "max";
 const MODE_DEFAULTS: Record<SafetyMode, number> = { safe: 0.70, balanced: 0.80, max: 0.90 };
 
@@ -263,7 +276,7 @@ const RecallBackendSection: React.FC = () => {
         invoke<RecallBackendInfo>("recall_backend_info"),
       ]);
       const activeName = info.active?.trim() || "local-cosine";
-      const supportedNames = info.supported?.length ? info.supported : ["local-cosine", "zvec"];
+      const supportedNames = sanitizeRecallBackendList(info.supported);
       const requestedName = info.requested?.trim() || null;
       const requestedRawName = info.requested_raw?.trim() || null;
       const picked = cfg.recall_vector_backend?.trim() || requestedName || activeName;
