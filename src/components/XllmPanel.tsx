@@ -5,7 +5,7 @@ import {
   SlidersHorizontal, Loader2,
   Zap, Sparkles, FolderOpen, Wifi, RefreshCw, Check, Database,
 } from "lucide-react";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { IconButton } from "@/components/ui/icon-button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -96,6 +96,9 @@ const XllmPanel: React.FC<Props> = ({ onClose }) => {
         <div className="flex items-center gap-2 px-4 py-3 border-b border-white/5 shrink-0">
           <SlidersHorizontal size={SMALL_ICON_SIZE} className="text-accent shrink-0" />
           <DialogTitle className="text-xs font-semibold">xLLM 실전 최적화 설정</DialogTitle>
+          <DialogDescription className="sr-only">
+            로컬/원격 AI 백엔드와 임베디드 모델 동작을 설정합니다.
+          </DialogDescription>
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-5">
