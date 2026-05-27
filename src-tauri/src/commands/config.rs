@@ -511,11 +511,19 @@ pub fn save_react_tool_whitelist(whitelist: Vec<String>) -> Result<()> {
 }
 
 /// Phase 131: Recall 벡터 백엔드 저장 (예: "local-cosine", "zvec")
+fn normalize_recall_backend_for_storage(raw: Option<&str>) -> Option<String> {
+    match crate::commands::recall_backend::normalize_requested_backend_key(raw).as_deref() {
+        // 기본값은 override를 남기지 않는다.
+        Some("local-cosine") | None => None,
+        Some("zvec") => Some("zvec".into()),
+        Some(_) => None,
+    }
+}
+
 #[tauri::command]
 pub fn save_recall_vector_backend(backend: Option<String>) -> Result<()> {
     let mut config = load_config()?;
-    config.recall_vector_backend =
-        crate::commands::recall_backend::normalize_requested_backend_key(backend.as_deref());
+    config.recall_vector_backend = normalize_recall_backend_for_storage(backend.as_deref());
     save_config(&config)
 }
 
@@ -606,5 +614,28 @@ mod tests {
             vec!["https://example.com/xllm".to_string()]
         );
         assert_eq!(cfg.xllm_url(), "https://example.com/xllm".to_string());
+    }
+
+    #[test]
+    fn normalize_recall_backend_for_storage_기본값은_none() {
+        assert_eq!(normalize_recall_backend_for_storage(None), None);
+        assert_eq!(
+            normalize_recall_backend_for_storage(Some("local-cosine")),
+            None
+        );
+        assert_eq!(normalize_recall_backend_for_storage(Some("cosine")), None);
+        assert_eq!(normalize_recall_backend_for_storage(Some("custom-db")), None);
+    }
+
+    #[test]
+    fn normalize_recall_backend_for_storage_zvec는_보존() {
+        assert_eq!(
+            normalize_recall_backend_for_storage(Some("zvec")).as_deref(),
+            Some("zvec")
+        );
+        assert_eq!(
+            normalize_recall_backend_for_storage(Some("z-vec")).as_deref(),
+            Some("zvec")
+        );
     }
 }
