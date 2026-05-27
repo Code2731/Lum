@@ -604,4 +604,38 @@ describe("XllmPanel", () => {
 
     expect(await screen.findByText("적용 실패: 백엔드 적용 오류")).toBeInTheDocument();
   });
+
+  it("임베디드 추론 실패 시 객체 오류를 사람이 읽을 수 있는 메시지로 노출한다", async () => {
+    invokeMock.mockReset();
+    invokeMock.mockImplementation((cmd: string, args?: unknown) => {
+      if (cmd === "load_app_config") return Promise.resolve({});
+      if (cmd === "recall_backend_info") {
+        return Promise.resolve({
+          requested_raw: null,
+          requested: null,
+          active: "local-cosine",
+          supported: ["local-cosine", "zvec"],
+          requested_adjusted: false,
+          active_matches_requested: true,
+        });
+      }
+      if (cmd === "embed_loaded_info") return Promise.resolve("/tmp/test/model.gguf");
+      if (cmd === "embed_infer_stream") return Promise.reject({ message: "임베디드 추론 오류" });
+      if (cmd === "save_recall_vector_backend") return Promise.resolve(args ?? {});
+      if (cmd === "save_xllm_settings") return Promise.resolve({});
+      if (cmd === "list_embed_candidates") return Promise.resolve([]);
+      if (cmd === "list_lora_candidates") return Promise.resolve([]);
+      return Promise.resolve({});
+    });
+
+    render(<XllmPanel onClose={vi.fn()} />);
+
+    const promptInput = await screen.findByPlaceholderText("Hello, world!");
+    fireEvent.change(promptInput, { target: { value: "안녕" } });
+
+    const inferButton = await screen.findByRole("button", { name: /임베디드 추론/ });
+    fireEvent.click(inferButton);
+
+    expect(await screen.findByText("❌ 임베디드 추론 오류")).toBeInTheDocument();
+  });
 });

@@ -837,7 +837,7 @@ const EmbeddedInferenceDebug: React.FC = () => {
       setResponse(`✅ ${r}`);
       refreshLoadedKey();
     } catch (e) {
-      setResponse(`❌ ${typeof e === "string" ? e : JSON.stringify(e)}`);
+      setResponse(`❌ ${formatErrorMessage(e)}`);
     } finally {
       if (loadTimerRef.current) { clearInterval(loadTimerRef.current); loadTimerRef.current = null; }
       setLoadElapsed(0);
@@ -853,7 +853,7 @@ const EmbeddedInferenceDebug: React.FC = () => {
       setResponse("🗑 모델 언로드 완료 (VRAM 해제)");
       refreshLoadedKey();
     } catch (e) {
-      setResponse(`❌ ${typeof e === "string" ? e : JSON.stringify(e)}`);
+      setResponse(`❌ ${formatErrorMessage(e)}`);
     } finally {
       setBusy(null);
     }
@@ -869,7 +869,7 @@ const EmbeddedInferenceDebug: React.FC = () => {
     try {
       await invoke<string>("embed_infer_stream", { prompt: prompt.trim() });
     } catch (e) {
-      setResponse(`❌ ${typeof e === "string" ? e : JSON.stringify(e)}`);
+      setResponse(`❌ ${formatErrorMessage(e)}`);
     } finally {
       unlisten();
       setBusy(null);
