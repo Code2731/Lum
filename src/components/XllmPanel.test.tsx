@@ -22,12 +22,18 @@ function mockInvokeWith(overrides: {
   infoRequestedRaw?: string;
   infoActive?: string;
   infoSupported?: string[];
+  infoRequestedAdjusted?: boolean;
+  infoActiveMatchesRequested?: boolean;
 }) {
   const configBackend = overrides.configBackend ?? "zvec";
   const infoRequested = overrides.infoRequested ?? "zvec";
   const infoRequestedRaw = overrides.infoRequestedRaw ?? infoRequested;
   const infoActive = overrides.infoActive ?? "local-cosine";
   const infoSupported = overrides.infoSupported ?? ["local-cosine", "zvec"];
+  const infoRequestedAdjusted =
+    overrides.infoRequestedAdjusted ?? infoRequestedRaw !== infoRequested;
+  const infoActiveMatchesRequested =
+    overrides.infoActiveMatchesRequested ?? infoRequested === infoActive;
   invokeMock.mockImplementation((cmd: string, args?: unknown) => {
     if (cmd === "load_app_config") {
       return Promise.resolve({
@@ -40,6 +46,8 @@ function mockInvokeWith(overrides: {
         requested: infoRequested,
         active: infoActive,
         supported: infoSupported,
+        requested_adjusted: infoRequestedAdjusted,
+        active_matches_requested: infoActiveMatchesRequested,
       });
     }
     if (cmd === "save_recall_vector_backend") {

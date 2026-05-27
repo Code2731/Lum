@@ -70,6 +70,8 @@ pub struct RecallBackendInfo {
     pub requested: Option<String>,
     pub active: String,
     pub supported: Vec<String>,
+    pub requested_adjusted: bool,
+    pub active_matches_requested: bool,
 }
 
 #[tauri::command]
@@ -83,12 +85,20 @@ pub fn recall_backend_info() -> RecallBackendInfo {
         .map(str::to_string);
     let requested = normalize_requested_backend_key(requested_raw.as_deref());
     let backend = resolve_backend(requested.as_deref());
+    let active = backend.name().to_string();
+    let requested_adjusted = requested_raw.as_deref() != requested.as_deref();
+    let active_matches_requested = requested
+        .as_deref()
+        .map(|r| r == active.as_str())
+        .unwrap_or(true);
     RecallBackendInfo {
         requested_raw,
         requested,
-        active: backend.name().to_string(),
+        active,
         // `zvec`는 호환 키로 예약(현재 구현은 local-cosine 폴백).
         supported: vec!["local-cosine".into(), "zvec".into()],
+        requested_adjusted,
+        active_matches_requested,
     }
 }
 

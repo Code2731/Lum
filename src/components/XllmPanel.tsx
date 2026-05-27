@@ -35,6 +35,8 @@ interface RecallBackendInfo {
   requested?: string | null;
   active: string;
   supported: string[];
+  requested_adjusted?: boolean;
+  active_matches_requested?: boolean;
 }
 
 function normalizeRecallBackend(
@@ -246,6 +248,8 @@ const RecallBackendSection: React.FC = () => {
   const [active, setActive] = useState("local-cosine");
   const [requestedRaw, setRequestedRaw] = useState<string | null>(null);
   const [requested, setRequested] = useState<string | null>(null);
+  const [requestedAdjusted, setRequestedAdjusted] = useState(false);
+  const [activeMatchesRequested, setActiveMatchesRequested] = useState(true);
   const [supported, setSupported] = useState<string[]>(["local-cosine", "zvec"]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -267,6 +271,8 @@ const RecallBackendSection: React.FC = () => {
       setActive(activeName);
       setRequestedRaw(requestedRawName);
       setRequested(requestedName);
+      setRequestedAdjusted(Boolean(info.requested_adjusted));
+      setActiveMatchesRequested(info.active_matches_requested !== false);
       setSupported(supportedNames);
       setMsg(null);
     } catch {
@@ -312,10 +318,8 @@ const RecallBackendSection: React.FC = () => {
     }
   }, [refresh]);
 
-  // 경고는 "현재 서버 상태" 기준으로만 표시한다.
-  // selected(사용자 임시 선택값)와 분리해, 저장 전 편집 상태에서 과잉 경고가 뜨지 않게 한다.
-  const requestedAdjusted = !!requestedRaw && requestedRaw !== (requested ?? null);
-  const activeChanged = active !== (requested ?? active);
+  // 경고는 서버가 계산한 persisted 상태를 기준으로만 표시한다.
+  const activeChanged = !activeMatchesRequested;
 
   return (
     <section className="space-y-2 border border-emerald-400/20 rounded-lg p-3 bg-emerald-500/5">
