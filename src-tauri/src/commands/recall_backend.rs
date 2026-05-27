@@ -133,6 +133,10 @@ mod tests {
             Some("local-cosine")
         );
         assert_eq!(
+            normalize_requested_backend_key(Some("  local_cosine  ")).as_deref(),
+            Some("local-cosine")
+        );
+        assert_eq!(
             normalize_requested_backend_key(Some("zvec")).as_deref(),
             Some("zvec")
         );
@@ -141,7 +145,15 @@ mod tests {
             Some("zvec")
         );
         assert_eq!(
+            normalize_requested_backend_key(Some("Z_VEC")).as_deref(),
+            Some("zvec")
+        );
+        assert_eq!(
             normalize_requested_backend_key(Some("localcosine")).as_deref(),
+            Some("local-cosine")
+        );
+        assert_eq!(
+            normalize_requested_backend_key(Some("  default  ")).as_deref(),
             Some("local-cosine")
         );
         assert_eq!(
