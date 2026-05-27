@@ -74,15 +74,7 @@ pub struct RecallBackendInfo {
     pub active_matches_requested: bool,
 }
 
-#[tauri::command]
-pub fn recall_backend_info() -> RecallBackendInfo {
-    let requested_raw = load_config()
-        .ok()
-        .and_then(|c| c.recall_vector_backend)
-        .as_deref()
-        .map(str::trim)
-        .filter(|s| !s.is_empty())
-        .map(str::to_string);
+fn build_backend_info(requested_raw: Option<String>) -> RecallBackendInfo {
     let requested = normalize_requested_backend_key(requested_raw.as_deref());
     let backend = resolve_backend(requested.as_deref());
     let active = backend.name().to_string();
@@ -100,6 +92,18 @@ pub fn recall_backend_info() -> RecallBackendInfo {
         requested_adjusted,
         active_matches_requested,
     }
+}
+
+#[tauri::command]
+pub fn recall_backend_info() -> RecallBackendInfo {
+    let requested_raw = load_config()
+        .ok()
+        .and_then(|c| c.recall_vector_backend)
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .map(str::to_string);
+    build_backend_info(requested_raw)
 }
 
 #[cfg(test)]
@@ -144,5 +148,24 @@ mod tests {
             normalize_requested_backend_key(Some("custom-db")).as_deref(),
             Some("local-cosine")
         );
+    }
+
+    #[test]
+    fn build_backend_info_marks_adjusted_when_raw_is_normalized() {
+        let info = build_backend_info(Some("custom-db".into()));
+        assert_eq!(info.requested_raw.as_deref(), Some("custom-db"));
+        assert_eq!(info.requested.as_deref(), Some("local-cosine"));
+        assert!(info.requested_adjusted);
+        assert!(info.active_matches_requested);
+    }
+
+    #[test]
+    fn build_backend_info_marks_active_mismatch_for_zvec_proxy() {
+        let info = build_backend_info(Some("zvec".into()));
+        assert_eq!(info.requested_raw.as_deref(), Some("zvec"));
+        assert_eq!(info.requested.as_deref(), Some("zvec"));
+        assert!(!info.requested_adjusted);
+        assert!(!info.active_matches_requested);
+        assert_eq!(info.active, "local-cosine");
     }
 }
