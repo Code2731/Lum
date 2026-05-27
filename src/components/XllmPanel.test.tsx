@@ -319,4 +319,23 @@ describe("XllmPanel", () => {
     await screen.findByTestId("recall-backend-save");
     expect(screen.queryByTestId("recall-backend-warning")).toBeNull();
   });
+
+  it("새로고침 버튼 클릭 시 recall_backend_info를 다시 호출한다", async () => {
+    render(<XllmPanel onClose={vi.fn()} />);
+
+    await screen.findByTestId("recall-backend-save");
+    const initialCalls = invokeMock.mock.calls.filter(
+      (c) => c[0] === "recall_backend_info",
+    ).length;
+
+    const refreshButton = screen.getByTestId("recall-backend-refresh");
+    fireEvent.click(refreshButton);
+
+    await waitFor(() => {
+      const afterCalls = invokeMock.mock.calls.filter(
+        (c) => c[0] === "recall_backend_info",
+      ).length;
+      expect(afterCalls).toBeGreaterThan(initialCalls);
+    });
+  });
 });
