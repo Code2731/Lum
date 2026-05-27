@@ -101,7 +101,7 @@ describe("XllmPanel", () => {
     });
     render(<XllmPanel onClose={vi.fn()} />);
 
-    const saveButton = await screen.findByTitle("Recall 백엔드 저장");
+    const saveButton = await screen.findByTestId("recall-backend-save");
     fireEvent.click(saveButton);
 
     await waitFor(() => {
@@ -124,7 +124,7 @@ describe("XllmPanel", () => {
     });
     render(<XllmPanel onClose={vi.fn()} />);
 
-    const saveButton = await screen.findByTitle("Recall 백엔드 저장");
+    const saveButton = await screen.findByTestId("recall-backend-save");
     expect(saveButton).toBeEnabled();
     fireEvent.click(saveButton);
 
@@ -146,7 +146,7 @@ describe("XllmPanel", () => {
     });
     render(<XllmPanel onClose={vi.fn()} />);
 
-    const saveButton = await screen.findByTitle("Recall 백엔드 저장");
+    const saveButton = await screen.findByTestId("recall-backend-save");
     expect(saveButton).toBeDisabled();
     expect(screen.getByText("원본 요청값:", { exact: false })).toBeInTheDocument();
   });
@@ -162,7 +162,7 @@ describe("XllmPanel", () => {
     });
     render(<XllmPanel onClose={vi.fn()} />);
 
-    const saveButton = await screen.findByTitle("Recall 백엔드 저장");
+    const saveButton = await screen.findByTestId("recall-backend-save");
     fireEvent.click(saveButton);
 
     await waitFor(() => {
@@ -175,7 +175,7 @@ describe("XllmPanel", () => {
   it("기본값 버튼 클릭 시 backend null로 저장한다", async () => {
     render(<XllmPanel onClose={vi.fn()} />);
 
-    const resetButton = await screen.findByTitle("Recall 백엔드 기본값 사용");
+    const resetButton = await screen.findByTestId("recall-backend-reset");
     fireEvent.click(resetButton);
 
     await waitFor(() => {
@@ -198,7 +198,7 @@ describe("XllmPanel", () => {
     });
     render(<XllmPanel onClose={vi.fn()} />);
 
-    const resetButton = await screen.findByTitle("Recall 백엔드 기본값 사용");
+    const resetButton = await screen.findByTestId("recall-backend-reset");
     expect(resetButton).toBeDisabled();
   });
 
@@ -215,7 +215,7 @@ describe("XllmPanel", () => {
     });
     render(<XllmPanel onClose={vi.fn()} />);
 
-    const saveButton = await screen.findByTitle("Recall 백엔드 저장");
+    const saveButton = await screen.findByTestId("recall-backend-save");
     expect(saveButton).toBeDisabled();
   });
 
@@ -232,7 +232,7 @@ describe("XllmPanel", () => {
     });
     render(<XllmPanel onClose={vi.fn()} />);
 
-    const saveButton = await screen.findByTitle("Recall 백엔드 저장");
+    const saveButton = await screen.findByTestId("recall-backend-save");
     expect(saveButton).toBeDisabled();
   });
 
@@ -249,7 +249,7 @@ describe("XllmPanel", () => {
     });
     render(<XllmPanel onClose={vi.fn()} />);
 
-    const saveButton = await screen.findByTitle("Recall 백엔드 저장");
+    const saveButton = await screen.findByTestId("recall-backend-save");
     expect(saveButton).toBeDisabled();
   });
 
@@ -266,7 +266,7 @@ describe("XllmPanel", () => {
     });
     render(<XllmPanel onClose={vi.fn()} />);
 
-    const resetButton = await screen.findByTitle("Recall 백엔드 기본값 사용");
+    const resetButton = await screen.findByTestId("recall-backend-reset");
     expect(resetButton).toBeEnabled();
     fireEvent.click(resetButton);
 

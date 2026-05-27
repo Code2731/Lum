@@ -362,6 +362,7 @@ const RecallBackendSection: React.FC = () => {
           onClick={save}
           disabled={saving || loading || isSaveNoop}
           title="Recall 백엔드 저장"
+          data-testid="recall-backend-save"
           className="px-3 py-1 rounded bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-400/25 text-sm text-emerald-200 disabled:opacity-40 transition-colors"
         >
           {saving ? "저장 중..." : "저장"}
@@ -370,6 +371,7 @@ const RecallBackendSection: React.FC = () => {
           onClick={resetToDefault}
           disabled={saving || loading || isDefaultConfigured}
           title="Recall 백엔드 기본값 사용"
+          data-testid="recall-backend-reset"
           className="px-2.5 py-1 rounded border border-emerald-400/25 bg-emerald-500/8 hover:bg-emerald-500/15 text-sm text-emerald-200 disabled:opacity-40 transition-colors"
         >
           기본값
@@ -378,6 +380,7 @@ const RecallBackendSection: React.FC = () => {
           onClick={refresh}
           disabled={saving || loading}
           title="Recall 백엔드 상태 새로고침"
+          data-testid="recall-backend-refresh"
           className="px-2.5 py-1 rounded border border-white/10 bg-white/5 hover:bg-white/10 text-sm text-white/70 disabled:opacity-40 transition-colors"
         >
           {loading ? "새로고침 중..." : "새로고침"}
