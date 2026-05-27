@@ -118,7 +118,7 @@ const XllmPanel: React.FC<Props> = ({ onClose }) => {
       });
       setStatusMsg("설정 저장 완료");
     } catch (e) {
-      setStatusMsg(`저장 실패: ${e}`);
+      setStatusMsg(`저장 실패: ${formatErrorMessage(e)}`);
     } finally {
       setIsSaving(false);
     }
@@ -481,7 +481,7 @@ const OllamaSection: React.FC = () => {
       });
       setMsg(enabled ? "저장 완료 — Ollama 활성" : "비활성화됨 (embedded / xLLM 폴백)");
     } catch (e) {
-      setMsg(`저장 실패: ${e}`);
+      setMsg(`저장 실패: ${formatErrorMessage(e)}`);
     } finally {
       setSaving(false);
     }
