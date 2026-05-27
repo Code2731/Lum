@@ -73,6 +73,16 @@ function sanitizeRecallBackendList(rawList: string[] | null | undefined): string
   return ["local-cosine", "zvec"];
 }
 
+function formatErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  if (typeof error === "string") return error;
+  if (error && typeof error === "object" && "message" in error) {
+    const candidate = (error as { message?: unknown }).message;
+    if (typeof candidate === "string" && candidate.trim().length > 0) return candidate;
+  }
+  return "알 수 없는 오류";
+}
+
 type SafetyMode = "safe" | "balanced" | "max";
 const MODE_DEFAULTS: Record<SafetyMode, number> = { safe: 0.70, balanced: 0.80, max: 0.90 };
 
@@ -318,7 +328,7 @@ const RecallBackendSection: React.FC = () => {
       await refresh();
       setMsg("저장 완료");
     } catch (e) {
-      setMsg(`저장 실패: ${e}`);
+      setMsg(`저장 실패: ${formatErrorMessage(e)}`);
     } finally {
       setSaving(false);
     }
@@ -334,7 +344,7 @@ const RecallBackendSection: React.FC = () => {
       await refresh();
       setMsg("기본값 적용");
     } catch (e) {
-      setMsg(`기본값 복원 실패: ${e}`);
+      setMsg(`기본값 복원 실패: ${formatErrorMessage(e)}`);
     } finally {
       setSaving(false);
     }
