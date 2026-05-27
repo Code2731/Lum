@@ -638,4 +638,75 @@ describe("XllmPanel", () => {
 
     expect(await screen.findByText("❌ 임베디드 추론 오류")).toBeInTheDocument();
   });
+
+  it("임베디드 로드 실패 시 객체 오류를 사람이 읽을 수 있는 메시지로 노출한다", async () => {
+    invokeMock.mockReset();
+    invokeMock.mockImplementation((cmd: string, args?: unknown) => {
+      if (cmd === "load_app_config") return Promise.resolve({});
+      if (cmd === "recall_backend_info") {
+        return Promise.resolve({
+          requested_raw: null,
+          requested: null,
+          active: "local-cosine",
+          supported: ["local-cosine", "zvec"],
+          requested_adjusted: false,
+          active_matches_requested: true,
+        });
+      }
+      if (cmd === "embed_loaded_info") return Promise.resolve(null);
+      if (cmd === "list_embed_candidates") {
+        return Promise.resolve([{
+          folder: "/tmp/models/qwen",
+          folder_label: "qwen",
+          gguf_files: ["qwen.gguf"],
+          has_safetensors: false,
+        }]);
+      }
+      if (cmd === "list_lora_candidates") return Promise.resolve([]);
+      if (cmd === "embed_load_gguf") return Promise.reject({ message: "모델 로드 오류" });
+      if (cmd === "save_recall_vector_backend") return Promise.resolve(args ?? {});
+      if (cmd === "save_xllm_settings") return Promise.resolve({});
+      return Promise.resolve({});
+    });
+
+    render(<XllmPanel onClose={vi.fn()} />);
+
+    const loadButton = await screen.findByRole("button", { name: /임베디드 로드|교체|재로드/ });
+    fireEvent.click(loadButton);
+
+    expect(await screen.findByText("❌ 모델 로드 오류")).toBeInTheDocument();
+  });
+
+  it("임베디드 언로드 실패 시 객체 오류를 사람이 읽을 수 있는 메시지로 노출한다", async () => {
+    invokeMock.mockReset();
+    invokeMock.mockImplementation((cmd: string, args?: unknown) => {
+      if (cmd === "load_app_config") return Promise.resolve({});
+      if (cmd === "recall_backend_info") {
+        return Promise.resolve({
+          requested_raw: null,
+          requested: null,
+          active: "local-cosine",
+          supported: ["local-cosine", "zvec"],
+          requested_adjusted: false,
+          active_matches_requested: true,
+        });
+      }
+      if (cmd === "embed_loaded_info") return Promise.resolve("/tmp/test/model.gguf");
+      if (cmd === "list_embed_candidates") return Promise.resolve([]);
+      if (cmd === "list_lora_candidates") return Promise.resolve([]);
+      if (cmd === "embed_unload") return Promise.reject({ message: "모델 언로드 오류" });
+      if (cmd === "save_recall_vector_backend") return Promise.resolve(args ?? {});
+      if (cmd === "save_xllm_settings") return Promise.resolve({});
+      return Promise.resolve(args ?? {});
+    });
+
+    render(<XllmPanel onClose={vi.fn()} />);
+
+    const unloadText = await screen.findByText("🗑 언로드");
+    const unloadButton = unloadText.closest("button");
+    expect(unloadButton).not.toBeNull();
+    if (unloadButton) fireEvent.click(unloadButton);
+
+    expect(await screen.findByText("❌ 모델 언로드 오류")).toBeInTheDocument();
+  });
 });
