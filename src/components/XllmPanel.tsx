@@ -322,7 +322,8 @@ const RecallBackendSection: React.FC = () => {
   const activeChanged = !activeMatchesRequested;
   const isDefaultConfigured = requestedRaw == null;
   const selectedStoredValue = selected === "local-cosine" ? null : selected;
-  const isSaveNoop = selectedStoredValue === (requestedRaw ?? null);
+  const requestedStoredValue = requested === "local-cosine" ? null : (requested ?? null);
+  const isSaveNoop = selectedStoredValue === requestedStoredValue;
 
   return (
     <section className="space-y-2 border border-emerald-400/20 rounded-lg p-3 bg-emerald-500/5">

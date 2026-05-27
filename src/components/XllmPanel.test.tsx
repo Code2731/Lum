@@ -111,20 +111,21 @@ describe("XllmPanel", () => {
     });
   });
 
-  it("local-cosine 선택 상태에서 저장하면 backend null로 보낸다", async () => {
+  it("local-cosine 선택이 변경 상태일 때 저장하면 backend null로 보낸다", async () => {
     invokeMock.mockReset();
     mockInvokeWith({
       configBackend: "local-cosine",
-      infoRequestedRaw: "local-cosine",
-      infoRequested: "local-cosine",
+      infoRequestedRaw: "zvec",
+      infoRequested: "zvec",
       infoActive: "local-cosine",
       infoSupported: ["local-cosine", "zvec"],
       infoRequestedAdjusted: false,
-      infoActiveMatchesRequested: true,
+      infoActiveMatchesRequested: false,
     });
     render(<XllmPanel onClose={vi.fn()} />);
 
     const saveButton = await screen.findByTitle("Recall 백엔드 저장");
+    expect(saveButton).toBeEnabled();
     fireEvent.click(saveButton);
 
     await waitFor(() => {
@@ -134,7 +135,7 @@ describe("XllmPanel", () => {
     });
   });
 
-  it("지원 목록에 없는 설정값은 active 백엔드로 정규화해서 저장한다", async () => {
+  it("지원 목록에 없는 설정값이 local-cosine으로 정규화되면 저장 버튼이 비활성화된다", async () => {
     invokeMock.mockReset();
     mockInvokeWith({
       configBackend: "custom-db",
@@ -146,14 +147,8 @@ describe("XllmPanel", () => {
     render(<XllmPanel onClose={vi.fn()} />);
 
     const saveButton = await screen.findByTitle("Recall 백엔드 저장");
-    fireEvent.click(saveButton);
-
-    await waitFor(() => {
-      expect(invokeMock).toHaveBeenCalledWith("save_recall_vector_backend", {
-        backend: null,
-      });
-      expect(screen.getByText("원본 요청값:", { exact: false })).toBeInTheDocument();
-    });
+    expect(saveButton).toBeDisabled();
+    expect(screen.getByText("원본 요청값:", { exact: false })).toBeInTheDocument();
   });
 
   it("active/fallback도 지원 목록에 없으면 첫 supported 값으로 저장한다", async () => {
@@ -234,6 +229,23 @@ describe("XllmPanel", () => {
       infoSupported: ["local-cosine", "zvec"],
       infoRequestedAdjusted: false,
       infoActiveMatchesRequested: false,
+    });
+    render(<XllmPanel onClose={vi.fn()} />);
+
+    const saveButton = await screen.findByTitle("Recall 백엔드 저장");
+    expect(saveButton).toBeDisabled();
+  });
+
+  it("legacy local-cosine raw 상태도 저장 버튼이 비활성화된다", async () => {
+    invokeMock.mockReset();
+    mockInvokeWith({
+      configBackend: "local-cosine",
+      infoRequestedRaw: "local-cosine",
+      infoRequested: "local-cosine",
+      infoActive: "local-cosine",
+      infoSupported: ["local-cosine", "zvec"],
+      infoRequestedAdjusted: false,
+      infoActiveMatchesRequested: true,
     });
     render(<XllmPanel onClose={vi.fn()} />);
 
