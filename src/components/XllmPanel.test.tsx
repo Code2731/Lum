@@ -531,6 +531,42 @@ describe("XllmPanel", () => {
     expect(await screen.findByText("저장 실패: 저장 API 오류")).toBeInTheDocument();
   });
 
+  it("recall backend 기본값 복원 실패 시 객체 오류도 메시지 문자열로 노출한다", async () => {
+    invokeMock.mockReset();
+    invokeMock.mockImplementation((cmd: string, args?: unknown) => {
+      if (cmd === "load_app_config") {
+        return Promise.resolve({
+          recall_vector_backend: "zvec",
+        });
+      }
+      if (cmd === "recall_backend_info") {
+        return Promise.resolve({
+          requested_raw: "zvec",
+          requested: "zvec",
+          active: "local-cosine",
+          supported: ["local-cosine", "zvec"],
+          requested_adjusted: false,
+          active_matches_requested: false,
+        });
+      }
+      if (cmd === "save_recall_vector_backend") {
+        return Promise.reject({ message: "기본값 저장 오류" });
+      }
+      if (cmd === "list_embed_candidates") return Promise.resolve([]);
+      if (cmd === "list_lora_candidates") return Promise.resolve([]);
+      if (cmd === "embed_loaded_info") return Promise.resolve(null);
+      if (cmd === "save_xllm_settings") return Promise.resolve({});
+      return Promise.resolve(args ?? {});
+    });
+
+    render(<XllmPanel onClose={vi.fn()} />);
+
+    const resetButton = await screen.findByTestId("recall-backend-reset");
+    fireEvent.click(resetButton);
+
+    expect(await screen.findByText("기본값 복원 실패: 기본값 저장 오류")).toBeInTheDocument();
+  });
+
   it("LAN 검색 실패 시 객체 오류를 사람이 읽을 수 있는 메시지로 노출한다", async () => {
     invokeMock.mockReset();
     invokeMock.mockImplementation((cmd: string, args?: unknown) => {
