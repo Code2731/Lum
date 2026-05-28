@@ -79,7 +79,11 @@ function formatErrorMessage(error: unknown): string {
     if (msg) return msg;
     return "알 수 없는 오류";
   }
-  if (typeof error === "string") return error;
+  if (typeof error === "string") {
+    const msg = error.trim();
+    if (msg) return msg;
+    return "알 수 없는 오류";
+  }
   if (
     typeof error === "number" ||
     typeof error === "boolean" ||
