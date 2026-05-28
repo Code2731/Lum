@@ -778,6 +778,89 @@ describe("XllmPanel", () => {
     expect(await screen.findByText("저장 실패: body 배열 reason 메시지")).toBeInTheDocument();
   });
 
+  it("상단 설정 저장 실패 시 statusText 필드 문자열을 폴백 메시지로 사용한다", async () => {
+    invokeMock.mockReset();
+    invokeMock.mockImplementation((cmd: string, args?: unknown) => {
+      if (cmd === "load_app_config") return Promise.resolve({});
+      if (cmd === "recall_backend_info") {
+        return Promise.resolve({
+          requested_raw: null,
+          requested: null,
+          active: "local-cosine",
+          supported: ["local-cosine", "zvec"],
+          requested_adjusted: false,
+          active_matches_requested: true,
+        });
+      }
+      if (cmd === "save_xllm_settings") {
+        return Promise.reject({
+          message: "",
+          error: " ",
+          errors: [],
+          cause: "\n",
+          detail: " ",
+          reason: "",
+          msg: " ",
+          statusText: "Service Unavailable",
+        });
+      }
+      if (cmd === "save_recall_vector_backend") return Promise.resolve(args ?? {});
+      if (cmd === "list_embed_candidates") return Promise.resolve([]);
+      if (cmd === "list_lora_candidates") return Promise.resolve([]);
+      if (cmd === "embed_loaded_info") return Promise.resolve(null);
+      return Promise.resolve({});
+    });
+
+    render(<XllmPanel onClose={vi.fn()} />);
+
+    const saveButton = await screen.findByRole("button", { name: "설정 저장" });
+    fireEvent.click(saveButton);
+
+    expect(await screen.findByText("저장 실패: Service Unavailable")).toBeInTheDocument();
+  });
+
+  it("상단 설정 저장 실패 시 statusText가 비어 있으면 status 숫자를 폴백한다", async () => {
+    invokeMock.mockReset();
+    invokeMock.mockImplementation((cmd: string, args?: unknown) => {
+      if (cmd === "load_app_config") return Promise.resolve({});
+      if (cmd === "recall_backend_info") {
+        return Promise.resolve({
+          requested_raw: null,
+          requested: null,
+          active: "local-cosine",
+          supported: ["local-cosine", "zvec"],
+          requested_adjusted: false,
+          active_matches_requested: true,
+        });
+      }
+      if (cmd === "save_xllm_settings") {
+        return Promise.reject({
+          message: "",
+          error: " ",
+          errors: [],
+          cause: " ",
+          detail: " ",
+          reason: " ",
+          msg: " ",
+          statusText: "\n",
+          status: 429,
+        });
+      }
+      if (cmd === "save_recall_vector_backend") return Promise.resolve(args ?? {});
+      if (cmd === "list_embed_candidates") return Promise.resolve([]);
+      if (cmd === "list_lora_candidates") return Promise.resolve([]);
+      if (cmd === "embed_loaded_info") return Promise.resolve(null);
+      return Promise.resolve({});
+    });
+
+    render(<XllmPanel onClose={vi.fn()} />);
+
+    const saveButton = await screen.findByRole("button", { name: "설정 저장" });
+    fireEvent.click(saveButton);
+
+    expect(await screen.findByText("저장 실패: 429")).toBeInTheDocument();
+  });
+
   it("상단 설정 저장 실패 시 객체 error 필드가 숫자면 문자열로 노출한다", async () => {
     invokeMock.mockReset();
     invokeMock.mockImplementation((cmd: string, args?: unknown) => {
