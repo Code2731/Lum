@@ -178,6 +178,36 @@ describe("XllmPanel", () => {
     expect(await screen.findByText("저장 실패: 알 수 없는 오류")).toBeInTheDocument();
   });
 
+  it("상단 설정 저장 실패 시 숫자 오류를 문자열로 노출한다", async () => {
+    invokeMock.mockReset();
+    invokeMock.mockImplementation((cmd: string, args?: unknown) => {
+      if (cmd === "load_app_config") return Promise.resolve({});
+      if (cmd === "recall_backend_info") {
+        return Promise.resolve({
+          requested_raw: null,
+          requested: null,
+          active: "local-cosine",
+          supported: ["local-cosine", "zvec"],
+          requested_adjusted: false,
+          active_matches_requested: true,
+        });
+      }
+      if (cmd === "save_xllm_settings") return Promise.reject(503);
+      if (cmd === "save_recall_vector_backend") return Promise.resolve(args ?? {});
+      if (cmd === "list_embed_candidates") return Promise.resolve([]);
+      if (cmd === "list_lora_candidates") return Promise.resolve([]);
+      if (cmd === "embed_loaded_info") return Promise.resolve(null);
+      return Promise.resolve({});
+    });
+
+    render(<XllmPanel onClose={vi.fn()} />);
+
+    const saveButton = await screen.findByRole("button", { name: "설정 저장" });
+    fireEvent.click(saveButton);
+
+    expect(await screen.findByText("저장 실패: 503")).toBeInTheDocument();
+  });
+
   it("Recall 백엔드 저장 클릭 시 save_recall_vector_backend를 호출한다", async () => {
     invokeMock.mockReset();
     mockInvokeWith({
