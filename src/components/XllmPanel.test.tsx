@@ -1101,6 +1101,76 @@ describe("XllmPanel", () => {
     expect(await screen.findByText("저장 실패: 알 수 없는 오류")).toBeInTheDocument();
   });
 
+  it("상단 설정 저장 실패 시 빈 Error.message여도 errors 필드에서 메시지를 추출한다", async () => {
+    invokeMock.mockReset();
+    invokeMock.mockImplementation((cmd: string, args?: unknown) => {
+      if (cmd === "load_app_config") return Promise.resolve({});
+      if (cmd === "recall_backend_info") {
+        return Promise.resolve({
+          requested_raw: null,
+          requested: null,
+          active: "local-cosine",
+          supported: ["local-cosine", "zvec"],
+          requested_adjusted: false,
+          active_matches_requested: true,
+        });
+      }
+      if (cmd === "save_xllm_settings") {
+        const errorWithErrors = Object.assign(new Error(" "), {
+          errors: [{ message: "Error.errors 내부 메시지" }],
+        });
+        return Promise.reject(errorWithErrors);
+      }
+      if (cmd === "save_recall_vector_backend") return Promise.resolve(args ?? {});
+      if (cmd === "list_embed_candidates") return Promise.resolve([]);
+      if (cmd === "list_lora_candidates") return Promise.resolve([]);
+      if (cmd === "embed_loaded_info") return Promise.resolve(null);
+      return Promise.resolve({});
+    });
+
+    render(<XllmPanel onClose={vi.fn()} />);
+
+    const saveButton = await screen.findByRole("button", { name: "설정 저장" });
+    fireEvent.click(saveButton);
+
+    expect(await screen.findByText("저장 실패: Error.errors 내부 메시지")).toBeInTheDocument();
+  });
+
+  it("상단 설정 저장 실패 시 빈 Error.message여도 statusText 필드를 폴백한다", async () => {
+    invokeMock.mockReset();
+    invokeMock.mockImplementation((cmd: string, args?: unknown) => {
+      if (cmd === "load_app_config") return Promise.resolve({});
+      if (cmd === "recall_backend_info") {
+        return Promise.resolve({
+          requested_raw: null,
+          requested: null,
+          active: "local-cosine",
+          supported: ["local-cosine", "zvec"],
+          requested_adjusted: false,
+          active_matches_requested: true,
+        });
+      }
+      if (cmd === "save_xllm_settings") {
+        const errorWithStatus = Object.assign(new Error(" "), {
+          statusText: "Bad Gateway",
+        });
+        return Promise.reject(errorWithStatus);
+      }
+      if (cmd === "save_recall_vector_backend") return Promise.resolve(args ?? {});
+      if (cmd === "list_embed_candidates") return Promise.resolve([]);
+      if (cmd === "list_lora_candidates") return Promise.resolve([]);
+      if (cmd === "embed_loaded_info") return Promise.resolve(null);
+      return Promise.resolve({});
+    });
+
+    render(<XllmPanel onClose={vi.fn()} />);
+
+    const saveButton = await screen.findByRole("button", { name: "설정 저장" });
+    fireEvent.click(saveButton);
+
+    expect(await screen.findByText("저장 실패: Bad Gateway")).toBeInTheDocument();
+  });
+
   it("상단 설정 저장 실패 시 Error.cause의 내부 메시지를 노출한다", async () => {
     invokeMock.mockReset();
     invokeMock.mockImplementation((cmd: string, args?: unknown) => {

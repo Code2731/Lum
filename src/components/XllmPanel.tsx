@@ -87,14 +87,6 @@ function extractErrorText(value: unknown): string | null {
       }
       return null;
     }
-    if (target instanceof Error) {
-      const msg = target.message?.trim();
-      if (msg) return msg;
-      if ("cause" in target) {
-        return visit((target as { cause?: unknown }).cause);
-      }
-      return null;
-    }
     if (typeof target === "string") {
       const msg = target.trim();
       return msg || null;
