@@ -76,16 +76,16 @@ function sanitizeRecallBackendList(rawList: string[] | null | undefined): string
 function extractErrorText(value: unknown): string | null {
   const seen = new WeakSet<object>();
   const visit = (target: unknown): string | null => {
+    if (target && typeof target === "object") {
+      if (seen.has(target)) return null;
+      seen.add(target);
+    }
     if (Array.isArray(target)) {
       for (const item of target) {
         const parsed = visit(item);
         if (parsed !== null) return parsed;
       }
       return null;
-    }
-    if (target && typeof target === "object") {
-      if (seen.has(target)) return null;
-      seen.add(target);
     }
     if (target instanceof Error) {
       const msg = target.message?.trim();
