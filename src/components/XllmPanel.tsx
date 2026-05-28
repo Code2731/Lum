@@ -94,6 +94,9 @@ function formatErrorMessage(error: unknown): string {
   }
   if (error && typeof error === "object" && "message" in error) {
     const candidate = (error as { message?: unknown }).message;
+    if (candidate instanceof Error) {
+      return formatErrorMessage(candidate);
+    }
     if (typeof candidate === "string") {
       const msg = candidate.trim();
       if (msg) return msg;
