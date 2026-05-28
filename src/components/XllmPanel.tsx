@@ -74,7 +74,11 @@ function sanitizeRecallBackendList(rawList: string[] | null | undefined): string
 }
 
 function formatErrorMessage(error: unknown): string {
-  if (error instanceof Error) return error.message;
+  if (error instanceof Error) {
+    const msg = error.message?.trim();
+    if (msg) return msg;
+    return "알 수 없는 오류";
+  }
   if (typeof error === "string") return error;
   if (typeof error === "number" || typeof error === "boolean" || typeof error === "bigint") {
     return String(error);
