@@ -100,14 +100,20 @@ function extractErrorText(value: unknown): string | null {
     ) {
       return String(target);
     }
-    if (target && typeof target === "object" && "message" in target) {
-      return visit((target as { message?: unknown }).message);
-    }
-    if (target && typeof target === "object" && "error" in target) {
-      return visit((target as { error?: unknown }).error);
-    }
-    if (target && typeof target === "object" && "cause" in target) {
-      return visit((target as { cause?: unknown }).cause);
+    if (target && typeof target === "object") {
+      const obj = target as { message?: unknown; error?: unknown; cause?: unknown };
+      if ("message" in obj) {
+        const fromMessage = visit(obj.message);
+        if (fromMessage !== null) return fromMessage;
+      }
+      if ("error" in obj) {
+        const fromError = visit(obj.error);
+        if (fromError !== null) return fromError;
+      }
+      if ("cause" in obj) {
+        const fromCause = visit(obj.cause);
+        if (fromCause !== null) return fromCause;
+      }
     }
     return null;
   };
