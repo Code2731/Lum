@@ -112,6 +112,9 @@ function extractErrorText(value: unknown): string | null {
         message?: unknown;
         error?: unknown;
         errors?: unknown;
+        response?: unknown;
+        data?: unknown;
+        body?: unknown;
         cause?: unknown;
         detail?: unknown;
         reason?: unknown;
@@ -128,6 +131,18 @@ function extractErrorText(value: unknown): string | null {
       if ("errors" in obj) {
         const fromErrors = visit(obj.errors);
         if (fromErrors !== null) return fromErrors;
+      }
+      if ("response" in obj) {
+        const fromResponse = visit(obj.response);
+        if (fromResponse !== null) return fromResponse;
+      }
+      if ("data" in obj) {
+        const fromData = visit(obj.data);
+        if (fromData !== null) return fromData;
+      }
+      if ("body" in obj) {
+        const fromBody = visit(obj.body);
+        if (fromBody !== null) return fromBody;
       }
       if ("cause" in obj) {
         const fromCause = visit(obj.cause);
