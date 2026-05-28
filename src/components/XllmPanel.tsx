@@ -74,36 +74,44 @@ function sanitizeRecallBackendList(rawList: string[] | null | undefined): string
 }
 
 function extractErrorText(value: unknown): string | null {
-  if (value instanceof Error) {
-    const msg = value.message?.trim();
-    if (msg) return msg;
-    if ("cause" in value) {
-      return extractErrorText((value as { cause?: unknown }).cause);
+  const seen = new WeakSet<object>();
+  const visit = (target: unknown): string | null => {
+    if (target && typeof target === "object") {
+      if (seen.has(target)) return null;
+      seen.add(target);
+    }
+    if (target instanceof Error) {
+      const msg = target.message?.trim();
+      if (msg) return msg;
+      if ("cause" in target) {
+        return visit((target as { cause?: unknown }).cause);
+      }
+      return null;
+    }
+    if (typeof target === "string") {
+      const msg = target.trim();
+      return msg || null;
+    }
+    if (
+      typeof target === "number" ||
+      typeof target === "boolean" ||
+      typeof target === "bigint" ||
+      typeof target === "symbol"
+    ) {
+      return String(target);
+    }
+    if (target && typeof target === "object" && "message" in target) {
+      return visit((target as { message?: unknown }).message);
+    }
+    if (target && typeof target === "object" && "error" in target) {
+      return visit((target as { error?: unknown }).error);
+    }
+    if (target && typeof target === "object" && "cause" in target) {
+      return visit((target as { cause?: unknown }).cause);
     }
     return null;
-  }
-  if (typeof value === "string") {
-    const msg = value.trim();
-    return msg || null;
-  }
-  if (
-    typeof value === "number" ||
-    typeof value === "boolean" ||
-    typeof value === "bigint" ||
-    typeof value === "symbol"
-  ) {
-    return String(value);
-  }
-  if (value && typeof value === "object" && "message" in value) {
-    return extractErrorText((value as { message?: unknown }).message);
-  }
-  if (value && typeof value === "object" && "error" in value) {
-    return extractErrorText((value as { error?: unknown }).error);
-  }
-  if (value && typeof value === "object" && "cause" in value) {
-    return extractErrorText((value as { cause?: unknown }).cause);
-  }
-  return null;
+  };
+  return visit(value);
 }
 
 function formatErrorMessage(error: unknown): string {
