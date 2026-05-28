@@ -94,7 +94,19 @@ function formatErrorMessage(error: unknown): string {
   }
   if (error && typeof error === "object" && "message" in error) {
     const candidate = (error as { message?: unknown }).message;
-    if (typeof candidate === "string" && candidate.trim().length > 0) return candidate;
+    if (typeof candidate === "string") {
+      const msg = candidate.trim();
+      if (msg) return msg;
+      return "알 수 없는 오류";
+    }
+    if (
+      typeof candidate === "number" ||
+      typeof candidate === "boolean" ||
+      typeof candidate === "bigint" ||
+      typeof candidate === "symbol"
+    ) {
+      return String(candidate);
+    }
   }
   return "알 수 없는 오류";
 }
