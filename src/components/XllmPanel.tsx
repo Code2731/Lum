@@ -80,7 +80,12 @@ function formatErrorMessage(error: unknown): string {
     return "알 수 없는 오류";
   }
   if (typeof error === "string") return error;
-  if (typeof error === "number" || typeof error === "boolean" || typeof error === "bigint") {
+  if (
+    typeof error === "number" ||
+    typeof error === "boolean" ||
+    typeof error === "bigint" ||
+    typeof error === "symbol"
+  ) {
     return String(error);
   }
   if (error && typeof error === "object" && "message" in error) {
