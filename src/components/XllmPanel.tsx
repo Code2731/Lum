@@ -76,7 +76,11 @@ function sanitizeRecallBackendList(rawList: string[] | null | undefined): string
 function extractErrorText(value: unknown): string | null {
   if (value instanceof Error) {
     const msg = value.message?.trim();
-    return msg || null;
+    if (msg) return msg;
+    if ("cause" in value) {
+      return extractErrorText((value as { cause?: unknown }).cause);
+    }
+    return null;
   }
   if (typeof value === "string") {
     const msg = value.trim();
@@ -95,6 +99,9 @@ function extractErrorText(value: unknown): string | null {
   }
   if (value && typeof value === "object" && "error" in value) {
     return extractErrorText((value as { error?: unknown }).error);
+  }
+  if (value && typeof value === "object" && "cause" in value) {
+    return extractErrorText((value as { cause?: unknown }).cause);
   }
   return null;
 }
