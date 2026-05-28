@@ -658,6 +658,37 @@ describe("XllmPanel", () => {
     expect(await screen.findByText("검색 실패: LAN 탐색 API 오류")).toBeInTheDocument();
   });
 
+  it("LAN 검색 실패 시 문자열 오류를 그대로 노출한다", async () => {
+    invokeMock.mockReset();
+    invokeMock.mockImplementation((cmd: string, args?: unknown) => {
+      if (cmd === "load_app_config") return Promise.resolve({});
+      if (cmd === "recall_backend_info") {
+        return Promise.resolve({
+          requested_raw: null,
+          requested: null,
+          active: "local-cosine",
+          supported: ["local-cosine", "zvec"],
+          requested_adjusted: false,
+          active_matches_requested: true,
+        });
+      }
+      if (cmd === "discover_lan_llm_servers") return Promise.reject("LAN 타임아웃");
+      if (cmd === "save_recall_vector_backend") return Promise.resolve(args ?? {});
+      if (cmd === "save_xllm_settings") return Promise.resolve({});
+      if (cmd === "list_embed_candidates") return Promise.resolve([]);
+      if (cmd === "list_lora_candidates") return Promise.resolve([]);
+      if (cmd === "embed_loaded_info") return Promise.resolve(null);
+      return Promise.resolve({});
+    });
+
+    render(<XllmPanel onClose={vi.fn()} />);
+
+    const discoverButton = await screen.findByRole("button", { name: "검색" });
+    fireEvent.click(discoverButton);
+
+    expect(await screen.findByText("검색 실패: LAN 타임아웃")).toBeInTheDocument();
+  });
+
   it("LAN 서버 적용 실패 시 객체 오류를 사람이 읽을 수 있는 메시지로 노출한다", async () => {
     invokeMock.mockReset();
     invokeMock.mockImplementation((cmd: string, args?: unknown) => {
@@ -771,6 +802,44 @@ describe("XllmPanel", () => {
     fireEvent.click(loadButton);
 
     expect(await screen.findByText("❌ 모델 로드 오류")).toBeInTheDocument();
+  });
+
+  it("임베디드 로드 실패 시 Error 인스턴스 오류를 사람이 읽을 수 있는 메시지로 노출한다", async () => {
+    invokeMock.mockReset();
+    invokeMock.mockImplementation((cmd: string, args?: unknown) => {
+      if (cmd === "load_app_config") return Promise.resolve({});
+      if (cmd === "recall_backend_info") {
+        return Promise.resolve({
+          requested_raw: null,
+          requested: null,
+          active: "local-cosine",
+          supported: ["local-cosine", "zvec"],
+          requested_adjusted: false,
+          active_matches_requested: true,
+        });
+      }
+      if (cmd === "embed_loaded_info") return Promise.resolve(null);
+      if (cmd === "list_embed_candidates") {
+        return Promise.resolve([{
+          folder: "/tmp/models/qwen",
+          folder_label: "qwen",
+          gguf_files: ["qwen.gguf"],
+          has_safetensors: false,
+        }]);
+      }
+      if (cmd === "list_lora_candidates") return Promise.resolve([]);
+      if (cmd === "embed_load_gguf") return Promise.reject(new Error("모델 로드 예외"));
+      if (cmd === "save_recall_vector_backend") return Promise.resolve(args ?? {});
+      if (cmd === "save_xllm_settings") return Promise.resolve({});
+      return Promise.resolve({});
+    });
+
+    render(<XllmPanel onClose={vi.fn()} />);
+
+    const loadButton = await screen.findByRole("button", { name: /임베디드 로드|교체|재로드/ });
+    fireEvent.click(loadButton);
+
+    expect(await screen.findByText("❌ 모델 로드 예외")).toBeInTheDocument();
   });
 
   it("임베디드 언로드 실패 시 객체 오류를 사람이 읽을 수 있는 메시지로 노출한다", async () => {
