@@ -73,45 +73,34 @@ function sanitizeRecallBackendList(rawList: string[] | null | undefined): string
   return ["local-cosine", "zvec"];
 }
 
-function formatErrorMessage(error: unknown): string {
-  if (error instanceof Error) {
-    const msg = error.message?.trim();
-    if (msg) return msg;
-    return "알 수 없는 오류";
+function extractErrorText(value: unknown): string | null {
+  if (value instanceof Error) {
+    const msg = value.message?.trim();
+    return msg || null;
   }
-  if (typeof error === "string") {
-    const msg = error.trim();
-    if (msg) return msg;
-    return "알 수 없는 오류";
+  if (typeof value === "string") {
+    const msg = value.trim();
+    return msg || null;
   }
   if (
-    typeof error === "number" ||
-    typeof error === "boolean" ||
-    typeof error === "bigint" ||
-    typeof error === "symbol"
+    typeof value === "number" ||
+    typeof value === "boolean" ||
+    typeof value === "bigint" ||
+    typeof value === "symbol"
   ) {
-    return String(error);
+    return String(value);
   }
-  if (error && typeof error === "object" && "message" in error) {
-    const candidate = (error as { message?: unknown }).message;
-    if (candidate instanceof Error) {
-      return formatErrorMessage(candidate);
-    }
-    if (typeof candidate === "string") {
-      const msg = candidate.trim();
-      if (msg) return msg;
-      return "알 수 없는 오류";
-    }
-    if (
-      typeof candidate === "number" ||
-      typeof candidate === "boolean" ||
-      typeof candidate === "bigint" ||
-      typeof candidate === "symbol"
-    ) {
-      return String(candidate);
-    }
+  if (value && typeof value === "object" && "message" in value) {
+    return extractErrorText((value as { message?: unknown }).message);
   }
-  return "알 수 없는 오류";
+  if (value && typeof value === "object" && "error" in value) {
+    return extractErrorText((value as { error?: unknown }).error);
+  }
+  return null;
+}
+
+function formatErrorMessage(error: unknown): string {
+  return extractErrorText(error) ?? "알 수 없는 오류";
 }
 
 type SafetyMode = "safe" | "balanced" | "max";
