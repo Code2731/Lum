@@ -89,7 +89,18 @@ function extractErrorText(value: unknown): string | null {
     }
     if (typeof target === "string") {
       const msg = target.trim();
-      return msg || null;
+      if (!msg) return null;
+      const first = msg[0];
+      if (first === "{" || first === "[") {
+        try {
+          const parsed = JSON.parse(msg) as unknown;
+          const fromParsed = visit(parsed);
+          if (fromParsed !== null) return fromParsed;
+        } catch {
+          // 문자열 자체를 보여주는 기존 동작 유지
+        }
+      }
+      return msg;
     }
     if (
       typeof target === "number" ||
