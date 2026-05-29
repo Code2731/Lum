@@ -485,6 +485,79 @@ describe("XllmPanel", () => {
     expect(await screen.findByText("저장 실패: ECONNREFUSED")).toBeInTheDocument();
   });
 
+  it("상단 설정 저장 실패 시 message가 비어 있으면 messages 배열의 첫 유효 값을 사용한다", async () => {
+    invokeMock.mockReset();
+    invokeMock.mockImplementation((cmd: string, args?: unknown) => {
+      if (cmd === "load_app_config") return Promise.resolve({});
+      if (cmd === "recall_backend_info") {
+        return Promise.resolve({
+          requested_raw: null,
+          requested: null,
+          active: "local-cosine",
+          supported: ["local-cosine", "zvec"],
+          requested_adjusted: false,
+          active_matches_requested: true,
+        });
+      }
+      if (cmd === "save_xllm_settings") {
+        return Promise.reject({
+          message: " ",
+          messages: [" ", "messages 배열 폴백"],
+        });
+      }
+      if (cmd === "save_recall_vector_backend") return Promise.resolve(args ?? {});
+      if (cmd === "list_embed_candidates") return Promise.resolve([]);
+      if (cmd === "list_lora_candidates") return Promise.resolve([]);
+      if (cmd === "embed_loaded_info") return Promise.resolve(null);
+      return Promise.resolve({});
+    });
+
+    render(<XllmPanel onClose={vi.fn()} />);
+
+    const saveButton = await screen.findByRole("button", { name: "설정 저장" });
+    fireEvent.click(saveButton);
+
+    expect(await screen.findByText("저장 실패: messages 배열 폴백")).toBeInTheDocument();
+  });
+
+  it("상단 설정 저장 실패 시 details까지 비어 있으면 description으로 폴백한다", async () => {
+    invokeMock.mockReset();
+    invokeMock.mockImplementation((cmd: string, args?: unknown) => {
+      if (cmd === "load_app_config") return Promise.resolve({});
+      if (cmd === "recall_backend_info") {
+        return Promise.resolve({
+          requested_raw: null,
+          requested: null,
+          active: "local-cosine",
+          supported: ["local-cosine", "zvec"],
+          requested_adjusted: false,
+          active_matches_requested: true,
+        });
+      }
+      if (cmd === "save_xllm_settings") {
+        return Promise.reject({
+          message: "",
+          error: " ",
+          detail: " ",
+          details: [],
+          description: "description 폴백",
+        });
+      }
+      if (cmd === "save_recall_vector_backend") return Promise.resolve(args ?? {});
+      if (cmd === "list_embed_candidates") return Promise.resolve([]);
+      if (cmd === "list_lora_candidates") return Promise.resolve([]);
+      if (cmd === "embed_loaded_info") return Promise.resolve(null);
+      return Promise.resolve({});
+    });
+
+    render(<XllmPanel onClose={vi.fn()} />);
+
+    const saveButton = await screen.findByRole("button", { name: "설정 저장" });
+    fireEvent.click(saveButton);
+
+    expect(await screen.findByText("저장 실패: description 폴백")).toBeInTheDocument();
+  });
+
   it("상단 설정 저장 실패 시 message와 error/cause가 함께 있으면 message를 우선 사용한다", async () => {
     invokeMock.mockReset();
     invokeMock.mockImplementation((cmd: string, args?: unknown) => {
