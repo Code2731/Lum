@@ -84,11 +84,7 @@ pub fn simulate_click(x: i32, y: i32, button: String) -> Result<(), String> {
     enigo
         .move_mouse(x, y, Coordinate::Abs)
         .map_err(|e| e.to_string())?;
-    let b = match button.as_str() {
-        "right" => enigo::Button::Right,
-        "middle" => enigo::Button::Middle,
-        _ => enigo::Button::Left,
-    };
+    let b = parse_mouse_button(&button)?;
     enigo
         .button(b, enigo::Direction::Click)
         .map_err(|e| e.to_string())?;
@@ -114,20 +110,8 @@ pub fn simulate_key_combo(modifier: String, key: String) -> Result<(), String> {
     #[cfg(target_os = "linux")]
     check_wayland()?;
     let mut enigo = Enigo::new(&Settings::default()).map_err(|e| e.to_string())?;
-    let m = match modifier.to_lowercase().as_str() {
-        "cmd" | "command" | "meta" => enigo::Key::Meta,
-        "ctrl" | "control" => enigo::Key::Control,
-        "alt" | "option" => enigo::Key::Alt,
-        "shift" => enigo::Key::Shift,
-        _ => return Err(format!("Unknown modifier: '{}'", modifier)),
-    };
-
-    let k = match key.to_lowercase().as_str() {
-        "v" => enigo::Key::Unicode('v'),
-        "c" => enigo::Key::Unicode('c'),
-        "a" => enigo::Key::Unicode('a'),
-        _ => enigo::Key::Unicode(key.chars().next().unwrap_or(' ')),
-    };
+    let m = parse_modifier_key(&modifier)?;
+    let k = parse_combo_key(&key)?;
 
     enigo
         .key(m, enigo::Direction::Press)
@@ -139,4 +123,96 @@ pub fn simulate_key_combo(modifier: String, key: String) -> Result<(), String> {
         .key(m, enigo::Direction::Release)
         .map_err(|e| e.to_string())?;
     Ok(())
+}
+
+fn parse_mouse_button(raw: &str) -> Result<enigo::Button, String> {
+    let normalized = raw.trim().to_lowercase();
+    match normalized.as_str() {
+        "" | "left" => Ok(enigo::Button::Left),
+        "right" => Ok(enigo::Button::Right),
+        "middle" => Ok(enigo::Button::Middle),
+        _ => Err(format!(
+            "Unknown mouse button: '{}'. allowed: left/right/middle",
+            raw
+        )),
+    }
+}
+
+fn parse_modifier_key(raw: &str) -> Result<enigo::Key, String> {
+    let normalized = raw.trim().to_lowercase();
+    match normalized.as_str() {
+        "cmd" | "command" | "meta" => Ok(enigo::Key::Meta),
+        "ctrl" | "control" => Ok(enigo::Key::Control),
+        "alt" | "option" => Ok(enigo::Key::Alt),
+        "shift" => Ok(enigo::Key::Shift),
+        _ => Err(format!("Unknown modifier: '{}'", raw)),
+    }
+}
+
+fn parse_combo_key(raw: &str) -> Result<enigo::Key, String> {
+    let normalized = raw.trim().to_lowercase();
+    if normalized.is_empty() {
+        return Err("Key is empty".to_string());
+    }
+    if normalized == "enter" || normalized == "return" {
+        return Ok(enigo::Key::Return);
+    }
+    let mut chars = normalized.chars();
+    let first = chars.next().ok_or_else(|| "Key is empty".to_string())?;
+    if chars.next().is_some() {
+        return Err(format!("Unknown key token: '{}'", raw));
+    }
+    Ok(enigo::Key::Unicode(first))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_mouse_button_허용값_성공() {
+        assert!(parse_mouse_button("left").is_ok());
+        assert!(parse_mouse_button("RIGHT").is_ok());
+        assert!(parse_mouse_button(" middle ").is_ok());
+        assert!(parse_mouse_button("").is_ok());
+    }
+
+    #[test]
+    fn parse_mouse_button_비허용값_거부() {
+        let err = parse_mouse_button("double").unwrap_err();
+        assert!(err.contains("allowed: left/right/middle"), "{err}");
+    }
+
+    #[test]
+    fn parse_modifier_key_허용값_성공() {
+        assert!(parse_modifier_key("cmd").is_ok());
+        assert!(parse_modifier_key(" CONTROL ").is_ok());
+        assert!(parse_modifier_key("option").is_ok());
+        assert!(parse_modifier_key("shift").is_ok());
+    }
+
+    #[test]
+    fn parse_modifier_key_비허용값_거부() {
+        let err = parse_modifier_key("super").unwrap_err();
+        assert!(err.contains("Unknown modifier"), "{err}");
+    }
+
+    #[test]
+    fn parse_combo_key_허용값_성공() {
+        assert!(parse_combo_key("k").is_ok());
+        assert!(parse_combo_key(" V ").is_ok());
+        assert!(parse_combo_key("enter").is_ok());
+    }
+
+    #[test]
+    fn parse_combo_key_빈값_거부() {
+        let err = parse_combo_key("   ").unwrap_err();
+        assert!(err.contains("Key is empty"), "{err}");
+    }
+
+    #[test]
+    fn parse_combo_key_다문자_토큰_거부() {
+        let err = parse_combo_key("space").unwrap_err();
+        assert!(err.contains("Unknown key token"), "{err}");
+    }
 }
