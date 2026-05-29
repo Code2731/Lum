@@ -3587,8 +3587,13 @@ ACTION: mcp({"server": "playwright", "tool": "screenshot", "arguments": {"url": 
         );
     }
 
+    // DesktopToolMock은 글로벌 상태라 병렬 테스트에서 서로 consume race가 생길 수 있음.
+    // 데스크톱 도구 테스트는 직렬 lock으로 고정.
+    static DESKTOP_TEST_LOCK: Mutex<()> = Mutex::new(());
+
     #[tokio::test]
     async fn desktop_tools_토글_off면_호출_거부() {
+        let _g = DESKTOP_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         for tool in ["screenshot", "mouse", "click", "type", "key_combo", "scroll"] {
             let args = match tool {
                 "scroll" => serde_json::json!({"x": 10, "y": 20, "amount": -120}),
@@ -3608,6 +3613,7 @@ ACTION: mcp({"server": "playwright", "tool": "screenshot", "arguments": {"url": 
 
     #[tokio::test]
     async fn desktop_tools_토글_on_호출_성공() {
+        let _g = DESKTOP_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         set_desktop_tool_mock(DesktopToolMock {
             screenshot: Some(Ok("A".repeat(TOOL_OUTPUT_LIMIT + 30))),
             mouse: Some(Ok(())),
@@ -3653,6 +3659,7 @@ ACTION: mcp({"server": "playwright", "tool": "screenshot", "arguments": {"url": 
 
     #[tokio::test]
     async fn desktop_tools_scroll_파라미터_누락시_에러() {
+        let _g = DESKTOP_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         let missing_amount =
             run_desktop_tool("scroll", &serde_json::json!({"x": 10, "y": 20}), true).await;
         assert!(
@@ -3670,6 +3677,7 @@ ACTION: mcp({"server": "playwright", "tool": "screenshot", "arguments": {"url": 
 
     #[tokio::test]
     async fn desktop_tools_scroll_0은_거부() {
+        let _g = DESKTOP_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         let zero = run_desktop_tool(
             "scroll",
             &serde_json::json!({"x": 10, "y": 20, "amount": 0}),
@@ -3684,6 +3692,7 @@ ACTION: mcp({"server": "playwright", "tool": "screenshot", "arguments": {"url": 
 
     #[tokio::test]
     async fn desktop_tools_mouse_파라미터_누락시_에러() {
+        let _g = DESKTOP_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         let missing_x =
             run_desktop_tool("mouse", &serde_json::json!({"y": 20, "click": true}), true).await;
         assert!(
@@ -3701,6 +3710,7 @@ ACTION: mcp({"server": "playwright", "tool": "screenshot", "arguments": {"url": 
 
     #[tokio::test]
     async fn desktop_tools_mouse_click_기본값_false() {
+        let _g = DESKTOP_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         set_desktop_tool_mock(DesktopToolMock {
             mouse: Some(Ok(())),
             ..Default::default()
@@ -3715,6 +3725,7 @@ ACTION: mcp({"server": "playwright", "tool": "screenshot", "arguments": {"url": 
 
     #[tokio::test]
     async fn desktop_tools_click_button_허용값_검증() {
+        let _g = DESKTOP_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         let out = run_desktop_tool(
             "click",
             &serde_json::json!({"x": 10, "y": 20, "button": "double"}),
@@ -3729,6 +3740,7 @@ ACTION: mcp({"server": "playwright", "tool": "screenshot", "arguments": {"url": 
 
     #[tokio::test]
     async fn desktop_tools_click_button_기본값_left() {
+        let _g = DESKTOP_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         set_desktop_tool_mock(DesktopToolMock {
             click: Some(Ok(())),
             ..Default::default()
@@ -3737,6 +3749,44 @@ ACTION: mcp({"server": "playwright", "tool": "screenshot", "arguments": {"url": 
         let out = run_desktop_tool("click", &serde_json::json!({"x": 9, "y": 8}), true).await;
         assert!(out.contains("클릭 성공"), "{out}");
         assert!(out.contains("left"), "{out}");
+
+        clear_desktop_tool_mock();
+    }
+
+    #[tokio::test]
+    async fn desktop_tools_key_combo_파라미터_누락시_에러() {
+        let _g = DESKTOP_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        let missing_modifier =
+            run_desktop_tool("key_combo", &serde_json::json!({"key": "k"}), true).await;
+        assert!(
+            missing_modifier.contains("modifier와 key"),
+            "key_combo 누락 파라미터 처리 필요: {missing_modifier}"
+        );
+
+        let missing_key =
+            run_desktop_tool("key_combo", &serde_json::json!({"modifier": "cmd"}), true).await;
+        assert!(
+            missing_key.contains("modifier와 key"),
+            "key_combo 누락 파라미터 처리 필요: {missing_key}"
+        );
+    }
+
+    #[tokio::test]
+    async fn desktop_tools_key_combo_허용되지_않는_modifier_거부() {
+        let _g = DESKTOP_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        set_desktop_tool_mock(DesktopToolMock {
+            key_combo: Some(Err("Unknown modifier: 'super'".into())),
+            ..Default::default()
+        });
+
+        let out = run_desktop_tool(
+            "key_combo",
+            &serde_json::json!({"modifier": "super", "key": "k"}),
+            true,
+        )
+        .await;
+        assert!(out.contains("단축키 실패"), "{out}");
+        assert!(out.contains("Unknown modifier"), "{out}");
 
         clear_desktop_tool_mock();
     }
