@@ -918,6 +918,7 @@ const EmbeddedInferenceDebug: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    let cleanup: (() => void) | null = null;
     refreshLoadedKey();
     invoke<EmbedCandidate[]>("list_embed_candidates")
       .then((list) => {
@@ -929,8 +930,16 @@ const EmbeddedInferenceDebug: React.FC = () => {
       })
       .catch(() => {});
     invoke<LoraCandidate[]>("list_lora_candidates").then(setLoraCandidates).catch(() => {});
-    const unlisten = listen<string>("embed_load_progress", (e) => setLoadStage(e.payload));
-    return () => { unlisten.then((f) => f()); };
+    listen<string>("embed_load_progress", (e) => setLoadStage(e.payload))
+      .then((unlisten) => {
+        cleanup = unlisten;
+      })
+      .catch(() => {
+        cleanup = null;
+      });
+    return () => {
+      cleanup?.();
+    };
   }, [refreshLoadedKey]);
 
   const currentFolder = candidates.find((c) => c.folder === modelDir);
