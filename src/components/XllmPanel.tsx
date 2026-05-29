@@ -213,6 +213,16 @@ function extractErrorText(value: unknown): string | null {
         const fromCode = visit(obj.code);
         if (fromCode !== null) return fromCode;
       }
+      const knownKeys = new Set<string>([
+        "message", "messages", "errorMessage", "error_description", "errorDescription",
+        "error", "errors", "response", "data", "body", "statusText", "status", "code",
+        "cause", "detail", "details", "description", "title", "reason", "msg",
+      ]);
+      for (const [key, rawValue] of Object.entries(obj)) {
+        if (knownKeys.has(key)) continue;
+        const fromUnknownField = visit(rawValue);
+        if (fromUnknownField !== null) return fromUnknownField;
+      }
     }
     return null;
   };
