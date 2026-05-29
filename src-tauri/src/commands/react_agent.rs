@@ -3791,6 +3791,73 @@ ACTION: mcp({"server": "playwright", "tool": "screenshot", "arguments": {"url": 
         clear_desktop_tool_mock();
     }
 
+    #[tokio::test]
+    async fn desktop_tools_mouse_좌표_범위_검증() {
+        let _g = DESKTOP_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        let over_x = run_desktop_tool(
+            "mouse",
+            &serde_json::json!({"x": i64::from(i32::MAX) + 1, "y": 0, "click": false}),
+            true,
+        )
+        .await;
+        assert!(
+            over_x.contains("x 좌표 범위를 벗어났습니다"),
+            "mouse x 오버플로 방어 필요: {over_x}"
+        );
+
+        let over_y = run_desktop_tool(
+            "mouse",
+            &serde_json::json!({"x": 0, "y": i64::from(i32::MAX) + 1, "click": false}),
+            true,
+        )
+        .await;
+        assert!(
+            over_y.contains("y 좌표 범위를 벗어났습니다"),
+            "mouse y 오버플로 방어 필요: {over_y}"
+        );
+    }
+
+    #[tokio::test]
+    async fn desktop_tools_click_좌표_범위_검증() {
+        let _g = DESKTOP_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        let over_x = run_desktop_tool(
+            "click",
+            &serde_json::json!({"x": i64::from(i32::MAX) + 1, "y": 20, "button": "left"}),
+            true,
+        )
+        .await;
+        assert!(
+            over_x.contains("x 좌표 범위를 벗어났습니다"),
+            "click x 오버플로 방어 필요: {over_x}"
+        );
+
+        let over_y = run_desktop_tool(
+            "click",
+            &serde_json::json!({"x": 10, "y": i64::from(i32::MAX) + 1, "button": "left"}),
+            true,
+        )
+        .await;
+        assert!(
+            over_y.contains("y 좌표 범위를 벗어났습니다"),
+            "click y 오버플로 방어 필요: {over_y}"
+        );
+    }
+
+    #[tokio::test]
+    async fn desktop_tools_scroll_amount_범위_검증() {
+        let _g = DESKTOP_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        let over_amount = run_desktop_tool(
+            "scroll",
+            &serde_json::json!({"x": 10, "y": 20, "amount": i64::from(i32::MAX) + 1}),
+            true,
+        )
+        .await;
+        assert!(
+            over_amount.contains("amount 범위를 벗어났습니다"),
+            "scroll amount 오버플로 방어 필요: {over_amount}"
+        );
+    }
+
     // HealingToolMock도 글로벌 state — 3개 테스트가 mock을 공유해 병렬 실행 시 race.
     // Phase 137-B 테스트 추가로 스케줄링이 변하며 race가 더 자주 표면화됨 → 직렬 lock.
     static HEALING_TEST_LOCK: Mutex<()> = Mutex::new(());
