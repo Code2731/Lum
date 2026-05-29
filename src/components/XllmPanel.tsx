@@ -73,6 +73,12 @@ function sanitizeRecallBackendList(rawList: string[] | null | undefined): string
   return ["local-cosine", "zvec"];
 }
 
+const ERROR_KNOWN_KEYS = new Set<string>([
+  "message", "messages", "errorMessage", "error_description", "errorDescription",
+  "error", "errors", "response", "data", "body", "statusText", "status", "code",
+  "cause", "detail", "details", "description", "title", "reason", "msg",
+]);
+
 function extractErrorText(value: unknown): string | null {
   const seen = new WeakSet<object>();
   const visit = (target: unknown): string | null => {
@@ -213,13 +219,8 @@ function extractErrorText(value: unknown): string | null {
         const fromCode = visit(obj.code);
         if (fromCode !== null) return fromCode;
       }
-      const knownKeys = new Set<string>([
-        "message", "messages", "errorMessage", "error_description", "errorDescription",
-        "error", "errors", "response", "data", "body", "statusText", "status", "code",
-        "cause", "detail", "details", "description", "title", "reason", "msg",
-      ]);
       const unknownValues = Object.entries(obj)
-        .filter(([key]) => !knownKeys.has(key))
+        .filter(([key]) => !ERROR_KNOWN_KEYS.has(key))
         .map(([, value]) => value);
       for (const rawValue of unknownValues) {
         if (rawValue && typeof rawValue === "object") {
