@@ -1498,6 +1498,75 @@ describe("XllmPanel", () => {
     expect(await screen.findByText("저장 실패: JSON 커스텀 메시지")).toBeInTheDocument();
   });
 
+  it("상단 설정 저장 실패 시 커스텀 숫자 메타데이터보다 중첩 객체 메시지를 우선한다", async () => {
+    invokeMock.mockReset();
+    invokeMock.mockImplementation((cmd: string, args?: unknown) => {
+      if (cmd === "load_app_config") return Promise.resolve({});
+      if (cmd === "recall_backend_info") {
+        return Promise.resolve({
+          requested_raw: null,
+          requested: null,
+          active: "local-cosine",
+          supported: ["local-cosine", "zvec"],
+          requested_adjusted: false,
+          active_matches_requested: true,
+        });
+      }
+      if (cmd === "save_xllm_settings") {
+        return Promise.reject({
+          timestamp: 1712345678901,
+          payload: { note: "중첩 객체 우선 메시지" },
+        });
+      }
+      if (cmd === "save_recall_vector_backend") return Promise.resolve(args ?? {});
+      if (cmd === "list_embed_candidates") return Promise.resolve([]);
+      if (cmd === "list_lora_candidates") return Promise.resolve([]);
+      if (cmd === "embed_loaded_info") return Promise.resolve(null);
+      return Promise.resolve({});
+    });
+
+    render(<XllmPanel onClose={vi.fn()} />);
+
+    const saveButton = await screen.findByRole("button", { name: "설정 저장" });
+    fireEvent.click(saveButton);
+
+    expect(await screen.findByText("저장 실패: 중첩 객체 우선 메시지")).toBeInTheDocument();
+  });
+
+  it("상단 설정 저장 실패 시 커스텀 필드가 원시값뿐이면 해당 값을 폴백한다", async () => {
+    invokeMock.mockReset();
+    invokeMock.mockImplementation((cmd: string, args?: unknown) => {
+      if (cmd === "load_app_config") return Promise.resolve({});
+      if (cmd === "recall_backend_info") {
+        return Promise.resolve({
+          requested_raw: null,
+          requested: null,
+          active: "local-cosine",
+          supported: ["local-cosine", "zvec"],
+          requested_adjusted: false,
+          active_matches_requested: true,
+        });
+      }
+      if (cmd === "save_xllm_settings") {
+        return Promise.reject({
+          requestId: "REQ-2026-05-29",
+        });
+      }
+      if (cmd === "save_recall_vector_backend") return Promise.resolve(args ?? {});
+      if (cmd === "list_embed_candidates") return Promise.resolve([]);
+      if (cmd === "list_lora_candidates") return Promise.resolve([]);
+      if (cmd === "embed_loaded_info") return Promise.resolve(null);
+      return Promise.resolve({});
+    });
+
+    render(<XllmPanel onClose={vi.fn()} />);
+
+    const saveButton = await screen.findByRole("button", { name: "설정 저장" });
+    fireEvent.click(saveButton);
+
+    expect(await screen.findByText("저장 실패: REQ-2026-05-29")).toBeInTheDocument();
+  });
+
   it("상단 설정 저장 실패 시 빈 Error.message는 기본 문구로 노출한다", async () => {
     invokeMock.mockReset();
     invokeMock.mockImplementation((cmd: string, args?: unknown) => {

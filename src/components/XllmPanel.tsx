@@ -218,8 +218,16 @@ function extractErrorText(value: unknown): string | null {
         "error", "errors", "response", "data", "body", "statusText", "status", "code",
         "cause", "detail", "details", "description", "title", "reason", "msg",
       ]);
-      for (const [key, rawValue] of Object.entries(obj)) {
-        if (knownKeys.has(key)) continue;
+      const unknownValues = Object.entries(obj)
+        .filter(([key]) => !knownKeys.has(key))
+        .map(([, value]) => value);
+      for (const rawValue of unknownValues) {
+        if (rawValue && typeof rawValue === "object") {
+          const fromUnknownObject = visit(rawValue);
+          if (fromUnknownObject !== null) return fromUnknownObject;
+        }
+      }
+      for (const rawValue of unknownValues) {
         const fromUnknownField = visit(rawValue);
         if (fromUnknownField !== null) return fromUnknownField;
       }
