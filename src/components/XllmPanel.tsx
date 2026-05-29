@@ -600,19 +600,6 @@ const OllamaSection: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
-  useEffect(() => {
-    invoke<AppConfig>("load_app_config").then((c) => {
-      if (c.ollama_base_url) setUrl(c.ollama_base_url);
-      if (c.ollama_model) {
-        setModel(c.ollama_model);
-        setEnabled(true);
-      }
-      if (c.ollama_base_url || c.ollama_model) {
-        checkStatus();
-      }
-    }).catch(() => {});
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
   const checkStatus = useCallback(async () => {
     setChecking(true);
     setStatus("unknown");
@@ -629,6 +616,19 @@ const OllamaSection: React.FC = () => {
       setChecking(false);
     }
   }, []);
+
+  useEffect(() => {
+    invoke<AppConfig>("load_app_config").then((c) => {
+      if (c.ollama_base_url) setUrl(c.ollama_base_url);
+      if (c.ollama_model) {
+        setModel(c.ollama_model);
+        setEnabled(true);
+      }
+      if (c.ollama_base_url || c.ollama_model) {
+        checkStatus();
+      }
+    }).catch(() => {});
+  }, [checkStatus]);
 
   const handleSave = useCallback(async () => {
     setSaving(true);
