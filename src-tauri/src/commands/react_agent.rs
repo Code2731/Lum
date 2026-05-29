@@ -763,6 +763,11 @@ async fn run_desktop_tool(tool: &str, args: &serde_json::Value, enabled: bool) -
                 .unwrap_or("left")
                 .trim()
                 .to_lowercase();
+            if !matches!(button.as_str(), "left" | "right" | "middle") {
+                return format!(
+                    "오류: click button은 left/right/middle만 허용됩니다 ({button})"
+                );
+            }
             match desktop_simulate_click(x_i32, y_i32, button.clone()) {
                 Ok(()) => format!("클릭 성공: ({x}, {y}, {button})"),
                 Err(e) => format!("클릭 실패: {e}"),
@@ -3704,6 +3709,34 @@ ACTION: mcp({"server": "playwright", "tool": "screenshot", "arguments": {"url": 
         let out = run_desktop_tool("mouse", &serde_json::json!({"x": 12, "y": 34}), true).await;
         assert!(out.contains("마우스 이동 성공"), "{out}");
         assert!(out.contains("click=false"), "{out}");
+
+        clear_desktop_tool_mock();
+    }
+
+    #[tokio::test]
+    async fn desktop_tools_click_button_허용값_검증() {
+        let out = run_desktop_tool(
+            "click",
+            &serde_json::json!({"x": 10, "y": 20, "button": "double"}),
+            true,
+        )
+        .await;
+        assert!(
+            out.contains("left/right/middle만 허용"),
+            "button 검증 오류 메시지 필요: {out}"
+        );
+    }
+
+    #[tokio::test]
+    async fn desktop_tools_click_button_기본값_left() {
+        set_desktop_tool_mock(DesktopToolMock {
+            click: Some(Ok(())),
+            ..Default::default()
+        });
+
+        let out = run_desktop_tool("click", &serde_json::json!({"x": 9, "y": 8}), true).await;
+        assert!(out.contains("클릭 성공"), "{out}");
+        assert!(out.contains("left"), "{out}");
 
         clear_desktop_tool_mock();
     }
