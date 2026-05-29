@@ -918,10 +918,18 @@ const EmbeddedInferenceDebug: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    let disposed = false;
     let cleanup: (() => void) | null = null;
-    refreshLoadedKey();
+    invoke<string | null>("embed_loaded_info")
+      .then((key) => {
+        if (!disposed) setLoadedKey(key);
+      })
+      .catch(() => {
+        if (!disposed) setLoadedKey(null);
+      });
     invoke<EmbedCandidate[]>("list_embed_candidates")
       .then((list) => {
+        if (disposed) return;
         setCandidates(list);
         if (list.length === 1) {
           setModelDir(list[0].folder);
@@ -929,18 +937,29 @@ const EmbeddedInferenceDebug: React.FC = () => {
         }
       })
       .catch(() => {});
-    invoke<LoraCandidate[]>("list_lora_candidates").then(setLoraCandidates).catch(() => {});
-    listen<string>("embed_load_progress", (e) => setLoadStage(e.payload))
+    invoke<LoraCandidate[]>("list_lora_candidates")
+      .then((list) => {
+        if (!disposed) setLoraCandidates(list);
+      })
+      .catch(() => {});
+    listen<string>("embed_load_progress", (e) => {
+      if (!disposed) setLoadStage(e.payload);
+    })
       .then((unlisten) => {
+        if (disposed) {
+          unlisten();
+          return;
+        }
         cleanup = unlisten;
       })
       .catch(() => {
         cleanup = null;
       });
     return () => {
+      disposed = true;
       cleanup?.();
     };
-  }, [refreshLoadedKey]);
+  }, []);
 
   const currentFolder = candidates.find((c) => c.folder === modelDir);
   const fileOptions = currentFolder?.gguf_files ?? [];
