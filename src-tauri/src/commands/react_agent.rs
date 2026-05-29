@@ -261,7 +261,7 @@ const DESKTOP_PROMPT: &str = r#"
 - screenshot({}) — 현재 화면 PNG 캡처(base64). UI 상태 확인용.
 - mouse({"x": 100, "y": 200, "click": false}) — 절대좌표로 마우스 이동. click=true면 left 클릭까지 수행.
 - click({"x": 100, "y": 200, "button": "left"}) — 화면 절대좌표 클릭 (button: left/right/middle, 생략 시 left)
-- type({"text": "입력할 텍스트"}) — 키보드 텍스트 입력
+- type({"text": "입력할 텍스트", "enter": false}) — 키보드 텍스트 입력 (enter=true면 입력 후 Enter까지 수행)
 - scroll({"x": 100, "y": 200, "amount": -120}) — 화면 절대좌표 기준 마우스 휠 스크롤 (amount>0: 아래, <0: 위)
 - key_combo({"modifier": "cmd", "key": "k"}) — 단축키 조합 입력 (modifier: cmd/ctrl/alt/shift)"#;
 
@@ -685,7 +685,7 @@ fn desktop_simulate_mouse(x: i32, y: i32, click: bool) -> std::result::Result<()
     crate::desktop::simulate_mouse(crate::desktop::MouseAction { x, y, click })
 }
 
-fn desktop_simulate_typing(text: String) -> std::result::Result<(), String> {
+fn desktop_simulate_typing(text: String, enter: bool) -> std::result::Result<(), String> {
     #[cfg(test)]
     {
         let mut guard = desktop_tool_mock_lock().lock().unwrap();
@@ -693,7 +693,7 @@ fn desktop_simulate_typing(text: String) -> std::result::Result<(), String> {
             return v;
         }
     }
-    crate::desktop::simulate_keyboard(crate::desktop::KeyboardAction { text, enter: false })
+    crate::desktop::simulate_keyboard(crate::desktop::KeyboardAction { text, enter })
 }
 
 fn desktop_simulate_key_combo(modifier: String, key: String) -> std::result::Result<(), String> {
@@ -773,8 +773,9 @@ async fn run_desktop_tool(tool: &str, args: &serde_json::Value, enabled: bool) -
             if text.is_empty() {
                 return "오류: type은 text 파라미터가 필요합니다".to_string();
             }
-            match desktop_simulate_typing(text.clone()) {
-                Ok(()) => format!("입력 성공: {} chars", text.chars().count()),
+            let enter = args["enter"].as_bool().unwrap_or(false);
+            match desktop_simulate_typing(text.clone(), enter) {
+                Ok(()) => format!("입력 성공: {} chars (enter={enter})", text.chars().count()),
                 Err(e) => format!("입력 실패: {e}"),
             }
         }
@@ -3522,7 +3523,7 @@ mod tests {
         assert!(s.contains("- screenshot({})"));
         assert!(s.contains("- mouse({\"x\": 100, \"y\": 200, \"click\": false})"));
         assert!(s.contains("- click({\"x\": 100, \"y\": 200"));
-        assert!(s.contains("- type({\"text\": \"입력할 텍스트\"})"));
+        assert!(s.contains("- type({\"text\": \"입력할 텍스트\", \"enter\": false})"));
         assert!(s.contains("- scroll({\"x\": 100, \"y\": 200"));
         assert!(s.contains("amount\": -120"));
         assert!(s.contains("- key_combo({\"modifier\": \"cmd\", \"key\": \"k\"})"));
@@ -3588,7 +3589,7 @@ ACTION: mcp({"server": "playwright", "tool": "screenshot", "arguments": {"url": 
                 "scroll" => serde_json::json!({"x": 10, "y": 20, "amount": -120}),
                 "mouse" => serde_json::json!({"x": 10, "y": 20, "click": true}),
                 "click" => serde_json::json!({"x": 10, "y": 20}),
-                "type" => serde_json::json!({"text": "hello"}),
+                "type" => serde_json::json!({"text": "hello", "enter": true}),
                 "key_combo" => serde_json::json!({"modifier": "cmd", "key": "k"}),
                 _ => serde_json::json!({}),
             };
@@ -3622,8 +3623,11 @@ ACTION: mcp({"server": "playwright", "tool": "screenshot", "arguments": {"url": 
         assert!(mouse.contains("마우스 이동 성공"), "{mouse}");
         let click = run_desktop_tool("click", &serde_json::json!({"x": 100, "y": 200}), true).await;
         assert!(click.contains("클릭 성공"), "{click}");
-        let typing = run_desktop_tool("type", &serde_json::json!({"text": "테스트"}), true).await;
+        let typing =
+            run_desktop_tool("type", &serde_json::json!({"text": "테스트", "enter": true}), true)
+                .await;
         assert!(typing.contains("입력 성공"), "{typing}");
+        assert!(typing.contains("enter=true"), "{typing}");
         let combo = run_desktop_tool(
             "key_combo",
             &serde_json::json!({"modifier": "cmd", "key": "k"}),
