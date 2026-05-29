@@ -259,6 +259,7 @@ const BASE_PROMPT: &str = r#"당신은 터미널 코딩 에이전트입니다. �
 const DESKTOP_PROMPT: &str = r#"
 데스크톱 제어 도구 (설정에서 활성화된 경우에만 동작):
 - screenshot({}) — 현재 화면 PNG 캡처(base64). UI 상태 확인용.
+- mouse({"x": 100, "y": 200, "click": false}) — 절대좌표로 마우스 이동. click=true면 left 클릭까지 수행.
 - click({"x": 100, "y": 200, "button": "left"}) — 화면 절대좌표 클릭 (button: left/right/middle, 생략 시 left)
 - type({"text": "입력할 텍스트"}) — 키보드 텍스트 입력
 - scroll({"x": 100, "y": 200, "amount": -120}) — 화면 절대좌표 기준 마우스 휠 스크롤 (amount>0: 아래, <0: 위)
@@ -587,7 +588,7 @@ async fn run_tool(
         "write_file" => write_file_tool(args, cwd),
         "apply_patch" => apply_patch_tool(args, cwd),
         "delete_file" => delete_file_tool(args, cwd),
-        "screenshot" | "click" | "type" | "key_combo" | "scroll" => {
+        "screenshot" | "mouse" | "click" | "type" | "key_combo" | "scroll" => {
             run_desktop_tool(tool, args, desktop_tools_enabled).await
         }
         "mcp" => run_mcp_tool(app, args).await,
@@ -626,6 +627,7 @@ fn is_whitelisted_in_act(mode: ReactMode, tool: &str, whitelist: Option<&HashSet
 #[derive(Default)]
 struct DesktopToolMock {
     screenshot: Option<std::result::Result<String, String>>,
+    mouse: Option<std::result::Result<(), String>>,
     click: Option<std::result::Result<(), String>>,
     typing: Option<std::result::Result<(), String>>,
     scroll: Option<std::result::Result<(), String>>,
@@ -672,6 +674,17 @@ fn desktop_simulate_click(x: i32, y: i32, button: String) -> std::result::Result
     crate::desktop::simulate_click(x, y, button)
 }
 
+fn desktop_simulate_mouse(x: i32, y: i32, click: bool) -> std::result::Result<(), String> {
+    #[cfg(test)]
+    {
+        let mut guard = desktop_tool_mock_lock().lock().unwrap();
+        if let Some(v) = guard.mouse.take() {
+            return v;
+        }
+    }
+    crate::desktop::simulate_mouse(crate::desktop::MouseAction { x, y, click })
+}
+
 fn desktop_simulate_typing(text: String) -> std::result::Result<(), String> {
     #[cfg(test)]
     {
@@ -715,6 +728,24 @@ async fn run_desktop_tool(tool: &str, args: &serde_json::Value, enabled: bool) -
             Ok(image_base64) => truncate(&image_base64),
             Err(e) => format!("스크린샷 실패: {e}"),
         },
+        "mouse" => {
+            let x = args["x"].as_i64().unwrap_or(i64::MIN);
+            let y = args["y"].as_i64().unwrap_or(i64::MIN);
+            if x == i64::MIN || y == i64::MIN {
+                return "오류: mouse는 x, y 좌표가 필요합니다".to_string();
+            }
+            let Ok(x_i32) = i32::try_from(x) else {
+                return format!("오류: x 좌표 범위를 벗어났습니다 ({x})");
+            };
+            let Ok(y_i32) = i32::try_from(y) else {
+                return format!("오류: y 좌표 범위를 벗어났습니다 ({y})");
+            };
+            let do_click = args["click"].as_bool().unwrap_or(false);
+            match desktop_simulate_mouse(x_i32, y_i32, do_click) {
+                Ok(()) => format!("마우스 이동 성공: ({x}, {y}) click={do_click}"),
+                Err(e) => format!("마우스 이동 실패: {e}"),
+            }
+        }
         "click" => {
             let x = args["x"].as_i64().unwrap_or(i64::MIN);
             let y = args["y"].as_i64().unwrap_or(i64::MIN);
@@ -3489,6 +3520,7 @@ mod tests {
         let s = build_system_prompt(&[], &[]);
         assert!(s.contains("데스크톱 제어 도구"));
         assert!(s.contains("- screenshot({})"));
+        assert!(s.contains("- mouse({\"x\": 100, \"y\": 200, \"click\": false})"));
         assert!(s.contains("- click({\"x\": 100, \"y\": 200"));
         assert!(s.contains("- type({\"text\": \"입력할 텍스트\"})"));
         assert!(s.contains("- scroll({\"x\": 100, \"y\": 200"));
@@ -3551,9 +3583,10 @@ ACTION: mcp({"server": "playwright", "tool": "screenshot", "arguments": {"url": 
 
     #[tokio::test]
     async fn desktop_tools_토글_off면_호출_거부() {
-        for tool in ["screenshot", "click", "type", "key_combo", "scroll"] {
+        for tool in ["screenshot", "mouse", "click", "type", "key_combo", "scroll"] {
             let args = match tool {
                 "scroll" => serde_json::json!({"x": 10, "y": 20, "amount": -120}),
+                "mouse" => serde_json::json!({"x": 10, "y": 20, "click": true}),
                 "click" => serde_json::json!({"x": 10, "y": 20}),
                 "type" => serde_json::json!({"text": "hello"}),
                 "key_combo" => serde_json::json!({"modifier": "cmd", "key": "k"}),
@@ -3571,6 +3604,7 @@ ACTION: mcp({"server": "playwright", "tool": "screenshot", "arguments": {"url": 
     async fn desktop_tools_토글_on_호출_성공() {
         set_desktop_tool_mock(DesktopToolMock {
             screenshot: Some(Ok("A".repeat(TOOL_OUTPUT_LIMIT + 30))),
+            mouse: Some(Ok(())),
             click: Some(Ok(())),
             typing: Some(Ok(())),
             scroll: Some(Ok(())),
@@ -3582,6 +3616,10 @@ ACTION: mcp({"server": "playwright", "tool": "screenshot", "arguments": {"url": 
             screenshot.contains("생략"),
             "base64 결과는 truncate되어야 함: {screenshot}"
         );
+        let mouse =
+            run_desktop_tool("mouse", &serde_json::json!({"x": 33, "y": 44, "click": true}), true)
+                .await;
+        assert!(mouse.contains("마우스 이동 성공"), "{mouse}");
         let click = run_desktop_tool("click", &serde_json::json!({"x": 100, "y": 200}), true).await;
         assert!(click.contains("클릭 성공"), "{click}");
         let typing = run_desktop_tool("type", &serde_json::json!({"text": "테스트"}), true).await;
