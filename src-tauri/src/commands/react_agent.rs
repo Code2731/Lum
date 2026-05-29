@@ -3677,6 +3677,37 @@ ACTION: mcp({"server": "playwright", "tool": "screenshot", "arguments": {"url": 
         );
     }
 
+    #[tokio::test]
+    async fn desktop_tools_mouse_파라미터_누락시_에러() {
+        let missing_x =
+            run_desktop_tool("mouse", &serde_json::json!({"y": 20, "click": true}), true).await;
+        assert!(
+            missing_x.contains("x, y 좌표"),
+            "mouse 누락 파라미터 처리 필요: {missing_x}"
+        );
+
+        let missing_y =
+            run_desktop_tool("mouse", &serde_json::json!({"x": 10, "click": true}), true).await;
+        assert!(
+            missing_y.contains("x, y 좌표"),
+            "mouse 누락 파라미터 처리 필요: {missing_y}"
+        );
+    }
+
+    #[tokio::test]
+    async fn desktop_tools_mouse_click_기본값_false() {
+        set_desktop_tool_mock(DesktopToolMock {
+            mouse: Some(Ok(())),
+            ..Default::default()
+        });
+
+        let out = run_desktop_tool("mouse", &serde_json::json!({"x": 12, "y": 34}), true).await;
+        assert!(out.contains("마우스 이동 성공"), "{out}");
+        assert!(out.contains("click=false"), "{out}");
+
+        clear_desktop_tool_mock();
+    }
+
     // HealingToolMock도 글로벌 state — 3개 테스트가 mock을 공유해 병렬 실행 시 race.
     // Phase 137-B 테스트 추가로 스케줄링이 변하며 race가 더 자주 표면화됨 → 직렬 lock.
     static HEALING_TEST_LOCK: Mutex<()> = Mutex::new(());
