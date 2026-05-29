@@ -6,12 +6,15 @@
 
 ```bash
 npm run mvp:readiness
+npm run mvp:readiness:json
+node scripts/mvp-readiness.mjs --strict-voice
 ```
 
 ## 판정 규칙
 
 - 필수 코어 항목은 모두 `PASS`여야 MVP 코어 충족으로 판정합니다.
 - Voice 입력은 현재 아키텍처상 별도 고도화 트랙으로 `PARTIAL`을 허용합니다.
+- `--strict-voice`를 사용하면 Voice가 `PASS`가 아닐 때 전체 판정을 실패로 처리합니다.
 
 ## 포함 항목(자동 점검)
 

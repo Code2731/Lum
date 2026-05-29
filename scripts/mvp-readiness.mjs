@@ -2,6 +2,9 @@ import fs from "node:fs";
 import path from "node:path";
 
 const root = process.cwd();
+const argv = new Set(process.argv.slice(2));
+const asJson = argv.has("--json");
+const strictVoice = argv.has("--strict-voice");
 
 function read(relPath) {
   return fs.readFileSync(path.join(root, relPath), "utf8");
@@ -122,43 +125,96 @@ function voiceStatus() {
   return { status: "PARTIAL", detail: "구현 경로 확인 필요" };
 }
 
-const lines = [];
-let requiredPass = 0;
-let requiredFail = 0;
+function buildReport() {
+  const required = [];
+  let requiredPass = 0;
+  let requiredFail = 0;
 
-lines.push("LUM MVP Readiness Check");
-lines.push(`기준 시각: ${new Date().toISOString()}`);
-lines.push("");
-lines.push("[필수 코어 항목]");
-for (const check of requiredChecks) {
-  const ok = check.run();
-  if (ok) {
-    requiredPass += 1;
-    lines.push(`${statusIcon("PASS")} ${check.name}`);
-  } else {
-    requiredFail += 1;
-    lines.push(`${statusIcon("FAIL")} ${check.name}`);
+  for (const check of requiredChecks) {
+    const ok = check.run();
+    const status = ok ? "PASS" : "FAIL";
+    if (ok) {
+      requiredPass += 1;
+    } else {
+      requiredFail += 1;
+    }
+    required.push({
+      key: check.key,
+      name: check.name,
+      status,
+    });
   }
+
+  const voice = voiceStatus();
+  const passCore = requiredFail === 0;
+  const passStrict = passCore && voice.status === "PASS";
+  const overall = strictVoice ? passStrict : passCore;
+
+  return {
+    generatedAt: new Date().toISOString(),
+    options: {
+      strictVoice,
+    },
+    required,
+    deferred: {
+      key: "voice_input",
+      name: "Voice 입력 경로",
+      status: voice.status,
+      detail: voice.detail,
+    },
+    summary: {
+      requiredPass,
+      requiredTotal: requiredChecks.length,
+      requiredFail,
+      passCore,
+      passStrict,
+      overall,
+      mode: strictVoice ? "strict-voice" : "core-only",
+    },
+  };
 }
 
-const voice = voiceStatus();
-lines.push("");
-lines.push("[보류/부분 항목]");
-lines.push(`${statusIcon(voice.status)} Voice 입력 경로 — ${voice.detail}`);
+function printHuman(report) {
+  const lines = [];
+  lines.push("LUM MVP Readiness Check");
+  lines.push(`기준 시각: ${report.generatedAt}`);
+  lines.push("");
+  lines.push("[필수 코어 항목]");
+  for (const item of report.required) {
+    lines.push(`${statusIcon(item.status)} ${item.name}`);
+  }
+  lines.push("");
+  lines.push("[보류/부분 항목]");
+  lines.push(
+    `${statusIcon(report.deferred.status)} ${report.deferred.name} — ${report.deferred.detail}`,
+  );
+  lines.push("");
+  lines.push(
+    `요약: 필수 ${report.summary.requiredPass}/${report.summary.requiredTotal} PASS` +
+      (report.summary.requiredFail > 0 ? `, FAIL ${report.summary.requiredFail}` : ", FAIL 0"),
+  );
+  if (report.summary.passCore) {
+    lines.push("판정: MVP 코어 충족 (Voice는 별도 고도화 트랙)");
+  } else {
+    lines.push("판정: MVP 코어 미충족 (필수 FAIL 항목 해결 필요)");
+  }
+  if (report.options.strictVoice) {
+    lines.push(
+      report.summary.passStrict
+        ? "엄격 판정: Voice 포함 PASS"
+        : "엄격 판정: Voice 포함 FAIL",
+    );
+  }
+  console.log(lines.join("\n"));
+}
 
-lines.push("");
-lines.push(
-  `요약: 필수 ${requiredPass}/${requiredChecks.length} PASS` +
-    (requiredFail > 0 ? `, FAIL ${requiredFail}` : ", FAIL 0"),
-);
-lines.push(
-  requiredFail === 0
-    ? "판정: MVP 코어 충족 (Voice는 별도 고도화 트랙)"
-    : "판정: MVP 코어 미충족 (필수 FAIL 항목 해결 필요)",
-);
+const report = buildReport();
+if (asJson) {
+  console.log(JSON.stringify(report, null, 2));
+} else {
+  printHuman(report);
+}
 
-console.log(lines.join("\n"));
-
-if (requiredFail > 0) {
+if (!report.summary.overall) {
   process.exitCode = 1;
 }
