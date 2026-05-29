@@ -154,8 +154,37 @@ fn parse_combo_key(raw: &str) -> Result<enigo::Key, String> {
     if normalized.is_empty() {
         return Err("Key is empty".to_string());
     }
-    if normalized == "enter" || normalized == "return" {
-        return Ok(enigo::Key::Return);
+    let named_key = match normalized.as_str() {
+        "enter" | "return" => Some(enigo::Key::Return),
+        "space" => Some(enigo::Key::Space),
+        "tab" => Some(enigo::Key::Tab),
+        "esc" | "escape" => Some(enigo::Key::Escape),
+        "backspace" => Some(enigo::Key::Backspace),
+        "delete" | "del" => Some(enigo::Key::Delete),
+        "up" | "arrowup" => Some(enigo::Key::UpArrow),
+        "down" | "arrowdown" => Some(enigo::Key::DownArrow),
+        "left" | "arrowleft" => Some(enigo::Key::LeftArrow),
+        "right" | "arrowright" => Some(enigo::Key::RightArrow),
+        "home" => Some(enigo::Key::Home),
+        "end" => Some(enigo::Key::End),
+        "pageup" => Some(enigo::Key::PageUp),
+        "pagedown" => Some(enigo::Key::PageDown),
+        "f1" => Some(enigo::Key::F1),
+        "f2" => Some(enigo::Key::F2),
+        "f3" => Some(enigo::Key::F3),
+        "f4" => Some(enigo::Key::F4),
+        "f5" => Some(enigo::Key::F5),
+        "f6" => Some(enigo::Key::F6),
+        "f7" => Some(enigo::Key::F7),
+        "f8" => Some(enigo::Key::F8),
+        "f9" => Some(enigo::Key::F9),
+        "f10" => Some(enigo::Key::F10),
+        "f11" => Some(enigo::Key::F11),
+        "f12" => Some(enigo::Key::F12),
+        _ => None,
+    };
+    if let Some(key) = named_key {
+        return Ok(key);
     }
     let mut chars = normalized.chars();
     let first = chars.next().ok_or_else(|| "Key is empty".to_string())?;
@@ -202,6 +231,12 @@ mod tests {
         assert!(parse_combo_key("k").is_ok());
         assert!(parse_combo_key(" V ").is_ok());
         assert!(parse_combo_key("enter").is_ok());
+        assert!(parse_combo_key("space").is_ok());
+        assert!(parse_combo_key("tab").is_ok());
+        assert!(parse_combo_key("esc").is_ok());
+        assert!(parse_combo_key("up").is_ok());
+        assert!(parse_combo_key("pagedown").is_ok());
+        assert!(parse_combo_key("f12").is_ok());
     }
 
     #[test]
@@ -212,7 +247,7 @@ mod tests {
 
     #[test]
     fn parse_combo_key_다문자_토큰_거부() {
-        let err = parse_combo_key("space").unwrap_err();
+        let err = parse_combo_key("superkey").unwrap_err();
         assert!(err.contains("Unknown key token"), "{err}");
     }
 }
