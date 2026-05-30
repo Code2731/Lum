@@ -743,13 +743,39 @@ fn is_whitelisted_in_act(mode: ReactMode, tool: &str, whitelist: Option<&HashSet
         return true;
     }
     match whitelist {
-        Some(set) => set.contains(tool),
+        Some(set) => normalize_tool_key(tool)
+            .map(|key| set.contains(&key))
+            .unwrap_or(false),
         None => true,
     }
 }
 
 fn should_apply_config_whitelist(apply_config_whitelist: Option<bool>) -> bool {
     apply_config_whitelist.unwrap_or(false)
+}
+
+fn normalize_tool_key(raw: &str) -> Option<String> {
+    let key = raw.trim().to_ascii_lowercase();
+    if key.is_empty() {
+        None
+    } else {
+        Some(key)
+    }
+}
+
+fn normalize_tool_whitelist(list: Option<Vec<String>>) -> Option<HashSet<String>> {
+    let Some(list) = list else {
+        return None;
+    };
+    let set: HashSet<String> = list
+        .into_iter()
+        .filter_map(|s| normalize_tool_key(&s))
+        .collect();
+    if set.is_empty() {
+        None
+    } else {
+        Some(set)
+    }
 }
 
 #[cfg(test)]
@@ -3178,12 +3204,7 @@ pub async fn react_agent_run(
         None if use_config_whitelist => config_tool_whitelist,
         None => None,
     };
-    let whitelist_set = effective_whitelist.as_ref().map(|list| {
-        list.iter()
-            .map(|s| s.trim().to_string())
-            .filter(|s| !s.is_empty())
-            .collect::<HashSet<String>>()
-    });
+    let whitelist_set = normalize_tool_whitelist(effective_whitelist);
     if react_mode == ReactMode::Act {
         if let Some(set) = whitelist_set.as_ref() {
             emit_event(
@@ -3645,6 +3666,34 @@ mod tests {
         assert!(!is_whitelisted_in_act(ReactMode::Act, "shell", Some(&wl)));
         assert!(is_whitelisted_in_act(ReactMode::Plan, "shell", Some(&wl)));
         assert!(is_whitelisted_in_act(ReactMode::Act, "shell", None));
+    }
+
+    #[test]
+    fn phase129_whitelist_정규화() {
+        let wl = normalize_tool_whitelist(Some(vec![
+            " Read_File ".into(),
+            "LIST_DIR".into(),
+            "   ".into(),
+        ]))
+        .unwrap();
+        assert!(is_whitelisted_in_act(
+            ReactMode::Act,
+            "read_file",
+            Some(&wl)
+        ));
+        assert!(is_whitelisted_in_act(
+            ReactMode::Act,
+            "list_dir",
+            Some(&wl)
+        ));
+        assert!(!is_whitelisted_in_act(ReactMode::Act, "shell", Some(&wl)));
+    }
+
+    #[test]
+    fn phase129_whitelist_빈목록은_미적용() {
+        assert!(normalize_tool_whitelist(None).is_none());
+        assert!(normalize_tool_whitelist(Some(vec![])).is_none());
+        assert!(normalize_tool_whitelist(Some(vec!["  ".into()])).is_none());
     }
 
     #[test]
