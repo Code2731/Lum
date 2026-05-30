@@ -227,6 +227,7 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(screen.getByText("WHY EMPTY")).toBeInTheDocument();
 
     fireEvent.change(input, { target: { value: "ls -la" } });
+    fireEvent.blur(input);
     expect(screen.getByText("SHELL")).toBeInTheDocument();
     expect(screen.getByText("BACKEND AUTO (LOCAL→OLLAMA→XLLM→GEMINI)")).toBeInTheDocument();
     expect(screen.getByText("WHY HEURISTIC CLI")).toBeInTheDocument();
@@ -1174,6 +1175,7 @@ describe("TerminalPane — 입력 라우팅", () => {
 
   it("HISTORY 검색창에서 Delete/Backspace 키로 선택 항목을 삭제한다", async () => {
     const { container } = render(<TerminalPane id="tab-1" />);
+    const input = screen.getByRole("textbox");
 
     submitInput(container, "ls -la");
     await waitFor(() => {

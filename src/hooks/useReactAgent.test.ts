@@ -60,7 +60,7 @@ describe("useReactAgent — Phase 129 Plan/Act", () => {
     });
   });
 
-  it("runPlan → plannedTools 수집 후 runAct에 whitelist 전달", async () => {
+  it("runPlan → 읽기 도구만 수집하고 runAct는 whitelist 없이 실행", async () => {
     const { result } = renderHook(() => useReactAgent());
 
     await act(async () => {
@@ -68,7 +68,7 @@ describe("useReactAgent — Phase 129 Plan/Act", () => {
     });
     expect(result.current.state.mode).toBe("plan");
     expect(result.current.state.status).toBe("done");
-    expect(result.current.state.plannedTools).toEqual(["read_file", "run_tests"]);
+    expect(result.current.state.plannedTools).toEqual(["read_file"]);
     expect(result.current.state.planId).toBeTruthy();
 
     const firstCall = invokeMock.mock.calls.find((c) => c[0] === "react_agent_run");
@@ -86,7 +86,7 @@ describe("useReactAgent — Phase 129 Plan/Act", () => {
         result.current.state.planId,
         result.current.state.backend,
         result.current.state.model,
-        result.current.state.plannedTools,
+        null,
       );
     });
     expect(result.current.state.mode).toBe("act");
@@ -97,7 +97,7 @@ describe("useReactAgent — Phase 129 Plan/Act", () => {
     expect(runCalls).toHaveLength(2);
     expect(runCalls[1]?.[1]).toMatchObject({
       mode: "act",
-      toolWhitelist: ["read_file", "run_tests"],
+      toolWhitelist: null,
       planId: expect.any(String),
       applyConfigWhitelist: true,
     });

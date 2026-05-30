@@ -128,25 +128,6 @@ const BASE_FONT_SIZE = 12;
 const TITLE_FONT_SIZE = 14;
 const HERO_FONT_SIZE = 36;
 
-const compactPath = (path?: string): string => {
-  if (!path) return "루트";
-  const normalized = path.replace(/\\/g, "/").replace(/\/+$/, "") || "/";
-  if (normalized.length <= 28) return normalized;
-  const parts = normalized.split("/").filter(Boolean);
-  if (parts.length <= 2) return normalized;
-  return `…/${parts.slice(-2).join("/")}`;
-};
-
-const compactModel = (raw?: string): string => {
-  if (!raw) return "unknown";
-  const last = raw.match(/[^/\\]+$/)?.[0] ?? raw;
-  return last
-    .replace(/-Instruct$/i, "")
-    .replace(/-Q\d+_K_.+$/i, "")
-    .replace(/-\d+\.\d+bpw$/i, "")
-    .replace(/-\d+bit$/i, "")
-    .slice(0, 26);
-};
 const hasExecutableRecallRoute = (raw: string): boolean => {
   const normalized = raw.trim();
   if (normalized === "") return false;
@@ -1562,7 +1543,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     { id: "reset", label: "Reset Input State", keywords: "reset", run: resetAllInputStateQuick, disabled: !canResetAllQuick },
     { id: "toggle_terminal", label: "Toggle Terminal View", keywords: "terminal view", run: () => setTerminalVisible((v) => !v), disabled: false },
     { id: "toggle_vision", label: "Toggle Vision Mode", keywords: "vision image", run: () => setVisionMode((v) => !v), disabled: false },
-    { id: "toggle_reasoning", label: "Toggle Reasoning View", keywords: "reasoning think", run: () => onToggleReasoning?.(), disabled: false },
+    { id: "toggle_reasoning", label: showReasoning ? "Hide Reasoning View" : "Show Reasoning View", keywords: "reasoning think", run: () => onToggleReasoning?.(), disabled: false },
     { id: "mention_attach", label: "Attach File Mention", keywords: "mention attach file @", run: triggerMentionAttach, disabled: false },
     { id: "plain", label: "Normalize to Plain Input", keywords: "plain normalize prefix", run: normalizeInputToPlain, disabled: !canNormalizeToPlain },
     { id: "trim", label: "Trim Input", keywords: "trim whitespace", run: trimInputQuick, disabled: !canTrimInput },
@@ -2022,7 +2003,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
             cwd={cwd}
             fullHeight
             onAskAIForFix={onAskAI}
-            visionEnabled={visionEnabled}
+            visionEnabled={visionMode}
           />
         ) : !terminalVisible ? (
           <div style={{

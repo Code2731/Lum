@@ -54,6 +54,27 @@ export interface ReactAgentState {
   undoReport: UndoReport | null;
 }
 
+// 백엔드 Plan 모드 정책과 같은 차단 목록.
+// Plan 중 LLM이 실행/쓰기 도구를 환각 호출해도 승인 후보로 표시하지 않는다.
+const PLAN_BLOCKED_TOOLS = new Set([
+  "shell",
+  "run_tests",
+  "write_file",
+  "apply_patch",
+  "delete_file",
+  "mcp",
+  "screenshot",
+  "mouse",
+  "click",
+  "type",
+  "key_combo",
+  "scroll",
+]);
+
+function isPlanVisibleTool(tool: string): boolean {
+  return !PLAN_BLOCKED_TOOLS.has(tool);
+}
+
 /// path/kind/risk 셋만 비교 — 백엔드가 같은 entries에서 결정적으로 같은 ChangeInfo를 반환하므로 충분.
 function sameChanges(a: ChangeInfo[], b: ChangeInfo[]): boolean {
   if (a.length !== b.length) return false;
@@ -147,7 +168,12 @@ export function useReactAgent() {
               steps: [...prev.steps, step],
             };
           }
-          if (step.kind === "action" && step.tool && prev.mode === "plan") {
+          if (
+            step.kind === "action" &&
+            step.tool &&
+            prev.mode === "plan" &&
+            isPlanVisibleTool(step.tool)
+          ) {
             const has = prev.plannedTools.includes(step.tool);
             return {
               ...prev,

@@ -216,7 +216,6 @@ const ReactAgentPanel: React.FC<Props> = ({
 }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [desktopToolsEnabled, setDesktopToolsEnabled] = React.useState(false);
-  const [autoApprovePlanTools, setAutoApprovePlanTools] = React.useState(false);
   const [scipToolsEnabled, setScipToolsEnabled] = React.useState(false);
   const [scipStatus, setScipStatus] = React.useState<ScipStatus | null>(null);
   const [isScipRebuildInProgress, setIsScipRebuildInProgress] =
@@ -575,7 +574,7 @@ const ReactAgentPanel: React.FC<Props> = ({
       {isPlanDone && state.plannedTools.length > 0 && (
         <div className="shrink-0 border-t border-white/5 bg-cyan-500/5 px-3 py-2">
           <div className="text-xs text-cyan-200/80 mb-1">
-            Plan에서 제안된 도구
+            Plan에서 사용한 읽기 도구
           </div>
           <div className="flex flex-wrap gap-1">
             {state.plannedTools.map((tool) => (
@@ -639,7 +638,7 @@ const ReactAgentPanel: React.FC<Props> = ({
           <div className="mr-auto flex items-center gap-2 text-xs text-white/55">
             <span className="text-cyan-300/80 font-medium">Plan 완료</span>
             <span className="text-white/35">
-              도구 {state.plannedTools.length}개
+              읽기 도구 {state.plannedTools.length}개
             </span>
           </div>
         )}
@@ -668,35 +667,12 @@ const ReactAgentPanel: React.FC<Props> = ({
           </button>
         )}
         {isPlanDone && (
-          <>
-            <label className="flex items-center gap-1.5 px-2 py-1 rounded border border-white/10 bg-white/5 text-xs text-white/65">
-              <input
-                type="checkbox"
-                checked={autoApprovePlanTools}
-                onChange={(e) => setAutoApprovePlanTools(e.target.checked)}
-                className="accent-cyan-500"
-              />
-              이 도구들 자동 승인
-            </label>
-            <button
-              onClick={async () => {
-                const wl = autoApprovePlanTools ? state.plannedTools : null;
-                if (autoApprovePlanTools) {
-                  try {
-                    await invoke("save_react_tool_whitelist", {
-                      whitelist: state.plannedTools,
-                    });
-                  } catch {
-                    // 저장 실패해도 이번 실행은 진행.
-                  }
-                }
-                onRunAct(wl);
-              }}
-              className="px-3 py-1.5 text-sm rounded-md bg-cyan-500/15 text-cyan-300 hover:bg-cyan-500/25 transition-colors"
-            >
-              실행
-            </button>
-          </>
+          <button
+            onClick={() => onRunAct(null)}
+            className="px-3 py-1.5 text-sm rounded-md bg-cyan-500/15 text-cyan-300 hover:bg-cyan-500/25 transition-colors"
+          >
+            실행
+          </button>
         )}
         {(status === "done" ||
           status === "error" ||

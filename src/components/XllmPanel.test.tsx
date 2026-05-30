@@ -1682,7 +1682,9 @@ describe("XllmPanel", () => {
         });
       }
       if (cmd === "save_xllm_settings") {
-        return Promise.reject(new Error("", { cause: new Error("원인 메시지") }));
+        return Promise.reject(
+          Object.assign(new Error(""), { cause: new Error("원인 메시지") }),
+        );
       }
       if (cmd === "save_recall_vector_backend") return Promise.resolve(args ?? {});
       if (cmd === "list_embed_candidates") return Promise.resolve([]);

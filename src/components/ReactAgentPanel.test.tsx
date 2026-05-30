@@ -143,13 +143,13 @@ describe("ReactAgentPanel", () => {
     });
   });
 
-  it("Plan 완료 상태에서 실행은 whitelisted 도구를 전달한다", async () => {
+  it("Plan 완료 상태에서 실행은 whitelist 없이 Act를 시작한다", async () => {
     mockConfigAndScip();
     const state = makeState({
       status: "done",
       mode: "plan",
       planId: "plan-1",
-      plannedTools: ["read_file", "write_file"],
+      plannedTools: ["read_file"],
       steps: [{ kind: "status", content: "plan" }],
     });
 
@@ -164,17 +164,14 @@ describe("ReactAgentPanel", () => {
     );
 
     const runButton = await screen.findByRole("button", { name: "실행" });
-    const autoApprove = screen.getByRole("checkbox", {
-      name: "이 도구들 자동 승인",
-    });
-    fireEvent.click(autoApprove);
     fireEvent.click(runButton);
 
     await waitFor(() => {
-      expect(invokeMock).toHaveBeenCalledWith("save_react_tool_whitelist", {
-        whitelist: ["read_file", "write_file"],
-      });
+      expect(onRunAct).toHaveBeenCalledWith(null);
     });
-    expect(onRunAct).toHaveBeenCalledWith(["read_file", "write_file"]);
+    expect(invokeMock).not.toHaveBeenCalledWith(
+      "save_react_tool_whitelist",
+      expect.anything(),
+    );
   });
 });
