@@ -198,7 +198,7 @@ export function useReactAgent() {
           backend: backend ?? null,
           model: model ?? null,
           toolWhitelist: toolWhitelist ?? null,
-          applyConfigWhitelist: applyConfigWhitelist ?? true,
+          applyConfigWhitelist: applyConfigWhitelist ?? false,
           planId: planId ?? null,
         });
         setState((prev) =>
