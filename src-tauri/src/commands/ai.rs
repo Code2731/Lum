@@ -3,6 +3,7 @@ use crate::error::{LumError, Result};
 use futures_util::StreamExt;
 use serde::{Deserialize, Serialize};
 use std::error::Error;
+use std::future::Future;
 use std::sync::{
     atomic::{AtomicBool, Ordering},
     Arc,
@@ -908,6 +909,38 @@ mod tests {
 
         assert_eq!(models, vec!["qwen-coder".to_string()]);
     }
+
+    #[tokio::test]
+    async fn await_with_cancel_이미_취소된_상태면_즉시_중단() {
+        let cancel = Arc::new(AtomicBool::new(true));
+        let result = await_with_cancel(async { Ok::<_, LumError>("ok".to_string()) }, &cancel).await;
+        match result {
+            Err(LumError::AiEngine(msg)) => assert!(msg.contains("취소")),
+            other => panic!("unexpected result: {other:?}"),
+        }
+    }
+
+    #[tokio::test]
+    async fn await_with_cancel_대기중_취소되면_중단() {
+        let cancel = Arc::new(AtomicBool::new(false));
+        let cancel_setter = cancel.clone();
+        tokio::spawn(async move {
+            tokio::time::sleep(std::time::Duration::from_millis(25)).await;
+            cancel_setter.store(true, Ordering::Relaxed);
+        });
+        let result = await_with_cancel(
+            async {
+                tokio::time::sleep(std::time::Duration::from_millis(250)).await;
+                Ok::<_, LumError>("done".to_string())
+            },
+            &cancel,
+        )
+        .await;
+        match result {
+            Err(LumError::AiEngine(msg)) => assert!(msg.contains("취소")),
+            other => panic!("unexpected result: {other:?}"),
+        }
+    }
 }
 
 /// xLLM 서버 상태 확인 — /v1/models 엔드포인트로 핑
@@ -1052,6 +1085,26 @@ fn extract_gemini_text(res: &serde_json::Value) -> Result<String> {
         .as_str()
         .map(|s| s.to_string())
         .ok_or_else(|| LumError::AiEngine(format!("Unexpected Gemini response: {}", res)))
+}
+
+async fn await_with_cancel<T, F>(future: F, cancel: &Arc<AtomicBool>) -> Result<T>
+where
+    F: Future<Output = Result<T>>,
+{
+    if cancel.load(Ordering::Relaxed) {
+        return Err(LumError::AiEngine("요청이 취소되었습니다.".to_string()));
+    }
+    let mut future = std::pin::pin!(future);
+    loop {
+        tokio::select! {
+            res = &mut future => return res,
+            _ = tokio::time::sleep(std::time::Duration::from_millis(CONNECT_CANCEL_POLL_MS)) => {
+                if cancel.load(Ordering::Relaxed) {
+                    return Err(LumError::AiEngine("요청이 취소되었습니다.".to_string()));
+                }
+            }
+        }
+    }
 }
 
 async fn call_gemini(
@@ -1257,7 +1310,11 @@ pub async fn stream_ai_command(
                     ));
                 }
                 let single_image = imgs.first().map(|s| s.as_str());
-                let result = call_gemini(&client, &model, &full_prompt, single_image).await?;
+                let result = await_with_cancel(
+                    call_gemini(&client, &model, &full_prompt, single_image),
+                    &cancel_flag,
+                )
+                .await?;
                 emit_route(
                     &app,
                     "gemini",
@@ -1280,7 +1337,11 @@ pub async fn stream_ai_command(
 
     if model.starts_with("gemini") && !force_local_engine {
         let single_image = imgs.first().map(|s| s.as_str());
-        let result = call_gemini(&client, &model, &full_prompt, single_image).await?;
+        let result = await_with_cancel(
+            call_gemini(&client, &model, &full_prompt, single_image),
+            &cancel_flag,
+        )
+        .await?;
         emit_route(
             &app,
             "gemini",
