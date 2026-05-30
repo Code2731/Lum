@@ -203,6 +203,21 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(writeCalls.length).toBe(0);
   });
 
+  it("CLI처럼 보이는 자연어 수정 요청 → agent", async () => {
+    const onAgentTrigger = vi.fn();
+    const onAskAI = vi.fn();
+    const { container } = render(
+      <TerminalPane id="tab-1" onAgentTrigger={onAgentTrigger} onAskAI={onAskAI} />,
+    );
+    submitInput(container, "patch the auth issue");
+    await waitFor(() => {
+      expect(onAgentTrigger).toHaveBeenCalledWith("patch the auth issue", undefined);
+    });
+    expect(onAskAI).not.toHaveBeenCalled();
+    const writeCalls = invokeMock.mock.calls.filter((c) => c[0] === "write_to_pty");
+    expect(writeCalls.length).toBe(0);
+  });
+
   it("@backend + >> 조합 → agent + backend 유지", async () => {
     const onAgentTrigger = vi.fn();
     const onAskAI = vi.fn();
