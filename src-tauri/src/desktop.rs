@@ -207,7 +207,7 @@ fn parse_combo_key(raw: &str) -> Result<enigo::Key, String> {
     let first = chars.next().ok_or_else(|| "Key is empty".to_string())?;
     if chars.next().is_some() {
         return Err(format!(
-            "Unknown key token: '{}'. allowed: 1 char or enter/space/tab/esc/backspace/delete/up/down/left/right/home/end/pageup(pgup)/pagedown(pgdn)/f1~f12",
+            "Unknown key token: '{}'. allowed: 1 char or enter/return, space, tab, esc/escape, backspace, delete/del, up/down/left/right (or arrowup/arrowdown/arrowleft/arrowright), home/end, pageup(pgup)/pagedown(pgdn), f1~f12",
             raw
         ));
     }
