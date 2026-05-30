@@ -326,6 +326,10 @@ fn should_expose_desktop_tools_in_prompt(goal: &str, desktop_tools_enabled: bool
     desktop_tools_enabled && !is_review_goal(goal)
 }
 
+fn should_expose_mcp_tools_in_prompt(mode: ReactMode, review_mode: bool) -> bool {
+    mode == ReactMode::Act && !review_mode
+}
+
 /// Phase 121: 활성 MCP 서버/도구 목록을 동적으로 시스템 프롬프트에 주입.
 /// Phase 127: 자연어 goal과 매칭된 Skill markdown도 함께 주입.
 /// mcp_tools/skills 비었으면 해당 섹션 생략 — 토큰 낭비 방지.
@@ -333,6 +337,7 @@ fn build_system_prompt(
     mcp_tools: &[McpToolEntry],
     skills: &[crate::commands::skills::Skill],
     desktop_tools_enabled: bool,
+    mcp_tools_enabled: bool,
 ) -> String {
     let mut s = String::from(BASE_PROMPT);
     if desktop_tools_enabled {
@@ -340,7 +345,7 @@ fn build_system_prompt(
     } else {
         s.push_str(DESKTOP_DISABLED_PROMPT);
     }
-    if !mcp_tools.is_empty() {
+    if mcp_tools_enabled && !mcp_tools.is_empty() {
         s.push_str("\n\nMCP 도구 (외부 서버):\n");
         s.push_str("- mcp({\"server\": \"이름\", \"tool\": \"도구\", \"arguments\": {...}}) — MCP 서버의 도구 호출\n");
         s.push_str("\n사용 가능한 MCP 도구:\n");
@@ -3066,6 +3071,7 @@ pub async fn react_agent_run(
             &mcp_tools,
             &skills,
             should_expose_desktop_tools_in_prompt(&goal, desktop_tools_enabled),
+            should_expose_mcp_tools_in_prompt(react_mode, review_mode),
         )
     );
     if review_mode {
@@ -3587,6 +3593,13 @@ mod tests {
     }
 
     #[test]
+    fn mode별_mcp_prompt_노출_정책() {
+        assert!(should_expose_mcp_tools_in_prompt(ReactMode::Act, false));
+        assert!(!should_expose_mcp_tools_in_prompt(ReactMode::Act, true));
+        assert!(!should_expose_mcp_tools_in_prompt(ReactMode::Plan, false));
+    }
+
+    #[test]
     fn parse_action_없으면_none() {
         let text = "THOUGHT: 완료\nANSWER: 결과입니다.";
         assert!(parse_action(text).is_none());
@@ -3608,7 +3621,7 @@ mod tests {
 
     #[test]
     fn build_prompt_omits_mcp_section_when_empty() {
-        let s = build_system_prompt(&[], &[], true);
+        let s = build_system_prompt(&[], &[], true, true);
         assert!(!s.contains("MCP 도구"));
         assert!(!s.contains("관련 Skill"));
         // 라벨에 의존하지 않고 베이스 도구 자체가 들어가는지로 검사 — 향후 라벨 리네임에 강함.
@@ -3622,7 +3635,7 @@ mod tests {
 
     #[test]
     fn build_prompt_includes_desktop_tools() {
-        let s = build_system_prompt(&[], &[], true);
+        let s = build_system_prompt(&[], &[], true, true);
         assert!(s.contains("데스크톱 제어 도구"));
         assert!(s.contains("- screenshot({})"));
         assert!(s.contains("- mouse({\"x\": 100, \"y\": 200, \"click\": false})"));
@@ -3640,7 +3653,7 @@ mod tests {
 
     #[test]
     fn build_prompt_desktop_disabled_hides_tool_specs() {
-        let s = build_system_prompt(&[], &[], false);
+        let s = build_system_prompt(&[], &[], false, true);
         assert!(s.contains("현재 비활성화 상태"));
         assert!(s.contains("도구를 호출하지 마세요"));
         assert!(!s.contains("- screenshot({})"));
@@ -3676,7 +3689,7 @@ mod tests {
                 description: String::new(),
             },
         ];
-        let s = build_system_prompt(&tools, &[], true);
+        let s = build_system_prompt(&tools, &[], true, true);
         assert!(s.contains("MCP 도구"));
         assert!(s.contains("playwright/screenshot"));
         assert!(s.contains("브라우저 스크린샷"));
@@ -3698,6 +3711,19 @@ ACTION: mcp({"server": "playwright", "tool": "screenshot", "arguments": {"url": 
             action.args["arguments"]["url"].as_str(),
             Some("https://example.com")
         );
+    }
+
+    #[test]
+    fn build_prompt_omits_mcp_listing_when_disabled() {
+        let tools = vec![McpToolEntry {
+            server: "playwright".into(),
+            tool: "screenshot".into(),
+            description: "브라우저 스크린샷".into(),
+        }];
+        let s = build_system_prompt(&tools, &[], true, false);
+        assert!(!s.contains("MCP 도구"));
+        assert!(!s.contains("playwright/screenshot"));
+        assert!(!s.contains("\"server\""));
     }
 
     // DesktopToolMock은 글로벌 상태라 병렬 테스트에서 서로 consume race가 생길 수 있음.
@@ -4073,7 +4099,7 @@ ACTION: mcp({"server": "playwright", "tool": "screenshot", "arguments": {"url": 
         let _g = CODEBASE_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         // 시스템 프롬프트에 query_codebase 항목이 노출되는지 + LLM이 호출했을 때
         // run_tool match → run_query_codebase_tool로 라우팅되어 결과를 요약 반환하는지.
-        let prompt = build_system_prompt(&[], &[], true);
+        let prompt = build_system_prompt(&[], &[], true, true);
         assert!(
             prompt.contains("query_codebase"),
             "프롬프트에 도구 미등록: {prompt}"
@@ -5137,7 +5163,7 @@ ACTION: write_file({"path": "src/new.rs", "content": "pub fn x() {}", "overwrite
 
     #[test]
     fn build_prompt_includes_write_tools() {
-        let s = build_system_prompt(&[], &[], true);
+        let s = build_system_prompt(&[], &[], true, true);
         assert!(s.contains("write_file"));
         assert!(s.contains("apply_patch"));
         assert!(s.contains("delete_file"));
@@ -5167,7 +5193,7 @@ ACTION: write_file({"path": "src/new.rs", "content": "pub fn x() {}", "overwrite
             last_used_ms: None,
             success_count: 0,
         }];
-        let s = build_system_prompt(&[], &skills, true);
+        let s = build_system_prompt(&[], &skills, true, true);
         assert!(s.contains("관련 Skill"));
         assert!(s.contains("Git rebase 정리"));
         assert!(s.contains("git rebase --continue"));
