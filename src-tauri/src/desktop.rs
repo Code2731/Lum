@@ -268,10 +268,14 @@ mod tests {
         assert!(parse_combo_key("k").is_ok());
         assert!(parse_combo_key(" V ").is_ok());
         assert!(parse_combo_key("enter").is_ok());
+        assert!(parse_combo_key("return").is_ok());
         assert!(parse_combo_key("space").is_ok());
         assert!(parse_combo_key("tab").is_ok());
         assert!(parse_combo_key("esc").is_ok());
+        assert!(parse_combo_key("escape").is_ok());
+        assert!(parse_combo_key("del").is_ok());
         assert!(parse_combo_key("up").is_ok());
+        assert!(parse_combo_key("arrowup").is_ok());
         assert!(parse_combo_key("arrowleft").is_ok());
         assert!(parse_combo_key("pagedown").is_ok());
         assert!(parse_combo_key("pgup").is_ok());
