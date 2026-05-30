@@ -236,6 +236,14 @@ describe("routeInput — 기본: 자연어=AI, CLI 감지 시 shell", () => {
       });
     });
 
+    it("@local + patch issue → agent + backend=local", () => {
+      expect(routeInput("@local patch the auth issue")).toEqual({
+        type: "agent",
+        task: "patch the auth issue",
+        backend: "local",
+      });
+    });
+
     it("@backend + >> 조합은 강제 agent로 처리", () => {
       expect(routeInput("@local >> 테스트 실패 원인 찾아서 고쳐줘")).toEqual({
         type: "agent",
@@ -256,6 +264,14 @@ describe("routeInput — 기본: 자연어=AI, CLI 감지 시 shell", () => {
       expect(routeInput("@sglang what is a closure?")).toEqual({
         type: "ai",
         question: "what is a closure?",
+        backend: "xllm",
+      });
+    });
+
+    it("@sglang + patch issue → agent + backend=xllm", () => {
+      expect(routeInput("@sglang patch the auth issue")).toEqual({
+        type: "agent",
+        task: "patch the auth issue",
         backend: "xllm",
       });
     });
