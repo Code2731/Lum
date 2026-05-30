@@ -141,7 +141,7 @@ fn parse_mouse_button(raw: &str) -> Result<enigo::Button, String> {
 fn parse_modifier_key(raw: &str) -> Result<enigo::Key, String> {
     let normalized = raw.trim().to_lowercase();
     match normalized.as_str() {
-        "cmd" | "command" | "meta" => Ok(enigo::Key::Meta),
+        "cmd" | "command" | "meta" | "super" | "win" | "windows" => Ok(enigo::Key::Meta),
         "ctrl" | "control" => Ok(enigo::Key::Control),
         "alt" | "option" => Ok(enigo::Key::Alt),
         "shift" => Ok(enigo::Key::Shift),
@@ -215,6 +215,8 @@ mod tests {
     #[test]
     fn parse_modifier_key_허용값_성공() {
         assert!(parse_modifier_key("cmd").is_ok());
+        assert!(parse_modifier_key("super").is_ok());
+        assert!(parse_modifier_key("windows").is_ok());
         assert!(parse_modifier_key(" CONTROL ").is_ok());
         assert!(parse_modifier_key("option").is_ok());
         assert!(parse_modifier_key("shift").is_ok());
@@ -222,7 +224,7 @@ mod tests {
 
     #[test]
     fn parse_modifier_key_비허용값_거부() {
-        let err = parse_modifier_key("super").unwrap_err();
+        let err = parse_modifier_key("hyper").unwrap_err();
         assert!(err.contains("Unknown modifier"), "{err}");
     }
 

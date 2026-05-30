@@ -263,7 +263,7 @@ const DESKTOP_PROMPT: &str = r#"
 - click({"x": 100, "y": 200, "button": "left"}) — 화면 절대좌표 클릭 (button: left/right/middle, 생략 시 left)
 - type({"text": "입력할 텍스트", "enter": false}) — 키보드 텍스트 입력 (enter=true면 입력 후 Enter까지 수행)
 - scroll({"x": 100, "y": 200, "amount": -120}) — 화면 절대좌표 기준 마우스 휠 스크롤 (amount>0: 아래, <0: 위)
-- key_combo({"modifier": "cmd", "key": "k"}) — 단축키 조합 입력 (modifier: cmd/command/meta, ctrl/control, alt/option, shift; key: 1글자 또는 enter/space/tab/esc/backspace/delete/arrow/home/end/pageup/pagedown/f1~f12)"#;
+- key_combo({"modifier": "cmd", "key": "k"}) — 단축키 조합 입력 (modifier: cmd/command/meta/super/win/windows, ctrl/control, alt/option, shift; key: 1글자 또는 enter/space/tab/esc/backspace/delete/arrow/home/end/pageup/pagedown/f1~f12)"#;
 
 const PROMPT_TAIL: &str = r#"응답 형식 (반드시 준수):
 THOUGHT: <현재 상황 분석 및 다음 행동 이유>
@@ -3532,6 +3532,7 @@ mod tests {
         assert!(s.contains("- scroll({\"x\": 100, \"y\": 200"));
         assert!(s.contains("amount\": -120"));
         assert!(s.contains("- key_combo({\"modifier\": \"cmd\", \"key\": \"k\"})"));
+        assert!(s.contains("cmd/command/meta/super/win/windows"));
         assert!(s.contains("key: 1글자 또는 enter/space/tab/esc/backspace/delete"));
         assert!(s.contains("설정에서 활성화된 경우에만 동작"));
     }
@@ -3776,13 +3777,13 @@ ACTION: mcp({"server": "playwright", "tool": "screenshot", "arguments": {"url": 
     async fn desktop_tools_key_combo_허용되지_않는_modifier_거부() {
         let _g = DESKTOP_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         set_desktop_tool_mock(DesktopToolMock {
-            key_combo: Some(Err("Unknown modifier: 'super'".into())),
+            key_combo: Some(Err("Unknown modifier: 'hyper'".into())),
             ..Default::default()
         });
 
         let out = run_desktop_tool(
             "key_combo",
-            &serde_json::json!({"modifier": "super", "key": "k"}),
+            &serde_json::json!({"modifier": "hyper", "key": "k"}),
             true,
         )
         .await;
