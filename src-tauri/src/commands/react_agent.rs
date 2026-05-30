@@ -265,6 +265,11 @@ const DESKTOP_PROMPT: &str = r#"
 - scroll({"x": 100, "y": 200, "amount": -120}) — 화면 절대좌표 기준 마우스 휠 스크롤 (amount>0: 아래, <0: 위)
 - key_combo({"modifier": "cmd", "key": "k"}) — 단축키 조합 입력 (modifier: cmd/command/meta/super/win/windows, ctrl/control, alt/option, shift, cmdorctrl(commandorcontrol/controlorcommand/ctrlorcmd/cmd/ctrl); key: 1글자 또는 enter/return, space, tab, esc/escape, backspace, delete/del, up/down/left/right(또는 arrowup/arrowdown/arrowleft/arrowright), home/end, pageup(pgup)/pagedown(pgdn), f1~f12)"#;
 
+const DESKTOP_DISABLED_PROMPT: &str = r#"
+데스크톱 제어 도구:
+- 현재 비활성화 상태입니다. screenshot/mouse/click/type/key_combo/scroll 도구를 호출하지 마세요.
+- 사용자가 설정에서 활성화하면 그때만 데스크톱 제어 도구를 사용하세요."#;
+
 const PROMPT_TAIL: &str = r#"응답 형식 (반드시 준수):
 THOUGHT: <현재 상황 분석 및 다음 행동 이유>
 ACTION: 도구명({"param": "값"})
@@ -323,9 +328,14 @@ fn is_review_goal(goal: &str) -> bool {
 fn build_system_prompt(
     mcp_tools: &[McpToolEntry],
     skills: &[crate::commands::skills::Skill],
+    desktop_tools_enabled: bool,
 ) -> String {
     let mut s = String::from(BASE_PROMPT);
-    s.push_str(DESKTOP_PROMPT);
+    if desktop_tools_enabled {
+        s.push_str(DESKTOP_PROMPT);
+    } else {
+        s.push_str(DESKTOP_DISABLED_PROMPT);
+    }
     if !mcp_tools.is_empty() {
         s.push_str("\n\nMCP 도구 (외부 서버):\n");
         s.push_str("- mcp({\"server\": \"이름\", \"tool\": \"도구\", \"arguments\": {...}}) — MCP 서버의 도구 호출\n");
@@ -3004,9 +3014,14 @@ pub async fn react_agent_run(
             Some(0),
         );
     }
+    // 사용자 명시 opt-in 토글. 기본 false — 활성화 전에는 ReAct가 화면/입력 제어 불가.
+    let desktop_tools_enabled = loaded_config
+        .as_ref()
+        .and_then(|c| c.react_desktop_tools_enabled)
+        .unwrap_or(false);
     let mut conversation = format!(
         "{}\n\n목표: {goal}\n\nCWD: {effective_cwd}",
-        build_system_prompt(&mcp_tools, &skills)
+        build_system_prompt(&mcp_tools, &skills, desktop_tools_enabled)
     );
     if is_review_goal(&goal) {
         conversation.push_str("\n\n");
@@ -3019,11 +3034,6 @@ pub async fn react_agent_run(
             Some(0),
         );
     }
-    // 사용자 명시 opt-in 토글. 기본 false — 활성화 전에는 ReAct가 화면/입력 제어 불가.
-    let desktop_tools_enabled = loaded_config
-        .as_ref()
-        .and_then(|c| c.react_desktop_tools_enabled)
-        .unwrap_or(false);
     let scip_tools_enabled = loaded_config
         .as_ref()
         .and_then(|c| c.react_scip_tools_enabled)
@@ -3509,7 +3519,7 @@ mod tests {
 
     #[test]
     fn build_prompt_omits_mcp_section_when_empty() {
-        let s = build_system_prompt(&[], &[]);
+        let s = build_system_prompt(&[], &[], true);
         assert!(!s.contains("MCP 도구"));
         assert!(!s.contains("관련 Skill"));
         // 라벨에 의존하지 않고 베이스 도구 자체가 들어가는지로 검사 — 향후 라벨 리네임에 강함.
@@ -3523,7 +3533,7 @@ mod tests {
 
     #[test]
     fn build_prompt_includes_desktop_tools() {
-        let s = build_system_prompt(&[], &[]);
+        let s = build_system_prompt(&[], &[], true);
         assert!(s.contains("데스크톱 제어 도구"));
         assert!(s.contains("- screenshot({})"));
         assert!(s.contains("- mouse({\"x\": 100, \"y\": 200, \"click\": false})"));
@@ -3537,6 +3547,16 @@ mod tests {
         assert!(s.contains("key: 1글자 또는 enter/return, space, tab, esc/escape, backspace, delete/del, up/down/left/right"));
         assert!(s.contains("pageup(pgup)/pagedown(pgdn)"));
         assert!(s.contains("설정에서 활성화된 경우에만 동작"));
+    }
+
+    #[test]
+    fn build_prompt_desktop_disabled_hides_tool_specs() {
+        let s = build_system_prompt(&[], &[], false);
+        assert!(s.contains("현재 비활성화 상태"));
+        assert!(s.contains("도구를 호출하지 마세요"));
+        assert!(!s.contains("- screenshot({})"));
+        assert!(!s.contains("- mouse({\"x\": 100, \"y\": 200, \"click\": false})"));
+        assert!(!s.contains("- key_combo({\"modifier\": \"cmd\", \"key\": \"k\"})"));
     }
 
     #[test]
@@ -3567,7 +3587,7 @@ mod tests {
                 description: String::new(),
             },
         ];
-        let s = build_system_prompt(&tools, &[]);
+        let s = build_system_prompt(&tools, &[], true);
         assert!(s.contains("MCP 도구"));
         assert!(s.contains("playwright/screenshot"));
         assert!(s.contains("브라우저 스크린샷"));
@@ -3964,7 +3984,7 @@ ACTION: mcp({"server": "playwright", "tool": "screenshot", "arguments": {"url": 
         let _g = CODEBASE_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         // 시스템 프롬프트에 query_codebase 항목이 노출되는지 + LLM이 호출했을 때
         // run_tool match → run_query_codebase_tool로 라우팅되어 결과를 요약 반환하는지.
-        let prompt = build_system_prompt(&[], &[]);
+        let prompt = build_system_prompt(&[], &[], true);
         assert!(
             prompt.contains("query_codebase"),
             "프롬프트에 도구 미등록: {prompt}"
@@ -5028,7 +5048,7 @@ ACTION: write_file({"path": "src/new.rs", "content": "pub fn x() {}", "overwrite
 
     #[test]
     fn build_prompt_includes_write_tools() {
-        let s = build_system_prompt(&[], &[]);
+        let s = build_system_prompt(&[], &[], true);
         assert!(s.contains("write_file"));
         assert!(s.contains("apply_patch"));
         assert!(s.contains("delete_file"));
@@ -5058,7 +5078,7 @@ ACTION: write_file({"path": "src/new.rs", "content": "pub fn x() {}", "overwrite
             last_used_ms: None,
             success_count: 0,
         }];
-        let s = build_system_prompt(&[], &skills);
+        let s = build_system_prompt(&[], &skills, true);
         assert!(s.contains("관련 Skill"));
         assert!(s.contains("Git rebase 정리"));
         assert!(s.contains("git rebase --continue"));
