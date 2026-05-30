@@ -142,14 +142,14 @@ fn parse_modifier_key(raw: &str) -> Result<enigo::Key, String> {
     let normalized = raw.trim().to_lowercase();
     match normalized.as_str() {
         "cmd" | "command" | "meta" | "super" | "win" | "windows" => Ok(enigo::Key::Meta),
-        "cmdorctrl" | "commandorcontrol" | "ctrlorcmd" | "cmd/ctrl" => {
+        "cmdorctrl" | "commandorcontrol" | "controlorcommand" | "ctrlorcmd" | "cmd/ctrl" => {
             Ok(cmd_or_ctrl_key())
         }
         "ctrl" | "control" => Ok(enigo::Key::Control),
         "alt" | "option" => Ok(enigo::Key::Alt),
         "shift" => Ok(enigo::Key::Shift),
         _ => Err(format!(
-            "Unknown modifier: '{}'. allowed: cmd/command/meta/super/win/windows, ctrl/control, alt/option, shift, cmdorctrl",
+            "Unknown modifier: '{}'. allowed: cmd/command/meta/super/win/windows, ctrl/control, alt/option, shift, cmdorctrl(commandorcontrol/controlorcommand/ctrlorcmd/cmd/ctrl)",
             raw
         )),
     }
@@ -238,10 +238,22 @@ mod tests {
         assert!(parse_modifier_key("super").is_ok());
         assert!(parse_modifier_key("windows").is_ok());
         assert!(parse_modifier_key("cmdorctrl").is_ok());
+        assert!(parse_modifier_key("commandorcontrol").is_ok());
+        assert!(parse_modifier_key("controlorcommand").is_ok());
+        assert!(parse_modifier_key("ctrlorcmd").is_ok());
         assert!(parse_modifier_key("cmd/ctrl").is_ok());
         assert!(parse_modifier_key(" CONTROL ").is_ok());
         assert!(parse_modifier_key("option").is_ok());
         assert!(parse_modifier_key("shift").is_ok());
+    }
+
+    #[test]
+    fn parse_modifier_key_cmdorctrl_플랫폼_매핑() {
+        assert_eq!(parse_modifier_key("cmdorctrl").unwrap(), cmd_or_ctrl_key());
+        assert_eq!(
+            parse_modifier_key("controlorcommand").unwrap(),
+            cmd_or_ctrl_key()
+        );
     }
 
     #[test]
