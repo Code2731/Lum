@@ -542,6 +542,7 @@ async fn run_tool(
     args: &serde_json::Value,
     cwd: &str,
     desktop_tools_enabled: bool,
+    review_mode: bool,
     scip_tools_enabled: bool,
     mode: ReactMode,
     tool_whitelist: Option<&HashSet<String>>,
@@ -549,6 +550,10 @@ async fn run_tool(
     // Phase 129: Plan 모드에서는 읽기/분석만 허용 — 쓰기 도구와 shell 실행은 차단.
     if is_plan_blocked_tool(mode, tool) {
         return format!("Plan 모드 차단: {tool} 도구는 승인 후 Act 모드에서만 실행됩니다.");
+    }
+    // 리뷰 모드에서는 read-only 분석만 허용.
+    if is_review_blocked_tool(review_mode, tool) {
+        return format!("리뷰 모드 차단: {tool} 도구는 read-only 분석에서 허용되지 않습니다.");
     }
     // Phase 129: Act 모드 + whitelist가 있으면 목록 외 도구 차단.
     if !is_whitelisted_in_act(mode, tool, tool_whitelist) {
@@ -625,6 +630,23 @@ async fn run_tool(
 fn is_plan_blocked_tool(mode: ReactMode, tool: &str) -> bool {
     mode == ReactMode::Plan
         && matches!(tool, "shell" | "write_file" | "apply_patch" | "delete_file")
+}
+
+fn is_review_blocked_tool(review_mode: bool, tool: &str) -> bool {
+    review_mode
+        && matches!(
+            tool,
+            "shell"
+                | "write_file"
+                | "apply_patch"
+                | "delete_file"
+                | "screenshot"
+                | "mouse"
+                | "click"
+                | "type"
+                | "key_combo"
+                | "scroll"
+        )
 }
 
 fn is_whitelisted_in_act(mode: ReactMode, tool: &str, whitelist: Option<&HashSet<String>>) -> bool {
@@ -3346,6 +3368,7 @@ pub async fn react_agent_run(
                 &action.args,
                 &effective_cwd,
                 desktop_tools_enabled,
+                review_mode,
                 scip_tools_enabled,
                 react_mode,
                 whitelist_set.as_ref(),
@@ -3479,6 +3502,24 @@ mod tests {
         assert!(is_plan_blocked_tool(ReactMode::Plan, "delete_file"));
         assert!(!is_plan_blocked_tool(ReactMode::Plan, "read_file"));
         assert!(!is_plan_blocked_tool(ReactMode::Act, "shell"));
+    }
+
+    #[test]
+    fn review_mode_차단_도구() {
+        assert!(is_review_blocked_tool(true, "shell"));
+        assert!(is_review_blocked_tool(true, "write_file"));
+        assert!(is_review_blocked_tool(true, "apply_patch"));
+        assert!(is_review_blocked_tool(true, "delete_file"));
+        assert!(is_review_blocked_tool(true, "screenshot"));
+        assert!(is_review_blocked_tool(true, "mouse"));
+        assert!(is_review_blocked_tool(true, "click"));
+        assert!(is_review_blocked_tool(true, "type"));
+        assert!(is_review_blocked_tool(true, "key_combo"));
+        assert!(is_review_blocked_tool(true, "scroll"));
+        assert!(!is_review_blocked_tool(true, "read_file"));
+        assert!(!is_review_blocked_tool(true, "list_dir"));
+        assert!(!is_review_blocked_tool(true, "git_diff"));
+        assert!(!is_review_blocked_tool(false, "shell"));
     }
 
     #[test]
