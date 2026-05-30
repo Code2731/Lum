@@ -456,7 +456,16 @@ fn append_candidate_urls_hint(message: &str, candidate_urls: &[String]) -> Strin
     if candidate_urls.is_empty() {
         return format!("{message}: 사용 가능한 후보 URL이 없습니다");
     }
-    format!("{message} · 후보 주소: {}", candidate_urls.join(", "))
+    let local_candidate_exists = candidate_urls.iter().any(|url| !is_remote_url(url));
+    let action_hint = if local_candidate_exists {
+        "로컬 서버 실행 상태를 확인하거나 Model Manager에서 임베디드 모델을 먼저 로드하세요"
+    } else {
+        "서버 접근 가능 여부와 방화벽/네트워크를 확인하세요"
+    };
+    format!(
+        "{message} · 후보 주소: {} · 힌트: {action_hint}",
+        candidate_urls.join(", ")
+    )
 }
 
 fn summarize_xllm_request_error(base_url: &str, action: &str, err: &reqwest::Error) -> String {
@@ -881,6 +890,15 @@ mod tests {
         assert!(msg.contains("http://127.0.0.1:8080"));
         assert!(msg.contains("http://localhost:11434"));
         assert!(msg.contains("xLLM 서버에 연결할 수 없습니다"));
+        assert!(msg.contains("임베디드 모델"));
+    }
+
+    #[test]
+    fn append_candidate_urls_hint_remote_candidates_show_network_hint() {
+        let candidates = vec!["https://api.example.com/v1".to_string()];
+        let msg = append_candidate_urls_hint("xLLM 서버 연결 실패", &candidates);
+        assert!(msg.contains("https://api.example.com/v1"));
+        assert!(msg.contains("방화벽/네트워크"));
     }
 
     #[tokio::test]
