@@ -314,6 +314,9 @@ const REVIEW_MODE_PROMPT: &str = r#"
 
 fn is_review_goal(goal: &str) -> bool {
     let lower = goal.to_lowercase();
+    if has_mutation_intent(goal, &lower) {
+        return false;
+    }
     let ko_hits = [
         "코드 리뷰",
         "프로젝트 리뷰",
@@ -330,6 +333,27 @@ fn is_review_goal(goal: &str) -> bool {
         "review this repo",
         "review the repo",
         "find bugs",
+    ];
+    ko_hits.iter().any(|needle| goal.contains(needle))
+        || en_hits.iter().any(|needle| lower.contains(needle))
+}
+
+fn has_mutation_intent(goal: &str, lower: &str) -> bool {
+    let ko_hits = [
+        "고쳐", "고치", "수정", "해결", "적용", "반영", "구현", "추가", "변경",
+    ];
+    let en_hits = [
+        " and fix",
+        " fix them",
+        " fix it",
+        " fix bug",
+        " repair",
+        " modify",
+        " update",
+        " implement",
+        " apply",
+        " change",
+        " add ",
     ];
     ko_hits.iter().any(|needle| goal.contains(needle))
         || en_hits.iter().any(|needle| lower.contains(needle))
@@ -3633,6 +3657,9 @@ mod tests {
         assert!(is_review_goal("review this project"));
         assert!(is_review_goal("code review this repo"));
         assert!(!is_review_goal("로그인 버그 고쳐줘"));
+        assert!(!is_review_goal("버그 찾아서 고쳐줘"));
+        assert!(!is_review_goal("프로젝트 리뷰 후 수정해줘"));
+        assert!(!is_review_goal("find bugs and fix them"));
         assert!(!is_review_goal("안녕"));
     }
 
