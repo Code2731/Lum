@@ -5,6 +5,16 @@ const VITE_MARKER = "/@vite/client";
 const LUM_TITLE_MARKER = "<title>LUM Terminal</title>";
 const LUM_ENTRY_MARKER = 'src="/src/main.tsx"';
 const DEV_PORT = 1420;
+const JS_DEV_PROCESS_NAMES = new Set([
+  "node",
+  "vite",
+  "npm",
+  "npm-cli",
+  "pnpm",
+  "pnpm-node",
+  "yarn",
+  "bun",
+]);
 
 function getListeners(port) {
   if (process.platform === "win32") return [];
@@ -44,8 +54,8 @@ function getListeners(port) {
 function classifyListener(port) {
   const listeners = getListeners(port);
   if (listeners.length === 0) return { type: "none", listeners: [] };
-  const allNodeLike = listeners.every(
-    ({ command }) => command === "node" || command === "vite"
+  const allNodeLike = listeners.every(({ command }) =>
+    JS_DEV_PROCESS_NAMES.has((command || "").toLowerCase())
   );
   if (allNodeLike) {
     return { type: "node-like", listeners };
@@ -80,6 +90,16 @@ function stopPids(pids) {
       process.kill(pid, "SIGTERM");
     } catch {
       // Ignore failures; if stop fails, next health check/start will surface it.
+    }
+  }
+}
+
+function forceStopPids(pids) {
+  for (const pid of pids) {
+    try {
+      process.kill(pid, "SIGKILL");
+    } catch {
+      // 이미 종료됐거나 권한 없음 — 아래 상태 점검에서 최종 판단.
     }
   }
 }
@@ -129,15 +149,25 @@ async function main() {
     console.log(
       `[tauri-before-dev] Stopping existing node/vite listeners on :${DEV_PORT} -> ${formatListeners(listeners)}`
     );
-    stopPids(listeners.map((entry) => entry.pid));
+    const pids = listeners.map((entry) => entry.pid);
+    stopPids(pids);
     const released = await waitForPortRelease(DEV_PORT, 4000);
     if (!released) {
+      console.warn(
+        `[tauri-before-dev] Port ${DEV_PORT} still busy after SIGTERM. Sending SIGKILL to ${pids.length} process(es).`
+      );
+      forceStopPids(pids);
+      const releasedAfterKill = await waitForPortRelease(DEV_PORT, 2500);
+      if (releasedAfterKill) {
+        console.log(`[tauri-before-dev] Port ${DEV_PORT} released after SIGKILL fallback.`);
+      } else {
       console.error(
-        `[tauri-before-dev] Port ${DEV_PORT} did not release after SIGTERM. listeners=${formatListeners(
+          `[tauri-before-dev] Port ${DEV_PORT} did not release after SIGTERM/SIGKILL. listeners=${formatListeners(
           classifyListener(DEV_PORT).listeners
         )}`
       );
       process.exit(1);
+      }
     }
   }
 
