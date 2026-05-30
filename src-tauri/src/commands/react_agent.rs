@@ -629,7 +629,19 @@ async fn run_tool(
 
 fn is_plan_blocked_tool(mode: ReactMode, tool: &str) -> bool {
     mode == ReactMode::Plan
-        && matches!(tool, "shell" | "write_file" | "apply_patch" | "delete_file")
+        && matches!(
+            tool,
+            "shell"
+                | "write_file"
+                | "apply_patch"
+                | "delete_file"
+                | "screenshot"
+                | "mouse"
+                | "click"
+                | "type"
+                | "key_combo"
+                | "scroll"
+        )
 }
 
 fn is_review_blocked_tool(review_mode: bool, tool: &str) -> bool {
@@ -3500,6 +3512,12 @@ mod tests {
         assert!(is_plan_blocked_tool(ReactMode::Plan, "write_file"));
         assert!(is_plan_blocked_tool(ReactMode::Plan, "apply_patch"));
         assert!(is_plan_blocked_tool(ReactMode::Plan, "delete_file"));
+        assert!(is_plan_blocked_tool(ReactMode::Plan, "screenshot"));
+        assert!(is_plan_blocked_tool(ReactMode::Plan, "mouse"));
+        assert!(is_plan_blocked_tool(ReactMode::Plan, "click"));
+        assert!(is_plan_blocked_tool(ReactMode::Plan, "type"));
+        assert!(is_plan_blocked_tool(ReactMode::Plan, "key_combo"));
+        assert!(is_plan_blocked_tool(ReactMode::Plan, "scroll"));
         assert!(!is_plan_blocked_tool(ReactMode::Plan, "read_file"));
         assert!(!is_plan_blocked_tool(ReactMode::Act, "shell"));
     }
