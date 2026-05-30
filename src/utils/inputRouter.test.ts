@@ -154,6 +154,8 @@ describe("routeInput — 기본: 자연어=AI, CLI 감지 시 shell", () => {
       "added a function in auth module",
       "fix the bug in login flow",
       "fix this bug",
+      "resolve the login issue",
+      "patch the auth issue",
       "refactor this module to use hooks",
       "write tests for the parser",
       "rename the class from Foo to Bar",

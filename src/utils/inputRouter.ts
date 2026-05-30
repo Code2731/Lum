@@ -110,6 +110,7 @@ const CODING_VERB_KO_SUFFIX_FORMS = [
 const CODING_VERBS_EN = [
   "fix", "add", "implement", "create", "refactor", "modify",
   "delete", "remove", "write", "change", "rename", "update",
+  "resolve", "patch", "repair", "apply",
 ];
 const CODING_NOUNS_KO = [
   "함수", "파일", "클래스", "메서드", "버그", "모듈", "컴포넌트",
@@ -117,10 +118,10 @@ const CODING_NOUNS_KO = [
 ];
 const CODING_NOUNS_EN = [
   "function", "file", "class", "method", "bug", "module", "component",
-  "hook", "test", "type", "code", "error",
+  "hook", "test", "type", "code", "error", "issue",
 ];
 const CODING_CONTEXT_KO = ["버그", "에러", "오류", "테스트", "함수", "파일", "리팩터링"];
-const CODING_CONTEXT_EN = ["bug", "error", "test", "function", "file", "refactor"];
+const CODING_CONTEXT_EN = ["bug", "error", "issue", "test", "function", "file", "refactor"];
 const HEALING_INTENT_KO = ["거부 케이스", "실패 패턴", "내가 거부한", "거부한 케이스"];
 const HEALING_INTENT_EN = ["rejected", "rejection", "failure pattern", "rejected case"];
 const CODE_REVIEW_INTENT_KO = [
@@ -198,6 +199,15 @@ function detectCodeReviewIntent(text: string): boolean {
   );
 }
 
+/** `patch the issue`처럼 CLI 이름으로 시작하지만 자연어 수정 요청인 케이스. */
+function detectNaturalMutationBeforeCli(text: string): boolean {
+  if (!text) return false;
+  const lower = text.toLowerCase();
+  if (!/^(patch|resolve|repair|apply)\b/.test(lower)) return false;
+  return matchAny(text, lower, CODING_NOUNS_KO, CODING_NOUN_RE_EN)
+    || matchAny(text, lower, CODING_CONTEXT_KO, CODING_CONTEXT_RE_EN);
+}
+
 /** 입력 전체가 shell 특수문자로 시작하는지 (path, pipe, redirect 등) */
 function startsWithShellPrefix(trimmed: string): boolean {
   if (!trimmed) return false;
@@ -263,8 +273,11 @@ export function routeInput(raw: string): Route {
     return { type: "ai", question: stripped };
   }
 
-  // 3. 리뷰 의도는 CLI 판정보다 우선 — "code review ..."를 VS Code 실행으로 오인하지 않음.
+  // 3. 리뷰 의도와 CLI처럼 보이는 자연어 수정 요청은 CLI 판정보다 우선.
   if (detectCodeReviewIntent(trimmed)) {
+    return { type: "agent", task: trimmed };
+  }
+  if (detectNaturalMutationBeforeCli(trimmed)) {
     return { type: "agent", task: trimmed };
   }
 
