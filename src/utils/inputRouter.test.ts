@@ -29,6 +29,9 @@ describe("routeInput — 기본: 자연어=AI, CLI 감지 시 shell", () => {
     it("node script.js → shell", () => {
       expect(routeInput("node script.js")).toEqual({ type: "shell", command: "node script.js" });
     });
+    it("patch file.diff → shell", () => {
+      expect(routeInput("patch file.diff")).toEqual({ type: "shell", command: "patch file.diff" });
+    });
   });
 
   describe("shell fast-path — 경로/특수문자 시작", () => {

@@ -124,6 +124,8 @@ const CODING_CONTEXT_KO = ["버그", "에러", "오류", "테스트", "함수", 
 const CODING_CONTEXT_EN = ["bug", "error", "issue", "test", "function", "file", "refactor"];
 const HEALING_INTENT_KO = ["거부 케이스", "실패 패턴", "내가 거부한", "거부한 케이스"];
 const HEALING_INTENT_EN = ["rejected", "rejection", "failure pattern", "rejected case"];
+const NATURAL_MUTATION_HINT_KO = ["버그", "이슈", "오류", "에러", "문제"];
+const NATURAL_MUTATION_HINT_EN = ["bug", "issue", "error", "problem"];
 const CODE_REVIEW_INTENT_KO = [
   "코드 리뷰",
   "프로젝트 리뷰",
@@ -149,6 +151,9 @@ const CODING_NOUN_RE_EN = CODING_NOUNS_EN.map((n) => new RegExp(`\\b${n}s?\\b`))
 const CODING_CONTEXT_RE_EN = CODING_CONTEXT_EN.map((w) => new RegExp(`\\b${w}s?\\b`));
 const HEALING_INTENT_RE_EN = HEALING_INTENT_EN.map(
   (w) => new RegExp(`\\b${w.replace(/\s+/g, "\\s+")}\\b`),
+);
+const NATURAL_MUTATION_HINT_RE_EN = NATURAL_MUTATION_HINT_EN.map(
+  (w) => new RegExp(`\\b${w}s?\\b`),
 );
 const CODE_REVIEW_INTENT_RE_EN = CODE_REVIEW_INTENT_EN.map(
   (w) => new RegExp(`\\b${w.replace(/\s+/g, "\\s+")}\\b`),
@@ -204,8 +209,7 @@ function detectNaturalMutationBeforeCli(text: string): boolean {
   if (!text) return false;
   const lower = text.toLowerCase();
   if (!/^(patch|resolve|repair|apply)\b/.test(lower)) return false;
-  return matchAny(text, lower, CODING_NOUNS_KO, CODING_NOUN_RE_EN)
-    || matchAny(text, lower, CODING_CONTEXT_KO, CODING_CONTEXT_RE_EN);
+  return matchAny(text, lower, NATURAL_MUTATION_HINT_KO, NATURAL_MUTATION_HINT_RE_EN);
 }
 
 /** 입력 전체가 shell 특수문자로 시작하는지 (path, pipe, redirect 등) */
