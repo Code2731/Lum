@@ -322,6 +322,10 @@ fn is_review_goal(goal: &str) -> bool {
         || en_hits.iter().any(|needle| lower.contains(needle))
 }
 
+fn should_expose_desktop_tools_in_prompt(goal: &str, desktop_tools_enabled: bool) -> bool {
+    desktop_tools_enabled && !is_review_goal(goal)
+}
+
 /// Phase 121: 활성 MCP 서버/도구 목록을 동적으로 시스템 프롬프트에 주입.
 /// Phase 127: 자연어 goal과 매칭된 Skill markdown도 함께 주입.
 /// mcp_tools/skills 비었으면 해당 섹션 생략 — 토큰 낭비 방지.
@@ -3019,11 +3023,16 @@ pub async fn react_agent_run(
         .as_ref()
         .and_then(|c| c.react_desktop_tools_enabled)
         .unwrap_or(false);
+    let review_mode = is_review_goal(&goal);
     let mut conversation = format!(
         "{}\n\n목표: {goal}\n\nCWD: {effective_cwd}",
-        build_system_prompt(&mcp_tools, &skills, desktop_tools_enabled)
+        build_system_prompt(
+            &mcp_tools,
+            &skills,
+            should_expose_desktop_tools_in_prompt(&goal, desktop_tools_enabled),
+        )
     );
-    if is_review_goal(&goal) {
+    if review_mode {
         conversation.push_str("\n\n");
         conversation.push_str(REVIEW_MODE_PROMPT);
         emit_event(
@@ -3495,6 +3504,23 @@ mod tests {
         assert!(is_review_goal("code review this repo"));
         assert!(!is_review_goal("로그인 버그 고쳐줘"));
         assert!(!is_review_goal("안녕"));
+    }
+
+    #[test]
+    fn review_goal일때_desktop_prompt_비노출() {
+        assert!(!should_expose_desktop_tools_in_prompt(
+            "프로젝트 리뷰 해줘",
+            true
+        ));
+        assert!(!should_expose_desktop_tools_in_prompt(
+            "review this repo",
+            true
+        ));
+        assert!(!should_expose_desktop_tools_in_prompt("안녕", false));
+        assert!(should_expose_desktop_tools_in_prompt(
+            "로그인 버그 고쳐줘",
+            true
+        ));
     }
 
     #[test]
