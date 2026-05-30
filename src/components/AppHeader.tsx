@@ -112,6 +112,8 @@ type PopupPosition = {
   width?: number;
 };
 
+const POPUP_OFFSCREEN_POSITION: PopupPosition = { x: -9999, y: -9999 };
+
 const clampValue = (value: number, min: number, max: number): number => {
   return Math.max(min, Math.min(value, max));
 };
@@ -428,8 +430,10 @@ const AppHeader: React.FC<Props> = ({
   const [notifCenterPlacement, setNotifCenterPlacement] = React.useState<PopupPlacement>("down");
   const [advancedOverflowMaxHeight, setAdvancedOverflowMaxHeight] = React.useState(440);
   const [notifCenterMaxHeight, setNotifCenterMaxHeight] = React.useState(440);
-  const [advancedOverflowPosition, setAdvancedOverflowPosition] = React.useState<PopupPosition>({ x: 0, y: 0 });
-  const [notifCenterPosition, setNotifCenterPosition] = React.useState<PopupPosition>({ x: 0, y: 0 });
+  const [advancedOverflowPosition, setAdvancedOverflowPosition] = React.useState<PopupPosition>(POPUP_OFFSCREEN_POSITION);
+  const [notifCenterPosition, setNotifCenterPosition] = React.useState<PopupPosition>(POPUP_OFFSCREEN_POSITION);
+  const [advancedOverflowReady, setAdvancedOverflowReady] = React.useState(false);
+  const [notifCenterReady, setNotifCenterReady] = React.useState(false);
   const ADVANCED_OVERFLOW_PANEL_ID = "advanced-overflow-panel";
   const NOTIF_CENTER_PANEL_ID = "notification-center-panel";
   const POPUP_GUTTER = 8;
@@ -544,6 +548,9 @@ const AppHeader: React.FC<Props> = ({
     left: `${advancedOverflowPosition.x}px`,
     top: `${advancedOverflowPosition.y}px`,
     width: typeof advancedOverflowPosition.width === "number" ? `${advancedOverflowPosition.width}px` : undefined,
+    visibility: advancedOverflowReady ? "visible" : "hidden",
+    backdropFilter: "none",
+    WebkitBackdropFilter: "none",
   };
 
   const advancedOverflowPanelOrigin = advancedOverflowPlacement === "up" ? "bottom right" : "top right";
@@ -553,6 +560,9 @@ const AppHeader: React.FC<Props> = ({
     left: `${notifCenterPosition.x}px`,
     top: `${notifCenterPosition.y}px`,
     width: typeof notifCenterPosition.width === "number" ? `${notifCenterPosition.width}px` : undefined,
+    visibility: notifCenterReady ? "visible" : "hidden",
+    backdropFilter: "none",
+    WebkitBackdropFilter: "none",
   };
   const notifCenterPanelOrigin = notifCenterPlacement === "up" ? "bottom right" : "top right";
   const notifCenterPanelOffsetY = notifCenterPlacement === "up" ? 4 : -4;
@@ -624,6 +634,7 @@ const AppHeader: React.FC<Props> = ({
 
   const closeAdvancedOverflow = React.useCallback(() => {
     setShowAdvancedOverflow(false);
+    setAdvancedOverflowReady(false);
     requestAnimationFrame(() => {
       advancedOverflowButtonRef.current?.focus();
     });
@@ -631,6 +642,7 @@ const AppHeader: React.FC<Props> = ({
 
   const closeNotifCenter = React.useCallback(() => {
     setShowNotifCenter(false);
+    setNotifCenterReady(false);
     requestAnimationFrame(() => {
       notifCenterButtonRef.current?.focus();
     });
@@ -638,15 +650,26 @@ const AppHeader: React.FC<Props> = ({
 
   const toggleAdvancedOverflow = React.useCallback(() => {
     setShowNotifCenter(false);
+    setNotifCenterReady(false);
     setShowAdvancedOverflow((prev) => {
-      return !prev;
+      const next = !prev;
+      if (next) {
+        setAdvancedOverflowReady(false);
+        setAdvancedOverflowPosition(POPUP_OFFSCREEN_POSITION);
+      }
+      return next;
     });
   }, [setShowAdvancedOverflow, setShowNotifCenter]);
 
   const toggleNotifCenter = React.useCallback(() => {
     setShowAdvancedOverflow(false);
+    setAdvancedOverflowReady(false);
     setShowNotifCenter((prev) => {
       const next = !prev;
+      if (next) {
+        setNotifCenterReady(false);
+        setNotifCenterPosition(POPUP_OFFSCREEN_POSITION);
+      }
       if (next) notifCenter.markAllRead();
       return next;
     });
@@ -692,7 +715,9 @@ const AppHeader: React.FC<Props> = ({
       setMaxHeight: setAdvancedOverflowMaxHeight,
       setPosition: setAdvancedOverflowPosition,
       fallbackWidth: POPUP_FALLBACK_WIDTH.advanced,
-      onReady: () => {},
+      onReady: () => {
+        setAdvancedOverflowReady(true);
+      },
     }));
 
     const updatePlacement = () => {
@@ -703,7 +728,9 @@ const AppHeader: React.FC<Props> = ({
         setMaxHeight: setAdvancedOverflowMaxHeight,
         setPosition: setAdvancedOverflowPosition,
         fallbackWidth: POPUP_FALLBACK_WIDTH.advanced,
-        onReady: () => {},
+        onReady: () => {
+          setAdvancedOverflowReady(true);
+        },
       });
     };
 
@@ -773,7 +800,9 @@ const AppHeader: React.FC<Props> = ({
       setMaxHeight: setNotifCenterMaxHeight,
       setPosition: setNotifCenterPosition,
       fallbackWidth: POPUP_FALLBACK_WIDTH.notif,
-      onReady: () => {},
+      onReady: () => {
+        setNotifCenterReady(true);
+      },
     }));
 
     const updatePlacement = () => {
@@ -784,7 +813,9 @@ const AppHeader: React.FC<Props> = ({
         setMaxHeight: setNotifCenterMaxHeight,
         setPosition: setNotifCenterPosition,
         fallbackWidth: POPUP_FALLBACK_WIDTH.notif,
-        onReady: () => {},
+        onReady: () => {
+          setNotifCenterReady(true);
+        },
       });
     };
 
@@ -1021,7 +1052,7 @@ const AppHeader: React.FC<Props> = ({
                   opacity: 1,
                   backgroundColor: "#0f1620",
                 }}
-                className="fixed z-[1400] w-64 overflow-y-auto rounded-xl border border-white/[0.12] bg-[#0f1620] shadow-xl p-2 space-y-0.5 text-white pointer-events-auto"
+                className="fixed z-[2200] w-64 overflow-y-auto rounded-xl border border-white/[0.16] bg-[#111a24] shadow-xl p-2 space-y-0.5 text-white pointer-events-auto"
               >
                 {hasUnseenAdvanced && (
                   <div className="px-2 py-1.5 mb-1 border-b border-white/10">
@@ -1163,7 +1194,7 @@ const AppHeader: React.FC<Props> = ({
                   ...notifCenterPanelStyle,
                   opacity: 1,
                 }}
-                className="fixed w-80 h-fit z-[1400] pointer-events-auto bg-[#0f1620] border border-white/[0.12] rounded-xl shadow-xl"
+                className="fixed w-80 h-fit z-[2200] pointer-events-auto bg-[#111a24] border border-white/[0.16] rounded-xl shadow-xl"
               >
                 <NotificationCenter
                   notifications={notifCenter.notifications}

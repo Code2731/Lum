@@ -67,6 +67,7 @@ const POPUP_FALLBACK_WIDTH = 288; // w-72
 const POPUP_FALLBACK_HEIGHT_RATIO = 0.9;
 const POPUP_EDGE_GUTTER = 8;
 const POPUP_MIN_HEIGHT = 96;
+const POPUP_OFFSCREEN_POSITION: PopupPosition = { x: -9999, y: -9999 };
 
 const clampValue = (value: number, min: number, max: number): number => {
   return Math.max(min, Math.min(value, max));
@@ -150,8 +151,7 @@ const PrivacyLedgerBadge: React.FC<Props> = ({
   const triggerRef = useRef<HTMLButtonElement>(null);
   const [placement, setPlacement] = useState<PopupPlacement>("down");
   const [popupPos, setPopupPos] = useState<PopupPosition>({
-    x: -9999,
-    y: -9999,
+    ...POPUP_OFFSCREEN_POSITION,
     width: 288,
   });
   const [popupMaxHeight, setPopupMaxHeight] = useState(() => {
@@ -344,6 +344,7 @@ const PrivacyLedgerBadge: React.FC<Props> = ({
   }, [open, updatePlacement]);
 
   const openPopover = React.useCallback(() => {
+    setPopupPos((prev) => ({ ...POPUP_OFFSCREEN_POSITION, width: prev.width }));
     setOpen(true);
   }, []);
 
@@ -394,6 +395,9 @@ const PrivacyLedgerBadge: React.FC<Props> = ({
     top: `${popupPos.y}px`,
     width:
       typeof popupPos.width === "number" ? `${popupPos.width}px` : undefined,
+    visibility: popupPos.x > -9000 && popupPos.y > -9000 ? "visible" : "hidden",
+    backdropFilter: "none",
+    WebkitBackdropFilter: "none",
   };
   const popover = (
     <motion.div
@@ -416,7 +420,7 @@ const PrivacyLedgerBadge: React.FC<Props> = ({
         opacity: 1,
         backgroundColor: "#161b22",
       }}
-      className="fixed w-72 flex flex-col border border-white/10 rounded-xl shadow-2xl z-[1400] overflow-hidden"
+      className="fixed w-72 flex flex-col border border-white/12 rounded-xl shadow-2xl z-[2200] overflow-hidden"
       aria-label="Privacy Ledger 상세"
       id={popoverId}
       role="dialog"
