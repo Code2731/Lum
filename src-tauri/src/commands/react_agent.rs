@@ -344,9 +344,12 @@ fn has_mutation_intent(goal: &str, lower: &str) -> bool {
     ];
     let en_hits = [
         " and fix",
+        " then fix",
         " fix them",
         " fix it",
         " fix bug",
+        " fix issue",
+        " patch",
         " repair",
         " modify",
         " update",
@@ -3660,6 +3663,8 @@ mod tests {
         assert!(!is_review_goal("버그 찾아서 고쳐줘"));
         assert!(!is_review_goal("프로젝트 리뷰 후 수정해줘"));
         assert!(!is_review_goal("find bugs and fix them"));
+        assert!(!is_review_goal("find bugs then fix"));
+        assert!(!is_review_goal("review this repo and patch issues"));
         assert!(!is_review_goal("안녕"));
     }
 
