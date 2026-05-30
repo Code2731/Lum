@@ -167,8 +167,8 @@ fn parse_combo_key(raw: &str) -> Result<enigo::Key, String> {
         "right" | "arrowright" => Some(enigo::Key::RightArrow),
         "home" => Some(enigo::Key::Home),
         "end" => Some(enigo::Key::End),
-        "pageup" => Some(enigo::Key::PageUp),
-        "pagedown" => Some(enigo::Key::PageDown),
+        "pageup" | "pgup" => Some(enigo::Key::PageUp),
+        "pagedown" | "pgdn" => Some(enigo::Key::PageDown),
         "f1" => Some(enigo::Key::F1),
         "f2" => Some(enigo::Key::F2),
         "f3" => Some(enigo::Key::F3),
@@ -189,7 +189,10 @@ fn parse_combo_key(raw: &str) -> Result<enigo::Key, String> {
     let mut chars = normalized.chars();
     let first = chars.next().ok_or_else(|| "Key is empty".to_string())?;
     if chars.next().is_some() {
-        return Err(format!("Unknown key token: '{}'", raw));
+        return Err(format!(
+            "Unknown key token: '{}'. allowed: 1 char or enter/space/tab/esc/backspace/delete/up/down/left/right/home/end/pageup(pgup)/pagedown(pgdn)/f1~f12",
+            raw
+        ));
     }
     Ok(enigo::Key::Unicode(first))
 }
@@ -237,7 +240,10 @@ mod tests {
         assert!(parse_combo_key("tab").is_ok());
         assert!(parse_combo_key("esc").is_ok());
         assert!(parse_combo_key("up").is_ok());
+        assert!(parse_combo_key("arrowleft").is_ok());
         assert!(parse_combo_key("pagedown").is_ok());
+        assert!(parse_combo_key("pgup").is_ok());
+        assert!(parse_combo_key("pgdn").is_ok());
         assert!(parse_combo_key("f12").is_ok());
     }
 
@@ -251,5 +257,6 @@ mod tests {
     fn parse_combo_key_다문자_토큰_거부() {
         let err = parse_combo_key("superkey").unwrap_err();
         assert!(err.contains("Unknown key token"), "{err}");
+        assert!(err.contains("allowed:"), "{err}");
     }
 }
