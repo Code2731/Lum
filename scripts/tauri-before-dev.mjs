@@ -2,6 +2,8 @@ import { execFileSync, spawn } from "node:child_process";
 
 const DEV_URL = "http://127.0.0.1:1420";
 const VITE_MARKER = "/@vite/client";
+const LUM_TITLE_MARKER = "<title>LUM Terminal</title>";
+const LUM_ENTRY_MARKER = 'src="/src/main.tsx"';
 const DEV_PORT = 1420;
 
 function getListeners(port) {
@@ -51,16 +53,22 @@ function classifyListener(port) {
   return { type: "other", listeners };
 }
 
-async function isHealthyViteServer(baseUrl) {
+function isLumViteHtml(html) {
+  if (!html) return false;
+  const hasVite = html.includes(VITE_MARKER);
+  const hasLumMarker = html.includes(LUM_TITLE_MARKER) && html.includes(LUM_ENTRY_MARKER);
+  return hasVite && hasLumMarker;
+}
+
+async function fetchDevHtml(baseUrl) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 1200);
   try {
     const res = await fetch(baseUrl, { signal: controller.signal });
-    if (!res.ok) return false;
-    const html = await res.text();
-    return html.includes(VITE_MARKER);
+    if (!res.ok) return null;
+    return await res.text();
   } catch {
-    return false;
+    return null;
   } finally {
     clearTimeout(timeout);
   }
@@ -83,7 +91,8 @@ async function wait(ms) {
 async function waitForHealthy(baseUrl, maxMs = 3000) {
   const start = Date.now();
   while (Date.now() - start < maxMs) {
-    if (await isHealthyViteServer(baseUrl)) {
+    const html = await fetchDevHtml(baseUrl);
+    if (isLumViteHtml(html)) {
       return true;
     }
     await wait(200);
@@ -91,21 +100,52 @@ async function waitForHealthy(baseUrl, maxMs = 3000) {
   return false;
 }
 
+function formatListeners(listeners) {
+  if (!listeners.length) return "none";
+  return listeners
+    .map((entry) => `${entry.command || "unknown"}(pid:${entry.pid})`)
+    .join(", ");
+}
+
+async function waitForPortRelease(port, maxMs = 4000) {
+  const start = Date.now();
+  while (Date.now() - start < maxMs) {
+    const { type } = classifyListener(port);
+    if (type === "none") return true;
+    await wait(200);
+  }
+  return false;
+}
+
 async function main() {
-  if (await isHealthyViteServer(DEV_URL)) {
+  const existingHtml = await fetchDevHtml(DEV_URL);
+  if (isLumViteHtml(existingHtml)) {
     console.log(`[tauri-before-dev] Reusing existing Vite server at ${DEV_URL}`);
     process.exit(0);
   }
 
   const { type: listenerType, listeners } = classifyListener(DEV_PORT);
   if (listenerType === "node-like") {
+    console.log(
+      `[tauri-before-dev] Stopping existing node/vite listeners on :${DEV_PORT} -> ${formatListeners(listeners)}`
+    );
     stopPids(listeners.map((entry) => entry.pid));
-    await wait(500);
+    const released = await waitForPortRelease(DEV_PORT, 4000);
+    if (!released) {
+      console.error(
+        `[tauri-before-dev] Port ${DEV_PORT} did not release after SIGTERM. listeners=${formatListeners(
+          classifyListener(DEV_PORT).listeners
+        )}`
+      );
+      process.exit(1);
+    }
   }
 
   if (listenerType === "other") {
     console.error(
-      `[tauri-before-dev] Port 1420 is in use by a non-Vite process. Stop that process and retry.`
+      `[tauri-before-dev] Port ${DEV_PORT} is in use by a non-node process. listeners=${formatListeners(
+        listeners
+      )}`
     );
     process.exit(1);
   }
