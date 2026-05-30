@@ -296,7 +296,7 @@ const REVIEW_MODE_PROMPT: &str = r#"
 리뷰 모드:
 - 목표가 코드/프로젝트 리뷰이면 파일을 수정하지 말고 read-only 분석만 수행한다.
 - 우선 list_dir/get_repo_map/git_diff/read_file/query_graph를 사용해 구조, 변경점, 위험 지점을 확인한다.
-- shell/write_file/apply_patch/delete_file/데스크톱 제어 도구는 사용하지 않는다.
+- shell/write_file/apply_patch/delete_file/mcp/데스크톱 제어 도구는 사용하지 않는다.
 - 최종 답변은 심각도 순으로 버그·회귀 위험·누락 테스트를 먼저 제시하고, 파일/영역 근거를 붙인다."#;
 
 fn is_review_goal(goal: &str) -> bool {
@@ -635,6 +635,7 @@ fn is_plan_blocked_tool(mode: ReactMode, tool: &str) -> bool {
                 | "write_file"
                 | "apply_patch"
                 | "delete_file"
+                | "mcp"
                 | "screenshot"
                 | "mouse"
                 | "click"
@@ -652,6 +653,7 @@ fn is_review_blocked_tool(review_mode: bool, tool: &str) -> bool {
                 | "write_file"
                 | "apply_patch"
                 | "delete_file"
+                | "mcp"
                 | "screenshot"
                 | "mouse"
                 | "click"
@@ -3512,6 +3514,7 @@ mod tests {
         assert!(is_plan_blocked_tool(ReactMode::Plan, "write_file"));
         assert!(is_plan_blocked_tool(ReactMode::Plan, "apply_patch"));
         assert!(is_plan_blocked_tool(ReactMode::Plan, "delete_file"));
+        assert!(is_plan_blocked_tool(ReactMode::Plan, "mcp"));
         assert!(is_plan_blocked_tool(ReactMode::Plan, "screenshot"));
         assert!(is_plan_blocked_tool(ReactMode::Plan, "mouse"));
         assert!(is_plan_blocked_tool(ReactMode::Plan, "click"));
@@ -3528,6 +3531,7 @@ mod tests {
         assert!(is_review_blocked_tool(true, "write_file"));
         assert!(is_review_blocked_tool(true, "apply_patch"));
         assert!(is_review_blocked_tool(true, "delete_file"));
+        assert!(is_review_blocked_tool(true, "mcp"));
         assert!(is_review_blocked_tool(true, "screenshot"));
         assert!(is_review_blocked_tool(true, "mouse"));
         assert!(is_review_blocked_tool(true, "click"));
