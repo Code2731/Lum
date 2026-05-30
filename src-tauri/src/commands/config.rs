@@ -130,7 +130,8 @@ pub struct AppConfig {
     /// true면 최종 직전/상한 도달 시 자기검토 1회 수행. 기본 true.
     pub react_reflexion_enabled: Option<bool>,
     // ── Phase 129: ReAct 도구 화이트리스트 ───────────────────────────────────
-    /// Act 모드에서 자동 승인할 도구 목록. None이면 수동 승인 흐름(런타임 전달 whitelist 우선).
+    /// Act 모드에서 호출자가 config whitelist 적용을 명시했을 때만 사용할 도구 목록.
+    /// 기본 실행은 stale 저장값을 무시하고 런타임 전달 whitelist를 우선한다.
     pub react_tool_whitelist: Option<Vec<String>>,
     // ── Phase 131: Recall 벡터 백엔드 프록시 ─────────────────────────────────
     /// Recall 검색 벡터 백엔드 ID. 기본 local-cosine.
