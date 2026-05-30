@@ -267,7 +267,7 @@ describe("TerminalPane — 입력 라우팅", () => {
     const { container } = render(<TerminalPane id="tab-1" />);
     const input = container.querySelector("input")!;
 
-    expect(screen.getByText("AUTO 라우팅")).toBeInTheDocument();
+    expect(screen.queryByText("AUTO 라우팅")).not.toBeInTheDocument();
     expect(screen.queryByText("BACKEND AUTO (LOCAL→OLLAMA→XLLM→GEMINI)")).not.toBeInTheDocument();
     expect(screen.queryByText("WHY EMPTY")).not.toBeInTheDocument();
 
@@ -438,7 +438,7 @@ describe("TerminalPane — 입력 라우팅", () => {
       expect(screen.queryByRole("button", { name: "터미널 표시/숨김 (shell 명령 실행 시 자동 표시)" })).not.toBeInTheDocument();
       expect(screen.queryByRole("button", { name: "비전 모드 — 이미지 첨부 활성화" })).not.toBeInTheDocument();
       expect(screen.queryByRole("button", { name: "추론 체인 표시 — <think> 블록 보이기 (전역 설정 토글)" })).not.toBeInTheDocument();
-      expect(screen.getByText("AUTO 라우팅")).toBeInTheDocument();
+      expect(screen.queryByText("AUTO 라우팅")).not.toBeInTheDocument();
       expect(screen.queryByText("WHY EMPTY")).not.toBeInTheDocument();
       expect(screen.queryByText("BACKEND AUTO (LOCAL→OLLAMA→XLLM→GEMINI)")).not.toBeInTheDocument();
       expect(screen.queryByText("터미널 OFF")).not.toBeInTheDocument();
@@ -845,7 +845,7 @@ describe("TerminalPane — 입력 라우팅", () => {
     clearInputWithShortcut(input);
     expect(input).toHaveValue("");
     expectClearActionDisabled();
-    expect(screen.getByText("AUTO 라우팅")).toBeInTheDocument();
+    expect(screen.queryByText("AUTO 라우팅")).not.toBeInTheDocument();
     expectUndoActionEnabled();
 
     fireEvent.keyDown(input, { key: "Z", ctrlKey: true, shiftKey: true });

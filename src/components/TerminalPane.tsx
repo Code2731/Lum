@@ -1918,8 +1918,11 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     }
   }, [inputBuffer]);
 
+  const shouldShowRouteChip = inputBuffer.trim() !== "" && !isBackendOnlyInput;
   const inputChips: Array<{ id: string; label: string; tone: "neutral" | "accent" | "success" | "warn" }> = [
-    { id: "route", label: routeMeta.label, tone: routeMeta.tone },
+    ...(shouldShowRouteChip
+      ? [{ id: "route", label: routeMeta.label, tone: routeMeta.tone }]
+      : []),
     ...(activeBackendPrefix
       ? [{
         id: "backend",
