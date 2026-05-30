@@ -1898,48 +1898,35 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
 
   const routeMeta = useMemo(() => {
     const route = routeInput(inputBuffer);
-    const trimmed = inputBuffer.trimStart();
-    const forcedBackend = detectBackendPrefixFromInput(inputBuffer);
     const backendTag = (backend?: AiBackend) => (backend ? ` @${backend.toUpperCase()}` : " AUTO");
-    let reason = "WHY DEFAULT";
-    if (trimmed.startsWith("!!")) reason = "WHY PREFIX !!";
-    else if (trimmed.startsWith(">>")) reason = "WHY PREFIX >>";
-    else if (/^\?\s/.test(trimmed)) reason = "WHY PREFIX ?";
-    else if (/^#\s/.test(trimmed)) reason = "WHY PREFIX #";
-    else if (trimmed.startsWith("@") && forcedBackend === null) reason = "WHY PREFIX @";
-    else if (forcedBackend) reason = `WHY BACKEND @${forcedBackend.toUpperCase()}`;
-    else if (route.type === "shell") reason = "WHY HEURISTIC CLI";
-    else if (route.type === "ai" || route.type === "agent") reason = "WHY HEURISTIC INTENT";
     switch (route.type) {
       case "shell":
-        return { label: "SHELL", tone: "success" as const, reason };
+        return { label: "SHELL", tone: "success" as const };
       case "ai":
-        return { label: `AI${backendTag(route.backend)}`, tone: "accent" as const, reason };
+        return { label: `AI${backendTag(route.backend)}`, tone: "accent" as const };
       case "agent":
-        return { label: `AGENT${backendTag(route.backend)}`, tone: "warn" as const, reason };
+        return { label: `AGENT${backendTag(route.backend)}`, tone: "warn" as const };
       case "aiCmd":
-        return { label: "AI CMD #", tone: "accent" as const, reason };
+        return { label: "AI CMD #", tone: "accent" as const };
       case "explain":
-        return { label: "EXPLAIN ?", tone: "neutral" as const, reason };
+        return { label: "EXPLAIN ?", tone: "neutral" as const };
       case "heavy":
-        return { label: "HEAVY !!", tone: "warn" as const, reason };
+        return { label: "HEAVY !!", tone: "warn" as const };
       case "empty":
       default:
-        return { label: "AUTO 라우팅", tone: "accent" as const, reason: "WHY EMPTY" };
+        return { label: "AUTO 라우팅", tone: "accent" as const };
     }
   }, [inputBuffer]);
 
   const inputChips: Array<{ id: string; label: string; tone: "neutral" | "accent" | "success" | "warn" }> = [
     { id: "route", label: routeMeta.label, tone: routeMeta.tone },
-    { id: "why", label: routeMeta.reason, tone: "neutral" },
-    {
-      id: "backend",
-      label: activeBackendPrefix
-        ? `BACKEND FORCED @${activeBackendPrefix.toUpperCase()}`
-        : "BACKEND AUTO (LOCAL→OLLAMA→XLLM→GEMINI)",
-      tone: activeBackendPrefix ? "warn" : "neutral",
-    },
-    { id: "term", label: terminalVisible ? "터미널 ON" : "터미널 OFF", tone: terminalVisible ? "success" : "warn" },
+    ...(activeBackendPrefix
+      ? [{
+        id: "backend",
+        label: `BACKEND FORCED @${activeBackendPrefix.toUpperCase()}`,
+        tone: "warn" as const,
+      }]
+      : []),
   ];
   const visibleInputChips = inputChips;
 

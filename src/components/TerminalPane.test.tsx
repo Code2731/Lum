@@ -268,37 +268,37 @@ describe("TerminalPane — 입력 라우팅", () => {
     const input = container.querySelector("input")!;
 
     expect(screen.getByText("AUTO 라우팅")).toBeInTheDocument();
-    expect(screen.getByText("BACKEND AUTO (LOCAL→OLLAMA→XLLM→GEMINI)")).toBeInTheDocument();
-    expect(screen.getByText("WHY EMPTY")).toBeInTheDocument();
+    expect(screen.queryByText("BACKEND AUTO (LOCAL→OLLAMA→XLLM→GEMINI)")).not.toBeInTheDocument();
+    expect(screen.queryByText("WHY EMPTY")).not.toBeInTheDocument();
 
     fireEvent.change(input, { target: { value: "ls -la" } });
     fireEvent.blur(input);
     expect(screen.getByText("SHELL")).toBeInTheDocument();
-    expect(screen.getByText("BACKEND AUTO (LOCAL→OLLAMA→XLLM→GEMINI)")).toBeInTheDocument();
-    expect(screen.getByText("WHY HEURISTIC CLI")).toBeInTheDocument();
+    expect(screen.queryByText("BACKEND AUTO (LOCAL→OLLAMA→XLLM→GEMINI)")).not.toBeInTheDocument();
+    expect(screen.queryByText("WHY HEURISTIC CLI")).not.toBeInTheDocument();
 
     fireEvent.change(input, { target: { value: "@xllm closure가 뭐야?" } });
     expect(screen.getByText("AI @XLLM")).toBeInTheDocument();
     expect(screen.getByText("BACKEND FORCED @XLLM")).toBeInTheDocument();
-    expect(screen.getByText("WHY BACKEND @XLLM")).toBeInTheDocument();
+    expect(screen.queryByText("WHY BACKEND @XLLM")).not.toBeInTheDocument();
 
     fireEvent.change(input, { target: { value: "@sglang closure가 뭐야?" } });
     expect(screen.getByText("AI @XLLM")).toBeInTheDocument();
     expect(screen.getByText("BACKEND FORCED @XLLM")).toBeInTheDocument();
-    expect(screen.getByText("WHY BACKEND @XLLM")).toBeInTheDocument();
+    expect(screen.queryByText("WHY BACKEND @XLLM")).not.toBeInTheDocument();
 
     fireEvent.change(input, { target: { value: "@local src/utils.ts 함수 수정해줘" } });
     expect(screen.getByText("AGENT @LOCAL")).toBeInTheDocument();
     expect(screen.getByText("BACKEND FORCED @LOCAL")).toBeInTheDocument();
-    expect(screen.getByText("WHY BACKEND @LOCAL")).toBeInTheDocument();
+    expect(screen.queryByText("WHY BACKEND @LOCAL")).not.toBeInTheDocument();
 
     fireEvent.change(input, { target: { value: "#로그 요약해줘" } });
     expect(screen.getByText("AI AUTO")).toBeInTheDocument();
-    expect(screen.getByText("WHY HEURISTIC INTENT")).toBeInTheDocument();
+    expect(screen.queryByText("WHY HEURISTIC INTENT")).not.toBeInTheDocument();
 
     fireEvent.change(input, { target: { value: "# 로그 요약해줘" } });
     expect(screen.getByText("AI CMD #")).toBeInTheDocument();
-    expect(screen.getByText("WHY PREFIX #")).toBeInTheDocument();
+    expect(screen.queryByText("WHY PREFIX #")).not.toBeInTheDocument();
   });
 
   it("선행 공백 + # 탭 입력도 AI 명령 제안 호출 시 prefix를 제외한 prompt를 전달한다", async () => {
@@ -439,9 +439,9 @@ describe("TerminalPane — 입력 라우팅", () => {
       expect(screen.queryByRole("button", { name: "비전 모드 — 이미지 첨부 활성화" })).not.toBeInTheDocument();
       expect(screen.queryByRole("button", { name: "추론 체인 표시 — <think> 블록 보이기 (전역 설정 토글)" })).not.toBeInTheDocument();
       expect(screen.getByText("AUTO 라우팅")).toBeInTheDocument();
-      expect(screen.getByText("WHY EMPTY")).toBeInTheDocument();
-      expect(screen.getByText("BACKEND AUTO (LOCAL→OLLAMA→XLLM→GEMINI)")).toBeInTheDocument();
-      expect(screen.getByText("터미널 OFF")).toBeInTheDocument();
+      expect(screen.queryByText("WHY EMPTY")).not.toBeInTheDocument();
+      expect(screen.queryByText("BACKEND AUTO (LOCAL→OLLAMA→XLLM→GEMINI)")).not.toBeInTheDocument();
+      expect(screen.queryByText("터미널 OFF")).not.toBeInTheDocument();
       expect(screen.queryByText(/MODEL /)).not.toBeInTheDocument();
       expect(screen.queryByText(/CWD /)).not.toBeInTheDocument();
       expect(screen.getByRole("button", { name: "quick-input-action-palette" })).toHaveTextContent("K");
