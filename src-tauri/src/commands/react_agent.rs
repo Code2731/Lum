@@ -322,8 +322,12 @@ fn is_review_goal(goal: &str) -> bool {
         || en_hits.iter().any(|needle| lower.contains(needle))
 }
 
-fn should_expose_desktop_tools_in_prompt(goal: &str, desktop_tools_enabled: bool) -> bool {
-    desktop_tools_enabled && !is_review_goal(goal)
+fn should_expose_desktop_tools_in_prompt(
+    mode: ReactMode,
+    review_mode: bool,
+    desktop_tools_enabled: bool,
+) -> bool {
+    mode == ReactMode::Act && !review_mode && desktop_tools_enabled
 }
 
 fn should_expose_mcp_tools_in_prompt(mode: ReactMode, review_mode: bool) -> bool {
@@ -3070,7 +3074,7 @@ pub async fn react_agent_run(
         build_system_prompt(
             &mcp_tools,
             &skills,
-            should_expose_desktop_tools_in_prompt(&goal, desktop_tools_enabled),
+            should_expose_desktop_tools_in_prompt(react_mode, review_mode, desktop_tools_enabled),
             should_expose_mcp_tools_in_prompt(react_mode, review_mode),
         )
     );
@@ -3576,19 +3580,26 @@ mod tests {
     }
 
     #[test]
-    fn review_goal일때_desktop_prompt_비노출() {
-        assert!(!should_expose_desktop_tools_in_prompt(
-            "프로젝트 리뷰 해줘",
-            true
-        ));
-        assert!(!should_expose_desktop_tools_in_prompt(
-            "review this repo",
-            true
-        ));
-        assert!(!should_expose_desktop_tools_in_prompt("안녕", false));
+    fn mode별_desktop_prompt_노출_정책() {
         assert!(should_expose_desktop_tools_in_prompt(
-            "로그인 버그 고쳐줘",
+            ReactMode::Act,
+            false,
             true
+        ));
+        assert!(!should_expose_desktop_tools_in_prompt(
+            ReactMode::Act,
+            true,
+            true
+        ));
+        assert!(!should_expose_desktop_tools_in_prompt(
+            ReactMode::Plan,
+            false,
+            true
+        ));
+        assert!(!should_expose_desktop_tools_in_prompt(
+            ReactMode::Act,
+            false,
+            false
         ));
     }
 
