@@ -233,13 +233,11 @@ fn emit_event(
 
 const BASE_PROMPT: &str = r#"당신은 터미널 코딩 에이전트입니다. 주어진 목표를 달성하기 위해 도구를 사용해 코드를 읽고, 분석하고, 수정합니다.
 
-읽기/실행 도구:
-- shell({"cmd": "명령어"}) — Windows=cmd /C, 그 외=sh -c (stdout+stderr 반환)
+읽기/분석 도구:
 - read_file({"path": "파일경로"}) — 파일 내용 읽기
 - list_dir({"path": "경로"}) — 디렉토리 목록
 - get_repo_map({"cwd": "경로"}) — 코드베이스 구조 요약
 - git_diff({"cwd": "경로"}) — git diff 조회
-- run_tests({"cwd": "경로"}) — 테스트 자동 감지 후 실행
 - query_healing({"query": "질문", "limit": 5, "since_days": 30}) — 자동치유(healing) 기록만 시맨틱 검색
 - analyze_failure_reasons({"since_days": 30, "limit": 5}) — reject 거부 사유 빈도 Top-N 요약
 - query_codebase({"query": "질문", "limit": 5}) — 인덱싱된 코드베이스 시맨틱 검색 (top-K 청크). grep과 달리 의미 매칭 — "auth 관련 함수 찾아" 같은 자연어 질의에 사용. 인덱스 비어있으면 안내 메시지가 반환되며, 그 경우 사용자에게 RAG 색인을 먼저 권장.
@@ -249,12 +247,26 @@ const BASE_PROMPT: &str = r#"당신은 터미널 코딩 에이전트입니다. �
 - trace_dependents({"symbol": "함수명", "depth": 3}) — 변경 영향도 BFS (기본 depth=3, 최대 5)
 - precise_callers({"symbol": "함수명"}) — scip가 있을 때 동명이인 해소 + 정밀 caller 목록(미지원시 tree-sitter fallback)
 - scip_status() — scip 백엔드 상태, index.scip 존재 여부, opt-in 토글 상태를 조회.
-- precise_definition({"symbol": "식별자"}) — scip가 있을 때 정확한 정의 위치(미지원시 tree-sitter fallback)
+- precise_definition({"symbol": "식별자"}) — scip가 있을 때 정확한 정의 위치(미지원시 tree-sitter fallback)"#;
 
+const EXECUTION_PROMPT: &str = r#"
+실행 도구 (Act 모드에서만 사용):
+- shell({"cmd": "명령어"}) — Windows=cmd /C, 그 외=sh -c (stdout+stderr 반환)
+- run_tests({"cwd": "경로"}) — 테스트 자동 감지 후 실행"#;
+
+const EXECUTION_DISABLED_PROMPT: &str = r#"
+실행 도구:
+- 현재 모드에서는 shell/run_tests 도구를 호출하지 마세요."#;
+
+const WRITE_PROMPT: &str = r#"
 쓰기 도구 (CWD 내부 + 안전 경로만 허용 — .git/node_modules/target/dist/.lum_* 거부):
 - write_file({"path": "...", "content": "...", "overwrite": false}) — 신규 파일 생성. 기존 파일은 overwrite=true 명시 필요.
 - apply_patch({"path": "...", "search": "...", "replace": "..."}) — 단일 SEARCH/REPLACE. search는 파일 내 정확히 1회 매칭되어야 함 (앞뒤 컨텍스트 충분히 포함).
 - delete_file({"path": "..."}) — 파일 삭제."#;
+
+const WRITE_DISABLED_PROMPT: &str = r#"
+쓰기 도구:
+- 현재 모드에서는 write_file/apply_patch/delete_file 도구를 호출하지 마세요."#;
 
 const DESKTOP_PROMPT: &str = r#"
 데스크톱 제어 도구 (설정에서 활성화된 경우에만 동작):
@@ -284,8 +296,9 @@ ANSWER: <사용자에게 전달할 최종 답변>
 - 이전 OBSERVATION으로 충분한 정보를 얻었으면 즉시 ANSWER 출력
 - 동일 도구를 같은 인수로 2회 이상 호출 금지
 - 불필요한 도구 호출 최소화
-- 한국어로 응답
+- 한국어로 응답"#;
 
+const CODING_WORKFLOW_PROMPT: &str = r#"
 코딩 워크플로우:
 - 코드 수정 전 read_file 또는 get_repo_map으로 현재 상태 확인
 - apply_patch가 "0개 매칭" 또는 "N개 매칭" 오류면 search 문자열에 앞뒤 라인을 더 포함해 다시 시도
@@ -330,6 +343,14 @@ fn should_expose_desktop_tools_in_prompt(
     mode == ReactMode::Act && !review_mode && desktop_tools_enabled
 }
 
+fn should_expose_execution_tools_in_prompt(mode: ReactMode, review_mode: bool) -> bool {
+    mode == ReactMode::Act && !review_mode
+}
+
+fn should_expose_write_tools_in_prompt(mode: ReactMode, review_mode: bool) -> bool {
+    mode == ReactMode::Act && !review_mode
+}
+
 fn should_expose_mcp_tools_in_prompt(mode: ReactMode, review_mode: bool) -> bool {
     mode == ReactMode::Act && !review_mode
 }
@@ -340,10 +361,22 @@ fn should_expose_mcp_tools_in_prompt(mode: ReactMode, review_mode: bool) -> bool
 fn build_system_prompt(
     mcp_tools: &[McpToolEntry],
     skills: &[crate::commands::skills::Skill],
+    execution_tools_enabled: bool,
+    write_tools_enabled: bool,
     desktop_tools_enabled: bool,
     mcp_tools_enabled: bool,
 ) -> String {
     let mut s = String::from(BASE_PROMPT);
+    if execution_tools_enabled {
+        s.push_str(EXECUTION_PROMPT);
+    } else {
+        s.push_str(EXECUTION_DISABLED_PROMPT);
+    }
+    if write_tools_enabled {
+        s.push_str(WRITE_PROMPT);
+    } else {
+        s.push_str(WRITE_DISABLED_PROMPT);
+    }
     if desktop_tools_enabled {
         s.push_str(DESKTOP_PROMPT);
     } else {
@@ -375,6 +408,9 @@ fn build_system_prompt(
     }
     s.push_str("\n\n");
     s.push_str(PROMPT_TAIL);
+    if execution_tools_enabled && write_tools_enabled {
+        s.push_str(CODING_WORKFLOW_PROMPT);
+    }
     s
 }
 
@@ -825,9 +861,7 @@ async fn run_desktop_tool(tool: &str, args: &serde_json::Value, enabled: bool) -
                 .trim()
                 .to_lowercase();
             if !matches!(button.as_str(), "left" | "right" | "middle") {
-                return format!(
-                    "오류: click button은 left/right/middle만 허용됩니다 ({button})"
-                );
+                return format!("오류: click button은 left/right/middle만 허용됩니다 ({button})");
             }
             match desktop_simulate_click(x_i32, y_i32, button.clone()) {
                 Ok(()) => format!("클릭 성공: ({x}, {y}, {button})"),
@@ -3082,6 +3116,8 @@ pub async fn react_agent_run(
         build_system_prompt(
             &mcp_tools,
             &skills,
+            should_expose_execution_tools_in_prompt(react_mode, review_mode),
+            should_expose_write_tools_in_prompt(react_mode, review_mode),
             should_expose_desktop_tools_in_prompt(react_mode, review_mode, desktop_tools_enabled),
             mcp_prompt_enabled,
         )
@@ -3621,6 +3657,25 @@ mod tests {
     }
 
     #[test]
+    fn mode별_execution_write_prompt_노출_정책() {
+        assert!(should_expose_execution_tools_in_prompt(
+            ReactMode::Act,
+            false
+        ));
+        assert!(should_expose_write_tools_in_prompt(ReactMode::Act, false));
+        assert!(!should_expose_execution_tools_in_prompt(
+            ReactMode::Act,
+            true
+        ));
+        assert!(!should_expose_write_tools_in_prompt(ReactMode::Act, true));
+        assert!(!should_expose_execution_tools_in_prompt(
+            ReactMode::Plan,
+            false
+        ));
+        assert!(!should_expose_write_tools_in_prompt(ReactMode::Plan, false));
+    }
+
+    #[test]
     fn parse_action_없으면_none() {
         let text = "THOUGHT: 완료\nANSWER: 결과입니다.";
         assert!(parse_action(text).is_none());
@@ -3642,7 +3697,7 @@ mod tests {
 
     #[test]
     fn build_prompt_omits_mcp_section_when_empty() {
-        let s = build_system_prompt(&[], &[], true, true);
+        let s = build_system_prompt(&[], &[], true, true, true, true);
         assert!(!s.contains("MCP 도구"));
         assert!(!s.contains("관련 Skill"));
         // 라벨에 의존하지 않고 베이스 도구 자체가 들어가는지로 검사 — 향후 라벨 리네임에 강함.
@@ -3656,7 +3711,7 @@ mod tests {
 
     #[test]
     fn build_prompt_includes_desktop_tools() {
-        let s = build_system_prompt(&[], &[], true, true);
+        let s = build_system_prompt(&[], &[], true, true, true, true);
         assert!(s.contains("데스크톱 제어 도구"));
         assert!(s.contains("- screenshot({})"));
         assert!(s.contains("- mouse({\"x\": 100, \"y\": 200, \"click\": false})"));
@@ -3674,12 +3729,25 @@ mod tests {
 
     #[test]
     fn build_prompt_desktop_disabled_hides_tool_specs() {
-        let s = build_system_prompt(&[], &[], false, true);
+        let s = build_system_prompt(&[], &[], true, true, false, true);
         assert!(s.contains("현재 비활성화 상태"));
         assert!(s.contains("도구를 호출하지 마세요"));
         assert!(!s.contains("- screenshot({})"));
         assert!(!s.contains("- mouse({\"x\": 100, \"y\": 200, \"click\": false})"));
         assert!(!s.contains("- key_combo({\"modifier\": \"cmd\", \"key\": \"k\"})"));
+    }
+
+    #[test]
+    fn build_prompt_execution_write_disabled_hides_tool_specs() {
+        let s = build_system_prompt(&[], &[], false, false, false, false);
+        assert!(s.contains("현재 모드에서는 shell/run_tests"));
+        assert!(s.contains("현재 모드에서는 write_file/apply_patch/delete_file"));
+        assert!(!s.contains("- shell({\"cmd\""));
+        assert!(!s.contains("- run_tests({\"cwd\""));
+        assert!(!s.contains("- write_file({\"path\""));
+        assert!(!s.contains("- apply_patch({\"path\""));
+        assert!(!s.contains("- delete_file({\"path\""));
+        assert!(!s.contains("코딩 워크플로우"));
     }
 
     #[test]
@@ -3710,7 +3778,7 @@ mod tests {
                 description: String::new(),
             },
         ];
-        let s = build_system_prompt(&tools, &[], true, true);
+        let s = build_system_prompt(&tools, &[], true, true, true, true);
         assert!(s.contains("MCP 도구"));
         assert!(s.contains("playwright/screenshot"));
         assert!(s.contains("브라우저 스크린샷"));
@@ -3741,7 +3809,7 @@ ACTION: mcp({"server": "playwright", "tool": "screenshot", "arguments": {"url": 
             tool: "screenshot".into(),
             description: "브라우저 스크린샷".into(),
         }];
-        let s = build_system_prompt(&tools, &[], true, false);
+        let s = build_system_prompt(&tools, &[], true, true, true, false);
         assert!(!s.contains("MCP 도구"));
         assert!(!s.contains("playwright/screenshot"));
         assert!(!s.contains("\"server\""));
@@ -3754,7 +3822,14 @@ ACTION: mcp({"server": "playwright", "tool": "screenshot", "arguments": {"url": 
     #[tokio::test]
     async fn desktop_tools_토글_off면_호출_거부() {
         let _g = DESKTOP_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
-        for tool in ["screenshot", "mouse", "click", "type", "key_combo", "scroll"] {
+        for tool in [
+            "screenshot",
+            "mouse",
+            "click",
+            "type",
+            "key_combo",
+            "scroll",
+        ] {
             let args = match tool {
                 "scroll" => serde_json::json!({"x": 10, "y": 20, "amount": -120}),
                 "mouse" => serde_json::json!({"x": 10, "y": 20, "click": true}),
@@ -3788,15 +3863,21 @@ ACTION: mcp({"server": "playwright", "tool": "screenshot", "arguments": {"url": 
             screenshot.contains("생략"),
             "base64 결과는 truncate되어야 함: {screenshot}"
         );
-        let mouse =
-            run_desktop_tool("mouse", &serde_json::json!({"x": 33, "y": 44, "click": true}), true)
-                .await;
+        let mouse = run_desktop_tool(
+            "mouse",
+            &serde_json::json!({"x": 33, "y": 44, "click": true}),
+            true,
+        )
+        .await;
         assert!(mouse.contains("마우스 이동 성공"), "{mouse}");
         let click = run_desktop_tool("click", &serde_json::json!({"x": 100, "y": 200}), true).await;
         assert!(click.contains("클릭 성공"), "{click}");
-        let typing =
-            run_desktop_tool("type", &serde_json::json!({"text": "테스트", "enter": true}), true)
-                .await;
+        let typing = run_desktop_tool(
+            "type",
+            &serde_json::json!({"text": "테스트", "enter": true}),
+            true,
+        )
+        .await;
         assert!(typing.contains("입력 성공"), "{typing}");
         assert!(typing.contains("enter=true"), "{typing}");
         let combo = run_desktop_tool(
@@ -4120,7 +4201,7 @@ ACTION: mcp({"server": "playwright", "tool": "screenshot", "arguments": {"url": 
         let _g = CODEBASE_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         // 시스템 프롬프트에 query_codebase 항목이 노출되는지 + LLM이 호출했을 때
         // run_tool match → run_query_codebase_tool로 라우팅되어 결과를 요약 반환하는지.
-        let prompt = build_system_prompt(&[], &[], true, true);
+        let prompt = build_system_prompt(&[], &[], true, true, true, true);
         assert!(
             prompt.contains("query_codebase"),
             "프롬프트에 도구 미등록: {prompt}"
@@ -5184,7 +5265,7 @@ ACTION: write_file({"path": "src/new.rs", "content": "pub fn x() {}", "overwrite
 
     #[test]
     fn build_prompt_includes_write_tools() {
-        let s = build_system_prompt(&[], &[], true, true);
+        let s = build_system_prompt(&[], &[], true, true, true, true);
         assert!(s.contains("write_file"));
         assert!(s.contains("apply_patch"));
         assert!(s.contains("delete_file"));
@@ -5214,7 +5295,7 @@ ACTION: write_file({"path": "src/new.rs", "content": "pub fn x() {}", "overwrite
             last_used_ms: None,
             success_count: 0,
         }];
-        let s = build_system_prompt(&[], &skills, true, true);
+        let s = build_system_prompt(&[], &skills, true, true, true, true);
         assert!(s.contains("관련 Skill"));
         assert!(s.contains("Git rebase 정리"));
         assert!(s.contains("git rebase --continue"));
