@@ -3040,18 +3040,25 @@ pub async fn react_agent_run(
         emit_event(&app, "status", format!("plan_id={pid}"), None, Some(0));
     }
 
-    // Phase 121: 활성 MCP 서버의 도구를 동적으로 시스템 프롬프트에 주입.
-    let mcp_state: tauri::State<'_, crate::mcp::McpState> = app.state();
-    let mcp_tools = enumerate_mcp_tools(&mcp_state).await;
-    if !mcp_tools.is_empty() {
-        emit_event(
-            &app,
-            "status",
-            format!("MCP 도구 {}개 로드", mcp_tools.len()),
-            None,
-            Some(0),
-        );
-    }
+    let review_mode = is_review_goal(&goal);
+    let mcp_prompt_enabled = should_expose_mcp_tools_in_prompt(react_mode, review_mode);
+    // Phase 121: 활성 MCP 서버의 도구를 동적으로 시스템 프롬프트에 주입(Act + non-review에서만).
+    let mcp_tools = if mcp_prompt_enabled {
+        let mcp_state: tauri::State<'_, crate::mcp::McpState> = app.state();
+        let tools = enumerate_mcp_tools(&mcp_state).await;
+        if !tools.is_empty() {
+            emit_event(
+                &app,
+                "status",
+                format!("MCP 도구 {}개 로드", tools.len()),
+                None,
+                Some(0),
+            );
+        }
+        tools
+    } else {
+        Vec::new()
+    };
     // Phase 127: 자연어 goal과 매칭된 사용자 저장 Skill을 시스템 프롬프트에 주입.
     let skills = crate::commands::skills::find_relevant_skills(&goal, 3).await;
     if !skills.is_empty() {
@@ -3068,14 +3075,13 @@ pub async fn react_agent_run(
         .as_ref()
         .and_then(|c| c.react_desktop_tools_enabled)
         .unwrap_or(false);
-    let review_mode = is_review_goal(&goal);
     let mut conversation = format!(
         "{}\n\n목표: {goal}\n\nCWD: {effective_cwd}",
         build_system_prompt(
             &mcp_tools,
             &skills,
             should_expose_desktop_tools_in_prompt(react_mode, review_mode, desktop_tools_enabled),
-            should_expose_mcp_tools_in_prompt(react_mode, review_mode),
+            mcp_prompt_enabled,
         )
     );
     if review_mode {
