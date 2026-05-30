@@ -248,7 +248,7 @@ export function useReactAgent() {
         backend,
         model,
         toolWhitelist,
-        applyConfigWhitelist ?? true,
+        applyConfigWhitelist ?? false,
         planId ?? null,
       );
     },

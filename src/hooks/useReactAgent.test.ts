@@ -99,7 +99,7 @@ describe("useReactAgent — Phase 129 Plan/Act", () => {
       mode: "act",
       toolWhitelist: null,
       planId: expect.any(String),
-      applyConfigWhitelist: true,
+      applyConfigWhitelist: false,
     });
   });
 
@@ -107,6 +107,21 @@ describe("useReactAgent — Phase 129 Plan/Act", () => {
     const { result } = renderHook(() => useReactAgent());
     await act(async () => {
       await result.current.runAct("goal", "/tmp/lum", "plan-1", null, null, null, false);
+    });
+    const runCalls = invokeMock.mock.calls.filter((c) => c[0] === "react_agent_run");
+    const last = runCalls[runCalls.length - 1];
+    expect(last?.[1]).toMatchObject({
+      mode: "act",
+      toolWhitelist: null,
+      applyConfigWhitelist: false,
+      planId: "plan-1",
+    });
+  });
+
+  it("runAct에서 applyConfigWhitelist를 생략해도 config whitelist를 쓰지 않는다", async () => {
+    const { result } = renderHook(() => useReactAgent());
+    await act(async () => {
+      await result.current.runAct("goal", "/tmp/lum", "plan-1", null, null, null);
     });
     const runCalls = invokeMock.mock.calls.filter((c) => c[0] === "react_agent_run");
     const last = runCalls[runCalls.length - 1];

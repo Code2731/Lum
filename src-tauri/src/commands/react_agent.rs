@@ -720,6 +720,10 @@ fn is_whitelisted_in_act(mode: ReactMode, tool: &str, whitelist: Option<&HashSet
     }
 }
 
+fn should_apply_config_whitelist(apply_config_whitelist: Option<bool>) -> bool {
+    apply_config_whitelist.unwrap_or(false)
+}
+
 #[cfg(test)]
 #[derive(Default)]
 struct DesktopToolMock {
@@ -3140,7 +3144,7 @@ pub async fn react_agent_run(
     let config_tool_whitelist = loaded_config
         .as_ref()
         .and_then(|c| c.react_tool_whitelist.clone());
-    let use_config_whitelist = apply_config_whitelist.unwrap_or(true);
+    let use_config_whitelist = should_apply_config_whitelist(apply_config_whitelist);
     let effective_whitelist = match tool_whitelist {
         Some(v) => Some(v),
         None if use_config_whitelist => config_tool_whitelist,
@@ -3613,6 +3617,13 @@ mod tests {
         assert!(!is_whitelisted_in_act(ReactMode::Act, "shell", Some(&wl)));
         assert!(is_whitelisted_in_act(ReactMode::Plan, "shell", Some(&wl)));
         assert!(is_whitelisted_in_act(ReactMode::Act, "shell", None));
+    }
+
+    #[test]
+    fn config_whitelist_기본값은_미적용() {
+        assert!(!should_apply_config_whitelist(None));
+        assert!(!should_apply_config_whitelist(Some(false)));
+        assert!(should_apply_config_whitelist(Some(true)));
     }
 
     #[test]
