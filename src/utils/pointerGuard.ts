@@ -7,9 +7,9 @@ export function isEventTargetWithinSelector(
 }
 
 export function isPointerOutsideTargets(
-  target: Node | null,
+  target: EventTarget | null,
   targets: Array<Node | null | undefined>,
 ): boolean {
-  if (!target) return false;
+  if (!(target instanceof Node)) return false;
   return targets.every((node) => !(node?.contains(target) ?? false));
 }

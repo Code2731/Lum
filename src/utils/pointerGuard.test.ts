@@ -34,4 +34,10 @@ describe("pointerGuard", () => {
     expect(isPointerOutsideTargets(outside, [null, undefined])).toBe(true);
     expect(isPointerOutsideTargets(null, [panel])).toBe(false);
   });
+
+  it("isPointerOutsideTargets는 Node가 아닌 EventTarget도 안전하게 처리한다", () => {
+    const fakeTarget = new EventTarget();
+    const panel = document.createElement("div");
+    expect(isPointerOutsideTargets(fakeTarget, [panel])).toBe(false);
+  });
 });

@@ -32,7 +32,7 @@ const TYPE_COLOR: Record<NotifType, string> = {
 const popupFocusables = "a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex='-1'])";
 
 export const isPointerOutsideNotificationPanel = (
-  target: Node | null,
+  target: EventTarget | null,
   panelElement: HTMLElement | null,
 ): boolean => {
   return isPointerOutsideTargets(target, [panelElement]);
@@ -127,8 +127,7 @@ const NotificationCenter: React.FC<Props> = ({
     if (!closeOnDocument) return;
 
     const handleOutsidePointer = (target: EventTarget | null) => {
-      const nodeTarget = target as Node | null;
-      if (isPointerOutsideNotificationPanel(nodeTarget, panelRef.current)) {
+      if (isPointerOutsideNotificationPanel(target, panelRef.current)) {
         onCloseRef.current();
       }
     };

@@ -71,7 +71,7 @@ const POPUP_MIN_HEIGHT = 96;
 const POPUP_OFFSCREEN_POSITION: PopupPosition = { x: -9999, y: -9999 };
 
 export const isPointerOutsideLedgerPopover = (
-  target: Node | null,
+  target: EventTarget | null,
   triggerElement: HTMLElement | null,
   popoverElement: HTMLElement | null,
 ): boolean => {
@@ -373,7 +373,7 @@ const PrivacyLedgerBadge: React.FC<Props> = ({
   React.useLayoutEffect(() => {
     if (!open) return;
     const handler = (e: PointerEvent) => {
-      const target = e.target as Node | null;
+      const target = e.target;
       if (isPointerOutsideLedgerPopover(target, triggerRef.current, popRef.current)) {
         closePopover();
       }

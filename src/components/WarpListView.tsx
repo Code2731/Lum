@@ -867,7 +867,7 @@ const WarpListView: React.FC<Props> = ({
       closeDeltaPopover(true, deltaOpenId);
     };
     const onPointerDown = (e: PointerEvent) => {
-      const target = e.target as Node | null;
+      const target = e.target;
       if (!isPointerOutsideAllTargets(target, [deltaPopoverRef.current, deltaButtonRefs.current[deltaOpenId]])) {
         return;
       }
@@ -951,7 +951,7 @@ const WarpListView: React.FC<Props> = ({
       }
     };
     const onPointerDown = (e: PointerEvent) => {
-      const target = e.target as Node | null;
+      const target = e.target;
       const menuButton = menuButtonRefs.current[menuOpenId];
       const menuContainer = menuContainerRefs.current[menuOpenId];
       if (!isPointerOutsideAllTargets(target, [menuButton, menuContainer])) return;
@@ -1393,7 +1393,7 @@ const WarpListView: React.FC<Props> = ({
       closeTimelinePanel(true);
     };
     const onPointerDown = (e: PointerEvent) => {
-      const target = e.target as Node | null;
+      const target = e.target;
       if (!isPointerOutsideAllTargets(target, [timelinePanelRef.current, timelineButtonRef.current])) return;
       closeTimelinePanel(false);
     };
