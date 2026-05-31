@@ -96,6 +96,12 @@ describe("OnboardingWizard", () => {
     fireEvent.click(screen.getByText("다음")); // → xLLM
     await waitFor(() => {
       expect(screen.getByText(/pip install tabbyapi/)).toBeInTheDocument();
+      expect(
+        screen.getByText(/tabbyapi --model-dir ~\/tabby\/models --port 8080/)
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText(/기본 연결 포트는 8080이며, 구형 환경에서는 5000 포트를 사용할 수 있습니다\./)
+      ).toBeInTheDocument();
     });
   });
 

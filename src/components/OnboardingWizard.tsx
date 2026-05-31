@@ -304,6 +304,9 @@ const OnboardingWizard: React.FC<Props> = ({ onComplete }) => {
                   <p className="text-white/50 font-medium">xLLM 서버 설치 및 실행</p>
                   <CodeBlock>pip install tabbyapi</CodeBlock>
                   <CodeBlock>tabbyapi --model-dir ~/tabby/models --port 8080</CodeBlock>
+                  <p className="text-xs text-white/45 leading-relaxed">
+                    기본 연결 포트는 8080이며, 구형 환경에서는 5000 포트를 사용할 수 있습니다.
+                  </p>
                   <a
                     href="https://github.com/theroyallab/tabbyAPI"
                     target="_blank"
