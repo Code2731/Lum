@@ -223,7 +223,7 @@ describe("WarpListView delta actions", () => {
 
     fireEvent.click(screen.getByText("Δ +1/-1"));
     expect(screen.getByText(/Retry Compare/)).toBeInTheDocument();
-    fireEvent.mouseDown(document.body);
+    fireEvent.pointerDown(document.body);
     expect(screen.queryByText(/Retry Compare/)).not.toBeInTheDocument();
   });
 
@@ -478,7 +478,7 @@ describe("WarpListView delta actions", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "블록 액션" }));
     expect(screen.getByRole("menuitem", { name: /Copy Both/ })).toBeInTheDocument();
-    fireEvent.mouseDown(document.body);
+    fireEvent.pointerDown(document.body);
     expect(screen.queryByRole("menuitem", { name: /Copy Both/ })).not.toBeInTheDocument();
   });
 

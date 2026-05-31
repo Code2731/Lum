@@ -863,7 +863,7 @@ const WarpListView: React.FC<Props> = ({
       e.stopImmediatePropagation();
       closeDeltaPopover(true, deltaOpenId);
     };
-    const onMouseDown = (e: MouseEvent) => {
+    const onPointerDown = (e: PointerEvent) => {
       const target = e.target as Node | null;
       if (!target) return;
       if (deltaPopoverRef.current?.contains(target)) return;
@@ -871,12 +871,12 @@ const WarpListView: React.FC<Props> = ({
       closeDeltaPopover(false, deltaOpenId);
     };
     window.addEventListener("keydown", onWindowKeyDown);
-    window.addEventListener("mousedown", onMouseDown);
+    window.addEventListener("pointerdown", onPointerDown);
     window.addEventListener("resize", updatePosition);
     window.addEventListener("scroll", updatePosition, { capture: true });
     return () => {
       window.removeEventListener("keydown", onWindowKeyDown);
-      window.removeEventListener("mousedown", onMouseDown);
+      window.removeEventListener("pointerdown", onPointerDown);
       window.removeEventListener("resize", updatePosition);
       window.removeEventListener("scroll", updatePosition, { capture: true });
     };
@@ -947,7 +947,7 @@ const WarpListView: React.FC<Props> = ({
         return;
       }
     };
-    const onMouseDown = (e: MouseEvent) => {
+    const onPointerDown = (e: PointerEvent) => {
       const target = e.target as Node | null;
       if (!target) return;
       const menuButton = menuButtonRefs.current[menuOpenId];
@@ -957,12 +957,12 @@ const WarpListView: React.FC<Props> = ({
       closeMenuById(menuOpenId, false);
     };
     window.addEventListener("keydown", onWindowKeyDown);
-    window.addEventListener("mousedown", onMouseDown);
+    window.addEventListener("pointerdown", onPointerDown);
     window.addEventListener("resize", updatePosition);
     window.addEventListener("scroll", updatePosition, { capture: true });
     return () => {
       window.removeEventListener("keydown", onWindowKeyDown);
-      window.removeEventListener("mousedown", onMouseDown);
+      window.removeEventListener("pointerdown", onPointerDown);
       window.removeEventListener("resize", updatePosition);
       window.removeEventListener("scroll", updatePosition, { capture: true });
     };
@@ -1391,7 +1391,7 @@ const WarpListView: React.FC<Props> = ({
       e.stopImmediatePropagation();
       closeTimelinePanel(true);
     };
-    const onMouseDown = (e: MouseEvent) => {
+    const onPointerDown = (e: PointerEvent) => {
       const target = e.target as Node | null;
       if (!target) return;
       if (timelinePanelRef.current?.contains(target)) return;
@@ -1399,10 +1399,10 @@ const WarpListView: React.FC<Props> = ({
       closeTimelinePanel(false);
     };
     window.addEventListener("keydown", onWindowKeyDown);
-    window.addEventListener("mousedown", onMouseDown);
+    window.addEventListener("pointerdown", onPointerDown);
     return () => {
       window.removeEventListener("keydown", onWindowKeyDown);
-      window.removeEventListener("mousedown", onMouseDown);
+      window.removeEventListener("pointerdown", onPointerDown);
     };
   }, [
     timelineOpen,
