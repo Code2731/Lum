@@ -4,7 +4,7 @@ import { CheckCircle2, XCircle, Clock, ChevronDown, ChevronRight, Copy, Terminal
 import { IconButton } from "@/components/ui/icon-button";
 import { tokenizeShell, TOKEN_COLORS } from "../utils/shellSyntax";
 import { isTextInputTarget } from "../utils/event";
-import { isPointerOutsideTargets } from "../utils/pointerGuard";
+import { isPointerOutsideTargets, isTargetInsideTargets } from "../utils/pointerGuard";
 import type { CommandBlock } from "../hooks/useCommandBlocks";
 
 interface Props {
@@ -2478,10 +2478,9 @@ const WarpListView: React.FC<Props> = ({
                           }}
                           onClick={(e) => e.stopPropagation()}
                           onBlurCapture={(e) => {
-                            const next = e.relatedTarget as Node | null;
                             const menuContainer = menuContainerRefs.current[b.id];
                             const menuButton = menuButtonRefs.current[b.id];
-                            if (next && (menuContainer?.contains(next) || menuButton?.contains(next))) return;
+                            if (isTargetInsideTargets(e.relatedTarget, [menuContainer, menuButton])) return;
                             closeMenuById(b.id, false);
                           }}
                           onKeyDown={(e) => {

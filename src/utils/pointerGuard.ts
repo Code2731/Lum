@@ -13,3 +13,11 @@ export function isPointerOutsideTargets(
   if (!(target instanceof Node)) return false;
   return targets.every((node) => !(node?.contains(target) ?? false));
 }
+
+export function isTargetInsideTargets(
+  target: EventTarget | null,
+  targets: Array<Node | null | undefined>,
+): boolean {
+  if (!(target instanceof Node)) return false;
+  return targets.some((node) => node?.contains(target) ?? false);
+}

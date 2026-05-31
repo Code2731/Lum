@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { isEventTargetWithinSelector, isPointerOutsideTargets } from "./pointerGuard";
+import {
+  isEventTargetWithinSelector,
+  isPointerOutsideTargets,
+  isTargetInsideTargets,
+} from "./pointerGuard";
 
 describe("pointerGuard", () => {
   it("isEventTargetWithinSelector는 Element가 아니면 false", () => {
@@ -39,5 +43,19 @@ describe("pointerGuard", () => {
     const fakeTarget = new EventTarget();
     const panel = document.createElement("div");
     expect(isPointerOutsideTargets(fakeTarget, [panel])).toBe(false);
+  });
+
+  it("isTargetInsideTargets는 대상 내부 여부를 정확히 판정한다", () => {
+    const panel = document.createElement("div");
+    const child = document.createElement("button");
+    const outside = document.createElement("span");
+    panel.appendChild(child);
+    document.body.appendChild(panel);
+    document.body.appendChild(outside);
+
+    expect(isTargetInsideTargets(child, [panel])).toBe(true);
+    expect(isTargetInsideTargets(outside, [panel])).toBe(false);
+    expect(isTargetInsideTargets(null, [panel])).toBe(false);
+    expect(isTargetInsideTargets(new EventTarget(), [panel])).toBe(false);
   });
 });
