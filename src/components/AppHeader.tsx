@@ -127,6 +127,17 @@ const POPUP_MIN_HEIGHT = 96;
 const POPUP_EDGE_GUTTER = 8;
 const VIEWPORT_FALLBACK_GUTTER = 8;
 
+export const isPointerOutsidePopup = (
+  target: Node | null,
+  triggerElement: HTMLElement | null,
+  panelElement: HTMLElement | null,
+): boolean => {
+  if (!target) return false;
+  const insideTrigger = triggerElement?.contains(target) ?? false;
+  const insidePanel = panelElement?.contains(target) ?? false;
+  return !insideTrigger && !insidePanel;
+};
+
 type ViewportBounds = {
   left: number;
   top: number;
@@ -516,20 +527,50 @@ const AppHeader: React.FC<Props> = ({
     const nextHeight = clampPopupHeight(placement, options.trigger?.getBoundingClientRect() ?? null);
     options.setMaxHeight(nextHeight);
 
-    if (typeof window === "undefined" || !options.trigger) {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const viewport = getViewportBounds();
+    const safeViewportWidth = Math.max(
+      POPUP_EDGE_GUTTER * 2 + 1,
+      viewport.width - POPUP_EDGE_GUTTER * 2,
+    );
+    const viewportSafeTop = viewport.top + VIEWPORT_FALLBACK_GUTTER;
+    const viewportSafeLeft = viewport.left + VIEWPORT_FALLBACK_GUTTER;
+
+    if (!options.trigger) {
+      const clampedPanelWidth = Math.min(options.fallbackWidth, safeViewportWidth);
+      const fallbackY = clampValue(
+        viewportSafeTop,
+        viewportSafeTop,
+        Math.max(
+          viewportSafeTop,
+          viewport.top + viewport.height - nextHeight - POPUP_EDGE_GUTTER,
+        ),
+      );
+      const fallbackX = clampValue(
+        viewport.left + viewport.width - clampedPanelWidth - POPUP_EDGE_GUTTER,
+        viewportSafeLeft,
+        Math.max(
+          viewportSafeLeft,
+          viewport.left + viewport.width - clampedPanelWidth - POPUP_EDGE_GUTTER,
+        ),
+      );
+      options.setPosition({
+        x: fallbackX,
+        y: fallbackY,
+        width: clampedPanelWidth,
+      });
+      options.onReady();
       return;
     }
 
     const triggerRect = options.trigger.getBoundingClientRect();
     const panelRect = options.panelRef?.current?.getBoundingClientRect();
-    const viewport = getViewportBounds();
     const panelWidth = (panelRect?.width && Number.isFinite(panelRect.width) && panelRect.width > 0)
       ? panelRect.width
       : options.fallbackWidth;
-    const safeViewportWidth = Math.max(
-      POPUP_EDGE_GUTTER * 2 + 1,
-      viewport.width - POPUP_EDGE_GUTTER * 2,
-    );
     const clampedPanelWidth = Math.min(panelWidth, safeViewportWidth);
     const panelHeight = nextHeight;
 
@@ -538,8 +579,6 @@ const AppHeader: React.FC<Props> = ({
       : triggerRect.bottom + POPUP_EDGE_GUTTER;
 
     const nextX = triggerRect.right - clampedPanelWidth;
-    const viewportSafeTop = viewport.top + VIEWPORT_FALLBACK_GUTTER;
-    const viewportSafeLeft = viewport.left + VIEWPORT_FALLBACK_GUTTER;
     const maxTop = Math.max(
       viewportSafeTop,
       viewport.top + viewport.height - panelHeight - POPUP_EDGE_GUTTER,
@@ -692,11 +731,8 @@ const AppHeader: React.FC<Props> = ({
     if (!showAdvancedOverflow) return;
 
     const handleClose = (e: PointerEvent) => {
-      const target = e.target as Node;
-      if (
-        (advancedOverflowRef.current && !advancedOverflowRef.current.contains(target))
-        && (advancedOverflowPanelRef.current && !advancedOverflowPanelRef.current.contains(target))
-      ) {
+      const target = e.target as Node | null;
+      if (isPointerOutsidePopup(target, advancedOverflowRef.current, advancedOverflowPanelRef.current)) {
         closeAdvancedOverflow();
       }
     };
@@ -775,13 +811,8 @@ const AppHeader: React.FC<Props> = ({
     if (!showNotifCenter) return;
 
     const handleClose = (e: PointerEvent) => {
-      const target = e.target as Node;
-      if (
-        notifCenterPopupRef.current
-        && !notifCenterPopupRef.current.contains(target)
-        && notifCenterPanelRef.current
-        && !notifCenterPanelRef.current.contains(target)
-      ) {
+      const target = e.target as Node | null;
+      if (isPointerOutsidePopup(target, notifCenterPopupRef.current, notifCenterPanelRef.current)) {
         closeNotifCenter();
       }
     };

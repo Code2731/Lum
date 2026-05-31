@@ -10,7 +10,7 @@ vi.mock("@tauri-apps/api/window", () => ({
     toggleMaximize: vi.fn(() => Promise.resolve()),
   })),
 }));
-import AppHeader, { type NewFeatureId } from "./AppHeader";
+import AppHeader, { isPointerOutsidePopup, type NewFeatureId } from "./AppHeader";
 
 const buildProps = () => {
   return {
@@ -165,6 +165,31 @@ const installResizeObserverMock = () => {
 };
 
 describe("AppHeader", () => {
+  it("팝오버 외부 클릭 판정은 ref가 null이어도 안전하게 동작한다", () => {
+    const target = document.createElement("div");
+    document.body.appendChild(target);
+
+    expect(isPointerOutsidePopup(target, null, null)).toBe(true);
+    expect(isPointerOutsidePopup(null, null, null)).toBe(false);
+  });
+
+  it("팝오버 외부 클릭 판정은 트리거/패널 내부 클릭을 구분한다", () => {
+    const trigger = document.createElement("button");
+    const panel = document.createElement("div");
+    const triggerChild = document.createElement("span");
+    const panelChild = document.createElement("button");
+    const outside = document.createElement("div");
+    trigger.appendChild(triggerChild);
+    panel.appendChild(panelChild);
+    document.body.appendChild(trigger);
+    document.body.appendChild(panel);
+    document.body.appendChild(outside);
+
+    expect(isPointerOutsidePopup(triggerChild, trigger, panel)).toBe(false);
+    expect(isPointerOutsidePopup(panelChild, trigger, panel)).toBe(false);
+    expect(isPointerOutsidePopup(outside, trigger, panel)).toBe(true);
+  });
+
   it("fast 배지 title이 xLLM 표기로 노출된다", () => {
     const props = buildProps() as any;
     render(<AppHeader {...props} />);
