@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { Palette, Tag, X } from "lucide-react";
 import { TAB_COLORS } from "../hooks/useTabManager";
 import type { TabColor } from "../hooks/useTabManager";
+import { isPointerOutsideTargets } from "../utils/pointerGuard";
 
 interface Props {
   tabId: string;
@@ -26,8 +27,7 @@ export const isPointerOutsideTabContextMenu = (
   target: Node | null,
   menuElement: HTMLElement | null,
 ): boolean => {
-  if (!target) return false;
-  return !(menuElement?.contains(target) ?? false);
+  return isPointerOutsideTargets(target, [menuElement]);
 };
 
 const TabContextMenu: React.FC<Props> = ({

@@ -1,6 +1,7 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Copy, Play, Search, ExternalLink, Sparkles } from "lucide-react";
+import { isPointerOutsideTargets } from "../utils/pointerGuard";
 
 interface Props {
   x: number;
@@ -29,8 +30,7 @@ export const isPointerOutsideTerminalContextMenu = (
   target: Node | null,
   menuElement: HTMLElement | null,
 ): boolean => {
-  if (!target) return false;
-  return !(menuElement?.contains(target) ?? false);
+  return isPointerOutsideTargets(target, [menuElement]);
 };
 
 const clampMenuPos = (x: number, y: number, width: number, height: number) => {

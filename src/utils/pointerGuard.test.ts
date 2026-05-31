@@ -1,0 +1,37 @@
+import { describe, expect, it } from "vitest";
+import { isEventTargetWithinSelector, isPointerOutsideTargets } from "./pointerGuard";
+
+describe("pointerGuard", () => {
+  it("isEventTargetWithinSelector는 Element가 아니면 false", () => {
+    const textNode = document.createTextNode("x");
+    expect(isEventTargetWithinSelector(textNode, "[data-a='1']")).toBe(false);
+    expect(isEventTargetWithinSelector(null, "[data-a='1']")).toBe(false);
+  });
+
+  it("isEventTargetWithinSelector는 closest 매칭을 판정한다", () => {
+    const parent = document.createElement("div");
+    parent.setAttribute("data-a", "1");
+    const child = document.createElement("button");
+    const outside = document.createElement("span");
+    parent.appendChild(child);
+    document.body.appendChild(parent);
+    document.body.appendChild(outside);
+
+    expect(isEventTargetWithinSelector(child, "[data-a='1']")).toBe(true);
+    expect(isEventTargetWithinSelector(outside, "[data-a='1']")).toBe(false);
+  });
+
+  it("isPointerOutsideTargets는 모든 대상 바깥일 때만 true", () => {
+    const panel = document.createElement("div");
+    const child = document.createElement("button");
+    const outside = document.createElement("span");
+    panel.appendChild(child);
+    document.body.appendChild(panel);
+    document.body.appendChild(outside);
+
+    expect(isPointerOutsideTargets(child, [panel])).toBe(false);
+    expect(isPointerOutsideTargets(outside, [panel])).toBe(true);
+    expect(isPointerOutsideTargets(outside, [null, undefined])).toBe(true);
+    expect(isPointerOutsideTargets(null, [panel])).toBe(false);
+  });
+});

@@ -13,6 +13,7 @@ import { Cloud, ShieldCheck, RotateCcw, X } from "lucide-react";
 import { motion } from "framer-motion";
 import type { LedgerState, Backend } from "../hooks/usePrivacyLedger";
 import { cn } from "@/lib/utils";
+import { isPointerOutsideTargets } from "../utils/pointerGuard";
 
 interface Props {
   state: LedgerState;
@@ -74,10 +75,7 @@ export const isPointerOutsideLedgerPopover = (
   triggerElement: HTMLElement | null,
   popoverElement: HTMLElement | null,
 ): boolean => {
-  if (!target) return false;
-  const insideTrigger = triggerElement?.contains(target) ?? false;
-  const insidePopover = popoverElement?.contains(target) ?? false;
-  return !insideTrigger && !insidePopover;
+  return isPointerOutsideTargets(target, [triggerElement, popoverElement]);
 };
 
 const clampValue = (value: number, min: number, max: number): number => {

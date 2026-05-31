@@ -2,6 +2,7 @@ import React, { useRef, useEffect } from "react";
 import { Bell, Terminal, Bot, Wrench, Layers, X, CheckCheck, Trash2 } from "lucide-react";
 import { IconButton } from "@/components/ui/icon-button";
 import type { AppNotification, NotifType } from "../hooks/useNotificationCenter";
+import { isPointerOutsideTargets } from "../utils/pointerGuard";
 
 interface Props {
   notifications: AppNotification[];
@@ -34,8 +35,7 @@ export const isPointerOutsideNotificationPanel = (
   target: Node | null,
   panelElement: HTMLElement | null,
 ): boolean => {
-  if (!target) return false;
-  return !(panelElement?.contains(target) ?? false);
+  return isPointerOutsideTargets(target, [panelElement]);
 };
 
 function timeAgo(ts: number): string {

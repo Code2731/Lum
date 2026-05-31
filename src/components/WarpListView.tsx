@@ -4,6 +4,7 @@ import { CheckCircle2, XCircle, Clock, ChevronDown, ChevronRight, Copy, Terminal
 import { IconButton } from "@/components/ui/icon-button";
 import { tokenizeShell, TOKEN_COLORS } from "../utils/shellSyntax";
 import { isTextInputTarget } from "../utils/event";
+import { isPointerOutsideTargets } from "../utils/pointerGuard";
 import type { CommandBlock } from "../hooks/useCommandBlocks";
 
 interface Props {
@@ -51,13 +52,7 @@ interface Props {
 type CompareResult = NonNullable<Props["compareResultByBlock"]>[string];
 type TimelineRisk = "high" | "medium" | "low";
 
-export function isPointerOutsideAllTargets(
-  target: Node | null,
-  targets: Array<Node | null | undefined>,
-): boolean {
-  if (!target) return false;
-  return targets.every((node) => !(node?.contains(target) ?? false));
-}
+export const isPointerOutsideAllTargets = isPointerOutsideTargets;
 
 const SyntaxCmd: React.FC<{ cmd: string }> = ({ cmd }) => (
   <>

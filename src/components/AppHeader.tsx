@@ -17,6 +17,7 @@ import WindowControls from "./WindowControls";
 import PrivacyLedgerBadge from "./PrivacyLedgerBadge";
 import NotificationCenter from "./NotificationCenter";
 import { SMALL_ICON_SIZE } from "../constants/ui";
+import { isPointerOutsideTargets } from "../utils/pointerGuard";
 import type { usePanelVisibility } from "../hooks/usePanelVisibility";
 import type { useSquads } from "../hooks/useSquads";
 import type { usePrivacyLedger } from "../hooks/usePrivacyLedger";
@@ -132,10 +133,7 @@ export const isPointerOutsidePopup = (
   triggerElement: HTMLElement | null,
   panelElement: HTMLElement | null,
 ): boolean => {
-  if (!target) return false;
-  const insideTrigger = triggerElement?.contains(target) ?? false;
-  const insidePanel = panelElement?.contains(target) ?? false;
-  return !insideTrigger && !insidePanel;
+  return isPointerOutsideTargets(target, [triggerElement, panelElement]);
 };
 
 type ViewportBounds = {

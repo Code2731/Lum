@@ -53,6 +53,7 @@ import type { AiBackend } from "./utils/inputRouter";
 import { extractInspectorAnalyzeCommands } from "./utils/inspectorAnalyze";
 import { getRovingMenuNextIndex } from "./utils/menuRoving";
 import { resolveInspectorMenuHotkey } from "./utils/inspectorMenuHotkeys";
+import { isEventTargetWithinSelector as isEventTargetWithinSelectorUtil } from "./utils/pointerGuard";
 import type {
   RetryCompareResult,
   RetryCompareTask,
@@ -101,13 +102,7 @@ interface MarkdownDocViewState {
   error: string | null;
 }
 
-export function isEventTargetWithinSelector(
-  target: EventTarget | null,
-  selector: string,
-): boolean {
-  if (!(target instanceof Element)) return false;
-  return target.closest(selector) != null;
-}
+export const isEventTargetWithinSelector = isEventTargetWithinSelectorUtil;
 
 function parseGitTabInfo(ctx: string): GitTabInfo | null {
   if (!ctx) return null;
