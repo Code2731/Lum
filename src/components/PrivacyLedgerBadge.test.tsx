@@ -211,6 +211,25 @@ describe("PrivacyLedgerBadge", () => {
     expect(trigger).toHaveFocus();
   });
 
+  it("팝오버 내부 포인터 다운은 바깥 클릭으로 처리되지 않는다", () => {
+    renderWithProvider(
+      <PrivacyLedgerBadge
+        state={defaultState}
+        isAllOnDevice
+        onReset={vi.fn()}
+      />,
+    );
+
+    const trigger = screen.getByRole("button", { name: /Privacy Ledger/ });
+    fireEvent.click(trigger);
+
+    const popover = screen.getByRole("dialog", { name: "Privacy Ledger 상세" });
+    fireEvent.pointerDown(popover);
+
+    expect(screen.getByRole("dialog", { name: "Privacy Ledger 상세" })).toBeInTheDocument();
+    expect(trigger).toHaveAttribute("aria-pressed", "true");
+  });
+
   it("작은 창 높이에서 팝오버 높이가 뷰포트 여백을 넘지 않는다", () => {
     const onReset = vi.fn();
     const originalInnerHeight = window.innerHeight;
