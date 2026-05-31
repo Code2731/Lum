@@ -652,7 +652,7 @@ async fn run_tool(
     }
     // 리뷰 모드에서는 read-only 분석만 허용.
     if is_review_blocked_tool(review_mode, tool) {
-        return format!("리뷰 모드 차단: {tool} 도구는 read-only 분석에서 허용되지 않습니다.");
+        return review_mode_block_message(tool);
     }
     // Phase 129: Act 모드 + whitelist가 있으면 목록 외 도구 차단.
     if !is_whitelisted_in_act(mode, tool, tool_whitelist) {
@@ -778,6 +778,12 @@ fn is_review_blocked_tool(review_mode: bool, tool: &str) -> bool {
                 | "key_combo"
                 | "scroll"
         )
+}
+
+fn review_mode_block_message(tool: &str) -> String {
+    format!(
+        "리뷰 모드 정책 차단: {tool} 도구는 read-only 분석에서 허용되지 않습니다. (권한 오류 아님)"
+    )
 }
 
 fn is_whitelisted_in_act(mode: ReactMode, tool: &str, whitelist: Option<&HashSet<String>>) -> bool {
@@ -3786,6 +3792,13 @@ mod tests {
         assert!(!is_review_blocked_tool(true, "list_dir"));
         assert!(!is_review_blocked_tool(true, "git_diff"));
         assert!(!is_review_blocked_tool(false, "shell"));
+    }
+
+    #[test]
+    fn review_mode_차단_문구는_권한오류_아님을_명시() {
+        let msg = review_mode_block_message("run_tests");
+        assert!(msg.contains("리뷰 모드 정책 차단"), "{msg}");
+        assert!(msg.contains("권한 오류 아님"), "{msg}");
     }
 
     #[test]
