@@ -643,6 +643,9 @@ async fn run_tool(
     mode: ReactMode,
     tool_whitelist: Option<&HashSet<String>>,
 ) -> String {
+    if cancel_flag().load(Ordering::Relaxed) {
+        return "도구 실행 취소됨".to_string();
+    }
     // Phase 129: Plan 모드에서는 읽기/분석만 허용 — 쓰기 도구와 shell 실행은 차단.
     if is_plan_blocked_tool(mode, tool) {
         return format!("Plan 모드 차단: {tool} 도구는 승인 후 Act 모드에서만 실행됩니다.");
@@ -690,10 +693,16 @@ async fn run_tool(
             let test_cwd = args["cwd"].as_str().unwrap_or(cwd).to_string();
             run_tests_tool(&test_cwd).await
         }
-        "query_healing" => run_query_healing_tool(args).await,
+        "query_healing" => {
+            run_async_tool_with_cancel(run_query_healing_tool(args), "query_healing").await
+        }
         "analyze_failure_reasons" => run_analyze_failure_reasons_tool(args),
-        "query_codebase" => run_query_codebase_tool(args).await,
-        "query_graph" => run_query_graph_tool(args, cwd).await,
+        "query_codebase" => {
+            run_async_tool_with_cancel(run_query_codebase_tool(args), "query_codebase").await
+        }
+        "query_graph" => {
+            run_async_tool_with_cancel(run_query_graph_tool(args, cwd), "query_graph").await
+        }
         "find_callers" => run_find_callers_tool(args, cwd),
         "find_callees" => run_find_callees_tool(args, cwd),
         "trace_dependents" => run_trace_dependents_tool(args, cwd),
@@ -704,9 +713,9 @@ async fn run_tool(
         "apply_patch" => apply_patch_tool(args, cwd),
         "delete_file" => delete_file_tool(args, cwd),
         "screenshot" | "mouse" | "click" | "type" | "key_combo" | "scroll" => {
-            run_desktop_tool(tool, args, desktop_tools_enabled).await
+            run_async_tool_with_cancel(run_desktop_tool(tool, args, desktop_tools_enabled), tool).await
         }
-        "mcp" => run_mcp_tool(app, args).await,
+        "mcp" => run_async_tool_with_cancel(run_mcp_tool(app, args), "mcp").await,
         _ => format!("알 수 없는 도구: {tool}"),
     };
 
@@ -721,6 +730,16 @@ async fn run_tool(
     }
 
     result
+}
+
+async fn run_async_tool_with_cancel<F>(future: F, tool_name: &str) -> String
+where
+    F: Future<Output = String>,
+{
+    match await_with_cancel(future).await {
+        Some(v) => v,
+        None => format!("{tool_name} 실행 취소됨"),
+    }
 }
 
 fn is_plan_blocked_tool(mode: ReactMode, tool: &str) -> bool {
@@ -3691,6 +3710,8 @@ pub fn react_agent_undo() -> std::result::Result<UndoReport, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::Mutex;
+    static CANCEL_FLAG_TEST_LOCK: Mutex<()> = Mutex::new(());
 
     #[test]
     fn parse_thought_기본() {
@@ -3819,6 +3840,9 @@ mod tests {
 
     #[tokio::test]
     async fn await_with_cancel_이미_취소면_none() {
+        let _g = CANCEL_FLAG_TEST_LOCK
+            .lock()
+            .unwrap_or_else(|e| e.into_inner());
         cancel_flag().store(true, Ordering::Relaxed);
         let out = await_with_cancel(async { 42usize }).await;
         assert!(out.is_none());
@@ -3828,6 +3852,9 @@ mod tests {
     #[tokio::test]
     async fn await_with_cancel_대기중_취소되면_none() {
         use tokio::time::{sleep, Duration, Instant};
+        let _g = CANCEL_FLAG_TEST_LOCK
+            .lock()
+            .unwrap_or_else(|e| e.into_inner());
 
         cancel_flag().store(false, Ordering::Relaxed);
         tokio::spawn(async {
@@ -3844,6 +3871,30 @@ mod tests {
         let elapsed = started.elapsed();
         assert!(out.is_none());
         assert!(elapsed < Duration::from_millis(260), "elapsed={elapsed:?}");
+        cancel_flag().store(false, Ordering::Relaxed);
+    }
+
+    #[tokio::test]
+    async fn run_async_tool_with_cancel_대기중_취소되면_취소문구() {
+        use tokio::time::{sleep, Duration};
+        let _g = CANCEL_FLAG_TEST_LOCK
+            .lock()
+            .unwrap_or_else(|e| e.into_inner());
+        cancel_flag().store(false, Ordering::Relaxed);
+        tokio::spawn(async {
+            sleep(Duration::from_millis(25)).await;
+            cancel_flag().store(true, Ordering::Relaxed);
+        });
+
+        let out = run_async_tool_with_cancel(
+            async {
+                sleep(Duration::from_millis(400)).await;
+                "done".to_string()
+            },
+            "query_graph",
+        )
+        .await;
+        assert!(out.contains("query_graph 실행 취소됨"), "{out}");
         cancel_flag().store(false, Ordering::Relaxed);
     }
 
