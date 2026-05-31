@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import NotificationCenter from "./NotificationCenter";
+import NotificationCenter, { isPointerOutsideNotificationPanel } from "./NotificationCenter";
 import type { AppNotification } from "../hooks/useNotificationCenter";
 
 describe("NotificationCenter", () => {
@@ -11,6 +11,26 @@ describe("NotificationCenter", () => {
     onDismiss: vi.fn(),
     onClear: vi.fn(),
   };
+
+  it("바깥 클릭 판정은 ref가 null이어도 안전하게 동작한다", () => {
+    const target = document.createElement("div");
+    document.body.appendChild(target);
+
+    expect(isPointerOutsideNotificationPanel(target, null)).toBe(true);
+    expect(isPointerOutsideNotificationPanel(null, null)).toBe(false);
+  });
+
+  it("바깥 클릭 판정은 패널 내부/외부를 구분한다", () => {
+    const panel = document.createElement("div");
+    const child = document.createElement("button");
+    const outside = document.createElement("div");
+    panel.appendChild(child);
+    document.body.appendChild(panel);
+    document.body.appendChild(outside);
+
+    expect(isPointerOutsideNotificationPanel(child, panel)).toBe(false);
+    expect(isPointerOutsideNotificationPanel(outside, panel)).toBe(true);
+  });
 
   it("Escape 키로 패널을 닫는다", () => {
     const onClose = vi.fn();

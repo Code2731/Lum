@@ -30,6 +30,14 @@ const TYPE_COLOR: Record<NotifType, string> = {
 };
 const popupFocusables = "a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex='-1'])";
 
+export const isPointerOutsideNotificationPanel = (
+  target: Node | null,
+  panelElement: HTMLElement | null,
+): boolean => {
+  if (!target) return false;
+  return !(panelElement?.contains(target) ?? false);
+};
+
 function timeAgo(ts: number): string {
   const diff = Math.floor((Date.now() - ts) / 1000);
   if (diff < 60) return `${diff}초 전`;
@@ -119,7 +127,8 @@ const NotificationCenter: React.FC<Props> = ({
     if (!closeOnDocument) return;
 
     const handleOutsidePointer = (target: EventTarget | null) => {
-      if (panelRef.current && !panelRef.current.contains(target as Node)) {
+      const nodeTarget = target as Node | null;
+      if (isPointerOutsideNotificationPanel(nodeTarget, panelRef.current)) {
         onCloseRef.current();
       }
     };
