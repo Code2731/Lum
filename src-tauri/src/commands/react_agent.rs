@@ -329,7 +329,7 @@ const CODING_WORKFLOW_PROMPT: &str = r#"
 
 const REVIEW_MODE_PROMPT: &str = r#"
 리뷰 모드:
-- 목표가 코드/프로젝트 리뷰이면 파일을 수정하지 말고 read-only 분석만 수행한다.
+- 목표가 코드/프로젝트 리뷰이면 파일을 수정하지 말고 읽기 전용 분석만 수행한다.
 - 우선 list_dir/get_repo_map/git_diff/read_file/query_graph를 사용해 구조, 변경점, 위험 지점을 확인한다.
 - shell/run_tests/write_file/apply_patch/delete_file/mcp/데스크톱 제어 도구는 사용하지 않는다.
 - 최종 답변은 심각도 순으로 버그·회귀 위험·누락 테스트를 먼저 제시하고, 파일/영역 근거를 붙인다."#;
@@ -650,7 +650,7 @@ async fn run_tool(
     if is_plan_blocked_tool(mode, tool) {
         return format!("Plan 모드 차단: {tool} 도구는 승인 후 Act 모드에서만 실행됩니다.");
     }
-    // 리뷰 모드에서는 read-only 분석만 허용.
+    // 리뷰 모드에서는 읽기 전용 분석만 허용.
     if is_review_blocked_tool(review_mode, tool) {
         return review_mode_block_message(tool);
     }
@@ -782,7 +782,7 @@ fn is_review_blocked_tool(review_mode: bool, tool: &str) -> bool {
 
 fn review_mode_block_message(tool: &str) -> String {
     format!(
-        "리뷰 모드 정책 차단: {tool} 도구는 read-only 분석에서 허용되지 않습니다. (권한 오류 아님)"
+        "리뷰 모드 정책 차단: {tool} 도구는 읽기 전용 분석에서 허용되지 않습니다. (권한 오류 아님)"
     )
 }
 
@@ -3289,7 +3289,7 @@ pub async fn react_agent_run(
         emit_event(
             &app,
             "status",
-            "리뷰 모드 — read-only 분석 도구만 사용",
+            "리뷰 모드 — 읽기 전용 분석 도구만 사용",
             None,
             Some(0),
         );
@@ -3799,6 +3799,7 @@ mod tests {
         let msg = review_mode_block_message("run_tests");
         assert!(msg.contains("리뷰 모드 정책 차단"), "{msg}");
         assert!(msg.contains("권한 오류 아님"), "{msg}");
+        assert!(msg.contains("읽기 전용"), "{msg}");
     }
 
     #[test]
