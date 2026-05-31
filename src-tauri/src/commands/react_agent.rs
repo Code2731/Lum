@@ -11,6 +11,7 @@ use crate::error::{LumError, Result};
 use crate::platform;
 use serde::Serialize;
 use std::collections::{BTreeMap, HashMap, HashSet};
+use std::future::Future;
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -198,6 +199,25 @@ static CANCEL_FLAG: OnceLock<Arc<AtomicBool>> = OnceLock::new();
 
 fn cancel_flag() -> &'static Arc<AtomicBool> {
     CANCEL_FLAG.get_or_init(|| Arc::new(AtomicBool::new(false)))
+}
+
+/// 장시간 future를 짧은 주기로 폴링하면서 전역 취소 플래그를 감시.
+/// 취소되면 None을 반환해 상위 루프가 즉시 중단할 수 있게 한다.
+async fn await_with_cancel<F, T>(future: F) -> Option<T>
+where
+    F: Future<Output = T>,
+{
+    use tokio::time::{timeout, Duration};
+    tokio::pin!(future);
+    loop {
+        if cancel_flag().load(Ordering::Relaxed) {
+            return None;
+        }
+        match timeout(Duration::from_millis(80), &mut future).await {
+            Ok(v) => return Some(v),
+            Err(_) => continue,
+        }
+    }
 }
 
 // ─── 이벤트 타입 ──────────────────────────────────────────────────────────────
@@ -3342,17 +3362,21 @@ pub async fn react_agent_run(
             );
 
             // 로컬 전용 — embedded GGUF 우선, 미로드면 xLLM HTTP (127.0.0.1:8080)
-            let response = match call_ai_with_backend(
+            let response = match await_with_cancel(call_ai_with_backend(
                 Some(&app),
                 &client,
                 &effective_model,
                 &conversation,
                 forced_backend.as_deref(),
-            )
+            ))
             .await
             {
-                Ok(r) => r,
-                Err(e) => {
+                None => {
+                    emit_event(&app, "status", "취소됨", None, Some(step));
+                    return Ok(());
+                }
+                Some(Ok(r)) => r,
+                Some(Err(e)) => {
                     emit_event(&app, "error", format!("LLM 오류: {e}"), None, None);
                     return Err(e);
                 }
@@ -3506,18 +3530,28 @@ pub async fn react_agent_run(
                         "{conversation}\n\n{response}\n\n[시스템]: {}\n즉시 ANSWER를 출력하세요.",
                         ledger.recovery_l2()
                     );
-                    if let Ok(final_resp) = call_ai_with_backend(
+                    match await_with_cancel(call_ai_with_backend(
                         Some(&app),
                         &client,
                         &effective_model,
                         &force_prompt,
                         forced_backend.as_deref(),
-                    )
+                    ))
                     .await
                     {
-                        let answer = parse_answer(&final_resp)
-                            .unwrap_or_else(|| final_resp.trim().to_string());
-                        emit_event(&app, "answer", &answer, None, Some(step + 1));
+                        None => emit_event(&app, "status", "취소됨", None, Some(step)),
+                        Some(Ok(final_resp)) => {
+                            let answer = parse_answer(&final_resp)
+                                .unwrap_or_else(|| final_resp.trim().to_string());
+                            emit_event(&app, "answer", &answer, None, Some(step + 1));
+                        }
+                        Some(Err(e)) => emit_event(
+                            &app,
+                            "error",
+                            format!("LLM 오류(강제 답변): {e}"),
+                            None,
+                            Some(step + 1),
+                        ),
                     }
                     return Ok(());
                 }
