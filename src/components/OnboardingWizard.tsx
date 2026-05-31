@@ -303,7 +303,7 @@ const OnboardingWizard: React.FC<Props> = ({ onComplete }) => {
                 <div className="bg-white/2 border border-white/5 rounded-xl p-4 space-y-3 text-sm">
                   <p className="text-white/50 font-medium">xLLM 서버 설치 및 실행</p>
                   <CodeBlock>pip install tabbyapi</CodeBlock>
-                  <CodeBlock>tabbyapi --model-dir ~/tabby/models --port 5000</CodeBlock>
+                  <CodeBlock>tabbyapi --model-dir ~/tabby/models --port 8080</CodeBlock>
                   <a
                     href="https://github.com/theroyallab/tabbyAPI"
                     target="_blank"
