@@ -363,7 +363,7 @@ const PrivacyLedgerBadge: React.FC<Props> = ({
 
   React.useLayoutEffect(() => {
     if (!open) return;
-    const handler = (e: MouseEvent) => {
+    const handler = (e: PointerEvent) => {
       const target = e.target as Node;
       if (
         (popRef.current && !popRef.current.contains(target)) &&
@@ -380,12 +380,12 @@ const PrivacyLedgerBadge: React.FC<Props> = ({
         closePopover();
       }
     };
-    document.addEventListener("mousedown", handler);
+    document.addEventListener("pointerdown", handler);
     document.addEventListener("keydown", keyHandler, { capture: true });
     window.addEventListener("resize", updatePlacement);
     window.addEventListener("scroll", updatePlacement, true);
     return () => {
-      document.removeEventListener("mousedown", handler);
+      document.removeEventListener("pointerdown", handler);
       document.removeEventListener("keydown", keyHandler, { capture: true });
       window.removeEventListener("resize", updatePlacement);
       window.removeEventListener("scroll", updatePlacement, true);

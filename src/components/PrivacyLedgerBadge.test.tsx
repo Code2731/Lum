@@ -206,7 +206,7 @@ describe("PrivacyLedgerBadge", () => {
     const reset = screen.getByRole("button", { name: "세션 카운터 초기화" });
     expect(reset).toBeInTheDocument();
 
-    fireEvent.mouseDown(document.body);
+    fireEvent.pointerDown(document.body);
 
     expect(trigger).toHaveFocus();
   });
