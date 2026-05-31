@@ -51,6 +51,14 @@ interface Props {
 type CompareResult = NonNullable<Props["compareResultByBlock"]>[string];
 type TimelineRisk = "high" | "medium" | "low";
 
+export function isPointerOutsideAllTargets(
+  target: Node | null,
+  targets: Array<Node | null | undefined>,
+): boolean {
+  if (!target) return false;
+  return targets.every((node) => !(node?.contains(target) ?? false));
+}
+
 const SyntaxCmd: React.FC<{ cmd: string }> = ({ cmd }) => (
   <>
     {tokenizeShell(cmd).map((t, i) => (
@@ -865,9 +873,9 @@ const WarpListView: React.FC<Props> = ({
     };
     const onPointerDown = (e: PointerEvent) => {
       const target = e.target as Node | null;
-      if (!target) return;
-      if (deltaPopoverRef.current?.contains(target)) return;
-      if (deltaButtonRefs.current[deltaOpenId]?.contains(target)) return;
+      if (!isPointerOutsideAllTargets(target, [deltaPopoverRef.current, deltaButtonRefs.current[deltaOpenId]])) {
+        return;
+      }
       closeDeltaPopover(false, deltaOpenId);
     };
     window.addEventListener("keydown", onWindowKeyDown);
@@ -949,11 +957,9 @@ const WarpListView: React.FC<Props> = ({
     };
     const onPointerDown = (e: PointerEvent) => {
       const target = e.target as Node | null;
-      if (!target) return;
       const menuButton = menuButtonRefs.current[menuOpenId];
       const menuContainer = menuContainerRefs.current[menuOpenId];
-      if (menuButton?.contains(target)) return;
-      if (menuContainer?.contains(target)) return;
+      if (!isPointerOutsideAllTargets(target, [menuButton, menuContainer])) return;
       closeMenuById(menuOpenId, false);
     };
     window.addEventListener("keydown", onWindowKeyDown);
@@ -1393,9 +1399,7 @@ const WarpListView: React.FC<Props> = ({
     };
     const onPointerDown = (e: PointerEvent) => {
       const target = e.target as Node | null;
-      if (!target) return;
-      if (timelinePanelRef.current?.contains(target)) return;
-      if (timelineButtonRef.current?.contains(target)) return;
+      if (!isPointerOutsideAllTargets(target, [timelinePanelRef.current, timelineButtonRef.current])) return;
       closeTimelinePanel(false);
     };
     window.addEventListener("keydown", onWindowKeyDown);
