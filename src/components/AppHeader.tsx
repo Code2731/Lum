@@ -912,8 +912,8 @@ const AppHeader: React.FC<Props> = ({
             }`}
             title={
               fastEmpty
-                ? "TabbyAPI에 로드된 모델이 없습니다 — XllmPanel에서 모델을 [사용]하세요"
-                : `Fast (TabbyAPI): ${loadedModelId}`
+                ? "xLLM에 로드된 모델이 없습니다 — XllmPanel에서 모델을 [사용]하세요"
+                : `Fast (xLLM): ${loadedModelId}`
             }
           >
             {fastEmpty ? "EMPTY" : "FAST"} · {fast}

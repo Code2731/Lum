@@ -23,7 +23,7 @@ interface Props {
 const BACKEND_LABEL: Record<Backend, string> = {
   embedded: "임베디드 mistralrs",
   ollama: "Ollama",
-  xllm: "xLLM (TabbyAPI)",
+  xllm: "xLLM",
   gemini: "Gemini Cloud",
 };
 

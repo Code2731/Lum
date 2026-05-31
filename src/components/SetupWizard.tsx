@@ -37,7 +37,7 @@ const SetupWizard: React.FC<Props> = ({
             <div className="setup-step">
               <h3>1. xLLM 서버를 찾을 수 없습니다</h3>
               <p>
-                LUM은 로컬 AI 터미널입니다. xLLM(TabbyAPI)을 설치하고 실행해야
+                LUM은 로컬 AI 터미널입니다. xLLM 서버(TabbyAPI)를 설치하고 실행해야
                 AI 기능을 사용할 수 있습니다.
               </p>
               <a
@@ -46,7 +46,7 @@ const SetupWizard: React.FC<Props> = ({
                 rel="noreferrer"
                 className="setup-link"
               >
-                TabbyAPI (xLLM) 설치 가이드
+                xLLM(TabbyAPI) 설치 가이드
               </a>
               <p className="setup-hint">
                 설치 후 <code>python main.py</code>로 실행하면 기본적으로
