@@ -70,6 +70,23 @@ describe("TerminalContextMenu", () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
+  it("메뉴 내부 포인터 다운은 바깥 클릭으로 처리되지 않는다", () => {
+    const onClose = vi.fn();
+    render(
+      <TerminalContextMenu
+        {...baseProps}
+        onClose={onClose}
+        isPathOrUrl={false}
+      />,
+    );
+
+    const menu = document.querySelector('[role="menu"]');
+    if (!menu) throw new Error("컨텍스트 메뉴를 찾지 못했습니다.");
+    fireEvent.pointerDown(menu);
+    expect(onClose).not.toHaveBeenCalled();
+    expect(document.querySelector('[role="menu"]')).toBeInTheDocument();
+  });
+
   it("방향키로 항목을 이동하고 Enter로 실행한다", () => {
     const onRun = vi.fn();
     const onCopy = vi.fn();

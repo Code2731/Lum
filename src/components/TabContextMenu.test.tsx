@@ -70,6 +70,23 @@ describe("TabContextMenu", () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
+  it("메뉴 내부 포인터 다운은 바깥 클릭으로 처리되지 않는다", () => {
+    const onClose = vi.fn();
+    render(
+      <TabContextMenu
+        {...baseProps}
+        onClose={onClose}
+        onSetColor={vi.fn()}
+        onSetGroup={vi.fn()}
+      />,
+    );
+
+    const menu = screen.getByRole("menu", { hidden: true });
+    fireEvent.pointerDown(menu);
+    expect(onClose).not.toHaveBeenCalled();
+    expect(screen.getByRole("menu", { hidden: true })).toBeInTheDocument();
+  });
+
   it("색상 버튼에서 탭 색상을 변경한다", () => {
     const onSetColor = vi.fn();
     render(
