@@ -62,11 +62,11 @@ describe("NotificationCenter", () => {
       </div>,
     );
 
-    fireEvent.mouseDown(document.body);
+    fireEvent.pointerDown(document.body);
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
-  it("터치 시작으로도 바깥 영역 탭 시 패널이 닫힌다", () => {
+  it("포인터 다운으로도 바깥 영역 탭 시 패널이 닫힌다", () => {
     const onClose = vi.fn();
     render(
       <div>
@@ -78,7 +78,7 @@ describe("NotificationCenter", () => {
       </div>,
     );
 
-    fireEvent.touchStart(document.body);
+    fireEvent.pointerDown(document.body);
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
