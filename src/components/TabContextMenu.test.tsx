@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import React from "react";
-import TabContextMenu from "./TabContextMenu";
+import TabContextMenu, { isPointerOutsideTabContextMenu } from "./TabContextMenu";
 
 describe("TabContextMenu", () => {
   const baseProps = {
@@ -12,6 +12,26 @@ describe("TabContextMenu", () => {
     onSetGroup: vi.fn(),
     onClose: vi.fn(),
   };
+
+  it("바깥 클릭 판정은 ref가 null이어도 안전하게 동작한다", () => {
+    const target = document.createElement("div");
+    document.body.appendChild(target);
+
+    expect(isPointerOutsideTabContextMenu(target, null)).toBe(true);
+    expect(isPointerOutsideTabContextMenu(null, null)).toBe(false);
+  });
+
+  it("바깥 클릭 판정은 메뉴 내부/외부를 구분한다", () => {
+    const menu = document.createElement("div");
+    const child = document.createElement("button");
+    const outside = document.createElement("div");
+    menu.appendChild(child);
+    document.body.appendChild(menu);
+    document.body.appendChild(outside);
+
+    expect(isPointerOutsideTabContextMenu(child, menu)).toBe(false);
+    expect(isPointerOutsideTabContextMenu(outside, menu)).toBe(true);
+  });
 
   it("Escape 키로 메뉴가 닫힌다", () => {
     const onClose = vi.fn();

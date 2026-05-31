@@ -25,6 +25,14 @@ const getFallbackViewportSize = () => ({
   height: typeof window === "undefined" ? 800 : window.innerHeight,
 });
 
+export const isPointerOutsideTerminalContextMenu = (
+  target: Node | null,
+  menuElement: HTMLElement | null,
+): boolean => {
+  if (!target) return false;
+  return !(menuElement?.contains(target) ?? false);
+};
+
 const clampMenuPos = (x: number, y: number, width: number, height: number) => {
   const viewport = getFallbackViewportSize();
   return {
@@ -62,7 +70,8 @@ const TerminalContextMenu: React.FC<Props> = ({
 
   useEffect(() => {
     const handler = (e: PointerEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+      const nodeTarget = e.target as Node | null;
+      if (isPointerOutsideTerminalContextMenu(nodeTarget, menuRef.current)) {
         onClose();
       }
     };
