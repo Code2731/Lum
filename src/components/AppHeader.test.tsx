@@ -560,6 +560,23 @@ describe("AppHeader", () => {
     expect(overflowButton).toHaveFocus();
   });
 
+  it("고급 메뉴 내부 포인터 다운은 바깥 클릭으로 처리되지 않는다", async () => {
+    const HeaderHarness = () => {
+      const [showAdvancedOverflow, setShowAdvancedOverflow] = React.useState(true);
+      const props = buildProps() as any;
+      props.showAdvancedOverflow = showAdvancedOverflow;
+      props.setShowAdvancedOverflow = setShowAdvancedOverflow;
+      return <AppHeader {...props} />;
+    };
+
+    render(<HeaderHarness />);
+
+    const menu = await screen.findByRole("menu", { name: "고급 기능 메뉴" });
+    fireEvent.pointerDown(menu);
+
+    expect(screen.getByRole("menu", { name: "고급 기능 메뉴" })).toBeInTheDocument();
+  });
+
   it("고급 메뉴를 열면 즉시 닫히지 않고 바깥에서 닫힌다", async () => {
     const props = buildProps() as any;
     const Wrapper = () => {
@@ -617,6 +634,30 @@ describe("AppHeader", () => {
       expect(screen.queryByRole("menu", { name: "알림 센터" })).not.toBeInTheDocument();
     });
     expect(notifButton).toHaveFocus();
+  });
+
+  it("알림 센터 내부 포인터 다운은 바깥 클릭으로 처리되지 않는다", async () => {
+    const HeaderHarness = () => {
+      const [showNotifCenter, setShowNotifCenter] = React.useState(true);
+      const props = buildProps() as any;
+      return (
+        <AppHeader
+          {...props}
+          panels={{
+            ...props.panels,
+            showNotifCenter,
+            setShowNotifCenter,
+          }}
+        />
+      );
+    };
+
+    render(<HeaderHarness />);
+
+    const menu = await screen.findByRole("menu", { name: "알림 센터" });
+    fireEvent.pointerDown(menu);
+
+    expect(screen.getByRole("menu", { name: "알림 센터" })).toBeInTheDocument();
   });
 
   it("고급 기능 패널을 열 때 알림 센터를 닫는다", async () => {
