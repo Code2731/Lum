@@ -53,7 +53,10 @@ import type { AiBackend } from "./utils/inputRouter";
 import { extractInspectorAnalyzeCommands } from "./utils/inspectorAnalyze";
 import { getRovingMenuNextIndex } from "./utils/menuRoving";
 import { resolveInspectorMenuHotkey } from "./utils/inspectorMenuHotkeys";
-import { isEventTargetWithinSelector as isEventTargetWithinSelectorUtil } from "./utils/pointerGuard";
+import {
+  isEventTargetWithinSelector as isEventTargetWithinSelectorUtil,
+  isTargetInsideTargets,
+} from "./utils/pointerGuard";
 import type {
   RetryCompareResult,
   RetryCompareTask,
@@ -2476,7 +2479,7 @@ const App: React.FC = () => {
                                           next,
                                           "[data-inspector-command-menu='compact']",
                                         );
-                                        const currentRowFocused = next instanceof Node && e.currentTarget.contains(next);
+                                        const currentRowFocused = isTargetInsideTargets(next, [e.currentTarget]);
                                         if (!currentRowFocused && !menuContainerFocused) {
                                           closeInspectorCommandMenu();
                                         }
