@@ -1046,4 +1046,53 @@ describe("AppHeader", () => {
       });
     }
   });
+
+  it("위아래 공간이 모두 작은 경우 뷰포트 기준 높이로 확장해 잘림을 완화한다", async () => {
+    const originalInnerHeight = window.innerHeight;
+
+    try {
+      const props = buildProps() as any;
+      const HeaderHarness = () => {
+        const [showAdvancedOverflow, setShowAdvancedOverflow] = React.useState(true);
+        return (
+          <AppHeader
+            {...props}
+            showAdvancedOverflow={showAdvancedOverflow}
+            setShowAdvancedOverflow={setShowAdvancedOverflow}
+          />
+        );
+      };
+
+      render(<HeaderHarness />);
+
+      const button = await screen.findByRole("button", { name: ADVANCED_BUTTON_NAME });
+      const menu = await screen.findByRole("menu", { name: "고급 기능 메뉴" });
+
+      Object.defineProperty(button, "getBoundingClientRect", {
+        configurable: true,
+        value: () => domRect(60, 0, 40, 28),
+      });
+      Object.defineProperty(menu, "getBoundingClientRect", {
+        configurable: true,
+        value: () => domRect(0, 0, 256, 440),
+      });
+      Object.defineProperty(window, "innerHeight", {
+        configurable: true,
+        value: 140,
+      });
+
+      fireEvent(window, new Event("resize"));
+
+      await waitFor(() => {
+        const menuEl = screen.getByRole("menu", { name: "고급 기능 메뉴" });
+        expect(menuEl).toHaveStyle({ maxHeight: "124px" });
+        expect(menuEl).toHaveStyle({ top: "8px" });
+      });
+    } finally {
+      Object.defineProperty(window, "innerHeight", {
+        configurable: true,
+        value: originalInnerHeight,
+      });
+    }
+  });
 });

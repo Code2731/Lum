@@ -256,6 +256,51 @@ describe("PrivacyLedgerBadge", () => {
     });
   });
 
+  it("위아래 공간이 모두 작은 경우 뷰포트 기준 높이로 확장해 잘림을 완화한다", () => {
+    const onReset = vi.fn();
+    const originalInnerHeight = window.innerHeight;
+
+    renderWithProvider(
+      <PrivacyLedgerBadge
+        state={defaultState}
+        isAllOnDevice
+        onReset={onReset}
+      />,
+    );
+
+    const trigger = screen.getByRole("button", { name: /Privacy Ledger/ });
+    Object.defineProperty(window, "innerHeight", {
+      configurable: true,
+      value: 140,
+    });
+    Object.defineProperty(trigger, "getBoundingClientRect", {
+      configurable: true,
+      value: () => ({
+        x: 620,
+        y: 60,
+        top: 60,
+        left: 620,
+        right: 650,
+        bottom: 88,
+        width: 30,
+        height: 28,
+        toJSON: () => ({}),
+      } as DOMRect),
+    });
+
+    fireEvent.click(trigger);
+
+    const popover = screen.getByRole("dialog", { name: "Privacy Ledger 상세" });
+    const maxHeight = Number.parseFloat(popover.style.maxHeight || "0");
+    expect(maxHeight).toBe(124);
+    expect(popover.style.top).toBe("8px");
+
+    Object.defineProperty(window, "innerHeight", {
+      configurable: true,
+      value: originalInnerHeight,
+    });
+  });
+
   it("visualViewport 높이가 0이어도 innerHeight를 폴백으로 사용한다", () => {
     const onReset = vi.fn();
     const originalInnerHeight = window.innerHeight;

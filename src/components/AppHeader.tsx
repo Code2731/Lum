@@ -450,6 +450,19 @@ const AppHeader: React.FC<Props> = ({
     const viewport = getViewportBounds();
     const availableHeight = getPopupMaxHeight(viewport.height);
     const availableSpace = getPopupAvailableSpace(triggerRect, placement, viewport);
+    const spaceAbove = triggerRect.top - viewport.top - POPUP_EDGE_GUTTER;
+    const spaceBelow = viewport.top + viewport.height - triggerRect.bottom - POPUP_EDGE_GUTTER;
+
+    // 위/아래 모두 최소 가시 높이 미만이면 트리거 일부를 겹치더라도
+    // 뷰포트 안전 높이를 우선 사용해 "거의 안 보이는 잘림"을 피한다.
+    if (spaceAbove < POPUP_MIN_HEIGHT && spaceBelow < POPUP_MIN_HEIGHT) {
+      const viewportSafeHeight = Math.max(
+        1,
+        Math.floor(viewport.height - POPUP_EDGE_GUTTER * 2),
+      );
+      return Math.max(1, Math.min(availableHeight, viewportSafeHeight));
+    }
+
     return Math.max(1, Math.min(availableHeight, availableSpace));
   };
   const measurePopupPlacement = React.useCallback((trigger: HTMLElement | null, panelRef?: React.RefObject<HTMLDivElement | null>): PopupPlacement => {
