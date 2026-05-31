@@ -644,7 +644,7 @@ async fn run_tool(
     tool_whitelist: Option<&HashSet<String>>,
 ) -> String {
     if cancel_flag().load(Ordering::Relaxed) {
-        return "도구 실행 취소됨".to_string();
+        return tool_cancel_message(tool);
     }
     // Phase 129: Plan 모드에서는 읽기/분석만 허용 — 쓰기 도구와 shell 실행은 차단.
     if is_plan_blocked_tool(mode, tool) {
@@ -738,8 +738,12 @@ where
 {
     match await_with_cancel(future).await {
         Some(v) => v,
-        None => format!("{tool_name} 실행 취소됨"),
+        None => tool_cancel_message(tool_name),
     }
+}
+
+fn tool_cancel_message(tool_name: &str) -> String {
+    format!("{tool_name} 실행 취소됨")
 }
 
 fn is_plan_blocked_tool(mode: ReactMode, tool: &str) -> bool {
@@ -3804,6 +3808,12 @@ mod tests {
         assert!(msg.contains("리뷰 모드 정책 차단"), "{msg}");
         assert!(msg.contains("권한 오류 아님"), "{msg}");
         assert!(msg.contains("읽기 전용"), "{msg}");
+    }
+
+    #[test]
+    fn 도구_취소_문구_일관성() {
+        assert_eq!(tool_cancel_message("mcp"), "mcp 실행 취소됨");
+        assert_eq!(tool_cancel_message("query_graph"), "query_graph 실행 취소됨");
     }
 
     #[test]
