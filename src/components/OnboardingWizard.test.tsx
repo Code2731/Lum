@@ -100,8 +100,9 @@ describe("OnboardingWizard", () => {
         screen.getByText(/tabbyapi --model-dir ~\/tabby\/models --port 8080/)
       ).toBeInTheDocument();
       expect(
-        screen.getByText(/기본 연결 포트는 8080이며, 구형 환경에서는 5000 포트를 사용할 수 있습니다\./)
+        screen.getByText(/위 명령은 TabbyAPI 예시입니다\. mlx_lm\.server 같은 OpenAI 호환 서버도 base URL만 맞추면 연결됩니다\./)
       ).toBeInTheDocument();
+      expect(screen.getByText(/TabbyAPI 공식 문서\(예시\) →/)).toBeInTheDocument();
     });
   });
 

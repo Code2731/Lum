@@ -301,11 +301,11 @@ const OnboardingWizard: React.FC<Props> = ({ onComplete }) => {
 
               {xllmOnline === false && (
                 <div className="bg-white/2 border border-white/5 rounded-xl p-4 space-y-3 text-sm">
-                  <p className="text-white/50 font-medium">xLLM 서버 설치 및 실행</p>
+                  <p className="text-white/50 font-medium">xLLM 서버 설치 및 실행 (OpenAI 호환)</p>
                   <CodeBlock>pip install tabbyapi</CodeBlock>
                   <CodeBlock>tabbyapi --model-dir ~/tabby/models --port 8080</CodeBlock>
                   <p className="text-xs text-white/45 leading-relaxed">
-                    기본 연결 포트는 8080이며, 구형 환경에서는 5000 포트를 사용할 수 있습니다.
+                    위 명령은 TabbyAPI 예시입니다. mlx_lm.server 같은 OpenAI 호환 서버도 base URL만 맞추면 연결됩니다.
                   </p>
                   <a
                     href="https://github.com/theroyallab/tabbyAPI"
@@ -313,7 +313,7 @@ const OnboardingWizard: React.FC<Props> = ({ onComplete }) => {
                     rel="noreferrer"
                     className="inline-block text-accent hover:text-accent/70 transition-colors mt-1"
                   >
-                    xLLM(TabbyAPI) 공식 문서 →
+                    TabbyAPI 공식 문서(예시) →
                   </a>
                 </div>
               )}
