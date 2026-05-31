@@ -227,6 +227,29 @@ describe("WarpListView delta actions", () => {
     expect(screen.queryByText(/Retry Compare/)).not.toBeInTheDocument();
   });
 
+  it("Δ 팝오버 내부 포인터 다운은 바깥 클릭으로 처리되지 않는다", () => {
+    render(
+      <WarpListView
+        blocks={blocks}
+        compareResultByBlock={{
+          b2: {
+            added: 1,
+            removed: 1,
+            preview: "",
+            addedLines: ["new line"],
+            removedLines: ["old line"],
+            comparedAt: now,
+          },
+        }}
+      />,
+    );
+
+    fireEvent.click(screen.getByText("Δ +1/-1"));
+    const heading = screen.getByText(/Retry Compare/);
+    fireEvent.pointerDown(heading);
+    expect(screen.getByText(/Retry Compare/)).toBeInTheDocument();
+  });
+
   it("Δ 팝오버는 Escape로 닫힘", () => {
     render(
       <WarpListView
@@ -375,6 +398,29 @@ describe("WarpListView delta actions", () => {
     fireEvent.keyDown(window, { key: "Escape" });
     expect(screen.queryByText("최근 비교 히스토리")).not.toBeInTheDocument();
   });
+
+  it("Δ Timeline 내부 포인터 다운은 바깥 클릭으로 처리되지 않는다", () => {
+    render(
+      <WarpListView
+        blocks={blocks}
+        compareResultByBlock={{
+          b2: {
+            added: 1,
+            removed: 1,
+            preview: "",
+            addedLines: ["new line"],
+            removedLines: ["old line"],
+            comparedAt: now,
+          },
+        }}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Δ Timeline (1)" }));
+    const panelTitle = screen.getByText("최근 비교 히스토리");
+    fireEvent.pointerDown(panelTitle);
+    expect(screen.getByText("최근 비교 히스토리")).toBeInTheDocument();
+  });
   it("Δ Timeline에서 Escape는 상위 키 핸들러로 전파되지 않음", () => {
     const onParentEscape = vi.fn();
     const onParentKeyDown = (e: KeyboardEvent) => {
@@ -480,6 +526,28 @@ describe("WarpListView delta actions", () => {
     expect(screen.getByRole("menuitem", { name: /Copy Both/ })).toBeInTheDocument();
     fireEvent.pointerDown(document.body);
     expect(screen.queryByRole("menuitem", { name: /Copy Both/ })).not.toBeInTheDocument();
+  });
+
+  it("블록 액션 메뉴 내부 포인터 다운은 바깥 클릭으로 처리되지 않는다", () => {
+    render(
+      <WarpListView
+        blocks={[
+          {
+            id: "b4",
+            command: "echo menu test",
+            output: "menu ok",
+            exitCode: 0,
+            startedAt: now - 1000,
+            endedAt: now,
+          },
+        ]}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "블록 액션" }));
+    const menuItem = screen.getByRole("menuitem", { name: /Copy Both/ });
+    fireEvent.pointerDown(menuItem);
+    expect(screen.getByRole("menuitem", { name: /Copy Both/ })).toBeInTheDocument();
   });
 
   it("블록 액션 메뉴는 Escape로 닫힘", () => {
