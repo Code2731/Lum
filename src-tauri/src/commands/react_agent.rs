@@ -3631,6 +3631,10 @@ pub async fn react_agent_run(
             )
             .await;
             emit_event(&app, "observation", &observation, None, Some(step + 1));
+            if cancel_flag().load(Ordering::Relaxed) {
+                emit_event(&app, "status", "취소됨", None, Some(step));
+                return Ok(());
+            }
             ledger.absorb_observation(&action.tool, &observation);
 
             // 대화 히스토리 업데이트 (최근 6턴만 유지해 컨텍스트 폭발 방지)
