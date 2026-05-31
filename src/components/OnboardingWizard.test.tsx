@@ -75,7 +75,7 @@ describe("OnboardingWizard", () => {
     await waitFor(() => screen.getByText("성능 모드 선택"));
     fireEvent.click(screen.getByText("다음")); // → step 3 (xLLM)
     await waitFor(() => {
-      expect(screen.getByText("TabbyAPI 연결됨")).toBeInTheDocument();
+      expect(screen.getByText("xLLM 연결됨")).toBeInTheDocument();
     });
   });
 
@@ -118,7 +118,7 @@ describe("OnboardingWizard", () => {
     await waitFor(() => screen.getByText("성능 모드 선택"));
     fireEvent.click(screen.getByText("다음"));
     // step 3: xLLM 상태 확인 후 다음
-    await waitFor(() => screen.getByText(/TabbyAPI (연결됨|미연결)/));
+    await waitFor(() => screen.getByText(/xLLM (연결됨|미연결)/));
     fireEvent.click(screen.getByText("다음"));
     // step 4: 모델 준비 화면 진입 후 다음
     await waitFor(() => screen.getByText("AI 모델 준비"));
@@ -136,7 +136,7 @@ describe("OnboardingWizard", () => {
     fireEvent.click(screen.getByText("다음"));
     await waitFor(() => screen.getByText("성능 모드 선택"));
     fireEvent.click(screen.getByText("다음"));
-    await waitFor(() => screen.getByText(/TabbyAPI (연결됨|미연결)/));
+    await waitFor(() => screen.getByText(/xLLM (연결됨|미연결)/));
     fireEvent.click(screen.getByText("다음"));
     await waitFor(() => screen.getByText("AI 모델 준비"));
     fireEvent.click(screen.getByText("다음"));

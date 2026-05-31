@@ -286,7 +286,7 @@ const OnboardingWizard: React.FC<Props> = ({ onComplete }) => {
                   xllmOnline === null ? "text-white/30" :
                   xllmOnline ? "text-green-400" : "text-red-400"
                 }`}>
-                  {xllmOnline === null ? "확인 중…" : xllmOnline ? "TabbyAPI 연결됨" : "TabbyAPI 미연결"}
+                  {xllmOnline === null ? "확인 중…" : xllmOnline ? "xLLM 연결됨" : "xLLM 미연결"}
                 </span>
                 <IconButton
                   tooltip="재확인"
@@ -301,7 +301,7 @@ const OnboardingWizard: React.FC<Props> = ({ onComplete }) => {
 
               {xllmOnline === false && (
                 <div className="bg-white/2 border border-white/5 rounded-xl p-4 space-y-3 text-sm">
-                  <p className="text-white/50 font-medium">TabbyAPI 설치 및 실행</p>
+                  <p className="text-white/50 font-medium">xLLM 서버 설치 및 실행</p>
                   <CodeBlock>pip install tabbyapi</CodeBlock>
                   <CodeBlock>tabbyapi --model-dir ~/tabby/models --port 5000</CodeBlock>
                   <a
@@ -310,7 +310,7 @@ const OnboardingWizard: React.FC<Props> = ({ onComplete }) => {
                     rel="noreferrer"
                     className="inline-block text-accent hover:text-accent/70 transition-colors mt-1"
                   >
-                    TabbyAPI 공식 문서 →
+                    xLLM(TabbyAPI) 공식 문서 →
                   </a>
                 </div>
               )}
