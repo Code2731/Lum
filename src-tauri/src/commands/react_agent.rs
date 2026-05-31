@@ -613,8 +613,9 @@ async fn run_reflexion(
         "{conversation}\n\n[시스템-Reflexion]\n목표: {goal}\n현재 결론 후보: {candidate}\n지금까지의 과정으로 목표 달성 여부와 회귀 위험을 60자 이내 한 줄로 평가하세요.\n형식: ok: ... 또는 fail: ... 또는 risk_high: ..."
     );
     let fut = call_ai_with_backend(Some(app), client, model, &prompt, backend);
-    match tokio::time::timeout(std::time::Duration::from_secs(REFLEXION_TIMEOUT_SECS), fut).await {
-        Ok(Ok(resp)) => {
+    let timed = tokio::time::timeout(std::time::Duration::from_secs(REFLEXION_TIMEOUT_SECS), fut);
+    match await_with_cancel(timed).await {
+        Some(Ok(Ok(resp))) => {
             let line = resp
                 .lines()
                 .find(|l| !l.trim().is_empty())
@@ -3320,29 +3321,34 @@ pub async fn react_agent_run(
             None,
             None,
         );
-        if let Ok(plan_resp) = generate_task_plan(
+        if let Some(plan_result) = await_with_cancel(generate_task_plan(
             &app,
             &client,
             &goal,
             forced_backend.as_deref(),
             &effective_model,
-        )
+        ))
         .await
         {
-            let steps_list = parse_task_plan(&plan_resp);
-            if !steps_list.is_empty() {
-                let plan_str = format_plan(&steps_list);
-                conversation.push_str(&format!(
-                    "\n\n[작업 계획 — 이 순서로 실행하세요]\n{plan_str}"
-                ));
-                emit_event(
-                    &app,
-                    "status",
-                    format!("작업 계획 생성됨 ({}단계)", steps_list.len()),
-                    None,
-                    None,
-                );
+            if let Ok(plan_resp) = plan_result {
+                let steps_list = parse_task_plan(&plan_resp);
+                if !steps_list.is_empty() {
+                    let plan_str = format_plan(&steps_list);
+                    conversation.push_str(&format!(
+                        "\n\n[작업 계획 — 이 순서로 실행하세요]\n{plan_str}"
+                    ));
+                    emit_event(
+                        &app,
+                        "status",
+                        format!("작업 계획 생성됨 ({}단계)", steps_list.len()),
+                        None,
+                        None,
+                    );
+                }
             }
+        } else {
+            emit_event(&app, "status", "취소됨", None, Some(step));
+            return Ok(());
         }
     }
 
@@ -3391,7 +3397,7 @@ pub async fn react_agent_run(
             // ANSWER 확인 — 완료 직전 reflexion 1회.
             if let Some(answer) = parse_answer(&response) {
                 if reflexion_enabled {
-                    if let Some(reflect) = run_reflexion(
+                    let reflect_opt = run_reflexion(
                         &app,
                         &client,
                         &conversation,
@@ -3400,8 +3406,12 @@ pub async fn react_agent_run(
                         forced_backend.as_deref(),
                         &effective_model,
                     )
-                    .await
-                    {
+                    .await;
+                    if cancel_flag().load(Ordering::Relaxed) {
+                        emit_event(&app, "status", "취소됨", None, Some(step));
+                        return Ok(());
+                    }
+                    if let Some(reflect) = reflect_opt {
                         emit_event(
                             &app,
                             "status",
@@ -3436,7 +3446,7 @@ pub async fn react_agent_run(
                 // 파싱 실패 — 응답 전체를 ANSWER로 취급(반성 1회 후 종료 가능)
                 let candidate = response.trim();
                 if reflexion_enabled {
-                    if let Some(reflect) = run_reflexion(
+                    let reflect_opt = run_reflexion(
                         &app,
                         &client,
                         &conversation,
@@ -3445,8 +3455,12 @@ pub async fn react_agent_run(
                         forced_backend.as_deref(),
                         &effective_model,
                     )
-                    .await
-                    {
+                    .await;
+                    if cancel_flag().load(Ordering::Relaxed) {
+                        emit_event(&app, "status", "취소됨", None, Some(step));
+                        return Ok(());
+                    }
+                    if let Some(reflect) = reflect_opt {
                         emit_event(
                             &app,
                             "status",
@@ -3502,27 +3516,32 @@ pub async fn react_agent_run(
                             None,
                             Some(step + 1),
                         );
-                        if let Ok(plan_resp) = generate_task_plan(
+                        if let Some(plan_result) = await_with_cancel(generate_task_plan(
                             &app,
                             &client,
                             &goal,
                             forced_backend.as_deref(),
                             &effective_model,
-                        )
+                        ))
                         .await
                         {
-                            let new_steps = parse_task_plan(&plan_resp);
-                            if !new_steps.is_empty() {
-                                outer_replan_count += 1;
-                                ledger.stuck_total = 0;
-                                let plan_str = format_plan(&new_steps);
-                                conversation.push_str(&format!(
-                                    "\n\n{response}\n\nOBSERVATION: ⚠ 반복 패턴 감지. \
-                                     재계획으로 재시도하세요 (outer 재계획 {outer_replan_count}/2):\n{plan_str}"
-                                ));
-                                step += 1;
-                                continue;
+                            if let Ok(plan_resp) = plan_result {
+                                let new_steps = parse_task_plan(&plan_resp);
+                                if !new_steps.is_empty() {
+                                    outer_replan_count += 1;
+                                    ledger.stuck_total = 0;
+                                    let plan_str = format_plan(&new_steps);
+                                    conversation.push_str(&format!(
+                                        "\n\n{response}\n\nOBSERVATION: ⚠ 반복 패턴 감지. \
+                                         재계획으로 재시도하세요 (outer 재계획 {outer_replan_count}/2):\n{plan_str}"
+                                    ));
+                                    step += 1;
+                                    continue;
+                                }
                             }
+                        } else {
+                            emit_event(&app, "status", "취소됨", None, Some(step));
+                            return Ok(());
                         }
                     }
                     // 재계획 실패 또는 횟수 초과 → 강제 최종 답변
@@ -3604,7 +3623,7 @@ pub async fn react_agent_run(
 
         // 최대 단계 초과 — reflexion에서 위험 감지되면 딱 1턴 추가 허용.
         if reflexion_enabled && !extra_turn_granted {
-            if let Some(reflect) = run_reflexion(
+            let reflect_opt = run_reflexion(
                 &app,
                 &client,
                 &conversation,
@@ -3613,8 +3632,12 @@ pub async fn react_agent_run(
                 forced_backend.as_deref(),
                 &effective_model,
             )
-            .await
-            {
+            .await;
+            if cancel_flag().load(Ordering::Relaxed) {
+                emit_event(&app, "status", "취소됨", None, Some(step));
+                return Ok(());
+            }
+            if let Some(reflect) = reflect_opt {
                 emit_event(
                     &app,
                     "status",
@@ -3792,6 +3815,36 @@ mod tests {
         assert!(!should_apply_config_whitelist(None));
         assert!(!should_apply_config_whitelist(Some(false)));
         assert!(should_apply_config_whitelist(Some(true)));
+    }
+
+    #[tokio::test]
+    async fn await_with_cancel_이미_취소면_none() {
+        cancel_flag().store(true, Ordering::Relaxed);
+        let out = await_with_cancel(async { 42usize }).await;
+        assert!(out.is_none());
+        cancel_flag().store(false, Ordering::Relaxed);
+    }
+
+    #[tokio::test]
+    async fn await_with_cancel_대기중_취소되면_none() {
+        use tokio::time::{sleep, Duration, Instant};
+
+        cancel_flag().store(false, Ordering::Relaxed);
+        tokio::spawn(async {
+            sleep(Duration::from_millis(25)).await;
+            cancel_flag().store(true, Ordering::Relaxed);
+        });
+
+        let started = Instant::now();
+        let out = await_with_cancel(async {
+            sleep(Duration::from_millis(400)).await;
+            "done"
+        })
+        .await;
+        let elapsed = started.elapsed();
+        assert!(out.is_none());
+        assert!(elapsed < Duration::from_millis(260), "elapsed={elapsed:?}");
+        cancel_flag().store(false, Ordering::Relaxed);
     }
 
     #[test]
