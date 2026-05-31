@@ -38,7 +38,7 @@ const TabContextMenu: React.FC<Props> = ({
   });
 
   useEffect(() => {
-    const handle = (e: MouseEvent) => {
+    const handle = (e: PointerEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) onClose();
     };
     const handleKeydown = (e: KeyboardEvent) => {
@@ -48,10 +48,10 @@ const TabContextMenu: React.FC<Props> = ({
       e.stopImmediatePropagation();
       onClose();
     };
-    document.addEventListener("mousedown", handle);
+    document.addEventListener("pointerdown", handle);
     document.addEventListener("keydown", handleKeydown, { capture: true });
     return () => {
-      document.removeEventListener("mousedown", handle);
+      document.removeEventListener("pointerdown", handle);
       document.removeEventListener("keydown", handleKeydown, { capture: true });
     };
   }, [onClose]);

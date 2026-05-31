@@ -61,7 +61,7 @@ const TerminalContextMenu: React.FC<Props> = ({
   };
 
   useEffect(() => {
-    const handler = (e: MouseEvent) => {
+    const handler = (e: PointerEvent) => {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
         onClose();
       }
@@ -74,10 +74,10 @@ const TerminalContextMenu: React.FC<Props> = ({
         onClose();
       }
     };
-    document.addEventListener("mousedown", handler);
+    document.addEventListener("pointerdown", handler);
     document.addEventListener("keydown", keyHandler, { capture: true });
     return () => {
-      document.removeEventListener("mousedown", handler);
+      document.removeEventListener("pointerdown", handler);
       document.removeEventListener("keydown", keyHandler, { capture: true });
     };
   }, [onClose]);

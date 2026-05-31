@@ -66,7 +66,7 @@ describe("TabContextMenu", () => {
       />,
     );
 
-    fireEvent.mouseDown(document.body);
+    fireEvent.pointerDown(document.body);
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
