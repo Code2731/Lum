@@ -12,9 +12,11 @@ use crate::platform;
 use serde::Serialize;
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::path::{Path, PathBuf};
+use std::process::Stdio;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
 use tauri::{command, AppHandle, Emitter, Manager};
+use tokio::io::AsyncReadExt;
 use tokio::process::Command as TokioCommand;
 
 const REACT_EVENT: &str = "react_event";
@@ -2456,24 +2458,21 @@ fn run_analyze_failure_reasons_tool(args: &serde_json::Value) -> String {
 }
 
 async fn run_shell(cmd: &str, cwd: &str) -> String {
-    let result = if cfg!(windows) {
-        TokioCommand::new("cmd")
-            .args(["/C", cmd])
-            .current_dir(cwd)
-            .output()
-            .await
+    let mut command = if cfg!(windows) {
+        let mut c = TokioCommand::new("cmd");
+        c.args(["/C", cmd]).current_dir(cwd);
+        c
     } else {
-        TokioCommand::new("sh")
-            .args(["-c", cmd])
-            .current_dir(cwd)
-            .output()
-            .await
+        let mut c = TokioCommand::new("sh");
+        c.args(["-c", cmd]).current_dir(cwd);
+        c
     };
-    match result {
+    match run_command_with_cancel(&mut command).await {
         Ok(output) => {
-            let stdout = String::from_utf8_lossy(&output.stdout);
-            let stderr = String::from_utf8_lossy(&output.stderr);
-            let combined = format!("{stdout}{stderr}");
+            if output.cancelled {
+                return "셸 실행 취소됨".to_string();
+            }
+            let combined = format!("{}{}", output.stdout, output.stderr);
             truncate(&combined)
         }
         Err(e) => format!("셸 실행 실패: {e}"),
@@ -2521,14 +2520,14 @@ fn list_dir_tool(path: &str, cwd: &str) -> String {
 }
 
 async fn run_git_diff(cwd: &str) -> String {
-    let result = TokioCommand::new("git")
-        .args(["diff"])
-        .current_dir(cwd)
-        .output()
-        .await;
-    match result {
+    let mut command = TokioCommand::new("git");
+    command.args(["diff"]).current_dir(cwd);
+    match run_command_with_cancel(&mut command).await {
         Ok(output) => {
-            let diff = String::from_utf8_lossy(&output.stdout).to_string();
+            if output.cancelled {
+                return "git diff 실행 취소됨".to_string();
+            }
+            let diff = output.stdout;
             if diff.trim().is_empty() {
                 "변경사항 없음".to_string()
             } else {
@@ -2544,31 +2543,89 @@ async fn run_tests_tool(cwd: &str) -> String {
     let Some(test_cmd) = detect_test_command(path) else {
         return "테스트 커맨드를 감지하지 못했습니다.".to_string();
     };
-    let result = if cfg!(windows) {
-        TokioCommand::new("cmd")
-            .args(["/C", &test_cmd.command])
-            .current_dir(cwd)
-            .output()
-            .await
+    let mut command = if cfg!(windows) {
+        let mut c = TokioCommand::new("cmd");
+        c.args(["/C", &test_cmd.command]).current_dir(cwd);
+        c
     } else {
-        TokioCommand::new("sh")
-            .args(["-c", &test_cmd.command])
-            .current_dir(cwd)
-            .output()
-            .await
+        let mut c = TokioCommand::new("sh");
+        c.args(["-c", &test_cmd.command]).current_dir(cwd);
+        c
     };
-    match result {
+    match run_command_with_cancel(&mut command).await {
         Ok(output) => {
-            let stdout = String::from_utf8_lossy(&output.stdout);
-            let stderr = String::from_utf8_lossy(&output.stderr);
-            let code = output.status.code().unwrap_or(-1);
+            if output.cancelled {
+                return truncate(&format!(
+                    "[{}: {}] 실행 취소됨",
+                    test_cmd.project_type, test_cmd.command
+                ));
+            }
             truncate(&format!(
                 "[{}: {}] (exit {})\n{}{}",
-                test_cmd.project_type, test_cmd.command, code, stdout, stderr
+                test_cmd.project_type,
+                test_cmd.command,
+                output.exit_code,
+                output.stdout,
+                output.stderr
             ))
         }
         Err(e) => format!("테스트 실행 실패: {e}"),
     }
+}
+
+struct CommandOutput {
+    stdout: String,
+    stderr: String,
+    exit_code: i32,
+    cancelled: bool,
+}
+
+async fn run_command_with_cancel(command: &mut TokioCommand) -> std::result::Result<CommandOutput, String> {
+    use tokio::time::{timeout, Duration};
+
+    command.stdout(Stdio::piped()).stderr(Stdio::piped());
+    let mut child = command.spawn().map_err(|e| e.to_string())?;
+
+    let stdout = child.stdout.take();
+    let stderr = child.stderr.take();
+    let stdout_task = tokio::spawn(async move {
+        let mut buf = Vec::new();
+        if let Some(mut stream) = stdout {
+            let _ = stream.read_to_end(&mut buf).await;
+        }
+        String::from_utf8_lossy(&buf).to_string()
+    });
+    let stderr_task = tokio::spawn(async move {
+        let mut buf = Vec::new();
+        if let Some(mut stream) = stderr {
+            let _ = stream.read_to_end(&mut buf).await;
+        }
+        String::from_utf8_lossy(&buf).to_string()
+    });
+
+    let mut cancelled = false;
+    let status = loop {
+        if cancel_flag().load(Ordering::Relaxed) && !cancelled {
+            cancelled = true;
+            let _ = child.start_kill();
+        }
+        match timeout(Duration::from_millis(80), child.wait()).await {
+            Ok(Ok(status)) => break status,
+            Ok(Err(e)) => return Err(format!("프로세스 대기 실패: {e}")),
+            Err(_) => continue,
+        }
+    };
+
+    let stdout = stdout_task.await.unwrap_or_default();
+    let stderr = stderr_task.await.unwrap_or_default();
+    let exit_code = status.code().unwrap_or(-1);
+
+    Ok(CommandOutput {
+        stdout,
+        stderr,
+        exit_code,
+        cancelled,
+    })
 }
 
 fn truncate(s: &str) -> String {
