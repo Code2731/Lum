@@ -87,6 +87,7 @@ describe("App (LUM 터미널)", () => {
     const textNode = document.createTextNode("hello");
     expect(isEventTargetWithinSelector(textNode, "[data-test='x']")).toBe(false);
     expect(isEventTargetWithinSelector(null, "[data-test='x']")).toBe(false);
+    expect(isEventTargetWithinSelector(new EventTarget(), "[data-test='x']")).toBe(false);
   });
 
   it("이벤트 타깃 선택자 판정은 closest 매칭 여부를 반환한다", () => {

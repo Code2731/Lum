@@ -2467,13 +2467,17 @@ const App: React.FC = () => {
                                       className="rounded border border-cyan-300/18 bg-cyan-400/[0.06] px-1.5 py-1 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-cyan-300/45"
                                       onBlurCapture={(e) => {
                                         if (!isInspectorCompact || inspectorCommandMenuIndex !== idx) return;
-                                        const next = e.relatedTarget as Element | null;
+                                        const next = e.relatedTarget;
                                         if (!next) {
                                           closeInspectorCommandMenu();
                                           return;
                                         }
-                                        const menuContainer = next.closest("[data-inspector-command-menu='compact']");
-                                        if (!e.currentTarget.contains(next) && !menuContainer) {
+                                        const menuContainerFocused = isEventTargetWithinSelector(
+                                          next,
+                                          "[data-inspector-command-menu='compact']",
+                                        );
+                                        const currentRowFocused = next instanceof Node && e.currentTarget.contains(next);
+                                        if (!currentRowFocused && !menuContainerFocused) {
                                           closeInspectorCommandMenu();
                                         }
                                       }}
