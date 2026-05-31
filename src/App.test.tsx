@@ -1732,6 +1732,34 @@ describe("App (LUM 터미널)", () => {
     });
   });
 
+  it("고급 액션 메뉴 내부 포인터 다운은 바깥 클릭으로 처리되지 않는다", async () => {
+    render(<App />);
+
+    const inspectorButton = screen.getByLabelText("Inspector");
+    const inspectorCloseButton = screen.queryByLabelText("Inspector 닫기");
+
+    if (inspectorCloseButton) {
+      fireEvent.click(inspectorCloseButton);
+    }
+    fireEvent.click(inspectorButton);
+
+    await waitFor(() => {
+      expect(screen.getByRole("tablist", { name: "Inspector 탭" })).toBeInTheDocument();
+    });
+
+    const panel = document.querySelector("#inspector-tabpanel-summary");
+    expect(panel).toBeTruthy();
+    const summary = panel as HTMLElement;
+
+    const moreButton = within(summary).getByRole("button", { name: "더보기" });
+    fireEvent.click(moreButton);
+    const diffButton = await waitFor(() => within(summary).getByRole("button", { name: "Diff" }));
+
+    fireEvent.pointerDown(diffButton);
+
+    expect(within(summary).getByRole("button", { name: "Diff" })).toBeInTheDocument();
+  });
+
   it("Inspector는 Escape 키로 닫히고 포커스가 트리거로 되돌아간다", async () => {
     render(<App />);
 
