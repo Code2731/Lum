@@ -912,7 +912,7 @@ const AppHeader: React.FC<Props> = ({
             }`}
             title={
               fastEmpty
-                ? "xLLM에 로드된 모델이 없습니다 — XllmPanel에서 모델을 [사용]하세요"
+                ? "xLLM에 로드된 모델이 없습니다 — xLLM 패널에서 모델을 [사용]하세요"
                 : `Fast (xLLM): ${loadedModelId}`
             }
           >

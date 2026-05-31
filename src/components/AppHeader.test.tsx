@@ -165,6 +165,26 @@ const installResizeObserverMock = () => {
 };
 
 describe("AppHeader", () => {
+  it("fast 배지 title이 xLLM 표기로 노출된다", () => {
+    const props = buildProps() as any;
+    render(<AppHeader {...props} />);
+
+    const fastBadge = screen.getByText("FAST · mock-model");
+    expect(fastBadge).toHaveAttribute("title", "Fast (xLLM): mock-model");
+  });
+
+  it("모델 미로드 시 fast 배지 title이 xLLM 패널 안내를 노출한다", () => {
+    const props = buildProps() as any;
+    props.loadedModelId = null;
+    render(<AppHeader {...props} />);
+
+    const emptyBadge = screen.getByText("EMPTY · Empty Model");
+    expect(emptyBadge).toHaveAttribute(
+      "title",
+      "xLLM에 로드된 모델이 없습니다 — xLLM 패널에서 모델을 [사용]하세요",
+    );
+  });
+
   it("고급 메뉴에서 화살표 키로 포커스가 순환 이동한다", async () => {
     const HeaderHarness = () => {
       const [showAdvancedOverflow, setShowAdvancedOverflow] = React.useState(true);
