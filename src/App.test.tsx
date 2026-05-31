@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { invoke } from "@tauri-apps/api/core";
 import { useCommandBlocks } from "./hooks/useCommandBlocks";
-import App from "./App";
+import App, { isEventTargetWithinSelector } from "./App";
 
 vi.mock("@tauri-apps/api/core", () => ({
   invoke: vi.fn().mockImplementation((cmd: string) => {
@@ -81,6 +81,25 @@ describe("App (LUM 터미널)", () => {
   beforeEach(() => {
     mockedInvoke.mockClear();
     setMockCommandBlocks([]);
+  });
+
+  it("이벤트 타깃 선택자 판정은 Element가 아니어도 안전하다", () => {
+    const textNode = document.createTextNode("hello");
+    expect(isEventTargetWithinSelector(textNode, "[data-test='x']")).toBe(false);
+    expect(isEventTargetWithinSelector(null, "[data-test='x']")).toBe(false);
+  });
+
+  it("이벤트 타깃 선택자 판정은 closest 매칭 여부를 반환한다", () => {
+    const wrapper = document.createElement("div");
+    wrapper.setAttribute("data-test", "x");
+    const child = document.createElement("button");
+    const outside = document.createElement("span");
+    wrapper.appendChild(child);
+    document.body.appendChild(wrapper);
+    document.body.appendChild(outside);
+
+    expect(isEventTargetWithinSelector(child, "[data-test='x']")).toBe(true);
+    expect(isEventTargetWithinSelector(outside, "[data-test='x']")).toBe(false);
   });
 
   it("Phase 66 이후 헤더에 LUM 텍스트 로고 제거됨 — 아이콘만 사용", () => {

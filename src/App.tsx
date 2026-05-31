@@ -101,6 +101,14 @@ interface MarkdownDocViewState {
   error: string | null;
 }
 
+export function isEventTargetWithinSelector(
+  target: EventTarget | null,
+  selector: string,
+): boolean {
+  if (!(target instanceof Element)) return false;
+  return target.closest(selector) != null;
+}
+
 function parseGitTabInfo(ctx: string): GitTabInfo | null {
   if (!ctx) return null;
   const statusHeader = "$ git status";
@@ -582,10 +590,8 @@ const App: React.FC = () => {
   useEffect(() => {
     const handlePointerDown = (e: PointerEvent) => {
       if (!showInspectorQuickActionsExpanded) return;
-      const target = e.target as HTMLElement | null;
-      if (!target) return;
-      if (target.closest("[data-inspector-quick-actions-advanced]")) return;
-      if (target.closest("[data-inspector-quick-actions-toggle]")) return;
+      if (isEventTargetWithinSelector(e.target, "[data-inspector-quick-actions-advanced]")) return;
+      if (isEventTargetWithinSelector(e.target, "[data-inspector-quick-actions-toggle]")) return;
       closeInspectorQuickActions();
     };
     window.addEventListener("pointerdown", handlePointerDown, { capture: true });
@@ -1514,10 +1520,8 @@ const App: React.FC = () => {
   useEffect(() => {
     const onPointerDown = (e: PointerEvent) => {
       if (inspectorCommandMenuOpenRef.current == null) return;
-      const target = e.target as HTMLElement | null;
-      if (!target) return;
-      if (target.closest("[data-inspector-command-menu-row='1']")) return;
-      if (target.closest("[data-inspector-command-menu='compact']")) return;
+      if (isEventTargetWithinSelector(e.target, "[data-inspector-command-menu-row='1']")) return;
+      if (isEventTargetWithinSelector(e.target, "[data-inspector-command-menu='compact']")) return;
       closeInspectorCommandMenu();
     };
     window.addEventListener("pointerdown", onPointerDown, { capture: true });
