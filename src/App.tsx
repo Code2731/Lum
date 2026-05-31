@@ -1512,7 +1512,7 @@ const App: React.FC = () => {
   }, [addTabWithReset, closeTabWithReset, toggleSplit, closeOverlays, activeTabIdRef, setShowCommitPanel, setShowHistorySearch, setShowDiffReview, setShowThemePanel, quickActions, ptyWriteRefs, activePaneIdRef, setShowWorkspace, loadWorkspaces, setShowPalette, navigateCommandBlock, focusFailedBlock, showInspector, closeInspector, openInspectorTab, inspectorCommandMenuIndex, closeInspectorCommandMenu, showInspectorQuickActionsExpanded, closeInspectorQuickActions]);
 
   useEffect(() => {
-    const onPointerDown = (e: MouseEvent) => {
+    const onPointerDown = (e: PointerEvent) => {
       if (inspectorCommandMenuOpenRef.current == null) return;
       const target = e.target as HTMLElement | null;
       if (!target) return;
@@ -1520,8 +1520,8 @@ const App: React.FC = () => {
       if (target.closest("[data-inspector-command-menu='compact']")) return;
       closeInspectorCommandMenu();
     };
-    window.addEventListener("mousedown", onPointerDown, { capture: true });
-    return () => window.removeEventListener("mousedown", onPointerDown, { capture: true });
+    window.addEventListener("pointerdown", onPointerDown, { capture: true });
+    return () => window.removeEventListener("pointerdown", onPointerDown, { capture: true });
   }, [closeInspectorCommandMenu]);
 
   const activeTab = tabs.find((t) => t.id === activeTabId);
