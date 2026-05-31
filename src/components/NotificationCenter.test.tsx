@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { fireEvent, render, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import NotificationCenter from "./NotificationCenter";
 import type { AppNotification } from "../hooks/useNotificationCenter";
 
@@ -80,6 +80,37 @@ describe("NotificationCenter", () => {
 
     fireEvent.pointerDown(document.body);
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("패널 내부 포인터 다운은 바깥 클릭으로 처리되지 않는다", () => {
+    const onClose = vi.fn();
+    render(
+      <NotificationCenter
+        {...baseProps}
+        onClose={onClose}
+      />,
+    );
+
+    const panel = screen.getByRole("dialog", { name: "알림 센터" });
+    fireEvent.pointerDown(panel);
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it("closeOnDocument=false일 때 바깥 포인터 다운으로 닫히지 않는다", () => {
+    const onClose = vi.fn();
+    render(
+      <div>
+        <div>outside</div>
+        <NotificationCenter
+          {...baseProps}
+          onClose={onClose}
+          closeOnDocument={false}
+        />
+      </div>,
+    );
+
+    fireEvent.pointerDown(document.body);
+    expect(onClose).not.toHaveBeenCalled();
   });
 
   it("알림 삭제 버튼이 있으면 타입이 맞게 렌더링된다", () => {
