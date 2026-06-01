@@ -1,12 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import WarpListView, { isPointerOutsideAllTargets } from "./WarpListView";
+import { isPointerOutsideTargets } from "../utils/pointerGuard";
+import WarpListView from "./WarpListView";
 
 const now = Date.now();
 
 describe("WarpListView pointer outside helper", () => {
   it("target이 null이면 안전하게 false를 반환한다", () => {
-    expect(isPointerOutsideAllTargets(null, [])).toBe(false);
+    expect(isPointerOutsideTargets(null, [])).toBe(false);
   });
 
   it("모든 대상 바깥일 때만 true를 반환한다", () => {
@@ -17,9 +18,9 @@ describe("WarpListView pointer outside helper", () => {
     document.body.appendChild(container);
     document.body.appendChild(outside);
 
-    expect(isPointerOutsideAllTargets(child, [container])).toBe(false);
-    expect(isPointerOutsideAllTargets(outside, [container])).toBe(true);
-    expect(isPointerOutsideAllTargets(outside, [null, undefined])).toBe(true);
+    expect(isPointerOutsideTargets(child, [container])).toBe(false);
+    expect(isPointerOutsideTargets(outside, [container])).toBe(true);
+    expect(isPointerOutsideTargets(outside, [null, undefined])).toBe(true);
   });
 });
 

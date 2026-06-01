@@ -128,14 +128,6 @@ const POPUP_MIN_HEIGHT = 96;
 const POPUP_EDGE_GUTTER = 8;
 const VIEWPORT_FALLBACK_GUTTER = 8;
 
-export const isPointerOutsidePopup = (
-  target: EventTarget | null,
-  triggerElement: HTMLElement | null,
-  panelElement: HTMLElement | null,
-): boolean => {
-  return isPointerOutsideTargets(target, [triggerElement, panelElement]);
-};
-
 type ViewportBounds = {
   left: number;
   top: number;
@@ -730,7 +722,7 @@ const AppHeader: React.FC<Props> = ({
 
     const handleClose = (e: PointerEvent) => {
       const target = e.target;
-      if (isPointerOutsidePopup(target, advancedOverflowRef.current, advancedOverflowPanelRef.current)) {
+      if (isPointerOutsideTargets(target, [advancedOverflowRef.current, advancedOverflowPanelRef.current])) {
         closeAdvancedOverflow();
       }
     };
@@ -810,7 +802,7 @@ const AppHeader: React.FC<Props> = ({
 
     const handleClose = (e: PointerEvent) => {
       const target = e.target;
-      if (isPointerOutsidePopup(target, notifCenterPopupRef.current, notifCenterPanelRef.current)) {
+      if (isPointerOutsideTargets(target, [notifCenterPopupRef.current, notifCenterPanelRef.current])) {
         closeNotifCenter();
       }
     };

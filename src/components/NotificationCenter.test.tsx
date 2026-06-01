@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import NotificationCenter, { isPointerOutsideNotificationPanel } from "./NotificationCenter";
+import { isPointerOutsideTargets } from "../utils/pointerGuard";
+import NotificationCenter from "./NotificationCenter";
 import type { AppNotification } from "../hooks/useNotificationCenter";
 
 describe("NotificationCenter", () => {
@@ -16,8 +17,8 @@ describe("NotificationCenter", () => {
     const target = document.createElement("div");
     document.body.appendChild(target);
 
-    expect(isPointerOutsideNotificationPanel(target, null)).toBe(true);
-    expect(isPointerOutsideNotificationPanel(null, null)).toBe(false);
+    expect(isPointerOutsideTargets(target, [null])).toBe(true);
+    expect(isPointerOutsideTargets(null, [null])).toBe(false);
   });
 
   it("바깥 클릭 판정은 패널 내부/외부를 구분한다", () => {
@@ -28,8 +29,8 @@ describe("NotificationCenter", () => {
     document.body.appendChild(panel);
     document.body.appendChild(outside);
 
-    expect(isPointerOutsideNotificationPanel(child, panel)).toBe(false);
-    expect(isPointerOutsideNotificationPanel(outside, panel)).toBe(true);
+    expect(isPointerOutsideTargets(child, [panel])).toBe(false);
+    expect(isPointerOutsideTargets(outside, [panel])).toBe(true);
   });
 
   it("Escape 키로 패널을 닫는다", () => {

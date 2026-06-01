@@ -2,7 +2,8 @@ import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import type { ReactElement } from "react";
-import PrivacyLedgerBadge, { isPointerOutsideLedgerPopover } from "./PrivacyLedgerBadge";
+import { isPointerOutsideTargets } from "../utils/pointerGuard";
+import PrivacyLedgerBadge from "./PrivacyLedgerBadge";
 import type { LedgerState } from "../hooks/usePrivacyLedger";
 
 const renderWithProvider = (ui: ReactElement) => {
@@ -26,8 +27,8 @@ describe("PrivacyLedgerBadge", () => {
     const target = document.createElement("div");
     document.body.appendChild(target);
 
-    expect(isPointerOutsideLedgerPopover(target, null, null)).toBe(true);
-    expect(isPointerOutsideLedgerPopover(null, null, null)).toBe(false);
+    expect(isPointerOutsideTargets(target, [null, null])).toBe(true);
+    expect(isPointerOutsideTargets(null, [null, null])).toBe(false);
   });
 
   it("팝오버 외부 클릭 판정은 트리거/팝오버 내부 클릭을 제외한다", () => {
@@ -42,9 +43,9 @@ describe("PrivacyLedgerBadge", () => {
     document.body.appendChild(popover);
     document.body.appendChild(outside);
 
-    expect(isPointerOutsideLedgerPopover(triggerChild, trigger, popover)).toBe(false);
-    expect(isPointerOutsideLedgerPopover(popoverChild, trigger, popover)).toBe(false);
-    expect(isPointerOutsideLedgerPopover(outside, trigger, popover)).toBe(true);
+    expect(isPointerOutsideTargets(triggerChild, [trigger, popover])).toBe(false);
+    expect(isPointerOutsideTargets(popoverChild, [trigger, popover])).toBe(false);
+    expect(isPointerOutsideTargets(outside, [trigger, popover])).toBe(true);
   });
 
   it("버튼을 눌러 배지를 열고 Escape로 닫을 수 있다", () => {

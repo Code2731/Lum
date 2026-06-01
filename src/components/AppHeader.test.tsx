@@ -1,6 +1,7 @@
 import React from "react";
 import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { isPointerOutsideTargets } from "../utils/pointerGuard";
 vi.mock("@tauri-apps/api/window", () => ({
   getCurrentWindow: vi.fn(() => ({
     isMaximized: vi.fn(() => Promise.resolve(false)),
@@ -10,7 +11,7 @@ vi.mock("@tauri-apps/api/window", () => ({
     toggleMaximize: vi.fn(() => Promise.resolve()),
   })),
 }));
-import AppHeader, { isPointerOutsidePopup, type NewFeatureId } from "./AppHeader";
+import AppHeader, { type NewFeatureId } from "./AppHeader";
 
 const buildProps = () => {
   return {
@@ -169,8 +170,8 @@ describe("AppHeader", () => {
     const target = document.createElement("div");
     document.body.appendChild(target);
 
-    expect(isPointerOutsidePopup(target, null, null)).toBe(true);
-    expect(isPointerOutsidePopup(null, null, null)).toBe(false);
+    expect(isPointerOutsideTargets(target, [null, null])).toBe(true);
+    expect(isPointerOutsideTargets(null, [null, null])).toBe(false);
   });
 
   it("팝오버 외부 클릭 판정은 트리거/패널 내부 클릭을 구분한다", () => {
@@ -185,9 +186,9 @@ describe("AppHeader", () => {
     document.body.appendChild(panel);
     document.body.appendChild(outside);
 
-    expect(isPointerOutsidePopup(triggerChild, trigger, panel)).toBe(false);
-    expect(isPointerOutsidePopup(panelChild, trigger, panel)).toBe(false);
-    expect(isPointerOutsidePopup(outside, trigger, panel)).toBe(true);
+    expect(isPointerOutsideTargets(triggerChild, [trigger, panel])).toBe(false);
+    expect(isPointerOutsideTargets(panelChild, [trigger, panel])).toBe(false);
+    expect(isPointerOutsideTargets(outside, [trigger, panel])).toBe(true);
   });
 
   it("fast 배지 title이 xLLM 표기로 노출된다", () => {

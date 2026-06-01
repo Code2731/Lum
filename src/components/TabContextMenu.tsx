@@ -23,13 +23,6 @@ const MENU_EDGE_GAP = 10;
 
 const clampValue = (value: number, min: number, max: number): number => Math.max(min, Math.min(value, max));
 
-export const isPointerOutsideTabContextMenu = (
-  target: EventTarget | null,
-  menuElement: HTMLElement | null,
-): boolean => {
-  return isPointerOutsideTargets(target, [menuElement]);
-};
-
 const TabContextMenu: React.FC<Props> = ({
   tabId, currentColor, currentGroup,
   x, y, onSetColor, onSetGroup, onClose,
@@ -47,7 +40,7 @@ const TabContextMenu: React.FC<Props> = ({
 
   useEffect(() => {
     const handle = (e: PointerEvent) => {
-      if (isPointerOutsideTabContextMenu(e.target, ref.current)) onClose();
+      if (isPointerOutsideTargets(e.target, [ref.current])) onClose();
     };
     const handleKeydown = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;

@@ -70,14 +70,6 @@ const POPUP_EDGE_GUTTER = 8;
 const POPUP_MIN_HEIGHT = 96;
 const POPUP_OFFSCREEN_POSITION: PopupPosition = { x: -9999, y: -9999 };
 
-export const isPointerOutsideLedgerPopover = (
-  target: EventTarget | null,
-  triggerElement: HTMLElement | null,
-  popoverElement: HTMLElement | null,
-): boolean => {
-  return isPointerOutsideTargets(target, [triggerElement, popoverElement]);
-};
-
 const clampValue = (value: number, min: number, max: number): number => {
   return Math.max(min, Math.min(value, max));
 };
@@ -374,7 +366,7 @@ const PrivacyLedgerBadge: React.FC<Props> = ({
     if (!open) return;
     const handler = (e: PointerEvent) => {
       const target = e.target;
-      if (isPointerOutsideLedgerPopover(target, triggerRef.current, popRef.current)) {
+      if (isPointerOutsideTargets(target, [triggerRef.current, popRef.current])) {
         closePopover();
       }
     };

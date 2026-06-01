@@ -52,8 +52,6 @@ interface Props {
 type CompareResult = NonNullable<Props["compareResultByBlock"]>[string];
 type TimelineRisk = "high" | "medium" | "low";
 
-export const isPointerOutsideAllTargets = isPointerOutsideTargets;
-
 const SyntaxCmd: React.FC<{ cmd: string }> = ({ cmd }) => (
   <>
     {tokenizeShell(cmd).map((t, i) => (
@@ -868,7 +866,7 @@ const WarpListView: React.FC<Props> = ({
     };
     const onPointerDown = (e: PointerEvent) => {
       const target = e.target;
-      if (!isPointerOutsideAllTargets(target, [deltaPopoverRef.current, deltaButtonRefs.current[deltaOpenId]])) {
+      if (!isPointerOutsideTargets(target, [deltaPopoverRef.current, deltaButtonRefs.current[deltaOpenId]])) {
         return;
       }
       closeDeltaPopover(false, deltaOpenId);
@@ -954,7 +952,7 @@ const WarpListView: React.FC<Props> = ({
       const target = e.target;
       const menuButton = menuButtonRefs.current[menuOpenId];
       const menuContainer = menuContainerRefs.current[menuOpenId];
-      if (!isPointerOutsideAllTargets(target, [menuButton, menuContainer])) return;
+      if (!isPointerOutsideTargets(target, [menuButton, menuContainer])) return;
       closeMenuById(menuOpenId, false);
     };
     window.addEventListener("keydown", onWindowKeyDown);
@@ -1394,7 +1392,7 @@ const WarpListView: React.FC<Props> = ({
     };
     const onPointerDown = (e: PointerEvent) => {
       const target = e.target;
-      if (!isPointerOutsideAllTargets(target, [timelinePanelRef.current, timelineButtonRef.current])) return;
+      if (!isPointerOutsideTargets(target, [timelinePanelRef.current, timelineButtonRef.current])) return;
       closeTimelinePanel(false);
     };
     window.addEventListener("keydown", onWindowKeyDown);

@@ -1,7 +1,8 @@
 import React from "react";
 import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
-import TerminalContextMenu, { isPointerOutsideTerminalContextMenu } from "./TerminalContextMenu";
+import { isPointerOutsideTargets } from "../utils/pointerGuard";
+import TerminalContextMenu from "./TerminalContextMenu";
 
 describe("TerminalContextMenu", () => {
   const baseProps = {
@@ -20,8 +21,8 @@ describe("TerminalContextMenu", () => {
     const target = document.createElement("div");
     document.body.appendChild(target);
 
-    expect(isPointerOutsideTerminalContextMenu(target, null)).toBe(true);
-    expect(isPointerOutsideTerminalContextMenu(null, null)).toBe(false);
+    expect(isPointerOutsideTargets(target, [null])).toBe(true);
+    expect(isPointerOutsideTargets(null, [null])).toBe(false);
   });
 
   it("바깥 클릭 판정은 메뉴 내부/외부를 구분한다", () => {
@@ -32,8 +33,8 @@ describe("TerminalContextMenu", () => {
     document.body.appendChild(menu);
     document.body.appendChild(outside);
 
-    expect(isPointerOutsideTerminalContextMenu(child, menu)).toBe(false);
-    expect(isPointerOutsideTerminalContextMenu(outside, menu)).toBe(true);
+    expect(isPointerOutsideTargets(child, [menu])).toBe(false);
+    expect(isPointerOutsideTargets(outside, [menu])).toBe(true);
   });
 
   it("Escape 키로 메뉴가 닫힌다", () => {
