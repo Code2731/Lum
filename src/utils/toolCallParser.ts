@@ -24,7 +24,7 @@ export interface ToolCall {
 const ATTR_RE = /(\w+)\s*=\s*(?:"([^"]*)"|'([^']*)')/g;
 
 // tool_use 태그 전체 (self-closing 또는 </tool_use> 둘 다 허용)
-const TAG_RE = /<tool_use\b([^>]*?)\/>|<tool_use\b([^>]*?)><\/tool_use>/g;
+const TAG_RE = /<tool_use\b([^>]*?)\/>|<tool_use\b([^>]*?)><\/tool_use>/gi;
 
 function decodeHtmlEntities(value: string): string {
   let decoded = value;
@@ -46,7 +46,7 @@ function parseAttrs(attrs: string): Record<string, string> {
   let m: RegExpExecArray | null;
   ATTR_RE.lastIndex = 0;
   while ((m = ATTR_RE.exec(attrs)) !== null) {
-    out[m[1]] = decodeHtmlEntities(m[2] ?? m[3] ?? "");
+    out[m[1].toLowerCase()] = decodeHtmlEntities(m[2] ?? m[3] ?? "");
   }
   return out;
 }
@@ -86,5 +86,5 @@ export function parseToolCalls(raw: string): ToolCall[] {
 }
 
 export function hasToolCalls(content: string): boolean {
-  return /<tool_use\b[^>]*(\/>|><\/tool_use>)/.test(content);
+  return /<tool_use\b[^>]*(\/>|><\/tool_use>)/i.test(content);
 }

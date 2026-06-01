@@ -60,6 +60,17 @@ describe("parseToolCalls", () => {
     expect(calls[0].args).toEqual({ a: 1 });
   });
 
+  it("태그/속성 대소문자가 섞여도 파싱한다", () => {
+    const raw = `<TOOL_USE SERVER="x" NAME="y" ARGS='{"ok":true}' />`;
+    const calls = parseToolCalls(raw);
+    expect(calls).toHaveLength(1);
+    expect(calls[0]).toMatchObject({
+      server: "x",
+      name: "y",
+      args: { ok: true },
+    });
+  });
+
   it("server/name 없으면 무시", () => {
     expect(parseToolCalls(`<tool_use name="x" />`)).toHaveLength(0);
     expect(parseToolCalls(`<tool_use server="x" />`)).toHaveLength(0);
@@ -80,6 +91,7 @@ describe("parseToolCalls", () => {
 describe("hasToolCalls", () => {
   it("태그 있으면 true", () => {
     expect(hasToolCalls(`blah <tool_use server="x" name="y" /> blah`)).toBe(true);
+    expect(hasToolCalls(`blah <TOOL_USE SERVER="x" NAME="y" /> blah`)).toBe(true);
   });
   it("태그 없으면 false", () => {
     expect(hasToolCalls("plain text")).toBe(false);
