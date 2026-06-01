@@ -246,7 +246,7 @@ const TabContextMenu: React.FC<Props> = ({
             if (e.key === "Enter") {
               e.preventDefault();
               e.stopPropagation();
-              const val = (e.target as HTMLInputElement).value.trim();
+              const val = e.currentTarget.value.trim();
               onSetGroup(tabId, val || undefined);
               onClose();
               return;
