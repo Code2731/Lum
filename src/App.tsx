@@ -1406,7 +1406,7 @@ const App: React.FC = () => {
   // 탭 전환 시 healing 초기화
   const addTabWithReset = useCallback(() => { resetHealing(); addTab(); }, [resetHealing, addTab]);
   const closeTabWithReset = useCallback(
-    (id: string, e: React.MouseEvent) => { resetHealing(); closeTab(id, e); },
+    (id: string, e: Pick<React.MouseEvent, "stopPropagation">) => { resetHealing(); closeTab(id, e); },
     [resetHealing, closeTab],
   );
   const switchTabWithReset = useCallback(
@@ -1452,7 +1452,7 @@ const App: React.FC = () => {
       if (mod && !e.shiftKey && !e.altKey && key === "t") { e.preventDefault(); addTabWithReset(); }
       if (mod && !e.shiftKey && !e.altKey && key === "w") {
         e.preventDefault();
-        closeTabWithReset(activeTabIdRef.current, { stopPropagation: () => {} } as React.MouseEvent);
+        closeTabWithReset(activeTabIdRef.current, { stopPropagation() {} });
       }
       if (mod && e.shiftKey && !e.altKey && key === "d") { e.preventDefault(); toggleSplit("h"); }
       if (mod && e.shiftKey && !e.altKey && key === "e") { e.preventDefault(); toggleSplit("v"); }
