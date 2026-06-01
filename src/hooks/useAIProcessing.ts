@@ -4,6 +4,15 @@ import { listen } from "@tauri-apps/api/event";
 
 const XLLM_TOKEN_EVENT = "xllm_token";
 
+function parseJsonResponse<T>(response: string, command: string): T {
+  try {
+    return JSON.parse(response) as T;
+  } catch {
+    const snippet = response.slice(0, 160).replace(/\s+/g, " ").trim();
+    throw new Error(`${command} 응답 JSON 파싱 실패${snippet ? `: ${snippet}` : ""}`);
+  }
+}
+
 export const useAIProcessing = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const requestIdRef = useRef(0);
@@ -44,7 +53,7 @@ export const useAIProcessing = () => {
         context,
         imageData: imageData ?? null,
       });
-      return JSON.parse(response);
+      return parseJsonResponse(response, "generate_ai_command");
     } catch (e) {
       console.error("AI Command failed:", e);
       throw e;
@@ -67,7 +76,7 @@ export const useAIProcessing = () => {
         model,
         context,
       });
-      return JSON.parse(response);
+      return parseJsonResponse(response, "analyze_error");
     } catch (e) {
       console.error("Error analysis failed:", e);
       throw e;

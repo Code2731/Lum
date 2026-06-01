@@ -92,3 +92,30 @@ describe("useAIProcessing — 스트리밍 취소 경합 방지", () => {
     expect(invokeMock.mock.calls.some(([cmd]) => cmd === "cancel_ai_stream")).toBe(true);
   });
 });
+
+describe("useAIProcessing — JSON 응답 파싱", () => {
+  it("processAICommand는 JSON 문자열을 객체로 파싱한다", async () => {
+    invokeMock.mockImplementation(async (cmd: string) => {
+      if (cmd === "generate_ai_command") {
+        return JSON.stringify({ action: "run", command: "npm test" });
+      }
+      return;
+    });
+
+    const { result } = renderHook(() => useAIProcessing());
+    const parsed = await result.current.processAICommand("p", "m", "c");
+    expect(parsed).toEqual({ action: "run", command: "npm test" });
+  });
+
+  it("analyzeError는 파싱 실패 시 명확한 에러 메시지를 던진다", async () => {
+    invokeMock.mockImplementation(async (cmd: string) => {
+      if (cmd === "analyze_error") return "not-json-response";
+      return;
+    });
+
+    const { result } = renderHook(() => useAIProcessing());
+    await expect(result.current.analyzeError("ls", "err", "m", "c")).rejects.toThrow(
+      "analyze_error 응답 JSON 파싱 실패: not-json-response",
+    );
+  });
+});
