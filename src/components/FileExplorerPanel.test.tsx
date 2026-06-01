@@ -50,6 +50,9 @@ describe("FileExplorerPanel", () => {
       expect(invokeMock).toHaveBeenCalledWith("list_directory", { path: "/project" });
     });
     expect(screen.getByText("readme.md")).toBeInTheDocument();
+    expect(
+      invokeMock.mock.calls.filter(([cmd, args]) => cmd === "list_directory" && args?.path === "/project").length,
+    ).toBe(1);
   });
 
   it("cwd가 바뀌면 새 경로로 다시 조회한다", async () => {
