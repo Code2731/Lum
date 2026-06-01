@@ -93,3 +93,43 @@ describe("useAIChat — 스트리밍 취소 경합 방지", () => {
     expect(invokeMock.mock.calls.some(([cmd]) => cmd === "cancel_ai_stream")).toBe(true);
   });
 });
+
+describe("useAIChat — 스트림 실패 메시지 처리", () => {
+  it("message 필드가 있는 오류 객체는 해당 메시지를 노출한다", async () => {
+    invokeMock.mockImplementation(async (cmd: string) => {
+      if (cmd === "reset_ai_stream") return;
+      if (cmd === "cancel_ai_stream") return;
+      if (cmd === "mcp_system_prompt") return "";
+      if (cmd === "stream_ai_command") throw { message: "xLLM 연결 실패" };
+      return "";
+    });
+
+    const { result } = renderHook(() => useAIChat("model", () => "CWD: /tmp"));
+    await act(async () => {
+      await result.current.sendMessage("안녕");
+    });
+
+    expect(result.current.error).toBe("xLLM 연결 실패");
+    expect(result.current.messages.at(-1)?.content).toBe("❌ xLLM 연결 실패");
+  });
+
+  it("순환 참조 오류도 2차 예외 없이 기본 메시지로 폴백한다", async () => {
+    const cyclic: { self?: unknown } = {};
+    cyclic.self = cyclic;
+    invokeMock.mockImplementation(async (cmd: string) => {
+      if (cmd === "reset_ai_stream") return;
+      if (cmd === "cancel_ai_stream") return;
+      if (cmd === "mcp_system_prompt") return "";
+      if (cmd === "stream_ai_command") throw cyclic;
+      return "";
+    });
+
+    const { result } = renderHook(() => useAIChat("model", () => "CWD: /tmp"));
+    await act(async () => {
+      await result.current.sendMessage("안녕");
+    });
+
+    expect(result.current.error).toBe("알 수 없는 오류");
+    expect(result.current.messages.at(-1)?.content).toBe("❌ 알 수 없는 오류");
+  });
+});
