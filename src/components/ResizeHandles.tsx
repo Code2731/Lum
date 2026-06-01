@@ -19,14 +19,23 @@ const HANDLES: Handle[] = [
   { dir: "SouthEast", style: { bottom: 0, right: 0,      width: CORNER,  height: CORNER, cursor: "se-resize" } },
 ];
 
+const createResizeHandler = (dir: ResizeDirection) => (e: React.MouseEvent) => {
+  e.preventDefault();
+  getCurrentWindow().startResizeDragging(dir).catch(() => {});
+};
+
 export default function ResizeHandles() {
   const handlers = useMemo(
-    () => Object.fromEntries(
-      HANDLES.map(({ dir }) => [
-        dir,
-        (e: React.MouseEvent) => { e.preventDefault(); getCurrentWindow().startResizeDragging(dir).catch(() => {}); },
-      ]),
-    ) as Record<ResizeDirection, (e: React.MouseEvent) => void>,
+    () => ({
+      East: createResizeHandler("East"),
+      North: createResizeHandler("North"),
+      NorthEast: createResizeHandler("NorthEast"),
+      NorthWest: createResizeHandler("NorthWest"),
+      South: createResizeHandler("South"),
+      SouthEast: createResizeHandler("SouthEast"),
+      SouthWest: createResizeHandler("SouthWest"),
+      West: createResizeHandler("West"),
+    }),
     [],
   );
 
