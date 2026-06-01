@@ -42,8 +42,15 @@ describe("parseToolCalls", () => {
   it("큰따옴표 args도 허용", () => {
     const raw = `<tool_use server="x" name="y" args="{&quot;a&quot;:1}" />`;
     const calls = parseToolCalls(raw);
-    // &quot;는 우리가 디코드 안 함 — JSON 파싱 실패 → _parse_error true
-    expect(calls[0].args).toEqual({ _raw: "{&quot;a&quot;:1}", _parse_error: true });
+    expect(calls[0].args).toEqual({ a: 1 });
+  });
+
+  it("server/name 속성의 HTML 엔티티도 디코드한다", () => {
+    const raw = `<tool_use server="a&amp;b" name="open&amp;run" args='{}' />`;
+    const calls = parseToolCalls(raw);
+    expect(calls).toHaveLength(1);
+    expect(calls[0].server).toBe("a&b");
+    expect(calls[0].name).toBe("open&run");
   });
 
   it("server/name 없으면 무시", () => {

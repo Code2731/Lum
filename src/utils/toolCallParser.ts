@@ -26,12 +26,21 @@ const ATTR_RE = /(\w+)\s*=\s*(?:"([^"]*)"|'([^']*)')/g;
 // tool_use 태그 전체 (self-closing 또는 </tool_use> 둘 다 허용)
 const TAG_RE = /<tool_use\b([^>]*?)\/>|<tool_use\b([^>]*?)><\/tool_use>/g;
 
+function decodeHtmlEntities(value: string): string {
+  return value
+    .replace(/&quot;/g, "\"")
+    .replace(/&#39;/g, "'")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">");
+}
+
 function parseAttrs(attrs: string): Record<string, string> {
   const out: Record<string, string> = {};
   let m: RegExpExecArray | null;
   ATTR_RE.lastIndex = 0;
   while ((m = ATTR_RE.exec(attrs)) !== null) {
-    out[m[1]] = m[2] ?? m[3] ?? "";
+    out[m[1]] = decodeHtmlEntities(m[2] ?? m[3] ?? "");
   }
   return out;
 }
