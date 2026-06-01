@@ -30,7 +30,9 @@ function isRecord(v: unknown): v is Record<string, unknown> {
 
 function safeSummaryJson(value: unknown): string {
   try {
-    return JSON.stringify(value);
+    const serialized = JSON.stringify(value);
+    if (typeof serialized === "string") return serialized;
+    return String(value);
   } catch {
     return "[직렬화 불가]";
   }

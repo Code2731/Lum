@@ -47,6 +47,12 @@ describe("parseMcpResult", () => {
     expect(r.hasImage).toBe(false);
   });
 
+  it("undefined 입력도 요약 문자열이 비지 않게 보존한다", () => {
+    const r = parseMcpResult(undefined);
+    expect(r.blocks[0]).toEqual({ kind: "json", value: undefined });
+    expect(r.textSummary).toBe("undefined");
+  });
+
   it("이미지만 있으면 hasImage=true, textSummary에 placeholder", () => {
     const r = parseMcpResult({
       content: [{ type: "image", data: "abc", mimeType: "image/jpeg" }],
