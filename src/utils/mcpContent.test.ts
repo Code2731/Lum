@@ -54,4 +54,12 @@ describe("parseMcpResult", () => {
     expect(r.hasImage).toBe(true);
     expect(r.textSummary).toBe("(이미지: image/jpeg)");
   });
+
+  it("요약 직렬화가 실패해도 파서가 예외 없이 fallback 문자열을 사용한다", () => {
+    const circular: Record<string, unknown> = {};
+    circular.self = circular;
+    const r = parseMcpResult({ content: [{ type: "unknown", payload: circular }] });
+    expect(r.blocks[0].kind).toBe("json");
+    expect(r.textSummary).toBe("[직렬화 불가]");
+  });
 });

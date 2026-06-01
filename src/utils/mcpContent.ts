@@ -24,15 +24,26 @@ function isContentArray(v: unknown): v is Array<Record<string, unknown>> {
   return Array.isArray(v) && v.every((x) => typeof x === "object" && x !== null);
 }
 
+function isRecord(v: unknown): v is Record<string, unknown> {
+  return typeof v === "object" && v !== null;
+}
+
+function safeSummaryJson(value: unknown): string {
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return "[직렬화 불가]";
+  }
+}
+
 export function parseMcpResult(raw: unknown): ParsedMcpResult {
   const blocks: McpContent[] = [];
   let hasImage = false;
 
   if (typeof raw === "string") {
     blocks.push({ kind: "text", text: raw });
-  } else if (typeof raw === "object" && raw !== null) {
-    const obj = raw as Record<string, unknown>;
-    const content = obj.content;
+  } else if (isRecord(raw)) {
+    const content = raw.content;
     if (isContentArray(content)) {
       for (const item of content) {
         const type = item.type;
@@ -64,7 +75,7 @@ export function parseMcpResult(raw: unknown): ParsedMcpResult {
     .map((b) => {
       if (b.kind === "text") return b.text;
       if (b.kind === "image") return `(이미지: ${b.mimeType})`;
-      return JSON.stringify(b.value);
+      return safeSummaryJson(b.value);
     })
     .join("\n");
 
