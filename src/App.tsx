@@ -54,6 +54,7 @@ import { extractInspectorAnalyzeCommands } from "./utils/inspectorAnalyze";
 import { getRovingMenuNextIndex } from "./utils/menuRoving";
 import { resolveInspectorMenuHotkey } from "./utils/inspectorMenuHotkeys";
 import {
+  getActiveFocusableIndex,
   isEventTargetWithinSelector,
   isTargetInsideTargets,
 } from "./utils/pointerGuard";
@@ -434,8 +435,7 @@ const App: React.FC = () => {
       e.currentTarget.querySelectorAll<HTMLButtonElement>("[role='menuitem']"),
     );
     if (items.length === 0) return;
-    const active = document.activeElement as HTMLButtonElement | null;
-    const currentIdx = active ? items.indexOf(active) : -1;
+    const currentIdx = getActiveFocusableIndex(items, document.activeElement);
     const navKey = e.key as "ArrowRight" | "ArrowLeft" | "Home" | "End";
     const nextIdx = getRovingMenuNextIndex(navKey, items.length, currentIdx);
     if (nextIdx < 0) return;
@@ -558,8 +558,7 @@ const App: React.FC = () => {
     const buttons = Array.from(inspectorQuickActionsAdvancedRef.current?.querySelectorAll<HTMLButtonElement>("button") ?? []);
     if (buttons.length === 0) return;
 
-    const active = document.activeElement as HTMLButtonElement | null;
-    const currentIdx = active ? buttons.indexOf(active) : -1;
+    const currentIdx = getActiveFocusableIndex(buttons, document.activeElement);
     const navKey: "ArrowRight" | "ArrowLeft" | "Home" | "End" = e.key === "ArrowDown" || e.key === "ArrowRight"
       ? "ArrowRight"
       : e.key === "ArrowUp" || e.key === "ArrowLeft"
