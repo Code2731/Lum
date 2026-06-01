@@ -22,15 +22,72 @@ export interface RetryCompareRuntimeCache {
 const RETRY_COMPARE_STORAGE_KEY = "lum.retryCompareByBlock.v1";
 const RETRY_COMPARE_RUNTIME_STORAGE_KEY = "lum.retryCompareRuntime.v1";
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function toNonNegativeInt(value: unknown): number | null {
+  if (typeof value !== "number" || !Number.isFinite(value)) return null;
+  return Math.max(0, Math.floor(value));
+}
+
+function toStringArray(value: unknown): string[] | null {
+  if (!Array.isArray(value)) return null;
+  if (!value.every((item) => typeof item === "string")) return null;
+  return value;
+}
+
+function parseRetryCompareResult(value: unknown): RetryCompareResult | null {
+  if (!isRecord(value)) return null;
+
+  const added = toNonNegativeInt(value.added);
+  const removed = toNonNegativeInt(value.removed);
+  const comparedAt = toNonNegativeInt(value.comparedAt);
+  const addedLines = toStringArray(value.addedLines);
+  const removedLines = toStringArray(value.removedLines);
+
+  if (
+    added === null ||
+    removed === null ||
+    comparedAt === null ||
+    typeof value.preview !== "string" ||
+    addedLines === null ||
+    removedLines === null
+  ) {
+    return null;
+  }
+
+  return {
+    added,
+    removed,
+    preview: value.preview,
+    addedLines,
+    removedLines,
+    comparedAt,
+  };
+}
+
+function parseRetryCompareTask(value: unknown): RetryCompareTask | null {
+  if (!isRecord(value)) return null;
+  if (typeof value.id !== "string" || typeof value.command !== "string" || typeof value.baselineOutput !== "string") {
+    return null;
+  }
+  return { id: value.id, command: value.command, baselineOutput: value.baselineOutput };
+}
+
 export function loadRetryCompareCache(): Record<string, RetryCompareResult> {
   try {
     const raw = localStorage.getItem(RETRY_COMPARE_STORAGE_KEY);
     if (!raw) return {};
-    const parsed = JSON.parse(raw) as unknown;
-    if (!parsed || typeof parsed !== "object") return {};
-    const byBlock = (parsed as { byBlock?: unknown }).byBlock;
-    if (!byBlock || typeof byBlock !== "object") return {};
-    return byBlock as Record<string, RetryCompareResult>;
+    const parsed = JSON.parse(raw);
+    if (!isRecord(parsed) || !isRecord(parsed.byBlock)) return {};
+
+    const byBlock: Record<string, RetryCompareResult> = {};
+    for (const [key, value] of Object.entries(parsed.byBlock)) {
+      const result = parseRetryCompareResult(value);
+      if (result) byBlock[key] = result;
+    }
+    return byBlock;
   } catch {
     return {};
   }
@@ -48,20 +105,16 @@ export function loadRetryCompareRuntimeCache(): RetryCompareRuntimeCache {
   try {
     const raw = localStorage.getItem(RETRY_COMPARE_RUNTIME_STORAGE_KEY);
     if (!raw) return { queue: [], paused: false, completedCount: 0 };
-    const parsed = JSON.parse(raw) as unknown;
-    if (!parsed || typeof parsed !== "object") return { queue: [], paused: false, completedCount: 0 };
-    const obj = parsed as { queue?: unknown; paused?: unknown; completedCount?: unknown };
-    const queue = Array.isArray(obj.queue)
-      ? obj.queue.filter((x): x is RetryCompareTask => {
-        if (!x || typeof x !== "object") return false;
-        const v = x as Partial<RetryCompareTask>;
-        return typeof v.id === "string" && typeof v.command === "string" && typeof v.baselineOutput === "string";
-      })
+    const parsed = JSON.parse(raw);
+    if (!isRecord(parsed)) return { queue: [], paused: false, completedCount: 0 };
+
+    const queue = Array.isArray(parsed.queue)
+      ? parsed.queue
+        .map(parseRetryCompareTask)
+        .filter((task): task is RetryCompareTask => task !== null)
       : [];
-    const paused = typeof obj.paused === "boolean" ? obj.paused : false;
-    const completedCount = typeof obj.completedCount === "number" && Number.isFinite(obj.completedCount)
-      ? Math.max(0, Math.floor(obj.completedCount))
-      : 0;
+    const paused = typeof parsed.paused === "boolean" ? parsed.paused : false;
+    const completedCount = toNonNegativeInt(parsed.completedCount) ?? 0;
     return { queue, paused, completedCount };
   } catch {
     return { queue: [], paused: false, completedCount: 0 };
