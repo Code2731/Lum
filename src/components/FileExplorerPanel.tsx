@@ -24,6 +24,18 @@ function formatSize(bytes: number): string {
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)}G`;
 }
 
+function toErrorMessage(error: unknown): string {
+  if (typeof error === "string") return error;
+  if (error instanceof Error && error.message.trim()) return error.message;
+  if (typeof error === "object" && error !== null) {
+    const maybeMessage = (error as Record<string, unknown>).message;
+    if (typeof maybeMessage === "string" && maybeMessage.trim()) {
+      return maybeMessage.trim();
+    }
+  }
+  return "읽기 실패";
+}
+
 export default function FileExplorerPanel({ cwd, onClose, onCdTo, onOpenFile }: Props) {
   const [currentPath, setCurrentPath] = useState(cwd || "~");
   const [entries, setEntries] = useState<DirEntry[]>([]);
@@ -38,7 +50,7 @@ export default function FileExplorerPanel({ cwd, onClose, onCdTo, onOpenFile }: 
       setEntries(res);
       setCurrentPath(path);
     } catch (e) {
-      setError(typeof e === "string" ? e : (e as { message?: string })?.message ?? "읽기 실패");
+      setError(toErrorMessage(e));
     } finally {
       setLoading(false);
     }

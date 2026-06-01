@@ -99,4 +99,30 @@ describe("FileExplorerPanel", () => {
     fireEvent.click(screen.getByLabelText("홈"));
     await waitFor(() => expect(invokeMock).toHaveBeenCalledWith("list_directory", { path: "~" }));
   });
+
+  it("list_directory 실패 시 message 필드를 에러로 표시한다", async () => {
+    invokeMock.mockImplementation((cmd: string, args?: { path?: string }) => {
+      if (cmd === "list_directory" && args?.path === "/project") {
+        return Promise.reject({ message: "권한이 없습니다" });
+      }
+      return Promise.resolve([]);
+    });
+
+    renderPanel("/project");
+
+    expect(await screen.findByText("권한이 없습니다")).toBeInTheDocument();
+  });
+
+  it("알 수 없는 실패 값이면 기본 메시지를 표시한다", async () => {
+    invokeMock.mockImplementation((cmd: string, args?: { path?: string }) => {
+      if (cmd === "list_directory" && args?.path === "/project") {
+        return Promise.reject({ message: "   " });
+      }
+      return Promise.resolve([]);
+    });
+
+    renderPanel("/project");
+
+    expect(await screen.findByText("읽기 실패")).toBeInTheDocument();
+  });
 });
