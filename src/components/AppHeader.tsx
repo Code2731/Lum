@@ -17,7 +17,7 @@ import WindowControls from "./WindowControls";
 import PrivacyLedgerBadge from "./PrivacyLedgerBadge";
 import NotificationCenter from "./NotificationCenter";
 import { SMALL_ICON_SIZE } from "../constants/ui";
-import { isPointerOutsideTargets } from "../utils/pointerGuard";
+import { getActiveFocusableIndex, isPointerOutsideTargets } from "../utils/pointerGuard";
 import type { usePanelVisibility } from "../hooks/usePanelVisibility";
 import type { useSquads } from "../hooks/useSquads";
 import type { usePrivacyLedger } from "../hooks/usePrivacyLedger";
@@ -624,7 +624,7 @@ const AppHeader: React.FC<Props> = ({
     if (focusables.length === 0) return false;
 
     const active = document.activeElement;
-    const currentIndex = focusables.indexOf(active as HTMLElement);
+    const currentIndex = getActiveFocusableIndex(focusables, active);
     const nextIndex = (() => {
       if (currentIndex < 0) {
         return 0;
@@ -650,7 +650,7 @@ const AppHeader: React.FC<Props> = ({
     if (focusables.length === 0) return false;
 
     const active = document.activeElement;
-    const currentIndex = focusables.indexOf(active as HTMLElement);
+    const currentIndex = getActiveFocusableIndex(focusables, active);
     const nextIndex = (() => {
       if (e.key === "Home") return 0;
       if (e.key === "End") return focusables.length - 1;

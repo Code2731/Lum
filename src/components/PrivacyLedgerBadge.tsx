@@ -13,7 +13,7 @@ import { Cloud, ShieldCheck, RotateCcw, X } from "lucide-react";
 import { motion } from "framer-motion";
 import type { LedgerState, Backend } from "../hooks/usePrivacyLedger";
 import { cn } from "@/lib/utils";
-import { isPointerOutsideTargets } from "../utils/pointerGuard";
+import { getActiveFocusableIndex, isPointerOutsideTargets } from "../utils/pointerGuard";
 
 interface Props {
   state: LedgerState;
@@ -249,7 +249,7 @@ const PrivacyLedgerBadge: React.FC<Props> = ({
     if (focusables.length === 0) return false;
 
     const active = document.activeElement;
-    const currentIndex = focusables.indexOf(active as HTMLElement);
+    const currentIndex = getActiveFocusableIndex(focusables, active);
     const nextIndex = (() => {
       if (currentIndex < 0) {
         return 0;
@@ -278,7 +278,7 @@ const PrivacyLedgerBadge: React.FC<Props> = ({
     if (focusables.length === 0) return false;
 
     const active = document.activeElement;
-    const currentIndex = focusables.indexOf(active as HTMLElement);
+    const currentIndex = getActiveFocusableIndex(focusables, active);
     const nextIndex = (() => {
       if (currentIndex < 0) {
         return 0;

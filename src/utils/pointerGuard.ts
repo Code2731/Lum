@@ -21,3 +21,11 @@ export function isTargetInsideTargets(
   if (!(target instanceof Node)) return false;
   return targets.some((node) => node?.contains(target) ?? false);
 }
+
+export function getActiveFocusableIndex(
+  focusables: HTMLElement[],
+  active: Element | null,
+): number {
+  if (!(active instanceof HTMLElement)) return -1;
+  return focusables.indexOf(active);
+}

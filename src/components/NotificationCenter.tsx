@@ -2,7 +2,7 @@ import React, { useRef, useEffect } from "react";
 import { Bell, Terminal, Bot, Wrench, Layers, X, CheckCheck, Trash2 } from "lucide-react";
 import { IconButton } from "@/components/ui/icon-button";
 import type { AppNotification, NotifType } from "../hooks/useNotificationCenter";
-import { isPointerOutsideTargets } from "../utils/pointerGuard";
+import { getActiveFocusableIndex, isPointerOutsideTargets } from "../utils/pointerGuard";
 
 interface Props {
   notifications: AppNotification[];
@@ -66,7 +66,7 @@ const NotificationCenter: React.FC<Props> = ({
     if (focusables.length === 0) return false;
 
     const active = document.activeElement;
-    const currentIndex = focusables.indexOf(active as HTMLElement);
+    const currentIndex = getActiveFocusableIndex(focusables, active);
     const nextIndex = (() => {
       if (currentIndex < 0) {
         return 0;
@@ -94,7 +94,7 @@ const NotificationCenter: React.FC<Props> = ({
     if (focusables.length === 0) return false;
 
     const active = document.activeElement;
-    const currentIndex = focusables.indexOf(active as HTMLElement);
+    const currentIndex = getActiveFocusableIndex(focusables, active);
     const nextIndex = (() => {
       if (currentIndex < 0) {
         return 0;

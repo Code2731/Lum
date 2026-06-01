@@ -3,6 +3,7 @@ import {
   isEventTargetWithinSelector,
   isPointerOutsideTargets,
   isTargetInsideTargets,
+  getActiveFocusableIndex,
 } from "./pointerGuard";
 
 describe("pointerGuard", () => {
@@ -57,5 +58,16 @@ describe("pointerGuard", () => {
     expect(isTargetInsideTargets(outside, [panel])).toBe(false);
     expect(isTargetInsideTargets(null, [panel])).toBe(false);
     expect(isTargetInsideTargets(new EventTarget(), [panel])).toBe(false);
+  });
+
+  it("getActiveFocusableIndex는 active 요소의 인덱스를 반환하고 비HTMLElement는 -1", () => {
+    const a = document.createElement("button");
+    const b = document.createElement("button");
+    const c = document.createElement("button");
+    const focusables = [a, b, c];
+
+    expect(getActiveFocusableIndex(focusables, b)).toBe(1);
+    expect(getActiveFocusableIndex(focusables, document.createElement("div"))).toBe(-1);
+    expect(getActiveFocusableIndex(focusables, null)).toBe(-1);
   });
 });
