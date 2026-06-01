@@ -54,7 +54,7 @@ import { extractInspectorAnalyzeCommands } from "./utils/inspectorAnalyze";
 import { getRovingMenuNextIndex } from "./utils/menuRoving";
 import { resolveInspectorMenuHotkey } from "./utils/inspectorMenuHotkeys";
 import {
-  isEventTargetWithinSelector as isEventTargetWithinSelectorUtil,
+  isEventTargetWithinSelector,
   isTargetInsideTargets,
 } from "./utils/pointerGuard";
 import type {
@@ -104,8 +104,6 @@ interface MarkdownDocViewState {
   loading: boolean;
   error: string | null;
 }
-
-export const isEventTargetWithinSelector = isEventTargetWithinSelectorUtil;
 
 function parseGitTabInfo(ctx: string): GitTabInfo | null {
   if (!ctx) return null;

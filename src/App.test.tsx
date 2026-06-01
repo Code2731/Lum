@@ -2,7 +2,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { invoke } from "@tauri-apps/api/core";
 import { useCommandBlocks } from "./hooks/useCommandBlocks";
-import App, { isEventTargetWithinSelector } from "./App";
+import { isEventTargetWithinSelector } from "./utils/pointerGuard";
+import App from "./App";
 
 vi.mock("@tauri-apps/api/core", () => ({
   invoke: vi.fn().mockImplementation((cmd: string) => {
