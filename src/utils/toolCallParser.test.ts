@@ -53,6 +53,13 @@ describe("parseToolCalls", () => {
     expect(calls[0].name).toBe("open&run");
   });
 
+  it("이중 인코딩된 엔티티(&amp;quot;)도 args JSON으로 파싱한다", () => {
+    const raw = `<tool_use server="x" name="y" args="{&amp;quot;a&amp;quot;:1}" />`;
+    const calls = parseToolCalls(raw);
+    expect(calls).toHaveLength(1);
+    expect(calls[0].args).toEqual({ a: 1 });
+  });
+
   it("server/name 없으면 무시", () => {
     expect(parseToolCalls(`<tool_use name="x" />`)).toHaveLength(0);
     expect(parseToolCalls(`<tool_use server="x" />`)).toHaveLength(0);

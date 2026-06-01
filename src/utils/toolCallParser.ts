@@ -27,12 +27,18 @@ const ATTR_RE = /(\w+)\s*=\s*(?:"([^"]*)"|'([^']*)')/g;
 const TAG_RE = /<tool_use\b([^>]*?)\/>|<tool_use\b([^>]*?)><\/tool_use>/g;
 
 function decodeHtmlEntities(value: string): string {
-  return value
-    .replace(/&quot;/g, "\"")
-    .replace(/&#39;/g, "'")
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">");
+  let decoded = value;
+  for (let i = 0; i < 3; i += 1) {
+    const next = decoded
+      .replace(/&quot;|&#34;/g, "\"")
+      .replace(/&#39;|&apos;/g, "'")
+      .replace(/&lt;/g, "<")
+      .replace(/&gt;/g, ">")
+      .replace(/&amp;/g, "&");
+    if (next === decoded) break;
+    decoded = next;
+  }
+  return decoded;
 }
 
 function parseAttrs(attrs: string): Record<string, string> {
