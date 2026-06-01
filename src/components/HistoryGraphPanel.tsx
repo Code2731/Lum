@@ -22,6 +22,10 @@ import { invoke } from "@tauri-apps/api/core";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { GitBranch, RefreshCw, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  parseHistoryGraphClusterLabelData,
+  parseHistoryGraphNodeData,
+} from "../utils/historyGraphData";
 
 // ─── 타입 ──────────────────────────────────────────────────────────────────
 
@@ -55,15 +59,6 @@ interface GraphData {
   clusters: ClusterInfo[];
 }
 
-interface NodeData {
-  label: string;
-  nodeType: GraphNode["node_type"];
-  cluster: number;
-  timestamp: number;
-  clusterColor: string;
-  [key: string]: unknown;
-}
-
 interface Props {
   onClose: () => void;
 }
@@ -88,7 +83,8 @@ function clusterColor(clusterId: number): string {
 // ─── 커스텀 노드 컴포넌트 ────────────────────────────────────────────────────
 
 function HistoryNode({ data }: NodeProps) {
-  const d = data as NodeData;
+  const d = parseHistoryGraphNodeData(data);
+  if (!d) return null;
   const base = clusterColor(d.cluster);
 
   const bg =
@@ -134,7 +130,8 @@ function HistoryNode({ data }: NodeProps) {
 // ─── 클러스터 레이블 노드 ────────────────────────────────────────────────────
 
 function ClusterLabelNode({ data }: NodeProps) {
-  const d = data as { label: string; color: string; count: number };
+  const d = parseHistoryGraphClusterLabelData(data);
+  if (!d) return null;
   return (
     <div
       style={{
@@ -283,7 +280,10 @@ export function HistoryGraphPanel({ onClose }: Props) {
               nodeTypes={NODE_TYPES}
               onNodeClick={(_, node) => {
                 if (!node.id.startsWith("cluster-label")) {
-                  setSelectedLabel(String((node.data as NodeData).label));
+                  const d = parseHistoryGraphNodeData(node.data);
+                  if (d) {
+                    setSelectedLabel(d.label);
+                  }
                 }
               }}
               fitView
@@ -297,7 +297,7 @@ export function HistoryGraphPanel({ onClose }: Props) {
               <MiniMap
                 style={{ background: "#161b22", border: "1px solid #30363d" }}
                 nodeColor={(n) => {
-                  const d = n.data as NodeData;
+                  const d = parseHistoryGraphNodeData(n.data);
                   if (!d) return "#334155";
                   if (d.nodeType === "healing_approve") return "#22c55e";
                   if (d.nodeType === "healing_reject") return "#ef4444";
