@@ -121,11 +121,16 @@ describe("routeInput — 기본: 자연어=AI, CLI 감지 시 shell", () => {
       expect(routeInput("!")).toEqual({ type: "empty" });
       expect(routeInput("!   ")).toEqual({ type: "empty" });
     });
-    it("@ → 강제 AI (CLI 이름이라도)", () => {
+  it("@ → 강제 AI (CLI 이름이라도)", () => {
       expect(routeInput("@ls 왜 에러나는지 알려줘")).toEqual({
         type: "ai",
         question: "ls 왜 에러나는지 알려줘",
       });
+    });
+    it("@ 단독 입력은 empty로 처리", () => {
+      expect(routeInput("@")).toEqual({ type: "empty" });
+      expect(routeInput("@   ")).toEqual({ type: "empty" });
+      expect(routeInput(" \t@ ")).toEqual({ type: "empty" });
     });
   });
 

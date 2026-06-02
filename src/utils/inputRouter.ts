@@ -253,6 +253,9 @@ export function routeInput(raw: string): Route {
   }
   if (trimmed.startsWith("@")) {
     const stripped = trimmed.slice(1).trimStart();
+    if (!stripped) {
+      return { type: "empty" };
+    }
     // `@local <text>` 같이 첫 토큰이 backend 키워드면 backend 강제 + 텍스트는 의도 분류.
     // 그 외(`@ls 어떻게...`)는 기존 동작 유지 — 단순 강제 AI 챗.
     const backendPrefix = parseBackendPrefix(stripped);
