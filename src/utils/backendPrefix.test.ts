@@ -52,6 +52,12 @@ describe("clearBackendPrefixFromInput", () => {
     expect(clearBackendPrefixFromInput("@ls 왜 에러?")).toBe("@ls 왜 에러?");
     expect(clearBackendPrefixFromInput("plain text")).toBe("plain text");
   });
+
+  it("backend-only 입력에서 공백만 남는 경우 정규화한 뒤 빈 값이 된다", () => {
+    expect(clearBackendPrefixFromInput("@local   ")).toBe("");
+    expect(clearBackendPrefixFromInput("  @xllm\t")).toBe("  ");
+    expect(clearBackendPrefixFromInput("\n@cloud   ")).toBe("");
+  });
 });
 
 describe("detectBackendPrefixFromInput", () => {
@@ -77,5 +83,11 @@ describe("detectBackendPrefixFromInput", () => {
   it("backend prefix가 아니면 null", () => {
     expect(detectBackendPrefixFromInput("plain text")).toBeNull();
     expect(detectBackendPrefixFromInput("@ls why")).toBeNull();
+  });
+
+  it("선행 공백이 있어도 backend 토큰을 감지한다", () => {
+    expect(detectBackendPrefixFromInput("   @local hi")).toBe("local");
+    expect(detectBackendPrefixFromInput("\t@xllm hi")).toBe("xllm");
+    expect(detectBackendPrefixFromInput("\n@embedded   hi")).toBe("local");
   });
 });
