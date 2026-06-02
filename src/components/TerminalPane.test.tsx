@@ -326,19 +326,40 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(invokeMock.mock.calls.filter((c) => c[0] === "write_to_pty").length).toBe(0);
   });
 
-  it("단독 @backend Enter는 즉시 실행되지 않고 canonical prefix 상태로 유지된다", async () => {
+  it.each([
+    {
+      label: "@local 단독 입력",
+      input: "@local",
+      expected: "@local ",
+    },
+    {
+      label: "Alias + 앞뒤 공백",
+      input: " @Embedded   ",
+      expected: "@local ",
+    },
+    {
+      label: "탭/개행 혼합 xllm",
+      input: "\t@xllm\n",
+      expected: "@xllm ",
+    },
+    {
+      label: "개행/공백 혼합 cloud",
+      input: "\n@Cloud   \t",
+      expected: "@gemini ",
+    },
+  ])("$label Enter는 즉시 실행되지 않고 canonical prefix 상태로 유지된다", async ({ input, expected }) => {
     const onAskAI = vi.fn();
     const { container } = render(
       <TerminalPane id="tab-1" onAskAI={onAskAI} />,
     );
-    const input = container.querySelector("input")!;
+    const inputEl = container.querySelector("input")!;
 
-    fireEvent.change(input, { target: { value: " @Embedded   " } });
-    fireEvent.keyDown(input, { key: "Enter" });
+    fireEvent.change(inputEl, { target: { value: input } });
+    fireEvent.keyDown(inputEl, { key: "Enter" });
 
     expect(onAskAI).not.toHaveBeenCalled();
     expect(invokeMock.mock.calls.filter((c) => c[0] === "write_to_pty").length).toBe(0);
-    expect(input).toHaveValue("@local ");
+    expect(inputEl).toHaveValue(expected);
   });
 
   it.each([
