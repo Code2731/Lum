@@ -424,6 +424,19 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(screen.queryByText("BACKEND FORCED @GEMINI")).not.toBeInTheDocument();
   });
 
+  it("백엔드 단독 입력(개행/탭 조합)에서도 칩이 표시되지 않는다", () => {
+    const { container } = render(<TerminalPane id="tab-1" />);
+    const input = container.querySelector("input")!;
+
+    fireEvent.change(input, { target: { value: "\n@cloud   " } });
+    expect(screen.queryByText("AUTO 라우팅")).not.toBeInTheDocument();
+    expect(screen.queryByText("BACKEND FORCED @GEMINI")).not.toBeInTheDocument();
+
+    fireEvent.change(input, { target: { value: "\t@Embedded\n" } });
+    expect(screen.queryByText("AUTO 라우팅")).not.toBeInTheDocument();
+    expect(screen.queryByText("BACKEND FORCED @LOCAL")).not.toBeInTheDocument();
+  });
+
   it("선행 공백 + # 탭 입력도 AI 명령 제안 호출 시 prefix를 제외한 prompt를 전달한다", async () => {
     invokeMock.mockImplementation((cmd: string) => {
       if (cmd === "load_app_config") return Promise.resolve({});
