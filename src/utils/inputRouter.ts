@@ -264,7 +264,9 @@ export function routeInput(raw: string): Route {
       // @backend >> task 형태는 코딩 의도 감지와 무관하게 강제 agent로 처리.
       // 예: "@local >> 테스트 실패 원인 찾아서 수정해줘"
       if (rest.startsWith(">>")) {
-        return { type: "agent", task: rest.replace(/^>>\s*/, "").trim(), backend };
+        const task = rest.replace(/^>>\s*/, "").trim();
+        if (!task) return { type: "empty" };
+        return { type: "agent", task, backend };
       }
       // 리뷰 의도도 파일 탐색 도구가 필요하므로 backend를 유지한 채 agent로 보낸다.
       if (detectCodeReviewIntent(rest)) {
