@@ -1920,11 +1920,12 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
   }, [inputBuffer]);
 
   const shouldShowRouteChip = inputBuffer.trim() !== "" && !isBackendOnlyInputValue;
+  const shouldShowBackendChip = inputBuffer.trim() !== "" && !isBackendOnlyInputValue;
   const inputChips: Array<{ id: string; label: string; tone: "neutral" | "accent" | "success" | "warn" }> = [
     ...(shouldShowRouteChip
       ? [{ id: "route", label: routeMeta.label, tone: routeMeta.tone }]
       : []),
-    ...(activeBackendPrefix
+    ...(shouldShowBackendChip && activeBackendPrefix
       ? [{
         id: "backend",
         label: `BACKEND FORCED @${activeBackendPrefix.toUpperCase()}`,
