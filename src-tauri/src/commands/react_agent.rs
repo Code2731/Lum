@@ -5522,6 +5522,70 @@ fn sample() {}
     }
 
     #[test]
+    fn apply_patch_백업실패_메시지_전파() {
+        let td = TempDir::new("prewrite4");
+        let target = td.path().join("a.rs");
+        std::fs::write(&target, "fn x() -> i32 { 1 }").unwrap();
+        let invalid_backup_dir = td.path().join("invalid_backup_dir3");
+        std::fs::write(&invalid_backup_dir, b"x").unwrap();
+
+        {
+            let mut guard = backup_lock().lock().unwrap_or_else(|e| e.into_inner());
+            *guard = Some(ReactBackup {
+                cwd_input: td.cwd(),
+                cwd: td.path().to_path_buf(),
+                backup_dir: invalid_backup_dir.clone(),
+                entries: HashMap::new(),
+            });
+        }
+
+        let args = serde_json::json!({
+            "path": "a.rs",
+            "search": "1",
+            "replace": "2",
+        });
+        let out = apply_patch_tool(&args, &td.cwd());
+        assert!(out.contains("백업 준비 실패"), "메시지 검증 필요: {out}");
+        assert_eq!(std::fs::read_to_string(&target).unwrap(), "fn x() -> i32 { 1 }");
+        assert!(
+            out.contains("백업 디렉터리 생성 실패"),
+            "실제 실패 원인을 그대로 노출해야 함: {out}"
+        );
+
+        *backup_lock().lock().unwrap_or_else(|e| e.into_inner()) = None;
+    }
+
+    #[test]
+    fn delete_file_백업실패_메시지_전파() {
+        let td = TempDir::new("prewrite5");
+        let target = td.path().join("b.txt");
+        std::fs::write(&target, "bye").unwrap();
+        let invalid_backup_dir = td.path().join("invalid_backup_dir4");
+        std::fs::write(&invalid_backup_dir, b"x").unwrap();
+
+        {
+            let mut guard = backup_lock().lock().unwrap_or_else(|e| e.into_inner());
+            *guard = Some(ReactBackup {
+                cwd_input: td.cwd(),
+                cwd: td.path().to_path_buf(),
+                backup_dir: invalid_backup_dir.clone(),
+                entries: HashMap::new(),
+            });
+        }
+
+        let args = serde_json::json!({"path": "b.txt"});
+        let out = delete_file_tool(&args, &td.cwd());
+        assert!(out.contains("백업 준비 실패"), "메시지 검증 필요: {out}");
+        assert!(target.exists(), "삭제는 백업 실패로 차단되어야 함");
+        assert!(
+            out.contains("백업 디렉터리 생성 실패"),
+            "실제 실패 원인을 그대로 노출해야 함: {out}"
+        );
+
+        *backup_lock().lock().unwrap_or_else(|e| e.into_inner()) = None;
+    }
+
+    #[test]
     fn write_file_creates_new_file() {
         let td = TempDir::new("wf1");
         let args = serde_json::json!({"path": "hello.txt", "content": "안녕"});
