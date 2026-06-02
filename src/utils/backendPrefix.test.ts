@@ -75,6 +75,11 @@ describe("clearBackendPrefixFromInput", () => {
     expect(clearBackendPrefixFromInput("\n@cloud   ")).toBe("");
   });
 
+  it("개행 앞뒤가 포함된 단독 backend도 공백/빈 문자열 정규화 규칙 유지", () => {
+    expect(clearBackendPrefixFromInput("\n\t@embedded\n")).toBe("\n\t");
+    expect(clearBackendPrefixFromInput("  @sglang\n\n")).toBe("  ");
+  });
+
   it("alias 대소문자 상관없이 제거된다", () => {
     expect(clearBackendPrefixFromInput("@XLLM hello")).toBe("hello");
   });
@@ -135,6 +140,7 @@ describe("parseBackendPrefixFromInput", () => {
 
   it("backend-only는 rest 빈 문자열", () => {
     expect(parseBackendPrefixFromInput("@cloud   ")).toEqual({ backend: "gemini", rest: "" });
+    expect(parseBackendPrefixFromInput("\n\t@xllm\n")).toEqual({ backend: "xllm", rest: "" });
   });
 
   it("대문자 alias도 정규화된다", () => {
