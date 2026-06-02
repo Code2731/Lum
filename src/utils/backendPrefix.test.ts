@@ -26,6 +26,11 @@ describe("applyBackendPrefixToInput", () => {
     expect(applyBackendPrefixToInput("@gemini", "local")).toBe("@local ");
   });
 
+  it("backend와 본문 사이의 공백을 허용한다", () => {
+    expect(applyBackendPrefixToInput("@ local", "xllm")).toBe("@xllm ");
+    expect(applyBackendPrefixToInput(" \t@ embedded   hi", "gemini")).toBe(" \t@gemini hi");
+  });
+
   it("non-backend @강제AI 입력은 본문으로 취급한다", () => {
     expect(applyBackendPrefixToInput("@ls 왜 에러?", "gemini")).toBe("@gemini ls 왜 에러?");
   });
@@ -46,6 +51,11 @@ describe("clearBackendPrefixFromInput", () => {
   it("backend 뒤 탭/개행 구분자도 제거한다", () => {
     expect(clearBackendPrefixFromInput("@local\t로그 요약해줘")).toBe("로그 요약해줘");
     expect(clearBackendPrefixFromInput("@local\n로그 요약해줘")).toBe("로그 요약해줘");
+  });
+
+  it("backend와 본문 사이 공백만 있어도 backend-only로 정리한다", () => {
+    expect(clearBackendPrefixFromInput("@ local")).toBe("");
+    expect(clearBackendPrefixFromInput("  @ xllm")).toBe("  ");
   });
 
   it("backend prefix가 없으면 원본을 유지한다", () => {
@@ -78,6 +88,11 @@ describe("detectBackendPrefixFromInput", () => {
   it("backend 뒤 탭/개행 구분자도 감지한다", () => {
     expect(detectBackendPrefixFromInput("@local\thi")).toBe("local");
     expect(detectBackendPrefixFromInput("@cloud\nhi")).toBe("gemini");
+  });
+
+  it("backend와 본문 사이 공백이 있어도 감지한다", () => {
+    expect(detectBackendPrefixFromInput("@ local hi")).toBe("local");
+    expect(detectBackendPrefixFromInput("   @ xllm   hi")).toBe("xllm");
   });
 
   it("backend prefix가 아니면 null", () => {

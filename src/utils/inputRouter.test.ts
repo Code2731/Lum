@@ -324,6 +324,20 @@ describe("routeInput — 기본: 자연어=AI, CLI 감지 시 shell", () => {
       });
     });
 
+    it("@와 backend 사이 공백이 있어도 backend 강제로 인식", () => {
+      expect(routeInput("@ local fix the bug in login flow")).toEqual({
+        type: "agent",
+        task: "fix the bug in login flow",
+        backend: "local",
+      });
+      expect(routeInput("@   xllm what is a closure?")).toEqual({
+        type: "ai",
+        question: "what is a closure?",
+        backend: "xllm",
+      });
+      expect(routeInput("   @ embedded")).toEqual({ type: "empty" });
+    });
+
     it("@backend + 탭/개행 뒤 >> 조합도 강제 agent 유지", () => {
       expect(routeInput("@local\t>> 테스트 실패 원인 찾아서 고쳐줘")).toEqual({
         type: "agent",
