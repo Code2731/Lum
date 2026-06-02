@@ -566,7 +566,10 @@ pub fn save_terminal_appearance(
 mod tests {
     use super::*;
     use std::ffi::OsString;
+    use std::sync::Mutex;
     use std::time::{SystemTime, UNIX_EPOCH};
+
+    static HOME_ENV_TEST_LOCK: Mutex<()> = Mutex::new(());
 
     struct HomeEnvGuard {
         old_home: Option<OsString>,
@@ -612,6 +615,7 @@ mod tests {
     where
         F: FnOnce() -> R,
     {
+        let _lock = HOME_ENV_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         let nanos = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()
