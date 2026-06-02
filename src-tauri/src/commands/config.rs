@@ -693,6 +693,26 @@ mod tests {
     }
 
     #[test]
+    fn load_config_파싱_실패시_기존_백업_넘버_누적을_유지한다() {
+        with_temp_home(|| {
+            let bad = config_path();
+            std::fs::write(&bad, "{invalid_json:").unwrap();
+
+            // 이전 백업이 남아 있어도 충돌 없이 다음 번호로 누적해야 함.
+            std::fs::write(bad.with_extension("json.bak"), "old").unwrap();
+            std::fs::write(bad.with_extension("json.bak.1"), "old1").unwrap();
+
+            let loaded = load_config().expect("기본값 복구용 로드");
+            assert_eq!(loaded, AppConfig::default());
+
+            assert!(bad.with_extension("json.bak").exists());
+            assert!(bad.with_extension("json.bak.1").exists());
+            assert!(bad.with_extension("json.bak.2").exists());
+            assert!(!bad.with_extension("json.bak.3").exists());
+        });
+    }
+
+    #[test]
     fn vram_utilization_override_clamp() {
         let mut cfg = AppConfig::default();
         cfg.vram_cap_override = Some(0.25); // below 0.50 → clamped to 0.50
