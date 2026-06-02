@@ -565,6 +565,65 @@ pub fn save_terminal_appearance(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::ffi::OsString;
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    struct HomeEnvGuard {
+        old_home: Option<OsString>,
+        user_profile: Option<OsString>,
+    }
+
+    impl HomeEnvGuard {
+        fn set(home: &std::path::Path) -> Self {
+            let home = std::ffi::OsString::from(home.to_string_lossy().into_owned());
+            let old_home = std::env::var_os("HOME");
+            #[cfg(windows)]
+            let old_user_profile = std::env::var_os("USERPROFILE");
+            std::env::set_var("HOME", &home);
+            #[cfg(windows)]
+            std::env::set_var("USERPROFILE", &home);
+            Self {
+                old_home,
+                #[cfg(windows)]
+                user_profile: old_user_profile,
+                #[cfg(not(windows))]
+                user_profile: None,
+            }
+        }
+    }
+
+    impl Drop for HomeEnvGuard {
+        fn drop(&mut self) {
+            if let Some(home) = self.old_home.take() {
+                std::env::set_var("HOME", home);
+            } else {
+                std::env::remove_var("HOME");
+            }
+            #[cfg(windows)]
+            if let Some(user_profile) = self.user_profile.take() {
+                std::env::set_var("USERPROFILE", user_profile);
+            } else {
+                std::env::remove_var("USERPROFILE");
+            }
+        }
+    }
+
+    fn with_temp_home<F, R>(f: F) -> R
+    where
+        F: FnOnce() -> R,
+    {
+        let nanos = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let home = std::env::temp_dir().join(format!("lum_config_home_{nanos}"));
+        std::fs::create_dir_all(&home).unwrap();
+
+        let _guard = HomeEnvGuard::set(&home);
+        let result = f();
+        let _ = std::fs::remove_dir_all(&home);
+        result
+    }
 
     #[test]
     fn vram_utilization_default_balanced() {
@@ -600,6 +659,33 @@ mod tests {
             .unwrap_or(content_with_bom);
         let cfg: AppConfig = serde_json::from_str(stripped).expect("BOM 제거 후 파싱 성공해야 함");
         assert_eq!(cfg.theme.as_deref(), Some("Solarized Dark"));
+    }
+
+    #[test]
+    fn load_config_파싱_실패시_기본값으로_복구하고_백업_저장() {
+        with_temp_home(|| {
+            let bad = config_path();
+            std::fs::write(&bad, "{invalid_json:").unwrap();
+            let loaded = load_config().expect("기본값 복구용 로드");
+
+            assert_eq!(loaded, AppConfig::default());
+
+            let mut i = 0_u32;
+            let mut found_backup = false;
+            while i < 3 {
+                let backup = if i == 0 {
+                    bad.with_extension("json.bak")
+                } else {
+                    bad.with_extension(format!("json.bak.{i}"))
+                };
+                if backup.exists() {
+                    found_backup = true;
+                    break;
+                }
+                i += 1;
+            }
+            assert!(found_backup, "손상된 설정 파일 백업이 생성되어야 함");
+        });
     }
 
     #[test]

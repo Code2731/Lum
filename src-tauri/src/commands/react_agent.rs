@@ -5448,6 +5448,80 @@ fn sample() {}
     }
 
     #[test]
+    fn track_pre_write_실패_경로_계산_오류() {
+        let td = TempDir::new("prewrite1");
+        init_react_backup(&td.cwd());
+        let outside = if cfg!(windows) {
+            PathBuf::from("C:\\Windows\\System32\\temp_for_track_pre_write_test.txt")
+        } else {
+            PathBuf::from("/tmp/lum_track_pre_write_outside.txt")
+        };
+        let r = track_pre_write(&outside).expect_err("백업 경로 계산 오류가 발생해야 함");
+        assert!(
+            r.contains("경로 계산 오류"),
+            "오류 메시지로 경로 계산 실패가 드러나야 함: {r}"
+        );
+        *backup_lock().lock().unwrap_or_else(|e| e.into_inner()) = None;
+    }
+
+    #[test]
+    fn track_pre_write_실패_백업디렉터리_생성오류() {
+        let td = TempDir::new("prewrite2");
+        let target = td.path().join("source.txt");
+        std::fs::write(&target, "before").unwrap();
+        let invalid_backup_dir = td.path().join("invalid_backup_dir");
+        std::fs::write(&invalid_backup_dir, b"x").unwrap();
+
+        {
+            let mut guard = backup_lock().lock().unwrap_or_else(|e| e.into_inner());
+            *guard = Some(ReactBackup {
+                cwd_input: td.cwd(),
+                cwd: td.path().to_path_buf(),
+                backup_dir: invalid_backup_dir.clone(),
+                entries: HashMap::new(),
+            });
+        }
+
+        let r = track_pre_write(&target).expect_err("백업 디렉터리 생성 단계에서 에러가 나야 함");
+        assert!(
+            r.contains("백업 디렉터리 생성 실패"),
+            "에러 메시지 검증: {r}"
+        );
+
+        *backup_lock().lock().unwrap_or_else(|e| e.into_inner()) = None;
+    }
+
+    #[test]
+    fn write_file_백업실패_메시지_전파() {
+        let td = TempDir::new("prewrite3");
+        let target = td.path().join("a.txt");
+        std::fs::write(&target, "before").unwrap();
+        let invalid_backup_dir = td.path().join("invalid_backup_dir2");
+        std::fs::write(&invalid_backup_dir, b"x").unwrap();
+
+        {
+            let mut guard = backup_lock().lock().unwrap_or_else(|e| e.into_inner());
+            *guard = Some(ReactBackup {
+                cwd_input: td.cwd(),
+                cwd: td.path().to_path_buf(),
+                backup_dir: invalid_backup_dir.clone(),
+                entries: HashMap::new(),
+            });
+        }
+
+        let args = serde_json::json!({"path": "a.txt", "content": "after", "overwrite": true});
+        let out = write_file_tool(&args, &td.cwd());
+        assert!(out.contains("백업 준비 실패"), "메시지 검증 필요: {out}");
+        assert_eq!(std::fs::read_to_string(&target).unwrap(), "before");
+        assert!(
+            out.contains("백업 디렉터리 생성 실패"),
+            "실제 실패 원인을 그대로 노출해야 함: {out}"
+        );
+
+        *backup_lock().lock().unwrap_or_else(|e| e.into_inner()) = None;
+    }
+
+    #[test]
     fn write_file_creates_new_file() {
         let td = TempDir::new("wf1");
         let args = serde_json::json!({"path": "hello.txt", "content": "안녕"});
