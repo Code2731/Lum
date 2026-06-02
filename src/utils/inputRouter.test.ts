@@ -342,6 +342,23 @@ describe("routeInput — 기본: 자연어=AI, CLI 감지 시 shell", () => {
       });
     });
 
+    it("@backend + >> 뒤 공백만 있으면 empty", () => {
+      expect(routeInput("@local >>")).toEqual({ type: "empty" });
+      expect(routeInput("@local\t>>")).toEqual({ type: "empty" });
+      expect(routeInput("@xllm\n>>   ")).toEqual({ type: "empty" });
+      expect(routeInput("@cloud\n>>\t")).toEqual({ type: "empty" });
+      expect(routeInput("@OLLAMA  >>\t   ")).toEqual({ type: "empty" });
+    });
+
+    it("@backend 단독 입력은 앞뒤 공백/탭이 있어도 empty", () => {
+      expect(routeInput("   @local   ")).toEqual({ type: "empty" });
+      expect(routeInput("\t@xllm\t")).toEqual({ type: "empty" });
+      expect(routeInput("\n@ollama\n")).toEqual({ type: "empty" });
+      expect(routeInput("  @gemini   ")).toEqual({ type: "empty" });
+      expect(routeInput("   @cloud   ")).toEqual({ type: "empty" });
+      expect(routeInput("  @embedded \t")).toEqual({ type: "empty" });
+    });
+
     it("@local만 단독 입력 → 빈 입력(backend만 토글)", () => {
       expect(routeInput("@local")).toEqual({ type: "empty" });
       expect(routeInput("@local\t")).toEqual({ type: "empty" });
