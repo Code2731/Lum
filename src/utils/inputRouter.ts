@@ -258,7 +258,9 @@ export function routeInput(raw: string): Route {
     const backendPrefix = parseBackendPrefix(stripped);
     if (backendPrefix) {
       const { backend, rest } = backendPrefix;
-      if (!rest) return { type: "ai", question: "", backend };
+      if (!rest) {
+        return { type: "empty" };
+      }
       // @backend >> task 형태는 코딩 의도 감지와 무관하게 강제 agent로 처리.
       // 예: "@local >> 테스트 실패 원인 찾아서 수정해줘"
       if (rest.startsWith(">>")) {

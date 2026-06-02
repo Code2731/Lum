@@ -324,12 +324,8 @@ describe("routeInput — 기본: 자연어=AI, CLI 감지 시 shell", () => {
       });
     });
 
-    it("@local만 단독 입력 → 빈 ai (백엔드만 토글)", () => {
-      expect(routeInput("@local")).toEqual({
-        type: "ai",
-        question: "",
-        backend: "local",
-      });
+    it("@local만 단독 입력 → 빈 입력(backend만 토글)", () => {
+      expect(routeInput("@local")).toEqual({ type: "empty" });
     });
 
     it("backend 키워드 아닌 @ → 기존 강제 AI (backend 없음)", () => {

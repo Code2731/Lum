@@ -213,11 +213,29 @@ fn config_path() -> std::path::PathBuf {
 }
 
 pub fn load_config() -> Result<AppConfig> {
-    match std::fs::read_to_string(config_path()) {
+    let path = config_path();
+    match std::fs::read_to_string(&path) {
         Ok(content) => {
             // Windows의 PowerShell Out-File 등이 박는 UTF-8 BOM 제거 — 없으면 그대로
             let stripped = content.strip_prefix('\u{feff}').unwrap_or(&content);
-            serde_json::from_str(stripped).map_err(|e| LumError::Config(e.to_string()))
+            match serde_json::from_str(stripped) {
+                Ok(cfg) => Ok(cfg),
+                Err(err) => {
+                    // 설정 파싱 실패 시 앱 전체 동작을 멈추지 않기 위해 기본값으로 복구.
+                    // 손상된 파일은 백업해 두고 다음 실행에서 정상 동작하도록 한다.
+                    let mut backup = path.with_extension("json.bak");
+                    if backup.exists() {
+                        let mut i = 1_u32;
+                        while backup.exists() {
+                            backup = path.with_extension(format!("json.bak.{i}"));
+                            i += 1;
+                        }
+                    }
+                    let _ = std::fs::copy(&path, &backup);
+                    eprintln!("config parse error: {err} (backup: {})", backup.display());
+                    Ok(AppConfig::default())
+                }
+            }
         }
         Err(_) => Ok(AppConfig::default()),
     }

@@ -2835,31 +2835,35 @@ fn init_react_backup(cwd: &str) {
 
 /// 쓰기 도구가 abs_path에 변경을 가하기 직전 호출.
 /// 활성 백업이 없으면 noop. 같은 파일 두 번째부턴 백업 안 함 (첫 원본만 보존).
-fn track_pre_write(abs_path: &Path) {
+fn track_pre_write(abs_path: &Path) -> std::result::Result<(), String> {
     let mut guard = backup_lock().lock().unwrap();
-    let Some(backup) = guard.as_mut() else { return };
+    let Some(backup) = guard.as_mut() else {
+        return Ok(());
+    };
     if backup.entries.contains_key(abs_path) {
-        return;
+        return Ok(());
     }
     if abs_path.exists() {
         // cwd 외부면 백업 skip — SafePath가 막아주므로 정상 흐름에선 도달 안 함.
         let Ok(rel) = abs_path.strip_prefix(&backup.cwd) else {
-            return;
+            return Err(format!("경로 계산 오류: {}", abs_path.display()));
         };
         let dst = backup.backup_dir.join(rel);
         if let Some(parent) = dst.parent() {
-            let _ = std::fs::create_dir_all(parent);
+            std::fs::create_dir_all(parent)
+                .map_err(|e| format!("백업 디렉터리 생성 실패: {} ({e})", parent.display()))?;
         }
-        if std::fs::copy(abs_path, &dst).is_ok() {
-            backup
-                .entries
-                .insert(abs_path.to_path_buf(), BackupEntry::Original);
-        }
+        std::fs::copy(abs_path, &dst)
+            .map_err(|e| format!("백업 복사 실패: {} ({e})", abs_path.display()))?;
+        backup
+            .entries
+            .insert(abs_path.to_path_buf(), BackupEntry::Original);
     } else {
         backup
             .entries
             .insert(abs_path.to_path_buf(), BackupEntry::Created);
     }
+    Ok(())
 }
 
 #[derive(Serialize, Default, Debug)]
@@ -3083,7 +3087,9 @@ fn write_file_tool(args: &serde_json::Value, cwd: &str) -> String {
         );
     }
 
-    track_pre_write(&abs);
+    if let Err(e) = track_pre_write(&abs) {
+        return format!("백업 준비 실패: {e}");
+    }
     match std::fs::write(&abs, &content) {
         Ok(()) => format!("쓰기 성공: {} ({} bytes)", abs.display(), content.len()),
         Err(e) => format!("쓰기 실패: {e}"),
@@ -3137,7 +3143,9 @@ fn apply_patch_tool(args: &serde_json::Value, cwd: &str) -> String {
     new_content.push_str(&replace);
     new_content.push_str(&content[start + search.len()..]);
 
-    track_pre_write(&abs);
+    if let Err(e) = track_pre_write(&abs) {
+        return format!("백업 준비 실패: {e}");
+    }
     match std::fs::write(&abs, &new_content) {
         Ok(()) => format!(
             "패치 적용 성공: {} (-{} +{} bytes)",
@@ -3164,7 +3172,9 @@ fn delete_file_tool(args: &serde_json::Value, cwd: &str) -> String {
     if abs.is_dir() {
         return format!("오류: 디렉터리는 삭제 불가 ({})", abs.display());
     }
-    track_pre_write(&abs);
+    if let Err(e) = track_pre_write(&abs) {
+        return format!("백업 준비 실패: {e}");
+    }
     match std::fs::remove_file(&abs) {
         Ok(()) => format!("삭제 성공: {}", abs.display()),
         Err(e) => format!("삭제 실패: {e}"),
