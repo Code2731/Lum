@@ -21,7 +21,7 @@ import {
   applyBackendPrefixToInput,
   clearBackendPrefixFromInput,
   detectBackendPrefixFromInput,
-  isBackendOnlyInput as isBackendOnlyInputValue,
+  isBackendOnlyInput,
 } from "../utils/backendPrefix";
 import type { ChatMessage } from "../hooks/useAIChat";
 import { openUrl } from "@tauri-apps/plugin-opener";
@@ -1155,8 +1155,8 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     () => detectBackendPrefixFromInput(inputBuffer),
     [inputBuffer],
   );
-  const isBackendOnlyInput =
-    activeBackendPrefix !== null && isBackendOnlyInputValue(inputBuffer);
+  const isBackendOnlyInputValue =
+    isBackendOnlyInput(inputBuffer);
   const [backendTrail, setBackendTrail] = useState<{ last: AiBackend; prev: AiBackend | null }>({
     last: "local",
     prev: null,
@@ -1919,7 +1919,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     }
   }, [inputBuffer]);
 
-  const shouldShowRouteChip = inputBuffer.trim() !== "" && !isBackendOnlyInput;
+  const shouldShowRouteChip = inputBuffer.trim() !== "" && !isBackendOnlyInputValue;
   const inputChips: Array<{ id: string; label: string; tone: "neutral" | "accent" | "success" | "warn" }> = [
     ...(shouldShowRouteChip
       ? [{ id: "route", label: routeMeta.label, tone: routeMeta.tone }]
@@ -1937,7 +1937,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
   const inputFocusCompact =
     warpInputFocused &&
     inputBuffer.trim() !== "" &&
-    !isBackendOnlyInput &&
+    !isBackendOnlyInputValue &&
     !actionPaletteOpen &&
     !inputHistoryOpen &&
     !mentionOpen &&

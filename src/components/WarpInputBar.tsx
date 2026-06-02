@@ -5,7 +5,7 @@ import {
   applyBackendPrefixToInput,
   clearBackendPrefixFromInput,
   detectBackendPrefixFromInput,
-  isBackendOnlyInput as isBackendOnlyInputValue,
+  isBackendOnlyInput,
 } from "../utils/backendPrefix";
 import { useVoiceInput } from "../hooks/useVoiceInput";
 
@@ -71,7 +71,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
     const isVisuallyEmpty = input.trim() === "";
     const activeBackend = detectBackendPrefixFromInput(input);
     const isBackendOnly =
-      isBackendOnlyInputValue(input);
+      isBackendOnlyInput(input);
     const isEffectivelyEmpty = isVisuallyEmpty || isBackendOnly;
     const activeHeavy  = isHeavy;
     // 첫 토큰에서 `ls` 등 shell 냄새 풍기면 $, 아니면 기본값을 "AI 모드"로 표시 (★)
