@@ -326,26 +326,44 @@ describe("routeInput — 기본: 자연어=AI, CLI 감지 시 shell", () => {
 
     it("@local만 단독 입력 → 빈 입력(backend만 토글)", () => {
       expect(routeInput("@local")).toEqual({ type: "empty" });
+      expect(routeInput("@local\t")).toEqual({ type: "empty" });
+      expect(routeInput("@local\n")).toEqual({ type: "empty" });
     });
 
     it("@ollama만 단독 입력 → 빈 입력(backend만 토글)", () => {
       expect(routeInput("@ollama")).toEqual({ type: "empty" });
+      expect(routeInput("@ollama\t")).toEqual({ type: "empty" });
+      expect(routeInput("@ollama\n")).toEqual({ type: "empty" });
     });
 
     it("@xllm만 단독 입력 → 빈 입력(backend만 토글)", () => {
       expect(routeInput("@xllm")).toEqual({ type: "empty" });
+      expect(routeInput("@xllm\t")).toEqual({ type: "empty" });
+      expect(routeInput("@xllm\n")).toEqual({ type: "empty" });
     });
 
     it("@gemini만 단독 입력 → 빈 입력(backend만 토글)", () => {
       expect(routeInput("@gemini")).toEqual({ type: "empty" });
+      expect(routeInput("@gemini\t")).toEqual({ type: "empty" });
+      expect(routeInput("@gemini\n")).toEqual({ type: "empty" });
     });
 
     it("@embedded만 단독 입력 → 빈 입력(backend만 토글)", () => {
       expect(routeInput("@embedded")).toEqual({ type: "empty" });
+      expect(routeInput("@embedded\t")).toEqual({ type: "empty" });
+      expect(routeInput("@embedded\n")).toEqual({ type: "empty" });
     });
 
     it("@cloud만 단독 입력 → 빈 입력(backend만 토글)", () => {
       expect(routeInput("@cloud")).toEqual({ type: "empty" });
+      expect(routeInput("@cloud\t")).toEqual({ type: "empty" });
+      expect(routeInput("@cloud\n")).toEqual({ type: "empty" });
+    });
+
+    it("@LOCAL만 단독 입력 대소문자 포함 입력도 빈 입력", () => {
+      expect(routeInput("@LOCAL")).toEqual({ type: "empty" });
+      expect(routeInput("@xLlM\t")).toEqual({ type: "empty" });
+      expect(routeInput("@Gemini\n")).toEqual({ type: "empty" });
     });
 
     it("backend 키워드 아닌 @ → 기존 강제 AI (backend 없음)", () => {
