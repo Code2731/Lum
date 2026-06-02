@@ -21,6 +21,7 @@ import {
   applyBackendPrefixToInput,
   clearBackendPrefixFromInput,
   detectBackendPrefixFromInput,
+  isBackendOnlyInput as isBackendOnlyInputValue,
 } from "../utils/backendPrefix";
 import type { ChatMessage } from "../hooks/useAIChat";
 import { openUrl } from "@tauri-apps/plugin-opener";
@@ -1155,7 +1156,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     [inputBuffer],
   );
   const isBackendOnlyInput =
-    activeBackendPrefix !== null && clearBackendPrefixFromInput(inputBuffer).trim() === "";
+    activeBackendPrefix !== null && isBackendOnlyInputValue(inputBuffer);
   const [backendTrail, setBackendTrail] = useState<{ last: AiBackend; prev: AiBackend | null }>({
     last: "local",
     prev: null,

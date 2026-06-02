@@ -4,6 +4,7 @@ import {
   clearBackendPrefixFromInput,
   detectBackendPrefixFromInput,
   parseBackendPrefixFromInput,
+  isBackendOnlyInput,
 } from "./backendPrefix";
 
 describe("applyBackendPrefixToInput", () => {
@@ -138,5 +139,23 @@ describe("parseBackendPrefixFromInput", () => {
 
   it("대문자 alias도 정규화된다", () => {
     expect(parseBackendPrefixFromInput("@CLOUD test")).toEqual({ backend: "gemini", rest: "test" });
+  });
+});
+
+describe("isBackendOnlyInput", () => {
+  it("backend-only 입력은 true", () => {
+    expect(isBackendOnlyInput("@local")).toBe(true);
+    expect(isBackendOnlyInput("   @ xllm\t")).toBe(true);
+    expect(isBackendOnlyInput("\n@cloud   ")).toBe(true);
+  });
+
+  it("backend+본문은 false", () => {
+    expect(isBackendOnlyInput("@local hi")).toBe(false);
+    expect(isBackendOnlyInput("  @xllm 작업")).toBe(false);
+  });
+
+  it("비 backend @ 접두는 false", () => {
+    expect(isBackendOnlyInput("@ls")).toBe(false);
+    expect(isBackendOnlyInput("@")).toBe(false);
   });
 });

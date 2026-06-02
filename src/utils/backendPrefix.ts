@@ -80,3 +80,8 @@ export function detectBackendPrefixFromInput(raw: string): AiBackend | null {
   const parsed = parseBackendPrefixFromInput(raw);
   return parsed?.backend ?? null;
 }
+
+export function isBackendOnlyInput(raw: string): boolean {
+  const parsed = parseBackendPrefixFromInput(raw);
+  return parsed !== null && parsed.rest.trim() === "";
+}
