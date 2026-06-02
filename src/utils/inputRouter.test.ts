@@ -328,6 +328,26 @@ describe("routeInput — 기본: 자연어=AI, CLI 감지 시 shell", () => {
       expect(routeInput("@local")).toEqual({ type: "empty" });
     });
 
+    it("@ollama만 단독 입력 → 빈 입력(backend만 토글)", () => {
+      expect(routeInput("@ollama")).toEqual({ type: "empty" });
+    });
+
+    it("@xllm만 단독 입력 → 빈 입력(backend만 토글)", () => {
+      expect(routeInput("@xllm")).toEqual({ type: "empty" });
+    });
+
+    it("@gemini만 단독 입력 → 빈 입력(backend만 토글)", () => {
+      expect(routeInput("@gemini")).toEqual({ type: "empty" });
+    });
+
+    it("@embedded만 단독 입력 → 빈 입력(backend만 토글)", () => {
+      expect(routeInput("@embedded")).toEqual({ type: "empty" });
+    });
+
+    it("@cloud만 단독 입력 → 빈 입력(backend만 토글)", () => {
+      expect(routeInput("@cloud")).toEqual({ type: "empty" });
+    });
+
     it("backend 키워드 아닌 @ → 기존 강제 AI (backend 없음)", () => {
       // `ls`는 backend 키워드가 아님 → 기존 동작 유지 (강제 AI 챗).
       expect(routeInput("@ls 왜 에러나는지 알려줘")).toEqual({
