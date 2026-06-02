@@ -263,6 +263,34 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(writeCalls.length).toBe(0);
   });
 
+  it("@backend + 탭/개행 >> 조합 → agent + backend 유지", async () => {
+    const onAgentTrigger = vi.fn();
+    const onAskAI = vi.fn();
+    const { container } = render(
+      <TerminalPane id="tab-1" onAgentTrigger={onAgentTrigger} onAskAI={onAskAI} />,
+    );
+    submitInput(container, "@local\t>> 테스트 실패 원인 찾아서 고쳐줘");
+    await waitFor(() => {
+      expect(onAgentTrigger).toHaveBeenCalledWith("테스트 실패 원인 찾아서 고쳐줘", "local");
+    });
+    expect(onAskAI).not.toHaveBeenCalled();
+    expect(invokeMock.mock.calls.filter((c) => c[0] === "write_to_pty").length).toBe(0);
+  });
+
+  it("@backend + 개행 >> 조합 → agent + backend 유지", async () => {
+    const onAgentTrigger = vi.fn();
+    const onAskAI = vi.fn();
+    const { container } = render(
+      <TerminalPane id="tab-1" onAgentTrigger={onAgentTrigger} onAskAI={onAskAI} />,
+    );
+    submitInput(container, "@xllm\n>> resolve the parse error");
+    await waitFor(() => {
+      expect(onAgentTrigger).toHaveBeenCalledWith("resolve the parse error", "xllm");
+    });
+    expect(onAskAI).not.toHaveBeenCalled();
+    expect(invokeMock.mock.calls.filter((c) => c[0] === "write_to_pty").length).toBe(0);
+  });
+
   it("@local 단독 입력은 라우팅은 되지만 실행은 생략된다", async () => {
     const onAgentTrigger = vi.fn();
     const onAskAI = vi.fn();

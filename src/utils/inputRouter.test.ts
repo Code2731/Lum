@@ -324,6 +324,24 @@ describe("routeInput — 기본: 자연어=AI, CLI 감지 시 shell", () => {
       });
     });
 
+    it("@backend + 탭/개행 뒤 >> 조합도 강제 agent 유지", () => {
+      expect(routeInput("@local\t>> 테스트 실패 원인 찾아서 고쳐줘")).toEqual({
+        type: "agent",
+        task: "테스트 실패 원인 찾아서 고쳐줘",
+        backend: "local",
+      });
+      expect(routeInput("@xllm\n>> resolve the parse error")).toEqual({
+        type: "agent",
+        task: "resolve the parse error",
+        backend: "xllm",
+      });
+      expect(routeInput("@cloud\t>> 로그 분석 해줘")).toEqual({
+        type: "agent",
+        task: "로그 분석 해줘",
+        backend: "gemini",
+      });
+    });
+
     it("@local만 단독 입력 → 빈 입력(backend만 토글)", () => {
       expect(routeInput("@local")).toEqual({ type: "empty" });
       expect(routeInput("@local\t")).toEqual({ type: "empty" });
