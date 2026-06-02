@@ -35,6 +35,10 @@ describe("applyBackendPrefixToInput", () => {
   it("non-backend @강제AI 입력은 본문으로 취급한다", () => {
     expect(applyBackendPrefixToInput("@ls 왜 에러?", "gemini")).toBe("@gemini ls 왜 에러?");
   });
+
+  it("alias 대소문자 상관없이 백엔드 토큰을 교체한다", () => {
+    expect(applyBackendPrefixToInput("@LOCAL hello", "gemini")).toBe("@gemini hello");
+  });
 });
 
 describe("clearBackendPrefixFromInput", () => {
@@ -68,6 +72,10 @@ describe("clearBackendPrefixFromInput", () => {
     expect(clearBackendPrefixFromInput("@local   ")).toBe("");
     expect(clearBackendPrefixFromInput("  @xllm\t")).toBe("  ");
     expect(clearBackendPrefixFromInput("\n@cloud   ")).toBe("");
+  });
+
+  it("alias 대소문자 상관없이 제거된다", () => {
+    expect(clearBackendPrefixFromInput("@XLLM hello")).toBe("hello");
   });
 });
 
@@ -106,6 +114,11 @@ describe("detectBackendPrefixFromInput", () => {
     expect(detectBackendPrefixFromInput("\t@xllm hi")).toBe("xllm");
     expect(detectBackendPrefixFromInput("\n@embedded   hi")).toBe("local");
   });
+
+  it("대문자 alias도 감지한다", () => {
+    expect(detectBackendPrefixFromInput("@LOCAL hi")).toBe("local");
+    expect(detectBackendPrefixFromInput("@CLOUD hi")).toBe("gemini");
+  });
 });
 
 describe("parseBackendPrefixFromInput", () => {
@@ -121,5 +134,9 @@ describe("parseBackendPrefixFromInput", () => {
 
   it("backend-only는 rest 빈 문자열", () => {
     expect(parseBackendPrefixFromInput("@cloud   ")).toEqual({ backend: "gemini", rest: "" });
+  });
+
+  it("대문자 alias도 정규화된다", () => {
+    expect(parseBackendPrefixFromInput("@CLOUD test")).toEqual({ backend: "gemini", rest: "test" });
   });
 });

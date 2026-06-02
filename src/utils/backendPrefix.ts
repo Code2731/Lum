@@ -10,8 +10,6 @@ const BACKEND_KEYWORDS: Record<string, AiBackend> = {
   cloud: "gemini",
 };
 
-const BACKEND_ALIAS = new Set(Object.keys(BACKEND_KEYWORDS));
-
 function splitFirstToken(raw: string): { token: string; rest: string } {
   const firstWs = raw.search(/\s/);
   if (firstWs === -1) {
@@ -51,14 +49,11 @@ export function applyBackendPrefixToInput(raw: string, backend: AiBackend): stri
   const src = raw.trimStart();
   let body = src.trim();
 
-  if (src.startsWith("@")) {
-    const stripped = src.slice(1).trimStart();
-    const { token, rest } = splitFirstToken(stripped);
-    if (BACKEND_ALIAS.has(token)) {
-      body = rest;
-    } else {
-      body = stripped.trim();
-    }
+  const parsed = parseBackendPrefixFromInput(raw);
+  if (src.startsWith("@") && parsed) {
+    body = parsed.rest;
+  } else if (src.startsWith("@")) {
+    body = src.slice(1).trimStart();
   }
 
   return body ? `${leading}@${backend} ${body}` : `${leading}@${backend} `;
@@ -72,10 +67,9 @@ export function clearBackendPrefixFromInput(raw: string): string {
   const leading = raw.match(/^\s*/)?.[0] ?? "";
   const src = raw.trimStart();
   if (!src.startsWith("@")) return raw;
-  const stripped = src.slice(1).trimStart();
-  const { token, rest } = splitFirstToken(stripped);
-  if (!BACKEND_ALIAS.has(token)) return raw;
-  return `${leading}${rest}`;
+  const parsed = parseBackendPrefixFromInput(raw);
+  if (!parsed) return raw;
+  return `${leading}${parsed.rest}`;
 }
 
 /**
@@ -83,9 +77,6 @@ export function clearBackendPrefixFromInput(raw: string): string {
  * alias(embedded→local, sglang→xllm, cloud→gemini)를 정규화해서 반환한다.
  */
 export function detectBackendPrefixFromInput(raw: string): AiBackend | null {
-  const src = raw.trimStart();
-  if (!src.startsWith("@")) return null;
-  const stripped = src.slice(1).trimStart();
-  const { token } = splitFirstToken(stripped);
-  return normalizeBackendAlias(token);
+  const parsed = parseBackendPrefixFromInput(raw);
+  return parsed?.backend ?? null;
 }
