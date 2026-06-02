@@ -326,6 +326,21 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(invokeMock.mock.calls.filter((c) => c[0] === "write_to_pty").length).toBe(0);
   });
 
+  it("단독 @backend Enter는 즉시 실행되지 않고 canonical prefix 상태로 유지된다", async () => {
+    const onAskAI = vi.fn();
+    const { container } = render(
+      <TerminalPane id="tab-1" onAskAI={onAskAI} />,
+    );
+    const input = container.querySelector("input")!;
+
+    fireEvent.change(input, { target: { value: " @Embedded   " } });
+    fireEvent.keyDown(input, { key: "Enter" });
+
+    expect(onAskAI).not.toHaveBeenCalled();
+    expect(invokeMock.mock.calls.filter((c) => c[0] === "write_to_pty").length).toBe(0);
+    expect(input).toHaveValue("@local ");
+  });
+
   it.each([
     "@",
     "@  ",
