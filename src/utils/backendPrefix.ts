@@ -1,6 +1,16 @@
 import type { AiBackend } from "./inputRouter";
 
-const BACKEND_ALIAS = new Set(["local", "embedded", "ollama", "xllm", "sglang", "gemini", "cloud"]);
+const BACKEND_KEYWORDS: Record<string, AiBackend> = {
+  local: "local",
+  embedded: "local",
+  ollama: "ollama",
+  xllm: "xllm",
+  sglang: "xllm",
+  gemini: "gemini",
+  cloud: "gemini",
+};
+
+const BACKEND_ALIAS = new Set(Object.keys(BACKEND_KEYWORDS));
 
 function splitFirstToken(raw: string): { token: string; rest: string } {
   const firstWs = raw.search(/\s/);
@@ -11,6 +21,25 @@ function splitFirstToken(raw: string): { token: string; rest: string } {
     token: raw.slice(0, firstWs).toLowerCase(),
     rest: raw.slice(firstWs + 1).trim(),
   };
+}
+
+function normalizeBackendAlias(token: string): AiBackend | null {
+  return BACKEND_KEYWORDS[token] ?? null;
+}
+
+/**
+ * `@<backend> <rest>` 형태에서 backend를 파싱한다.
+ * alias(embedded→local, sglang→xllm, cloud→gemini)를 정규화해 반환한다.
+ * 일치하지 않으면 null.
+ */
+export function parseBackendPrefixFromInput(raw: string): { backend: AiBackend; rest: string } | null {
+  const src = raw.trimStart();
+  if (!src.startsWith("@")) return null;
+  const stripped = src.slice(1).trimStart();
+  const { token, rest } = splitFirstToken(stripped);
+  const backend = normalizeBackendAlias(token);
+  if (!backend) return null;
+  return { backend, rest };
 }
 
 /**
@@ -58,9 +87,5 @@ export function detectBackendPrefixFromInput(raw: string): AiBackend | null {
   if (!src.startsWith("@")) return null;
   const stripped = src.slice(1).trimStart();
   const { token } = splitFirstToken(stripped);
-  if (!BACKEND_ALIAS.has(token)) return null;
-  if (token === "embedded") return "local";
-  if (token === "sglang") return "xllm";
-  if (token === "cloud") return "gemini";
-  return token as AiBackend;
+  return normalizeBackendAlias(token);
 }

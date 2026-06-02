@@ -1,4 +1,5 @@
 import { getSpec } from "../data/cliSpecs";
+import { parseBackendPrefixFromInput } from "./backendPrefix";
 
 /**
  * 사용자 입력을 의미에 따라 라우팅한다.
@@ -20,31 +21,6 @@ export type Route =
   | { type: "agent"; task: string; backend?: AiBackend }   // ">> ..." — 에이전트 태스크
   | { type: "heavy"; prompt: string }     // "!! ..." — Heavy Track (mistral.rs 30B)
   | { type: "empty" };
-
-/** @local·@embedded → "local" 등 — alias 흡수. 첫 토큰이 키워드 아니면 null.
- * sglang는 별도 엔진이 아니라 xLLM HTTP 경로로 라우팅한다. */
-const BACKEND_KEYWORDS: Record<string, AiBackend> = {
-  local: "local",
-  embedded: "local",
-  ollama: "ollama",
-  xllm: "xllm",
-  sglang: "xllm",
-  gemini: "gemini",
-  cloud: "gemini",
-};
-
-/**
- * `@<backend> <rest>` 형태에서 backend 추출. 첫 토큰이 backend 키워드면 `{backend, rest}`,
- * 아니면 null (호출자가 기존 `@` 동작=강제 AI 챗으로 폴백).
- */
-function parseBackendPrefix(stripped: string): { backend: AiBackend; rest: string } | null {
-  const firstWs = stripped.search(/\s/);
-  const firstToken = (firstWs === -1 ? stripped : stripped.slice(0, firstWs)).toLowerCase();
-  const backend = BACKEND_KEYWORDS[firstToken];
-  if (!backend) return null;
-  const rest = firstWs === -1 ? "" : stripped.slice(firstWs + 1).trim();
-  return { backend, rest };
-}
 
 // cliSpecs.ts에 없지만 흔한 POSIX/개발 도구 — 자연어로 오인되면 안 되는 것들만
 const EXTRA_SHELL_TOOLS = new Set([
@@ -252,13 +228,7 @@ export function routeInput(raw: string): Route {
     return { type: "shell", command: stripped };
   }
   if (trimmed.startsWith("@")) {
-    const stripped = trimmed.slice(1).trimStart();
-    if (!stripped) {
-      return { type: "empty" };
-    }
-    // `@local <text>` 같이 첫 토큰이 backend 키워드면 backend 강제 + 텍스트는 의도 분류.
-    // 그 외(`@ls 어떻게...`)는 기존 동작 유지 — 단순 강제 AI 챗.
-    const backendPrefix = parseBackendPrefix(stripped);
+    const backendPrefix = parseBackendPrefixFromInput(trimmed);
     if (backendPrefix) {
       const { backend, rest } = backendPrefix;
       if (!rest) {
@@ -280,6 +250,11 @@ export function routeInput(raw: string): Route {
         return { type: "agent", task: rest, backend };
       }
       return { type: "ai", question: rest, backend };
+    }
+
+    const stripped = trimmed.slice(1).trimStart();
+    if (!stripped) {
+      return { type: "empty" };
     }
     return { type: "ai", question: stripped };
   }

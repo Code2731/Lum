@@ -3,6 +3,7 @@ import {
   applyBackendPrefixToInput,
   clearBackendPrefixFromInput,
   detectBackendPrefixFromInput,
+  parseBackendPrefixFromInput,
 } from "./backendPrefix";
 
 describe("applyBackendPrefixToInput", () => {
@@ -104,5 +105,21 @@ describe("detectBackendPrefixFromInput", () => {
     expect(detectBackendPrefixFromInput("   @local hi")).toBe("local");
     expect(detectBackendPrefixFromInput("\t@xllm hi")).toBe("xllm");
     expect(detectBackendPrefixFromInput("\n@embedded   hi")).toBe("local");
+  });
+});
+
+describe("parseBackendPrefixFromInput", () => {
+  it("backend 토큰을 추출해 rest와 함께 반환한다", () => {
+    expect(parseBackendPrefixFromInput("@local 테스트")).toEqual({ backend: "local", rest: "테스트" });
+    expect(parseBackendPrefixFromInput("   @ xllm\thello")).toEqual({ backend: "xllm", rest: "hello" });
+  });
+
+  it("backend가 없으면 null", () => {
+    expect(parseBackendPrefixFromInput("@ls 테스트")).toBeNull();
+    expect(parseBackendPrefixFromInput("hello")).toBeNull();
+  });
+
+  it("backend-only는 rest 빈 문자열", () => {
+    expect(parseBackendPrefixFromInput("@cloud   ")).toEqual({ backend: "gemini", rest: "" });
   });
 });
