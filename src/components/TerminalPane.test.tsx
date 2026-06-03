@@ -491,6 +491,24 @@ describe("TerminalPane — 입력 라우팅", () => {
     expectRecallActionDisabled();
   });
 
+  it("백엔드 단독 입력 Enter 연타 시 매번 정규화 유지되고 실행되지 않는다", async () => {
+    const onAskAI = vi.fn();
+    const { container } = render(<TerminalPane id="tab-1" onAskAI={onAskAI} />);
+    const input = container.querySelector("input")!;
+
+    fireEvent.change(input, { target: { value: "@xllm   \n" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(input).toHaveValue("@xllm ");
+    expect(invokeMock.mock.calls.filter((c) => c[0] === "write_to_pty").length).toBe(0);
+
+    fireEvent.keyDown(input, { key: "Enter" });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(input).toHaveValue("@xllm ");
+    expect(invokeMock.mock.calls.filter((c) => c[0] === "write_to_pty").length).toBe(0);
+    expect(onAskAI).not.toHaveBeenCalled();
+  });
+
   it("선행 공백 + # 탭 입력도 AI 명령 제안 호출 시 prefix를 제외한 prompt를 전달한다", async () => {
     invokeMock.mockImplementation((cmd: string) => {
       if (cmd === "load_app_config") return Promise.resolve({});
