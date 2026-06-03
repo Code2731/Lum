@@ -347,6 +347,16 @@ describe("TerminalPane — 입력 라우팅", () => {
       input: "\n@Cloud   \t",
       expected: "@gemini ",
     },
+    {
+      label: "CR 단독 입력",
+      input: "\r@local",
+      expected: "@local ",
+    },
+    {
+      label: "CRLF 단독 입력",
+      input: "\r\n@Cloud\r\n",
+      expected: "@gemini ",
+    },
   ])("$label Enter는 즉시 실행되지 않고 canonical prefix 상태로 유지된다", async ({ input, expected }) => {
     const onAskAI = vi.fn();
     const { container } = render(
@@ -471,6 +481,10 @@ describe("TerminalPane — 입력 라우팅", () => {
     fireEvent.change(input, { target: { value: "\t@Embedded\n" } });
     expect(screen.queryByText("AUTO 라우팅")).not.toBeInTheDocument();
     expect(screen.queryByText("BACKEND FORCED @LOCAL")).not.toBeInTheDocument();
+
+    fireEvent.change(input, { target: { value: "\r@xllm\r" } });
+    expect(screen.queryByText("AUTO 라우팅")).not.toBeInTheDocument();
+    expect(screen.queryByText("BACKEND FORCED @XLLM")).not.toBeInTheDocument();
   });
 
   it("백엔드 단독 Enter는 실행 이력에 저장되지 않는다", async () => {
