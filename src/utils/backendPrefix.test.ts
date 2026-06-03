@@ -73,11 +73,13 @@ describe("clearBackendPrefixFromInput", () => {
     expect(clearBackendPrefixFromInput("@local   ")).toBe("");
     expect(clearBackendPrefixFromInput("  @xllm\t")).toBe("  ");
     expect(clearBackendPrefixFromInput("\n@cloud   ")).toBe("");
+    expect(clearBackendPrefixFromInput("\r@xllm\r")).toBe("");
   });
 
   it("개행 앞뒤가 포함된 단독 backend도 공백/빈 문자열 정규화 규칙 유지", () => {
     expect(clearBackendPrefixFromInput("\n\t@embedded\n")).toBe("\n\t");
     expect(clearBackendPrefixFromInput("  @sglang\n\n")).toBe("  ");
+    expect(clearBackendPrefixFromInput("\r\n@cloud\r\n")).toBe("");
   });
 
   it("alias 대소문자 상관없이 제거된다", () => {
@@ -103,6 +105,8 @@ describe("detectBackendPrefixFromInput", () => {
   it("backend 뒤 탭/개행 구분자도 감지한다", () => {
     expect(detectBackendPrefixFromInput("@local\thi")).toBe("local");
     expect(detectBackendPrefixFromInput("@cloud\nhi")).toBe("gemini");
+    expect(detectBackendPrefixFromInput("@local\rhi")).toBe("local");
+    expect(detectBackendPrefixFromInput("@cloud\r\nhi")).toBe("gemini");
   });
 
   it("backend와 본문 사이 공백이 있어도 감지한다", () => {
@@ -141,6 +145,8 @@ describe("parseBackendPrefixFromInput", () => {
   it("backend-only는 rest 빈 문자열", () => {
     expect(parseBackendPrefixFromInput("@cloud   ")).toEqual({ backend: "gemini", rest: "" });
     expect(parseBackendPrefixFromInput("\n\t@xllm\n")).toEqual({ backend: "xllm", rest: "" });
+    expect(parseBackendPrefixFromInput("\r@local\r")).toEqual({ backend: "local", rest: "" });
+    expect(parseBackendPrefixFromInput("\r\n@cloud\r\n")).toEqual({ backend: "gemini", rest: "" });
   });
 
   it("대문자 alias도 정규화된다", () => {
@@ -153,6 +159,8 @@ describe("isBackendOnlyInput", () => {
     expect(isBackendOnlyInput("@local")).toBe(true);
     expect(isBackendOnlyInput("   @ xllm\t")).toBe(true);
     expect(isBackendOnlyInput("\n@cloud   ")).toBe(true);
+    expect(isBackendOnlyInput("\r@xllm\r")).toBe(true);
+    expect(isBackendOnlyInput("\r\n@gemini\r\n")).toBe(true);
   });
 
   it("backend+본문은 false", () => {
