@@ -376,6 +376,8 @@ describe("routeInput — 기본: 자연어=AI, CLI 감지 시 shell", () => {
       expect(routeInput("  @gemini   ")).toEqual({ type: "empty" });
       expect(routeInput("   @cloud   ")).toEqual({ type: "empty" });
       expect(routeInput("  @embedded \t")).toEqual({ type: "empty" });
+      expect(routeInput("\n\t@xllm\n")).toEqual({ type: "empty" });
+      expect(routeInput("\t\n@Cloud   ")).toEqual({ type: "empty" });
     });
 
     it("@local만 단독 입력 → 빈 입력(backend만 토글)", () => {
