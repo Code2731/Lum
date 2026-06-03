@@ -130,6 +130,8 @@ describe("routeInput — 기본: 자연어=AI, CLI 감지 시 shell", () => {
     it("@ 단독 입력은 empty로 처리", () => {
       expect(routeInput("@")).toEqual({ type: "empty" });
       expect(routeInput("@   ")).toEqual({ type: "empty" });
+      expect(routeInput("@\r")).toEqual({ type: "empty" });
+      expect(routeInput("\r@")).toEqual({ type: "empty" });
       expect(routeInput(" \t@ ")).toEqual({ type: "empty" });
     });
   });
