@@ -487,14 +487,18 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(screen.queryByText("BACKEND FORCED @XLLM")).not.toBeInTheDocument();
   });
 
-  it("백엔드 단독 Enter는 실행 이력에 저장되지 않는다", async () => {
+  it.each([
+    "\n@Cloud  \t",
+    "\r@xllm\r",
+    "\r\n@gemini\r\n",
+  ])("백엔드 단독 Enter는 실행 이력에 저장되지 않는다", async (rawInput) => {
     const onAskAI = vi.fn();
     const { container } = render(
       <TerminalPane id="tab-1" onAskAI={onAskAI} />,
     );
     const input = container.querySelector("input")!;
 
-    fireEvent.change(input, { target: { value: "\n@Cloud  \t" } });
+    fireEvent.change(input, { target: { value: rawInput } });
     fireEvent.keyDown(input, { key: "Enter" });
 
     await new Promise((resolve) => setTimeout(resolve, 50));
