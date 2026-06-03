@@ -473,6 +473,24 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(screen.queryByText("BACKEND FORCED @LOCAL")).not.toBeInTheDocument();
   });
 
+  it("백엔드 단독 Enter는 실행 이력에 저장되지 않는다", async () => {
+    const onAskAI = vi.fn();
+    const { container } = render(
+      <TerminalPane id="tab-1" onAskAI={onAskAI} />,
+    );
+    const input = container.querySelector("input")!;
+
+    fireEvent.change(input, { target: { value: "\n@Cloud  \t" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    expect(onAskAI).not.toHaveBeenCalled();
+    expect(invokeMock.mock.calls.filter((c) => c[0] === "write_to_pty").length).toBe(0);
+    expect(localStorage.getItem("lum_input_submit_history")).toBeNull();
+    expectRecallActionDisabled();
+  });
+
   it("선행 공백 + # 탭 입력도 AI 명령 제안 호출 시 prefix를 제외한 prompt를 전달한다", async () => {
     invokeMock.mockImplementation((cmd: string) => {
       if (cmd === "load_app_config") return Promise.resolve({});
