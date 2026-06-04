@@ -375,6 +375,9 @@ describe("TerminalPane — 입력 라우팅", () => {
   it.each([
     "@",
     "@  ",
+    "@\r",
+    "\r@",
+    "\r\n@  ",
     "  @ local ",
     "@ local hi",
     "\t @xllm ",
