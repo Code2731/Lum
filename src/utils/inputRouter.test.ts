@@ -339,6 +339,11 @@ describe("routeInput — 기본: 자연어=AI, CLI 감지 시 shell", () => {
         question: "explain this",
         backend: "gemini",
       });
+      expect(routeInput("@cloud\u00A0explain this")).toEqual({
+        type: "ai",
+        question: "explain this",
+        backend: "gemini",
+      });
     });
 
     it("@와 backend 사이 공백이 있어도 backend 강제로 인식", () => {

@@ -57,6 +57,7 @@ describe("clearBackendPrefixFromInput", () => {
   it("backend 뒤 탭/개행 구분자도 제거한다", () => {
     expect(clearBackendPrefixFromInput("@local\t로그 요약해줘")).toBe("로그 요약해줘");
     expect(clearBackendPrefixFromInput("@local\n로그 요약해줘")).toBe("로그 요약해줘");
+    expect(clearBackendPrefixFromInput("@local\u00A0로그 요약해줘")).toBe("로그 요약해줘");
   });
 
   it("backend와 본문 사이 공백만 있어도 backend-only로 정리한다", () => {
@@ -107,6 +108,7 @@ describe("detectBackendPrefixFromInput", () => {
     expect(detectBackendPrefixFromInput("@cloud\nhi")).toBe("gemini");
     expect(detectBackendPrefixFromInput("@local\rhi")).toBe("local");
     expect(detectBackendPrefixFromInput("@cloud\r\nhi")).toBe("gemini");
+    expect(detectBackendPrefixFromInput("@gemini\u00A0hi")).toBe("gemini");
   });
 
   it("backend와 본문 사이 공백이 있어도 감지한다", () => {
