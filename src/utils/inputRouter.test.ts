@@ -388,6 +388,7 @@ describe("routeInput — 기본: 자연어=AI, CLI 감지 시 shell", () => {
 
     it("@backend 단독 입력은 앞뒤 공백/탭이 있어도 empty", () => {
       expect(routeInput("   @local   ")).toEqual({ type: "empty" });
+      expect(routeInput("@xllm\u00A0")).toEqual({ type: "empty" });
       expect(routeInput("\t@xllm\t")).toEqual({ type: "empty" });
       expect(routeInput("\n@ollama\n")).toEqual({ type: "empty" });
       expect(routeInput("  @gemini   ")).toEqual({ type: "empty" });

@@ -111,6 +111,11 @@ describe("detectBackendPrefixFromInput", () => {
     expect(detectBackendPrefixFromInput("@gemini\u00A0hi")).toBe("gemini");
   });
 
+  it("backend 뒤 NBSP는 backend-only 처리로 감지 유지", () => {
+    expect(detectBackendPrefixFromInput("@local\u00A0")).toBe("local");
+    expect(isBackendOnlyInput("@xllm\u00A0")).toBe(true);
+  });
+
   it("backend와 본문 사이 공백이 있어도 감지한다", () => {
     expect(detectBackendPrefixFromInput("@ local hi")).toBe("local");
     expect(detectBackendPrefixFromInput("   @ xllm   hi")).toBe("xllm");
