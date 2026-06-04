@@ -67,6 +67,8 @@ describe("clearBackendPrefixFromInput", () => {
   it("backend와 본문 사이 공백만 있어도 backend-only로 정리한다", () => {
     expect(clearBackendPrefixFromInput("@ local")).toBe("");
     expect(clearBackendPrefixFromInput("  @ xllm")).toBe("  ");
+    expect(clearBackendPrefixFromInput("@local\u2002")).toBe("");
+    expect(clearBackendPrefixFromInput("@xllm\u2003")).toBe("");
   });
 
   it("backend prefix가 없으면 원본을 유지한다", () => {
@@ -113,6 +115,8 @@ describe("detectBackendPrefixFromInput", () => {
     expect(detectBackendPrefixFromInput("@local\rhi")).toBe("local");
     expect(detectBackendPrefixFromInput("@cloud\r\nhi")).toBe("gemini");
     expect(detectBackendPrefixFromInput("@gemini\u00A0hi")).toBe("gemini");
+    expect(detectBackendPrefixFromInput("@local\u2002hi")).toBe("local");
+    expect(detectBackendPrefixFromInput("@xllm\u2003hi")).toBe("xllm");
   });
 
   it("앞에서 NBSP가 있어도 backend을 감지한다", () => {
@@ -176,6 +180,8 @@ describe("isBackendOnlyInput", () => {
     expect(isBackendOnlyInput("\n@cloud   ")).toBe(true);
     expect(isBackendOnlyInput("\r@xllm\r")).toBe(true);
     expect(isBackendOnlyInput("\r\n@gemini\r\n")).toBe(true);
+    expect(isBackendOnlyInput("\u2002@local\u2002")).toBe(true);
+    expect(isBackendOnlyInput("@xllm\u2003")).toBe(true);
   });
 
   it("backend+본문은 false", () => {
