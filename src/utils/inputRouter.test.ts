@@ -344,6 +344,11 @@ describe("routeInput — 기본: 자연어=AI, CLI 감지 시 shell", () => {
         question: "explain this",
         backend: "gemini",
       });
+      expect(routeInput("\u00A0@local hi")).toEqual({
+        type: "agent",
+        task: "hi",
+        backend: "local",
+      });
     });
 
     it("@와 backend 사이 공백이 있어도 backend 강제로 인식", () => {

@@ -40,6 +40,10 @@ describe("applyBackendPrefixToInput", () => {
   it("alias 대소문자 상관없이 백엔드 토큰을 교체한다", () => {
     expect(applyBackendPrefixToInput("@LOCAL hello", "gemini")).toBe("@gemini hello");
   });
+
+  it("선행 NBSP가 있는 경우에도 backend prefix 적용 위치를 보존한다", () => {
+    expect(applyBackendPrefixToInput("\u00A0로그 요약해줘", "local")).toBe("\u00A0@local 로그 요약해줘");
+  });
 });
 
 describe("clearBackendPrefixFromInput", () => {
@@ -109,6 +113,10 @@ describe("detectBackendPrefixFromInput", () => {
     expect(detectBackendPrefixFromInput("@local\rhi")).toBe("local");
     expect(detectBackendPrefixFromInput("@cloud\r\nhi")).toBe("gemini");
     expect(detectBackendPrefixFromInput("@gemini\u00A0hi")).toBe("gemini");
+  });
+
+  it("앞에서 NBSP가 있어도 backend을 감지한다", () => {
+    expect(detectBackendPrefixFromInput("\u00A0@local hi")).toBe("local");
   });
 
   it("backend 뒤 NBSP는 backend-only 처리로 감지 유지", () => {
