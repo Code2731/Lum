@@ -488,6 +488,10 @@ describe("TerminalPane — 입력 라우팅", () => {
     fireEvent.change(input, { target: { value: "\r@xllm\r" } });
     expect(screen.queryByText("AUTO 라우팅")).not.toBeInTheDocument();
     expect(screen.queryByText("BACKEND FORCED @XLLM")).not.toBeInTheDocument();
+
+    fireEvent.change(input, { target: { value: "\r\n@Cloud\r\n" } });
+    expect(screen.queryByText("AUTO 라우팅")).not.toBeInTheDocument();
+    expect(screen.queryByText("BACKEND FORCED @GEMINI")).not.toBeInTheDocument();
   });
 
   it.each([
