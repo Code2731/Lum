@@ -117,6 +117,8 @@ describe("detectBackendPrefixFromInput", () => {
     expect(detectBackendPrefixFromInput("@gemini\u00A0hi")).toBe("gemini");
     expect(detectBackendPrefixFromInput("@local\u2002hi")).toBe("local");
     expect(detectBackendPrefixFromInput("@xllm\u2003hi")).toBe("xllm");
+    expect(detectBackendPrefixFromInput("@xllm\u2009hi")).toBe("xllm");
+    expect(detectBackendPrefixFromInput("@gemini\u205Fhi")).toBe("gemini");
   });
 
   it("앞에서 NBSP가 있어도 backend을 감지한다", () => {
@@ -182,6 +184,8 @@ describe("isBackendOnlyInput", () => {
     expect(isBackendOnlyInput("\r\n@gemini\r\n")).toBe(true);
     expect(isBackendOnlyInput("\u2002@local\u2002")).toBe(true);
     expect(isBackendOnlyInput("@xllm\u2003")).toBe(true);
+    expect(isBackendOnlyInput("\u2009@local")).toBe(true);
+    expect(isBackendOnlyInput("@xllm\u205F")).toBe(true);
   });
 
   it("backend+본문은 false", () => {
