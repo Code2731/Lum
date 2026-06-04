@@ -119,6 +119,7 @@ describe("detectBackendPrefixFromInput", () => {
     expect(detectBackendPrefixFromInput("@xllm\u2003hi")).toBe("xllm");
     expect(detectBackendPrefixFromInput("@xllm\u2009hi")).toBe("xllm");
     expect(detectBackendPrefixFromInput("@gemini\u205Fhi")).toBe("gemini");
+    expect(detectBackendPrefixFromInput("@cloud\u3000hi")).toBe("gemini");
   });
 
   it("앞에서 NBSP가 있어도 backend을 감지한다", () => {
@@ -186,6 +187,13 @@ describe("isBackendOnlyInput", () => {
     expect(isBackendOnlyInput("@xllm\u2003")).toBe(true);
     expect(isBackendOnlyInput("\u2009@local")).toBe(true);
     expect(isBackendOnlyInput("@xllm\u205F")).toBe(true);
+    expect(isBackendOnlyInput("\u3000@local")).toBe(true);
+    expect(isBackendOnlyInput("@cloud\u3000")).toBe(true);
+  });
+
+  it("backend-only에서 U+3000 정리", () => {
+    expect(clearBackendPrefixFromInput("@local\u3000")).toBe("");
+    expect(clearBackendPrefixFromInput("@gemini\u3000")).toBe("");
   });
 
   it("backend+본문은 false", () => {
