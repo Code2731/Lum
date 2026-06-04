@@ -160,6 +160,18 @@ export function detectCodingIntent(text: string): boolean {
   return score >= 0.6;
 }
 
+const ROUTE_WHITESPACE = /\p{White_Space}/u;
+const ROUTE_LEADING_WHITESPACE = /^[\p{White_Space}]+/u;
+const ROUTE_TRIM_WHITESPACE = /^[\p{White_Space}]+|[\p{White_Space}]+$/gu;
+
+function trimRouteWhitespace(raw: string): string {
+  return raw.replace(ROUTE_TRIM_WHITESPACE, "");
+}
+
+function trimRouteWhitespaceStart(raw: string): string {
+  return raw.replace(ROUTE_LEADING_WHITESPACE, "");
+}
+
 /** Phase 134 — Healing 조회 의도 감지. 코딩 의도와 무관해도 agent로 라우팅. */
 function detectHealingIntent(text: string): boolean {
   if (!text) return false;
@@ -204,26 +216,26 @@ function startsWithShellPrefix(trimmed: string): boolean {
 }
 
 export function routeInput(raw: string): Route {
-  const trimmed = raw.trim();
+  const trimmed = trimRouteWhitespace(raw);
   if (!trimmed) return { type: "empty" };
 
   // 1. 명시적 prefix들 — 우선순위 최상
   if (trimmed.startsWith("!!")) {
-    return { type: "heavy", prompt: trimmed.slice(2).trim() };
+    return { type: "heavy", prompt: trimRouteWhitespace(trimmed.slice(2)) };
   }
   if (trimmed.startsWith(">>")) {
-    return { type: "agent", task: trimmed.replace(/^>>\s*/, "").trim() };
+    return { type: "agent", task: trimRouteWhitespace(trimmed.slice(2)) };
   }
   if (/^#\s/.test(trimmed)) {
-    return { type: "aiCmd", prompt: trimmed.slice(2).trim() };
+    return { type: "aiCmd", prompt: trimRouteWhitespace(trimmed.slice(2)) };
   }
   if (/^\?\s/.test(trimmed)) {
-    return { type: "explain", command: trimmed.slice(2).trim() };
+    return { type: "explain", command: trimRouteWhitespace(trimmed.slice(2)) };
   }
 
   // 2. override: `!` → 강제 shell, `@` → 강제 AI / `@<backend>` → 백엔드 강제
   if (trimmed.startsWith("!")) {
-    const stripped = trimmed.slice(1).trimStart();
+    const stripped = trimRouteWhitespaceStart(trimmed.slice(1));
     if (!stripped) return { type: "empty" };
     return { type: "shell", command: stripped };
   }
@@ -237,7 +249,7 @@ export function routeInput(raw: string): Route {
       // @backend >> task 형태는 코딩 의도 감지와 무관하게 강제 agent로 처리.
       // 예: "@local >> 테스트 실패 원인 찾아서 수정해줘"
       if (rest.startsWith(">>")) {
-        const task = rest.replace(/^>>\s*/, "").trim();
+        const task = trimRouteWhitespace(rest.slice(2));
         if (!task) return { type: "empty" };
         return { type: "agent", task, backend };
       }
@@ -252,7 +264,7 @@ export function routeInput(raw: string): Route {
       return { type: "ai", question: rest, backend };
     }
 
-    const stripped = trimmed.slice(1).trimStart();
+    const stripped = trimRouteWhitespaceStart(trimmed.slice(1));
     if (!stripped) {
       return { type: "empty" };
     }
@@ -273,7 +285,7 @@ export function routeInput(raw: string): Route {
   }
 
   // 5. 첫 토큰이 알려진 CLI → shell
-  const firstToken = trimmed.split(/\s+/)[0];
+  const firstToken = trimmed.split(ROUTE_WHITESPACE)[0];
   if (isKnownShellCommand(firstToken)) {
     return { type: "shell", command: trimmed };
   }

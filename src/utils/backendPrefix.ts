@@ -1,5 +1,17 @@
 import type { AiBackend } from "./inputRouter";
 
+const WHITESPACE = /\p{White_Space}/u;
+const LEADING_WHITESPACE = /^[\p{White_Space}]+/u;
+const TRIM_WHITESPACE = /^[\p{White_Space}]+|[\p{White_Space}]+$/gu;
+
+function trimWhitespace(raw: string): string {
+  return raw.replace(TRIM_WHITESPACE, "");
+}
+
+function trimWhitespaceStart(raw: string): string {
+  return raw.replace(LEADING_WHITESPACE, "");
+}
+
 const BACKEND_KEYWORDS: Record<string, AiBackend> = {
   local: "local",
   embedded: "local",
@@ -11,13 +23,13 @@ const BACKEND_KEYWORDS: Record<string, AiBackend> = {
 };
 
 function splitFirstToken(raw: string): { token: string; rest: string } {
-  const firstWs = raw.search(/\s/);
+  const firstWs = raw.search(WHITESPACE);
   if (firstWs === -1) {
     return { token: raw.toLowerCase(), rest: "" };
   }
   return {
     token: raw.slice(0, firstWs).toLowerCase(),
-    rest: raw.slice(firstWs + 1).trim(),
+    rest: trimWhitespace(raw.slice(firstWs + 1)),
   };
 }
 
@@ -31,9 +43,9 @@ function normalizeBackendAlias(token: string): AiBackend | null {
  * 일치하지 않으면 null.
  */
 export function parseBackendPrefixFromInput(raw: string): { backend: AiBackend; rest: string } | null {
-  const src = raw.trimStart();
+  const src = trimWhitespaceStart(raw);
   if (!src.startsWith("@")) return null;
-  const stripped = src.slice(1).trimStart();
+  const stripped = trimWhitespaceStart(src.slice(1));
   const { token, rest } = splitFirstToken(stripped);
   const backend = normalizeBackendAlias(token);
   if (!backend) return null;
@@ -45,15 +57,15 @@ export function parseBackendPrefixFromInput(raw: string): { backend: AiBackend; 
  * 기존 @backend prefix가 있으면 본문을 유지한 채 prefix만 교체한다.
  */
 export function applyBackendPrefixToInput(raw: string, backend: AiBackend): string {
-  const leading = raw.match(/^\s*/)?.[0] ?? "";
-  const src = raw.trimStart();
-  let body = src.trim();
+  const leading = raw.match(LEADING_WHITESPACE)?.[0] ?? "";
+  const src = trimWhitespaceStart(raw);
+  let body = trimWhitespace(src);
 
   const parsed = parseBackendPrefixFromInput(raw);
   if (src.startsWith("@") && parsed) {
     body = parsed.rest;
   } else if (src.startsWith("@")) {
-    body = src.slice(1).trimStart();
+    body = trimWhitespaceStart(src.slice(1));
   }
 
   return body ? `${leading}@${backend} ${body}` : `${leading}@${backend} `;
@@ -64,8 +76,8 @@ export function applyBackendPrefixToInput(raw: string, backend: AiBackend): stri
  * backend prefix가 없으면 원본 문자열을 그대로 반환한다.
  */
 export function clearBackendPrefixFromInput(raw: string): string {
-  const leading = raw.match(/^\s*/)?.[0] ?? "";
-  const src = raw.trimStart();
+  const leading = raw.match(LEADING_WHITESPACE)?.[0] ?? "";
+  const src = trimWhitespaceStart(raw);
   if (!src.startsWith("@")) return raw;
   const parsed = parseBackendPrefixFromInput(raw);
   if (!parsed) return raw;
@@ -83,5 +95,5 @@ export function detectBackendPrefixFromInput(raw: string): AiBackend | null {
 
 export function isBackendOnlyInput(raw: string): boolean {
   const parsed = parseBackendPrefixFromInput(raw);
-  return parsed !== null && parsed.rest.trim() === "";
+  return parsed !== null && trimWhitespace(parsed.rest) === "";
 }
