@@ -44,6 +44,11 @@ describe("applyBackendPrefixToInput", () => {
   it("선행 NBSP가 있는 경우에도 backend prefix 적용 위치를 보존한다", () => {
     expect(applyBackendPrefixToInput("\u00A0로그 요약해줘", "local")).toBe("\u00A0@local 로그 요약해줘");
   });
+
+  it("선행 유니코드 공백들도 backend prefix 적용 위치를 보존한다", () => {
+    expect(applyBackendPrefixToInput("\u2009로그 요약해줘", "local")).toBe("\u2009@local 로그 요약해줘");
+    expect(applyBackendPrefixToInput("\u2003로그 요약해줘", "xllm")).toBe("\u2003@xllm 로그 요약해줘");
+  });
 });
 
 describe("clearBackendPrefixFromInput", () => {

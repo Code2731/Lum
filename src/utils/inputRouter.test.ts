@@ -77,6 +77,29 @@ describe("routeInput — 기본: 자연어=AI, CLI 감지 시 shell", () => {
   });
 
   describe("명시적 prefix 보존", () => {
+    it("명시적 prefix 뒤 유니코드 공백도 동작", () => {
+      expect(routeInput(">>\u2009이 프로젝트 빌드해줘")).toEqual({
+        type: "agent",
+        task: "이 프로젝트 빌드해줘",
+      });
+      expect(routeInput("#\u2003파일 개수 세줘")).toEqual({
+        type: "aiCmd",
+        prompt: "파일 개수 세줘",
+      });
+      expect(routeInput("?\u205Fgit rebase")).toEqual({
+        type: "explain",
+        command: "git rebase",
+      });
+      expect(routeInput("!!\u00A0요약해줘")).toEqual({
+        type: "heavy",
+        prompt: "요약해줘",
+      });
+      expect(routeInput("!\u2002ls -la")).toEqual({
+        type: "shell",
+        command: "ls -la",
+      });
+    });
+
     it(">> 에이전트 태스크", () => {
       expect(routeInput(">> 이 프로젝트 빌드해줘")).toEqual({
         type: "agent",
