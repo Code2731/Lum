@@ -653,4 +653,23 @@ describe("routeInput — 추가 경계 검증", () => {
     expect(routeInput("@ embedded   ")).toEqual({ type: "empty" });
     expect(routeInput("@sglang")).toEqual({ type: "empty" });
   });
+
+  it("단독 @ 패턴은 공백/제어문자 혼합에서도 empty 처리", () => {
+    expect(routeInput("@\n")).toEqual({ type: "empty" });
+    expect(routeInput("@\t")).toEqual({ type: "empty" });
+    expect(routeInput("@\u2007\t")).toEqual({ type: "empty" });
+  });
+
+  it("백엔드 키워드가 공백만 있어도 인식 가능한 경우는 rest 기반으로 판단", () => {
+    expect(routeInput("@\t\txllm hi")).toEqual({
+      type: "agent",
+      task: "hi",
+      backend: "xllm",
+    });
+    expect(routeInput("@\n\tembedded hi")).toEqual({
+      type: "agent",
+      task: "hi",
+      backend: "local",
+    });
+  });
 });
