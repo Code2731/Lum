@@ -672,4 +672,22 @@ describe("routeInput — 추가 경계 검증", () => {
       backend: "local",
     });
   });
+
+  it("명시적 shell 강제 `!`는 backend/AI 접두보다 항상 우선", () => {
+    expect(routeInput("! @local hello")).toEqual({
+      type: "shell",
+      command: "@local hello",
+    });
+    expect(routeInput("!\n@xllm hi")).toEqual({
+      type: "shell",
+      command: "@xllm hi",
+    });
+  });
+
+  it("비백엔드 @ token은 원문 텍스트를 강제 AI로 처리", () => {
+    expect(routeInput("@xllm2 hi there")).toEqual({
+      type: "ai",
+      question: "xllm2 hi there",
+    });
+  });
 });
