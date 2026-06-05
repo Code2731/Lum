@@ -98,6 +98,14 @@ describe("routeInput — 기본: 자연어=AI, CLI 감지 시 shell", () => {
         type: "shell",
         command: "ls -la",
       });
+      expect(routeInput("#\u205F")).toEqual({
+        type: "aiCmd",
+        prompt: "",
+      });
+      expect(routeInput("?\u2002")).toEqual({
+        type: "explain",
+        command: "",
+      });
     });
 
     it(">> 에이전트 태스크", () => {

@@ -226,11 +226,11 @@ export function routeInput(raw: string): Route {
   if (trimmed.startsWith(">>")) {
     return { type: "agent", task: trimRouteWhitespace(trimmed.slice(2)) };
   }
-  if (/^#\s/.test(trimmed)) {
-    return { type: "aiCmd", prompt: trimRouteWhitespace(trimmed.slice(2)) };
+  if (trimmed.startsWith("#") && ROUTE_WHITESPACE.test(trimmed.slice(1)[0] ?? "")) {
+    return { type: "aiCmd", prompt: trimRouteWhitespace(trimmed.slice(1)) };
   }
-  if (/^\?\s/.test(trimmed)) {
-    return { type: "explain", command: trimRouteWhitespace(trimmed.slice(2)) };
+  if (trimmed.startsWith("?") && ROUTE_WHITESPACE.test(trimmed.slice(1)[0] ?? "")) {
+    return { type: "explain", command: trimRouteWhitespace(trimmed.slice(1)) };
   }
 
   // 2. override: `!` → 강제 shell, `@` → 강제 AI / `@<backend>` → 백엔드 강제
