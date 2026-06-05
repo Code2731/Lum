@@ -620,4 +620,22 @@ describe("routeInput — 추가 경계 검증", () => {
       backend: "xllm",
     });
   });
+
+  it("backend-only 입력 뒤 유니코드/개행 분리자는 empty로 정리", () => {
+    expect(routeInput("@local\u00A0\u2007")).toEqual({ type: "empty" });
+    expect(routeInput("@xllm\r\n")).toEqual({ type: "empty" });
+  });
+
+  it("backend + >> 강제는 분리자 공백 포함해도 유효하게 유지", () => {
+    expect(routeInput("@local\t>>\t로그인 버그 수정")).toEqual({
+      type: "agent",
+      task: "로그인 버그 수정",
+      backend: "local",
+    });
+    expect(routeInput("\n@cloud\r>>\r\n이슈 분석")).toEqual({
+      type: "agent",
+      task: "이슈 분석",
+      backend: "gemini",
+    });
+  });
 });
