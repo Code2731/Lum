@@ -595,3 +595,29 @@ describe("routeInput — 기본: 자연어=AI, CLI 감지 시 shell", () => {
     });
   });
 });
+
+describe("routeInput — 추가 경계 검증", () => {
+  it("backend-only 입력은 선행 개행/탭/유니코드 공백 포함해도 empty", () => {
+    expect(routeInput("\r\n@local\t")).toEqual({ type: "empty" });
+    expect(routeInput("\u2003@xllm\u2007")).toEqual({ type: "empty" });
+    expect(routeInput("\u3000@Cloud\n")).toEqual({ type: "empty" });
+  });
+
+  it("backend 강제 뒤 본문은 공백 정규화 후 추론", () => {
+    expect(routeInput("@LOCAL\thello world")).toEqual({
+      type: "ai",
+      question: "hello world",
+      backend: "local",
+    });
+    expect(routeInput("\r@cloud\u2009이슈 정리해줘")).toEqual({
+      type: "agent",
+      task: "이슈 정리해줘",
+      backend: "gemini",
+    });
+    expect(routeInput("@xllm\n\n이 버그 수정해줘")).toEqual({
+      type: "agent",
+      task: "이 버그 수정해줘",
+      backend: "xllm",
+    });
+  });
+});
