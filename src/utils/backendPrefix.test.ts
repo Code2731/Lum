@@ -31,6 +31,7 @@ describe("applyBackendPrefixToInput", () => {
   it("backend와 본문 사이의 공백을 허용한다", () => {
     expect(applyBackendPrefixToInput("@ local", "xllm")).toBe("@xllm ");
     expect(applyBackendPrefixToInput(" \t@ embedded   hi", "gemini")).toBe(" \t@gemini hi");
+    expect(applyBackendPrefixToInput("\r\n\t@local   hi", "gemini")).toBe("\r\n\t@gemini hi");
   });
 
   it("non-backend @강제AI 입력은 본문으로 취급한다", () => {
@@ -81,17 +82,22 @@ describe("clearBackendPrefixFromInput", () => {
     expect(clearBackendPrefixFromInput("plain text")).toBe("plain text");
   });
 
+  it("개행+유니코드 공백이 섞인 backend 뒤 본문도 정리한다", () => {
+    expect(clearBackendPrefixFromInput("\n@local\t\u2003 hi")).toBe("\nhi");
+    expect(clearBackendPrefixFromInput("\r\n@xllm\u2009")).toBe("\r\n");
+  });
+
   it("backend-only 입력에서 공백만 남는 경우 정규화한 뒤 빈 값이 된다", () => {
     expect(clearBackendPrefixFromInput("@local   ")).toBe("");
     expect(clearBackendPrefixFromInput("  @xllm\t")).toBe("  ");
-    expect(clearBackendPrefixFromInput("\n@cloud   ")).toBe("");
-    expect(clearBackendPrefixFromInput("\r@xllm\r")).toBe("");
+    expect(clearBackendPrefixFromInput("\n@cloud   ")).toBe("\n");
+    expect(clearBackendPrefixFromInput("\r@xllm\r")).toBe("\r");
   });
 
   it("개행 앞뒤가 포함된 단독 backend도 공백/빈 문자열 정규화 규칙 유지", () => {
     expect(clearBackendPrefixFromInput("\n\t@embedded\n")).toBe("\n\t");
     expect(clearBackendPrefixFromInput("  @sglang\n\n")).toBe("  ");
-    expect(clearBackendPrefixFromInput("\r\n@cloud\r\n")).toBe("");
+    expect(clearBackendPrefixFromInput("\r\n@cloud\r\n")).toBe("\r\n");
   });
 
   it("alias 대소문자 상관없이 제거된다", () => {
@@ -139,6 +145,7 @@ describe("detectBackendPrefixFromInput", () => {
   it("backend와 본문 사이 공백이 있어도 감지한다", () => {
     expect(detectBackendPrefixFromInput("@ local hi")).toBe("local");
     expect(detectBackendPrefixFromInput("   @ xllm   hi")).toBe("xllm");
+    expect(detectBackendPrefixFromInput("\r\n\t@ \u205Fxllm   hi")).toBe("xllm");
   });
 
   it("backend prefix가 아니면 null", () => {
@@ -162,6 +169,7 @@ describe("parseBackendPrefixFromInput", () => {
   it("backend 토큰을 추출해 rest와 함께 반환한다", () => {
     expect(parseBackendPrefixFromInput("@local 테스트")).toEqual({ backend: "local", rest: "테스트" });
     expect(parseBackendPrefixFromInput("   @ xllm\thello")).toEqual({ backend: "xllm", rest: "hello" });
+    expect(parseBackendPrefixFromInput("\r\n \t@ \u3000xllm\u2009hi")).toEqual({ backend: "xllm", rest: "hi" });
   });
 
   it("backend가 없으면 null", () => {
@@ -204,6 +212,7 @@ describe("isBackendOnlyInput", () => {
   it("backend+본문은 false", () => {
     expect(isBackendOnlyInput("@local hi")).toBe(false);
     expect(isBackendOnlyInput("  @xllm 작업")).toBe(false);
+    expect(isBackendOnlyInput("\r\n@local hi")).toBe(false);
   });
 
   it("비 backend @ 접두는 false", () => {
