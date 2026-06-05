@@ -673,6 +673,24 @@ describe("routeInput — 추가 경계 검증", () => {
     });
   });
 
+  it("백엔드 강제는 선행 공백/개행이 있어도 유지된다", () => {
+    expect(routeInput(" \t@ local hi")).toEqual({
+      type: "agent",
+      task: "hi",
+      backend: "local",
+    });
+    expect(routeInput("\n\t@ \r\nxllm 작업")).toEqual({
+      type: "agent",
+      task: "작업",
+      backend: "xllm",
+    });
+    expect(routeInput("\u00A0@Embedded hello")).toEqual({
+      type: "agent",
+      task: "hello",
+      backend: "local",
+    });
+  });
+
   it("명시적 shell 강제 `!`는 backend/AI 접두보다 항상 우선", () => {
     expect(routeInput("! @local hello")).toEqual({
       type: "shell",
@@ -710,6 +728,22 @@ describe("routeInput — shell prefix 경계 보강", () => {
     expect(routeInput("$NODE_ENV=prod cmd")).toEqual({
       type: "shell",
       command: "$NODE_ENV=prod cmd",
+    });
+  });
+
+  it("심볼/공백 변형 shell 명령도 shell로 유지", () => {
+    expect(routeInput("|\n")).toEqual({
+      type: "shell",
+      command: "|",
+    });
+    expect(routeInput(" < file.txt")).toEqual({
+      type: "shell",
+      command: "< file.txt",
+    });
+    expect(routeInput("!\t")).toEqual({ type: "empty" });
+    expect(routeInput(" \n! $NODE_ENV=dev echo hi")).toEqual({
+      type: "shell",
+      command: "$NODE_ENV=dev echo hi",
     });
   });
 });
