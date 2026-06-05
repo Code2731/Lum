@@ -461,6 +461,20 @@ describe("routeInput — 기본: 자연어=AI, CLI 감지 시 shell", () => {
       });
     });
 
+    it("@backend 단독/본문 분리 구분에서 CR/LF/유니코드 공백 경계가 일관되게 처리된다", () => {
+      expect(routeInput("@local\r\nresolve the auth issue")).toEqual({
+        type: "agent",
+        task: "resolve the auth issue",
+        backend: "local",
+      });
+      expect(routeInput("@xllm\u205Ffix this bug")).toEqual({
+        type: "agent",
+        task: "fix this bug",
+        backend: "xllm",
+      });
+      expect(routeInput("@cloud\u3000")).toEqual({ type: "empty" });
+    });
+
     it("@backend + >> 뒤 공백만 있으면 empty", () => {
       expect(routeInput("@local >>")).toEqual({ type: "empty" });
       expect(routeInput("@local\t>>")).toEqual({ type: "empty" });
@@ -546,6 +560,11 @@ describe("routeInput — 기본: 자연어=AI, CLI 감지 시 shell", () => {
     it("동사+명사 모두 매칭 → true", () => {
       expect(detectCodingIntent("함수 추가")).toBe(true);
       expect(detectCodingIntent("fix the bug")).toBe(true);
+    });
+    it("임계치 기준 동작 — 동사+명사 조합만 true", () => {
+      expect(detectCodingIntent("버그 수정")).toBe(true);
+      expect(detectCodingIntent("update code")).toBe(true);
+      expect(detectCodingIntent("설명해 줘")).toBe(false);
     });
     it("동사만 → false (단, 리팩터링은 코딩 문맥으로 true)", () => {
       expect(detectCodingIntent("리팩터링해")).toBe(true);
