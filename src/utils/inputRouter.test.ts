@@ -762,3 +762,22 @@ describe("routeInput — shell prefix 경계 보강", () => {
     });
   });
 });
+
+describe("routeInput — agent prefix 경계 보강", () => {
+  it(">> + 빈 토큰은 empty 대신 task 빈 문자열을 가진 agent로 라우팅", () => {
+    expect(routeInput(">>")).toEqual({ type: "agent", task: "" });
+    expect(routeInput(">>   ")).toEqual({ type: "agent", task: "" });
+    expect(routeInput(" \n>>\t")).toEqual({ type: "agent", task: "" });
+  });
+
+  it(">> 뒤 백엔드 문자열은 backend 파서 통과 없이 그대로 task 전달", () => {
+    expect(routeInput(">>@local hotfix")).toEqual({
+      type: "agent",
+      task: "@local hotfix",
+    });
+    expect(routeInput("  >> @xllm fix issue")).toEqual({
+      type: "agent",
+      task: "@xllm fix issue",
+    });
+  });
+});
