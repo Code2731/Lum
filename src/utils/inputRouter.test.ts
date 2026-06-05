@@ -90,6 +90,14 @@ describe("routeInput — 기본: 자연어=AI, CLI 감지 시 shell", () => {
         type: "explain",
         command: "git rebase",
       });
+      expect(routeInput("#\r\n파일 개수 세줘")).toEqual({
+        type: "aiCmd",
+        prompt: "파일 개수 세줘",
+      });
+      expect(routeInput("?\ngit rebase")).toEqual({
+        type: "explain",
+        command: "git rebase",
+      });
       expect(routeInput("!!\u00A0요약해줘")).toEqual({
         type: "heavy",
         prompt: "요약해줘",
@@ -105,6 +113,10 @@ describe("routeInput — 기본: 자연어=AI, CLI 감지 시 shell", () => {
       expect(routeInput("?\u2002")).toEqual({
         type: "explain",
         command: "",
+      });
+      expect(routeInput("!\u3000git status")).toEqual({
+        type: "shell",
+        command: "git status",
       });
     });
 
