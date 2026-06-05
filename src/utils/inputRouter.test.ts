@@ -746,4 +746,19 @@ describe("routeInput — shell prefix 경계 보강", () => {
       command: "$NODE_ENV=dev echo hi",
     });
   });
+
+  it("leading whitespace이 있는 shell override는 여전히 shell", () => {
+    expect(routeInput("   ! ls -la")).toEqual({
+      type: "shell",
+      command: "ls -la",
+    });
+    expect(routeInput("\n\t!   git status")).toEqual({
+      type: "shell",
+      command: "git status",
+    });
+    expect(routeInput("\u2003!\t echo hi")).toEqual({
+      type: "shell",
+      command: "echo hi",
+    });
+  });
 });
