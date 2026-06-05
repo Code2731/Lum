@@ -638,4 +638,19 @@ describe("routeInput — 추가 경계 검증", () => {
       backend: "gemini",
     });
   });
+
+  it("비 backend @ 토큰은 기존 강제 AI로 유지", () => {
+    expect(routeInput("@@local hi").type).toBe("ai");
+    expect(routeInput("@@local hi").question).toBe("@local hi");
+    expect(routeInput("@\u205Flocal hi")).toEqual({
+      type: "ai",
+      question: "local hi",
+    });
+  });
+
+  it("백엔드 alias가 모호한 공백 조합은 backend 단독 입력으로 처리", () => {
+    expect(routeInput("@ xllm")).toEqual({ type: "empty" });
+    expect(routeInput("@ embedded   ")).toEqual({ type: "empty" });
+    expect(routeInput("@sglang")).toEqual({ type: "empty" });
+  });
 });
