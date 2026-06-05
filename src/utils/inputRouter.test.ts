@@ -691,3 +691,25 @@ describe("routeInput — 추가 경계 검증", () => {
     });
   });
 });
+
+describe("routeInput — shell prefix 경계 보강", () => {
+  it("명시적 shell override `!`는 공백만 있으면 empty", () => {
+    expect(routeInput("!\n")).toEqual({ type: "empty" });
+    expect(routeInput("!\t\n")).toEqual({ type: "empty" });
+    expect(routeInput("!   ")).toEqual({ type: "empty" });
+  });
+
+  it("기호 기반 shell prefix는 기존 규칙대로 shell로 처리", () => {
+    expect(routeInput("| grep foo")).toEqual({ type: "shell", command: "| grep foo" });
+    expect(routeInput("< input.txt")).toEqual({ type: "shell", command: "< input.txt" });
+    expect(routeInput("`echo hi`")).toEqual({ type: "shell", command: "`echo hi`" });
+    expect(routeInput("> output.txt")).toEqual({ type: "shell", command: "> output.txt" });
+  });
+
+  it("환경 변수/셸 변수 시그니처는 shell 강제로 처리", () => {
+    expect(routeInput("$NODE_ENV=prod cmd")).toEqual({
+      type: "shell",
+      command: "$NODE_ENV=prod cmd",
+    });
+  });
+});
