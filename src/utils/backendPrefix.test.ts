@@ -155,6 +155,12 @@ describe("detectBackendPrefixFromInput", () => {
     expect(detectBackendPrefixFromInput("@xllm2 why")).toBeNull();
   });
 
+  it("backend 토큰 뒤 단일 개행은 backend-only로 감지", () => {
+    expect(detectBackendPrefixFromInput("@local\n")).toBe("local");
+    expect(detectBackendPrefixFromInput("@\nlocal")).toBe("local");
+    expect(detectBackendPrefixFromInput("@ local\n")).toBe("local");
+  });
+
   it("선행 공백이 있어도 backend 토큰을 감지한다", () => {
     expect(detectBackendPrefixFromInput("   @local hi")).toBe("local");
     expect(detectBackendPrefixFromInput("\t@xllm hi")).toBe("xllm");
@@ -206,6 +212,13 @@ describe("isBackendOnlyInput", () => {
     expect(isBackendOnlyInput("@xllm\u205F")).toBe(true);
     expect(isBackendOnlyInput("\u3000@local")).toBe(true);
     expect(isBackendOnlyInput("@cloud\u3000")).toBe(true);
+  });
+
+  it("비 backend 토큰/구두점은 backend-only false", () => {
+    expect(isBackendOnlyInput("@local,")).toBe(false);
+    expect(isBackendOnlyInput("@xllm2")).toBe(false);
+    expect(isBackendOnlyInput("@local,\n")).toBe(false);
+    expect(isBackendOnlyInput("@\n")).toBe(false);
   });
 
   it("backend-only에서 U+3000 정리", () => {

@@ -1157,4 +1157,26 @@ describe("routeInput — prefix precedence 및 fallback 경계 보강", () => {
       command: ">",
     });
   });
+
+  it("heavy는 빈 본문도 prompt로 처리", () => {
+    expect(routeInput("!!#")).toEqual({
+      type: "heavy",
+      prompt: "#",
+    });
+    expect(routeInput("!!?")).toEqual({
+      type: "heavy",
+      prompt: "?",
+    });
+  });
+
+  it("명시적 shell override는 파이프 기호도 그대로 전달", () => {
+    expect(routeInput("!| grep foo")).toEqual({
+      type: "shell",
+      command: "| grep foo",
+    });
+  });
+
+  it("백엔드 토큰 뒤 whitespace-only가 남으면 empty", () => {
+    expect(routeInput("@ local")).toEqual({ type: "empty" });
+  });
 });
