@@ -812,4 +812,27 @@ describe("routeInput — prefix precedence 및 fallback 경계 보강", () => {
       question: "unknown hi",
     });
   });
+
+  it("heavy prefix는 어떤 뒤따르는 문맥에도 우선 적용", () => {
+    expect(routeInput("!!")).toEqual({
+      type: "heavy",
+      prompt: "",
+    });
+    expect(routeInput("!!   ")).toEqual({
+      type: "heavy",
+      prompt: "",
+    });
+    expect(routeInput("!!요약해줘")).toEqual({
+      type: "heavy",
+      prompt: "요약해줘",
+    });
+    expect(routeInput("!!\t@local 요약")).toEqual({
+      type: "heavy",
+      prompt: "@local 요약",
+    });
+    expect(routeInput("!!\u2003요약해줘")).toEqual({
+      type: "heavy",
+      prompt: "요약해줘",
+    });
+  });
 });
