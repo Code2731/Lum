@@ -1061,4 +1061,71 @@ describe("routeInput — prefix precedence 및 fallback 경계 보강", () => {
       prompt: "",
     });
   });
+
+  it("공백 제거 경계는 모든 prefix 규칙보다 먼저 적용", () => {
+    expect(routeInput(" \n  !!\t요약")).toEqual({
+      type: "heavy",
+      prompt: "요약",
+    });
+    expect(routeInput("\r\n !  ls -la")).toEqual({
+      type: "shell",
+      command: "ls -la",
+    });
+    expect(routeInput("\t #  파일 구조")).toEqual({
+      type: "aiCmd",
+      prompt: "파일 구조",
+    });
+  });
+
+  it("`!`+`>>`와 `!`+`&&`는 shell로 그대로 패스", () => {
+    expect(routeInput("!>>")).toEqual({
+      type: "shell",
+      command: ">>",
+    });
+    expect(routeInput("!&&")).toEqual({
+      type: "shell",
+      command: "&&",
+    });
+  });
+
+  it("`!` 뒤 백엔드 유사 토큰은 강제 shell 텍스트로만 전달", () => {
+    expect(routeInput("!@local hi")).toEqual({
+      type: "shell",
+      command: "@local hi",
+    });
+    expect(routeInput("!@xllm")).toEqual({
+      type: "shell",
+      command: "@xllm",
+    });
+  });
+
+  it("`?`/`#`는 공백 없으면 텍스트 fallback, 공백 있으면 각 타입으로 라우팅", () => {
+    expect(routeInput("?help")).toEqual({
+      type: "ai",
+      question: "?help",
+    });
+    expect(routeInput("#help")).toEqual({
+      type: "ai",
+      question: "#help",
+    });
+    expect(routeInput("?help me")).toEqual({
+      type: "ai",
+      question: "?help me",
+    });
+    expect(routeInput("# help me")).toEqual({
+      type: "aiCmd",
+      prompt: "help me",
+    });
+  });
+
+  it("빈 중복 symbol은 shell/ai 빈 프롬프트 규칙과 일치", () => {
+    expect(routeInput("??")).toEqual({
+      type: "ai",
+      question: "??",
+    });
+    expect(routeInput(">>\n")).toEqual({
+      type: "agent",
+      task: "",
+    });
+  });
 });
