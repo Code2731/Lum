@@ -1000,21 +1000,28 @@ describe("routeInput — prefix precedence 및 fallback 경계 보강", () => {
   it("@ 뒤 개행/유니코드 공백 조합에서 backend 판별/단독 처리", () => {
     expect(routeInput("@\nlocal hi")).toEqual({
       type: "ai",
-      question: "local hi",
+      question: "hi",
+      backend: "local",
     });
     expect(routeInput(" \t@ \nlocal hi")).toEqual({
-      type: "agent",
-      task: "hi",
+      type: "ai",
+      question: "hi",
       backend: "local",
     });
     expect(routeInput("@\u00A0xllm")).toEqual({
-      type: "ai",
-      question: "xllm",
+      type: "empty",
     });
     expect(routeInput("@\r\txllm hi")).toEqual({
-      type: "agent",
-      task: "hi",
+      type: "ai",
+      question: "hi",
       backend: "xllm",
+    });
+  });
+
+  it("backend 접두가 아닌 유사 문자열은 AI fallback로 유지", () => {
+    expect(routeInput("@xllm, hello")).toEqual({
+      type: "ai",
+      question: "xllm, hello",
     });
   });
 
@@ -1030,6 +1037,17 @@ describe("routeInput — prefix precedence 및 fallback 경계 보강", () => {
     expect(routeInput("!!\t@gemini hi")).toEqual({
       type: "heavy",
       prompt: "@gemini hi",
+    });
+  });
+
+  it("non-backend `@@`는 일반 AI 텍스트로 유지", () => {
+    expect(routeInput("@@")).toEqual({
+      type: "ai",
+      question: "@",
+    });
+    expect(routeInput("@@ ! hi")).toEqual({
+      type: "ai",
+      question: "! hi",
     });
   });
 
