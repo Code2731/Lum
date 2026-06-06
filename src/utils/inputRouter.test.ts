@@ -996,4 +996,51 @@ describe("routeInput — prefix precedence 및 fallback 경계 보강", () => {
       command: ">",
     });
   });
+
+  it("@ 뒤 개행/유니코드 공백 조합에서 backend 판별/단독 처리", () => {
+    expect(routeInput("@\nlocal hi")).toEqual({
+      type: "ai",
+      question: "local hi",
+    });
+    expect(routeInput(" \t@ \nlocal hi")).toEqual({
+      type: "agent",
+      task: "hi",
+      backend: "local",
+    });
+    expect(routeInput("@\u00A0xllm")).toEqual({
+      type: "ai",
+      question: "xllm",
+    });
+    expect(routeInput("@\r\txllm hi")).toEqual({
+      type: "agent",
+      task: "hi",
+      backend: "xllm",
+    });
+  });
+
+  it("백엔드 입력 + heavy 조합은 heavy 우선, heavy 내용은 그대로 유지", () => {
+    expect(routeInput("!!@local")).toEqual({
+      type: "heavy",
+      prompt: "@local",
+    });
+    expect(routeInput("!! @xllm")).toEqual({
+      type: "heavy",
+      prompt: "@xllm",
+    });
+    expect(routeInput("!!\t@gemini hi")).toEqual({
+      type: "heavy",
+      prompt: "@gemini hi",
+    });
+  });
+
+  it("빈 heavy + 뒤따르는 구분자/공백만 존재하면 empty가 아닌 heavy 빈프롬프트", () => {
+    expect(routeInput("!!\u2003")).toEqual({
+      type: "heavy",
+      prompt: "",
+    });
+    expect(routeInput("!! \t\n")).toEqual({
+      type: "heavy",
+      prompt: "",
+    });
+  });
 });
