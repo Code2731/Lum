@@ -781,3 +781,35 @@ describe("routeInput — agent prefix 경계 보강", () => {
     });
   });
 });
+
+describe("routeInput — prefix precedence 및 fallback 경계 보강", () => {
+  it("`!` 오버라이드는 다른 prefix 문자열도 그대로 shell command로 처리", () => {
+    expect(routeInput("!# 파일 개수 세줘")).toEqual({
+      type: "shell",
+      command: "# 파일 개수 세줘",
+    });
+    expect(routeInput("! ?git rebase")).toEqual({
+      type: "shell",
+      command: "?git rebase",
+    });
+    expect(routeInput("!>> hello")).toEqual({
+      type: "shell",
+      command: ">> hello",
+    });
+  });
+
+  it("비백엔드 @ 조합은 backend 제거 없이 단일 텍스트로 유지", () => {
+    expect(routeInput("@@")).toEqual({
+      type: "ai",
+      question: "@",
+    });
+    expect(routeInput("@unknown hi")).toEqual({
+      type: "ai",
+      question: "unknown hi",
+    });
+    expect(routeInput("@unknown\t hi")).toEqual({
+      type: "ai",
+      question: "unknown hi",
+    });
+  });
+});
