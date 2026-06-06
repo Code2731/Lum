@@ -922,4 +922,45 @@ describe("routeInput — prefix precedence 및 fallback 경계 보강", () => {
       question: "sglangen bug",
     });
   });
+
+  it("설명/제안 prefix는 구분자 공백이 없으면 fallback AI로 이동", () => {
+    expect(routeInput("?git rebase")).toEqual({
+      type: "ai",
+      question: "?git rebase",
+    });
+    expect(routeInput("#프로젝트 구조를 보여줘")).toEqual({
+      type: "ai",
+      question: "#프로젝트 구조를 보여줘",
+    });
+    expect(routeInput("?\u2009git")).toEqual({
+      type: "ai",
+      question: "?git",
+    });
+    expect(routeInput("#\u00A0프로젝트")).toEqual({
+      type: "ai",
+      question: "#프로젝트",
+    });
+  });
+
+  it("`$` 시작 변수 스타일은 shell로 유지, 선행 공백과 혼합되어도 유효", () => {
+    expect(routeInput("$NODE_ENV=dev npm run start")).toEqual({
+      type: "shell",
+      command: "$NODE_ENV=dev npm run start",
+    });
+    expect(routeInput(" \n$NODE_ENV=prod \techo hi")).toEqual({
+      type: "shell",
+      command: "$NODE_ENV=prod \techo hi",
+    });
+  });
+
+  it("`?`/`#` 뒤 쉼표 패턴은 분기 미스매치로 ai fallback", () => {
+    expect(routeInput("??echo hi")).toEqual({
+      type: "ai",
+      question: "??echo hi",
+    });
+    expect(routeInput("# # help")).toEqual({
+      type: "ai",
+      question: "# # help",
+    });
+  });
 });
