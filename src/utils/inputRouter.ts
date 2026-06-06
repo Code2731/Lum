@@ -163,6 +163,11 @@ export function detectCodingIntent(text: string): boolean {
 const ROUTE_WHITESPACE = /\p{White_Space}/u;
 const ROUTE_LEADING_WHITESPACE = /^[\p{White_Space}]+/u;
 const ROUTE_TRIM_WHITESPACE = /^[\p{White_Space}]+|[\p{White_Space}]+$/gu;
+const ROUTE_PREFIX_HEAVY = "!!";
+const ROUTE_PREFIX_AGENT = ">>";
+const ROUTE_PREFIX_ASK = "#";
+const ROUTE_PREFIX_EXPLAIN = "?";
+const ROUTE_PREFIX_SHELL = "!";
 
 function trimRouteWhitespace(raw: string): string {
   return raw.replace(ROUTE_TRIM_WHITESPACE, "");
@@ -170,6 +175,15 @@ function trimRouteWhitespace(raw: string): string {
 
 function trimRouteWhitespaceStart(raw: string): string {
   return raw.replace(ROUTE_LEADING_WHITESPACE, "");
+}
+
+function hasPrefixWithWhitespace(trimmed: string, prefix: string): boolean {
+  if (!trimmed.startsWith(prefix)) return false;
+  return ROUTE_WHITESPACE.test(trimmed.slice(prefix.length).charAt(0) ?? "");
+}
+
+function stripPrefix(trimmed: string, prefixLength: number): string {
+  return trimRouteWhitespace(trimmed.slice(prefixLength));
 }
 
 /** Phase 134 — Healing 조회 의도 감지. 코딩 의도와 무관해도 agent로 라우팅. */
@@ -220,21 +234,21 @@ export function routeInput(raw: string): Route {
   if (!trimmed) return { type: "empty" };
 
   // 1. 명시적 prefix들 — 우선순위 최상
-  if (trimmed.startsWith("!!")) {
-    return { type: "heavy", prompt: trimRouteWhitespace(trimmed.slice(2)) };
+  if (trimmed.startsWith(ROUTE_PREFIX_HEAVY)) {
+    return { type: "heavy", prompt: stripPrefix(trimmed, ROUTE_PREFIX_HEAVY.length) };
   }
-  if (trimmed.startsWith(">>")) {
-    return { type: "agent", task: trimRouteWhitespace(trimmed.slice(2)) };
+  if (trimmed.startsWith(ROUTE_PREFIX_AGENT)) {
+    return { type: "agent", task: stripPrefix(trimmed, ROUTE_PREFIX_AGENT.length) };
   }
-  if (trimmed.startsWith("#") && ROUTE_WHITESPACE.test(trimmed.slice(1)[0] ?? "")) {
-    return { type: "aiCmd", prompt: trimRouteWhitespace(trimmed.slice(1)) };
+  if (hasPrefixWithWhitespace(trimmed, ROUTE_PREFIX_ASK)) {
+    return { type: "aiCmd", prompt: stripPrefix(trimmed, ROUTE_PREFIX_ASK.length) };
   }
-  if (trimmed.startsWith("?") && ROUTE_WHITESPACE.test(trimmed.slice(1)[0] ?? "")) {
-    return { type: "explain", command: trimRouteWhitespace(trimmed.slice(1)) };
+  if (hasPrefixWithWhitespace(trimmed, ROUTE_PREFIX_EXPLAIN)) {
+    return { type: "explain", command: stripPrefix(trimmed, ROUTE_PREFIX_EXPLAIN.length) };
   }
 
   // 2. override: `!` → 강제 shell, `@` → 강제 AI / `@<backend>` → 백엔드 강제
-  if (trimmed.startsWith("!")) {
+  if (trimmed.startsWith(ROUTE_PREFIX_SHELL)) {
     const stripped = trimRouteWhitespaceStart(trimmed.slice(1));
     if (!stripped) return { type: "empty" };
     return { type: "shell", command: stripped };
