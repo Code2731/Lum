@@ -168,6 +168,7 @@ const ROUTE_PREFIX_AGENT = ">>";
 const ROUTE_PREFIX_ASK = "#";
 const ROUTE_PREFIX_EXPLAIN = "?";
 const ROUTE_PREFIX_SHELL = "!";
+const ROUTE_PREFIX_BACKEND = "@";
 
 function trimRouteWhitespace(raw: string): string {
   return raw.replace(ROUTE_TRIM_WHITESPACE, "");
@@ -253,37 +254,8 @@ export function routeInput(raw: string): Route {
     if (!stripped) return { type: "empty" };
     return { type: "shell", command: stripped };
   }
-  if (trimmed.startsWith("@")) {
-    const backendPrefix = parseBackendPrefixFromInput(trimmed);
-    if (backendPrefix) {
-      const { backend, rest } = backendPrefix;
-      if (!rest) {
-        return { type: "empty" };
-      }
-      // @backend >> task 형태는 코딩 의도 감지와 무관하게 강제 agent로 처리.
-      // 예: "@local >> 테스트 실패 원인 찾아서 수정해줘"
-      if (rest.startsWith(">>")) {
-        const task = trimRouteWhitespace(rest.slice(2));
-        if (!task) return { type: "empty" };
-        return { type: "agent", task, backend };
-      }
-      // 리뷰 의도도 파일 탐색 도구가 필요하므로 backend를 유지한 채 agent로 보낸다.
-      if (detectCodeReviewIntent(rest)) {
-        return { type: "agent", task: rest, backend };
-      }
-      // backend 명시했더라도 코딩 의도 있으면 agent로 (둘 다 backend 필드 받음).
-      if (detectCodingIntent(rest)) {
-        return { type: "agent", task: rest, backend };
-      }
-      return { type: "ai", question: rest, backend };
-    }
-
-    const stripped = trimRouteWhitespaceStart(trimmed.slice(1));
-    if (!stripped) {
-      return { type: "empty" };
-    }
-    return { type: "ai", question: stripped };
-  }
+  const backendRoute = routeWithBackendPrefix(trimmed);
+  if (backendRoute) return backendRoute;
 
   // 3. 리뷰 의도와 CLI처럼 보이는 자연어 수정 요청은 CLI 판정보다 우선.
   if (detectCodeReviewIntent(trimmed)) {
@@ -316,4 +288,38 @@ export function routeInput(raw: string): Route {
 
   // 8. 그 외 전부 AI (기본값 — 단순 질문/대화)
   return { type: "ai", question: trimmed };
+}
+
+function routeWithBackendPrefix(trimmed: string): Route | null {
+  if (!trimmed.startsWith(ROUTE_PREFIX_BACKEND)) return null;
+
+  const backendPrefix = parseBackendPrefixFromInput(trimmed);
+  if (backendPrefix) {
+    const { backend, rest } = backendPrefix;
+    if (!rest) {
+      return { type: "empty" };
+    }
+    // @backend >> task 형태는 코딩 의도 감지와 무관하게 강제 agent로 처리.
+    // 예: "@local >> 테스트 실패 원인 찾아서 수정해줘"
+    if (rest.startsWith(ROUTE_PREFIX_AGENT)) {
+      const task = stripPrefix(rest, ROUTE_PREFIX_AGENT.length);
+      if (!task) return { type: "empty" };
+      return { type: "agent", task, backend };
+    }
+    // 리뷰 의도도 파일 탐색 도구가 필요하므로 backend를 유지한 채 agent로 보낸다.
+    if (detectCodeReviewIntent(rest)) {
+      return { type: "agent", task: rest, backend };
+    }
+    // backend 명시했더라도 코딩 의도 있으면 agent로 (둘 다 backend 필드 받음).
+    if (detectCodingIntent(rest)) {
+      return { type: "agent", task: rest, backend };
+    }
+    return { type: "ai", question: rest, backend };
+  }
+
+  const stripped = trimRouteWhitespaceStart(trimmed.slice(1));
+  if (!stripped) {
+    return { type: "empty" };
+  }
+  return { type: "ai", question: stripped };
 }
