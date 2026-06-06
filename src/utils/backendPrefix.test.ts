@@ -151,6 +151,8 @@ describe("detectBackendPrefixFromInput", () => {
   it("backend prefix가 아니면 null", () => {
     expect(detectBackendPrefixFromInput("plain text")).toBeNull();
     expect(detectBackendPrefixFromInput("@ls why")).toBeNull();
+    expect(detectBackendPrefixFromInput("@local,\twhy")).toBeNull();
+    expect(detectBackendPrefixFromInput("@xllm2 why")).toBeNull();
   });
 
   it("선행 공백이 있어도 backend 토큰을 감지한다", () => {
@@ -175,6 +177,8 @@ describe("parseBackendPrefixFromInput", () => {
   it("backend가 없으면 null", () => {
     expect(parseBackendPrefixFromInput("@ls 테스트")).toBeNull();
     expect(parseBackendPrefixFromInput("hello")).toBeNull();
+    expect(parseBackendPrefixFromInput("@local,\n테스트")).toBeNull();
+    expect(parseBackendPrefixFromInput("@sglangen\t테스트")).toBeNull();
   });
 
   it("backend-only는 rest 빈 문자열", () => {
@@ -218,5 +222,8 @@ describe("isBackendOnlyInput", () => {
   it("비 backend @ 접두는 false", () => {
     expect(isBackendOnlyInput("@ls")).toBe(false);
     expect(isBackendOnlyInput("@")).toBe(false);
+    expect(isBackendOnlyInput("@local,")).toBe(false);
+    expect(isBackendOnlyInput("@xllm2")).toBe(false);
+    expect(isBackendOnlyInput("@ ")).toBe(false);
   });
 });

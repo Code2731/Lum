@@ -1128,4 +1128,33 @@ describe("routeInput — prefix precedence 및 fallback 경계 보강", () => {
       task: "",
     });
   });
+
+  it("backend 아닌 @ 조합은 항상 ai 텍스트로 유지된다", () => {
+    expect(routeInput("@ local")).toEqual({
+      type: "empty",
+    });
+    expect(routeInput("@ local,\n")).toEqual({
+      type: "ai",
+      question: "local,",
+    });
+    expect(routeInput("@xllm2")).toEqual({
+      type: "ai",
+      question: "xllm2",
+    });
+    expect(routeInput("@ xllm2 hi")).toEqual({
+      type: "ai",
+      question: "xllm2 hi",
+    });
+  });
+
+  it("단일 `!`+구분자 미조합은 fallback shell/ai 규칙 유지", () => {
+    expect(routeInput("!#")).toEqual({
+      type: "shell",
+      command: "#",
+    });
+    expect(routeInput("!>")).toEqual({
+      type: "shell",
+      command: ">",
+    });
+  });
 });
