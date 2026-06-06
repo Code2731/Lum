@@ -835,4 +835,61 @@ describe("routeInput — prefix precedence 및 fallback 경계 보강", () => {
       prompt: "요약해줘",
     });
   });
+
+  it("heavy prefix는 shell/AI prefix보다 항상 우선 적용", () => {
+    expect(routeInput("!! ! ls -la")).toEqual({
+      type: "heavy",
+      prompt: "! ls -la",
+    });
+    expect(routeInput("!!@local hi")).toEqual({
+      type: "heavy",
+      prompt: "@local hi",
+    });
+    expect(routeInput("!!# explain this")).toEqual({
+      type: "heavy",
+      prompt: "# explain this",
+    });
+    expect(routeInput("!!\t>> test")).toEqual({
+      type: "heavy",
+      prompt: ">> test",
+    });
+  });
+
+  it("shell override는 빈 문자열만 있을 때만 empty", () => {
+    expect(routeInput("!")).toEqual({ type: "empty" });
+    expect(routeInput(" \n!")).toEqual({ type: "empty" });
+  });
+
+  it("선행 공백이 있는 heavy prefix도 정상 동작", () => {
+    expect(routeInput("   !! 요약해줘")).toEqual({
+      type: "heavy",
+      prompt: "요약해줘",
+    });
+    expect(routeInput("\n\t!!\r\n")).toEqual({
+      type: "heavy",
+      prompt: "",
+    });
+  });
+
+  it("shell 시작 기호 `&`/`&&`는 shell로 라우팅", () => {
+    expect(routeInput("& git status")).toEqual({
+      type: "shell",
+      command: "& git status",
+    });
+    expect(routeInput("&& ls -la")).toEqual({
+      type: "shell",
+      command: "&& ls -la",
+    });
+  });
+
+  it("backend 키워드가 붙는 형태는 backend 강제가 아닌 일반 @ AI로 처리", () => {
+    expect(routeInput("@localfoo hi")).toEqual({
+      type: "ai",
+      question: "localfoo hi",
+    });
+    expect(routeInput("@sglangen bug")).toEqual({
+      type: "ai",
+      question: "sglangen bug",
+    });
+  });
 });
