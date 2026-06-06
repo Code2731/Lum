@@ -1186,4 +1186,47 @@ describe("routeInput — prefix precedence 및 fallback 경계 보강", () => {
     expect(routeInput("@\r\n")).toEqual({ type: "empty" });
     expect(routeInput("@CLOUD")).toEqual({ type: "empty" });
   });
+
+  it("`!` 오버라이드는 개행/공백 제거 뒤에도 기호 문자열을 shell로 유지", () => {
+    expect(routeInput(" !   ")).toEqual({
+      type: "empty",
+    });
+    expect(routeInput("!\u205F")).toEqual({
+      type: "empty",
+    });
+    expect(routeInput("! # 파일")).toEqual({
+      type: "shell",
+      command: "# 파일",
+    });
+  });
+
+  it("`@` 뒤 구두점/백엔드 유사 토큰은 ai fallback", () => {
+    expect(routeInput("@local, next")).toEqual({
+      type: "ai",
+      question: "local, next",
+    });
+    expect(routeInput("@xllm! hi")).toEqual({
+      type: "ai",
+      question: "xllm! hi",
+    });
+    expect(routeInput("@\t@xllm")).toEqual({
+      type: "ai",
+      question: "@xllm",
+    });
+  });
+
+  it("heavy 뒤 개행·백스페이스 혼합은 trim 후 prompt로 처리", () => {
+    expect(routeInput("!!\u2007")).toEqual({
+      type: "heavy",
+      prompt: "",
+    });
+    expect(routeInput("!!\t\n")).toEqual({
+      type: "heavy",
+      prompt: "",
+    });
+    expect(routeInput("!!\u2003요약")).toEqual({
+      type: "heavy",
+      prompt: "요약",
+    });
+  });
 });

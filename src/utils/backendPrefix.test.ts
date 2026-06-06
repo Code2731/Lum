@@ -153,6 +153,9 @@ describe("detectBackendPrefixFromInput", () => {
     expect(detectBackendPrefixFromInput("@ls why")).toBeNull();
     expect(detectBackendPrefixFromInput("@local,\twhy")).toBeNull();
     expect(detectBackendPrefixFromInput("@xllm2 why")).toBeNull();
+    expect(detectBackendPrefixFromInput("@local! hi")).toBeNull();
+    expect(detectBackendPrefixFromInput("@xllm? hi")).toBeNull();
+    expect(detectBackendPrefixFromInput("@\u2009@xllm hi")).toBeNull();
   });
 
   it("backend 단독 시그널도 감지", () => {
@@ -191,6 +194,8 @@ describe("parseBackendPrefixFromInput", () => {
     expect(parseBackendPrefixFromInput("hello")).toBeNull();
     expect(parseBackendPrefixFromInput("@local,\n테스트")).toBeNull();
     expect(parseBackendPrefixFromInput("@sglangen\t테스트")).toBeNull();
+    expect(parseBackendPrefixFromInput("@xllm! hi")).toBeNull();
+    expect(parseBackendPrefixFromInput("@local?")).toBeNull();
   });
 
   it("backend-only는 rest 빈 문자열", () => {
@@ -250,5 +255,7 @@ describe("isBackendOnlyInput", () => {
     expect(isBackendOnlyInput("@local,")).toBe(false);
     expect(isBackendOnlyInput("@xllm2")).toBe(false);
     expect(isBackendOnlyInput("@ ")).toBe(false);
+    expect(isBackendOnlyInput("@local!")).toBe(false);
+    expect(isBackendOnlyInput("@xllm?")).toBe(false);
   });
 });
