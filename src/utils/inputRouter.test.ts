@@ -1179,4 +1179,11 @@ describe("routeInput — prefix precedence 및 fallback 경계 보강", () => {
   it("백엔드 토큰 뒤 whitespace-only가 남으면 empty", () => {
     expect(routeInput("@ local")).toEqual({ type: "empty" });
   });
+
+  it("백엔드 단독 입력은 본문이 없어도 empty로 정리", () => {
+    expect(routeInput("@local")).toEqual({ type: "empty" });
+    expect(routeInput("@ local\n")).toEqual({ type: "empty" });
+    expect(routeInput("@\r\n")).toEqual({ type: "empty" });
+    expect(routeInput("@CLOUD")).toEqual({ type: "empty" });
+  });
 });

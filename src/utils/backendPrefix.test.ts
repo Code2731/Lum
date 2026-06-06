@@ -155,6 +155,12 @@ describe("detectBackendPrefixFromInput", () => {
     expect(detectBackendPrefixFromInput("@xllm2 why")).toBeNull();
   });
 
+  it("backend 단독 시그널도 감지", () => {
+    expect(detectBackendPrefixFromInput("@local\n")).toBe("local");
+    expect(detectBackendPrefixFromInput("@xllm\r")).toBe("xllm");
+    expect(detectBackendPrefixFromInput("@CLOUD\n")).toBe("gemini");
+  });
+
   it("backend 토큰 뒤 단일 개행은 backend-only로 감지", () => {
     expect(detectBackendPrefixFromInput("@local\n")).toBe("local");
     expect(detectBackendPrefixFromInput("@\nlocal")).toBe("local");
@@ -212,6 +218,12 @@ describe("isBackendOnlyInput", () => {
     expect(isBackendOnlyInput("@xllm\u205F")).toBe(true);
     expect(isBackendOnlyInput("\u3000@local")).toBe(true);
     expect(isBackendOnlyInput("@cloud\u3000")).toBe(true);
+  });
+
+  it("단독 백엔드 접두는 whitespace만 있을 때만 true", () => {
+    expect(isBackendOnlyInput("@local hi")).toBe(false);
+    expect(isBackendOnlyInput("@local hi\t")).toBe(false);
+    expect(isBackendOnlyInput("@xllm\nwork")).toBe(false);
   });
 
   it("비 backend 토큰/구두점은 backend-only false", () => {
