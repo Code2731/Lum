@@ -860,6 +860,36 @@ describe("routeInput — prefix precedence 및 fallback 경계 보강", () => {
     expect(routeInput(" \n!")).toEqual({ type: "empty" });
   });
 
+  it("`!`는 heavy 기호 다음에도 shell 우선을 유지", () => {
+    expect(routeInput("! !!요약해줘")).toEqual({
+      type: "shell",
+      command: "!!요약해줘",
+    });
+    expect(routeInput(" \t! @local")).toEqual({
+      type: "shell",
+      command: "@local",
+    });
+    expect(routeInput("\n!!\n@xllm")).toEqual({
+      type: "heavy",
+      prompt: "@xllm",
+    });
+  });
+
+  it("shell 시작 기호는 선행 공백이 있어도 shell로 처리", () => {
+    expect(routeInput("   & git status")).toEqual({
+      type: "shell",
+      command: "& git status",
+    });
+    expect(routeInput(" \n&&  npm test")).toEqual({
+      type: "shell",
+      command: "&&  npm test",
+    });
+    expect(routeInput("\t\t|  cat file")).toEqual({
+      type: "shell",
+      command: "|  cat file",
+    });
+  });
+
   it("선행 공백이 있는 heavy prefix도 정상 동작", () => {
     expect(routeInput("   !! 요약해줘")).toEqual({
       type: "heavy",
