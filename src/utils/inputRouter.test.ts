@@ -554,6 +554,30 @@ describe("routeInput — 기본: 자연어=AI, CLI 감지 시 shell", () => {
         backend: "local",
       });
     });
+
+    it("백엔드 토큰 뒤 다중 공백/개행도 동일 동작", () => {
+      expect(routeInput("@xllm \t\t작업")).toEqual({
+        type: "agent",
+        task: "작업",
+        backend: "xllm",
+      });
+      expect(routeInput("@\t\tembedded\n\t로그")).toEqual({
+        type: "agent",
+        task: "로그",
+        backend: "local",
+      });
+    });
+
+    it("비백엔드 토큰은 fallback AI가 유지되어야 함", () => {
+      expect(routeInput("@xllm2\t작업")).toEqual({
+        type: "ai",
+        question: "xllm2\t작업",
+      });
+      expect(routeInput("@local!\n작업")).toEqual({
+        type: "ai",
+        question: "local!\n작업",
+      });
+    });
   });
 
   describe("detectCodingIntent — 단위", () => {
