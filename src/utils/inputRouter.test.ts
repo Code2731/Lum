@@ -963,4 +963,37 @@ describe("routeInput — prefix precedence 및 fallback 경계 보강", () => {
       question: "# # help",
     });
   });
+
+  it("단일 prefix 문자 자체는 구분자 fallback로 ai 처리", () => {
+    expect(routeInput("?")).toEqual({
+      type: "ai",
+      question: "?",
+    });
+    expect(routeInput("#")).toEqual({
+      type: "ai",
+      question: "#",
+    });
+  });
+
+  it("기호 `>`/`>>`는 쉘 구문으로 라우팅", () => {
+    expect(routeInput(">")).toEqual({
+      type: "shell",
+      command: ">",
+    });
+    expect(routeInput("> output.txt")).toEqual({
+      type: "shell",
+      command: "> output.txt",
+    });
+  });
+
+  it("shell 앞 경계자와 backslash 스타일 공백 혼합은 shell로 유지", () => {
+    expect(routeInput("> \t file.txt")).toEqual({
+      type: "shell",
+      command: "> \t file.txt",
+    });
+    expect(routeInput(" >\t")).toEqual({
+      type: "shell",
+      command: ">",
+    });
+  });
 });
