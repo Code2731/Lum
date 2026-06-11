@@ -295,6 +295,52 @@ describe("InspectorPanel", () => {
     expect(onAnalyzeFailedBlock).toHaveBeenCalledWith("fail-1");
   });
 
+  it("요약 탭 실패 블록 보조 액션들은 각 콜백을 호출한다", () => {
+    const onFocusFailedBlock = vi.fn();
+    const onCopyFailedOutput = vi.fn();
+    const onCopyAnalyzePrompt = vi.fn();
+    const onLoadAnalyzePromptToAiBar = vi.fn();
+    const onSelectBlock = vi.fn();
+    renderInspector({
+      onFocusFailedBlock,
+      onCopyFailedOutput,
+      onCopyAnalyzePrompt,
+      onLoadAnalyzePromptToAiBar,
+      onSelectBlock,
+    });
+
+    fireEvent.click(screen.getByText("NEXT FAIL"));
+    fireEvent.click(screen.getByText("COPY LOG"));
+    fireEvent.click(screen.getByText("COPY PROMPT"));
+    fireEvent.click(screen.getByText("LOAD PROMPT"));
+    fireEvent.click(screen.getByText("SELECT"));
+
+    expect(onFocusFailedBlock).toHaveBeenCalledTimes(1);
+    expect(onCopyFailedOutput).toHaveBeenCalledWith("fail-1");
+    expect(onCopyAnalyzePrompt).toHaveBeenCalledWith("fail-1");
+    expect(onLoadAnalyzePromptToAiBar).toHaveBeenCalledWith("fail-1");
+    expect(onSelectBlock).toHaveBeenCalledWith("fail-1");
+  });
+
+  it("기본 빠른 액션 버튼들은 각 콜백을 호출한다", () => {
+    const onToggleProjectBin = vi.fn();
+    const onOpenWorkspace = vi.fn();
+    const onTabSelect = vi.fn();
+    renderInspector({
+      onToggleProjectBin,
+      onOpenWorkspace,
+      onTabSelect,
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /Project Bin/ }));
+    fireEvent.click(screen.getByRole("button", { name: /^Workspace$/ }));
+    fireEvent.click(screen.getByRole("button", { name: /^RAG$/ }));
+
+    expect(onToggleProjectBin).toHaveBeenCalledTimes(1);
+    expect(onOpenWorkspace).toHaveBeenCalledTimes(1);
+    expect(onTabSelect).toHaveBeenCalledWith("rag");
+  });
+
   it("완료된 분석 캐시의 추천 커맨드를 렌더링하고 실행 콜백을 호출한다", () => {
     const onApplySuggestedCommand = vi.fn();
     renderInspector({
@@ -309,6 +355,34 @@ describe("InspectorPanel", () => {
     fireEvent.click(screen.getByText("RUN #1"));
 
     expect(onApplySuggestedCommand).toHaveBeenCalledWith(0);
+  });
+
+  it("최근 블록 액션들은 선택, 재실행, 분석 프롬프트 로드를 호출한다", () => {
+    const onSelectBlock = vi.fn();
+    const onRerunBlock = vi.fn();
+    const onLoadAnalyzePromptToAiBar = vi.fn();
+    renderInspector({
+      recentBlocks: [
+        {
+          id: "block-2",
+          command: "npm run build",
+          exitCode: 1,
+          durationMs: 2300,
+          outputTail: "build failed",
+        },
+      ],
+      onSelectBlock,
+      onRerunBlock,
+      onLoadAnalyzePromptToAiBar,
+    });
+
+    fireEvent.click(screen.getByText("SEL"));
+    fireEvent.click(screen.getByText("RUN"));
+    fireEvent.click(screen.getByText("LOAD"));
+
+    expect(onSelectBlock).toHaveBeenCalledWith("block-2");
+    expect(onRerunBlock).toHaveBeenCalledWith("npm run build");
+    expect(onLoadAnalyzePromptToAiBar).toHaveBeenCalledWith("block-2");
   });
 
   it("compact 분석 메뉴의 MORE 버튼은 닫힌 상태에서 메뉴 열기 콜백을 호출한다", () => {
