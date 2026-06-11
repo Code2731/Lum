@@ -56,6 +56,45 @@ vi.mock("./components/TerminalPane", () => ({
   ),
 }));
 
+vi.mock("./components/AiBar", () => ({
+  default: ({ value, onChange, onSubmit, onCancel, onClose, disabled, processing }: any) => (
+    <div data-testid="ai-bar-mock">
+      <input
+        data-testid="ai-bar-input"
+        placeholder="AI에게 질문하세요… (Enter 전송 · Esc 닫기)"
+        value={value}
+        disabled={disabled}
+        onChange={(e: any) => onChange(e.target.value)}
+        onKeyDown={(e: any) => {
+          if (e.key === "Enter") { e.preventDefault(); onSubmit(); }
+          if (e.key === "Escape") { e.preventDefault(); onClose(); }
+        }}
+      />
+      {processing && <button data-testid="ai-bar-stop" aria-label="AI 응답 중지" onClick={onCancel}>Stop</button>}
+      <span>Esc 또는 Cmd/Ctrl+Shift+K 로 닫기</span>
+    </div>
+  ),
+}));
+
+vi.mock("./components/TabBar", () => ({
+  default: ({ onAddTab, onOpenSshModal, onToggleSplitH, onToggleSplitV, activeTab }: any) => (
+    <div data-testid="tab-bar-mock">
+      <button aria-label="새 탭 (Cmd/Ctrl+T)" onClick={onAddTab}>+</button>
+      <button aria-label="SSH 연결 (Cmd/Ctrl+Shift+H)" onClick={onOpenSshModal}><svg /></button>
+      <button
+        aria-label="수평 분할 (Cmd/Ctrl+Shift+D)"
+        aria-pressed={activeTab?.splitDir === "h" ? "true" : "false"}
+        onClick={onToggleSplitH}
+      >H</button>
+      <button
+        aria-label="수직 분할 (Cmd/Ctrl+Shift+E)"
+        aria-pressed={activeTab?.splitDir === "v" ? "true" : "false"}
+        onClick={onToggleSplitV}
+      >V</button>
+    </div>
+  ),
+}));
+
 vi.mock("./hooks/useCommandBlocks", () => ({
   useCommandBlocks: vi.fn(),
 }));

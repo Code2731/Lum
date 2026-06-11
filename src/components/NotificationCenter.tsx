@@ -219,6 +219,7 @@ const NotificationCenter: React.FC<Props> = ({
             {notifications.map((n) => (
               <div
                 key={n.id}
+                role="alert"
                 className={`group flex items-start gap-2 px-2.5 py-2 rounded-lg border transition-colors ${
                   n.read ? "bg-transparent border-white/3" : "bg-white/3 border-white/8"
                 }`}

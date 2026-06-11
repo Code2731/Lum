@@ -1,5 +1,6 @@
 import { getSpec } from "../data/cliSpecs";
 import { parseBackendPrefixFromInput } from "./backendPrefix";
+import { WHITESPACE, trimWhitespace, trimWhitespaceStart } from "./whitespace";
 
 /**
  * 사용자 입력을 의미에 따라 라우팅한다.
@@ -160,9 +161,6 @@ export function detectCodingIntent(text: string): boolean {
   return score >= 0.6;
 }
 
-const ROUTE_WHITESPACE = /\p{White_Space}/u;
-const ROUTE_LEADING_WHITESPACE = /^[\p{White_Space}]+/u;
-const ROUTE_TRIM_WHITESPACE = /^[\p{White_Space}]+|[\p{White_Space}]+$/gu;
 const ROUTE_PREFIX_HEAVY = "!!";
 const ROUTE_PREFIX_AGENT = ">>";
 const ROUTE_PREFIX_ASK = "#";
@@ -170,21 +168,13 @@ const ROUTE_PREFIX_EXPLAIN = "?";
 const ROUTE_PREFIX_SHELL = "!";
 const ROUTE_PREFIX_BACKEND = "@";
 
-function trimRouteWhitespace(raw: string): string {
-  return raw.replace(ROUTE_TRIM_WHITESPACE, "");
-}
-
-function trimRouteWhitespaceStart(raw: string): string {
-  return raw.replace(ROUTE_LEADING_WHITESPACE, "");
-}
-
 function hasPrefixWithWhitespace(trimmed: string, prefix: string): boolean {
   if (!trimmed.startsWith(prefix)) return false;
-  return ROUTE_WHITESPACE.test(trimmed.slice(prefix.length).charAt(0) ?? "");
+  return WHITESPACE.test(trimmed.slice(prefix.length).charAt(0));
 }
 
 function stripPrefix(trimmed: string, prefixLength: number): string {
-  return trimRouteWhitespace(trimmed.slice(prefixLength));
+  return trimWhitespace(trimmed.slice(prefixLength));
 }
 
 /** Phase 134 — Healing 조회 의도 감지. 코딩 의도와 무관해도 agent로 라우팅. */
@@ -230,8 +220,45 @@ function startsWithShellPrefix(trimmed: string): boolean {
   return false;
 }
 
+function routeWithBackendPrefix(trimmed: string): Route | null {
+  if (!trimmed.startsWith(ROUTE_PREFIX_BACKEND)) return null;
+
+  const backendPrefix = parseBackendPrefixFromInput(trimmed);
+  if (backendPrefix) {
+    const { backend, rest } = backendPrefix;
+    if (!rest) {
+      return { type: "empty" };
+    }
+    // @backend >> task 형태는 코딩 의도 감지와 무관하게 강제 agent로 처리.
+    // 예: "@local >> 테스트 실패 원인 찾아서 수정해줘"
+    if (rest.startsWith(ROUTE_PREFIX_AGENT)) {
+      const task = stripPrefix(rest, ROUTE_PREFIX_AGENT.length);
+      if (!task) return { type: "empty" };
+      return { type: "agent", task, backend };
+    }
+    // 리뷰 의도와 자연어 수정 요청도 backend를 유지한 채 agent로 보낸다.
+    if (detectCodeReviewIntent(rest)) {
+      return { type: "agent", task: rest, backend };
+    }
+    if (detectNaturalMutationBeforeCli(rest)) {
+      return { type: "agent", task: rest, backend };
+    }
+    // backend 명시했더라도 코딩 의도 있으면 agent로 (둘 다 backend 필드 받음).
+    if (detectCodingIntent(rest)) {
+      return { type: "agent", task: rest, backend };
+    }
+    return { type: "ai", question: rest, backend };
+  }
+
+  const stripped = trimWhitespace(trimmed.slice(1));
+  if (!stripped) {
+    return { type: "empty" };
+  }
+  return { type: "ai", question: stripped };
+}
+
 export function routeInput(raw: string): Route {
-  const trimmed = trimRouteWhitespace(raw);
+  const trimmed = trimWhitespaceStart(raw);
   if (!trimmed) return { type: "empty" };
 
   // 1. 명시적 prefix들 — 우선순위 최상
@@ -250,7 +277,7 @@ export function routeInput(raw: string): Route {
 
   // 2. override: `!` → 강제 shell, `@` → 강제 AI / `@<backend>` → 백엔드 강제
   if (trimmed.startsWith(ROUTE_PREFIX_SHELL)) {
-    const stripped = trimRouteWhitespaceStart(trimmed.slice(1));
+    const stripped = trimWhitespace(trimmed.slice(1));
     if (!stripped) return { type: "empty" };
     return { type: "shell", command: stripped };
   }
@@ -259,67 +286,33 @@ export function routeInput(raw: string): Route {
 
   // 3. 리뷰 의도와 CLI처럼 보이는 자연어 수정 요청은 CLI 판정보다 우선.
   if (detectCodeReviewIntent(trimmed)) {
-    return { type: "agent", task: trimmed };
+    return { type: "agent", task: trimWhitespace(trimmed) };
   }
   if (detectNaturalMutationBeforeCli(trimmed)) {
-    return { type: "agent", task: trimmed };
+    return { type: "agent", task: trimWhitespace(trimmed) };
   }
 
   // 4. shell 특수문자 시작 → shell
   if (startsWithShellPrefix(trimmed)) {
-    return { type: "shell", command: trimmed };
+    return { type: "shell", command: trimWhitespace(trimmed) };
   }
 
   // 5. 첫 토큰이 알려진 CLI → shell
-  const firstToken = trimmed.split(ROUTE_WHITESPACE)[0];
+  const firstToken = trimmed.split(WHITESPACE)[0];
   if (isKnownShellCommand(firstToken)) {
-    return { type: "shell", command: trimmed };
+    return { type: "shell", command: trimWhitespace(trimmed) };
   }
 
   // 6. Healing 조회 의도 → 자동 agent 라우팅
   if (detectHealingIntent(trimmed)) {
-    return { type: "agent", task: trimmed };
+    return { type: "agent", task: trimWhitespace(trimmed) };
   }
 
   // 7. (Phase 124) 자연어이지만 코딩 의도 감지 → 자동 agent 라우팅
   if (detectCodingIntent(trimmed)) {
-    return { type: "agent", task: trimmed };
+    return { type: "agent", task: trimWhitespace(trimmed) };
   }
 
   // 8. 그 외 전부 AI (기본값 — 단순 질문/대화)
-  return { type: "ai", question: trimmed };
-}
-
-function routeWithBackendPrefix(trimmed: string): Route | null {
-  if (!trimmed.startsWith(ROUTE_PREFIX_BACKEND)) return null;
-
-  const backendPrefix = parseBackendPrefixFromInput(trimmed);
-  if (backendPrefix) {
-    const { backend, rest } = backendPrefix;
-    if (!rest) {
-      return { type: "empty" };
-    }
-    // @backend >> task 형태는 코딩 의도 감지와 무관하게 강제 agent로 처리.
-    // 예: "@local >> 테스트 실패 원인 찾아서 수정해줘"
-    if (rest.startsWith(ROUTE_PREFIX_AGENT)) {
-      const task = stripPrefix(rest, ROUTE_PREFIX_AGENT.length);
-      if (!task) return { type: "empty" };
-      return { type: "agent", task, backend };
-    }
-    // 리뷰 의도도 파일 탐색 도구가 필요하므로 backend를 유지한 채 agent로 보낸다.
-    if (detectCodeReviewIntent(rest)) {
-      return { type: "agent", task: rest, backend };
-    }
-    // backend 명시했더라도 코딩 의도 있으면 agent로 (둘 다 backend 필드 받음).
-    if (detectCodingIntent(rest)) {
-      return { type: "agent", task: rest, backend };
-    }
-    return { type: "ai", question: rest, backend };
-  }
-
-  const stripped = trimRouteWhitespaceStart(trimmed.slice(1));
-  if (!stripped) {
-    return { type: "empty" };
-  }
-  return { type: "ai", question: stripped };
+  return { type: "ai", question: trimWhitespace(trimmed) };
 }

@@ -2287,10 +2287,12 @@ const WarpListView: React.FC<Props> = ({
         const moveCursor = (dir: 1 | -1) => moveBlockSearchCursor(b.id, dir);
         const compare = compareResultByBlock[b.id];
 
+        const isSelected = deltaOpenId === b.id;
         return (
           <div
             key={b.id}
             ref={(el) => { blockRowRefs.current[b.id] = el; }}
+            aria-selected={isSelected}
             className={`relative rounded-xl border ${
               ok ? "border-white/8 bg-white/[0.018]" : "border-red-500/20 bg-red-500/[0.03]"
             }`}

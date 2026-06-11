@@ -19,7 +19,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { AnimatePresence, motion } from "framer-motion";
 import {
-  Zap, Cpu, Loader2, TerminalSquare, Square,
+  Cpu, Loader2,
   Package, Plus, X, Columns2, Rows2, ArrowUpCircle,
   GitBranch, Container, Lock, FolderTree, Clock3, Search, GitCompareArrows, Library, Activity, Layers, AlertTriangle, RotateCcw, Copy, MoreHorizontal,
 } from "lucide-react";
@@ -45,10 +45,11 @@ import ResizeHandles from "./components/ResizeHandles";
 import WarpListView from "./components/WarpListView";
 import FileExplorerPanel from "./components/FileExplorerPanel";
 import MarkdownViewerPanel from "./components/MarkdownViewerPanel";
+import TabBar from "./components/TabBar";
 import AppHeader from "./components/AppHeader";
 import AppOverlays from "./components/AppOverlays";
+import AiBar from "./components/AiBar";
 import { ErrorBoundary } from "./components/ErrorBoundary";
-import { TAB_COLORS } from "./hooks/useTabManager";
 import type { AiBackend } from "./utils/inputRouter";
 import { extractInspectorAnalyzeCommands } from "./utils/inspectorAnalyze";
 import { getRovingMenuNextIndex } from "./utils/menuRoving";
@@ -61,6 +62,12 @@ import {
 import type {
   RetryCompareResult,
   RetryCompareTask,
+} from "./utils/retryCompare";
+import {
+  loadRetryCompareCache,
+  loadRetryCompareRuntimeCache,
+  saveRetryCompareCache,
+  saveRetryCompareRuntimeCache,
 } from "./utils/retryCompare";
 import {
   loadRetryCompareCache,
@@ -1700,143 +1707,25 @@ const App: React.FC = () => {
 
       {/* ── 탭 바 ─────────────────────────────────────────────── */}
       {viewMode === "terminal" && (
-        <div className="lum-tabbar flex items-center border-b border-white/10 shrink-0 overflow-x-auto">
-          {tabs.map((tab) => (
-            <div
-              key={tab.id}
-              onClick={() => switchTabWithReset(tab.id)}
-              onDoubleClick={() => {
-                setRenamingTabId(tab.id);
-                setRenameValue(tab.title);
-              }}
-              onContextMenu={e => {
-                e.preventDefault();
-                setTabCtxMenu({ tabId: tab.id, x: e.clientX, y: e.clientY });
-              }}
-              className={`relative flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border-r border-white/8 whitespace-nowrap transition-colors group cursor-pointer ${
-                tab.id === activeTabId
-                  ? "bg-[#182739] text-white shadow-[inset_0_-2px_0_rgba(88,166,255,0.8)]"
-                  : "text-white/45 hover:text-white/80 hover:bg-white/[0.05]"
-              }`}
-              style={tab.color ? { borderBottom: `2px solid ${TAB_COLORS[tab.color]}` } : undefined}
-            >
-              {tab.color && (
-                <span
-                  className="w-1.5 h-1.5 rounded-full shrink-0"
-                  style={{ backgroundColor: TAB_COLORS[tab.color] }}
-                />
-              )}
-              <TabIconComponent icon={tab.icon} />
-              {tab.group && (
-                <span className="text-xs uppercase tracking-wider text-white/35 font-semibold">{tab.group}</span>
-              )}
-              {renamingTabId === tab.id ? (
-                <input
-                  autoFocus
-                  value={renameValue}
-                  onChange={e => setRenameValue(e.target.value)}
-                  onBlur={() => { renameTab(tab.id, renameValue); setRenamingTabId(null); }}
-                  onKeyDown={e => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      renameTab(tab.id, renameValue);
-                      setRenamingTabId(null);
-                    }
-                    if (e.key === "Escape") {
-                      e.preventDefault();
-                      setRenamingTabId(null);
-                    }
-                    e.stopPropagation();
-                  }}
-                  onClick={e => e.stopPropagation()}
-                  className="w-24 bg-transparent border-b border-accent/60 outline-none text-white text-xs"
-                />
-              ) : (
-                <>
-                  {tab.sshProfile && <Lock size={11} className="text-cyan-400 shrink-0" />}
-                  {tab.title}
-                  {tabGitInfo[tab.id]?.branch && (
-                    <span
-                      className={`ml-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md border text-xs ${
-                        tab.id === activeTabId
-                          ? "border-cyan-300/35 bg-cyan-400/12 text-cyan-200"
-                          : "border-white/15 bg-white/[0.04] text-white/60"
-                      }`}
-                      title={
-                        tabGitInfo[tab.id]!.changed > 0
-                          ? `브랜치 ${tabGitInfo[tab.id]!.branch} · 변경 ${tabGitInfo[tab.id]!.changed}개`
-                          : `브랜치 ${tabGitInfo[tab.id]!.branch}`
-                      }
-                    >
-                      <GitBranch size={10} />
-                      <span>{tabGitInfo[tab.id]!.branch}</span>
-                      {tabGitInfo[tab.id]!.changed > 0 && (
-                        <span className="text-xs px-1 rounded bg-amber-400/22 text-amber-200">
-                          {tabGitInfo[tab.id]!.changed}
-                        </span>
-                      )}
-                    </span>
-                  )}
-                </>
-              )}
-              {tabs.length > 1 && renamingTabId !== tab.id && (
-                <button
-                  type="button"
-                  onClick={(e) => closeTabWithReset(tab.id, e)}
-                  className="ml-0.5 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 hover:text-white transition-opacity rounded p-0.5 hover:bg-white/10 focus-visible:bg-white/10 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                  aria-label={`${tab.title} 닫기`}
-                >
-                  <X size={11} />
-                </button>
-              )}
-            </div>
-          ))}
-          <button
-            onClick={addTabWithReset}
-            aria-label="새 탭 (Cmd/Ctrl+T)"
-            title="새 탭 (Cmd/Ctrl+T)"
-            className="px-2 py-1.5 text-white/35 hover:text-white/75 hover:bg-white/5 transition-colors shrink-0 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring focus-visible:bg-white/5"
-          >
-            <Plus size={13} />
-          </button>
-          <button
-            onClick={() => setShowSshModal(true)}
-            aria-label="SSH 연결 (Cmd/Ctrl+Shift+H)"
-            title="SSH 연결 (Cmd/Ctrl+Shift+H)"
-            className="px-2 py-1.5 text-white/35 hover:text-white/75 hover:bg-white/5 transition-colors shrink-0 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring focus-visible:bg-white/5"
-          >
-            <Lock size={13} />
-          </button>
-
-          <div className="ml-auto flex items-center gap-0.5 px-2 shrink-0">
-            <button
-              onClick={() => toggleSplit("h")}
-              aria-label="수평 분할 (Cmd/Ctrl+Shift+D)"
-              aria-pressed={activeTab?.splitDir === "h"}
-              title="수평 분할 (Cmd/Ctrl+Shift+D)"
-              className={`p-1.5 rounded-md transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring ${
-                activeTab?.splitDir === "h"
-                  ? "text-accent bg-accent/10"
-                  : "text-white/35 hover:text-white/75 hover:bg-white/5"
-              }`}
-            >
-              <Columns2 size={13} />
-            </button>
-            <button
-              onClick={() => toggleSplit("v")}
-              aria-label="수직 분할 (Cmd/Ctrl+Shift+E)"
-              aria-pressed={activeTab?.splitDir === "v"}
-              title="수직 분할 (Cmd/Ctrl+Shift+E)"
-              className={`p-1.5 rounded-md transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring ${
-                activeTab?.splitDir === "v"
-                  ? "text-accent bg-accent/10"
-                  : "text-white/35 hover:text-white/75 hover:bg-white/5"
-              }`}
-            >
-              <Rows2 size={13} />
-            </button>
-          </div>
-        </div>
+        <TabBar
+          tabs={tabs}
+          activeTabId={activeTabId}
+          activeTab={activeTab}
+          tabGitInfo={tabGitInfo}
+          renamingTabId={renamingTabId}
+          renameValue={renameValue}
+          onSwitchTab={switchTabWithReset}
+          onStartRename={(id, title) => { setRenamingTabId(id); setRenameValue(title); }}
+          onRenameChange={setRenameValue}
+          onRenameSubmit={(id) => { renameTab(id, renameValue); setRenamingTabId(null); }}
+          onRenameCancel={() => setRenamingTabId(null)}
+          onCloseTab={closeTabWithReset}
+          onAddTab={addTabWithReset}
+          onOpenSshModal={() => setShowSshModal(true)}
+          onToggleSplitH={() => toggleSplit("h")}
+          onToggleSplitV={() => toggleSplit("v")}
+          onContextMenu={(e, tabId) => { e.preventDefault(); setTabCtxMenu({ tabId, x: e.clientX, y: e.clientY }); }}
+        />
       )}
 
       {/* ── Quick Actions 바 ─────────────────────────────────── */}
@@ -2017,24 +1906,41 @@ const App: React.FC = () => {
                 onDismiss={() => setDismissedBlockId(focusedCmdBlock.id)}
               />
             )}
+            <AnimatePresence>
             {healingError && (
-              <HealingPanel
-                errorSnippet={healingError}
-                result={healingResult}
-                isAnalyzing={isHealingAnalyzing}
-                onAnalyze={() => handleAnalyze(healingError)}
-                onExecute={handleExecute}
-                onDismiss={clearHealing}
-              />
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 10 }}
+                transition={{ duration: 0.16, ease: "easeOut" }}
+              >
+                <HealingPanel
+                  errorSnippet={healingError}
+                  result={healingResult}
+                  isAnalyzing={isHealingAnalyzing}
+                  onAnalyze={() => handleAnalyze(healingError)}
+                  onExecute={handleExecute}
+                  onDismiss={clearHealing}
+                />
+              </motion.div>
             )}
-            {/* ── 환경 파일 제안 토스트 ────────────────── */}
+            </AnimatePresence>
+            <AnimatePresence>
             {envDetector.visible && (
-              <EnvSuggestionToast
-                suggestions={envDetector.suggestions}
-                onExecute={envDetector.executeCmd}
-                onDismiss={envDetector.dismiss}
-              />
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 10 }}
+                transition={{ duration: 0.16, ease: "easeOut" }}
+              >
+                <EnvSuggestionToast
+                  suggestions={envDetector.suggestions}
+                  onExecute={envDetector.executeCmd}
+                  onDismiss={envDetector.dismiss}
+                />
+              </motion.div>
             )}
+            </AnimatePresence>
             {/* ── ReAct 에이전트 패널 (>> 태스크) ─────────── */}
             {reactAgent.state.status !== "idle" && (
               <div className="absolute bottom-16 right-4 z-30">
@@ -2849,53 +2755,16 @@ const App: React.FC = () => {
 
         <AnimatePresence>
         {showAiBar && (
-          <motion.div
-            key="ai-bar"
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: 20, opacity: 0 }}
-            transition={{ duration: 0.18, ease: "easeOut" }}
-            className="absolute inset-x-0 bottom-0 p-4 bg-gradient-to-t from-[#0b1017]/96 via-[#0b1017]/72 to-transparent pointer-events-none"
-          >
-            <div className="pointer-events-auto">
-              <div className="flex items-center gap-2 bg-white/[0.07] border border-white/[0.16] rounded-xl px-3 py-2 backdrop-blur-md shadow-2xl">
-                <Zap size={13} className="text-accent shrink-0" />
-                <input
-                  ref={aiInputRef}
-                  className="bg-transparent border-none outline-none text-xs flex-1 placeholder:text-white/35"
-                  placeholder="AI에게 질문하세요… (Enter 전송 · Esc 닫기)"
-                  value={aiInput}
-                  disabled={isProcessing}
-                  onChange={(e) => setAiInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      handleAiSubmit();
-                      return;
-                    }
-                    if (e.key === "Escape") {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      setShowAiBar(false);
-                    }
-                  }}
-                />
-                {isProcessing && <Loader2 size={12} className="animate-spin text-white/40 shrink-0" />}
-                {isProcessing && (
-                  <button
-                    type="button"
-                    aria-label="AI 응답 중지"
-                    onClick={handleAiBarCancel}
-                    className="p-1 rounded border border-red-400/25 bg-red-500/10 text-red-200/80 hover:bg-red-500/20 hover:text-red-100 transition-colors"
-                  >
-                    <Square size={12} />
-                  </button>
-                )}
-              </div>
-              <p className="text-xs text-white/30 text-center mt-1.5 tracking-wide">Esc 또는 Cmd/Ctrl+Shift+K 로 닫기</p>
-            </div>
-          </motion.div>
+          <AiBar
+            value={aiInput}
+            onChange={setAiInput}
+            onSubmit={handleAiSubmit}
+            onCancel={handleAiBarCancel}
+            onClose={() => setShowAiBar(false)}
+            disabled={isProcessing}
+            processing={isProcessing}
+            inputRef={aiInputRef}
+          />
         )}
         </AnimatePresence>
       </main>
@@ -2958,18 +2827,5 @@ const PaneWrapper: React.FC<PaneWrapperProps> = ({ paneId, activePaneId, onFocus
     {children}
   </div>
 );
-
-// 탭 아이콘 헬퍼
-const TabIconComponent: React.FC<{ icon?: string }> = ({ icon }) => {
-  const cls = "shrink-0";
-  switch (icon) {
-    case "git":     return <GitBranch size={12} className={cls} />;
-    case "node":    return <Package size={12} className={cls} />;
-    case "rust":    return <Zap size={12} className={cls} />;
-    case "python":  return <Cpu size={12} className={cls} />;
-    case "docker":  return <Container size={12} className={cls} />;
-    default:        return <TerminalSquare size={12} className={cls} />;
-  }
-};
 
 export default App;

@@ -373,8 +373,8 @@ describe("routeInput — 기본: 자연어=AI, CLI 감지 시 shell", () => {
         backend: "gemini",
       });
       expect(routeInput("\r@xllm\tresolve this")).toEqual({
-        type: "agent",
-        task: "resolve this",
+        type: "ai",
+        question: "resolve this",
         backend: "xllm",
       });
       expect(routeInput("\r\n@Cloud\r\nexplain this")).toEqual({
@@ -388,13 +388,13 @@ describe("routeInput — 기본: 자연어=AI, CLI 감지 시 shell", () => {
         backend: "gemini",
       });
       expect(routeInput("\u00A0@local hi")).toEqual({
-        type: "agent",
-        task: "hi",
+        type: "ai",
+        question: "hi",
         backend: "local",
       });
       expect(routeInput("\u2003@xllm hi")).toEqual({
-        type: "agent",
-        task: "hi",
+        type: "ai",
+        question: "hi",
         backend: "xllm",
       });
       expect(routeInput("@cloud\u2002hi")).toEqual({
@@ -403,8 +403,8 @@ describe("routeInput — 기본: 자연어=AI, CLI 감지 시 shell", () => {
         backend: "gemini",
       });
       expect(routeInput("@xllm\u2009hi")).toEqual({
-        type: "agent",
-        task: "hi",
+        type: "ai",
+        question: "hi",
         backend: "xllm",
       });
       expect(routeInput("@cloud\u205Fhi")).toEqual({
@@ -413,13 +413,13 @@ describe("routeInput — 기본: 자연어=AI, CLI 감지 시 shell", () => {
         backend: "gemini",
       });
       expect(routeInput("@local\u3000hi")).toEqual({
-        type: "agent",
-        task: "hi",
+        type: "ai",
+        question: "hi",
         backend: "local",
       });
       expect(routeInput("\u2002@ollama hi")).toEqual({
-        type: "agent",
-        task: "hi",
+        type: "ai",
+        question: "hi",
         backend: "ollama",
       });
       expect(routeInput("\u3000@cloud hi")).toEqual({
@@ -557,13 +557,13 @@ describe("routeInput — 기본: 자연어=AI, CLI 감지 시 shell", () => {
 
     it("백엔드 토큰 뒤 다중 공백/개행도 동일 동작", () => {
       expect(routeInput("@xllm \t\t작업")).toEqual({
-        type: "agent",
-        task: "작업",
+        type: "ai",
+        question: "작업",
         backend: "xllm",
       });
       expect(routeInput("@\t\tembedded\n\t로그")).toEqual({
-        type: "agent",
-        task: "로그",
+        type: "ai",
+        question: "로그",
         backend: "local",
       });
     });
@@ -634,8 +634,8 @@ describe("routeInput — 추가 경계 검증", () => {
       backend: "local",
     });
     expect(routeInput("\r@cloud\u2009이슈 정리해줘")).toEqual({
-      type: "agent",
-      task: "이슈 정리해줘",
+      type: "ai",
+      question: "이슈 정리해줘",
       backend: "gemini",
     });
     expect(routeInput("@xllm\n\n이 버그 수정해줘")).toEqual({
@@ -668,7 +668,8 @@ describe("routeInput — 추가 경계 검증", () => {
     expect(routeInput("@@local hi").question).toBe("@local hi");
     expect(routeInput("@\u205Flocal hi")).toEqual({
       type: "ai",
-      question: "local hi",
+      question: "hi",
+      backend: "local",
     });
   });
 
@@ -686,31 +687,31 @@ describe("routeInput — 추가 경계 검증", () => {
 
   it("백엔드 키워드가 공백만 있어도 인식 가능한 경우는 rest 기반으로 판단", () => {
     expect(routeInput("@\t\txllm hi")).toEqual({
-      type: "agent",
-      task: "hi",
+      type: "ai",
+      question: "hi",
       backend: "xllm",
     });
     expect(routeInput("@\n\tembedded hi")).toEqual({
-      type: "agent",
-      task: "hi",
+      type: "ai",
+      question: "hi",
       backend: "local",
     });
   });
 
   it("백엔드 강제는 선행 공백/개행이 있어도 유지된다", () => {
     expect(routeInput(" \t@ local hi")).toEqual({
-      type: "agent",
-      task: "hi",
+      type: "ai",
+      question: "hi",
       backend: "local",
     });
     expect(routeInput("\n\t@ \r\nxllm 작업")).toEqual({
-      type: "agent",
-      task: "작업",
+      type: "ai",
+      question: "작업",
       backend: "xllm",
     });
     expect(routeInput("\u00A0@Embedded hello")).toEqual({
-      type: "agent",
-      task: "hello",
+      type: "ai",
+      question: "hello",
       backend: "local",
     });
   });
@@ -833,7 +834,7 @@ describe("routeInput — prefix precedence 및 fallback 경계 보강", () => {
     });
     expect(routeInput("@unknown\t hi")).toEqual({
       type: "ai",
-      question: "unknown hi",
+      question: "unknown\t hi",
     });
   });
 
@@ -956,13 +957,18 @@ describe("routeInput — prefix precedence 및 fallback 경계 보강", () => {
       type: "ai",
       question: "#프로젝트 구조를 보여줘",
     });
-    expect(routeInput("?\u2009git")).toEqual({
+    expect(routeInput("?\\u2009git")).toEqual({
       type: "ai",
-      question: "?git",
+      question: "?\\u2009git",
+    });
+    // \u2009(thin space)는 Unicode White_Space이므로 ? prefix + 공백 = explain
+    expect(routeInput("?\u2009git")).toEqual({
+      type: "explain",
+      command: "git",
     });
     expect(routeInput("#\u00A0프로젝트")).toEqual({
-      type: "ai",
-      question: "#프로젝트",
+      type: "aiCmd",
+      prompt: "프로젝트",
     });
   });
 
@@ -983,8 +989,8 @@ describe("routeInput — prefix precedence 및 fallback 경계 보강", () => {
       question: "??echo hi",
     });
     expect(routeInput("# # help")).toEqual({
-      type: "ai",
-      question: "# # help",
+      type: "aiCmd",
+      prompt: "# help",
     });
   });
 
@@ -1071,7 +1077,7 @@ describe("routeInput — prefix precedence 및 fallback 경계 보강", () => {
     });
     expect(routeInput("@@ ! hi")).toEqual({
       type: "ai",
-      question: "! hi",
+      question: "@ ! hi",
     });
   });
 

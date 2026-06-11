@@ -1,16 +1,5 @@
 import type { AiBackend } from "./inputRouter";
-
-const WHITESPACE = /\p{White_Space}/u;
-const LEADING_WHITESPACE = /^[\p{White_Space}]+/u;
-const TRIM_WHITESPACE = /^[\p{White_Space}]+|[\p{White_Space}]+$/gu;
-
-function trimWhitespace(raw: string): string {
-  return raw.replace(TRIM_WHITESPACE, "");
-}
-
-function trimWhitespaceStart(raw: string): string {
-  return raw.replace(LEADING_WHITESPACE, "");
-}
+import { WHITESPACE, LEADING_WHITESPACE, trimWhitespace, trimWhitespaceStart } from "./whitespace";
 
 const BACKEND_KEYWORDS: Record<string, AiBackend> = {
   local: "local",
