@@ -796,6 +796,19 @@ describe("InspectorPanel", () => {
     expect(screen.getByRole("menu")).toBeInTheDocument();
   });
 
+  it("compact MORE 버튼은 각 추천 행의 메뉴 id를 aria-controls로 연결한다", () => {
+    renderInspector({
+      analyzeCache: multiAnalyzeCache,
+      inspectorDensity: "compact",
+      commandMenuIndex: 1,
+    });
+
+    const moreButtons = screen.getAllByText("MORE");
+    expect(moreButtons[0].closest("button")).toHaveAttribute("aria-controls", "inspector-command-menu-0");
+    expect(moreButtons[1].closest("button")).toHaveAttribute("aria-controls", "inspector-command-menu-1");
+    expect(screen.getByRole("menu")).toHaveAttribute("id", "inspector-command-menu-1");
+  });
+
   it("compact 분석 메뉴가 열린 상태에서 복사와 로드 콜백을 호출한다", () => {
     const onCopySuggestedCommand = vi.fn();
     const onLoadSuggestedCommandToAiBar = vi.fn();
@@ -816,6 +829,19 @@ describe("InspectorPanel", () => {
     expect(onLoadSuggestedCommandToAiBar).toHaveBeenCalledWith(0);
   });
 
+  it("compact 분석 메뉴는 menuitem 역할의 액션 버튼들을 노출한다", () => {
+    renderInspector({
+      analyzeCache: baseAnalyzeCache,
+      commandMenuIndex: 0,
+      inspectorDensity: "compact",
+    });
+
+    const menuItems = screen.getAllByRole("menuitem");
+    expect(menuItems).toHaveLength(2);
+    expect(menuItems[0]).toHaveTextContent("COPY (C)");
+    expect(menuItems[1]).toHaveTextContent("LOAD (L)");
+  });
+
   it("compact 분석 메뉴가 열리면 첫 메뉴 액션 ref가 COPY 버튼을 가리킨다", () => {
     const refs = createRefs();
     render(
@@ -830,6 +856,23 @@ describe("InspectorPanel", () => {
     );
 
     expect(refs.inspectorMenuFirstActionRefs.current[0]).toBe(screen.getByText("COPY (C)").closest("button"));
+  });
+
+  it("compact 추천 커맨드 MORE 버튼 ref는 각 행의 버튼 DOM을 보관한다", () => {
+    const refs = createRefs();
+    render(
+      <InspectorPanel
+        {...makeInspectorProps({
+          analyzeCache: multiAnalyzeCache,
+          inspectorDensity: "compact",
+          inspectorMoreButtonRefs: refs.inspectorMoreButtonRefs,
+        })}
+      />,
+    );
+
+    const moreButtons = screen.getAllByText("MORE");
+    expect(refs.inspectorMoreButtonRefs.current[0]).toBe(moreButtons[0].closest("button"));
+    expect(refs.inspectorMoreButtonRefs.current[1]).toBe(moreButtons[1].closest("button"));
   });
 
   it("일반 밀도 추천 커맨드 버튼들은 두 번째 인덱스를 전달한다", () => {
