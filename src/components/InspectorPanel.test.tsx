@@ -276,6 +276,24 @@ describe("InspectorPanel", () => {
     expect(screen.queryByRole("menu")).not.toBeInTheDocument();
   });
 
+  it("compact 분석 메뉴의 MORE 버튼은 키보드로도 메뉴 열기 콜백을 호출한다", () => {
+    const onOpenCompactMenu = vi.fn();
+    renderInspector({
+      analyzeCache: baseAnalyzeCache,
+      inspectorDensity: "compact",
+      onOpenCompactMenu,
+    });
+
+    const moreButton = screen.getAllByText("MORE")[0];
+    fireEvent.keyDown(moreButton, { key: "ArrowDown" });
+    fireEvent.keyDown(moreButton, { key: "Enter" });
+    fireEvent.keyDown(moreButton, { key: "Escape" });
+
+    expect(onOpenCompactMenu).toHaveBeenNthCalledWith(1, 0);
+    expect(onOpenCompactMenu).toHaveBeenNthCalledWith(2, 0);
+    expect(onOpenCompactMenu).toHaveBeenCalledTimes(2);
+  });
+
   it("compact 분석 메뉴가 열린 상태에서 복사와 로드 콜백을 호출한다", () => {
     const onCopySuggestedCommand = vi.fn();
     const onLoadSuggestedCommandToAiBar = vi.fn();
@@ -294,6 +312,21 @@ describe("InspectorPanel", () => {
 
     expect(onCopySuggestedCommand).toHaveBeenCalledWith(0);
     expect(onLoadSuggestedCommandToAiBar).toHaveBeenCalledWith(0);
+  });
+
+  it("compact 분석 메뉴가 열린 상태에서 메뉴 keydown 콜백에 row index를 전달한다", () => {
+    const onCompactMenuKeyDown = vi.fn();
+    renderInspector({
+      analyzeCache: baseAnalyzeCache,
+      commandMenuIndex: 0,
+      inspectorDensity: "compact",
+      onCompactMenuKeyDown,
+    });
+
+    fireEvent.keyDown(screen.getByRole("menu"), { key: "ArrowRight" });
+
+    expect(onCompactMenuKeyDown).toHaveBeenCalledTimes(1);
+    expect(onCompactMenuKeyDown.mock.calls[0][1]).toBe(0);
   });
 
   it("compact 분석 메뉴가 열린 상태에서 MORE 버튼을 다시 누르면 메뉴 닫기 콜백을 호출한다", () => {
