@@ -280,6 +280,16 @@ describe("InspectorPanel", () => {
     expect(screen.getByText("더보기").closest("button")).toHaveAttribute("aria-expanded", "false");
   });
 
+  it("빠른 액션 토글은 확장 영역 id를 aria-controls로 가리킨다", () => {
+    renderInspector({ quickActionsExpanded: true });
+
+    expect(screen.getByText("축소").closest("button")).toHaveAttribute("aria-controls", "inspector-quick-actions-advanced");
+    expect(screen.getByText("History").closest("[data-inspector-quick-actions-advanced]")).toHaveAttribute(
+      "id",
+      "inspector-quick-actions-advanced",
+    );
+  });
+
   it("빠른 액션이 확장되면 축소 라벨과 expanded 상태를 보여준다", () => {
     renderInspector({ quickActionsExpanded: true });
 
@@ -403,6 +413,20 @@ describe("InspectorPanel", () => {
 
     expect(screen.getByRole("tab", { name: /RAG/ })).toHaveAttribute("aria-controls", "inspector-tabpanel-rag");
     expect(screen.getByRole("tabpanel")).toHaveAttribute("aria-labelledby", "inspector-tab-rag");
+  });
+
+  it("Scripts 탭 버튼과 패널도 접근성 속성으로 연결된다", () => {
+    renderInspector({ inspectorTab: "scripts" });
+
+    expect(screen.getByRole("tab", { name: /Scripts/ })).toHaveAttribute("aria-controls", "inspector-tabpanel-scripts");
+    expect(screen.getByRole("tabpanel")).toHaveAttribute("aria-labelledby", "inspector-tab-scripts");
+  });
+
+  it("System 탭 버튼과 패널도 접근성 속성으로 연결된다", () => {
+    renderInspector({ inspectorTab: "sysmon" });
+
+    expect(screen.getByRole("tab", { name: /System/ })).toHaveAttribute("aria-controls", "inspector-tabpanel-sysmon");
+    expect(screen.getByRole("tabpanel")).toHaveAttribute("aria-labelledby", "inspector-tab-sysmon");
   });
 
   it("Scripts 탭은 스크립트 라이브러리 패널을 렌더링한다", () => {
