@@ -290,6 +290,24 @@ describe("InspectorPanel", () => {
     );
   });
 
+  it("빠른 액션 관련 ref는 토글 버튼과 확장 영역 DOM을 보관한다", () => {
+    const refs = createRefs();
+    render(
+      <InspectorPanel
+        {...makeInspectorProps({
+          quickActionsExpanded: true,
+          inspectorQuickActionsToggleRef: refs.inspectorQuickActionsToggleRef,
+          inspectorQuickActionsAdvancedRef: refs.inspectorQuickActionsAdvancedRef,
+        })}
+      />,
+    );
+
+    expect(refs.inspectorQuickActionsToggleRef.current).toBe(screen.getByText("축소").closest("button"));
+    expect(refs.inspectorQuickActionsAdvancedRef.current).toBe(
+      screen.getByText("History").closest("[data-inspector-quick-actions-advanced]"),
+    );
+  });
+
   it("빠른 액션이 확장되면 축소 라벨과 expanded 상태를 보여준다", () => {
     renderInspector({ quickActionsExpanded: true });
 
@@ -395,6 +413,29 @@ describe("InspectorPanel", () => {
     expect(screen.getByRole("tab", { name: /요약/ })).toHaveAttribute("tabindex", "0");
     expect(screen.getByRole("tab", { name: /RAG/ })).toHaveAttribute("aria-selected", "false");
     expect(screen.getByRole("tab", { name: /RAG/ })).toHaveAttribute("tabindex", "-1");
+  });
+
+  it("요약 탭 버튼과 패널도 aria-controls와 aria-labelledby로 연결된다", () => {
+    renderInspector({ inspectorTab: "summary" });
+
+    expect(screen.getByRole("tab", { name: /요약/ })).toHaveAttribute("aria-controls", "inspector-tabpanel-summary");
+    expect(screen.getByRole("tabpanel")).toHaveAttribute("aria-labelledby", "inspector-tab-summary");
+  });
+
+  it("탭 ref 맵은 렌더된 탭 버튼 DOM을 보관한다", () => {
+    const refs = createRefs();
+    render(
+      <InspectorPanel
+        {...makeInspectorProps({
+          inspectorTabRefs: refs.inspectorTabRefs,
+        })}
+      />,
+    );
+
+    expect(refs.inspectorTabRefs.current.summary).toBe(screen.getByRole("tab", { name: /요약/ }));
+    expect(refs.inspectorTabRefs.current.rag).toBe(screen.getByRole("tab", { name: /RAG/ }));
+    expect(refs.inspectorTabRefs.current.scripts).toBe(screen.getByRole("tab", { name: /Scripts/ }));
+    expect(refs.inspectorTabRefs.current.sysmon).toBe(screen.getByRole("tab", { name: /System/ }));
   });
 
   it("RAG 탭은 RAG 패널에 모델과 밀도 상태를 전달한다", () => {
@@ -773,6 +814,22 @@ describe("InspectorPanel", () => {
 
     expect(onCopySuggestedCommand).toHaveBeenCalledWith(0);
     expect(onLoadSuggestedCommandToAiBar).toHaveBeenCalledWith(0);
+  });
+
+  it("compact 분석 메뉴가 열리면 첫 메뉴 액션 ref가 COPY 버튼을 가리킨다", () => {
+    const refs = createRefs();
+    render(
+      <InspectorPanel
+        {...makeInspectorProps({
+          analyzeCache: baseAnalyzeCache,
+          commandMenuIndex: 0,
+          inspectorDensity: "compact",
+          inspectorMenuFirstActionRefs: refs.inspectorMenuFirstActionRefs,
+        })}
+      />,
+    );
+
+    expect(refs.inspectorMenuFirstActionRefs.current[0]).toBe(screen.getByText("COPY (C)").closest("button"));
   });
 
   it("일반 밀도 추천 커맨드 버튼들은 두 번째 인덱스를 전달한다", () => {
