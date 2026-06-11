@@ -261,4 +261,52 @@ describe("InspectorPanel", () => {
 
     expect(onApplySuggestedCommand).toHaveBeenCalledWith(0);
   });
+
+  it("compact 분석 메뉴의 MORE 버튼은 닫힌 상태에서 메뉴 열기 콜백을 호출한다", () => {
+    const onOpenCompactMenu = vi.fn();
+    renderInspector({
+      analyzeCache: baseAnalyzeCache,
+      inspectorDensity: "compact",
+      onOpenCompactMenu,
+    });
+
+    fireEvent.click(screen.getAllByText("MORE")[0]);
+
+    expect(onOpenCompactMenu).toHaveBeenCalledWith(0);
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+  });
+
+  it("compact 분석 메뉴가 열린 상태에서 복사와 로드 콜백을 호출한다", () => {
+    const onCopySuggestedCommand = vi.fn();
+    const onLoadSuggestedCommandToAiBar = vi.fn();
+    renderInspector({
+      analyzeCache: baseAnalyzeCache,
+      commandMenuIndex: 0,
+      inspectorDensity: "compact",
+      onCopySuggestedCommand,
+      onLoadSuggestedCommandToAiBar,
+    });
+
+    expect(screen.getByRole("menu")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText("COPY (C)"));
+    fireEvent.click(screen.getByText("LOAD (L)"));
+
+    expect(onCopySuggestedCommand).toHaveBeenCalledWith(0);
+    expect(onLoadSuggestedCommandToAiBar).toHaveBeenCalledWith(0);
+  });
+
+  it("compact 분석 메뉴가 열린 상태에서 MORE 버튼을 다시 누르면 메뉴 닫기 콜백을 호출한다", () => {
+    const onCloseCommandMenu = vi.fn();
+    renderInspector({
+      analyzeCache: baseAnalyzeCache,
+      commandMenuIndex: 0,
+      inspectorDensity: "compact",
+      onCloseCommandMenu,
+    });
+
+    fireEvent.click(screen.getAllByText("MORE")[0]);
+
+    expect(onCloseCommandMenu).toHaveBeenCalledTimes(1);
+  });
 });
