@@ -373,6 +373,15 @@ describe("InspectorPanel", () => {
     expect(screen.getByRole("tab", { name: /RAG/ })).toHaveAttribute("aria-keyshortcuts", "Alt+2");
   });
 
+  it("활성 탭은 aria-selected=true와 tabIndex 0을 가진다", () => {
+    renderInspector({ inspectorTab: "summary" });
+
+    expect(screen.getByRole("tab", { name: /요약/ })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("tab", { name: /요약/ })).toHaveAttribute("tabindex", "0");
+    expect(screen.getByRole("tab", { name: /RAG/ })).toHaveAttribute("aria-selected", "false");
+    expect(screen.getByRole("tab", { name: /RAG/ })).toHaveAttribute("tabindex", "-1");
+  });
+
   it("RAG 탭은 RAG 패널에 모델과 밀도 상태를 전달한다", () => {
     renderInspector({
       inspectorTab: "rag",
@@ -495,6 +504,15 @@ describe("InspectorPanel", () => {
     expect(onApplySuggestedCommand).toHaveBeenCalledWith(0);
   });
 
+  it("cozy 분석 카드는 일반 밀도 안내 문구를 보여준다", () => {
+    renderInspector({
+      analyzeCache: baseAnalyzeCache,
+      inspectorDensity: "cozy",
+    });
+
+    expect(screen.getByText("R 실행 · C 복사 · L 로드")).toBeInTheDocument();
+  });
+
   it("분석 캐시가 없으면 빈 상태 문구를 보여준다", () => {
     renderInspector({ analyzeCache: null });
 
@@ -602,6 +620,15 @@ describe("InspectorPanel", () => {
     fireEvent.click(screen.getAllByText("RUN (R)")[1]);
 
     expect(onApplySuggestedCommand).toHaveBeenCalledWith(1);
+  });
+
+  it("compact 분석 카드는 compact 안내 문구를 보여준다", () => {
+    renderInspector({
+      analyzeCache: multiAnalyzeCache,
+      inspectorDensity: "compact",
+    });
+
+    expect(screen.getByText("R 실행 · MORE→C/L")).toBeInTheDocument();
   });
 
   it("추천 커맨드 행 blur와 keydown은 row index를 전달한다", () => {
