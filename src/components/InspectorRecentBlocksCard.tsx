@@ -1,6 +1,7 @@
 import React from "react";
 import { Clock3, RotateCcw, Search } from "lucide-react";
 import type { InspectorRecentBlock } from "./InspectorPanel/types";
+import { formatDurationMs } from "./InspectorPanelSummary/utils";
 
 interface InspectorRecentBlocksCardProps {
   recentBlocks: readonly InspectorRecentBlock[];
@@ -8,7 +9,6 @@ interface InspectorRecentBlocksCardProps {
   onSelectBlock: (blockId: string) => void;
   onRerunBlock: (command: string) => void;
   onLoadAnalyzePromptToAiBar: (blockId?: string) => void;
-  formatDurationMs: (ms: number | null) => string;
 }
 
 const InspectorRecentBlocksCard: React.FC<InspectorRecentBlocksCardProps> = ({
@@ -17,7 +17,6 @@ const InspectorRecentBlocksCard: React.FC<InspectorRecentBlocksCardProps> = ({
   onSelectBlock,
   onRerunBlock,
   onLoadAnalyzePromptToAiBar,
-  formatDurationMs,
 }) => (
   <div className={inspectorCardRegularClass}>
     <p className="text-white/45 uppercase tracking-[0.06em] text-xs">Recent Blocks</p>
