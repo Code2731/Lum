@@ -75,6 +75,11 @@ const errorAnalyzeCache: InspectorAnalyzeCache = {
   suggestedCommands: [],
 };
 
+const multiAnalyzeCache: InspectorAnalyzeCache = {
+  ...baseAnalyzeCache,
+  suggestedCommands: ["npm test -- --runInBand", "npm run lint"],
+};
+
 function createRefs() {
   return {
     inspectorMoreButtonRefs: { current: {} as Record<number, HTMLButtonElement | null> },
@@ -226,6 +231,16 @@ describe("InspectorPanel", () => {
 
     expect(screen.getByText("feature/inspector")).toBeInTheDocument();
     expect(screen.getByText("3")).toBeInTheDocument();
+  });
+
+  it("변경 개수가 0이면 숫자 배지를 숨긴다", () => {
+    renderInspector({
+      activeTabBranch: "feature/inspector",
+      activeTabChanged: 0,
+    });
+
+    expect(screen.getByText("feature/inspector")).toBeInTheDocument();
+    expect(screen.queryByText("0")).not.toBeInTheDocument();
   });
 
   it("빠른 액션 더보기 토글을 누르면 onQuickActionsToggle가 호출된다", () => {
@@ -513,6 +528,19 @@ describe("InspectorPanel", () => {
     expect(screen.queryByRole("menu")).not.toBeInTheDocument();
   });
 
+  it("compact 분석 카드의 RUN (R)은 두 번째 추천 커맨드 인덱스를 전달한다", () => {
+    const onApplySuggestedCommand = vi.fn();
+    renderInspector({
+      analyzeCache: multiAnalyzeCache,
+      inspectorDensity: "compact",
+      onApplySuggestedCommand,
+    });
+
+    fireEvent.click(screen.getAllByText("RUN (R)")[1]);
+
+    expect(onApplySuggestedCommand).toHaveBeenCalledWith(1);
+  });
+
   it("추천 커맨드 행 blur와 keydown은 row index를 전달한다", () => {
     const onCommandMenuRowBlurCapture = vi.fn();
     const onSuggestedCommandRowKeyDown = vi.fn();
@@ -551,6 +579,19 @@ describe("InspectorPanel", () => {
     expect(onOpenCompactMenu).toHaveBeenCalledTimes(2);
   });
 
+  it("열린 compact 메뉴는 두 번째 행의 aria-expanded 상태를 반영한다", () => {
+    renderInspector({
+      analyzeCache: multiAnalyzeCache,
+      inspectorDensity: "compact",
+      commandMenuIndex: 1,
+    });
+
+    const moreButtons = screen.getAllByText("MORE");
+    expect(moreButtons[0].closest("button")).toHaveAttribute("aria-expanded", "false");
+    expect(moreButtons[1].closest("button")).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByRole("menu")).toBeInTheDocument();
+  });
+
   it("compact 분석 메뉴가 열린 상태에서 복사와 로드 콜백을 호출한다", () => {
     const onCopySuggestedCommand = vi.fn();
     const onLoadSuggestedCommandToAiBar = vi.fn();
@@ -569,6 +610,26 @@ describe("InspectorPanel", () => {
 
     expect(onCopySuggestedCommand).toHaveBeenCalledWith(0);
     expect(onLoadSuggestedCommandToAiBar).toHaveBeenCalledWith(0);
+  });
+
+  it("일반 밀도 추천 커맨드 버튼들은 두 번째 인덱스를 전달한다", () => {
+    const onCopySuggestedCommand = vi.fn();
+    const onLoadSuggestedCommandToAiBar = vi.fn();
+    const onApplySuggestedCommand = vi.fn();
+    renderInspector({
+      analyzeCache: multiAnalyzeCache,
+      onCopySuggestedCommand,
+      onLoadSuggestedCommandToAiBar,
+      onApplySuggestedCommand,
+    });
+
+    fireEvent.click(screen.getByTitle("2번 커맨드 복사 (C)"));
+    fireEvent.click(screen.getByTitle("2번 커맨드 AI 입력바 로드 (L)"));
+    fireEvent.click(screen.getByTitle("2번 커맨드 실행 (R)"));
+
+    expect(onCopySuggestedCommand).toHaveBeenCalledWith(1);
+    expect(onLoadSuggestedCommandToAiBar).toHaveBeenCalledWith(1);
+    expect(onApplySuggestedCommand).toHaveBeenCalledWith(1);
   });
 
   it("compact 분석 메뉴가 열린 상태에서 메뉴 keydown 콜백에 row index를 전달한다", () => {
