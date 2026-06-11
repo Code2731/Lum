@@ -205,6 +205,29 @@ describe("InspectorPanel", () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
+  it("Inspector 밀도 토글 버튼이 onDensityToggle를 호출하고 현재 밀도 라벨을 보여준다", () => {
+    const onDensityToggle = vi.fn();
+    renderInspector({
+      inspectorDensity: "compact",
+      onDensityToggle,
+    });
+
+    expect(screen.getByText("COMPACT")).toBeInTheDocument();
+    fireEvent.click(screen.getByLabelText("Inspector 밀도 토글"));
+
+    expect(onDensityToggle).toHaveBeenCalledTimes(1);
+  });
+
+  it("브랜치와 변경 개수가 있으면 워크스페이스 배지를 보여준다", () => {
+    renderInspector({
+      activeTabBranch: "feature/inspector",
+      activeTabChanged: 3,
+    });
+
+    expect(screen.getByText("feature/inspector")).toBeInTheDocument();
+    expect(screen.getByText("3")).toBeInTheDocument();
+  });
+
   it("빠른 액션 더보기 토글을 누르면 onQuickActionsToggle가 호출된다", () => {
     const onQuickActionsToggle = vi.fn();
     renderInspector({ onQuickActionsToggle });
@@ -414,6 +437,22 @@ describe("InspectorPanel", () => {
     expect(screen.getByText("ERROR")).toBeInTheDocument();
     expect(screen.getByText("stderr: command failed")).toBeInTheDocument();
     expect(screen.queryByText("Suggested Commands")).not.toBeInTheDocument();
+  });
+
+  it("분석 캐시가 있으면 COPY와 CLEAR 액션을 호출한다", () => {
+    const onCopyAnalyzeResult = vi.fn();
+    const onClearAnalyzeCache = vi.fn();
+    renderInspector({
+      analyzeCache: baseAnalyzeCache,
+      onCopyAnalyzeResult,
+      onClearAnalyzeCache,
+    });
+
+    fireEvent.click(screen.getAllByText("COPY")[0]);
+    fireEvent.click(screen.getByText("CLEAR"));
+
+    expect(onCopyAnalyzeResult).toHaveBeenCalledTimes(1);
+    expect(onClearAnalyzeCache).toHaveBeenCalledTimes(1);
   });
 
   it("최근 블록 액션들은 선택, 재실행, 분석 프롬프트 로드를 호출한다", () => {
