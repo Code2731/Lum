@@ -61,6 +61,20 @@ const baseAnalyzeCache: InspectorAnalyzeCache = {
   suggestedCommands: ["npm test -- --runInBand", "npm run lint"],
 };
 
+const streamingAnalyzeCache: InspectorAnalyzeCache = {
+  ...baseAnalyzeCache,
+  status: "streaming",
+  result: "",
+  suggestedCommands: [],
+};
+
+const errorAnalyzeCache: InspectorAnalyzeCache = {
+  ...baseAnalyzeCache,
+  status: "error",
+  result: "stderr: command failed",
+  suggestedCommands: [],
+};
+
 function createRefs() {
   return {
     inspectorMoreButtonRefs: { current: {} as Record<number, HTMLButtonElement | null> },
@@ -166,6 +180,20 @@ describe("InspectorPanel", () => {
     expect(screen.getByText("/Users/dev")).toBeInTheDocument();
     expect(screen.getByText("Failed Block")).toBeInTheDocument();
     expect(screen.getByText("Recent Blocks")).toBeInTheDocument();
+  });
+
+  it("noActivity 상태에서는 Inspector 안내 문구를 보여준다", () => {
+    renderInspector({
+      noActivity: true,
+      failedBlocks: [],
+      focusedFailedBlock: null,
+      recentBlocks: [],
+    });
+
+    expect(
+      screen.getByText("터미널에서 최근 명령을 실행하면 여기에서 실패 블록·추천 커맨드·최근 기록을 확인할 수 있습니다."),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Failed Block")).not.toBeInTheDocument();
   });
 
   it("Inspector 닫기 버튼이 onClose를 호출한다", () => {
@@ -295,6 +323,15 @@ describe("InspectorPanel", () => {
     expect(onAnalyzeFailedBlock).toHaveBeenCalledWith("fail-1");
   });
 
+  it("실패 블록이 없으면 빈 상태 문구를 보여준다", () => {
+    renderInspector({
+      failedBlocks: [],
+      focusedFailedBlock: null,
+    });
+
+    expect(screen.getByText("실패 블록이 없습니다.")).toBeInTheDocument();
+  });
+
   it("요약 탭 실패 블록 보조 액션들은 각 콜백을 호출한다", () => {
     const onFocusFailedBlock = vi.fn();
     const onCopyFailedOutput = vi.fn();
@@ -357,6 +394,28 @@ describe("InspectorPanel", () => {
     expect(onApplySuggestedCommand).toHaveBeenCalledWith(0);
   });
 
+  it("분석 캐시가 없으면 빈 상태 문구를 보여준다", () => {
+    renderInspector({ analyzeCache: null });
+
+    expect(screen.getByText("아직 실행된 분석이 없습니다.")).toBeInTheDocument();
+  });
+
+  it("streaming 분석 캐시는 진행 중 상태 문구를 보여준다", () => {
+    renderInspector({ analyzeCache: streamingAnalyzeCache });
+
+    expect(screen.getByText("STREAMING")).toBeInTheDocument();
+    expect(screen.getByText("응답을 기다리는 중...")).toBeInTheDocument();
+    expect(screen.queryByText("Suggested Commands")).not.toBeInTheDocument();
+  });
+
+  it("error 분석 캐시는 오류 상태와 결과를 보여준다", () => {
+    renderInspector({ analyzeCache: errorAnalyzeCache });
+
+    expect(screen.getByText("ERROR")).toBeInTheDocument();
+    expect(screen.getByText("stderr: command failed")).toBeInTheDocument();
+    expect(screen.queryByText("Suggested Commands")).not.toBeInTheDocument();
+  });
+
   it("최근 블록 액션들은 선택, 재실행, 분석 프롬프트 로드를 호출한다", () => {
     const onSelectBlock = vi.fn();
     const onRerunBlock = vi.fn();
@@ -383,6 +442,22 @@ describe("InspectorPanel", () => {
     expect(onSelectBlock).toHaveBeenCalledWith("block-2");
     expect(onRerunBlock).toHaveBeenCalledWith("npm run build");
     expect(onLoadAnalyzePromptToAiBar).toHaveBeenCalledWith("block-2");
+  });
+
+  it("성공한 최근 블록은 LOAD 버튼을 노출하지 않는다", () => {
+    renderInspector({
+      recentBlocks: [
+        {
+          id: "block-3",
+          command: "echo ok",
+          exitCode: 0,
+          durationMs: 120,
+          outputTail: "ok",
+        },
+      ],
+    });
+
+    expect(screen.queryByText("LOAD")).not.toBeInTheDocument();
   });
 
   it("compact 분석 메뉴의 MORE 버튼은 닫힌 상태에서 메뉴 열기 콜백을 호출한다", () => {
