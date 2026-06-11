@@ -18,18 +18,13 @@ import { inferTabIcon } from "./utils/tabIcon";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { AnimatePresence, motion } from "framer-motion";
-import {
-  Cpu, Loader2,
-  Package, Plus, X, Columns2, Rows2, ArrowUpCircle,
-  GitBranch, Container, Lock, FolderTree, Clock3, Search, GitCompareArrows, Library, Activity, Layers, AlertTriangle, RotateCcw, Copy, MoreHorizontal,
-} from "lucide-react";
+import { X, ArrowUpCircle } from "lucide-react";
 import { useReactAgent } from "./hooks/useReactAgent";
 import { useAIChat } from "./hooks/useAIChat";
 import { useEnvAutoDetector } from "./hooks/useEnvAutoDetector";
 import EnvSuggestionToast from "./components/EnvSuggestionToast";
 import { useScriptLibrary } from "./hooks/useScriptLibrary";
-import ScriptLibraryPanel from "./components/ScriptLibraryPanel";
-import SystemMonitorPanel from "./components/SystemMonitorPanel";
+import InspectorPanel, { type InspectorAnalyzeCache } from "./components/InspectorPanel";
 import { useNotificationCenter } from "./hooks/useNotificationCenter";
 import { usePrivacyLedger } from "./hooks/usePrivacyLedger";
 import { useSquads } from "./hooks/useSquads";
@@ -38,7 +33,6 @@ import { isTextInputTarget } from "./utils/event";
 import InfiniteCanvas from "./components/layout/InfiniteCanvas";
 import TerminalPane from "./components/TerminalPane";
 import HealingPanel from "./components/HealingPanel";
-import RagPanel from "./components/RagPanel";
 import CommandBlockBar from "./components/CommandBlockBar";
 import QuickActionsBar from "./components/QuickActionsBar";
 import ResizeHandles from "./components/ResizeHandles";
@@ -69,28 +63,12 @@ import {
   saveRetryCompareCache,
   saveRetryCompareRuntimeCache,
 } from "./utils/retryCompare";
-import {
-  loadRetryCompareCache,
-  loadRetryCompareRuntimeCache,
-  saveRetryCompareCache,
-  saveRetryCompareRuntimeCache,
-} from "./utils/retryCompare";
 
 const ReactAgentPanel = lazy(() => import("./components/ReactAgentPanel"));
 
 type ViewMode = "terminal" | "canvas" | "list";
 type InspectorTab = "summary" | "rag" | "scripts" | "sysmon";
 type InspectorDensity = "cozy" | "compact";
-
-interface InspectorAnalyzeCache {
-  blockId: string;
-  command: string;
-  requestedAt: number;
-  status: "streaming" | "done" | "error";
-  result: string;
-  rawResult: string;
-  suggestedCommands: string[];
-}
 
 type SafetyLevel = "Safe" | "Warning" | "Dangerous" | "Blocked";
 
@@ -172,15 +150,6 @@ function summarizeOutputDiff(before: string, after: string): {
     addedLines: addedLines.slice(0, 20),
     removedLines: removedLines.slice(0, 20),
   };
-}
-
-function formatDurationMs(ms: number | null): string {
-  if (ms == null || !Number.isFinite(ms) || ms < 0) return "-";
-  if (ms < 1000) return `${Math.round(ms)}ms`;
-  if (ms < 60_000) return `${(ms / 1000).toFixed(1)}s`;
-  const mins = Math.floor(ms / 60_000);
-  const secs = Math.round((ms % 60_000) / 1000);
-  return `${mins}m ${secs}s`;
 }
 
 function extractOutputTail(output: string, maxChars = 160): string {
@@ -1283,6 +1252,56 @@ const App: React.FC = () => {
     }
   }, [inspectorAnalyzeCache, notifCenter, closeInspectorCommandMenu]);
 
+  const handleInspectorSuggestedCommandRowBlurCapture = useCallback((
+    e: React.FocusEvent<HTMLDivElement>,
+    rowIndex: number,
+  ) => {
+    if (!isInspectorCompact || inspectorCommandMenuIndex !== rowIndex) return;
+    const next = e.relatedTarget;
+    if (!next) {
+      closeInspectorCommandMenu();
+      return;
+    }
+    const menuContainerFocused = isEventTargetWithinSelector(
+      next,
+      "[data-inspector-command-menu='compact']",
+    );
+    const currentRowFocused = isTargetInsideTargets(next, [e.currentTarget]);
+    if (!currentRowFocused && !menuContainerFocused) {
+      closeInspectorCommandMenu();
+    }
+  }, [isInspectorCompact, inspectorCommandMenuIndex, closeInspectorCommandMenu]);
+
+  const handleInspectorSuggestedCommandRowKeyDown = useCallback((
+    e: React.KeyboardEvent<HTMLDivElement>,
+    rowIndex: number,
+  ) => {
+    if (!isInspectorCompact) return;
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    const action = resolveInspectorMenuHotkey(
+      e.key,
+      inspectorCommandMenuIndex === rowIndex,
+    );
+    if (!action) return;
+    e.preventDefault();
+    e.stopPropagation();
+    if (action === "run") {
+      applyInspectorAnalyzeCommand(rowIndex);
+      return;
+    }
+    if (action === "copy") {
+      copyInspectorSuggestedCommand(rowIndex);
+      return;
+    }
+    loadInspectorSuggestedCommandToAiBar(rowIndex);
+  }, [
+    isInspectorCompact,
+    inspectorCommandMenuIndex,
+    applyInspectorAnalyzeCommand,
+    copyInspectorSuggestedCommand,
+    loadInspectorSuggestedCommandToAiBar,
+  ]);
+
   const loadInspectorSuggestedCommandToAiBar = useCallback((commandIndex: number) => {
     const cmd = inspectorAnalyzeCache?.suggestedCommands[commandIndex]?.trim() ?? "";
     if (!cmd) {
@@ -1359,6 +1378,11 @@ const App: React.FC = () => {
       });
     }
   }, [inspectorAnalyzeCache, notifCenter, setAiInput, setShowAiBar, setViewMode, closeInspector, ptyWriteRefs, activePaneIdRef, closeInspectorCommandMenu]);
+
+  const clearInspectorAnalyzeCache = useCallback(() => {
+    setInspectorAnalyzeCache(null);
+    closeInspectorCommandMenu();
+  }, [closeInspectorCommandMenu]);
 
   const handleAiSubmit = useCallback(async () => {
     const cmd = aiInput.trim();
@@ -1566,13 +1590,6 @@ const App: React.FC = () => {
   ), [cmdBlocks]);
   const lastCmdBlock = cmdBlocks[cmdBlocks.length - 1] ?? null;
   const isInspectorCompact = inspectorDensity === "compact";
-  const inspectorSummaryWrapClass = isInspectorCompact
-    ? "h-full overflow-y-auto p-2 space-y-1.5 text-xs"
-    : "h-full overflow-y-auto p-3 space-y-2 text-sm";
-  const inspectorCardPadClass = isInspectorCompact ? "px-2 py-1.5" : "px-2.5 py-2";
-  const inspectorCardTightClass = `rounded-lg border border-white/10 bg-white/[0.03] ${inspectorCardPadClass} space-y-1`;
-  const inspectorCardRegularClass = `rounded-lg border border-white/10 bg-white/[0.03] ${inspectorCardPadClass} ${isInspectorCompact ? "space-y-1" : "space-y-1.5"}`;
-  const inspectorQuickGridClass = isInspectorCompact ? "grid grid-cols-2 gap-1" : "grid grid-cols-2 gap-1.5";
   useEffect(() => {
     if (!isInspectorCompact && inspectorCommandMenuIndex != null) {
       closeInspectorCommandMenu();
@@ -2119,639 +2136,66 @@ const App: React.FC = () => {
           )}
         </div>
 
-        <AnimatePresence initial={false}>
-        {showInspector && (
-          <motion.div
-            key="inspector-panel"
-            initial={{ width: 0, opacity: 0 }}
-            animate={{ width: inspectorDensity === "compact" ? 304 : 336, opacity: 1 }}
-            exit={{ width: 0, opacity: 0 }}
-            transition={{ duration: 0.2, ease: "easeOut" }}
-            className="border-l border-white/8 shrink-0 overflow-hidden bg-[#0e141d]/88"
-          >
-            <div className="h-full flex flex-col">
-              <div className="px-2.5 py-2 border-b border-white/10 bg-white/[0.02] shrink-0">
-                <div className="flex items-center justify-between gap-2 mb-2">
-                  <span className="text-sm tracking-[0.06em] uppercase text-white/65 font-semibold">Inspector</span>
-                  <button
-                    onClick={() => setInspectorDensity((prev) => (prev === "cozy" ? "compact" : "cozy"))}
-                    className={`px-1.5 py-0.5 rounded border text-xs transition-colors ${
-                      inspectorDensity === "compact"
-                        ? "border-cyan-300/35 bg-cyan-400/16 text-cyan-100"
-                        : "border-white/[0.1] bg-white/[0.05] text-white/58 hover:text-white/80"
-                    }`}
-                    aria-label="Inspector 밀도 토글"
-                    title={inspectorDensity === "compact" ? "Cozy 보기" : "Compact 보기"}
-                  >
-                    {inspectorDensity === "compact" ? "COMPACT" : "COZY"}
-                  </button>
-                  <button
-                    onClick={closeInspector}
-                    className="p-1 rounded border border-white/[0.1] text-white/42 hover:text-white/78 hover:bg-white/[0.08] transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                    aria-label="Inspector 닫기"
-                  >
-                    <X size={12} />
-                  </button>
-                </div>
-                <div
-                  className="flex items-center gap-1"
-                  role="tablist"
-                  aria-label="Inspector 탭"
-                  onKeyDown={handleInspectorTabKeyDown}
-                >
-                  {inspectorTabs.map((tab) => (
-                    <button
-                      key={tab.id}
-                      type="button"
-                      ref={(el) => {
-                        inspectorTabRefs.current[tab.id] = el;
-                      }}
-                      role="tab"
-                      id={`inspector-tab-${tab.id}`}
-                      aria-selected={inspectorTab === tab.id}
-                      aria-controls={`inspector-tabpanel-${tab.id}`}
-                      aria-keyshortcuts={`Alt+${tab.shortcut}`}
-                      tabIndex={inspectorTab === tab.id ? 0 : -1}
-                      onClick={() => openInspectorTab(tab.id)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") {
-                          e.preventDefault();
-                          openInspectorTab(tab.id);
-                        }
-                      }}
-                      className={`px-2 py-1 rounded-md text-xs border transition-colors ${
-                        inspectorTab === tab.id
-                          ? "border-cyan-300/35 bg-cyan-400/16 text-cyan-100"
-                          : "border-white/10 bg-white/[0.04] text-white/58 hover:text-white/82"
-                      } focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring`}
-                      title={`Alt+${tab.shortcut} : ${tab.label}`}
-                    >
-                      <span>{tab.label}</span>
-                      <span className="ml-1 inline-flex text-xs text-white/35">({tab.shortcut})</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="flex-1 min-h-0 overflow-hidden">
-                {inspectorTab === "summary" && (
-                  <section
-                    id="inspector-tabpanel-summary"
-                    role="tabpanel"
-                    aria-labelledby="inspector-tab-summary"
-                    tabIndex={0}
-                    className={`${inspectorSummaryWrapClass} text-white/72`}
-                  >
-                    <div className={inspectorCardTightClass}>
-                      <div className="flex items-center justify-between gap-2">
-                        <p className="text-white/45 uppercase tracking-[0.06em] text-xs">Workspace</p>
-                        {activeTabGitInfo?.branch && (
-                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md border border-cyan-300/30 bg-cyan-400/12 text-cyan-100 text-xs">
-                            <GitBranch size={10} />
-                            {activeTabGitInfo.branch}
-                            {activeTabGitInfo.changed > 0 && (
-                              <span className="px-1 rounded bg-amber-400/22 text-amber-200 text-xs">
-                                {activeTabGitInfo.changed}
-                              </span>
-                            )}
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-white/82 truncate">{activeTab?.title ?? "탭 없음"}</p>
-                      <p className="text-white/55 font-mono break-all">{activeTab?.cwd ?? "cwd 없음"}</p>
-                    </div>
-                    <div className={inspectorCardTightClass}>
-                      <p className="text-white/45 uppercase tracking-[0.06em] text-xs">Model</p>
-                      <p className="text-white/82 break-all">{selectedModel}</p>
-                    </div>
-                    {inspectorHasNoActivity && (
-                      <div className={inspectorCardRegularClass}>
-                        <p className="text-white/45 uppercase tracking-[0.06em] text-xs">INSPECTOR</p>
-                        <p className="text-white/72">
-                          터미널에서 최근 명령을 실행하면 여기에서 실패 블록·추천 커맨드·최근 기록을 확인할 수 있습니다.
-                        </p>
-                      </div>
-                    )}
-                    {!inspectorHasNoActivity && (
-                      <div className={inspectorCardRegularClass}>
-                        <div className="flex items-center justify-between gap-2">
-                          <p className="text-white/45 uppercase tracking-[0.06em] text-xs">Failed Block</p>
-                          <span className="text-xs text-rose-200/80">{inspectorFailedBlocks.length}개</span>
-                        </div>
-                        {inspectorFocusedFailedBlock ? (
-                          <div className="rounded-md border border-rose-300/25 bg-rose-400/8 px-2 py-1.5 space-y-1">
-                            <div className="flex items-center justify-between gap-2">
-                              <p className="text-rose-100/90 truncate">{inspectorFocusedFailedBlock.command}</p>
-                              <span className="text-xs px-1.5 py-0.5 rounded bg-rose-400/20 text-rose-100">
-                                ERR {inspectorFocusedFailedBlock.exitCode}
-                              </span>
-                            </div>
-                            {inspectorFocusedFailedBlock.outputTail && (
-                              <p className="text-xs text-rose-100/75 font-mono break-words">
-                                {inspectorFocusedFailedBlock.outputTail}
-                              </p>
-                            )}
-                            <div className="flex flex-wrap items-center gap-1.5">
-                              <button
-                                onClick={focusFailedBlock}
-                                className="inline-flex w-[84px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-rose-300/35 bg-rose-400/14 text-xs text-rose-100 hover:bg-rose-400/22 transition-colors"
-                              >
-                                <AlertTriangle size={9} />
-                                NEXT FAIL
-                              </button>
-                              <button
-                                onClick={() => analyzeInspectorFailedBlock(inspectorFocusedFailedBlock.id)}
-                                className="inline-flex w-[88px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-cyan-300/35 bg-cyan-400/14 text-xs text-cyan-100 hover:bg-cyan-400/24 transition-colors"
-                              >
-                                <Search size={9} />
-                                AI ANALYZE
-                              </button>
-                              <button
-                                onClick={() => copyInspectorFailedOutput(inspectorFocusedFailedBlock.id)}
-                                className="inline-flex w-[76px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-white/20 bg-white/[0.05] text-xs text-white/75 hover:text-white hover:bg-white/[0.12] transition-colors"
-                              >
-                                <Copy size={9} />
-                                COPY LOG
-                              </button>
-                              <button
-                                onClick={() => copyInspectorAnalyzePrompt(inspectorFocusedFailedBlock.id)}
-                                className="inline-flex w-[92px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-cyan-300/30 bg-cyan-400/10 text-xs text-cyan-100 hover:bg-cyan-400/20 transition-colors"
-                              >
-                                <Copy size={9} />
-                                COPY PROMPT
-                              </button>
-                              <button
-                                onClick={() => loadInspectorAnalyzePromptToAiBar(inspectorFocusedFailedBlock.id)}
-                                className="inline-flex w-[92px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-accent/35 bg-accent/14 text-xs text-accent hover:bg-accent/24 transition-colors"
-                              >
-                                <Search size={9} />
-                                LOAD PROMPT
-                              </button>
-                              <button
-                                onClick={() => selectInspectorBlock(inspectorFocusedFailedBlock.id)}
-                                className="inline-flex w-[60px] justify-center items-center px-1.5 py-0.5 rounded border border-white/18 bg-white/[0.05] text-xs text-white/75 hover:text-white hover:bg-white/[0.11] transition-colors"
-                              >
-                                SELECT
-                              </button>
-                            </div>
-                          </div>
-                        ) : (
-                          <p className="text-white/40">실패 블록이 없습니다.</p>
-                        )}
-                      </div>
-                    )}
-                    {!inspectorHasNoActivity && (
-                      <div className={inspectorCardRegularClass}>
-                        <div className="flex items-center justify-between gap-2">
-                          <p className="text-white/45 uppercase tracking-[0.06em] text-xs">Last AI Analyze</p>
-                          {inspectorAnalyzeCache && (
-                            <div className="flex items-center gap-1">
-                              <button
-                                onClick={copyInspectorAnalyzeResult}
-                                className="inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded border border-white/18 bg-white/[0.05] text-white/72 hover:text-white hover:bg-white/[0.1] transition-colors"
-                              >
-                                <Copy size={9} />
-                                COPY
-                              </button>
-                              <button
-                                onClick={() => {
-                                  setInspectorAnalyzeCache(null);
-                                  closeInspectorCommandMenu();
-                                }}
-                                className="text-xs px-1.5 py-0.5 rounded border border-white/18 bg-white/[0.05] text-white/70 hover:text-white hover:bg-white/[0.1] transition-colors"
-                              >
-                                CLEAR
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                        {!inspectorAnalyzeCache && (
-                          <p className="text-white/40">아직 실행된 분석이 없습니다.</p>
-                        )}
-                        {inspectorAnalyzeCache && (
-                          <div className={`rounded-md border px-2 py-1.5 space-y-1 ${
-                            inspectorAnalyzeCache.status === "error"
-                              ? "border-rose-300/25 bg-rose-400/8"
-                              : "border-cyan-300/20 bg-cyan-400/8"
-                          }`}>
-                            <div className="flex items-center justify-between gap-2">
-                              <p className="text-white/82 truncate">{inspectorAnalyzeCache.command}</p>
-                              {inspectorAnalyzeCache.status === "streaming" ? (
-                                <span className="inline-flex items-center gap-1 text-xs text-cyan-100">
-                                  <Loader2 size={9} className="animate-spin" />
-                                  STREAMING
-                                </span>
-                              ) : inspectorAnalyzeCache.status === "error" ? (
-                                <span className="text-xs px-1.5 py-0.5 rounded bg-rose-400/20 text-rose-100">
-                                  ERROR
-                                </span>
-                              ) : (
-                                <span className="text-xs px-1.5 py-0.5 rounded bg-emerald-400/20 text-emerald-100">
-                                  DONE
-                                </span>
-                              )}
-                            </div>
-                            <p className={`text-xs font-mono break-words ${
-                              inspectorAnalyzeCache.status === "error" ? "text-rose-100/80" : "text-cyan-100/78"
-                            }`}>
-                              {inspectorAnalyzeCache.result || "응답을 기다리는 중..."}
-                            </p>
-                            {inspectorAnalyzeCache.status === "done" && inspectorAnalyzeCache.suggestedCommands.length > 0 && (
-                              <div className="space-y-1">
-                                <div className="flex items-center justify-between gap-2">
-                                  <p className="text-xs uppercase tracking-[0.06em] text-cyan-100/70">Suggested Commands</p>
-                                  <p className="text-xs text-cyan-100/62">
-                                    {isInspectorCompact ? "R 실행 · MORE→C/L" : "R 실행 · C 복사 · L 로드"}
-                                  </p>
-                                </div>
-                                <div className="space-y-1">
-                                  {inspectorAnalyzeCache.suggestedCommands.map((cmd, idx) => (
-                                    <div
-                                      key={`${cmd}-${idx}`}
-                                      data-inspector-command-menu-row="1"
-                                      tabIndex={isInspectorCompact ? 0 : -1}
-                                      className="rounded border border-cyan-300/18 bg-cyan-400/[0.06] px-1.5 py-1 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-cyan-300/45"
-                                      onBlurCapture={(e) => {
-                                        if (!isInspectorCompact || inspectorCommandMenuIndex !== idx) return;
-                                        const next = e.relatedTarget;
-                                        if (!next) {
-                                          closeInspectorCommandMenu();
-                                          return;
-                                        }
-                                        const menuContainerFocused = isEventTargetWithinSelector(
-                                          next,
-                                          "[data-inspector-command-menu='compact']",
-                                        );
-                                        const currentRowFocused = isTargetInsideTargets(next, [e.currentTarget]);
-                                        if (!currentRowFocused && !menuContainerFocused) {
-                                          closeInspectorCommandMenu();
-                                        }
-                                      }}
-                                      onKeyDown={(e) => {
-                                        if (!isInspectorCompact) return;
-                                        if (e.metaKey || e.ctrlKey || e.altKey) return;
-                                        const action = resolveInspectorMenuHotkey(
-                                          e.key,
-                                          inspectorCommandMenuIndex === idx,
-                                        );
-                                        if (!action) return;
-                                        e.preventDefault();
-                                        e.stopPropagation();
-                                        if (action === "run") {
-                                          applyInspectorAnalyzeCommand(idx);
-                                          return;
-                                        }
-                                        if (action === "copy") {
-                                          copyInspectorSuggestedCommand(idx);
-                                          return;
-                                        }
-                                        loadInspectorSuggestedCommandToAiBar(idx);
-                                      }}
-                                    >
-                                      <div className="flex items-center gap-1.5">
-                                        <span className="inline-flex items-center justify-center min-w-4 h-4 rounded bg-cyan-400/20 text-xs text-cyan-100">
-                                          {idx + 1}
-                                        </span>
-                                        <p className="min-w-0 flex-1 text-xs font-mono text-cyan-100/92 truncate" title={cmd}>
-                                          {cmd}
-                                        </p>
-                                        {isInspectorCompact ? (
-                                          <div className="flex items-center gap-1 shrink-0">
-                                            <button
-                                              onClick={() => applyInspectorAnalyzeCommand(idx)}
-                                              className="inline-flex w-[68px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-emerald-300/35 bg-emerald-400/16 text-xs text-emerald-100 hover:bg-emerald-400/26 transition-colors"
-                                              title={`${idx + 1}번 커맨드 실행 (R)`}
-                                            >
-                                              <TerminalSquare size={9} />
-                                              RUN (R)
-                                            </button>
-                                            <button
-                                              ref={(el) => { inspectorMoreButtonRefs.current[idx] = el; }}
-                                              onClick={() => {
-                                                if (inspectorCommandMenuIndex === idx) {
-                                                  closeInspectorCommandMenu();
-                                                  return;
-                                                }
-                                                openInspectorCompactMenu(idx);
-                                              }}
-                                              onKeyDown={(e) => {
-                                                if (e.key !== "ArrowDown" && e.key !== "Enter" && e.key !== " ") return;
-                                                e.preventDefault();
-                                                openInspectorCompactMenu(idx);
-                                              }}
-                                              aria-expanded={inspectorCommandMenuIndex === idx}
-                                              aria-controls={`inspector-command-menu-${idx}`}
-                                              className="inline-flex w-[58px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-white/20 bg-white/[0.05] text-xs text-white/75 hover:text-white hover:bg-white/[0.12] transition-colors"
-                                              title={`${idx + 1}번 추가 액션 (C/L 단축키 활성화)`}
-                                            >
-                                              <MoreHorizontal size={9} />
-                                              MORE
-                                            </button>
-                                          </div>
-                                        ) : (
-                                          <div className="flex items-center gap-1 shrink-0">
-                                            <button
-                                              onClick={() => copyInspectorSuggestedCommand(idx)}
-                                              className="inline-flex w-[58px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-white/22 bg-white/[0.05] text-xs text-white/76 hover:text-white hover:bg-white/[0.12] transition-colors"
-                                              title={`${idx + 1}번 커맨드 복사 (C)`}
-                                            >
-                                              <Copy size={9} />
-                                              COPY
-                                            </button>
-                                            <button
-                                              onClick={() => loadInspectorSuggestedCommandToAiBar(idx)}
-                                              className="inline-flex w-[58px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-accent/35 bg-accent/14 text-xs text-accent hover:bg-accent/24 transition-colors"
-                                              title={`${idx + 1}번 커맨드 AI 입력바 로드 (L)`}
-                                            >
-                                              <Search size={9} />
-                                              LOAD
-                                            </button>
-                                            <button
-                                              onClick={() => applyInspectorAnalyzeCommand(idx)}
-                                              className="inline-flex w-[58px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-emerald-300/35 bg-emerald-400/16 text-xs text-emerald-100 hover:bg-emerald-400/26 transition-colors"
-                                              title={`${idx + 1}번 커맨드 실행 (R)`}
-                                            >
-                                              <TerminalSquare size={9} />
-                                              RUN
-                                            </button>
-                                          </div>
-                                        )}
-                                      </div>
-                                      {isInspectorCompact && inspectorCommandMenuIndex === idx && (
-                                        <div
-                                          id={`inspector-command-menu-${idx}`}
-                                          data-inspector-command-menu="compact"
-                                          role="menu"
-                                          onKeyDown={(e) => handleInspectorCompactMenuKeyDown(e, idx)}
-                                          className="mt-1.5 ml-5 flex items-center gap-1"
-                                        >
-                                          <button
-                                            ref={(el) => { inspectorMenuFirstActionRefs.current[idx] = el; }}
-                                            role="menuitem"
-                                            onClick={() => copyInspectorSuggestedCommand(idx)}
-                                            className="inline-flex w-[72px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-white/22 bg-white/[0.05] text-xs text-white/76 hover:text-white hover:bg-white/[0.12] transition-colors"
-                                            title={`${idx + 1}번 커맨드 복사 (C)`}
-                                          >
-                                            <Copy size={9} />
-                                            COPY (C)
-                                          </button>
-                                          <button
-                                            role="menuitem"
-                                            onClick={() => loadInspectorSuggestedCommandToAiBar(idx)}
-                                            className="inline-flex w-[72px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-accent/35 bg-accent/14 text-xs text-accent hover:bg-accent/24 transition-colors"
-                                            title={`${idx + 1}번 커맨드 AI 입력바 로드 (L)`}
-                                          >
-                                            <Search size={9} />
-                                            LOAD (L)
-                                          </button>
-                                        </div>
-                                      )}
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-                            {inspectorAnalyzeCache.status === "done" && !isInspectorCompact && (
-                              <div className="flex items-center gap-1.5">
-                                <button
-                                  onClick={() => applyInspectorAnalyzeCommand(0)}
-                                  title="첫 번째 추천 커맨드 실행 (R)"
-                                  className="inline-flex w-[74px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-emerald-300/35 bg-emerald-400/16 text-xs text-emerald-100 hover:bg-emerald-400/26 transition-colors"
-                                >
-                                  <TerminalSquare size={9} />
-                                  RUN #1
-                                </button>
-                                <button
-                                  onClick={copyInspectorAnalyzeResult}
-                                  title="분석 결과 전체 복사"
-                                  className="inline-flex w-[64px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-white/20 bg-white/[0.05] text-xs text-white/76 hover:text-white hover:bg-white/[0.12] transition-colors"
-                                >
-                                  <Copy size={9} />
-                                  COPY
-                                </button>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                    {!inspectorHasNoActivity && inspectorRecentBlocks.length > 0 && (
-                      <div className={inspectorCardRegularClass}>
-                        <p className="text-white/45 uppercase tracking-[0.06em] text-xs">Recent Blocks</p>
-                        {inspectorRecentBlocks.map((block) => (
-                          <div key={block.id} className="flex items-start gap-2 rounded-md border border-white/[0.08] bg-black/20 px-2 py-1.5">
-                            <span className={`mt-0.5 inline-flex items-center justify-center text-xs px-1.5 py-0.5 rounded ${
-                              block.exitCode === 0 || block.exitCode == null
-                                ? "bg-emerald-400/16 text-emerald-200"
-                                : "bg-rose-400/18 text-rose-200"
-                            }`}>
-                              {block.exitCode === 0 || block.exitCode == null ? "OK" : `ERR ${block.exitCode}`}
-                            </span>
-                            <div className="min-w-0 flex-1">
-                              <p className="text-white/80 truncate">{block.command}</p>
-                              <p className="text-white/44 text-xs inline-flex items-center gap-1 mt-0.5">
-                                <Clock3 size={10} />
-                                {formatDurationMs(block.durationMs)}
-                              </p>
-                              {block.outputTail && (
-                                <p className="text-xs text-white/36 font-mono truncate mt-0.5">{block.outputTail}</p>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-1 shrink-0">
-                              <button
-                                onClick={() => selectInspectorBlock(block.id)}
-                                className="inline-flex w-[56px] justify-center items-center px-1.5 py-0.5 rounded border border-white/12 bg-white/[0.05] text-xs text-white/68 hover:text-white hover:bg-white/[0.11] transition-colors"
-                                title="이 블록 선택"
-                              >
-                                SEL
-                              </button>
-                              <button
-                                onClick={() => rerunInspectorBlock(block.command)}
-                                className="inline-flex w-[64px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-cyan-300/30 bg-cyan-400/14 text-xs text-cyan-100 hover:bg-cyan-400/24 transition-colors"
-                                title="명령 재실행"
-                              >
-                                <RotateCcw size={9} />
-                                RUN
-                              </button>
-                              {block.exitCode !== 0 && block.exitCode != null && (
-                                <button
-                                  onClick={() => loadInspectorAnalyzePromptToAiBar(block.id)}
-                                  className="inline-flex w-[68px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-accent/35 bg-accent/14 text-xs text-accent hover:bg-accent/24 transition-colors"
-                                  title="실패 분석 프롬프트 로드"
-                                >
-                                  <Search size={9} />
-                                  LOAD
-                                </button>
-                              )}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    <div className={inspectorCardRegularClass}>
-                      <p className="text-white/45 uppercase tracking-[0.06em] text-xs">Quick Actions</p>
-                      <div className={inspectorQuickGridClass}>
-                        <button
-                          type="button"
-                          onClick={() => setShowFileExplorer((prev) => {
-                            const next = !prev;
-                            invoke("save_ui_preferences", { showFileExplorer: next }).catch(() => {});
-                            return next;
-                          })}
-                          className="inline-flex w-full h-7 items-center gap-1.5 px-2 rounded-md text-xs border border-white/12 bg-white/[0.05] text-white/74 hover:text-white hover:bg-white/[0.1] transition-colors"
-                        >
-                          <FolderTree size={11} />
-                          Project Bin
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setShowWorkspace(true);
-                            loadWorkspaces();
-                          }}
-                          className="inline-flex w-full h-7 items-center gap-1.5 px-2 rounded-md text-xs border border-white/12 bg-white/[0.05] text-white/74 hover:text-white hover:bg-white/[0.1] transition-colors"
-                        >
-                          <Layers size={11} />
-                          Workspace
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => openInspectorTab("rag")}
-                          className="inline-flex w-full h-7 items-center gap-1.5 px-2 rounded-md text-xs border border-white/12 bg-white/[0.05] text-white/74 hover:text-white hover:bg-white/[0.1] transition-colors"
-                        >
-                          <Library size={11} />
-                          RAG
-                        </button>
-                        <button
-                          type="button"
-                          data-inspector-quick-actions-toggle
-                          aria-controls="inspector-quick-actions-advanced"
-                          aria-expanded={showInspectorQuickActionsExpanded}
-                          ref={inspectorQuickActionsToggleRef}
-                          onKeyDown={handleInspectorQuickActionsToggleKeyDown}
-                          onClick={handleInspectorQuickActionsToggle}
-                          className="inline-flex w-full h-7 items-center gap-1.5 px-2 rounded-md text-xs border border-white/12 bg-white/[0.05] text-white/74 hover:text-white hover:bg-white/[0.1] transition-colors"
-                        >
-                          {showInspectorQuickActionsExpanded ? "축소" : "더보기"}
-                        </button>
-                        <AnimatePresence initial={false}>
-                          {showInspectorQuickActionsExpanded && (
-                            <motion.div
-                              id="inspector-quick-actions-advanced"
-                              data-inspector-quick-actions-advanced
-                              key="inspector-quick-actions-advanced"
-                              className="col-span-2"
-                              ref={inspectorQuickActionsAdvancedRef}
-                              onKeyDown={handleInspectorQuickActionsAdvancedKeyDown}
-                              initial={{ opacity: 0, height: 0 }}
-                              animate={{ opacity: 1, height: "auto" }}
-                              exit={{ opacity: 0, height: 0 }}
-                              transition={{ duration: 0.16, ease: "easeOut" }}
-                              style={{ overflow: "hidden" }}
-                            >
-                              <div className={inspectorQuickGridClass}>
-                                <button
-                                  type="button"
-                                  onClick={() => setShowHistorySearch(true)}
-                                  className="inline-flex w-full h-7 items-center gap-1.5 px-2 rounded-md text-xs border border-white/12 bg-white/[0.05] text-white/74 hover:text-white hover:bg-white/[0.1] transition-colors"
-                                >
-                                  <Search size={11} />
-                                  History
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => setShowDiffReview(true)}
-                                  className="inline-flex w-full h-7 items-center gap-1.5 px-2 rounded-md text-xs border border-white/12 bg-white/[0.05] text-white/74 hover:text-white hover:bg-white/[0.1] transition-colors"
-                                >
-                                  <GitCompareArrows size={11} />
-                                  Diff
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={focusFailedBlock}
-                                  className="inline-flex w-full h-7 items-center gap-1.5 px-2 rounded-md text-xs border border-rose-300/30 bg-rose-400/12 text-rose-100 hover:bg-rose-400/20 transition-colors"
-                                >
-                                  <AlertTriangle size={11} />
-                                  Failed
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => openInspectorTab("scripts")}
-                                  className="inline-flex w-full h-7 items-center gap-1.5 px-2 rounded-md text-xs border border-white/12 bg-white/[0.05] text-white/74 hover:text-white hover:bg-white/[0.1] transition-colors"
-                                >
-                                  Scripts
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => openInspectorTab("sysmon")}
-                                  className="inline-flex w-full h-7 items-center gap-1.5 px-2 rounded-md text-xs border border-white/12 bg-white/[0.05] text-white/74 hover:text-white hover:bg-white/[0.1] transition-colors"
-                                >
-                                  <Activity size={11} />
-                                  System
-                                </button>
-                              </div>
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
-                      </div>
-                    </div>
-                  </section>
-                )}
-
-                {inspectorTab === "rag" && (
-                  <section id="inspector-tabpanel-rag" role="tabpanel" aria-labelledby="inspector-tab-rag" tabIndex={0}>
-                    <ErrorBoundary label="RAG">
-                      <RagPanel
-                        model={selectedModel}
-                        onClose={closeInspector}
-                        compact={isInspectorCompact}
-                      />
-                    </ErrorBoundary>
-                  </section>
-                )}
-
-                {inspectorTab === "scripts" && (
-                  <section
-                    id="inspector-tabpanel-scripts"
-                    role="tabpanel"
-                    aria-labelledby="inspector-tab-scripts"
-                    tabIndex={0}
-                  >
-                    <ErrorBoundary label="스크립트 라이브러리">
-                      <ScriptLibraryPanel
-                        scripts={scriptLib.scripts}
-                        loading={scriptLib.loading}
-                        onLoad={scriptLib.loadScripts}
-                        onRun={scriptLib.runScript}
-                        onDelete={scriptLib.deleteScript}
-                        onSave={scriptLib.saveScript}
-                        onClose={closeInspector}
-                        compact={isInspectorCompact}
-                      />
-                    </ErrorBoundary>
-                  </section>
-                )}
-
-                {inspectorTab === "sysmon" && (
-                  <section
-                    id="inspector-tabpanel-sysmon"
-                    role="tabpanel"
-                    aria-labelledby="inspector-tab-sysmon"
-                    tabIndex={0}
-                  >
-                    <ErrorBoundary label="시스템 모니터">
-                      <SystemMonitorPanel
-                        onClose={closeInspector}
-                        compact={isInspectorCompact}
-                      />
-                    </ErrorBoundary>
-                  </section>
-                )}
-              </div>
-            </div>
-          </motion.div>
-        )}
-        </AnimatePresence>
+        <InspectorPanel
+          showInspector={showInspector}
+          selectedModel={selectedModel}
+          inspectorTab={inspectorTab}
+          inspectorDensity={inspectorDensity}
+          inspectorTabs={inspectorTabs}
+          inspectorTabRefs={inspectorTabRefs}
+          activeTabTitle={activeTab?.title ?? "탭 없음"}
+          activeTabPath={activeTab?.cwd ?? "cwd 없음"}
+          activeTabBranch={activeTabGitInfo?.branch}
+          activeTabChanged={activeTabGitInfo?.changed}
+          noActivity={inspectorHasNoActivity}
+          failedBlocks={inspectorFailedBlocks}
+          focusedFailedBlock={inspectorFocusedFailedBlock}
+          analyzeCache={inspectorAnalyzeCache}
+          recentBlocks={inspectorRecentBlocks}
+          commandMenuIndex={inspectorCommandMenuIndex}
+          quickActionsExpanded={showInspectorQuickActionsExpanded}
+          inspectorMoreButtonRefs={inspectorMoreButtonRefs}
+          inspectorMenuFirstActionRefs={inspectorMenuFirstActionRefs}
+          inspectorQuickActionsToggleRef={inspectorQuickActionsToggleRef}
+          inspectorQuickActionsAdvancedRef={inspectorQuickActionsAdvancedRef}
+          onDensityToggle={() => setInspectorDensity((prev) => (prev === "cozy" ? "compact" : "cozy"))}
+          onClose={closeInspector}
+          onTabSelect={openInspectorTab}
+          onTabKeyDown={handleInspectorTabKeyDown}
+          onFocusFailedBlock={focusFailedBlock}
+          onAnalyzeFailedBlock={analyzeInspectorFailedBlock}
+          onCopyFailedOutput={copyInspectorFailedOutput}
+          onCopyAnalyzePrompt={copyInspectorAnalyzePrompt}
+          onLoadAnalyzePromptToAiBar={loadInspectorAnalyzePromptToAiBar}
+          onSelectBlock={selectInspectorBlock}
+          onCopyAnalyzeResult={copyInspectorAnalyzeResult}
+          onClearAnalyzeCache={clearInspectorAnalyzeCache}
+          onCopySuggestedCommand={copyInspectorSuggestedCommand}
+          onLoadSuggestedCommandToAiBar={loadInspectorSuggestedCommandToAiBar}
+          onApplySuggestedCommand={applyInspectorAnalyzeCommand}
+          onRerunBlock={rerunInspectorBlock}
+          onCommandMenuRowBlurCapture={handleInspectorSuggestedCommandRowBlurCapture}
+          onSuggestedCommandRowKeyDown={handleInspectorSuggestedCommandRowKeyDown}
+          onCompactMenuKeyDown={handleInspectorCompactMenuKeyDown}
+          onOpenCompactMenu={openInspectorCompactMenu}
+          onCloseCommandMenu={closeInspectorCommandMenu}
+          onQuickActionsToggle={handleInspectorQuickActionsToggle}
+          onQuickActionsToggleKeyDown={handleInspectorQuickActionsToggleKeyDown}
+          onQuickActionsAdvancedKeyDown={handleInspectorQuickActionsAdvancedKeyDown}
+          onToggleProjectBin={() => setShowFileExplorer((prev) => {
+            const next = !prev;
+            invoke("save_ui_preferences", { showFileExplorer: next }).catch(() => {});
+            return next;
+          })}
+          onOpenWorkspace={() => {
+            setShowWorkspace(true);
+            loadWorkspaces();
+          }}
+          onOpenHistory={() => setShowHistorySearch(true)}
+          onOpenDiffReview={() => setShowDiffReview(true)}
+          onOpenFailedBlock={focusFailedBlock}
+          scriptLibrary={scriptLib}
+        />
 
         <AnimatePresence>
         {showAiBar && (
