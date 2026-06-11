@@ -24,11 +24,12 @@ import { useAIChat } from "./hooks/useAIChat";
 import { useEnvAutoDetector } from "./hooks/useEnvAutoDetector";
 import EnvSuggestionToast from "./components/EnvSuggestionToast";
 import { useScriptLibrary } from "./hooks/useScriptLibrary";
-import InspectorPanel, { type InspectorAnalyzeCache } from "./components/InspectorPanel";
+import InspectorPanel from "./components/InspectorPanel";
 import { useNotificationCenter } from "./hooks/useNotificationCenter";
 import { usePrivacyLedger } from "./hooks/usePrivacyLedger";
 import { useSquads } from "./hooks/useSquads";
 import type { SshProfile } from "./hooks/useTabManager";
+import type { InspectorAnalyzeCache, InspectorDensity, InspectorTab } from "./components/InspectorPanel/types";
 import { isTextInputTarget } from "./utils/event";
 import InfiniteCanvas from "./components/layout/InfiniteCanvas";
 import TerminalPane from "./components/TerminalPane";
@@ -67,8 +68,6 @@ import {
 const ReactAgentPanel = lazy(() => import("./components/ReactAgentPanel"));
 
 type ViewMode = "terminal" | "canvas" | "list";
-type InspectorTab = "summary" | "rag" | "scripts" | "sysmon";
-type InspectorDensity = "cozy" | "compact";
 
 type SafetyLevel = "Safe" | "Warning" | "Dangerous" | "Blocked";
 

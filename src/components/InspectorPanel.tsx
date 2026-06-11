@@ -18,53 +18,18 @@ import {
   X,
 } from "lucide-react";
 import { ErrorBoundary } from "./ErrorBoundary";
-import type { Script } from "../hooks/useScriptLibrary";
 import RagPanel from "./RagPanel";
 import ScriptLibraryPanel from "./ScriptLibraryPanel";
 import SystemMonitorPanel from "./SystemMonitorPanel";
-
-type InspectorTab = "summary" | "rag" | "scripts" | "sysmon";
-type InspectorDensity = "cozy" | "compact";
-
-export interface InspectorAnalyzeCache {
-  blockId: string;
-  command: string;
-  requestedAt: number;
-  status: "streaming" | "done" | "error";
-  result: string;
-  rawResult: string;
-  suggestedCommands: string[];
-}
-
-interface InspectorFailedBlock {
-  id: string;
-  command: string;
-  exitCode: number;
-  outputTail: string;
-}
-
-interface InspectorRecentBlock {
-  id: string;
-  command: string;
-  exitCode: number | null;
-  durationMs: number | null;
-  outputTail: string;
-}
-
-interface InspectorTabItem {
-  id: InspectorTab;
-  label: string;
-  shortcut: string;
-}
-
-interface ScriptLibraryLike {
-  scripts: Script[];
-  loading: boolean;
-  onLoad: () => Promise<void>;
-  onRun: (commands: string[]) => void;
-  onDelete: (id: string) => Promise<void>;
-  onSave: (name: string, description: string, commands: string[]) => Promise<Script>;
-}
+import type {
+  InspectorAnalyzeCache,
+  InspectorDensity,
+  InspectorFailedBlock,
+  InspectorRecentBlock,
+  InspectorTab,
+  InspectorTabItem,
+  ScriptLibraryLike,
+} from "./InspectorPanel/types";
 
 interface InspectorPanelProps {
   showInspector: boolean;
