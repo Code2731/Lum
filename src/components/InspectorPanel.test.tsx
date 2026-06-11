@@ -280,6 +280,12 @@ describe("InspectorPanel", () => {
     expect(screen.getByText("더보기").closest("button")).toHaveAttribute("aria-expanded", "false");
   });
 
+  it("빠른 액션이 접혀 있으면 고급 액션 영역 DOM을 렌더링하지 않는다", () => {
+    renderInspector({ quickActionsExpanded: false });
+
+    expect(document.querySelector("[data-inspector-quick-actions-advanced]")).toBeNull();
+  });
+
   it("빠른 액션 토글은 확장 영역 id를 aria-controls로 가리킨다", () => {
     renderInspector({ quickActionsExpanded: true });
 
@@ -288,6 +294,12 @@ describe("InspectorPanel", () => {
       "id",
       "inspector-quick-actions-advanced",
     );
+  });
+
+  it("빠른 액션 토글 버튼은 data attribute를 노출한다", () => {
+    renderInspector({ quickActionsExpanded: false });
+
+    expect(screen.getByText("더보기").closest("button")).toHaveAttribute("data-inspector-quick-actions-toggle");
   });
 
   it("빠른 액션 관련 ref는 토글 버튼과 확장 영역 DOM을 보관한다", () => {
@@ -306,6 +318,22 @@ describe("InspectorPanel", () => {
     expect(refs.inspectorQuickActionsAdvancedRef.current).toBe(
       screen.getByText("History").closest("[data-inspector-quick-actions-advanced]"),
     );
+  });
+
+  it("빠른 액션이 접힌 상태에서도 토글 ref는 버튼을 가리키고 확장 영역 ref는 null이다", () => {
+    const refs = createRefs();
+    render(
+      <InspectorPanel
+        {...makeInspectorProps({
+          quickActionsExpanded: false,
+          inspectorQuickActionsToggleRef: refs.inspectorQuickActionsToggleRef,
+          inspectorQuickActionsAdvancedRef: refs.inspectorQuickActionsAdvancedRef,
+        })}
+      />,
+    );
+
+    expect(refs.inspectorQuickActionsToggleRef.current).toBe(screen.getByText("더보기").closest("button"));
+    expect(refs.inspectorQuickActionsAdvancedRef.current).toBeNull();
   });
 
   it("빠른 액션이 확장되면 축소 라벨과 expanded 상태를 보여준다", () => {
