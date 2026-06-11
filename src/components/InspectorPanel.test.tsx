@@ -80,6 +80,11 @@ const multiAnalyzeCache: InspectorAnalyzeCache = {
   suggestedCommands: ["npm test -- --runInBand", "npm run lint"],
 };
 
+const doneWithoutSuggestionsCache: InspectorAnalyzeCache = {
+  ...baseAnalyzeCache,
+  suggestedCommands: [],
+};
+
 function createRefs() {
   return {
     inspectorMoreButtonRefs: { current: {} as Record<number, HTMLButtonElement | null> },
@@ -513,6 +518,17 @@ describe("InspectorPanel", () => {
     expect(screen.getByText("R 실행 · C 복사 · L 로드")).toBeInTheDocument();
   });
 
+  it("추천 커맨드가 없으면 Suggested Commands 영역을 숨긴다", () => {
+    renderInspector({
+      analyzeCache: doneWithoutSuggestionsCache,
+      inspectorDensity: "cozy",
+    });
+
+    expect(screen.queryByText("Suggested Commands")).not.toBeInTheDocument();
+    expect(screen.queryByText("R 실행 · C 복사 · L 로드")).not.toBeInTheDocument();
+    expect(screen.getByText("RUN #1")).toBeInTheDocument();
+  });
+
   it("분석 캐시가 없으면 빈 상태 문구를 보여준다", () => {
     renderInspector({ analyzeCache: null });
 
@@ -629,6 +645,26 @@ describe("InspectorPanel", () => {
     });
 
     expect(screen.getByText("R 실행 · MORE→C/L")).toBeInTheDocument();
+  });
+
+  it("cozy 추천 커맨드 행은 tabIndex -1을 가진다", () => {
+    renderInspector({
+      analyzeCache: multiAnalyzeCache,
+      inspectorDensity: "cozy",
+    });
+
+    const commandRow = document.querySelector('[data-inspector-command-menu-row="1"]') as HTMLDivElement;
+    expect(commandRow).toHaveAttribute("tabindex", "-1");
+  });
+
+  it("compact 추천 커맨드 행은 tabIndex 0을 가진다", () => {
+    renderInspector({
+      analyzeCache: multiAnalyzeCache,
+      inspectorDensity: "compact",
+    });
+
+    const commandRow = document.querySelector('[data-inspector-command-menu-row="1"]') as HTMLDivElement;
+    expect(commandRow).toHaveAttribute("tabindex", "0");
   });
 
   it("추천 커맨드 행 blur와 keydown은 row index를 전달한다", () => {
