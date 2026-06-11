@@ -1,8 +1,8 @@
 import React from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ErrorBoundary } from "./ErrorBoundary";
 import InspectorPanelHeader from "./InspectorPanelHeader";
 import InspectorPanelSummary from "./InspectorPanelSummary";
+import InspectorTabPanel from "./InspectorTabPanel";
 import RagPanel from "./RagPanel";
 import ScriptLibraryPanel from "./ScriptLibraryPanel";
 import SystemMonitorPanel from "./SystemMonitorPanel";
@@ -223,53 +223,49 @@ const InspectorPanel: React.FC<InspectorPanelProps> = ({
               )}
 
               {inspectorTab === "rag" && (
-                <section id="inspector-tabpanel-rag" role="tabpanel" aria-labelledby="inspector-tab-rag" tabIndex={0}>
-                  <ErrorBoundary label="RAG">
-                    <RagPanel
-                      model={selectedModel}
-                      onClose={onClose}
-                      compact={isInspectorCompact}
-                    />
-                  </ErrorBoundary>
-                </section>
+                <InspectorTabPanel
+                  id="inspector-tabpanel-rag"
+                  tabId="inspector-tab-rag"
+                  label="RAG"
+                >
+                  <RagPanel
+                    model={selectedModel}
+                    onClose={onClose}
+                    compact={isInspectorCompact}
+                  />
+                </InspectorTabPanel>
               )}
 
               {inspectorTab === "scripts" && (
-                <section
+                <InspectorTabPanel
                   id="inspector-tabpanel-scripts"
-                  role="tabpanel"
-                  aria-labelledby="inspector-tab-scripts"
-                  tabIndex={0}
+                  tabId="inspector-tab-scripts"
+                  label="스크립트 라이브러리"
                 >
-                  <ErrorBoundary label="스크립트 라이브러리">
-                    <ScriptLibraryPanel
-                      scripts={scriptLibrary.scripts}
-                      loading={scriptLibrary.loading}
-                      onLoad={scriptLibrary.onLoad}
-                      onRun={scriptLibrary.onRun}
-                      onDelete={scriptLibrary.onDelete}
-                      onSave={scriptLibrary.onSave}
-                      onClose={onClose}
-                      compact={isInspectorCompact}
-                    />
-                  </ErrorBoundary>
-                </section>
+                  <ScriptLibraryPanel
+                    scripts={scriptLibrary.scripts}
+                    loading={scriptLibrary.loading}
+                    onLoad={scriptLibrary.onLoad}
+                    onRun={scriptLibrary.onRun}
+                    onDelete={scriptLibrary.onDelete}
+                    onSave={scriptLibrary.onSave}
+                    onClose={onClose}
+                    compact={isInspectorCompact}
+                  />
+                </InspectorTabPanel>
               )}
 
               {inspectorTab === "sysmon" && (
-                <section
+                <InspectorTabPanel
                   id="inspector-tabpanel-sysmon"
-                  role="tabpanel"
-                  aria-labelledby="inspector-tab-sysmon"
-                  tabIndex={0}
+                  tabId="inspector-tab-sysmon"
+                  label="시스템 모니터"
                 >
-                  <ErrorBoundary label="시스템 모니터">
-                    <SystemMonitorPanel
-                      onClose={onClose}
-                      compact={isInspectorCompact}
-                    />
-                  </ErrorBoundary>
-                </section>
+                  <SystemMonitorPanel
+                    onClose={onClose}
+                    compact={isInspectorCompact}
+                  />
+                </InspectorTabPanel>
               )}
             </div>
           </div>
