@@ -145,6 +145,114 @@ const InspectorPanel: React.FC<InspectorPanelProps> = ({
   const inspectorCardTightClass = `rounded-lg border border-white/10 bg-white/[0.03] ${inspectorCardPadClass} space-y-1`;
   const inspectorCardRegularClass = `rounded-lg border border-white/10 bg-white/[0.03] ${inspectorCardPadClass} ${isInspectorCompact ? "space-y-1" : "space-y-1.5"}`;
   const inspectorQuickGridClass = isInspectorCompact ? "grid grid-cols-2 gap-1" : "grid grid-cols-2 gap-1.5";
+  const summaryData = {
+    selectedModel,
+    activeTabTitle,
+    activeTabPath,
+    activeTabBranch,
+    activeTabChanged,
+    noActivity,
+    failedBlocks,
+    focusedFailedBlock,
+    analyzeCache,
+    recentBlocks,
+    commandMenuIndex,
+  };
+  const summaryLayout = {
+    quickActionsExpanded,
+    isInspectorCompact,
+    inspectorSummaryWrapClass,
+    inspectorCardTightClass,
+    inspectorCardRegularClass,
+    inspectorQuickGridClass,
+  };
+  const summaryRefs = {
+    inspectorMoreButtonRefs,
+    inspectorMenuFirstActionRefs,
+    inspectorQuickActionsToggleRef,
+    inspectorQuickActionsAdvancedRef,
+  };
+  const summaryActions = {
+    onFocusFailedBlock,
+    onAnalyzeFailedBlock,
+    onCopyFailedOutput,
+    onCopyAnalyzePrompt,
+    onLoadAnalyzePromptToAiBar,
+    onSelectBlock,
+    onCopyAnalyzeResult,
+    onClearAnalyzeCache,
+    onCopySuggestedCommand,
+    onLoadSuggestedCommandToAiBar,
+    onApplySuggestedCommand,
+    onRerunBlock,
+    onCommandMenuRowBlurCapture,
+    onSuggestedCommandRowKeyDown,
+    onCompactMenuKeyDown,
+    onOpenCompactMenu,
+    onCloseCommandMenu,
+    onQuickActionsToggle,
+    onQuickActionsToggleKeyDown,
+    onQuickActionsAdvancedKeyDown,
+    onToggleProjectBin,
+    onOpenWorkspace,
+    onOpenHistory,
+    onOpenDiffReview,
+    onOpenFailedBlock,
+    onTabSelect,
+  };
+  const inspectorContentByTab: Record<InspectorTab, React.ReactNode> = {
+    summary: (
+      <InspectorPanelSummary
+        data={summaryData}
+        layout={summaryLayout}
+        refs={summaryRefs}
+        actions={summaryActions}
+      />
+    ),
+    rag: (
+      <InspectorTabPanel
+        id="inspector-tabpanel-rag"
+        tabId="inspector-tab-rag"
+        label="RAG"
+      >
+        <RagPanel
+          model={selectedModel}
+          onClose={onClose}
+          compact={isInspectorCompact}
+        />
+      </InspectorTabPanel>
+    ),
+    scripts: (
+      <InspectorTabPanel
+        id="inspector-tabpanel-scripts"
+        tabId="inspector-tab-scripts"
+        label="스크립트 라이브러리"
+      >
+        <ScriptLibraryPanel
+          scripts={scriptLibrary.scripts}
+          loading={scriptLibrary.loading}
+          onLoad={scriptLibrary.onLoad}
+          onRun={scriptLibrary.onRun}
+          onDelete={scriptLibrary.onDelete}
+          onSave={scriptLibrary.onSave}
+          onClose={onClose}
+          compact={isInspectorCompact}
+        />
+      </InspectorTabPanel>
+    ),
+    sysmon: (
+      <InspectorTabPanel
+        id="inspector-tabpanel-sysmon"
+        tabId="inspector-tab-sysmon"
+        label="시스템 모니터"
+      >
+        <SystemMonitorPanel
+          onClose={onClose}
+          compact={isInspectorCompact}
+        />
+      </InspectorTabPanel>
+    ),
+  };
 
   return (
     <AnimatePresence initial={false}>
@@ -170,111 +278,7 @@ const InspectorPanel: React.FC<InspectorPanelProps> = ({
             />
 
             <div className="flex-1 min-h-0 overflow-hidden">
-              {inspectorTab === "summary" && (
-                <InspectorPanelSummary
-                  data={{
-                    selectedModel,
-                    activeTabTitle,
-                    activeTabPath,
-                    activeTabBranch,
-                    activeTabChanged,
-                    noActivity,
-                    failedBlocks,
-                    focusedFailedBlock,
-                    analyzeCache,
-                    recentBlocks,
-                    commandMenuIndex,
-                  }}
-                  layout={{
-                    quickActionsExpanded,
-                    isInspectorCompact,
-                    inspectorSummaryWrapClass,
-                    inspectorCardTightClass,
-                    inspectorCardRegularClass,
-                    inspectorQuickGridClass,
-                  }}
-                  refs={{
-                    inspectorMoreButtonRefs,
-                    inspectorMenuFirstActionRefs,
-                    inspectorQuickActionsToggleRef,
-                    inspectorQuickActionsAdvancedRef,
-                  }}
-                  actions={{
-                    onFocusFailedBlock,
-                    onAnalyzeFailedBlock,
-                    onCopyFailedOutput,
-                    onCopyAnalyzePrompt,
-                    onLoadAnalyzePromptToAiBar,
-                    onSelectBlock,
-                    onCopyAnalyzeResult,
-                    onClearAnalyzeCache,
-                    onCopySuggestedCommand,
-                    onLoadSuggestedCommandToAiBar,
-                    onApplySuggestedCommand,
-                    onRerunBlock,
-                    onCommandMenuRowBlurCapture,
-                    onSuggestedCommandRowKeyDown,
-                    onCompactMenuKeyDown,
-                    onOpenCompactMenu,
-                    onCloseCommandMenu,
-                    onQuickActionsToggle,
-                    onQuickActionsToggleKeyDown,
-                    onQuickActionsAdvancedKeyDown,
-                    onToggleProjectBin,
-                    onOpenWorkspace,
-                    onOpenHistory,
-                    onOpenDiffReview,
-                    onOpenFailedBlock,
-                    onTabSelect,
-                  }}
-                />
-              )}
-
-              {inspectorTab === "rag" && (
-                <InspectorTabPanel
-                  id="inspector-tabpanel-rag"
-                  tabId="inspector-tab-rag"
-                  label="RAG"
-                >
-                  <RagPanel
-                    model={selectedModel}
-                    onClose={onClose}
-                    compact={isInspectorCompact}
-                  />
-                </InspectorTabPanel>
-              )}
-
-              {inspectorTab === "scripts" && (
-                <InspectorTabPanel
-                  id="inspector-tabpanel-scripts"
-                  tabId="inspector-tab-scripts"
-                  label="스크립트 라이브러리"
-                >
-                  <ScriptLibraryPanel
-                    scripts={scriptLibrary.scripts}
-                    loading={scriptLibrary.loading}
-                    onLoad={scriptLibrary.onLoad}
-                    onRun={scriptLibrary.onRun}
-                    onDelete={scriptLibrary.onDelete}
-                    onSave={scriptLibrary.onSave}
-                    onClose={onClose}
-                    compact={isInspectorCompact}
-                  />
-                </InspectorTabPanel>
-              )}
-
-              {inspectorTab === "sysmon" && (
-                <InspectorTabPanel
-                  id="inspector-tabpanel-sysmon"
-                  tabId="inspector-tab-sysmon"
-                  label="시스템 모니터"
-                >
-                  <SystemMonitorPanel
-                    onClose={onClose}
-                    compact={isInspectorCompact}
-                  />
-                </InspectorTabPanel>
-              )}
+              {inspectorContentByTab[inspectorTab]}
             </div>
           </div>
         </motion.div>
