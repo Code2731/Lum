@@ -252,6 +252,13 @@ describe("InspectorPanel", () => {
     expect(onQuickActionsToggle).toHaveBeenCalledTimes(1);
   });
 
+  it("빠른 액션이 확장되면 축소 라벨과 expanded 상태를 보여준다", () => {
+    renderInspector({ quickActionsExpanded: true });
+
+    expect(screen.getByText("축소")).toBeInTheDocument();
+    expect(screen.getByText("축소").closest("button")).toHaveAttribute("aria-expanded", "true");
+  });
+
   it("빠른 액션 더보기 토글은 keydown 핸들러를 호출한다", () => {
     const onQuickActionsToggleKeyDown = vi.fn();
     renderInspector({ onQuickActionsToggleKeyDown });
@@ -308,6 +315,30 @@ describe("InspectorPanel", () => {
     fireEvent.click(screen.getByRole("tab", { name: /RAG/ }));
 
     expect(onTabSelect).toHaveBeenCalledWith("rag");
+  });
+
+  it("탭 리스트 keydown은 onTabKeyDown으로 전달된다", () => {
+    const onTabKeyDown = vi.fn();
+    renderInspector({ onTabKeyDown });
+
+    fireEvent.keyDown(screen.getByRole("tablist", { name: "Inspector 탭" }), { key: "ArrowRight" });
+
+    expect(onTabKeyDown).toHaveBeenCalledTimes(1);
+  });
+
+  it("탭 버튼 Enter 입력은 해당 탭 선택 콜백을 호출한다", () => {
+    const onTabSelect = vi.fn();
+    renderInspector({ onTabSelect });
+
+    fireEvent.keyDown(screen.getByRole("tab", { name: /RAG/ }), { key: "Enter" });
+
+    expect(onTabSelect).toHaveBeenCalledWith("rag");
+  });
+
+  it("탭 버튼은 단축키 메타데이터를 노출한다", () => {
+    renderInspector();
+
+    expect(screen.getByRole("tab", { name: /RAG/ })).toHaveAttribute("aria-keyshortcuts", "Alt+2");
   });
 
   it("RAG 탭은 RAG 패널에 모델과 밀도 상태를 전달한다", () => {
