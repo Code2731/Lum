@@ -186,6 +186,55 @@ describe("InspectorPanel", () => {
     expect(onQuickActionsToggle).toHaveBeenCalledTimes(1);
   });
 
+  it("빠른 액션 더보기 토글은 keydown 핸들러를 호출한다", () => {
+    const onQuickActionsToggleKeyDown = vi.fn();
+    renderInspector({ onQuickActionsToggleKeyDown });
+
+    fireEvent.keyDown(screen.getByText("더보기"), { key: "ArrowDown" });
+
+    expect(onQuickActionsToggleKeyDown).toHaveBeenCalledTimes(1);
+  });
+
+  it("확장된 빠른 액션 버튼들은 각 콜백을 호출한다", () => {
+    const onOpenHistory = vi.fn();
+    const onOpenDiffReview = vi.fn();
+    const onOpenFailedBlock = vi.fn();
+    const onTabSelect = vi.fn();
+    renderInspector({
+      quickActionsExpanded: true,
+      onOpenHistory,
+      onOpenDiffReview,
+      onOpenFailedBlock,
+      onTabSelect,
+    });
+
+    fireEvent.click(screen.getByText("History"));
+    fireEvent.click(screen.getByText("Diff"));
+    fireEvent.click(screen.getByText("Failed"));
+    fireEvent.click(screen.getAllByText("Scripts")[1]);
+    fireEvent.click(screen.getAllByText("System")[1]);
+
+    expect(onOpenHistory).toHaveBeenCalledTimes(1);
+    expect(onOpenDiffReview).toHaveBeenCalledTimes(1);
+    expect(onOpenFailedBlock).toHaveBeenCalledTimes(1);
+    expect(onTabSelect).toHaveBeenNthCalledWith(1, "scripts");
+    expect(onTabSelect).toHaveBeenNthCalledWith(2, "sysmon");
+  });
+
+  it("확장된 빠른 액션 영역은 keydown 핸들러를 호출한다", () => {
+    const onQuickActionsAdvancedKeyDown = vi.fn();
+    renderInspector({
+      quickActionsExpanded: true,
+      onQuickActionsAdvancedKeyDown,
+    });
+
+    fireEvent.keyDown(screen.getByText("History").closest("[data-inspector-quick-actions-advanced]")!, {
+      key: "ArrowRight",
+    });
+
+    expect(onQuickActionsAdvancedKeyDown).toHaveBeenCalledTimes(1);
+  });
+
   it("탭 전환 버튼 클릭 시 onTabSelect가 호출된다", () => {
     const onTabSelect = vi.fn();
     renderInspector({ onTabSelect });
@@ -274,6 +323,26 @@ describe("InspectorPanel", () => {
 
     expect(onOpenCompactMenu).toHaveBeenCalledWith(0);
     expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+  });
+
+  it("추천 커맨드 행 blur와 keydown은 row index를 전달한다", () => {
+    const onCommandMenuRowBlurCapture = vi.fn();
+    const onSuggestedCommandRowKeyDown = vi.fn();
+    renderInspector({
+      analyzeCache: baseAnalyzeCache,
+      onCommandMenuRowBlurCapture,
+      onSuggestedCommandRowKeyDown,
+    });
+
+    const commandRow = document.querySelector('[data-inspector-command-menu-row="1"]') as HTMLDivElement;
+
+    fireEvent.blur(commandRow);
+    fireEvent.keyDown(commandRow, { key: "ArrowDown" });
+
+    expect(onCommandMenuRowBlurCapture).toHaveBeenCalledTimes(1);
+    expect(onCommandMenuRowBlurCapture.mock.calls[0][1]).toBe(0);
+    expect(onSuggestedCommandRowKeyDown).toHaveBeenCalledTimes(1);
+    expect(onSuggestedCommandRowKeyDown.mock.calls[0][1]).toBe(0);
   });
 
   it("compact 분석 메뉴의 MORE 버튼은 키보드로도 메뉴 열기 콜백을 호출한다", () => {
