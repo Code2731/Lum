@@ -22,7 +22,7 @@ import type {
   InspectorRecentBlock,
 } from "./InspectorPanel/types";
 
-interface InspectorPanelSummaryProps {
+interface InspectorPanelSummaryData {
   selectedModel: string;
   activeTabTitle: string;
   activeTabPath: string;
@@ -34,16 +34,25 @@ interface InspectorPanelSummaryProps {
   analyzeCache: InspectorAnalyzeCache | null;
   recentBlocks: readonly InspectorRecentBlock[];
   commandMenuIndex: number | null;
+}
+
+interface InspectorPanelSummaryLayout {
   quickActionsExpanded: boolean;
   isInspectorCompact: boolean;
   inspectorSummaryWrapClass: string;
   inspectorCardTightClass: string;
   inspectorCardRegularClass: string;
   inspectorQuickGridClass: string;
+}
+
+interface InspectorPanelSummaryRefs {
   inspectorMoreButtonRefs: React.MutableRefObject<Record<number, HTMLButtonElement | null>>;
   inspectorMenuFirstActionRefs: React.MutableRefObject<Record<number, HTMLButtonElement | null>>;
   inspectorQuickActionsToggleRef: React.RefObject<HTMLButtonElement>;
   inspectorQuickActionsAdvancedRef: React.RefObject<HTMLDivElement>;
+}
+
+interface InspectorPanelSummaryActions {
   onFocusFailedBlock: () => void;
   onAnalyzeFailedBlock: (blockId?: string) => void;
   onCopyFailedOutput: (blockId?: string) => void;
@@ -72,6 +81,13 @@ interface InspectorPanelSummaryProps {
   onTabSelect: (tab: "summary" | "rag" | "scripts" | "sysmon") => void;
 }
 
+interface InspectorPanelSummaryProps {
+  data: InspectorPanelSummaryData;
+  layout: InspectorPanelSummaryLayout;
+  refs: InspectorPanelSummaryRefs;
+  actions: InspectorPanelSummaryActions;
+}
+
 function formatDurationMs(ms: number | null): string {
   if (ms == null || !Number.isFinite(ms) || ms < 0) return "-";
   if (ms < 1000) return `${Math.round(ms)}ms`;
@@ -81,55 +97,63 @@ function formatDurationMs(ms: number | null): string {
   return `${mins}m ${secs}s`;
 }
 
-const InspectorPanelSummary: React.FC<InspectorPanelSummaryProps> = ({
-  selectedModel,
-  activeTabTitle,
-  activeTabPath,
-  activeTabBranch,
-  activeTabChanged,
-  noActivity,
-  failedBlocks,
-  focusedFailedBlock,
-  analyzeCache,
-  recentBlocks,
-  commandMenuIndex,
-  quickActionsExpanded,
-  isInspectorCompact,
-  inspectorSummaryWrapClass,
-  inspectorCardTightClass,
-  inspectorCardRegularClass,
-  inspectorQuickGridClass,
-  inspectorMoreButtonRefs,
-  inspectorMenuFirstActionRefs,
-  inspectorQuickActionsToggleRef,
-  inspectorQuickActionsAdvancedRef,
-  onFocusFailedBlock,
-  onAnalyzeFailedBlock,
-  onCopyFailedOutput,
-  onCopyAnalyzePrompt,
-  onLoadAnalyzePromptToAiBar,
-  onSelectBlock,
-  onCopyAnalyzeResult,
-  onClearAnalyzeCache,
-  onCopySuggestedCommand,
-  onLoadSuggestedCommandToAiBar,
-  onApplySuggestedCommand,
-  onRerunBlock,
-  onCommandMenuRowBlurCapture,
-  onSuggestedCommandRowKeyDown,
-  onCompactMenuKeyDown,
-  onOpenCompactMenu,
-  onCloseCommandMenu,
-  onQuickActionsToggle,
-  onQuickActionsToggleKeyDown,
-  onQuickActionsAdvancedKeyDown,
-  onToggleProjectBin,
-  onOpenWorkspace,
-  onOpenHistory,
-  onOpenDiffReview,
-  onOpenFailedBlock,
-  onTabSelect,
-}) => {
+const InspectorPanelSummary: React.FC<InspectorPanelSummaryProps> = ({ data, layout, refs, actions }) => {
+  const {
+    selectedModel,
+    activeTabTitle,
+    activeTabPath,
+    activeTabBranch,
+    activeTabChanged,
+    noActivity,
+    failedBlocks,
+    focusedFailedBlock,
+    analyzeCache,
+    recentBlocks,
+    commandMenuIndex,
+  } = data;
+  const {
+    quickActionsExpanded,
+    isInspectorCompact,
+    inspectorSummaryWrapClass,
+    inspectorCardTightClass,
+    inspectorCardRegularClass,
+    inspectorQuickGridClass,
+  } = layout;
+  const {
+    inspectorMoreButtonRefs,
+    inspectorMenuFirstActionRefs,
+    inspectorQuickActionsToggleRef,
+    inspectorQuickActionsAdvancedRef,
+  } = refs;
+  const {
+    onFocusFailedBlock,
+    onAnalyzeFailedBlock,
+    onCopyFailedOutput,
+    onCopyAnalyzePrompt,
+    onLoadAnalyzePromptToAiBar,
+    onSelectBlock,
+    onCopyAnalyzeResult,
+    onClearAnalyzeCache,
+    onCopySuggestedCommand,
+    onLoadSuggestedCommandToAiBar,
+    onApplySuggestedCommand,
+    onRerunBlock,
+    onCommandMenuRowBlurCapture,
+    onSuggestedCommandRowKeyDown,
+    onCompactMenuKeyDown,
+    onOpenCompactMenu,
+    onCloseCommandMenu,
+    onQuickActionsToggle,
+    onQuickActionsToggleKeyDown,
+    onQuickActionsAdvancedKeyDown,
+    onToggleProjectBin,
+    onOpenWorkspace,
+    onOpenHistory,
+    onOpenDiffReview,
+    onOpenFailedBlock,
+    onTabSelect,
+  } = actions;
+
   return (
     <section
       id="inspector-tabpanel-summary"
