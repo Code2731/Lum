@@ -398,6 +398,13 @@ describe("InspectorPanel", () => {
     expect(screen.queryByText("Failed Block")).not.toBeInTheDocument();
   });
 
+  it("탭 버튼과 패널은 aria-controls와 aria-labelledby로 연결된다", () => {
+    renderInspector({ inspectorTab: "rag" });
+
+    expect(screen.getByRole("tab", { name: /RAG/ })).toHaveAttribute("aria-controls", "inspector-tabpanel-rag");
+    expect(screen.getByRole("tabpanel")).toHaveAttribute("aria-labelledby", "inspector-tab-rag");
+  });
+
   it("Scripts 탭은 스크립트 라이브러리 패널을 렌더링한다", () => {
     renderInspector({
       inspectorTab: "scripts",
@@ -533,6 +540,12 @@ describe("InspectorPanel", () => {
     renderInspector({ analyzeCache: null });
 
     expect(screen.getByText("아직 실행된 분석이 없습니다.")).toBeInTheDocument();
+  });
+
+  it("분석 캐시가 없으면 상단 CLEAR 액션을 숨긴다", () => {
+    renderInspector({ analyzeCache: null });
+
+    expect(screen.queryByText("CLEAR")).not.toBeInTheDocument();
   });
 
   it("streaming 분석 캐시는 진행 중 상태 문구를 보여준다", () => {
