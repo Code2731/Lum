@@ -223,6 +223,13 @@ describe("InspectorPanel", () => {
     expect(onDensityToggle).toHaveBeenCalledTimes(1);
   });
 
+  it("cozy 밀도에서는 Compact 보기 타이틀을 노출한다", () => {
+    renderInspector({ inspectorDensity: "cozy" });
+
+    expect(screen.getByLabelText("Inspector 밀도 토글")).toHaveAttribute("title", "Compact 보기");
+    expect(screen.getByText("COZY")).toBeInTheDocument();
+  });
+
   it("브랜치와 변경 개수가 있으면 워크스페이스 배지를 보여준다", () => {
     renderInspector({
       activeTabBranch: "feature/inspector",
@@ -243,6 +250,15 @@ describe("InspectorPanel", () => {
     expect(screen.queryByText("0")).not.toBeInTheDocument();
   });
 
+  it("브랜치가 없으면 워크스페이스 배지를 숨긴다", () => {
+    renderInspector({
+      activeTabBranch: undefined,
+      activeTabChanged: 5,
+    });
+
+    expect(screen.queryByText("5")).not.toBeInTheDocument();
+  });
+
   it("빠른 액션 더보기 토글을 누르면 onQuickActionsToggle가 호출된다", () => {
     const onQuickActionsToggle = vi.fn();
     renderInspector({ onQuickActionsToggle });
@@ -250,6 +266,13 @@ describe("InspectorPanel", () => {
     fireEvent.click(screen.getByText("더보기"));
 
     expect(onQuickActionsToggle).toHaveBeenCalledTimes(1);
+  });
+
+  it("빠른 액션이 접혀 있으면 더보기 라벨과 collapsed 상태를 보여준다", () => {
+    renderInspector({ quickActionsExpanded: false });
+
+    expect(screen.getByText("더보기")).toBeInTheDocument();
+    expect(screen.getByText("더보기").closest("button")).toHaveAttribute("aria-expanded", "false");
   });
 
   it("빠른 액션이 확장되면 축소 라벨과 expanded 상태를 보여준다", () => {
@@ -331,6 +354,15 @@ describe("InspectorPanel", () => {
     renderInspector({ onTabSelect });
 
     fireEvent.keyDown(screen.getByRole("tab", { name: /RAG/ }), { key: "Enter" });
+
+    expect(onTabSelect).toHaveBeenCalledWith("rag");
+  });
+
+  it("탭 버튼 Space 입력도 해당 탭 선택 콜백을 호출한다", () => {
+    const onTabSelect = vi.fn();
+    renderInspector({ onTabSelect });
+
+    fireEvent.keyDown(screen.getByRole("tab", { name: /RAG/ }), { key: " " });
 
     expect(onTabSelect).toHaveBeenCalledWith("rag");
   });
