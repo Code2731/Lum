@@ -12,6 +12,24 @@ import type {
 
 type InspectorPanelProps = ComponentProps<typeof InspectorPanel>;
 
+vi.mock("./RagPanel", () => ({
+  default: ({ model, compact }: { model: string; compact?: boolean }) => (
+    <div data-testid="rag-panel">RAG mock {model} {compact ? "compact" : "cozy"}</div>
+  ),
+}));
+
+vi.mock("./ScriptLibraryPanel", () => ({
+  default: ({ compact }: { compact?: boolean }) => (
+    <div data-testid="script-library-panel">Scripts mock {compact ? "compact" : "cozy"}</div>
+  ),
+}));
+
+vi.mock("./SystemMonitorPanel", () => ({
+  default: ({ compact }: { compact?: boolean }) => (
+    <div data-testid="system-monitor-panel">System mock {compact ? "compact" : "cozy"}</div>
+  ),
+}));
+
 const baseTabItems: InspectorTabItem[] = [
   { id: "summary", label: "요약", shortcut: "1" },
   { id: "rag", label: "RAG", shortcut: "2" },
@@ -175,6 +193,48 @@ describe("InspectorPanel", () => {
     fireEvent.click(screen.getByRole("tab", { name: /RAG/ }));
 
     expect(onTabSelect).toHaveBeenCalledWith("rag");
+  });
+
+  it("RAG 탭은 RAG 패널에 모델과 밀도 상태를 전달한다", () => {
+    renderInspector({
+      inspectorTab: "rag",
+      inspectorDensity: "compact",
+      selectedModel: "local-coder",
+    });
+
+    expect(screen.getByTestId("rag-panel")).toHaveTextContent("local-coder compact");
+    expect(screen.queryByText("Failed Block")).not.toBeInTheDocument();
+  });
+
+  it("Scripts 탭은 스크립트 라이브러리 패널을 렌더링한다", () => {
+    renderInspector({
+      inspectorTab: "scripts",
+      scriptLibrary: {
+        ...createScriptLibrary(),
+        scripts: [
+          {
+            id: "script-1",
+            name: "테스트 실행",
+            description: "unit",
+            commands: ["npm test"],
+            created_at: 1,
+          },
+        ],
+      },
+    });
+
+    expect(screen.getByTestId("script-library-panel")).toHaveTextContent("Scripts mock cozy");
+    expect(screen.queryByText("Failed Block")).not.toBeInTheDocument();
+  });
+
+  it("System 탭은 시스템 모니터 패널을 렌더링한다", () => {
+    renderInspector({
+      inspectorTab: "sysmon",
+      inspectorDensity: "compact",
+    });
+
+    expect(screen.getByTestId("system-monitor-panel")).toHaveTextContent("System mock compact");
+    expect(screen.queryByText("Failed Block")).not.toBeInTheDocument();
   });
 
   it("요약 탭 실패 분석 버튼이 onAnalyzeFailedBlock를 호출한다", () => {
