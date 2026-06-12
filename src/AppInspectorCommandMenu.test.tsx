@@ -106,6 +106,7 @@ vi.mock("./components/InspectorPanel", () => ({
     onClose,
     inspectorMoreButtonRefs,
     inspectorMenuFirstActionRefs,
+    onCompactMenuKeyDown,
     onOpenCompactMenu,
     onCloseCommandMenu,
     commandMenuIndex,
@@ -136,8 +137,13 @@ vi.mock("./components/InspectorPanel", () => ({
               MORE
             </button>
             {commandMenuIndex === idx && (
-              <div role="menu" data-inspector-command-menu="compact" onKeyDown={() => onCloseCommandMenu?.(true)}>
+              <div
+                role="menu"
+                data-inspector-command-menu="compact"
+                onKeyDown={(e: React.KeyboardEvent<HTMLDivElement>) => onCompactMenuKeyDown?.(e, idx)}
+              >
                 <button
+                  role="menuitem"
                   ref={(el) => {
                     if (inspectorMenuFirstActionRefs?.current) {
                       inspectorMenuFirstActionRefs.current[commandMenuIndex] = el;
@@ -146,7 +152,7 @@ vi.mock("./components/InspectorPanel", () => ({
                 >
                   {idx === 0 ? "COPY (C)" : "COPY (C) #2"}
                 </button>
-                <button>{idx === 0 ? "LOAD (L)" : "LOAD (L) #2"}</button>
+                <button role="menuitem">{idx === 0 ? "LOAD (L)" : "LOAD (L) #2"}</button>
               </div>
             )}
           </div>
@@ -493,6 +499,34 @@ describe("App (Inspector compact command menu focus)", () => {
     await waitFor(() => {
       expect(screen.queryByRole("menu")).not.toBeInTheDocument();
       expect(moreButtons[1]).toHaveFocus();
+    });
+  });
+
+  it("두 번째 행 compact 메뉴에서 ArrowRight로 액션 포커스를 다음 항목으로 이동한다", async () => {
+    render(<App />);
+
+    const inspectorButton = screen.getByLabelText("Inspector");
+    fireEvent.click(inspectorButton);
+
+    await waitFor(() => {
+      expect(screen.getByRole("tablist", { name: "Inspector 탭" })).toBeInTheDocument();
+    });
+
+    const moreButtons = screen.getAllByRole("button", { name: "MORE" });
+    fireEvent.click(moreButtons[1]);
+
+    const copyAction = await waitFor(() => screen.getByText("COPY (C) #2"));
+    const loadAction = screen.getByText("LOAD (L) #2");
+    const menu = screen.getByRole("menu");
+
+    await waitFor(() => {
+      expect(copyAction).toHaveFocus();
+    });
+
+    fireEvent.keyDown(menu, { key: "ArrowRight" });
+
+    await waitFor(() => {
+      expect(loadAction).toHaveFocus();
     });
   });
 
