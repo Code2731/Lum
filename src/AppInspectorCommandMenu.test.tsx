@@ -326,6 +326,32 @@ describe("App (Inspector compact command menu focus)", () => {
     expect(firstMenuButton).toHaveTextContent("COPY (C) #2");
   });
 
+  it("메뉴가 열린 상태에서 두 번째 행에서 첫 번째 행으로 전환하면 첫 번째 행 메뉴가 열리며 포커스가 갱신된다", async () => {
+    render(<App />);
+
+    const inspectorButton = screen.getByLabelText("Inspector");
+    fireEvent.click(inspectorButton);
+
+    await waitFor(() => {
+      expect(screen.getByRole("tablist", { name: "Inspector 탭" })).toBeInTheDocument();
+    });
+
+    const moreButtons = screen.getAllByRole("button", { name: "MORE" });
+    fireEvent.click(moreButtons[1]);
+
+    await waitFor(() => {
+      expect(screen.getByText("COPY (C) #2")).toBeInTheDocument();
+    });
+
+    fireEvent.click(moreButtons[0]);
+
+    const firstFirstAction = await waitFor(() => screen.getByText("COPY (C)"));
+    expect(firstFirstAction).toHaveFocus();
+    const menu = screen.getByRole("menu");
+    const firstMenuButton = menu.querySelector("button");
+    expect(firstMenuButton).toHaveTextContent("COPY (C)");
+  });
+
   it("다른 행의 RUN 클릭은 메뉴를 닫는다", async () => {
     render(<App />);
 
