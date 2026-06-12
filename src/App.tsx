@@ -1545,7 +1545,7 @@ const App: React.FC = () => {
   useEffect(() => {
     const onPointerDown = (e: PointerEvent) => {
       if (inspectorCommandMenuOpenRef.current == null) return;
-      if (isEventTargetWithinSelector(e.target, "[data-inspector-command-menu-row='1']")) return;
+      if (isEventTargetWithinSelector(e.target, "[data-inspector-command-menu-row]")) return;
       if (isEventTargetWithinSelector(e.target, "[data-inspector-command-menu='compact']")) return;
       closeInspectorCommandMenu();
     };

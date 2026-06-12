@@ -204,4 +204,21 @@ describe("InspectorAnalyzeCard", () => {
     expect(onSuggestedCommandRowKeyDown).toHaveBeenCalledTimes(1);
     expect(onSuggestedCommandRowKeyDown.mock.calls[0][1]).toBe(0);
   });
+
+  it("compact 모드에서 각 추천 커맨드 행은 고유한 menu-row 태그를 가진다", () => {
+    render(
+      <InspectorAnalyzeCard
+        {...createProps({
+          analyzeCache: baseAnalyzeCache,
+          isInspectorCompact: true,
+        })}
+      />,
+    );
+
+    const rows = Array.from(document.querySelectorAll("[data-inspector-command-menu-row]"));
+
+    expect(rows).toHaveLength(2);
+    expect(rows[0]).toHaveAttribute("data-inspector-command-menu-row", "1");
+    expect(rows[1]).toHaveAttribute("data-inspector-command-menu-row", "2");
+  });
 });

@@ -103,7 +103,7 @@ const InspectorAnalyzeCard: React.FC<InspectorAnalyzeCardProps> = ({
               {analyzeCache.suggestedCommands.map((cmd, idx) => (
                 <div
                   key={`${cmd}-${idx}`}
-                  data-inspector-command-menu-row="1"
+                  data-inspector-command-menu-row={idx + 1}
                   tabIndex={isInspectorCompact ? 0 : -1}
                   className="rounded border border-cyan-300/18 bg-cyan-400/[0.06] px-1.5 py-1 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-cyan-300/45"
                   onBlurCapture={(e) => onCommandMenuRowBlurCapture(e, idx)}
