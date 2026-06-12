@@ -115,40 +115,42 @@ vi.mock("./components/InspectorPanel", () => ({
       <section>
         <button aria-label="Inspector 닫기" onClick={onClose}>Inspector 닫기</button>
         <div role="tablist" aria-label="Inspector 탭" />
-        <button
-          ref={(el) => {
-            if (inspectorMoreButtonRefs?.current) {
-              inspectorMoreButtonRefs.current[0] = el;
-            }
-            if (inspectorMenuFirstActionRefs?.current) {
-              inspectorMenuFirstActionRefs.current[0] = el;
-            }
-          }}
-          onClick={() => onOpenCompactMenu(0)}
-        >
-          MORE
-        </button>
-        {commandMenuIndex != null && (
-          <div data-inspector-command-menu-row="1">
+        {[0, 1].map((idx) => (
+          <div key={idx} data-inspector-command-menu-row={idx + 1}>
             <button
               onClick={() => onCloseCommandMenu?.(false)}
             >
-              RUN (R)
+              {idx === 0 ? "RUN (R)" : `RUN (R) #${idx + 1}`}
             </button>
-            <div role="menu" data-inspector-command-menu="compact" onKeyDown={() => onCloseCommandMenu?.(true)}>
-              <button
-                ref={(el) => {
-                  if (inspectorMenuFirstActionRefs?.current) {
-                    inspectorMenuFirstActionRefs.current[commandMenuIndex] = el;
-                  }
-                }}
-              >
-                COPY (C)
-              </button>
-              <button>LOAD (L)</button>
-            </div>
+            <button
+              ref={(el) => {
+                if (inspectorMoreButtonRefs?.current) {
+                  inspectorMoreButtonRefs.current[idx] = el;
+                }
+                if (inspectorMenuFirstActionRefs?.current && idx === 0) {
+                  inspectorMenuFirstActionRefs.current[idx] = el;
+                }
+              }}
+              onClick={() => onOpenCompactMenu(idx)}
+            >
+              MORE
+            </button>
+            {commandMenuIndex === idx && (
+              <div role="menu" data-inspector-command-menu="compact" onKeyDown={() => onCloseCommandMenu?.(true)}>
+                <button
+                  ref={(el) => {
+                    if (inspectorMenuFirstActionRefs?.current) {
+                      inspectorMenuFirstActionRefs.current[commandMenuIndex] = el;
+                    }
+                  }}
+                >
+                  {idx === 0 ? "COPY (C)" : "COPY (C) #2"}
+                </button>
+                <button>{idx === 0 ? "LOAD (L)" : "LOAD (L) #2"}</button>
+              </div>
+            )}
           </div>
-        )}
+        ))}
       </section>
     );
   },
@@ -188,7 +190,7 @@ describe("App (Inspector compact command menu focus)", () => {
       expect(screen.getByRole("tablist", { name: "Inspector 탭" })).toBeInTheDocument();
     });
 
-    const moreButton = screen.getByRole("button", { name: "MORE" });
+    const moreButton = screen.getAllByRole("button", { name: "MORE" })[0];
     moreButton.focus();
     fireEvent.click(moreButton);
 
@@ -214,11 +216,11 @@ describe("App (Inspector compact command menu focus)", () => {
       expect(screen.getByRole("tablist", { name: "Inspector 탭" })).toBeInTheDocument();
     });
 
-    const moreButton = screen.getByRole("button", { name: "MORE" });
+    const moreButton = screen.getAllByRole("button", { name: "MORE" })[0];
     fireEvent.click(moreButton);
 
     const menu = await waitFor(() => screen.getByRole("menu"));
-    const copyAction = screen.getByRole("button", { name: "COPY (C)" });
+    const copyAction = screen.getAllByRole("button", { name: "COPY (C)" })[0];
     const commandRow = screen.getByText("RUN (R)");
 
     fireEvent.pointerDown(commandRow);
@@ -239,7 +241,7 @@ describe("App (Inspector compact command menu focus)", () => {
 
     const closeButton = screen.getByRole("button", { name: "Inspector 닫기" });
     closeButton.focus();
-    const moreButton = screen.getByRole("button", { name: "MORE" });
+    const moreButton = screen.getAllByRole("button", { name: "MORE" })[0];
     fireEvent.click(moreButton);
 
     await waitFor(() => {
@@ -252,5 +254,28 @@ describe("App (Inspector compact command menu focus)", () => {
       expect(screen.queryByRole("menu")).not.toBeInTheDocument();
       expect(closeButton).toHaveFocus();
     });
+  });
+
+  it("compact 메뉴가 두 번째 행에서도 내부 포인터 다운은 메뉴를 닫지 않는다", async () => {
+    render(<App />);
+
+    const inspectorButton = screen.getByLabelText("Inspector");
+    fireEvent.click(inspectorButton);
+
+    await waitFor(() => {
+      expect(screen.getByRole("tablist", { name: "Inspector 탭" })).toBeInTheDocument();
+    });
+
+    const moreButtons = screen.getAllByRole("button", { name: "MORE" });
+    fireEvent.click(moreButtons[1]);
+
+    const menu = await waitFor(() => screen.getByRole("menu"));
+    const secondRunRow = screen.getByText("RUN (R) #2");
+    const secondCopy = screen.getByText("COPY (C) #2");
+
+    fireEvent.pointerDown(secondRunRow);
+    fireEvent.pointerDown(secondCopy);
+
+    expect(menu).toBeInTheDocument();
   });
 });
