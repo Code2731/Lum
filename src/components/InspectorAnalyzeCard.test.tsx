@@ -163,6 +163,25 @@ describe("InspectorAnalyzeCard", () => {
     expect(onCompactMenuKeyDown).toHaveBeenCalledTimes(1);
   });
 
+  it("compact 메뉴 keydown에서 Escape도 행 인덱스를 전달한다", () => {
+    const onCompactMenuKeyDown = vi.fn();
+    render(
+      <InspectorAnalyzeCard
+        {...createProps({
+          analyzeCache: baseAnalyzeCache,
+          isInspectorCompact: true,
+          commandMenuIndex: 0,
+          onCompactMenuKeyDown,
+        })}
+      />,
+    );
+
+    fireEvent.keyDown(screen.getByRole("menu"), { key: "Escape" });
+
+    expect(onCompactMenuKeyDown).toHaveBeenCalledTimes(1);
+    expect(onCompactMenuKeyDown.mock.calls[0][1]).toBe(0);
+  });
+
   it("추천 커맨드 행 blur와 keydown은 row index를 전달한다", () => {
     const onCommandMenuRowBlurCapture = vi.fn();
     const onSuggestedCommandRowKeyDown = vi.fn();

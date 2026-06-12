@@ -938,6 +938,21 @@ describe("InspectorPanel", () => {
     expect(onCompactMenuKeyDown.mock.calls[0][1]).toBe(0);
   });
 
+  it("compact 분석 메뉴에서 Escape keydown도 row index를 전달한다", () => {
+    const onCompactMenuKeyDown = vi.fn();
+    renderInspector({
+      analyzeCache: baseAnalyzeCache,
+      commandMenuIndex: 0,
+      inspectorDensity: "compact",
+      onCompactMenuKeyDown,
+    });
+
+    fireEvent.keyDown(screen.getByRole("menu"), { key: "Escape" });
+
+    expect(onCompactMenuKeyDown).toHaveBeenCalledTimes(1);
+    expect(onCompactMenuKeyDown.mock.calls[0][1]).toBe(0);
+  });
+
   it("compact 분석 메뉴가 열린 상태에서 MORE 버튼을 다시 누르면 메뉴 닫기 콜백을 호출한다", () => {
     const onCloseCommandMenu = vi.fn();
     renderInspector({
