@@ -279,6 +279,32 @@ describe("App (Inspector compact command menu focus)", () => {
     expect(menu).toBeInTheDocument();
   });
 
+  it("메뉴가 열린 상태에서 다른 행의 MORE를 누르면 두 번째 행 메뉴가 열리며 포커스가 갱신된다", async () => {
+    render(<App />);
+
+    const inspectorButton = screen.getByLabelText("Inspector");
+    fireEvent.click(inspectorButton);
+
+    await waitFor(() => {
+      expect(screen.getByRole("tablist", { name: "Inspector 탭" })).toBeInTheDocument();
+    });
+
+    const moreButtons = screen.getAllByRole("button", { name: "MORE" });
+    fireEvent.click(moreButtons[0]);
+
+    await waitFor(() => {
+      expect(screen.getByText("COPY (C)")).toBeInTheDocument();
+    });
+
+    fireEvent.click(moreButtons[1]);
+
+    const secondFirstAction = await waitFor(() => screen.getByText("COPY (C) #2"));
+    expect(secondFirstAction).toHaveFocus();
+    const menu = screen.getByRole("menu");
+    const firstMenuButton = menu.querySelector("button");
+    expect(firstMenuButton).toHaveTextContent("COPY (C) #2");
+  });
+
   it("두 번째 행의 compact 메뉴가 열리면 해당 행의 첫 액션으로 포커스가 이동한다", async () => {
     render(<App />);
 
