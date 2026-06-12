@@ -108,6 +108,8 @@ vi.mock("./components/InspectorPanel", () => ({
     inspectorMenuFirstActionRefs,
     onCompactMenuKeyDown,
     onSuggestedCommandRowKeyDown,
+    onCopySuggestedCommand,
+    onLoadSuggestedCommandToAiBar,
     onOpenCompactMenu,
     onCloseCommandMenu,
     commandMenuIndex,
@@ -157,10 +159,36 @@ vi.mock("./components/InspectorPanel", () => ({
                       inspectorMenuFirstActionRefs.current[commandMenuIndex] = el;
                     }
                   }}
+                  onKeyDown={(e: React.KeyboardEvent<HTMLButtonElement>) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      onCopySuggestedCommand?.(idx);
+                      onCloseCommandMenu?.(true);
+                    }
+                  }}
+                  onClick={() => {
+                    onCopySuggestedCommand?.(idx);
+                    onCloseCommandMenu?.(true);
+                  }}
                 >
                   {idx === 0 ? "COPY (C)" : "COPY (C) #2"}
                 </button>
-                <button role="menuitem">{idx === 0 ? "LOAD (L)" : "LOAD (L) #2"}</button>
+                <button
+                  role="menuitem"
+                  onKeyDown={(e: React.KeyboardEvent<HTMLButtonElement>) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      onLoadSuggestedCommandToAiBar?.(idx);
+                      onCloseCommandMenu?.(false);
+                    }
+                  }}
+                  onClick={() => {
+                    onLoadSuggestedCommandToAiBar?.(idx);
+                    onCloseCommandMenu?.(false);
+                  }}
+                >
+                  {idx === 0 ? "LOAD (L)" : "LOAD (L) #2"}
+                </button>
               </div>
             )}
           </div>
@@ -310,6 +338,73 @@ describe("App (Inspector compact command menu focus)", () => {
     const secondAction = await waitFor(() => screen.getByText("COPY (C) #2"));
     expect(secondAction).toHaveFocus();
     expect(screen.getByRole("menu")).toBeInTheDocument();
+  });
+
+  it("compact 메뉴에서 COPY 액션 Enter는 메뉴를 닫고 해당 행 MORE 버튼으로 포커스를 되돌린다", async () => {
+    render(<App />);
+
+    const inspectorButton = screen.getByLabelText("Inspector");
+    fireEvent.click(inspectorButton);
+
+    await waitFor(() => {
+      expect(screen.getByRole("tablist", { name: "Inspector 탭" })).toBeInTheDocument();
+    });
+
+    const moreButtons = screen.getAllByRole("button", { name: "MORE" });
+    fireEvent.click(moreButtons[0]);
+
+    const copyAction = await waitFor(() => screen.getByText("COPY (C)"));
+    copyAction.focus();
+    fireEvent.keyDown(copyAction, { key: "Enter" });
+
+    await waitFor(() => {
+      expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+      expect(moreButtons[0]).toHaveFocus();
+    });
+  });
+
+  it("compact 메뉴에서 LOAD 액션 Space는 메뉴를 닫고 액션 대상 포커스를 유지한다", async () => {
+    render(<App />);
+
+    const inspectorButton = screen.getByLabelText("Inspector");
+    fireEvent.click(inspectorButton);
+
+    await waitFor(() => {
+      expect(screen.getByRole("tablist", { name: "Inspector 탭" })).toBeInTheDocument();
+    });
+
+    const moreButtons = screen.getAllByRole("button", { name: "MORE" });
+    fireEvent.click(moreButtons[1]);
+
+    const loadAction = await waitFor(() => screen.getByText("LOAD (L) #2"));
+    loadAction.focus();
+    fireEvent.keyDown(loadAction, { key: " " });
+
+    await waitFor(() => {
+      expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+      expect(moreButtons[1]).not.toHaveFocus();
+    });
+  });
+
+  it("compact 메뉴에서 LOAD 액션 클릭은 메뉴를 닫는다", async () => {
+    render(<App />);
+
+    const inspectorButton = screen.getByLabelText("Inspector");
+    fireEvent.click(inspectorButton);
+
+    await waitFor(() => {
+      expect(screen.getByRole("tablist", { name: "Inspector 탭" })).toBeInTheDocument();
+    });
+
+    const moreButtons = screen.getAllByRole("button", { name: "MORE" });
+    fireEvent.click(moreButtons[0]);
+
+    const loadAction = await waitFor(() => screen.getByText("LOAD (L)"));
+    fireEvent.click(loadAction);
+
+    await waitFor(() => {
+      expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+    });
   });
 
   it("compact 메뉴가 두 번째 행에서도 내부 포인터 다운은 메뉴를 닫지 않는다", async () => {
