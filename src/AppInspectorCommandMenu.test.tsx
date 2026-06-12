@@ -295,4 +295,30 @@ describe("App (Inspector compact command menu focus)", () => {
     const firstAction = await waitFor(() => screen.getByText("COPY (C) #2"));
     expect(firstAction).toHaveFocus();
   });
+
+  it("두 번째 행의 compact 메뉴에서 Escape를 누르면 두 번째 MORE 버튼으로 포커스가 복귀한다", async () => {
+    render(<App />);
+
+    const inspectorButton = screen.getByLabelText("Inspector");
+    fireEvent.click(inspectorButton);
+
+    await waitFor(() => {
+      expect(screen.getByRole("tablist", { name: "Inspector 탭" })).toBeInTheDocument();
+    });
+
+    const moreButtons = screen.getAllByRole("button", { name: "MORE" });
+    moreButtons[1].focus();
+    fireEvent.click(moreButtons[1]);
+
+    await waitFor(() => {
+      expect(screen.getByRole("menu")).toBeInTheDocument();
+    });
+
+    fireEvent.keyDown(window, { key: "Escape" });
+
+    await waitFor(() => {
+      expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+      expect(moreButtons[1]).toHaveFocus();
+    });
+  });
 });
