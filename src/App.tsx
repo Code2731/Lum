@@ -385,6 +385,8 @@ const App: React.FC = () => {
   }, [inspectorCommandMenuIndex]);
 
   const closeInspectorCommandMenu = useCallback((restoreFocus = false) => {
+    // restoreFocus true는 메뉴를 닫을 때 해당 행의 MORE 버튼으로 포커스를 되돌려
+    // 키보드 접근성을 유지하고, compact 메뉴 액션에서 false는 실행 액션 흐름의 자연스러운 진행을 보존한다.
     setInspectorCommandMenuIndex((prev) => {
       if (restoreFocus && prev != null) {
         setTimeout(() => inspectorMoreButtonRefs.current[prev]?.focus(), 0);
