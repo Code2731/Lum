@@ -127,7 +127,7 @@ vi.mock("./components/InspectorPanel", () => ({
                 if (inspectorMoreButtonRefs?.current) {
                   inspectorMoreButtonRefs.current[idx] = el;
                 }
-                if (inspectorMenuFirstActionRefs?.current && idx === 0) {
+                if (inspectorMenuFirstActionRefs?.current) {
                   inspectorMenuFirstActionRefs.current[idx] = el;
                 }
               }}
@@ -277,5 +277,22 @@ describe("App (Inspector compact command menu focus)", () => {
     fireEvent.pointerDown(secondCopy);
 
     expect(menu).toBeInTheDocument();
+  });
+
+  it("두 번째 행의 compact 메뉴가 열리면 해당 행의 첫 액션으로 포커스가 이동한다", async () => {
+    render(<App />);
+
+    const inspectorButton = screen.getByLabelText("Inspector");
+    fireEvent.click(inspectorButton);
+
+    await waitFor(() => {
+      expect(screen.getByRole("tablist", { name: "Inspector 탭" })).toBeInTheDocument();
+    });
+
+    const moreButtons = screen.getAllByRole("button", { name: "MORE" });
+    fireEvent.click(moreButtons[1]);
+
+    const firstAction = await waitFor(() => screen.getByText("COPY (C) #2"));
+    expect(firstAction).toHaveFocus();
   });
 });
