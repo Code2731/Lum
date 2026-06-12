@@ -953,6 +953,36 @@ describe("InspectorPanel", () => {
     expect(onCompactMenuKeyDown.mock.calls[0][1]).toBe(0);
   });
 
+  it("compact 두 번째 행에서 메뉴 keydown은 row index 1을 전달한다", () => {
+    const onCompactMenuKeyDown = vi.fn();
+    renderInspector({
+      analyzeCache: multiAnalyzeCache,
+      commandMenuIndex: 1,
+      inspectorDensity: "compact",
+      onCompactMenuKeyDown,
+    });
+
+    fireEvent.keyDown(screen.getByRole("menu"), { key: "ArrowRight" });
+
+    expect(onCompactMenuKeyDown).toHaveBeenCalledTimes(1);
+    expect(onCompactMenuKeyDown.mock.calls[0][1]).toBe(1);
+  });
+
+  it("compact 두 번째 행에서 Escape keydown은 row index 1을 전달한다", () => {
+    const onCompactMenuKeyDown = vi.fn();
+    renderInspector({
+      analyzeCache: multiAnalyzeCache,
+      commandMenuIndex: 1,
+      inspectorDensity: "compact",
+      onCompactMenuKeyDown,
+    });
+
+    fireEvent.keyDown(screen.getByRole("menu"), { key: "Escape" });
+
+    expect(onCompactMenuKeyDown).toHaveBeenCalledTimes(1);
+    expect(onCompactMenuKeyDown.mock.calls[0][1]).toBe(1);
+  });
+
   it("compact 분석 메뉴가 열린 상태에서 MORE 버튼을 다시 누르면 메뉴 닫기 콜백을 호출한다", () => {
     const onCloseCommandMenu = vi.fn();
     renderInspector({
