@@ -996,4 +996,18 @@ describe("InspectorPanel", () => {
 
     expect(onCloseCommandMenu).toHaveBeenCalledWith(true);
   });
+
+  it("compact 두 번째 행의 RUN 버튼은 onCloseCommandMenu(false)를 호출한다", () => {
+    const onCloseCommandMenu = vi.fn();
+    renderInspector({
+      analyzeCache: multiAnalyzeCache,
+      commandMenuIndex: 0,
+      inspectorDensity: "compact",
+      onCloseCommandMenu,
+    });
+
+    fireEvent.click(screen.getByText("RUN (R) #2"));
+
+    expect(onCloseCommandMenu).toHaveBeenCalledWith(false);
+  });
 });
