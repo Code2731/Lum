@@ -226,7 +226,7 @@ describe("App (Inspector compact command menu focus)", () => {
     fireEvent.pointerDown(commandRow);
     fireEvent.pointerDown(copyAction);
 
-    expect(menu).toBeInTheDocument();
+    expect(screen.getByRole("menu")).toBeInTheDocument();
   });
 
   it("compact 메뉴 밖의 포인터 다운은 메뉴를 닫고 포커스를 유지한다", async () => {
@@ -347,6 +347,34 @@ describe("App (Inspector compact command menu focus)", () => {
     fireEvent.click(secondRunRow);
 
     expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+  });
+
+  it("두 번째 행 메뉴가 열려 있을 때 바깥 포인터다운은 원래 MORE 버튼으로 포커스를 복구한다", async () => {
+    render(<App />);
+
+    const inspectorButton = screen.getByLabelText("Inspector");
+    fireEvent.click(inspectorButton);
+
+    await waitFor(() => {
+      expect(screen.getByRole("tablist", { name: "Inspector 탭" })).toBeInTheDocument();
+    });
+
+    const closeButton = screen.getByRole("button", { name: "Inspector 닫기" });
+    const moreButtons = screen.getAllByRole("button", { name: "MORE" });
+
+    closeButton.focus();
+    fireEvent.click(moreButtons[1]);
+
+    await waitFor(() => {
+      expect(screen.getByRole("menu")).toBeInTheDocument();
+    });
+
+    fireEvent.pointerDown(document.body);
+
+    await waitFor(() => {
+      expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+      expect(moreButtons[1]).toHaveFocus();
+    });
   });
 
   it("첫 번째 행 RUN 클릭은 메뉴를 닫고 클릭한 RUN 요소 포커스를 유지한다", async () => {
