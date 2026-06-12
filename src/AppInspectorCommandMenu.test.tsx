@@ -107,6 +107,7 @@ vi.mock("./components/InspectorPanel", () => ({
     inspectorMoreButtonRefs,
     inspectorMenuFirstActionRefs,
     onCompactMenuKeyDown,
+    onSuggestedCommandRowKeyDown,
     onOpenCompactMenu,
     onCloseCommandMenu,
     commandMenuIndex,
@@ -119,11 +120,18 @@ vi.mock("./components/InspectorPanel", () => ({
         {[0, 1].map((idx) => (
           <div key={idx} data-inspector-command-menu-row={idx + 1}>
             <button
+              onKeyDown={(e: React.KeyboardEvent<HTMLButtonElement>) => onSuggestedCommandRowKeyDown?.(e, idx)}
               onClick={() => onCloseCommandMenu?.(false)}
             >
               {idx === 0 ? "RUN (R)" : `RUN (R) #${idx + 1}`}
             </button>
             <button
+              onKeyDown={(e: React.KeyboardEvent<HTMLButtonElement>) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  onOpenCompactMenu(idx);
+                }
+              }}
               ref={(el) => {
                 if (inspectorMoreButtonRefs?.current) {
                   inspectorMoreButtonRefs.current[idx] = el;
@@ -260,6 +268,48 @@ describe("App (Inspector compact command menu focus)", () => {
       expect(screen.queryByRole("menu")).not.toBeInTheDocument();
       expect(closeButton).toHaveFocus();
     });
+  });
+
+  it("compact 메뉴의 MORE를 Enter 키로 열면 해당 행 첫 액션에 포커스가 이동한다", async () => {
+    render(<App />);
+
+    const inspectorButton = screen.getByLabelText("Inspector");
+    fireEvent.click(inspectorButton);
+
+    await waitFor(() => {
+      expect(screen.getByRole("tablist", { name: "Inspector 탭" })).toBeInTheDocument();
+    });
+
+    const moreButtons = screen.getAllByRole("button", { name: "MORE" });
+    const firstMore = moreButtons[0];
+
+    firstMore.focus();
+    fireEvent.keyDown(firstMore, { key: "Enter" });
+
+    const firstAction = await waitFor(() => screen.getByText("COPY (C)"));
+    expect(firstAction).toHaveFocus();
+    expect(screen.getByRole("menu")).toBeInTheDocument();
+  });
+
+  it("compact 메뉴의 MORE를 Space 키로 열면 해당 행 첫 액션에 포커스가 이동한다", async () => {
+    render(<App />);
+
+    const inspectorButton = screen.getByLabelText("Inspector");
+    fireEvent.click(inspectorButton);
+
+    await waitFor(() => {
+      expect(screen.getByRole("tablist", { name: "Inspector 탭" })).toBeInTheDocument();
+    });
+
+    const moreButtons = screen.getAllByRole("button", { name: "MORE" });
+    const secondMore = moreButtons[1];
+
+    secondMore.focus();
+    fireEvent.keyDown(secondMore, { key: " " });
+
+    const secondAction = await waitFor(() => screen.getByText("COPY (C) #2"));
+    expect(secondAction).toHaveFocus();
+    expect(screen.getByRole("menu")).toBeInTheDocument();
   });
 
   it("compact 메뉴가 두 번째 행에서도 내부 포인터 다운은 메뉴를 닫지 않는다", async () => {
