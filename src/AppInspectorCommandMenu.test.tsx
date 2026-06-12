@@ -279,6 +279,27 @@ describe("App (Inspector compact command menu focus)", () => {
     expect(menu).toBeInTheDocument();
   });
 
+  it("첫 번째 행 메뉴가 열려 있을 때 다른 행의 RUN 행 포인터다운은 메뉴를 닫지 않는다", async () => {
+    render(<App />);
+
+    const inspectorButton = screen.getByLabelText("Inspector");
+    fireEvent.click(inspectorButton);
+
+    await waitFor(() => {
+      expect(screen.getByRole("tablist", { name: "Inspector 탭" })).toBeInTheDocument();
+    });
+
+    const moreButtons = screen.getAllByRole("button", { name: "MORE" });
+    fireEvent.click(moreButtons[0]);
+
+    const menu = await waitFor(() => screen.getByRole("menu"));
+    const secondRunRow = screen.getByText("RUN (R) #2");
+
+    fireEvent.pointerDown(secondRunRow);
+
+    expect(menu).toBeInTheDocument();
+  });
+
   it("메뉴가 열린 상태에서 다른 행의 MORE를 누르면 두 번째 행 메뉴가 열리며 포커스가 갱신된다", async () => {
     render(<App />);
 
