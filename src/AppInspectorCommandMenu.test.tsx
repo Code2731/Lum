@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { invoke } from "@tauri-apps/api/core";
 import { useCommandBlocks } from "./hooks/useCommandBlocks";
+import App from "./App";
 
 vi.mock("@tauri-apps/api/core", () => ({
   invoke: vi.fn().mockImplementation((cmd: string) => {
@@ -106,6 +107,7 @@ vi.mock("./components/InspectorPanel", () => ({
     inspectorMoreButtonRefs,
     inspectorMenuFirstActionRefs,
     onOpenCompactMenu,
+    onCloseCommandMenu,
     commandMenuIndex,
   }: any) => {
     if (!showInspector) return null;
@@ -126,7 +128,27 @@ vi.mock("./components/InspectorPanel", () => ({
         >
           MORE
         </button>
-        {commandMenuIndex != null && <div role="menu">compact command menu</div>}
+        {commandMenuIndex != null && (
+          <div data-inspector-command-menu-row="1">
+            <button
+              onClick={() => onCloseCommandMenu?.(false)}
+            >
+              RUN (R)
+            </button>
+            <div role="menu" data-inspector-command-menu="compact" onKeyDown={() => onCloseCommandMenu?.(true)}>
+              <button
+                ref={(el) => {
+                  if (inspectorMenuFirstActionRefs?.current) {
+                    inspectorMenuFirstActionRefs.current[commandMenuIndex] = el;
+                  }
+                }}
+              >
+                COPY (C)
+              </button>
+              <button>LOAD (L)</button>
+            </div>
+          </div>
+        )}
       </section>
     );
   },
@@ -157,9 +179,6 @@ describe("App (Inspector compact command menu focus)", () => {
   });
 
   it("compact 분석 메뉴를 Escape로 닫으면 MORE 버튼으로 포커스가 복귀한다", async () => {
-    vi.resetModules();
-
-    const { default: App } = await import("./App");
     render(<App />);
 
     const inspectorButton = screen.getByLabelText("Inspector");
@@ -182,6 +201,56 @@ describe("App (Inspector compact command menu focus)", () => {
     await waitFor(() => {
       expect(screen.queryByRole("menu")).not.toBeInTheDocument();
       expect(moreButton).toHaveFocus();
+    });
+  });
+
+  it("compact 메뉴 내부에서 포인터 다운은 메뉴를 닫지 않는다", async () => {
+    render(<App />);
+
+    const inspectorButton = screen.getByLabelText("Inspector");
+    fireEvent.click(inspectorButton);
+
+    await waitFor(() => {
+      expect(screen.getByRole("tablist", { name: "Inspector 탭" })).toBeInTheDocument();
+    });
+
+    const moreButton = screen.getByRole("button", { name: "MORE" });
+    fireEvent.click(moreButton);
+
+    const menu = await waitFor(() => screen.getByRole("menu"));
+    const copyAction = screen.getByRole("button", { name: "COPY (C)" });
+    const commandRow = screen.getByText("RUN (R)");
+
+    fireEvent.pointerDown(commandRow);
+    fireEvent.pointerDown(copyAction);
+
+    expect(menu).toBeInTheDocument();
+  });
+
+  it("compact 메뉴 밖의 포인터 다운은 메뉴를 닫고 포커스를 유지한다", async () => {
+    render(<App />);
+
+    const inspectorButton = screen.getByLabelText("Inspector");
+    fireEvent.click(inspectorButton);
+
+    await waitFor(() => {
+      expect(screen.getByRole("tablist", { name: "Inspector 탭" })).toBeInTheDocument();
+    });
+
+    const closeButton = screen.getByRole("button", { name: "Inspector 닫기" });
+    closeButton.focus();
+    const moreButton = screen.getByRole("button", { name: "MORE" });
+    fireEvent.click(moreButton);
+
+    await waitFor(() => {
+      expect(screen.getByRole("menu")).toBeInTheDocument();
+    });
+
+    fireEvent.pointerDown(document.body);
+
+    await waitFor(() => {
+      expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+      expect(closeButton).toHaveFocus();
     });
   });
 });
