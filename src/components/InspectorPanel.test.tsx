@@ -949,6 +949,6 @@ describe("InspectorPanel", () => {
 
     fireEvent.click(screen.getAllByText("MORE")[0]);
 
-    expect(onCloseCommandMenu).toHaveBeenCalledTimes(1);
+    expect(onCloseCommandMenu).toHaveBeenCalledWith(true);
   });
 });

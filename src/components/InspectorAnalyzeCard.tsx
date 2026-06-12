@@ -130,7 +130,7 @@ const InspectorAnalyzeCard: React.FC<InspectorAnalyzeCardProps> = ({
                           ref={(el) => { inspectorMoreButtonRefs.current[idx] = el; }}
                           onClick={() => {
                             if (commandMenuIndex === idx) {
-                              onCloseCommandMenu();
+                              onCloseCommandMenu(true);
                               return;
                             }
                             onOpenCompactMenu(idx);

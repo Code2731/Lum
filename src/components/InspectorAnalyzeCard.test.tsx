@@ -156,7 +156,7 @@ describe("InspectorAnalyzeCard", () => {
     fireEvent.click(screen.getByText("LOAD (L)"));
     fireEvent.keyDown(screen.getByRole("menu"), { key: "ArrowRight" });
 
-    expect(onCloseCommandMenu).toHaveBeenCalledTimes(1);
+    expect(onCloseCommandMenu).toHaveBeenCalledWith(true);
     expect(onOpenCompactMenu).toHaveBeenCalledWith(1);
     expect(onCopySuggestedCommand).toHaveBeenCalledWith(0);
     expect(onLoadSuggestedCommandToAiBar).toHaveBeenCalledWith(0);
