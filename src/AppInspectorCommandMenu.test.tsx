@@ -1131,6 +1131,58 @@ describe("App (Inspector compact command menu focus)", () => {
     });
   });
 
+  it("첫 번째 행 compact 메뉴에서 Tab은 액션 포커스를 다음 항목으로 이동한다", async () => {
+    render(<App />);
+
+    const inspectorButton = screen.getByLabelText("Inspector");
+    fireEvent.click(inspectorButton);
+
+    await waitFor(() => {
+      expect(screen.getByRole("tablist", { name: "Inspector 탭" })).toBeInTheDocument();
+    });
+
+    const moreButtons = screen.getAllByRole("button", { name: "MORE" });
+    fireEvent.click(moreButtons[0]);
+
+    const copyAction = await waitFor(() => screen.getByText("COPY (C)"));
+    const loadAction = screen.getByText("LOAD (L)");
+    const menu = screen.getByRole("menu");
+
+    await waitFor(() => {
+      expect(copyAction).toHaveFocus();
+      expect(screen.getByRole("menu")).toBeInTheDocument();
+    });
+
+    fireEvent.keyDown(menu, { key: "Tab" });
+    await waitFor(() => {
+      expect(loadAction).toHaveFocus();
+    });
+  });
+
+  it("첫 번째 행 compact 메뉴에서 Shift+Tab은 액션 포커스를 이전 항목으로 이동한다", async () => {
+    render(<App />);
+
+    const inspectorButton = screen.getByLabelText("Inspector");
+    fireEvent.click(inspectorButton);
+
+    await waitFor(() => {
+      expect(screen.getByRole("tablist", { name: "Inspector 탭" })).toBeInTheDocument();
+    });
+
+    const moreButtons = screen.getAllByRole("button", { name: "MORE" });
+    fireEvent.click(moreButtons[0]);
+
+    const copyAction = await waitFor(() => screen.getByText("COPY (C)"));
+    const loadAction = screen.getByText("LOAD (L)");
+    const menu = screen.getByRole("menu");
+
+    loadAction.focus();
+    fireEvent.keyDown(menu, { key: "Tab", shiftKey: true });
+    await waitFor(() => {
+      expect(copyAction).toHaveFocus();
+    });
+  });
+
   it("두 번째 행 compact 메뉴에서 ArrowLeft로 액션 포커스를 이전 항목으로 이동한다", async () => {
     render(<App />);
 
@@ -1213,6 +1265,58 @@ describe("App (Inspector compact command menu focus)", () => {
     await waitFor(() => {
       expect(copyAction).toHaveFocus();
       expect(screen.getByRole("menu")).toBeInTheDocument();
+    });
+  });
+
+  it("두 번째 행 compact 메뉴에서 Tab은 액션 포커스를 다음 항목으로 이동한다", async () => {
+    render(<App />);
+
+    const inspectorButton = screen.getByLabelText("Inspector");
+    fireEvent.click(inspectorButton);
+
+    await waitFor(() => {
+      expect(screen.getByRole("tablist", { name: "Inspector 탭" })).toBeInTheDocument();
+    });
+
+    const moreButtons = screen.getAllByRole("button", { name: "MORE" });
+    fireEvent.click(moreButtons[1]);
+
+    const copyAction = await waitFor(() => screen.getByText("COPY (C) #2"));
+    const loadAction = screen.getByText("LOAD (L) #2");
+    const menu = screen.getByRole("menu");
+
+    await waitFor(() => {
+      expect(copyAction).toHaveFocus();
+      expect(screen.getByRole("menu")).toBeInTheDocument();
+    });
+
+    fireEvent.keyDown(menu, { key: "Tab" });
+    await waitFor(() => {
+      expect(loadAction).toHaveFocus();
+    });
+  });
+
+  it("두 번째 행 compact 메뉴에서 Shift+Tab은 액션 포커스를 이전 항목으로 이동한다", async () => {
+    render(<App />);
+
+    const inspectorButton = screen.getByLabelText("Inspector");
+    fireEvent.click(inspectorButton);
+
+    await waitFor(() => {
+      expect(screen.getByRole("tablist", { name: "Inspector 탭" })).toBeInTheDocument();
+    });
+
+    const moreButtons = screen.getAllByRole("button", { name: "MORE" });
+    fireEvent.click(moreButtons[1]);
+
+    const copyAction = await waitFor(() => screen.getByText("COPY (C) #2"));
+    const loadAction = screen.getByText("LOAD (L) #2");
+    const menu = screen.getByRole("menu");
+
+    loadAction.focus();
+    fireEvent.keyDown(menu, { key: "Tab", shiftKey: true });
+    await waitFor(() => {
+      expect(copyAction).toHaveFocus();
     });
   });
 

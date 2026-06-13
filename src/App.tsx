@@ -407,13 +407,25 @@ const App: React.FC = () => {
       closeInspectorCommandMenu(true);
       return;
     }
-    if (e.key !== "ArrowRight" && e.key !== "ArrowLeft" && e.key !== "Home" && e.key !== "End") return;
+    if (
+      e.key !== "ArrowRight"
+      && e.key !== "ArrowLeft"
+      && e.key !== "Home"
+      && e.key !== "End"
+      && e.key !== "Tab"
+    ) {
+      return;
+    }
     const items = Array.from(
       e.currentTarget.querySelectorAll<HTMLButtonElement>("[role='menuitem']"),
     );
     if (items.length === 0) return;
     const currentIdx = getActiveFocusableIndex(items, document.activeElement);
-    const navKey = e.key as "ArrowRight" | "ArrowLeft" | "Home" | "End";
+    const navKey = e.key === "Tab"
+      ? e.shiftKey
+        ? "ArrowLeft"
+        : "ArrowRight"
+      : e.key as "ArrowRight" | "ArrowLeft" | "Home" | "End";
     const nextIdx = getRovingMenuNextIndex(navKey, items.length, currentIdx);
     if (nextIdx < 0) return;
     e.preventDefault();
