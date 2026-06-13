@@ -47,7 +47,11 @@ import AiBar from "./components/AiBar";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import type { AiBackend } from "./utils/inputRouter";
 import { extractInspectorAnalyzeCommands } from "./utils/inspectorAnalyze";
-import { getRovingMenuNextIndex } from "./utils/menuRoving";
+import {
+  getRovingMenuNextIndex,
+  isRovingMenuInputKey,
+  normalizeRovingMenuNavKey,
+} from "./utils/menuRoving";
 import { resolveInspectorMenuHotkey } from "./utils/inspectorMenuHotkeys";
 import {
   getActiveFocusableIndex,
@@ -403,42 +407,13 @@ const App: React.FC = () => {
   }, [inspectorCommandMenuIndex]);
 
   const handleInspectorCompactMenuKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>, rowIndex: number) => {
-    type CompactMenuNavKey =
-      | "ArrowRight"
-      | "ArrowLeft"
-      | "ArrowDown"
-      | "ArrowUp"
-      | "Home"
-      | "End"
-      | "Tab";
-
-    const isCompactMenuNavigationKey = (key: string): key is CompactMenuNavKey => (
-      key === "ArrowRight" || key === "ArrowLeft" || key === "ArrowDown" || key === "ArrowUp" || key === "Home" || key === "End" || key === "Tab"
-    );
-
-    const toMenuNavKey = (
-      key: CompactMenuNavKey,
-      isShift: boolean,
-    ): "ArrowRight" | "ArrowLeft" | "Home" | "End" => {
-      if (key === "ArrowDown") {
-        return "ArrowRight";
-      }
-      if (key === "ArrowUp") {
-        return "ArrowLeft";
-      }
-      if (key === "Tab") {
-        return isShift ? "ArrowLeft" : "ArrowRight";
-      }
-      return key;
-    };
-
     if (e.key === "Escape") {
       e.preventDefault();
       e.stopPropagation();
       closeInspectorCommandMenu(true);
       return;
     }
-    if (!isCompactMenuNavigationKey(e.key)) {
+    if (!isRovingMenuInputKey(e.key)) {
       return;
     }
     const items = Array.from(
@@ -446,10 +421,11 @@ const App: React.FC = () => {
     );
     if (items.length === 0) return;
     const currentIdx = getActiveFocusableIndex(items, document.activeElement);
-    const navKey = toMenuNavKey(e.key, e.shiftKey);
+    const navKey = normalizeRovingMenuNavKey(e.key, e.shiftKey);
     const nextIdx = getRovingMenuNextIndex(navKey, items.length, currentIdx);
     if (nextIdx < 0) return;
     e.preventDefault();
+    e.stopPropagation();
     items[nextIdx]?.focus();
     if (inspectorCommandMenuOpenRef.current !== rowIndex) {
       setInspectorCommandMenuIndex(rowIndex);
