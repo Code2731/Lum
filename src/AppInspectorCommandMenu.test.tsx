@@ -432,6 +432,52 @@ describe("App (Inspector compact command menu focus)", () => {
     });
   });
 
+  it("compact 메뉴에서 첫 번째 행 LOAD 액션 Enter는 메뉴를 닫고 액션 대상 포커스를 유지한다", async () => {
+    render(<App />);
+
+    const inspectorButton = screen.getByLabelText("Inspector");
+    fireEvent.click(inspectorButton);
+
+    await waitFor(() => {
+      expect(screen.getByRole("tablist", { name: "Inspector 탭" })).toBeInTheDocument();
+    });
+
+    const moreButtons = screen.getAllByRole("button", { name: "MORE" });
+    fireEvent.click(moreButtons[0]);
+
+    const loadAction = await waitFor(() => screen.getByText("LOAD (L)"));
+    loadAction.focus();
+    fireEvent.keyDown(loadAction, { key: "Enter" });
+
+    await waitFor(() => {
+      expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+      expect(loadAction).toHaveFocus();
+    });
+  });
+
+  it("compact 메뉴에서 첫 번째 행 LOAD 액션 Space는 메뉴를 닫고 액션 대상 포커스를 유지한다", async () => {
+    render(<App />);
+
+    const inspectorButton = screen.getByLabelText("Inspector");
+    fireEvent.click(inspectorButton);
+
+    await waitFor(() => {
+      expect(screen.getByRole("tablist", { name: "Inspector 탭" })).toBeInTheDocument();
+    });
+
+    const moreButtons = screen.getAllByRole("button", { name: "MORE" });
+    fireEvent.click(moreButtons[0]);
+
+    const loadAction = await waitFor(() => screen.getByText("LOAD (L)"));
+    loadAction.focus();
+    fireEvent.keyDown(loadAction, { key: " " });
+
+    await waitFor(() => {
+      expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+      expect(loadAction).toHaveFocus();
+    });
+  });
+
   it("compact 메뉴에서 LOAD 액션 클릭은 메뉴를 닫는다", async () => {
     render(<App />);
 
