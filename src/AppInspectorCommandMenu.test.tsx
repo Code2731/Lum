@@ -566,6 +566,50 @@ describe("App (Inspector compact command menu focus)", () => {
     });
   });
 
+  it("compact 메뉴에서 첫 번째 행 COPY 액션 클릭은 메뉴를 닫고 해당 행 MORE 버튼으로 포커스를 복귀한다", async () => {
+    render(<App />);
+
+    const inspectorButton = screen.getByLabelText("Inspector");
+    fireEvent.click(inspectorButton);
+
+    await waitFor(() => {
+      expect(screen.getByRole("tablist", { name: "Inspector 탭" })).toBeInTheDocument();
+    });
+
+    const moreButtons = screen.getAllByRole("button", { name: "MORE" });
+    fireEvent.click(moreButtons[0]);
+
+    const copyAction = await waitFor(() => screen.getByText("COPY (C)"));
+    fireEvent.click(copyAction);
+
+    await waitFor(() => {
+      expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+      expect(moreButtons[0]).toHaveFocus();
+    });
+  });
+
+  it("compact 메뉴에서 두 번째 행 COPY 액션 클릭은 메뉴를 닫고 해당 행 MORE 버튼으로 포커스를 복귀한다", async () => {
+    render(<App />);
+
+    const inspectorButton = screen.getByLabelText("Inspector");
+    fireEvent.click(inspectorButton);
+
+    await waitFor(() => {
+      expect(screen.getByRole("tablist", { name: "Inspector 탭" })).toBeInTheDocument();
+    });
+
+    const moreButtons = screen.getAllByRole("button", { name: "MORE" });
+    fireEvent.click(moreButtons[1]);
+
+    const copyAction = await waitFor(() => screen.getByText("COPY (C) #2"));
+    fireEvent.click(copyAction);
+
+    await waitFor(() => {
+      expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+      expect(moreButtons[1]).toHaveFocus();
+    });
+  });
+
   it("compact 메뉴가 두 번째 행에서도 내부 포인터 다운은 메뉴를 닫지 않는다", async () => {
     render(<App />);
 
