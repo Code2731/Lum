@@ -401,19 +401,26 @@ const App: React.FC = () => {
   }, [inspectorCommandMenuIndex]);
 
   const handleInspectorCompactMenuKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>, rowIndex: number) => {
+    type CompactMenuNavKey = "ArrowRight" | "ArrowLeft" | "Home" | "End" | "Tab";
+
+    const isCompactMenuNavigationKey = (key: string): key is CompactMenuNavKey => (
+      key === "ArrowRight" || key === "ArrowLeft" || key === "Home" || key === "End" || key === "Tab"
+    );
+
+    const toMenuNavKey = (key: CompactMenuNavKey, isShift: boolean): "ArrowRight" | "ArrowLeft" | "Home" | "End" => {
+      if (key === "Tab") {
+        return isShift ? "ArrowLeft" : "ArrowRight";
+      }
+      return key;
+    };
+
     if (e.key === "Escape") {
       e.preventDefault();
       e.stopPropagation();
       closeInspectorCommandMenu(true);
       return;
     }
-    if (
-      e.key !== "ArrowRight"
-      && e.key !== "ArrowLeft"
-      && e.key !== "Home"
-      && e.key !== "End"
-      && e.key !== "Tab"
-    ) {
+    if (!isCompactMenuNavigationKey(e.key)) {
       return;
     }
     const items = Array.from(
@@ -421,11 +428,7 @@ const App: React.FC = () => {
     );
     if (items.length === 0) return;
     const currentIdx = getActiveFocusableIndex(items, document.activeElement);
-    const navKey = e.key === "Tab"
-      ? e.shiftKey
-        ? "ArrowLeft"
-        : "ArrowRight"
-      : e.key as "ArrowRight" | "ArrowLeft" | "Home" | "End";
+    const navKey = toMenuNavKey(e.key, e.shiftKey);
     const nextIdx = getRovingMenuNextIndex(navKey, items.length, currentIdx);
     if (nextIdx < 0) return;
     e.preventDefault();
