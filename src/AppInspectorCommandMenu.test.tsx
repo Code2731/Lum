@@ -610,6 +610,98 @@ describe("App (Inspector compact command menu focus)", () => {
     });
   });
 
+  it("메뉴가 열려 있을 때 첫 번째 행 RUN 버튼에서 Enter는 메뉴를 닫고 해당 RUN 버튼 포커스를 유지한다", async () => {
+    render(<App />);
+
+    const inspectorButton = screen.getByLabelText("Inspector");
+    fireEvent.click(inspectorButton);
+
+    await waitFor(() => {
+      expect(screen.getByRole("tablist", { name: "Inspector 탭" })).toBeInTheDocument();
+    });
+
+    const moreButtons = screen.getAllByRole("button", { name: "MORE" });
+    fireEvent.click(moreButtons[0]);
+
+    const firstRunRow = screen.getByText("RUN (R)");
+    firstRunRow.focus();
+    fireEvent.keyDown(firstRunRow, { key: "Enter" });
+
+    await waitFor(() => {
+      expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+      expect(firstRunRow).toHaveFocus();
+    });
+  });
+
+  it("메뉴가 열려 있을 때 두 번째 행 RUN 버튼에서 Enter는 메뉴를 닫고 해당 RUN 버튼 포커스를 유지한다", async () => {
+    render(<App />);
+
+    const inspectorButton = screen.getByLabelText("Inspector");
+    fireEvent.click(inspectorButton);
+
+    await waitFor(() => {
+      expect(screen.getByRole("tablist", { name: "Inspector 탭" })).toBeInTheDocument();
+    });
+
+    const moreButtons = screen.getAllByRole("button", { name: "MORE" });
+    fireEvent.click(moreButtons[1]);
+
+    const secondRunRow = screen.getByText("RUN (R) #2");
+    secondRunRow.focus();
+    fireEvent.keyDown(secondRunRow, { key: "Enter" });
+
+    await waitFor(() => {
+      expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+      expect(secondRunRow).toHaveFocus();
+    });
+  });
+
+  it("메뉴가 열려 있을 때 첫 번째 행 RUN 버튼에서 Space는 메뉴를 닫고 해당 RUN 버튼 포커스를 유지한다", async () => {
+    render(<App />);
+
+    const inspectorButton = screen.getByLabelText("Inspector");
+    fireEvent.click(inspectorButton);
+
+    await waitFor(() => {
+      expect(screen.getByRole("tablist", { name: "Inspector 탭" })).toBeInTheDocument();
+    });
+
+    const moreButtons = screen.getAllByRole("button", { name: "MORE" });
+    fireEvent.click(moreButtons[0]);
+
+    const firstRunRow = screen.getByText("RUN (R)");
+    firstRunRow.focus();
+    fireEvent.keyDown(firstRunRow, { key: " " });
+
+    await waitFor(() => {
+      expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+      expect(firstRunRow).toHaveFocus();
+    });
+  });
+
+  it("메뉴가 열려 있을 때 두 번째 행 RUN 버튼에서 Space는 메뉴를 닫고 해당 RUN 버튼 포커스를 유지한다", async () => {
+    render(<App />);
+
+    const inspectorButton = screen.getByLabelText("Inspector");
+    fireEvent.click(inspectorButton);
+
+    await waitFor(() => {
+      expect(screen.getByRole("tablist", { name: "Inspector 탭" })).toBeInTheDocument();
+    });
+
+    const moreButtons = screen.getAllByRole("button", { name: "MORE" });
+    fireEvent.click(moreButtons[1]);
+
+    const secondRunRow = screen.getByText("RUN (R) #2");
+    secondRunRow.focus();
+    fireEvent.keyDown(secondRunRow, { key: " " });
+
+    await waitFor(() => {
+      expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+      expect(secondRunRow).toHaveFocus();
+    });
+  });
+
   it("compact 메뉴가 두 번째 행에서도 내부 포인터 다운은 메뉴를 닫지 않는다", async () => {
     render(<App />);
 
