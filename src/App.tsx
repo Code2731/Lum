@@ -403,7 +403,9 @@ const App: React.FC = () => {
 
   useEffect(() => {
     if (inspectorCommandMenuIndex == null) return;
-    setTimeout(() => inspectorMenuFirstActionRefs.current[inspectorCommandMenuIndex]?.focus(), 0);
+    requestAnimationFrame(() => {
+      inspectorMenuFirstActionRefs.current[inspectorCommandMenuIndex]?.focus();
+    });
   }, [inspectorCommandMenuIndex]);
 
   const handleInspectorCompactMenuKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>, rowIndex: number) => {
@@ -539,17 +541,14 @@ const App: React.FC = () => {
       return;
     }
 
-    if (!["ArrowRight", "ArrowLeft", "ArrowDown", "ArrowUp", "Home", "End"].includes(e.key)) return;
+    if (!isRovingMenuInputKey(e.key)) return;
+    if (e.key === "Tab") return;
 
     const buttons = Array.from(inspectorQuickActionsAdvancedRef.current?.querySelectorAll<HTMLButtonElement>("button") ?? []);
     if (buttons.length === 0) return;
 
     const currentIdx = getActiveFocusableIndex(buttons, document.activeElement);
-    const navKey: "ArrowRight" | "ArrowLeft" | "Home" | "End" = e.key === "ArrowDown" || e.key === "ArrowRight"
-      ? "ArrowRight"
-      : e.key === "ArrowUp" || e.key === "ArrowLeft"
-        ? "ArrowLeft"
-        : e.key as "Home" | "End" | "ArrowRight" | "ArrowLeft";
+    const navKey = normalizeRovingMenuNavKey(e.key, e.shiftKey);
     const nextIdx = getRovingMenuNextIndex(
       navKey,
       buttons.length,
