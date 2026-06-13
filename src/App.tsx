@@ -14,6 +14,7 @@ import { useTerminalTheme } from "./hooks/useTerminalTheme";
 import { useQuickActions } from "./hooks/useQuickActions";
 import { useCommandNotifier } from "./hooks/useCommandNotifier";
 import { useWorkspace } from "./hooks/useWorkspace";
+import { useInspectorMenuControls } from "./hooks/useInspectorMenuControls";
 import { inferTabIcon } from "./utils/tabIcon";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
@@ -47,16 +48,10 @@ import AiBar from "./components/AiBar";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import type { AiBackend } from "./utils/inputRouter";
 import { extractInspectorAnalyzeCommands } from "./utils/inspectorAnalyze";
-import {
-  getRovingMenuNextIndex,
-  isRovingMenuInputKey,
-  normalizeRovingMenuNavKey,
-} from "./utils/menuRoving";
+import { getRovingMenuNextIndex } from "./utils/menuRoving";
 import { resolveInspectorMenuHotkey } from "./utils/inspectorMenuHotkeys";
 import {
-  getActiveFocusableIndex,
   isEventTargetWithinSelector,
-  isTargetInsideTargets,
 } from "./utils/pointerGuard";
 import type {
   RetryCompareResult,
@@ -253,7 +248,6 @@ const App: React.FC = () => {
   const [showAdvancedOverflow, setShowAdvancedOverflow] = useState(false);
   const [compactToolbar, setCompactToolbar] = useState(false);
   const [inspectorCommandMenuIndex, setInspectorCommandMenuIndex] = useState<number | null>(null);
-  const inspectorCommandMenuOpenRef = useRef<number | null>(null);
   const inspectorMoreButtonRefs = useRef<Record<number, HTMLButtonElement | null>>({});
   const inspectorMenuFirstActionRefs = useRef<Record<number, HTMLButtonElement | null>>({});
   const inspectorTabRefs = useRef<Record<InspectorTab, HTMLButtonElement | null>>({
@@ -384,62 +378,6 @@ const App: React.FC = () => {
     invoke("save_ui_preferences", { inspectorDensity }).catch(() => {});
   }, [inspectorDensity]);
 
-  useEffect(() => {
-    inspectorCommandMenuOpenRef.current = inspectorCommandMenuIndex;
-  }, [inspectorCommandMenuIndex]);
-
-  const closeInspectorCommandMenu = useCallback((restoreFocus = false) => {
-    // restoreFocus true는 메뉴를 닫을 때 해당 행의 MORE 버튼으로 포커스를 되돌려
-    // 키보드 접근성을 유지하고, compact 메뉴 액션에서 false는 실행 액션 흐름의 자연스러운 진행을 보존한다.
-    setInspectorCommandMenuIndex((prev) => {
-      if (restoreFocus && prev != null) {
-        requestAnimationFrame(() => {
-          inspectorMoreButtonRefs.current[prev]?.focus();
-        });
-      }
-      return null;
-    });
-  }, []);
-
-  useEffect(() => {
-    if (inspectorCommandMenuIndex == null) return;
-    requestAnimationFrame(() => {
-      inspectorMenuFirstActionRefs.current[inspectorCommandMenuIndex]?.focus();
-    });
-  }, [inspectorCommandMenuIndex]);
-
-  const handleInspectorCompactMenuKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>, rowIndex: number) => {
-    if (e.key === "Escape") {
-      e.preventDefault();
-      e.stopPropagation();
-      closeInspectorCommandMenu(true);
-      return;
-    }
-    if (!isRovingMenuInputKey(e.key)) {
-      return;
-    }
-    const items = Array.from(
-      e.currentTarget.querySelectorAll<HTMLButtonElement>("[role='menuitem']"),
-    );
-    if (items.length === 0) return;
-    const currentIdx = getActiveFocusableIndex(items, document.activeElement);
-    const navKey = normalizeRovingMenuNavKey(e.key, e.shiftKey);
-    const nextIdx = getRovingMenuNextIndex(navKey, items.length, currentIdx);
-    if (nextIdx < 0) return;
-    e.preventDefault();
-    e.stopPropagation();
-    items[nextIdx]?.focus();
-    if (inspectorCommandMenuOpenRef.current !== rowIndex) {
-      setInspectorCommandMenuIndex(rowIndex);
-    }
-  }, [closeInspectorCommandMenu]);
-
-  const openInspectorCompactMenu = useCallback((index: number) => {
-    const triggerButton = inspectorMoreButtonRefs.current[index];
-    triggerButton?.scrollIntoView({ block: "center", inline: "nearest", behavior: "auto" });
-    setInspectorCommandMenuIndex(index);
-  }, []);
-
   const selectedModel = loadedModelId ?? specs?.recommended_model ?? "Qwen2.5-Coder-7B-Instruct-EXL2-4bpw";
 
   const {
@@ -532,32 +470,22 @@ const App: React.FC = () => {
     }
   }, [handleInspectorQuickActionsToggle, showInspectorQuickActionsExpanded]);
 
-  const handleInspectorQuickActionsAdvancedKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
-    if (!showInspectorQuickActionsExpanded) return;
-
-    if (e.key === "Escape") {
-      e.preventDefault();
-      closeInspectorQuickActions();
-      return;
-    }
-
-    if (!isRovingMenuInputKey(e.key)) return;
-    if (e.key === "Tab") return;
-
-    const buttons = Array.from(inspectorQuickActionsAdvancedRef.current?.querySelectorAll<HTMLButtonElement>("button") ?? []);
-    if (buttons.length === 0) return;
-
-    const currentIdx = getActiveFocusableIndex(buttons, document.activeElement);
-    const navKey = normalizeRovingMenuNavKey(e.key, e.shiftKey);
-    const nextIdx = getRovingMenuNextIndex(
-      navKey,
-      buttons.length,
-      currentIdx,
-    );
-    if (nextIdx < 0) return;
-    e.preventDefault();
-    buttons[nextIdx]?.focus();
-  }, [closeInspectorQuickActions, showInspectorQuickActionsExpanded]);
+  const {
+    closeInspectorCommandMenu,
+    openInspectorCompactMenu,
+    handleInspectorCompactMenuKeyDown,
+    handleInspectorSuggestedCommandRowBlurCapture,
+    handleInspectorQuickActionsAdvancedKeyDown,
+  } = useInspectorMenuControls({
+    isInspectorCompact: inspectorDensity === "compact",
+    inspectorCommandMenuIndex,
+    setInspectorCommandMenuIndex,
+    inspectorMoreButtonRefs,
+    inspectorMenuFirstActionRefs,
+    inspectorQuickActionsAdvancedRef,
+    showInspectorQuickActionsExpanded,
+    closeInspectorQuickActions,
+  });
 
   useEffect(() => {
     if (!showInspectorQuickActionsExpanded) return;
@@ -1261,26 +1189,6 @@ const App: React.FC = () => {
     }
   }, [inspectorAnalyzeCache, notifCenter, closeInspectorCommandMenu]);
 
-  const handleInspectorSuggestedCommandRowBlurCapture = useCallback((
-    e: React.FocusEvent<HTMLDivElement>,
-    rowIndex: number,
-  ) => {
-    if (!isInspectorCompact || inspectorCommandMenuIndex !== rowIndex) return;
-    const next = e.relatedTarget;
-    if (!next) {
-      closeInspectorCommandMenu();
-      return;
-    }
-    const menuContainerFocused = isEventTargetWithinSelector(
-      next,
-      "[data-inspector-command-menu='compact']",
-    );
-    const currentRowFocused = isTargetInsideTargets(next, [e.currentTarget]);
-    if (!currentRowFocused && !menuContainerFocused) {
-      closeInspectorCommandMenu();
-    }
-  }, [isInspectorCompact, inspectorCommandMenuIndex, closeInspectorCommandMenu]);
-
   const handleInspectorSuggestedCommandRowKeyDown = useCallback((
     e: React.KeyboardEvent<HTMLDivElement>,
     rowIndex: number,
@@ -1552,17 +1460,6 @@ const App: React.FC = () => {
     };
   }, [addTabWithReset, closeTabWithReset, toggleSplit, closeOverlays, activeTabIdRef, setShowCommitPanel, setShowHistorySearch, setShowDiffReview, setShowThemePanel, quickActions, ptyWriteRefs, activePaneIdRef, setShowWorkspace, loadWorkspaces, setShowPalette, navigateCommandBlock, focusFailedBlock, showInspector, closeInspector, openInspectorTab, inspectorCommandMenuIndex, closeInspectorCommandMenu, showInspectorQuickActionsExpanded, closeInspectorQuickActions]);
 
-  useEffect(() => {
-    const onPointerDown = (e: PointerEvent) => {
-      if (inspectorCommandMenuOpenRef.current == null) return;
-      if (isEventTargetWithinSelector(e.target, "[data-inspector-command-menu-row]")) return;
-      if (isEventTargetWithinSelector(e.target, "[data-inspector-command-menu='compact']")) return;
-      closeInspectorCommandMenu();
-    };
-    window.addEventListener("pointerdown", onPointerDown, { capture: true });
-    return () => window.removeEventListener("pointerdown", onPointerDown, { capture: true });
-  }, [closeInspectorCommandMenu]);
-
   const activeTab = tabs.find((t) => t.id === activeTabId);
   const activeTabGitInfo = activeTab ? tabGitInfo[activeTab.id] ?? null : null;
   const inspectorFailedBlocks = useMemo(() => (
@@ -1599,11 +1496,6 @@ const App: React.FC = () => {
   ), [cmdBlocks]);
   const lastCmdBlock = cmdBlocks[cmdBlocks.length - 1] ?? null;
   const isInspectorCompact = inspectorDensity === "compact";
-  useEffect(() => {
-    if (!isInspectorCompact && inspectorCommandMenuIndex != null) {
-      closeInspectorCommandMenu();
-    }
-  }, [isInspectorCompact, inspectorCommandMenuIndex, closeInspectorCommandMenu]);
   const focusedCmdBlock = selectedBlockId
     ? (cmdBlocks.find((b) => b.id === selectedBlockId) ?? null)
     : lastCmdBlock;
