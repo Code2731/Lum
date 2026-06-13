@@ -389,7 +389,9 @@ const App: React.FC = () => {
     // 키보드 접근성을 유지하고, compact 메뉴 액션에서 false는 실행 액션 흐름의 자연스러운 진행을 보존한다.
     setInspectorCommandMenuIndex((prev) => {
       if (restoreFocus && prev != null) {
-        setTimeout(() => inspectorMoreButtonRefs.current[prev]?.focus(), 0);
+        requestAnimationFrame(() => {
+          inspectorMoreButtonRefs.current[prev]?.focus();
+        });
       }
       return null;
     });
@@ -401,13 +403,29 @@ const App: React.FC = () => {
   }, [inspectorCommandMenuIndex]);
 
   const handleInspectorCompactMenuKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>, rowIndex: number) => {
-    type CompactMenuNavKey = "ArrowRight" | "ArrowLeft" | "Home" | "End" | "Tab";
+    type CompactMenuNavKey =
+      | "ArrowRight"
+      | "ArrowLeft"
+      | "ArrowDown"
+      | "ArrowUp"
+      | "Home"
+      | "End"
+      | "Tab";
 
     const isCompactMenuNavigationKey = (key: string): key is CompactMenuNavKey => (
-      key === "ArrowRight" || key === "ArrowLeft" || key === "Home" || key === "End" || key === "Tab"
+      key === "ArrowRight" || key === "ArrowLeft" || key === "ArrowDown" || key === "ArrowUp" || key === "Home" || key === "End" || key === "Tab"
     );
 
-    const toMenuNavKey = (key: CompactMenuNavKey, isShift: boolean): "ArrowRight" | "ArrowLeft" | "Home" | "End" => {
+    const toMenuNavKey = (
+      key: CompactMenuNavKey,
+      isShift: boolean,
+    ): "ArrowRight" | "ArrowLeft" | "Home" | "End" => {
+      if (key === "ArrowDown") {
+        return "ArrowRight";
+      }
+      if (key === "ArrowUp") {
+        return "ArrowLeft";
+      }
       if (key === "Tab") {
         return isShift ? "ArrowLeft" : "ArrowRight";
       }
