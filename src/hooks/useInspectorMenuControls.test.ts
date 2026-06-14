@@ -928,4 +928,77 @@ describe("useInspectorMenuControls", () => {
     requestAnimationFrameSpy.mockRestore();
     window.requestAnimationFrame = originalRequestAnimationFrame;
   });
+
+  it("메뉴 열기 후 inspectorCommandMenuOpenRef가 열림 인덱스로 동기화된다", () => {
+    const button = document.createElement("button");
+    const moreRef = { current: { 2: button } };
+    const firstActionRefs = { current: {} as Record<number, HTMLButtonElement | null> };
+    const quickActionsAdvancedRef = { current: null as HTMLDivElement | null };
+    const closeQuickActions = vi.fn();
+
+    const { result } = renderHook(() => {
+      const [inspectorCommandMenuIndex, setInspectorCommandMenuIndex] = useState<number | null>(null);
+      const controls = useInspectorMenuControls({
+        isInspectorCompact: true,
+        inspectorCommandMenuIndex,
+        setInspectorCommandMenuIndex,
+        inspectorMoreButtonRefs: moreRef,
+        inspectorMenuFirstActionRefs: firstActionRefs,
+        inspectorQuickActionsAdvancedRef: quickActionsAdvancedRef,
+        showInspectorQuickActionsExpanded: false,
+        closeInspectorQuickActions: closeQuickActions,
+      });
+      return { controls, inspectorCommandMenuIndex, menuOpenRef: controls.inspectorCommandMenuOpenRef };
+    });
+
+    act(() => {
+      result.current.controls.openInspectorCompactMenu(2);
+    });
+
+    expect(result.current.inspectorCommandMenuIndex).toBe(2);
+    expect(result.current.menuOpenRef.current).toBe(2);
+  });
+
+  it("메뉴 닫기 후 inspectorCommandMenuOpenRef가 null로 동기화된다", () => {
+    const button = document.createElement("button");
+    const buttonFocusSpy = vi.spyOn(button, "focus");
+    const moreRef = { current: { 0: button } };
+    const firstActionRefs = { current: {} as Record<number, HTMLButtonElement | null> };
+    const quickActionsAdvancedRef = { current: null as HTMLDivElement | null };
+    const closeQuickActions = vi.fn();
+
+    const originalRequestAnimationFrame = window.requestAnimationFrame;
+    const requestAnimationFrameSpy = vi
+      .spyOn(window, "requestAnimationFrame")
+      .mockImplementation((cb) => {
+        cb(0);
+        return 0;
+      });
+
+    const { result } = renderHook(() => {
+      const [inspectorCommandMenuIndex, setInspectorCommandMenuIndex] = useState<number | null>(0);
+      const controls = useInspectorMenuControls({
+        isInspectorCompact: true,
+        inspectorCommandMenuIndex,
+        setInspectorCommandMenuIndex,
+        inspectorMoreButtonRefs: moreRef,
+        inspectorMenuFirstActionRefs: firstActionRefs,
+        inspectorQuickActionsAdvancedRef: quickActionsAdvancedRef,
+        showInspectorQuickActionsExpanded: false,
+        closeInspectorQuickActions: closeQuickActions,
+      });
+      return { controls, inspectorCommandMenuIndex, menuOpenRef: controls.inspectorCommandMenuOpenRef };
+    });
+
+    act(() => {
+      result.current.controls.closeInspectorCommandMenu(true);
+    });
+
+    expect(result.current.inspectorCommandMenuIndex).toBeNull();
+    expect(result.current.menuOpenRef.current).toBeNull();
+    expect(buttonFocusSpy).toHaveBeenCalledTimes(1);
+
+    requestAnimationFrameSpy.mockRestore();
+    window.requestAnimationFrame = originalRequestAnimationFrame;
+  });
 });
