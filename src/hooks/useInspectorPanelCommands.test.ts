@@ -1,6 +1,7 @@
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { KeyboardEvent } from "react";
+import { type KeyboardEvent, type SetStateAction, useState } from "react";
+import type { ChatMessage } from "./useAIChat";
 import type { InspectorAnalyzeCache } from "../components/InspectorPanel/types";
 import { useInspectorPanelCommands } from "./useInspectorPanelCommands";
 
@@ -64,8 +65,6 @@ function setupInspectorCommands(overrides: {
   const notifications: Notif[] = [];
   const aiInput = document.createElement("input");
   const aiInputRef = { current: aiInput };
-  const focusSpy = vi.spyOn(aiInput, "focus");
-  const setInspectorAnalyzeCache = vi.fn();
   const closeInspector = vi.fn();
   const closeInspectorCommandMenu = vi.fn();
   const handleAskAI = vi.fn();
@@ -79,35 +78,55 @@ function setupInspectorCommands(overrides: {
     reason: verifyReason,
   });
   const notifCenter = { addNotification: vi.fn((n: Notif) => notifications.push(n)) };
-  const aiChat = {
-    messages: [],
-    streaming: false,
-  };
+  const setInspectorAnalyzeCacheSpy = vi.fn();
 
-  const result = renderHook(() => useInspectorPanelCommands({
-    cmdBlocks,
-    selectedBlockId,
-    setSelectedBlockId,
-    setDismissedBlockId,
-    setViewMode,
-    setAiInput,
-    setShowAiBar,
-    aiInputRef,
-    tabs,
-    activeTabIdRef,
-    handleAskAI,
-    aiChat,
-    inspectorAnalyzeCache: inspectCache,
-    setInspectorAnalyzeCache,
-    closeInspector,
-    closeInspectorCommandMenu,
-    isInspectorCompact,
-    inspectorCommandMenuIndex,
-    ptyWriteRefs,
-    activePaneIdRef,
-    verifyCommandSafety,
-    notifCenter,
-  }));
+  const result = renderHook(() => {
+    const [inspectorAnalyzeCache, setInspectorAnalyzeCacheState] = useState<InspectorAnalyzeCache | null>(
+      inspectCache ?? null,
+    );
+    const [aiChat, setAiChat] = useState<{ messages: ChatMessage[]; streaming: boolean }>({
+      messages: [],
+      streaming: false,
+    });
+
+    const setInspectorAnalyzeCache = (
+      value: SetStateAction<InspectorAnalyzeCache | null>,
+    ) => {
+      setInspectorAnalyzeCacheSpy(value);
+      setInspectorAnalyzeCacheState(value);
+    };
+
+    const commands = useInspectorPanelCommands({
+      cmdBlocks,
+      selectedBlockId,
+      setSelectedBlockId,
+      setDismissedBlockId,
+      setViewMode,
+      setAiInput,
+      setShowAiBar,
+      aiInputRef,
+      tabs,
+      activeTabIdRef,
+      handleAskAI,
+      aiChat,
+      inspectorAnalyzeCache,
+      setInspectorAnalyzeCache,
+      closeInspector,
+      closeInspectorCommandMenu,
+      isInspectorCompact,
+      inspectorCommandMenuIndex,
+      ptyWriteRefs,
+      activePaneIdRef,
+      verifyCommandSafety,
+      notifCenter,
+    });
+
+    return {
+      ...commands,
+      inspectorAnalyzeCache,
+      setAiChat,
+    };
+  });
 
   return {
     result,
@@ -117,8 +136,7 @@ function setupInspectorCommands(overrides: {
       setViewMode,
       setAiInput,
       setShowAiBar,
-      focusSpy,
-      setInspectorAnalyzeCache,
+      setInspectorAnalyzeCache: setInspectorAnalyzeCacheSpy,
       closeInspector,
       closeInspectorCommandMenu,
       handleAskAI,
@@ -126,8 +144,8 @@ function setupInspectorCommands(overrides: {
       notifCenter,
       notifications,
       ptyWrite,
+      setAiChat: result.current.setAiChat,
     },
-    aiInputRef,
   };
 }
 
@@ -321,8 +339,8 @@ describe("useInspectorPanelCommands", () => {
     expect(e.stopPropagation).not.toHaveBeenCalled();
   });
 
-  it("handleInspectorSuggestedCommandRowKeyDown는 key가 run이면 제안 커맨드를 실행한다", async () => {
-    const { result } = setupInspectorCommands({
+  it("handleInspectorSuggestedCommandRowKeyDown는 run 키면 제안 커맨드를 실행한다", () => {
+    const { result, spies } = setupInspectorCommands({
       inspectorAnalyzeCache: {
         blockId: "b",
         command: "bad",
@@ -335,11 +353,45 @@ describe("useInspectorPanelCommands", () => {
       inspectorCommandMenuIndex: 0,
       isInspectorCompact: true,
       verifyLevel: "Warning",
-      verifyReason: "warning command",
     });
 
     const e = {
       key: "r",
+      metaKey: false,
+      ctrlKey: false,
+      altKey: false,
+      shiftKey: false,
+      preventDefault: vi.fn(),
+      stopPropagation: vi.fn(),
+    } as unknown as KeyboardEvent<HTMLDivElement>;
+
+    act(() => {
+      result.current.handleInspectorSuggestedCommandRowKeyDown(e, 0);
+    });
+
+    expect(e.preventDefault).toHaveBeenCalledTimes(1);
+    expect(e.stopPropagation).toHaveBeenCalledTimes(1);
+    expect(spies.setAiInput).not.toHaveBeenCalled();
+    expect(spies.ptyWrite).toHaveBeenCalledWith("echo ok\r");
+  });
+
+  it("handleInspectorSuggestedCommandRowKeyDown는 copy 키면 추천 커맨드를 클립보드에 복사한다", async () => {
+    const { result, spies } = setupInspectorCommands({
+      inspectorAnalyzeCache: {
+        blockId: "b",
+        command: "bad",
+        requestedAt: 1,
+        status: "done",
+        result: "",
+        rawResult: "",
+        suggestedCommands: ["echo ok"],
+      },
+      inspectorCommandMenuIndex: 0,
+      isInspectorCompact: true,
+    });
+
+    const e = {
+      key: "c",
       metaKey: false,
       ctrlKey: false,
       altKey: false,
@@ -354,7 +406,121 @@ describe("useInspectorPanelCommands", () => {
     });
 
     expect(e.preventDefault).toHaveBeenCalledTimes(1);
+    expect(spies.closeInspectorCommandMenu).toHaveBeenCalledWith(true);
+    expect(writeText).toHaveBeenCalledWith("echo ok");
+    expect(spies.notifCenter.addNotification).toHaveBeenCalledWith(expect.objectContaining({
+      title: "추천 커맨드 복사 완료",
+    }));
+  });
+
+  it("handleInspectorSuggestedCommandRowKeyDown는 load 키면 추천 커맨드를 AI 입력바로 로드한다", () => {
+    const { result, spies } = setupInspectorCommands({
+      inspectorAnalyzeCache: {
+        blockId: "b",
+        command: "bad",
+        requestedAt: 1,
+        status: "done",
+        result: "",
+        rawResult: "",
+        suggestedCommands: ["echo ok"],
+      },
+      inspectorCommandMenuIndex: 0,
+      isInspectorCompact: true,
+    });
+
+    const e = {
+      key: "l",
+      metaKey: false,
+      ctrlKey: false,
+      altKey: false,
+      shiftKey: false,
+      preventDefault: vi.fn(),
+      stopPropagation: vi.fn(),
+    } as unknown as KeyboardEvent<HTMLDivElement>;
+
+    act(() => {
+      result.current.handleInspectorSuggestedCommandRowKeyDown(e, 0);
+    });
+
+    expect(e.preventDefault).toHaveBeenCalledTimes(1);
     expect(e.stopPropagation).toHaveBeenCalledTimes(1);
+    expect(spies.setAiInput).toHaveBeenCalledWith("echo ok");
+    expect(spies.setShowAiBar).toHaveBeenCalledWith(true);
+    expect(spies.setViewMode).toHaveBeenCalledWith("terminal");
+  });
+
+  it("스트리밍 분석 캐시가 완료 응답을 받으면 done 상태와 추천 커맨드가 갱신된다", async () => {
+    const { result } = setupInspectorCommands({
+      inspectorAnalyzeCache: {
+        blockId: "b",
+        command: "bad",
+        requestedAt: 10,
+        status: "streaming",
+        result: "",
+        rawResult: "",
+        suggestedCommands: [],
+      },
+    });
+
+    const assistantMessage: ChatMessage = {
+      id: "assistant-1",
+      role: "assistant",
+      timestamp: 12,
+      content: [
+        "```bash",
+        "echo one",
+        "rm -rf /tmp",
+        "```",
+      ].join("\n"),
+    };
+
+    await act(async () => {
+      result.current.setAiChat({
+        messages: [assistantMessage],
+        streaming: false,
+      });
+      await Promise.resolve();
+    });
+
+    expect(result.current.inspectorAnalyzeCache).toMatchObject({
+      status: "done",
+      suggestedCommands: ["echo one", "rm -rf /tmp"],
+    });
+  });
+
+  it("스트리밍 분석 결과가 에러 응답이면 status가 error로 바뀐다", async () => {
+    const { result } = setupInspectorCommands({
+      inspectorAnalyzeCache: {
+        blockId: "b",
+        command: "bad",
+        requestedAt: 10,
+        status: "streaming",
+        result: "",
+        rawResult: "",
+        suggestedCommands: [],
+      },
+    });
+
+    const assistantMessage: ChatMessage = {
+      id: "assistant-2",
+      role: "assistant",
+      timestamp: 12,
+      content: "❌ 분석할 수 없습니다",
+    };
+
+    await act(async () => {
+      result.current.setAiChat({
+        messages: [assistantMessage],
+        streaming: false,
+      });
+      await Promise.resolve();
+    });
+
+    expect(result.current.inspectorAnalyzeCache).toMatchObject({
+      status: "error",
+      result: "❌ 분석할 수 없습니다",
+      rawResult: "❌ 분석할 수 없습니다",
+    });
   });
 
   it("추천 커맨드 로드가 AI 입력바로 반영된다", async () => {
