@@ -1572,6 +1572,71 @@ describe("App (LUM 터미널)", () => {
     });
   });
 
+  it("실패 블록에서 AI ANALYZE를 누르면 분석 상태가 STREAMING으로 표시된다", async () => {
+    setMockCommandBlocks([{
+      id: "b1",
+      command: "npm test",
+      output: "FAIL: missing snapshot",
+      exitCode: 1,
+      startedAt: 1,
+      endedAt: 10,
+    }]);
+    const { container } = render(<App />);
+
+    const inspectorButton = screen.getByLabelText("Inspector");
+    fireEvent.click(inspectorButton);
+
+    await waitFor(() => {
+      expect(screen.getByRole("tablist", { name: "Inspector 탭" })).toBeInTheDocument();
+    });
+
+    let summaryPanel = container.querySelector("#inspector-tabpanel-summary");
+    await waitFor(() => {
+      summaryPanel = container.querySelector("#inspector-tabpanel-summary");
+      expect(summaryPanel).not.toBeNull();
+    });
+
+    const analyzeButton = within(summaryPanel as HTMLElement).getByRole("button", { name: "AI ANALYZE" });
+    fireEvent.click(analyzeButton);
+
+    await waitFor(() => {
+      expect(within(summaryPanel as HTMLElement).getByText("STREAMING")).toBeInTheDocument();
+    });
+  });
+
+  it("AI 분석 LOAD PROMPT를 누르면 AI 바에 실패 블록 분석 프롬프트가 채워진다", async () => {
+    setMockCommandBlocks([{
+      id: "b2",
+      command: "python -m pytest",
+      output: "FAIL: import error",
+      exitCode: 1,
+      startedAt: 1,
+      endedAt: 10,
+    }]);
+    const { container } = render(<App />);
+
+    const inspectorButton = screen.getByLabelText("Inspector");
+    fireEvent.click(inspectorButton);
+
+    await waitFor(() => {
+      expect(screen.getByRole("tablist", { name: "Inspector 탭" })).toBeInTheDocument();
+    });
+
+    let summaryPanel = container.querySelector("#inspector-tabpanel-summary");
+    await waitFor(() => {
+      summaryPanel = container.querySelector("#inspector-tabpanel-summary");
+      expect(summaryPanel).not.toBeNull();
+    });
+
+    const loadPromptButton = within(summaryPanel as HTMLElement).getByRole("button", { name: "LOAD PROMPT" });
+    fireEvent.click(loadPromptButton);
+
+    const aiBarInput = await screen.findByTestId("ai-bar-input");
+    expect(aiBarInput).toHaveValue(expect.stringContaining("Command: python -m pytest"));
+    expect(aiBarInput).toHaveValue(expect.stringContaining("Exit Code: 1"));
+    expect(screen.queryByRole("tablist", { name: "Inspector 탭" })).not.toBeInTheDocument();
+  });
+
   it("Quick Actions에서 RAG 검색 버튼을 누르면 RAG 탭으로 이동한다", async () => {
     render(<App />);
 
