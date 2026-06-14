@@ -1676,6 +1676,155 @@ describe("App (LUM 터미널)", () => {
     }
   });
 
+  it("추천 커맨드 RUN #1을 누르면 Inspector 패널이 닫힌다", async () => {
+    const tokenHandlers: Array<(event: { payload: string }) => void> = [];
+    const mockedListen = vi.mocked(listen);
+    const mockedBaseListen = mockedListen.getMockImplementation();
+    const mockedBaseInvoke = mockedInvoke.getMockImplementation();
+    let resolveStream: (() => void) | null = null;
+
+    mockedListen.mockImplementation((event, callback) => {
+      if (event === "xllm_token") {
+        tokenHandlers.push((payloadEvent) => callback(payloadEvent));
+      }
+      return Promise.resolve(() => {});
+    });
+    mockedInvoke.mockImplementation((cmd: string) => {
+      if (cmd === "stream_ai_command") {
+        return new Promise<void>((resolve) => {
+          resolveStream = resolve;
+        });
+      }
+      return mockedBaseInvoke ? mockedBaseInvoke(cmd) : Promise.resolve("{}");
+    });
+
+    try {
+      setMockCommandBlocks([{
+        id: "b5",
+        command: "pnpm test",
+        output: "FAIL: test failed",
+        exitCode: 2,
+        startedAt: 1,
+        endedAt: 10,
+      }]);
+      const { container } = render(<App />);
+
+      const inspectorButton = screen.getByLabelText("Inspector");
+      fireEvent.click(inspectorButton);
+
+      await waitFor(() => {
+        expect(screen.getByRole("tablist", { name: "Inspector 탭" })).toBeInTheDocument();
+      });
+
+      let summaryPanel = container.querySelector("#inspector-tabpanel-summary");
+      await waitFor(() => {
+        summaryPanel = container.querySelector("#inspector-tabpanel-summary");
+        expect(summaryPanel).not.toBeNull();
+      });
+      const analyzeButton = within(summaryPanel as HTMLElement).getByRole("button", { name: "AI ANALYZE" });
+      fireEvent.click(analyzeButton);
+
+      await waitFor(() => {
+        expect(within(summaryPanel as HTMLElement).getByText("STREAMING")).toBeInTheDocument();
+      });
+
+      tokenHandlers[0]?.({
+        payload: "```bash\necho pnpm test --watch\nnpm run lint\n```\n",
+      });
+      resolveStream?.();
+
+      const runFirstButton = await waitFor(() => within(summaryPanel as HTMLElement).getByRole("button", { name: "RUN #1" }));
+      fireEvent.click(runFirstButton);
+
+      await waitFor(() => {
+        expect(screen.queryByRole("tablist", { name: "Inspector 탭" })).not.toBeInTheDocument();
+      });
+    } finally {
+      mockedListen.mockImplementation(mockedBaseListen as any);
+      mockedInvoke.mockImplementation(mockedBaseInvoke);
+      resolveStream = null;
+    }
+  });
+
+  it("추천 커맨드의 COPY/LOAD가 각각 클립보드와 AI 바로 반영된다", async () => {
+    const tokenHandlers: Array<(event: { payload: string }) => void> = [];
+    const mockedListen = vi.mocked(listen);
+    const mockedBaseListen = mockedListen.getMockImplementation();
+    const mockedBaseInvoke = mockedInvoke.getMockImplementation();
+    let resolveStream: (() => void) | null = null;
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    const baseClipboard = navigator.clipboard;
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
+
+    mockedListen.mockImplementation((event, callback) => {
+      if (event === "xllm_token") {
+        tokenHandlers.push((payloadEvent) => callback(payloadEvent));
+      }
+      return Promise.resolve(() => {});
+    });
+    mockedInvoke.mockImplementation((cmd: string) => {
+      if (cmd === "stream_ai_command") {
+        return new Promise<void>((resolve) => {
+          resolveStream = resolve;
+        });
+      }
+      return mockedBaseInvoke ? mockedBaseInvoke(cmd) : Promise.resolve("{}");
+    });
+
+    try {
+      setMockCommandBlocks([{
+        id: "b6",
+        command: "cargo test",
+        output: "FAIL: compile error",
+        exitCode: 1,
+        startedAt: 1,
+        endedAt: 10,
+      }]);
+      const { container } = render(<App />);
+
+      const inspectorButton = screen.getByLabelText("Inspector");
+      fireEvent.click(inspectorButton);
+
+      await waitFor(() => {
+        expect(screen.getByRole("tablist", { name: "Inspector 탭" })).toBeInTheDocument();
+      });
+
+      let summaryPanel = container.querySelector("#inspector-tabpanel-summary");
+      await waitFor(() => {
+        summaryPanel = container.querySelector("#inspector-tabpanel-summary");
+        expect(summaryPanel).not.toBeNull();
+      });
+
+      const analyzeButton = within(summaryPanel as HTMLElement).getByRole("button", { name: "AI ANALYZE" });
+      fireEvent.click(analyzeButton);
+
+      await waitFor(() => {
+        expect(within(summaryPanel as HTMLElement).getByText("STREAMING")).toBeInTheDocument();
+      });
+
+      tokenHandlers[0]?.({
+        payload: "```bash\ncargo fmt\ncargo check\ncargo test -q\n```\n",
+      });
+      resolveStream?.();
+
+      const firstRow = await waitFor(() => container.querySelector("[data-inspector-command-menu-row='1']"));
+      const rowCopyButton = within(firstRow as HTMLElement).getByRole("button", { name: "COPY" });
+      const rowLoadButton = within(firstRow as HTMLElement).getByRole("button", { name: "LOAD" });
+
+      fireEvent.click(rowCopyButton);
+      fireEvent.click(rowLoadButton);
+
+      expect(writeText).toHaveBeenCalledWith("cargo fmt");
+      const aiBarInput = await screen.findByTestId("ai-bar-input");
+      expect(aiBarInput).toHaveValue("cargo fmt");
+    } finally {
+      mockedListen.mockImplementation(mockedBaseListen as any);
+      mockedInvoke.mockImplementation(mockedBaseInvoke);
+      Object.defineProperty(navigator, "clipboard", { configurable: true, value: baseClipboard });
+      resolveStream = null;
+    }
+  });
+
   it("AI 분석 실패 응답은 ERROR 상태로 표시된다", async () => {
     const tokenHandlers: Array<(event: { payload: string }) => void> = [];
     const mockedListen = vi.mocked(listen);
