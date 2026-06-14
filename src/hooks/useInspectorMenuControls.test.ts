@@ -846,4 +846,86 @@ describe("useInspectorMenuControls", () => {
     expect(e.preventDefault).not.toHaveBeenCalled();
     expect(e.stopPropagation).not.toHaveBeenCalled();
   });
+
+  it("compact 메뉴를 연달아 열면 마지막 호출 인덱스가 유지된다", () => {
+    const button0 = document.createElement("button");
+    const button1 = document.createElement("button");
+    const scrollSpy0 = vi.spyOn(button0, "scrollIntoView");
+    const scrollSpy1 = vi.spyOn(button1, "scrollIntoView");
+    const moreRef = { current: { 0: button0, 1: button1 } };
+    const firstActionRefs = { current: {} as Record<number, HTMLButtonElement | null> };
+    const quickActionsAdvancedRef = { current: null as HTMLDivElement | null };
+    const closeQuickActions = vi.fn();
+
+    const { result } = renderHook(() => {
+      const [inspectorCommandMenuIndex, setInspectorCommandMenuIndex] = useState<number | null>(null);
+      const controls = useInspectorMenuControls({
+        isInspectorCompact: true,
+        inspectorCommandMenuIndex,
+        setInspectorCommandMenuIndex,
+        inspectorMoreButtonRefs: moreRef,
+        inspectorMenuFirstActionRefs: firstActionRefs,
+        inspectorQuickActionsAdvancedRef: quickActionsAdvancedRef,
+        showInspectorQuickActionsExpanded: false,
+        closeInspectorQuickActions: closeQuickActions,
+      });
+      return { controls, inspectorCommandMenuIndex };
+    });
+
+    act(() => {
+      result.current.controls.openInspectorCompactMenu(0);
+      result.current.controls.openInspectorCompactMenu(1);
+    });
+
+    expect(result.current.inspectorCommandMenuIndex).toBe(1);
+    expect(scrollSpy0).toHaveBeenCalledTimes(1);
+    expect(scrollSpy1).toHaveBeenCalledTimes(1);
+  });
+
+  it("메뉴를 닫고 바로 다시 열어도 최종 상태가 일관된다", () => {
+    const button0 = document.createElement("button");
+    const button1 = document.createElement("button");
+    const focusSpy0 = vi.spyOn(button0, "focus");
+    const scrollSpy1 = vi.spyOn(button1, "scrollIntoView");
+    const moreRef = { current: { 0: button0, 1: button1 } };
+    const firstActionRefs = { current: {} as Record<number, HTMLButtonElement | null> };
+    const quickActionsAdvancedRef = { current: null as HTMLDivElement | null };
+    const closeQuickActions = vi.fn();
+
+    const originalRequestAnimationFrame = window.requestAnimationFrame;
+    const requestAnimationFrameSpy = vi
+      .spyOn(window, "requestAnimationFrame")
+      .mockImplementation((cb) => {
+        cb(0);
+        return 0;
+      });
+
+    const { result } = renderHook(() => {
+      const [inspectorCommandMenuIndex, setInspectorCommandMenuIndex] = useState<number | null>(null);
+      const controls = useInspectorMenuControls({
+        isInspectorCompact: true,
+        inspectorCommandMenuIndex,
+        setInspectorCommandMenuIndex,
+        inspectorMoreButtonRefs: moreRef,
+        inspectorMenuFirstActionRefs: firstActionRefs,
+        inspectorQuickActionsAdvancedRef: quickActionsAdvancedRef,
+        showInspectorQuickActionsExpanded: false,
+        closeInspectorQuickActions: closeQuickActions,
+      });
+      return { controls, inspectorCommandMenuIndex };
+    });
+
+    act(() => {
+      result.current.controls.openInspectorCompactMenu(0);
+      result.current.controls.closeInspectorCommandMenu(true);
+      result.current.controls.openInspectorCompactMenu(1);
+    });
+
+    expect(result.current.inspectorCommandMenuIndex).toBe(1);
+    expect(focusSpy0).toHaveBeenCalledTimes(1);
+    expect(scrollSpy1).toHaveBeenCalledTimes(1);
+
+    requestAnimationFrameSpy.mockRestore();
+    window.requestAnimationFrame = originalRequestAnimationFrame;
+  });
 });
