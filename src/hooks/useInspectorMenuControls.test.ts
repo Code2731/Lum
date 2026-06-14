@@ -696,4 +696,80 @@ describe("useInspectorMenuControls", () => {
     requestAnimationFrameSpy.mockRestore();
     window.requestAnimationFrame = originalRequestAnimationFrame;
   });
+
+  it("compact 메뉴 키다운 핸들러는 currentTarget이 비정상이어도 안전하게 종료한다", () => {
+    const moreRef = { current: { 0: document.createElement("button") } };
+    const firstActionRefs = { current: {} as Record<number, HTMLButtonElement | null> };
+    const quickActionsAdvancedRef = { current: null as HTMLDivElement | null };
+    const closeQuickActions = vi.fn();
+
+    const { result } = renderHook(() => {
+      const [inspectorCommandMenuIndex, setInspectorCommandMenuIndex] = useState<number | null>(0);
+      const controls = useInspectorMenuControls({
+        isInspectorCompact: true,
+        inspectorCommandMenuIndex,
+        setInspectorCommandMenuIndex,
+        inspectorMoreButtonRefs: moreRef,
+        inspectorMenuFirstActionRefs: firstActionRefs,
+        inspectorQuickActionsAdvancedRef: quickActionsAdvancedRef,
+        showInspectorQuickActionsExpanded: false,
+        closeInspectorQuickActions: closeQuickActions,
+      });
+      return { controls, inspectorCommandMenuIndex };
+    });
+
+    const e = {
+      key: "ArrowRight",
+      shiftKey: false,
+      preventDefault: vi.fn(),
+      stopPropagation: vi.fn(),
+      currentTarget: null,
+    } as unknown as KeyboardEvent<HTMLDivElement>;
+
+    expect(() => {
+      act(() => {
+        result.current.controls.handleInspectorCompactMenuKeyDown(e, 0);
+      });
+    }).not.toThrow();
+
+    expect(result.current.inspectorCommandMenuIndex).toBe(0);
+    expect(e.preventDefault).not.toHaveBeenCalled();
+  });
+
+  it("compact 메뉴 키다운 핸들러는 currentTarget이 Element가 아니면 메뉴 인덱스를 변경하지 않는다", () => {
+    const moreRef = { current: { 0: document.createElement("button") } };
+    const firstActionRefs = { current: {} as Record<number, HTMLButtonElement | null> };
+    const quickActionsAdvancedRef = { current: null as HTMLDivElement | null };
+    const closeQuickActions = vi.fn();
+
+    const { result } = renderHook(() => {
+      const [inspectorCommandMenuIndex, setInspectorCommandMenuIndex] = useState<number | null>(0);
+      const controls = useInspectorMenuControls({
+        isInspectorCompact: true,
+        inspectorCommandMenuIndex,
+        setInspectorCommandMenuIndex,
+        inspectorMoreButtonRefs: moreRef,
+        inspectorMenuFirstActionRefs: firstActionRefs,
+        inspectorQuickActionsAdvancedRef: quickActionsAdvancedRef,
+        showInspectorQuickActionsExpanded: false,
+        closeInspectorQuickActions: closeQuickActions,
+      });
+      return { controls, inspectorCommandMenuIndex };
+    });
+
+    const e = {
+      key: "ArrowRight",
+      shiftKey: false,
+      preventDefault: vi.fn(),
+      stopPropagation: vi.fn(),
+      currentTarget: document.createTextNode("x") as unknown as HTMLDivElement,
+    } as unknown as KeyboardEvent<HTMLDivElement>;
+
+    act(() => {
+      result.current.controls.handleInspectorCompactMenuKeyDown(e, 0);
+    });
+
+    expect(result.current.inspectorCommandMenuIndex).toBe(0);
+    expect(e.preventDefault).toHaveBeenCalledTimes(0);
+  });
 });

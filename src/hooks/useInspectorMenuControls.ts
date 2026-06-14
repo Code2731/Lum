@@ -87,6 +87,7 @@ export function useInspectorMenuControls({
     if (!isRovingMenuInputKey(e.key)) {
       return;
     }
+    if (!(e.currentTarget instanceof Element)) return;
     const items = Array.from(
       e.currentTarget.querySelectorAll<HTMLButtonElement>("[role='menuitem']"),
     );
