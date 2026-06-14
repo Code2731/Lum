@@ -465,4 +465,109 @@ describe("useInspectorMenuControls", () => {
       behavior: "auto",
     });
   });
+
+  it("openInspectorCompactMenu는 존재하지 않는 인덱스를 전달해도 크래시 없이 상태만 갱신된다", () => {
+    const moreRef = { current: {} as Record<number, HTMLButtonElement | null> };
+    const firstActionRefs = { current: {} as Record<number, HTMLButtonElement | null> };
+    const quickActionsAdvancedRef = { current: null as HTMLDivElement | null };
+    const closeQuickActions = vi.fn();
+
+    const { result } = renderHook(() => {
+      const [inspectorCommandMenuIndex, setInspectorCommandMenuIndex] = useState<number | null>(null);
+      const controls = useInspectorMenuControls({
+        isInspectorCompact: true,
+        inspectorCommandMenuIndex,
+        setInspectorCommandMenuIndex,
+        inspectorMoreButtonRefs: moreRef,
+        inspectorMenuFirstActionRefs: firstActionRefs,
+        inspectorQuickActionsAdvancedRef: quickActionsAdvancedRef,
+        showInspectorQuickActionsExpanded: false,
+        closeInspectorQuickActions: closeQuickActions,
+      });
+      return { controls, inspectorCommandMenuIndex };
+    });
+
+    act(() => {
+      result.current.controls.openInspectorCompactMenu(999);
+    });
+
+    expect(result.current.inspectorCommandMenuIndex).toBe(999);
+  });
+
+  it("포인터다운 타겟이 document일 때도 메뉴가 닫힌다", () => {
+    const outside = document.createElement("button");
+    document.body.appendChild(outside);
+
+    const closeQuickActions = vi.fn();
+    const moreRef = { current: { 0: document.createElement("button") } };
+    const firstActionRefs = { current: {} as Record<number, HTMLButtonElement | null> };
+    const quickActionsAdvancedRef = { current: null as HTMLDivElement | null };
+
+    const { result } = renderHook(() => {
+      const [inspectorCommandMenuIndex, setInspectorCommandMenuIndex] = useState<number | null>(0);
+      const controls = useInspectorMenuControls({
+        isInspectorCompact: true,
+        inspectorCommandMenuIndex,
+        setInspectorCommandMenuIndex,
+        inspectorMoreButtonRefs: moreRef,
+        inspectorMenuFirstActionRefs: firstActionRefs,
+        inspectorQuickActionsAdvancedRef: quickActionsAdvancedRef,
+        showInspectorQuickActionsExpanded: false,
+        closeInspectorQuickActions: closeQuickActions,
+      });
+      return { controls, inspectorCommandMenuIndex };
+    });
+
+    act(() => {
+      document.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+    });
+
+    expect(result.current.inspectorCommandMenuIndex).toBeNull();
+    expect(outside).toBeDefined();
+  });
+
+  it("퀵액션에서 Tab 키는 방향키 처리에서 제외되어 이동이 발생하지 않는다", () => {
+    const actionContainer = document.createElement("div");
+    const first = document.createElement("button");
+    const second = document.createElement("button");
+    actionContainer.appendChild(first);
+    actionContainer.appendChild(second);
+    document.body.appendChild(actionContainer);
+    first.focus();
+
+    const quickActionsAdvancedRef = { current: actionContainer };
+    const moreRef = { current: {} as Record<number, HTMLButtonElement | null> };
+    const firstActionRefs = { current: {} as Record<number, HTMLButtonElement | null> };
+    const closeQuickActions = vi.fn();
+
+    const { result } = renderHook(() => {
+      const [inspectorCommandMenuIndex, setInspectorCommandMenuIndex] = useState<number | null>(null);
+      const controls = useInspectorMenuControls({
+        isInspectorCompact: true,
+        inspectorCommandMenuIndex,
+        setInspectorCommandMenuIndex,
+        inspectorMoreButtonRefs: moreRef,
+        inspectorMenuFirstActionRefs: firstActionRefs,
+        inspectorQuickActionsAdvancedRef: quickActionsAdvancedRef,
+        showInspectorQuickActionsExpanded: true,
+        closeInspectorQuickActions: closeQuickActions,
+      });
+      return { controls };
+    });
+
+    const e = {
+      key: "Tab",
+      shiftKey: false,
+      preventDefault: vi.fn(),
+      stopPropagation: vi.fn(),
+      currentTarget: actionContainer,
+    } as unknown as KeyboardEvent<HTMLDivElement>;
+
+    act(() => {
+      result.current.controls.handleInspectorQuickActionsAdvancedKeyDown(e);
+    });
+
+    expect(document.activeElement).toBe(first);
+    expect(e.preventDefault).not.toHaveBeenCalled();
+  });
 });
