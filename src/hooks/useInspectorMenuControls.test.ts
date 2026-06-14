@@ -772,4 +772,78 @@ describe("useInspectorMenuControls", () => {
     expect(result.current.inspectorCommandMenuIndex).toBe(0);
     expect(e.preventDefault).toHaveBeenCalledTimes(0);
   });
+
+  it("퀵액션 패널 참조가 null이면 핸들러가 안전하게 종료된다", () => {
+    const actionRef = { current: null as HTMLDivElement | null };
+    const moreRef = { current: { 0: document.createElement("button") } };
+    const firstActionRefs = { current: {} as Record<number, HTMLButtonElement | null> };
+    const closeQuickActions = vi.fn();
+
+    const { result } = renderHook(() => {
+      const [inspectorCommandMenuIndex, setInspectorCommandMenuIndex] = useState<number | null>(null);
+      const controls = useInspectorMenuControls({
+        isInspectorCompact: true,
+        inspectorCommandMenuIndex,
+        setInspectorCommandMenuIndex,
+        inspectorMoreButtonRefs: moreRef,
+        inspectorMenuFirstActionRefs: firstActionRefs,
+        inspectorQuickActionsAdvancedRef: actionRef,
+        showInspectorQuickActionsExpanded: true,
+        closeInspectorQuickActions: closeQuickActions,
+      });
+      return { controls };
+    });
+
+    const e = {
+      key: "ArrowRight",
+      shiftKey: false,
+      preventDefault: vi.fn(),
+      stopPropagation: vi.fn(),
+      currentTarget: document.createElement("div"),
+    } as unknown as KeyboardEvent<HTMLDivElement>;
+
+    expect(() => {
+      act(() => {
+        result.current.controls.handleInspectorQuickActionsAdvancedKeyDown(e);
+      });
+    }).not.toThrow();
+  });
+
+  it("퀵액션 패널에 버튼이 없으면 인덱스 이동은 발생하지 않는다", () => {
+    const actionContainer = document.createElement("div");
+    const quickActionsAdvancedRef = { current: actionContainer };
+    const moreRef = { current: { 0: document.createElement("button") } };
+    const firstActionRefs = { current: {} as Record<number, HTMLButtonElement | null> };
+    const closeQuickActions = vi.fn();
+
+    const { result } = renderHook(() => {
+      const [inspectorCommandMenuIndex, setInspectorCommandMenuIndex] = useState<number | null>(null);
+      const controls = useInspectorMenuControls({
+        isInspectorCompact: true,
+        inspectorCommandMenuIndex,
+        setInspectorCommandMenuIndex,
+        inspectorMoreButtonRefs: moreRef,
+        inspectorMenuFirstActionRefs: firstActionRefs,
+        inspectorQuickActionsAdvancedRef: quickActionsAdvancedRef,
+        showInspectorQuickActionsExpanded: true,
+        closeInspectorQuickActions: closeQuickActions,
+      });
+      return { controls };
+    });
+
+    const e = {
+      key: "ArrowLeft",
+      shiftKey: false,
+      preventDefault: vi.fn(),
+      stopPropagation: vi.fn(),
+      currentTarget: actionContainer,
+    } as unknown as KeyboardEvent<HTMLDivElement>;
+
+    act(() => {
+      result.current.controls.handleInspectorQuickActionsAdvancedKeyDown(e);
+    });
+
+    expect(e.preventDefault).not.toHaveBeenCalled();
+    expect(e.stopPropagation).not.toHaveBeenCalled();
+  });
 });
