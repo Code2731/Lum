@@ -356,4 +356,117 @@ describe("useInspectorPanelCommands", () => {
     expect(e.preventDefault).toHaveBeenCalledTimes(1);
     expect(e.stopPropagation).toHaveBeenCalledTimes(1);
   });
+
+  it("추천 커맨드 로드가 AI 입력바로 반영된다", async () => {
+    const { result, spies } = setupInspectorCommands({
+      inspectorAnalyzeCache: {
+        blockId: "b",
+        command: "bad",
+        requestedAt: 1,
+        status: "done",
+        result: "",
+        rawResult: "",
+        suggestedCommands: ["echo ok"],
+      },
+    });
+
+    act(() => {
+      result.current.loadInspectorSuggestedCommandToAiBar(0);
+    });
+
+    expect(spies.setAiInput).toHaveBeenCalledWith("echo ok");
+    expect(spies.setShowAiBar).toHaveBeenCalledWith(true);
+    expect(spies.setViewMode).toHaveBeenCalledWith("terminal");
+    expect(spies.closeInspectorCommandMenu).toHaveBeenCalledTimes(1);
+    expect(spies.closeInspector).toHaveBeenCalledTimes(1);
+    expect(spies.notifCenter.addNotification).toHaveBeenCalledWith(expect.objectContaining({
+      title: "추천 커맨드 로드됨",
+    }));
+  });
+
+  it("copyInspectorAnalyzeResult는 분석 캐시가 있을 때 텍스트를 클립보드에 복사한다", async () => {
+    const { result, spies } = setupInspectorCommands({
+      inspectorAnalyzeCache: {
+        blockId: "b",
+        command: "bad",
+        requestedAt: 1,
+        status: "done",
+        result: "요약 결과",
+        rawResult: "원문결과",
+        suggestedCommands: ["echo ok"],
+      },
+    });
+
+    await act(async () => {
+      await result.current.copyInspectorAnalyzeResult();
+    });
+
+    expect(writeText).toHaveBeenCalledWith([
+      "Command: bad",
+      "Status: DONE",
+      "",
+      "원문결과",
+    ].join("\n"));
+    expect(spies.notifCenter.addNotification).toHaveBeenCalledWith(expect.objectContaining({
+      title: "AI 분석 결과 복사 완료",
+    }));
+  });
+
+  it("copyInspectorAnalyzeResult는 캐시가 없으면 동작하지 않는다", async () => {
+    const { result, spies } = setupInspectorCommands({ inspectorAnalyzeCache: null });
+
+    await act(async () => {
+      await result.current.copyInspectorAnalyzeResult();
+    });
+
+    expect(writeText).not.toHaveBeenCalled();
+    expect(spies.notifCenter.addNotification).not.toHaveBeenCalled();
+  });
+
+  it("추천 커맨드 적용 후 안전도가 Safe면 PTY로 실행된다", async () => {
+    const { result, spies } = setupInspectorCommands({
+      inspectorAnalyzeCache: {
+        blockId: "b",
+        command: "bad",
+        requestedAt: 1,
+        status: "done",
+        result: "",
+        rawResult: "",
+        suggestedCommands: ["echo ok"],
+      },
+      verifyLevel: "Safe",
+    });
+
+    await act(async () => {
+      await result.current.applyInspectorAnalyzeCommand(0);
+    });
+
+    expect(spies.verifyCommandSafety).toHaveBeenCalledWith("echo ok");
+    expect(spies.ptyWrite).toHaveBeenCalledWith("echo ok\r");
+    expect(spies.setAiInput).not.toHaveBeenCalled();
+    expect(spies.notifCenter.addNotification).toHaveBeenCalledWith(expect.objectContaining({
+      title: "추천 커맨드 실행됨",
+    }));
+  });
+
+  it("clearInspectorAnalyzeCache는 캐시를 초기화하고 커맨드 메뉴를 닫는다", () => {
+    const { result, spies } = setupInspectorCommands({
+      inspectorAnalyzeCache: {
+        blockId: "b",
+        command: "bad",
+        requestedAt: 1,
+        status: "done",
+        result: "",
+        rawResult: "",
+        suggestedCommands: [],
+      },
+    });
+
+    act(() => {
+      result.current.clearInspectorAnalyzeCache();
+    });
+
+    expect(spies.setInspectorAnalyzeCache).toHaveBeenCalledWith(null);
+    expect(spies.closeInspectorCommandMenu).toHaveBeenCalledWith(undefined);
+  });
 });
