@@ -494,6 +494,158 @@ describe("useInspectorMenuControls", () => {
     expect(result.current.inspectorCommandMenuIndex).toBe(999);
   });
 
+  it("open/close를 분리된 act에서 호출해도 메뉴 인덱스와 ref 동기화가 일치한다", () => {
+    const moreButton = document.createElement("button");
+    const focusSpy = vi.spyOn(moreButton, "focus");
+    const moreRef = { current: { 0: moreButton } };
+    const firstActionRefs = { current: {} as Record<number, HTMLButtonElement | null> };
+    const quickActionsAdvancedRef = { current: null as HTMLDivElement | null };
+    const closeQuickActions = vi.fn();
+
+    const originalRequestAnimationFrame = window.requestAnimationFrame;
+    const requestAnimationFrameSpy = vi
+      .spyOn(window, "requestAnimationFrame")
+      .mockImplementation((cb) => {
+        cb(0);
+        return 0;
+      });
+
+    const { result } = renderHook(() => {
+      const [inspectorCommandMenuIndex, setInspectorCommandMenuIndex] = useState<number | null>(null);
+      const controls = useInspectorMenuControls({
+        isInspectorCompact: true,
+        inspectorCommandMenuIndex,
+        setInspectorCommandMenuIndex,
+        inspectorMoreButtonRefs: moreRef,
+        inspectorMenuFirstActionRefs: firstActionRefs,
+        inspectorQuickActionsAdvancedRef: quickActionsAdvancedRef,
+        showInspectorQuickActionsExpanded: false,
+        closeInspectorQuickActions: closeQuickActions,
+      });
+      return { controls, inspectorCommandMenuIndex, openRef: controls.inspectorCommandMenuOpenRef };
+    });
+
+    act(() => {
+      result.current.controls.openInspectorCompactMenu(0);
+    });
+
+    expect(result.current.inspectorCommandMenuIndex).toBe(0);
+    expect(result.current.openRef.current).toBe(0);
+
+    act(() => {
+      result.current.controls.closeInspectorCommandMenu(true);
+    });
+
+    expect(result.current.inspectorCommandMenuIndex).toBeNull();
+    expect(result.current.openRef.current).toBeNull();
+    expect(focusSpy).toHaveBeenCalledTimes(1);
+
+    requestAnimationFrameSpy.mockRestore();
+    window.requestAnimationFrame = originalRequestAnimationFrame;
+  });
+
+  it("메뉴 열기 직후 첫 번째 액션이 있을 때 포커스가 첫 액션으로 이동한다", () => {
+    const targetButton = document.createElement("button");
+    const firstActionButton = document.createElement("button");
+    const focusSpy = vi.spyOn(firstActionButton, "focus");
+    const firstActionRefs = {
+      current: {
+        1: firstActionButton,
+      } as Record<number, HTMLButtonElement | null>,
+    };
+    const scrollSpy = vi.spyOn(targetButton, "scrollIntoView");
+    const moreRef = { current: { 1: targetButton } };
+    const quickActionsAdvancedRef = { current: null as HTMLDivElement | null };
+    const closeQuickActions = vi.fn();
+
+    const originalRequestAnimationFrame = window.requestAnimationFrame;
+    const requestAnimationFrameSpy = vi
+      .spyOn(window, "requestAnimationFrame")
+      .mockImplementation((cb) => {
+        cb(0);
+        return 0;
+      });
+
+    const { result } = renderHook(() => {
+      const [inspectorCommandMenuIndex, setInspectorCommandMenuIndex] = useState<number | null>(null);
+      const controls = useInspectorMenuControls({
+        isInspectorCompact: true,
+        inspectorCommandMenuIndex,
+        setInspectorCommandMenuIndex,
+        inspectorMoreButtonRefs: moreRef,
+        inspectorMenuFirstActionRefs: firstActionRefs,
+        inspectorQuickActionsAdvancedRef: quickActionsAdvancedRef,
+        showInspectorQuickActionsExpanded: false,
+        closeInspectorQuickActions: closeQuickActions,
+      });
+      return { controls, inspectorCommandMenuIndex };
+    });
+
+    act(() => {
+      result.current.controls.openInspectorCompactMenu(1);
+    });
+
+    expect(result.current.inspectorCommandMenuIndex).toBe(1);
+    expect(scrollSpy).toHaveBeenCalledWith({
+      block: "center",
+      inline: "nearest",
+      behavior: "auto",
+    });
+    expect(focusSpy).toHaveBeenCalledTimes(1);
+
+    requestAnimationFrameSpy.mockRestore();
+    window.requestAnimationFrame = originalRequestAnimationFrame;
+  });
+
+  it("메뉴 열기 시 첫 액션 참조가 없으면 자동 포커스 이동이 발생하지 않는다", () => {
+    const targetButton = document.createElement("button");
+    const firstActionButton = document.createElement("button");
+    const focusSpy = vi.spyOn(firstActionButton, "focus");
+    const firstActionRefs = { current: {} as Record<number, HTMLButtonElement | null> };
+    const scrollSpy = vi.spyOn(targetButton, "scrollIntoView");
+    const moreRef = { current: { 1: targetButton } };
+    const quickActionsAdvancedRef = { current: null as HTMLDivElement | null };
+    const closeQuickActions = vi.fn();
+
+    const originalRequestAnimationFrame = window.requestAnimationFrame;
+    const requestAnimationFrameSpy = vi
+      .spyOn(window, "requestAnimationFrame")
+      .mockImplementation((cb) => {
+        cb(0);
+        return 0;
+      });
+
+    const { result } = renderHook(() => {
+      const [inspectorCommandMenuIndex, setInspectorCommandMenuIndex] = useState<number | null>(null);
+      const controls = useInspectorMenuControls({
+        isInspectorCompact: true,
+        inspectorCommandMenuIndex,
+        setInspectorCommandMenuIndex,
+        inspectorMoreButtonRefs: moreRef,
+        inspectorMenuFirstActionRefs: firstActionRefs,
+        inspectorQuickActionsAdvancedRef: quickActionsAdvancedRef,
+        showInspectorQuickActionsExpanded: false,
+        closeInspectorQuickActions: closeQuickActions,
+      });
+      return { controls, inspectorCommandMenuIndex };
+    });
+
+    act(() => {
+      result.current.controls.openInspectorCompactMenu(1);
+    });
+
+    expect(result.current.inspectorCommandMenuIndex).toBe(1);
+    expect(scrollSpy).toHaveBeenCalledWith({
+      block: "center",
+      inline: "nearest",
+      behavior: "auto",
+    });
+    expect(focusSpy).not.toHaveBeenCalled();
+
+    requestAnimationFrameSpy.mockRestore();
+    window.requestAnimationFrame = originalRequestAnimationFrame;
+  });
+
   it("포인터다운 타겟이 document일 때도 메뉴가 닫힌다", () => {
     const outside = document.createElement("button");
     document.body.appendChild(outside);
