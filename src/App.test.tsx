@@ -2442,6 +2442,180 @@ describe("App (LUM 터미널)", () => {
     }
   });
 
+  it("compact 모드에서 추천 커맨드 행이 닫힌 상태면 C/L 키는 무시된다", async () => {
+    const tokenHandlers: Array<(event: { payload: string }) => void> = [];
+    const mockedListen = vi.mocked(listen);
+    const mockedBaseListen = mockedListen.getMockImplementation();
+    const mockedBaseInvoke = mockedInvoke.getMockImplementation();
+    let resolveStream: (() => void) | null = null;
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    const baseClipboard = navigator.clipboard;
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
+    localStorage.setItem("lum.inspectorDensity", "compact");
+
+    mockedListen.mockImplementation((event, callback) => {
+      if (event === "xllm_token") {
+        tokenHandlers.push((payloadEvent) => callback(payloadEvent));
+      }
+      return Promise.resolve(() => {});
+    });
+    mockedInvoke.mockImplementation((cmd: string, args?: unknown) => {
+      if (cmd === "stream_ai_command") {
+        return new Promise<void>((resolve) => {
+          resolveStream = resolve;
+        });
+      }
+      if (cmd === "verify_command_safety") {
+        return Promise.resolve({
+          level: "Safe",
+          reason: "low risk",
+        });
+      }
+      return mockedBaseInvoke ? mockedBaseInvoke(cmd, args) : Promise.resolve("{}");
+    });
+
+    try {
+      setMockCommandBlocks([{
+        id: "b18",
+        command: "npm ci",
+        output: "FAIL: lockfile invalid",
+        exitCode: 1,
+        startedAt: 1,
+        endedAt: 10,
+      }]);
+      const { container } = render(<App />);
+
+      const inspectorButton = screen.getByLabelText("Inspector");
+      fireEvent.click(inspectorButton);
+
+      await waitFor(() => {
+        expect(screen.getByRole("tablist", { name: "Inspector 탭" })).toBeInTheDocument();
+      });
+
+      let summaryPanel = container.querySelector("#inspector-tabpanel-summary");
+      await waitFor(() => {
+        summaryPanel = container.querySelector("#inspector-tabpanel-summary");
+        expect(summaryPanel).not.toBeNull();
+      });
+
+      const analyzeButton = within(summaryPanel as HTMLElement).getByRole("button", { name: "AI ANALYZE" });
+      fireEvent.click(analyzeButton);
+
+      await waitFor(() => {
+        expect(within(summaryPanel as HTMLElement).getByText("STREAMING")).toBeInTheDocument();
+      });
+
+      tokenHandlers[0]?.({
+        payload: "```bash\nnpm run test\nnpm run lint\n```\n",
+      });
+      resolveStream?.();
+
+      await waitFor(() => {
+        expect(within(summaryPanel as HTMLElement).getByText("DONE")).toBeInTheDocument();
+      });
+
+      const secondRow = container.querySelector("[data-inspector-command-menu-row='2']");
+      expect(secondRow).not.toBeNull();
+      fireEvent.keyDown(secondRow as HTMLElement, { key: "c" });
+      fireEvent.keyDown(secondRow as HTMLElement, { key: "l" });
+
+      expect(writeText).not.toHaveBeenCalled();
+      expect(screen.queryByTestId("ai-bar-input")).not.toBeInTheDocument();
+      expect(invoke).not.toHaveBeenCalledWith("verify_command_safety", { command: "npm run lint" });
+    } finally {
+      mockedListen.mockImplementation(mockedBaseListen as any);
+      mockedInvoke.mockImplementation(mockedBaseInvoke);
+      Object.defineProperty(navigator, "clipboard", { configurable: true, value: baseClipboard });
+      localStorage.removeItem("lum.inspectorDensity");
+      resolveStream = null;
+    }
+  });
+
+  it("compact 모드에서 두 번째 추천 커맨드 행의 R 키는 두 번째 명령을 적용한다", async () => {
+    const tokenHandlers: Array<(event: { payload: string }) => void> = [];
+    const mockedListen = vi.mocked(listen);
+    const mockedBaseListen = mockedListen.getMockImplementation();
+    const mockedBaseInvoke = mockedInvoke.getMockImplementation();
+    let resolveStream: (() => void) | null = null;
+    localStorage.setItem("lum.inspectorDensity", "compact");
+
+    mockedListen.mockImplementation((event, callback) => {
+      if (event === "xllm_token") {
+        tokenHandlers.push((payloadEvent) => callback(payloadEvent));
+      }
+      return Promise.resolve(() => {});
+    });
+    mockedInvoke.mockImplementation((cmd: string, args?: unknown) => {
+      if (cmd === "stream_ai_command") {
+        return new Promise<void>((resolve) => {
+          resolveStream = resolve;
+        });
+      }
+      if (cmd === "verify_command_safety") {
+        return Promise.resolve({
+          level: "Safe",
+          reason: "low risk",
+        });
+      }
+      return mockedBaseInvoke ? mockedBaseInvoke(cmd, args) : Promise.resolve("{}");
+    });
+
+    try {
+      setMockCommandBlocks([{
+        id: "b19",
+        command: "npm run build",
+        output: "FAIL: missing peer dep",
+        exitCode: 1,
+        startedAt: 1,
+        endedAt: 10,
+      }]);
+      const { container } = render(<App />);
+
+      const inspectorButton = screen.getByLabelText("Inspector");
+      fireEvent.click(inspectorButton);
+
+      await waitFor(() => {
+        expect(screen.getByRole("tablist", { name: "Inspector 탭" })).toBeInTheDocument();
+      });
+
+      let summaryPanel = container.querySelector("#inspector-tabpanel-summary");
+      await waitFor(() => {
+        summaryPanel = container.querySelector("#inspector-tabpanel-summary");
+        expect(summaryPanel).not.toBeNull();
+      });
+
+      const analyzeButton = within(summaryPanel as HTMLElement).getByRole("button", { name: "AI ANALYZE" });
+      fireEvent.click(analyzeButton);
+
+      await waitFor(() => {
+        expect(within(summaryPanel as HTMLElement).getByText("STREAMING")).toBeInTheDocument();
+      });
+
+      tokenHandlers[0]?.({
+        payload: "```bash\nnpm run test\nnpm run lint\n```\n",
+      });
+      resolveStream?.();
+
+      await waitFor(() => {
+        expect(within(summaryPanel as HTMLElement).getByText("DONE")).toBeInTheDocument();
+      });
+
+      const secondRow = container.querySelector("[data-inspector-command-menu-row='2']");
+      expect(secondRow).not.toBeNull();
+      fireEvent.keyDown(secondRow as HTMLElement, { key: "r" });
+
+      await waitFor(() => {
+        expect(screen.queryByRole("tablist", { name: "Inspector 탭" })).not.toBeInTheDocument();
+      });
+      expect(invoke).toHaveBeenCalledWith("verify_command_safety", { command: "npm run lint" });
+    } finally {
+      mockedListen.mockImplementation(mockedBaseListen as any);
+      mockedInvoke.mockImplementation(mockedBaseInvoke);
+      localStorage.removeItem("lum.inspectorDensity");
+      resolveStream = null;
+    }
+  });
+
   it("분석 결과 전체 복사 버튼은 분석 요약을 클립보드에 반영한다", async () => {
     const tokenHandlers: Array<(event: { payload: string }) => void> = [];
     const mockedListen = vi.mocked(listen);
