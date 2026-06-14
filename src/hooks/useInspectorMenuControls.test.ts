@@ -570,4 +570,130 @@ describe("useInspectorMenuControls", () => {
     expect(document.activeElement).toBe(first);
     expect(e.preventDefault).not.toHaveBeenCalled();
   });
+
+  it("compact 메뉴에서 비-네비게이션 키 입력은 메뉴 상태를 변경하지 않는다", () => {
+    const menu = document.createElement("div");
+    const buttons: HTMLButtonElement[] = [];
+    for (let i = 0; i < 3; i += 1) {
+      const btn = document.createElement("button");
+      btn.setAttribute("role", "menuitem");
+      btn.textContent = `item-${i + 1}`;
+      buttons.push(btn);
+      menu.appendChild(btn);
+    }
+    document.body.appendChild(menu);
+
+    const moreRef = { current: { 0: document.createElement("button") } };
+    const firstActionRefs = { current: {} as Record<number, HTMLButtonElement | null> };
+    const quickActionsAdvancedRef = { current: null as HTMLDivElement | null };
+    const closeQuickActions = vi.fn();
+
+    const { result } = renderHook(() => {
+      const [inspectorCommandMenuIndex, setInspectorCommandMenuIndex] = useState<number | null>(0);
+      const controls = useInspectorMenuControls({
+        isInspectorCompact: true,
+        inspectorCommandMenuIndex,
+        setInspectorCommandMenuIndex,
+        inspectorMoreButtonRefs: moreRef,
+        inspectorMenuFirstActionRefs: firstActionRefs,
+        inspectorQuickActionsAdvancedRef: quickActionsAdvancedRef,
+        showInspectorQuickActionsExpanded: false,
+        closeInspectorQuickActions: closeQuickActions,
+      });
+      return { controls, inspectorCommandMenuIndex };
+    });
+
+    const e = {
+      key: "Enter",
+      shiftKey: false,
+      preventDefault: vi.fn(),
+      stopPropagation: vi.fn(),
+      currentTarget: menu,
+    } as unknown as KeyboardEvent<HTMLDivElement>;
+
+    act(() => {
+      result.current.controls.handleInspectorCompactMenuKeyDown(e, 0);
+    });
+
+    expect(result.current.inspectorCommandMenuIndex).toBe(0);
+    expect(e.preventDefault).toHaveBeenCalledTimes(0);
+  });
+
+  it("compact 모드가 아니면 메뉴 row blur 핸들러가 더 이상 메뉴 닫힘을 수행하지 않는다", () => {
+    const menuRow = document.createElement("div");
+    const relatedOutside = document.createElement("button");
+
+    const moreRef = { current: { 0: document.createElement("button") } };
+    const firstActionRefs = { current: {} as Record<number, HTMLButtonElement | null> };
+    const quickActionsAdvancedRef = { current: null as HTMLDivElement | null };
+    const closeQuickActions = vi.fn();
+
+    const { result } = renderHook(() => {
+      const [inspectorCommandMenuIndex, setInspectorCommandMenuIndex] = useState<number | null>(0);
+      const controls = useInspectorMenuControls({
+        isInspectorCompact: false,
+        inspectorCommandMenuIndex,
+        setInspectorCommandMenuIndex,
+        inspectorMoreButtonRefs: moreRef,
+        inspectorMenuFirstActionRefs: firstActionRefs,
+        inspectorQuickActionsAdvancedRef: quickActionsAdvancedRef,
+        showInspectorQuickActionsExpanded: false,
+        closeInspectorQuickActions: closeQuickActions,
+      });
+      return { controls, inspectorCommandMenuIndex };
+    });
+
+    const e = {
+      currentTarget: menuRow,
+      relatedTarget: relatedOutside,
+    } as unknown as FocusEvent<HTMLDivElement>;
+
+    act(() => {
+      result.current.controls.handleInspectorSuggestedCommandRowBlurCapture(e, 0);
+    });
+
+    expect(result.current.inspectorCommandMenuIndex).toBe(0);
+  });
+
+  it("closeInspectorCommandMenu는 restoreFocus=false일 때 트리거 포커스를 복원하지 않는다", () => {
+    const moreButton = document.createElement("button");
+    const moreRef = { current: { 0: moreButton } };
+    const firstActionRefs = { current: {} as Record<number, HTMLButtonElement | null> };
+    const quickActionsAdvancedRef = { current: null as HTMLDivElement | null };
+    const closeQuickActions = vi.fn();
+    const focusSpy = vi.spyOn(moreButton, "focus");
+
+    const originalRequestAnimationFrame = window.requestAnimationFrame;
+    const requestAnimationFrameSpy = vi
+      .spyOn(window, "requestAnimationFrame")
+      .mockImplementation((cb) => {
+        cb(0);
+        return 0;
+      });
+
+    const { result } = renderHook(() => {
+      const [inspectorCommandMenuIndex, setInspectorCommandMenuIndex] = useState<number | null>(0);
+      const controls = useInspectorMenuControls({
+        isInspectorCompact: true,
+        inspectorCommandMenuIndex,
+        setInspectorCommandMenuIndex,
+        inspectorMoreButtonRefs: moreRef,
+        inspectorMenuFirstActionRefs: firstActionRefs,
+        inspectorQuickActionsAdvancedRef: quickActionsAdvancedRef,
+        showInspectorQuickActionsExpanded: false,
+        closeInspectorQuickActions: closeQuickActions,
+      });
+      return { controls, inspectorCommandMenuIndex };
+    });
+
+    act(() => {
+      result.current.controls.closeInspectorCommandMenu(false);
+    });
+
+    expect(result.current.inspectorCommandMenuIndex).toBeNull();
+    expect(focusSpy).not.toHaveBeenCalled();
+
+    requestAnimationFrameSpy.mockRestore();
+    window.requestAnimationFrame = originalRequestAnimationFrame;
+  });
 });
