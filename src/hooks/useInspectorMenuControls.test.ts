@@ -333,4 +333,136 @@ describe("useInspectorMenuControls", () => {
     expect(result.current.inspectorCommandMenuIndex).toBeNull();
     expect(closeQuickActions).not.toHaveBeenCalled();
   });
+
+  it("compact 메뉴에서 Escape를 누르면 열린 메뉴가 닫히고 원래 트리거로 포커스를 되돌린다", () => {
+    const menu = document.createElement("div");
+    const moreButton = document.createElement("button");
+    const spyScroll = vi.spyOn(moreButton, "focus");
+    const moreRef = { current: { 0: moreButton } };
+    const firstActionRefs = { current: {} as Record<number, HTMLButtonElement | null> };
+    const quickActionsAdvancedRef = { current: null as HTMLDivElement | null };
+    const closeQuickActions = vi.fn();
+
+    const originalRequestAnimationFrame = window.requestAnimationFrame;
+    const requestAnimationFrameSpy = vi
+      .spyOn(window, "requestAnimationFrame")
+      .mockImplementation((cb) => {
+        cb(0);
+        return 0;
+      });
+
+    const { result } = renderHook(() => {
+      const [inspectorCommandMenuIndex, setInspectorCommandMenuIndex] = useState<number | null>(0);
+      const controls = useInspectorMenuControls({
+        isInspectorCompact: true,
+        inspectorCommandMenuIndex,
+        setInspectorCommandMenuIndex,
+        inspectorMoreButtonRefs: moreRef,
+        inspectorMenuFirstActionRefs: firstActionRefs,
+        inspectorQuickActionsAdvancedRef: quickActionsAdvancedRef,
+        showInspectorQuickActionsExpanded: false,
+        closeInspectorQuickActions: closeQuickActions,
+      });
+      return { controls, inspectorCommandMenuIndex };
+    });
+
+    const e = {
+      key: "Escape",
+      shiftKey: false,
+      preventDefault: vi.fn(),
+      stopPropagation: vi.fn(),
+      currentTarget: menu,
+    } as unknown as KeyboardEvent<HTMLDivElement>;
+
+    act(() => {
+      result.current.controls.handleInspectorCompactMenuKeyDown(e, 0);
+    });
+
+    expect(result.current.inspectorCommandMenuIndex).toBeNull();
+    expect(e.preventDefault).toHaveBeenCalledTimes(1);
+    expect(e.stopPropagation).toHaveBeenCalledTimes(1);
+    expect(spyScroll).toHaveBeenCalledTimes(1);
+
+    requestAnimationFrameSpy.mockRestore();
+    window.requestAnimationFrame = originalRequestAnimationFrame;
+  });
+
+  it("퀵액션 패널에서 Escape를 누르면 닫기 핸들러가 호출된다", () => {
+    const actionContainer = document.createElement("div");
+    const first = document.createElement("button");
+    const second = document.createElement("button");
+    actionContainer.appendChild(first);
+    actionContainer.appendChild(second);
+
+    const quickActionsAdvancedRef = { current: actionContainer };
+    const moreRef = { current: {} as Record<number, HTMLButtonElement | null> };
+    const firstActionRefs = { current: {} as Record<number, HTMLButtonElement | null> };
+    const closeQuickActions = vi.fn();
+
+    const { result } = renderHook(() => {
+      const [inspectorCommandMenuIndex, setInspectorCommandMenuIndex] = useState<number | null>(null);
+      const controls = useInspectorMenuControls({
+        isInspectorCompact: true,
+        inspectorCommandMenuIndex,
+        setInspectorCommandMenuIndex,
+        inspectorMoreButtonRefs: moreRef,
+        inspectorMenuFirstActionRefs: firstActionRefs,
+        inspectorQuickActionsAdvancedRef: quickActionsAdvancedRef,
+        showInspectorQuickActionsExpanded: true,
+        closeInspectorQuickActions: closeQuickActions,
+      });
+      return { controls };
+    });
+
+    const e = {
+      key: "Escape",
+      shiftKey: false,
+      preventDefault: vi.fn(),
+      stopPropagation: vi.fn(),
+      currentTarget: actionContainer,
+    } as unknown as KeyboardEvent<HTMLDivElement>;
+
+    act(() => {
+      result.current.controls.handleInspectorQuickActionsAdvancedKeyDown(e);
+    });
+
+    expect(closeQuickActions).toHaveBeenCalledTimes(1);
+    expect(e.preventDefault).toHaveBeenCalledTimes(1);
+    expect(e.stopPropagation).toHaveBeenCalledTimes(0);
+  });
+
+  it("openInspectorCompactMenu는 전달 인덱스 메뉴를 열고 트리거 버튼을 스크롤한다", () => {
+    const targetButton = document.createElement("button");
+    const scrollSpy = vi.spyOn(targetButton, "scrollIntoView");
+    const moreRef = { current: { 1: targetButton } };
+    const firstActionRefs = { current: {} as Record<number, HTMLButtonElement | null> };
+    const quickActionsAdvancedRef = { current: null as HTMLDivElement | null };
+    const closeQuickActions = vi.fn();
+
+    const { result } = renderHook(() => {
+      const [inspectorCommandMenuIndex, setInspectorCommandMenuIndex] = useState<number | null>(null);
+      const controls = useInspectorMenuControls({
+        isInspectorCompact: true,
+        inspectorCommandMenuIndex,
+        setInspectorCommandMenuIndex,
+        inspectorMoreButtonRefs: moreRef,
+        inspectorMenuFirstActionRefs: firstActionRefs,
+        inspectorQuickActionsAdvancedRef: quickActionsAdvancedRef,
+        showInspectorQuickActionsExpanded: false,
+        closeInspectorQuickActions: closeQuickActions,
+      });
+      return { controls, inspectorCommandMenuIndex };
+    });
+
+    act(() => {
+      result.current.controls.openInspectorCompactMenu(1);
+    });
+
+    expect(result.current.inspectorCommandMenuIndex).toBe(1);
+    expect(scrollSpy).toHaveBeenCalledWith({
+      block: "center",
+      inline: "nearest",
+      behavior: "auto",
+    });
+  });
 });
