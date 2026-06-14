@@ -59,4 +59,64 @@ describe("extractInspectorAnalyzeCommands", () => {
     const content = "원인 분석: 파일 권한 오류. 체크포인트를 확인하세요.";
     expect(extractInspectorAnalyzeCommands(content)).toEqual([]);
   });
+
+  it("코드블록 추출 시 주석 행은 건너뛴다", () => {
+    const content = [
+      "```bash",
+      "# 빌드 환경 확인",
+      "npm ci",
+      "# 테스트 실행",
+      "npm test",
+      "```",
+    ].join("\n");
+
+    expect(extractInspectorAnalyzeCommands(content)).toEqual([
+      "npm ci",
+      "npm test",
+    ]);
+  });
+
+  it("동일한 명령은 코드블록/라인 혼합에서도 한 번만 반환한다", () => {
+    const content = [
+      "```bash",
+      "npm run build",
+      "```",
+      "",
+      "- $ npm run build",
+      "- $ npm run lint",
+      "1) `npm run test`",
+    ].join("\n");
+
+    expect(extractInspectorAnalyzeCommands(content, 3)).toEqual([
+      "npm run build",
+      "npm run lint",
+      "npm run test",
+    ]);
+  });
+
+  it("limit가 1이면 첫 번째 추천 커맨드만 반환한다", () => {
+    const content = [
+      "```bash",
+      "npm run build",
+      "npm run test",
+      "```",
+      "- $ npm run lint",
+    ].join("\n");
+
+    expect(extractInspectorAnalyzeCommands(content, 1)).toEqual(["npm run build"]);
+  });
+
+  it("너무 긴 라인은 명령 후보에서 제외된다", () => {
+    const veryLongCommand = `echo ${"a".repeat(241)}`;
+    const content = [
+      "- $ echo short",
+      veryLongCommand,
+      "```bash",
+      veryLongCommand,
+      "npm test",
+      "```",
+    ].join("\n");
+
+    expect(extractInspectorAnalyzeCommands(content)).toEqual(["echo short", "npm test"]);
+  });
 });
