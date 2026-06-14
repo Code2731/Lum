@@ -14,7 +14,7 @@ import { useTerminalTheme } from "./hooks/useTerminalTheme";
 import { useQuickActions } from "./hooks/useQuickActions";
 import { useCommandNotifier } from "./hooks/useCommandNotifier";
 import { useWorkspace } from "./hooks/useWorkspace";
-import { useInspectorMenuControls } from "./hooks/useInspectorMenuControls";
+import { useInspectorPanelController } from "./hooks/useInspectorPanelController";
 import { inferTabIcon } from "./utils/tabIcon";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
@@ -48,11 +48,7 @@ import AiBar from "./components/AiBar";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import type { AiBackend } from "./utils/inputRouter";
 import { extractInspectorAnalyzeCommands } from "./utils/inspectorAnalyze";
-import { getRovingMenuNextIndex } from "./utils/menuRoving";
 import { resolveInspectorMenuHotkey } from "./utils/inspectorMenuHotkeys";
-import {
-  isEventTargetWithinSelector,
-} from "./utils/pointerGuard";
 import type {
   RetryCompareResult,
   RetryCompareTask,
@@ -408,154 +404,41 @@ const App: React.FC = () => {
     closeOverlays,
   } = panels;
 
-  const openInspectorTab = useCallback((tab: InspectorTab) => {
-    setShowInspector(true);
-    setInspectorTab(tab);
-    setShowRagPanel(tab === "rag");
-    setShowScriptPanel(tab === "scripts");
-    setShowSysmon(tab === "sysmon");
-    requestAnimationFrame(() => {
-      inspectorTabRefs.current[tab]?.focus();
-    });
-  }, [setShowRagPanel, setShowScriptPanel, setShowSysmon]);
-  const inspectorTabs = useMemo(() => [
-    { id: "summary", label: "개요", shortcut: "1" },
-    { id: "rag", label: "RAG", shortcut: "2" },
-    { id: "scripts", label: "Scripts", shortcut: "3" },
-    { id: "sysmon", label: "System", shortcut: "4" },
-  ] as const, []);
-  const handleInspectorTabKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
-    if (!["ArrowRight", "ArrowLeft", "Home", "End"].includes(e.key)) return;
-    e.preventDefault();
-    const activeIndex = inspectorTabs.findIndex((item) => item.id === inspectorTab);
-    const next = getRovingMenuNextIndex(
-      e.key as "ArrowRight" | "ArrowLeft" | "Home" | "End",
-      inspectorTabs.length,
-      activeIndex,
-    );
-    if (next < 0) return;
-    const nextTab = inspectorTabs[next].id;
-    openInspectorTab(nextTab);
-    requestAnimationFrame(() => {
-      inspectorTabRefs.current[nextTab]?.focus();
-    });
-  }, [inspectorTab, inspectorTabs, openInspectorTab]);
-
-  const closeInspectorQuickActions = useCallback((restoreFocus = true) => {
-    setShowInspectorQuickActionsExpanded(false);
-    if (restoreFocus) {
-      requestAnimationFrame(() => {
-        inspectorQuickActionsToggleRef.current?.focus();
-      });
-    }
-  }, []);
-
-  const handleInspectorQuickActionsToggle = useCallback(() => {
-    setShowInspectorQuickActionsExpanded((prev) => !prev);
-  }, []);
-
-  const handleInspectorQuickActionsToggleKeyDown = useCallback((
-    e: React.KeyboardEvent<HTMLButtonElement>,
-  ) => {
-    if (e.key === "Enter" || e.key === " ") {
-      e.preventDefault();
-      handleInspectorQuickActionsToggle();
-      return;
-    }
-
-    if (e.key === "ArrowDown" && !showInspectorQuickActionsExpanded) {
-      e.preventDefault();
-      handleInspectorQuickActionsToggle();
-      return;
-    }
-  }, [handleInspectorQuickActionsToggle, showInspectorQuickActionsExpanded]);
-
   const {
+    inspectorTabs,
+    isInspectorCompact,
+    openInspectorTab,
+    closeInspector,
+    handleInspectorTabKeyDown,
+    closeInspectorQuickActions,
+    handleInspectorQuickActionsToggle,
+    handleInspectorQuickActionsToggleKeyDown,
     closeInspectorCommandMenu,
     openInspectorCompactMenu,
     handleInspectorCompactMenuKeyDown,
     handleInspectorSuggestedCommandRowBlurCapture,
     handleInspectorQuickActionsAdvancedKeyDown,
-  } = useInspectorMenuControls({
-    isInspectorCompact: inspectorDensity === "compact",
+    handleInspectorTabShortcut,
+  } = useInspectorPanelController({
+    inspectorTab,
+    setInspectorTab,
+    inspectorDensity,
     inspectorCommandMenuIndex,
     setInspectorCommandMenuIndex,
+    inspectorTabRefs,
     inspectorMoreButtonRefs,
     inspectorMenuFirstActionRefs,
     inspectorQuickActionsAdvancedRef,
+    inspectorQuickActionsToggleRef,
+    inspectorToggleButtonRef,
+    setShowInspector,
+    setShowRagPanel,
+    setShowScriptPanel,
+    setShowSysmon,
     showInspectorQuickActionsExpanded,
-    closeInspectorQuickActions,
+    setShowInspectorQuickActionsExpanded,
+    showInspector,
   });
-
-  useEffect(() => {
-    if (!showInspectorQuickActionsExpanded) return;
-    requestAnimationFrame(() => {
-      const firstAction = inspectorQuickActionsAdvancedRef.current?.querySelector("button");
-      firstAction?.focus();
-    });
-  }, [showInspectorQuickActionsExpanded]);
-
-  useEffect(() => {
-    const handlePointerDown = (e: PointerEvent) => {
-      if (!showInspectorQuickActionsExpanded) return;
-      if (isEventTargetWithinSelector(e.target, "[data-inspector-quick-actions-advanced]")) return;
-      if (isEventTargetWithinSelector(e.target, "[data-inspector-quick-actions-toggle]")) return;
-      closeInspectorQuickActions();
-    };
-    window.addEventListener("pointerdown", handlePointerDown, { capture: true });
-    return () => window.removeEventListener("pointerdown", handlePointerDown, { capture: true });
-  }, [showInspectorQuickActionsExpanded, closeInspectorQuickActions]);
-
-  useEffect(() => {
-    const handleInspectorTabShortcut = (e: KeyboardEvent) => {
-      if (!e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
-      const tab = (() => {
-        switch (e.key) {
-          case "1":
-            return "summary" as const;
-          case "2":
-            return "rag" as const;
-          case "3":
-            return "scripts" as const;
-          case "4":
-            return "sysmon" as const;
-          default:
-            return null;
-        }
-      })();
-      if (!tab || isTextInputTarget(e.target)) return;
-      e.preventDefault();
-      openInspectorTab(tab);
-      requestAnimationFrame(() => {
-        inspectorTabRefs.current[tab]?.focus();
-      });
-    };
-
-    window.addEventListener("keydown", handleInspectorTabShortcut);
-    return () => window.removeEventListener("keydown", handleInspectorTabShortcut);
-  }, [openInspectorTab]);
-
-  const closeInspector = useCallback(() => {
-    setShowInspector(false);
-    setShowRagPanel(false);
-    setShowScriptPanel(false);
-    setShowSysmon(false);
-    requestAnimationFrame(() => inspectorToggleButtonRef.current?.focus());
-  }, [setShowRagPanel, setShowScriptPanel, setShowSysmon]);
-
-  useEffect(() => {
-    if (!showInspector && showInspectorQuickActionsExpanded) {
-      closeInspectorQuickActions(false);
-    }
-  }, [closeInspectorQuickActions, showInspector, showInspectorQuickActionsExpanded]);
-
-  useEffect(() => {
-    if (!showInspectorQuickActionsExpanded) return;
-    requestAnimationFrame(() => {
-      const first = inspectorQuickActionsAdvancedRef.current?.querySelector("button");
-      first?.focus();
-    });
-  }, [showInspectorQuickActionsExpanded]);
 
   useEffect(() => {
     if (showRagPanel) {
@@ -1409,6 +1292,9 @@ const App: React.FC = () => {
       if (mod && e.shiftKey && !e.altKey && key === "l") { e.preventDefault(); setShowScriptPanel(v => { if (!v) scriptLib.loadScripts(); return !v; }); }
       if (mod && e.shiftKey && !e.altKey && key === "m") { e.preventDefault(); setShowSysmon(v => !v); }
       if (mod && !e.shiftKey && !e.altKey && e.key === ",") { e.preventDefault(); setShowThemePanel(true); }
+      if (handleInspectorTabShortcut(e)) {
+        return;
+      }
       if (mod && !e.shiftKey && !e.altKey && key === "i") {
         e.preventDefault();
         if (showInspector) {
@@ -1458,7 +1344,7 @@ const App: React.FC = () => {
       window.removeEventListener("keydown", captureHandler, { capture: true });
       window.removeEventListener("keydown", handler);
     };
-  }, [addTabWithReset, closeTabWithReset, toggleSplit, closeOverlays, activeTabIdRef, setShowCommitPanel, setShowHistorySearch, setShowDiffReview, setShowThemePanel, quickActions, ptyWriteRefs, activePaneIdRef, setShowWorkspace, loadWorkspaces, setShowPalette, navigateCommandBlock, focusFailedBlock, showInspector, closeInspector, openInspectorTab, inspectorCommandMenuIndex, closeInspectorCommandMenu, showInspectorQuickActionsExpanded, closeInspectorQuickActions]);
+  }, [addTabWithReset, closeTabWithReset, toggleSplit, closeOverlays, activeTabIdRef, setShowCommitPanel, setShowHistorySearch, setShowDiffReview, setShowThemePanel, quickActions, ptyWriteRefs, activePaneIdRef, setShowWorkspace, loadWorkspaces, setShowPalette, navigateCommandBlock, focusFailedBlock, showInspector, closeInspector, openInspectorTab, inspectorCommandMenuIndex, closeInspectorCommandMenu, showInspectorQuickActionsExpanded, closeInspectorQuickActions, handleInspectorTabShortcut]);
 
   const activeTab = tabs.find((t) => t.id === activeTabId);
   const activeTabGitInfo = activeTab ? tabGitInfo[activeTab.id] ?? null : null;
@@ -1495,7 +1381,6 @@ const App: React.FC = () => {
       }))
   ), [cmdBlocks]);
   const lastCmdBlock = cmdBlocks[cmdBlocks.length - 1] ?? null;
-  const isInspectorCompact = inspectorDensity === "compact";
   const focusedCmdBlock = selectedBlockId
     ? (cmdBlocks.find((b) => b.id === selectedBlockId) ?? null)
     : lastCmdBlock;
