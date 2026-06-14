@@ -11,6 +11,7 @@ import {
 } from "react";
 import { getRovingMenuNextIndex } from "../utils/menuRoving";
 import { isEventTargetWithinSelector } from "../utils/pointerGuard";
+import { isTextInputTarget } from "../utils/event";
 import { useInspectorMenuControls } from "./useInspectorMenuControls";
 import type { InspectorDensity, InspectorTab } from "../components/InspectorPanel/types";
 
@@ -194,6 +195,7 @@ export function useInspectorPanelController({
   }, [setShowInspector, setShowRagPanel, setShowScriptPanel, setShowSysmon, inspectorToggleButtonRef]);
 
   const handleInspectorTabShortcut = useCallback((e: globalThis.KeyboardEvent) => {
+    if (isTextInputTarget(e.target)) return false;
     if (!e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return false;
     const tab = (() => {
       switch (e.key) {
