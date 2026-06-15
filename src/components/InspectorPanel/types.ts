@@ -49,7 +49,7 @@ export interface ScriptLibraryLike {
   onSave: (name: string, description: string, commands: string[]) => Promise<Script>;
 }
 
-export interface InspectorPanelProps {
+export interface InspectorPanelDataProps {
   showInspector: boolean;
   selectedModel: string;
   inspectorTab: InspectorTab;
@@ -74,7 +74,10 @@ export interface InspectorPanelProps {
   inspectorMenuFirstActionRefs: MutableRefObject<Record<number, HTMLButtonElement | null>>;
   inspectorQuickActionsToggleRef: RefObject<HTMLButtonElement>;
   inspectorQuickActionsAdvancedRef: RefObject<HTMLDivElement>;
+  scriptLibrary: ScriptLibraryLike;
+}
 
+export interface InspectorPanelActionProps {
   onDensityToggle: () => void;
   onClose: () => void;
   onTabSelect: (tab: InspectorTab) => void;
@@ -106,6 +109,6 @@ export interface InspectorPanelProps {
   onOpenHistory: () => void;
   onOpenDiffReview: () => void;
   onOpenFailedBlock: () => void;
-
-  scriptLibrary: ScriptLibraryLike;
 }
+
+export interface InspectorPanelProps extends InspectorPanelDataProps, InspectorPanelActionProps {}

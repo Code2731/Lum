@@ -1,10 +1,37 @@
 import { useMemo } from "react";
-import type { InspectorPanelProps } from "../components/InspectorPanel/types";
+import type {
+  InspectorPanelActionProps,
+  InspectorPanelDataProps,
+  InspectorPanelProps,
+} from "../components/InspectorPanel/types";
 
 export function useInspectorPanelProps(
   props: InspectorPanelProps,
 ): InspectorPanelProps {
-  return useMemo(() => props, [
+  const dataProps = useMemo<InspectorPanelDataProps>(() => ({
+    showInspector: props.showInspector,
+    selectedModel: props.selectedModel,
+    inspectorTab: props.inspectorTab,
+    inspectorDensity: props.inspectorDensity,
+    inspectorTabs: props.inspectorTabs,
+    inspectorTabRefs: props.inspectorTabRefs,
+    activeTabTitle: props.activeTabTitle,
+    activeTabPath: props.activeTabPath,
+    activeTabBranch: props.activeTabBranch,
+    activeTabChanged: props.activeTabChanged,
+    noActivity: props.noActivity,
+    failedBlocks: props.failedBlocks,
+    focusedFailedBlock: props.focusedFailedBlock,
+    analyzeCache: props.analyzeCache,
+    recentBlocks: props.recentBlocks,
+    commandMenuIndex: props.commandMenuIndex,
+    quickActionsExpanded: props.quickActionsExpanded,
+    inspectorMoreButtonRefs: props.inspectorMoreButtonRefs,
+    inspectorMenuFirstActionRefs: props.inspectorMenuFirstActionRefs,
+    inspectorQuickActionsToggleRef: props.inspectorQuickActionsToggleRef,
+    inspectorQuickActionsAdvancedRef: props.inspectorQuickActionsAdvancedRef,
+    scriptLibrary: props.scriptLibrary,
+  }), [
     props.showInspector,
     props.selectedModel,
     props.inspectorTab,
@@ -26,6 +53,40 @@ export function useInspectorPanelProps(
     props.inspectorMenuFirstActionRefs,
     props.inspectorQuickActionsToggleRef,
     props.inspectorQuickActionsAdvancedRef,
+    props.scriptLibrary,
+  ]);
+
+  const actionProps = useMemo<InspectorPanelActionProps>(() => ({
+    onDensityToggle: props.onDensityToggle,
+    onClose: props.onClose,
+    onTabSelect: props.onTabSelect,
+    onTabKeyDown: props.onTabKeyDown,
+    onFocusFailedBlock: props.onFocusFailedBlock,
+    onAnalyzeFailedBlock: props.onAnalyzeFailedBlock,
+    onCopyFailedOutput: props.onCopyFailedOutput,
+    onCopyAnalyzePrompt: props.onCopyAnalyzePrompt,
+    onLoadAnalyzePromptToAiBar: props.onLoadAnalyzePromptToAiBar,
+    onSelectBlock: props.onSelectBlock,
+    onCopyAnalyzeResult: props.onCopyAnalyzeResult,
+    onClearAnalyzeCache: props.onClearAnalyzeCache,
+    onCopySuggestedCommand: props.onCopySuggestedCommand,
+    onLoadSuggestedCommandToAiBar: props.onLoadSuggestedCommandToAiBar,
+    onApplySuggestedCommand: props.onApplySuggestedCommand,
+    onRerunBlock: props.onRerunBlock,
+    onCommandMenuRowBlurCapture: props.onCommandMenuRowBlurCapture,
+    onSuggestedCommandRowKeyDown: props.onSuggestedCommandRowKeyDown,
+    onCompactMenuKeyDown: props.onCompactMenuKeyDown,
+    onOpenCompactMenu: props.onOpenCompactMenu,
+    onCloseCommandMenu: props.onCloseCommandMenu,
+    onQuickActionsToggle: props.onQuickActionsToggle,
+    onQuickActionsToggleKeyDown: props.onQuickActionsToggleKeyDown,
+    onQuickActionsAdvancedKeyDown: props.onQuickActionsAdvancedKeyDown,
+    onToggleProjectBin: props.onToggleProjectBin,
+    onOpenWorkspace: props.onOpenWorkspace,
+    onOpenHistory: props.onOpenHistory,
+    onOpenDiffReview: props.onOpenDiffReview,
+    onOpenFailedBlock: props.onOpenFailedBlock,
+  }), [
     props.onDensityToggle,
     props.onClose,
     props.onTabSelect,
@@ -55,6 +116,13 @@ export function useInspectorPanelProps(
     props.onOpenHistory,
     props.onOpenDiffReview,
     props.onOpenFailedBlock,
-    props.scriptLibrary,
   ]);
+
+  return useMemo(
+    () => ({
+      ...dataProps,
+      ...actionProps,
+    }),
+    [dataProps, actionProps],
+  );
 }
