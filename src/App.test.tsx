@@ -2442,6 +2442,93 @@ describe("App (LUM 터미널)", () => {
     }
   });
 
+  it("compact 모드에서 두 번째 추천 커맨드 행의 MORE 메뉴가 열리면 두 번째 행에 대해 C/L 키가 동작한다", async () => {
+    const tokenHandlers: Array<(event: { payload: string }) => void> = [];
+    const mockedListen = vi.mocked(listen);
+    const mockedBaseListen = mockedListen.getMockImplementation();
+    const mockedBaseInvoke = mockedInvoke.getMockImplementation();
+    let resolveStream: (() => void) | null = null;
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    const baseClipboard = navigator.clipboard;
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
+    localStorage.setItem("lum.inspectorDensity", "compact");
+
+    mockedListen.mockImplementation((event, callback) => {
+      if (event === "xllm_token") {
+        tokenHandlers.push((payloadEvent) => callback(payloadEvent));
+      }
+      return Promise.resolve(() => {});
+    });
+    mockedInvoke.mockImplementation((cmd: string) => {
+      if (cmd === "stream_ai_command") {
+        return new Promise<void>((resolve) => {
+          resolveStream = resolve;
+        });
+      }
+      return mockedBaseInvoke ? mockedBaseInvoke(cmd) : Promise.resolve("{}");
+    });
+
+    try {
+      setMockCommandBlocks([{
+        id: "b20",
+        command: "npm exec",
+        output: "FAIL: script error",
+        exitCode: 1,
+        startedAt: 1,
+        endedAt: 10,
+      }]);
+      const { container } = render(<App />);
+
+      const inspectorButton = screen.getByLabelText("Inspector");
+      fireEvent.click(inspectorButton);
+
+      await waitFor(() => {
+        expect(screen.getByRole("tablist", { name: "Inspector 탭" })).toBeInTheDocument();
+      });
+
+      let summaryPanel = container.querySelector("#inspector-tabpanel-summary");
+      await waitFor(() => {
+        summaryPanel = container.querySelector("#inspector-tabpanel-summary");
+        expect(summaryPanel).not.toBeNull();
+      });
+
+      const analyzeButton = within(summaryPanel as HTMLElement).getByRole("button", { name: "AI ANALYZE" });
+      fireEvent.click(analyzeButton);
+
+      await waitFor(() => {
+        expect(within(summaryPanel as HTMLElement).getByText("STREAMING")).toBeInTheDocument();
+      });
+
+      tokenHandlers[0]?.({
+        payload: "```bash\nnpm run test\nnpm run lint\n```\n",
+      });
+      resolveStream?.();
+
+      await waitFor(() => {
+        expect(within(summaryPanel as HTMLElement).getByText("DONE")).toBeInTheDocument();
+      });
+
+      const moreButtonSecond = within(summaryPanel as HTMLElement).getAllByRole("button", { name: "MORE" })[1];
+      fireEvent.click(moreButtonSecond);
+
+      const secondRow = container.querySelector("[data-inspector-command-menu-row='2']");
+      expect(secondRow).not.toBeNull();
+      fireEvent.keyDown(secondRow as HTMLElement, { key: "c" });
+
+      expect(writeText).toHaveBeenCalledWith("npm run lint");
+
+      fireEvent.keyDown(secondRow as HTMLElement, { key: "l" });
+      const aiBarInput = await screen.findByTestId("ai-bar-input");
+      expect(aiBarInput).toHaveValue("npm run lint");
+    } finally {
+      mockedListen.mockImplementation(mockedBaseListen as any);
+      mockedInvoke.mockImplementation(mockedBaseInvoke);
+      Object.defineProperty(navigator, "clipboard", { configurable: true, value: baseClipboard });
+      localStorage.removeItem("lum.inspectorDensity");
+      resolveStream = null;
+    }
+  });
+
   it("compact 모드에서 추천 커맨드 행이 닫힌 상태면 C/L 키는 무시된다", async () => {
     const tokenHandlers: Array<(event: { payload: string }) => void> = [];
     const mockedListen = vi.mocked(listen);
