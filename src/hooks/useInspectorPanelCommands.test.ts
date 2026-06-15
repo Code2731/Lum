@@ -439,6 +439,82 @@ describe("useInspectorPanelCommands", () => {
     }));
   });
 
+  it("handleInspectorSuggestedCommandRowKeyDown에서 rowIndex가 범위를 벗어난 copy는 복사할 커맨드 없음으로 처리한다", async () => {
+    const { result, spies } = setupInspectorCommands({
+      inspectorAnalyzeCache: {
+        blockId: "b",
+        command: "bad",
+        requestedAt: 1,
+        status: "done",
+        result: "",
+        rawResult: "",
+        suggestedCommands: ["echo ok"],
+      },
+      inspectorCommandMenuIndex: 0,
+      isInspectorCompact: true,
+    });
+
+    const e = {
+      key: "c",
+      metaKey: false,
+      ctrlKey: false,
+      altKey: false,
+      shiftKey: false,
+      preventDefault: vi.fn(),
+      stopPropagation: vi.fn(),
+    } as unknown as KeyboardEvent<HTMLDivElement>;
+
+    await act(async () => {
+      result.current.handleInspectorSuggestedCommandRowKeyDown(e, 9);
+      await Promise.resolve();
+    });
+
+    expect(e.preventDefault).toHaveBeenCalledTimes(1);
+    expect(e.stopPropagation).toHaveBeenCalledTimes(1);
+    expect(writeText).not.toHaveBeenCalled();
+    expect(spies.notifCenter.addNotification).toHaveBeenCalledWith(expect.objectContaining({
+      title: "복사할 커맨드 없음",
+      body: "10번 추천 커맨드를 찾지 못했습니다.",
+    }));
+  });
+
+  it("handleInspectorSuggestedCommandRowKeyDown에서 rowIndex가 범위를 벗어난 load는 로드할 커맨드 없음으로 처리한다", () => {
+    const { result, spies } = setupInspectorCommands({
+      inspectorAnalyzeCache: {
+        blockId: "b",
+        command: "bad",
+        requestedAt: 1,
+        status: "done",
+        result: "",
+        rawResult: "",
+        suggestedCommands: ["echo ok"],
+      },
+      inspectorCommandMenuIndex: 0,
+      isInspectorCompact: true,
+    });
+
+    const e = {
+      key: "l",
+      metaKey: false,
+      ctrlKey: false,
+      altKey: false,
+      shiftKey: false,
+      preventDefault: vi.fn(),
+      stopPropagation: vi.fn(),
+    } as unknown as KeyboardEvent<HTMLDivElement>;
+
+    act(() => {
+      result.current.handleInspectorSuggestedCommandRowKeyDown(e, 9);
+    });
+
+    expect(e.preventDefault).toHaveBeenCalledTimes(1);
+    expect(e.stopPropagation).toHaveBeenCalledTimes(1);
+    expect(spies.notifCenter.addNotification).toHaveBeenCalledWith(expect.objectContaining({
+      title: "로드할 커맨드 없음",
+      body: "10번 추천 커맨드를 찾지 못했습니다.",
+    }));
+  });
+
   it("handleInspectorSuggestedCommandRowKeyDown는 run 키면 제안 커맨드를 실행한다", () => {
     const { result, spies } = setupInspectorCommands({
       inspectorAnalyzeCache: {
