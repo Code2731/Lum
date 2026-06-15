@@ -619,6 +619,81 @@ describe("useInspectorPanelCommands", () => {
     expect(spies.notifCenter.addNotification).not.toHaveBeenCalled();
   });
 
+  it.each([
+    ["ctrlKey", "ctrlKey"],
+    ["altKey", "altKey"],
+    ["shiftKey", "shiftKey"],
+  ] as const)("handleInspectorSuggestedCommandRowKeyDown에서 %s가 있으면 아무 동작도 하지 않는다", (_, modifierKey) => {
+    const { result, spies } = setupInspectorCommands({
+      inspectorAnalyzeCache: {
+        blockId: "b",
+        command: "bad",
+        requestedAt: 1,
+        status: "done",
+        result: "",
+        rawResult: "",
+        suggestedCommands: ["echo ok"],
+      },
+      inspectorCommandMenuIndex: 0,
+      isInspectorCompact: true,
+    });
+
+    const e = {
+      key: "r",
+      metaKey: false,
+      ctrlKey: false,
+      altKey: false,
+      shiftKey: false,
+      [modifierKey]: true,
+      preventDefault: vi.fn(),
+      stopPropagation: vi.fn(),
+    } as unknown as KeyboardEvent<HTMLDivElement>;
+
+    act(() => {
+      result.current.handleInspectorSuggestedCommandRowKeyDown(e, 0);
+    });
+
+    expect(e.preventDefault).not.toHaveBeenCalled();
+    expect(e.stopPropagation).not.toHaveBeenCalled();
+    expect(spies.ptyWrite).not.toHaveBeenCalled();
+    expect(spies.notifCenter.addNotification).not.toHaveBeenCalled();
+  });
+
+  it("handleInspectorSuggestedCommandRowKeyDown에서 알 수 없는 키는 아무 동작도 하지 않는다", () => {
+    const { result, spies } = setupInspectorCommands({
+      inspectorAnalyzeCache: {
+        blockId: "b",
+        command: "bad",
+        requestedAt: 1,
+        status: "done",
+        result: "",
+        rawResult: "",
+        suggestedCommands: ["echo ok"],
+      },
+      inspectorCommandMenuIndex: 0,
+      isInspectorCompact: true,
+    });
+
+    const e = {
+      key: "x",
+      metaKey: false,
+      ctrlKey: false,
+      altKey: false,
+      shiftKey: false,
+      preventDefault: vi.fn(),
+      stopPropagation: vi.fn(),
+    } as unknown as KeyboardEvent<HTMLDivElement>;
+
+    act(() => {
+      result.current.handleInspectorSuggestedCommandRowKeyDown(e, 0);
+    });
+
+    expect(e.preventDefault).not.toHaveBeenCalled();
+    expect(e.stopPropagation).not.toHaveBeenCalled();
+    expect(spies.ptyWrite).not.toHaveBeenCalled();
+    expect(spies.notifCenter.addNotification).not.toHaveBeenCalled();
+  });
+
   it("handleInspectorSuggestedCommandRowKeyDown는 run 키면 제안 커맨드를 실행한다", () => {
     const { result, spies } = setupInspectorCommands({
       inspectorAnalyzeCache: {

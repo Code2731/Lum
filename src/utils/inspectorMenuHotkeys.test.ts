@@ -20,5 +20,6 @@ describe("resolveInspectorMenuHotkey", () => {
     expect(resolveInspectorMenuHotkey("x", true)).toBeNull();
     expect(resolveInspectorMenuHotkey("ArrowRight", true)).toBeNull();
     expect(resolveInspectorMenuHotkey("", true)).toBeNull();
+    expect(resolveInspectorMenuHotkey(" ", true)).toBeNull();
   });
 });
