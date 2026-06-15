@@ -172,6 +172,56 @@ describe("useInspectorPanelData", () => {
     expect(result.current.failedBlocks[0].outputTail.endsWith("...")).toBe(true);
   });
 
+  it("최근 블록 duration은 endedAt이 없거나 음수면 0으로 안정적으로 처리한다", () => {
+    const { result } = renderHook(() => useInspectorPanelData({
+      showInspector: true,
+      selectedModel: "test-model",
+      inspectorTab: "summary",
+      inspectorDensity: "cozy",
+      inspectorTabs: INSPECTOR_TABS,
+      inspectorTabRefs: makeRef({ summary: null, rag: null, scripts: null, sysmon: null }),
+      activeTab: { title: "Shell 1", cwd: "/repo" },
+      activeTabGitInfo: { branch: "feat/x", changed: 2 },
+      cmdBlocks: [
+        buildBlock({
+          id: "zero",
+          command: "sleep 0",
+          output: "ok",
+          exitCode: 0,
+          startedAt: 100,
+          endedAt: null,
+        }),
+        buildBlock({
+          id: "negative",
+          command: "bad-order",
+          output: "ok",
+          exitCode: 1,
+          startedAt: 300,
+          endedAt: 100,
+        }),
+      ],
+      selectedBlockId: null,
+      inspectorAnalyzeCache: null,
+      inspectorCommandMenuIndex: null,
+      quickActionsExpanded: false,
+      inspectorMoreButtonRefs: makeRef({}),
+      inspectorMenuFirstActionRefs: makeRef({}),
+      inspectorQuickActionsToggleRef: makeRef(null),
+      inspectorQuickActionsAdvancedRef: makeRef(null),
+      scriptLibrary: DEFAULT_SCRIPT_LIBRARY,
+    }));
+
+    expect(result.current.recentBlocks).toHaveLength(2);
+    expect(result.current.recentBlocks[0]).toMatchObject({
+      id: "negative",
+      durationMs: 0,
+    });
+    expect(result.current.recentBlocks[1]).toMatchObject({
+      id: "zero",
+      durationMs: 0,
+    });
+  });
+
   it("활동 없음은 cmdBlocks가 없고 분석 캐시도 없을 때만 true", () => {
     const inspectCache: InspectorAnalyzeCache = {
       blockId: "x",
