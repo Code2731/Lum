@@ -57,6 +57,57 @@ describe("useInspectorMenuControls", () => {
     expect(result.current.inspectorCommandMenuIndex).toBe(0);
   });
 
+  it("compact 메뉴 키다운 시 이벤트가 전달된 행과 현재 열린 행이 다르면 열린 행 인덱스를 동기화한다", () => {
+    const menu = document.createElement("div");
+    const buttons: HTMLButtonElement[] = [];
+    for (let i = 0; i < 2; i += 1) {
+      const btn = document.createElement("button");
+      btn.setAttribute("role", "menuitem");
+      btn.textContent = `item-${i + 1}`;
+      buttons.push(btn);
+      menu.appendChild(btn);
+    }
+    document.body.appendChild(menu);
+    buttons[0].focus();
+
+    const moreRef = { current: { 0: document.createElement("button"), 1: document.createElement("button") } };
+    const firstActionRefs = { current: {} as Record<number, HTMLButtonElement | null> };
+    const quickActionsAdvancedRef = { current: null as HTMLDivElement | null };
+    const closeQuickActions = vi.fn();
+
+    const { result } = renderHook(() => {
+      const [inspectorCommandMenuIndex, setInspectorCommandMenuIndex] = useState<number | null>(1);
+      const controls = useInspectorMenuControls({
+        isInspectorCompact: true,
+        inspectorCommandMenuIndex,
+        setInspectorCommandMenuIndex,
+        inspectorMoreButtonRefs: moreRef,
+        inspectorMenuFirstActionRefs: firstActionRefs,
+        inspectorQuickActionsAdvancedRef: quickActionsAdvancedRef,
+        showInspectorQuickActionsExpanded: false,
+        closeInspectorQuickActions: closeQuickActions,
+      });
+      return { controls, inspectorCommandMenuIndex };
+    });
+
+    const e = {
+      key: "ArrowRight",
+      shiftKey: false,
+      preventDefault: vi.fn(),
+      stopPropagation: vi.fn(),
+      currentTarget: menu,
+    } as unknown as KeyboardEvent<HTMLDivElement>;
+
+    act(() => {
+      result.current.controls.handleInspectorCompactMenuKeyDown(e, 0);
+    });
+
+    expect(document.activeElement).toBe(buttons[1]);
+    expect(result.current.inspectorCommandMenuIndex).toBe(0);
+    expect(e.preventDefault).toHaveBeenCalledTimes(1);
+    expect(e.stopPropagation).toHaveBeenCalledTimes(1);
+  });
+
   it("compact 메뉴 행 blur 시 포커스가 행 내부로 이동하면 메뉴가 닫히지 않는다", () => {
     const menuRow = document.createElement("div");
     const relatedInside = document.createElement("button");
