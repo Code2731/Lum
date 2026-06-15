@@ -205,6 +205,26 @@ describe("InspectorAnalyzeCard", () => {
     expect(onSuggestedCommandRowKeyDown.mock.calls[0][1]).toBe(0);
   });
 
+  it("추천 커맨드 행 keydown은 누른 키와 행 인덱스를 함께 전달한다", () => {
+    const onSuggestedCommandRowKeyDown = vi.fn();
+    render(
+      <InspectorAnalyzeCard
+        {...createProps({
+          analyzeCache: baseAnalyzeCache,
+          onSuggestedCommandRowKeyDown,
+        })}
+      />,
+    );
+
+    const commandRow = document.querySelector('[data-inspector-command-menu-row="1"]') as HTMLDivElement;
+    fireEvent.keyDown(commandRow, { key: "X" });
+
+    expect(onSuggestedCommandRowKeyDown).toHaveBeenCalledTimes(1);
+    const [eventArg, rowArg] = onSuggestedCommandRowKeyDown.mock.calls[0] ?? [];
+    expect(rowArg).toBe(0);
+    expect(eventArg.key).toBe("X");
+  });
+
   it("compact 모드에서 각 추천 커맨드 행은 고유한 menu-row 태그를 가진다", () => {
     render(
       <InspectorAnalyzeCard
