@@ -1,0 +1,191 @@
+import { renderHook } from "@testing-library/react";
+import { describe, it, expect } from "vitest";
+import type { InspectorAnalyzeCache } from "../components/InspectorPanel/types";
+import { useInspectorPanelData } from "./useInspectorPanelData";
+import type { CommandBlock } from "./useCommandBlocks";
+
+const INSPECTOR_TABS = [
+  { id: "summary", label: "개요", shortcut: "1" },
+  { id: "rag", label: "RAG", shortcut: "2" },
+  { id: "scripts", label: "Scripts", shortcut: "3" },
+  { id: "sysmon", label: "System", shortcut: "4" },
+] as const;
+
+const DEFAULT_SCRIPT_LIBRARY = {
+  scripts: [],
+  loading: false,
+  onLoad: async () => {},
+  onRun: () => {},
+  onDelete: async () => {},
+  onSave: async () => ({
+    id: "tmp",
+    name: "",
+    commands: [],
+    description: "",
+    created_at: Date.now(),
+  }),
+};
+
+function makeRef<T>(value: T): { current: T } {
+  return { current: value };
+}
+
+function buildBlock(overrides: Partial<CommandBlock> & { id: string; command: string; output: string; }): CommandBlock {
+  return {
+    id: overrides.id,
+    command: overrides.command,
+    output: overrides.output,
+    exitCode: overrides.exitCode ?? null,
+    startedAt: overrides.startedAt ?? 1_000,
+    endedAt: overrides.endedAt ?? 1_002,
+    ...overrides,
+  };
+}
+
+describe("useInspectorPanelData", () => {
+  it("실패 블록만 역순으로 정렬되고 선택 블록이 있으면 우선 반환한다", () => {
+    const cmdBlocks = [
+      buildBlock({ id: "a", command: "echo ok", output: "출력 1", exitCode: 0 }),
+      buildBlock({ id: "b", command: "bad cmd", output: "오류 tail", exitCode: 1 }),
+      buildBlock({ id: "c", command: "  fail\\nagain  ", output: "  마지막줄  ", exitCode: 2 }),
+      buildBlock({ id: "d", command: "   ", output: "ignore", exitCode: 1 }),
+    ];
+
+    const { result } = renderHook(() => useInspectorPanelData({
+      showInspector: true,
+      selectedModel: "test-model",
+      inspectorTab: "summary",
+      inspectorDensity: "cozy",
+      inspectorTabs: INSPECTOR_TABS,
+      inspectorTabRefs: makeRef({ summary: null, rag: null, scripts: null, sysmon: null }),
+      activeTab: { title: "Shell 1", cwd: "/repo" },
+      activeTabGitInfo: { branch: "feat/x", changed: 2 },
+      cmdBlocks,
+      selectedBlockId: "c",
+      inspectorAnalyzeCache: null,
+      inspectorCommandMenuIndex: null,
+      quickActionsExpanded: false,
+      inspectorMoreButtonRefs: makeRef({}),
+      inspectorMenuFirstActionRefs: makeRef({}),
+      inspectorQuickActionsToggleRef: makeRef(null),
+      inspectorQuickActionsAdvancedRef: makeRef(null),
+      scriptLibrary: DEFAULT_SCRIPT_LIBRARY,
+    }));
+
+    expect(result.current.failedBlocks).toEqual([
+      { id: "c", command: "fail\\nagain", exitCode: 2, outputTail: "마지막줄" },
+      { id: "b", command: "bad cmd", exitCode: 1, outputTail: "오류 tail" },
+    ]);
+    expect(result.current.focusedFailedBlock).toEqual({
+      id: "c",
+      command: "fail\\nagain",
+      exitCode: 2,
+      outputTail: "마지막줄",
+    });
+  });
+
+  it("최근 블록은 최근 6개만 역순으로 슬라이스하고 duration을 계산한다", () => {
+    const cmdBlocks = Array.from({ length: 8 }).map((_, idx) =>
+      buildBlock({
+        id: `b${idx + 1}`,
+        command: `cmd-${idx + 1}`,
+        output: `out-${idx + 1}`,
+        exitCode: idx % 2,
+        startedAt: 1_000 + idx * 10,
+        endedAt: 1_000 + idx * 10 + (idx + 1),
+      }),
+    );
+
+    const { result } = renderHook(() => useInspectorPanelData({
+      showInspector: true,
+      selectedModel: "test-model",
+      inspectorTab: "summary",
+      inspectorDensity: "cozy",
+      inspectorTabs: INSPECTOR_TABS,
+      inspectorTabRefs: makeRef({ summary: null, rag: null, scripts: null, sysmon: null }),
+      activeTab: { title: "Shell 1", cwd: "/repo" },
+      activeTabGitInfo: { branch: "feat/x", changed: 2 },
+      cmdBlocks,
+      selectedBlockId: null,
+      inspectorAnalyzeCache: null,
+      inspectorCommandMenuIndex: 0,
+      quickActionsExpanded: true,
+      inspectorMoreButtonRefs: makeRef({}),
+      inspectorMenuFirstActionRefs: makeRef({}),
+      inspectorQuickActionsToggleRef: makeRef(null),
+      inspectorQuickActionsAdvancedRef: makeRef(null),
+      scriptLibrary: DEFAULT_SCRIPT_LIBRARY,
+    }));
+
+    expect(result.current.recentBlocks).toHaveLength(6);
+    expect(result.current.recentBlocks[0]).toMatchObject({
+      id: "b8",
+      command: "cmd-8",
+      durationMs: 8,
+      outputTail: "out-8",
+    });
+    expect(result.current.recentBlocks[5]).toMatchObject({
+      id: "b3",
+      command: "cmd-3",
+      durationMs: 3,
+      outputTail: "out-3",
+    });
+  });
+
+  it("활동 없음은 cmdBlocks가 없고 분석 캐시도 없을 때만 true", () => {
+    const inspectCache: InspectorAnalyzeCache = {
+      blockId: "x",
+      command: "echo",
+      requestedAt: 1,
+      status: "done",
+      result: "ok",
+      rawResult: "ok",
+      suggestedCommands: [],
+    };
+
+    const { result: emptyResult } = renderHook(() => useInspectorPanelData({
+      showInspector: true,
+      selectedModel: "test-model",
+      inspectorTab: "summary",
+      inspectorDensity: "cozy",
+      inspectorTabs: INSPECTOR_TABS,
+      inspectorTabRefs: makeRef({ summary: null, rag: null, scripts: null, sysmon: null }),
+      activeTab: { title: "Shell 1", cwd: "/repo" },
+      activeTabGitInfo: { branch: "feat/x", changed: 2 },
+      cmdBlocks: [],
+      selectedBlockId: null,
+      inspectorAnalyzeCache: null,
+      inspectorCommandMenuIndex: null,
+      quickActionsExpanded: false,
+      inspectorMoreButtonRefs: makeRef({}),
+      inspectorMenuFirstActionRefs: makeRef({}),
+      inspectorQuickActionsToggleRef: makeRef(null),
+      inspectorQuickActionsAdvancedRef: makeRef(null),
+      scriptLibrary: DEFAULT_SCRIPT_LIBRARY,
+    }));
+
+    const { result: cachedResult } = renderHook(() => useInspectorPanelData({
+      showInspector: true,
+      selectedModel: "test-model",
+      inspectorTab: "summary",
+      inspectorDensity: "cozy",
+      inspectorTabs: INSPECTOR_TABS,
+      inspectorTabRefs: makeRef({ summary: null, rag: null, scripts: null, sysmon: null }),
+      activeTab: { title: "Shell 1", cwd: "/repo" },
+      activeTabGitInfo: { branch: "feat/x", changed: 2 },
+      cmdBlocks: [],
+      selectedBlockId: null,
+      inspectorAnalyzeCache: inspectCache,
+      inspectorCommandMenuIndex: null,
+      quickActionsExpanded: false,
+      inspectorMoreButtonRefs: makeRef({}),
+      inspectorMenuFirstActionRefs: makeRef({}),
+      inspectorQuickActionsToggleRef: makeRef(null),
+      inspectorQuickActionsAdvancedRef: makeRef(null),
+      scriptLibrary: DEFAULT_SCRIPT_LIBRARY,
+    }));
+
+    expect(emptyResult.current.noActivity).toBe(true);
+    expect(cachedResult.current.noActivity).toBe(false);
+  });
+});
