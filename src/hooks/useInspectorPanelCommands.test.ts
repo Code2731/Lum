@@ -861,6 +861,102 @@ describe("useInspectorPanelCommands", () => {
     expect(e.stopPropagation).toHaveBeenCalledTimes(1);
   });
 
+  it("handleInspectorSuggestedCommandRowKeyDown는 추천 분석 캐시가 streaming이면 run 키에서 실행하지 않는다", () => {
+    const { result, spies } = setupInspectorCommands({
+      inspectorAnalyzeCache: {
+        blockId: "b",
+        command: "bad",
+        requestedAt: 1,
+        status: "streaming",
+        result: "",
+        rawResult: "",
+        suggestedCommands: ["echo ok"],
+      },
+      inspectorCommandMenuIndex: 0,
+      isInspectorCompact: true,
+    });
+
+    const e = {
+      key: "r",
+      metaKey: false,
+      ctrlKey: false,
+      altKey: false,
+      shiftKey: false,
+      preventDefault: vi.fn(),
+      stopPropagation: vi.fn(),
+    } as unknown as KeyboardEvent<HTMLDivElement>;
+
+    act(() => {
+      result.current.handleInspectorSuggestedCommandRowKeyDown(e, 0);
+    });
+
+    expect(e.preventDefault).toHaveBeenCalledTimes(1);
+    expect(e.stopPropagation).toHaveBeenCalledTimes(1);
+    expect(spies.ptyWrite).not.toHaveBeenCalled();
+    expect(spies.notifCenter.addNotification).not.toHaveBeenCalled();
+  });
+
+  it("handleInspectorSuggestedCommandRowKeyDown는 추천 분석 캐시가 error라도 run 키에서 실행하지 않는다", () => {
+    const { result, spies } = setupInspectorCommands({
+      inspectorAnalyzeCache: {
+        blockId: "b",
+        command: "bad",
+        requestedAt: 1,
+        status: "error",
+        result: "failed",
+        rawResult: "failed",
+        suggestedCommands: ["echo ok"],
+      },
+      inspectorCommandMenuIndex: 0,
+      isInspectorCompact: true,
+    });
+
+    const e = {
+      key: "r",
+      metaKey: false,
+      ctrlKey: false,
+      altKey: false,
+      shiftKey: false,
+      preventDefault: vi.fn(),
+      stopPropagation: vi.fn(),
+    } as unknown as KeyboardEvent<HTMLDivElement>;
+
+    act(() => {
+      result.current.handleInspectorSuggestedCommandRowKeyDown(e, 0);
+    });
+
+    expect(e.preventDefault).toHaveBeenCalledTimes(1);
+    expect(e.stopPropagation).toHaveBeenCalledTimes(1);
+    expect(spies.ptyWrite).not.toHaveBeenCalled();
+    expect(spies.notifCenter.addNotification).not.toHaveBeenCalled();
+  });
+
+  it("handleInspectorSuggestedCommandRowKeyDown는 캐시가 없으면 run 키에서 실행하지 않는다", () => {
+    const { result, spies } = setupInspectorCommands({
+      isInspectorCompact: true,
+      inspectorCommandMenuIndex: 0,
+    });
+
+    const e = {
+      key: "r",
+      metaKey: false,
+      ctrlKey: false,
+      altKey: false,
+      shiftKey: false,
+      preventDefault: vi.fn(),
+      stopPropagation: vi.fn(),
+    } as unknown as KeyboardEvent<HTMLDivElement>;
+
+    act(() => {
+      result.current.handleInspectorSuggestedCommandRowKeyDown(e, 0);
+    });
+
+    expect(e.preventDefault).toHaveBeenCalledTimes(1);
+    expect(e.stopPropagation).toHaveBeenCalledTimes(1);
+    expect(spies.ptyWrite).not.toHaveBeenCalled();
+    expect(spies.notifCenter.addNotification).not.toHaveBeenCalled();
+  });
+
   it("스트리밍 분석 캐시가 완료 응답을 받으면 done 상태와 추천 커맨드가 갱신된다", async () => {
     const { result } = setupInspectorCommands({
       inspectorAnalyzeCache: {
