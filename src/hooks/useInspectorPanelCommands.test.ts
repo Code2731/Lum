@@ -402,6 +402,43 @@ describe("useInspectorPanelCommands", () => {
     expect(e.stopPropagation).not.toHaveBeenCalled();
   });
 
+  it("handleInspectorSuggestedCommandRowKeyDown에서 rowIndex가 범위를 벗어난 run은 적용할 커맨드 없음으로 처리한다", () => {
+    const { result, spies } = setupInspectorCommands({
+      inspectorAnalyzeCache: {
+        blockId: "b",
+        command: "bad",
+        requestedAt: 1,
+        status: "done",
+        result: "",
+        rawResult: "",
+        suggestedCommands: ["echo ok"],
+      },
+      inspectorCommandMenuIndex: 0,
+      isInspectorCompact: true,
+    });
+
+    const e = {
+      key: "r",
+      metaKey: false,
+      ctrlKey: false,
+      altKey: false,
+      shiftKey: false,
+      preventDefault: vi.fn(),
+      stopPropagation: vi.fn(),
+    } as unknown as KeyboardEvent<HTMLDivElement>;
+
+    act(() => {
+      result.current.handleInspectorSuggestedCommandRowKeyDown(e, 9);
+    });
+
+    expect(e.preventDefault).toHaveBeenCalledTimes(1);
+    expect(e.stopPropagation).toHaveBeenCalledTimes(1);
+    expect(spies.notifCenter.addNotification).toHaveBeenCalledWith(expect.objectContaining({
+      title: "적용할 커맨드 없음",
+      body: "10번 추천 커맨드를 찾지 못했습니다.",
+    }));
+  });
+
   it("handleInspectorSuggestedCommandRowKeyDown는 run 키면 제안 커맨드를 실행한다", () => {
     const { result, spies } = setupInspectorCommands({
       inspectorAnalyzeCache: {
