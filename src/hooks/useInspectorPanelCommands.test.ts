@@ -515,6 +515,76 @@ describe("useInspectorPanelCommands", () => {
     }));
   });
 
+  it("handleInspectorSuggestedCommandRowKeyDown에서 메뉴 행이 다르면 아무 동작도 하지 않는다", () => {
+    const { result, spies } = setupInspectorCommands({
+      inspectorAnalyzeCache: {
+        blockId: "b",
+        command: "bad",
+        requestedAt: 1,
+        status: "done",
+        result: "",
+        rawResult: "",
+        suggestedCommands: ["echo ok", "rm -rf /tmp"],
+      },
+      inspectorCommandMenuIndex: 0,
+      isInspectorCompact: true,
+    });
+
+    const e = {
+      key: "r",
+      metaKey: false,
+      ctrlKey: false,
+      altKey: false,
+      shiftKey: false,
+      preventDefault: vi.fn(),
+      stopPropagation: vi.fn(),
+    } as unknown as KeyboardEvent<HTMLDivElement>;
+
+    act(() => {
+      result.current.handleInspectorSuggestedCommandRowKeyDown(e, 1);
+    });
+
+    expect(e.preventDefault).not.toHaveBeenCalled();
+    expect(e.stopPropagation).not.toHaveBeenCalled();
+    expect(spies.ptyWrite).not.toHaveBeenCalled();
+    expect(spies.notifCenter.addNotification).not.toHaveBeenCalled();
+  });
+
+  it("handleInspectorSuggestedCommandRowKeyDown에서 수정자 키가 있으면 매핑되어도 동작하지 않는다", () => {
+    const { result, spies } = setupInspectorCommands({
+      inspectorAnalyzeCache: {
+        blockId: "b",
+        command: "bad",
+        requestedAt: 1,
+        status: "done",
+        result: "",
+        rawResult: "",
+        suggestedCommands: ["echo ok"],
+      },
+      inspectorCommandMenuIndex: 0,
+      isInspectorCompact: true,
+    });
+
+    const e = {
+      key: "r",
+      metaKey: true,
+      ctrlKey: false,
+      altKey: false,
+      shiftKey: false,
+      preventDefault: vi.fn(),
+      stopPropagation: vi.fn(),
+    } as unknown as KeyboardEvent<HTMLDivElement>;
+
+    act(() => {
+      result.current.handleInspectorSuggestedCommandRowKeyDown(e, 0);
+    });
+
+    expect(e.preventDefault).not.toHaveBeenCalled();
+    expect(e.stopPropagation).not.toHaveBeenCalled();
+    expect(spies.ptyWrite).not.toHaveBeenCalled();
+    expect(spies.notifCenter.addNotification).not.toHaveBeenCalled();
+  });
+
   it("handleInspectorSuggestedCommandRowKeyDown는 run 키면 제안 커맨드를 실행한다", () => {
     const { result, spies } = setupInspectorCommands({
       inspectorAnalyzeCache: {
