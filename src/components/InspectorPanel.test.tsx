@@ -793,6 +793,22 @@ describe("InspectorPanel", () => {
     expect(onSuggestedCommandRowKeyDown.mock.calls[0][1]).toBe(0);
   });
 
+  it("추천 커맨드 행 keydown은 누른 키와 행 인덱스를 함께 전달한다", () => {
+    const onSuggestedCommandRowKeyDown = vi.fn();
+    renderInspector({
+      analyzeCache: baseAnalyzeCache,
+      onSuggestedCommandRowKeyDown,
+    });
+
+    const commandRow = document.querySelector('[data-inspector-command-menu-row="1"]') as HTMLDivElement;
+    fireEvent.keyDown(commandRow, { key: "Q" });
+
+    expect(onSuggestedCommandRowKeyDown).toHaveBeenCalledTimes(1);
+    const [eventArg, rowArg] = onSuggestedCommandRowKeyDown.mock.calls[0] ?? [];
+    expect(rowArg).toBe(0);
+    expect(eventArg.key).toBe("Q");
+  });
+
   it("compact 분석 메뉴의 MORE 버튼은 키보드로도 메뉴 열기 콜백을 호출한다", () => {
     const onOpenCompactMenu = vi.fn();
     renderInspector({
