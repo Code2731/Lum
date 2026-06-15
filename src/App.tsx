@@ -29,6 +29,7 @@ import InspectorPanel from "./components/InspectorPanel";
 import { useNotificationCenter } from "./hooks/useNotificationCenter";
 import { usePrivacyLedger } from "./hooks/usePrivacyLedger";
 import { useSquads } from "./hooks/useSquads";
+import { useInspectorPanelActionHandlers } from "./hooks/useInspectorPanelActionHandlers";
 import type { SshProfile } from "./hooks/useTabManager";
 import type { InspectorAnalyzeCache, InspectorDensity, InspectorTab } from "./components/InspectorPanel/types";
 import { isTextInputTarget } from "./utils/event";
@@ -908,6 +909,16 @@ const App: React.FC = () => {
     notifCenter,
   });
 
+  const inspectorPanelActionHandlers = useInspectorPanelActionHandlers({
+    setShowFileExplorer,
+    setInspectorDensity,
+    loadWorkspaces,
+    setShowWorkspace,
+    setShowHistorySearch,
+    setShowDiffReview,
+    focusFailedBlock,
+  });
+
   const handleAiSubmit = useCallback(async () => {
     const cmd = aiInput.trim();
     if (!cmd) return;
@@ -1160,7 +1171,7 @@ const App: React.FC = () => {
     inspectorMenuFirstActionRefs,
     inspectorQuickActionsToggleRef,
     inspectorQuickActionsAdvancedRef,
-    onDensityToggle: () => setInspectorDensity((prev) => (prev === "cozy" ? "compact" : "cozy")),
+    onDensityToggle: inspectorPanelActionHandlers.onDensityToggle,
     onClose: closeInspector,
     onTabSelect: openInspectorTab,
     onTabKeyDown: handleInspectorTabKeyDown,
@@ -1184,20 +1195,11 @@ const App: React.FC = () => {
     onQuickActionsToggle: handleInspectorQuickActionsToggle,
     onQuickActionsToggleKeyDown: handleInspectorQuickActionsToggleKeyDown,
     onQuickActionsAdvancedKeyDown: handleInspectorQuickActionsAdvancedKeyDown,
-    onToggleProjectBin: () => {
-      setShowFileExplorer((prev) => {
-        const next = !prev;
-        invoke("save_ui_preferences", { showFileExplorer: next }).catch(() => {});
-        return next;
-      });
-    },
-    onOpenWorkspace: () => {
-      setShowWorkspace(true);
-      loadWorkspaces();
-    },
-    onOpenHistory: () => setShowHistorySearch(true),
-    onOpenDiffReview: () => setShowDiffReview(true),
-    onOpenFailedBlock: focusFailedBlock,
+    onToggleProjectBin: inspectorPanelActionHandlers.onToggleProjectBin,
+    onOpenWorkspace: inspectorPanelActionHandlers.onOpenWorkspace,
+    onOpenHistory: inspectorPanelActionHandlers.onOpenHistory,
+    onOpenDiffReview: inspectorPanelActionHandlers.onOpenDiffReview,
+    onOpenFailedBlock: inspectorPanelActionHandlers.onOpenFailedBlock,
     scriptLibrary: scriptLib,
   });
 
