@@ -9,7 +9,9 @@ describe("resolveInspectorMenuHotkey", () => {
 
   it("C/L 키는 메뉴가 열려 있을 때만 copy/load", () => {
     expect(resolveInspectorMenuHotkey("c", true)).toBe("copy");
+    expect(resolveInspectorMenuHotkey("C", true)).toBe("copy");
     expect(resolveInspectorMenuHotkey("l", true)).toBe("load");
+    expect(resolveInspectorMenuHotkey("L", true)).toBe("load");
     expect(resolveInspectorMenuHotkey("c", false)).toBeNull();
     expect(resolveInspectorMenuHotkey("l", false)).toBeNull();
   });
@@ -17,5 +19,6 @@ describe("resolveInspectorMenuHotkey", () => {
   it("기타 키는 null", () => {
     expect(resolveInspectorMenuHotkey("x", true)).toBeNull();
     expect(resolveInspectorMenuHotkey("ArrowRight", true)).toBeNull();
+    expect(resolveInspectorMenuHotkey("", true)).toBeNull();
   });
 });
