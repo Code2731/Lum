@@ -132,6 +132,46 @@ describe("useInspectorPanelData", () => {
     });
   });
 
+  it("출력은 줄바꿈을 기준으로 마지막 유효 줄을 추출하고 길이 초과 시 잘라낸다", () => {
+    const longTail = "x".repeat(220);
+    const { result } = renderHook(() => useInspectorPanelData({
+      showInspector: true,
+      selectedModel: "test-model",
+      inspectorTab: "summary",
+      inspectorDensity: "cozy",
+      inspectorTabs: INSPECTOR_TABS,
+      inspectorTabRefs: makeRef({ summary: null, rag: null, scripts: null, sysmon: null }),
+      activeTab: { title: "Shell 1", cwd: "/repo" },
+      activeTabGitInfo: { branch: "feat/x", changed: 2 },
+      cmdBlocks: [
+        buildBlock({
+          id: "long",
+          command: "  echo line1\nline2  \n  \n tail line  \n",
+          output: `a\n\n${longTail}`,
+          exitCode: 1,
+        }),
+      ],
+      selectedBlockId: "long",
+      inspectorAnalyzeCache: null,
+      inspectorCommandMenuIndex: null,
+      quickActionsExpanded: false,
+      inspectorMoreButtonRefs: makeRef({}),
+      inspectorMenuFirstActionRefs: makeRef({}),
+      inspectorQuickActionsToggleRef: makeRef(null),
+      inspectorQuickActionsAdvancedRef: makeRef(null),
+      scriptLibrary: DEFAULT_SCRIPT_LIBRARY,
+    }));
+
+    expect(result.current.failedBlocks).toHaveLength(1);
+    expect(result.current.failedBlocks[0]).toMatchObject({
+      id: "long",
+      command: "echo line1\nline2",
+    });
+    expect(result.current.failedBlocks[0].outputTail).toHaveLength(163);
+    expect(result.current.failedBlocks[0].outputTail.startsWith("x".repeat(2))).toBe(true);
+    expect(result.current.failedBlocks[0].outputTail.endsWith("...")).toBe(true);
+  });
+
   it("활동 없음은 cmdBlocks가 없고 분석 캐시도 없을 때만 true", () => {
     const inspectCache: InspectorAnalyzeCache = {
       blockId: "x",
