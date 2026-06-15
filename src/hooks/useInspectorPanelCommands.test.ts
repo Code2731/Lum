@@ -804,6 +804,63 @@ describe("useInspectorPanelCommands", () => {
     expect(spies.setViewMode).toHaveBeenCalledWith("terminal");
   });
 
+  it.each([
+    ["R", "run"],
+    ["C", "copy"],
+    ["L", "load"],
+  ] as const)("handleInspectorSuggestedCommandRowKeyDown는 대문자 키도 동작을 수행한다 (%s)", async (key, action) => {
+    const { result, spies } = setupInspectorCommands({
+      inspectorAnalyzeCache: {
+        blockId: "b",
+        command: "bad",
+        requestedAt: 1,
+        status: "done",
+        result: "",
+        rawResult: "",
+        suggestedCommands: ["echo ok"],
+      },
+      inspectorCommandMenuIndex: 0,
+      isInspectorCompact: true,
+    });
+
+    const e = {
+      key,
+      metaKey: false,
+      ctrlKey: false,
+      altKey: false,
+      shiftKey: false,
+      preventDefault: vi.fn(),
+      stopPropagation: vi.fn(),
+    } as unknown as KeyboardEvent<HTMLDivElement>;
+
+    if (action === "copy") {
+      await act(async () => {
+        result.current.handleInspectorSuggestedCommandRowKeyDown(e, 0);
+        await Promise.resolve();
+      });
+      expect(writeText).toHaveBeenCalledWith("echo ok");
+      expect(spies.closeInspectorCommandMenu).toHaveBeenCalledWith(true);
+      expect(spies.notifCenter.addNotification).toHaveBeenCalledWith(expect.objectContaining({
+        title: "추천 커맨드 복사 완료",
+      }));
+    } else if (action === "load") {
+      act(() => {
+        result.current.handleInspectorSuggestedCommandRowKeyDown(e, 0);
+      });
+      expect(spies.setAiInput).toHaveBeenCalledWith("echo ok");
+      expect(spies.setShowAiBar).toHaveBeenCalledWith(true);
+      expect(spies.setViewMode).toHaveBeenCalledWith("terminal");
+    } else {
+      act(() => {
+        result.current.handleInspectorSuggestedCommandRowKeyDown(e, 0);
+      });
+      expect(spies.ptyWrite).toHaveBeenCalledWith("echo ok\r");
+    }
+
+    expect(e.preventDefault).toHaveBeenCalledTimes(1);
+    expect(e.stopPropagation).toHaveBeenCalledTimes(1);
+  });
+
   it("스트리밍 분석 캐시가 완료 응답을 받으면 done 상태와 추천 커맨드가 갱신된다", async () => {
     const { result } = setupInspectorCommands({
       inspectorAnalyzeCache: {
