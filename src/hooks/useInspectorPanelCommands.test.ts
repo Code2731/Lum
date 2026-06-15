@@ -213,6 +213,29 @@ describe("useInspectorPanelCommands", () => {
     expect(spies.handleAskAI).not.toHaveBeenCalled();
   });
 
+  it("선택 블록이 없거나 실패 블록이 아니면 최근 실패 블록으로 분석 프롬프트를 생성한다", () => {
+    const { result, spies } = setupInspectorCommands({
+      cmdBlocks: [
+        buildBlock("ok-1", "pwd", "ok", 0),
+        buildBlock("fail-1", "cat missing", "err", 1),
+        buildBlock("ok-2", "echo hi", "ok", 0),
+      ],
+      selectedBlockId: "ok-2",
+    });
+
+    act(() => {
+      result.current.analyzeInspectorFailedBlock("nonexistent");
+    });
+
+    const arg = spies.setInspectorAnalyzeCache.mock.calls[0]?.[0];
+    expect(arg).toMatchObject({
+      blockId: "fail-1",
+      command: "cat missing",
+      status: "streaming",
+    });
+    expect(spies.handleAskAI).toHaveBeenCalledWith(expect.stringContaining("Command: cat missing"));
+  });
+
   it("추천 커맨드 복사는 클립보드에 반영되고 메뉴를 닫는다", async () => {
     const { result, spies } = setupInspectorCommands({
       inspectorAnalyzeCache: {
