@@ -33,6 +33,7 @@ import type { SshProfile } from "./hooks/useTabManager";
 import type { InspectorAnalyzeCache, InspectorDensity, InspectorTab } from "./components/InspectorPanel/types";
 import { isTextInputTarget } from "./utils/event";
 import { useInspectorPanelCommands } from "./hooks/useInspectorPanelCommands";
+import { useInspectorPanelProps } from "./hooks/useInspectorPanelProps";
 import InfiniteCanvas from "./components/layout/InfiniteCanvas";
 import TerminalPane from "./components/TerminalPane";
 import HealingPanel from "./components/HealingPanel";
@@ -1137,7 +1138,7 @@ const App: React.FC = () => {
     );
   }, [restoreTabs]);
 
-  const inspectorPanelProps = {
+  const inspectorPanelProps = useInspectorPanelProps({
     showInspector,
     selectedModel,
     inspectorTab,
@@ -1198,7 +1199,7 @@ const App: React.FC = () => {
     onOpenDiffReview: () => setShowDiffReview(true),
     onOpenFailedBlock: focusFailedBlock,
     scriptLibrary: scriptLib,
-  };
+  });
 
   return (
     <TooltipProvider delayDuration={300} skipDelayDuration={150}>

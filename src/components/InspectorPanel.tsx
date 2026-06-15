@@ -16,7 +16,7 @@ import type {
   ScriptLibraryLike,
 } from "./InspectorPanel/types";
 
-interface InspectorPanelProps {
+export interface InspectorPanelProps {
   showInspector: boolean;
   selectedModel: string;
   inspectorTab: InspectorTab;
