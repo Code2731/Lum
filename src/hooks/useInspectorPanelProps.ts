@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import type { InspectorPanelProps } from "../components/InspectorPanel";
+import type { InspectorPanelProps } from "../components/InspectorPanel/types";
 
 export function useInspectorPanelProps(
   props: InspectorPanelProps,
@@ -58,4 +58,3 @@ export function useInspectorPanelProps(
     props.scriptLibrary,
   ]);
 }
-
