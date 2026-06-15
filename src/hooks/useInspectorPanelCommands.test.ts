@@ -213,6 +213,26 @@ describe("useInspectorPanelCommands", () => {
     expect(spies.handleAskAI).not.toHaveBeenCalled();
   });
 
+  it("AI 분석 프롬프트 복사 실패 시 실패 알림을 표시한다", async () => {
+    const { result, spies } = setupInspectorCommands({
+      cmdBlocks: [
+        buildBlock("b", "cat missing", "err", 1),
+      ],
+      selectedBlockId: "b",
+    });
+
+    writeText.mockRejectedValueOnce(new Error("clipboard denied"));
+
+    await act(async () => {
+      await result.current.copyInspectorAnalyzePrompt("b");
+    });
+
+    expect(spies.notifCenter.addNotification).toHaveBeenCalledWith(expect.objectContaining({
+      title: "AI 분석 프롬프트 복사 실패",
+      body: "클립보드 접근 권한을 확인해 주세요.",
+    }));
+  });
+
   it("선택 블록이 없거나 실패 블록이 아니면 최근 실패 블록으로 분석 프롬프트를 생성한다", () => {
     const { result, spies } = setupInspectorCommands({
       cmdBlocks: [
