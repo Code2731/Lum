@@ -30,6 +30,7 @@ import { useNotificationCenter } from "./hooks/useNotificationCenter";
 import { usePrivacyLedger } from "./hooks/usePrivacyLedger";
 import { useSquads } from "./hooks/useSquads";
 import { useInspectorPanelActionHandlers } from "./hooks/useInspectorPanelActionHandlers";
+import { useInspectorPanelData } from "./hooks/useInspectorPanelData";
 import type { SshProfile } from "./hooks/useTabManager";
 import type { InspectorAnalyzeCache, InspectorDensity, InspectorTab } from "./components/InspectorPanel/types";
 import { isTextInputTarget } from "./utils/event";
@@ -143,17 +144,6 @@ function summarizeOutputDiff(before: string, after: string): {
     addedLines: addedLines.slice(0, 20),
     removedLines: removedLines.slice(0, 20),
   };
-}
-
-function extractOutputTail(output: string, maxChars = 160): string {
-  const lines = output
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0);
-  if (lines.length === 0) return "";
-  const tail = lines[lines.length - 1];
-  if (tail.length <= maxChars) return tail;
-  return `${tail.slice(0, maxChars)}...`;
 }
 
 const App: React.FC = () => {
@@ -1083,44 +1073,11 @@ const App: React.FC = () => {
 
   const activeTab = tabs.find((t) => t.id === activeTabId);
   const activeTabGitInfo = activeTab ? tabGitInfo[activeTab.id] ?? null : null;
-  const inspectorFailedBlocks = useMemo(() => (
-    cmdBlocks
-      .filter((b) => b.exitCode !== null && b.exitCode !== 0 && b.command.trim() !== "")
-      .map((b) => ({
-        id: b.id,
-        command: b.command.trim(),
-        exitCode: b.exitCode ?? 1,
-        outputTail: extractOutputTail(b.output),
-      }))
-      .reverse()
-  ), [cmdBlocks]);
-  const inspectorFocusedFailedBlock = useMemo(() => {
-    if (inspectorFailedBlocks.length === 0) return null;
-    if (selectedBlockId) {
-      const selected = inspectorFailedBlocks.find((b) => b.id === selectedBlockId);
-      if (selected) return selected;
-    }
-    return inspectorFailedBlocks[0];
-  }, [inspectorFailedBlocks, selectedBlockId]);
-  const inspectorRecentBlocks = useMemo(() => (
-    cmdBlocks
-      .filter((b) => b.command.trim() !== "")
-      .slice(-6)
-      .reverse()
-      .map((b) => ({
-        id: b.id,
-        command: b.command.trim(),
-        exitCode: b.exitCode,
-        durationMs: b.endedAt != null ? Math.max(0, b.endedAt - b.startedAt) : null,
-        outputTail: extractOutputTail(b.output, 120),
-      }))
-  ), [cmdBlocks]);
   const lastCmdBlock = cmdBlocks[cmdBlocks.length - 1] ?? null;
   const focusedCmdBlock = selectedBlockId
     ? (cmdBlocks.find((b) => b.id === selectedBlockId) ?? null)
     : lastCmdBlock;
   const focusedCmdIndex = focusedCmdBlock ? cmdBlocks.findIndex((b) => b.id === focusedCmdBlock.id) : -1;
-  const inspectorHasNoActivity = cmdBlocks.length === 0 && !inspectorAnalyzeCache;
   const showBlockBar = focusedCmdBlock !== null && focusedCmdBlock.id !== dismissedBlockId && !healingError;
   const wsTabs = tabs.map(t => ({
     id: t.id,
@@ -1149,28 +1106,35 @@ const App: React.FC = () => {
     );
   }, [restoreTabs]);
 
-  const inspectorPanelProps = useInspectorPanelProps({
+  const inspectorPanelData = useInspectorPanelData({
     showInspector,
     selectedModel,
     inspectorTab,
     inspectorDensity,
     inspectorTabs,
     inspectorTabRefs,
-    activeTabTitle: activeTab?.title ?? "탭 없음",
-    activeTabPath: activeTab?.cwd ?? "cwd 없음",
-    activeTabBranch: activeTabGitInfo?.branch,
-    activeTabChanged: activeTabGitInfo?.changed,
-    noActivity: inspectorHasNoActivity,
-    failedBlocks: inspectorFailedBlocks,
-    focusedFailedBlock: inspectorFocusedFailedBlock,
-    analyzeCache: inspectorAnalyzeCache,
-    recentBlocks: inspectorRecentBlocks,
+    activeTab: activeTab ? {
+      title: activeTab.title,
+      cwd: activeTab.cwd ?? "cwd 없음",
+    } : null,
+    activeTabGitInfo: {
+      branch: activeTabGitInfo?.branch,
+      changed: activeTabGitInfo?.changed,
+    },
+    cmdBlocks,
+    selectedBlockId,
+    inspectorAnalyzeCache,
     commandMenuIndex: inspectorCommandMenuIndex,
     quickActionsExpanded: showInspectorQuickActionsExpanded,
     inspectorMoreButtonRefs,
     inspectorMenuFirstActionRefs,
     inspectorQuickActionsToggleRef,
     inspectorQuickActionsAdvancedRef,
+    scriptLibrary: scriptLib,
+  });
+
+  const inspectorPanelProps = useInspectorPanelProps({
+    ...inspectorPanelData,
     onDensityToggle: inspectorPanelActionHandlers.onDensityToggle,
     onClose: closeInspector,
     onTabSelect: openInspectorTab,
@@ -1200,7 +1164,6 @@ const App: React.FC = () => {
     onOpenHistory: inspectorPanelActionHandlers.onOpenHistory,
     onOpenDiffReview: inspectorPanelActionHandlers.onOpenDiffReview,
     onOpenFailedBlock: inspectorPanelActionHandlers.onOpenFailedBlock,
-    scriptLibrary: scriptLib,
   });
 
   return (
