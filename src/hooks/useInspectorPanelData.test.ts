@@ -172,6 +172,42 @@ describe("useInspectorPanelData", () => {
     expect(result.current.failedBlocks[0].outputTail.endsWith("...")).toBe(true);
   });
 
+  it("선택한 블록이 실패 블록이 아니면 최근 실패 블록을 fallback으로 사용한다", () => {
+    const cmdBlocks = [
+      buildBlock({ id: "ok", command: "echo ok", output: "ok", exitCode: 0 }),
+      buildBlock({ id: "fail-1", command: "bad1", output: "fail tail", exitCode: 1 }),
+      buildBlock({ id: "fail-2", command: "bad2", output: "fail2", exitCode: 2 }),
+    ];
+
+    const { result } = renderHook(() => useInspectorPanelData({
+      showInspector: true,
+      selectedModel: "test-model",
+      inspectorTab: "summary",
+      inspectorDensity: "cozy",
+      inspectorTabs: INSPECTOR_TABS,
+      inspectorTabRefs: makeRef({ summary: null, rag: null, scripts: null, sysmon: null }),
+      activeTab: { title: "Shell 1", cwd: "/repo" },
+      activeTabGitInfo: { branch: "feat/x", changed: 2 },
+      cmdBlocks,
+      selectedBlockId: "ok",
+      inspectorAnalyzeCache: null,
+      inspectorCommandMenuIndex: null,
+      quickActionsExpanded: false,
+      inspectorMoreButtonRefs: makeRef({}),
+      inspectorMenuFirstActionRefs: makeRef({}),
+      inspectorQuickActionsToggleRef: makeRef(null),
+      inspectorQuickActionsAdvancedRef: makeRef(null),
+      scriptLibrary: DEFAULT_SCRIPT_LIBRARY,
+    }));
+
+    expect(result.current.focusedFailedBlock).toEqual({
+      id: "fail-2",
+      command: "bad2",
+      exitCode: 2,
+      outputTail: "fail2",
+    });
+  });
+
   it("최근 블록 duration은 endedAt이 없거나 음수면 0으로 안정적으로 처리한다", () => {
     const { result } = renderHook(() => useInspectorPanelData({
       showInspector: true,
