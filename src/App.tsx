@@ -1137,6 +1137,69 @@ const App: React.FC = () => {
     );
   }, [restoreTabs]);
 
+  const inspectorPanelProps = {
+    showInspector,
+    selectedModel,
+    inspectorTab,
+    inspectorDensity,
+    inspectorTabs,
+    inspectorTabRefs,
+    activeTabTitle: activeTab?.title ?? "탭 없음",
+    activeTabPath: activeTab?.cwd ?? "cwd 없음",
+    activeTabBranch: activeTabGitInfo?.branch,
+    activeTabChanged: activeTabGitInfo?.changed,
+    noActivity: inspectorHasNoActivity,
+    failedBlocks: inspectorFailedBlocks,
+    focusedFailedBlock: inspectorFocusedFailedBlock,
+    analyzeCache: inspectorAnalyzeCache,
+    recentBlocks: inspectorRecentBlocks,
+    commandMenuIndex: inspectorCommandMenuIndex,
+    quickActionsExpanded: showInspectorQuickActionsExpanded,
+    inspectorMoreButtonRefs,
+    inspectorMenuFirstActionRefs,
+    inspectorQuickActionsToggleRef,
+    inspectorQuickActionsAdvancedRef,
+    onDensityToggle: () => setInspectorDensity((prev) => (prev === "cozy" ? "compact" : "cozy")),
+    onClose: closeInspector,
+    onTabSelect: openInspectorTab,
+    onTabKeyDown: handleInspectorTabKeyDown,
+    onFocusFailedBlock: focusFailedBlock,
+    onAnalyzeFailedBlock: analyzeInspectorFailedBlock,
+    onCopyFailedOutput: copyInspectorFailedOutput,
+    onCopyAnalyzePrompt: copyInspectorAnalyzePrompt,
+    onLoadAnalyzePromptToAiBar: loadInspectorAnalyzePromptToAiBar,
+    onSelectBlock: selectInspectorBlock,
+    onCopyAnalyzeResult: copyInspectorAnalyzeResult,
+    onClearAnalyzeCache: clearInspectorAnalyzeCache,
+    onCopySuggestedCommand: copyInspectorSuggestedCommand,
+    onLoadSuggestedCommandToAiBar: loadInspectorSuggestedCommandToAiBar,
+    onApplySuggestedCommand: applyInspectorAnalyzeCommand,
+    onRerunBlock: rerunInspectorBlock,
+    onCommandMenuRowBlurCapture: handleInspectorSuggestedCommandRowBlurCapture,
+    onSuggestedCommandRowKeyDown: handleInspectorSuggestedCommandRowKeyDown,
+    onCompactMenuKeyDown: handleInspectorCompactMenuKeyDown,
+    onOpenCompactMenu: openInspectorCompactMenu,
+    onCloseCommandMenu: closeInspectorCommandMenu,
+    onQuickActionsToggle: handleInspectorQuickActionsToggle,
+    onQuickActionsToggleKeyDown: handleInspectorQuickActionsToggleKeyDown,
+    onQuickActionsAdvancedKeyDown: handleInspectorQuickActionsAdvancedKeyDown,
+    onToggleProjectBin: () => {
+      setShowFileExplorer((prev) => {
+        const next = !prev;
+        invoke("save_ui_preferences", { showFileExplorer: next }).catch(() => {});
+        return next;
+      });
+    },
+    onOpenWorkspace: () => {
+      setShowWorkspace(true);
+      loadWorkspaces();
+    },
+    onOpenHistory: () => setShowHistorySearch(true),
+    onOpenDiffReview: () => setShowDiffReview(true),
+    onOpenFailedBlock: focusFailedBlock,
+    scriptLibrary: scriptLib,
+  };
+
   return (
     <TooltipProvider delayDuration={300} skipDelayDuration={150}>
     <div className="app-root lum-app-shell text-white h-screen overflow-hidden flex flex-col">
@@ -1645,66 +1708,7 @@ const App: React.FC = () => {
           )}
         </div>
 
-        <InspectorPanel
-          showInspector={showInspector}
-          selectedModel={selectedModel}
-          inspectorTab={inspectorTab}
-          inspectorDensity={inspectorDensity}
-          inspectorTabs={inspectorTabs}
-          inspectorTabRefs={inspectorTabRefs}
-          activeTabTitle={activeTab?.title ?? "탭 없음"}
-          activeTabPath={activeTab?.cwd ?? "cwd 없음"}
-          activeTabBranch={activeTabGitInfo?.branch}
-          activeTabChanged={activeTabGitInfo?.changed}
-          noActivity={inspectorHasNoActivity}
-          failedBlocks={inspectorFailedBlocks}
-          focusedFailedBlock={inspectorFocusedFailedBlock}
-          analyzeCache={inspectorAnalyzeCache}
-          recentBlocks={inspectorRecentBlocks}
-          commandMenuIndex={inspectorCommandMenuIndex}
-          quickActionsExpanded={showInspectorQuickActionsExpanded}
-          inspectorMoreButtonRefs={inspectorMoreButtonRefs}
-          inspectorMenuFirstActionRefs={inspectorMenuFirstActionRefs}
-          inspectorQuickActionsToggleRef={inspectorQuickActionsToggleRef}
-          inspectorQuickActionsAdvancedRef={inspectorQuickActionsAdvancedRef}
-          onDensityToggle={() => setInspectorDensity((prev) => (prev === "cozy" ? "compact" : "cozy"))}
-          onClose={closeInspector}
-          onTabSelect={openInspectorTab}
-          onTabKeyDown={handleInspectorTabKeyDown}
-          onFocusFailedBlock={focusFailedBlock}
-          onAnalyzeFailedBlock={analyzeInspectorFailedBlock}
-          onCopyFailedOutput={copyInspectorFailedOutput}
-          onCopyAnalyzePrompt={copyInspectorAnalyzePrompt}
-          onLoadAnalyzePromptToAiBar={loadInspectorAnalyzePromptToAiBar}
-          onSelectBlock={selectInspectorBlock}
-          onCopyAnalyzeResult={copyInspectorAnalyzeResult}
-          onClearAnalyzeCache={clearInspectorAnalyzeCache}
-          onCopySuggestedCommand={copyInspectorSuggestedCommand}
-          onLoadSuggestedCommandToAiBar={loadInspectorSuggestedCommandToAiBar}
-          onApplySuggestedCommand={applyInspectorAnalyzeCommand}
-          onRerunBlock={rerunInspectorBlock}
-          onCommandMenuRowBlurCapture={handleInspectorSuggestedCommandRowBlurCapture}
-          onSuggestedCommandRowKeyDown={handleInspectorSuggestedCommandRowKeyDown}
-          onCompactMenuKeyDown={handleInspectorCompactMenuKeyDown}
-          onOpenCompactMenu={openInspectorCompactMenu}
-          onCloseCommandMenu={closeInspectorCommandMenu}
-          onQuickActionsToggle={handleInspectorQuickActionsToggle}
-          onQuickActionsToggleKeyDown={handleInspectorQuickActionsToggleKeyDown}
-          onQuickActionsAdvancedKeyDown={handleInspectorQuickActionsAdvancedKeyDown}
-          onToggleProjectBin={() => setShowFileExplorer((prev) => {
-            const next = !prev;
-            invoke("save_ui_preferences", { showFileExplorer: next }).catch(() => {});
-            return next;
-          })}
-          onOpenWorkspace={() => {
-            setShowWorkspace(true);
-            loadWorkspaces();
-          }}
-          onOpenHistory={() => setShowHistorySearch(true)}
-          onOpenDiffReview={() => setShowDiffReview(true)}
-          onOpenFailedBlock={focusFailedBlock}
-          scriptLibrary={scriptLib}
-        />
+        <InspectorPanel {...inspectorPanelProps} />
 
         <AnimatePresence>
         {showAiBar && (
