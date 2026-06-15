@@ -641,6 +641,31 @@ describe("useInspectorPanelCommands", () => {
     }));
   });
 
+  it("copyInspectorAnalyzeResult 복사 실패 시 실패 알림을 표시한다", async () => {
+    const { result, spies } = setupInspectorCommands({
+      inspectorAnalyzeCache: {
+        blockId: "b",
+        command: "bad",
+        requestedAt: 1,
+        status: "done",
+        result: "요약 결과",
+        rawResult: "원문결과",
+        suggestedCommands: ["echo ok"],
+      },
+    });
+
+    writeText.mockRejectedValueOnce(new Error("clipboard denied"));
+
+    await act(async () => {
+      await result.current.copyInspectorAnalyzeResult();
+    });
+
+    expect(spies.notifCenter.addNotification).toHaveBeenCalledWith(expect.objectContaining({
+      title: "AI 분석 결과 복사 실패",
+      body: "클립보드 접근 권한을 확인해 주세요.",
+    }));
+  });
+
   it("copyInspectorAnalyzeResult는 캐시가 없으면 동작하지 않는다", async () => {
     const { result, spies } = setupInspectorCommands({ inspectorAnalyzeCache: null });
 
