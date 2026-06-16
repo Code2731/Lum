@@ -793,6 +793,20 @@ describe("InspectorPanel", () => {
     expect(onSuggestedCommandRowKeyDown.mock.calls[0][1]).toBe(0);
   });
 
+  it("추천 커맨드 두 번째 행 blur는 row index 1을 전달한다", () => {
+    const onCommandMenuRowBlurCapture = vi.fn();
+    renderInspector({
+      analyzeCache: multiAnalyzeCache,
+      onCommandMenuRowBlurCapture,
+    });
+
+    const commandRow = document.querySelector('[data-inspector-command-menu-row="2"]') as HTMLDivElement;
+    fireEvent.blur(commandRow);
+
+    expect(onCommandMenuRowBlurCapture).toHaveBeenCalledTimes(1);
+    expect(onCommandMenuRowBlurCapture.mock.calls[0]?.[1]).toBe(1);
+  });
+
   it("추천 커맨드 행 keydown은 누른 키와 행 인덱스를 함께 전달한다", () => {
     const onSuggestedCommandRowKeyDown = vi.fn();
     renderInspector({
