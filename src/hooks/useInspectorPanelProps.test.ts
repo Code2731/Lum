@@ -347,4 +347,47 @@ describe("useInspectorPanelProps", () => {
     expect(result.current.onCompactMenuKeyDown).toBe(handlers.onCompactMenuKeyDown);
     expect(result.current.onOpenCompactMenu).toBe(handlers.onOpenCompactMenu);
   });
+
+  it("quickActionsExpanded, inspectorDensity, inspectorTab 동시 변경에서도 핸들러 레퍼런스가 유지된다", () => {
+    const handlers = createHandlers();
+    const base = createProps({
+      ...handlers,
+      commandMenuIndex: 3,
+      quickActionsExpanded: false,
+      inspectorDensity: "cozy",
+      inspectorTab: "summary",
+    });
+
+    const { result, rerender } = renderHook(
+      ([quickActionsExpanded, inspectorDensity, inspectorTab]) => useInspectorPanelProps({
+        ...base,
+        quickActionsExpanded,
+        inspectorDensity,
+        inspectorTab,
+      }),
+      {
+        initialProps: [false, "cozy", "summary"] as const,
+      },
+    );
+
+    expect(result.current.quickActionsExpanded).toBe(false);
+    expect(result.current.inspectorDensity).toBe("cozy");
+    expect(result.current.inspectorTab).toBe("summary");
+    expect(result.current.commandMenuIndex).toBe(3);
+    expect(result.current.onCommandMenuRowBlurCapture).toBe(handlers.onCommandMenuRowBlurCapture);
+    expect(result.current.onSuggestedCommandRowKeyDown).toBe(handlers.onSuggestedCommandRowKeyDown);
+    expect(result.current.onCompactMenuKeyDown).toBe(handlers.onCompactMenuKeyDown);
+    expect(result.current.onOpenCompactMenu).toBe(handlers.onOpenCompactMenu);
+
+    rerender([true, "compact", "rag"]);
+
+    expect(result.current.quickActionsExpanded).toBe(true);
+    expect(result.current.inspectorDensity).toBe("compact");
+    expect(result.current.inspectorTab).toBe("rag");
+    expect(result.current.commandMenuIndex).toBe(3);
+    expect(result.current.onCommandMenuRowBlurCapture).toBe(handlers.onCommandMenuRowBlurCapture);
+    expect(result.current.onSuggestedCommandRowKeyDown).toBe(handlers.onSuggestedCommandRowKeyDown);
+    expect(result.current.onCompactMenuKeyDown).toBe(handlers.onCompactMenuKeyDown);
+    expect(result.current.onOpenCompactMenu).toBe(handlers.onOpenCompactMenu);
+  });
 });

@@ -562,4 +562,103 @@ describe("Inspector panel data + props pipeline", () => {
     expect(result.current.props.onCompactMenuKeyDown).toBe(handlers.onCompactMenuKeyDown);
     expect(result.current.props.onOpenCompactMenu).toBe(handlers.onOpenCompactMenu);
   });
+
+  it("analyzeCache 변경과 quickActions 전환이 동시에 일어나도 핸들러 전달은 유지된다", () => {
+    const cmdBlocks = [
+      makeCommandBlock({ id: "a", command: "first fail", output: "f1", exitCode: 1 }),
+      makeCommandBlock({ id: "b", command: "second fail", output: "f2", exitCode: 2 }),
+    ];
+    const handlers = createActionHandlers();
+    const firstCache = {
+      blockId: "stream-a",
+      command: "stream cmd a",
+      requestedAt: 1,
+      status: "done" as const,
+      result: "ok",
+      rawResult: "ok",
+      suggestedCommands: ["echo a"],
+    };
+    const secondCache = {
+      blockId: "stream-b",
+      command: "stream cmd b",
+      requestedAt: 2,
+      status: "done" as const,
+      result: "ok2",
+      rawResult: "ok2",
+      suggestedCommands: ["echo b"],
+    };
+
+    const { result, rerender } = renderHook(
+      ([inspectorAnalyzeCache, quickActionsExpanded, selectedBlockId]) => {
+        const data = useInspectorPanelData({
+          showInspector: true,
+          selectedModel: "test-model",
+          inspectorTab: "summary" as const,
+          inspectorDensity: "cozy" as const,
+          inspectorTabs: INSPECTOR_TABS,
+          inspectorTabRefs: makeRef({
+            summary: null,
+            rag: null,
+            scripts: null,
+            sysmon: null,
+          }),
+          activeTab: { title: "Shell 1", cwd: "/repo" },
+          activeTabGitInfo: null,
+          cmdBlocks,
+          selectedBlockId,
+          inspectorAnalyzeCache,
+          inspectorCommandMenuIndex: 0,
+          quickActionsExpanded,
+          inspectorMoreButtonRefs: makeRef({} as Record<number, HTMLButtonElement | null>),
+          inspectorMenuFirstActionRefs: makeRef({} as Record<number, HTMLButtonElement | null>),
+          inspectorQuickActionsToggleRef: makeRef(null as HTMLButtonElement | null),
+          inspectorQuickActionsAdvancedRef: makeRef(null as HTMLDivElement | null),
+          scriptLibrary: {
+            scripts: [],
+            loading: false,
+            onLoad: vi.fn(async () => undefined),
+            onRun: vi.fn(),
+            onDelete: vi.fn(async () => undefined),
+            onSave: vi.fn(async () => ({
+              id: "script-1",
+              name: "test",
+              description: "test",
+              commands: [],
+              created_at: 1,
+            })),
+          },
+        });
+        return {
+          data,
+          props: useInspectorPanelProps({
+            ...data,
+            ...handlers,
+          }),
+        };
+      },
+      {
+        initialProps: [firstCache, false, "a" as string | null] as const,
+      },
+    );
+
+    expect(result.current.props.commandMenuIndex).toBe(0);
+    expect(result.current.props.quickActionsExpanded).toBe(false);
+    expect(result.current.props.analyzeCache).toEqual(firstCache);
+    expect(result.current.props.focusedFailedBlock).toMatchObject({ id: "a", exitCode: 1, outputTail: "f1" });
+    expect(result.current.props.onCommandMenuRowBlurCapture).toBe(handlers.onCommandMenuRowBlurCapture);
+    expect(result.current.props.onSuggestedCommandRowKeyDown).toBe(handlers.onSuggestedCommandRowKeyDown);
+    expect(result.current.props.onCompactMenuKeyDown).toBe(handlers.onCompactMenuKeyDown);
+    expect(result.current.props.onOpenCompactMenu).toBe(handlers.onOpenCompactMenu);
+
+    rerender([secondCache, true, "b" as string | null]);
+
+    expect(result.current.props.commandMenuIndex).toBe(0);
+    expect(result.current.props.quickActionsExpanded).toBe(true);
+    expect(result.current.props.analyzeCache).toEqual(secondCache);
+    expect(result.current.props.focusedFailedBlock).toMatchObject({ id: "b", exitCode: 2, outputTail: "f2" });
+    expect(result.current.props.onCommandMenuRowBlurCapture).toBe(handlers.onCommandMenuRowBlurCapture);
+    expect(result.current.props.onSuggestedCommandRowKeyDown).toBe(handlers.onSuggestedCommandRowKeyDown);
+    expect(result.current.props.onCompactMenuKeyDown).toBe(handlers.onCompactMenuKeyDown);
+    expect(result.current.props.onOpenCompactMenu).toBe(handlers.onOpenCompactMenu);
+  });
 });
