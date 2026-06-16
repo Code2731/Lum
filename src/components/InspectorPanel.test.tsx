@@ -871,6 +871,21 @@ describe("InspectorPanel", () => {
     expect(onOpenCompactMenu).toHaveBeenCalledTimes(2);
   });
 
+  it("compact MORE 버튼의 비지원 키는 onOpenCompactMenu를 호출하지 않는다", () => {
+    const onOpenCompactMenu = vi.fn();
+    renderInspector({
+      analyzeCache: baseAnalyzeCache,
+      inspectorDensity: "compact",
+      onOpenCompactMenu,
+    });
+
+    const moreButton = screen.getAllByText("MORE")[0];
+    fireEvent.keyDown(moreButton, { key: "Tab" });
+    fireEvent.keyDown(moreButton, { key: "ArrowUp" });
+
+    expect(onOpenCompactMenu).not.toHaveBeenCalled();
+  });
+
   it("열린 compact 메뉴는 두 번째 행의 aria-expanded 상태를 반영한다", () => {
     renderInspector({
       analyzeCache: multiAnalyzeCache,
