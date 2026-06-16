@@ -221,4 +221,61 @@ describe("Inspector panel data + props pipeline", () => {
       suggestedCommands: [],
     });
   });
+
+  it("useInspectorPanelProps는 Command 메뉴 이벤트 핸들러를 동일 레퍼런스로 보존한다", () => {
+    const cmdBlocks = [
+      makeCommandBlock({ id: "a", command: "first fail", output: "f1", exitCode: 1 }),
+    ];
+    const handlers = createActionHandlers();
+    const base = {
+      showInspector: true,
+      selectedModel: "test-model",
+      inspectorTab: "summary" as const,
+      inspectorDensity: "cozy" as const,
+      inspectorTabs: INSPECTOR_TABS,
+      inspectorTabRefs: makeRef({
+        summary: null,
+        rag: null,
+        scripts: null,
+        sysmon: null,
+      }),
+      activeTab: { title: "Shell 1", cwd: "/repo" },
+      activeTabGitInfo: null,
+      cmdBlocks,
+      selectedBlockId: "a" as string | null,
+      inspectorAnalyzeCache: null,
+      inspectorCommandMenuIndex: 1,
+      quickActionsExpanded: false,
+      inspectorMoreButtonRefs: makeRef({} as Record<number, HTMLButtonElement | null>),
+      inspectorMenuFirstActionRefs: makeRef({} as Record<number, HTMLButtonElement | null>),
+      inspectorQuickActionsToggleRef: makeRef(null as HTMLButtonElement | null),
+      inspectorQuickActionsAdvancedRef: makeRef(null as HTMLDivElement | null),
+      scriptLibrary: {
+        scripts: [],
+        loading: false,
+        onLoad: vi.fn(async () => undefined),
+        onRun: vi.fn(),
+        onDelete: vi.fn(async () => undefined),
+        onSave: vi.fn(async () => ({
+          id: "script-1",
+          name: "test",
+          description: "test",
+          commands: [],
+          created_at: 1,
+        })),
+      },
+    };
+
+    const { result } = renderHook(() => {
+      const data = useInspectorPanelData(base);
+      return useInspectorPanelProps({
+        ...data,
+        ...handlers,
+      });
+    });
+
+    expect(result.current.onCommandMenuRowBlurCapture).toBe(handlers.onCommandMenuRowBlurCapture);
+    expect(result.current.onSuggestedCommandRowKeyDown).toBe(handlers.onSuggestedCommandRowKeyDown);
+    expect(result.current.onCompactMenuKeyDown).toBe(handlers.onCompactMenuKeyDown);
+  });
 });
