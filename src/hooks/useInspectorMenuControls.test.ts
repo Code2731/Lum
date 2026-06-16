@@ -326,6 +326,51 @@ describe("useInspectorMenuControls", () => {
     expect(result.current.inspectorCommandMenuIndex).toBe(1);
   });
 
+  it("다른 행에서 blur가 발생해도 메뉴 유지 후 바깥 포인터다운에서만 닫힘", () => {
+    const outside = document.createElement("button");
+    document.body.appendChild(outside);
+    const menuRow = document.createElement("div");
+    menuRow.setAttribute("data-inspector-command-menu-row", "2");
+    document.body.appendChild(menuRow);
+
+    const moreRef = { current: { 0: document.createElement("button"), 1: document.createElement("button") } };
+    const firstActionRefs = { current: {} as Record<number, HTMLButtonElement | null> };
+    const quickActionsAdvancedRef = { current: null as HTMLDivElement | null };
+    const closeQuickActions = vi.fn();
+
+    const { result } = renderHook(() => {
+      const [inspectorCommandMenuIndex, setInspectorCommandMenuIndex] = useState<number | null>(1);
+      const controls = useInspectorMenuControls({
+        isInspectorCompact: true,
+        inspectorCommandMenuIndex,
+        setInspectorCommandMenuIndex,
+        inspectorMoreButtonRefs: moreRef,
+        inspectorMenuFirstActionRefs: firstActionRefs,
+        inspectorQuickActionsAdvancedRef: quickActionsAdvancedRef,
+        showInspectorQuickActionsExpanded: false,
+        closeInspectorQuickActions: closeQuickActions,
+      });
+      return { controls, inspectorCommandMenuIndex };
+    });
+
+    const e = {
+      currentTarget: menuRow,
+      relatedTarget: outside,
+    } as unknown as FocusEvent<HTMLDivElement>;
+
+    act(() => {
+      result.current.controls.handleInspectorSuggestedCommandRowBlurCapture(e, 0);
+    });
+
+    expect(result.current.inspectorCommandMenuIndex).toBe(1);
+
+    act(() => {
+      outside.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+    });
+
+    expect(result.current.inspectorCommandMenuIndex).toBeNull();
+  });
+
   it("퀵액션 패널 열림 상태에서 키보드 이동으로 다음 버튼으로 이동한다", () => {
     const actionContainer = document.createElement("div");
     const first = document.createElement("button");
