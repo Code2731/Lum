@@ -505,6 +505,57 @@ describe("useInspectorMenuControls", () => {
     expect(stopPropagation).not.toHaveBeenCalled();
   });
 
+  it("퀵액션 패널이 열려 있을 때 Enter 키는 이동 처리나 닫힘 처리를 수행하지 않는다", () => {
+    const actionContainer = document.createElement("div");
+    const first = document.createElement("button");
+    const second = document.createElement("button");
+    actionContainer.appendChild(first);
+    actionContainer.appendChild(second);
+    document.body.appendChild(actionContainer);
+    const firstFocusSpy = vi.spyOn(first, "focus");
+    const secondFocusSpy = vi.spyOn(second, "focus");
+
+    const quickActionsAdvancedRef = { current: actionContainer };
+    const moreRef = { current: {} as Record<number, HTMLButtonElement | null> };
+    const firstActionRefs = { current: {} as Record<number, HTMLButtonElement | null> };
+    const closeQuickActions = vi.fn();
+    const preventDefault = vi.fn();
+    const stopPropagation = vi.fn();
+
+    const { result } = renderHook(() => {
+      const [inspectorCommandMenuIndex, setInspectorCommandMenuIndex] = useState<number | null>(null);
+      const controls = useInspectorMenuControls({
+        isInspectorCompact: true,
+        inspectorCommandMenuIndex,
+        setInspectorCommandMenuIndex,
+        inspectorMoreButtonRefs: moreRef,
+        inspectorMenuFirstActionRefs: firstActionRefs,
+        inspectorQuickActionsAdvancedRef: quickActionsAdvancedRef,
+        showInspectorQuickActionsExpanded: true,
+        closeInspectorQuickActions: closeQuickActions,
+      });
+      return { controls };
+    });
+
+    const e = {
+      key: "Enter",
+      shiftKey: false,
+      preventDefault,
+      stopPropagation,
+      currentTarget: actionContainer,
+    } as unknown as KeyboardEvent<HTMLDivElement>;
+
+    act(() => {
+      result.current.controls.handleInspectorQuickActionsAdvancedKeyDown(e);
+    });
+
+    expect(closeQuickActions).not.toHaveBeenCalled();
+    expect(preventDefault).not.toHaveBeenCalled();
+    expect(stopPropagation).not.toHaveBeenCalled();
+    expect(firstFocusSpy).not.toHaveBeenCalled();
+    expect(secondFocusSpy).not.toHaveBeenCalled();
+  });
+
   it("컴팩트 메뉴가 열려 있으면 바깥 포인터다운 시 메뉴를 닫는다", () => {
     const outside = document.createElement("button");
     document.body.appendChild(outside);
