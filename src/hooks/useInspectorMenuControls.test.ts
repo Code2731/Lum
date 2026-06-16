@@ -181,6 +181,44 @@ describe("useInspectorMenuControls", () => {
     expect(result.current.inspectorCommandMenuIndex).toBeNull();
   });
 
+  it("compact 메뉴 행 blur에서 currentTarget이 Element가 아니어도 메뉴 바깥 이동이면 닫힘이 적용된다", () => {
+    const menuRowTextNode = document.createTextNode("row");
+    const relatedOutside = document.createElement("button");
+
+    const moreRef = { current: { 0: document.createElement("button") } };
+    const firstActionRefs = { current: {} as Record<number, HTMLButtonElement | null> };
+    const quickActionsAdvancedRef = { current: null as HTMLDivElement | null };
+    const closeQuickActions = vi.fn();
+
+    const { result } = renderHook(() => {
+      const [inspectorCommandMenuIndex, setInspectorCommandMenuIndex] = useState<number | null>(0);
+      const controls = useInspectorMenuControls({
+        isInspectorCompact: true,
+        inspectorCommandMenuIndex,
+        setInspectorCommandMenuIndex,
+        inspectorMoreButtonRefs: moreRef,
+        inspectorMenuFirstActionRefs: firstActionRefs,
+        inspectorQuickActionsAdvancedRef: quickActionsAdvancedRef,
+        showInspectorQuickActionsExpanded: false,
+        closeInspectorQuickActions: closeQuickActions,
+      });
+      return { controls, inspectorCommandMenuIndex };
+    });
+
+    const e = {
+      currentTarget: menuRowTextNode as unknown as HTMLDivElement,
+      relatedTarget: relatedOutside,
+    } as unknown as FocusEvent<HTMLDivElement>;
+
+    expect(() => {
+      act(() => {
+        result.current.controls.handleInspectorSuggestedCommandRowBlurCapture(e, 0);
+      });
+    }).not.toThrow();
+
+    expect(result.current.inspectorCommandMenuIndex).toBeNull();
+  });
+
   it("compact 메뉴가 열려 있지 않으면 row blur에서 메뉴를 닫지 않는다", () => {
     const menuRow = document.createElement("div");
     const relatedOutside = document.createElement("button");
