@@ -311,4 +311,40 @@ describe("useInspectorPanelProps", () => {
     expect(result.current.onSuggestedCommandRowKeyDown).toBe(handlers.onSuggestedCommandRowKeyDown);
     expect(result.current.onCompactMenuKeyDown).toBe(handlers.onCompactMenuKeyDown);
   });
+
+  it("quickActionsExpanded 동시 변경 시 메뉴 핸들러 레퍼런스가 유지된다", () => {
+    const handlers = createHandlers();
+    const base = createProps({
+      ...handlers,
+      commandMenuIndex: 1,
+      quickActionsExpanded: false,
+    });
+
+    const { result, rerender } = renderHook(
+      ([quickActionsExpanded, commandMenuIndex]) => useInspectorPanelProps({
+        ...base,
+        quickActionsExpanded,
+        commandMenuIndex,
+      }),
+      {
+        initialProps: [false, 1] as const,
+      },
+    );
+
+    expect(result.current.quickActionsExpanded).toBe(false);
+    expect(result.current.commandMenuIndex).toBe(1);
+    expect(result.current.onCommandMenuRowBlurCapture).toBe(handlers.onCommandMenuRowBlurCapture);
+    expect(result.current.onSuggestedCommandRowKeyDown).toBe(handlers.onSuggestedCommandRowKeyDown);
+    expect(result.current.onCompactMenuKeyDown).toBe(handlers.onCompactMenuKeyDown);
+    expect(result.current.onOpenCompactMenu).toBe(handlers.onOpenCompactMenu);
+
+    rerender([true, null]);
+
+    expect(result.current.quickActionsExpanded).toBe(true);
+    expect(result.current.commandMenuIndex).toBeNull();
+    expect(result.current.onCommandMenuRowBlurCapture).toBe(handlers.onCommandMenuRowBlurCapture);
+    expect(result.current.onSuggestedCommandRowKeyDown).toBe(handlers.onSuggestedCommandRowKeyDown);
+    expect(result.current.onCompactMenuKeyDown).toBe(handlers.onCompactMenuKeyDown);
+    expect(result.current.onOpenCompactMenu).toBe(handlers.onOpenCompactMenu);
+  });
 });
