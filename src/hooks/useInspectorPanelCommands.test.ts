@@ -402,6 +402,59 @@ describe("useInspectorPanelCommands", () => {
     expect(e.stopPropagation).not.toHaveBeenCalled();
   });
 
+  it("handleInspectorSuggestedCommandRowKeyDown에서 compact 모드가 아니면 copy/load 키도 무시한다", () => {
+    const { result, spies } = setupInspectorCommands({
+      inspectorAnalyzeCache: {
+        blockId: "b",
+        command: "bad",
+        requestedAt: 1,
+        status: "done",
+        result: "",
+        rawResult: "",
+        suggestedCommands: ["echo ok", "rm -rf /tmp"],
+      },
+      inspectorCommandMenuIndex: 0,
+      isInspectorCompact: false,
+    });
+
+    const eCopy = {
+      key: "c",
+      metaKey: false,
+      ctrlKey: false,
+      altKey: false,
+      shiftKey: false,
+      preventDefault: vi.fn(),
+      stopPropagation: vi.fn(),
+    } as unknown as KeyboardEvent<HTMLDivElement>;
+
+    const eLoad = {
+      key: "l",
+      metaKey: false,
+      ctrlKey: false,
+      altKey: false,
+      shiftKey: false,
+      preventDefault: vi.fn(),
+      stopPropagation: vi.fn(),
+    } as unknown as KeyboardEvent<HTMLDivElement>;
+
+    act(() => {
+      result.current.handleInspectorSuggestedCommandRowKeyDown(eCopy, 0);
+      result.current.handleInspectorSuggestedCommandRowKeyDown(eLoad, 0);
+    });
+
+    expect(eCopy.preventDefault).not.toHaveBeenCalled();
+    expect(eCopy.stopPropagation).not.toHaveBeenCalled();
+    expect(eLoad.preventDefault).not.toHaveBeenCalled();
+    expect(eLoad.stopPropagation).not.toHaveBeenCalled();
+    expect(writeText).not.toHaveBeenCalled();
+    expect(spies.setAiInput).not.toHaveBeenCalled();
+    expect(spies.setShowAiBar).not.toHaveBeenCalled();
+    expect(spies.setViewMode).not.toHaveBeenCalled();
+    expect(spies.notifCenter.addNotification).not.toHaveBeenCalled();
+    expect(spies.ptyWrite).not.toHaveBeenCalled();
+    expect(spies.verifyCommandSafety).not.toHaveBeenCalled();
+  });
+
   it("handleInspectorSuggestedCommandRowKeyDown에서 rowIndex가 범위를 벗어난 run은 적용할 커맨드 없음으로 처리한다", () => {
     const { result, spies } = setupInspectorCommands({
       inspectorAnalyzeCache: {
