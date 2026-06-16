@@ -763,4 +763,96 @@ describe("Inspector panel data + props pipeline", () => {
       suggestedCommands: [],
     });
   });
+
+  it("noActivity와 quickActionsExpanded 동시 변경에서도 메뉴 핸들러 전달은 유지된다", () => {
+    const handlers = createActionHandlers();
+    const cmdBlocks = [
+      makeCommandBlock({ id: "a", command: "first fail", output: "f1", exitCode: 1 }),
+      makeCommandBlock({ id: "b", command: "second fail", output: "f2", exitCode: 2 }),
+    ];
+
+    const { result, rerender } = renderHook(
+      ([noActivity, quickActionsExpanded, selectedBlockId]) => {
+        const data = useInspectorPanelData({
+          showInspector: true,
+          selectedModel: "test-model",
+          inspectorTab: "summary" as const,
+          inspectorDensity: "cozy" as const,
+          inspectorTabs: INSPECTOR_TABS,
+          inspectorTabRefs: makeRef({
+            summary: null,
+            rag: null,
+            scripts: null,
+            sysmon: null,
+          }),
+          activeTab: { title: "Shell 1", cwd: "/repo" },
+          activeTabGitInfo: null,
+          cmdBlocks,
+          selectedBlockId,
+          inspectorAnalyzeCache: null,
+          inspectorCommandMenuIndex: 7,
+          quickActionsExpanded,
+          inspectorMoreButtonRefs: makeRef({} as Record<number, HTMLButtonElement | null>),
+          inspectorMenuFirstActionRefs: makeRef({} as Record<number, HTMLButtonElement | null>),
+          inspectorQuickActionsToggleRef: makeRef(null as HTMLButtonElement | null),
+          inspectorQuickActionsAdvancedRef: makeRef(null as HTMLDivElement | null),
+          scriptLibrary: {
+            scripts: [],
+            loading: false,
+            onLoad: vi.fn(async () => undefined),
+            onRun: vi.fn(),
+            onDelete: vi.fn(async () => undefined),
+            onSave: vi.fn(async () => ({
+              id: "script-1",
+              name: "test",
+              description: "test",
+              commands: [],
+              created_at: 1,
+            })),
+          },
+        });
+        const props = useInspectorPanelProps({
+          ...data,
+          ...handlers,
+        });
+        return {
+          data,
+          props,
+          quickActionsExpanded,
+        };
+      },
+      {
+        initialProps: [true, false, "a" as string | null] as const,
+      },
+    );
+
+    expect(result.current.props.noActivity).toBe(true);
+    expect(result.current.props.quickActionsExpanded).toBe(false);
+    expect(result.current.props.commandMenuIndex).toBe(7);
+    expect(result.current.data.inspectorCommandMenuIndex).toBe(7);
+    expect(result.current.props.onCommandMenuRowBlurCapture).toBe(handlers.onCommandMenuRowBlurCapture);
+    expect(result.current.props.onSuggestedCommandRowKeyDown).toBe(handlers.onSuggestedCommandRowKeyDown);
+    expect(result.current.props.onCompactMenuKeyDown).toBe(handlers.onCompactMenuKeyDown);
+    expect(result.current.props.onOpenCompactMenu).toBe(handlers.onOpenCompactMenu);
+    expect(result.current.props.focusedFailedBlock).toMatchObject({
+      id: "a",
+      exitCode: 1,
+      outputTail: "f1",
+    });
+
+    rerender([false, true, "b" as string | null]);
+
+    expect(result.current.props.noActivity).toBe(false);
+    expect(result.current.props.quickActionsExpanded).toBe(true);
+    expect(result.current.props.commandMenuIndex).toBe(7);
+    expect(result.current.props.onCommandMenuRowBlurCapture).toBe(handlers.onCommandMenuRowBlurCapture);
+    expect(result.current.props.onSuggestedCommandRowKeyDown).toBe(handlers.onSuggestedCommandRowKeyDown);
+    expect(result.current.props.onCompactMenuKeyDown).toBe(handlers.onCompactMenuKeyDown);
+    expect(result.current.props.onOpenCompactMenu).toBe(handlers.onOpenCompactMenu);
+    expect(result.current.props.focusedFailedBlock).toMatchObject({
+      id: "b",
+      exitCode: 2,
+      outputTail: "f2",
+    });
+  });
 });
