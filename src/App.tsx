@@ -30,12 +30,11 @@ import { useNotificationCenter } from "./hooks/useNotificationCenter";
 import { usePrivacyLedger } from "./hooks/usePrivacyLedger";
 import { useSquads } from "./hooks/useSquads";
 import { useInspectorPanelActionHandlers } from "./hooks/useInspectorPanelActionHandlers";
-import { useInspectorPanelData } from "./hooks/useInspectorPanelData";
 import type { SshProfile } from "./hooks/useTabManager";
 import type { InspectorAnalyzeCache, InspectorDensity, InspectorTab } from "./components/InspectorPanel/types";
 import { isTextInputTarget } from "./utils/event";
 import { useInspectorPanelCommands } from "./hooks/useInspectorPanelCommands";
-import { useInspectorPanelProps } from "./hooks/useInspectorPanelProps";
+import { useInspectorPanelPropsBundle } from "./hooks/useInspectorPanelPropsBundle";
 import InfiniteCanvas from "./components/layout/InfiniteCanvas";
 import TerminalPane from "./components/TerminalPane";
 import HealingPanel from "./components/HealingPanel";
@@ -1106,17 +1105,14 @@ const App: React.FC = () => {
     );
   }, [restoreTabs]);
 
-  const inspectorPanelData = useInspectorPanelData({
+  const inspectorPanelProps = useInspectorPanelPropsBundle({
     showInspector,
     selectedModel,
     inspectorTab,
     inspectorDensity,
     inspectorTabs,
     inspectorTabRefs,
-    activeTab: activeTab ? {
-      title: activeTab.title,
-      cwd: activeTab.cwd ?? "cwd 없음",
-    } : null,
+    activeTab: activeTab ? { title: activeTab.title, cwd: activeTab.cwd ?? "cwd 없음" } : null,
     activeTabGitInfo: {
       branch: activeTabGitInfo?.branch,
       changed: activeTabGitInfo?.changed,
@@ -1125,45 +1121,43 @@ const App: React.FC = () => {
     selectedBlockId,
     inspectorAnalyzeCache,
     commandMenuIndex: inspectorCommandMenuIndex,
-    quickActionsExpanded: showInspectorQuickActionsExpanded,
+    showInspectorQuickActionsExpanded,
     inspectorMoreButtonRefs,
     inspectorMenuFirstActionRefs,
     inspectorQuickActionsToggleRef,
     inspectorQuickActionsAdvancedRef,
     scriptLibrary: scriptLib,
-  });
-
-  const inspectorPanelProps = useInspectorPanelProps({
-    ...inspectorPanelData,
-    onDensityToggle: inspectorPanelActionHandlers.onDensityToggle,
-    onClose: closeInspector,
-    onTabSelect: openInspectorTab,
-    onTabKeyDown: handleInspectorTabKeyDown,
-    onFocusFailedBlock: focusFailedBlock,
-    onAnalyzeFailedBlock: analyzeInspectorFailedBlock,
-    onCopyFailedOutput: copyInspectorFailedOutput,
-    onCopyAnalyzePrompt: copyInspectorAnalyzePrompt,
-    onLoadAnalyzePromptToAiBar: loadInspectorAnalyzePromptToAiBar,
-    onSelectBlock: selectInspectorBlock,
-    onCopyAnalyzeResult: copyInspectorAnalyzeResult,
-    onClearAnalyzeCache: clearInspectorAnalyzeCache,
-    onCopySuggestedCommand: copyInspectorSuggestedCommand,
-    onLoadSuggestedCommandToAiBar: loadInspectorSuggestedCommandToAiBar,
-    onApplySuggestedCommand: applyInspectorAnalyzeCommand,
-    onRerunBlock: rerunInspectorBlock,
-    onCommandMenuRowBlurCapture: handleInspectorSuggestedCommandRowBlurCapture,
-    onSuggestedCommandRowKeyDown: handleInspectorSuggestedCommandRowKeyDown,
-    onCompactMenuKeyDown: handleInspectorCompactMenuKeyDown,
-    onOpenCompactMenu: openInspectorCompactMenu,
-    onCloseCommandMenu: closeInspectorCommandMenu,
-    onQuickActionsToggle: handleInspectorQuickActionsToggle,
-    onQuickActionsToggleKeyDown: handleInspectorQuickActionsToggleKeyDown,
-    onQuickActionsAdvancedKeyDown: handleInspectorQuickActionsAdvancedKeyDown,
-    onToggleProjectBin: inspectorPanelActionHandlers.onToggleProjectBin,
-    onOpenWorkspace: inspectorPanelActionHandlers.onOpenWorkspace,
-    onOpenHistory: inspectorPanelActionHandlers.onOpenHistory,
-    onOpenDiffReview: inspectorPanelActionHandlers.onOpenDiffReview,
-    onOpenFailedBlock: inspectorPanelActionHandlers.onOpenFailedBlock,
+    handlers: {
+      onDensityToggle: inspectorPanelActionHandlers.onDensityToggle,
+      onClose: closeInspector,
+      onTabSelect: openInspectorTab,
+      onTabKeyDown: handleInspectorTabKeyDown,
+      onFocusFailedBlock: focusFailedBlock,
+      onAnalyzeFailedBlock: analyzeInspectorFailedBlock,
+      onCopyFailedOutput: copyInspectorFailedOutput,
+      onCopyAnalyzePrompt: copyInspectorAnalyzePrompt,
+      onLoadAnalyzePromptToAiBar: loadInspectorAnalyzePromptToAiBar,
+      onSelectBlock: selectInspectorBlock,
+      onCopyAnalyzeResult: copyInspectorAnalyzeResult,
+      onClearAnalyzeCache: clearInspectorAnalyzeCache,
+      onCopySuggestedCommand: copyInspectorSuggestedCommand,
+      onLoadSuggestedCommandToAiBar: loadInspectorSuggestedCommandToAiBar,
+      onApplySuggestedCommand: applyInspectorAnalyzeCommand,
+      onRerunBlock: rerunInspectorBlock,
+      onCommandMenuRowBlurCapture: handleInspectorSuggestedCommandRowBlurCapture,
+      onSuggestedCommandRowKeyDown: handleInspectorSuggestedCommandRowKeyDown,
+      onCompactMenuKeyDown: handleInspectorCompactMenuKeyDown,
+      onOpenCompactMenu: openInspectorCompactMenu,
+      onCloseCommandMenu: closeInspectorCommandMenu,
+      onQuickActionsToggle: handleInspectorQuickActionsToggle,
+      onQuickActionsToggleKeyDown: handleInspectorQuickActionsToggleKeyDown,
+      onQuickActionsAdvancedKeyDown: handleInspectorQuickActionsAdvancedKeyDown,
+      onToggleProjectBin: inspectorPanelActionHandlers.onToggleProjectBin,
+      onOpenWorkspace: inspectorPanelActionHandlers.onOpenWorkspace,
+      onOpenHistory: inspectorPanelActionHandlers.onOpenHistory,
+      onOpenDiffReview: inspectorPanelActionHandlers.onOpenDiffReview,
+      onOpenFailedBlock: inspectorPanelActionHandlers.onOpenFailedBlock,
+    },
   });
 
   return (
