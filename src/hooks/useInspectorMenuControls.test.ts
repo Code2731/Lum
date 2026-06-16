@@ -181,6 +181,78 @@ describe("useInspectorMenuControls", () => {
     expect(result.current.inspectorCommandMenuIndex).toBeNull();
   });
 
+  it("compact 메뉴가 열려 있지 않으면 row blur에서 메뉴를 닫지 않는다", () => {
+    const menuRow = document.createElement("div");
+    const relatedOutside = document.createElement("button");
+
+    const moreRef = { current: { 0: document.createElement("button") } };
+    const firstActionRefs = { current: {} as Record<number, HTMLButtonElement | null> };
+    const quickActionsAdvancedRef = { current: null as HTMLDivElement | null };
+    const closeQuickActions = vi.fn();
+
+    const { result } = renderHook(() => {
+      const [inspectorCommandMenuIndex, setInspectorCommandMenuIndex] = useState<number | null>(null);
+      const controls = useInspectorMenuControls({
+        isInspectorCompact: true,
+        inspectorCommandMenuIndex,
+        setInspectorCommandMenuIndex,
+        inspectorMoreButtonRefs: moreRef,
+        inspectorMenuFirstActionRefs: firstActionRefs,
+        inspectorQuickActionsAdvancedRef: quickActionsAdvancedRef,
+        showInspectorQuickActionsExpanded: false,
+        closeInspectorQuickActions: closeQuickActions,
+      });
+      return { controls, inspectorCommandMenuIndex };
+    });
+
+    const e = {
+      currentTarget: menuRow,
+      relatedTarget: relatedOutside,
+    } as unknown as FocusEvent<HTMLDivElement>;
+
+    act(() => {
+      result.current.controls.handleInspectorSuggestedCommandRowBlurCapture(e, 0);
+    });
+
+    expect(result.current.inspectorCommandMenuIndex).toBeNull();
+  });
+
+  it("compact 메뉴 열린 행과 blur 이벤트의 행이 다르면 메뉴를 닫지 않는다", () => {
+    const menuRow = document.createElement("div");
+    const relatedOutside = document.createElement("button");
+
+    const moreRef = { current: { 0: document.createElement("button"), 1: document.createElement("button") } };
+    const firstActionRefs = { current: {} as Record<number, HTMLButtonElement | null> };
+    const quickActionsAdvancedRef = { current: null as HTMLDivElement | null };
+    const closeQuickActions = vi.fn();
+
+    const { result } = renderHook(() => {
+      const [inspectorCommandMenuIndex, setInspectorCommandMenuIndex] = useState<number | null>(1);
+      const controls = useInspectorMenuControls({
+        isInspectorCompact: true,
+        inspectorCommandMenuIndex,
+        setInspectorCommandMenuIndex,
+        inspectorMoreButtonRefs: moreRef,
+        inspectorMenuFirstActionRefs: firstActionRefs,
+        inspectorQuickActionsAdvancedRef: quickActionsAdvancedRef,
+        showInspectorQuickActionsExpanded: false,
+        closeInspectorQuickActions: closeQuickActions,
+      });
+      return { controls, inspectorCommandMenuIndex };
+    });
+
+    const e = {
+      currentTarget: menuRow,
+      relatedTarget: relatedOutside,
+    } as unknown as FocusEvent<HTMLDivElement>;
+
+    act(() => {
+      result.current.controls.handleInspectorSuggestedCommandRowBlurCapture(e, 0);
+    });
+
+    expect(result.current.inspectorCommandMenuIndex).toBe(1);
+  });
+
   it("퀵액션 패널 열림 상태에서 키보드 이동으로 다음 버튼으로 이동한다", () => {
     const actionContainer = document.createElement("div");
     const first = document.createElement("button");
