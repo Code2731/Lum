@@ -607,6 +607,52 @@ describe("useInspectorMenuControls", () => {
     expect(closeQuickActions).not.toHaveBeenCalled();
   });
 
+  it("compact 모드가 false가 된 뒤 바깥 포인터다운은 메뉴를 다시 열지 않는다", () => {
+    const outside = document.createElement("button");
+    document.body.appendChild(outside);
+    const closeQuickActions = vi.fn();
+    const moreRef = { current: { 0: document.createElement("button") } };
+    const firstActionRefs = { current: {} as Record<number, HTMLButtonElement | null> };
+    const quickActionsAdvancedRef = { current: null as HTMLDivElement | null };
+
+    const { result, rerender } = renderHook(
+      ({ isInspectorCompact }) => {
+        const [inspectorCommandMenuIndex, setInspectorCommandMenuIndex] = useState<number | null>(0);
+        const controls = useInspectorMenuControls({
+          isInspectorCompact,
+          inspectorCommandMenuIndex,
+          setInspectorCommandMenuIndex,
+          inspectorMoreButtonRefs: moreRef,
+          inspectorMenuFirstActionRefs: firstActionRefs,
+          inspectorQuickActionsAdvancedRef: quickActionsAdvancedRef,
+          showInspectorQuickActionsExpanded: false,
+          closeInspectorQuickActions: closeQuickActions,
+        });
+        return { controls, inspectorCommandMenuIndex };
+      },
+      {
+        initialProps: {
+          isInspectorCompact: true,
+        },
+      },
+    );
+
+    expect(result.current.inspectorCommandMenuIndex).toBe(0);
+
+    act(() => {
+      rerender({ isInspectorCompact: false });
+    });
+
+    expect(result.current.inspectorCommandMenuIndex).toBeNull();
+
+    act(() => {
+      outside.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+    });
+
+    expect(result.current.inspectorCommandMenuIndex).toBeNull();
+    expect(closeQuickActions).not.toHaveBeenCalled();
+  });
+
   it("compact 메뉴에서 Escape를 누르면 열린 메뉴가 닫히고 원래 트리거로 포커스를 되돌린다", () => {
     const menu = document.createElement("div");
     const moreButton = document.createElement("button");
