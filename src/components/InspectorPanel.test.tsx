@@ -809,6 +809,36 @@ describe("InspectorPanel", () => {
     expect(eventArg.key).toBe("Q");
   });
 
+  it("추천 커맨드 두 번째 행 keydown에서 row index 1이 전달된다", () => {
+    const onSuggestedCommandRowKeyDown = vi.fn();
+    renderInspector({
+      analyzeCache: multiAnalyzeCache,
+      onSuggestedCommandRowKeyDown,
+    });
+
+    const commandRow = document.querySelector('[data-inspector-command-menu-row="2"]') as HTMLDivElement;
+    fireEvent.keyDown(commandRow, { key: "ArrowLeft" });
+
+    expect(onSuggestedCommandRowKeyDown).toHaveBeenCalledTimes(1);
+    expect(onSuggestedCommandRowKeyDown.mock.calls[0]?.[1]).toBe(1);
+    expect(commandRow).toHaveAttribute("data-inspector-command-menu-row", "2");
+  });
+
+  it("compact 모드에서도 추천 커맨드 행 keydown 이벤트가 행 인덱스를 전달한다", () => {
+    const onSuggestedCommandRowKeyDown = vi.fn();
+    renderInspector({
+      analyzeCache: multiAnalyzeCache,
+      inspectorDensity: "compact",
+      onSuggestedCommandRowKeyDown,
+    });
+
+    const commandRow = document.querySelector('[data-inspector-command-menu-row="1"]') as HTMLDivElement;
+    fireEvent.keyDown(commandRow, { key: "Q" });
+
+    expect(onSuggestedCommandRowKeyDown).toHaveBeenCalledTimes(1);
+    expect(onSuggestedCommandRowKeyDown.mock.calls[0]?.[1]).toBe(0);
+  });
+
   it("compact 분석 메뉴의 MORE 버튼은 키보드로도 메뉴 열기 콜백을 호출한다", () => {
     const onOpenCompactMenu = vi.fn();
     renderInspector({
