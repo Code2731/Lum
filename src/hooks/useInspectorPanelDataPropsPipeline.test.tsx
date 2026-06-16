@@ -278,4 +278,63 @@ describe("Inspector panel data + props pipeline", () => {
     expect(result.current.onSuggestedCommandRowKeyDown).toBe(handlers.onSuggestedCommandRowKeyDown);
     expect(result.current.onCompactMenuKeyDown).toBe(handlers.onCompactMenuKeyDown);
   });
+
+  it("inspectorCommandMenuIndex 변경은 useInspectorPanelProps에 그대로 반영된다", () => {
+    const cmdBlocks = [
+      makeCommandBlock({ id: "a", command: "first fail", output: "f1", exitCode: 1 }),
+    ];
+
+    const { result, rerender } = renderHook((inspectorCommandMenuIndex: number | null) => {
+      const data = useInspectorPanelData({
+        showInspector: true,
+        selectedModel: "test-model",
+        inspectorTab: "summary" as const,
+        inspectorDensity: "cozy" as const,
+        inspectorTabs: INSPECTOR_TABS,
+        inspectorTabRefs: makeRef({
+          summary: null,
+          rag: null,
+          scripts: null,
+          sysmon: null,
+        }),
+        activeTab: { title: "Shell 1", cwd: "/repo" },
+        activeTabGitInfo: null,
+        cmdBlocks,
+        selectedBlockId: "a" as string | null,
+        inspectorAnalyzeCache: null,
+        inspectorCommandMenuIndex,
+        quickActionsExpanded: false,
+        inspectorMoreButtonRefs: makeRef({} as Record<number, HTMLButtonElement | null>),
+        inspectorMenuFirstActionRefs: makeRef({} as Record<number, HTMLButtonElement | null>),
+        inspectorQuickActionsToggleRef: makeRef(null as HTMLButtonElement | null),
+        inspectorQuickActionsAdvancedRef: makeRef(null as HTMLDivElement | null),
+        scriptLibrary: {
+          scripts: [],
+          loading: false,
+          onLoad: vi.fn(async () => undefined),
+          onRun: vi.fn(),
+          onDelete: vi.fn(async () => undefined),
+          onSave: vi.fn(async () => ({
+            id: "script-1",
+            name: "test",
+            description: "test",
+            commands: [],
+            created_at: 1,
+          })),
+        },
+      });
+      return useInspectorPanelProps({
+        ...data,
+        ...createActionHandlers(),
+      });
+    }, { initialProps: 0 });
+
+    expect(result.current.commandMenuIndex).toBe(0);
+
+    rerender(null);
+    expect(result.current.commandMenuIndex).toBeNull();
+
+    rerender(2);
+    expect(result.current.commandMenuIndex).toBe(2);
+  });
 });
