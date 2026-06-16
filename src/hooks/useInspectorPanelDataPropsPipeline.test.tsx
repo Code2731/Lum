@@ -337,4 +337,73 @@ describe("Inspector panel data + props pipeline", () => {
     rerender(2);
     expect(result.current.commandMenuIndex).toBe(2);
   });
+
+  it("inspectorDensity 변경 시 commandMenuIndex는 유지되며 props 연결이 유지된다", () => {
+    const cmdBlocks = [
+      makeCommandBlock({ id: "a", command: "first fail", output: "f1", exitCode: 1 }),
+    ];
+    const handlers = createActionHandlers();
+    const { result, rerender } = renderHook(
+      ([selectedBlockId, inspectorDensity]) => {
+        const data = useInspectorPanelData({
+          showInspector: true,
+          selectedModel: "test-model",
+          inspectorTab: "summary" as const,
+          inspectorDensity,
+          inspectorTabs: INSPECTOR_TABS,
+          inspectorTabRefs: makeRef({
+            summary: null,
+            rag: null,
+            scripts: null,
+            sysmon: null,
+          }),
+          activeTab: { title: "Shell 1", cwd: "/repo" },
+          activeTabGitInfo: null,
+          cmdBlocks,
+          selectedBlockId,
+          inspectorAnalyzeCache: null,
+          inspectorCommandMenuIndex: 1,
+          quickActionsExpanded: false,
+          inspectorMoreButtonRefs: makeRef({} as Record<number, HTMLButtonElement | null>),
+          inspectorMenuFirstActionRefs: makeRef({} as Record<number, HTMLButtonElement | null>),
+          inspectorQuickActionsToggleRef: makeRef(null as HTMLButtonElement | null),
+          inspectorQuickActionsAdvancedRef: makeRef(null as HTMLDivElement | null),
+          scriptLibrary: {
+            scripts: [],
+            loading: false,
+            onLoad: vi.fn(async () => undefined),
+            onRun: vi.fn(),
+            onDelete: vi.fn(async () => undefined),
+            onSave: vi.fn(async () => ({
+              id: "script-1",
+              name: "test",
+              description: "test",
+              commands: [],
+              created_at: 1,
+            })),
+          },
+        });
+        return {
+          data,
+          props: useInspectorPanelProps({
+            ...data,
+            ...handlers,
+          }),
+        };
+      },
+      { initialProps: ["a" as string | null, "cozy" as const] },
+    );
+
+    expect(result.current.props.commandMenuIndex).toBe(1);
+    expect(result.current.props.inspectorDensity).toBe("cozy");
+    expect(result.current.data.inspectorDensity).toBe("cozy");
+    expect(result.current.props.onCompactMenuKeyDown).toBe(handlers.onCompactMenuKeyDown);
+
+    rerender(["a" as string | null, "compact" as const]);
+
+    expect(result.current.props.commandMenuIndex).toBe(1);
+    expect(result.current.props.inspectorDensity).toBe("compact");
+    expect(result.current.data.inspectorDensity).toBe("compact");
+    expect(result.current.props.onCompactMenuKeyDown).toBe(handlers.onCompactMenuKeyDown);
+  });
 });
