@@ -204,4 +204,35 @@ describe("useInspectorPanelProps", () => {
     expect(result.current.onOpenCompactMenu).toBe(handlers.onOpenCompactMenu);
     expect(result.current.activeTabChanged).toBe(2);
   });
+
+  it("inspectorDensity 변경 시 메뉴 인덱스 및 핸들러 전달이 유지된다", () => {
+    const handlers = createHandlers();
+    const base = createProps({
+      ...handlers,
+      commandMenuIndex: 2,
+      inspectorDensity: "cozy",
+    });
+
+    const { result, rerender } = renderHook((inspectorDensity: "compact" | "cozy" | "cozy") => {
+      return useInspectorPanelProps({
+        ...base,
+        inspectorDensity,
+      });
+    }, {
+      initialProps: "cozy",
+    });
+
+    expect(result.current.commandMenuIndex).toBe(2);
+    expect(result.current.onCommandMenuRowBlurCapture).toBe(handlers.onCommandMenuRowBlurCapture);
+    expect(result.current.onSuggestedCommandRowKeyDown).toBe(handlers.onSuggestedCommandRowKeyDown);
+    expect(result.current.onCompactMenuKeyDown).toBe(handlers.onCompactMenuKeyDown);
+
+    rerender("compact");
+
+    expect(result.current.commandMenuIndex).toBe(2);
+    expect(result.current.inspectorDensity).toBe("compact");
+    expect(result.current.onCommandMenuRowBlurCapture).toBe(handlers.onCommandMenuRowBlurCapture);
+    expect(result.current.onSuggestedCommandRowKeyDown).toBe(handlers.onSuggestedCommandRowKeyDown);
+    expect(result.current.onCompactMenuKeyDown).toBe(handlers.onCompactMenuKeyDown);
+  });
 });
