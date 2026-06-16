@@ -274,4 +274,41 @@ describe("useInspectorPanelProps", () => {
     expect(result.current.onCompactMenuKeyDown).toBe(handlers.onCompactMenuKeyDown);
     expect(result.current.onOpenCompactMenu).toBe(handlers.onOpenCompactMenu);
   });
+
+  it("inspectorDensity와 inspectorTab 동시 변경에서도 메뉴 핸들러 레퍼런스가 유지된다", () => {
+    const handlers = createHandlers();
+    const base = createProps({
+      ...handlers,
+      commandMenuIndex: 2,
+      inspectorDensity: "cozy",
+      inspectorTab: "summary",
+    });
+
+    const { result, rerender } = renderHook(
+      ([inspectorDensity, inspectorTab]) => useInspectorPanelProps({
+        ...base,
+        inspectorDensity,
+        inspectorTab,
+      }),
+      {
+        initialProps: ["cozy", "summary"] as const,
+      },
+    );
+
+    expect(result.current.commandMenuIndex).toBe(2);
+    expect(result.current.inspectorDensity).toBe("cozy");
+    expect(result.current.inspectorTab).toBe("summary");
+    expect(result.current.onCommandMenuRowBlurCapture).toBe(handlers.onCommandMenuRowBlurCapture);
+    expect(result.current.onSuggestedCommandRowKeyDown).toBe(handlers.onSuggestedCommandRowKeyDown);
+    expect(result.current.onCompactMenuKeyDown).toBe(handlers.onCompactMenuKeyDown);
+
+    rerender(["compact", "rag"]);
+
+    expect(result.current.commandMenuIndex).toBe(2);
+    expect(result.current.inspectorDensity).toBe("compact");
+    expect(result.current.inspectorTab).toBe("rag");
+    expect(result.current.onCommandMenuRowBlurCapture).toBe(handlers.onCommandMenuRowBlurCapture);
+    expect(result.current.onSuggestedCommandRowKeyDown).toBe(handlers.onSuggestedCommandRowKeyDown);
+    expect(result.current.onCompactMenuKeyDown).toBe(handlers.onCompactMenuKeyDown);
+  });
 });
