@@ -176,4 +176,32 @@ describe("useInspectorPanelProps", () => {
     expect(result.current).toBe(afterTabChanged);
     expect(result.current.inspectorTab).toBe("rag");
   });
+
+  it("동일한 핸들러 입력이면 액션 핸들러 레퍼런스를 유지한다", () => {
+    const handlers = createHandlers();
+    const base = createProps(handlers);
+
+    const { result, rerender } = renderHook((activeTabChanged: number) => {
+      return useInspectorPanelProps({
+        ...base,
+        activeTabChanged,
+      });
+    }, {
+      initialProps: 1,
+    });
+
+    const afterBase = result.current;
+    expect(afterBase.onCommandMenuRowBlurCapture).toBe(handlers.onCommandMenuRowBlurCapture);
+    expect(afterBase.onSuggestedCommandRowKeyDown).toBe(handlers.onSuggestedCommandRowKeyDown);
+    expect(afterBase.onCompactMenuKeyDown).toBe(handlers.onCompactMenuKeyDown);
+    expect(afterBase.onOpenCompactMenu).toBe(handlers.onOpenCompactMenu);
+
+    rerender(2);
+
+    expect(result.current.onCommandMenuRowBlurCapture).toBe(handlers.onCommandMenuRowBlurCapture);
+    expect(result.current.onSuggestedCommandRowKeyDown).toBe(handlers.onSuggestedCommandRowKeyDown);
+    expect(result.current.onCompactMenuKeyDown).toBe(handlers.onCompactMenuKeyDown);
+    expect(result.current.onOpenCompactMenu).toBe(handlers.onOpenCompactMenu);
+    expect(result.current.activeTabChanged).toBe(2);
+  });
 });
