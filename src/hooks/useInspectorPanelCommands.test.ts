@@ -137,10 +137,10 @@ function setupInspectorCommands(overrides: {
       setAiInput,
       setShowAiBar,
       setInspectorAnalyzeCache: setInspectorAnalyzeCacheSpy,
+      verifyCommandSafety,
       closeInspector,
       closeInspectorCommandMenu,
       handleAskAI,
-      verifyCommandSafety,
       notifCenter,
       notifications,
       ptyWrite,
@@ -1145,6 +1145,37 @@ describe("useInspectorPanelCommands", () => {
     expect(spies.setAiInput).not.toHaveBeenCalled();
     expect(spies.notifCenter.addNotification).toHaveBeenCalledWith(expect.objectContaining({
       title: "추천 커맨드 실행됨",
+    }));
+  });
+
+  it("추천 커맨드 적용 시 안전도 검사 실패는 실행 실패 알림만 표시한다", async () => {
+    const { result, spies } = setupInspectorCommands({
+      inspectorAnalyzeCache: {
+        blockId: "b",
+        command: "bad",
+        requestedAt: 1,
+        status: "done",
+        result: "",
+        rawResult: "",
+        suggestedCommands: ["echo ok"],
+      },
+    });
+
+    spies.verifyCommandSafety.mockRejectedValueOnce(new Error("safety check failed"));
+
+    await act(async () => {
+      await result.current.applyInspectorAnalyzeCommand(0);
+    });
+
+    expect(spies.verifyCommandSafety).toHaveBeenCalledWith("echo ok");
+    expect(spies.ptyWrite).not.toHaveBeenCalled();
+    expect(spies.setAiInput).not.toHaveBeenCalled();
+    expect(spies.setShowAiBar).not.toHaveBeenCalled();
+    expect(spies.closeInspector).not.toHaveBeenCalled();
+    expect(spies.closeInspectorCommandMenu).not.toHaveBeenCalled();
+    expect(spies.notifCenter.addNotification).toHaveBeenCalledWith(expect.objectContaining({
+      title: "커맨드 실행 실패",
+      body: "안전도 검사 또는 PTY 전송 중 오류가 발생했습니다.",
     }));
   });
 
