@@ -461,4 +461,45 @@ describe("useInspectorPanelProps", () => {
     expect(result.current.onCompactMenuKeyDown).toBe(handlers.onCompactMenuKeyDown);
     expect(result.current.onOpenCompactMenu).toBe(handlers.onOpenCompactMenu);
   });
+
+  it("noActivity+quickActions 조합 전환 후에도 onCompactMenuKeyDown 호출이 유지된다", () => {
+    const handlers = createHandlers();
+    const base = createProps({
+      ...handlers,
+      noActivity: true,
+      quickActionsExpanded: false,
+      commandMenuIndex: 0,
+    });
+    const event = { key: "ArrowDown", preventDefault: vi.fn(), stopPropagation: vi.fn() } as any;
+
+    const { result, rerender } = renderHook(
+      ([noActivity, quickActionsExpanded]) => useInspectorPanelProps({
+        ...base,
+        noActivity,
+        quickActionsExpanded,
+      }),
+      {
+        initialProps: [true, false] as const,
+      },
+    );
+
+    expect(result.current.noActivity).toBe(true);
+    expect(result.current.quickActionsExpanded).toBe(false);
+    expect(result.current.onCompactMenuKeyDown).toBe(handlers.onCompactMenuKeyDown);
+    result.current.onCompactMenuKeyDown(event, 0);
+
+    rerender([false, true]);
+
+    expect(result.current.noActivity).toBe(false);
+    expect(result.current.quickActionsExpanded).toBe(true);
+    expect(result.current.onCompactMenuKeyDown).toBe(handlers.onCompactMenuKeyDown);
+    expect(handlers.onCompactMenuKeyDown).toHaveBeenCalledTimes(1);
+    expect(handlers.onCompactMenuKeyDown).toHaveBeenCalledWith(event, 0);
+
+    result.current.onCompactMenuKeyDown(event, 1);
+
+    expect(result.current.onCompactMenuKeyDown).toBe(handlers.onCompactMenuKeyDown);
+    expect(handlers.onCompactMenuKeyDown).toHaveBeenCalledTimes(2);
+    expect(handlers.onCompactMenuKeyDown).toHaveBeenNthCalledWith(2, event, 1);
+  });
 });

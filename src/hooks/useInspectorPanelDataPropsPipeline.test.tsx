@@ -855,4 +855,97 @@ describe("Inspector panel data + props pipeline", () => {
       outputTail: "f2",
     });
   });
+
+  it("파이프라인 경로에서 onCompactMenuKeyDown 호출이 noActivity+quickActions 전환에도 유지된다", () => {
+    const handlers = createActionHandlers();
+    const event = { key: "ArrowDown", preventDefault: vi.fn(), stopPropagation: vi.fn() } as any;
+
+    const { result, rerender } = renderHook(
+      ([noActivity, quickActionsExpanded, selectedBlockId]) => {
+        const data = useInspectorPanelData({
+          showInspector: true,
+          selectedModel: "test-model",
+          inspectorTab: "summary" as const,
+          inspectorDensity: "cozy" as const,
+          inspectorTabs: INSPECTOR_TABS,
+          inspectorTabRefs: makeRef({
+            summary: null,
+            rag: null,
+            scripts: null,
+            sysmon: null,
+          }),
+          activeTab: { title: "Shell 1", cwd: "/repo" },
+          activeTabGitInfo: null,
+          cmdBlocks: noActivity
+            ? []
+            : [makeCommandBlock({ id: "a", command: "first fail", output: "f1", exitCode: 1 })],
+          selectedBlockId,
+          inspectorAnalyzeCache: noActivity
+            ? null
+            : {
+                blockId: "stream",
+                command: "stream cmd",
+                requestedAt: 1,
+                status: "done" as const,
+                result: "ok",
+                rawResult: "ok",
+                suggestedCommands: [],
+              },
+          inspectorCommandMenuIndex: 7,
+          quickActionsExpanded,
+          inspectorMoreButtonRefs: makeRef({} as Record<number, HTMLButtonElement | null>),
+          inspectorMenuFirstActionRefs: makeRef({} as Record<number, HTMLButtonElement | null>),
+          inspectorQuickActionsToggleRef: makeRef(null as HTMLButtonElement | null),
+          inspectorQuickActionsAdvancedRef: makeRef(null as HTMLDivElement | null),
+          scriptLibrary: {
+            scripts: [],
+            loading: false,
+            onLoad: vi.fn(async () => undefined),
+            onRun: vi.fn(),
+            onDelete: vi.fn(async () => undefined),
+            onSave: vi.fn(async () => ({
+              id: "script-1",
+              name: "test",
+              description: "test",
+              commands: [],
+              created_at: 1,
+            })),
+          },
+        });
+
+        const props = useInspectorPanelProps({
+          ...data,
+          ...handlers,
+        });
+        return {
+          data,
+          props,
+        };
+      },
+      {
+        initialProps: [true, false, null] as const,
+      },
+    );
+
+    expect(result.current.props.noActivity).toBe(true);
+    expect(result.current.props.quickActionsExpanded).toBe(false);
+    expect(result.current.props.onCompactMenuKeyDown).toBe(handlers.onCompactMenuKeyDown);
+    result.current.props.onCompactMenuKeyDown(event, 0);
+
+    rerender([false, true, "a" as string | null]);
+
+    expect(result.current.props.noActivity).toBe(false);
+    expect(result.current.props.quickActionsExpanded).toBe(true);
+    expect(result.current.props.onCompactMenuKeyDown).toBe(handlers.onCompactMenuKeyDown);
+    expect(result.current.props.focusedFailedBlock).toMatchObject({
+      id: "a",
+      exitCode: 1,
+      outputTail: "f1",
+    });
+    result.current.props.onCompactMenuKeyDown(event, 1);
+
+    expect(handlers.onCompactMenuKeyDown).toHaveBeenCalledTimes(2);
+    expect(handlers.onCompactMenuKeyDown).toHaveBeenNthCalledWith(1, event, 0);
+    expect(handlers.onCompactMenuKeyDown).toHaveBeenNthCalledWith(2, event, 1);
+  });
 });
