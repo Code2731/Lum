@@ -418,6 +418,38 @@ describe("useInspectorMenuControls", () => {
     expect(result.current.inspectorCommandMenuIndex).toBeNull();
   });
 
+  it("컴팩트 메뉴가 열려 있는데 다른 행(data-inspector-command-menu-row) 포인터다운은 닫힘을 트리거하지 않는다", () => {
+    const otherRow = document.createElement("div");
+    otherRow.setAttribute("data-inspector-command-menu-row", "2");
+    document.body.appendChild(otherRow);
+
+    const closeQuickActions = vi.fn();
+    const moreRef = { current: { 0: document.createElement("button"), 1: document.createElement("button") } };
+    const firstActionRefs = { current: {} as Record<number, HTMLButtonElement | null> };
+    const quickActionsAdvancedRef = { current: null as HTMLDivElement | null };
+
+    const { result } = renderHook(() => {
+      const [inspectorCommandMenuIndex, setInspectorCommandMenuIndex] = useState<number | null>(1);
+      const controls = useInspectorMenuControls({
+        isInspectorCompact: true,
+        inspectorCommandMenuIndex,
+        setInspectorCommandMenuIndex,
+        inspectorMoreButtonRefs: moreRef,
+        inspectorMenuFirstActionRefs: firstActionRefs,
+        inspectorQuickActionsAdvancedRef: quickActionsAdvancedRef,
+        showInspectorQuickActionsExpanded: false,
+        closeInspectorQuickActions: closeQuickActions,
+      });
+      return { controls, inspectorCommandMenuIndex };
+    });
+
+    act(() => {
+      otherRow.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+    });
+
+    expect(result.current.inspectorCommandMenuIndex).toBe(1);
+  });
+
   it("컴팩트 메뉴가 열려 있을 때 메뉴 컨테이너 내부 포인터다운은 메뉴를 닫지 않는다", () => {
     const outside = document.createElement("button");
     document.body.appendChild(outside);
