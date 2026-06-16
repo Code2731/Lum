@@ -163,6 +163,29 @@ describe("InspectorAnalyzeCard", () => {
     expect(onCompactMenuKeyDown).toHaveBeenCalledTimes(1);
   });
 
+  it("compact 모드에서 MORE 버튼의 비지원 키는 onOpenCompactMenu를 호출하지 않는다", () => {
+    const onOpenCompactMenu = vi.fn();
+    const onCloseCommandMenu = vi.fn();
+    render(
+      <InspectorAnalyzeCard
+        {...createProps({
+          analyzeCache: baseAnalyzeCache,
+          isInspectorCompact: true,
+          commandMenuIndex: 0,
+          onOpenCompactMenu,
+          onCloseCommandMenu,
+        })}
+      />,
+    );
+
+    const moreButton = screen.getAllByText("MORE")[0];
+    fireEvent.keyDown(moreButton, { key: "ArrowUp" });
+    fireEvent.keyDown(moreButton, { key: "Tab" });
+
+    expect(onOpenCompactMenu).not.toHaveBeenCalled();
+    expect(onCloseCommandMenu).not.toHaveBeenCalled();
+  });
+
   it("compact 메뉴 keydown에서 Escape도 행 인덱스를 전달한다", () => {
     const onCompactMenuKeyDown = vi.fn();
     render(
