@@ -320,4 +320,58 @@ describe("useInspectorPanelPropsBundle", () => {
     expect(handlers.onCompactMenuKeyDown).toHaveBeenCalledTimes(1);
     expect(handlers.onCompactMenuKeyDown).toHaveBeenCalledWith(event, 0);
   });
+
+  it("selectedModel / inspectorDensity / inspectorTab 변경 시 번들 반환값이 갱신된다", () => {
+    const handlers = createHandlers();
+    const baseProps = {
+      showInspector: true,
+      selectedModel: "model-a",
+      inspectorTab: "summary" as const,
+      inspectorDensity: "cozy" as const,
+      inspectorTabs: INSPECTOR_TABS,
+      inspectorTabRefs: makeRef({
+        summary: null,
+        rag: null,
+        scripts: null,
+        sysmon: null,
+      }),
+      activeTab: { title: "Shell 1", cwd: "/repo" },
+      activeTabGitInfo: null,
+      cmdBlocks: [
+        makeCommandBlock({ id: "a", command: "cmd", output: "out", exitCode: 0 }),
+      ],
+      selectedBlockId: "a",
+      inspectorAnalyzeCache: null,
+      commandMenuIndex: 2,
+      showInspectorQuickActionsExpanded: false,
+      inspectorMoreButtonRefs: makeRef({} as Record<number, HTMLButtonElement | null>),
+      inspectorMenuFirstActionRefs: makeRef({} as Record<number, HTMLButtonElement | null>),
+      inspectorQuickActionsToggleRef: makeRef(null as HTMLButtonElement | null),
+      inspectorQuickActionsAdvancedRef: makeRef(null as HTMLDivElement | null),
+      scriptLibrary: createScriptLibrary(),
+      handlers,
+    };
+
+    const { result, rerender } = renderHook(
+      (props: typeof baseProps) => useInspectorPanelPropsBundle(props),
+      {
+        initialProps: baseProps,
+      },
+    );
+
+    expect(result.current.selectedModel).toBe("model-a");
+    expect(result.current.inspectorDensity).toBe("cozy");
+    expect(result.current.inspectorTab).toBe("summary");
+
+    rerender({
+      ...baseProps,
+      selectedModel: "model-b",
+      inspectorDensity: "compact",
+      inspectorTab: "rag" as const,
+    });
+
+    expect(result.current.selectedModel).toBe("model-b");
+    expect(result.current.inspectorDensity).toBe("compact");
+    expect(result.current.inspectorTab).toBe("rag");
+  });
 });
