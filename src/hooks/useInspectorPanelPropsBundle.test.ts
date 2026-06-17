@@ -328,6 +328,12 @@ describe("useInspectorPanelPropsBundle", () => {
 
     rerender({ branch: "main", changed: Number.NaN });
     expect(result.current.activeTabChanged).toBeUndefined();
+
+    rerender({ branch: "main", changed: Number.MAX_SAFE_INTEGER });
+    expect(result.current.activeTabChanged).toBe(Number.MAX_SAFE_INTEGER);
+
+    rerender({ branch: "main", changed: Number.MAX_SAFE_INTEGER + 1 });
+    expect(result.current.activeTabChanged).toBeUndefined();
   });
 
   it("noActivity+quickActions 조합 전환 후에도 메뉴 핸들러 레퍼런스가 유지된다", () => {

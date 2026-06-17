@@ -56,6 +56,7 @@ function normalizeOptionalString(value: string | undefined | null): string | und
 function normalizeNonNegativeInteger(value: number | undefined): number | undefined {
   if (!Number.isFinite(value)) return undefined;
   const next = Math.trunc(value);
+  if (!Number.isSafeInteger(next)) return undefined;
   if (next < 0) return undefined;
   return next;
 }
