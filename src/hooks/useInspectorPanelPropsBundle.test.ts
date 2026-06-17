@@ -336,6 +336,45 @@ describe("useInspectorPanelPropsBundle", () => {
     expect(result.current.activeTabChanged).toBeUndefined();
   });
 
+  it("선택한 블록 ID가 없는 경우 실패 블록은 최신 항목으로 안전하게 폴백한다", () => {
+    const handlers = createHandlers();
+    const { result } = renderHook(() => useInspectorPanelPropsBundle({
+      showInspector: true,
+      selectedModel: "test-model",
+      inspectorTab: "summary" as const,
+      inspectorDensity: "cozy" as const,
+      inspectorTabs: INSPECTOR_TABS,
+      inspectorTabRefs: makeRef({
+        summary: null,
+        rag: null,
+        scripts: null,
+        sysmon: null,
+      }),
+      activeTab: { title: "Shell 1", cwd: "/repo" },
+      activeTabGitInfo: null,
+      cmdBlocks: [
+        makeCommandBlock({ id: "good", command: "first fail", output: "f1", exitCode: 1 }),
+        makeCommandBlock({ id: "latest", command: "second fail", output: "f2", exitCode: 1 }),
+      ],
+      selectedBlockId: "not-exist",
+      inspectorAnalyzeCache: null,
+      commandMenuIndex: 0,
+      showInspectorQuickActionsExpanded: false,
+      inspectorMoreButtonRefs: makeRef({} as Record<number, HTMLButtonElement | null>),
+      inspectorMenuFirstActionRefs: makeRef({} as Record<number, HTMLButtonElement | null>),
+      inspectorQuickActionsToggleRef: makeRef(null as HTMLButtonElement | null),
+      inspectorQuickActionsAdvancedRef: makeRef(null as HTMLDivElement | null),
+      scriptLibrary: createScriptLibrary(),
+      handlers,
+    }));
+
+    expect(result.current.focusedFailedBlock).toMatchObject({
+      id: "latest",
+      exitCode: 1,
+      outputTail: "f2",
+    });
+  });
+
   it("noActivity+quickActions 조합 전환 후에도 메뉴 핸들러 레퍼런스가 유지된다", () => {
     const handlers = createHandlers();
     const cmdBlocks: CommandBlock[] = [

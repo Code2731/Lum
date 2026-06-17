@@ -56,6 +56,7 @@ function normalizeOptionalString(value: string | undefined | null): string | und
 function normalizeNonNegativeInteger(value: number | undefined): number | undefined {
   if (!Number.isFinite(value)) return undefined;
   const next = Math.trunc(value);
+  // 브랜치 변경 수는 안전한 정수만 허용한다. 음수/무한대/비정수/과도값은 UI에 노출되지 않도록 제거한다.
   if (!Number.isSafeInteger(next)) return undefined;
   if (next < 0) return undefined;
   return next;
