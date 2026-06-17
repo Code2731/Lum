@@ -136,6 +136,72 @@ describe("useInspectorPanelPropsBundle", () => {
     });
   });
 
+  it("activeTab / activeTabGitInfo 변경 시 activeTab 파생값이 갱신된다", () => {
+    const handlers = createHandlers();
+    const commonProps = {
+      showInspector: true,
+      selectedModel: "test-model",
+      inspectorTab: "summary" as const,
+      inspectorDensity: "cozy" as const,
+      inspectorTabs: INSPECTOR_TABS,
+      inspectorTabRefs: makeRef({
+        summary: null,
+        rag: null,
+        scripts: null,
+        sysmon: null,
+      }),
+      activeTab: { title: "Shell 1", cwd: "/repo-a" },
+      activeTabGitInfo: { branch: "main", changed: 2 },
+      cmdBlocks: [
+        makeCommandBlock({ id: "a", command: "fail", output: "err", exitCode: 1 }),
+      ],
+      selectedBlockId: "a",
+      inspectorAnalyzeCache: null,
+      commandMenuIndex: 0,
+      showInspectorQuickActionsExpanded: false,
+      inspectorMoreButtonRefs: makeRef({} as Record<number, HTMLButtonElement | null>),
+      inspectorMenuFirstActionRefs: makeRef({} as Record<number, HTMLButtonElement | null>),
+      inspectorQuickActionsToggleRef: makeRef(null as HTMLButtonElement | null),
+      inspectorQuickActionsAdvancedRef: makeRef(null as HTMLDivElement | null),
+      scriptLibrary: createScriptLibrary(),
+      handlers,
+    };
+
+    const { result, rerender } = renderHook(
+      (props: typeof commonProps) => useInspectorPanelPropsBundle(props),
+      {
+        initialProps: commonProps,
+      },
+    );
+
+    expect(result.current.activeTabTitle).toBe("Shell 1");
+    expect(result.current.activeTabPath).toBe("/repo-a");
+    expect(result.current.activeTabBranch).toBe("main");
+    expect(result.current.activeTabChanged).toBe(2);
+
+    rerender({
+      ...commonProps,
+      activeTab: { title: "Shell 2", cwd: "/repo-b" },
+      activeTabGitInfo: { branch: "feature/ui", changed: 7 },
+    });
+
+    expect(result.current.activeTabTitle).toBe("Shell 2");
+    expect(result.current.activeTabPath).toBe("/repo-b");
+    expect(result.current.activeTabBranch).toBe("feature/ui");
+    expect(result.current.activeTabChanged).toBe(7);
+
+    rerender({
+      ...commonProps,
+      activeTab: null,
+      activeTabGitInfo: null,
+    });
+
+    expect(result.current.activeTabTitle).toBe("탭 없음");
+    expect(result.current.activeTabPath).toBe("cwd 없음");
+    expect(result.current.activeTabBranch).toBeUndefined();
+    expect(result.current.activeTabChanged).toBeUndefined();
+  });
+
   it("noActivity+quickActions 조합 전환 후에도 메뉴 핸들러 레퍼런스가 유지된다", () => {
     const handlers = createHandlers();
     const cmdBlocks: CommandBlock[] = [
