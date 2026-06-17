@@ -1072,6 +1072,20 @@ const App: React.FC = () => {
 
   const activeTab = tabs.find((t) => t.id === activeTabId);
   const activeTabGitInfo = activeTab ? tabGitInfo[activeTab.id] ?? null : null;
+  const activeInspectorTab = useMemo(() => {
+    if (!activeTab) return null;
+    return {
+      title: activeTab.title,
+      cwd: activeTab.cwd ?? "cwd 없음",
+    };
+  }, [activeTab]);
+  const activeInspectorGitInfo = useMemo(() => {
+    if (!activeTabGitInfo) return null;
+    return {
+      branch: activeTabGitInfo.branch,
+      changed: activeTabGitInfo.changed,
+    };
+  }, [activeTabGitInfo]);
   const lastCmdBlock = cmdBlocks[cmdBlocks.length - 1] ?? null;
   const focusedCmdBlock = selectedBlockId
     ? (cmdBlocks.find((b) => b.id === selectedBlockId) ?? null)
@@ -1112,11 +1126,8 @@ const App: React.FC = () => {
     inspectorDensity,
     inspectorTabs,
     inspectorTabRefs,
-    activeTab: activeTab ? { title: activeTab.title, cwd: activeTab.cwd ?? "cwd 없음" } : null,
-    activeTabGitInfo: {
-      branch: activeTabGitInfo?.branch,
-      changed: activeTabGitInfo?.changed,
-    },
+    activeTab: activeInspectorTab,
+    activeTabGitInfo: activeInspectorGitInfo,
     cmdBlocks,
     selectedBlockId,
     inspectorAnalyzeCache,
