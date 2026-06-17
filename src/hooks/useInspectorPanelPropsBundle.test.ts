@@ -553,6 +553,95 @@ describe("useInspectorPanelPropsBundle", () => {
     });
   });
 
+  it.each([
+    { selectedBlockId: "", label: "빈 문자열" },
+    { selectedBlockId: "   ", label: "공백 문자열" },
+  ])("선택한 블록 ID가 $label일 때 실패 블록은 최신 항목으로 폴백한다", ({ selectedBlockId }) => {
+    const handlers = createHandlers();
+    const { result } = renderHook(() => useInspectorPanelPropsBundle({
+      showInspector: true,
+      selectedModel: "test-model",
+      inspectorTab: "summary" as const,
+      inspectorDensity: "cozy" as const,
+      inspectorTabs: INSPECTOR_TABS,
+      inspectorTabRefs: makeRef({
+        summary: null,
+        rag: null,
+        scripts: null,
+        sysmon: null,
+      }),
+      activeTab: { title: "Shell 1", cwd: "/repo" },
+      activeTabGitInfo: null,
+      cmdBlocks: [
+        makeCommandBlock({ id: "failed-first", command: "first fail", output: "f1", exitCode: 1 }),
+        makeCommandBlock({ id: "failed-latest", command: "latest fail", output: "f2", exitCode: 1 }),
+      ],
+      selectedBlockId,
+      inspectorAnalyzeCache: null,
+      commandMenuIndex: 0,
+      showInspectorQuickActionsExpanded: false,
+      inspectorMoreButtonRefs: makeRef({} as Record<number, HTMLButtonElement | null>),
+      inspectorMenuFirstActionRefs: makeRef({} as Record<number, HTMLButtonElement | null>),
+      inspectorQuickActionsToggleRef: makeRef(null as HTMLButtonElement | null),
+      inspectorQuickActionsAdvancedRef: makeRef(null as HTMLDivElement | null),
+      scriptLibrary: createScriptLibrary(),
+      handlers,
+    }));
+
+    expect(result.current.focusedFailedBlock).toMatchObject({
+      id: "failed-latest",
+      exitCode: 1,
+      outputTail: "f2",
+    });
+  });
+
+  it.each([
+    { kind: "inspectorFailedBlocks", output: "  first line\n  second line  \n  ", expected: "second line" },
+    { kind: "recentBlocks", output: "  first line\n  second line  \n  ", expected: "second line" },
+  ])("$kind는 공백 라인을 제거하고 마지막 라인을 trim한다", ({ kind, output, expected }) => {
+    const handlers = createHandlers();
+    const command = "cmd";
+
+    const { result } = renderHook(() => useInspectorPanelPropsBundle({
+      showInspector: true,
+      selectedModel: "test-model",
+      inspectorTab: "summary" as const,
+      inspectorDensity: "cozy" as const,
+      inspectorTabs: INSPECTOR_TABS,
+      inspectorTabRefs: makeRef({
+        summary: null,
+        rag: null,
+        scripts: null,
+        sysmon: null,
+      }),
+      activeTab: { title: "Shell 1", cwd: "/repo" },
+      activeTabGitInfo: null,
+      cmdBlocks: [
+        makeCommandBlock({ id: "failed", command, output, exitCode: kind === "inspectorFailedBlocks" ? 1 : 0 }),
+      ],
+      selectedBlockId: "failed",
+      inspectorAnalyzeCache: null,
+      commandMenuIndex: 0,
+      showInspectorQuickActionsExpanded: false,
+      inspectorMoreButtonRefs: makeRef({} as Record<number, HTMLButtonElement | null>),
+      inspectorMenuFirstActionRefs: makeRef({} as Record<number, HTMLButtonElement | null>),
+      inspectorQuickActionsToggleRef: makeRef(null as HTMLButtonElement | null),
+      inspectorQuickActionsAdvancedRef: makeRef(null as HTMLDivElement | null),
+      scriptLibrary: createScriptLibrary(),
+      handlers,
+    }));
+
+    const expectedTail = expected;
+    if (kind === "inspectorFailedBlocks") {
+      expect(result.current.failedBlocks).toHaveLength(1);
+      expect(result.current.failedBlocks[0].outputTail).toBe(expectedTail);
+      return;
+    }
+
+    expect(result.current.recentBlocks).toHaveLength(1);
+    expect(result.current.recentBlocks[0].outputTail).toBe(expectedTail);
+  });
+
   it("noActivity+quickActions 조합 전환 후에도 메뉴 핸들러 레퍼런스가 유지된다", () => {
     const handlers = createHandlers();
     const cmdBlocks: CommandBlock[] = [
