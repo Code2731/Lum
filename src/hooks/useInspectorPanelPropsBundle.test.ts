@@ -245,6 +245,48 @@ describe("useInspectorPanelPropsBundle", () => {
     expect(result.current.activeTabPath).toBe("/repo");
   });
 
+  it("activeTabGitInfo가 비어있거나 공백이면 branch가 undefined로 정규화된다", () => {
+    const handlers = createHandlers();
+    const { result, rerender } = renderHook(
+      (activeTabGitInfo: { branch?: string; changed?: number } | null) => useInspectorPanelPropsBundle({
+        showInspector: true,
+        selectedModel: "test-model",
+        inspectorTab: "summary" as const,
+        inspectorDensity: "cozy" as const,
+        inspectorTabs: INSPECTOR_TABS,
+        inspectorTabRefs: makeRef({
+          summary: null,
+          rag: null,
+          scripts: null,
+          sysmon: null,
+        }),
+        activeTab: { title: "Shell 1", cwd: "/repo" },
+        activeTabGitInfo,
+        cmdBlocks: [makeCommandBlock({ id: "a", command: "ok", output: "out", exitCode: 0 })],
+        selectedBlockId: "a",
+        inspectorAnalyzeCache: null,
+        commandMenuIndex: null,
+        showInspectorQuickActionsExpanded: false,
+        inspectorMoreButtonRefs: makeRef({} as Record<number, HTMLButtonElement | null>),
+        inspectorMenuFirstActionRefs: makeRef({} as Record<number, HTMLButtonElement | null>),
+        inspectorQuickActionsToggleRef: makeRef(null as HTMLButtonElement | null),
+        inspectorQuickActionsAdvancedRef: makeRef(null as HTMLDivElement | null),
+        scriptLibrary: createScriptLibrary(),
+        handlers,
+      }),
+      {
+        initialProps: { branch: "   ", changed: 3 } as const,
+      },
+    );
+
+    expect(result.current.activeTabBranch).toBeUndefined();
+    expect(result.current.activeTabChanged).toBe(3);
+
+    rerender({ branch: "  feature/main  ", changed: 4 });
+    expect(result.current.activeTabBranch).toBe("feature/main");
+    expect(result.current.activeTabChanged).toBe(4);
+  });
+
   it("noActivity+quickActions 조합 전환 후에도 메뉴 핸들러 레퍼런스가 유지된다", () => {
     const handlers = createHandlers();
     const cmdBlocks: CommandBlock[] = [

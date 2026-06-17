@@ -47,6 +47,12 @@ function normalizeOrFallback(value: string | undefined | null, fallback: string)
   return trimmed.length > 0 ? trimmed : fallback;
 }
 
+function normalizeOptionalString(value: string | undefined | null): string | undefined {
+  const normalized = value?.trim();
+  if (!normalized) return undefined;
+  return normalized;
+}
+
 export function useInspectorPanelData({
   showInspector,
   selectedModel,
@@ -114,7 +120,7 @@ export function useInspectorPanelData({
 
     activeTabTitle: normalizeOrFallback(activeTab?.title, "탭 없음"),
     activeTabPath: normalizeOrFallback(activeTab?.cwd, "cwd 없음"),
-    activeTabBranch: activeTabGitInfo?.branch,
+    activeTabBranch: normalizeOptionalString(activeTabGitInfo?.branch),
     activeTabChanged: activeTabGitInfo?.changed,
 
     noActivity,
