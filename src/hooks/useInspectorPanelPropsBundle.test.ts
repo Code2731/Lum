@@ -287,6 +287,49 @@ describe("useInspectorPanelPropsBundle", () => {
     expect(result.current.activeTabChanged).toBe(4);
   });
 
+  it("activeTabChanged는 음수나 실수 입력을 정규화해서 비정상값을 제거한다", () => {
+    const handlers = createHandlers();
+    const { result, rerender } = renderHook(
+      (activeTabGitInfo: { branch?: string; changed?: number } | null) => useInspectorPanelPropsBundle({
+        showInspector: true,
+        selectedModel: "test-model",
+        inspectorTab: "summary" as const,
+        inspectorDensity: "cozy" as const,
+        inspectorTabs: INSPECTOR_TABS,
+        inspectorTabRefs: makeRef({
+          summary: null,
+          rag: null,
+          scripts: null,
+          sysmon: null,
+        }),
+        activeTab: { title: "Shell 1", cwd: "/repo" },
+        activeTabGitInfo,
+        cmdBlocks: [makeCommandBlock({ id: "a", command: "ok", output: "out", exitCode: 0 })],
+        selectedBlockId: "a",
+        inspectorAnalyzeCache: null,
+        commandMenuIndex: null,
+        showInspectorQuickActionsExpanded: false,
+        inspectorMoreButtonRefs: makeRef({} as Record<number, HTMLButtonElement | null>),
+        inspectorMenuFirstActionRefs: makeRef({} as Record<number, HTMLButtonElement | null>),
+        inspectorQuickActionsToggleRef: makeRef(null as HTMLButtonElement | null),
+        inspectorQuickActionsAdvancedRef: makeRef(null as HTMLDivElement | null),
+        scriptLibrary: createScriptLibrary(),
+        handlers,
+      }),
+      {
+        initialProps: { branch: "main", changed: -1 } as const,
+      },
+    );
+
+    expect(result.current.activeTabChanged).toBeUndefined();
+
+    rerender({ branch: "main", changed: 2.7 });
+    expect(result.current.activeTabChanged).toBe(2);
+
+    rerender({ branch: "main", changed: Number.NaN });
+    expect(result.current.activeTabChanged).toBeUndefined();
+  });
+
   it("noActivity+quickActions 조합 전환 후에도 메뉴 핸들러 레퍼런스가 유지된다", () => {
     const handlers = createHandlers();
     const cmdBlocks: CommandBlock[] = [

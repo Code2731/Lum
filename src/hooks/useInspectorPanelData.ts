@@ -53,6 +53,13 @@ function normalizeOptionalString(value: string | undefined | null): string | und
   return normalized;
 }
 
+function normalizeNonNegativeInteger(value: number | undefined): number | undefined {
+  if (!Number.isFinite(value)) return undefined;
+  const next = Math.trunc(value);
+  if (next < 0) return undefined;
+  return next;
+}
+
 export function useInspectorPanelData({
   showInspector,
   selectedModel,
@@ -121,7 +128,7 @@ export function useInspectorPanelData({
     activeTabTitle: normalizeOrFallback(activeTab?.title, "탭 없음"),
     activeTabPath: normalizeOrFallback(activeTab?.cwd, "cwd 없음"),
     activeTabBranch: normalizeOptionalString(activeTabGitInfo?.branch),
-    activeTabChanged: activeTabGitInfo?.changed,
+    activeTabChanged: normalizeNonNegativeInteger(activeTabGitInfo?.changed),
 
     noActivity,
     failedBlocks: inspectorFailedBlocks,
