@@ -734,6 +734,79 @@ describe("useInspectorPanelPropsBundle", () => {
     });
   });
 
+  it("성공 블록 ID를 선택하고 실패 블록이 없으면 focusedFailedBlock이 null이다", () => {
+    const handlers = createHandlers();
+    const { result } = renderHook(() => useInspectorPanelPropsBundle({
+      showInspector: true,
+      selectedModel: "test-model",
+      inspectorTab: "summary" as const,
+      inspectorDensity: "cozy" as const,
+      inspectorTabs: INSPECTOR_TABS,
+      inspectorTabRefs: makeRef({
+        summary: null,
+        rag: null,
+        scripts: null,
+        sysmon: null,
+      }),
+      activeTab: { title: "Shell 1", cwd: "/repo" },
+      activeTabGitInfo: null,
+      cmdBlocks: [
+        makeCommandBlock({ id: "success", command: "ok", output: "result", exitCode: 0 }),
+      ],
+      selectedBlockId: "success",
+      inspectorAnalyzeCache: null,
+      commandMenuIndex: 0,
+      showInspectorQuickActionsExpanded: false,
+      inspectorMoreButtonRefs: makeRef({} as Record<number, HTMLButtonElement | null>),
+      inspectorMenuFirstActionRefs: makeRef({} as Record<number, HTMLButtonElement | null>),
+      inspectorQuickActionsToggleRef: makeRef(null as HTMLButtonElement | null),
+      inspectorQuickActionsAdvancedRef: makeRef(null as HTMLDivElement | null),
+      scriptLibrary: createScriptLibrary(),
+      handlers,
+    }));
+
+    expect(result.current.focusedFailedBlock).toBeNull();
+  });
+
+  it("이모지 포함 출력도 outputTail 제한 길이 규칙을 유지한다", () => {
+    const handlers = createHandlers();
+    const output = `first\n${"😀".repeat(90)}\n`;
+
+    const { result } = renderHook(() => useInspectorPanelPropsBundle({
+      showInspector: true,
+      selectedModel: "test-model",
+      inspectorTab: "summary" as const,
+      inspectorDensity: "cozy" as const,
+      inspectorTabs: INSPECTOR_TABS,
+      inspectorTabRefs: makeRef({
+        summary: null,
+        rag: null,
+        scripts: null,
+        sysmon: null,
+      }),
+      activeTab: { title: "Shell 1", cwd: "/repo" },
+      activeTabGitInfo: null,
+      cmdBlocks: [
+        makeCommandBlock({ id: "emoji", command: "cmd", output, exitCode: 1 }),
+      ],
+      selectedBlockId: "emoji",
+      inspectorAnalyzeCache: null,
+      commandMenuIndex: 0,
+      showInspectorQuickActionsExpanded: false,
+      inspectorMoreButtonRefs: makeRef({} as Record<number, HTMLButtonElement | null>),
+      inspectorMenuFirstActionRefs: makeRef({} as Record<number, HTMLButtonElement | null>),
+      inspectorQuickActionsToggleRef: makeRef(null as HTMLButtonElement | null),
+      inspectorQuickActionsAdvancedRef: makeRef(null as HTMLDivElement | null),
+      scriptLibrary: createScriptLibrary(),
+      handlers,
+    }));
+
+    expect(result.current.failedBlocks).toHaveLength(1);
+    expect(result.current.failedBlocks[0].outputTail).toContain("...");
+    expect(result.current.failedBlocks[0].outputTail.endsWith("...")).toBe(true);
+    expect(result.current.failedBlocks[0].outputTail.length).toBe(163);
+  });
+
   it("noActivity+quickActions 조합 전환 후에도 메뉴 핸들러 레퍼런스가 유지된다", () => {
     const handlers = createHandlers();
     const cmdBlocks: CommandBlock[] = [
