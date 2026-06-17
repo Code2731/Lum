@@ -31,7 +31,10 @@ interface UseInspectorPanelDataOptions {
   scriptLibrary: ScriptLibraryLike;
 }
 
-function extractOutputTail(output: string, maxChars = 160): string {
+const FAILED_BLOCK_OUTPUT_TAIL_MAX_CHARS = 160;
+const RECENT_BLOCK_OUTPUT_TAIL_MAX_CHARS = 120;
+
+function extractOutputTail(output: string, maxChars = FAILED_BLOCK_OUTPUT_TAIL_MAX_CHARS): string {
   const lines = output
     .split(/\r?\n/)
     .map((line) => line.trim())
@@ -113,7 +116,7 @@ export function useInspectorPanelData({
         command: b.command.trim(),
         exitCode: b.exitCode,
         durationMs: b.endedAt != null ? Math.max(0, b.endedAt - b.startedAt) : null,
-        outputTail: extractOutputTail(b.output, 120),
+        outputTail: extractOutputTail(b.output, RECENT_BLOCK_OUTPUT_TAIL_MAX_CHARS),
       }))
   ), [cmdBlocks]);
 
