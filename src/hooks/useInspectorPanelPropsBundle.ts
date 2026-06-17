@@ -1,66 +1,44 @@
 import type { CommandBlock } from "./useCommandBlocks";
-import type { ScriptLibraryLike, InspectorPanelProps } from "../components/InspectorPanel/types";
+import type {
+  InspectorPanelActionProps,
+  InspectorPanelDataProps,
+  InspectorPanelProps,
+  ScriptLibraryLike,
+} from "../components/InspectorPanel/types";
 import { useInspectorPanelData } from "./useInspectorPanelData";
 import { useInspectorPanelProps } from "./useInspectorPanelProps";
 
-export type InspectorPanelActionHandlerProps = Pick<
-  InspectorPanelProps,
-  | "onDensityToggle"
-  | "onClose"
-  | "onTabSelect"
-  | "onTabKeyDown"
-  | "onFocusFailedBlock"
-  | "onAnalyzeFailedBlock"
-  | "onCopyFailedOutput"
-  | "onCopyAnalyzePrompt"
-  | "onLoadAnalyzePromptToAiBar"
-  | "onSelectBlock"
-  | "onCopyAnalyzeResult"
-  | "onClearAnalyzeCache"
-  | "onCopySuggestedCommand"
-  | "onLoadSuggestedCommandToAiBar"
-  | "onApplySuggestedCommand"
-  | "onRerunBlock"
-  | "onCommandMenuRowBlurCapture"
-  | "onSuggestedCommandRowKeyDown"
-  | "onCompactMenuKeyDown"
-  | "onOpenCompactMenu"
-  | "onCloseCommandMenu"
-  | "onQuickActionsToggle"
-  | "onQuickActionsToggleKeyDown"
-  | "onQuickActionsAdvancedKeyDown"
-  | "onToggleProjectBin"
-  | "onOpenWorkspace"
-  | "onOpenHistory"
-  | "onOpenDiffReview"
-  | "onOpenFailedBlock"
->;
+export type InspectorPanelActionHandlerProps = InspectorPanelActionProps;
 
-interface UseInspectorPanelPropsBundleOptions {
+interface ActiveTabInfo {
+  title: string;
+  cwd: string;
+}
+
+interface ActiveTabGitInfo {
+  branch?: string;
+  changed?: number;
+}
+
+export interface UseInspectorPanelPropsBundleOptions {
   showInspector: boolean;
-  selectedModel: string;
-  inspectorTab: InspectorPanelProps["inspectorTab"];
-  inspectorDensity: InspectorPanelProps["inspectorDensity"];
-  inspectorTabs: InspectorPanelProps["inspectorTabs"];
-  inspectorTabRefs: InspectorPanelProps["inspectorTabRefs"];
+  selectedModel: InspectorPanelDataProps["selectedModel"];
+  inspectorTab: InspectorPanelDataProps["inspectorTab"];
+  inspectorDensity: InspectorPanelDataProps["inspectorDensity"];
+  inspectorTabs: InspectorPanelDataProps["inspectorTabs"];
+  inspectorTabRefs: InspectorPanelDataProps["inspectorTabRefs"];
 
-  activeTab: {
-    title: string;
-    cwd: string;
-  } | null;
-  activeTabGitInfo: {
-    branch?: string;
-    changed?: number;
-  } | null;
+  activeTab: ActiveTabInfo | null;
+  activeTabGitInfo: ActiveTabGitInfo | null;
   cmdBlocks: readonly CommandBlock[];
   selectedBlockId: string | null;
-  inspectorAnalyzeCache: InspectorPanelProps["analyzeCache"];
-  commandMenuIndex: number | null;
-  showInspectorQuickActionsExpanded: boolean;
-  inspectorMoreButtonRefs: InspectorPanelProps["inspectorMoreButtonRefs"];
-  inspectorMenuFirstActionRefs: InspectorPanelProps["inspectorMenuFirstActionRefs"];
-  inspectorQuickActionsToggleRef: InspectorPanelProps["inspectorQuickActionsToggleRef"];
-  inspectorQuickActionsAdvancedRef: InspectorPanelProps["inspectorQuickActionsAdvancedRef"];
+  inspectorAnalyzeCache: InspectorPanelDataProps["analyzeCache"];
+  commandMenuIndex: InspectorPanelDataProps["commandMenuIndex"];
+  showInspectorQuickActionsExpanded: InspectorPanelDataProps["quickActionsExpanded"];
+  inspectorMoreButtonRefs: InspectorPanelDataProps["inspectorMoreButtonRefs"];
+  inspectorMenuFirstActionRefs: InspectorPanelDataProps["inspectorMenuFirstActionRefs"];
+  inspectorQuickActionsToggleRef: InspectorPanelDataProps["inspectorQuickActionsToggleRef"];
+  inspectorQuickActionsAdvancedRef: InspectorPanelDataProps["inspectorQuickActionsAdvancedRef"];
   scriptLibrary: ScriptLibraryLike;
 
   handlers: InspectorPanelActionHandlerProps;
