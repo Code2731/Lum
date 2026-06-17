@@ -374,4 +374,122 @@ describe("useInspectorPanelPropsBundle", () => {
     expect(result.current.inspectorDensity).toBe("compact");
     expect(result.current.inspectorTab).toBe("rag");
   });
+
+  it("showInspector / quickActionsExpanded / commandMenuIndex / analyzeCache 변경이 번들에 반영된다", () => {
+    const handlers = createHandlers();
+    const base = {
+      showInspector: true,
+      selectedModel: "test-model",
+      inspectorTab: "summary" as const,
+      inspectorDensity: "cozy" as const,
+      inspectorTabs: INSPECTOR_TABS,
+      inspectorTabRefs: makeRef({
+        summary: null,
+        rag: null,
+        scripts: null,
+        sysmon: null,
+      }),
+      activeTab: { title: "Shell 1", cwd: "/repo" },
+      activeTabGitInfo: null,
+      cmdBlocks: [
+        makeCommandBlock({ id: "a", command: "fail", output: "err", exitCode: 1 }),
+      ],
+      selectedBlockId: "a",
+      inspectorAnalyzeCache: {
+        blockId: "stream",
+        command: "stream cmd",
+        requestedAt: 10,
+        status: "done",
+        result: "ok",
+        rawResult: "ok",
+        suggestedCommands: ["echo ok"],
+      },
+      commandMenuIndex: 0,
+      showInspectorQuickActionsExpanded: false,
+      inspectorMoreButtonRefs: makeRef({} as Record<number, HTMLButtonElement | null>),
+      inspectorMenuFirstActionRefs: makeRef({} as Record<number, HTMLButtonElement | null>),
+      inspectorQuickActionsToggleRef: makeRef(null as HTMLButtonElement | null),
+      inspectorQuickActionsAdvancedRef: makeRef(null as HTMLDivElement | null),
+      scriptLibrary: createScriptLibrary(),
+      handlers,
+    };
+
+    const { result, rerender } = renderHook(
+      (props: typeof base) => useInspectorPanelPropsBundle(props),
+      {
+        initialProps: base,
+      },
+    );
+
+    expect(result.current.showInspector).toBe(true);
+    expect(result.current.quickActionsExpanded).toBe(false);
+    expect(result.current.commandMenuIndex).toBe(0);
+    expect(result.current.noActivity).toBe(false);
+
+    rerender({
+      ...base,
+      showInspector: false,
+      showInspectorQuickActionsExpanded: true,
+      commandMenuIndex: 5,
+      inspectorAnalyzeCache: null,
+    });
+
+    expect(result.current.showInspector).toBe(false);
+    expect(result.current.quickActionsExpanded).toBe(true);
+    expect(result.current.commandMenuIndex).toBe(5);
+    expect(result.current.noActivity).toBe(true);
+  });
+
+  it("commandMenuIndex가 null일 때도 noActivity 계산은 캐시 기준으로 일관된다", () => {
+    const handlers = createHandlers();
+    const { result, rerender } = renderHook(
+      ([showInspectorQuickActionsExpanded, commandMenuIndex, hasAnalyzeCache]) => useInspectorPanelPropsBundle({
+        showInspector: true,
+        selectedModel: "test-model",
+        inspectorTab: "summary" as const,
+        inspectorDensity: "cozy" as const,
+        inspectorTabs: INSPECTOR_TABS,
+        inspectorTabRefs: makeRef({
+          summary: null,
+          rag: null,
+          scripts: null,
+          sysmon: null,
+        }),
+        activeTab: { title: "Shell 1", cwd: "/repo" },
+        activeTabGitInfo: null,
+        cmdBlocks: [],
+        selectedBlockId: null,
+        inspectorAnalyzeCache: hasAnalyzeCache ? {
+          blockId: "stream",
+          command: "stream cmd",
+          requestedAt: 10,
+          status: "done",
+          result: "ok",
+          rawResult: "ok",
+          suggestedCommands: [],
+        } : null,
+        commandMenuIndex,
+        showInspectorQuickActionsExpanded,
+        inspectorMoreButtonRefs: makeRef({} as Record<number, HTMLButtonElement | null>),
+        inspectorMenuFirstActionRefs: makeRef({} as Record<number, HTMLButtonElement | null>),
+        inspectorQuickActionsToggleRef: makeRef(null as HTMLButtonElement | null),
+        inspectorQuickActionsAdvancedRef: makeRef(null as HTMLDivElement | null),
+        scriptLibrary: createScriptLibrary(),
+        handlers,
+      }),
+      {
+        initialProps: [false, null, true] as const,
+      },
+    );
+
+    expect(result.current.noActivity).toBe(false);
+
+    rerender([false, null, false]);
+    expect(result.current.noActivity).toBe(true);
+    expect(result.current.commandMenuIndex).toBeNull();
+
+    rerender([false, 2, false]);
+    expect(result.current.noActivity).toBe(true);
+    expect(result.current.commandMenuIndex).toBe(2);
+  });
 });
