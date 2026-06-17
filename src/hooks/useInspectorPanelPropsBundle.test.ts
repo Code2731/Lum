@@ -336,6 +336,107 @@ describe("useInspectorPanelPropsBundle", () => {
     expect(result.current.activeTabChanged).toBeUndefined();
   });
 
+  it("inspectorFailedBlocks는 공백 명령을 제외하고 실패 블록만 정렬·trim해서 노출한다", () => {
+    const handlers = createHandlers();
+    const { result } = renderHook(() => useInspectorPanelPropsBundle({
+      showInspector: true,
+      selectedModel: "test-model",
+      inspectorTab: "summary" as const,
+      inspectorDensity: "cozy" as const,
+      inspectorTabs: INSPECTOR_TABS,
+      inspectorTabRefs: makeRef({
+        summary: null,
+        rag: null,
+        scripts: null,
+        sysmon: null,
+      }),
+      activeTab: { title: "Shell 1", cwd: "/repo" },
+      activeTabGitInfo: null,
+      cmdBlocks: [
+        makeCommandBlock({ id: "whitespace", command: "   ", output: "should-ignore", exitCode: 1 }),
+        makeCommandBlock({ id: "success", command: "ok", output: "success", exitCode: 0 }),
+        makeCommandBlock({ id: "failed", command: "  bad cmd  ", output: " line1\nline2", exitCode: 2 }),
+      ],
+      selectedBlockId: null,
+      inspectorAnalyzeCache: null,
+      commandMenuIndex: 0,
+      showInspectorQuickActionsExpanded: false,
+      inspectorMoreButtonRefs: makeRef({} as Record<number, HTMLButtonElement | null>),
+      inspectorMenuFirstActionRefs: makeRef({} as Record<number, HTMLButtonElement | null>),
+      inspectorQuickActionsToggleRef: makeRef(null as HTMLButtonElement | null),
+      inspectorQuickActionsAdvancedRef: makeRef(null as HTMLDivElement | null),
+      scriptLibrary: createScriptLibrary(),
+      handlers,
+    }));
+
+    expect(result.current.failedBlocks).toHaveLength(1);
+    expect(result.current.failedBlocks[0]).toMatchObject({
+      id: "failed",
+      command: "bad cmd",
+      exitCode: 2,
+      outputTail: "line2",
+    });
+  });
+
+  it("recentBlocks는 공백 명령을 제외하고 duration을 안전하게 계산한다", () => {
+    const handlers = createHandlers();
+    const { result } = renderHook(() => useInspectorPanelPropsBundle({
+      showInspector: true,
+      selectedModel: "test-model",
+      inspectorTab: "summary" as const,
+      inspectorDensity: "cozy" as const,
+      inspectorTabs: INSPECTOR_TABS,
+      inspectorTabRefs: makeRef({
+        summary: null,
+        rag: null,
+        scripts: null,
+        sysmon: null,
+      }),
+      activeTab: { title: "Shell 1", cwd: "/repo" },
+      activeTabGitInfo: null,
+      cmdBlocks: [
+        { id: "first", command: "first", output: "ok", exitCode: 0, startedAt: 1_000, endedAt: 1_050 },
+        { id: "second", command: "  ", output: "ignore", exitCode: 1, startedAt: 1_050, endedAt: 1_100 },
+        { id: "third", command: "third", output: "out", exitCode: 1, startedAt: 1_200, endedAt: 1_150 },
+        { id: "fourth", command: "fourth", output: "done", exitCode: 0, startedAt: 1_300, endedAt: null },
+      ] as const as CommandBlock[],
+      selectedBlockId: null,
+      inspectorAnalyzeCache: null,
+      commandMenuIndex: 0,
+      showInspectorQuickActionsExpanded: false,
+      inspectorMoreButtonRefs: makeRef({} as Record<number, HTMLButtonElement | null>),
+      inspectorMenuFirstActionRefs: makeRef({} as Record<number, HTMLButtonElement | null>),
+      inspectorQuickActionsToggleRef: makeRef(null as HTMLButtonElement | null),
+      inspectorQuickActionsAdvancedRef: makeRef(null as HTMLDivElement | null),
+      scriptLibrary: createScriptLibrary(),
+      handlers,
+    }));
+
+    expect(result.current.recentBlocks).toHaveLength(3);
+    expect(result.current.recentBlocks.map((block) => block.id)).toEqual(["fourth", "third", "first"]);
+    expect(result.current.recentBlocks[1]).toMatchObject({
+      id: "third",
+      durationMs: 0,
+      command: "third",
+      exitCode: 1,
+      outputTail: "out",
+    });
+    expect(result.current.recentBlocks[2]).toMatchObject({
+      id: "first",
+      durationMs: 50,
+      exitCode: 0,
+      command: "first",
+      outputTail: "ok",
+    });
+    expect(result.current.recentBlocks[0]).toMatchObject({
+      id: "fourth",
+      durationMs: null,
+      exitCode: 0,
+      command: "fourth",
+      outputTail: "done",
+    });
+  });
+
   it("선택한 블록 ID가 없는 경우 실패 블록은 최신 항목으로 안전하게 폴백한다", () => {
     const handlers = createHandlers();
     const { result } = renderHook(() => useInspectorPanelPropsBundle({
