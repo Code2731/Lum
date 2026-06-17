@@ -437,6 +437,43 @@ describe("useInspectorPanelPropsBundle", () => {
     });
   });
 
+  it("recentBlocks의 outputTail은 120자 제한을 넘으면 끝이 생략된다", () => {
+    const handlers = createHandlers();
+    const longOutput = `line1\n${"x".repeat(130)}\n`;
+
+    const { result } = renderHook(() => useInspectorPanelPropsBundle({
+      showInspector: true,
+      selectedModel: "test-model",
+      inspectorTab: "summary" as const,
+      inspectorDensity: "cozy" as const,
+      inspectorTabs: INSPECTOR_TABS,
+      inspectorTabRefs: makeRef({
+        summary: null,
+        rag: null,
+        scripts: null,
+        sysmon: null,
+      }),
+      activeTab: { title: "Shell 1", cwd: "/repo" },
+      activeTabGitInfo: null,
+      cmdBlocks: [
+        makeCommandBlock({ id: "a", command: "cmd", output: longOutput, exitCode: 0 }),
+      ],
+      selectedBlockId: null,
+      inspectorAnalyzeCache: null,
+      commandMenuIndex: 0,
+      showInspectorQuickActionsExpanded: false,
+      inspectorMoreButtonRefs: makeRef({} as Record<number, HTMLButtonElement | null>),
+      inspectorMenuFirstActionRefs: makeRef({} as Record<number, HTMLButtonElement | null>),
+      inspectorQuickActionsToggleRef: makeRef(null as HTMLButtonElement | null),
+      inspectorQuickActionsAdvancedRef: makeRef(null as HTMLDivElement | null),
+      scriptLibrary: createScriptLibrary(),
+      handlers,
+    }));
+
+    expect(result.current.recentBlocks).toHaveLength(1);
+    expect(result.current.recentBlocks[0].outputTail).toBe(`${"x".repeat(120)}...`);
+  });
+
   it("선택한 블록 ID가 없는 경우 실패 블록은 최신 항목으로 안전하게 폴백한다", () => {
     const handlers = createHandlers();
     const { result } = renderHook(() => useInspectorPanelPropsBundle({
