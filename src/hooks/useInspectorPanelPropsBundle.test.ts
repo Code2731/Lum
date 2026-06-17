@@ -766,4 +766,96 @@ describe("useInspectorPanelPropsBundle", () => {
     expect(result.current.noActivity).toBe(true);
     expect(result.current.commandMenuIndex).toBe(2);
   });
+
+  it("inspectorFailedBlocks의 outputTail은 160자 제한을 넘으면 끝이 생략된다", () => {
+    const handlers = createHandlers();
+    const longOutput = `head\n${"x".repeat(170)}\n`;
+
+    const { result } = renderHook(() => useInspectorPanelPropsBundle({
+      showInspector: true,
+      selectedModel: "test-model",
+      inspectorTab: "summary" as const,
+      inspectorDensity: "cozy" as const,
+      inspectorTabs: INSPECTOR_TABS,
+      inspectorTabRefs: makeRef({
+        summary: null,
+        rag: null,
+        scripts: null,
+        sysmon: null,
+      }),
+      activeTab: { title: "Shell 1", cwd: "/repo" },
+      activeTabGitInfo: null,
+      cmdBlocks: [
+        makeCommandBlock({ id: "failed", command: "bad cmd", output: longOutput, exitCode: 1 }),
+      ],
+      selectedBlockId: null,
+      inspectorAnalyzeCache: null,
+      commandMenuIndex: 0,
+      showInspectorQuickActionsExpanded: false,
+      inspectorMoreButtonRefs: makeRef({} as Record<number, HTMLButtonElement | null>),
+      inspectorMenuFirstActionRefs: makeRef({} as Record<number, HTMLButtonElement | null>),
+      inspectorQuickActionsToggleRef: makeRef(null as HTMLButtonElement | null),
+      inspectorQuickActionsAdvancedRef: makeRef(null as HTMLDivElement | null),
+      scriptLibrary: createScriptLibrary(),
+      handlers,
+    }));
+
+    expect(result.current.failedBlocks).toHaveLength(1);
+    expect(result.current.failedBlocks[0].outputTail).toBe(`${"x".repeat(160)}...`);
+  });
+
+  it("noActivity와 selectedBlockId, 분석 캐시 상태를 오갈 때 실패 블록이 없으면 focus는 null로 유지된다", () => {
+    const handlers = createHandlers();
+    const { result, rerender } = renderHook(
+      ([inspectorAnalyzeCache, selectedBlockId]) => useInspectorPanelPropsBundle({
+        showInspector: true,
+        selectedModel: "test-model",
+        inspectorTab: "summary" as const,
+        inspectorDensity: "cozy" as const,
+        inspectorTabs: INSPECTOR_TABS,
+        inspectorTabRefs: makeRef({
+          summary: null,
+          rag: null,
+          scripts: null,
+          sysmon: null,
+        }),
+        activeTab: { title: "Shell 1", cwd: "/repo" },
+        activeTabGitInfo: null,
+        cmdBlocks: [],
+        selectedBlockId,
+        inspectorAnalyzeCache,
+        commandMenuIndex: 0,
+        showInspectorQuickActionsExpanded: false,
+        inspectorMoreButtonRefs: makeRef({} as Record<number, HTMLButtonElement | null>),
+        inspectorMenuFirstActionRefs: makeRef({} as Record<number, HTMLButtonElement | null>),
+        inspectorQuickActionsToggleRef: makeRef(null as HTMLButtonElement | null),
+        inspectorQuickActionsAdvancedRef: makeRef(null as HTMLDivElement | null),
+        scriptLibrary: createScriptLibrary(),
+        handlers,
+      }),
+      {
+        initialProps: [
+          {
+            blockId: "stream",
+            command: "stream cmd",
+            requestedAt: 10,
+            status: "done",
+            result: "ok",
+            rawResult: "ok",
+            suggestedCommands: ["echo ok"],
+          } as const,
+          "some-block",
+        ] as const,
+      },
+    );
+
+    expect(result.current.noActivity).toBe(false);
+    expect(result.current.analyzeCache).toEqual(expect.objectContaining({ status: "done" }));
+    expect(result.current.focusedFailedBlock).toBeNull();
+
+    rerender([null, "some-block"]);
+    expect(result.current.noActivity).toBe(true);
+    expect(result.current.analyzeCache).toBeNull();
+    expect(result.current.focusedFailedBlock).toBeNull();
+  });
 });
