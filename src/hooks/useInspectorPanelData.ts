@@ -42,6 +42,11 @@ function extractOutputTail(output: string, maxChars = 160): string {
   return `${tail.slice(0, maxChars)}...`;
 }
 
+function normalizeOrFallback(value: string | undefined | null, fallback: string): string {
+  const trimmed = value?.trim() ?? "";
+  return trimmed.length > 0 ? trimmed : fallback;
+}
+
 export function useInspectorPanelData({
   showInspector,
   selectedModel,
@@ -107,8 +112,8 @@ export function useInspectorPanelData({
     inspectorTabs,
     inspectorTabRefs,
 
-    activeTabTitle: activeTab?.title ?? "탭 없음",
-    activeTabPath: activeTab?.cwd ?? "cwd 없음",
+    activeTabTitle: normalizeOrFallback(activeTab?.title, "탭 없음"),
+    activeTabPath: normalizeOrFallback(activeTab?.cwd, "cwd 없음"),
     activeTabBranch: activeTabGitInfo?.branch,
     activeTabChanged: activeTabGitInfo?.changed,
 

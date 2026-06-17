@@ -202,6 +202,49 @@ describe("useInspectorPanelPropsBundle", () => {
     expect(result.current.activeTabChanged).toBeUndefined();
   });
 
+  it("activeTab의 제목/경로가 비어있으면 fallback 값이 적용된다", () => {
+    const handlers = createHandlers();
+    const { result, rerender } = renderHook(
+      (activeTab: { title: string; cwd: string } | null) => useInspectorPanelPropsBundle({
+        showInspector: true,
+        selectedModel: "test-model",
+        inspectorTab: "summary" as const,
+        inspectorDensity: "cozy" as const,
+        inspectorTabs: INSPECTOR_TABS,
+        inspectorTabRefs: makeRef({
+          summary: null,
+          rag: null,
+          scripts: null,
+          sysmon: null,
+        }),
+        activeTab,
+        activeTabGitInfo: null,
+        cmdBlocks: [makeCommandBlock({ id: "a", command: "ok", output: "out", exitCode: 0 })],
+        selectedBlockId: "a",
+        inspectorAnalyzeCache: null,
+        commandMenuIndex: null,
+        showInspectorQuickActionsExpanded: false,
+        inspectorMoreButtonRefs: makeRef({} as Record<number, HTMLButtonElement | null>),
+        inspectorMenuFirstActionRefs: makeRef({} as Record<number, HTMLButtonElement | null>),
+        inspectorQuickActionsToggleRef: makeRef(null as HTMLButtonElement | null),
+        inspectorQuickActionsAdvancedRef: makeRef(null as HTMLDivElement | null),
+        scriptLibrary: createScriptLibrary(),
+        handlers,
+      }),
+      {
+        initialProps: { title: "   ", cwd: "   " } as const,
+      },
+    );
+
+    expect(result.current.activeTabTitle).toBe("탭 없음");
+    expect(result.current.activeTabPath).toBe("cwd 없음");
+
+    rerender({ title: "  shell-a  ", cwd: "  /repo  " });
+
+    expect(result.current.activeTabTitle).toBe("shell-a");
+    expect(result.current.activeTabPath).toBe("/repo");
+  });
+
   it("noActivity+quickActions 조합 전환 후에도 메뉴 핸들러 레퍼런스가 유지된다", () => {
     const handlers = createHandlers();
     const cmdBlocks: CommandBlock[] = [
