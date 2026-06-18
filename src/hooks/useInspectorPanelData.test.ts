@@ -213,7 +213,7 @@ describe("useInspectorPanelData", () => {
     { label: "개행", selectedBlockId: "fail-2\n" },
     { label: "탭", selectedBlockId: "fail-2\t" },
     { label: "BOM 문자", selectedBlockId: "\uFEFFfail-2" },
-  ])("$label이 포함된 선택 ID는 정확히 일치하지 않아 최근 실패 블록으로 폴백한다", ({ selectedBlockId }) => {
+  ])("$label이 포함된 선택 ID는 정규화 후 해당 실패 블록을 정확히 선택한다", ({ selectedBlockId }) => {
     const { result } = renderHook(() => useInspectorPanelData({
       showInspector: true,
       selectedModel: "test-model",

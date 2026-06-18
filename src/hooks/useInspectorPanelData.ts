@@ -4,6 +4,7 @@ import type {
   InspectorPanelDataProps,
   ScriptLibraryLike,
 } from "../components/InspectorPanel/types";
+import { normalizeBlockId } from "../utils";
 
 interface TabMeta {
   title: string;
@@ -99,8 +100,9 @@ export function useInspectorPanelData({
 
   const focusedFailedBlock = useMemo(() => {
     if (inspectorFailedBlocks.length === 0) return null;
-    if (selectedBlockId) {
-      const selected = inspectorFailedBlocks.find((b) => b.id === selectedBlockId);
+    const normalizedSelectedBlockId = normalizeBlockId(selectedBlockId);
+    if (normalizedSelectedBlockId) {
+      const selected = inspectorFailedBlocks.find((b) => b.id === normalizedSelectedBlockId);
       if (selected) return selected;
     }
     return inspectorFailedBlocks[0];
