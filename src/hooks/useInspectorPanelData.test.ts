@@ -208,6 +208,44 @@ describe("useInspectorPanelData", () => {
     });
   });
 
+  it.each([
+    { label: "앞뒤 공백", selectedBlockId: " fail-2 " },
+    { label: "개행", selectedBlockId: "fail-2\n" },
+    { label: "탭", selectedBlockId: "fail-2\t" },
+    { label: "BOM 문자", selectedBlockId: "\uFEFFfail-2" },
+  ])("$label이 포함된 선택 ID는 정확히 일치하지 않아 최근 실패 블록으로 폴백한다", ({ selectedBlockId }) => {
+    const { result } = renderHook(() => useInspectorPanelData({
+      showInspector: true,
+      selectedModel: "test-model",
+      inspectorTab: "summary",
+      inspectorDensity: "cozy",
+      inspectorTabs: INSPECTOR_TABS,
+      inspectorTabRefs: makeRef({ summary: null, rag: null, scripts: null, sysmon: null }),
+      activeTab: { title: "Shell 1", cwd: "/repo" },
+      activeTabGitInfo: { branch: "feat/x", changed: 2 },
+      cmdBlocks: [
+        buildBlock({ id: "fail-1", command: "bad1", output: "fail tail", exitCode: 1 }),
+        buildBlock({ id: "fail-2", command: "bad2", output: "fail2", exitCode: 2 }),
+      ],
+      selectedBlockId,
+      inspectorAnalyzeCache: null,
+      inspectorCommandMenuIndex: null,
+      quickActionsExpanded: false,
+      inspectorMoreButtonRefs: makeRef({}),
+      inspectorMenuFirstActionRefs: makeRef({}),
+      inspectorQuickActionsToggleRef: makeRef(null),
+      inspectorQuickActionsAdvancedRef: makeRef(null),
+      scriptLibrary: DEFAULT_SCRIPT_LIBRARY,
+    }));
+
+    expect(result.current.focusedFailedBlock).toEqual({
+      id: "fail-2",
+      command: "bad2",
+      exitCode: 2,
+      outputTail: "fail2",
+    });
+  });
+
   it("최근 블록 duration은 endedAt이 없거나 음수면 0으로 안정적으로 처리한다", () => {
     const { result } = renderHook(() => useInspectorPanelData({
       showInspector: true,
