@@ -71,6 +71,12 @@ function summarizeAssistantResult(content: string, maxChars = 520): string {
   return `${normalized.slice(0, maxChars)}...`;
 }
 
+const normalizeBlockId = (value?: string | null): string | null => {
+  if (!value) return null;
+  const normalized = value.replace(/^\uFEFF+/, "").trim();
+  return normalized === "" ? null : normalized;
+};
+
 export function useInspectorPanelCommands({
   cmdBlocks,
   selectedBlockId,
@@ -96,13 +102,14 @@ export function useInspectorPanelCommands({
   notifCenter,
 }: UseInspectorPanelCommandsOptions): UseInspectorPanelCommandsResult {
   const resolveInspectorFailedBlock = useCallback((blockId?: string) => {
+    const resolvedBlockId = normalizeBlockId(blockId ?? selectedBlockId);
     const failed = cmdBlocks.filter(
       (b) => b.exitCode !== null && b.exitCode !== 0 && b.command.trim() !== "",
     );
     if (failed.length === 0) return null;
-    const selected = blockId
-      ? failed.find((b) => b.id === blockId)
-      : (selectedBlockId ? failed.find((b) => b.id === selectedBlockId) : null);
+    const selected = resolvedBlockId
+      ? failed.find((b) => b.id === resolvedBlockId)
+      : null;
     return selected ?? failed[failed.length - 1];
   }, [cmdBlocks, selectedBlockId]);
 
@@ -438,7 +445,7 @@ export function useInspectorPanelCommands({
 
   const selectInspectorBlock = useCallback((blockId: string) => {
     setViewMode("terminal");
-    setSelectedBlockId(blockId);
+    setSelectedBlockId(normalizeBlockId(blockId));
     setDismissedBlockId(null);
   }, [setSelectedBlockId, setDismissedBlockId, setViewMode]);
 

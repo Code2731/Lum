@@ -320,6 +320,34 @@ describe("useInspectorPanelCommands", () => {
   });
 
   it.each([
+    { label: "개행", selectedBlockId: "fail-2\n" },
+    { label: "공백", selectedBlockId: " fail-2 " },
+    { label: "탭", selectedBlockId: "fail-2\t" },
+    { label: "BOM", selectedBlockId: "\uFEFFfail-2" },
+  ])("선택 블록이 $label이 섞인 ID면 정규화해 실패 블록 분석 프롬프트를 생성한다", ({ selectedBlockId }) => {
+    const { result, spies } = setupInspectorCommands({
+      cmdBlocks: [
+        buildBlock("ok-1", "pwd", "ok", 0),
+        buildBlock("fail-1", "cat missing", "err", 1),
+        buildBlock("fail-2", "npm test", "fail", 2),
+      ],
+      selectedBlockId,
+    });
+
+    act(() => {
+      result.current.analyzeInspectorFailedBlock();
+    });
+
+    const arg = spies.setInspectorAnalyzeCache.mock.calls[0]?.[0];
+    expect(arg).toMatchObject({
+      blockId: "fail-2",
+      command: "npm test",
+      status: "streaming",
+    });
+    expect(spies.handleAskAI).toHaveBeenCalledWith(expect.stringContaining("Command: npm test"));
+  });
+
+  it.each([
     { label: "개행", blockId: "fail-2\n" },
     { label: "공백", blockId: " fail-2 " },
     { label: "탭", blockId: "fail-2\t" },
@@ -393,6 +421,29 @@ describe("useInspectorPanelCommands", () => {
     expect(spies.notifCenter.addNotification).toHaveBeenCalledWith(expect.objectContaining({
       title: "복사할 커맨드 없음",
     }));
+  });
+
+  it.each([
+    { label: "개행", blockId: " fail-2\n" },
+    { label: "공백", blockId: "\t fail-2 \t" },
+    { label: "탭", blockId: "fail-2\t" },
+    { label: "BOM", blockId: "\uFEFFfail-2" },
+  ])("선택 블록은 $label이 섞여도 정규화되어 선택 상태에 반영된다", ({ blockId }) => {
+    const { result, spies } = setupInspectorCommands({
+      cmdBlocks: [
+        buildBlock("fail-1", "cat missing", "err", 1),
+        buildBlock("fail-2", "npm test", "fail", 2),
+      ],
+      selectedBlockId: null,
+    });
+
+    act(() => {
+      result.current.selectInspectorBlock(blockId);
+    });
+
+    expect(spies.setSelectedBlockId).toHaveBeenCalledWith("fail-2");
+    expect(spies.setViewMode).toHaveBeenCalledWith("terminal");
+    expect(spies.setDismissedBlockId).toHaveBeenCalledWith(null);
   });
 
   it("applyInspectorAnalyzeCommand는 안전도 Blocked일 때 PTY 실행하지 않는다", async () => {
