@@ -279,7 +279,12 @@ describe("Inspector panel data + props pipeline", () => {
     expect(result.current.onCompactMenuKeyDown).toBe(handlers.onCompactMenuKeyDown);
   });
 
-  it("선택 블록 ID에 개행이 포함되면 파이프라인도 최신 실패 블록으로 폴백한다", () => {
+  it.each([
+    { label: "개행", selectedBlockId: "fail-2\n" },
+    { label: "앞뒤 공백", selectedBlockId: " fail-2 " },
+    { label: "탭", selectedBlockId: "fail-2\t" },
+    { label: "BOM", selectedBlockId: "\uFEFFfail-2" },
+  ])("선택 블록 ID에 $label이 포함되면 파이프라인도 최신 실패 블록으로 폴백한다", ({ selectedBlockId }) => {
     const { result } = renderHook(() => {
       const data = useInspectorPanelData({
         showInspector: true,
@@ -299,7 +304,7 @@ describe("Inspector panel data + props pipeline", () => {
           makeCommandBlock({ id: "fail-1", command: "cat", output: "fail1", exitCode: 1 }),
           makeCommandBlock({ id: "fail-2", command: "ls", output: "fail2", exitCode: 2 }),
         ],
-        selectedBlockId: "fail-2\n",
+        selectedBlockId: selectedBlockId as string,
         inspectorAnalyzeCache: null,
         inspectorCommandMenuIndex: 0,
         quickActionsExpanded: false,

@@ -233,6 +233,49 @@ describe("useInspectorPanelCommands", () => {
     }));
   });
 
+  it.each([
+    { label: "개행", blockId: "fail-2\n" },
+    { label: "공백", blockId: " fail-2 " },
+    { label: "탭", blockId: "fail-2\t" },
+    { label: "BOM", blockId: "\uFEFFfail-2" },
+  ])("실패 로그 복사 시 블록 ID에 $label이 섞여도 최근 실패 블록을 대상으로 복사한다", async ({ blockId }) => {
+    const { result } = setupInspectorCommands({
+      cmdBlocks: [
+        buildBlock("fail-1", "cat missing", "err", 1),
+        buildBlock("fail-2", "npm test", "fail", 2),
+      ],
+      selectedBlockId: "fail-1",
+    });
+
+    await act(async () => {
+      await result.current.copyInspectorFailedOutput(blockId);
+    });
+
+    expect(writeText).toHaveBeenCalledWith(expect.stringContaining("Command: npm test"));
+    expect(writeText).toHaveBeenCalledWith(expect.stringContaining("Exit Code: 2"));
+  });
+
+  it.each([
+    { label: "개행", blockId: "fail-2\n" },
+    { label: "공백", blockId: " fail-2 " },
+    { label: "탭", blockId: "fail-2\t" },
+    { label: "BOM", blockId: "\uFEFFfail-2" },
+  ])("AI 분석 프롬프트 복사 시 블록 ID에 $label이 섞여도 최근 실패 블록을 대상으로 복사한다", async ({ blockId }) => {
+    const { result } = setupInspectorCommands({
+      cmdBlocks: [
+        buildBlock("fail-1", "cat missing", "err", 1),
+        buildBlock("fail-2", "npm test", "fail", 2),
+      ],
+      selectedBlockId: "fail-1",
+    });
+
+    await act(async () => {
+      await result.current.copyInspectorAnalyzePrompt(blockId);
+    });
+
+    expect(writeText).toHaveBeenCalledWith(expect.stringContaining("Command: npm test"));
+  });
+
   it("실패 로그 복사 실패 시 실패 알림을 표시한다", async () => {
     const { result, spies } = setupInspectorCommands({
       cmdBlocks: [
@@ -276,7 +319,12 @@ describe("useInspectorPanelCommands", () => {
     expect(spies.handleAskAI).toHaveBeenCalledWith(expect.stringContaining("Command: cat missing"));
   });
 
-  it("블록 ID가 개행이 섞여도 최근 실패 블록으로 분석 프롬프트를 생성한다", () => {
+  it.each([
+    { label: "개행", blockId: "fail-2\n" },
+    { label: "공백", blockId: " fail-2 " },
+    { label: "탭", blockId: "fail-2\t" },
+    { label: "BOM", blockId: "\uFEFFfail-2" },
+  ])("블록 ID에 $label이 섞여도 최근 실패 블록으로 분석 프롬프트를 생성한다", ({ blockId }) => {
     const { result, spies } = setupInspectorCommands({
       cmdBlocks: [
         buildBlock("ok-1", "pwd", "ok", 0),
@@ -287,7 +335,7 @@ describe("useInspectorPanelCommands", () => {
     });
 
     act(() => {
-      result.current.analyzeInspectorFailedBlock("fail-2\n");
+      result.current.analyzeInspectorFailedBlock(blockId);
     });
 
     const arg = spies.setInspectorAnalyzeCache.mock.calls[0]?.[0];
