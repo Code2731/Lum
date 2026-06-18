@@ -22,6 +22,12 @@ export const parseLoadedKey = (key: string): { base: string; lora: string; isq: 
   return { base: key, lora: "", isq: "" };
 };
 
+export const normalizeBlockId = (value: string | null | undefined): string | null => {
+  if (!value) return null;
+  const normalized = value.replace(/^\uFEFF+/, "").trim();
+  return normalized === "" ? null : normalized;
+};
+
 /** ko-KR 짧은 날짜시간 — workspace/squad/healing 패널 공용. unit으로 초/밀리초 자동 처리. */
 export const fmtShortDate = (ts: number, unit: "s" | "ms" = "s"): string => {
   const ms = unit === "s" ? ts * 1000 : ts;

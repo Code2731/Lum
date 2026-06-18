@@ -1,7 +1,7 @@
 import React, { useState, useRef, useCallback, useEffect, useMemo, lazy, Suspense } from "react";
 import { Group as PanelGroup, Panel, Separator as PanelResizeHandle } from "react-resizable-panels";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { shortPath } from "./utils";
+import { normalizeBlockId, shortPath } from "./utils";
 import { useTerminalBlocks } from "./hooks/useTerminalBlocks";
 import { useAIProcessing } from "./hooks/useAIProcessing";
 import { useHardwareSpecs } from "./hooks/useHardwareSpecs";
@@ -543,15 +543,10 @@ const App: React.FC = () => {
   const [showAiBar, setShowAiBar] = useState(false);
   const [dismissedBlockId, setDismissedBlockId] = useState<string | null>(null);
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
-  const normalizeBlockId = useCallback((value: string | null): string | null => {
-    if (!value) return null;
-    const normalized = value.replace(/^\uFEFF+/, "").trim();
-    return normalized === "" ? null : normalized;
-  }, []);
-  const resolvedSelectedBlockId = useMemo(() => normalizeBlockId(selectedBlockId), [selectedBlockId, normalizeBlockId]);
+  const resolvedSelectedBlockId = useMemo(() => normalizeBlockId(selectedBlockId), [selectedBlockId]);
   const setResolvedSelectedBlockId = useCallback((nextBlockId: string | null) => {
     setSelectedBlockId(normalizeBlockId(nextBlockId));
-  }, [normalizeBlockId]);
+  }, []);
   const [retryComparePending, setRetryComparePending] = useState<RetryComparePending | null>(null);
   const [retryCompareQueue, setRetryCompareQueue] = useState<RetryCompareTask[]>(() => loadRetryCompareRuntimeCache().queue);
   const [retryCompareQueueUndo, setRetryCompareQueueUndo] = useState<RetryCompareTask[] | null>(null);

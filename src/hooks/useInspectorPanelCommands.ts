@@ -1,6 +1,7 @@
 import { useCallback, useEffect, type Dispatch, type KeyboardEvent, type MutableRefObject, type SetStateAction } from "react";
 import type { CommandBlock } from "./useCommandBlocks";
 import type { ChatMessage } from "./useAIChat";
+import { normalizeBlockId } from "../utils";
 import { extractInspectorAnalyzeCommands } from "../utils/inspectorAnalyze";
 import { resolveInspectorMenuHotkey } from "../utils/inspectorMenuHotkeys";
 import type { InspectorAnalyzeCache } from "../components/InspectorPanel/types";
@@ -70,12 +71,6 @@ function summarizeAssistantResult(content: string, maxChars = 520): string {
   if (normalized.length <= maxChars) return normalized;
   return `${normalized.slice(0, maxChars)}...`;
 }
-
-const normalizeBlockId = (value?: string | null): string | null => {
-  if (!value) return null;
-  const normalized = value.replace(/^\uFEFF+/, "").trim();
-  return normalized === "" ? null : normalized;
-};
 
 export function useInspectorPanelCommands({
   cmdBlocks,

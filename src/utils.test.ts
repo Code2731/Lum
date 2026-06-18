@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { shortPath, cosineSimilarity } from "./utils";
+import { normalizeBlockId, shortPath, cosineSimilarity } from "./utils";
 
 describe("Utility Functions", () => {
   describe("shortPath", () => {
@@ -32,6 +32,21 @@ describe("Utility Functions", () => {
       expect(cosineSimilarity([], [])).toBe(0);
       // @ts-ignore
       expect(cosineSimilarity([1], [1, 2])).toBe(0);
+    });
+  });
+
+  describe("normalizeBlockId", () => {
+    it("빈 문자열·공백·null을 null로 정규화한다", () => {
+      expect(normalizeBlockId(null)).toBeNull();
+      expect(normalizeBlockId("")).toBeNull();
+      expect(normalizeBlockId("   ")).toBeNull();
+      expect(normalizeBlockId("\t")).toBeNull();
+    });
+
+    it("개행/탭/BOM을 제거하고 내부 trim 처리한다", () => {
+      expect(normalizeBlockId("\nfail-2\n")).toBe("fail-2");
+      expect(normalizeBlockId(" fail-2\t")).toBe("fail-2");
+      expect(normalizeBlockId("\uFEFFfail-2")).toBe("fail-2");
     });
   });
 });
