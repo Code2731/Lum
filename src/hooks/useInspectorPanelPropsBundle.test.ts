@@ -884,6 +884,66 @@ describe("useInspectorPanelPropsBundle", () => {
     expect(result.current.recentBlocks[0].outputTail.length).toBe(lineCap);
   });
 
+  it.each([
+    { kind: "inspectorFailedBlocks", cap: 160, lengths: [0, 1, 159, 160, 161, 200] },
+    { kind: "recentBlocks", cap: 120, lengths: [0, 1, 119, 120, 121, 200] },
+  ])("$kind는 outputTail 경계치에서 길이 규칙이 일관된다", ({ kind, cap, lengths }) => {
+    const handlers = createHandlers();
+
+    lengths.forEach((length) => {
+      const output = `head\n${"x".repeat(length)}\n`;
+      const { result } = renderHook(() => useInspectorPanelPropsBundle({
+        showInspector: true,
+        selectedModel: "test-model",
+        inspectorTab: "summary" as const,
+        inspectorDensity: "cozy" as const,
+        inspectorTabs: INSPECTOR_TABS,
+        inspectorTabRefs: makeRef({
+          summary: null,
+          rag: null,
+          scripts: null,
+          sysmon: null,
+        }),
+        activeTab: { title: "Shell 1", cwd: "/repo" },
+        activeTabGitInfo: null,
+        cmdBlocks: [
+          makeCommandBlock({
+            id: `tail-${length}`,
+            command: "cmd",
+            output,
+            exitCode: kind === "inspectorFailedBlocks" ? 1 : 0,
+          }),
+        ],
+        selectedBlockId: `tail-${length}`,
+        inspectorAnalyzeCache: null,
+        commandMenuIndex: 0,
+        showInspectorQuickActionsExpanded: false,
+        inspectorMoreButtonRefs: makeRef({} as Record<number, HTMLButtonElement | null>),
+        inspectorMenuFirstActionRefs: makeRef({} as Record<number, HTMLButtonElement | null>),
+        inspectorQuickActionsToggleRef: makeRef(null as HTMLButtonElement | null),
+        inspectorQuickActionsAdvancedRef: makeRef(null as HTMLDivElement | null),
+        scriptLibrary: createScriptLibrary(),
+        handlers,
+      }));
+
+      const expected = length <= cap
+        ? "x".repeat(length)
+        : `${"x".repeat(cap)}...`;
+      const expectedLength = length <= cap ? length : cap + 3;
+
+      if (kind === "inspectorFailedBlocks") {
+        expect(result.current.failedBlocks).toHaveLength(1);
+        expect(result.current.failedBlocks[0].outputTail).toBe(expected);
+        expect(result.current.failedBlocks[0].outputTail.length).toBe(expectedLength);
+        return;
+      }
+
+      expect(result.current.recentBlocks).toHaveLength(1);
+      expect(result.current.recentBlocks[0].outputTail).toBe(expected);
+      expect(result.current.recentBlocks[0].outputTail.length).toBe(expectedLength);
+    });
+  });
+
   it("이모지 포함 출력도 outputTail 제한 길이 규칙을 유지한다", () => {
     const handlers = createHandlers();
     const output = `first\n${"😀".repeat(90)}\n`;
