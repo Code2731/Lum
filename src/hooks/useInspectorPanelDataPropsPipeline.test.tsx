@@ -279,6 +279,64 @@ describe("Inspector panel data + props pipeline", () => {
     expect(result.current.onCompactMenuKeyDown).toBe(handlers.onCompactMenuKeyDown);
   });
 
+  it("선택 블록 ID에 개행이 포함되면 파이프라인도 최신 실패 블록으로 폴백한다", () => {
+    const { result } = renderHook(() => {
+      const data = useInspectorPanelData({
+        showInspector: true,
+        selectedModel: "test-model",
+        inspectorTab: "summary" as const,
+        inspectorDensity: "cozy" as const,
+        inspectorTabs: INSPECTOR_TABS,
+        inspectorTabRefs: makeRef({
+          summary: null,
+          rag: null,
+          scripts: null,
+          sysmon: null,
+        }),
+        activeTab: { title: "Shell 1", cwd: "/repo" },
+        activeTabGitInfo: null,
+        cmdBlocks: [
+          makeCommandBlock({ id: "fail-1", command: "cat", output: "fail1", exitCode: 1 }),
+          makeCommandBlock({ id: "fail-2", command: "ls", output: "fail2", exitCode: 2 }),
+        ],
+        selectedBlockId: "fail-2\n",
+        inspectorAnalyzeCache: null,
+        inspectorCommandMenuIndex: 0,
+        quickActionsExpanded: false,
+        inspectorMoreButtonRefs: makeRef({} as Record<number, HTMLButtonElement | null>),
+        inspectorMenuFirstActionRefs: makeRef({} as Record<number, HTMLButtonElement | null>),
+        inspectorQuickActionsToggleRef: makeRef(null as HTMLButtonElement | null),
+        inspectorQuickActionsAdvancedRef: makeRef(null as HTMLDivElement | null),
+        scriptLibrary: {
+          scripts: [],
+          loading: false,
+          onLoad: vi.fn(async () => undefined),
+          onRun: vi.fn(),
+          onDelete: vi.fn(async () => undefined),
+          onSave: vi.fn(async () => ({
+            id: "script-1",
+            name: "test",
+            description: "test",
+            commands: [],
+            created_at: 1,
+          })),
+        },
+      });
+
+      const handlers = createActionHandlers();
+      return useInspectorPanelProps({
+        ...data,
+        ...handlers,
+      });
+    });
+
+    expect(result.current.focusedFailedBlock).toMatchObject({
+      id: "fail-2",
+      exitCode: 2,
+      outputTail: "fail2",
+    });
+  });
+
   it("inspectorCommandMenuIndex 변경은 useInspectorPanelProps에 그대로 반영된다", () => {
     const cmdBlocks = [
       makeCommandBlock({ id: "a", command: "first fail", output: "f1", exitCode: 1 }),
