@@ -773,6 +773,45 @@ describe("useInspectorPanelPropsBundle", () => {
     });
   });
 
+  it("선택 블록 ID의 대소문자가 다르면 정확히 일치하지 않아 최신 실패 블록으로 폴백한다", () => {
+    const handlers = createHandlers();
+    const { result } = renderHook(() => useInspectorPanelPropsBundle({
+      showInspector: true,
+      selectedModel: "test-model",
+      inspectorTab: "summary" as const,
+      inspectorDensity: "cozy" as const,
+      inspectorTabs: INSPECTOR_TABS,
+      inspectorTabRefs: makeRef({
+        summary: null,
+        rag: null,
+        scripts: null,
+        sysmon: null,
+      }),
+      activeTab: { title: "Shell 1", cwd: "/repo" },
+      activeTabGitInfo: null,
+      cmdBlocks: [
+        makeCommandBlock({ id: "failed-first", command: "first fail", output: "f1", exitCode: 1 }),
+        makeCommandBlock({ id: "failed-latest", command: "latest fail", output: "f2", exitCode: 1 }),
+      ],
+      selectedBlockId: "FAILED-LATEST",
+      inspectorAnalyzeCache: null,
+      commandMenuIndex: 0,
+      showInspectorQuickActionsExpanded: false,
+      inspectorMoreButtonRefs: makeRef({} as Record<number, HTMLButtonElement | null>),
+      inspectorMenuFirstActionRefs: makeRef({} as Record<number, HTMLButtonElement | null>),
+      inspectorQuickActionsToggleRef: makeRef(null as HTMLButtonElement | null),
+      inspectorQuickActionsAdvancedRef: makeRef(null as HTMLDivElement | null),
+      scriptLibrary: createScriptLibrary(),
+      handlers,
+    }));
+
+    expect(result.current.focusedFailedBlock).toMatchObject({
+      id: "failed-latest",
+      exitCode: 1,
+      outputTail: "f2",
+    });
+  });
+
   it("선택한 실패 블록이 제거되면 최신 실패 블록으로 안전하게 폴백한다", () => {
     const handlers = createHandlers();
     const base = {
