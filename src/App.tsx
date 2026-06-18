@@ -543,6 +543,15 @@ const App: React.FC = () => {
   const [showAiBar, setShowAiBar] = useState(false);
   const [dismissedBlockId, setDismissedBlockId] = useState<string | null>(null);
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
+  const normalizeBlockId = useCallback((value: string | null): string | null => {
+    if (!value) return null;
+    const normalized = value.replace(/^\uFEFF+/, "").trim();
+    return normalized === "" ? null : normalized;
+  }, []);
+  const resolvedSelectedBlockId = useMemo(() => normalizeBlockId(selectedBlockId), [selectedBlockId, normalizeBlockId]);
+  const setResolvedSelectedBlockId = useCallback((nextBlockId: string | null) => {
+    setSelectedBlockId(normalizeBlockId(nextBlockId));
+  }, [normalizeBlockId]);
   const [retryComparePending, setRetryComparePending] = useState<RetryComparePending | null>(null);
   const [retryCompareQueue, setRetryCompareQueue] = useState<RetryCompareTask[]>(() => loadRetryCompareRuntimeCache().queue);
   const [retryCompareQueueUndo, setRetryCompareQueueUndo] = useState<RetryCompareTask[] | null>(null);
@@ -668,11 +677,11 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (!selectedBlockId) return;
-    if (!cmdBlocks.some((b) => b.id === selectedBlockId)) {
-      setSelectedBlockId(null);
+    if (!resolvedSelectedBlockId) return;
+    if (!cmdBlocks.some((b) => b.id === resolvedSelectedBlockId)) {
+      setResolvedSelectedBlockId(null);
     }
-  }, [cmdBlocks, selectedBlockId]);
+  }, [cmdBlocks, resolvedSelectedBlockId, setResolvedSelectedBlockId]);
   useEffect(() => {
     saveRetryCompareCache(retryCompareByBlock);
   }, [retryCompareByBlock]);
@@ -816,17 +825,17 @@ const App: React.FC = () => {
   // 최근 커맨드 블록 네비게이션 (Warp 블록 점프 감각)
   const navigateCommandBlock = useCallback((delta: -1 | 1) => {
     if (cmdBlocks.length === 0) return;
-    const currentId = selectedBlockId ?? cmdBlocks[cmdBlocks.length - 1]?.id ?? null;
+    const currentId = resolvedSelectedBlockId ?? cmdBlocks[cmdBlocks.length - 1]?.id ?? null;
     if (!currentId) return;
     const idx = cmdBlocks.findIndex((b) => b.id === currentId);
     if (idx < 0) {
-      setSelectedBlockId(cmdBlocks[cmdBlocks.length - 1]?.id ?? null);
+      setResolvedSelectedBlockId(cmdBlocks[cmdBlocks.length - 1]?.id ?? null);
       return;
     }
     const nextIdx = Math.max(0, Math.min(cmdBlocks.length - 1, idx + delta));
-    setSelectedBlockId(cmdBlocks[nextIdx]?.id ?? null);
+    setResolvedSelectedBlockId(cmdBlocks[nextIdx]?.id ?? null);
     setDismissedBlockId(null);
-  }, [cmdBlocks, selectedBlockId]);
+  }, [cmdBlocks, resolvedSelectedBlockId, setResolvedSelectedBlockId]);
 
   const focusFailedBlock = useCallback(() => {
     const failed = cmdBlocks
@@ -834,26 +843,26 @@ const App: React.FC = () => {
       .filter(({ b }) => b.exitCode !== null && b.exitCode !== 0);
     if (failed.length === 0) return;
 
-    if (!selectedBlockId) {
+    if (!resolvedSelectedBlockId) {
       setViewMode("terminal");
-      setSelectedBlockId(failed[failed.length - 1].b.id);
+      setResolvedSelectedBlockId(failed[failed.length - 1].b.id);
       setDismissedBlockId(null);
       return;
     }
 
-    const currentPos = failed.findIndex(({ b }) => b.id === selectedBlockId);
+    const currentPos = failed.findIndex(({ b }) => b.id === resolvedSelectedBlockId);
     if (currentPos < 0) {
       setViewMode("terminal");
-      setSelectedBlockId(failed[failed.length - 1].b.id);
+      setResolvedSelectedBlockId(failed[failed.length - 1].b.id);
       setDismissedBlockId(null);
       return;
     }
 
     const nextPos = (currentPos - 1 + failed.length) % failed.length;
     setViewMode("terminal");
-    setSelectedBlockId(failed[nextPos].b.id);
+    setResolvedSelectedBlockId(failed[nextPos].b.id);
     setDismissedBlockId(null);
-  }, [cmdBlocks, selectedBlockId]);
+  }, [cmdBlocks, resolvedSelectedBlockId, setResolvedSelectedBlockId]);
 
   const verifyCommandSafety = useCallback(
     (command: string) => invoke<{ level: "Safe" | "Warning" | "Dangerous" | "Blocked" }>("verify_command_safety", { command }),
@@ -876,7 +885,7 @@ const App: React.FC = () => {
   } = useInspectorPanelCommands({
     cmdBlocks,
     selectedBlockId,
-    setSelectedBlockId,
+    setResolvedSelectedBlockId,
     setDismissedBlockId,
     setViewMode,
     setAiInput,
@@ -1087,8 +1096,8 @@ const App: React.FC = () => {
     };
   }, [activeTabGitInfo]);
   const lastCmdBlock = cmdBlocks[cmdBlocks.length - 1] ?? null;
-  const focusedCmdBlock = selectedBlockId
-    ? (cmdBlocks.find((b) => b.id === selectedBlockId) ?? null)
+  const focusedCmdBlock = resolvedSelectedBlockId
+    ? (cmdBlocks.find((b) => b.id === resolvedSelectedBlockId) ?? null)
     : lastCmdBlock;
   const focusedCmdIndex = focusedCmdBlock ? cmdBlocks.findIndex((b) => b.id === focusedCmdBlock.id) : -1;
   const showBlockBar = focusedCmdBlock !== null && focusedCmdBlock.id !== dismissedBlockId && !healingError;
@@ -1129,7 +1138,7 @@ const App: React.FC = () => {
     activeTab: activeInspectorTab,
     activeTabGitInfo: activeInspectorGitInfo,
     cmdBlocks,
-    selectedBlockId,
+    selectedBlockId: resolvedSelectedBlockId,
     inspectorAnalyzeCache,
     commandMenuIndex: inspectorCommandMenuIndex,
     showInspectorQuickActionsExpanded,
