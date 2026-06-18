@@ -734,6 +734,69 @@ describe("useInspectorPanelPropsBundle", () => {
     });
   });
 
+  it("선택한 실패 블록이 제거되면 최신 실패 블록으로 안전하게 폴백한다", () => {
+    const handlers = createHandlers();
+    const base = {
+      showInspector: true,
+      selectedModel: "test-model",
+      inspectorTab: "summary" as const,
+      inspectorDensity: "cozy" as const,
+      inspectorTabs: INSPECTOR_TABS,
+      inspectorTabRefs: makeRef({
+        summary: null,
+        rag: null,
+        scripts: null,
+        sysmon: null,
+      }),
+      activeTab: { title: "Shell 1", cwd: "/repo" },
+      activeTabGitInfo: null,
+      selectedBlockId: "failed-latest",
+      inspectorAnalyzeCache: null,
+      commandMenuIndex: 0,
+      showInspectorQuickActionsExpanded: false,
+      inspectorMoreButtonRefs: makeRef({} as Record<number, HTMLButtonElement | null>),
+      inspectorMenuFirstActionRefs: makeRef({} as Record<number, HTMLButtonElement | null>),
+      inspectorQuickActionsToggleRef: makeRef(null as HTMLButtonElement | null),
+      inspectorQuickActionsAdvancedRef: makeRef(null as HTMLDivElement | null),
+      scriptLibrary: createScriptLibrary(),
+      handlers,
+    };
+
+    const { result, rerender } = renderHook(
+      (cmdBlocks: CommandBlock[]) => useInspectorPanelPropsBundle({
+        ...base,
+        cmdBlocks,
+      }),
+      {
+        initialProps: [
+          makeCommandBlock({ id: "failed-first", command: "first fail", output: "f1", exitCode: 1 }),
+          makeCommandBlock({ id: "failed-latest", command: "second fail", output: "f2", exitCode: 1 }),
+        ] as const as CommandBlock[],
+      },
+    );
+
+    expect(result.current.focusedFailedBlock).toMatchObject({
+      id: "failed-latest",
+      exitCode: 1,
+      outputTail: "f2",
+    });
+
+    rerender([
+      makeCommandBlock({ id: "failed-first", command: "first fail", output: "f1", exitCode: 1 }),
+      makeCommandBlock({ id: "success", command: "ok", output: "ok", exitCode: 0 }),
+    ] as const as CommandBlock[]);
+
+    expect(result.current.focusedFailedBlock).toMatchObject({
+      id: "failed-first",
+      exitCode: 1,
+      outputTail: "f1",
+    });
+
+    rerender([] as const as CommandBlock[]);
+
+    expect(result.current.focusedFailedBlock).toBeNull();
+  });
+
   it("성공 블록 ID를 선택하고 실패 블록이 없으면 focusedFailedBlock이 null이다", () => {
     const handlers = createHandlers();
     const { result } = renderHook(() => useInspectorPanelPropsBundle({
@@ -766,6 +829,59 @@ describe("useInspectorPanelPropsBundle", () => {
     }));
 
     expect(result.current.focusedFailedBlock).toBeNull();
+  });
+
+  it.each([
+    { kind: "inspectorFailedBlocks", tailChars: "x".repeat(160), outputTail: "x".repeat(160), lineCap: 160 },
+    { kind: "recentBlocks", tailChars: "x".repeat(120), outputTail: "x".repeat(120), lineCap: 120 },
+  ])("$kind는 outputTail 길이가 cap일 때 ellipsis를 붙이지 않는다", ({ kind, outputTail, lineCap, tailChars }) => {
+    const handlers = createHandlers();
+    const output = `line1\n${tailChars}\n`;
+
+    const { result } = renderHook(() => useInspectorPanelPropsBundle({
+      showInspector: true,
+      selectedModel: "test-model",
+      inspectorTab: "summary" as const,
+      inspectorDensity: "cozy" as const,
+      inspectorTabs: INSPECTOR_TABS,
+      inspectorTabRefs: makeRef({
+        summary: null,
+        rag: null,
+        scripts: null,
+        sysmon: null,
+      }),
+      activeTab: { title: "Shell 1", cwd: "/repo" },
+      activeTabGitInfo: null,
+      cmdBlocks: [
+        makeCommandBlock({
+          id: "tail",
+          command: "cmd",
+          output,
+          exitCode: kind === "inspectorFailedBlocks" ? 1 : 0,
+        }),
+      ],
+      selectedBlockId: "tail",
+      inspectorAnalyzeCache: null,
+      commandMenuIndex: 0,
+      showInspectorQuickActionsExpanded: false,
+      inspectorMoreButtonRefs: makeRef({} as Record<number, HTMLButtonElement | null>),
+      inspectorMenuFirstActionRefs: makeRef({} as Record<number, HTMLButtonElement | null>),
+      inspectorQuickActionsToggleRef: makeRef(null as HTMLButtonElement | null),
+      inspectorQuickActionsAdvancedRef: makeRef(null as HTMLDivElement | null),
+      scriptLibrary: createScriptLibrary(),
+      handlers,
+    }));
+
+    if (kind === "inspectorFailedBlocks") {
+      expect(result.current.failedBlocks).toHaveLength(1);
+      expect(result.current.failedBlocks[0].outputTail).toBe(outputTail);
+      expect(result.current.failedBlocks[0].outputTail.length).toBe(lineCap);
+      return;
+    }
+
+    expect(result.current.recentBlocks).toHaveLength(1);
+    expect(result.current.recentBlocks[0].outputTail).toBe(outputTail);
+    expect(result.current.recentBlocks[0].outputTail.length).toBe(lineCap);
   });
 
   it("이모지 포함 출력도 outputTail 제한 길이 규칙을 유지한다", () => {
