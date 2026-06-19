@@ -1605,6 +1605,38 @@ describe("App (LUM 터미널)", () => {
     });
   });
 
+  it("실패 블록 id가 BOM-only면 AI ANALYZE가 여전히 STREAMING으로 진입해야 한다", async () => {
+    setMockCommandBlocks([{
+      id: "\uFEFF",
+      command: "pnpm lint",
+      output: "FAIL: malformed id target",
+      exitCode: 2,
+      startedAt: 1,
+      endedAt: 10,
+    }]);
+    const { container } = render(<App />);
+
+    const inspectorButton = screen.getByLabelText("Inspector");
+    fireEvent.click(inspectorButton);
+
+    await waitFor(() => {
+      expect(screen.getByRole("tablist", { name: "Inspector 탭" })).toBeInTheDocument();
+    });
+
+    let summaryPanel = container.querySelector("#inspector-tabpanel-summary");
+    await waitFor(() => {
+      summaryPanel = container.querySelector("#inspector-tabpanel-summary");
+      expect(summaryPanel).not.toBeNull();
+    });
+
+    const analyzeButton = within(summaryPanel as HTMLElement).getByRole("button", { name: "AI ANALYZE" });
+    fireEvent.click(analyzeButton);
+
+    await waitFor(() => {
+      expect(within(summaryPanel as HTMLElement).getByText("STREAMING")).toBeInTheDocument();
+    });
+  });
+
   it("AI ANALYZE 결과가 완료되면 Inspector에서 추천 커맨드가 표시된다", async () => {
     const tokenHandlers: Array<(event: { payload: string }) => void> = [];
     const mockedListen = vi.mocked(listen);
