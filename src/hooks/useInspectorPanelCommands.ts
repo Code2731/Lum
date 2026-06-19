@@ -1,4 +1,4 @@
-import { useCallback, useEffect, type Dispatch, type KeyboardEvent, type MutableRefObject, type SetStateAction } from "react";
+import { useCallback, useEffect, useMemo, type Dispatch, type KeyboardEvent, type MutableRefObject, type SetStateAction } from "react";
 import type { CommandBlock } from "./useCommandBlocks";
 import type { ChatMessage } from "./useAIChat";
 import { normalizeBlockId } from "../utils";
@@ -96,8 +96,10 @@ export function useInspectorPanelCommands({
   verifyCommandSafety,
   notifCenter,
 }: UseInspectorPanelCommandsOptions): UseInspectorPanelCommandsResult {
+  const normalizedSelectedBlockId = useMemo(() => normalizeBlockId(selectedBlockId), [selectedBlockId]);
+
   const resolveInspectorFailedBlock = useCallback((blockId?: string) => {
-    const resolvedBlockId = normalizeBlockId(blockId ?? selectedBlockId);
+    const resolvedBlockId = normalizeBlockId(blockId) ?? normalizedSelectedBlockId;
     const failed = cmdBlocks.filter(
       (b) => b.exitCode !== null && b.exitCode !== 0 && b.command.trim() !== "",
     );
@@ -106,7 +108,7 @@ export function useInspectorPanelCommands({
       ? failed.find((b) => b.id === resolvedBlockId)
       : null;
     return selected ?? failed[failed.length - 1];
-  }, [cmdBlocks, selectedBlockId]);
+  }, [cmdBlocks, normalizedSelectedBlockId]);
 
   const buildFailedAnalyzePrompt = useCallback((target: CommandBlock, cwd?: string) => {
     const outputSnippet = target.output.trim().slice(-3000);

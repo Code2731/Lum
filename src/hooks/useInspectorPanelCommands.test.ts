@@ -348,6 +348,35 @@ describe("useInspectorPanelCommands", () => {
   });
 
   it.each([
+    { label: "빈 문자열", selectedBlockId: "" },
+    { label: "공백 문자열", selectedBlockId: "   " },
+    { label: "개행만", selectedBlockId: "\n" },
+    { label: "탭만", selectedBlockId: "\t" },
+    { label: "BOM만", selectedBlockId: "\uFEFF" },
+  ])("선택 블록 ID가 $label이면 정규화 후 최근 실패 블록으로 분석 프롬프트를 생성한다", ({ selectedBlockId }) => {
+    const { result, spies } = setupInspectorCommands({
+      cmdBlocks: [
+        buildBlock("ok-1", "pwd", "ok", 0),
+        buildBlock("fail-1", "cat missing", "err", 1),
+        buildBlock("fail-2", "npm test", "fail", 2),
+      ],
+      selectedBlockId,
+    });
+
+    act(() => {
+      result.current.analyzeInspectorFailedBlock();
+    });
+
+    const arg = spies.setInspectorAnalyzeCache.mock.calls[0]?.[0];
+    expect(arg).toMatchObject({
+      blockId: "fail-2",
+      command: "npm test",
+      status: "streaming",
+    });
+    expect(spies.handleAskAI).toHaveBeenCalledWith(expect.stringContaining("Command: npm test"));
+  });
+
+  it.each([
     { label: "개행", blockId: "fail-2\n" },
     { label: "공백", blockId: " fail-2 " },
     { label: "탭", blockId: "fail-2\t" },
