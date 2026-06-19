@@ -378,6 +378,32 @@ describe("useInspectorPanelCommands", () => {
   });
 
   it.each([
+    { label: "빈 문자열", selectedBlockId: "" },
+    { label: "공백 문자열", selectedBlockId: "   " },
+    { label: "개행만", selectedBlockId: "\n" },
+    { label: "탭만", selectedBlockId: "\t" },
+    { label: "BOM만", selectedBlockId: "\uFEFF" },
+    { label: "미존재 일반 값", selectedBlockId: "bad-3" },
+    { label: "미존재 공백", selectedBlockId: " bad-3 " },
+    { label: "미존재 개행", selectedBlockId: "bad-3\n" },
+  ])("선택 블록이 $label일 때 실패 로그 복사 대상은 최근 실패 블록으로 폴백한다", async ({ selectedBlockId }) => {
+    const { result } = setupInspectorCommands({
+      cmdBlocks: [
+        buildBlock("ok-1", "pwd", "ok", 0),
+        buildBlock("fail-1", "cat missing", "err", 1),
+        buildBlock("fail-2", "npm test", "fail", 2),
+      ],
+      selectedBlockId,
+    });
+
+    await act(async () => {
+      await result.current.copyInspectorFailedOutput();
+    });
+
+    expect(writeText).toHaveBeenCalledWith(expect.stringContaining("Command: npm test"));
+  });
+
+  it.each([
     { label: "개행", blockId: "fail-2\n" },
     { label: "공백", blockId: " fail-2 " },
     { label: "탭", blockId: "fail-2\t" },
@@ -481,6 +507,34 @@ describe("useInspectorPanelCommands", () => {
 
     await act(async () => {
       await result.current.copyInspectorFailedOutput(blockId);
+    });
+
+    expect(writeText).toHaveBeenCalledWith(expect.stringContaining("Command: npm test"));
+  });
+
+  it.each([
+    { label: "빈 문자열", selectedBlockId: "" },
+    { label: "공백 문자열", selectedBlockId: "   " },
+    { label: "개행만", selectedBlockId: "\n" },
+    { label: "탭만", selectedBlockId: "\t" },
+    { label: "BOM만", selectedBlockId: "\uFEFF" },
+    { label: "미존재 일반 값", selectedBlockId: "bad-3" },
+    { label: "미존재 공백", selectedBlockId: " bad-3 " },
+    { label: "미존재 개행", selectedBlockId: "bad-3\n" },
+    { label: "미존재 탭", selectedBlockId: "\tbad-3\t" },
+    { label: "미존재 BOM", selectedBlockId: "\uFEFFbad-3" },
+  ])("선택 블록이 $label일 때 분석 프롬프트 복사 대상은 최근 실패 블록으로 폴백한다", async ({ selectedBlockId }) => {
+    const { result } = setupInspectorCommands({
+      cmdBlocks: [
+        buildBlock("ok-1", "pwd", "ok", 0),
+        buildBlock("fail-1", "cat missing", "err", 1),
+        buildBlock("fail-2", "npm test", "fail", 2),
+      ],
+      selectedBlockId,
+    });
+
+    await act(async () => {
+      await result.current.copyInspectorAnalyzePrompt();
     });
 
     expect(writeText).toHaveBeenCalledWith(expect.stringContaining("Command: npm test"));
