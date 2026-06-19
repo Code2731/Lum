@@ -98,15 +98,16 @@ export function useInspectorPanelData({
       .reverse()
   ), [cmdBlocks]);
 
+  const normalizedSelectedBlockId = useMemo(() => normalizeBlockId(selectedBlockId), [selectedBlockId]);
+
   const focusedFailedBlock = useMemo(() => {
     if (inspectorFailedBlocks.length === 0) return null;
-    const normalizedSelectedBlockId = normalizeBlockId(selectedBlockId);
     if (normalizedSelectedBlockId) {
       const selected = inspectorFailedBlocks.find((b) => b.id === normalizedSelectedBlockId);
       if (selected) return selected;
     }
     return inspectorFailedBlocks[0];
-  }, [inspectorFailedBlocks, selectedBlockId]);
+  }, [inspectorFailedBlocks, normalizedSelectedBlockId]);
 
   const recentBlocks = useMemo(() => (
     cmdBlocks
