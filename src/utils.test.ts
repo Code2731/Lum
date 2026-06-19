@@ -41,6 +41,7 @@ describe("Utility Functions", () => {
       expect(normalizeBlockId("")).toBeNull();
       expect(normalizeBlockId("   ")).toBeNull();
       expect(normalizeBlockId("\t")).toBeNull();
+      expect(normalizeBlockId("\uFEFF")).toBeNull();
     });
 
     it("개행/탭/BOM을 제거하고 내부 trim 처리한다", () => {

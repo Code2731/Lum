@@ -23,6 +23,8 @@ export const parseLoadedKey = (key: string): { base: string; lora: string; isq: 
 };
 
 export const normalizeBlockId = (value: string | null | undefined): string | null => {
+  // UI/AI 동작에서는 선택 블록 ID가 공백, 탭, 개행, BOM만 있는 값이면 null로 처리해
+  // "유효한 ID가 아닌 값으로 선택 상태가 고정되는" 버그를 방지한다.
   if (!value) return null;
   const normalized = value.replace(/^\uFEFF+/, "").trim();
   return normalized === "" ? null : normalized;
