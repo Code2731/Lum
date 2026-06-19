@@ -406,6 +406,35 @@ describe("useInspectorPanelCommands", () => {
   });
 
   it.each([
+    { label: "미존재 일반 값", blockId: "bad-3" },
+    { label: "미존재 공백", blockId: " bad-3 " },
+    { label: "미존재 개행", blockId: "bad-3\n" },
+    { label: "미존재 탭", blockId: "\tbad-3\t" },
+    { label: "미존재 BOM", blockId: "\uFEFFbad-3" },
+  ])("명시한 블록 ID가 $label이면 정규화 후 최근 실패 블록으로 분석 프롬프트를 생성한다", ({ blockId }) => {
+    const { result, spies } = setupInspectorCommands({
+      cmdBlocks: [
+        buildBlock("ok-1", "pwd", "ok", 0),
+        buildBlock("fail-1", "cat missing", "err", 1),
+        buildBlock("fail-2", "npm test", "fail", 2),
+      ],
+      selectedBlockId: "fail-1",
+    });
+
+    act(() => {
+      result.current.analyzeInspectorFailedBlock(blockId);
+    });
+
+    const arg = spies.setInspectorAnalyzeCache.mock.calls[0]?.[0];
+    expect(arg).toMatchObject({
+      blockId: "fail-2",
+      command: "npm test",
+      status: "streaming",
+    });
+    expect(spies.handleAskAI).toHaveBeenCalledWith(expect.stringContaining("Command: npm test"));
+  });
+
+  it.each([
     { label: "미존재 일반 값", selectedBlockId: "bad-3" },
     { label: "미존재 공백", selectedBlockId: " bad-3 " },
     { label: "미존재 개행", selectedBlockId: "bad-3\n" },
