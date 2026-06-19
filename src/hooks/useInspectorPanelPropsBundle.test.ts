@@ -556,6 +556,9 @@ describe("useInspectorPanelPropsBundle", () => {
   it.each([
     { selectedBlockId: "", label: "빈 문자열" },
     { selectedBlockId: "   ", label: "공백 문자열" },
+    { selectedBlockId: "\n", label: "개행 문자열" },
+    { selectedBlockId: "\t", label: "탭 문자열" },
+    { selectedBlockId: "\uFEFF", label: "BOM 문자열" },
   ])("선택한 블록 ID가 $label일 때 실패 블록은 최신 항목으로 폴백한다", ({ selectedBlockId }) => {
     const handlers = createHandlers();
     const { result } = renderHook(() => useInspectorPanelPropsBundle({
@@ -693,6 +696,9 @@ describe("useInspectorPanelPropsBundle", () => {
     { selectedBlockId: null, label: "null" },
     { selectedBlockId: "", label: "빈 문자열" },
     { selectedBlockId: "  ", label: "공백 문자열" },
+    { selectedBlockId: "\n", label: "개행 문자열" },
+    { selectedBlockId: "\t", label: "탭 문자열" },
+    { selectedBlockId: "\uFEFF", label: "BOM 문자열" },
     { selectedBlockId: "non-exist", label: "미존재 ID" },
   ])("선택한 블록 ID가 $label이면 최근 실패 블록으로 폴백한다", ({ selectedBlockId }) => {
     const handlers = createHandlers();

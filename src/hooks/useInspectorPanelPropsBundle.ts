@@ -7,6 +7,7 @@ import type {
 } from "../components/InspectorPanel/types";
 import { useInspectorPanelData } from "./useInspectorPanelData";
 import { useInspectorPanelProps } from "./useInspectorPanelProps";
+import { normalizeBlockId } from "../utils";
 
 export type InspectorPanelActionHandlerProps = InspectorPanelActionProps;
 
@@ -65,6 +66,8 @@ export function useInspectorPanelPropsBundle({
   scriptLibrary,
   handlers,
 }: UseInspectorPanelPropsBundleOptions): InspectorPanelProps {
+  const normalizedSelectedBlockId = normalizeBlockId(selectedBlockId);
+
   const data = useInspectorPanelData({
     showInspector,
     selectedModel,
@@ -75,7 +78,7 @@ export function useInspectorPanelPropsBundle({
     activeTab,
     activeTabGitInfo,
     cmdBlocks,
-    selectedBlockId,
+    selectedBlockId: normalizedSelectedBlockId,
     inspectorAnalyzeCache,
     inspectorCommandMenuIndex: commandMenuIndex,
     quickActionsExpanded: showInspectorQuickActionsExpanded,
