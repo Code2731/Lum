@@ -879,7 +879,7 @@ const App: React.FC = () => {
     clearInspectorAnalyzeCache,
   } = useInspectorPanelCommands({
     cmdBlocks,
-    selectedBlockId,
+    selectedBlockId: resolvedSelectedBlockId,
     setResolvedSelectedBlockId,
     setDismissedBlockId,
     setViewMode,
