@@ -693,6 +693,52 @@ describe("useInspectorPanelPropsBundle", () => {
   });
 
   it.each([
+    { selectedBlockId: "bad-1", label: "미존재 일반 값" },
+    { selectedBlockId: " bad-1", label: "선행 공백과 미존재 값" },
+    { selectedBlockId: "\tbad-1\t", label: "탭이 붙은 미존재 값" },
+    { selectedBlockId: "bad-1\n", label: "개행이 붙은 미존재 값" },
+    { selectedBlockId: "\uFEFFbad-1", label: "BOM 접두 미존재 값" },
+  ])("선택한 블록 ID가 $label이면 최근 실패 블록으로 폴백한다", ({ selectedBlockId }) => {
+    const handlers = createHandlers();
+    const { result } = renderHook(() => useInspectorPanelPropsBundle({
+      showInspector: true,
+      selectedModel: "test-model",
+      inspectorTab: "summary" as const,
+      inspectorDensity: "cozy" as const,
+      inspectorTabs: INSPECTOR_TABS,
+      inspectorTabRefs: makeRef({
+        summary: null,
+        rag: null,
+        scripts: null,
+        sysmon: null,
+      }),
+      activeTab: { title: "Shell 1", cwd: "/repo" },
+      activeTabGitInfo: null,
+      cmdBlocks: [
+        makeCommandBlock({ id: "failed-first", command: "first fail", output: "f1", exitCode: 1 }),
+        makeCommandBlock({ id: "success", command: "ok", output: "ok", exitCode: 0 }),
+        makeCommandBlock({ id: "failed-latest", command: "latest fail", output: "f2", exitCode: 1 }),
+      ],
+      selectedBlockId,
+      inspectorAnalyzeCache: null,
+      commandMenuIndex: 0,
+      showInspectorQuickActionsExpanded: false,
+      inspectorMoreButtonRefs: makeRef({} as Record<number, HTMLButtonElement | null>),
+      inspectorMenuFirstActionRefs: makeRef({} as Record<number, HTMLButtonElement | null>),
+      inspectorQuickActionsToggleRef: makeRef(null as HTMLButtonElement | null),
+      inspectorQuickActionsAdvancedRef: makeRef(null as HTMLDivElement | null),
+      scriptLibrary: createScriptLibrary(),
+      handlers,
+    }));
+
+    expect(result.current.focusedFailedBlock).toMatchObject({
+      id: "failed-latest",
+      exitCode: 1,
+      outputTail: "f2",
+    });
+  });
+
+  it.each([
     { selectedBlockId: null, label: "null" },
     { selectedBlockId: "", label: "빈 문자열" },
     { selectedBlockId: "  ", label: "공백 문자열" },
