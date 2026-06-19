@@ -284,6 +284,11 @@ describe("Inspector panel data + props pipeline", () => {
     { label: "앞뒤 공백", selectedBlockId: " fail-2 " },
     { label: "탭", selectedBlockId: "fail-2\t" },
     { label: "BOM", selectedBlockId: "\uFEFFfail-2" },
+    { label: "빈 문자열", selectedBlockId: "" },
+    { label: "공백 문자열", selectedBlockId: "   " },
+    { label: "개행만", selectedBlockId: "\n" },
+    { label: "탭만", selectedBlockId: "\t" },
+    { label: "BOM만", selectedBlockId: "\uFEFF" },
   ])("선택 블록 ID에 $label이 포함되면 파이프라인도 최신 실패 블록으로 폴백한다", ({ selectedBlockId }) => {
     const { result } = renderHook(() => {
       const data = useInspectorPanelData({

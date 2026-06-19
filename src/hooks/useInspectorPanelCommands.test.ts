@@ -4,6 +4,7 @@ import { type KeyboardEvent, type SetStateAction, useState } from "react";
 import type { ChatMessage } from "./useAIChat";
 import type { InspectorAnalyzeCache } from "../components/InspectorPanel/types";
 import { useInspectorPanelCommands } from "./useInspectorPanelCommands";
+import { normalizeBlockId } from "../utils";
 
 interface Notif {
   type: "command";
@@ -457,6 +458,11 @@ describe("useInspectorPanelCommands", () => {
     { label: "공백", blockId: "\t fail-2 \t" },
     { label: "탭", blockId: "fail-2\t" },
     { label: "BOM", blockId: "\uFEFFfail-2" },
+    { label: "빈 문자열", blockId: "" },
+    { label: "공백 문자열", blockId: "   " },
+    { label: "개행만", blockId: "\n" },
+    { label: "탭만", blockId: "\t" },
+    { label: "BOM만", blockId: "\uFEFF" },
   ])("선택 블록은 $label이 섞여도 정규화되어 선택 상태에 반영된다", ({ blockId }) => {
     const { result, spies } = setupInspectorCommands({
       cmdBlocks: [
@@ -465,12 +471,13 @@ describe("useInspectorPanelCommands", () => {
       ],
       selectedBlockId: null,
     });
+    const expected = normalizeBlockId(blockId);
 
     act(() => {
       result.current.selectInspectorBlock(blockId);
     });
 
-    expect(spies.setSelectedBlockId).toHaveBeenCalledWith("fail-2");
+    expect(spies.setSelectedBlockId).toHaveBeenCalledWith(expected);
     expect(spies.setViewMode).toHaveBeenCalledWith("terminal");
     expect(spies.setDismissedBlockId).toHaveBeenCalledWith(null);
   });
