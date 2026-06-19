@@ -964,6 +964,48 @@ describe("App (LUM 터미널)", () => {
     });
   });
 
+  it("실패 블록 포커스가 공백-only ID를 가질 때도 AI ANALYZE가 STREAMING으로 진입해야 한다", async () => {
+    setMockCommandBlocks([
+      {
+        id: "cmd-1",
+        command: "npm test",
+        output: "old fail",
+        exitCode: 1,
+        startedAt: 1,
+        endedAt: 2,
+      },
+      {
+        id: "   ",
+        command: "pnpm lint",
+        output: "latest fail",
+        exitCode: 2,
+        startedAt: 3,
+        endedAt: 4,
+      },
+    ]);
+
+    render(<App />);
+
+    fireEvent.keyDown(window, { key: "f", metaKey: true, shiftKey: true });
+    expect(await screen.findByText("2/2")).toBeInTheDocument();
+
+    const inspectorButton = screen.getByLabelText("Inspector");
+    fireEvent.click(inspectorButton);
+
+    await waitFor(() => {
+      expect(screen.getByRole("tablist", { name: "Inspector 탭" })).toBeInTheDocument();
+    });
+
+    const summaryPanel = document.querySelector("#inspector-tabpanel-summary");
+    expect(summaryPanel).not.toBeNull();
+    const analyzeButton = within(summaryPanel as HTMLElement).getByRole("button", { name: "AI ANALYZE" });
+    fireEvent.click(analyzeButton);
+
+    await waitFor(() => {
+      expect(within(summaryPanel as HTMLElement).getByText("STREAMING")).toBeInTheDocument();
+    });
+  });
+
   it("Ctrl+Shift+F도 실패 블록을 순환 포커스한다", async () => {
     setMockCommandBlocks([
       {
