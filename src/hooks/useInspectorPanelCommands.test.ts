@@ -405,6 +405,58 @@ describe("useInspectorPanelCommands", () => {
     expect(spies.handleAskAI).toHaveBeenCalledWith(expect.stringContaining("Command: npm test"));
   });
 
+  it.each([
+    { label: "미존재 일반 값", selectedBlockId: "bad-3" },
+    { label: "미존재 공백", selectedBlockId: " bad-3 " },
+    { label: "미존재 개행", selectedBlockId: "bad-3\n" },
+    { label: "미존재 탭", selectedBlockId: "\tbad-3\t" },
+    { label: "미존재 BOM", selectedBlockId: "\uFEFFbad-3" },
+  ])("선택 블록이 $label이면 정규화 후 최근 실패 블록으로 분석 프롬프트를 생성한다", ({ selectedBlockId }) => {
+    const { result, spies } = setupInspectorCommands({
+      cmdBlocks: [
+        buildBlock("ok-1", "pwd", "ok", 0),
+        buildBlock("fail-1", "cat missing", "err", 1),
+        buildBlock("fail-2", "npm test", "fail", 2),
+      ],
+      selectedBlockId,
+    });
+
+    act(() => {
+      result.current.analyzeInspectorFailedBlock();
+    });
+
+    const arg = spies.setInspectorAnalyzeCache.mock.calls[0]?.[0];
+    expect(arg).toMatchObject({
+      blockId: "fail-2",
+      command: "npm test",
+      status: "streaming",
+    });
+    expect(spies.handleAskAI).toHaveBeenCalledWith(expect.stringContaining("Command: npm test"));
+  });
+
+  it.each([
+    { label: "미존재 일반 값", blockId: "bad-3" },
+    { label: "미존재 공백", blockId: " bad-3 " },
+    { label: "미존재 개행", blockId: "bad-3\n" },
+    { label: "미존재 탭", blockId: "\tbad-3\t" },
+    { label: "미존재 BOM", blockId: "\uFEFFbad-3" },
+  ])("블록 ID에 $label이 섞여도 미존재 ID는 최근 실패 블록을 대상으로 복사한다", async ({ blockId }) => {
+    const { result } = setupInspectorCommands({
+      cmdBlocks: [
+        buildBlock("ok-1", "pwd", "ok", 0),
+        buildBlock("fail-1", "cat missing", "err", 1),
+        buildBlock("fail-2", "npm test", "fail", 2),
+      ],
+      selectedBlockId: "fail-1",
+    });
+
+    await act(async () => {
+      await result.current.copyInspectorFailedOutput(blockId);
+    });
+
+    expect(writeText).toHaveBeenCalledWith(expect.stringContaining("Command: npm test"));
+  });
+
   it("추천 커맨드 복사는 클립보드에 반영되고 메뉴를 닫는다", async () => {
     const { result, spies } = setupInspectorCommands({
       inspectorAnalyzeCache: {
