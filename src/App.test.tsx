@@ -6,6 +6,8 @@ import { useCommandBlocks } from "./hooks/useCommandBlocks";
 import { isEventTargetWithinSelector } from "./utils/pointerGuard";
 import App from "./App";
 
+const terminalWriteMocks = new Map<string, ReturnType<typeof vi.fn>>();
+
 vi.mock("@tauri-apps/api/core", () => ({
   invoke: vi.fn().mockImplementation((cmd: string) => {
     if (cmd === "check_onboarding_complete") return Promise.resolve(true);
@@ -51,11 +53,25 @@ vi.mock("./components/FileExplorerPanel", () => ({
   default: () => <div data-testid="file-explorer-mock" />,
 }));
 
-vi.mock("./components/TerminalPane", () => ({
-  default: ({ id }: { id: string }) => (
-    <div data-testid={`terminal-pane-${id}`}>terminal:{id}</div>
-  ),
-}));
+vi.mock("./components/TerminalPane", async () => {
+  const React = await import("react");
+
+  return {
+    default: ({ id, onReady }: { id: string; onReady?: (write: (data: string) => void) => void }) => {
+      React.useEffect(() => {
+        if (!onReady) return;
+        let write = terminalWriteMocks.get(id);
+        if (!write) {
+          write = vi.fn();
+          terminalWriteMocks.set(id, write);
+        }
+        onReady(write);
+      }, [id, onReady]);
+
+      return <div data-testid={`terminal-pane-${id}`}>terminal:{id}</div>;
+    },
+  };
+});
 
 vi.mock("./components/AiBar", () => ({
   default: ({ value, onChange, onSubmit, onCancel, onClose, disabled, processing }: any) => (
@@ -121,6 +137,7 @@ describe("App (LUM 터미널)", () => {
 
   beforeEach(() => {
     mockedInvoke.mockClear();
+    terminalWriteMocks.clear();
     setMockCommandBlocks([]);
   });
 
@@ -3581,6 +3598,49 @@ describe("App (LUM 터미널)", () => {
     await waitFor(() => {
       expect(screen.getByText("1/2")).toBeInTheDocument();
     });
+  });
+
+  it("Recent Blocks의 RUN을 누르면 해당 명령을 PTY에 다시 보낸다", async () => {
+    setMockCommandBlocks([
+      {
+        id: "block-1",
+        command: "npm test",
+        output: "FAIL: first block",
+        exitCode: 1,
+        startedAt: 1,
+        endedAt: 2,
+      },
+      {
+        id: "block-2",
+        command: "pnpm lint",
+        output: "FAIL: second block",
+        exitCode: 1,
+        startedAt: 3,
+        endedAt: 4,
+      },
+    ]);
+
+    render(<App />);
+
+    const inspectorButton = screen.getByLabelText("Inspector");
+    fireEvent.click(inspectorButton);
+
+    await waitFor(() => {
+      expect(screen.getByRole("tablist", { name: "Inspector 탭" })).toBeInTheDocument();
+    });
+
+    const summaryPanel = document.querySelector("#inspector-tabpanel-summary");
+    expect(summaryPanel).not.toBeNull();
+
+    const secondRecentBlockCommand = within(summaryPanel as HTMLElement).getByText("pnpm lint");
+    const secondRecentBlockRow = secondRecentBlockCommand.closest("div")?.parentElement;
+    expect(secondRecentBlockRow).not.toBeNull();
+
+    fireEvent.click(within(secondRecentBlockRow as HTMLElement).getByText("RUN"));
+
+    const writes = Array.from(terminalWriteMocks.values());
+    expect(writes.length).toBeGreaterThan(0);
+    expect(writes[0]).toHaveBeenCalledWith("pnpm lint\r");
   });
 
   it("Quick Actions에서 RAG 검색 버튼을 누르면 RAG 탭으로 이동한다", async () => {
