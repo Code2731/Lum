@@ -3371,6 +3371,33 @@ describe("App (LUM 터미널)", () => {
     }
   });
 
+  it("실패 블록이 없을 때 요약 패널은 실패 전용 액션을 노출하지 않는다", () => {
+    setMockCommandBlocks([{
+      id: "ok-1",
+      command: "npm test",
+      output: "All good",
+      exitCode: 0,
+      startedAt: 1,
+      endedAt: 2,
+    }]);
+
+    render(<App />);
+
+    const inspectorButton = screen.getByLabelText("Inspector");
+    fireEvent.click(inspectorButton);
+
+    expect(screen.getByRole("tablist", { name: "Inspector 탭" })).toBeInTheDocument();
+
+    const summaryPanel = document.querySelector("#inspector-tabpanel-summary");
+    expect(summaryPanel).not.toBeNull();
+    expect(screen.getByText("실패 블록이 없습니다.")).toBeInTheDocument();
+
+    expect(within(summaryPanel as HTMLElement).queryByRole("button", { name: "AI ANALYZE" })).not.toBeInTheDocument();
+    expect(within(summaryPanel as HTMLElement).queryByRole("button", { name: "COPY LOG" })).not.toBeInTheDocument();
+    expect(within(summaryPanel as HTMLElement).queryByRole("button", { name: "COPY PROMPT" })).not.toBeInTheDocument();
+    expect(within(summaryPanel as HTMLElement).queryByRole("button", { name: "LOAD PROMPT" })).not.toBeInTheDocument();
+  });
+
   it("Quick Actions에서 RAG 검색 버튼을 누르면 RAG 탭으로 이동한다", async () => {
     render(<App />);
 
