@@ -3238,6 +3238,53 @@ describe("App (LUM 터미널)", () => {
     expect(screen.queryByRole("tablist", { name: "Inspector 탭" })).not.toBeInTheDocument();
   });
 
+  it.each([
+    { label: "선행 공백", malformedId: " bad-2" },
+    { label: "후행 공백", malformedId: "bad-3 " },
+    { label: "개행", malformedId: "bad-4\n" },
+    { label: "탭", malformedId: "\tbad-5\t" },
+    { label: "BOM", malformedId: "\uFEFFbad-6" },
+  ])("최근 블록에서 ID가 $label인 항목의 LOAD가 최종적으로 최신 실패 프롬프트를 불러온다", async ({ malformedId }) => {
+    setMockCommandBlocks([
+      {
+        id: malformedId,
+        command: "npm lint",
+        output: "FAIL: bad block target",
+        exitCode: 2,
+        startedAt: 1,
+        endedAt: 2,
+      },
+      {
+        id: "b-good",
+        command: "python -m pytest",
+        output: "FAIL: import error",
+        exitCode: 1,
+        startedAt: 3,
+        endedAt: 4,
+      },
+    ]);
+    const { container } = render(<App />);
+
+    const inspectorButton = screen.getByLabelText("Inspector");
+    fireEvent.click(inspectorButton);
+
+    let summaryPanel = container.querySelector("#inspector-tabpanel-summary");
+    await waitFor(() => {
+      expect(screen.getByRole("tablist", { name: "Inspector 탭" })).toBeInTheDocument();
+      summaryPanel = container.querySelector("#inspector-tabpanel-summary");
+      expect(summaryPanel).not.toBeNull();
+    });
+
+    const badBlockCommand = within(summaryPanel as HTMLElement).getByText("npm lint");
+    const badBlockRow = badBlockCommand.closest("div")?.parentElement;
+    expect(badBlockRow).not.toBeNull();
+    fireEvent.click(within(badBlockRow as HTMLElement).getByText("LOAD"));
+
+    const aiBarInput = await screen.findByTestId("ai-bar-input");
+    expect(aiBarInput).toHaveValue(expect.stringContaining("Command: python -m pytest"));
+    expect(aiBarInput).not.toHaveValue(expect.stringContaining("Command: npm lint"));
+  });
+
   it("Quick Actions에서 RAG 검색 버튼을 누르면 RAG 탭으로 이동한다", async () => {
     render(<App />);
 
