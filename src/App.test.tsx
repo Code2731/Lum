@@ -3787,14 +3787,11 @@ describe("App (LUM 터미널)", () => {
   });
 
   it("Failed Block의 NEXT FAIL 뒤 AI ANALYZE는 이동된 실패 블록 기준으로 STREAMING에 진입한다", async () => {
-    const tokenHandlers: Array<(event: { payload: string }) => void> = [];
     const mockedListen = vi.mocked(listen);
     const mockedBaseListen = mockedListen.getMockImplementation();
 
     mockedListen.mockImplementation((event, callback) => {
-      if (event === "xllm_token") {
-        tokenHandlers.push((payloadEvent) => callback(payloadEvent));
-      }
+      if (event === "xllm_token") return Promise.resolve(() => {});
       return Promise.resolve(() => {});
     });
 
