@@ -3285,6 +3285,92 @@ describe("App (LUM 터미널)", () => {
     expect(aiBarInput).not.toHaveValue(expect.stringContaining("Command: npm lint"));
   });
 
+  it.each([
+    { label: "선행 공백", malformedId: " bad-2" },
+    { label: "후행 공백", malformedId: "bad-3 " },
+    { label: "개행", malformedId: "bad-4\n" },
+    { label: "탭", malformedId: "\tbad-5\t" },
+    { label: "BOM", malformedId: "\uFEFFbad-6" },
+  ])("실패 블록이 $label인 상태에서 COPY LOG가 최신 실패 출력으로 복사된다", async ({ malformedId }) => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    const baseClipboard = navigator.clipboard;
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
+
+    try {
+      setMockCommandBlocks([{
+        id: malformedId,
+        command: "npm lint",
+        output: "FAIL: import error",
+        exitCode: 2,
+        startedAt: 1,
+        endedAt: 2,
+      }]);
+      const { container } = render(<App />);
+
+      const inspectorButton = screen.getByLabelText("Inspector");
+      fireEvent.click(inspectorButton);
+
+      let summaryPanel = container.querySelector("#inspector-tabpanel-summary");
+      await waitFor(() => {
+        expect(screen.getByRole("tablist", { name: "Inspector 탭" })).toBeInTheDocument();
+        summaryPanel = container.querySelector("#inspector-tabpanel-summary");
+        expect(summaryPanel).not.toBeNull();
+      });
+
+      const copyLogButton = within(summaryPanel as HTMLElement).getByRole("button", { name: "COPY LOG" });
+      fireEvent.click(copyLogButton);
+
+      expect(writeText).toHaveBeenCalledWith(expect.stringContaining("Command: npm lint"));
+      expect(writeText).toHaveBeenCalledWith(expect.stringContaining("Exit Code: 2"));
+      expect(writeText).toHaveBeenCalledWith(expect.stringContaining("Output:"));
+    } finally {
+      Object.defineProperty(navigator, "clipboard", { configurable: true, value: baseClipboard });
+    }
+  });
+
+  it.each([
+    { label: "선행 공백", malformedId: " bad-3" },
+    { label: "후행 공백", malformedId: "bad-4 " },
+    { label: "개행", malformedId: "bad-5\n" },
+    { label: "탭", malformedId: "\tbad-6\t" },
+    { label: "BOM", malformedId: "\uFEFFbad-7" },
+  ])("실패 블록이 $label인 상태에서 COPY PROMPT가 분석 프롬프트를 클립보드에 복사한다", async ({ malformedId }) => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    const baseClipboard = navigator.clipboard;
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
+
+    try {
+      setMockCommandBlocks([{
+        id: malformedId,
+        command: "pnpm lint",
+        output: "FAIL: prompt target",
+        exitCode: 3,
+        startedAt: 1,
+        endedAt: 2,
+      }]);
+      const { container } = render(<App />);
+
+      const inspectorButton = screen.getByLabelText("Inspector");
+      fireEvent.click(inspectorButton);
+
+      let summaryPanel = container.querySelector("#inspector-tabpanel-summary");
+      await waitFor(() => {
+        expect(screen.getByRole("tablist", { name: "Inspector 탭" })).toBeInTheDocument();
+        summaryPanel = container.querySelector("#inspector-tabpanel-summary");
+        expect(summaryPanel).not.toBeNull();
+      });
+
+      const copyPromptButton = within(summaryPanel as HTMLElement).getByRole("button", { name: "COPY PROMPT" });
+      fireEvent.click(copyPromptButton);
+
+      expect(writeText).toHaveBeenCalledWith(expect.stringContaining("아래 실패한 터미널 실행을 분석해줘."));
+      expect(writeText).toHaveBeenCalledWith(expect.stringContaining("Command: pnpm lint"));
+      expect(writeText).toHaveBeenCalledWith(expect.stringContaining("Exit Code: 3"));
+    } finally {
+      Object.defineProperty(navigator, "clipboard", { configurable: true, value: baseClipboard });
+    }
+  });
+
   it("Quick Actions에서 RAG 검색 버튼을 누르면 RAG 탭으로 이동한다", async () => {
     render(<App />);
 
