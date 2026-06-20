@@ -3730,6 +3730,62 @@ describe("App (LUM 터미널)", () => {
     });
   });
 
+  it("Failed Block의 NEXT FAIL 뒤 LOAD PROMPT는 이동된 실패 블록 기준으로 AI 바를 채운다", async () => {
+    setMockCommandBlocks([
+      {
+        id: "ok-1",
+        command: "echo ok",
+        output: "ok",
+        exitCode: 0,
+        startedAt: 1,
+        endedAt: 2,
+      },
+      {
+        id: "fail-1",
+        command: "npm test",
+        output: "FAIL: first block",
+        exitCode: 1,
+        startedAt: 3,
+        endedAt: 4,
+      },
+      {
+        id: "fail-2",
+        command: "pnpm lint",
+        output: "FAIL: second block",
+        exitCode: 1,
+        startedAt: 5,
+        endedAt: 6,
+      },
+    ]);
+
+    const { container } = render(<App />);
+
+    const inspectorButton = screen.getByLabelText("Inspector");
+    fireEvent.click(inspectorButton);
+
+    await waitFor(() => {
+      expect(screen.getByRole("tablist", { name: "Inspector 탭" })).toBeInTheDocument();
+    });
+
+    let summaryPanel = container.querySelector("#inspector-tabpanel-summary");
+    await waitFor(() => {
+      summaryPanel = container.querySelector("#inspector-tabpanel-summary");
+      expect(summaryPanel).not.toBeNull();
+    });
+
+    fireEvent.click(within(summaryPanel as HTMLElement).getByText("NEXT FAIL"));
+
+    await waitFor(() => {
+      expect(screen.getByText("2/3")).toBeInTheDocument();
+    });
+
+    fireEvent.click(within(summaryPanel as HTMLElement).getByRole("button", { name: "LOAD PROMPT" }));
+
+    const aiBarInput = await screen.findByTestId("ai-bar-input");
+    expect(aiBarInput).toHaveValue(expect.stringContaining("Command: npm test"));
+    expect(aiBarInput).not.toHaveValue(expect.stringContaining("Command: pnpm lint"));
+  });
+
   it("Quick Actions에서 RAG 검색 버튼을 누르면 RAG 탭으로 이동한다", async () => {
     render(<App />);
 
