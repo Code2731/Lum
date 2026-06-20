@@ -3786,6 +3786,77 @@ describe("App (LUM 터미널)", () => {
     expect(aiBarInput).not.toHaveValue(expect.stringContaining("Command: pnpm lint"));
   });
 
+  it("Failed Block의 NEXT FAIL 뒤 AI ANALYZE는 이동된 실패 블록 기준으로 STREAMING에 진입한다", async () => {
+    const tokenHandlers: Array<(event: { payload: string }) => void> = [];
+    const mockedListen = vi.mocked(listen);
+    const mockedBaseListen = mockedListen.getMockImplementation();
+
+    mockedListen.mockImplementation((event, callback) => {
+      if (event === "xllm_token") {
+        tokenHandlers.push((payloadEvent) => callback(payloadEvent));
+      }
+      return Promise.resolve(() => {});
+    });
+
+    try {
+      setMockCommandBlocks([
+        {
+          id: "ok-1",
+          command: "echo ok",
+          output: "ok",
+          exitCode: 0,
+          startedAt: 1,
+          endedAt: 2,
+        },
+        {
+          id: "fail-1",
+          command: "npm test",
+          output: "FAIL: first block",
+          exitCode: 1,
+          startedAt: 3,
+          endedAt: 4,
+        },
+        {
+          id: "fail-2",
+          command: "pnpm lint",
+          output: "FAIL: second block",
+          exitCode: 1,
+          startedAt: 5,
+          endedAt: 6,
+        },
+      ]);
+
+      const { container } = render(<App />);
+
+      const inspectorButton = screen.getByLabelText("Inspector");
+      fireEvent.click(inspectorButton);
+
+      await waitFor(() => {
+        expect(screen.getByRole("tablist", { name: "Inspector 탭" })).toBeInTheDocument();
+      });
+
+      let summaryPanel = container.querySelector("#inspector-tabpanel-summary");
+      await waitFor(() => {
+        summaryPanel = container.querySelector("#inspector-tabpanel-summary");
+        expect(summaryPanel).not.toBeNull();
+      });
+
+      fireEvent.click(within(summaryPanel as HTMLElement).getByText("NEXT FAIL"));
+
+      await waitFor(() => {
+        expect(screen.getByText("2/3")).toBeInTheDocument();
+      });
+
+      fireEvent.click(within(summaryPanel as HTMLElement).getByRole("button", { name: "AI ANALYZE" }));
+
+      await waitFor(() => {
+        expect(within(summaryPanel as HTMLElement).getByText("STREAMING")).toBeInTheDocument();
+      });
+    } finally {
+      mockedListen.mockImplementation(mockedBaseListen as any);
+    }
+  });
+
   it("Quick Actions에서 RAG 검색 버튼을 누르면 RAG 탭으로 이동한다", async () => {
     render(<App />);
 
