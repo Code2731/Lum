@@ -233,6 +233,22 @@ describe("useInspectorPanelCommands", () => {
     expect(spies.closeInspector).not.toHaveBeenCalled();
   });
 
+  it("실패한 블록이 없고 블록 ID가 비정상이어도 복사 동작은 수행하지 않는다", async () => {
+    const { result } = setupInspectorCommands({
+      cmdBlocks: [
+        buildBlock("ok", "pwd", "ok", 0),
+      ],
+      selectedBlockId: null,
+    });
+
+    await act(async () => {
+      await result.current.copyInspectorFailedOutput(" bad-1 ");
+      await result.current.copyInspectorAnalyzePrompt("\uFEFFbad-2\n");
+    });
+
+    expect(writeText).not.toHaveBeenCalled();
+  });
+
   it("AI 분석 프롬프트 복사 실패 시 실패 알림을 표시한다", async () => {
     const { result, spies } = setupInspectorCommands({
       cmdBlocks: [
