@@ -3643,6 +3643,46 @@ describe("App (LUM 터미널)", () => {
     expect(writes[0]).toHaveBeenCalledWith("pnpm lint\r");
   });
 
+  it("Failed Block의 SELECT를 누르면 해당 실패 블록이 선택된다", async () => {
+    setMockCommandBlocks([
+      {
+        id: "block-1",
+        command: "npm test",
+        output: "FAIL: first block",
+        exitCode: 1,
+        startedAt: 1,
+        endedAt: 2,
+      },
+      {
+        id: "block-2",
+        command: "pnpm lint",
+        output: "FAIL: second block",
+        exitCode: 1,
+        startedAt: 3,
+        endedAt: 4,
+      },
+    ]);
+
+    render(<App />);
+
+    const inspectorButton = screen.getByLabelText("Inspector");
+    fireEvent.click(inspectorButton);
+
+    await waitFor(() => {
+      expect(screen.getByRole("tablist", { name: "Inspector 탭" })).toBeInTheDocument();
+    });
+
+    const summaryPanel = document.querySelector("#inspector-tabpanel-summary");
+    expect(summaryPanel).not.toBeNull();
+    expect(within(summaryPanel as HTMLElement).getByText("pnpm lint")).toBeInTheDocument();
+
+    fireEvent.click(within(summaryPanel as HTMLElement).getByText("SELECT"));
+
+    await waitFor(() => {
+      expect(screen.getByText("2/2")).toBeInTheDocument();
+    });
+  });
+
   it("Quick Actions에서 RAG 검색 버튼을 누르면 RAG 탭으로 이동한다", async () => {
     render(<App />);
 
