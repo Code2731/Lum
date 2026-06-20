@@ -3371,6 +3371,43 @@ describe("App (LUM 터미널)", () => {
     }
   });
 
+  it("COPY LOG가 실패해도 실패 블록 패널이 유지된다", async () => {
+    const writeText = vi.fn().mockRejectedValue(new Error("clipboard denied"));
+    const baseClipboard = navigator.clipboard;
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
+
+    try {
+      setMockCommandBlocks([{
+        id: "bad-copy",
+        command: "npm run test",
+        output: "FAIL: clipboard check",
+        exitCode: 1,
+        startedAt: 1,
+        endedAt: 2,
+      }]);
+      const { container } = render(<App />);
+
+      const inspectorButton = screen.getByLabelText("Inspector");
+      fireEvent.click(inspectorButton);
+
+      let summaryPanel = container.querySelector("#inspector-tabpanel-summary");
+      await waitFor(() => {
+        expect(screen.getByRole("tablist", { name: "Inspector 탭" })).toBeInTheDocument();
+        summaryPanel = container.querySelector("#inspector-tabpanel-summary");
+        expect(summaryPanel).not.toBeNull();
+      });
+
+      const copyLogButton = within(summaryPanel as HTMLElement).getByRole("button", { name: "COPY LOG" });
+      fireEvent.click(copyLogButton);
+
+      expect(writeText).toHaveBeenCalledWith(expect.stringContaining("Command: npm run test"));
+      expect(screen.getByRole("tablist", { name: "Inspector 탭" })).toBeInTheDocument();
+      expect(within(summaryPanel as HTMLElement).getByText("npm run test")).toBeInTheDocument();
+    } finally {
+      Object.defineProperty(navigator, "clipboard", { configurable: true, value: baseClipboard });
+    }
+  });
+
   it("실패 블록이 없을 때 요약 패널은 실패 전용 액션을 노출하지 않는다", () => {
     setMockCommandBlocks([{
       id: "ok-1",
