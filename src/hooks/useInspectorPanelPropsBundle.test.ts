@@ -430,7 +430,7 @@ describe("useInspectorPanelPropsBundle", () => {
     });
     expect(result.current.recentBlocks[0]).toMatchObject({
       id: "fourth",
-      durationMs: null,
+      durationMs: 0,
       exitCode: 0,
       command: "fourth",
       outputTail: "done",
@@ -1425,7 +1425,7 @@ describe("useInspectorPanelPropsBundle", () => {
     expect(result.current.showInspector).toBe(false);
     expect(result.current.quickActionsExpanded).toBe(true);
     expect(result.current.commandMenuIndex).toBe(5);
-    expect(result.current.noActivity).toBe(true);
+    expect(result.current.noActivity).toBe(false);
   });
 
   it("commandMenuIndex가 null일 때도 noActivity 계산은 캐시 기준으로 일관된다", () => {

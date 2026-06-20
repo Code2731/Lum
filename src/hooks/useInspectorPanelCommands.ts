@@ -409,13 +409,22 @@ export function useInspectorPanelCommands({
     rowIndex: number,
   ) => {
     if (!isInspectorCompact) return;
-    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    if (e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) return;
 
-    const action = resolveInspectorMenuHotkey(
+    const menuOpen = inspectorCommandMenuIndex === rowIndex;
+    const commandCount = inspectorAnalyzeCache?.suggestedCommands.length ?? 0;
+    let action = resolveInspectorMenuHotkey(
       e.key,
-      inspectorCommandMenuIndex === rowIndex,
+      menuOpen,
     );
+    if (!action) {
+      const lowerKey = e.key.toLowerCase();
+      if ((lowerKey === "c" || lowerKey === "l") && rowIndex >= commandCount) {
+        action = lowerKey === "c" ? "copy" : "load";
+      }
+    }
     if (!action) return;
+    if (action === "run" && !menuOpen && rowIndex < commandCount) return;
     e.preventDefault();
     e.stopPropagation();
     if (action === "run") {

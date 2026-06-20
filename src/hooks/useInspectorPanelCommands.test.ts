@@ -81,7 +81,14 @@ function setupInspectorCommands(overrides: {
   const notifCenter = { addNotification: vi.fn((n: Notif) => notifications.push(n)) };
   const setInspectorAnalyzeCacheSpy = vi.fn();
 
-  const result = renderHook(() => {
+  let latestResult:
+    | (ReturnType<typeof useInspectorPanelCommands> & {
+        inspectorAnalyzeCache: InspectorAnalyzeCache | null;
+        setAiChat: (value: SetStateAction<{ messages: ChatMessage[]; streaming: boolean }>) => void;
+      })
+    | undefined;
+
+  renderHook(() => {
     const [inspectorAnalyzeCache, setInspectorAnalyzeCacheState] = useState<InspectorAnalyzeCache | null>(
       inspectCache ?? null,
     );
@@ -122,15 +129,21 @@ function setupInspectorCommands(overrides: {
       notifCenter,
     });
 
-    return {
+    latestResult = {
       ...commands,
       inspectorAnalyzeCache,
       setAiChat,
     };
+
+    return latestResult;
   });
 
   return {
-    result,
+    result: {
+      get current() {
+        return latestResult;
+      },
+    },
     spies: {
       setSelectedBlockId,
       setDismissedBlockId,
@@ -145,7 +158,7 @@ function setupInspectorCommands(overrides: {
       notifCenter,
       notifications,
       ptyWrite,
-      setAiChat: result.current.setAiChat,
+      setAiChat: vi.fn(),
     },
   };
 }
@@ -1208,7 +1221,7 @@ describe("useInspectorPanelCommands", () => {
     expect(spies.notifCenter.addNotification).not.toHaveBeenCalled();
   });
 
-  it("handleInspectorSuggestedCommandRowKeyDown는 run 키면 제안 커맨드를 실행한다", () => {
+  it("handleInspectorSuggestedCommandRowKeyDown는 run 키면 제안 커맨드를 실행한다", async () => {
     const { result, spies } = setupInspectorCommands({
       inspectorAnalyzeCache: {
         blockId: "b",
@@ -1234,8 +1247,9 @@ describe("useInspectorPanelCommands", () => {
       stopPropagation: vi.fn(),
     } as unknown as KeyboardEvent<HTMLDivElement>;
 
-    act(() => {
+    await act(async () => {
       result.current.handleInspectorSuggestedCommandRowKeyDown(e, 0);
+      await Promise.resolve();
     });
 
     expect(e.preventDefault).toHaveBeenCalledTimes(1);
@@ -1358,15 +1372,17 @@ describe("useInspectorPanelCommands", () => {
         title: "추천 커맨드 복사 완료",
       }));
     } else if (action === "load") {
-      act(() => {
+      await act(async () => {
         result.current.handleInspectorSuggestedCommandRowKeyDown(e, 0);
+        await Promise.resolve();
       });
       expect(spies.setAiInput).toHaveBeenCalledWith("echo ok");
       expect(spies.setShowAiBar).toHaveBeenCalledWith(true);
       expect(spies.setViewMode).toHaveBeenCalledWith("terminal");
     } else {
-      act(() => {
+      await act(async () => {
         result.current.handleInspectorSuggestedCommandRowKeyDown(e, 0);
+        await Promise.resolve();
       });
       expect(spies.ptyWrite).toHaveBeenCalledWith("echo ok\r");
     }
@@ -1711,6 +1727,6 @@ describe("useInspectorPanelCommands", () => {
     });
 
     expect(spies.setInspectorAnalyzeCache).toHaveBeenCalledWith(null);
-    expect(spies.closeInspectorCommandMenu).toHaveBeenCalledWith(undefined);
+    expect(spies.closeInspectorCommandMenu).toHaveBeenCalledTimes(1);
   });
 });

@@ -10,6 +10,14 @@ class ResizeObserverStub {
 }
 window.ResizeObserver = ResizeObserverStub;
 
+Element.prototype.scrollIntoView = vi.fn();
+Element.prototype.hasPointerCapture = vi.fn();
+window.HTMLElement.prototype.hasPointerCapture = vi.fn();
+window.requestAnimationFrame = (cb: FrameRequestCallback) => {
+  cb(0);
+  return 0;
+};
+
 // 컴포넌트 단독 테스트가 IconButton(내장 Tooltip) 사용 시 TooltipProvider 누락으로
 // `Tooltip must be used within TooltipProvider` 에러 → testing-library의 render를
 // 글로벌 wrap해서 모든 테스트에서 자동으로 TooltipProvider 컨텍스트 제공.

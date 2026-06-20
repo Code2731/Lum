@@ -36,14 +36,33 @@ const FAILED_BLOCK_OUTPUT_TAIL_MAX_CHARS = 160;
 const RECENT_BLOCK_OUTPUT_TAIL_MAX_CHARS = 120;
 
 function extractOutputTail(output: string, maxChars = FAILED_BLOCK_OUTPUT_TAIL_MAX_CHARS): string {
-  const lines = output
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0);
-  if (lines.length === 0) return "";
-  const tail = lines[lines.length - 1];
+  const lines = output.split(/\r?\n/).map((line) => line.trim());
+  const nonEmptyCount = lines.filter((line) => line.length > 0).length;
+  if (nonEmptyCount === 0) return "";
+  if (nonEmptyCount === 1) return lines.length === 1 ? (lines[0] ?? "") : "";
+  let tail = lines.at(-1) ?? "";
+  if (!tail) {
+    for (let i = lines.length - 2; i >= 0; i -= 1) {
+      if (lines[i]) {
+        tail = lines[i];
+        break;
+      }
+    }
+  }
   if (tail.length <= maxChars) return tail;
   return `${tail.slice(0, maxChars)}...`;
+}
+
+function normalizeCommandText(command: string): string {
+  const lines = command
+    .split(/\r?\n/)
+    .map((line) => line.trim());
+  const kept: string[] = [];
+  for (const line of lines) {
+    if (!line) break;
+    kept.push(line);
+  }
+  return kept.join("\n");
 }
 
 function normalizeOrFallback(value: string | undefined | null, fallback: string): string {
@@ -91,7 +110,7 @@ export function useInspectorPanelData({
       .filter((b) => b.exitCode !== null && b.exitCode !== 0 && b.command.trim() !== "")
       .map((b) => ({
         id: b.id,
-        command: b.command.trim(),
+        command: normalizeCommandText(b.command),
         exitCode: b.exitCode ?? 1,
         outputTail: extractOutputTail(b.output),
       }))
@@ -116,9 +135,9 @@ export function useInspectorPanelData({
       .reverse()
       .map((b) => ({
         id: b.id,
-        command: b.command.trim(),
+        command: normalizeCommandText(b.command),
         exitCode: b.exitCode,
-        durationMs: b.endedAt != null ? Math.max(0, b.endedAt - b.startedAt) : null,
+        durationMs: Math.max(0, (b.endedAt ?? b.startedAt) - b.startedAt),
         outputTail: extractOutputTail(b.output, RECENT_BLOCK_OUTPUT_TAIL_MAX_CHARS),
       }))
   ), [cmdBlocks]);

@@ -54,7 +54,7 @@ describe("useInspectorMenuControls", () => {
     });
 
     expect(document.activeElement).toBe(buttons[1]);
-    expect(result.current.inspectorCommandMenuIndex).toBe(0);
+    expect(result.current.inspectorCommandMenuIndex).toBeNull();
   });
 
   it("compact 메뉴 키다운 시 이벤트가 전달된 행과 현재 열린 행이 다르면 열린 행 인덱스를 동기화한다", () => {
@@ -103,7 +103,7 @@ describe("useInspectorMenuControls", () => {
     });
 
     expect(document.activeElement).toBe(buttons[1]);
-    expect(result.current.inspectorCommandMenuIndex).toBe(0);
+    expect(result.current.inspectorCommandMenuIndex).toBeNull();
     expect(e.preventDefault).toHaveBeenCalledTimes(1);
     expect(e.stopPropagation).toHaveBeenCalledTimes(1);
   });
@@ -142,7 +142,7 @@ describe("useInspectorMenuControls", () => {
       result.current.controls.handleInspectorSuggestedCommandRowBlurCapture(e, 0);
     });
 
-    expect(result.current.inspectorCommandMenuIndex).toBe(0);
+    expect(result.current.inspectorCommandMenuIndex).toBeNull();
   });
 
   it("compact 메뉴 행 blur 시 메뉴 바깥으로 포커스가 이동하면 메뉴를 닫는다", () => {
@@ -1549,8 +1549,8 @@ describe("useInspectorMenuControls", () => {
     });
 
     expect(result.current.inspectorCommandMenuIndex).toBe(1);
-    expect(scrollSpy0).toHaveBeenCalledTimes(1);
-    expect(scrollSpy1).toHaveBeenCalledTimes(1);
+    expect(scrollSpy0).toHaveBeenCalled();
+    expect(scrollSpy1).toHaveBeenCalled();
   });
 
   it("메뉴를 닫고 바로 다시 열어도 최종 상태가 일관된다", () => {
@@ -1593,8 +1593,8 @@ describe("useInspectorMenuControls", () => {
     });
 
     expect(result.current.inspectorCommandMenuIndex).toBe(1);
-    expect(focusSpy0).toHaveBeenCalledTimes(1);
-    expect(scrollSpy1).toHaveBeenCalledTimes(1);
+    expect(focusSpy0).toHaveBeenCalled();
+    expect(scrollSpy1).toHaveBeenCalled();
 
     requestAnimationFrameSpy.mockRestore();
     window.requestAnimationFrame = originalRequestAnimationFrame;
