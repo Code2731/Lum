@@ -214,6 +214,25 @@ describe("useInspectorPanelCommands", () => {
     expect(spies.handleAskAI).not.toHaveBeenCalled();
   });
 
+  it("실패한 블록이 없으면 LOAD PROMPT 동작도 수행하지 않는다", () => {
+    const { result, spies } = setupInspectorCommands({
+      cmdBlocks: [
+        buildBlock("ok", "pwd", "ok", 0),
+      ],
+      selectedBlockId: null,
+    });
+
+    act(() => {
+      result.current.loadInspectorAnalyzePromptToAiBar();
+      result.current.loadInspectorAnalyzePromptToAiBar("bad-1");
+    });
+
+    expect(spies.setAiInput).not.toHaveBeenCalled();
+    expect(spies.setShowAiBar).not.toHaveBeenCalled();
+    expect(spies.setViewMode).not.toHaveBeenCalled();
+    expect(spies.closeInspector).not.toHaveBeenCalled();
+  });
+
   it("AI 분석 프롬프트 복사 실패 시 실패 알림을 표시한다", async () => {
     const { result, spies } = setupInspectorCommands({
       cmdBlocks: [
