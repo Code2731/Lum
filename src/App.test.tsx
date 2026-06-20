@@ -3473,6 +3473,39 @@ describe("App (LUM 터미널)", () => {
     expect(within(summaryPanel as HTMLElement).queryByRole("button", { name: "LOAD PROMPT" })).not.toBeInTheDocument();
   });
 
+  it("성공한 최근 블록만 있을 때 Recent Blocks LOAD 버튼을 노출하지 않는다", () => {
+    setMockCommandBlocks([
+      {
+        id: "ok-1",
+        command: "npm test",
+        output: "All good",
+        exitCode: 0,
+        startedAt: 1,
+        endedAt: 2,
+      },
+      {
+        id: "ok-2",
+        command: "pnpm lint",
+        output: "Clean",
+        exitCode: 0,
+        startedAt: 3,
+        endedAt: 4,
+      },
+    ]);
+
+    render(<App />);
+
+    const inspectorButton = screen.getByLabelText("Inspector");
+    fireEvent.click(inspectorButton);
+
+    expect(screen.getByRole("tablist", { name: "Inspector 탭" })).toBeInTheDocument();
+
+    const summaryPanel = document.querySelector("#inspector-tabpanel-summary");
+    expect(summaryPanel).not.toBeNull();
+    expect(within(summaryPanel as HTMLElement).getByText("Recent Blocks")).toBeInTheDocument();
+    expect(within(summaryPanel as HTMLElement).queryByText("LOAD")).not.toBeInTheDocument();
+  });
+
   it("Quick Actions에서 RAG 검색 버튼을 누르면 RAG 탭으로 이동한다", async () => {
     render(<App />);
 
