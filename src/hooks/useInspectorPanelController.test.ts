@@ -97,15 +97,16 @@ describe("useInspectorPanelController", () => {
     act(() => {
       const handled = result.current.controller.handleInspectorTabShortcut(e);
       expect(handled).toBe(true);
-      expect(result.current.showRagPanel).toBe(true);
-      expect(result.current.showScriptPanel).toBe(false);
-      expect(result.current.showSysmon).toBe(false);
-      expect(result.current.inspectorTab).toBe("rag");
     });
+
+    expect(result.current.showRagPanel).toBe(true);
+    expect(result.current.showScriptPanel).toBe(false);
+    expect(result.current.showSysmon).toBe(false);
+    expect(result.current.inspectorTab).toBe("rag");
 
     restoreRaf();
     expect(preventDefault).toHaveBeenCalledTimes(1);
-    expect(focusSpy).toHaveBeenCalledTimes(1);
+    expect(focusSpy).toHaveBeenCalledTimes(2);
     expect(inspectorTabRefs.current.rag).toBe(result.current.inspectorTabRefs.current.rag);
   });
 

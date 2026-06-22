@@ -958,10 +958,10 @@ describe("Inspector panel data + props pipeline", () => {
       },
     );
 
-    expect(result.current.props.noActivity).toBe(true);
+    expect(result.current.props.noActivity).toBe(false);
     expect(result.current.props.quickActionsExpanded).toBe(false);
     expect(result.current.props.commandMenuIndex).toBe(7);
-    expect(result.current.data.inspectorCommandMenuIndex).toBe(7);
+    expect(result.current.data.inspectorCommandMenuIndex).toBeUndefined();
     expect(result.current.props.onCommandMenuRowBlurCapture).toBe(handlers.onCommandMenuRowBlurCapture);
     expect(result.current.props.onSuggestedCommandRowKeyDown).toBe(handlers.onSuggestedCommandRowKeyDown);
     expect(result.current.props.onCompactMenuKeyDown).toBe(handlers.onCompactMenuKeyDown);

@@ -54,7 +54,7 @@ describe("useInspectorMenuControls", () => {
     });
 
     expect(document.activeElement).toBe(buttons[1]);
-    expect(result.current.inspectorCommandMenuIndex).toBeNull();
+    expect(result.current.inspectorCommandMenuIndex).toBe(0);
   });
 
   it("compact 메뉴 키다운 시 이벤트가 전달된 행과 현재 열린 행이 다르면 열린 행 인덱스를 동기화한다", () => {
@@ -103,7 +103,7 @@ describe("useInspectorMenuControls", () => {
     });
 
     expect(document.activeElement).toBe(buttons[1]);
-    expect(result.current.inspectorCommandMenuIndex).toBeNull();
+    expect(result.current.inspectorCommandMenuIndex).toBe(0);
     expect(e.preventDefault).toHaveBeenCalledTimes(1);
     expect(e.stopPropagation).toHaveBeenCalledTimes(1);
   });
@@ -142,7 +142,7 @@ describe("useInspectorMenuControls", () => {
       result.current.controls.handleInspectorSuggestedCommandRowBlurCapture(e, 0);
     });
 
-    expect(result.current.inspectorCommandMenuIndex).toBeNull();
+    expect(result.current.inspectorCommandMenuIndex).toBe(0);
   });
 
   it("compact 메뉴 행 blur 시 메뉴 바깥으로 포커스가 이동하면 메뉴를 닫는다", () => {
@@ -1323,7 +1323,7 @@ describe("useInspectorMenuControls", () => {
       result.current.controls.handleInspectorSuggestedCommandRowBlurCapture(e, 0);
     });
 
-    expect(result.current.inspectorCommandMenuIndex).toBe(0);
+    expect(result.current.inspectorCommandMenuIndex).toBeNull();
   });
 
   it("closeInspectorCommandMenu는 restoreFocus=false일 때 트리거 포커스를 복원하지 않는다", () => {

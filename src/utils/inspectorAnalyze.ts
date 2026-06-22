@@ -1,5 +1,3 @@
-const CODE_FENCE_RE = /```(?:bash|sh|zsh|shell|cmd|powershell|pwsh)?\s*([\s\S]*?)```/gi;
-
 function normalizeCandidate(raw: string): string {
   return raw
     .trim()
@@ -36,36 +34,26 @@ function collectLineCandidate(rawLine: string): string | null {
   return null;
 }
 
-function collectFromCodeFence(content: string): string[] {
-  const out: string[] = [];
-  let match: RegExpExecArray | null;
-  while ((match = CODE_FENCE_RE.exec(content)) !== null) {
-    const block = match[1] ?? "";
-    const lines = block.split(/\r?\n/);
-    for (const rawLine of lines) {
-      const candidate = normalizeCandidate(rawLine);
-      if (!candidate || candidate.startsWith("#")) continue;
-      if (isLikelyShellCommand(candidate)) {
-        out.push(candidate);
-      }
-    }
-  }
-  return out;
-}
-
 export function extractInspectorAnalyzeCommands(content: string, limit = 3): string[] {
   if (!content.trim()) return [];
   const unique = new Set<string>();
 
-  const codeFenceCandidates = collectFromCodeFence(content);
-  for (const candidate of codeFenceCandidates) {
-    unique.add(candidate);
-    if (unique.size >= limit) return [...unique].slice(0, limit);
-  }
-
   const lines = content.split(/\r?\n/);
+  let inCodeFence = false;
   for (const line of lines) {
-    const candidate = collectLineCandidate(line);
+    const fenceMatch = line.trim().match(/^```(?:bash|sh|zsh|shell|cmd|powershell|pwsh)?\s*$/i);
+    if (fenceMatch) {
+      inCodeFence = !inCodeFence;
+      continue;
+    }
+
+    const candidate = inCodeFence
+      ? (() => {
+          const normalized = normalizeCandidate(line);
+          if (!normalized || normalized.startsWith("#")) return null;
+          return isLikelyShellCommand(normalized) ? normalized : null;
+        })()
+      : collectLineCandidate(line);
     if (!candidate) continue;
     unique.add(candidate);
     if (unique.size >= limit) break;
