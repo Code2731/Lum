@@ -37,9 +37,31 @@ vi.mock("@tauri-apps/api/core", () => ({
   invoke: vi.fn().mockImplementation((cmd: string) => {
     if (cmd === "check_onboarding_complete") return Promise.resolve(true);
     if (cmd === "check_xllm_status") return Promise.resolve(false);
+    if (cmd === "embed_loaded_info") return Promise.resolve(null);
+    if (cmd === "get_xllm_model_info") return Promise.resolve({ id: "unknown" });
+    if (cmd === "restore_last_embedded_model") return Promise.resolve(false);
+    if (cmd === "load_app_config") return Promise.resolve({
+      show_reasoning: true,
+      vision_enabled: false,
+      toolbar_show_advanced: false,
+      ui_compact_toolbar: false,
+      ui_show_file_explorer: true,
+      ui_show_inspector: true,
+      ui_inspector_density: "compact",
+      ui_hints_shown: true,
+      ui_seen_advanced_features: [],
+      quick_actions: [],
+      mistral_rs_enabled: false,
+      mistral_rs_model: null,
+    });
     if (cmd === "load_session") return Promise.reject("no session");
     if (cmd === "get_recent_history") return Promise.resolve([]);
     if (cmd === "search_history") return Promise.resolve([]);
+    if (cmd === "list_workspaces") return Promise.resolve([]);
+    if (cmd === "list_scripts") return Promise.resolve([]);
+    if (cmd === "list_ssh_profiles") return Promise.resolve([]);
+    if (cmd === "mcp_system_prompt") return Promise.resolve("");
+    if (cmd === "reset_ai_stream") return Promise.resolve();
     if (cmd === "get_hardware_specs") return Promise.resolve({
       total_memory_gb: 16,
       available_memory_gb: 8,

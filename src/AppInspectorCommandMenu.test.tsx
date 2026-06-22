@@ -9,6 +9,9 @@ vi.mock("@tauri-apps/api/core", () => ({
   invoke: vi.fn().mockImplementation((cmd: string) => {
     if (cmd === "check_onboarding_complete") return Promise.resolve(true);
     if (cmd === "check_xllm_status") return Promise.resolve(false);
+    if (cmd === "embed_loaded_info") return Promise.resolve(null);
+    if (cmd === "get_xllm_model_info") return Promise.resolve({ id: "unknown" });
+    if (cmd === "restore_last_embedded_model") return Promise.resolve(false);
     if (cmd === "load_app_config") return Promise.resolve({
       show_reasoning: true,
       vision_enabled: false,
@@ -30,6 +33,8 @@ vi.mock("@tauri-apps/api/core", () => ({
     if (cmd === "list_workspaces") return Promise.resolve([]);
     if (cmd === "list_scripts") return Promise.resolve([]);
     if (cmd === "list_ssh_profiles") return Promise.resolve([]);
+    if (cmd === "mcp_system_prompt") return Promise.resolve("");
+    if (cmd === "reset_ai_stream") return Promise.resolve();
     if (cmd === "get_hardware_specs") return Promise.resolve({
       total_memory_gb: 16,
       available_memory_gb: 8,
