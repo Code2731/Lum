@@ -1,12 +1,37 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { invoke } from "@tauri-apps/api/core";
-import { listen } from "@tauri-apps/api/event";
+import { invoke, type InvokeArgs, type InvokeOptions } from "@tauri-apps/api/core";
+import { listen, type Event as TauriEvent } from "@tauri-apps/api/event";
 import { useCommandBlocks } from "./hooks/useCommandBlocks";
 import { isEventTargetWithinSelector } from "./utils/pointerGuard";
 import App from "./App";
 
-const terminalWriteMocks = new Map<string, ReturnType<typeof vi.fn>>();
+type InvokeMockImplementation = (
+  cmd: string,
+  args?: InvokeArgs,
+  options?: InvokeOptions,
+) => Promise<unknown>;
+type TokenHandler = (event: { payload: string }) => void;
+
+const terminalWriteMocks = new Map<string, (data: string) => void>();
+
+function registerXllmTokenListener(
+  mockedListen: ReturnType<typeof vi.mocked<typeof listen>>,
+  tokenHandlers: TokenHandler[],
+) {
+  mockedListen.mockImplementation((event, callback) => {
+    if (event === "xllm_token") {
+      tokenHandlers.push((payloadEvent) => callback(payloadEvent as TauriEvent<string>));
+    }
+    return Promise.resolve(() => {});
+  });
+}
+
+function finishMockStream(resolveStream: (() => void) | null): void {
+  if (typeof resolveStream === "function") {
+    resolveStream();
+  }
+}
 
 vi.mock("@tauri-apps/api/core", () => ({
   invoke: vi.fn().mockImplementation((cmd: string) => {
@@ -62,7 +87,7 @@ vi.mock("./components/TerminalPane", async () => {
         if (!onReady) return;
         let write = terminalWriteMocks.get(id);
         if (!write) {
-          write = vi.fn();
+          write = vi.fn<(data: string) => void>();
           terminalWriteMocks.set(id, write);
         }
         onReady(write);
@@ -208,7 +233,7 @@ describe("App (LUM 터미널)", () => {
 
   it("AI 입력바 전송 중에는 유지되고 Stop으로 취소할 수 있다", async () => {
     let resolveStream: (() => void) | null = null;
-    const baseImpl = mockedInvoke.getMockImplementation();
+    const baseImpl = mockedInvoke.getMockImplementation() as InvokeMockImplementation | undefined;
     mockedInvoke.mockImplementation((cmd: string) => {
       if (cmd === "stream_ai_command") {
         return new Promise<void>((resolve) => {
@@ -216,7 +241,7 @@ describe("App (LUM 터미널)", () => {
         });
       }
       if (cmd === "cancel_ai_stream") {
-        resolveStream?.();
+        finishMockStream(resolveStream);
         resolveStream = null;
         return Promise.resolve();
       }
@@ -438,7 +463,7 @@ describe("App (LUM 터미널)", () => {
 
   it("Quick Action 단축키는 Ctrl+숫자만 소비하고 Ctrl+Alt+숫자는 소비하지 않는다", async () => {
     const baseImpl = mockedInvoke.getMockImplementation() as
-      ((cmd: string, args?: unknown, options?: unknown) => Promise<unknown>);
+      InvokeMockImplementation;
     if (!baseImpl) throw new Error("invoke mock implementation not found");
     mockedInvoke.mockImplementation((cmd: string, ...args: unknown[]) => {
       if (cmd === "load_app_config") {
@@ -446,7 +471,7 @@ describe("App (LUM 터미널)", () => {
           quick_actions: [{ id: "qa-1", label: "List", command: "ls", shortcut: 1 }],
         });
       }
-      return baseImpl(cmd, args[0], args[1]);
+      return baseImpl(cmd, args[0] as InvokeArgs | undefined, args[1] as InvokeOptions | undefined);
     });
 
     try {
@@ -478,7 +503,7 @@ describe("App (LUM 터미널)", () => {
 
   it("Quick Action 단축키는 Cmd+숫자만 소비하고 Cmd+Alt+숫자는 소비하지 않는다", async () => {
     const baseImpl = mockedInvoke.getMockImplementation() as
-      ((cmd: string, args?: unknown, options?: unknown) => Promise<unknown>);
+      InvokeMockImplementation;
     if (!baseImpl) throw new Error("invoke mock implementation not found");
     mockedInvoke.mockImplementation((cmd: string, ...args: unknown[]) => {
       if (cmd === "load_app_config") {
@@ -486,7 +511,7 @@ describe("App (LUM 터미널)", () => {
           quick_actions: [{ id: "qa-1", label: "List", command: "ls", shortcut: 1 }],
         });
       }
-      return baseImpl(cmd, args[0], args[1]);
+      return baseImpl(cmd, args[0] as InvokeArgs | undefined, args[1] as InvokeOptions | undefined);
     });
 
     try {
@@ -1829,18 +1854,13 @@ describe("App (LUM 터미널)", () => {
   });
 
   it("AI ANALYZE 결과가 완료되면 Inspector에서 추천 커맨드가 표시된다", async () => {
-    const tokenHandlers: Array<(event: { payload: string }) => void> = [];
+    const tokenHandlers: TokenHandler[] = [];
     const mockedListen = vi.mocked(listen);
     const mockedBaseListen = mockedListen.getMockImplementation();
-    const mockedBaseInvoke = mockedInvoke.getMockImplementation();
+    const mockedBaseInvoke = mockedInvoke.getMockImplementation() as InvokeMockImplementation | undefined;
     let resolveStream: (() => void) | null = null;
 
-    mockedListen.mockImplementation((event, callback) => {
-      if (event === "xllm_token") {
-        tokenHandlers.push((payloadEvent) => callback(payloadEvent));
-      }
-      return Promise.resolve(() => {});
-    });
+    registerXllmTokenListener(mockedListen, tokenHandlers);
 
     mockedInvoke.mockImplementation((cmd: string) => {
       if (cmd === "stream_ai_command") {
@@ -1885,7 +1905,7 @@ describe("App (LUM 터미널)", () => {
       tokenHandlers[0]?.({
         payload: "```bash\necho npm run build --fix\nnpm run test -- --watch\n```\n",
       });
-      resolveStream?.();
+      finishMockStream(resolveStream);
 
       await waitFor(() => {
         expect(screen.getByRole("tablist", { name: "Inspector 탭" })).toBeInTheDocument();
@@ -1894,24 +1914,19 @@ describe("App (LUM 터미널)", () => {
       });
     } finally {
       mockedListen.mockImplementation(mockedBaseListen as any);
-      mockedInvoke.mockImplementation(mockedBaseInvoke);
+      mockedInvoke.mockImplementation(mockedBaseInvoke as any);
       resolveStream = null;
     }
   });
 
   it("추천 커맨드 RUN #1을 누르면 Inspector 패널이 닫힌다", async () => {
-    const tokenHandlers: Array<(event: { payload: string }) => void> = [];
+    const tokenHandlers: TokenHandler[] = [];
     const mockedListen = vi.mocked(listen);
     const mockedBaseListen = mockedListen.getMockImplementation();
-    const mockedBaseInvoke = mockedInvoke.getMockImplementation();
+    const mockedBaseInvoke = mockedInvoke.getMockImplementation() as InvokeMockImplementation | undefined;
     let resolveStream: (() => void) | null = null;
 
-    mockedListen.mockImplementation((event, callback) => {
-      if (event === "xllm_token") {
-        tokenHandlers.push((payloadEvent) => callback(payloadEvent));
-      }
-      return Promise.resolve(() => {});
-    });
+    registerXllmTokenListener(mockedListen, tokenHandlers);
     mockedInvoke.mockImplementation((cmd: string) => {
       if (cmd === "stream_ai_command") {
         return new Promise<void>((resolve) => {
@@ -1954,7 +1969,7 @@ describe("App (LUM 터미널)", () => {
       tokenHandlers[0]?.({
         payload: "```bash\necho pnpm test --watch\nnpm run lint\n```\n",
       });
-      resolveStream?.();
+      finishMockStream(resolveStream);
 
       const runFirstButton = await waitFor(() => within(summaryPanel as HTMLElement).getByRole("button", { name: "RUN #1" }));
       fireEvent.click(runFirstButton);
@@ -1964,25 +1979,20 @@ describe("App (LUM 터미널)", () => {
       });
     } finally {
       mockedListen.mockImplementation(mockedBaseListen as any);
-      mockedInvoke.mockImplementation(mockedBaseInvoke);
+      mockedInvoke.mockImplementation(mockedBaseInvoke as any);
       resolveStream = null;
     }
   });
 
   it("추천 커맨드 RUN #1에서 Blocked 검사 결과면 실행하지 않고 Inspector가 유지된다", async () => {
-    const tokenHandlers: Array<(event: { payload: string }) => void> = [];
+    const tokenHandlers: TokenHandler[] = [];
     const mockedListen = vi.mocked(listen);
     const mockedBaseListen = mockedListen.getMockImplementation();
-    const mockedBaseInvoke = mockedInvoke.getMockImplementation();
+    const mockedBaseInvoke = mockedInvoke.getMockImplementation() as InvokeMockImplementation | undefined;
     let resolveStream: (() => void) | null = null;
 
-    mockedListen.mockImplementation((event, callback) => {
-      if (event === "xllm_token") {
-        tokenHandlers.push((payloadEvent) => callback(payloadEvent));
-      }
-      return Promise.resolve(() => {});
-    });
-    mockedInvoke.mockImplementation((cmd: string, args?: unknown) => {
+    registerXllmTokenListener(mockedListen, tokenHandlers);
+    mockedInvoke.mockImplementation((cmd: string, args?: InvokeArgs) => {
       if (cmd === "stream_ai_command") {
         return new Promise<void>((resolve) => {
           resolveStream = resolve;
@@ -2030,7 +2040,7 @@ describe("App (LUM 터미널)", () => {
       tokenHandlers[0]?.({
         payload: "```bash\nflutter analyze\nflutter test\n```\n",
       });
-      resolveStream?.();
+      finishMockStream(resolveStream);
 
       const runFirstButton = await waitFor(() => within(summaryPanel as HTMLElement).getByRole("button", { name: "RUN #1" }));
       fireEvent.click(runFirstButton);
@@ -2042,25 +2052,20 @@ describe("App (LUM 터미널)", () => {
       expect(invoke).toHaveBeenCalledWith("verify_command_safety", { command: "flutter analyze" });
     } finally {
       mockedListen.mockImplementation(mockedBaseListen as any);
-      mockedInvoke.mockImplementation(mockedBaseInvoke);
+      mockedInvoke.mockImplementation(mockedBaseInvoke as any);
       resolveStream = null;
     }
   });
 
   it("추천 커맨드 RUN #1에서 Dangerous 검사 결과면 AI 입력바로 이동하고 실행은 보류한다", async () => {
-    const tokenHandlers: Array<(event: { payload: string }) => void> = [];
+    const tokenHandlers: TokenHandler[] = [];
     const mockedListen = vi.mocked(listen);
     const mockedBaseListen = mockedListen.getMockImplementation();
-    const mockedBaseInvoke = mockedInvoke.getMockImplementation();
+    const mockedBaseInvoke = mockedInvoke.getMockImplementation() as InvokeMockImplementation | undefined;
     let resolveStream: (() => void) | null = null;
 
-    mockedListen.mockImplementation((event, callback) => {
-      if (event === "xllm_token") {
-        tokenHandlers.push((payloadEvent) => callback(payloadEvent));
-      }
-      return Promise.resolve(() => {});
-    });
-    mockedInvoke.mockImplementation((cmd: string, args?: unknown) => {
+    registerXllmTokenListener(mockedListen, tokenHandlers);
+    mockedInvoke.mockImplementation((cmd: string, args?: InvokeArgs) => {
       if (cmd === "stream_ai_command") {
         return new Promise<void>((resolve) => {
           resolveStream = resolve;
@@ -2108,7 +2113,7 @@ describe("App (LUM 터미널)", () => {
       tokenHandlers[0]?.({
         payload: "```bash\nnpm run lint --fix\nnpm run test\n```\n",
       });
-      resolveStream?.();
+      finishMockStream(resolveStream);
 
       const runFirstButton = await waitFor(() => within(summaryPanel as HTMLElement).getByRole("button", { name: "RUN #1" }));
       fireEvent.click(runFirstButton);
@@ -2120,25 +2125,20 @@ describe("App (LUM 터미널)", () => {
       expect(aiBarInput).toHaveValue("npm run lint --fix");
     } finally {
       mockedListen.mockImplementation(mockedBaseListen as any);
-      mockedInvoke.mockImplementation(mockedBaseInvoke);
+      mockedInvoke.mockImplementation(mockedBaseInvoke as any);
       resolveStream = null;
     }
   });
 
   it("추천 커맨드 RUN #1에서 Safe 검사 결과면 즉시 실행 흐름으로 처리된다", async () => {
-    const tokenHandlers: Array<(event: { payload: string }) => void> = [];
+    const tokenHandlers: TokenHandler[] = [];
     const mockedListen = vi.mocked(listen);
     const mockedBaseListen = mockedListen.getMockImplementation();
-    const mockedBaseInvoke = mockedInvoke.getMockImplementation();
+    const mockedBaseInvoke = mockedInvoke.getMockImplementation() as InvokeMockImplementation | undefined;
     let resolveStream: (() => void) | null = null;
 
-    mockedListen.mockImplementation((event, callback) => {
-      if (event === "xllm_token") {
-        tokenHandlers.push((payloadEvent) => callback(payloadEvent));
-      }
-      return Promise.resolve(() => {});
-    });
-    mockedInvoke.mockImplementation((cmd: string, args?: unknown) => {
+    registerXllmTokenListener(mockedListen, tokenHandlers);
+    mockedInvoke.mockImplementation((cmd: string, args?: InvokeArgs) => {
       if (cmd === "stream_ai_command") {
         return new Promise<void>((resolve) => {
           resolveStream = resolve;
@@ -2186,7 +2186,7 @@ describe("App (LUM 터미널)", () => {
       tokenHandlers[0]?.({
         payload: "```bash\nyarn test\nnpm run lint\n```\n",
       });
-      resolveStream?.();
+      finishMockStream(resolveStream);
 
       const runFirstButton = await waitFor(() => within(summaryPanel as HTMLElement).getByRole("button", { name: "RUN #1" }));
       fireEvent.click(runFirstButton);
@@ -2198,25 +2198,20 @@ describe("App (LUM 터미널)", () => {
       expect(invoke).toHaveBeenCalledWith("verify_command_safety", { command: "yarn test" });
     } finally {
       mockedListen.mockImplementation(mockedBaseListen as any);
-      mockedInvoke.mockImplementation(mockedBaseInvoke);
+      mockedInvoke.mockImplementation(mockedBaseInvoke as any);
       resolveStream = null;
     }
   });
 
   it("추천 커맨드 RUN #1에서 Warning 검사 결과도 즉시 실행 흐름으로 처리된다", async () => {
-    const tokenHandlers: Array<(event: { payload: string }) => void> = [];
+    const tokenHandlers: TokenHandler[] = [];
     const mockedListen = vi.mocked(listen);
     const mockedBaseListen = mockedListen.getMockImplementation();
-    const mockedBaseInvoke = mockedInvoke.getMockImplementation();
+    const mockedBaseInvoke = mockedInvoke.getMockImplementation() as InvokeMockImplementation | undefined;
     let resolveStream: (() => void) | null = null;
 
-    mockedListen.mockImplementation((event, callback) => {
-      if (event === "xllm_token") {
-        tokenHandlers.push((payloadEvent) => callback(payloadEvent));
-      }
-      return Promise.resolve(() => {});
-    });
-    mockedInvoke.mockImplementation((cmd: string, args?: unknown) => {
+    registerXllmTokenListener(mockedListen, tokenHandlers);
+    mockedInvoke.mockImplementation((cmd: string, args?: InvokeArgs) => {
       if (cmd === "stream_ai_command") {
         return new Promise<void>((resolve) => {
           resolveStream = resolve;
@@ -2264,7 +2259,7 @@ describe("App (LUM 터미널)", () => {
       tokenHandlers[0]?.({
         payload: "```bash\npnpm update\npnpm install\n```\n",
       });
-      resolveStream?.();
+      finishMockStream(resolveStream);
 
       const runFirstButton = await waitFor(() => within(summaryPanel as HTMLElement).getByRole("button", { name: "RUN #1" }));
       fireEvent.click(runFirstButton);
@@ -2276,25 +2271,20 @@ describe("App (LUM 터미널)", () => {
       expect(invoke).toHaveBeenCalledWith("verify_command_safety", { command: "pnpm update" });
     } finally {
       mockedListen.mockImplementation(mockedBaseListen as any);
-      mockedInvoke.mockImplementation(mockedBaseInvoke);
+      mockedInvoke.mockImplementation(mockedBaseInvoke as any);
       resolveStream = null;
     }
   });
 
   it("추천 커맨드 RUN #1에서 안전도 검사 오류가 나면 Inspector가 즉시 닫히지 않는다", async () => {
-    const tokenHandlers: Array<(event: { payload: string }) => void> = [];
+    const tokenHandlers: TokenHandler[] = [];
     const mockedListen = vi.mocked(listen);
     const mockedBaseListen = mockedListen.getMockImplementation();
-    const mockedBaseInvoke = mockedInvoke.getMockImplementation();
+    const mockedBaseInvoke = mockedInvoke.getMockImplementation() as InvokeMockImplementation | undefined;
     let resolveStream: (() => void) | null = null;
 
-    mockedListen.mockImplementation((event, callback) => {
-      if (event === "xllm_token") {
-        tokenHandlers.push((payloadEvent) => callback(payloadEvent));
-      }
-      return Promise.resolve(() => {});
-    });
-    mockedInvoke.mockImplementation((cmd: string, args?: unknown) => {
+    registerXllmTokenListener(mockedListen, tokenHandlers);
+    mockedInvoke.mockImplementation((cmd: string, args?: InvokeArgs) => {
       if (cmd === "stream_ai_command") {
         return new Promise<void>((resolve) => {
           resolveStream = resolve;
@@ -2339,7 +2329,7 @@ describe("App (LUM 터미널)", () => {
       tokenHandlers[0]?.({
         payload: "```bash\ngo test ./... -run TestX\n```\n",
       });
-      resolveStream?.();
+      finishMockStream(resolveStream);
 
       const runFirstButton = await waitFor(() => within(summaryPanel as HTMLElement).getByRole("button", { name: "RUN #1" }));
       fireEvent.click(runFirstButton);
@@ -2348,24 +2338,19 @@ describe("App (LUM 터미널)", () => {
       expect(screen.queryByTestId("ai-bar-input")).not.toBeInTheDocument();
     } finally {
       mockedListen.mockImplementation(mockedBaseListen as any);
-      mockedInvoke.mockImplementation(mockedBaseInvoke);
+      mockedInvoke.mockImplementation(mockedBaseInvoke as any);
       resolveStream = null;
     }
   });
 
   it("추천 명령이 파싱되지 않으면 RUN 버튼이 렌더링되지 않는다", async () => {
-    const tokenHandlers: Array<(event: { payload: string }) => void> = [];
+    const tokenHandlers: TokenHandler[] = [];
     const mockedListen = vi.mocked(listen);
     const mockedBaseListen = mockedListen.getMockImplementation();
-    const mockedBaseInvoke = mockedInvoke.getMockImplementation();
+    const mockedBaseInvoke = mockedInvoke.getMockImplementation() as InvokeMockImplementation | undefined;
     let resolveStream: (() => void) | null = null;
 
-    mockedListen.mockImplementation((event, callback) => {
-      if (event === "xllm_token") {
-        tokenHandlers.push((payloadEvent) => callback(payloadEvent));
-      }
-      return Promise.resolve(() => {});
-    });
+    registerXllmTokenListener(mockedListen, tokenHandlers);
     mockedInvoke.mockImplementation((cmd: string) => {
       if (cmd === "stream_ai_command") {
         return new Promise<void>((resolve) => {
@@ -2407,7 +2392,7 @@ describe("App (LUM 터미널)", () => {
       });
 
       tokenHandlers[0]?.({ payload: "추천 가능한 명령이 없습니다." });
-      resolveStream?.();
+      finishMockStream(resolveStream);
 
       await waitFor(() => {
         expect(within(summaryPanel as HTMLElement).getByText("DONE")).toBeInTheDocument();
@@ -2416,24 +2401,19 @@ describe("App (LUM 터미널)", () => {
       expect(summaryPanel?.querySelector("[data-inspector-command-menu-row='1']")).toBeNull();
     } finally {
       mockedListen.mockImplementation(mockedBaseListen as any);
-      mockedInvoke.mockImplementation(mockedBaseInvoke);
+      mockedInvoke.mockImplementation(mockedBaseInvoke as any);
       resolveStream = null;
     }
   });
 
   it("추천 커맨드가 3개를 초과해도 UI는 상위 3개만 표시한다", async () => {
-    const tokenHandlers: Array<(event: { payload: string }) => void> = [];
+    const tokenHandlers: TokenHandler[] = [];
     const mockedListen = vi.mocked(listen);
     const mockedBaseListen = mockedListen.getMockImplementation();
-    const mockedBaseInvoke = mockedInvoke.getMockImplementation();
+    const mockedBaseInvoke = mockedInvoke.getMockImplementation() as InvokeMockImplementation | undefined;
     let resolveStream: (() => void) | null = null;
 
-    mockedListen.mockImplementation((event, callback) => {
-      if (event === "xllm_token") {
-        tokenHandlers.push((payloadEvent) => callback(payloadEvent));
-      }
-      return Promise.resolve(() => {});
-    });
+    registerXllmTokenListener(mockedListen, tokenHandlers);
     mockedInvoke.mockImplementation((cmd: string) => {
       if (cmd === "stream_ai_command") {
         return new Promise<void>((resolve) => {
@@ -2477,7 +2457,7 @@ describe("App (LUM 터미널)", () => {
       tokenHandlers[0]?.({
         payload: "```bash\ncmd1\ncmd2\ncmd3\ncmd4\ncmd5\n```\n",
       });
-      resolveStream?.();
+      finishMockStream(resolveStream);
 
       await waitFor(() => {
         expect(within(summaryPanel as HTMLElement).getByText("DONE")).toBeInTheDocument();
@@ -2489,26 +2469,21 @@ describe("App (LUM 터미널)", () => {
       expect(screen.queryByRole("button", { name: "RUN #4" })).not.toBeInTheDocument();
     } finally {
       mockedListen.mockImplementation(mockedBaseListen as any);
-      mockedInvoke.mockImplementation(mockedBaseInvoke);
+      mockedInvoke.mockImplementation(mockedBaseInvoke as any);
       resolveStream = null;
     }
   });
 
   it("compact 모드에서 추천 커맨드 행의 R 키가 실행 처리로 이어져 Inspector가 닫힌다", async () => {
-    const tokenHandlers: Array<(event: { payload: string }) => void> = [];
+    const tokenHandlers: TokenHandler[] = [];
     const mockedListen = vi.mocked(listen);
     const mockedBaseListen = mockedListen.getMockImplementation();
-    const mockedBaseInvoke = mockedInvoke.getMockImplementation();
+    const mockedBaseInvoke = mockedInvoke.getMockImplementation() as InvokeMockImplementation | undefined;
     let resolveStream: (() => void) | null = null;
     localStorage.setItem("lum.inspectorDensity", "compact");
 
-    mockedListen.mockImplementation((event, callback) => {
-      if (event === "xllm_token") {
-        tokenHandlers.push((payloadEvent) => callback(payloadEvent));
-      }
-      return Promise.resolve(() => {});
-    });
-    mockedInvoke.mockImplementation((cmd: string, args?: unknown) => {
+    registerXllmTokenListener(mockedListen, tokenHandlers);
+    mockedInvoke.mockImplementation((cmd: string, args?: InvokeArgs) => {
       if (cmd === "stream_ai_command") {
         return new Promise<void>((resolve) => {
           resolveStream = resolve;
@@ -2556,7 +2531,7 @@ describe("App (LUM 터미널)", () => {
       tokenHandlers[0]?.({
         payload: "```bash\nnpm run build\nnpm run lint\n```\n",
       });
-      resolveStream?.();
+      finishMockStream(resolveStream);
 
       await waitFor(() => {
         expect(within(summaryPanel as HTMLElement).getByText("DONE")).toBeInTheDocument();
@@ -2572,29 +2547,24 @@ describe("App (LUM 터미널)", () => {
       expect(invoke).toHaveBeenCalledWith("verify_command_safety", { command: "npm run build" });
     } finally {
       mockedListen.mockImplementation(mockedBaseListen as any);
-      mockedInvoke.mockImplementation(mockedBaseInvoke);
+      mockedInvoke.mockImplementation(mockedBaseInvoke as any);
       localStorage.removeItem("lum.inspectorDensity");
       resolveStream = null;
     }
   });
 
   it("compact 모드에서 추천 커맨드 행 메뉴가 열리면 C/L 키가 각각 복사/로드로 동작한다", async () => {
-    const tokenHandlers: Array<(event: { payload: string }) => void> = [];
+    const tokenHandlers: TokenHandler[] = [];
     const mockedListen = vi.mocked(listen);
     const mockedBaseListen = mockedListen.getMockImplementation();
-    const mockedBaseInvoke = mockedInvoke.getMockImplementation();
+    const mockedBaseInvoke = mockedInvoke.getMockImplementation() as InvokeMockImplementation | undefined;
     let resolveStream: (() => void) | null = null;
     const writeText = vi.fn().mockResolvedValue(undefined);
     const baseClipboard = navigator.clipboard;
     Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
     localStorage.setItem("lum.inspectorDensity", "compact");
 
-    mockedListen.mockImplementation((event, callback) => {
-      if (event === "xllm_token") {
-        tokenHandlers.push((payloadEvent) => callback(payloadEvent));
-      }
-      return Promise.resolve(() => {});
-    });
+    registerXllmTokenListener(mockedListen, tokenHandlers);
     mockedInvoke.mockImplementation((cmd: string) => {
       if (cmd === "stream_ai_command") {
         return new Promise<void>((resolve) => {
@@ -2638,7 +2608,7 @@ describe("App (LUM 터미널)", () => {
       tokenHandlers[0]?.({
         payload: "```bash\nnpm run test\nnpm run lint\n```\n",
       });
-      resolveStream?.();
+      finishMockStream(resolveStream);
 
       await waitFor(() => {
         expect(within(summaryPanel as HTMLElement).getByText("DONE")).toBeInTheDocument();
@@ -2658,7 +2628,7 @@ describe("App (LUM 터미널)", () => {
       expect(aiBarInput).toHaveValue("npm run test");
     } finally {
       mockedListen.mockImplementation(mockedBaseListen as any);
-      mockedInvoke.mockImplementation(mockedBaseInvoke);
+      mockedInvoke.mockImplementation(mockedBaseInvoke as any);
       Object.defineProperty(navigator, "clipboard", { configurable: true, value: baseClipboard });
       localStorage.removeItem("lum.inspectorDensity");
       resolveStream = null;
@@ -2666,22 +2636,17 @@ describe("App (LUM 터미널)", () => {
   });
 
   it("compact 모드에서 두 번째 추천 커맨드 행의 MORE 메뉴가 열리면 두 번째 행에 대해 C/L 키가 동작한다", async () => {
-    const tokenHandlers: Array<(event: { payload: string }) => void> = [];
+    const tokenHandlers: TokenHandler[] = [];
     const mockedListen = vi.mocked(listen);
     const mockedBaseListen = mockedListen.getMockImplementation();
-    const mockedBaseInvoke = mockedInvoke.getMockImplementation();
+    const mockedBaseInvoke = mockedInvoke.getMockImplementation() as InvokeMockImplementation | undefined;
     let resolveStream: (() => void) | null = null;
     const writeText = vi.fn().mockResolvedValue(undefined);
     const baseClipboard = navigator.clipboard;
     Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
     localStorage.setItem("lum.inspectorDensity", "compact");
 
-    mockedListen.mockImplementation((event, callback) => {
-      if (event === "xllm_token") {
-        tokenHandlers.push((payloadEvent) => callback(payloadEvent));
-      }
-      return Promise.resolve(() => {});
-    });
+    registerXllmTokenListener(mockedListen, tokenHandlers);
     mockedInvoke.mockImplementation((cmd: string) => {
       if (cmd === "stream_ai_command") {
         return new Promise<void>((resolve) => {
@@ -2725,7 +2690,7 @@ describe("App (LUM 터미널)", () => {
       tokenHandlers[0]?.({
         payload: "```bash\nnpm run test\nnpm run lint\n```\n",
       });
-      resolveStream?.();
+      finishMockStream(resolveStream);
 
       await waitFor(() => {
         expect(within(summaryPanel as HTMLElement).getByText("DONE")).toBeInTheDocument();
@@ -2745,7 +2710,7 @@ describe("App (LUM 터미널)", () => {
       expect(aiBarInput).toHaveValue("npm run lint");
     } finally {
       mockedListen.mockImplementation(mockedBaseListen as any);
-      mockedInvoke.mockImplementation(mockedBaseInvoke);
+      mockedInvoke.mockImplementation(mockedBaseInvoke as any);
       Object.defineProperty(navigator, "clipboard", { configurable: true, value: baseClipboard });
       localStorage.removeItem("lum.inspectorDensity");
       resolveStream = null;
@@ -2753,23 +2718,18 @@ describe("App (LUM 터미널)", () => {
   });
 
   it("compact 모드에서 추천 커맨드 행이 닫힌 상태면 C/L 키는 무시된다", async () => {
-    const tokenHandlers: Array<(event: { payload: string }) => void> = [];
+    const tokenHandlers: TokenHandler[] = [];
     const mockedListen = vi.mocked(listen);
     const mockedBaseListen = mockedListen.getMockImplementation();
-    const mockedBaseInvoke = mockedInvoke.getMockImplementation();
+    const mockedBaseInvoke = mockedInvoke.getMockImplementation() as InvokeMockImplementation | undefined;
     let resolveStream: (() => void) | null = null;
     const writeText = vi.fn().mockResolvedValue(undefined);
     const baseClipboard = navigator.clipboard;
     Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
     localStorage.setItem("lum.inspectorDensity", "compact");
 
-    mockedListen.mockImplementation((event, callback) => {
-      if (event === "xllm_token") {
-        tokenHandlers.push((payloadEvent) => callback(payloadEvent));
-      }
-      return Promise.resolve(() => {});
-    });
-    mockedInvoke.mockImplementation((cmd: string, args?: unknown) => {
+    registerXllmTokenListener(mockedListen, tokenHandlers);
+    mockedInvoke.mockImplementation((cmd: string, args?: InvokeArgs) => {
       if (cmd === "stream_ai_command") {
         return new Promise<void>((resolve) => {
           resolveStream = resolve;
@@ -2818,7 +2778,7 @@ describe("App (LUM 터미널)", () => {
       tokenHandlers[0]?.({
         payload: "```bash\nnpm run test\nnpm run lint\n```\n",
       });
-      resolveStream?.();
+      finishMockStream(resolveStream);
 
       await waitFor(() => {
         expect(within(summaryPanel as HTMLElement).getByText("DONE")).toBeInTheDocument();
@@ -2834,7 +2794,7 @@ describe("App (LUM 터미널)", () => {
       expect(invoke).not.toHaveBeenCalledWith("verify_command_safety", { command: "npm run lint" });
     } finally {
       mockedListen.mockImplementation(mockedBaseListen as any);
-      mockedInvoke.mockImplementation(mockedBaseInvoke);
+      mockedInvoke.mockImplementation(mockedBaseInvoke as any);
       Object.defineProperty(navigator, "clipboard", { configurable: true, value: baseClipboard });
       localStorage.removeItem("lum.inspectorDensity");
       resolveStream = null;
@@ -2842,20 +2802,15 @@ describe("App (LUM 터미널)", () => {
   });
 
   it("compact 모드에서 두 번째 추천 커맨드 행의 R 키는 두 번째 명령을 적용한다", async () => {
-    const tokenHandlers: Array<(event: { payload: string }) => void> = [];
+    const tokenHandlers: TokenHandler[] = [];
     const mockedListen = vi.mocked(listen);
     const mockedBaseListen = mockedListen.getMockImplementation();
-    const mockedBaseInvoke = mockedInvoke.getMockImplementation();
+    const mockedBaseInvoke = mockedInvoke.getMockImplementation() as InvokeMockImplementation | undefined;
     let resolveStream: (() => void) | null = null;
     localStorage.setItem("lum.inspectorDensity", "compact");
 
-    mockedListen.mockImplementation((event, callback) => {
-      if (event === "xllm_token") {
-        tokenHandlers.push((payloadEvent) => callback(payloadEvent));
-      }
-      return Promise.resolve(() => {});
-    });
-    mockedInvoke.mockImplementation((cmd: string, args?: unknown) => {
+    registerXllmTokenListener(mockedListen, tokenHandlers);
+    mockedInvoke.mockImplementation((cmd: string, args?: InvokeArgs) => {
       if (cmd === "stream_ai_command") {
         return new Promise<void>((resolve) => {
           resolveStream = resolve;
@@ -2904,7 +2859,7 @@ describe("App (LUM 터미널)", () => {
       tokenHandlers[0]?.({
         payload: "```bash\nnpm run test\nnpm run lint\n```\n",
       });
-      resolveStream?.();
+      finishMockStream(resolveStream);
 
       await waitFor(() => {
         expect(within(summaryPanel as HTMLElement).getByText("DONE")).toBeInTheDocument();
@@ -2920,28 +2875,23 @@ describe("App (LUM 터미널)", () => {
       expect(invoke).toHaveBeenCalledWith("verify_command_safety", { command: "npm run lint" });
     } finally {
       mockedListen.mockImplementation(mockedBaseListen as any);
-      mockedInvoke.mockImplementation(mockedBaseInvoke);
+      mockedInvoke.mockImplementation(mockedBaseInvoke as any);
       localStorage.removeItem("lum.inspectorDensity");
       resolveStream = null;
     }
   });
 
   it("분석 결과 전체 복사 버튼은 분석 요약을 클립보드에 반영한다", async () => {
-    const tokenHandlers: Array<(event: { payload: string }) => void> = [];
+    const tokenHandlers: TokenHandler[] = [];
     const mockedListen = vi.mocked(listen);
     const mockedBaseListen = mockedListen.getMockImplementation();
-    const mockedBaseInvoke = mockedInvoke.getMockImplementation();
+    const mockedBaseInvoke = mockedInvoke.getMockImplementation() as InvokeMockImplementation | undefined;
     let resolveStream: (() => void) | null = null;
     const writeText = vi.fn().mockResolvedValue(undefined);
     const baseClipboard = navigator.clipboard;
     Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
 
-    mockedListen.mockImplementation((event, callback) => {
-      if (event === "xllm_token") {
-        tokenHandlers.push((payloadEvent) => callback(payloadEvent));
-      }
-      return Promise.resolve(() => {});
-    });
+    registerXllmTokenListener(mockedListen, tokenHandlers);
     mockedInvoke.mockImplementation((cmd: string) => {
       if (cmd === "stream_ai_command") {
         return new Promise<void>((resolve) => {
@@ -2983,7 +2933,7 @@ describe("App (LUM 터미널)", () => {
       });
 
       tokenHandlers[0]?.({ payload: "추천 수정: `npm run test` 를 다시 실행" });
-      resolveStream?.();
+      finishMockStream(resolveStream);
 
       const copyAnalyzeButton = await waitFor(
         () => within(summaryPanel as HTMLElement).getByTitle("분석 결과 전체 복사"),
@@ -2995,28 +2945,23 @@ describe("App (LUM 터미널)", () => {
       expect(writeText).toHaveBeenCalledWith(expect.stringContaining("추천 수정: `npm run test` 를 다시 실행"));
     } finally {
       mockedListen.mockImplementation(mockedBaseListen as any);
-      mockedInvoke.mockImplementation(mockedBaseInvoke);
+      mockedInvoke.mockImplementation(mockedBaseInvoke as any);
       Object.defineProperty(navigator, "clipboard", { configurable: true, value: baseClipboard });
       resolveStream = null;
     }
   });
 
   it("분석 결과 전체 복사 실패는 앱 예외로 이어지지 않고 패널을 유지한다", async () => {
-    const tokenHandlers: Array<(event: { payload: string }) => void> = [];
+    const tokenHandlers: TokenHandler[] = [];
     const mockedListen = vi.mocked(listen);
     const mockedBaseListen = mockedListen.getMockImplementation();
-    const mockedBaseInvoke = mockedInvoke.getMockImplementation();
+    const mockedBaseInvoke = mockedInvoke.getMockImplementation() as InvokeMockImplementation | undefined;
     let resolveStream: (() => void) | null = null;
     const writeText = vi.fn().mockRejectedValue(new Error("clipboard denied"));
     const baseClipboard = navigator.clipboard;
     Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
 
-    mockedListen.mockImplementation((event, callback) => {
-      if (event === "xllm_token") {
-        tokenHandlers.push((payloadEvent) => callback(payloadEvent));
-      }
-      return Promise.resolve(() => {});
-    });
+    registerXllmTokenListener(mockedListen, tokenHandlers);
     mockedInvoke.mockImplementation((cmd: string) => {
       if (cmd === "stream_ai_command") {
         return new Promise<void>((resolve) => {
@@ -3058,7 +3003,7 @@ describe("App (LUM 터미널)", () => {
       });
 
       tokenHandlers[0]?.({ payload: "추천 수정: 타입 에러를 수정해보세요" });
-      resolveStream?.();
+      finishMockStream(resolveStream);
 
       const copyAnalyzeButton = await waitFor(
         () => within(summaryPanel as HTMLElement).getByTitle("분석 결과 전체 복사"),
@@ -3071,28 +3016,23 @@ describe("App (LUM 터미널)", () => {
       expect(writeText).toHaveBeenCalledTimes(1);
     } finally {
       mockedListen.mockImplementation(mockedBaseListen as any);
-      mockedInvoke.mockImplementation(mockedBaseInvoke);
+      mockedInvoke.mockImplementation(mockedBaseInvoke as any);
       Object.defineProperty(navigator, "clipboard", { configurable: true, value: baseClipboard });
       resolveStream = null;
     }
   });
 
   it("추천 커맨드의 COPY/LOAD가 각각 클립보드와 AI 바로 반영된다", async () => {
-    const tokenHandlers: Array<(event: { payload: string }) => void> = [];
+    const tokenHandlers: TokenHandler[] = [];
     const mockedListen = vi.mocked(listen);
     const mockedBaseListen = mockedListen.getMockImplementation();
-    const mockedBaseInvoke = mockedInvoke.getMockImplementation();
+    const mockedBaseInvoke = mockedInvoke.getMockImplementation() as InvokeMockImplementation | undefined;
     let resolveStream: (() => void) | null = null;
     const writeText = vi.fn().mockResolvedValue(undefined);
     const baseClipboard = navigator.clipboard;
     Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
 
-    mockedListen.mockImplementation((event, callback) => {
-      if (event === "xllm_token") {
-        tokenHandlers.push((payloadEvent) => callback(payloadEvent));
-      }
-      return Promise.resolve(() => {});
-    });
+    registerXllmTokenListener(mockedListen, tokenHandlers);
     mockedInvoke.mockImplementation((cmd: string) => {
       if (cmd === "stream_ai_command") {
         return new Promise<void>((resolve) => {
@@ -3136,7 +3076,7 @@ describe("App (LUM 터미널)", () => {
       tokenHandlers[0]?.({
         payload: "```bash\ncargo fmt\ncargo check\ncargo test -q\n```\n",
       });
-      resolveStream?.();
+      finishMockStream(resolveStream);
 
       const firstRow = await waitFor(() => container.querySelector("[data-inspector-command-menu-row='1']"));
       const rowCopyButton = within(firstRow as HTMLElement).getByRole("button", { name: "COPY" });
@@ -3150,25 +3090,20 @@ describe("App (LUM 터미널)", () => {
       expect(aiBarInput).toHaveValue("cargo fmt");
     } finally {
       mockedListen.mockImplementation(mockedBaseListen as any);
-      mockedInvoke.mockImplementation(mockedBaseInvoke);
+      mockedInvoke.mockImplementation(mockedBaseInvoke as any);
       Object.defineProperty(navigator, "clipboard", { configurable: true, value: baseClipboard });
       resolveStream = null;
     }
   });
 
   it("AI 분석 실패 응답은 ERROR 상태로 표시된다", async () => {
-    const tokenHandlers: Array<(event: { payload: string }) => void> = [];
+    const tokenHandlers: TokenHandler[] = [];
     const mockedListen = vi.mocked(listen);
     const mockedBaseListen = mockedListen.getMockImplementation();
-    const mockedBaseInvoke = mockedInvoke.getMockImplementation();
+    const mockedBaseInvoke = mockedInvoke.getMockImplementation() as InvokeMockImplementation | undefined;
     let resolveStream: (() => void) | null = null;
 
-    mockedListen.mockImplementation((event, callback) => {
-      if (event === "xllm_token") {
-        tokenHandlers.push((payloadEvent) => callback(payloadEvent));
-      }
-      return Promise.resolve(() => {});
-    });
+    registerXllmTokenListener(mockedListen, tokenHandlers);
     mockedInvoke.mockImplementation((cmd: string) => {
       if (cmd === "stream_ai_command") {
         return new Promise<void>((resolve) => {
@@ -3210,14 +3145,14 @@ describe("App (LUM 터미널)", () => {
       });
 
       tokenHandlers[0]?.({ payload: "❌ 분석 실행 실패" });
-      resolveStream?.();
+      finishMockStream(resolveStream);
 
       await waitFor(() => {
         expect(within(summaryPanel as HTMLElement).getByText("ERROR")).toBeInTheDocument();
       });
     } finally {
       mockedListen.mockImplementation(mockedBaseListen as any);
-      mockedInvoke.mockImplementation(mockedBaseInvoke);
+      mockedInvoke.mockImplementation(mockedBaseInvoke as any);
       resolveStream = null;
     }
   });
@@ -3790,10 +3725,7 @@ describe("App (LUM 터미널)", () => {
     const mockedListen = vi.mocked(listen);
     const mockedBaseListen = mockedListen.getMockImplementation();
 
-    mockedListen.mockImplementation((event, callback) => {
-      if (event === "xllm_token") return Promise.resolve(() => {});
-      return Promise.resolve(() => {});
-    });
+    registerXllmTokenListener(mockedListen, []);
 
     try {
       setMockCommandBlocks([

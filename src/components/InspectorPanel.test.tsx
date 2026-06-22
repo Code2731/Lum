@@ -8,6 +8,7 @@ import type {
   InspectorRecentBlock,
   InspectorTab,
   InspectorTabItem,
+  ScriptLibraryLike,
 } from "./InspectorPanel/types";
 
 type InspectorPanelProps = ComponentProps<typeof InspectorPanel>;
@@ -85,7 +86,13 @@ const doneWithoutSuggestionsCache: InspectorAnalyzeCache = {
   suggestedCommands: [],
 };
 
-function createRefs() {
+function createRefs(): {
+  inspectorMoreButtonRefs: InspectorPanelProps["inspectorMoreButtonRefs"];
+  inspectorMenuFirstActionRefs: InspectorPanelProps["inspectorMenuFirstActionRefs"];
+  inspectorQuickActionsToggleRef: InspectorPanelProps["inspectorQuickActionsToggleRef"];
+  inspectorQuickActionsAdvancedRef: InspectorPanelProps["inspectorQuickActionsAdvancedRef"];
+  inspectorTabRefs: InspectorPanelProps["inspectorTabRefs"];
+} {
   return {
     inspectorMoreButtonRefs: { current: {} as Record<number, HTMLButtonElement | null> },
     inspectorMenuFirstActionRefs: { current: {} as Record<number, HTMLButtonElement | null> },
@@ -95,7 +102,7 @@ function createRefs() {
   };
 }
 
-function createScriptLibrary(): InspectorPanelProps["scriptLibrary"] {
+function createScriptLibrary(): ScriptLibraryLike {
   return {
     scripts: [],
     loading: false,

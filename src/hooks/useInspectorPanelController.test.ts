@@ -2,8 +2,24 @@ import { act, renderHook } from "@testing-library/react";
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { useInspectorPanelController } from "./useInspectorPanelController";
+import type { InspectorPanelDataProps } from "../components/InspectorPanel/types";
 
 type InspectorTab = "summary" | "rag" | "scripts" | "sysmon";
+
+function createGlobalKeyboardEvent(
+  overrides: Partial<globalThis.KeyboardEvent>,
+): globalThis.KeyboardEvent {
+  return {
+    altKey: false,
+    ctrlKey: false,
+    metaKey: false,
+    shiftKey: false,
+    key: "",
+    target: document.body,
+    preventDefault: vi.fn(),
+    ...overrides,
+  } as unknown as globalThis.KeyboardEvent;
+}
 
 function setupHook() {
   const originalRequestAnimationFrame = window.requestAnimationFrame;
@@ -24,8 +40,12 @@ function setupHook() {
   };
   const inspectorMoreButtonRefs = { current: {} as Record<number, HTMLButtonElement | null> };
   const inspectorMenuFirstActionRefs = { current: {} as Record<number, HTMLButtonElement | null> };
-  const inspectorQuickActionsAdvancedRef = { current: null as HTMLDivElement | null };
-  const inspectorQuickActionsToggleRef = { current: null as HTMLButtonElement | null };
+  const inspectorQuickActionsAdvancedRef: InspectorPanelDataProps["inspectorQuickActionsAdvancedRef"] = {
+    current: null,
+  };
+  const inspectorQuickActionsToggleRef: InspectorPanelDataProps["inspectorQuickActionsToggleRef"] = {
+    current: null,
+  };
   const inspectorToggleButtonRef = { current: null as HTMLButtonElement | null };
 
   const result = renderHook(() => {
@@ -84,7 +104,7 @@ describe("useInspectorPanelController", () => {
     const focusSpy = vi.spyOn(result.current.inspectorTabRefs.current.rag!, "focus");
     const preventDefault = vi.fn();
 
-    const e = {
+    const e = createGlobalKeyboardEvent({
       altKey: true,
       ctrlKey: false,
       metaKey: false,
@@ -92,7 +112,7 @@ describe("useInspectorPanelController", () => {
       key: "2",
       target: document.body,
       preventDefault,
-    } as globalThis.KeyboardEvent;
+    });
 
     act(() => {
       const handled = result.current.controller.handleInspectorTabShortcut(e);
@@ -115,7 +135,7 @@ describe("useInspectorPanelController", () => {
 
     const preventDefault = vi.fn();
     const input = document.createElement("input");
-    const e = {
+    const e = createGlobalKeyboardEvent({
       altKey: true,
       ctrlKey: false,
       metaKey: false,
@@ -123,7 +143,7 @@ describe("useInspectorPanelController", () => {
       key: "2",
       target: input,
       preventDefault,
-    } as globalThis.KeyboardEvent;
+    });
 
     act(() => {
       const handled = result.current.controller.handleInspectorTabShortcut(e);
@@ -138,7 +158,7 @@ describe("useInspectorPanelController", () => {
   it("지원하지 않는 키는 핸들하지 않는다", () => {
     const { result, restoreRaf } = setupHook();
     const preventDefault = vi.fn();
-    const e = {
+    const e = createGlobalKeyboardEvent({
       altKey: true,
       ctrlKey: false,
       metaKey: false,
@@ -146,7 +166,7 @@ describe("useInspectorPanelController", () => {
       key: "8",
       target: document.body,
       preventDefault,
-    } as globalThis.KeyboardEvent;
+    });
 
     act(() => {
       const handled = result.current.controller.handleInspectorTabShortcut(e);

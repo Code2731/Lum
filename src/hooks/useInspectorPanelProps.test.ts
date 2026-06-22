@@ -1,6 +1,6 @@
 import { renderHook } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import type { InspectorPanelProps, InspectorAnalyzeCache, InspectorTabItem } from "../components/InspectorPanel/types";
+import type { InspectorPanelProps, InspectorAnalyzeCache, InspectorTab, InspectorTabItem } from "../components/InspectorPanel/types";
 import { useInspectorPanelProps } from "./useInspectorPanelProps";
 
 const INSPECTOR_TABS: readonly InspectorTabItem[] = [
@@ -285,13 +285,13 @@ describe("useInspectorPanelProps", () => {
     });
 
     const { result, rerender } = renderHook(
-      ([inspectorDensity, inspectorTab]) => useInspectorPanelProps({
+      ([inspectorDensity, inspectorTab]: [InspectorPanelProps["inspectorDensity"], InspectorTab]) => useInspectorPanelProps({
         ...base,
         inspectorDensity,
         inspectorTab,
       }),
       {
-        initialProps: ["cozy", "summary"] as const,
+        initialProps: ["cozy", "summary"] as [InspectorPanelProps["inspectorDensity"], InspectorTab],
       },
     );
 
@@ -302,7 +302,7 @@ describe("useInspectorPanelProps", () => {
     expect(result.current.onSuggestedCommandRowKeyDown).toBe(handlers.onSuggestedCommandRowKeyDown);
     expect(result.current.onCompactMenuKeyDown).toBe(handlers.onCompactMenuKeyDown);
 
-    rerender(["compact", "rag"]);
+    rerender(["compact", "rag"] as [InspectorPanelProps["inspectorDensity"], InspectorTab]);
 
     expect(result.current.commandMenuIndex).toBe(2);
     expect(result.current.inspectorDensity).toBe("compact");
@@ -321,13 +321,13 @@ describe("useInspectorPanelProps", () => {
     });
 
     const { result, rerender } = renderHook(
-      ([quickActionsExpanded, commandMenuIndex]) => useInspectorPanelProps({
+      ([quickActionsExpanded, commandMenuIndex]: [boolean, number | null]) => useInspectorPanelProps({
         ...base,
         quickActionsExpanded,
         commandMenuIndex,
       }),
       {
-        initialProps: [false, 1] as const,
+        initialProps: [false, 1] as [boolean, number | null],
       },
     );
 
@@ -338,7 +338,7 @@ describe("useInspectorPanelProps", () => {
     expect(result.current.onCompactMenuKeyDown).toBe(handlers.onCompactMenuKeyDown);
     expect(result.current.onOpenCompactMenu).toBe(handlers.onOpenCompactMenu);
 
-    rerender([true, null]);
+    rerender([true, null] as [boolean, number | null]);
 
     expect(result.current.quickActionsExpanded).toBe(true);
     expect(result.current.commandMenuIndex).toBeNull();
@@ -359,14 +359,14 @@ describe("useInspectorPanelProps", () => {
     });
 
     const { result, rerender } = renderHook(
-      ([quickActionsExpanded, inspectorDensity, inspectorTab]) => useInspectorPanelProps({
+      ([quickActionsExpanded, inspectorDensity, inspectorTab]: [boolean, InspectorPanelProps["inspectorDensity"], InspectorTab]) => useInspectorPanelProps({
         ...base,
         quickActionsExpanded,
         inspectorDensity,
         inspectorTab,
       }),
       {
-        initialProps: [false, "cozy", "summary"] as const,
+        initialProps: [false, "cozy", "summary"] as [boolean, InspectorPanelProps["inspectorDensity"], InspectorTab],
       },
     );
 
@@ -379,7 +379,7 @@ describe("useInspectorPanelProps", () => {
     expect(result.current.onCompactMenuKeyDown).toBe(handlers.onCompactMenuKeyDown);
     expect(result.current.onOpenCompactMenu).toBe(handlers.onOpenCompactMenu);
 
-    rerender([true, "compact", "rag"]);
+    rerender([true, "compact", "rag"] as [boolean, InspectorPanelProps["inspectorDensity"], InspectorTab]);
 
     expect(result.current.quickActionsExpanded).toBe(true);
     expect(result.current.inspectorDensity).toBe("compact");
@@ -433,13 +433,13 @@ describe("useInspectorPanelProps", () => {
     });
 
     const { result, rerender } = renderHook(
-      ([noActivity, quickActionsExpanded]) => useInspectorPanelProps({
+      ([noActivity, quickActionsExpanded]: [boolean, boolean]) => useInspectorPanelProps({
         ...base,
         noActivity,
         quickActionsExpanded,
       }),
       {
-        initialProps: [true, false] as const,
+        initialProps: [true, false] as [boolean, boolean],
       },
     );
 
@@ -451,7 +451,7 @@ describe("useInspectorPanelProps", () => {
     expect(result.current.onCompactMenuKeyDown).toBe(handlers.onCompactMenuKeyDown);
     expect(result.current.onOpenCompactMenu).toBe(handlers.onOpenCompactMenu);
 
-    rerender([false, true]);
+    rerender([false, true] as [boolean, boolean]);
 
     expect(result.current.noActivity).toBe(false);
     expect(result.current.quickActionsExpanded).toBe(true);
@@ -473,13 +473,13 @@ describe("useInspectorPanelProps", () => {
     const event = { key: "ArrowDown", preventDefault: vi.fn(), stopPropagation: vi.fn() } as any;
 
     const { result, rerender } = renderHook(
-      ([noActivity, quickActionsExpanded]) => useInspectorPanelProps({
+      ([noActivity, quickActionsExpanded]: [boolean, boolean]) => useInspectorPanelProps({
         ...base,
         noActivity,
         quickActionsExpanded,
       }),
       {
-        initialProps: [true, false] as const,
+        initialProps: [true, false] as [boolean, boolean],
       },
     );
 
@@ -488,7 +488,7 @@ describe("useInspectorPanelProps", () => {
     expect(result.current.onCompactMenuKeyDown).toBe(handlers.onCompactMenuKeyDown);
     result.current.onCompactMenuKeyDown(event, 0);
 
-    rerender([false, true]);
+    rerender([false, true] as [boolean, boolean]);
 
     expect(result.current.noActivity).toBe(false);
     expect(result.current.quickActionsExpanded).toBe(true);

@@ -31,8 +31,8 @@ export interface InspectorPanelSummaryLayout {
 export interface InspectorPanelSummaryRefs {
   inspectorMoreButtonRefs: React.MutableRefObject<Record<number, HTMLButtonElement | null>>;
   inspectorMenuFirstActionRefs: React.MutableRefObject<Record<number, HTMLButtonElement | null>>;
-  inspectorQuickActionsToggleRef: React.RefObject<HTMLButtonElement>;
-  inspectorQuickActionsAdvancedRef: React.RefObject<HTMLDivElement>;
+  inspectorQuickActionsToggleRef: React.RefObject<HTMLButtonElement | null>;
+  inspectorQuickActionsAdvancedRef: React.RefObject<HTMLDivElement | null>;
 }
 
 export interface InspectorPanelSummaryActions {

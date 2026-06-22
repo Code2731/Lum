@@ -8,12 +8,8 @@ import ScriptLibraryPanel from "./ScriptLibraryPanel";
 import SystemMonitorPanel from "./SystemMonitorPanel";
 import type {
   InspectorPanelProps,
-  InspectorAnalyzeCache,
-  InspectorFailedBlock,
-  InspectorRecentBlock,
-  ScriptLibraryLike,
+  InspectorTab,
 } from "./InspectorPanel/types";
-
 
 const InspectorPanel: React.FC<InspectorPanelProps> = ({
   showInspector,

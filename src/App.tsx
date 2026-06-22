@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, useEffect, useMemo, lazy, Suspense } from "react";
+import React, { useState, useRef, useCallback, useEffect, useMemo, lazy, Suspense, type SetStateAction } from "react";
 import { Group as PanelGroup, Panel, Separator as PanelResizeHandle } from "react-resizable-panels";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { normalizeBlockId, shortPath } from "./utils";
@@ -500,6 +500,21 @@ const App: React.FC = () => {
 
   // 스크립트 라이브러리
   const scriptLib = useScriptLibrary(activePaneIdRef, ptyWriteRefs);
+  const inspectorScriptLibrary = useMemo(() => ({
+    scripts: scriptLib.scripts,
+    loading: scriptLib.loading,
+    onLoad: scriptLib.loadScripts,
+    onRun: scriptLib.runScript,
+    onDelete: scriptLib.deleteScript,
+    onSave: scriptLib.saveScript,
+  }), [
+    scriptLib.deleteScript,
+    scriptLib.loadScripts,
+    scriptLib.loading,
+    scriptLib.runScript,
+    scriptLib.saveScript,
+    scriptLib.scripts,
+  ]);
 
   // 알림 센터
   const notifCenter = useNotificationCenter();
@@ -544,8 +559,13 @@ const App: React.FC = () => {
   const [dismissedBlockId, setDismissedBlockId] = useState<string | null>(null);
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
   const resolvedSelectedBlockId = useMemo(() => normalizeBlockId(selectedBlockId), [selectedBlockId]);
-  const setResolvedSelectedBlockId = useCallback((nextBlockId: string | null) => {
-    setSelectedBlockId(normalizeBlockId(nextBlockId));
+  const setResolvedSelectedBlockId = useCallback((nextBlockId: SetStateAction<string | null>) => {
+    setSelectedBlockId((prev) => {
+      const resolvedNext = typeof nextBlockId === "function"
+        ? nextBlockId(prev)
+        : nextBlockId;
+      return normalizeBlockId(resolvedNext);
+    });
   }, []);
   const [retryComparePending, setRetryComparePending] = useState<RetryComparePending | null>(null);
   const [retryCompareQueue, setRetryCompareQueue] = useState<RetryCompareTask[]>(() => loadRetryCompareRuntimeCache().queue);
@@ -860,7 +880,16 @@ const App: React.FC = () => {
   }, [cmdBlocks, resolvedSelectedBlockId, setResolvedSelectedBlockId]);
 
   const verifyCommandSafety = useCallback(
-    (command: string) => invoke<{ level: "Safe" | "Warning" | "Dangerous" | "Blocked" }>("verify_command_safety", { command }),
+    async (command: string) => {
+      const result = await invoke<{
+        level: "Safe" | "Warning" | "Dangerous" | "Blocked";
+        reason?: string;
+      }>("verify_command_safety", { command });
+      return {
+        level: result.level,
+        reason: result.reason ?? "",
+      };
+    },
     [],
   );
 
@@ -880,7 +909,7 @@ const App: React.FC = () => {
   } = useInspectorPanelCommands({
     cmdBlocks,
     selectedBlockId: resolvedSelectedBlockId,
-    setResolvedSelectedBlockId,
+    setSelectedBlockId: setResolvedSelectedBlockId,
     setDismissedBlockId,
     setViewMode,
     setAiInput,
@@ -1141,7 +1170,7 @@ const App: React.FC = () => {
     inspectorMenuFirstActionRefs,
     inspectorQuickActionsToggleRef,
     inspectorQuickActionsAdvancedRef,
-    scriptLibrary: scriptLib,
+    scriptLibrary: inspectorScriptLibrary,
     handlers: {
       onDensityToggle: inspectorPanelActionHandlers.onDensityToggle,
       onClose: closeInspector,

@@ -43,10 +43,10 @@ export interface InspectorTabItem {
 export interface ScriptLibraryLike {
   scripts: Script[];
   loading: boolean;
-  onLoad: () => Promise<void>;
+  onLoad: () => void | Promise<void>;
   onRun: (commands: string[]) => void;
-  onDelete: (id: string) => Promise<void>;
-  onSave: (name: string, description: string, commands: string[]) => Promise<Script>;
+  onDelete: (id: string) => void | Promise<void>;
+  onSave: (name: string, description: string, commands: string[]) => Promise<unknown>;
 }
 
 export interface InspectorPanelDataProps {
@@ -72,8 +72,8 @@ export interface InspectorPanelDataProps {
   quickActionsExpanded: boolean;
   inspectorMoreButtonRefs: MutableRefObject<Record<number, HTMLButtonElement | null>>;
   inspectorMenuFirstActionRefs: MutableRefObject<Record<number, HTMLButtonElement | null>>;
-  inspectorQuickActionsToggleRef: RefObject<HTMLButtonElement>;
-  inspectorQuickActionsAdvancedRef: RefObject<HTMLDivElement>;
+  inspectorQuickActionsToggleRef: RefObject<HTMLButtonElement | null>;
+  inspectorQuickActionsAdvancedRef: RefObject<HTMLDivElement | null>;
   scriptLibrary: ScriptLibraryLike;
 }
 

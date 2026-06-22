@@ -2,6 +2,34 @@ import { act, renderHook } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { type FocusEvent, type KeyboardEvent, useState } from "react";
 import { useInspectorMenuControls } from "./useInspectorMenuControls";
+import type { InspectorPanelDataProps } from "../components/InspectorPanel/types";
+
+function createQuickActionsAdvancedRef(): InspectorPanelDataProps["inspectorQuickActionsAdvancedRef"] {
+  return { current: null };
+}
+
+function createDivKeyboardEvent(
+  overrides: Partial<KeyboardEvent<HTMLDivElement>>,
+): KeyboardEvent<HTMLDivElement> {
+  return {
+    key: "",
+    shiftKey: false,
+    preventDefault: vi.fn(),
+    stopPropagation: vi.fn(),
+    currentTarget: document.createElement("div"),
+    ...overrides,
+  } as unknown as KeyboardEvent<HTMLDivElement>;
+}
+
+function createDivFocusEvent(
+  overrides: Partial<FocusEvent<HTMLDivElement>>,
+): FocusEvent<HTMLDivElement> {
+  return {
+    currentTarget: document.createElement("div"),
+    relatedTarget: null,
+    ...overrides,
+  } as unknown as FocusEvent<HTMLDivElement>;
+}
 
 describe("useInspectorMenuControls", () => {
   afterEach(() => {
@@ -23,7 +51,7 @@ describe("useInspectorMenuControls", () => {
 
     const moreRef = { current: { 0: document.createElement("button") } };
     const firstActionRefs = { current: {} as Record<number, HTMLButtonElement | null> };
-    const quickActionsAdvancedRef = { current: null as HTMLDivElement | null };
+    const quickActionsAdvancedRef = createQuickActionsAdvancedRef();
     const closeQuickActions = vi.fn();
 
     const { result } = renderHook(() => {
@@ -41,13 +69,11 @@ describe("useInspectorMenuControls", () => {
       return { controls, inspectorCommandMenuIndex };
     });
 
-    const e = {
+    const e = createDivKeyboardEvent({
       key: "ArrowRight",
       shiftKey: false,
-      preventDefault: vi.fn(),
-      stopPropagation: vi.fn(),
       currentTarget: menu,
-    } as unknown as KeyboardEvent<HTMLDivElement>;
+    });
 
     act(() => {
       result.current.controls.handleInspectorCompactMenuKeyDown(e, 0);
@@ -72,7 +98,7 @@ describe("useInspectorMenuControls", () => {
 
     const moreRef = { current: { 0: document.createElement("button"), 1: document.createElement("button") } };
     const firstActionRefs = { current: {} as Record<number, HTMLButtonElement | null> };
-    const quickActionsAdvancedRef = { current: null as HTMLDivElement | null };
+    const quickActionsAdvancedRef = createQuickActionsAdvancedRef();
     const closeQuickActions = vi.fn();
 
     const { result } = renderHook(() => {
@@ -90,13 +116,11 @@ describe("useInspectorMenuControls", () => {
       return { controls, inspectorCommandMenuIndex };
     });
 
-    const e = {
+    const e = createDivKeyboardEvent({
       key: "ArrowRight",
       shiftKey: false,
-      preventDefault: vi.fn(),
-      stopPropagation: vi.fn(),
       currentTarget: menu,
-    } as unknown as KeyboardEvent<HTMLDivElement>;
+    });
 
     act(() => {
       result.current.controls.handleInspectorCompactMenuKeyDown(e, 0);
@@ -115,7 +139,7 @@ describe("useInspectorMenuControls", () => {
 
     const moreRef = { current: { 0: document.createElement("button") } };
     const firstActionRefs = { current: {} as Record<number, HTMLButtonElement | null> };
-    const quickActionsAdvancedRef = { current: null as HTMLDivElement | null };
+    const quickActionsAdvancedRef = createQuickActionsAdvancedRef();
     const closeQuickActions = vi.fn();
 
     const { result } = renderHook(() => {
@@ -133,10 +157,10 @@ describe("useInspectorMenuControls", () => {
       return { controls, inspectorCommandMenuIndex };
     });
 
-    const e = {
+    const e = createDivFocusEvent({
       currentTarget: menuRow,
       relatedTarget: relatedInside,
-    } as unknown as FocusEvent<HTMLDivElement>;
+    });
 
     act(() => {
       result.current.controls.handleInspectorSuggestedCommandRowBlurCapture(e, 0);
@@ -151,7 +175,7 @@ describe("useInspectorMenuControls", () => {
 
     const moreRef = { current: { 0: document.createElement("button") } };
     const firstActionRefs = { current: {} as Record<number, HTMLButtonElement | null> };
-    const quickActionsAdvancedRef = { current: null as HTMLDivElement | null };
+    const quickActionsAdvancedRef = createQuickActionsAdvancedRef();
     const closeQuickActions = vi.fn();
 
     const { result } = renderHook(() => {
@@ -169,10 +193,10 @@ describe("useInspectorMenuControls", () => {
       return { controls, inspectorCommandMenuIndex };
     });
 
-    const e = {
+    const e = createDivFocusEvent({
       currentTarget: menuRow,
       relatedTarget: relatedOutside,
-    } as unknown as FocusEvent<HTMLDivElement>;
+    });
 
     act(() => {
       result.current.controls.handleInspectorSuggestedCommandRowBlurCapture(e, 0);
@@ -187,7 +211,7 @@ describe("useInspectorMenuControls", () => {
 
     const moreRef = { current: { 0: document.createElement("button") } };
     const firstActionRefs = { current: {} as Record<number, HTMLButtonElement | null> };
-    const quickActionsAdvancedRef = { current: null as HTMLDivElement | null };
+    const quickActionsAdvancedRef = createQuickActionsAdvancedRef();
     const closeQuickActions = vi.fn();
 
     const { result } = renderHook(() => {
@@ -205,10 +229,10 @@ describe("useInspectorMenuControls", () => {
       return { controls, inspectorCommandMenuIndex };
     });
 
-    const e = {
+    const e = createDivFocusEvent({
       currentTarget: menuRowTextNode as unknown as HTMLDivElement,
       relatedTarget: relatedOutside,
-    } as unknown as FocusEvent<HTMLDivElement>;
+    });
 
     expect(() => {
       act(() => {
@@ -225,7 +249,7 @@ describe("useInspectorMenuControls", () => {
 
     const moreRef = { current: { 0: document.createElement("button") } };
     const firstActionRefs = { current: {} as Record<number, HTMLButtonElement | null> };
-    const quickActionsAdvancedRef = { current: null as HTMLDivElement | null };
+    const quickActionsAdvancedRef = createQuickActionsAdvancedRef();
     const closeQuickActions = vi.fn();
 
     const { result } = renderHook(() => {
@@ -243,10 +267,10 @@ describe("useInspectorMenuControls", () => {
       return { controls, inspectorCommandMenuIndex };
     });
 
-    const e = {
+    const e = createDivFocusEvent({
       currentTarget: menuRow,
       relatedTarget: relatedOutside,
-    } as unknown as FocusEvent<HTMLDivElement>;
+    });
 
     act(() => {
       result.current.controls.handleInspectorSuggestedCommandRowBlurCapture(e, 0);
@@ -261,7 +285,7 @@ describe("useInspectorMenuControls", () => {
 
     const moreRef = { current: { 0: document.createElement("button"), 1: document.createElement("button") } };
     const firstActionRefs = { current: {} as Record<number, HTMLButtonElement | null> };
-    const quickActionsAdvancedRef = { current: null as HTMLDivElement | null };
+    const quickActionsAdvancedRef = createQuickActionsAdvancedRef();
     const closeQuickActions = vi.fn();
 
     const { result } = renderHook(() => {
@@ -279,10 +303,10 @@ describe("useInspectorMenuControls", () => {
       return { controls, inspectorCommandMenuIndex };
     });
 
-    const e = {
+    const e = createDivFocusEvent({
       currentTarget: menuRow,
       relatedTarget: relatedOutside,
-    } as unknown as FocusEvent<HTMLDivElement>;
+    });
 
     act(() => {
       result.current.controls.handleInspectorSuggestedCommandRowBlurCapture(e, 0);
@@ -296,7 +320,7 @@ describe("useInspectorMenuControls", () => {
 
     const moreRef = { current: { 0: document.createElement("button"), 1: document.createElement("button") } };
     const firstActionRefs = { current: {} as Record<number, HTMLButtonElement | null> };
-    const quickActionsAdvancedRef = { current: null as HTMLDivElement | null };
+    const quickActionsAdvancedRef = createQuickActionsAdvancedRef();
     const closeQuickActions = vi.fn();
 
     const { result } = renderHook(() => {
@@ -314,10 +338,10 @@ describe("useInspectorMenuControls", () => {
       return { controls, inspectorCommandMenuIndex };
     });
 
-    const e = {
+    const e = createDivFocusEvent({
       currentTarget: menuRow,
       relatedTarget: null,
-    } as unknown as FocusEvent<HTMLDivElement>;
+    });
 
     act(() => {
       result.current.controls.handleInspectorSuggestedCommandRowBlurCapture(e, 0);
@@ -335,7 +359,7 @@ describe("useInspectorMenuControls", () => {
 
     const moreRef = { current: { 0: document.createElement("button"), 1: document.createElement("button") } };
     const firstActionRefs = { current: {} as Record<number, HTMLButtonElement | null> };
-    const quickActionsAdvancedRef = { current: null as HTMLDivElement | null };
+    const quickActionsAdvancedRef = createQuickActionsAdvancedRef();
     const closeQuickActions = vi.fn();
 
     const { result } = renderHook(() => {
@@ -353,10 +377,10 @@ describe("useInspectorMenuControls", () => {
       return { controls, inspectorCommandMenuIndex };
     });
 
-    const e = {
+    const e = createDivFocusEvent({
       currentTarget: menuRow,
       relatedTarget: outside,
-    } as unknown as FocusEvent<HTMLDivElement>;
+    });
 
     act(() => {
       result.current.controls.handleInspectorSuggestedCommandRowBlurCapture(e, 0);
@@ -400,13 +424,11 @@ describe("useInspectorMenuControls", () => {
       return { controls };
     });
 
-    const e = {
+    const e = createDivKeyboardEvent({
       key: "ArrowRight",
       shiftKey: false,
-      preventDefault: vi.fn(),
-      stopPropagation: vi.fn(),
       currentTarget: actionContainer,
-    } as unknown as KeyboardEvent<HTMLDivElement>;
+    });
 
     act(() => {
       result.current.controls.handleInspectorQuickActionsAdvancedKeyDown(e);
@@ -444,13 +466,11 @@ describe("useInspectorMenuControls", () => {
       return { controls };
     });
 
-    const e = {
+    const e = createDivKeyboardEvent({
       key: "ArrowRight",
       shiftKey: false,
-      preventDefault: vi.fn(),
-      stopPropagation: vi.fn(),
       currentTarget: actionContainer,
-    } as unknown as KeyboardEvent<HTMLDivElement>;
+    });
 
     act(() => {
       result.current.controls.handleInspectorQuickActionsAdvancedKeyDown(e);
@@ -488,13 +508,13 @@ describe("useInspectorMenuControls", () => {
       return { controls };
     });
 
-    const e = {
+    const e = createDivKeyboardEvent({
       key: "Escape",
       shiftKey: false,
       preventDefault,
       stopPropagation,
       currentTarget: actionContainer,
-    } as unknown as KeyboardEvent<HTMLDivElement>;
+    });
 
     act(() => {
       result.current.controls.handleInspectorQuickActionsAdvancedKeyDown(e);
@@ -537,13 +557,13 @@ describe("useInspectorMenuControls", () => {
       return { controls };
     });
 
-    const e = {
+    const e = createDivKeyboardEvent({
       key: "Enter",
       shiftKey: false,
       preventDefault,
       stopPropagation,
       currentTarget: actionContainer,
-    } as unknown as KeyboardEvent<HTMLDivElement>;
+    });
 
     act(() => {
       result.current.controls.handleInspectorQuickActionsAdvancedKeyDown(e);
@@ -598,13 +618,11 @@ describe("useInspectorMenuControls", () => {
       rerender({ showInspectorQuickActionsExpanded: false });
     });
 
-    const e = {
+    const e = createDivKeyboardEvent({
       key: "ArrowRight",
       shiftKey: false,
-      preventDefault: vi.fn(),
-      stopPropagation: vi.fn(),
       currentTarget: actionContainer,
-    } as unknown as KeyboardEvent<HTMLDivElement>;
+    });
 
     act(() => {
       result.current.controls.handleInspectorQuickActionsAdvancedKeyDown(e);
@@ -628,7 +646,7 @@ describe("useInspectorMenuControls", () => {
     const closeQuickActions = vi.fn();
     const moreRef = { current: { 0: document.createElement("button") } };
     const firstActionRefs = { current: {} as Record<number, HTMLButtonElement | null> };
-    const quickActionsAdvancedRef = { current: null as HTMLDivElement | null };
+    const quickActionsAdvancedRef = createQuickActionsAdvancedRef();
 
     const { result } = renderHook(() => {
       const [inspectorCommandMenuIndex, setInspectorCommandMenuIndex] = useState<number | null>(0);
@@ -668,7 +686,7 @@ describe("useInspectorMenuControls", () => {
     const closeQuickActions = vi.fn();
     const moreRef = { current: { 0: document.createElement("button"), 1: document.createElement("button") } };
     const firstActionRefs = { current: {} as Record<number, HTMLButtonElement | null> };
-    const quickActionsAdvancedRef = { current: null as HTMLDivElement | null };
+    const quickActionsAdvancedRef = createQuickActionsAdvancedRef();
 
     const { result } = renderHook(() => {
       const [inspectorCommandMenuIndex, setInspectorCommandMenuIndex] = useState<number | null>(1);
@@ -704,7 +722,7 @@ describe("useInspectorMenuControls", () => {
     const closeQuickActions = vi.fn();
     const moreRef = { current: { 0: document.createElement("button") } };
     const firstActionRefs = { current: {} as Record<number, HTMLButtonElement | null> };
-    const quickActionsAdvancedRef = { current: null as HTMLDivElement | null };
+    const quickActionsAdvancedRef = createQuickActionsAdvancedRef();
 
     const { result } = renderHook(() => {
       const [inspectorCommandMenuIndex, setInspectorCommandMenuIndex] = useState<number | null>(0);
@@ -731,7 +749,7 @@ describe("useInspectorMenuControls", () => {
   it("compact 모드가 아니게 되면 열린 메뉴가 닫힌다", () => {
     const moreRef = { current: { 0: document.createElement("button") } };
     const firstActionRefs = { current: {} as Record<number, HTMLButtonElement | null> };
-    const quickActionsAdvancedRef = { current: null as HTMLDivElement | null };
+    const quickActionsAdvancedRef = createQuickActionsAdvancedRef();
     const closeQuickActions = vi.fn();
 
     const { result, rerender } = renderHook(
@@ -772,7 +790,7 @@ describe("useInspectorMenuControls", () => {
     const closeQuickActions = vi.fn();
     const moreRef = { current: { 0: document.createElement("button") } };
     const firstActionRefs = { current: {} as Record<number, HTMLButtonElement | null> };
-    const quickActionsAdvancedRef = { current: null as HTMLDivElement | null };
+    const quickActionsAdvancedRef = createQuickActionsAdvancedRef();
 
     const { result, rerender } = renderHook(
       ({ isInspectorCompact }) => {
@@ -818,7 +836,7 @@ describe("useInspectorMenuControls", () => {
     const spyScroll = vi.spyOn(moreButton, "focus");
     const moreRef = { current: { 0: moreButton } };
     const firstActionRefs = { current: {} as Record<number, HTMLButtonElement | null> };
-    const quickActionsAdvancedRef = { current: null as HTMLDivElement | null };
+    const quickActionsAdvancedRef = createQuickActionsAdvancedRef();
     const closeQuickActions = vi.fn();
 
     const originalRequestAnimationFrame = window.requestAnimationFrame;
@@ -844,13 +862,11 @@ describe("useInspectorMenuControls", () => {
       return { controls, inspectorCommandMenuIndex };
     });
 
-    const e = {
+    const e = createDivKeyboardEvent({
       key: "Escape",
       shiftKey: false,
-      preventDefault: vi.fn(),
-      stopPropagation: vi.fn(),
       currentTarget: menu,
-    } as unknown as KeyboardEvent<HTMLDivElement>;
+    });
 
     act(() => {
       result.current.controls.handleInspectorCompactMenuKeyDown(e, 0);
@@ -892,13 +908,11 @@ describe("useInspectorMenuControls", () => {
       return { controls };
     });
 
-    const e = {
+    const e = createDivKeyboardEvent({
       key: "Escape",
       shiftKey: false,
-      preventDefault: vi.fn(),
-      stopPropagation: vi.fn(),
       currentTarget: actionContainer,
-    } as unknown as KeyboardEvent<HTMLDivElement>;
+    });
 
     act(() => {
       result.current.controls.handleInspectorQuickActionsAdvancedKeyDown(e);
@@ -914,7 +928,7 @@ describe("useInspectorMenuControls", () => {
     const scrollSpy = vi.spyOn(targetButton, "scrollIntoView");
     const moreRef = { current: { 1: targetButton } };
     const firstActionRefs = { current: {} as Record<number, HTMLButtonElement | null> };
-    const quickActionsAdvancedRef = { current: null as HTMLDivElement | null };
+    const quickActionsAdvancedRef = createQuickActionsAdvancedRef();
     const closeQuickActions = vi.fn();
 
     const { result } = renderHook(() => {
@@ -947,7 +961,7 @@ describe("useInspectorMenuControls", () => {
   it("openInspectorCompactMenu는 존재하지 않는 인덱스를 전달해도 크래시 없이 상태만 갱신된다", () => {
     const moreRef = { current: {} as Record<number, HTMLButtonElement | null> };
     const firstActionRefs = { current: {} as Record<number, HTMLButtonElement | null> };
-    const quickActionsAdvancedRef = { current: null as HTMLDivElement | null };
+    const quickActionsAdvancedRef = createQuickActionsAdvancedRef();
     const closeQuickActions = vi.fn();
 
     const { result } = renderHook(() => {
@@ -977,7 +991,7 @@ describe("useInspectorMenuControls", () => {
     const focusSpy = vi.spyOn(moreButton, "focus");
     const moreRef = { current: { 0: moreButton } };
     const firstActionRefs = { current: {} as Record<number, HTMLButtonElement | null> };
-    const quickActionsAdvancedRef = { current: null as HTMLDivElement | null };
+    const quickActionsAdvancedRef = createQuickActionsAdvancedRef();
     const closeQuickActions = vi.fn();
 
     const originalRequestAnimationFrame = window.requestAnimationFrame;
@@ -1033,7 +1047,7 @@ describe("useInspectorMenuControls", () => {
     };
     const scrollSpy = vi.spyOn(targetButton, "scrollIntoView");
     const moreRef = { current: { 1: targetButton } };
-    const quickActionsAdvancedRef = { current: null as HTMLDivElement | null };
+    const quickActionsAdvancedRef = createQuickActionsAdvancedRef();
     const closeQuickActions = vi.fn();
 
     const originalRequestAnimationFrame = window.requestAnimationFrame;
@@ -1082,7 +1096,7 @@ describe("useInspectorMenuControls", () => {
     const firstActionRefs = { current: {} as Record<number, HTMLButtonElement | null> };
     const scrollSpy = vi.spyOn(targetButton, "scrollIntoView");
     const moreRef = { current: { 1: targetButton } };
-    const quickActionsAdvancedRef = { current: null as HTMLDivElement | null };
+    const quickActionsAdvancedRef = createQuickActionsAdvancedRef();
     const closeQuickActions = vi.fn();
 
     const originalRequestAnimationFrame = window.requestAnimationFrame;
@@ -1131,7 +1145,7 @@ describe("useInspectorMenuControls", () => {
     const closeQuickActions = vi.fn();
     const moreRef = { current: { 0: document.createElement("button") } };
     const firstActionRefs = { current: {} as Record<number, HTMLButtonElement | null> };
-    const quickActionsAdvancedRef = { current: null as HTMLDivElement | null };
+    const quickActionsAdvancedRef = createQuickActionsAdvancedRef();
 
     const { result } = renderHook(() => {
       const [inspectorCommandMenuIndex, setInspectorCommandMenuIndex] = useState<number | null>(0);
@@ -1185,13 +1199,11 @@ describe("useInspectorMenuControls", () => {
       return { controls };
     });
 
-    const e = {
+    const e = createDivKeyboardEvent({
       key: "Tab",
       shiftKey: false,
-      preventDefault: vi.fn(),
-      stopPropagation: vi.fn(),
       currentTarget: actionContainer,
-    } as unknown as KeyboardEvent<HTMLDivElement>;
+    });
 
     act(() => {
       result.current.controls.handleInspectorQuickActionsAdvancedKeyDown(e);
@@ -1215,7 +1227,7 @@ describe("useInspectorMenuControls", () => {
 
     const moreRef = { current: { 0: document.createElement("button") } };
     const firstActionRefs = { current: {} as Record<number, HTMLButtonElement | null> };
-    const quickActionsAdvancedRef = { current: null as HTMLDivElement | null };
+    const quickActionsAdvancedRef = createQuickActionsAdvancedRef();
     const closeQuickActions = vi.fn();
 
     const { result } = renderHook(() => {
@@ -1233,13 +1245,11 @@ describe("useInspectorMenuControls", () => {
       return { controls, inspectorCommandMenuIndex };
     });
 
-    const e = {
+    const e = createDivKeyboardEvent({
       key: "Enter",
       shiftKey: false,
-      preventDefault: vi.fn(),
-      stopPropagation: vi.fn(),
       currentTarget: menu,
-    } as unknown as KeyboardEvent<HTMLDivElement>;
+    });
 
     act(() => {
       result.current.controls.handleInspectorCompactMenuKeyDown(e, 0);
@@ -1255,7 +1265,7 @@ describe("useInspectorMenuControls", () => {
 
     const moreRef = { current: { 0: document.createElement("button") } };
     const firstActionRefs = { current: {} as Record<number, HTMLButtonElement | null> };
-    const quickActionsAdvancedRef = { current: null as HTMLDivElement | null };
+    const quickActionsAdvancedRef = createQuickActionsAdvancedRef();
     const closeQuickActions = vi.fn();
 
     const { result } = renderHook(() => {
@@ -1273,13 +1283,11 @@ describe("useInspectorMenuControls", () => {
       return { controls, inspectorCommandMenuIndex };
     });
 
-    const e = {
+    const e = createDivKeyboardEvent({
       key: "ArrowRight",
       shiftKey: false,
-      preventDefault: vi.fn(),
-      stopPropagation: vi.fn(),
       currentTarget: menu,
-    } as unknown as KeyboardEvent<HTMLDivElement>;
+    });
 
     act(() => {
       result.current.controls.handleInspectorCompactMenuKeyDown(e, 0);
@@ -1296,7 +1304,7 @@ describe("useInspectorMenuControls", () => {
 
     const moreRef = { current: { 0: document.createElement("button") } };
     const firstActionRefs = { current: {} as Record<number, HTMLButtonElement | null> };
-    const quickActionsAdvancedRef = { current: null as HTMLDivElement | null };
+    const quickActionsAdvancedRef = createQuickActionsAdvancedRef();
     const closeQuickActions = vi.fn();
 
     const { result } = renderHook(() => {
@@ -1314,10 +1322,10 @@ describe("useInspectorMenuControls", () => {
       return { controls, inspectorCommandMenuIndex };
     });
 
-    const e = {
+    const e = createDivFocusEvent({
       currentTarget: menuRow,
       relatedTarget: relatedOutside,
-    } as unknown as FocusEvent<HTMLDivElement>;
+    });
 
     act(() => {
       result.current.controls.handleInspectorSuggestedCommandRowBlurCapture(e, 0);
@@ -1330,7 +1338,7 @@ describe("useInspectorMenuControls", () => {
     const moreButton = document.createElement("button");
     const moreRef = { current: { 0: moreButton } };
     const firstActionRefs = { current: {} as Record<number, HTMLButtonElement | null> };
-    const quickActionsAdvancedRef = { current: null as HTMLDivElement | null };
+    const quickActionsAdvancedRef = createQuickActionsAdvancedRef();
     const closeQuickActions = vi.fn();
     const focusSpy = vi.spyOn(moreButton, "focus");
 
@@ -1371,7 +1379,7 @@ describe("useInspectorMenuControls", () => {
   it("compact 메뉴 키다운 핸들러는 currentTarget이 비정상이어도 안전하게 종료한다", () => {
     const moreRef = { current: { 0: document.createElement("button") } };
     const firstActionRefs = { current: {} as Record<number, HTMLButtonElement | null> };
-    const quickActionsAdvancedRef = { current: null as HTMLDivElement | null };
+    const quickActionsAdvancedRef = createQuickActionsAdvancedRef();
     const closeQuickActions = vi.fn();
 
     const { result } = renderHook(() => {
@@ -1389,13 +1397,11 @@ describe("useInspectorMenuControls", () => {
       return { controls, inspectorCommandMenuIndex };
     });
 
-    const e = {
+    const e = createDivKeyboardEvent({
       key: "ArrowRight",
       shiftKey: false,
-      preventDefault: vi.fn(),
-      stopPropagation: vi.fn(),
-      currentTarget: null,
-    } as unknown as KeyboardEvent<HTMLDivElement>;
+      currentTarget: document.createTextNode("row") as unknown as HTMLDivElement,
+    });
 
     expect(() => {
       act(() => {
@@ -1410,7 +1416,7 @@ describe("useInspectorMenuControls", () => {
   it("compact 메뉴 키다운 핸들러는 currentTarget이 Element가 아니면 메뉴 인덱스를 변경하지 않는다", () => {
     const moreRef = { current: { 0: document.createElement("button") } };
     const firstActionRefs = { current: {} as Record<number, HTMLButtonElement | null> };
-    const quickActionsAdvancedRef = { current: null as HTMLDivElement | null };
+    const quickActionsAdvancedRef = createQuickActionsAdvancedRef();
     const closeQuickActions = vi.fn();
 
     const { result } = renderHook(() => {
@@ -1428,13 +1434,11 @@ describe("useInspectorMenuControls", () => {
       return { controls, inspectorCommandMenuIndex };
     });
 
-    const e = {
+    const e = createDivKeyboardEvent({
       key: "ArrowRight",
       shiftKey: false,
-      preventDefault: vi.fn(),
-      stopPropagation: vi.fn(),
       currentTarget: document.createTextNode("x") as unknown as HTMLDivElement,
-    } as unknown as KeyboardEvent<HTMLDivElement>;
+    });
 
     act(() => {
       result.current.controls.handleInspectorCompactMenuKeyDown(e, 0);
@@ -1445,7 +1449,7 @@ describe("useInspectorMenuControls", () => {
   });
 
   it("퀵액션 패널 참조가 null이면 핸들러가 안전하게 종료된다", () => {
-    const actionRef = { current: null as HTMLDivElement | null };
+    const actionRef = createQuickActionsAdvancedRef();
     const moreRef = { current: { 0: document.createElement("button") } };
     const firstActionRefs = { current: {} as Record<number, HTMLButtonElement | null> };
     const closeQuickActions = vi.fn();
@@ -1465,13 +1469,11 @@ describe("useInspectorMenuControls", () => {
       return { controls };
     });
 
-    const e = {
+    const e = createDivKeyboardEvent({
       key: "ArrowRight",
       shiftKey: false,
-      preventDefault: vi.fn(),
-      stopPropagation: vi.fn(),
       currentTarget: document.createElement("div"),
-    } as unknown as KeyboardEvent<HTMLDivElement>;
+    });
 
     expect(() => {
       act(() => {
@@ -1502,13 +1504,11 @@ describe("useInspectorMenuControls", () => {
       return { controls };
     });
 
-    const e = {
+    const e = createDivKeyboardEvent({
       key: "ArrowLeft",
       shiftKey: false,
-      preventDefault: vi.fn(),
-      stopPropagation: vi.fn(),
       currentTarget: actionContainer,
-    } as unknown as KeyboardEvent<HTMLDivElement>;
+    });
 
     act(() => {
       result.current.controls.handleInspectorQuickActionsAdvancedKeyDown(e);
@@ -1525,7 +1525,7 @@ describe("useInspectorMenuControls", () => {
     const scrollSpy1 = vi.spyOn(button1, "scrollIntoView");
     const moreRef = { current: { 0: button0, 1: button1 } };
     const firstActionRefs = { current: {} as Record<number, HTMLButtonElement | null> };
-    const quickActionsAdvancedRef = { current: null as HTMLDivElement | null };
+    const quickActionsAdvancedRef = createQuickActionsAdvancedRef();
     const closeQuickActions = vi.fn();
 
     const { result } = renderHook(() => {
@@ -1560,7 +1560,7 @@ describe("useInspectorMenuControls", () => {
     const scrollSpy1 = vi.spyOn(button1, "scrollIntoView");
     const moreRef = { current: { 0: button0, 1: button1 } };
     const firstActionRefs = { current: {} as Record<number, HTMLButtonElement | null> };
-    const quickActionsAdvancedRef = { current: null as HTMLDivElement | null };
+    const quickActionsAdvancedRef = createQuickActionsAdvancedRef();
     const closeQuickActions = vi.fn();
 
     const originalRequestAnimationFrame = window.requestAnimationFrame;
@@ -1604,7 +1604,7 @@ describe("useInspectorMenuControls", () => {
     const button = document.createElement("button");
     const moreRef = { current: { 2: button } };
     const firstActionRefs = { current: {} as Record<number, HTMLButtonElement | null> };
-    const quickActionsAdvancedRef = { current: null as HTMLDivElement | null };
+    const quickActionsAdvancedRef = createQuickActionsAdvancedRef();
     const closeQuickActions = vi.fn();
 
     const { result } = renderHook(() => {
@@ -1635,7 +1635,7 @@ describe("useInspectorMenuControls", () => {
     const buttonFocusSpy = vi.spyOn(button, "focus");
     const moreRef = { current: { 0: button } };
     const firstActionRefs = { current: {} as Record<number, HTMLButtonElement | null> };
-    const quickActionsAdvancedRef = { current: null as HTMLDivElement | null };
+    const quickActionsAdvancedRef = createQuickActionsAdvancedRef();
     const closeQuickActions = vi.fn();
 
     const originalRequestAnimationFrame = window.requestAnimationFrame;

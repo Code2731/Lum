@@ -110,7 +110,7 @@ describe("useAIChat — 스트림 실패 메시지 처리", () => {
     });
 
     expect(result.current.error).toBe("xLLM 연결 실패");
-    expect(result.current.messages.at(-1)?.content).toBe("❌ xLLM 연결 실패");
+    expect(result.current.messages[result.current.messages.length - 1]?.content).toBe("❌ xLLM 연결 실패");
   });
 
   it("순환 참조 오류도 2차 예외 없이 기본 메시지로 폴백한다", async () => {
@@ -130,6 +130,6 @@ describe("useAIChat — 스트림 실패 메시지 처리", () => {
     });
 
     expect(result.current.error).toBe("알 수 없는 오류");
-    expect(result.current.messages.at(-1)?.content).toBe("❌ 알 수 없는 오류");
+    expect(result.current.messages[result.current.messages.length - 1]?.content).toBe("❌ 알 수 없는 오류");
   });
 });

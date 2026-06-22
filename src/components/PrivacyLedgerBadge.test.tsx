@@ -62,7 +62,7 @@ describe("PrivacyLedgerBadge", () => {
     fireEvent.click(button);
     expect(screen.getByText("전체 AI 호출")).toBeInTheDocument();
 
-    fireEvent.keyDown(document.body, { key: "Escape" });
+    fireEvent.keyDown(document, { key: "Escape" });
     expect(button).toHaveAttribute("aria-pressed", "false");
     expect(button).toHaveFocus();
   });

@@ -1,9 +1,12 @@
 import { renderHook } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { useInspectorPanelPropsBundle } from "./useInspectorPanelPropsBundle";
-import type { InspectorPanelActionHandlerProps } from "./useInspectorPanelPropsBundle";
+import type {
+  InspectorPanelActionHandlerProps,
+  UseInspectorPanelPropsBundleOptions,
+} from "./useInspectorPanelPropsBundle";
 import type { CommandBlock } from "./useCommandBlocks";
-import type { InspectorTabItem } from "../components/InspectorPanel/types";
+import type { InspectorAnalyzeCache, InspectorTabItem, ScriptLibraryLike } from "../components/InspectorPanel/types";
 
 const INSPECTOR_TABS: readonly InspectorTabItem[] = [
   { id: "summary", label: "개요", shortcut: "1" },
@@ -18,17 +21,17 @@ function makeRef<T>(value: T): { current: T } {
 
 function makeCommandBlock(overrides: Partial<CommandBlock> & { id: string; command: string; output: string }): CommandBlock {
   return {
+    ...overrides,
     id: overrides.id,
     command: overrides.command,
     output: overrides.output,
     exitCode: overrides.exitCode ?? 1,
     startedAt: overrides.startedAt ?? 1_000,
     endedAt: overrides.endedAt ?? 1_050,
-    ...overrides,
   };
 }
 
-function createScriptLibrary() {
+function createScriptLibrary(): ScriptLibraryLike {
   return {
     scripts: [],
     loading: false,
@@ -82,7 +85,7 @@ function createHandlers(): InspectorPanelActionHandlerProps {
 describe("useInspectorPanelPropsBundle", () => {
   it("useInspectorPanelData와 handlers를 정확히 결합해 InspectorPanelProps를 반환한다", () => {
     const handlers = createHandlers();
-    const resultData = {
+    const resultData: UseInspectorPanelPropsBundleOptions = {
       showInspector: true,
       selectedModel: "test-model",
       inspectorTab: "summary" as const,
@@ -138,7 +141,7 @@ describe("useInspectorPanelPropsBundle", () => {
 
   it("activeTab / activeTabGitInfo 변경 시 activeTab 파생값이 갱신된다", () => {
     const handlers = createHandlers();
-    const commonProps = {
+    const commonProps: UseInspectorPanelPropsBundleOptions = {
       showInspector: true,
       selectedModel: "test-model",
       inspectorTab: "summary" as const,
@@ -168,7 +171,7 @@ describe("useInspectorPanelPropsBundle", () => {
     };
 
     const { result, rerender } = renderHook(
-      (props: typeof commonProps) => useInspectorPanelPropsBundle(props),
+      (props: UseInspectorPanelPropsBundleOptions) => useInspectorPanelPropsBundle(props),
       {
         initialProps: commonProps,
       },
@@ -232,7 +235,7 @@ describe("useInspectorPanelPropsBundle", () => {
         handlers,
       }),
       {
-        initialProps: { title: "   ", cwd: "   " } as const,
+        initialProps: { title: "   ", cwd: "   " } as { title: string; cwd: string } | null,
       },
     );
 
@@ -275,7 +278,7 @@ describe("useInspectorPanelPropsBundle", () => {
         handlers,
       }),
       {
-        initialProps: { branch: "   ", changed: 3 } as const,
+        initialProps: { branch: "   ", changed: 3 } as { branch?: string; changed?: number } | null,
       },
     );
 
@@ -317,7 +320,7 @@ describe("useInspectorPanelPropsBundle", () => {
         handlers,
       }),
       {
-        initialProps: { branch: "main", changed: -1 } as const,
+        initialProps: { branch: "main", changed: -1 } as { branch?: string; changed?: number } | null,
       },
     );
 
@@ -1230,7 +1233,7 @@ describe("useInspectorPanelPropsBundle", () => {
     } as const;
 
     const { result, rerender } = renderHook(
-      ([showInspector, showInspectorQuickActionsExpanded, commandMenuIndex, noActivity]) => useInspectorPanelPropsBundle({
+      ([showInspector, showInspectorQuickActionsExpanded, commandMenuIndex, noActivity]: [boolean, boolean, number | null, boolean]) => useInspectorPanelPropsBundle({
         ...base,
         showInspector,
         showInspectorQuickActionsExpanded,
@@ -1249,7 +1252,7 @@ describe("useInspectorPanelPropsBundle", () => {
             },
       }),
       {
-        initialProps: [true, false, 4, true] as const,
+        initialProps: [true, false, 4, true] as [boolean, boolean, number | null, boolean],
       },
     );
 
@@ -1259,7 +1262,7 @@ describe("useInspectorPanelPropsBundle", () => {
     expect(result.current.onQuickActionsToggle).toBe(handlers.onQuickActionsToggle);
     expect(result.current.onCompactMenuKeyDown).toBe(handlers.onCompactMenuKeyDown);
 
-    rerender([false, true, 5, false]);
+    rerender([false, true, 5, false] as [boolean, boolean, number | null, boolean]);
 
     expect(result.current.noActivity).toBe(false);
     expect(result.current.quickActionsExpanded).toBe(true);
@@ -1311,7 +1314,7 @@ describe("useInspectorPanelPropsBundle", () => {
 
   it("selectedModel / inspectorDensity / inspectorTab 변경 시 번들 반환값이 갱신된다", () => {
     const handlers = createHandlers();
-    const baseProps = {
+    const baseProps: UseInspectorPanelPropsBundleOptions = {
       showInspector: true,
       selectedModel: "model-a",
       inspectorTab: "summary" as const,
@@ -1341,7 +1344,7 @@ describe("useInspectorPanelPropsBundle", () => {
     };
 
     const { result, rerender } = renderHook(
-      (props: typeof baseProps) => useInspectorPanelPropsBundle(props),
+      (props: UseInspectorPanelPropsBundleOptions) => useInspectorPanelPropsBundle(props),
       {
         initialProps: baseProps,
       },
@@ -1355,7 +1358,7 @@ describe("useInspectorPanelPropsBundle", () => {
       ...baseProps,
       selectedModel: "model-b",
       inspectorDensity: "compact",
-      inspectorTab: "rag" as const,
+      inspectorTab: "rag",
     });
 
     expect(result.current.selectedModel).toBe("model-b");
@@ -1365,7 +1368,7 @@ describe("useInspectorPanelPropsBundle", () => {
 
   it("showInspector / quickActionsExpanded / commandMenuIndex / analyzeCache 변경이 번들에 반영된다", () => {
     const handlers = createHandlers();
-    const base = {
+    const base: UseInspectorPanelPropsBundleOptions = {
       showInspector: true,
       selectedModel: "test-model",
       inspectorTab: "summary" as const,
@@ -1403,7 +1406,7 @@ describe("useInspectorPanelPropsBundle", () => {
     };
 
     const { result, rerender } = renderHook(
-      (props: typeof base) => useInspectorPanelPropsBundle(props),
+      (props: UseInspectorPanelPropsBundleOptions) => useInspectorPanelPropsBundle(props),
       {
         initialProps: base,
       },
@@ -1431,7 +1434,7 @@ describe("useInspectorPanelPropsBundle", () => {
   it("commandMenuIndex가 null일 때도 noActivity 계산은 캐시 기준으로 일관된다", () => {
     const handlers = createHandlers();
     const { result, rerender } = renderHook(
-      ([showInspectorQuickActionsExpanded, commandMenuIndex, hasAnalyzeCache]) => useInspectorPanelPropsBundle({
+      ([showInspectorQuickActionsExpanded, commandMenuIndex, hasAnalyzeCache]: [boolean, number | null, boolean]) => useInspectorPanelPropsBundle({
         showInspector: true,
         selectedModel: "test-model",
         inspectorTab: "summary" as const,
@@ -1466,17 +1469,17 @@ describe("useInspectorPanelPropsBundle", () => {
         handlers,
       }),
       {
-        initialProps: [false, null, true] as const,
+        initialProps: [false, null, true] as [boolean, number | null, boolean],
       },
     );
 
     expect(result.current.noActivity).toBe(false);
 
-    rerender([false, null, false]);
+    rerender([false, null, false] as [boolean, number | null, boolean]);
     expect(result.current.noActivity).toBe(true);
     expect(result.current.commandMenuIndex).toBeNull();
 
-    rerender([false, 2, false]);
+    rerender([false, 2, false] as [boolean, number | null, boolean]);
     expect(result.current.noActivity).toBe(true);
     expect(result.current.commandMenuIndex).toBe(2);
   });
@@ -1521,7 +1524,7 @@ describe("useInspectorPanelPropsBundle", () => {
   it("noActivity와 selectedBlockId, 분석 캐시 상태를 오갈 때 실패 블록이 없으면 focus는 null로 유지된다", () => {
     const handlers = createHandlers();
     const { result, rerender } = renderHook(
-      ([inspectorAnalyzeCache, selectedBlockId]) => useInspectorPanelPropsBundle({
+      ([inspectorAnalyzeCache, selectedBlockId]: [InspectorAnalyzeCache | null, string | null]) => useInspectorPanelPropsBundle({
         showInspector: true,
         selectedModel: "test-model",
         inspectorTab: "summary" as const,
@@ -1557,9 +1560,9 @@ describe("useInspectorPanelPropsBundle", () => {
             result: "ok",
             rawResult: "ok",
             suggestedCommands: ["echo ok"],
-          } as const,
+          },
           "some-block",
-        ] as const,
+        ] as [InspectorAnalyzeCache | null, string | null],
       },
     );
 

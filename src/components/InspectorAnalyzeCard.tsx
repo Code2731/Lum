@@ -119,7 +119,10 @@ const InspectorAnalyzeCard: React.FC<InspectorAnalyzeCardProps> = ({
                     {isInspectorCompact ? (
                       <div className="flex items-center gap-1 shrink-0">
                         <button
-                          onClick={() => onApplySuggestedCommand(idx)}
+                          onClick={() => {
+                            onApplySuggestedCommand(idx);
+                            onCloseCommandMenu(false);
+                          }}
                           className="inline-flex w-[68px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-emerald-300/35 bg-emerald-400/16 text-xs text-emerald-100 hover:bg-emerald-400/26 transition-colors"
                           title={`${idx + 1}번 커맨드 실행 (R)`}
                         >
@@ -189,7 +192,10 @@ const InspectorAnalyzeCard: React.FC<InspectorAnalyzeCardProps> = ({
                       <button
                         ref={(el) => { inspectorMenuFirstActionRefs.current[idx] = el; }}
                         role="menuitem"
-                        onClick={() => onCopySuggestedCommand(idx)}
+                        onClick={() => {
+                          onCopySuggestedCommand(idx);
+                          onCloseCommandMenu(true);
+                        }}
                         className="inline-flex w-[72px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-white/22 bg-white/[0.05] text-xs text-white/76 hover:text-white hover:bg-white/[0.12] transition-colors"
                         title={`${idx + 1}번 커맨드 복사 (C)`}
                       >
@@ -198,7 +204,10 @@ const InspectorAnalyzeCard: React.FC<InspectorAnalyzeCardProps> = ({
                       </button>
                       <button
                         role="menuitem"
-                        onClick={() => onLoadSuggestedCommandToAiBar(idx)}
+                        onClick={() => {
+                          onLoadSuggestedCommandToAiBar(idx);
+                          onCloseCommandMenu(false);
+                        }}
                         className="inline-flex w-[72px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-accent/35 bg-accent/14 text-xs text-accent hover:bg-accent/24 transition-colors"
                         title={`${idx + 1}번 커맨드 AI 입력바 로드 (L)`}
                       >

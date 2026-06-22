@@ -9,9 +9,27 @@ vi.mock("@tauri-apps/api/core", () => ({
   invoke: vi.fn().mockImplementation((cmd: string) => {
     if (cmd === "check_onboarding_complete") return Promise.resolve(true);
     if (cmd === "check_xllm_status") return Promise.resolve(false);
+    if (cmd === "load_app_config") return Promise.resolve({
+      show_reasoning: true,
+      vision_enabled: false,
+      toolbar_show_advanced: false,
+      ui_compact_toolbar: false,
+      ui_show_file_explorer: true,
+      ui_show_inspector: true,
+      ui_inspector_density: "compact",
+      ui_hints_shown: true,
+      ui_seen_advanced_features: [],
+      quick_actions: [],
+      theme: "dark",
+      font_size: 13,
+      font_family: "Menlo",
+    });
     if (cmd === "load_session") return Promise.reject("no session");
     if (cmd === "get_recent_history") return Promise.resolve([]);
     if (cmd === "search_history") return Promise.resolve([]);
+    if (cmd === "list_workspaces") return Promise.resolve([]);
+    if (cmd === "list_scripts") return Promise.resolve([]);
+    if (cmd === "list_ssh_profiles") return Promise.resolve([]);
     if (cmd === "get_hardware_specs") return Promise.resolve({
       total_memory_gb: 16,
       available_memory_gb: 8,
@@ -772,14 +790,14 @@ describe("App (Inspector compact command menu focus)", () => {
     const moreButtons = screen.getAllByText("MORE");
     fireEvent.click(moreButtons[1]);
 
-    const menu = await waitFor(() => screen.getByTestId("inspector-menu"));
+    await waitFor(() => screen.getByTestId("inspector-menu"));
     const secondRunRow = screen.getByText("RUN (R) #2");
     const secondCopy = screen.getByText("COPY (C) #2");
 
     fireEvent.pointerDown(secondRunRow);
     fireEvent.pointerDown(secondCopy);
 
-    expect(menu).toBeInTheDocument();
+    expect(screen.getByTestId("inspector-menu")).toBeInTheDocument();
   });
 
   it("첫 번째 행 메뉴가 열려 있을 때 다른 행의 RUN 행 포인터다운은 메뉴를 닫지 않는다", async () => {
@@ -795,12 +813,12 @@ describe("App (Inspector compact command menu focus)", () => {
     const moreButtons = screen.getAllByText("MORE");
     fireEvent.click(moreButtons[0]);
 
-    const menu = await waitFor(() => screen.getByTestId("inspector-menu"));
+    await waitFor(() => screen.getByTestId("inspector-menu"));
     const secondRunRow = screen.getByText("RUN (R) #2");
 
     fireEvent.pointerDown(secondRunRow);
 
-    expect(menu).toBeInTheDocument();
+    expect(screen.getByTestId("inspector-menu")).toBeInTheDocument();
   });
 
   it("메뉴가 열린 상태에서 다른 행의 MORE를 누르면 두 번째 행 메뉴가 열리며 포커스가 갱신된다", async () => {
@@ -1672,7 +1690,7 @@ describe("App (Inspector compact command menu focus)", () => {
     fireEvent.click(moreButtons[1]);
 
     const secondRunRow = screen.getByText("RUN (R) #2");
-    const menu = await waitFor(() => screen.getByTestId("inspector-menu"));
+    await waitFor(() => screen.getByTestId("inspector-menu"));
     secondRunRow.focus();
     fireEvent.click(secondRunRow);
 

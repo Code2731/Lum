@@ -3,7 +3,14 @@ import { describe, expect, it, vi } from "vitest";
 import { useInspectorPanelData } from "./useInspectorPanelData";
 import { useInspectorPanelProps } from "./useInspectorPanelProps";
 import type { CommandBlock } from "./useCommandBlocks";
-import type { InspectorPanelProps, InspectorTabItem } from "../components/InspectorPanel/types";
+import type {
+  InspectorAnalyzeCache,
+  InspectorDensity,
+  InspectorPanelProps,
+  InspectorTabItem,
+} from "../components/InspectorPanel/types";
+
+type InspectorPanelDataOptions = Parameters<typeof useInspectorPanelData>[0];
 
 const INSPECTOR_TABS: readonly InspectorTabItem[] = [
   { id: "summary", label: "요약", shortcut: "1" },
@@ -18,13 +25,13 @@ function makeRef<T>(value: T): { current: T } {
 
 function makeCommandBlock(overrides: Partial<CommandBlock> & { id: string; command: string; output: string; }): CommandBlock {
   return {
+    ...overrides,
     id: overrides.id,
     command: overrides.command,
     output: overrides.output,
     exitCode: overrides.exitCode ?? null,
     startedAt: overrides.startedAt ?? 1_000,
     endedAt: overrides.endedAt ?? 1_050,
-    ...overrides,
   };
 }
 
@@ -64,7 +71,7 @@ function createActionHandlers(): Pick<InspectorPanelProps, "onDensityToggle" | "
 
 describe("Inspector panel data + props pipeline", () => {
   it("useInspectorPanelData 산출값이 useInspectorPanelProps에서 그대로 재사용된다", () => {
-    const common = {
+    const common: InspectorPanelDataOptions = {
       showInspector: true,
       selectedModel: "test-model",
       inspectorTab: "summary" as const,
@@ -129,7 +136,7 @@ describe("Inspector panel data + props pipeline", () => {
       makeCommandBlock({ id: "a", command: "first fail", output: "f1", exitCode: 1 }),
       makeCommandBlock({ id: "b", command: "second fail", output: "f2", exitCode: 2 }),
     ];
-    const base = {
+    const base: InspectorPanelDataOptions = {
       showInspector: true,
       selectedModel: "test-model",
       inspectorTab: "summary" as const,
@@ -459,7 +466,7 @@ describe("Inspector panel data + props pipeline", () => {
         ...data,
         ...createActionHandlers(),
       });
-    }, { initialProps: 0 });
+    }, { initialProps: 0 as number | null });
 
     expect(result.current.commandMenuIndex).toBe(0);
 
@@ -476,7 +483,7 @@ describe("Inspector panel data + props pipeline", () => {
     ];
     const handlers = createActionHandlers();
     const { result, rerender } = renderHook(
-      ([selectedBlockId, inspectorDensity]) => {
+      ([selectedBlockId, inspectorDensity]: [string | null, InspectorDensity]) => {
         const data = useInspectorPanelData({
           showInspector: true,
           selectedModel: "test-model",
@@ -523,7 +530,7 @@ describe("Inspector panel data + props pipeline", () => {
           }),
         };
       },
-      { initialProps: ["a" as string | null, "cozy" as const] },
+      { initialProps: ["a", "cozy"] as [string | null, InspectorDensity] },
     );
 
     expect(result.current.props.commandMenuIndex).toBe(1);
@@ -531,7 +538,7 @@ describe("Inspector panel data + props pipeline", () => {
     expect(result.current.data.inspectorDensity).toBe("cozy");
     expect(result.current.props.onCompactMenuKeyDown).toBe(handlers.onCompactMenuKeyDown);
 
-    rerender(["a" as string | null, "compact" as const]);
+    rerender(["a", "compact"] as [string | null, InspectorDensity]);
 
     expect(result.current.props.commandMenuIndex).toBe(1);
     expect(result.current.props.inspectorDensity).toBe("compact");
@@ -547,7 +554,7 @@ describe("Inspector panel data + props pipeline", () => {
     const handlers = createActionHandlers();
 
     const { result, rerender } = renderHook(
-      ([selectedBlockId, inspectorDensity]) => {
+      ([selectedBlockId, inspectorDensity]: [string | null, InspectorDensity]) => {
         const data = useInspectorPanelData({
           showInspector: true,
           selectedModel: "test-model",
@@ -595,7 +602,7 @@ describe("Inspector panel data + props pipeline", () => {
         };
       },
       {
-        initialProps: ["a" as string | null, "cozy" as const],
+        initialProps: ["a", "cozy"] as [string | null, InspectorDensity],
       },
     );
 
@@ -606,7 +613,7 @@ describe("Inspector panel data + props pipeline", () => {
     expect(result.current.props.onCompactMenuKeyDown).toBe(handlers.onCompactMenuKeyDown);
     expect(result.current.props.onOpenCompactMenu).toBe(handlers.onOpenCompactMenu);
 
-    rerender(["b" as string | null, "compact" as const]);
+    rerender(["b", "compact"] as [string | null, InspectorDensity]);
 
     expect(result.current.props.focusedFailedBlock).toMatchObject({ id: "b", exitCode: 2, outputTail: "f2" });
     expect(result.current.props.commandMenuIndex).toBe(1);
@@ -624,7 +631,7 @@ describe("Inspector panel data + props pipeline", () => {
     const handlers = createActionHandlers();
 
     const { result, rerender } = renderHook(
-      ([selectedBlockId, quickActionsExpanded]) => {
+      ([selectedBlockId, quickActionsExpanded]: [string | null, boolean]) => {
         const data = useInspectorPanelData({
           showInspector: true,
           selectedModel: "test-model",
@@ -721,7 +728,7 @@ describe("Inspector panel data + props pipeline", () => {
     };
 
     const { result, rerender } = renderHook(
-      ([inspectorAnalyzeCache, quickActionsExpanded, selectedBlockId]) => {
+      ([inspectorAnalyzeCache, quickActionsExpanded, selectedBlockId]: [InspectorAnalyzeCache, boolean, string | null]) => {
         const data = useInspectorPanelData({
           showInspector: true,
           selectedModel: "test-model",
@@ -769,7 +776,7 @@ describe("Inspector panel data + props pipeline", () => {
         };
       },
       {
-        initialProps: [firstCache, false, "a" as string | null] as const,
+        initialProps: [firstCache, false, "a"] as [InspectorAnalyzeCache, boolean, string | null],
       },
     );
 
@@ -782,7 +789,7 @@ describe("Inspector panel data + props pipeline", () => {
     expect(result.current.props.onCompactMenuKeyDown).toBe(handlers.onCompactMenuKeyDown);
     expect(result.current.props.onOpenCompactMenu).toBe(handlers.onOpenCompactMenu);
 
-    rerender([secondCache, true, "b" as string | null]);
+    rerender([secondCache, true, "b"] as [InspectorAnalyzeCache, boolean, string | null]);
 
     expect(result.current.props.commandMenuIndex).toBe(0);
     expect(result.current.props.quickActionsExpanded).toBe(true);
@@ -802,7 +809,7 @@ describe("Inspector panel data + props pipeline", () => {
     ];
 
     const { result, rerender } = renderHook(
-      ([cmdBlocks, quickActionsExpanded, inspectAnalyzeCache]) => {
+      ([cmdBlocks, quickActionsExpanded, inspectAnalyzeCache]: [CommandBlock[], boolean, InspectorAnalyzeCache | null]) => {
         const data = useInspectorPanelData({
           showInspector: true,
           selectedModel: "test-model",
@@ -850,7 +857,7 @@ describe("Inspector panel data + props pipeline", () => {
         };
       },
       {
-        initialProps: [emptyCmdBlocks, false, null] as const,
+        initialProps: [emptyCmdBlocks, false, null] as [CommandBlock[], boolean, InspectorAnalyzeCache | null],
       },
     );
 
@@ -870,7 +877,7 @@ describe("Inspector panel data + props pipeline", () => {
       result: "ok",
       rawResult: "ok",
       suggestedCommands: [],
-    }]);
+    }] as [CommandBlock[], boolean, InspectorAnalyzeCache | null]);
 
     expect(result.current.data.noActivity).toBe(false);
     expect(result.current.props.noActivity).toBe(false);
@@ -898,13 +905,8 @@ describe("Inspector panel data + props pipeline", () => {
 
   it("noActivity와 quickActionsExpanded 동시 변경에서도 메뉴 핸들러 전달은 유지된다", () => {
     const handlers = createActionHandlers();
-    const cmdBlocks = [
-      makeCommandBlock({ id: "a", command: "first fail", output: "f1", exitCode: 1 }),
-      makeCommandBlock({ id: "b", command: "second fail", output: "f2", exitCode: 2 }),
-    ];
-
     const { result, rerender } = renderHook(
-      ([noActivity, quickActionsExpanded, selectedBlockId]) => {
+      ([noActivity, quickActionsExpanded, selectedBlockId]: [boolean, boolean, string | null]) => {
         const data = useInspectorPanelData({
           showInspector: true,
           selectedModel: "test-model",
@@ -919,7 +921,12 @@ describe("Inspector panel data + props pipeline", () => {
           }),
           activeTab: { title: "Shell 1", cwd: "/repo" },
           activeTabGitInfo: null,
-          cmdBlocks,
+          cmdBlocks: noActivity
+            ? []
+            : [
+                makeCommandBlock({ id: "a", command: "first fail", output: "f1", exitCode: 1 }),
+                makeCommandBlock({ id: "b", command: "second fail", output: "f2", exitCode: 2 }),
+              ],
           selectedBlockId,
           inspectorAnalyzeCache: null,
           inspectorCommandMenuIndex: 7,
@@ -954,7 +961,7 @@ describe("Inspector panel data + props pipeline", () => {
         };
       },
       {
-        initialProps: [true, false, "a" as string | null] as const,
+        initialProps: [true, false, "a"] as [boolean, boolean, string | null],
       },
     );
 
@@ -966,13 +973,9 @@ describe("Inspector panel data + props pipeline", () => {
     expect(result.current.props.onSuggestedCommandRowKeyDown).toBe(handlers.onSuggestedCommandRowKeyDown);
     expect(result.current.props.onCompactMenuKeyDown).toBe(handlers.onCompactMenuKeyDown);
     expect(result.current.props.onOpenCompactMenu).toBe(handlers.onOpenCompactMenu);
-    expect(result.current.props.focusedFailedBlock).toMatchObject({
-      id: "a",
-      exitCode: 1,
-      outputTail: "f1",
-    });
+    expect(result.current.props.focusedFailedBlock).toBeNull();
 
-    rerender([false, true, "b" as string | null]);
+    rerender([false, true, "b"] as [boolean, boolean, string | null]);
 
     expect(result.current.props.noActivity).toBe(false);
     expect(result.current.props.quickActionsExpanded).toBe(true);
@@ -986,6 +989,11 @@ describe("Inspector panel data + props pipeline", () => {
       exitCode: 2,
       outputTail: "f2",
     });
+    expect(result.current.props.focusedFailedBlock).toMatchObject({
+      id: "b",
+      exitCode: 2,
+      outputTail: "f2",
+    });
   });
 
   it("파이프라인 경로에서 onCompactMenuKeyDown 호출이 noActivity+quickActions 전환에도 유지된다", () => {
@@ -993,7 +1001,7 @@ describe("Inspector panel data + props pipeline", () => {
     const event = { key: "ArrowDown", preventDefault: vi.fn(), stopPropagation: vi.fn() } as any;
 
     const { result, rerender } = renderHook(
-      ([noActivity, quickActionsExpanded, selectedBlockId]) => {
+      ([noActivity, quickActionsExpanded, selectedBlockId]: [boolean, boolean, string | null]) => {
         const data = useInspectorPanelData({
           showInspector: true,
           selectedModel: "test-model",
@@ -1055,7 +1063,7 @@ describe("Inspector panel data + props pipeline", () => {
         };
       },
       {
-        initialProps: [true, false, null] as const,
+        initialProps: [true, false, null] as [boolean, boolean, string | null],
       },
     );
 
@@ -1064,7 +1072,7 @@ describe("Inspector panel data + props pipeline", () => {
     expect(result.current.props.onCompactMenuKeyDown).toBe(handlers.onCompactMenuKeyDown);
     result.current.props.onCompactMenuKeyDown(event, 0);
 
-    rerender([false, true, "a" as string | null]);
+    rerender([false, true, "a"] as [boolean, boolean, string | null]);
 
     expect(result.current.props.noActivity).toBe(false);
     expect(result.current.props.quickActionsExpanded).toBe(true);

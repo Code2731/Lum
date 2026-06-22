@@ -57,10 +57,10 @@ describe("useInspectorPanelActionHandlers", () => {
 
     const setup = renderHook(() => {
       const [showFileExplorer, setShowFileExplorer] = useState(true);
-      const [inspectorDensity, setInspectorDensity] = useState<"cozy" | "compact">("cozy");
-      const [showWorkspace, setShowWorkspace] = useState(false);
-      const [showHistorySearch, setShowHistorySearch] = useState(false);
-      const [showDiffReview, setShowDiffReview] = useState(false);
+      const [, setInspectorDensity] = useState<"cozy" | "compact">("cozy");
+      const [, setShowWorkspace] = useState(false);
+      const [, setShowHistorySearch] = useState(false);
+      const [, setShowDiffReview] = useState(false);
       const focusFailedBlock = vi.fn();
 
       const handlers = useInspectorPanelActionHandlers({
@@ -91,8 +91,8 @@ describe("useInspectorPanelActionHandlers", () => {
     const focusFailedBlock = vi.fn();
 
     const setup = renderHook(() => {
-      const [showFileExplorer, setShowFileExplorer] = useState(false);
-      const [inspectorDensity, setInspectorDensity] = useState<"cozy" | "compact">("cozy");
+      const [, setShowFileExplorer] = useState(false);
+      const [, setInspectorDensity] = useState<"cozy" | "compact">("cozy");
       const [showWorkspace, setShowWorkspace] = useState(false);
       const [showHistorySearch, setShowHistorySearch] = useState(false);
       const [showDiffReview, setShowDiffReview] = useState(false);

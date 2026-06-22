@@ -12,7 +12,7 @@ interface TabBarProps {
   tabs: Tab[];
   activeTabId: string;
   activeTab: Tab | undefined;
-  tabGitInfo: Record<string, GitTabInfo>;
+  tabGitInfo: Record<string, GitTabInfo | null>;
   renamingTabId: string | null;
   renameValue: string;
   onSwitchTab: (id: string) => void;

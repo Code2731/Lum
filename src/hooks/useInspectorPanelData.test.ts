@@ -32,13 +32,13 @@ function makeRef<T>(value: T): { current: T } {
 
 function buildBlock(overrides: Partial<CommandBlock> & { id: string; command: string; output: string; }): CommandBlock {
   return {
+    ...overrides,
     id: overrides.id,
     command: overrides.command,
     output: overrides.output,
     exitCode: overrides.exitCode ?? null,
     startedAt: overrides.startedAt ?? 1_000,
     endedAt: overrides.endedAt ?? 1_002,
-    ...overrides,
   };
 }
 

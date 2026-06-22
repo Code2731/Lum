@@ -67,7 +67,7 @@ export const useAIProcessing = () => {
     stderr: string,
     model: string,
     context: string,
-  ) => {
+  ): Promise<{ analysis?: string; suggestion?: string } | null> => {
     setIsProcessing(true);
     try {
       const response = await invoke<string>("analyze_error", {
@@ -76,7 +76,7 @@ export const useAIProcessing = () => {
         model,
         context,
       });
-      return parseJsonResponse(response, "analyze_error");
+      return parseJsonResponse<{ analysis?: string; suggestion?: string }>(response, "analyze_error");
     } catch (e) {
       console.error("Error analysis failed:", e);
       throw e;

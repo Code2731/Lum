@@ -88,6 +88,13 @@ function setupInspectorCommands(overrides: {
       })
     | undefined;
 
+  const requireLatestResult = (): NonNullable<typeof latestResult> => {
+    if (!latestResult) {
+      throw new Error("useInspectorPanelCommands test result not initialized");
+    }
+    return latestResult;
+  };
+
   renderHook(() => {
     const [inspectorAnalyzeCache, setInspectorAnalyzeCacheState] = useState<InspectorAnalyzeCache | null>(
       inspectCache ?? null,
@@ -140,8 +147,8 @@ function setupInspectorCommands(overrides: {
 
   return {
     result: {
-      get current() {
-        return latestResult;
+      get current(): NonNullable<typeof latestResult> {
+        return requireLatestResult();
       },
     },
     spies: {

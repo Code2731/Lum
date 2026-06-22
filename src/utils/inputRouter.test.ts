@@ -664,8 +664,10 @@ describe("routeInput — 추가 경계 검증", () => {
   });
 
   it("비 backend @ 토큰은 기존 강제 AI로 유지", () => {
-    expect(routeInput("@@local hi").type).toBe("ai");
-    expect(routeInput("@@local hi").question).toBe("@local hi");
+    const forcedAi = routeInput("@@local hi");
+    expect(forcedAi.type).toBe("ai");
+    if (forcedAi.type !== "ai") throw new Error("expected ai route");
+    expect(forcedAi.question).toBe("@local hi");
     expect(routeInput("@\u205Flocal hi")).toEqual({
       type: "ai",
       question: "hi",

@@ -24,7 +24,7 @@ interface UseInspectorPanelControllerOptions {
   inspectorTabRefs: MutableRefObject<Record<InspectorTab, HTMLButtonElement | null>>;
   inspectorMoreButtonRefs: MutableRefObject<Record<number, HTMLButtonElement | null>>;
   inspectorMenuFirstActionRefs: MutableRefObject<Record<number, HTMLButtonElement | null>>;
-  inspectorQuickActionsAdvancedRef: RefObject<HTMLDivElement>;
+  inspectorQuickActionsAdvancedRef: RefObject<HTMLDivElement | null>;
   inspectorQuickActionsToggleRef: MutableRefObject<HTMLButtonElement | null>;
   inspectorToggleButtonRef: MutableRefObject<HTMLButtonElement | null>;
   setShowInspector: Dispatch<SetStateAction<boolean>>;
@@ -108,10 +108,7 @@ export function useInspectorPanelController({
     if (next < 0) return;
     const nextTab = inspectorTabs[next].id;
     openInspectorTab(nextTab);
-    requestAnimationFrame(() => {
-      inspectorTabRefs.current[nextTab]?.focus();
-    });
-  }, [inspectorTab, inspectorTabs, inspectorTabRefs, openInspectorTab]);
+  }, [inspectorTab, inspectorTabs, openInspectorTab]);
 
   const closeInspectorQuickActions = useCallback((restoreFocus = true) => {
     setShowInspectorQuickActionsExpanded(false);
@@ -214,11 +211,8 @@ export function useInspectorPanelController({
     if (!tab) return false;
     e.preventDefault();
     openInspectorTab(tab);
-    requestAnimationFrame(() => {
-      inspectorTabRefs.current[tab]?.focus();
-    });
     return true;
-  }, [openInspectorTab, inspectorTabRefs]);
+  }, [openInspectorTab]);
 
   return {
     inspectorTabs,

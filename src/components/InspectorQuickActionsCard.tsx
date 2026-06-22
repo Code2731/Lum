@@ -14,8 +14,8 @@ interface InspectorQuickActionsCardProps {
   quickActionsExpanded: boolean;
   inspectorCardRegularClass: string;
   inspectorQuickGridClass: string;
-  inspectorQuickActionsToggleRef: React.RefObject<HTMLButtonElement>;
-  inspectorQuickActionsAdvancedRef: React.RefObject<HTMLDivElement>;
+  inspectorQuickActionsToggleRef: React.RefObject<HTMLButtonElement | null>;
+  inspectorQuickActionsAdvancedRef: React.RefObject<HTMLDivElement | null>;
   onQuickActionsToggle: () => void;
   onQuickActionsToggleKeyDown: (e: React.KeyboardEvent<HTMLButtonElement>) => void;
   onQuickActionsAdvancedKeyDown: (e: React.KeyboardEvent<HTMLDivElement>) => void;

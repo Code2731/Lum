@@ -1,5 +1,4 @@
 import React from "react";
-import { AlertTriangle } from "lucide-react";
 import InspectorAnalyzeCard from "./InspectorAnalyzeCard";
 import InspectorFailedBlockCard from "./InspectorFailedBlockCard";
 import InspectorQuickActionsCard from "./InspectorQuickActionsCard";

@@ -26,7 +26,7 @@ interface UseInspectorMenuControlsOptions {
   setInspectorCommandMenuIndex: Dispatch<SetStateAction<number | null>>;
   inspectorMoreButtonRefs: MutableRefObject<Record<number, HTMLButtonElement | null>>;
   inspectorMenuFirstActionRefs: MutableRefObject<Record<number, HTMLButtonElement | null>>;
-  inspectorQuickActionsAdvancedRef: RefObject<HTMLDivElement>;
+  inspectorQuickActionsAdvancedRef: RefObject<HTMLDivElement | null>;
   showInspectorQuickActionsExpanded: boolean;
   closeInspectorQuickActions: (restoreFocus?: boolean) => void;
 }

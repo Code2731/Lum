@@ -40,7 +40,7 @@ function extractOutputTail(output: string, maxChars = FAILED_BLOCK_OUTPUT_TAIL_M
   const nonEmptyCount = lines.filter((line) => line.length > 0).length;
   if (nonEmptyCount === 0) return "";
   if (nonEmptyCount === 1) return lines.length === 1 ? (lines[0] ?? "") : "";
-  let tail = lines.at(-1) ?? "";
+  let tail = lines[lines.length - 1] ?? "";
   if (!tail) {
     for (let i = lines.length - 2; i >= 0; i -= 1) {
       if (lines[i]) {
@@ -77,7 +77,7 @@ function normalizeOptionalString(value: string | undefined | null): string | und
 }
 
 function normalizeNonNegativeInteger(value: number | undefined): number | undefined {
-  if (!Number.isFinite(value)) return undefined;
+  if (value == null || !Number.isFinite(value)) return undefined;
   const next = Math.trunc(value);
   // 브랜치 변경 수는 안전한 정수만 허용한다. 음수/무한대/비정수/과도값은 UI에 노출되지 않도록 제거한다.
   if (!Number.isSafeInteger(next)) return undefined;
