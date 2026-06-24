@@ -1088,7 +1088,7 @@ describe("InspectorPanel", () => {
       onCloseCommandMenu,
     });
 
-    fireEvent.click(screen.getByText("RUN (R) #2"));
+    fireEvent.click(screen.getAllByText("RUN (R)")[1]);
 
     expect(onCloseCommandMenu).toHaveBeenCalledWith(false);
   });

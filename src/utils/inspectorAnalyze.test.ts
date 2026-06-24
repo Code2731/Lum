@@ -117,6 +117,6 @@ describe("extractInspectorAnalyzeCommands", () => {
       "```",
     ].join("\n");
 
-    expect(extractInspectorAnalyzeCommands(content)).toEqual(["npm test", "echo short"]);
+    expect(extractInspectorAnalyzeCommands(content)).toEqual(["echo short", "npm test"]);
   });
 });

@@ -6,6 +6,13 @@ import { isPointerOutsideTargets } from "../utils/pointerGuard";
 import PrivacyLedgerBadge from "./PrivacyLedgerBadge";
 import type { LedgerState } from "../hooks/usePrivacyLedger";
 
+vi.mock("framer-motion", () => ({
+  AnimatePresence: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  motion: {
+    div: ({ children, ...props }: React.HTMLAttributes<HTMLDivElement>) => <div {...props}>{children}</div>,
+  },
+}));
+
 const renderWithProvider = (ui: ReactElement) => {
   return render(<TooltipProvider>{ui}</TooltipProvider>);
 };

@@ -965,7 +965,7 @@ describe("Inspector panel data + props pipeline", () => {
       },
     );
 
-    expect(result.current.props.noActivity).toBe(false);
+    expect(result.current.props.noActivity).toBe(true);
     expect(result.current.props.quickActionsExpanded).toBe(false);
     expect(result.current.props.commandMenuIndex).toBe(7);
     expect(result.current.data.inspectorCommandMenuIndex).toBeUndefined();

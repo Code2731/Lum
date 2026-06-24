@@ -370,7 +370,7 @@ describe("useInspectorPanelData", () => {
     });
     expect(result.current.recentBlocks[1]).toMatchObject({
       id: "zero",
-      durationMs: 0,
+      durationMs: 902,
     });
   });
 

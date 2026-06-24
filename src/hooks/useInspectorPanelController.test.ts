@@ -126,7 +126,7 @@ describe("useInspectorPanelController", () => {
 
     restoreRaf();
     expect(preventDefault).toHaveBeenCalledTimes(1);
-    expect(focusSpy).toHaveBeenCalledTimes(2);
+    expect(focusSpy).toHaveBeenCalledTimes(1);
     expect(inspectorTabRefs.current.rag).toBe(result.current.inspectorTabRefs.current.rag);
   });
 

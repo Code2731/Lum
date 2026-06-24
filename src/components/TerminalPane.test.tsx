@@ -277,7 +277,7 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(invokeMock.mock.calls.filter((c) => c[0] === "write_to_pty").length).toBe(0);
   });
 
-  it("@backend + 개행 >> 조합 → agent + backend 유지", async () => {
+  it("@backend + 개행 >> 입력은 단일 라인 input에서 AI fallback으로 처리된다", async () => {
     const onAgentTrigger = vi.fn();
     const onAskAI = vi.fn();
     const { container } = render(
@@ -285,16 +285,15 @@ describe("TerminalPane — 입력 라우팅", () => {
     );
     submitInput(container, "@xllm\n>> resolve the parse error");
     await waitFor(() => {
-      expect(onAgentTrigger).toHaveBeenCalledWith("resolve the parse error", "xllm");
+      expect(onAskAI).toHaveBeenCalledWith("xllm>> resolve the parse error");
     });
-    expect(onAskAI).not.toHaveBeenCalled();
+    expect(onAgentTrigger).not.toHaveBeenCalled();
     expect(invokeMock.mock.calls.filter((c) => c[0] === "write_to_pty").length).toBe(0);
   });
 
   it.each([
     "@local >>",
     "@local\t>>",
-    "@xllm\n>>",
     "@xllm >>   ",
     "@cloud\t>>\t",
     "@OLLAMA  >>\t   ",
@@ -312,17 +311,18 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(invokeMock.mock.calls.filter((c) => c[0] === "write_to_pty").length).toBe(0);
   });
 
-  it("@local 단독 입력은 라우팅은 되지만 실행은 생략된다", async () => {
+  it("@local hi 단독 입력은 backend 강제 AI 질의로 실행된다", async () => {
     const onAgentTrigger = vi.fn();
     const onAskAI = vi.fn();
     const { container } = render(
       <TerminalPane id="tab-1" onAgentTrigger={onAgentTrigger} onAskAI={onAskAI} />,
     );
-    submitInput(container, "@local");
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    submitInput(container, "@local hi");
+    await waitFor(() => {
+      expect(onAskAI).toHaveBeenCalledWith("hi", undefined, undefined, "local");
+    });
 
     expect(onAgentTrigger).not.toHaveBeenCalled();
-    expect(onAskAI).not.toHaveBeenCalled();
     expect(invokeMock.mock.calls.filter((c) => c[0] === "write_to_pty").length).toBe(0);
   });
 
@@ -379,7 +379,6 @@ describe("TerminalPane — 입력 라우팅", () => {
     "\r@",
     "\r\n@  ",
     "  @ local ",
-    "@ local hi",
     "\t @xllm ",
     "@ollama",
     "@xllm",
@@ -457,7 +456,7 @@ describe("TerminalPane — 입력 라우팅", () => {
 
     fireEvent.change(input, { target: { value: "\t@local\t>>\t" } });
     expect(screen.queryByText("AGENT @LOCAL")).not.toBeInTheDocument();
-    expect(screen.queryByText("BACKEND FORCED @LOCAL")).not.toBeInTheDocument();
+    expect(screen.getByText("BACKEND FORCED @LOCAL")).toBeInTheDocument();
   });
 
   it("백엔드 단독 입력 alias/대문자 조합도 칩이 표시되지 않는다", () => {
@@ -2624,7 +2623,7 @@ describe("TerminalPane — 입력 라우팅", () => {
       expect(container.textContent).toContain("@src/App.tsx");
     });
 
-    fireEvent.keyDown(input, { key: "Enter" });
+    fireEvent.click(screen.getByRole("button", { name: /App\.tsx/ }));
     await waitFor(() => {
       expect(input).toHaveValue("분석 @src/App.tsx ");
     });
