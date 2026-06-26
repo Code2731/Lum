@@ -187,6 +187,32 @@ test.describe("LUM 스모크 테스트", () => {
     await expect(shellTabs).toHaveCount(beforeCount + 1, { timeout: 5_000 });
   });
 
+  test("온보딩 종료 직후에도 액션 팔레트를 바로 열 수 있다", async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem("lum.mock.appConfig", JSON.stringify({ ui_hints_shown: true }));
+      localStorage.setItem("lum.mock.onboardingComplete", "0");
+      localStorage.setItem("lum.hintsShown", "1");
+    });
+
+    await page.goto("/");
+    await expect(page.getByText("LUM").first()).toBeVisible({ timeout: 15_000 });
+    await page.getByRole("button", { name: "시작하기" }).click();
+    await expect(page.getByText("하드웨어 자동 분석")).toBeVisible({ timeout: 5_000 });
+    await page.getByRole("button", { name: "다음" }).click();
+    await expect(page.getByText("성능 모드 선택")).toBeVisible({ timeout: 5_000 });
+    await page.getByRole("button", { name: "다음" }).click();
+    await expect(page.getByText("xLLM 서버 확인")).toBeVisible({ timeout: 5_000 });
+    await page.getByRole("button", { name: "나중에 설정" }).click();
+    await expect(page.getByText("AI 모델 준비")).toBeVisible({ timeout: 5_000 });
+    await page.getByRole("button", { name: "나중에 설치" }).click();
+    await expect(page.getByText("설정 완료!")).toBeVisible({ timeout: 5_000 });
+    await page.getByRole("button", { name: "터미널 시작하기" }).click();
+
+    await page.getByRole("button", { name: "quick-input-action-palette" }).click();
+    await expect(page.getByText("ACTION PALETTE")).toBeVisible({ timeout: 5_000 });
+    await expect(page.locator("[aria-label='action-palette-input']")).toBeVisible({ timeout: 5_000 });
+  });
+
   // ── 2. Cmd+T 로 새 탭 생성 ────────────────────────────────────────────────
   test("새 탭 버튼을 누르면 새 탭이 생성된다", async ({ page }) => {
     await waitForApp(page);
