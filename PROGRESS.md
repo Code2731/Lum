@@ -6,15 +6,18 @@
 
 - Playwright 스모크 전체 재통과
   - `npx playwright test e2e/smoke.spec.ts`
-  - 결과: `21 passed`
+  - 결과: `24 passed`
 - Inspector 중심 E2E 회귀 범위 확장
   - `Recent Blocks LOAD → AI 프롬프트 적재`
   - `Failed Block AI ANALYZE → Last AI Analyze 카드 갱신`
   - `Last AI Analyze LOAD → AI 입력바 반영`
   - `Last AI Analyze RUN → PTY 전송`
+  - `추천 커맨드 RUN → 알림 센터 실행 피드백`
   - `Inspector 표시 여부 새로고침 영속성`
   - `Inspector 밀도(COZY/COMPACT) 새로고침 영속성`
   - `파일 탐색기 폴더 이동 → 여기로 cd → OSC7 기반 cwd 반영`
+  - `첫 실행 웰컴 힌트 → 닫기 후 즉시 입력 진입`
+  - `첫 실행 온보딩 → 하드웨어 분석 단계 진입`
 
 ### 이번 안정화 라운드에서 반영한 핵심 수정
 
@@ -31,21 +34,23 @@
     - Inspector 밀도 영속성
     - Failed Block / Last AI Analyze 추천 커맨드 상호작용
     - 파일 탐색기 `cwd` 반영 흐름 추가
-    - 전체 스모크 21케이스 기준 누적 회귀 확인 완료
+    - 첫 실행 웰컴 힌트 / 온보딩 진입 검증 추가
+    - 추천 커맨드 실행 후 알림 센터 피드백 검증 추가
+    - 전체 스모크 24케이스 기준 누적 회귀 확인 완료
 
 ### 현재 상태 요약
 
 - 프론트 단위/통합 테스트: 안정화 완료
 - Rust 백엔드 테스트: 안정화 완료
-- Playwright 스모크: `21 passed`
+- Playwright 스모크: `24 passed`
 - 현재 라운드 기준으로 MVP 검증용 핵심 UI 회귀 방어선이 한 단계 더 강화됨
 
 ### 다음 추천 라운드
 
-1. `README` 또는 개발 문서에 Inspector / File Explorer E2E 커버리지 요약 반영
+1. `README` 또는 개발 문서에 Inspector / File Explorer / First-run E2E 커버리지 요약 반영
 2. 아직 비어 있는 핵심 흐름
-   - 첫 실행/온보딩/힌트 방해 여부
-   - 알림 센터에 추천 커맨드 실행 피드백이 사용자 눈에 보이는지 확인
+   - 온보딩 완료 이후 실제 “터미널 시작하기” 종료 흐름
+   - 힌트/온보딩과 기존 단축키 초기 사용성이 겹치지 않는지 확인
 3. 이번 누적 변경분 커밋 및 푸시
 
 ## 2026-06-25

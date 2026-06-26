@@ -96,6 +96,39 @@ test.describe("LUM 스모크 테스트", () => {
     await expect(page.getByRole("button", { name: "새 탭 (Cmd/Ctrl+T)" })).toBeVisible();
   });
 
+  test("첫 실행 웰컴 힌트는 닫은 뒤 바로 입력 흐름으로 진입할 수 있다", async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem("lum.mock.appConfig", JSON.stringify({ ui_hints_shown: false }));
+      localStorage.setItem("lum.mock.onboardingComplete", "1");
+      localStorage.removeItem("lum.hintsShown");
+    });
+
+    await page.goto("/");
+    await expect(page.getByText("LUM").first()).toBeVisible({ timeout: 15_000 });
+
+    const welcomeDialog = page.getByRole("dialog", { name: "LUM — AI 터미널 힌트" });
+    await expect(welcomeDialog).toBeVisible({ timeout: 5_000 });
+    await welcomeDialog.getByRole("button", { name: "시작하기" }).click();
+    await expect(welcomeDialog).toBeHidden({ timeout: 5_000 });
+
+    await expect(page.locator("input[type='text']").first()).toBeVisible({ timeout: 5_000 });
+  });
+
+  test("첫 실행 온보딩은 시작 단계에서 하드웨어 분석 단계로 정상 진입한다", async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem("lum.mock.appConfig", JSON.stringify({ ui_hints_shown: true }));
+      localStorage.setItem("lum.mock.onboardingComplete", "0");
+      localStorage.setItem("lum.hintsShown", "1");
+    });
+
+    await page.goto("/");
+    await expect(page.getByText("LUM").first()).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText("LUM에 오신 것을 환영합니다")).toBeVisible({ timeout: 5_000 });
+
+    await page.getByRole("button", { name: "시작하기" }).click();
+    await expect(page.getByText("하드웨어 자동 분석")).toBeVisible({ timeout: 5_000 });
+  });
+
   // ── 2. Cmd+T 로 새 탭 생성 ────────────────────────────────────────────────
   test("새 탭 버튼을 누르면 새 탭이 생성된다", async ({ page }) => {
     await waitForApp(page);
@@ -397,6 +430,37 @@ test.describe("LUM 스모크 테스트", () => {
         && call.args !== null
         && (call.args as { data?: string }).data === "pwd\r");
     }, { timeout: 5_000 }).toBe(true);
+  });
+
+  test("추천 커맨드 RUN 뒤 알림 센터에 실행 피드백이 표시된다", async ({ page }) => {
+    await waitForApp(page);
+
+    const mainInput = page.locator("input[type='text']").first();
+    await mainInput.click();
+    await mainInput.fill("badcmd");
+    await page.keyboard.press("Enter");
+
+    await emitPtyData(
+      page,
+      "tab-1",
+      "\u001b]133;A\u0007\u001b]133;C;badcmd\u0007command not found\r\n\u001b]133;D;127\u0007",
+    );
+
+    const failedBlockCard = page.locator("div").filter({ has: page.getByText("Failed Block") }).first();
+    await failedBlockCard.getByRole("button", { name: "AI ANALYZE" }).click();
+
+    const analyzeCard = page.locator("div").filter({ has: page.getByText("Last AI Analyze") }).first();
+    await expect(analyzeCard.getByText("DONE")).toBeVisible({ timeout: 5_000 });
+    const firstSuggestedRow = page.locator("[data-inspector-command-menu-row='1']").first();
+    await expect(firstSuggestedRow).toBeVisible({ timeout: 5_000 });
+    await firstSuggestedRow.getByRole("button", { name: "RUN" }).click();
+
+    const notifButton = page.getByRole("button", { name: "알림 센터" });
+    await notifButton.click();
+    const notifPanel = page.getByRole("menu", { name: "알림 센터" });
+    await expect(notifPanel).toBeVisible({ timeout: 5_000 });
+    await expect(notifPanel.getByText("추천 커맨드 실행됨")).toBeVisible({ timeout: 5_000 });
+    await expect(notifPanel.getByText("[1] pwd")).toBeVisible({ timeout: 5_000 });
   });
 
   // ── 6. 좁은 뷰포트 오버레이 하네스 ───────────────────────────────────────

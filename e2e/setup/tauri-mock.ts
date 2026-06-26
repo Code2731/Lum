@@ -131,7 +131,13 @@ export async function setupTauriMock(): Promise<void> {
 
         // 온보딩 완료 상태 — true를 반환해 온보딩 위저드가 뜨지 않도록 함
         case "check_onboarding_complete":
-          return true;
+          {
+            try {
+              return localStorage.getItem("lum.mock.onboardingComplete") !== "0";
+            } catch {
+              return true;
+            }
+          }
 
         // xLLM 서버 상태 — false (오프라인)로 반환
         case "check_xllm_status":
