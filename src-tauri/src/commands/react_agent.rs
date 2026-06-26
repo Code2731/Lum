@@ -2843,11 +2843,10 @@ fn track_pre_write(abs_path: &Path) -> std::result::Result<(), String> {
     if backup.entries.contains_key(abs_path) {
         return Ok(());
     }
+    let rel = abs_path
+        .strip_prefix(&backup.cwd)
+        .map_err(|_| format!("경로 계산 오류: {}", abs_path.display()))?;
     if abs_path.exists() {
-        // cwd 외부면 백업 skip — SafePath가 막아주므로 정상 흐름에선 도달 안 함.
-        let Ok(rel) = abs_path.strip_prefix(&backup.cwd) else {
-            return Err(format!("경로 계산 오류: {}", abs_path.display()));
-        };
         let dst = backup.backup_dir.join(rel);
         if let Some(parent) = dst.parent() {
             std::fs::create_dir_all(parent)

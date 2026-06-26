@@ -139,14 +139,16 @@ const getViewportBounds = (): ViewportBounds => {
   const vv = typeof window !== "undefined" ? window.visualViewport : null;
   const rawWidth = vv?.width;
   const rawHeight = vv?.height;
+  const innerWidth = typeof window !== "undefined" ? window.innerWidth : 1;
+  const innerHeight = typeof window !== "undefined" ? window.innerHeight : 1;
   const width =
     typeof rawWidth === "number" && Number.isFinite(rawWidth) && rawWidth > 1
-      ? rawWidth
-      : window.innerWidth;
+      ? Math.min(rawWidth, innerWidth)
+      : innerWidth;
   const height =
     typeof rawHeight === "number" && Number.isFinite(rawHeight) && rawHeight > 1
-      ? rawHeight
-      : window.innerHeight;
+      ? Math.min(rawHeight, innerHeight)
+      : innerHeight;
   const left = vv?.offsetLeft ?? 0;
   const top = vv?.offsetTop ?? 0;
 

@@ -12,7 +12,7 @@ fn normalize_xllm_url(value: &str) -> String {
     value.trim().trim_end_matches('/').to_string()
 }
 
-#[derive(Debug, Serialize, Deserialize, Default, Clone)]
+#[derive(Debug, Serialize, Deserialize, Default, Clone, PartialEq)]
 pub struct AppConfig {
     pub theme: Option<String>,
     pub font_size: Option<u32>,
@@ -153,7 +153,7 @@ impl AppConfig {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Default, Clone)]
+#[derive(Debug, Serialize, Deserialize, Default, Clone, PartialEq)]
 pub struct QuickAction {
     pub id: String,
     pub label: String,

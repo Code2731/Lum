@@ -462,7 +462,7 @@ mod tests {
     }
 
     #[test]
-    fn tools_call_unknown_tool_returns_isError_true() {
+    fn tools_call_unknown_tool_returns_is_error_true() {
         let resp = handle_request(&req(
             "tools/call",
             json!({ "name": "nonexistent_tool", "arguments": {} }),

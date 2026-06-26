@@ -15,7 +15,24 @@ export async function setupTauriMock(): Promise<void> {
   } catch {
     // noop
   }
+  const readMockConfig = () => {
+    try {
+      const raw = localStorage.getItem("lum.mock.appConfig");
+      return raw ? JSON.parse(raw) : {};
+    } catch {
+      return {};
+    }
+  };
+  const writeMockConfig = (next: Record<string, unknown>) => {
+    try {
+      localStorage.setItem("lum.mock.appConfig", JSON.stringify(next));
+    } catch {
+      // noop
+    }
+  };
   const callbacks = new Map<number, (payload: unknown) => void>();
+  const eventListeners = new Map<string, Set<number>>();
+  const invokeCalls: Array<{ cmd: string; args: unknown }> = [];
   let callbackSeq = 1;
 
   const transformCallback = (callback?: (payload: unknown) => void, once?: boolean): number => {
@@ -35,19 +52,82 @@ export async function setupTauriMock(): Promise<void> {
     callbacks.get(id)?.(payload);
   };
 
+  const emitTauriEvent = (event: string, payload: unknown): void => {
+    for (const id of eventListeners.get(event) ?? []) {
+      runCallback(id, { payload });
+    }
+  };
+  const directoryEntries: Record<string, Array<{ name: string; path: string; is_dir: boolean; size: number }>> = {
+    "~": [
+      { name: "project", path: "/workspace/project", is_dir: true, size: 0 },
+      { name: "notes.txt", path: "/workspace/notes.txt", is_dir: false, size: 128 },
+    ],
+    "/workspace/project": [
+      { name: "src", path: "/workspace/project/src", is_dir: true, size: 0 },
+      { name: "README.md", path: "/workspace/project/README.md", is_dir: false, size: 512 },
+    ],
+    "/workspace/project/src": [],
+  };
+
   w.__TAURI_INTERNALS__ = {
     /**
      * invoke 는 커맨드 이름과 인수를 받아 결과를 반환한다.
      * 테스트에서는 명령별 기본값을 반환해 UI가 오류 없이 렌더링되도록 한다.
      */
     invoke: async (cmd: string, args?: unknown): Promise<unknown> => {
+      invokeCalls.push({ cmd, args });
       switch (cmd) {
         case "plugin:event|listen":
-          return (args as { handler?: number } | undefined)?.handler ?? 0;
+          {
+            const listenArgs = args as { event?: string; handler?: number } | undefined;
+            const eventName = listenArgs?.event;
+            const handlerId = listenArgs?.handler ?? 0;
+            if (eventName) {
+              const handlers = eventListeners.get(eventName) ?? new Set<number>();
+              handlers.add(handlerId);
+              eventListeners.set(eventName, handlers);
+            }
+            return handlerId;
+          }
         case "plugin:event|unlisten":
+          {
+            const unlistenArgs = args as { event?: string; eventId?: number } | undefined;
+            if (unlistenArgs?.event && typeof unlistenArgs.eventId === "number") {
+              eventListeners.get(unlistenArgs.event)?.delete(unlistenArgs.eventId);
+            }
+          }
           return null;
         case "plugin:event|emit":
           return null;
+        case "reset_ai_stream":
+          return null;
+        case "cancel_ai_stream":
+          return null;
+        case "verify_command_safety":
+          return {
+            level: "Safe",
+            reason: "mock",
+          };
+        case "stream_ai_command":
+          {
+            const streamArgs = args as { prompt?: string } | undefined;
+            const prompt = streamArgs?.prompt ?? "";
+            const answer = prompt.includes("아래 실패한 터미널 실행을 분석해줘.")
+              ? [
+                  "원인: command not found",
+                  "",
+                  "```bash",
+                  "pwd",
+                  "echo badcmd",
+                  "which badcmd",
+                  "```",
+                ].join("\n")
+              : `Mock AI 응답: ${prompt}`;
+            for (const token of [answer.slice(0, Math.ceil(answer.length / 2)), answer.slice(Math.ceil(answer.length / 2))]) {
+              emitTauriEvent("xllm_token", token);
+            }
+            return null;
+          }
 
         // 온보딩 완료 상태 — true를 반환해 온보딩 위저드가 뜨지 않도록 함
         case "check_onboarding_complete":
@@ -72,7 +152,7 @@ export async function setupTauriMock(): Promise<void> {
 
         // 설정 로드 — 빈 객체
         case "load_config":
-          return {};
+          return readMockConfig();
         case "load_app_config":
           return {
             show_reasoning: true,
@@ -81,7 +161,21 @@ export async function setupTauriMock(): Promise<void> {
             ui_show_file_explorer: true,
             ui_hints_shown: true,
             ui_seen_advanced_features: [],
+            ...readMockConfig(),
           };
+        case "save_ui_preferences":
+          {
+            const prev = readMockConfig();
+            const saveArgs = (args as Record<string, unknown> | undefined) ?? {};
+            const next = {
+              ...prev,
+              ...(saveArgs.showFileExplorer !== undefined ? { ui_show_file_explorer: !!saveArgs.showFileExplorer } : {}),
+              ...(saveArgs.showInspector !== undefined ? { ui_show_inspector: !!saveArgs.showInspector } : {}),
+              ...(saveArgs.aiChatFontSize !== undefined ? { ui_ai_chat_font_size: saveArgs.aiChatFontSize } : {}),
+            };
+            writeMockConfig(next);
+            return null;
+          }
 
         // 세션 로드 — null (새 세션)
         case "load_session":
@@ -109,9 +203,19 @@ export async function setupTauriMock(): Promise<void> {
         case "lora_forge_list":
           return [];
         case "list_directory":
-          return [];
+          {
+            const dirArgs = args as { path?: string } | undefined;
+            return directoryEntries[dirArgs?.path ?? ""] ?? [];
+          }
         case "parent_directory":
-          return null;
+          {
+            const dirArgs = args as { path?: string } | undefined;
+            const path = dirArgs?.path ?? "";
+            if (path === "~" || !path) return null;
+            if (path === "/workspace/project/src") return "/workspace/project";
+            if (path === "/workspace/project") return "~";
+            return null;
+          }
 
         // 퀵 액션 로드 — 빈 배열
         case "load_quick_actions":
@@ -147,7 +251,16 @@ export async function setupTauriMock(): Promise<void> {
   w.__TAURI_EVENT_PLUGIN_INTERNALS__ = {
     unregisterListener: (event: string, id: number) => {
       void event;
+      eventListeners.get(event)?.delete(id);
       unregisterCallback(id);
+    },
+  };
+
+  w.__lumTest = {
+    emitTauriEvent,
+    getInvokeCalls: () => invokeCalls.slice(),
+    resetInvokeCalls: () => {
+      invokeCalls.length = 0;
     },
   };
 }

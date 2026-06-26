@@ -5,6 +5,22 @@ import { invoke } from "@tauri-apps/api/core";
 import { useCommandBlocks } from "./hooks/useCommandBlocks";
 import App from "./App";
 
+vi.mock("framer-motion", async () => {
+  const React = await import("react");
+  return {
+    AnimatePresence: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
+    motion: {
+      div: React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
+        ({ children, ...props }, ref) => (
+          <div ref={ref} {...props}>
+            {children}
+          </div>
+        ),
+      ),
+    },
+  };
+});
+
 vi.mock("@tauri-apps/api/core", () => ({
   invoke: vi.fn().mockImplementation((cmd: string) => {
     if (cmd === "check_onboarding_complete") return Promise.resolve(true);
@@ -250,9 +266,19 @@ describe("App (Inspector compact command menu focus)", () => {
   beforeEach(() => {
     mockedInvoke.mockClear();
     setMockCommandBlocks([]);
-    localStorage.setItem("lum.inspector", "0");
-    localStorage.setItem("lum.inspectorDensity", "compact");
-    localStorage.setItem("lum.hintsShown", "1");
+    const storage = globalThis.localStorage ?? {
+      getItem: vi.fn(() => null),
+      setItem: vi.fn(),
+      removeItem: vi.fn(),
+      clear: vi.fn(),
+    };
+    Object.defineProperty(globalThis, "localStorage", {
+      value: storage,
+      configurable: true,
+    });
+    globalThis.localStorage.setItem("lum.inspector", "0");
+    globalThis.localStorage.setItem("lum.inspectorDensity", "compact");
+    globalThis.localStorage.setItem("lum.hintsShown", "1");
   });
 
   it("compact 분석 메뉴를 Escape로 닫으면 MORE 버튼으로 포커스가 복귀한다", async () => {

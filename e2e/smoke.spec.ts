@@ -19,6 +19,30 @@ async function injectTauriMock(page: Page): Promise<void> {
   `);
 }
 
+async function emitPtyData(page: Page, id: string, data: string): Promise<void> {
+  await page.evaluate(
+    ({ event, payload }) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (window as any).__lumTest?.emitTauriEvent(event, payload);
+    },
+    { event: "pty_data", payload: { id, data } },
+  );
+}
+
+async function getInvokeCalls(page: Page): Promise<Array<{ cmd: string; args: unknown }>> {
+  return page.evaluate(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return ((window as any).__lumTest?.getInvokeCalls?.() ?? []) as Array<{ cmd: string; args: unknown }>;
+  });
+}
+
+async function resetInvokeCalls(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (window as any).__lumTest?.resetInvokeCalls?.();
+  });
+}
+
 // 앱이 완전히 로드되기를 기다리는 헬퍼 — 헤더의 "LUM" 텍스트가 보일 때까지 대기
 async function waitForApp(page: Page): Promise<void> {
   await page.goto("/");
@@ -68,8 +92,8 @@ test.describe("LUM 스모크 테스트", () => {
     // 탭은 div.cursor-pointer 요소로 렌더링되고 텍스트로 탭 이름을 포함한다
     await expect(page.getByText("Shell 1").first()).toBeVisible();
 
-    // 새 탭 추가 버튼(+ 아이콘, aria-label="새 탭 (Cmd+T)")이 표시되어야 한다
-    await expect(page.getByRole("button", { name: "새 탭 (Cmd+T)" })).toBeVisible();
+    // 새 탭 추가 버튼(+ 아이콘, aria-label="새 탭 (Cmd/Ctrl+T)")이 표시되어야 한다
+    await expect(page.getByRole("button", { name: "새 탭 (Cmd/Ctrl+T)" })).toBeVisible();
   });
 
   // ── 2. Cmd+T 로 새 탭 생성 ────────────────────────────────────────────────
@@ -83,31 +107,30 @@ test.describe("LUM 스모크 테스트", () => {
 
     // 브라우저 환경 E2E에서는 Ctrl/Cmd+T가 브라우저 새 탭 단축키와 충돌하므로
     // 동일 동작을 담당하는 헤더 버튼 경로를 검증한다.
-    await page.getByRole("button", { name: "새 탭 (Cmd+T)" }).click();
+    await page.getByRole("button", { name: "새 탭 (Cmd/Ctrl+T)" }).click();
 
     // 탭 개수가 1개 증가해야 한다.
     await expect(shellTabs).toHaveCount(beforeCount + 1, { timeout: 5_000 });
   });
 
   // ── 3. Cmd+Shift+H 로 SSH 연결 모달 열기 ─────────────────────────────────
-  test("Cmd+Shift+H 를 누르면 SSH 연결 모달이 열린다", async ({ page }) => {
+  test("SSH 연결 버튼을 누르면 SSH 연결 모달이 열린다", async ({ page }) => {
     await waitForApp(page);
 
     // 모달이 아직 보이지 않아야 한다
     await expect(page.getByText("SSH 연결")).not.toBeVisible();
 
-    // SSH 단축키 발동
-    await page.keyboard.press("Control+Shift+h");
+    // SSH 버튼 경로로 열기
+    await page.getByRole("button", { name: "SSH 연결 (Cmd/Ctrl+Shift+H)" }).click();
 
     // SSH 모달 타이틀 "SSH 연결"이 표시되어야 한다
     await expect(page.getByText("SSH 연결").first()).toBeVisible({ timeout: 5_000 });
 
-    // 탭 바의 SSH 버튼(Lock 아이콘)을 통해서도 모달을 열 수 있어야 한다 — 대안 경로 검증
-    // 이미 열린 상태이므로 닫고 버튼으로 다시 열기
+    // Escape 후 같은 버튼으로 다시 열 수 있어야 한다
     await page.keyboard.press("Escape");
     await expect(page.getByText("SSH 연결")).not.toBeVisible({ timeout: 3_000 });
 
-    await page.getByRole("button", { name: "SSH 연결 (Cmd+Shift+H)" }).click();
+    await page.getByRole("button", { name: "SSH 연결 (Cmd/Ctrl+Shift+H)" }).click();
     await expect(page.getByText("SSH 연결").first()).toBeVisible({ timeout: 5_000 });
   });
 
@@ -116,7 +139,7 @@ test.describe("LUM 스모크 테스트", () => {
     await waitForApp(page);
 
     // SSH 모달 열기
-    await page.keyboard.press("Control+Shift+h");
+    await page.getByRole("button", { name: "SSH 연결 (Cmd/Ctrl+Shift+H)" }).click();
     await expect(page.getByText("SSH 연결").first()).toBeVisible({ timeout: 5_000 });
 
     // Escape 로 닫기
@@ -124,28 +147,256 @@ test.describe("LUM 스모크 테스트", () => {
     await expect(page.getByText("SSH 연결")).not.toBeVisible({ timeout: 3_000 });
   });
 
-  // ── 5. Cmd+K 로 커맨드 팔레트 열기 ───────────────────────────────────────
-  test("Cmd+K 를 누르면 커맨드 팔레트가 열린다", async ({ page }) => {
+  // ── 5. 액션 팔레트 열기 ───────────────────────────────────────────────────
+  test("액션 팔레트 버튼을 누르면 ACTION PALETTE가 열린다", async ({ page }) => {
     await waitForApp(page);
 
-    // 커맨드 팔레트가 아직 보이지 않아야 한다
-    await expect(
-      page.getByPlaceholder("탭, 워크스페이스, 액션, 히스토리 검색…"),
-    ).not.toBeVisible();
+    // 액션 팔레트가 아직 보이지 않아야 한다
+    await expect(page.getByText("ACTION PALETTE")).not.toBeVisible();
 
-    // Cmd+K 발동
-    await page.keyboard.press("Control+k");
+    // 툴벨트 버튼 경로로 열기
+    await page.getByRole("button", { name: "quick-input-action-palette" }).click();
 
-    // 팔레트의 검색 인풋이 표시되어야 한다
-    await expect(
-      page.getByPlaceholder("탭, 워크스페이스, 액션, 히스토리 검색…"),
-    ).toBeVisible({ timeout: 5_000 });
+    // 팔레트 헤더와 검색 인풋이 표시되어야 한다
+    await expect(page.getByText("ACTION PALETTE")).toBeVisible({ timeout: 5_000 });
+    await expect(page.locator("[aria-label='action-palette-input']")).toBeVisible({ timeout: 5_000 });
 
     // Escape 로 닫기
     await page.keyboard.press("Escape");
-    await expect(
-      page.getByPlaceholder("탭, 워크스페이스, 액션, 히스토리 검색…"),
-    ).not.toBeVisible({ timeout: 3_000 });
+    await expect(page.getByText("ACTION PALETTE")).not.toBeVisible({ timeout: 3_000 });
+  });
+
+  test("명령을 제출하면 리스트 뷰에 커맨드 블록이 표시된다", async ({ page }) => {
+    await waitForApp(page);
+
+    const mainInput = page.locator("input[type='text']").first();
+    await mainInput.click();
+    await mainInput.fill("echo hello");
+    await page.keyboard.press("Enter");
+
+    await emitPtyData(
+      page,
+      "tab-1",
+      "\u001b]133;A\u0007\u001b]133;C;echo hello\u0007hello\r\n\u001b]133;D;0\u0007",
+    );
+
+    await page.getByRole("button", { name: "리스트" }).click();
+    await expect(page.getByText("echo hello", { exact: true })).toBeVisible({ timeout: 5_000 });
+  });
+
+  test("AI 질문을 제출하면 응답 스트림이 표시된다", async ({ page }) => {
+    await waitForApp(page);
+
+    const mainInput = page.locator("input[type='text']").first();
+    await mainInput.click();
+    await mainInput.fill("최근 로그 요약해줘");
+    await page.keyboard.press("Enter");
+
+    await expect(page.getByTestId("ai-block-stream")).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText("AI 대화")).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText("Mock AI 응답: 최근 로그 요약해줘")).toBeVisible({ timeout: 5_000 });
+  });
+
+  test("새 커맨드 블록은 Inspector Recent Blocks에도 반영된다", async ({ page }) => {
+    await waitForApp(page);
+
+    const mainInput = page.locator("input[type='text']").first();
+    await mainInput.click();
+    await mainInput.fill("pwd");
+    await page.keyboard.press("Enter");
+
+    await emitPtyData(
+      page,
+      "tab-1",
+      "\u001b]133;A\u0007\u001b]133;C;pwd\u0007/Users/mock\r\n\u001b]133;D;0\u0007",
+    );
+
+    const recentBlocksCard = page.locator("div").filter({ has: page.getByText("Recent Blocks") }).first();
+    await expect(recentBlocksCard).toBeVisible({ timeout: 5_000 });
+    await expect(recentBlocksCard.getByText("pwd", { exact: true })).toBeVisible({ timeout: 5_000 });
+    await expect(recentBlocksCard.getByText("/Users/mock", { exact: true })).toBeVisible({ timeout: 5_000 });
+  });
+
+  test("파일 탐색기 토글 상태는 새로고침 뒤에도 유지된다", async ({ page }) => {
+    await waitForApp(page);
+
+    const explorerToggle = page.getByRole("button", { name: "파일 탐색기" });
+    await expect(explorerToggle).toHaveAttribute("aria-pressed", "true");
+
+    await explorerToggle.click();
+    await expect(explorerToggle).toHaveAttribute("aria-pressed", "false");
+
+    await page.reload();
+    await expect(page.getByText("LUM").first()).toBeVisible({ timeout: 15_000 });
+
+    const reloadedExplorerToggle = page.getByRole("button", { name: "파일 탐색기" });
+    await expect(reloadedExplorerToggle).toHaveAttribute("aria-pressed", "false");
+  });
+
+  test("파일 탐색기에서 폴더 이동 뒤 여기로 cd를 누르면 현재 탭 cwd가 반영된다", async ({ page }) => {
+    await waitForApp(page);
+    await resetInvokeCalls(page);
+
+    await expect(page.getByText("project", { exact: true })).toBeVisible({ timeout: 5_000 });
+    await page.getByText("project", { exact: true }).click();
+    await expect(page.getByText("src", { exact: true })).toBeVisible({ timeout: 5_000 });
+
+    await page.getByRole("button", { name: "터미널을 이 폴더로 이동" }).click();
+
+    await expect.poll(async () => {
+      const calls = await getInvokeCalls(page);
+      return calls.some((call) => call.cmd === "write_to_pty"
+        && typeof call.args === "object"
+        && call.args !== null
+        && (call.args as { data?: string }).data === "cd /workspace/project\r");
+    }, { timeout: 5_000 }).toBe(true);
+
+    await emitPtyData(page, "tab-1", "\u001b]7;file://localhost/workspace/project\u0007");
+
+    const workspaceCard = page.locator("div").filter({ has: page.getByText("Workspace") }).first();
+    await expect(workspaceCard.getByText("/workspace/project", { exact: true })).toBeVisible({ timeout: 5_000 });
+  });
+
+  test("Inspector 토글 상태는 새로고침 뒤에도 유지된다", async ({ page }) => {
+    await waitForApp(page);
+
+    const inspectorToggle = page.getByRole("button", { name: "Inspector", exact: true });
+    await expect(inspectorToggle).toHaveAttribute("aria-pressed", "true");
+
+    await inspectorToggle.click();
+    await expect(inspectorToggle).toHaveAttribute("aria-pressed", "false");
+    await expect(page.getByRole("tablist", { name: "Inspector 탭" })).toBeHidden({ timeout: 5_000 });
+
+    await page.reload();
+    await expect(page.getByText("LUM").first()).toBeVisible({ timeout: 15_000 });
+
+    const reloadedInspectorToggle = page.getByRole("button", { name: "Inspector", exact: true });
+    await expect(reloadedInspectorToggle).toHaveAttribute("aria-pressed", "false");
+    await expect(page.getByRole("tablist", { name: "Inspector 탭" })).toBeHidden({ timeout: 5_000 });
+  });
+
+  test("Inspector 밀도 토글 상태는 새로고침 뒤에도 유지된다", async ({ page }) => {
+    await waitForApp(page);
+
+    await expect(page.getByText("COZY", { exact: true })).toBeVisible({ timeout: 5_000 });
+    await page.getByLabel("Inspector 밀도 토글").click();
+    await expect(page.getByText("COMPACT", { exact: true })).toBeVisible({ timeout: 5_000 });
+
+    await page.reload();
+    await expect(page.getByText("LUM").first()).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText("COMPACT", { exact: true })).toBeVisible({ timeout: 5_000 });
+  });
+
+  test("Inspector 실패 블록의 LOAD는 AI 분석 프롬프트를 AI 바에 채운다", async ({ page }) => {
+    await waitForApp(page);
+
+    const mainInput = page.locator("input[type='text']").first();
+    await mainInput.click();
+    await mainInput.fill("badcmd");
+    await page.keyboard.press("Enter");
+
+    await emitPtyData(
+      page,
+      "tab-1",
+      "\u001b]133;A\u0007\u001b]133;C;badcmd\u0007command not found\r\n\u001b]133;D;127\u0007",
+    );
+
+    const recentBlocksCard = page.locator("div").filter({ has: page.getByText("Recent Blocks") }).first();
+    await expect(recentBlocksCard.getByText("LOAD", { exact: true })).toBeVisible({ timeout: 5_000 });
+    await recentBlocksCard.getByText("LOAD", { exact: true }).click();
+
+    const aiInput = page.getByLabel("AI 질문 입력");
+    await expect(aiInput).toBeVisible({ timeout: 5_000 });
+    await expect(aiInput).toHaveValue(/아래 실패한 터미널 실행을 분석해줘\./);
+    await expect(aiInput).toHaveValue(/Command: badcmd/);
+    await expect(aiInput).toHaveValue(/Exit Code: 127/);
+    await expect(page.getByRole("button", { name: "Inspector", exact: true })).toHaveAttribute("aria-pressed", "false");
+  });
+
+  test("Inspector 실패 블록의 AI ANALYZE는 결과 카드에 추천 커맨드를 표시한다", async ({ page }) => {
+    await waitForApp(page);
+
+    const mainInput = page.locator("input[type='text']").first();
+    await mainInput.click();
+    await mainInput.fill("badcmd");
+    await page.keyboard.press("Enter");
+
+    await emitPtyData(
+      page,
+      "tab-1",
+      "\u001b]133;A\u0007\u001b]133;C;badcmd\u0007command not found\r\n\u001b]133;D;127\u0007",
+    );
+
+    const failedBlockCard = page.locator("div").filter({ has: page.getByText("Failed Block") }).first();
+    await expect(failedBlockCard.getByRole("button", { name: "AI ANALYZE" })).toBeVisible({ timeout: 5_000 });
+    await failedBlockCard.getByRole("button", { name: "AI ANALYZE" }).click();
+
+    const analyzeCard = page.locator("div").filter({ has: page.getByText("Last AI Analyze") }).first();
+    await expect(analyzeCard).toBeVisible({ timeout: 5_000 });
+    await expect(analyzeCard.getByText("DONE")).toBeVisible({ timeout: 5_000 });
+    await expect(analyzeCard.getByText("Suggested Commands")).toBeVisible({ timeout: 5_000 });
+    await expect(analyzeCard.getByRole("button", { name: "RUN" }).first()).toBeVisible({ timeout: 5_000 });
+  });
+
+  test("Last AI Analyze 추천 커맨드 LOAD는 AI 입력바에 첫 번째 커맨드를 채운다", async ({ page }) => {
+    await waitForApp(page);
+
+    const mainInput = page.locator("input[type='text']").first();
+    await mainInput.click();
+    await mainInput.fill("badcmd");
+    await page.keyboard.press("Enter");
+
+    await emitPtyData(
+      page,
+      "tab-1",
+      "\u001b]133;A\u0007\u001b]133;C;badcmd\u0007command not found\r\n\u001b]133;D;127\u0007",
+    );
+
+    const failedBlockCard = page.locator("div").filter({ has: page.getByText("Failed Block") }).first();
+    await failedBlockCard.getByRole("button", { name: "AI ANALYZE" }).click();
+
+    const analyzeCard = page.locator("div").filter({ has: page.getByText("Last AI Analyze") }).first();
+    await expect(analyzeCard.getByText("DONE")).toBeVisible({ timeout: 5_000 });
+    const firstSuggestedRow = page.locator("[data-inspector-command-menu-row='1']").first();
+    await expect(firstSuggestedRow).toBeVisible({ timeout: 5_000 });
+    await firstSuggestedRow.getByRole("button", { name: "LOAD" }).click();
+
+    const aiInput = page.getByLabel("AI 질문 입력");
+    await expect(aiInput).toBeVisible({ timeout: 5_000 });
+    await expect(aiInput).toHaveValue("pwd");
+  });
+
+  test("Last AI Analyze 추천 커맨드 RUN은 첫 번째 커맨드를 PTY로 실행한다", async ({ page }) => {
+    await waitForApp(page);
+    await resetInvokeCalls(page);
+
+    const mainInput = page.locator("input[type='text']").first();
+    await mainInput.click();
+    await mainInput.fill("badcmd");
+    await page.keyboard.press("Enter");
+
+    await emitPtyData(
+      page,
+      "tab-1",
+      "\u001b]133;A\u0007\u001b]133;C;badcmd\u0007command not found\r\n\u001b]133;D;127\u0007",
+    );
+
+    const failedBlockCard = page.locator("div").filter({ has: page.getByText("Failed Block") }).first();
+    await failedBlockCard.getByRole("button", { name: "AI ANALYZE" }).click();
+
+    const analyzeCard = page.locator("div").filter({ has: page.getByText("Last AI Analyze") }).first();
+    await expect(analyzeCard.getByText("DONE")).toBeVisible({ timeout: 5_000 });
+    const firstSuggestedRow = page.locator("[data-inspector-command-menu-row='1']").first();
+    await expect(firstSuggestedRow).toBeVisible({ timeout: 5_000 });
+    await firstSuggestedRow.getByRole("button", { name: "RUN" }).click();
+
+    await expect.poll(async () => {
+      const calls = await getInvokeCalls(page);
+      return calls.some((call) => call.cmd === "write_to_pty"
+        && typeof call.args === "object"
+        && call.args !== null
+        && (call.args as { data?: string }).data === "pwd\r");
+    }, { timeout: 5_000 }).toBe(true);
   });
 
   // ── 6. 좁은 뷰포트 오버레이 하네스 ───────────────────────────────────────
@@ -162,15 +413,15 @@ test.describe("LUM 스모크 테스트", () => {
     await page.keyboard.press("Enter");
 
     // INPUT HISTORY 패널 검증
-    await page.getByRole("button", { name: "quick-input-history-open" }).click();
+    await page.getByRole("button", { name: "quick-input-action-palette" }).click();
+    await page.getByRole("button", { name: "action-palette-item-history_open" }).click();
     await expect(page.getByText("INPUT HISTORY")).toBeVisible();
     await expectInViewport(page, "[aria-label='input-history-search']");
     await expectInViewport(page, "[aria-label='quick-input-history-close']");
     await page.keyboard.press("Escape");
 
     // ACTION PALETTE 패널 검증 (input intercept: Ctrl+K)
-    await mainInput.click();
-    await page.keyboard.press("Control+k");
+    await page.getByRole("button", { name: "quick-input-action-palette" }).click();
     await expect(page.getByText("ACTION PALETTE")).toBeVisible();
     await expectInViewport(page, "[aria-label='action-palette-input']");
     await expectInViewport(page, "[aria-label='action-palette-close']");

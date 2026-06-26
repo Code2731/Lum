@@ -159,7 +159,7 @@ const NotificationCenter: React.FC<Props> = ({
       role="dialog"
       aria-label="알림 센터"
       ref={panelRef}
-      className={`${popupPositionClass} w-80 flex flex-col bg-[#161b22] border border-white/10 rounded-xl shadow-2xl z-[1400] overflow-hidden`}
+      className={`${popupPositionClass} w-full flex flex-col bg-[#161b22] border border-white/10 rounded-xl shadow-2xl z-[1400] overflow-hidden`}
       style={{
         maxHeight: typeof maxHeight === "number" && maxHeight > 0
           ? `${maxHeight}px`
