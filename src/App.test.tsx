@@ -473,6 +473,18 @@ describe("App (LUM 터미널)", () => {
     expect(await screen.findByPlaceholderText(/자연어로 검색/)).toBeInTheDocument();
   });
 
+  it("입력 포커스 중에는 Ctrl+R이 히스토리 검색을 열지 않는다", () => {
+    render(<App />);
+
+    const textInput = document.createElement("input");
+    document.body.appendChild(textInput);
+    textInput.focus();
+
+    fireEvent.keyDown(textInput, { key: "r", ctrlKey: true });
+    expect(screen.queryByPlaceholderText(/자연어로 검색/)).not.toBeInTheDocument();
+    textInput.remove();
+  });
+
   it("리스트 뷰에서는 Ctrl+R이 히스토리 검색을 열지 않는다", async () => {
     render(<App />);
 
