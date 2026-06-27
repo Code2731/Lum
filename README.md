@@ -160,6 +160,13 @@ npm run dev -- --host 127.0.0.1 --port 1420
 node scripts/run-e2e-noserver.js
 ```
 
+- 현재 `e2e/smoke.spec.ts` 기준선은 `29 passed`입니다.
+- 이 스모크 세트는 다음 MVP 핵심 흐름을 우선 방어합니다.
+  - 첫 실행 웰컴 힌트 닫기, 온보딩 진입/완료, 메인 입력 포커스 복귀
+  - 온보딩 직후 헤더 툴바, 액션 팔레트, AI 입력바, 파일 탐색기 진입
+  - Inspector 최근 블록/실패 블록/추천 커맨드 상호작용
+  - 파일 탐색기 토글 영속성, 폴더 이동, `여기로 cd` 이후 `cwd` 반영
+  - Privacy Ledger, 고급 기능 메뉴, 알림 센터의 좁은 뷰포트 표시와 상호 배타 동작
 - `npm run test:e2e:noserver`는 `E2E_NO_WEB_SERVER=1`을 내부에서 주입하므로 Windows/macOS/Linux 모두 동일하게 동작합니다.
 - `E2E_NO_WEB_SERVER=1` 또는 `E2E_SKIP_WEBSERVER=1` 설정 시 Playwright가 `webServer`를 직접 띄우지 않습니다.
 - `E2E_FALLBACK_PROJECTS`를 설정하면 noserver 실행 시 기본 `--project=chromium` 실패 시 대체 프로젝트를 순차 실행할 수 있습니다. 예: `E2E_FALLBACK_PROJECTS="chromium"`.
