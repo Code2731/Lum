@@ -121,6 +121,14 @@ const AppOverlays: React.FC<Props> = ({
     showSshModal, setShowSshModal,
   } = panels;
 
+  const restoreMainInputFocus = () => {
+    if (typeof window === "undefined") return;
+    window.requestAnimationFrame(() => {
+      const mainInput = document.querySelector<HTMLInputElement>("input[type='text']");
+      mainInput?.focus();
+    });
+  };
+
   return (
     <>
       {showModelManager && (
@@ -281,7 +289,10 @@ const AppOverlays: React.FC<Props> = ({
 
       {showOnboarding && (
         <Suspense fallback={null}>
-          <OnboardingWizard onComplete={() => setShowOnboarding(false)} />
+          <OnboardingWizard onComplete={() => {
+            setShowOnboarding(false);
+            restoreMainInputFocus();
+          }} />
         </Suspense>
       )}
 
@@ -326,6 +337,7 @@ const AppOverlays: React.FC<Props> = ({
           onClose={() => {
             setShowWelcome(false);
             invoke("save_ui_preferences", { hintsShown: true }).catch(() => {});
+            restoreMainInputFocus();
           }}
         />
       )}

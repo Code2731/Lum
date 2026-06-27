@@ -111,7 +111,9 @@ test.describe("LUM 스모크 테스트", () => {
     await welcomeDialog.getByRole("button", { name: "시작하기" }).click();
     await expect(welcomeDialog).toBeHidden({ timeout: 5_000 });
 
-    await expect(page.locator("input[type='text']").first()).toBeVisible({ timeout: 5_000 });
+    const mainInput = page.locator("input[type='text']").first();
+    await expect(mainInput).toBeVisible({ timeout: 5_000 });
+    await expect(mainInput).toBeFocused();
   });
 
   test("첫 실행 온보딩은 시작 단계에서 하드웨어 분석 단계로 정상 진입한다", async ({ page }) => {
@@ -153,7 +155,9 @@ test.describe("LUM 스모크 테스트", () => {
     await page.getByRole("button", { name: "터미널 시작하기" }).click();
 
     await expect(page.getByText("설정 완료!")).toBeHidden({ timeout: 5_000 });
-    await expect(page.locator("input[type='text']").first()).toBeVisible({ timeout: 5_000 });
+    const mainInput = page.locator("input[type='text']").first();
+    await expect(mainInput).toBeVisible({ timeout: 5_000 });
+    await expect(mainInput).toBeFocused();
     await expect.poll(async () => {
       const calls = await getInvokeCalls(page);
       return calls.some((call) => call.cmd === "complete_onboarding");
@@ -234,6 +238,7 @@ test.describe("LUM 스모크 테스트", () => {
     await expect(page.getByText("설정 완료!")).toBeVisible({ timeout: 5_000 });
     await page.getByRole("button", { name: "터미널 시작하기" }).click();
 
+    await page.getByRole("button", { name: "터미널", exact: true }).focus();
     await page.keyboard.press("Meta+Shift+K");
     const aiInput = page.getByLabel("AI 질문 입력");
     await expect(aiInput).toBeVisible({ timeout: 5_000 });
