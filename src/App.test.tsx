@@ -339,6 +339,18 @@ describe("App (LUM 터미널)", () => {
     expect(screen.getByPlaceholderText("AI에게 질문하세요… (Enter 전송 · Esc 닫기)")).toBeInTheDocument();
   });
 
+  it("입력 포커스 중에는 Cmd/Ctrl+Shift+K가 AI 바 단축키로 처리되지 않는다", () => {
+    render(<App />);
+
+    const textInput = document.createElement("input");
+    document.body.appendChild(textInput);
+    textInput.focus();
+
+    fireEvent.keyDown(textInput, { key: "K", ctrlKey: true, shiftKey: true });
+    expect(screen.queryByLabelText("AI 질문 입력")).not.toBeInTheDocument();
+    textInput.remove();
+  });
+
   it("AI 입력바 전송 중에는 유지되고 Stop으로 취소할 수 있다", async () => {
     let resolveStream: (() => void) | null = null;
     const baseImpl = mockedInvoke.getMockImplementation() as InvokeMockImplementation | undefined;
