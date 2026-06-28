@@ -114,6 +114,20 @@ describe("isTextInputTarget", () => {
     cleanup();
   });
 
+  it("role=textbox + aria-disabled + contenteditable='plaintext-only'는 텍스트 입력 대상으로 제외한다", () => {
+    const wrapper = document.createElement("div");
+    wrapper.setAttribute("role", "textbox");
+    wrapper.setAttribute("contenteditable", "plaintext-only");
+    wrapper.setAttribute("aria-disabled", "true");
+    const child = document.createElement("span");
+    wrapper.appendChild(child);
+    const cleanup = appendAndCleanup([wrapper]);
+
+    expect(isTextInputTarget(child)).toBe(false);
+    expect(isTextInputTarget(wrapper)).toBe(false);
+    cleanup();
+  });
+
   it("contenteditable=''와 plaintext-only도 텍스트 입력 대상으로 판정한다", () => {
     const editableEmpty = document.createElement("div");
     editableEmpty.setAttribute("contenteditable", "");
