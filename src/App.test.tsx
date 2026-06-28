@@ -1739,23 +1739,73 @@ describe("App (LUM 터미널)", () => {
     render(<App />);
     const input = document.createElement("input");
     document.body.appendChild(input);
-    try {
-      const beforePanes = screen.getAllByTestId(/^terminal-pane-/).length;
 
+    const shortcuts = [
+      { name: "AI 바 토글", key: "k", ctrlKey: true, shiftKey: true },
+      { name: "AI 바 토글", key: "k", metaKey: true, shiftKey: true },
+      { name: "파일 탐색기 토글", key: "b", ctrlKey: true },
+      { name: "파일 탐색기 토글", key: "b", metaKey: true },
+      { name: "탭 추가", key: "t", ctrlKey: true },
+      { name: "탭 추가", key: "t", metaKey: true },
+      { name: "히스토리 검색", key: "r", ctrlKey: true },
+      { name: "히스토리 검색(캡처)", key: "r", metaKey: true },
+      { name: "수평 분할", key: "d", ctrlKey: true, shiftKey: true },
+      { name: "수평 분할", key: "d", metaKey: true, shiftKey: true },
+      { name: "수직 분할", key: "e", ctrlKey: true, shiftKey: true },
+      { name: "수직 분할", key: "e", metaKey: true, shiftKey: true },
+      { name: "커밋 패널", key: "g", ctrlKey: true, shiftKey: true },
+      { name: "커밋 패널", key: "g", metaKey: true, shiftKey: true },
+      { name: "SSH 패널", key: "h", ctrlKey: true, shiftKey: true },
+      { name: "SSH 패널", key: "h", metaKey: true, shiftKey: true },
+      { name: "Diff 리뷰", key: "r", ctrlKey: true, shiftKey: true },
+      { name: "Diff 리뷰", key: "r", metaKey: true, shiftKey: true },
+      { name: "스크립트 라이브러리", key: "l", ctrlKey: true, shiftKey: true },
+      { name: "스크립트 라이브러리", key: "l", metaKey: true, shiftKey: true },
+      { name: "시스템 모니터", key: "m", ctrlKey: true, shiftKey: true },
+      { name: "시스템 모니터", key: "m", metaKey: true, shiftKey: true },
+      { name: "테마 패널", key: ",", ctrlKey: true },
+      { name: "테마 패널", key: ",", metaKey: true },
+      { name: "Inspector 토글", key: "i", ctrlKey: true },
+      { name: "Inspector 토글", key: "i", metaKey: true },
+      { name: "퀵 액션 바", key: "q", ctrlKey: true, shiftKey: true },
+      { name: "퀵 액션 바", key: "q", metaKey: true, shiftKey: true },
+      { name: "빠른 액션 인덱스", key: "1", ctrlKey: true },
+      { name: "빠른 액션 인덱스", key: "2", metaKey: true },
+      { name: "Quick Action(Alt+숫자)", key: "3", ctrlKey: true, altKey: true },
+      { name: "Quick Action(Alt+숫자)", key: "4", metaKey: true, altKey: true },
+    ];
+
+    const beforeInspectorPressed = screen.getByLabelText("Inspector").getAttribute("aria-pressed");
+    const beforePanes = screen.getAllByTestId(/^terminal-pane-/).length;
+    const beforeQuickActionHint = screen.getByText("빠른 실행 없음 · 오른쪽 설정에서 추가").textContent;
+    const beforeScriptTextCount = screen.getAllByText("스크립트 라이브러리").length;
+
+    try {
       input.focus();
       expect(document.activeElement).toBe(input);
 
-      fireEvent.keyDown(input, { key: "k", ctrlKey: true, shiftKey: true });
+      for (const shortcut of shortcuts) {
+        const event = new KeyboardEvent("keydown", {
+          bubbles: true,
+          cancelable: true,
+          key: shortcut.key,
+          shiftKey: shortcut.shiftKey ?? false,
+          altKey: shortcut.altKey ?? false,
+          ctrlKey: shortcut.ctrlKey ?? false,
+          metaKey: shortcut.metaKey ?? false,
+        });
+        const didDispatch = input.dispatchEvent(event);
+        expect(didDispatch, `${shortcut.name} 이벤트가 전역 핫키에서 가로채지 않아야 함`).toBe(true);
+      }
+
+      expect(screen.getAllByTestId(/^terminal-pane-/).length).toBe(beforePanes);
+      expect(screen.getByLabelText("Inspector").getAttribute("aria-pressed")).toBe(beforeInspectorPressed);
       expect(screen.queryByPlaceholderText("AI에게 질문하세요… (Enter 전송 · Esc 닫기)")).not.toBeInTheDocument();
-
-      fireEvent.keyDown(input, { key: "b", ctrlKey: true });
-      expect(screen.getAllByTestId(/^terminal-pane-/).length).toBe(beforePanes);
-
-      fireEvent.keyDown(input, { key: "t", metaKey: true });
-      expect(screen.getAllByTestId(/^terminal-pane-/).length).toBe(beforePanes);
-
-      fireEvent.keyDown(input, { key: "r", metaKey: true });
       expect(screen.queryByPlaceholderText(/자연어로 검색/)).not.toBeInTheDocument();
+      expect(screen.queryByText("AI Diff Reviewer")).not.toBeInTheDocument();
+      expect(screen.getByText("빠른 실행 없음 · 오른쪽 설정에서 추가")).toHaveTextContent(beforeQuickActionHint ?? "");
+      expect(screen.getAllByText("스크립트 라이브러리")).toHaveLength(beforeScriptTextCount);
+      expect(document.activeElement).toBe(input);
     } finally {
       input.remove();
     }

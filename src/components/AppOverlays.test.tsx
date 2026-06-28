@@ -40,6 +40,22 @@ vi.mock("./SshConnectModal", () => ({
   ),
 }));
 
+vi.mock("./CommandPalette", () => ({
+  default: ({ onClose }: { onClose: () => void }) => (
+    <div role="dialog" aria-label="명령어 팔레트">
+      <button type="button" onClick={onClose}>명령어 팔레트 닫기</button>
+    </div>
+  ),
+}));
+
+vi.mock("./WorkspacePanel", () => ({
+  default: ({ onClose }: { onClose: () => void }) => (
+    <div role="dialog" aria-label="워크스페이스">
+      <button type="button" onClick={onClose}>워크스페이스 닫기</button>
+    </div>
+  ),
+}));
+
 type OverlayProps = React.ComponentProps<typeof AppOverlays>;
 
 function createProps(overrides?: Partial<OverlayProps>): OverlayProps {
@@ -110,16 +126,22 @@ function OverlayHarness({
   initialOnboarding = false,
   initialHistorySearch = false,
   initialSshModal = false,
+  initialPalette = false,
+  initialWorkspace = false,
 }: {
   initialWelcome?: boolean;
   initialOnboarding?: boolean;
   initialHistorySearch?: boolean;
   initialSshModal?: boolean;
+  initialPalette?: boolean;
+  initialWorkspace?: boolean;
 }) {
   const [showWelcome, setShowWelcome] = React.useState(initialWelcome);
   const [showOnboarding, setShowOnboarding] = React.useState(initialOnboarding);
   const [showHistorySearch, setShowHistorySearch] = React.useState(initialHistorySearch);
   const [showSshModal, setShowSshModal] = React.useState(initialSshModal);
+  const [showPalette, setShowPalette] = React.useState(initialPalette);
+  const [showWorkspace, setShowWorkspace] = React.useState(initialWorkspace);
 
   return (
     <>
@@ -132,6 +154,10 @@ function OverlayHarness({
             setShowHistorySearch,
             showSshModal,
             setShowSshModal,
+            showPalette,
+            setShowPalette,
+            showWorkspace,
+            setShowWorkspace,
           },
           showWelcome,
           setShowWelcome,
@@ -187,6 +213,28 @@ describe("AppOverlays", () => {
 
     const mainInput = screen.getByLabelText("메인 입력");
     fireEvent.click(screen.getByRole("button", { name: "SSH 닫기" }));
+
+    await waitFor(() => {
+      expect(mainInput).toHaveFocus();
+    });
+  });
+
+  it("명령어 팔레트를 닫으면 메인 입력으로 포커스를 복귀한다", async () => {
+    render(<OverlayHarness initialPalette />);
+
+    const mainInput = screen.getByLabelText("메인 입력");
+    fireEvent.click(screen.getByRole("button", { name: "명령어 팔레트 닫기" }));
+
+    await waitFor(() => {
+      expect(mainInput).toHaveFocus();
+    });
+  });
+
+  it("워크스페이스 패널을 닫으면 메인 입력으로 포커스를 복귀한다", async () => {
+    render(<OverlayHarness initialWorkspace />);
+
+    const mainInput = screen.getByLabelText("메인 입력");
+    fireEvent.click(screen.getByRole("button", { name: "워크스페이스 닫기" }));
 
     await waitFor(() => {
       expect(mainInput).toHaveFocus();

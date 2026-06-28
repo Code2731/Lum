@@ -327,6 +327,29 @@ describe("AppHeader", () => {
     expect(overflowButton).toHaveFocus();
   });
 
+  it("고급 메뉴를 트리거 버튼으로 닫으면 포커스가 트리거로 돌아간다", async () => {
+    const HeaderHarness = () => {
+      const [showAdvancedOverflow, setShowAdvancedOverflow] = React.useState(true);
+      const props = buildProps() as any;
+      props.showAdvancedOverflow = showAdvancedOverflow;
+      props.setShowAdvancedOverflow = setShowAdvancedOverflow;
+      return <AppHeader {...props} />;
+    };
+
+    render(<HeaderHarness />);
+
+    const overflowButton = screen.getByRole("button", { name: ADVANCED_BUTTON_NAME });
+    overflowButton.focus();
+    expect(overflowButton).toHaveFocus();
+
+    fireEvent.click(overflowButton);
+
+    await waitFor(() => {
+      expect(screen.queryByRole("menu", { name: "고급 기능 메뉴" })).not.toBeInTheDocument();
+    });
+    expect(overflowButton).toHaveFocus();
+  });
+
   it("알림 센터에서 Escape로 닫으면 트리거로 포커스가 돌아간다", async () => {
     const HeaderHarness = () => {
       const [showNotifCenter, setShowNotifCenter] = React.useState(true);
@@ -343,6 +366,57 @@ describe("AppHeader", () => {
     expect(notifButton).toHaveFocus();
 
     fireEvent.keyDown(document, { key: "Escape" });
+
+    await waitFor(() => {
+      expect(screen.queryByRole("menu", { name: "알림 센터" })).not.toBeInTheDocument();
+    });
+    expect(notifButton).toHaveFocus();
+  });
+
+  it("알림 센터를 트리거 버튼으로 닫으면 포커스가 트리거로 돌아간다", async () => {
+    const HeaderHarness = () => {
+      const [showNotifCenter, setShowNotifCenter] = React.useState(true);
+      const props = buildProps() as any;
+      props.showNotifCenter = showNotifCenter;
+      props.setShowNotifCenter = setShowNotifCenter;
+      return <AppHeader {...props} />;
+    };
+
+    render(<HeaderHarness />);
+
+    const notifButton = screen.getByRole("button", { name: "알림 센터" });
+    notifButton.focus();
+    expect(notifButton).toHaveFocus();
+
+    fireEvent.click(notifButton);
+
+    await waitFor(() => {
+      expect(screen.queryByRole("menu", { name: "알림 센터" })).not.toBeInTheDocument();
+    });
+    expect(notifButton).toHaveFocus();
+  });
+
+  it("알림 센터 닫기 버튼 클릭도 포커스를 트리거로 복귀시킨다", async () => {
+    const HeaderHarness = () => {
+      const [showNotifCenter, setShowNotifCenter] = React.useState(true);
+      const props = buildProps() as any;
+      props.showNotifCenter = showNotifCenter;
+      props.setShowNotifCenter = setShowNotifCenter;
+      return (
+        <AppHeader
+          {...props}
+        />
+      );
+    };
+
+    render(<HeaderHarness />);
+
+    const closeButton = await screen.findByRole("button", { name: "알림 센터 닫기" });
+    const notifButton = screen.getByRole("button", { name: "알림 센터" });
+    notifButton.focus();
+    expect(notifButton).toHaveFocus();
+
+    fireEvent.click(closeButton);
 
     await waitFor(() => {
       expect(screen.queryByRole("menu", { name: "알림 센터" })).not.toBeInTheDocument();

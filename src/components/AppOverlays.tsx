@@ -286,7 +286,10 @@ const AppOverlays: React.FC<Props> = ({
           onSave={async name => { await saveWorkspace(name, wsTabs, activeTabId); }}
           onRestore={handleRestoreWorkspace}
           onDelete={deleteWorkspace}
-          onClose={() => setShowWorkspace(false)}
+          onClose={() => {
+            setShowWorkspace(false);
+            restoreMainInputFocus();
+          }}
         />
       )}
 
@@ -311,7 +314,10 @@ const AppOverlays: React.FC<Props> = ({
           onRunAction={cmd => {
             ptyWriteRefs.current.get(activePaneIdRef.current ?? "")?.(cmd + "\r");
           }}
-          onClose={() => setShowPalette(false)}
+          onClose={() => {
+            setShowPalette(false);
+            restoreMainInputFocus();
+          }}
         />
       )}
 
