@@ -25,6 +25,9 @@
 - 전역 단축키 동작 반대 계약 고정
   - `src/App.test.tsx`
   - 텍스트 입력이 아닌 포커스(버튼)에서는 전역 단축키가 정상 동작함을 검증
+- 전역 단축키의 부분 음성 경로를 보강
+  - `src/App.test.tsx`
+  - readonly textarea 포커스에서 `Ctrl+Shift+K`가 동작해 AI 바가 토글되는지 검증
 
 ### 현재 상태 요약
 
