@@ -49,6 +49,9 @@
 - role=searchbox + aria-disabled 경로 보강
   - `src/utils/event.test.ts`, `src/App.test.tsx`
   - role=searchbox에서 aria-disabled 처리 경계 고정
+- role=combobox + aria-disabled 경로 보강
+  - `src/utils/event.test.ts`, `src/App.test.tsx`
+  - role=combobox 자손까지 포함해 aria-disabled 처리 경계 고정
 
 ### 현재 상태 요약
 
