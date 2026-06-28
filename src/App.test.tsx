@@ -1963,6 +1963,46 @@ describe("App (LUM 터미널)", () => {
     }
   });
 
+  it("disabled textarea에서는 글로벌 단축키가 동작한다", async () => {
+    render(<App />);
+
+    const beforeAiVisible = screen.queryByPlaceholderText("AI에게 질문하세요… (Enter 전송 · Esc 닫기)") !== null;
+    const textarea = document.createElement("textarea");
+    textarea.disabled = true;
+    document.body.appendChild(textarea);
+
+    try {
+      fireEvent.keyDown(textarea, { key: "k", ctrlKey: true, shiftKey: true });
+
+      await waitFor(() => {
+        const afterAiVisible = screen.queryByPlaceholderText("AI에게 질문하세요… (Enter 전송 · Esc 닫기)") !== null;
+        expect(afterAiVisible).toBe(!beforeAiVisible);
+      });
+    } finally {
+      textarea.remove();
+    }
+  });
+
+  it("disabled input에서는 글로벌 단축키가 동작한다", async () => {
+    render(<App />);
+
+    const beforeAiVisible = screen.queryByPlaceholderText("AI에게 질문하세요… (Enter 전송 · Esc 닫기)") !== null;
+    const input = document.createElement("input");
+    input.disabled = true;
+    document.body.appendChild(input);
+
+    try {
+      fireEvent.keyDown(input, { key: "k", ctrlKey: true, shiftKey: true });
+
+      await waitFor(() => {
+        const afterAiVisible = screen.queryByPlaceholderText("AI에게 질문하세요… (Enter 전송 · Esc 닫기)") !== null;
+        expect(afterAiVisible).toBe(!beforeAiVisible);
+      });
+    } finally {
+      input.remove();
+    }
+  });
+
   it("Inspector 닫기 버튼은 트리거 버튼으로 포커스를 되돌린다", async () => {
     render(<App />);
 
