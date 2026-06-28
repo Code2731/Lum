@@ -53,6 +53,14 @@ describe("isTextInputTarget", () => {
     cleanup();
   });
 
+  it("aria-disabled input은 텍스트 입력 대상으로 제외한다", () => {
+    const input = document.createElement("input");
+    input.setAttribute("aria-disabled", "true");
+    const cleanup = appendAndCleanup([input]);
+    expect(isTextInputTarget(input)).toBe(false);
+    cleanup();
+  });
+
   it("disabled 입력은 텍스트 입력 대상으로 제외한다", () => {
     const input = document.createElement("input");
     input.disabled = true;
@@ -64,6 +72,14 @@ describe("isTextInputTarget", () => {
   it("disabled textarea는 텍스트 입력 대상으로 제외한다", () => {
     const textarea = document.createElement("textarea");
     textarea.disabled = true;
+    const cleanup = appendAndCleanup([textarea]);
+    expect(isTextInputTarget(textarea)).toBe(false);
+    cleanup();
+  });
+
+  it("aria-disabled textarea는 텍스트 입력 대상으로 제외한다", () => {
+    const textarea = document.createElement("textarea");
+    textarea.setAttribute("aria-disabled", "true");
     const cleanup = appendAndCleanup([textarea]);
     expect(isTextInputTarget(textarea)).toBe(false);
     cleanup();

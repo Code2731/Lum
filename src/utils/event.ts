@@ -9,14 +9,14 @@ export function isTextInputTarget(target: EventTarget | null): boolean {
   };
 
   if (el instanceof HTMLInputElement) {
-    if (el.disabled || el.readOnly || el.type === "hidden" || el.type === "checkbox" || el.type === "radio" || el.type === "button" || el.type === "submit" || el.type === "reset" || el.type === "file") {
+    if (isAriaDisabled(el) || el.readOnly || el.type === "hidden" || el.type === "checkbox" || el.type === "radio" || el.type === "button" || el.type === "submit" || el.type === "reset" || el.type === "file") {
       return false;
     }
     return true;
   }
 
   if (el instanceof HTMLTextAreaElement) {
-    return !el.readOnly && !el.disabled;
+    return !el.readOnly && !el.disabled && !isAriaDisabled(el);
   }
 
   const editableNode = el.closest("textarea, [contenteditable='true'], [contenteditable=''], [contenteditable='plaintext-only'], [role='textbox'], [role='searchbox'], [role='combobox']");

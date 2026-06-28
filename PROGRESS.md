@@ -52,6 +52,9 @@
 - role=combobox + aria-disabled 경로 보강
   - `src/utils/event.test.ts`, `src/App.test.tsx`
   - role=combobox 자손까지 포함해 aria-disabled 처리 경계 고정
+- aria-disabled 실제 입력 엘리먼트 경계 보강
+  - `src/utils/event.ts`, `src/utils/event.test.ts`, `src/App.test.tsx`
+  - `<input>/<textarea>`에 `aria-disabled="true"`가 붙으면 텍스트 입력 타깃에서 제외
 
 ### 현재 상태 요약
 
