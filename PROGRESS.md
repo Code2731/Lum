@@ -10,6 +10,9 @@
   - `KeyboardEvent.dispatchEvent`의 기본 동작이 유지되는지까지 확인해 포커스 계약 회귀를 더 공격적으로 고정
   - textarea/contenteditable 포커스 경로까지 별도 케이스로 확장해 텍스트 입력 대상의 범위를 명시적으로 고정
   - contenteditable의 빈 문자열/`plaintext-only`, role 기반 `searchbox`까지 포함해 `isTextInputTarget` 의도 범위를 테스트로 고정
+- `isTextInputTarget` 회귀 방어 보강
+  - `src/utils/event.test.ts`
+  - `contenteditable` 확장 케이스(`''`, `plaintext-only`)와 텍스트 입력 비대상 타입(`checkbox`, `button`, `submit`, `reset`, `file`)를 음성(미차단) 테스트로 고정
 
 ### 현재 상태 요약
 
