@@ -13,6 +13,9 @@
 - `isTextInputTarget` 회귀 방어 보강
   - `src/utils/event.test.ts`
   - `contenteditable` 확장 케이스(`''`, `plaintext-only`)와 텍스트 입력 비대상 타입(`checkbox`, `button`, `submit`, `reset`, `file`)를 음성(미차단) 테스트로 고정
+- 전역 단축키 동작 반대 계약 고정
+  - `src/App.test.tsx`
+  - 텍스트 입력이 아닌 포커스(버튼)에서는 전역 단축키가 정상 동작함을 검증
 
 ### 현재 상태 요약
 

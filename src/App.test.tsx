@@ -1869,6 +1869,28 @@ describe("App (LUM 터미널)", () => {
     }
   });
 
+  it("글로벌 단축키는 텍스트 입력이 아닌 요소 포커스에서는 동작한다", async () => {
+    render(<App />);
+
+    const beforeExplorerVisible = screen.queryByTestId("file-explorer-mock") !== null;
+    const button = document.createElement("button");
+    document.body.appendChild(button);
+
+    try {
+      button.focus();
+      expect(document.activeElement).toBe(button);
+
+      fireEvent.keyDown(button, { key: "b", ctrlKey: true });
+
+      await waitFor(() => {
+        const afterExplorerVisible = screen.queryByTestId("file-explorer-mock") !== null;
+        expect(afterExplorerVisible).toBe(!beforeExplorerVisible);
+      });
+    } finally {
+      button.remove();
+    }
+  });
+
   it("Inspector 닫기 버튼은 트리거 버튼으로 포커스를 되돌린다", async () => {
     render(<App />);
 
