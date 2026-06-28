@@ -28,6 +28,9 @@
 - 전역 단축키의 부분 음성 경로를 보강
   - `src/App.test.tsx`
   - readonly textarea 포커스에서 `Ctrl+Shift+K`가 동작해 AI 바가 토글되는지 검증
+- App 레벨 `isTextInputTarget` 음성 경로 확장
+  - `src/App.test.tsx`
+  - readonly input 포커스에서 `Ctrl+Shift+K`가 동작해 AI 바가 토글되는지 검증
 
 ### 현재 상태 요약
 

@@ -1940,6 +1940,29 @@ describe("App (LUM 터미널)", () => {
     }
   });
 
+  it("readonly input 포커스에서는 글로벌 단축키가 동작한다", async () => {
+    render(<App />);
+
+    const beforeAiVisible = screen.queryByPlaceholderText("AI에게 질문하세요… (Enter 전송 · Esc 닫기)") !== null;
+    const input = document.createElement("input");
+    input.readOnly = true;
+    document.body.appendChild(input);
+
+    try {
+      input.focus();
+      expect(document.activeElement).toBe(input);
+
+      fireEvent.keyDown(input, { key: "k", ctrlKey: true, shiftKey: true });
+
+      await waitFor(() => {
+        const afterAiVisible = screen.queryByPlaceholderText("AI에게 질문하세요… (Enter 전송 · Esc 닫기)") !== null;
+        expect(afterAiVisible).toBe(!beforeAiVisible);
+      });
+    } finally {
+      input.remove();
+    }
+  });
+
   it("Inspector 닫기 버튼은 트리거 버튼으로 포커스를 되돌린다", async () => {
     render(<App />);
 
