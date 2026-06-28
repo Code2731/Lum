@@ -40,6 +40,9 @@
 - aria-disabled 텍스트 입력 타깃 배제 규칙 보강
   - `src/utils/event.ts`, `src/utils/event.test.ts`, `src/App.test.tsx`
   - `aria-disabled=true` role=textbox를 텍스트 입력 텍스트 타깃에서 제외하고, App 레벨 동작 검증 추가
+- aria-disabled plaintext-only contenteditable 회귀 확장
+  - `src/utils/event.test.ts`, `src/App.test.tsx`
+  - `aria-disabled=true` + `contenteditable='plaintext-only'` 조합도 텍스트 입력 타깃에서 제외
 
 ### 현재 상태 요약
 
