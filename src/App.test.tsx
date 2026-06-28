@@ -1811,6 +1811,50 @@ describe("App (LUM 터미널)", () => {
     }
   });
 
+  it("글로벌 단축키는 textarea/contenteditable 포커스 시에도 동작하지 않는다", async () => {
+    render(<App />);
+
+    const textarea = document.createElement("textarea");
+    const editable = document.createElement("div");
+    editable.setAttribute("contenteditable", "true");
+    document.body.appendChild(textarea);
+    document.body.appendChild(editable);
+
+    const beforePanes = screen.getAllByTestId(/^terminal-pane-/).length;
+
+    try {
+      textarea.focus();
+      expect(document.activeElement).toBe(textarea);
+
+      const textareaEvent = new KeyboardEvent("keydown", {
+        bubbles: true,
+        cancelable: true,
+        key: "k",
+        ctrlKey: true,
+        shiftKey: true,
+      });
+      expect(textarea.dispatchEvent(textareaEvent)).toBe(true);
+      expect(screen.getAllByTestId(/^terminal-pane-/).length).toBe(beforePanes);
+      expect(screen.queryByPlaceholderText("AI에게 질문하세요… (Enter 전송 · Esc 닫기)")).not.toBeInTheDocument();
+
+      editable.focus();
+      expect(document.activeElement).toBe(editable);
+
+      const editableEvent = new KeyboardEvent("keydown", {
+        bubbles: true,
+        cancelable: true,
+        key: "r",
+        metaKey: true,
+      });
+      expect(editable.dispatchEvent(editableEvent)).toBe(true);
+      expect(screen.getAllByTestId(/^terminal-pane-/).length).toBe(beforePanes);
+      expect(screen.queryByPlaceholderText(/자연어로 검색/)).not.toBeInTheDocument();
+    } finally {
+      textarea.remove();
+      editable.remove();
+    }
+  });
+
   it("Inspector 닫기 버튼은 트리거 버튼으로 포커스를 되돌린다", async () => {
     render(<App />);
 
