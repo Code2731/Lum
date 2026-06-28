@@ -93,6 +93,17 @@ describe("isTextInputTarget", () => {
     cleanup();
   });
 
+  it("contenteditable='false' 내부 자식도 텍스트 입력으로 판정하지 않는다", () => {
+    const editableFalse = document.createElement("div");
+    editableFalse.setAttribute("contenteditable", "false");
+    const child = document.createElement("span");
+    editableFalse.appendChild(child);
+    const cleanup = appendAndCleanup([editableFalse]);
+
+    expect(isTextInputTarget(child)).toBe(false);
+    cleanup();
+  });
+
   it("checkbox/button/search처럼 텍스트 입력 외 타입은 제외한다", () => {
     const checkbox = document.createElement("input");
     checkbox.type = "checkbox";

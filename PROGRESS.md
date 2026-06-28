@@ -16,6 +16,9 @@
 - `contenteditable` 음성 경로를 한 단계 더 명확화
   - `src/utils/event.test.ts`
   - `contenteditable='false'`가 텍스트 입력으로 오탐되지 않음을 검증
+- `contenteditable='false'` 자식 노드에 대한 오탐 차단도 단위 테스트로 추가
+  - `src/utils/event.test.ts`
+  - `contenteditable='false'` 컨테이너 내부 자식이 텍스트 입력으로 판정되지 않음을 검증
 - 전역 단축키 동작 반대 계약 고정
   - `src/App.test.tsx`
   - 텍스트 입력이 아닌 포커스(버튼)에서는 전역 단축키가 정상 동작함을 검증
