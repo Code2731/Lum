@@ -46,6 +46,9 @@
 - role=textbox + aria-disabled + contenteditable='plaintext-only' 경로 보강
   - `src/utils/event.test.ts`, `src/App.test.tsx`
   - 이중 속성 조합 노드도 텍스트 입력 타깃에서 제외
+- role=searchbox + aria-disabled 경로 보강
+  - `src/utils/event.test.ts`, `src/App.test.tsx`
+  - role=searchbox에서 aria-disabled 처리 경계 고정
 
 ### 현재 상태 요약
 

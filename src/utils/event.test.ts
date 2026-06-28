@@ -88,6 +88,19 @@ describe("isTextInputTarget", () => {
     cleanup();
   });
 
+  it("role=searchbox + aria-disabled는 텍스트 입력 대상으로 제외한다", () => {
+    const wrapper = document.createElement("div");
+    wrapper.setAttribute("role", "searchbox");
+    wrapper.setAttribute("aria-disabled", "true");
+    const child = document.createElement("span");
+    wrapper.appendChild(child);
+    const cleanup = appendAndCleanup([wrapper]);
+
+    expect(isTextInputTarget(child)).toBe(false);
+    expect(isTextInputTarget(wrapper)).toBe(false);
+    cleanup();
+  });
+
   it("aria-disabled role=textbox는 텍스트 입력 대상으로 제외한다", () => {
     const wrapper = document.createElement("div");
     wrapper.setAttribute("role", "textbox");
