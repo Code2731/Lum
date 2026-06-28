@@ -9,6 +9,7 @@
   - 기존 `글로벌 단축키는 입력 필드 포커스 시 동작하지 않는다(Ctrl/Cmd)` 케이스를 확대해 주요 전역 조합(Ctrl/Meta + 단독/Shift/Alt 변형, 퀵 액션 인덱스)을 일괄 검증하도록 보강
   - `KeyboardEvent.dispatchEvent`의 기본 동작이 유지되는지까지 확인해 포커스 계약 회귀를 더 공격적으로 고정
   - textarea/contenteditable 포커스 경로까지 별도 케이스로 확장해 텍스트 입력 대상의 범위를 명시적으로 고정
+  - contenteditable의 빈 문자열/`plaintext-only`, role 기반 `searchbox`까지 포함해 `isTextInputTarget` 의도 범위를 테스트로 고정
 
 ### 현재 상태 요약
 

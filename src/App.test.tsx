@@ -1816,9 +1816,17 @@ describe("App (LUM 터미널)", () => {
 
     const textarea = document.createElement("textarea");
     const editable = document.createElement("div");
+    const editablePlaintext = document.createElement("div");
+    const searchbox = document.createElement("input");
+    searchbox.type = "search";
+    searchbox.setAttribute("role", "searchbox");
+
     editable.setAttribute("contenteditable", "true");
+    editablePlaintext.setAttribute("contenteditable", "plaintext-only");
     document.body.appendChild(textarea);
     document.body.appendChild(editable);
+    document.body.appendChild(editablePlaintext);
+    document.body.appendChild(searchbox);
 
     const beforePanes = screen.getAllByTestId(/^terminal-pane-/).length;
 
@@ -1826,32 +1834,38 @@ describe("App (LUM 터미널)", () => {
       textarea.focus();
       expect(document.activeElement).toBe(textarea);
 
-      const textareaEvent = new KeyboardEvent("keydown", {
-        bubbles: true,
-        cancelable: true,
-        key: "k",
-        ctrlKey: true,
-        shiftKey: true,
-      });
+      const textareaEvent = new KeyboardEvent("keydown", { bubbles: true, cancelable: true, key: "k", ctrlKey: true, shiftKey: true });
       expect(textarea.dispatchEvent(textareaEvent)).toBe(true);
       expect(screen.getAllByTestId(/^terminal-pane-/).length).toBe(beforePanes);
       expect(screen.queryByPlaceholderText("AI에게 질문하세요… (Enter 전송 · Esc 닫기)")).not.toBeInTheDocument();
 
+      editablePlaintext.focus();
+      expect(document.activeElement).toBe(editablePlaintext);
+
+      const editablePlaintextEvent = new KeyboardEvent("keydown", { bubbles: true, cancelable: true, key: "i", ctrlKey: true });
+      expect(editablePlaintext.dispatchEvent(editablePlaintextEvent)).toBe(true);
+      expect(screen.getAllByTestId(/^terminal-pane-/).length).toBe(beforePanes);
+      expect(screen.queryByText("AI Diff Reviewer")).not.toBeInTheDocument();
+
       editable.focus();
       expect(document.activeElement).toBe(editable);
 
-      const editableEvent = new KeyboardEvent("keydown", {
-        bubbles: true,
-        cancelable: true,
-        key: "r",
-        metaKey: true,
-      });
+      const editableEvent = new KeyboardEvent("keydown", { bubbles: true, cancelable: true, key: "r", metaKey: true });
       expect(editable.dispatchEvent(editableEvent)).toBe(true);
       expect(screen.getAllByTestId(/^terminal-pane-/).length).toBe(beforePanes);
       expect(screen.queryByPlaceholderText(/자연어로 검색/)).not.toBeInTheDocument();
+
+      searchbox.focus();
+      expect(document.activeElement).toBe(searchbox);
+
+      const searchEvent = new KeyboardEvent("keydown", { bubbles: true, cancelable: true, key: "b", metaKey: true, shiftKey: true });
+      expect(searchbox.dispatchEvent(searchEvent)).toBe(true);
+      expect(screen.getAllByTestId(/^terminal-pane-/).length).toBe(beforePanes);
     } finally {
       textarea.remove();
       editable.remove();
+      editablePlaintext.remove();
+      searchbox.remove();
     }
   });
 
