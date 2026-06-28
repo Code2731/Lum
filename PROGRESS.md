@@ -31,6 +31,9 @@
 - App 레벨 `isTextInputTarget` 음성 경로 확장
   - `src/App.test.tsx`
   - readonly input 포커스에서 `Ctrl+Shift+K`가 동작해 AI 바가 토글되는지 검증
+- 텍스트 입력 판정 기준 보강
+  - `src/utils/event.ts`, `src/utils/event.test.ts`
+  - `disabled` 입력/textarea를 텍스트 입력 타깃에서 제외
 
 ### 현재 상태 요약
 

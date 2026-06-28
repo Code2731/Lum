@@ -53,6 +53,22 @@ describe("isTextInputTarget", () => {
     cleanup();
   });
 
+  it("disabled 입력은 텍스트 입력 대상으로 제외한다", () => {
+    const input = document.createElement("input");
+    input.disabled = true;
+    const cleanup = appendAndCleanup([input]);
+    expect(isTextInputTarget(input)).toBe(false);
+    cleanup();
+  });
+
+  it("disabled textarea는 텍스트 입력 대상으로 제외한다", () => {
+    const textarea = document.createElement("textarea");
+    textarea.disabled = true;
+    const cleanup = appendAndCleanup([textarea]);
+    expect(isTextInputTarget(textarea)).toBe(false);
+    cleanup();
+  });
+
   it("hidden 입력은 텍스트 입력 대상으로 제외한다", () => {
     const input = document.createElement("input");
     input.type = "hidden";
