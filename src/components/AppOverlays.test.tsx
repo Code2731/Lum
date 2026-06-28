@@ -24,6 +24,22 @@ vi.mock("./OnboardingWizard", () => ({
   ),
 }));
 
+vi.mock("./HistorySearch", () => ({
+  default: ({ onClose }: { onClose: () => void }) => (
+    <div role="dialog" aria-label="히스토리 검색">
+      <button type="button" onClick={onClose}>히스토리 닫기</button>
+    </div>
+  ),
+}));
+
+vi.mock("./SshConnectModal", () => ({
+  default: ({ onClose }: { onClose: () => void }) => (
+    <div role="dialog" aria-label="SSH 연결">
+      <button type="button" onClick={onClose}>SSH 닫기</button>
+    </div>
+  ),
+}));
+
 type OverlayProps = React.ComponentProps<typeof AppOverlays>;
 
 function createProps(overrides?: Partial<OverlayProps>): OverlayProps {
@@ -89,15 +105,34 @@ function createProps(overrides?: Partial<OverlayProps>): OverlayProps {
   };
 }
 
-function OverlayHarness({ initialWelcome = false, initialOnboarding = false }: { initialWelcome?: boolean; initialOnboarding?: boolean }) {
+function OverlayHarness({
+  initialWelcome = false,
+  initialOnboarding = false,
+  initialHistorySearch = false,
+  initialSshModal = false,
+}: {
+  initialWelcome?: boolean;
+  initialOnboarding?: boolean;
+  initialHistorySearch?: boolean;
+  initialSshModal?: boolean;
+}) {
   const [showWelcome, setShowWelcome] = React.useState(initialWelcome);
   const [showOnboarding, setShowOnboarding] = React.useState(initialOnboarding);
+  const [showHistorySearch, setShowHistorySearch] = React.useState(initialHistorySearch);
+  const [showSshModal, setShowSshModal] = React.useState(initialSshModal);
 
   return (
     <>
       <input type="text" aria-label="메인 입력" />
       <AppOverlays
         {...createProps({
+          panels: {
+            ...createProps().panels,
+            showHistorySearch,
+            setShowHistorySearch,
+            showSshModal,
+            setShowSshModal,
+          },
           showWelcome,
           setShowWelcome,
           showOnboarding,
@@ -130,6 +165,28 @@ describe("AppOverlays", () => {
 
     const mainInput = screen.getByLabelText("메인 입력");
     fireEvent.click(await screen.findByRole("button", { name: "터미널 시작하기" }));
+
+    await waitFor(() => {
+      expect(mainInput).toHaveFocus();
+    });
+  });
+
+  it("히스토리 검색을 닫으면 메인 입력으로 포커스를 복귀한다", async () => {
+    render(<OverlayHarness initialHistorySearch />);
+
+    const mainInput = screen.getByLabelText("메인 입력");
+    fireEvent.click(screen.getByRole("button", { name: "히스토리 닫기" }));
+
+    await waitFor(() => {
+      expect(mainInput).toHaveFocus();
+    });
+  });
+
+  it("SSH 모달을 닫으면 메인 입력으로 포커스를 복귀한다", async () => {
+    render(<OverlayHarness initialSshModal />);
+
+    const mainInput = screen.getByLabelText("메인 입력");
+    fireEvent.click(screen.getByRole("button", { name: "SSH 닫기" }));
 
     await waitFor(() => {
       expect(mainInput).toHaveFocus();

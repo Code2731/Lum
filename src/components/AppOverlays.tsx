@@ -141,7 +141,10 @@ const AppOverlays: React.FC<Props> = ({
         <HistorySearch
           model={selectedModel}
           onSelect={handleHistorySelect}
-          onClose={() => setShowHistorySearch(false)}
+          onClose={() => {
+            setShowHistorySearch(false);
+            restoreMainInputFocus();
+          }}
         />
       )}
 
@@ -328,7 +331,10 @@ const AppOverlays: React.FC<Props> = ({
       {showSshModal && (
         <SshConnectModal
           onConnect={handleSshConnect}
-          onClose={() => setShowSshModal(false)}
+          onClose={() => {
+            setShowSshModal(false);
+            restoreMainInputFocus();
+          }}
         />
       )}
 
