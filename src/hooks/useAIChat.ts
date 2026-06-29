@@ -2,7 +2,7 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import type { AiBackend } from "../utils/inputRouter";
-import { toErrorMessage, isCancelError } from "../utils/errorMessage";
+import { isNetworkError, toErrorMessage, isCancelError } from "../utils/errorMessage";
 
 const XLLM_TOKEN_EVENT = "xllm_token";
 
@@ -254,7 +254,10 @@ export function useAIChat(model: string, getTerminalContext: () => string) {
         if (isCancelError(e)) {
           return;
         }
-        const msg = toErrorMessage(e);
+        const message = toErrorMessage(e);
+        const msg = isNetworkError(e)
+          ? `네트워크/백엔드 연결 불안정: ${message}`
+          : message;
         if (requestIdRef.current === requestId) {
           setError(msg);
           setMessages((prev) =>

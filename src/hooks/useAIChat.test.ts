@@ -109,8 +109,50 @@ describe("useAIChat — 스트림 실패 메시지 처리", () => {
       await result.current.sendMessage("안녕");
     });
 
-    expect(result.current.error).toBe("xLLM 연결 실패");
-    expect(result.current.messages[result.current.messages.length - 1]?.content).toBe("❌ xLLM 연결 실패");
+    expect(result.current.error).toBe("네트워크/백엔드 연결 불안정: xLLM 연결 실패");
+    expect(result.current.messages[result.current.messages.length - 1]?.content).toBe(
+      "❌ 네트워크/백엔드 연결 불안정: xLLM 연결 실패",
+    );
+  });
+
+  it("네트워크 키워드가 있는 객체 오류는 네트워크 가이드 메시지를 붙인다", async () => {
+    invokeMock.mockImplementation(async (cmd: string) => {
+      if (cmd === "reset_ai_stream") return;
+      if (cmd === "cancel_ai_stream") return;
+      if (cmd === "mcp_system_prompt") return "";
+      if (cmd === "stream_ai_command") throw { error: "Failed to connect: socket timeout" };
+      return "";
+    });
+
+    const { result } = renderHook(() => useAIChat("model", () => "CWD: /tmp"));
+    await act(async () => {
+      await result.current.sendMessage("안녕");
+    });
+
+    expect(result.current.error).toBe(
+      "네트워크/백엔드 연결 불안정: Failed to connect: socket timeout",
+    );
+    expect(result.current.messages[result.current.messages.length - 1]?.content).toBe(
+      "❌ 네트워크/백엔드 연결 불안정: Failed to connect: socket timeout",
+    );
+  });
+
+  it("취소 오류는 에러 배너를 남기지 않는다", async () => {
+    invokeMock.mockImplementation(async (cmd: string) => {
+      if (cmd === "reset_ai_stream") return;
+      if (cmd === "cancel_ai_stream") return;
+      if (cmd === "mcp_system_prompt") return "";
+      if (cmd === "stream_ai_command") throw { error: "cancelled by user" };
+      return "";
+    });
+
+    const { result } = renderHook(() => useAIChat("model", () => "CWD: /tmp"));
+    await act(async () => {
+      await result.current.sendMessage("안녕");
+    });
+
+    expect(result.current.error).toBeNull();
+    expect(result.current.messages[result.current.messages.length - 1]?.content).toBe("");
   });
 
   it("순환 참조 오류도 2차 예외 없이 기본 메시지로 폴백한다", async () => {

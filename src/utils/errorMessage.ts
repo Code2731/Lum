@@ -41,6 +41,24 @@ export function toErrorMessage(error: unknown): string {
   return "알 수 없는 오류";
 }
 
+const networkIndicators: string[] = [
+  "network",
+  "네트워크",
+  "방화벽",
+  "연결",
+  "timed out",
+  "timeout",
+  "connection",
+  "econnrefused",
+  "econnreset",
+  "server access",
+];
+
+export function isNetworkError(error: unknown): boolean {
+  const message = toErrorMessage(error).toLowerCase();
+  return networkIndicators.some((keyword) => message.includes(keyword));
+}
+
 export function isCancelError(error: unknown): boolean {
   const message = toErrorMessage(error).toLowerCase();
   return message.includes("취소") || message.includes("canceled") || message.includes("cancel");

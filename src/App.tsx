@@ -2,7 +2,7 @@ import React, { useState, useRef, useCallback, useEffect, useMemo, lazy, Suspens
 import { Group as PanelGroup, Panel, Separator as PanelResizeHandle } from "react-resizable-panels";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { normalizeBlockId, shortPath } from "./utils";
-import { toErrorMessage, isCancelError } from "./utils/errorMessage";
+import { isNetworkError, toErrorMessage, isCancelError } from "./utils/errorMessage";
 import { useTerminalBlocks } from "./hooks/useTerminalBlocks";
 import { useAIProcessing } from "./hooks/useAIProcessing";
 import { useHardwareSpecs } from "./hooks/useHardwareSpecs";
@@ -990,7 +990,10 @@ const App: React.FC = () => {
         updateBlock(blockId, { output: cancelledMessage, status: "completed" });
         return;
       }
-      const errorMessage = toErrorMessage(err);
+      const message = toErrorMessage(err);
+      const errorMessage = isNetworkError(err)
+        ? `네트워크/백엔드 연결 불안정: ${message}`
+        : message;
       updateBlock(blockId, { output: `Error: ${errorMessage}`, status: "error" });
       setAiInput(cmd);
       setShowAiBar(true);
