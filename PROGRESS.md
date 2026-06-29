@@ -55,6 +55,9 @@
 - aria-disabled 실제 입력 엘리먼트 경계 보강
   - `src/utils/event.ts`, `src/utils/event.test.ts`, `src/App.test.tsx`
   - `<input>/<textarea>`에 `aria-disabled="true"`가 붙으면 텍스트 입력 타깃에서 제외
+- 전역 단축키 입력 포커스 회귀 경로 보강
+  - `src/App.test.tsx`
+  - `Cmd/Ctrl+W`, `Cmd/Ctrl+Shift+F`, `Cmd/Ctrl+Shift+O`, `Cmd/Ctrl+Shift+S`, `Cmd/Ctrl+Shift+ArrowUp/ArrowDown`를 입력 필드 포커스에서 전역 핫키가 가로채지 않도록 테스트 확장
 
 ### 현재 상태 요약
 
@@ -162,7 +165,7 @@
 ### 다음 추천 라운드
 
 1. 나머지 전역 단축키의 입력 포커스 계약 점검
-3. 이번 누적 변경분 커밋 및 푸시
+2. 이번 누적 변경분 커밋 및 푸시
 
 ## 2026-06-25
 
