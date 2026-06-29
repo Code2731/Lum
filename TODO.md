@@ -16,11 +16,12 @@
   - `Cmd/Ctrl+Shift+L`, `Cmd/Ctrl+,` 계열의 입력 포커스 음성 경로를 `App.test.tsx`에 추가
   - `Cmd/Ctrl+Shift+L` 텍스트 입력 포커스 무시 케이스
   - `Ctrl+,` 텍스트 입력 포커스 무시 케이스
-- [ ] ReAct/Editor 체인 UX 완성
+- [x] ReAct/Editor 체인 UX 완성
   - `react_agent` 변경 내역(생성/수정/삭제) 리뷰 후 사용자 의사결정 플로우가 일관적인지 점검
   - 위험도 배지/툴팁 문구 다국어 가독성 정합성
   - [x] 변경 파일 undo 노출/활성 상태 회귀 테스트 추가 (done/error/cancelled, undoing)
   - [x] 위험도 배지 라벨(높음/보통/낮음)와 툴팁 문구 한글화 및 헤더 요약 정합성 보완
+  - [x] 변경 파일 종류(신규/수정/삭제) 표시 회귀 테스트 추가
 
 ### 기능 (Feature)
 

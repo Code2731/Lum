@@ -221,6 +221,48 @@ describe("ReactAgentPanel", () => {
     expect(screen.getByText("· 높음 1")).toBeInTheDocument();
   });
 
+  it("변경 파일 종류 라벨을 생성/수정/삭제에 따라 구분해 보여준다", () => {
+    render(
+      <ReactAgentPanel
+        state={makeState({
+          status: "done",
+          changes: [
+            {
+              path: "/workspace/src/new.ts",
+              rel_path: "src/new.ts",
+              kind: "created",
+              risk: "low",
+            },
+            {
+              path: "/workspace/src/edit.ts",
+              rel_path: "src/edit.ts",
+              kind: "modified",
+              risk: "medium",
+            },
+            {
+              path: "/workspace/src/old.ts",
+              rel_path: "src/old.ts",
+              kind: "deleted",
+              risk: "high",
+            },
+          ],
+        })}
+        onCancel={onCancel}
+        onClose={onClose}
+        onUndo={onUndo}
+        onRunAct={onRunAct}
+      />,
+    );
+
+    expect(screen.getByText("신규")).toBeInTheDocument();
+    expect(screen.getByText("수정")).toBeInTheDocument();
+    expect(screen.getByText("삭제")).toBeInTheDocument();
+    expect(screen.getByText("src/new.ts")).toBeInTheDocument();
+    expect(screen.getByText("src/edit.ts")).toBeInTheDocument();
+    expect(screen.getByText("src/old.ts")).toBeInTheDocument();
+    expect(screen.getByText("변경 3")).toBeInTheDocument();
+  });
+
   it("done/error/cancelled 상태에서만 변경 되돌리기 버튼이 보이고, 나머지 상태에서는 숨겨진다", () => {
     const { rerender } = render(
       <ReactAgentPanel
