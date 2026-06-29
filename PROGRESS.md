@@ -31,6 +31,20 @@
   - 보류군: `src-tauri/src/bin/mcp_server.rs::INVALID_PARAMS` 경고를 유효성 경로 반영(`tools/call`)로 치환해 의도 유지
   - 보류군: `embedded-ai` 비활성/활성 조합의 조건부 경고 항목은 빌드 조합별 점검 로그로 추적
 
+## 2026-06-30 추천 라운드 반영 (배포 체크리스트 선행)
+
+- 릴리스 체크리스트 초안 확정(우선순위: macOS + Windows)
+  - macOS 경로
+    - MetalToolchain 전제 조건 및 `npm run tauri:dev:metal`/`npm run tauri build -- --features embedded-ai` 실행 체크 항목 정리
+    - `.dmg` 산출물 분기(aarch64.dmg / x64.dmg) 및 `xattr` 보안 해제 검증 항목 정리
+    - 앱 최초 실행 시 온보딩 진입 및 포커스 초기 상태 점검 항목 정리
+  - Windows 경로
+    - CUDA 12.x + MSVC/Visual Studio 도구 전제 조건을 릴리스 전 체크리스트로 고정
+    - `scripts/tauri-dev-cuda.bat`, `npm run tauri:dev:cuda`, `npm run tauri build -- --features embedded-ai` 실행 항목 정리
+    - `.msi` 산출물 설치·실행·온보딩 진입 점검 항목 정리
+  - Linux 경로
+    - 경량 빌드(`npm run tauri build`) 기반 CPU 전용 검증은 다음 라운드로 연기
+
 ### 현재 상태 요약
 
 - 기능: 핵심 UI 회귀 항목은 유지, 경고 처리 우선순위가 실제 코드 반영 단계로 이동
@@ -38,6 +52,7 @@
 - 품질: Rust 경고에서 3건은 feature 경계 정리로 즉시 정리, 1건은 유효성 경로 반영으로 설계 의도 유지
 - 품질: 테스트 문서-회귀 매핑을 정리해 `TODO`/`PROGRESS` 정합성을 마무리
 - 품질: 경고 분류(해결·보류·조건부)를 PR/리뷰 노트용으로 정리해 다음 라운드 기준 문서 정합성 확보
+- 품질/배포: 릴리스 체크리스트를 macOS + Windows path 기준으로 초안 정리해 다음 라운드 실행 항목으로 고정
 
 ## 2026-06-28
 

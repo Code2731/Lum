@@ -56,10 +56,18 @@
 
 ### 배포 (Release/Distribution)
 
-- [ ] 릴리스 체크리스트 초안 확정
-  - macOS dev/build + 금속(Metal) Toolchain 체크
-  - Windows CUDA dev/build 가이드 검증
-  - Linux CPU 전용 경로 실행 검증
+- [x] 릴리스 체크리스트 초안 확정 (macOS + Windows Path 우선)
+  - macOS Path
+    - `xcodebuild -downloadComponent MetalToolchain` 또는 `xcode-select --install` 사전 확인
+    - `npm run tauri:dev:metal` / `npm run tauri build -- --features embedded-ai` 실행 항목 정의
+    - `*.dmg` 산출물 위치, `aarch64.dmg`/`x64.dmg` 구분, 실행 직후 초기 온보딩/포커스 경로 점검 항목 정합
+  - Windows Path
+    - CUDA Toolkit 12.x + MSVC toolchain 설치/호환성 체크리스트 정의
+    - `scripts/tauri-dev-cuda.bat` / `npm run tauri:dev:cuda`로 dev 빌드 시나리오 정리
+    - `npm run tauri build -- --features embedded-ai` 또는 CPU fallback 경로 산출물 확인 항목 정리
+    - `.msi` 산출물 설치/실행 점검 항목(권한, 설치 경로, 실행/종료, 온보딩 진입) 추가
+  - Linux CPU Path(보류)
+    - `npm run tauri build` lightweight 경로(비 embedded-ai) 기반 회귀 테스트 시나리오로 다음 라운드 연계
 - [ ] 초기 설정/복구
   - `ui_*`/`show_*` 초기값 폴백 동작 일관성
   - 사용자 데이터(`.lum_*`) 손실 없는 복구 플로우
@@ -73,7 +81,7 @@
 
 [x] 1. 경고 분류 기준표/해결 내역(해결·보류)을 PR/리뷰 노트로 정리
 [x] 2. 기능 축에서 회귀 테스트 1~2개 추가하고 커밋
-3. 배포 체크리스트 항목 중 macOS/Windows path부터 실행
+[x] 3. 배포 체크리스트 항목 중 macOS/Windows path부터 실행
 
 ## 2026-06-29 추천 라운드 반영
 
