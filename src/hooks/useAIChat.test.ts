@@ -109,8 +109,9 @@ describe("useAIChat — 스트림 실패 메시지 처리", () => {
       await result.current.sendMessage("안녕");
     });
 
-    expect(result.current.error).toBe("네트워크/백엔드 연결 불안정: xLLM 연결 실패");
-    expect(result.current.messages[result.current.messages.length - 1]?.content).toBe(
+    expect(result.current.error).toContain("네트워크/백엔드 연결 불안정: xLLM 연결 실패");
+    expect(result.current.error).toContain("재시도");
+    expect(result.current.messages[result.current.messages.length - 1]?.content).toContain(
       "❌ 네트워크/백엔드 연결 불안정: xLLM 연결 실패",
     );
   });
@@ -129,12 +130,29 @@ describe("useAIChat — 스트림 실패 메시지 처리", () => {
       await result.current.sendMessage("안녕");
     });
 
-    expect(result.current.error).toBe(
-      "네트워크/백엔드 연결 불안정: Failed to connect: socket timeout",
-    );
-    expect(result.current.messages[result.current.messages.length - 1]?.content).toBe(
+    expect(result.current.error).toContain("네트워크/백엔드 연결 불안정: Failed to connect: socket timeout");
+    expect(result.current.messages[result.current.messages.length - 1]?.content).toContain(
       "❌ 네트워크/백엔드 연결 불안정: Failed to connect: socket timeout",
     );
+  });
+
+  it("라우팅 강제 설정 오류는 재시도 가이드를 붙여 노출한다", async () => {
+    invokeMock.mockImplementation(async (cmd: string) => {
+      if (cmd === "reset_ai_stream") return;
+      if (cmd === "cancel_ai_stream") return;
+      if (cmd === "mcp_system_prompt") return "";
+      if (cmd === "stream_ai_command") throw { message: "ollama backend 강제 요청이지만 ollama 모델/URL 설정이 없습니다." };
+      return "";
+    });
+
+    const { result } = renderHook(() => useAIChat("model", () => "CWD: /tmp"));
+    await act(async () => {
+      await result.current.sendMessage("안녕");
+    });
+
+    expect(result.current.error).toContain("라우팅 실패");
+    expect(result.current.error).toContain("해결:");
+    expect(result.current.messages[result.current.messages.length - 1]?.content).toContain("❌ 라우팅 실패");
   });
 
   it("취소 오류는 에러 배너를 남기지 않는다", async () => {

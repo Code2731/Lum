@@ -63,3 +63,30 @@ export function isCancelError(error: unknown): boolean {
   const message = toErrorMessage(error).toLowerCase();
   return message.includes("취소") || message.includes("canceled") || message.includes("cancel");
 }
+
+const ROUTING_FAIL_INDICATORS: string[] = [
+  "backend 강제 요청이지만",
+  "지원하지 않는 backend",
+  "gemini backend를 강제하려면",
+  "local_embed_unavailable",
+  "모델 미초기화",
+];
+
+export function isRoutingError(error: unknown): boolean {
+  const message = toErrorMessage(error).toLowerCase();
+  return ROUTING_FAIL_INDICATORS.some((keyword) => message.includes(keyword.toLowerCase()));
+}
+
+export function formatAIErrorMessage(error: unknown): string {
+  const message = toErrorMessage(error);
+
+  if (!message) return "알 수 없는 오류";
+  if (isCancelError(error)) return "";
+  if (isRoutingError(message)) {
+    return `라우팅 실패: ${message}\n해결: 백엔드 설정(모델/URL/API 키) 확인 후 다시 시도해 주세요.`;
+  }
+  if (isNetworkError(error)) {
+    return `네트워크/백엔드 연결 불안정: ${message}\n해결: 네트워크 상태와 백엔드 URL을 확인한 뒤 다시 시도하세요.`;
+  }
+  return message;
+}
