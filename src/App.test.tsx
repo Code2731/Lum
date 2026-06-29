@@ -754,6 +754,15 @@ describe("App (LUM 터미널)", () => {
     expect(await screen.findByText("터미널 테마 설정")).toBeInTheDocument();
   });
 
+  it("Cmd/Ctrl+L은 스크립트 패널/테마 패널을 토글하지 않는다", () => {
+    render(<App />);
+
+    fireEvent.keyDown(window, { key: "L", metaKey: true });
+    fireEvent.keyDown(window, { key: "L", ctrlKey: true });
+    expect(screen.queryByText("스크립트 라이브러리")).not.toBeInTheDocument();
+    expect(screen.queryByText("터미널 테마 설정")).not.toBeInTheDocument();
+  });
+
   it("Ctrl+Shift+<는 터미널 테마 단축키로 처리되지 않는다", () => {
     render(<App />);
 
@@ -1639,6 +1648,24 @@ describe("App (LUM 터미널)", () => {
       expect(document.activeElement).toBe(input);
 
       fireEvent.keyDown(input, { key: ",", ctrlKey: true });
+      expect(screen.queryByText("터미널 테마 설정")).not.toBeInTheDocument();
+    } finally {
+      input.remove();
+    }
+  });
+
+  it("입력 포커스 중에는 Cmd/Ctrl+L도 전역 패널 토글로 처리되지 않는다", () => {
+    const input = document.createElement("input");
+    document.body.appendChild(input);
+
+    try {
+      render(<App />);
+      input.focus();
+      expect(document.activeElement).toBe(input);
+
+      fireEvent.keyDown(input, { key: "L", metaKey: true });
+      fireEvent.keyDown(input, { key: "L", ctrlKey: true });
+      expect(screen.queryByText("스크립트 라이브러리")).not.toBeInTheDocument();
       expect(screen.queryByText("터미널 테마 설정")).not.toBeInTheDocument();
     } finally {
       input.remove();

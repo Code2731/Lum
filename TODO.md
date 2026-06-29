@@ -27,7 +27,7 @@
 
 - [ ] 단축키 계약 2차 점검
   - 신규/예외 단축키의 텍스트 입력 포커스 음성 경로를 `App.test`에서 1~2개씩 묶어 추가 점검
-  - `Cmd/Ctrl+L`/`Cmd/Ctrl+,` 계열(테마/기타 글로벌 동작) 계약 확인
+  - [x] `Cmd/Ctrl+L`/`Cmd/Ctrl+,` 계열(테마/기타 글로벌 동작) 계약 확인
 - [ ] Inspector/Workspace/History UX 연동 마감
   - Inspector 탭 전환, 워크스페이스 재개, 실패 블록 empty state 일관성
 - [ ] 파일 탐색기/메인 입력 포커스 복귀 흐름 일괄 점검
