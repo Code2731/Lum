@@ -12,15 +12,19 @@
   - `src/App.test.tsx`, `src/utils/event.ts`, `src/utils/event.test.ts`
   - `disabled`/`aria-disabled`/`contenteditable` 경로 회귀 장치 강화
   - 커밋: `46924c2`, `cc8216c`
+- [x] 단축키 계약 2차 점검
+  - `Cmd/Ctrl+Shift+L`, `Cmd/Ctrl+,` 계열의 입력 포커스 음성 경로를 `App.test.tsx`에 추가
+  - `Cmd/Ctrl+Shift+L` 텍스트 입력 포커스 무시 케이스
+  - `Ctrl+,` 텍스트 입력 포커스 무시 케이스
+- [ ] ReAct/Editor 체인 UX 완성
+  - `react_agent` 변경 내역(생성/수정/삭제) 리뷰 후 사용자 의사결정 플로우가 일관적인지 점검
+  - 위험도 배지/툴팁 문구 다국어 가독성 정합성
 
 ### 기능 (Feature)
 
 - [ ] 단축키 계약 2차 점검
   - 신규/예외 단축키의 텍스트 입력 포커스 음성 경로를 `App.test`에서 1~2개씩 묶어 추가 점검
   - `Cmd/Ctrl+L`/`Cmd/Ctrl+,` 계열(테마/기타 글로벌 동작) 계약 확인
-- [ ] ReAct/Editor 체인 UX 완성
-  - `react_agent` 변경 내역(생성/수정/삭제) 리뷰 후 사용자 의사결정 플로우가 일관적인지 점검
-  - 위험도 배지/툴팁 문구 다국어 가독성 정합성
 - [ ] Inspector/Workspace/History UX 연동 마감
   - Inspector 탭 전환, 워크스페이스 재개, 실패 블록 empty state 일관성
 - [ ] 파일 탐색기/메인 입력 포커스 복귀 흐름 일괄 점검
