@@ -14,12 +14,23 @@
   - `src/App.test.tsx`
     - 입력 필드 포커스 상태에서 `Cmd/Ctrl+Shift+L`이 스크립트 패널 토글로 처리되지 않음을 고정
     - 입력 필드 포커스 상태에서 `Ctrl+,`가 테마 패널 토글로 처리되지 않음을 고정
+- 테스트 문서/회귀 로그 정합성 정리
+  - `TODO.md`에 본 라운드 회귀 테스트 경로(`focus restore`, `단축키 경계`, `E2E 스모크`)를 매핑
+  - 이번 라운드 핵심 회귀 항목
+    - 파일 탐색기/워크스페이스/마크다운 종료 후 메인 입력 포커스 복귀: `src/App.tsx`, `src/App.test.tsx`, `src/components/AppOverlays.tsx`, `src/components/AppOverlays.test.tsx`
+    - 입력 포커스 경계 대비 AI/히스토리 단축키 계약: `src/utils/event.ts`, `src/utils/event.test.ts`, `src/App.test.tsx`
+    - 오버레이 종료/온보딩 포커스 복귀: `src/components/AppOverlays.tsx`, `src/components/AppOverlays.test.tsx`
+    - 헤더 오버레이 종료 포커스 복귀: `src/components/AppHeader.test.tsx`
+  - 회귀 실행/요약 이력 정합성
+    - `npx vitest run`: `55 files passed`, `1505 tests passed` (이전 라운드 누적 기준)
+    - `npx playwright test e2e/smoke.spec.ts`: `29 passed` (이전 라운드 누적 기준)
 
 ### 현재 상태 요약
 
 - 기능: 핵심 UI 회귀 항목은 유지, 경고 처리 우선순위가 실제 코드 반영 단계로 이동
 - 기능: `Cmd/Ctrl+Shift+L`, `Ctrl+,` 텍스트 입력 포커스 음성 경로 계약이 추가됨
 - 품질: Rust 경고에서 3건은 feature 경계 정리로 즉시 정리, 1건은 유효성 경로 반영으로 설계 의도 유지
+- 품질: 테스트 문서-회귀 매핑을 정리해 `TODO`/`PROGRESS` 정합성을 마무리
 
 ## 2026-06-28
 

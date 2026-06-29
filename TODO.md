@@ -67,3 +67,12 @@
 1. 경고 분류 기준표/해결 내역(해결·보류)을 PR/리뷰 노트로 정리
 2. 기능 축에서 회귀 테스트 1~2개 추가하고 커밋
 3. 배포 체크리스트 항목 중 macOS/Windows path부터 실행
+
+## 2026-06-29 추천 라운드 반영
+
+- [x] 테스트 문서/회귀 로그 정합성
+  - `PROGRESS.md`에 라운드별 테스트 경로/결과를 매핑(파일 탐색기/워크스페이스/마크다운 포커스 복귀 회귀 포함)
+  - 회귀 테스트 근거:
+    - 포커스 복귀: `src/App.test.tsx`, `src/components/AppOverlays.test.tsx`
+    - 입력 라우팅/단축키 경계: `src/utils/event.test.ts`, `src/App.test.tsx`, `src/components/AppHeader.test.tsx`
+    - 통합 플로우 회귀: `e2e/smoke.spec.ts`
