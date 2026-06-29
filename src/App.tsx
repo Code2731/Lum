@@ -988,6 +988,7 @@ const App: React.FC = () => {
           ? `${latestOutput}\n\n[사용자에 의해 중지됨]`
           : "[사용자에 의해 중지됨]";
         updateBlock(blockId, { output: cancelledMessage, status: "completed" });
+        setShowAiBar(false);
         return;
       }
       const message = toErrorMessage(err);

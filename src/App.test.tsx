@@ -400,6 +400,30 @@ describe("App (LUM 터미널)", () => {
     expect(mockedInvoke).toHaveBeenCalledWith("cancel_ai_stream");
   });
 
+  it("AI 응답이 취소 오류로 종료되면 AI 바가 닫혀야 한다", async () => {
+    const baseImpl = mockedInvoke.getMockImplementation() as InvokeMockImplementation | undefined;
+    mockedInvoke.mockImplementation((cmd: string, args?: InvokeArgs, options?: InvokeOptions) => {
+      if (cmd === "stream_ai_command") {
+        return Promise.reject({ error: "cancelled by user" });
+      }
+      return baseImpl ? baseImpl(cmd, args, options) : Promise.resolve("{}");
+    });
+
+    render(<App />);
+
+    fireEvent.keyDown(window, { key: "K", ctrlKey: true, shiftKey: true });
+    const aiInput = screen.getByPlaceholderText("AI에게 질문하세요… (Enter 전송 · Esc 닫기)");
+    fireEvent.change(aiInput, { target: { value: "로그 요약해줘" } });
+    fireEvent.keyDown(aiInput, { key: "Enter" });
+
+    await waitFor(() => {
+      expect(
+        screen.queryByPlaceholderText("AI에게 질문하세요… (Enter 전송 · Esc 닫기)"),
+      ).not.toBeInTheDocument();
+    });
+    expect(screen.queryByLabelText("AI 응답 중지")).not.toBeInTheDocument();
+  });
+
   it("Cmd/Ctrl+Shift+D는 수평 분할 토글이 동작한다", async () => {
     render(<App />);
     const splitBtn = screen.getByLabelText("수평 분할 (Cmd/Ctrl+Shift+D)");
