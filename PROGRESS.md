@@ -24,6 +24,10 @@
   - 회귀 실행/요약 이력 정합성
     - `npx vitest run`: `55 files passed`, `1505 tests passed` (이전 라운드 누적 기준)
     - `npx playwright test e2e/smoke.spec.ts`: `29 passed` (이전 라운드 누적 기준)
+- 경고 분류 기준표 정리(해결/보류)
+  - 해결군: `src-tauri/src/commands/embed.rs` dead code 경고(embedded-ai 분기 정리로 제거)
+  - 보류군: `src-tauri/src/bin/mcp_server.rs::INVALID_PARAMS` 경고를 유효성 경로 반영(`tools/call`)로 치환해 의도 유지
+  - 보류군: `embedded-ai` 비활성/활성 조합의 조건부 경고 항목은 빌드 조합별 점검 로그로 추적
 
 ### 현재 상태 요약
 
@@ -31,6 +35,7 @@
 - 기능: `Cmd/Ctrl+Shift+L`, `Ctrl+,` 텍스트 입력 포커스 음성 경로 계약이 추가됨
 - 품질: Rust 경고에서 3건은 feature 경계 정리로 즉시 정리, 1건은 유효성 경로 반영으로 설계 의도 유지
 - 품질: 테스트 문서-회귀 매핑을 정리해 `TODO`/`PROGRESS` 정합성을 마무리
+- 품질: 경고 분류(해결·보류·조건부)를 PR/리뷰 노트용으로 정리해 다음 라운드 기준 문서 정합성 확보
 
 ## 2026-06-28
 

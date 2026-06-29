@@ -40,6 +40,13 @@
   - 제로 액션/타깃 고정: `src-tauri/src/commands/embed.rs`의 `ParsedEmbedKey`, `ParsedEmbedKey::parse`, `split_model_file`을 embedded-ai 분기로 한정해 기본 빌드 dead code 경고 제거
   - 유지 전환: `src-tauri/src/bin/mcp_server.rs`의 `INVALID_PARAMS`을 `tools/call` 파라미터 유효성 경로에서 실제 사용해 상수 의미 유지
   - 후속 조치: feature 조합별 `cargo check`/`cargo check --features embedded-ai` 정합성 확인
+- [x] 경고 분류 기준표/해결 내역 정리 (PR/리뷰 노트)
+  - 해결군(폐기/제거): `embed.rs` 내 `ParsedEmbedKey` dead code 경고군
+    - `#[cfg(feature = "embedded-ai")]` 분기 이동으로 기본 빌드 경고 제거
+  - 보류군(설계 의도 유지): `mcp_server.rs::INVALID_PARAMS` 상수 사용
+    - 경고 제거 대신 실동작 경로에 반영해 규격적 처리(`tools/call` 파라미터 타입 불일치) 유지
+  - 보류군(조건부 노출): `embedded-ai` 미활성/활성 빌드 조건 분기
+    - `cargo check` 명령행 조합별 경고 추적(기본/embedded-ai)로 감지/합의 선회
 - [ ] 테스트 문서/회귀 로그 정합성
   - `PROGRESS.md`와 회귀 테스트 케이스 매핑
   - 라운드 종료 전후 `npx vitest run`/`npx playwright test` 결과 요약 기록
@@ -64,7 +71,7 @@
 
 ## 권장 다음 라운드
 
-1. 경고 분류 기준표/해결 내역(해결·보류)을 PR/리뷰 노트로 정리
+[x] 1. 경고 분류 기준표/해결 내역(해결·보류)을 PR/리뷰 노트로 정리
 2. 기능 축에서 회귀 테스트 1~2개 추가하고 커밋
 3. 배포 체크리스트 항목 중 macOS/Windows path부터 실행
 
@@ -76,3 +83,10 @@
     - 포커스 복귀: `src/App.test.tsx`, `src/components/AppOverlays.test.tsx`
     - 입력 라우팅/단축키 경계: `src/utils/event.test.ts`, `src/App.test.tsx`, `src/components/AppHeader.test.tsx`
     - 통합 플로우 회귀: `e2e/smoke.spec.ts`
+
+## 2026-06-30 추천 라운드 반영
+
+- [x] 경고 분류 기준표/해결 내역 정리
+  - PR/리뷰 노트 제출용 텍스트로 분류 축을 고정(해결/보류/조건부)
+  - 해결군: `ParsedEmbedKey` 데드코드 경고군 3건
+  - 보류군: `mcp_server` 유효성 경로 상수 유지 및 `embedded-ai` 빌드 조건부 경고군
