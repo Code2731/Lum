@@ -591,6 +591,17 @@ describe("App (LUM 터미널)", () => {
     });
   });
 
+  it("툴바 모드 토글은 compactToolbar 키로 저장한다", async () => {
+    render(<App />);
+
+    const compactButton = await screen.findByRole("button", { name: "툴바 단순 모드" });
+    fireEvent.click(compactButton);
+
+    await waitFor(() => {
+      expect(invoke).toHaveBeenCalledWith("save_ui_preferences", { compactToolbar: true });
+    });
+  });
+
   it("Cmd+B는 파일 탐색기 토글을 실행한다", async () => {
     render(<App />);
     const initiallyVisible = screen.queryByTestId("file-explorer-mock") !== null;

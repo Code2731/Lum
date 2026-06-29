@@ -332,7 +332,7 @@ const App: React.FC = () => {
     const next = !compactToolbar;
     setCompactToolbar(next);
     try {
-      await invoke("save_ui_preferences", { ui_compact_toolbar: next });
+      await invoke("save_ui_preferences", { compactToolbar: next });
     } catch {
       // noop
     }
