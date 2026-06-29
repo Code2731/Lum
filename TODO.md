@@ -1,72 +1,61 @@
 # TODO
 
-## MVP 우선순위
+## MVP 잔여 작업 정리 (기능 · 품질 · 배포 기준)
 
-### 1. 릴리스 직전 필수
+### Done (현재 라운드 반영)
 
-- 실제 사용자 기준 E2E 확장
-  - 현재 `e2e/smoke.spec.ts` `29 passed`
-  - 기본 실행/AI 응답/Inspector 추천 커맨드/영속성까지는 커버됨
-  - 아직 남은 핵심 사용자 흐름:
-  - 우선순위:
-    - 나머지 전역 단축키도 입력 포커스 상태와 비입력 포커스 상태에서 기대한 계약대로 동작하는지 점검 → 2026-06-29 완료
-- 설정 영속성 최종 확인
-  - 툴바 단순 모드
-  - Inspector 표시 여부
-  - Inspector 밀도(`cozy` / `compact`)
-  - 파일 탐색기 표시 여부
-  - AI 채팅 폰트 크기
-  - `ui_seen_advanced_features`
-- 첫 실행 경험 점검
-  - 온보딩/웰컴 힌트가 테스트/실사용 모두에서 흐름을 방해하지 않는지 확인
-  - 첫 진입 후 “무엇을 해야 하는지” 안내가 충분한지 점검
+- [x] 전역 단축키 입력 포커스 회귀 계약 보강
+  - `src/App.test.tsx`
+  - `Cmd/Ctrl+W`, `Cmd/Ctrl+Shift+F`, `Cmd/Ctrl+Shift+O`, `Cmd/Ctrl+Shift+S`, `Cmd/Ctrl+Shift+ArrowUp/ArrowDown`
+  - 커밋: `0833b78`
+- [x] 전역 단축키 입력 경계 테스트 보강
+  - `src/App.test.tsx`, `src/utils/event.ts`, `src/utils/event.test.ts`
+  - `disabled`/`aria-disabled`/`contenteditable` 경로 회귀 장치 강화
+  - 커밋: `46924c2`, `cc8216c`
 
-### 2. 기능 완성도 보강
+### 기능 (Feature)
 
-- TerminalPane 입력 오버레이 UX 다듬기
-  - `ACTION PALETTE`
-  - `INPUT HISTORY`
-  - `SHORTCUT CHEATSHEET`
-  - 좁은 뷰포트와 포커스 복귀 동작 추가 점검
-- AppHeader 오버레이 배치 추가 검증
-  - 고급 기능 메뉴
-  - 알림 센터
-  - Privacy Ledger 상세
-  - 매우 좁은 가로폭에서 버튼/패널 겹침 여부 점검
-- Inspector UX 마감
-  - 실패 블록/추천 커맨드/최근 블록이 비어 있을 때 empty state 문구 통일
-  - 빠른 액션 버튼 우선순위 재검토
-  - 추천 커맨드 실행 후 사용자 피드백 배치(알림/포커스 복귀) 점검
+- [ ] 단축키 계약 2차 점검
+  - 신규/예외 단축키의 텍스트 입력 포커스 음성 경로를 `App.test`에서 1~2개씩 묶어 추가 점검
+  - `Cmd/Ctrl+L`/`Cmd/Ctrl+,` 계열(테마/기타 글로벌 동작) 계약 확인
+- [ ] ReAct/Editor 체인 UX 완성
+  - `react_agent` 변경 내역(생성/수정/삭제) 리뷰 후 사용자 의사결정 플로우가 일관적인지 점검
+  - 위험도 배지/툴팁 문구 다국어 가독성 정합성
+- [ ] Inspector/Workspace/History UX 연동 마감
+  - Inspector 탭 전환, 워크스페이스 재개, 실패 블록 empty state 일관성
+- [ ] 파일 탐색기/메인 입력 포커스 복귀 흐름 일괄 점검
+  - 오버레이 종료 후 main input focus restore 경로 최종 점검
 
-### 3. 백엔드 안정성 보강
+### 품질 (Quality)
 
-- `embedded-ai` 관련 경로 재점검
-  - feature on/off 상태 모두에서 invoke 계약이 동일한지 확인
-  - 저장된 embed key 복원 경로 수동 검증
-- ReAct 파일 변경 안전모델 추가 점검
-  - 백업 생성
-  - undo 복원
-  - 위험도 분류 UI
-  - `cwd` 밖 경로 차단
-- MCP 서버 실사용 검증
-  - `lum-mcp-server`를 외부 클라이언트에서 붙였을 때 최소 read/list 흐름 확인
+- [ ] 경고 분류 (Rust 경고)
+  - 실사용 제거 가능 경고
+  - 타깃별 조건부 경고(예: OS/기능 플래그 분기)
+  - 유지가 필요한 경고(의도된 설계 제약) 구분
+- [ ] 테스트 문서/회귀 로그 정합성
+  - `PROGRESS.md`와 회귀 테스트 케이스 매핑
+  - 라운드 종료 전후 `npx vitest run`/`npx playwright test` 결과 요약 기록
+- [ ] 런타임 안정성 정리
+  - 커맨드 스트리밍 취소/오류 전파 경로 점검
+  - 네트워크 불안정 시 fallback 동작 가드
 
-### 4. 품질/운영
+### 배포 (Release/Distribution)
 
-- Rust 경고 분류
-  - 실제 제거해야 할 코드
-  - 타깃별 빌드에서만 보이는 경고
-  - 당장 유지해야 하는 경고
-- 테스트 문서 체계 유지
-  - `PROGRESS.md` 업데이트 루틴 유지
-  - 테스트 안정화/회귀 수정 후 기록 남기기
-- 릴리스 체크리스트 초안 만들기
-  - macOS dev/build
-  - Windows CUDA dev/build
-  - 기본 설정 파일 생성/복구
-  - 모델 미설치 상태 fallback UX
+- [ ] 릴리스 체크리스트 초안 확정
+  - macOS dev/build + 금속(Metal) Toolchain 체크
+  - Windows CUDA dev/build 가이드 검증
+  - Linux CPU 전용 경로 실행 검증
+- [ ] 초기 설정/복구
+  - `ui_*`/`show_*` 초기값 폴백 동작 일관성
+  - 사용자 데이터(`.lum_*`) 손실 없는 복구 플로우
+- [ ] 모델 미설치 상태 폴백 UX
+  - embedded / ollama / xllm / cloud fallback 메시지 및 안내 문구 통일
+- [ ] 배포 산출물 점검
+  - `.dmg/.msi` 사전 점검 항목 체크리스트 반영
+  - 앱 시작 후 첫 실행 온보딩 스모크 시나리오 포함
 
-## 추천 다음 라운드
+## 권장 다음 라운드
 
-1. 나머지 전역 단축키의 입력 포커스 계약 점검
-2. 이번 누적 변경분 커밋/푸시
+1. 경고 분류 기준표 정립 및 PR/이슈에 반영
+2. 기능 축에서 회귀 테스트 1~2개 추가하고 커밋
+3. 배포 체크리스트 항목 중 macOS/Windows path부터 실행
