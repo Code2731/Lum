@@ -28,10 +28,11 @@
 
 ### 품질 (Quality)
 
-- [ ] 경고 분류 (Rust 경고)
-  - 실사용 제거 가능 경고
-  - 타깃별 조건부 경고(예: OS/기능 플래그 분기)
-  - 유지가 필요한 경고(의도된 설계 제약) 구분
+- [x] 경고 분류 (Rust 경고) — 1차 판정 완료
+  - 대상: `cargo check --workspace` 기준 총 4건
+  - 실사용으로 바로 제거 대상: `src-tauri/src/commands/embed.rs`의 `ParsedEmbedKey`, `ParsedEmbedKey::parse`, `split_model_file` (embedded-ai 기능 빌드 분기에서 사용 경로가 살아 있어 기능 의존성 경고로 판단)
+  - 유지가 필요한 경고: `src-tauri/src/bin/mcp_server.rs`의 `INVALID_PARAMS`(JSON-RPC schema validation 향후 단계에서 사용 예정으로 보존)
+  - 후속 조치: embedded-ai/기능 flag 빌드 조합에서 경고 정책 정합성 판단 후 1차 PR 반영
 - [ ] 테스트 문서/회귀 로그 정합성
   - `PROGRESS.md`와 회귀 테스트 케이스 매핑
   - 라운드 종료 전후 `npx vitest run`/`npx playwright test` 결과 요약 기록
@@ -56,6 +57,6 @@
 
 ## 권장 다음 라운드
 
-1. 경고 분류 기준표 정립 및 PR/이슈에 반영
+1. 경고 분류 기준표를 `PROGRESS.md`에 반영하고 우선순위(제거/보존) 확정
 2. 기능 축에서 회귀 테스트 1~2개 추가하고 커밋
 3. 배포 체크리스트 항목 중 macOS/Windows path부터 실행
