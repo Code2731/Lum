@@ -272,7 +272,12 @@ const App: React.FC = () => {
         setSeenAdvancedFeatures(c.ui_seen_advanced_features ?? []);
 
         // Phase 126 — UI 환경설정 통합. config가 있으면 그 값, 없으면 localStorage에서 1회 마이그레이션.
-        const migrate: { showFileExplorer?: boolean; hintsShown?: boolean } = {};
+        const migrate: {
+          showFileExplorer?: boolean;
+          showInspector?: boolean;
+          inspectorDensity?: "cozy" | "compact";
+          hintsShown?: boolean;
+        } = {};
         if (c.ui_show_file_explorer != null) {
           setShowFileExplorer(c.ui_show_file_explorer);
         } else {
@@ -283,9 +288,25 @@ const App: React.FC = () => {
         }
         if (c.ui_show_inspector != null) {
           setShowInspector(c.ui_show_inspector);
+        } else {
+          try {
+            const raw = localStorage.getItem("lum.inspector");
+            if (raw != null) {
+              migrate.showInspector = raw !== "0";
+              setShowInspector(raw !== "0");
+            }
+          } catch { /* noop */ }
         }
         if (c.ui_inspector_density === "compact" || c.ui_inspector_density === "cozy") {
           setInspectorDensity(c.ui_inspector_density);
+        } else {
+          try {
+            const raw = localStorage.getItem("lum.inspectorDensity");
+            if (raw === "compact" || raw === "cozy") {
+              migrate.inspectorDensity = raw;
+              setInspectorDensity(raw);
+            }
+          } catch { /* noop */ }
         }
         if (c.ui_hints_shown != null) {
           setShowWelcome(!c.ui_hints_shown);
@@ -299,6 +320,8 @@ const App: React.FC = () => {
           try {
             await invoke("save_ui_preferences", migrate);
             try { localStorage.removeItem("lum.fileExplorer"); } catch { /* noop */ }
+            try { localStorage.removeItem("lum.inspector"); } catch { /* noop */ }
+            try { localStorage.removeItem("lum.inspectorDensity"); } catch { /* noop */ }
             try { localStorage.removeItem("lum.hintsShown"); } catch { /* noop */ }
           } catch { /* noop */ }
         }

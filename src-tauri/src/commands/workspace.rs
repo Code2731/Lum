@@ -6,6 +6,25 @@ fn workspace_path() -> PathBuf {
     platform::home_dir().join(".lum_workspaces.json")
 }
 
+fn backup_corrupt_workspace(path: &PathBuf, err: &str) {
+    if !path.exists() {
+        return;
+    }
+
+    let mut backup = path.with_extension("json.bak");
+    if backup.exists() {
+        let mut i = 1_u32;
+        while backup.exists() {
+            backup = path.with_extension(format!("json.bak.{i}"));
+            i += 1;
+        }
+    }
+
+    if std::fs::copy(path, &backup).is_ok() {
+        eprintln!("workspace parse error: {err} (backup: {})", backup.display());
+    }
+}
+
 #[derive(Serialize, Deserialize, Clone)]
 pub struct WorkspaceTab {
     pub id: String,
@@ -33,10 +52,16 @@ struct WorkspaceStore {
 
 fn load_store() -> WorkspaceStore {
     let path = workspace_path();
-    std::fs::read_to_string(&path)
-        .ok()
-        .and_then(|s| serde_json::from_str(&s).ok())
-        .unwrap_or_default()
+    match std::fs::read_to_string(&path) {
+        Ok(s) => match serde_json::from_str(&s) {
+            Ok(store) => store,
+            Err(err) => {
+                backup_corrupt_workspace(&path, &err.to_string());
+                WorkspaceStore::default()
+            }
+        },
+        Err(_) => WorkspaceStore::default(),
+    }
 }
 
 fn save_store(store: &WorkspaceStore) -> Result<(), String> {
