@@ -220,4 +220,122 @@ describe("ReactAgentPanel", () => {
     expect(screen.getByText("변경 3")).toBeInTheDocument();
     expect(screen.getByText("· 높음 1")).toBeInTheDocument();
   });
+
+  it("done/error/cancelled 상태에서만 변경 되돌리기 버튼이 보이고, 나머지 상태에서는 숨겨진다", () => {
+    const { rerender } = render(
+      <ReactAgentPanel
+        state={makeState({
+          status: "running",
+          changes: [
+            {
+              path: "/workspace/src/a.ts",
+              rel_path: "src/a.ts",
+              kind: "modified",
+              risk: "low",
+            },
+          ],
+        })}
+        onCancel={onCancel}
+        onClose={onClose}
+        onUndo={onUndo}
+        onRunAct={onRunAct}
+      />,
+    );
+
+    expect(
+      screen.queryByRole("button", { name: "변경 되돌리기" }),
+    ).not.toBeInTheDocument();
+
+    rerender(
+      <ReactAgentPanel
+        state={makeState({
+          status: "done",
+          changes: [
+            {
+              path: "/workspace/src/a.ts",
+              rel_path: "src/a.ts",
+              kind: "modified",
+              risk: "low",
+            },
+          ],
+        })}
+        onCancel={onCancel}
+        onClose={onClose}
+        onUndo={onUndo}
+        onRunAct={onRunAct}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "변경 되돌리기" })).toBeEnabled();
+
+    rerender(
+      <ReactAgentPanel
+        state={makeState({
+          status: "error",
+          changes: [
+            {
+              path: "/workspace/src/a.ts",
+              rel_path: "src/a.ts",
+              kind: "modified",
+              risk: "low",
+            },
+          ],
+        })}
+        onCancel={onCancel}
+        onClose={onClose}
+        onUndo={onUndo}
+        onRunAct={onRunAct}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "변경 되돌리기" })).toBeEnabled();
+
+    rerender(
+      <ReactAgentPanel
+        state={makeState({
+          status: "cancelled",
+          changes: [
+            {
+              path: "/workspace/src/a.ts",
+              rel_path: "src/a.ts",
+              kind: "modified",
+              risk: "low",
+            },
+          ],
+        })}
+        onCancel={onCancel}
+        onClose={onClose}
+        onUndo={onUndo}
+        onRunAct={onRunAct}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "변경 되돌리기" })).toBeEnabled();
+  });
+
+  it("undo 실행 중에는 변경 되돌리기 버튼이 비활성화되고 되돌리는 중 문구를 노출한다", () => {
+    render(
+      <ReactAgentPanel
+        state={makeState({
+          status: "done",
+          changes: [
+            {
+              path: "/workspace/src/a.ts",
+              rel_path: "src/a.ts",
+              kind: "modified",
+              risk: "low",
+            },
+          ],
+          undoing: true,
+        })}
+        onCancel={onCancel}
+        onClose={onClose}
+        onUndo={onUndo}
+        onRunAct={onRunAct}
+      />,
+    );
+
+    const undoButton = screen.getByRole("button", { name: "되돌리는 중..." });
+    expect(undoButton).toBeDisabled();
+  });
 });
