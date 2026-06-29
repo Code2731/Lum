@@ -124,8 +124,16 @@ const AppOverlays: React.FC<Props> = ({
   const restoreMainInputFocus = () => {
     if (typeof window === "undefined") return;
     window.requestAnimationFrame(() => {
-      const mainInput = document.querySelector<HTMLInputElement>("input[type='text']");
-      mainInput?.focus();
+      const mainInput = document.querySelector<HTMLInputElement>("[data-lum-main-input='true']");
+      if (mainInput) {
+        mainInput.focus();
+        return;
+      }
+
+      const fallbackInput = document.querySelector<HTMLInputElement>(
+        "input[type='text']:not([type='hidden']):not([type='checkbox']):not([type='radio']):not([type='button']):not([type='submit']):not([type='reset']):not([type='file'])",
+      );
+      fallbackInput?.focus();
     });
   };
 

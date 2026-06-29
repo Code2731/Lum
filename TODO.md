@@ -30,8 +30,8 @@
   - [x] `Cmd/Ctrl+L`/`Cmd/Ctrl+,` 계열(테마/기타 글로벌 동작) 계약 확인
 - [x] Inspector/Workspace/History UX 연동 마감
   - [x] Inspector 탭 전환, 워크스페이스 재개, 실패 블록 empty state 일관성
-- [ ] 파일 탐색기/메인 입력 포커스 복귀 흐름 일괄 점검
-  - 오버레이 종료 후 main input focus restore 경로 최종 점검
+- [x] 파일 탐색기/메인 입력 포커스 복귀 흐름 일괄 점검
+  - File Explorer/Workspace/Markdown 종료 후 main input focus restore 경로 최종 점검
 
 ### 품질 (Quality)
 

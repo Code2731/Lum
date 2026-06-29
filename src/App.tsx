@@ -448,9 +448,26 @@ const App: React.FC = () => {
 
   const [markdownView, setMarkdownView] = useState<MarkdownDocViewState | null>(null);
 
+  const restoreMainInputFocus = useCallback(() => {
+    if (typeof window === "undefined") return;
+    window.requestAnimationFrame(() => {
+      const mainInput = document.querySelector<HTMLInputElement>("[data-lum-main-input='true']");
+      if (mainInput) {
+        mainInput.focus();
+        return;
+      }
+
+      const fallbackInput = document.querySelector<HTMLInputElement>(
+        "input[type='text']:not([type='hidden']):not([type='checkbox']):not([type='radio']):not([type='button']):not([type='submit']):not([type='reset']):not([type='file'])",
+      );
+      fallbackInput?.focus();
+    });
+  }, []);
+
   const closeMarkdownView = useCallback(() => {
     setMarkdownView(null);
-  }, []);
+    restoreMainInputFocus();
+  }, [restoreMainInputFocus]);
 
   const openMarkdownView = useCallback(async (path: string) => {
     const title = path.split(/[\\/]/).pop() || path;
@@ -1345,6 +1362,7 @@ const App: React.FC = () => {
               onClose={() => {
                 setShowFileExplorer(false);
                 invoke("save_ui_preferences", { showFileExplorer: false }).catch(() => {});
+                restoreMainInputFocus();
               }}
               onCdTo={(p) => {
                 const write = ptyWriteRefs.current.get(activePaneIdRef.current);

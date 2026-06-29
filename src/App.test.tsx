@@ -83,6 +83,12 @@ async function ensureInspectorOpen(): Promise<HTMLButtonElement> {
   return inspectorButton;
 }
 
+function getMainCommandInput(): HTMLInputElement {
+  const mainInput = document.querySelector<HTMLInputElement>("[data-lum-main-input='true']");
+  expect(mainInput).not.toBeNull();
+  return mainInput as HTMLInputElement;
+}
+
 vi.mock("framer-motion", async () => {
   const React = await import("react");
   return {
@@ -163,7 +169,13 @@ vi.mock("@tauri-apps/plugin-opener", () => ({
 }));
 
 vi.mock("./components/FileExplorerPanel", () => ({
-  default: () => <div data-testid="file-explorer-mock" />,
+  default: ({ onClose }: { onClose: () => void }) => (
+    <div data-testid="file-explorer-mock">
+      <button type="button" aria-label="파일 탐색기 닫기" onClick={onClose}>
+        닫기
+      </button>
+    </div>
+  ),
 }));
 
 vi.mock("./components/TerminalPane", async () => {
@@ -1936,6 +1948,37 @@ describe("App (LUM 터미널)", () => {
       editablePlaintext.remove();
       searchbox.remove();
     }
+  });
+
+  it("파일 탐색기 닫기 후 main input으로 포커스가 복귀해야 한다", async () => {
+    render(<App />);
+
+    fireEvent.keyDown(window, { key: "b", metaKey: true });
+    expect(await screen.findByTestId("file-explorer-mock")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByLabelText("파일 탐색기 닫기"));
+
+    await waitFor(() => {
+      expect(screen.queryByTestId("file-explorer-mock")).not.toBeInTheDocument();
+    });
+    await waitFor(() => {
+      expect(getMainCommandInput()).toHaveFocus();
+    });
+  });
+
+  it("워크스페이스 패널 닫기 후 main input으로 포커스가 복귀해야 한다", async () => {
+    render(<App />);
+
+    fireEvent.keyDown(window, { key: "S", metaKey: true, shiftKey: true });
+    expect(await screen.findByText("워크스페이스")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByLabelText("Close"));
+    await waitFor(() => {
+      expect(screen.queryByText("워크스페이스")).not.toBeInTheDocument();
+    });
+    await waitFor(() => {
+      expect(getMainCommandInput()).toHaveFocus();
+    });
   });
 
   it("글로벌 단축키는 텍스트 입력이 아닌 요소 포커스에서는 동작한다", async () => {

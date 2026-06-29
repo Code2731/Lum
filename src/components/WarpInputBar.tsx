@@ -538,6 +538,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
           <input
             ref={inputRef}
             type="text"
+            data-lum-main-input="true"
             value={input}
             onChange={handleChange}
             onKeyDown={handleKeyDown}
