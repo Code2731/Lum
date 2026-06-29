@@ -2,6 +2,7 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import type { AiBackend } from "../utils/inputRouter";
+import { toErrorMessage, isCancelError } from "../utils/errorMessage";
 
 const XLLM_TOKEN_EVENT = "xllm_token";
 
@@ -86,30 +87,6 @@ function extractPaths(text: string, cwd: string | null): { paths: string[]; useC
   }
 
   return { paths: [...new Set(paths)], useCwd };
-}
-
-function toErrorMessage(error: unknown): string {
-  if (!error) return "알 수 없는 오류";
-  if (typeof error === "string") {
-    const msg = error.trim();
-    return msg || "알 수 없는 오류";
-  }
-  if (error instanceof Error && error.message.trim()) {
-    return error.message;
-  }
-  if (typeof error === "object" && error !== null) {
-    const message = (error as Record<string, unknown>).message;
-    if (typeof message === "string" && message.trim()) {
-      return message.trim();
-    }
-    try {
-      const serialized = JSON.stringify(error);
-      if (typeof serialized === "string" && serialized.trim()) return serialized;
-    } catch {
-      // 순환 참조 같은 직렬화 실패는 기본 메시지로 폴백
-    }
-  }
-  return "알 수 없는 오류";
 }
 
 async function buildContextAddons(text: string, termCtx: string): Promise<string[]> {
@@ -274,6 +251,9 @@ export function useAIChat(model: string, getTerminalContext: () => string) {
         console.log("[AI] stream_ai_command returned, tokens:", tokenCount);
       } catch (e) {
         console.error("[AI] stream_ai_command threw:", e);
+        if (isCancelError(e)) {
+          return;
+        }
         const msg = toErrorMessage(e);
         if (requestIdRef.current === requestId) {
           setError(msg);

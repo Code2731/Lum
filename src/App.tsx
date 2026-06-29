@@ -2,6 +2,7 @@ import React, { useState, useRef, useCallback, useEffect, useMemo, lazy, Suspens
 import { Group as PanelGroup, Panel, Separator as PanelResizeHandle } from "react-resizable-panels";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { normalizeBlockId, shortPath } from "./utils";
+import { toErrorMessage, isCancelError } from "./utils/errorMessage";
 import { useTerminalBlocks } from "./hooks/useTerminalBlocks";
 import { useAIProcessing } from "./hooks/useAIProcessing";
 import { useHardwareSpecs } from "./hooks/useHardwareSpecs";
@@ -82,44 +83,6 @@ interface MarkdownDocViewState {
   content: string;
   loading: boolean;
   error: string | null;
-}
-
-function toErrorMessage(error: unknown): string {
-  if (!error) return "알 수 없는 오류";
-  if (typeof error === "string") {
-    const message = error.trim();
-    return message || "알 수 없는 오류";
-  }
-  if (error instanceof Error && error.message.trim()) {
-    return error.message;
-  }
-  if (typeof error === "object" && error !== null) {
-    const message = (error as Record<string, unknown>).message;
-    if (typeof message === "string" && message.trim()) return message.trim();
-
-    if (
-      "error" in error &&
-      typeof (error as Record<string, unknown>).error === "string"
-    ) {
-      const errMessage = (error as Record<string, unknown>).error;
-      if (typeof errMessage === "string" && errMessage.trim()) {
-        return errMessage.trim();
-      }
-    }
-
-    try {
-      const serialized = JSON.stringify(error);
-      if (serialized.trim()) return serialized;
-    } catch {
-      return "알 수 없는 오류";
-    }
-  }
-  return "알 수 없는 오류";
-}
-
-function isCancelError(error: unknown): boolean {
-  const message = toErrorMessage(error);
-  return message.includes("취소") || message.includes("canceled") || message.includes("cancel");
 }
 
 function parseGitTabInfo(ctx: string): GitTabInfo | null {
