@@ -141,7 +141,7 @@ describe("useAIChat — 스트림 실패 메시지 처리", () => {
       if (cmd === "reset_ai_stream") return;
       if (cmd === "cancel_ai_stream") return;
       if (cmd === "mcp_system_prompt") return "";
-      if (cmd === "stream_ai_command") throw { message: "ollama backend 강제 요청이지만 ollama 모델/URL 설정이 없습니다." };
+      if (cmd === "stream_ai_command") throw { message: "Ollama 백엔드가 미설정/미연결 상태입니다. 패널에서 모델/URL/API 키를 확인하고 다시 시도하세요." };
       return "";
     });
 

@@ -71,12 +71,14 @@ const ROUTING_FAIL_INDICATORS: string[] = [
   "local_embed_unavailable",
   "모델 미초기화",
   "모델이 로드되지 않았습니다",
+  "백엔드가 미설정/미연결 상태입니다",
   "모델 조회 실패",
   "모델 조회 응답 파싱 실패",
   "사용 가능한 URL 후보가 없습니다",
   "임베디드 모델이 로드되지 않았습니다",
   "임베디드 mistral.rs 모델이 로드되지 않았습니다",
   "모델을 로드한 뒤 다시 시도하세요",
+  "모델 패널에서 gemini-* 모델을 선택하세요",
 ];
 
 export function isRoutingError(error: unknown): boolean {

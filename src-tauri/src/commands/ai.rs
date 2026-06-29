@@ -21,6 +21,7 @@ const EMBEDDED_READY_POLL_MS: u64 = 120;
 
 // Phase 115 — Privacy Ledger 이벤트 이름. 프론트 usePrivacyLedger 훅이 구독.
 const AI_ROUTE_EVENT: &str = "ai_route_event";
+const AI_READY_HINT: &str = "패널에서 모델/URL/API 키를 확인하고 다시 시도하세요.";
 
 /// Phase 115 — 단일 AI 호출의 라우팅 결과. 백엔드명 + 외부 네트워크 여부 + latency.
 /// 프론트는 이 이벤트들을 누적해 "100% on-device" 배지/통계를 산출.
@@ -72,15 +73,19 @@ fn emit_route(
     );
 }
 
-fn local_embed_unavailable_message() -> &'static str {
+fn local_embed_unavailable_message() -> String {
     #[cfg(feature = "embedded-ai")]
     {
-        "임베디드 mistral.rs 모델이 로드되지 않았습니다. 모델을 로드한 뒤 다시 시도하세요."
+        format!("임베디드 mistral.rs 모델이 로드되지 않았습니다. {AI_READY_HINT}")
     }
     #[cfg(not(feature = "embedded-ai"))]
     {
-        crate::commands::embed::DISABLED_MSG
+        crate::commands::embed::DISABLED_MSG.to_string()
     }
+}
+
+fn backend_not_ready_message(backend_label: &'static str) -> String {
+    format!("{backend_label} 백엔드가 미설정/미연결 상태입니다. {AI_READY_HINT}")
 }
 
 #[cfg(feature = "embedded-ai")]
@@ -458,9 +463,9 @@ fn append_candidate_urls_hint(message: &str, candidate_urls: &[String]) -> Strin
     }
     let local_candidate_exists = candidate_urls.iter().any(|url| !is_remote_url(url));
     let action_hint = if local_candidate_exists {
-        "로컬 서버 실행 상태를 확인하거나 Model Manager에서 임베디드 모델을 먼저 로드하세요"
+        "임베디드 모델 미확인 시 임베디드 패널에서 모델을 먼저 로드하거나 xLLM URL을 확인하세요"
     } else {
-        "서버 접근 가능 여부와 방화벽/네트워크를 확인하세요"
+        "xLLM 패널에서 URL 후보와 방화벽/네트워크를 확인하세요"
     };
     format!(
         "{message} · 후보 주소: {} · 힌트: {action_hint}",
@@ -496,7 +501,7 @@ fn summarize_xllm_request_error(base_url: &str, action: &str, err: &reqwest::Err
         );
 
     format!(
-        "xLLM {action} 요청 실패 ({base_url}) - {detail}. 서버 주소와 API 경로를 확인하세요",
+        "xLLM {action} 요청 실패 ({base_url}) - {detail}. xLLM 패널에서 서버 URL과 API 경로를 확인하세요",
     )
 }
 
@@ -569,23 +574,20 @@ pub async fn call_ai_with_backend(
             if let Some(result) = embedded_result {
                 return result;
             }
-            Err(LumError::AiEngine(
-                local_embed_unavailable_message().to_string(),
-            ))
+            Err(LumError::AiEngine(local_embed_unavailable_message()))
         }
         "ollama" => {
             if let Some(result) = try_ollama_once(prompt).await {
                 return result;
             }
-            Err(LumError::AiEngine(
-                "ollama backend 강제 요청이지만 ollama 모델/URL 설정이 없습니다.".to_string(),
-            ))
+            Err(LumError::AiEngine(backend_not_ready_message("Ollama")))
         }
         "xllm" | "sglang" => call_xllm_http(client, prompt).await,
         "gemini" | "cloud" => {
             if !model.starts_with("gemini") {
                 return Err(LumError::Config(
-                    "gemini backend를 강제하려면 모델을 gemini-*로 선택하세요.".to_string(),
+                    "Cloud(Gemini) 백엔드는 gemini-* 모델이 필요합니다. 모델 패널에서 gemini-* 모델을 선택하세요."
+                        .to_string(),
                 ));
             }
             call_gemini(client, model, prompt, None).await
@@ -1263,9 +1265,7 @@ pub async fn stream_ai_command(
                     }
                     return result;
                 }
-                return Err(LumError::AiEngine(
-                    local_embed_unavailable_message().to_string(),
-                ));
+                return Err(LumError::AiEngine(local_embed_unavailable_message()));
             }
             "ollama" => {
                 if let Some(result) = try_ollama_stream(&app, &full_prompt, &cancel_flag).await {
@@ -1282,9 +1282,7 @@ pub async fn stream_ai_command(
                     }
                     return result;
                 }
-                return Err(LumError::AiEngine(
-                    "ollama backend 강제 요청이지만 ollama 모델/URL 설정이 없습니다.".to_string(),
-                ));
+                return Err(LumError::AiEngine(backend_not_ready_message("Ollama")));
             }
             "xllm" | "sglang" => {
                 let xllm_urls = config.xllm_url_candidates();
@@ -1324,7 +1322,8 @@ pub async fn stream_ai_command(
             "gemini" | "cloud" => {
                 if !model.starts_with("gemini") {
                     return Err(LumError::Config(
-                        "gemini backend를 강제하려면 모델을 gemini-*로 선택하세요.".to_string(),
+                        "Cloud(Gemini) 백엔드는 gemini-* 모델이 필요합니다. 모델 패널에서 gemini-* 모델을 선택하세요."
+                            .to_string(),
                     ));
                 }
                 let single_image = imgs.first().map(|s| s.as_str());
@@ -1395,9 +1394,7 @@ pub async fn stream_ai_command(
                 }
                 return result;
             }
-            return Err(LumError::AiEngine(
-                local_embed_unavailable_message().to_string(),
-            ));
+            return Err(LumError::AiEngine(local_embed_unavailable_message()));
         }
         // 임베디드 GGUF 로드돼있으면 토큰별 스트리밍 — HTTP 우회.
         let show_reasoning = config.show_reasoning.unwrap_or(true);

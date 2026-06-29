@@ -77,7 +77,7 @@
 - [ ] 초기 설정/복구
   - `ui_*`/`show_*` 초기값 폴백 동작 일관성
   - 사용자 데이터(`.lum_*`) 손실 없는 복구 플로우
-- [ ] 모델 미설치 상태 폴백 UX
+- [x] 모델 미설치 상태 폴백 UX
   - embedded / ollama / xllm / cloud fallback 메시지 및 안내 문구 통일
 - [x] 배포 산출물 점검
   - [x] `.dmg/.msi` 사전 점검 항목 체크리스트 반영
@@ -94,7 +94,7 @@
   - 스트리밍 취소/오류 전파, 네트워크 불안정 fallback, 상태 복구 UX를 기능으로 정리
 - [ ] 2. 초기 설정/복구 경로 정합성
   - `ui_*`, `show_*` 기본값 불일치, `.lum_*` 복구/마이그레이션 경로를 1회 점검
-- [ ] 3. 모델 미설치 fallback UX 통일
+- [x] 3. 모델 미설치 fallback UX 통일
   - embedded/ollama/xllm/cloud 메시지 톤 및 액션 가이드를 사용자별로 통일
 - [ ] 4. 배포 Linux CPU 경로 회귀
   - `npm run tauri build` 기반 smoke 경로를 다음 라운드 초반 실행
