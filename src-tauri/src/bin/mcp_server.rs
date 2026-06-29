@@ -90,13 +90,22 @@ fn handle_request(req: &Value) -> Option<Value> {
     let result = match method {
         "initialize" => initialize_response(),
         "tools/list" => json!({ "tools": tool_definitions() }),
-        "tools/call" => match dispatch_tool_call(&params) {
-            Ok(content) => json!({ "content": content, "isError": false }),
-            Err(msg) => json!({
-                "content": [{ "type": "text", "text": msg }],
-                "isError": true
-            }),
-        },
+        "tools/call" => {
+            if !params.is_object() {
+                return Some(error_response(
+                    id,
+                    INVALID_PARAMS,
+                    "Invalid params for tools/call",
+                ));
+            }
+            match dispatch_tool_call(&params) {
+                Ok(content) => json!({ "content": content, "isError": false }),
+                Err(msg) => json!({
+                    "content": [{ "type": "text", "text": msg }],
+                    "isError": true
+                }),
+            }
+        }
         _ => return Some(error_response(id, METHOD_NOT_FOUND, "Method not found")),
     };
 

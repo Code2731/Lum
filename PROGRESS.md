@@ -1,5 +1,21 @@
 # PROGRESS
 
+## 2026-06-29
+
+### 이번 라운드까지 완료
+
+- Rust 경고 해소 작업 1차 실행
+  - `src-tauri/src/commands/embed.rs`
+    - `ParsedEmbedKey`, `ParsedEmbedKey::parse`, `split_model_file`을 `embedded-ai` feature 분기로 한정해 기본 빌드 경고를 제거
+  - `src-tauri/src/bin/mcp_server.rs`
+    - `tools/call`에서 파라미터 타입 불일치 시 `INVALID_PARAMS`(JSON-RPC `-32602`)를 실제 에러 경로로 사용
+- `TODO.md` 경고 분류 항목과 일치하도록 변경 반영 상태 유지
+
+### 현재 상태 요약
+
+- 기능: 핵심 UI 회귀 항목은 유지, 경고 처리 우선순위가 실제 코드 반영 단계로 이동
+- 품질: Rust 경고에서 3건은 feature 경계 정리로 즉시 정리, 1건은 유효성 경로 반영으로 설계 의도 유지
+
 ## 2026-06-28
 
 ### 이번 라운드까지 완료

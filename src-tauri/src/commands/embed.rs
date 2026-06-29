@@ -8,6 +8,7 @@ use serde::Serialize;
 #[cfg(feature = "embedded-ai")]
 use tauri::Emitter;
 
+#[cfg(feature = "embedded-ai")]
 #[derive(Debug, Clone)]
 enum ParsedEmbedKey {
     Gguf {
@@ -25,6 +26,7 @@ enum ParsedEmbedKey {
     },
 }
 
+#[cfg(feature = "embedded-ai")]
 impl ParsedEmbedKey {
     /// 저장된 키 문자열을 로드 방식으로 복원한다.
     /// - `{model_dir}/{gguf}+lora:{lora_adapter}`
@@ -66,6 +68,7 @@ impl ParsedEmbedKey {
     }
 }
 
+#[cfg(feature = "embedded-ai")]
 fn split_model_file(model_ref: &str) -> Option<(String, String)> {
     let slash = model_ref.rfind('/');
     let backslash = model_ref.rfind('\\');
