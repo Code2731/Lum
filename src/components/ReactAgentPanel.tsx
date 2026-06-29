@@ -92,19 +92,19 @@ const RISK_BADGE: Record<
   { label: string; bg: string; fg: string; border: string }
 > = {
   low: {
-    label: "Low",
+    label: "낮음",
     bg: "bg-green-500/10",
     fg: "text-green-300",
     border: "border-green-500/20",
   },
   medium: {
-    label: "Med",
+    label: "보통",
     bg: "bg-yellow-500/10",
     fg: "text-yellow-300",
     border: "border-yellow-500/20",
   },
   high: {
-    label: "High",
+    label: "높음",
     bg: "bg-red-500/10",
     fg: "text-red-300",
     border: "border-red-500/20",
@@ -181,10 +181,10 @@ const ChangeRow: React.FC<{ change: ChangeInfo }> = ({ change }) => {
         className={`text-xs font-mono px-1.5 py-0.5 rounded border ${risk.bg} ${risk.fg} ${risk.border} shrink-0`}
         title={
           change.risk === "high"
-            ? "빌드/설정 파일 — 신중 검토 필요"
+            ? "빌드/설정 파일 변경 — 신중 검토 필요"
             : change.risk === "low"
-              ? "테스트 파일 — 검토 가벼움"
-              : "일반 소스 — 검토 권장"
+              ? "테스트 파일 변경 — 빠른 확인"
+              : "일반 소스 변경 — 검토 권장"
         }
       >
         {risk.label}
@@ -450,12 +450,12 @@ const ReactAgentPanel: React.FC<Props> = ({
             }`}
             title={
               highRiskCount > 0
-                ? `${highRiskCount}건의 빌드/설정 파일 변경 — 검토 권장`
+                ? `${highRiskCount}건의 빌드/설정 파일 변경 — 높음 위험도`
                 : `${changes.length}개 파일 변경됨`
             }
           >
             변경 {changes.length}
-            {highRiskCount > 0 ? ` · High ${highRiskCount}` : ""}
+            {highRiskCount > 0 ? ` · ${RISK_BADGE.high.label} ${highRiskCount}` : ""}
           </span>
         )}
         <button
@@ -599,7 +599,7 @@ const ReactAgentPanel: React.FC<Props> = ({
             </span>
             {highRiskCount > 0 && (
               <span className="text-xs text-red-300 font-medium ml-1">
-                · High {highRiskCount}
+                · {RISK_BADGE.high.label} {highRiskCount}
               </span>
             )}
           </div>

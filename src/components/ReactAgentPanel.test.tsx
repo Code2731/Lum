@@ -174,4 +174,50 @@ describe("ReactAgentPanel", () => {
       expect.anything(),
     );
   });
+
+  it("변경 파일 위험도 배지는 한글 라벨과 정합된 툴팁을 보여준다", () => {
+    render(
+      <ReactAgentPanel
+        state={makeState({
+          status: "done",
+          changes: [
+            {
+              path: "/workspace/src/main.rs",
+              rel_path: "src/main.rs",
+              kind: "modified",
+              risk: "medium",
+            },
+            {
+              path: "/workspace/Cargo.toml",
+              rel_path: "Cargo.toml",
+              kind: "modified",
+              risk: "high",
+            },
+            {
+              path: "/workspace/tests/agent.test.ts",
+              rel_path: "tests/agent.test.ts",
+              kind: "modified",
+              risk: "low",
+            },
+          ],
+        })}
+        onCancel={onCancel}
+        onClose={onClose}
+        onUndo={onUndo}
+        onRunAct={onRunAct}
+      />,
+    );
+
+    expect(screen.getByTitle("일반 소스 변경 — 검토 권장")).toHaveTextContent(
+      "보통",
+    );
+    expect(screen.getByTitle("빌드/설정 파일 변경 — 신중 검토 필요")).toHaveTextContent(
+      "높음",
+    );
+    expect(screen.getByTitle("테스트 파일 변경 — 빠른 확인")).toHaveTextContent(
+      "낮음",
+    );
+    expect(screen.getByText("변경 3")).toBeInTheDocument();
+    expect(screen.getByText("· 높음 1")).toBeInTheDocument();
+  });
 });
