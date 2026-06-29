@@ -674,7 +674,9 @@ const OllamaSection: React.FC = () => {
         />
       </div>
       <p className="text-xs text-white/40 leading-relaxed">
-        {enabled ? "embedded 미로드 시 자동 폴백. xLLM보다 우선." : "꺼짐 — embedded / xLLM / Gemini 순으로 폴백."}
+        {enabled
+          ? "임베디드 미적재 시 자동 폴백. 없으면 xLLM을 우선 사용합니다."
+          : "꺼짐 — 임베디드 / xLLM / Gemini 순으로 폴백합니다."}
       </p>
 
       {enabled && (<>
