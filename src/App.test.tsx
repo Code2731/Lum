@@ -2317,6 +2317,196 @@ describe("App (LUM 터미널)", () => {
     expect(within(panel as HTMLElement).getByRole("button", { name: "Project Bin" })).toBeInTheDocument();
   });
 
+  it("Inspector 탭은 클릭으로 Summary/RAG/Scripts/System을 전환한다", async () => {
+    render(<App />);
+
+    const inspectorButton = screen.getByLabelText("Inspector");
+    const inspectorCloseButton = screen.queryByLabelText("Inspector 닫기");
+
+    if (inspectorCloseButton) {
+      fireEvent.click(inspectorCloseButton);
+    }
+    fireEvent.click(inspectorButton);
+
+    await waitFor(() => {
+      expect(screen.getByRole("tablist", { name: "Inspector 탭" })).toBeInTheDocument();
+    });
+
+    const summaryTab = screen.getByRole("tab", { name: /개요/ });
+    const ragTab = screen.getByRole("tab", { name: /RAG/ });
+    const scriptsTab = screen.getByRole("tab", { name: /Scripts/ });
+    const sysmonTab = screen.getByRole("tab", { name: /System/ });
+
+    expect(summaryTab).toHaveAttribute("aria-selected", "true");
+    expect(document.querySelector("#inspector-tabpanel-summary")).toBeInTheDocument();
+
+    fireEvent.click(ragTab);
+    await waitFor(() => {
+      expect(ragTab).toHaveAttribute("aria-selected", "true");
+      expect(document.querySelector("#inspector-tabpanel-rag")).toBeInTheDocument();
+      expect(document.querySelector("#inspector-tabpanel-summary")).not.toBeInTheDocument();
+    });
+
+    fireEvent.click(scriptsTab);
+    await waitFor(() => {
+      expect(scriptsTab).toHaveAttribute("aria-selected", "true");
+      expect(document.querySelector("#inspector-tabpanel-scripts")).toBeInTheDocument();
+      expect(document.querySelector("#inspector-tabpanel-rag")).not.toBeInTheDocument();
+    });
+
+    fireEvent.click(sysmonTab);
+    await waitFor(() => {
+      expect(sysmonTab).toHaveAttribute("aria-selected", "true");
+      expect(document.querySelector("#inspector-tabpanel-sysmon")).toBeInTheDocument();
+      expect(document.querySelector("#inspector-tabpanel-scripts")).not.toBeInTheDocument();
+    });
+
+    fireEvent.click(summaryTab);
+    await waitFor(() => {
+      expect(summaryTab).toHaveAttribute("aria-selected", "true");
+      expect(document.querySelector("#inspector-tabpanel-summary")).toBeInTheDocument();
+      expect(document.querySelector("#inspector-tabpanel-sysmon")).not.toBeInTheDocument();
+    });
+  });
+
+  it("요약 Quick Actions에서 Workspace를 열고 불러오기로 워크스페이스를 재개한다", async () => {
+    const baseImpl = mockedInvoke.getMockImplementation() as
+      ((cmd: string, args?: unknown, options?: unknown) => Promise<unknown>);
+    if (!baseImpl) throw new Error("invoke mock implementation not found");
+
+    const savedWorkspaces = [{
+      id: "ws-1",
+      name: "CI 체크",
+      tabs: [
+        {
+          id: "ws-tab-1",
+          title: "Shell 9",
+          cwd: "/Users/me/project/frontend",
+        },
+        {
+          id: "ws-tab-2",
+          title: "Shell 10",
+          cwd: "/Users/me/project/backend",
+        },
+      ],
+      active_tab_id: "ws-tab-2",
+      created_at: 1700000000,
+    }];
+
+    mockedInvoke.mockImplementation((cmd: string, ...args: unknown[]) => {
+      if (cmd === "list_workspaces") return Promise.resolve(savedWorkspaces);
+      if (cmd === "load_app_config") {
+        return Promise.resolve({
+          show_reasoning: true,
+          vision_enabled: false,
+          toolbar_show_advanced: false,
+          ui_compact_toolbar: false,
+          ui_show_file_explorer: true,
+          ui_show_inspector: true,
+          ui_inspector_density: "compact",
+          ui_hints_shown: true,
+          ui_seen_advanced_features: [],
+          quick_actions: [],
+          mistral_rs_enabled: false,
+          mistral_rs_model: null,
+        });
+      }
+      return baseImpl(cmd, args[0], args[1]);
+    });
+
+    try {
+      render(<App />);
+
+      const inspectorButton = screen.getByLabelText("Inspector");
+      const inspectorCloseButton = screen.queryByLabelText("Inspector 닫기");
+
+      if (inspectorCloseButton) {
+        fireEvent.click(inspectorCloseButton);
+      }
+      fireEvent.click(inspectorButton);
+
+      await waitFor(() => {
+        expect(screen.getByRole("tablist", { name: "Inspector 탭" })).toBeInTheDocument();
+      });
+
+      const panel = await waitFor(() => document.querySelector("#inspector-tabpanel-summary"));
+      const workspaceButton = await waitFor(() => within(panel as HTMLElement).getByRole("button", { name: "Workspace" }));
+      fireEvent.click(workspaceButton);
+
+      expect(await screen.findByText("워크스페이스")).toBeInTheDocument();
+      expect(screen.getByText("CI 체크")).toBeInTheDocument();
+
+      const restoreButton = screen.getAllByRole("button", { name: "불러오기" })[0];
+      fireEvent.click(restoreButton);
+
+      await waitFor(() => {
+        expect(screen.queryByText("워크스페이스")).not.toBeInTheDocument();
+      });
+      expect(screen.getAllByTestId(/^terminal-pane-/).length).toBe(2);
+    } finally {
+      mockedInvoke.mockImplementation(baseImpl);
+    }
+  });
+
+  it("Quick Actions 더보기에서 History를 누르면 히스토리 검색이 열린다", async () => {
+    render(<App />);
+
+    const inspectorButton = screen.getByLabelText("Inspector");
+    const inspectorCloseButton = screen.queryByLabelText("Inspector 닫기");
+
+    if (inspectorCloseButton) {
+      fireEvent.click(inspectorCloseButton);
+    }
+    fireEvent.click(inspectorButton);
+
+    await waitFor(() => {
+      expect(screen.getByRole("tablist", { name: "Inspector 탭" })).toBeInTheDocument();
+    });
+
+    const summaryPanel = document.querySelector("#inspector-tabpanel-summary");
+    if (!summaryPanel) {
+      throw new Error("Inspector summary panel not found");
+    }
+
+    const moreButton = within(summaryPanel).getByRole("button", { name: "더보기" });
+    fireEvent.click(moreButton);
+
+    await waitFor(() => {
+      expect(within(summaryPanel).getByRole("button", { name: "History" })).toBeInTheDocument();
+    });
+
+    const historyButton = within(summaryPanel).getByRole("button", { name: "History" });
+    fireEvent.click(historyButton);
+
+    expect(await screen.findByPlaceholderText("자연어로 검색: '지난번에 빌드 어떻게 했더라…'"))
+      .toBeInTheDocument();
+  });
+
+  it("요약에서 실패 블록이 없으면 빈 상태 문구가 노출된다", async () => {
+    const { container } = render(<App />);
+
+    const inspectorButton = screen.getByLabelText("Inspector");
+    const inspectorCloseButton = screen.queryByLabelText("Inspector 닫기");
+
+    if (inspectorCloseButton) {
+      fireEvent.click(inspectorCloseButton);
+    }
+    fireEvent.click(inspectorButton);
+
+    let inspectorSummaryPanel = container.querySelector("#inspector-tabpanel-summary");
+    if (!inspectorSummaryPanel) {
+      await waitFor(() => {
+        inspectorSummaryPanel = container.querySelector("#inspector-tabpanel-summary");
+        expect(inspectorSummaryPanel).not.toBeNull();
+      });
+    }
+    if (!inspectorSummaryPanel) {
+      throw new Error("Inspector summary panel not found");
+    }
+
+    expect(within(inspectorSummaryPanel as HTMLElement).getByText("실패 블록이 없습니다.")).toBeInTheDocument();
+  });
+
   it("실패 블록에서 AI ANALYZE를 누르면 분석 상태가 STREAMING으로 표시된다", async () => {
     setMockCommandBlocks([{
       id: "b1",
