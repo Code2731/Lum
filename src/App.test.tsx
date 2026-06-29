@@ -1684,6 +1684,40 @@ describe("App (LUM 터미널)", () => {
     }
   });
 
+  it("입력 포커스 중에는 Cmd/Ctrl+Shift+R이 AI Diff Reviewer를 열지 않는다", () => {
+    const input = document.createElement("input");
+    document.body.appendChild(input);
+
+    try {
+      render(<App />);
+      input.focus();
+      expect(document.activeElement).toBe(input);
+
+      fireEvent.keyDown(input, { key: "R", metaKey: true, shiftKey: true });
+      fireEvent.keyDown(input, { key: "r", ctrlKey: true, shiftKey: true });
+      expect(screen.queryByText("AI Diff Reviewer")).not.toBeInTheDocument();
+    } finally {
+      input.remove();
+    }
+  });
+
+  it("입력 포커스 중에는 Cmd/Ctrl+Shift+M이 시스템 모니터를 열지 않는다", () => {
+    const input = document.createElement("input");
+    document.body.appendChild(input);
+
+    try {
+      render(<App />);
+      input.focus();
+      expect(document.activeElement).toBe(input);
+
+      fireEvent.keyDown(input, { key: "M", metaKey: true, shiftKey: true });
+      fireEvent.keyDown(input, { key: "m", ctrlKey: true, shiftKey: true });
+      expect(screen.queryByText("시스템 모니터")).not.toBeInTheDocument();
+    } finally {
+      input.remove();
+    }
+  });
+
   it("Cmd+Shift+H는 SSH 연결 모달이 열리고, Alt 조합은 처리되지 않는다", async () => {
     const baseImpl = mockedInvoke.getMockImplementation() as
       ((cmd: string, args?: unknown, options?: unknown) => Promise<unknown>);
