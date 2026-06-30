@@ -97,8 +97,9 @@
   - `show_*` 복구 경로( `session`, `workspaces`) 파싱 실패 시 백업 후 안전 복구
 - [x] 3. 모델 미설치 fallback UX 통일
   - embedded/ollama/xllm/cloud 메시지 톤 및 액션 가이드를 사용자별로 통일
-- [ ] 4. 배포 Linux CPU 경로 회귀
-  - `npm run tauri build` 기반 smoke 경로를 다음 라운드 초반 실행
+- [x] 4. 배포 Linux CPU 경로 회귀
+  - `ci.yml`에 Linux `npm run tauri build` smoke 빌드 단계 추가 (`release` 기본 경로와 동일한 CPU 경로)
+  - `release.yml` Linux 매트릭스에 `deb/appimage` 번들 추가 (Linux CPU 빌드 산출물 자동 생성)
 
 ## 2026-06-29 추천 라운드 반영
 

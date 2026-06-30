@@ -27,6 +27,8 @@ jobs:
             args: '--target x86_64-apple-darwin --bundles dmg'
           - platform: windows-latest
             args: '--bundles msi,nsis'
+          - platform: ubuntu-latest
+            args: '--bundles deb,appimage'
 
     runs-on: ${{ matrix.platform }}
 
@@ -43,6 +45,15 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin' || matrix.platform == 'macos-13' && 'x86_64-apple-darwin' || '' }}
+
+      - name: Install Linux build dependencies
+        if: ${{ startsWith(matrix.platform, 'ubuntu') }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libgtk-3-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf \
+            libasound2-dev libxdo-dev libxtst-dev libx11-dev libxrandr-dev \
+            libxcb1-dev libxcb-shm0-dev libxcb-randr0-dev
 
       - name: Rust cache
         uses: swatinem/rust-cache@v2

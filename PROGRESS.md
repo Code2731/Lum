@@ -43,7 +43,8 @@
     - `scripts/tauri-dev-cuda.bat`, `npm run tauri:dev:cuda`, `npm run tauri build -- --features embedded-ai` 실행 항목 정리
     - `.msi` 산출물 설치·실행·온보딩 진입 점검 항목 정리
   - Linux 경로
-    - 경량 빌드(`npm run tauri build`) 기반 CPU 전용 검증은 다음 라운드로 연기
+    - `npm run tauri build` 기반 CPU-only 경로를 CI에 추가해 smoke 빌드 회귀 포인트를 확보
+    - `release.yml` Ubuntu 매트릭스에 `--bundles deb,appimage` 추가
 
 ## 2026-07-01 추천 라운드 반영 (배포 산출물 체크리스트)
 
