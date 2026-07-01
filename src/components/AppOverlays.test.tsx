@@ -32,6 +32,22 @@ vi.mock("./CommitPanel", () => ({
   ),
 }));
 
+vi.mock("./XllmPanel", () => ({
+  default: ({ onClose }: { onClose: () => void }) => (
+    <div role="dialog" aria-label="xLLM 패널">
+      <button type="button" onClick={onClose}>xLLM 닫기</button>
+    </div>
+  ),
+}));
+
+vi.mock("./McpPanel", () => ({
+  default: ({ onClose }: { onClose: () => void }) => (
+    <div role="dialog" aria-label="MCP 패널">
+      <button type="button" onClick={onClose}>MCP 닫기</button>
+    </div>
+  ),
+}));
+
 vi.mock("./OnboardingWizard", () => ({
   default: ({ onComplete }: { onComplete: () => void }) => (
     <div role="dialog" aria-label="LUM 온보딩">
@@ -185,6 +201,8 @@ function OverlayHarness({
   initialWorkspace = false,
   initialModelManager = false,
   initialCommitPanel = false,
+  initialXllmPanel = false,
+  initialMcpPanel = false,
 }: {
   initialWelcome?: boolean;
   initialOnboarding?: boolean;
@@ -194,6 +212,8 @@ function OverlayHarness({
   initialWorkspace?: boolean;
   initialModelManager?: boolean;
   initialCommitPanel?: boolean;
+  initialXllmPanel?: boolean;
+  initialMcpPanel?: boolean;
 }) {
   const [showWelcome, setShowWelcome] = React.useState(initialWelcome);
   const [showOnboarding, setShowOnboarding] = React.useState(initialOnboarding);
@@ -203,6 +223,8 @@ function OverlayHarness({
   const [showWorkspace, setShowWorkspace] = React.useState(initialWorkspace);
   const [showModelManager, setShowModelManager] = React.useState(initialModelManager);
   const [showCommitPanel, setShowCommitPanel] = React.useState(initialCommitPanel);
+  const [showXllmPanel, setShowXllmPanel] = React.useState(initialXllmPanel);
+  const [showMcpPanel, setShowMcpPanel] = React.useState(initialMcpPanel);
 
   return (
     <>
@@ -223,6 +245,10 @@ function OverlayHarness({
             setShowModelManager,
             showCommitPanel,
             setShowCommitPanel,
+            showXllmPanel,
+            setShowXllmPanel,
+            showMcpPanel,
+            setShowMcpPanel,
           },
           showWelcome,
           setShowWelcome,
@@ -323,6 +349,30 @@ describe("AppOverlays", () => {
 
     const mainInput = screen.getByLabelText("메인 입력");
     fireEvent.click(screen.getByRole("button", { name: "커밋 닫기" }));
+
+    await waitFor(() => {
+      expect(mainInput).toHaveFocus();
+    });
+  });
+
+  it("xLLM 패널을 닫으면 메인 입력으로 포커스를 복귀한다", async () => {
+    render(<OverlayHarness initialXllmPanel />);
+
+    const mainInput = screen.getByLabelText("메인 입력");
+    const closeButton = await screen.findByRole("button", { name: "xLLM 닫기" });
+    fireEvent.click(closeButton);
+
+    await waitFor(() => {
+      expect(mainInput).toHaveFocus();
+    });
+  });
+
+  it("MCP 패널을 닫으면 메인 입력으로 포커스를 복귀한다", async () => {
+    render(<OverlayHarness initialMcpPanel />);
+
+    const mainInput = screen.getByLabelText("메인 입력");
+    const closeButton = await screen.findByRole("button", { name: "MCP 닫기" });
+    fireEvent.click(closeButton);
 
     await waitFor(() => {
       expect(mainInput).toHaveFocus();
