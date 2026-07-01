@@ -220,12 +220,9 @@ describe("AppHeader", () => {
   it("고급 메뉴에서 화살표 키로 포커스가 순환 이동한다", async () => {
     const HeaderHarness = () => {
       const [showAdvancedOverflow, setShowAdvancedOverflow] = React.useState(true);
-      const [showNotifCenter, setShowNotifCenter] = React.useState(false);
       const props = buildProps() as any;
       props.showAdvancedOverflow = showAdvancedOverflow;
       props.setShowAdvancedOverflow = setShowAdvancedOverflow;
-      props.showNotifCenter = showNotifCenter;
-      props.setShowNotifCenter = setShowNotifCenter;
       return <AppHeader {...props} />;
     };
 
@@ -354,9 +351,11 @@ describe("AppHeader", () => {
     const HeaderHarness = () => {
       const [showNotifCenter, setShowNotifCenter] = React.useState(true);
       const props = buildProps() as any;
-      props.showNotifCenter = showNotifCenter;
-      props.setShowNotifCenter = setShowNotifCenter;
-      return <AppHeader {...props} />;
+      return <AppHeader {...props} panels={{
+        ...props.panels,
+        showNotifCenter,
+        setShowNotifCenter,
+      }} />;
     };
 
     render(<HeaderHarness />);
@@ -377,9 +376,11 @@ describe("AppHeader", () => {
     const HeaderHarness = () => {
       const [showNotifCenter, setShowNotifCenter] = React.useState(true);
       const props = buildProps() as any;
-      props.showNotifCenter = showNotifCenter;
-      props.setShowNotifCenter = setShowNotifCenter;
-      return <AppHeader {...props} />;
+      return <AppHeader {...props} panels={{
+        ...props.panels,
+        showNotifCenter,
+        setShowNotifCenter,
+      }} />;
     };
 
     render(<HeaderHarness />);
@@ -400,11 +401,14 @@ describe("AppHeader", () => {
     const HeaderHarness = () => {
       const [showNotifCenter, setShowNotifCenter] = React.useState(true);
       const props = buildProps() as any;
-      props.showNotifCenter = showNotifCenter;
-      props.setShowNotifCenter = setShowNotifCenter;
       return (
         <AppHeader
           {...props}
+          panels={{
+            ...props.panels,
+            showNotifCenter,
+            setShowNotifCenter,
+          }}
         />
       );
     };
@@ -723,9 +727,11 @@ describe("AppHeader", () => {
     const HeaderHarness = () => {
       const [showNotifCenter, setShowNotifCenter] = React.useState(true);
       const props = buildProps() as any;
-      props.showNotifCenter = showNotifCenter;
-      props.setShowNotifCenter = setShowNotifCenter;
-      return <AppHeader {...props} />;
+      return <AppHeader {...props} panels={{
+        ...props.panels,
+        showNotifCenter,
+        setShowNotifCenter,
+      }} />;
     };
 
     render(<HeaderHarness />);

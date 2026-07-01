@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Layers, Save, Trash2, FolderOpen, TerminalSquare, Clock } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete";
+import { focusMainInput } from "@/utils/focus";
 import type { Workspace, WorkspaceTab } from "../hooks/useWorkspace";
 import { shortPath } from "../utils";
 
@@ -35,8 +36,19 @@ const WorkspacePanel: React.FC<Props> = ({
   };
 
   return (
-    <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent className="sm:max-w-[580px] max-h-[80vh] flex flex-col gap-0 p-0 overflow-hidden border-white/10 rounded-2xl">
+    <Dialog
+      open
+      onOpenChange={(o) => {
+        if (!o) onClose();
+      }}
+    >
+      <DialogContent
+        className="sm:max-w-[580px] max-h-[80vh] flex flex-col gap-0 p-0 overflow-hidden border-white/10 rounded-2xl"
+        onCloseAutoFocus={(event) => {
+          event.preventDefault();
+          focusMainInput();
+        }}
+      >
         {/* Header */}
         <div className="flex items-center gap-2.5 px-5 py-4 border-b border-white/8 shrink-0">
           <Layers size={15} className="text-accent" />

@@ -454,8 +454,10 @@ const ReactAgentPanel: React.FC<Props> = ({
                 : `${changes.length}개 파일 변경됨`
             }
           >
-            변경 {changes.length}
-            {highRiskCount > 0 ? ` · ${RISK_BADGE.high.label} ${highRiskCount}` : ""}
+            <span>변경 {changes.length}</span>
+            {highRiskCount > 0 && (
+              <span className="ml-1">· {RISK_BADGE.high.label} {highRiskCount}</span>
+            )}
           </span>
         )}
         <button

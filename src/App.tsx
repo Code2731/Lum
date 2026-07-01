@@ -36,6 +36,7 @@ import type { InspectorAnalyzeCache, InspectorDensity, InspectorTab } from "./co
 import { isTextInputTarget } from "./utils/event";
 import { useInspectorPanelCommands } from "./hooks/useInspectorPanelCommands";
 import { useInspectorPanelPropsBundle } from "./hooks/useInspectorPanelPropsBundle";
+import { focusMainInput } from "./utils/focus";
 import InfiniteCanvas from "./components/layout/InfiniteCanvas";
 import TerminalPane from "./components/TerminalPane";
 import HealingPanel from "./components/HealingPanel";
@@ -473,19 +474,7 @@ const App: React.FC = () => {
   const [markdownView, setMarkdownView] = useState<MarkdownDocViewState | null>(null);
 
   const restoreMainInputFocus = useCallback(() => {
-    if (typeof window === "undefined") return;
-    window.requestAnimationFrame(() => {
-      const mainInput = document.querySelector<HTMLInputElement>("[data-lum-main-input='true']");
-      if (mainInput) {
-        mainInput.focus();
-        return;
-      }
-
-      const fallbackInput = document.querySelector<HTMLInputElement>(
-        "input[type='text']:not([type='hidden']):not([type='checkbox']):not([type='radio']):not([type='button']):not([type='submit']):not([type='reset']):not([type='file'])",
-      );
-      fallbackInput?.focus();
-    });
+    focusMainInput();
   }, []);
 
   const closeMarkdownView = useCallback(() => {

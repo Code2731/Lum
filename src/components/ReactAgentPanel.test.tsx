@@ -218,7 +218,8 @@ describe("ReactAgentPanel", () => {
       "낮음",
     );
     expect(screen.getByText("변경 3")).toBeInTheDocument();
-    expect(screen.getByText("· 높음 1")).toBeInTheDocument();
+    const summaryBadge = screen.getByTitle("1건의 빌드/설정 파일 변경 — 높음 위험도");
+    expect(summaryBadge).toHaveTextContent("· 높음 1");
   });
 
   it("변경 파일 종류 라벨을 생성/수정/삭제에 따라 구분해 보여준다", () => {

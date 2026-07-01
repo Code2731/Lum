@@ -7,8 +7,12 @@
  */
 export async function setupTauriMock(): Promise<void> {
   // @tauri-apps/api v2 내부 인터페이스 모킹 (window/event/core/window 모듈 공통)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const w = window as any;
+  type MockWindow = Window & {
+    __TAURI_INTERNALS__?: {
+      invoke: (cmd: string, args?: unknown) => Promise<unknown>;
+    };
+  };
+  const w = window as MockWindow;
   // E2E에서는 초기 웰컴 힌트 모달을 기본적으로 숨겨 상호작용을 안정화한다.
   try {
     localStorage.setItem("lum.hintsShown", "1");

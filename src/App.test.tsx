@@ -73,7 +73,7 @@ function holdMockStream(
 }
 
 async function ensureInspectorOpen(): Promise<HTMLButtonElement> {
-  const inspectorButton = screen.getByLabelText("Inspector");
+  const inspectorButton = screen.getByLabelText("Inspector") as HTMLButtonElement;
   if (!screen.queryByRole("tablist", { name: "Inspector 탭" })) {
     fireEvent.click(inspectorButton);
   }
@@ -193,7 +193,12 @@ vi.mock("./components/TerminalPane", async () => {
         onReady(write);
       }, [id, onReady]);
 
-      return <div data-testid={`terminal-pane-${id}`}>terminal:{id}</div>;
+      return (
+        <div data-testid={`terminal-pane-${id}`}>
+          terminal:{id}
+          <input type="text" data-lum-main-input="true" aria-label="main command input" />
+        </div>
+      );
     },
   };
 });
@@ -1221,9 +1226,9 @@ describe("App (LUM 터미널)", () => {
       fireEvent.keyDown(window, { key: "f", metaKey: true, shiftKey: true });
       expect(await screen.findByText("2/2")).toBeInTheDocument();
 
-      const inspectorButton = await ensureInspectorOpen();
+      await ensureInspectorOpen();
 
-      const summaryPanel = document.querySelector("#inspector-tabpanel-summary");
+    const summaryPanel = document.querySelector<HTMLElement>("#inspector-tabpanel-summary");
       expect(summaryPanel).not.toBeNull();
       const analyzeButton = within(summaryPanel as HTMLElement).getByRole("button", { name: "AI ANALYZE" });
       fireEvent.click(analyzeButton);
@@ -1255,7 +1260,7 @@ describe("App (LUM 터미널)", () => {
       fireEvent.keyDown(window, { key: "f", metaKey: true, shiftKey: true });
       expect(await screen.findByText("1/1")).toBeInTheDocument();
 
-      const inspectorButton = await ensureInspectorOpen();
+      await ensureInspectorOpen();
 
       const summaryPanel = document.querySelector("#inspector-tabpanel-summary");
       expect(summaryPanel).not.toBeNull();
@@ -1289,7 +1294,7 @@ describe("App (LUM 터미널)", () => {
       fireEvent.keyDown(window, { key: "f", metaKey: true, shiftKey: true });
       expect(await screen.findByText("1/1")).toBeInTheDocument();
 
-      const inspectorButton = await ensureInspectorOpen();
+      await ensureInspectorOpen();
 
       const summaryPanel = document.querySelector("#inspector-tabpanel-summary");
       expect(summaryPanel).not.toBeNull();
@@ -1928,7 +1933,7 @@ describe("App (LUM 터미널)", () => {
     const beforeInspectorPressed = screen.getByLabelText("Inspector").getAttribute("aria-pressed");
     const beforePanes = screen.getAllByTestId(/^terminal-pane-/).length;
     const beforeQuickActionHint = screen.getByText("빠른 실행 없음 · 오른쪽 설정에서 추가").textContent;
-    const beforeScriptTextCount = screen.getAllByText("스크립트 라이브러리").length;
+    const beforeScriptButtonCount = screen.getAllByRole("button", { name: "스크립트 라이브러리" }).length;
 
     try {
       input.focus();
@@ -1954,7 +1959,7 @@ describe("App (LUM 터미널)", () => {
       expect(screen.queryByPlaceholderText(/자연어로 검색/)).not.toBeInTheDocument();
       expect(screen.queryByText("AI Diff Reviewer")).not.toBeInTheDocument();
       expect(screen.getByText("빠른 실행 없음 · 오른쪽 설정에서 추가")).toHaveTextContent(beforeQuickActionHint ?? "");
-      expect(screen.getAllByText("스크립트 라이브러리")).toHaveLength(beforeScriptTextCount);
+      expect(screen.getAllByRole("button", { name: "스크립트 라이브러리" })).toHaveLength(beforeScriptButtonCount);
       expect(document.activeElement).toBe(input);
     } finally {
       input.remove();
@@ -2041,7 +2046,7 @@ describe("App (LUM 터미널)", () => {
     fireEvent.keyDown(window, { key: "S", metaKey: true, shiftKey: true });
     expect(await screen.findByText("워크스페이스")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByLabelText("Close"));
+    fireEvent.click(screen.getByRole("button", { name: "Close" }));
     await waitFor(() => {
       expect(screen.queryByText("워크스페이스")).not.toBeInTheDocument();
     });
@@ -2575,7 +2580,7 @@ describe("App (LUM 터미널)", () => {
       expect(screen.getByRole("tablist", { name: "Inspector 탭" })).toBeInTheDocument();
     });
 
-    const summaryPanel = document.querySelector("#inspector-tabpanel-summary");
+    const summaryPanel = document.querySelector<HTMLElement>("#inspector-tabpanel-summary");
     if (!summaryPanel) {
       throw new Error("Inspector summary panel not found");
     }
@@ -2616,7 +2621,9 @@ describe("App (LUM 터미널)", () => {
       throw new Error("Inspector summary panel not found");
     }
 
-    expect(within(inspectorSummaryPanel as HTMLElement).getByText("실패 블록이 없습니다.")).toBeInTheDocument();
+    expect(within(inspectorSummaryPanel as HTMLElement).getByText(
+      "터미널에서 최근 명령을 실행하면 여기에서 실패 블록·추천 커맨드·최근 기록을 확인할 수 있습니다.",
+    )).toBeInTheDocument();
   });
 
   it("실패 블록에서 AI ANALYZE를 누르면 분석 상태가 STREAMING으로 표시된다", async () => {
@@ -2630,7 +2637,7 @@ describe("App (LUM 터미널)", () => {
     }]);
     const { container } = render(<App />);
 
-    const inspectorButton = await ensureInspectorOpen();
+    await ensureInspectorOpen();
 
     let summaryPanel = container.querySelector("#inspector-tabpanel-summary");
     await waitFor(() => {
@@ -2659,7 +2666,7 @@ describe("App (LUM 터미널)", () => {
     try {
       const { container } = render(<App />);
 
-      const inspectorButton = await ensureInspectorOpen();
+      await ensureInspectorOpen();
 
       let summaryPanel = container.querySelector("#inspector-tabpanel-summary");
       await waitFor(() => {
@@ -2691,7 +2698,7 @@ describe("App (LUM 터미널)", () => {
     try {
       const { container } = render(<App />);
 
-      const inspectorButton = await ensureInspectorOpen();
+      await ensureInspectorOpen();
 
       let summaryPanel = container.querySelector("#inspector-tabpanel-summary");
       await waitFor(() => {
@@ -2723,7 +2730,7 @@ describe("App (LUM 터미널)", () => {
     try {
       const { container } = render(<App />);
 
-      const inspectorButton = await ensureInspectorOpen();
+      await ensureInspectorOpen();
 
       let summaryPanel = container.querySelector("#inspector-tabpanel-summary");
       await waitFor(() => {
@@ -2771,7 +2778,7 @@ describe("App (LUM 터미널)", () => {
       }]);
       const { container } = render(<App />);
 
-      const inspectorButton = await ensureInspectorOpen();
+      await ensureInspectorOpen();
 
       let summaryPanel = container.querySelector("#inspector-tabpanel-summary");
       await waitFor(() => {
@@ -2828,7 +2835,7 @@ describe("App (LUM 터미널)", () => {
       }]);
       const { container } = render(<App />);
 
-      const inspectorButton = await ensureInspectorOpen();
+      await ensureInspectorOpen();
 
       let summaryPanel = container.querySelector("#inspector-tabpanel-summary");
       await waitFor(() => {
@@ -2891,7 +2898,7 @@ describe("App (LUM 터미널)", () => {
       }]);
       const { container } = render(<App />);
 
-      const inspectorButton = await ensureInspectorOpen();
+      await ensureInspectorOpen();
 
       let summaryPanel = container.querySelector("#inspector-tabpanel-summary");
       await waitFor(() => {
@@ -2956,7 +2963,7 @@ describe("App (LUM 터미널)", () => {
       }]);
       const { container } = render(<App />);
 
-      const inspectorButton = await ensureInspectorOpen();
+      await ensureInspectorOpen();
 
       let summaryPanel = container.querySelector("#inspector-tabpanel-summary");
       await waitFor(() => {
@@ -3020,7 +3027,7 @@ describe("App (LUM 터미널)", () => {
       }]);
       const { container } = render(<App />);
 
-      const inspectorButton = await ensureInspectorOpen();
+      await ensureInspectorOpen();
 
       let summaryPanel = container.querySelector("#inspector-tabpanel-summary");
       await waitFor(() => {
@@ -3085,7 +3092,7 @@ describe("App (LUM 터미널)", () => {
       }]);
       const { container } = render(<App />);
 
-      const inspectorButton = await ensureInspectorOpen();
+      await ensureInspectorOpen();
 
       let summaryPanel = container.querySelector("#inspector-tabpanel-summary");
       await waitFor(() => {
@@ -3147,7 +3154,7 @@ describe("App (LUM 터미널)", () => {
       }]);
       const { container } = render(<App />);
 
-      const inspectorButton = await ensureInspectorOpen();
+      await ensureInspectorOpen();
 
       let summaryPanel = container.querySelector("#inspector-tabpanel-summary");
       await waitFor(() => {
@@ -3203,7 +3210,7 @@ describe("App (LUM 터미널)", () => {
       }]);
       const { container } = render(<App />);
 
-      const inspectorButton = await ensureInspectorOpen();
+      await ensureInspectorOpen();
 
       let summaryPanel = container.querySelector("#inspector-tabpanel-summary");
       await waitFor(() => {
@@ -3260,7 +3267,7 @@ describe("App (LUM 터미널)", () => {
       }]);
       const { container } = render(<App />);
 
-      const inspectorButton = await ensureInspectorOpen();
+      await ensureInspectorOpen();
 
       let summaryPanel = container.querySelector("#inspector-tabpanel-summary");
       await waitFor(() => {
@@ -3329,7 +3336,7 @@ describe("App (LUM 터미널)", () => {
       }]);
       const { container } = render(<App />);
 
-      const inspectorButton = await ensureInspectorOpen();
+      await ensureInspectorOpen();
 
       let summaryPanel = container.querySelector("#inspector-tabpanel-summary");
       await waitFor(() => {
@@ -3396,7 +3403,7 @@ describe("App (LUM 터미널)", () => {
       }]);
       const { container } = render(<App />);
 
-      const inspectorButton = await ensureInspectorOpen();
+      await ensureInspectorOpen();
 
       let summaryPanel = container.querySelector("#inspector-tabpanel-summary");
       await waitFor(() => {
@@ -3471,7 +3478,7 @@ describe("App (LUM 터미널)", () => {
       }]);
       const { container } = render(<App />);
 
-      const inspectorButton = await ensureInspectorOpen();
+      await ensureInspectorOpen();
 
       let summaryPanel = container.querySelector("#inspector-tabpanel-summary");
       await waitFor(() => {
@@ -3552,7 +3559,7 @@ describe("App (LUM 터미널)", () => {
       }]);
       const { container } = render(<App />);
 
-      const inspectorButton = await ensureInspectorOpen();
+      await ensureInspectorOpen();
 
       let summaryPanel = container.querySelector("#inspector-tabpanel-summary");
       await waitFor(() => {
@@ -3625,7 +3632,7 @@ describe("App (LUM 터미널)", () => {
       }]);
       const { container } = render(<App />);
 
-      const inspectorButton = await ensureInspectorOpen();
+      await ensureInspectorOpen();
 
       let summaryPanel = container.querySelector("#inspector-tabpanel-summary");
       await waitFor(() => {
@@ -3691,7 +3698,7 @@ describe("App (LUM 터미널)", () => {
       }]);
       const { container } = render(<App />);
 
-      const inspectorButton = await ensureInspectorOpen();
+      await ensureInspectorOpen();
 
       let summaryPanel = container.querySelector("#inspector-tabpanel-summary");
       await waitFor(() => {
@@ -3758,7 +3765,7 @@ describe("App (LUM 터미널)", () => {
       }]);
       const { container } = render(<App />);
 
-      const inspectorButton = await ensureInspectorOpen();
+      await ensureInspectorOpen();
 
       let summaryPanel = container.querySelector("#inspector-tabpanel-summary");
       await waitFor(() => {
@@ -3825,7 +3832,7 @@ describe("App (LUM 터미널)", () => {
       }]);
       const { container } = render(<App />);
 
-      const inspectorButton = await ensureInspectorOpen();
+      await ensureInspectorOpen();
 
       let summaryPanel = container.querySelector("#inspector-tabpanel-summary");
       await waitFor(() => {
@@ -3889,7 +3896,7 @@ describe("App (LUM 터미널)", () => {
       }]);
       const { container } = render(<App />);
 
-      const inspectorButton = await ensureInspectorOpen();
+      await ensureInspectorOpen();
 
       let summaryPanel = container.querySelector("#inspector-tabpanel-summary");
       await waitFor(() => {
@@ -3927,7 +3934,7 @@ describe("App (LUM 터미널)", () => {
     }]);
     const { container } = render(<App />);
 
-    const inspectorButton = await ensureInspectorOpen();
+    await ensureInspectorOpen();
 
     let summaryPanel = container.querySelector("#inspector-tabpanel-summary");
     await waitFor(() => {
@@ -4266,7 +4273,7 @@ describe("App (LUM 터미널)", () => {
 
     render(<App />);
 
-    const inspectorButton = await ensureInspectorOpen();
+    await ensureInspectorOpen();
 
     const summaryPanel = document.querySelector("#inspector-tabpanel-summary");
     expect(summaryPanel).not.toBeNull();
@@ -4306,7 +4313,7 @@ describe("App (LUM 터미널)", () => {
 
     render(<App />);
 
-    const inspectorButton = await ensureInspectorOpen();
+    await ensureInspectorOpen();
 
     const summaryPanel = document.querySelector("#inspector-tabpanel-summary");
     expect(summaryPanel).not.toBeNull();
@@ -4346,7 +4353,7 @@ describe("App (LUM 터미널)", () => {
 
     render(<App />);
 
-    const inspectorButton = await ensureInspectorOpen();
+    await ensureInspectorOpen();
 
     const summaryPanel = document.querySelector("#inspector-tabpanel-summary");
     expect(summaryPanel).not.toBeNull();
@@ -4392,7 +4399,7 @@ describe("App (LUM 터미널)", () => {
 
     render(<App />);
 
-    const inspectorButton = await ensureInspectorOpen();
+    await ensureInspectorOpen();
 
     const summaryPanel = document.querySelector("#inspector-tabpanel-summary");
     expect(summaryPanel).not.toBeNull();
@@ -4434,7 +4441,7 @@ describe("App (LUM 터미널)", () => {
 
     const { container } = render(<App />);
 
-    const inspectorButton = await ensureInspectorOpen();
+    await ensureInspectorOpen();
 
     let summaryPanel = container.querySelector("#inspector-tabpanel-summary");
     await waitFor(() => {
@@ -4491,7 +4498,7 @@ describe("App (LUM 터미널)", () => {
 
       const { container } = render(<App />);
 
-      const inspectorButton = await ensureInspectorOpen();
+      await ensureInspectorOpen();
 
       let summaryPanel = container.querySelector("#inspector-tabpanel-summary");
       await waitFor(() => {
@@ -4550,7 +4557,7 @@ describe("App (LUM 터미널)", () => {
 
       const { container } = render(<App />);
 
-      const inspectorButton = await ensureInspectorOpen();
+      await ensureInspectorOpen();
 
       let summaryPanel = container.querySelector("#inspector-tabpanel-summary");
       await waitFor(() => {
@@ -4608,7 +4615,7 @@ describe("App (LUM 터미널)", () => {
 
       const { container } = render(<App />);
 
-      const inspectorButton = await ensureInspectorOpen();
+      await ensureInspectorOpen();
 
       let summaryPanel = container.querySelector("#inspector-tabpanel-summary");
       await waitFor(() => {

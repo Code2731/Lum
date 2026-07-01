@@ -12,6 +12,14 @@
 import { test, expect, type Page } from "@playwright/test";
 import { setupTauriMock } from "./setup/tauri-mock";
 
+type LumTestWindow = Window & {
+  __lumTest?: {
+    emitTauriEvent?: (event: string, payload: unknown) => void;
+    getInvokeCalls?: () => Array<{ cmd: string; args: unknown }>;
+    resetInvokeCalls?: () => void;
+  };
+};
+
 // 각 테스트 전에 Tauri invoke 모킹 스크립트를 페이지에 주입
 async function injectTauriMock(page: Page): Promise<void> {
   await page.addInitScript(`
@@ -22,8 +30,8 @@ async function injectTauriMock(page: Page): Promise<void> {
 async function emitPtyData(page: Page, id: string, data: string): Promise<void> {
   await page.evaluate(
     ({ event, payload }) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (window as any).__lumTest?.emitTauriEvent(event, payload);
+      const lumWindow = window as LumTestWindow;
+      lumWindow.__lumTest?.emitTauriEvent?.(event, payload);
     },
     { event: "pty_data", payload: { id, data } },
   );
@@ -31,15 +39,15 @@ async function emitPtyData(page: Page, id: string, data: string): Promise<void> 
 
 async function getInvokeCalls(page: Page): Promise<Array<{ cmd: string; args: unknown }>> {
   return page.evaluate(() => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return ((window as any).__lumTest?.getInvokeCalls?.() ?? []) as Array<{ cmd: string; args: unknown }>;
+    const lumWindow = window as LumTestWindow;
+    return lumWindow.__lumTest?.getInvokeCalls?.() ?? [];
   });
 }
 
 async function resetInvokeCalls(page: Page): Promise<void> {
   await page.evaluate(() => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (window as any).__lumTest?.resetInvokeCalls?.();
+    const lumWindow = window as LumTestWindow;
+    lumWindow.__lumTest?.resetInvokeCalls?.();
   });
 }
 

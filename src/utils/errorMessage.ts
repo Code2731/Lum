@@ -95,7 +95,7 @@ export function formatAIErrorMessage(error: unknown): string {
     return `라우팅 실패: ${message}\n해결: 백엔드 설정(모델/URL/API 키) 확인 후 다시 시도해 주세요.`;
   }
   if (isNetworkError(error)) {
-    return `네트워크/백엔드 연결 불안정: ${message}\n해결: 네트워크 상태와 백엔드 URL을 확인한 뒤 다시 시도하세요.`;
+    return `네트워크/백엔드 연결 불안정: ${message}\n해결: 네트워크 상태와 백엔드 URL을 확인한 뒤 재시도하세요.`;
   }
   return message;
 }

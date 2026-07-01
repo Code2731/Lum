@@ -20,6 +20,7 @@ import type { useTerminalTheme } from "../hooks/useTerminalTheme";
 import type { useWorkspace, Workspace } from "../hooks/useWorkspace";
 import type { useQuickActions } from "../hooks/useQuickActions";
 import type { Tab, SshProfile, TabColor } from "../hooks/useTabManager";
+import { focusMainInput } from "@/utils/focus";
 
 const ReactAgentPanel = lazy(() => import("./ReactAgentPanel"));
 const ModelManager = lazy(() => import("./ModelManager"));
@@ -122,19 +123,7 @@ const AppOverlays: React.FC<Props> = ({
   } = panels;
 
   const restoreMainInputFocus = () => {
-    if (typeof window === "undefined") return;
-    window.requestAnimationFrame(() => {
-      const mainInput = document.querySelector<HTMLInputElement>("[data-lum-main-input='true']");
-      if (mainInput) {
-        mainInput.focus();
-        return;
-      }
-
-      const fallbackInput = document.querySelector<HTMLInputElement>(
-        "input[type='text']:not([type='hidden']):not([type='checkbox']):not([type='radio']):not([type='button']):not([type='submit']):not([type='reset']):not([type='file'])",
-      );
-      fallbackInput?.focus();
-    });
+    focusMainInput();
   };
 
   return (
