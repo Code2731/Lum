@@ -126,11 +126,16 @@ const AppOverlays: React.FC<Props> = ({
     focusMainInput();
   };
 
+  const closeWithFocus = (close: () => void) => {
+    close();
+    restoreMainInputFocus();
+  };
+
   return (
     <>
       {showModelManager && (
         <Suspense fallback={null}>
-          <ModelManager onClose={() => setShowModelManager(false)} />
+          <ModelManager onClose={() => closeWithFocus(() => setShowModelManager(false))} />
         </Suspense>
       )}
 
@@ -150,7 +155,7 @@ const AppOverlays: React.FC<Props> = ({
           <CommitPanel
             model={selectedModel}
             onExecute={handleCommitExecute}
-            onClose={() => setShowCommitPanel(false)}
+            onClose={() => closeWithFocus(() => setShowCommitPanel(false))}
           />
         </ErrorBoundary>
       )}
@@ -158,7 +163,7 @@ const AppOverlays: React.FC<Props> = ({
       {showXllmPanel && (
         <Suspense fallback={null}>
           <ErrorBoundary label="xLLM">
-            <XllmPanel onClose={() => setShowXllmPanel(false)} />
+            <XllmPanel onClose={() => closeWithFocus(() => setShowXllmPanel(false))} />
           </ErrorBoundary>
         </Suspense>
       )}
@@ -166,7 +171,7 @@ const AppOverlays: React.FC<Props> = ({
       {showMcpPanel && (
         <Suspense fallback={null}>
           <ErrorBoundary label="MCP">
-            <McpPanel onClose={() => setShowMcpPanel(false)} />
+            <McpPanel onClose={() => closeWithFocus(() => setShowMcpPanel(false))} />
           </ErrorBoundary>
         </Suspense>
       )}
@@ -174,7 +179,7 @@ const AppOverlays: React.FC<Props> = ({
       {showHealingDataset && (
         <Suspense fallback={null}>
           <ErrorBoundary label="Auto-Heal 데이터셋">
-            <HealingDatasetPanel onClose={() => setShowHealingDataset(false)} />
+            <HealingDatasetPanel onClose={() => closeWithFocus(() => setShowHealingDataset(false))} />
           </ErrorBoundary>
         </Suspense>
       )}
@@ -182,7 +187,7 @@ const AppOverlays: React.FC<Props> = ({
       {showHistoryGraph && (
         <Suspense fallback={null}>
           <ErrorBoundary label="히스토리 그래프">
-            <HistoryGraphPanel onClose={() => setShowHistoryGraph(false)} />
+            <HistoryGraphPanel onClose={() => closeWithFocus(() => setShowHistoryGraph(false))} />
           </ErrorBoundary>
         </Suspense>
       )}
@@ -193,7 +198,7 @@ const AppOverlays: React.FC<Props> = ({
             <RecallPanel
               model={selectedModel}
               onInjectToChat={(text) => { aiChat.sendMessage(`다음 과거 컨텍스트를 참고해서 답해줘:\n\n${text}`); setShowRecall(false); }}
-              onClose={() => setShowRecall(false)}
+              onClose={() => closeWithFocus(() => setShowRecall(false))}
             />
           </ErrorBoundary>
         </Suspense>
@@ -202,7 +207,7 @@ const AppOverlays: React.FC<Props> = ({
       {showSkills && (
         <Suspense fallback={null}>
           <ErrorBoundary label="Skills">
-            <SkillsPanel onClose={() => setShowSkills(false)} />
+            <SkillsPanel onClose={() => closeWithFocus(() => setShowSkills(false))} />
           </ErrorBoundary>
         </Suspense>
       )}
@@ -225,7 +230,7 @@ const AppOverlays: React.FC<Props> = ({
                   /* noop */
                 }
               }}
-              onClose={() => setShowLoraForge(false)}
+              onClose={() => closeWithFocus(() => setShowLoraForge(false))}
             />
           </ErrorBoundary>
         </Suspense>
@@ -249,7 +254,7 @@ const AppOverlays: React.FC<Props> = ({
                 addTab({ cwd: squad.worktree_path, title: `🛡 ${squad.task.slice(0, 18)}` });
                 setShowSquadPanel(false);
               }}
-              onClose={() => setShowSquadPanel(false)}
+              onClose={() => closeWithFocus(() => setShowSquadPanel(false))}
             />
           </ErrorBoundary>
         </Suspense>
@@ -260,7 +265,7 @@ const AppOverlays: React.FC<Props> = ({
           <ErrorBoundary label="Diff 리뷰">
             <DiffReviewPanel
               model={selectedModel}
-              onClose={() => setShowDiffReview(false)}
+              onClose={() => closeWithFocus(() => setShowDiffReview(false))}
             />
           </ErrorBoundary>
         </Suspense>
@@ -270,7 +275,7 @@ const AppOverlays: React.FC<Props> = ({
         <ThemePanel
           appearance={appearance}
           onSave={saveAppearance}
-          onClose={() => setShowThemePanel(false)}
+          onClose={() => closeWithFocus(() => setShowThemePanel(false))}
         />
       )}
 
