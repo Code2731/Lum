@@ -143,10 +143,7 @@ const AppOverlays: React.FC<Props> = ({
         <HistorySearch
           model={selectedModel}
           onSelect={handleHistorySelect}
-          onClose={() => {
-            setShowHistorySearch(false);
-            restoreMainInputFocus();
-          }}
+          onClose={() => closeWithFocus(() => setShowHistorySearch(false))}
         />
       )}
 
