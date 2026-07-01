@@ -288,19 +288,13 @@ const AppOverlays: React.FC<Props> = ({
           onSave={async name => { await saveWorkspace(name, wsTabs, activeTabId); }}
           onRestore={handleRestoreWorkspace}
           onDelete={deleteWorkspace}
-          onClose={() => {
-            setShowWorkspace(false);
-            restoreMainInputFocus();
-          }}
+          onClose={() => closeWithFocus(() => setShowWorkspace(false))}
         />
       )}
 
       {showOnboarding && (
         <Suspense fallback={null}>
-          <OnboardingWizard onComplete={() => {
-            setShowOnboarding(false);
-            restoreMainInputFocus();
-          }} />
+          <OnboardingWizard onComplete={() => closeWithFocus(() => setShowOnboarding(false))} />
         </Suspense>
       )}
 
@@ -316,10 +310,7 @@ const AppOverlays: React.FC<Props> = ({
           onRunAction={cmd => {
             ptyWriteRefs.current.get(activePaneIdRef.current ?? "")?.(cmd + "\r");
           }}
-          onClose={() => {
-            setShowPalette(false);
-            restoreMainInputFocus();
-          }}
+          onClose={() => closeWithFocus(() => setShowPalette(false))}
         />
       )}
 
@@ -339,20 +330,16 @@ const AppOverlays: React.FC<Props> = ({
       {showSshModal && (
         <SshConnectModal
           onConnect={handleSshConnect}
-          onClose={() => {
-            setShowSshModal(false);
-            restoreMainInputFocus();
-          }}
+          onClose={() => closeWithFocus(() => setShowSshModal(false))}
         />
       )}
 
       {showWelcome && (
         <WelcomeHints
-          onClose={() => {
+          onClose={() => closeWithFocus(() => {
             setShowWelcome(false);
             invoke("save_ui_preferences", { hintsShown: true }).catch(() => {});
-            restoreMainInputFocus();
-          }}
+          })}
         />
       )}
     </>
