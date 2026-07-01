@@ -5,7 +5,58 @@ import { join } from "node:path";
 
 const args = process.argv.slice(2);
 const baseArgs = args.length ? ["test", ...args] : ["test"];
-const projectArgSpecified = args.some((value) => value === "--project" || value.startsWith("--project="));
+
+const isProjectValue = (value) => typeof value === "string" && value.trim() !== "" && !value.startsWith("--");
+const getProjectArgInfo = (rawArgs) => {
+  const occurrences = [];
+
+  for (let index = 0; index < rawArgs.length; index += 1) {
+    const arg = rawArgs[index];
+    if (arg === "--project") {
+      const nextValue = rawArgs[index + 1];
+      if (!isProjectValue(nextValue)) {
+        throw new Error("Playwright 실행 인자 오류: `--project` 뒤에 프로젝트 이름이 필요합니다. 예: `--project chromium`");
+      }
+      occurrences.push(nextValue.trim());
+      index += 1;
+      continue;
+    }
+
+    if (arg.startsWith("--project=")) {
+      const inlineValue = arg.slice("--project=".length).trim();
+      if (!inlineValue) {
+        throw new Error(
+          "Playwright 실행 인자 오류: `--project=` 뒤에 프로젝트 이름이 필요합니다. 예: `--project=chromium`",
+        );
+      }
+      occurrences.push(inlineValue);
+    }
+  }
+
+  if (occurrences.length === 0) {
+    return { specified: false, value: "unknown" };
+  }
+
+  if (occurrences.length > 1) {
+    throw new Error(
+      "Playwright 실행 인자 오류: `--project`는 중복으로 지정할 수 없습니다. `--project=이름` 또는 `--project 이름` 중 한 번만 사용하세요.",
+    );
+  }
+
+  return { specified: true, value: occurrences[0] };
+};
+
+let projectArgInfo;
+try {
+  projectArgInfo = getProjectArgInfo(args);
+} catch (error) {
+  console.error(error.message);
+  process.exit(1);
+}
+
+const projectArgSpecified = projectArgInfo.specified;
+const explicitProject = projectArgInfo.value;
+
 const fallbackProjects = projectArgSpecified
   ? []
   : (process.env.E2E_FALLBACK_PROJECTS || "chromium")
@@ -14,6 +65,7 @@ const fallbackProjects = projectArgSpecified
       .filter(Boolean);
 
 const finalFallbackProjects = fallbackProjects.length > 0 ? fallbackProjects : ["chromium"];
+const displayProjects = projectArgSpecified ? [explicitProject] : finalFallbackProjects;
 
 const testArgMatrix = projectArgSpecified
   ? [baseArgs]
@@ -75,6 +127,22 @@ if (skippedProfiles.length > 0) {
 }
 const launchFallbackProfiles = launchProfileList;
 
+const getProjectFromArgs = (testArgs) => {
+  const inline = testArgs.find((arg) => arg.startsWith("--project="));
+  if (inline) {
+    const value = inline.split("=", 2)[1]?.trim();
+    return value ? value : "unknown";
+  }
+
+  const index = testArgs.findIndex((arg) => arg === "--project");
+  if (index !== -1 && index + 1 < testArgs.length) {
+    const value = testArgs[index + 1]?.trim();
+    return value ? value : "unknown";
+  }
+
+  return "unknown";
+};
+
 const launchFailureSignatures = [
   "Target page, context or browser has been closed",
   "browserType.launch",
@@ -88,6 +156,12 @@ const launchFailureSignatures = [
   "Permission denied (1100)",
   "Check failed: kr == KERN_SUCCESS",
   "kill EPERM",
+];
+const unrecoverableLaunchSignatures = [
+  "chrome_crashpad_handler: --database is required",
+  "Permission denied (1100)",
+  "bootstrap_check_in org.chromium.Chromium.MachPortRendezvousServer",
+  "Check failed: kr == KERN_SUCCESS",
 ];
 
 const launchFailureHints = [
@@ -143,11 +217,17 @@ const printInfo = (...messages) => {
 
 const hasLaunchFailure = (output) =>
   launchFailureSignatures.some((signature) => output.includes(signature));
+const hasUnrecoverableLaunchFailure = (output) =>
+  unrecoverableLaunchSignatures.some((signature) => output.includes(signature));
 
 if (isDryRun) {
   printInfo("Dry-run enabled. No tests will be executed.");
-  printInfo(`project filter: ${projectArgSpecified ? "explicit --project 사용" : "fallback 프로젝트 순회"}`);
-  printInfo(`launch projects: ${finalFallbackProjects.join(", ")}`);
+  if (projectArgSpecified) {
+    printInfo(`project filter: explicit --project 사용 (${explicitProject})`);
+  } else {
+    printInfo("project filter: fallback 프로젝트 순회");
+  }
+  printInfo(`launch projects: ${displayProjects.join(", ")}`);
   printInfo(`launch profiles: ${launchFallbackProfiles.map((profile) => profile.name).join(", ")}`);
   printInfo(
     `playwright candidates: ${candidates.filter((candidate) => Boolean(candidate) && candidate.length > 0).join(", ")}`,
@@ -169,6 +249,7 @@ for (const command of candidates) {
     let lastOutput = "";
     let commandUnavailable = false;
 
+    let unrecoverable = false;
     for (const profileIndex of launchFallbackProfiles.keys()) {
       const profile = launchFallbackProfiles[profileIndex];
       const spawnArgs = isNpx ? [runner, ...testArgs] : testArgs;
@@ -199,12 +280,17 @@ for (const command of candidates) {
         process.exit(0);
       }
 
+      if (hasUnrecoverableLaunchFailure(output)) {
+        unrecoverable = true;
+        break;
+      }
+
       if (!hasLaunchFailure(output)) {
         break;
       }
 
       const failedProfile = profile.name;
-      const failedProject = testArgs.find((arg) => arg.startsWith("--project=")) || "unknown";
+      const failedProject = getProjectFromArgs(testArgs);
       if (profileIndex < launchFallbackProfiles.length - 1) {
         failedProfiles.push(failedProfile);
         console.error(
@@ -221,6 +307,15 @@ for (const command of candidates) {
       break;
     }
 
+    if (unrecoverable) {
+      const failedProject = getProjectFromArgs(testArgs);
+      console.error(
+        `Playwright 프로젝트 ${failedProject}에서 복구 불가 launch 오류가 감지되었습니다. 더 진행하지 않고 중단합니다.`,
+      );
+      printFailureHints(lastOutput);
+      process.exit(lastStatus ?? 1);
+    }
+
     if (commandUnavailable) {
       continue;
     }
@@ -233,7 +328,7 @@ for (const command of candidates) {
     if (!projectArgSpecified) {
       const projectIndex = testArgMatrix.indexOf(testArgs);
       const hasNextProject = projectIndex < testArgMatrix.length - 1;
-      const failedProject = testArgs.find((arg) => arg.startsWith("--project=")) || "unknown";
+      const failedProject = getProjectFromArgs(testArgs);
       if (hasLaunchFailure(lastOutput) && hasNextProject) {
         console.error(`Playwright 프로젝트 ${failedProject} 실행 실패를 감지했습니다. 다음 프로젝트로 우회합니다.`);
         continue;
