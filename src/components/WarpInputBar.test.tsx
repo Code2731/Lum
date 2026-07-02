@@ -185,6 +185,22 @@ describe("WarpInputBar — dumb input, 라우팅은 상위에서", () => {
     expect(screen.getByText(/자연어는 AI · 명령어는 실행/)).toBeInTheDocument();
   });
 
+  it("BACKEND 단독 상태일 때 백엔드 모드 안내가 표시된다", () => {
+    const { input } = setup();
+    act(() => {
+      fireEvent.change(input, { target: { value: "@local " } });
+    });
+    expect(screen.getByText(/LOCAL 백엔드가 선택되어 있습니다/)).toBeInTheDocument();
+  });
+
+  it("강제 셸 모드 단독 입력일 때 셸 모드 안내가 표시된다", () => {
+    const { input } = setup();
+    act(() => {
+      fireEvent.change(input, { target: { value: "!" } });
+    });
+    expect(screen.getByText(/셸 강제 모드/)).toBeInTheDocument();
+  });
+
   it("compactContextChips=true면 컨텍스트 칩을 핵심 + 요약으로 축약한다", () => {
     setup({
       compactContextChips: true,

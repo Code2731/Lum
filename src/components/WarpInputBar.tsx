@@ -96,6 +96,27 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
       isVisuallyEmpty ? "✨" :
       looksShell   ? "$" : "✨";
     const activeBackendLabel = activeBackend ? activeBackend.toUpperCase() : null;
+    const defaultInputHint =
+      compactContextChips
+        ? "자연어=AI · 명령어=실행 · !/@/>>/#/?"
+        : "자연어는 AI · 명령어는 실행 · !/@/>>/#/? · backend @local/@ollama/@xllm/@gemini";
+    const activeModeHint =
+      isBackendOnly && activeBackend
+        ? `${activeBackend.toUpperCase()} 백엔드가 선택되어 있습니다. 엔터로 질의를 입력하면 ${activeBackend}로 처리됩니다.`
+        : isHeavy
+          ? "헤비 모드: AI에게 긴 컨텍스트 작업 지시를 입력하세요."
+          : isAgent
+            ? "에이전트 모드: 작업 지시를 입력하면 ReAct가 실행합니다."
+            : isAICmd
+              ? "AI 제안 모드: # 뒤에 질의할 내용을 입력하세요."
+              : isExplain
+                ? "설명 모드: ? 뒤에 설명이 필요한 내용을 입력하세요."
+                : isForceShell
+                  ? "셸 강제 모드: ! 뒤에 실행할 명령어를 입력하세요."
+                  : isForceAI
+                    ? "AI 강제 모드: @ 뒤에 질의할 내용을 입력하세요."
+                    : null;
+
     const activeBackendStyle = activeBackend === "local"
       ? { color: "rgba(121,192,255,0.95)", border: "1px solid rgba(88,166,255,0.35)", background: "rgba(88,166,255,0.12)" }
       : activeBackend === "ollama"
@@ -353,6 +374,13 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
       isForceShell ? trimmedInput.slice(1).trimStart() :
       isForceAI    ? trimmedInput.slice(1).trimStart() :
       null;
+    const modeHint = isVisuallyEmpty || isBackendOnly
+      ? isBackendOnly
+        ? activeModeHint
+        : defaultInputHint
+      : body !== null && body.trim() === "" && activeModeHint
+        ? activeModeHint
+        : null;
 
     return (
       <div
@@ -519,11 +547,9 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
               lineHeight: 1.4,
             }}
           >
-            {isVisuallyEmpty ? (
+            {modeHint ? (
               <span style={{ color: "rgba(255,255,255,0.28)" }}>
-                {compactContextChips
-                  ? "자연어=AI · 명령어=실행 · !/@/>>/#/?"
-                  : "자연어는 AI · 명령어는 실행 · !/@/>>/#/? · backend @local/@ollama/@xllm/@gemini"}
+                {modeHint}
               </span>
             ) : body !== null ? (
               <span style={{ color: TOKEN_COLORS.text }}>{body}</span>
