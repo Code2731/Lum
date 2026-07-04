@@ -99,10 +99,10 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
     const defaultInputHint =
       compactContextChips
         ? "자연어=AI · 명령어=실행 · !/@/>>/#/?"
-        : "자연어는 AI · 명령어는 실행 · !/@/>>/#/? · backend @local/@ollama/@xllm/@gemini";
+        : "자연어는 AI · 명령어는 실행 · !/@/>>/#/? · backend @local/@ollama/@xllm/@gemini · Cmd/Ctrl+1~4/0 선택·해제 · Cmd/Ctrl+./, 순환";
     const activeModeHint =
       isBackendOnly && activeBackend
-        ? `${activeBackend.toUpperCase()} 백엔드가 선택되어 있습니다. 엔터로 질의를 입력하면 ${activeBackend}로 처리됩니다.`
+        ? `${activeBackend.toUpperCase()} 백엔드가 선택되어 있습니다. 엔터로 질의를 입력하면 ${activeBackend}로 처리됩니다. Cmd/Ctrl+0으로 해제하고 Cmd/Ctrl+./,로 순환할 수 있습니다.`
         : isHeavy
           ? "헤비 모드: AI에게 긴 컨텍스트 작업 지시를 입력하세요."
           : isAgent
@@ -617,7 +617,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
                 background: activeBackendStyle.background,
                 cursor: "pointer",
               }}
-              title="현재 backend 강제 상태 (Cmd/Ctrl+` 또는 Cmd/Ctrl+. 정순환, Cmd/Ctrl+Shift+` 또는 Cmd/Ctrl+, 역순환, 클릭/Cmd/Ctrl+0 해제)"
+              title="현재 backend 강제 상태 (Cmd/Ctrl+1~4/0 direct 지정·해제, Cmd/Ctrl+./, direct 순환, 클릭으로 해제)"
             >
               BACKEND {activeBackendLabel}
             </button>

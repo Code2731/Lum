@@ -1,9 +1,37 @@
 # PROGRESS
 
+## 2026-07-05
+
+### 이번 라운드 완료
+
+- WarpInputBar backend-only 안내 문구 동사 정합성 보강
+  - `src/components/WarpInputBar.tsx` backend-only 안내의 `Cmd/Ctrl+./,` 동작 설명을 `전환`에서 `순환`으로 통일
+  - `src/components/WarpInputBar.test.tsx` backend-only 안내에 direct 순환 문구 노출 회귀 보강
+- WarpInputBar backend 배지 tooltip 계약 정합성 보강
+  - `src/components/WarpInputBar.tsx` backend 배지 tooltip을 `Cmd/Ctrl+1~4/0` direct 지정·해제와 `Cmd/Ctrl+./,` direct 순환 기준으로 갱신
+  - `src/components/WarpInputBar.test.tsx` tooltip 문구 회귀 테스트 1건 추가
+- WarpInputBar 기본 backend 힌트 계약 정합성 보강
+  - `src/components/WarpInputBar.tsx` 빈 입력 도움말을 `Cmd/Ctrl+1~4/0` 선택·해제 + `Cmd/Ctrl+./,` 순환 안내까지 포함하도록 갱신
+  - `src/components/WarpInputBar.test.tsx` 기본 도움말에 direct backend 순환 문구 노출 회귀 테스트 보강
+- TerminalPane shortcut cheatsheet backend 계약 정합성 보강
+  - `src/components/TerminalPane.tsx` 치트시트에 `Cmd/Ctrl+1~4/0` direct backend 지정·해제와 `Cmd/Ctrl+./,` direct backend 순환 항목 추가
+  - `src/components/TerminalPane.test.tsx` 치트시트 오픈 시 해당 항목 노출 회귀 테스트 추가
+- 회귀 검증
+  - `npm test -- --run src/components/WarpInputBar.test.tsx` 결과: 1 file / 64 tests passed
+  - `npm test -- --run src/components/WarpInputBar.test.tsx` 결과: 1 file / 63 tests passed
+  - `npm test -- --run src/components/TerminalPane.test.tsx` 결과: 1 file / 158 tests passed
+
 ## 2026-07-04
 
 ### 이번 라운드 완료
 
+- TerminalPane backend 툴벨트 팁 계약 정합성 보강
+  - `src/components/TerminalPane.tsx` 좁은/기본 툴벨트 TIP 문구를 `Cmd/Ctrl+1~4/0` 지정·해제와 `Cmd/Ctrl+./,` 순환 안내까지 포함하도록 갱신
+  - `src/components/TerminalPane.test.tsx` TIP 배너 실노출 경로 양성 테스트 1건 추가
+- Warp 입력창 backend quick-switch 안내 UX 보강
+  - `src/components/WarpInputBar.tsx` 빈 입력 도움말에 `Cmd/Ctrl+1-4` 선택, `Cmd/Ctrl+0` 해제 단축키 노출 추가
+  - backend prefix-only 상태 안내에 `Cmd/Ctrl+0` 해제 + `Cmd/Ctrl+./,` 순환 가이드 추가
+  - `src/components/WarpInputBar.test.tsx` 관련 안내 문구 회귀 테스트 2건 추가
 - MCP/AI 라우팅 장애 대응 정합성 마감
   - `scripts/run-e2e-noserver.js`의 launch profile 복구 분기 정렬(권한 계열 에러를 복구 가능로 이동) 반영
   - `scripts/run-e2e-noserver.test.ts` 테스트 기대값 업데이트 및 재시도 동작 보강
@@ -11,6 +39,8 @@
   - `src/utils/errorMessage.ts` 라우팅/네트워크 문구 강화 + 타임아웃 키워드 보완
   - `src/components/ToolCallCard.test.tsx`, `src/utils/errorMessage.test.ts` 추가/갱신으로 회귀 고정
 - 회귀 검증
+  - `npm test -- --run src/components/TerminalPane.test.tsx` 결과: 1 file / 158 tests passed
+  - `npm test -- --run src/components/WarpInputBar.test.tsx` 결과: 1 file / 63 tests passed
   - `npm test -- --run` 결과: 61 files / 1610 tests passed
   - `npm run lint` 통과
   - `cd src-tauri && cargo test` 통과

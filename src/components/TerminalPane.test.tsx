@@ -146,9 +146,9 @@ function expectClearActionEnabled() {
 }
 
 const TOOLBELT_TIP_FULL =
-  "TIP · Cmd/Ctrl+1~4 backend 전환 · Cmd/Ctrl+Shift+A @첨부 · Cmd/Ctrl+Shift+B/N BACK/LAST · Cmd/Ctrl+Shift+K/Z/R/L/M/P 입력 편집";
+  "TIP · Cmd/Ctrl+1~4/0 backend 지정·해제 · Cmd/Ctrl+./, backend 순환 · Cmd/Ctrl+Shift+A @첨부 · Cmd/Ctrl+Shift+B/N BACK/LAST · Cmd/Ctrl+Shift+K/Z/R/L/M/P 입력 편집";
 const TOOLBELT_TIP_NARROW =
-  "TIP · Cmd/Ctrl+1~4 backend · Shift+A @첨부 · Shift+B/N BACK/LAST · Shift+K/Z/R/L/M/P 편집";
+  "TIP · Cmd/Ctrl+1~4/0 backend · Cmd/Ctrl+./, 순환 · Shift+A @첨부 · Shift+B/N BACK/LAST · Shift+K/Z/R/L/M/P 편집";
 
 describe("TerminalPane — 입력 라우팅", () => {
   it("알려진 CLI (ls) → write_to_pty", async () => {
@@ -695,6 +695,14 @@ describe("TerminalPane — 입력 라우팅", () => {
     });
   });
 
+  it("입력 툴벨트 TIP 배너는 backend 지정·해제와 순환 단축키를 함께 노출한다", async () => {
+    render(<TerminalPane id="tab-1" />);
+
+    await waitFor(() => {
+      expect(screen.getByText(TOOLBELT_TIP_NARROW)).toBeInTheDocument();
+    });
+  });
+
   it("기존 localStorage 값은 config로 마이그레이션되고 즉시 반영된다", async () => {
     try {
       localStorage.setItem("lum_input_toolbelt_tip_dismissed", "1");
@@ -736,6 +744,8 @@ describe("TerminalPane — 입력 라우팅", () => {
     fireEvent.keyDown(input, { key: "/", code: "Slash", ctrlKey: true });
     expect(screen.getByText("SHORTCUT CHEATSHEET")).toBeInTheDocument();
     expect(screen.getByText("Cmd/Ctrl+Shift+C · 인터럽트")).toBeInTheDocument();
+    expect(screen.getByText("Cmd/Ctrl+1~4/0 · backend 직접 지정/해제")).toBeInTheDocument();
+    expect(screen.getByText("Cmd/Ctrl+./, · backend 직접 순환")).toBeInTheDocument();
 
     fireEvent.keyDown(input, { key: "Escape" });
     expect(screen.queryByText("SHORTCUT CHEATSHEET")).not.toBeInTheDocument();

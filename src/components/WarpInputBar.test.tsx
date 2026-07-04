@@ -159,6 +159,19 @@ describe("WarpInputBar — dumb input, 라우팅은 상위에서", () => {
     expect(screen.queryByText("BACKEND GEMINI")).not.toBeInTheDocument();
   });
 
+  it("BACKEND 배지 tooltip은 direct 지정·해제와 순환 단축키를 안내한다", () => {
+    const { input } = setup();
+    fireEvent.change(input, { target: { value: "@local 로그 요약해줘" } });
+    expect(screen.getByRole("button", { name: "clear-backend-badge" })).toHaveAttribute(
+      "title",
+      expect.stringContaining("Cmd/Ctrl+1~4/0"),
+    );
+    expect(screen.getByRole("button", { name: "clear-backend-badge" })).toHaveAttribute(
+      "title",
+      expect.stringContaining("Cmd/Ctrl+./,"),
+    );
+  });
+
   it(">> 입력도 그대로 onSubmit에 전달 (라우팅은 부모가)", () => {
     const { input, onSubmit } = setup();
     fireEvent.change(input, { target: { value: ">> 파일 목록" } });
@@ -177,6 +190,8 @@ describe("WarpInputBar — dumb input, 라우팅은 상위에서", () => {
     setup();
     expect(screen.getByText(/자연어는 AI · 명령어는 실행/)).toBeInTheDocument();
     expect(screen.getByText(/backend @local\/@ollama\/@xllm\/@gemini/)).toBeInTheDocument();
+    expect(screen.getByText(/Cmd\/Ctrl\+1~4\/0 선택·해제/)).toBeInTheDocument();
+    expect(screen.getByText(/Cmd\/Ctrl\+\./)).toBeInTheDocument();
   });
 
   it("공백만 입력된 상태에서도 빈 입력 도움말을 유지한다", () => {
@@ -191,6 +206,9 @@ describe("WarpInputBar — dumb input, 라우팅은 상위에서", () => {
       fireEvent.change(input, { target: { value: "@local " } });
     });
     expect(screen.getByText(/LOCAL 백엔드가 선택되어 있습니다/)).toBeInTheDocument();
+    expect(screen.getByText(/Cmd\/Ctrl\+0으로 해제/)).toBeInTheDocument();
+    expect(screen.getByText(/Cmd\/Ctrl\+\./)).toBeInTheDocument();
+    expect(screen.getByText(/순환할 수 있습니다/)).toBeInTheDocument();
   });
 
   it("강제 셸 모드 단독 입력일 때 셸 모드 안내가 표시된다", () => {
