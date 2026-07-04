@@ -2159,7 +2159,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
                 setActionPaletteSelected(0);
               }}
               onKeyDown={handleActionPaletteKeyDown}
-              placeholder="액션 검색 (예: clear, recall, backend)"
+              placeholder="액션 검색 (예: clear, recall, 백엔드)"
             />
           </div>
           <div className="lum-overlay-list">

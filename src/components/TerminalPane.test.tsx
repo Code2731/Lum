@@ -764,6 +764,18 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(screen.queryByText("ACTION PALETTE")).not.toBeInTheDocument();
   });
 
+  it("Action Palette placeholder는 백엔드 예시를 노출한다", () => {
+    const { container } = render(<TerminalPane id="tab-1" />);
+    const input = container.querySelector("input")!;
+
+    fireEvent.keyDown(input, { key: "k", code: "KeyK", ctrlKey: true });
+    expect(screen.getByText("ACTION PALETTE")).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "action-palette-input" })).toHaveAttribute(
+      "placeholder",
+      "액션 검색 (예: clear, recall, 백엔드)",
+    );
+  });
+
   it("입력 단축키 Cmd/Ctrl+Alt+K는 Action Palette를 열지 않는다", () => {
     const { container } = render(<TerminalPane id="tab-1" />);
     const input = container.querySelector("input")!;

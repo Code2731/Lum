@@ -27,6 +27,9 @@
   - `src/components/WarpInputBar.test.tsx` 관련 회귀 기대값을 동일 용어로 갱신
 - WarpInputBar 백엔드 툴팁 라벨 정합성 보강
   - `src/components/WarpInputBar.tsx` 백엔드 강제 상태 안내 툴팁 문구의 `backend` 표기를 `백엔드`로 통일
+- TerminalPane action palette placeholder 정합성 보강
+  - `src/components/TerminalPane.tsx` action 검색 예시의 `backend` 표기를 `백엔드`로 통일
+  - `src/components/TerminalPane.test.tsx` placeholder 노출 회귀 테스트 추가
 - 회귀 검증
   - `npm test -- --run src/components/WarpInputBar.test.tsx` 결과: 1 file / 64 tests passed
   - `npm test -- --run src/components/WarpInputBar.test.tsx` 결과: 1 file / 63 tests passed
