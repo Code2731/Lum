@@ -1944,8 +1944,8 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     !mentionOpen &&
     !shortcutHelpOpen;
   const inputToolbeltTipText = inputDockNarrow
-    ? "TIP · Cmd/Ctrl+1~4/0 backend · Cmd/Ctrl+./, 순환 · Shift+A @첨부 · Shift+B/N BACK/LAST · Shift+K/Z/R/L/M/P 편집"
-    : "TIP · Cmd/Ctrl+1~4/0 backend 지정·해제 · Cmd/Ctrl+./, backend 순환 · Cmd/Ctrl+Shift+A @첨부 · Cmd/Ctrl+Shift+B/N BACK/LAST · Cmd/Ctrl+Shift+K/Z/R/L/M/P 입력 편집";
+    ? "TIP · Cmd/Ctrl+1~4/0 백엔드 직접 지정·해제 · Cmd/Ctrl+./, 백엔드 직접 순환 · Shift+A @첨부 · Shift+B/N BACK/LAST · Shift+K/Z/R/L/M/P 편집"
+    : "TIP · Cmd/Ctrl+1~4/0 백엔드 직접 지정·해제 · Cmd/Ctrl+./, 백엔드 직접 순환 · Cmd/Ctrl+Shift+A @첨부 · Cmd/Ctrl+Shift+B/N BACK/LAST · Cmd/Ctrl+Shift+K/Z/R/L/M/P 입력 편집";
   const dismissInputTip = useCallback(() => {
     setShowInputTip(false);
     try {
@@ -2414,8 +2414,8 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
           </div>
           <div className="lum-cheatsheet-grid">
             <span>Cmd/Ctrl+/ · 치트시트 토글</span><span>Cmd/Ctrl+Shift+C · 인터럽트</span>
-            <span>Cmd/Ctrl+1~4/0 · backend 직접 지정/해제</span><span>Cmd/Ctrl+./, · backend 직접 순환</span>
-            <span>Cmd/Ctrl+Shift+1~4/0 · backend 지정/해제</span><span>Cmd/Ctrl+Shift+←/→ · backend 순환</span>
+            <span>Cmd/Ctrl+1~4/0 · 백엔드 직접 지정/해제</span><span>Cmd/Ctrl+./, · 백엔드 직접 순환</span>
+            <span>Cmd/Ctrl+Shift+1~4/0 · 백엔드 지정/해제</span><span>Cmd/Ctrl+Shift+←/→ · 백엔드 순환</span>
             <span>Cmd/Ctrl+Shift+B/N · BACK/LAST</span><span>Cmd/Ctrl+Shift+O · AUTO 토글</span>
             <span>Cmd/Ctrl+Shift+K/Z/R · CLEAR/UNDO/RECALL</span><span>Cmd/Ctrl+Shift+S/F · SET/FORGET RECALL</span>
             <span>Cmd/Ctrl+Shift+E/W · RERUN/SWAP</span><span>Cmd/Ctrl+Shift+M/P · MERGE/PREPEND</span>

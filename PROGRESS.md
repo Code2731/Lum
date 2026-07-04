@@ -4,6 +4,9 @@
 
 ### 이번 라운드 완료
 
+- WarpInputBar backend 배지 tooltip 한글 표현 정합성 보강
+  - `src/components/WarpInputBar.tsx` backend 배지 tooltip의 `direct` 영문 표현을 `직접`으로 통일
+  - `src/components/WarpInputBar.test.tsx` tooltip 문구의 한글 표현 회귀 보강
 - WarpInputBar backend-only 안내 문구 동사 정합성 보강
   - `src/components/WarpInputBar.tsx` backend-only 안내의 `Cmd/Ctrl+./,` 동작 설명을 `전환`에서 `순환`으로 통일
   - `src/components/WarpInputBar.test.tsx` backend-only 안내에 direct 순환 문구 노출 회귀 보강
@@ -16,6 +19,9 @@
 - TerminalPane shortcut cheatsheet backend 계약 정합성 보강
   - `src/components/TerminalPane.tsx` 치트시트에 `Cmd/Ctrl+1~4/0` direct backend 지정·해제와 `Cmd/Ctrl+./,` direct backend 순환 항목 추가
   - `src/components/TerminalPane.test.tsx` 치트시트 오픈 시 해당 항목 노출 회귀 테스트 추가
+- TerminalPane 입력 툴밸트 문구의 백엔드 용어 정합성 보강
+  - `src/components/TerminalPane.tsx` 입력 TIP 배너와 치트시트에서 `backend` 표현을 `백엔드`로 통일
+  - `src/components/TerminalPane.test.tsx` 문구 검증 기대값을 동일 기준으로 갱신
 - 회귀 검증
   - `npm test -- --run src/components/WarpInputBar.test.tsx` 결과: 1 file / 64 tests passed
   - `npm test -- --run src/components/WarpInputBar.test.tsx` 결과: 1 file / 63 tests passed

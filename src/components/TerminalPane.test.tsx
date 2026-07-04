@@ -146,9 +146,9 @@ function expectClearActionEnabled() {
 }
 
 const TOOLBELT_TIP_FULL =
-  "TIP · Cmd/Ctrl+1~4/0 backend 지정·해제 · Cmd/Ctrl+./, backend 순환 · Cmd/Ctrl+Shift+A @첨부 · Cmd/Ctrl+Shift+B/N BACK/LAST · Cmd/Ctrl+Shift+K/Z/R/L/M/P 입력 편집";
+  "TIP · Cmd/Ctrl+1~4/0 백엔드 직접 지정·해제 · Cmd/Ctrl+./, 백엔드 직접 순환 · Cmd/Ctrl+Shift+A @첨부 · Cmd/Ctrl+Shift+B/N BACK/LAST · Cmd/Ctrl+Shift+K/Z/R/L/M/P 입력 편집";
 const TOOLBELT_TIP_NARROW =
-  "TIP · Cmd/Ctrl+1~4/0 backend · Cmd/Ctrl+./, 순환 · Shift+A @첨부 · Shift+B/N BACK/LAST · Shift+K/Z/R/L/M/P 편집";
+  "TIP · Cmd/Ctrl+1~4/0 백엔드 직접 지정·해제 · Cmd/Ctrl+./, 백엔드 직접 순환 · Shift+A @첨부 · Shift+B/N BACK/LAST · Shift+K/Z/R/L/M/P 편집";
 
 describe("TerminalPane — 입력 라우팅", () => {
   it("알려진 CLI (ls) → write_to_pty", async () => {
@@ -744,8 +744,8 @@ describe("TerminalPane — 입력 라우팅", () => {
     fireEvent.keyDown(input, { key: "/", code: "Slash", ctrlKey: true });
     expect(screen.getByText("SHORTCUT CHEATSHEET")).toBeInTheDocument();
     expect(screen.getByText("Cmd/Ctrl+Shift+C · 인터럽트")).toBeInTheDocument();
-    expect(screen.getByText("Cmd/Ctrl+1~4/0 · backend 직접 지정/해제")).toBeInTheDocument();
-    expect(screen.getByText("Cmd/Ctrl+./, · backend 직접 순환")).toBeInTheDocument();
+    expect(screen.getByText("Cmd/Ctrl+1~4/0 · 백엔드 직접 지정/해제")).toBeInTheDocument();
+    expect(screen.getByText("Cmd/Ctrl+./, · 백엔드 직접 순환")).toBeInTheDocument();
 
     fireEvent.keyDown(input, { key: "Escape" });
     expect(screen.queryByText("SHORTCUT CHEATSHEET")).not.toBeInTheDocument();
