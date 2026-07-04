@@ -1520,7 +1520,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
   const actionPaletteActions = useMemo(() => ([
     {
       id: "history_open",
-      label: "Open Input History",
+      label: "입력 기록 열기",
       keywords: "history recent",
       run: () => {
         setInputHistoryOpen(true);
@@ -1531,31 +1531,31 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
       },
       disabled: submittedInputHistory.length === 0,
     },
-    { id: "clear", label: "Clear Input", keywords: "clear", run: clearInputQuick, disabled: !canClearInputQuick },
-    { id: "interrupt", label: "Interrupt Running Task", keywords: "interrupt stop cancel", run: handleInterrupt, disabled: false },
-    { id: "undo", label: "Undo Clear", keywords: "undo restore", run: restoreInputQuick, disabled: clearedInputStack.length === 0 },
-    { id: "set_recall", label: "Set Recall From Current Input", keywords: "set recall save current", run: setRecallFromCurrentQuick, disabled: !canSetRecallFromCurrent },
-    { id: "recall", label: "Recall Last Input", keywords: "recall", run: recallSubmittedInputQuick, disabled: !canRecallSubmittedInput },
-    { id: "rerun", label: "Rerun Last Input", keywords: "rerun repeat", run: rerunSubmittedInputQuick, disabled: !canRerunSubmittedInput },
-    { id: "forget_recall", label: "Forget Recall Input", keywords: "forget recall drop", run: forgetSubmittedInputQuick, disabled: !lastSubmittedInput },
-    { id: "swap_recall", label: "Swap Current/Recall Input", keywords: "swap recall", run: swapWithSubmittedInputQuick, disabled: !canSwapSubmittedInput },
-    { id: "merge_recall", label: "Merge Recall Input", keywords: "merge recall", run: mergeSubmittedInputQuick, disabled: !canMergeRecall },
-    { id: "prepend_recall", label: "Prepend Recall Input", keywords: "prepend recall", run: prependSubmittedInputQuick, disabled: !canPrependRecall },
-    { id: "reset", label: "Reset Input State", keywords: "reset", run: resetAllInputStateQuick, disabled: !canResetAllQuick },
-    { id: "toggle_terminal", label: "Toggle Terminal View", keywords: "terminal view", run: () => setTerminalVisible((v) => !v), disabled: false },
-    { id: "toggle_vision", label: "Toggle Vision Mode", keywords: "vision image", run: () => setVisionMode((v) => !v), disabled: false },
-    { id: "toggle_reasoning", label: showReasoning ? "Hide Reasoning View" : "Show Reasoning View", keywords: "reasoning think", run: () => onToggleReasoning?.(), disabled: false },
-    { id: "mention_attach", label: "Attach File Mention", keywords: "mention attach file @", run: triggerMentionAttach, disabled: false },
-    { id: "plain", label: "Normalize to Plain Input", keywords: "plain normalize prefix", run: normalizeInputToPlain, disabled: !canNormalizeToPlain },
-    { id: "trim", label: "Trim Input", keywords: "trim whitespace", run: trimInputQuick, disabled: !canTrimInput },
-    { id: "squash", label: "Squash Spaces", keywords: "squash spaces", run: squashInputSpacesQuick, disabled: !canSquashInputSpaces },
-    { id: "clean", label: "Clean Input (Trim + Squash)", keywords: "clean trim squash", run: cleanInputQuick, disabled: !canCleanInput },
-    { id: "mode_heavy", label: "Toggle Heavy Mode (!!)", keywords: "mode heavy !!", run: () => toggleQuickModePrefix("heavy"), disabled: false },
-    { id: "mode_shell", label: "Toggle Shell Mode (!)", keywords: "mode shell !", run: () => toggleQuickModePrefix("shell"), disabled: false },
-    { id: "mode_agent", label: "Toggle Agent Mode (>>)", keywords: "mode agent >>", run: () => toggleQuickModePrefix("agent"), disabled: false },
-    { id: "mode_explain", label: "Toggle Explain Mode (?)", keywords: "mode explain ?", run: () => toggleQuickModePrefix("explain"), disabled: false },
-    { id: "mode_ai_cmd", label: "Toggle AI Cmd Mode (#)", keywords: "mode ai cmd #", run: () => toggleQuickModePrefix("aiCmd"), disabled: false },
-    { id: "mode_force_ai", label: "Toggle Force AI Mode (@)", keywords: "mode force ai @", run: toggleForceAiPrefix, disabled: false },
+    { id: "clear", label: "입력 지우기", keywords: "clear", run: clearInputQuick, disabled: !canClearInputQuick },
+    { id: "interrupt", label: "실행 중단", keywords: "interrupt stop cancel", run: handleInterrupt, disabled: false },
+    { id: "undo", label: "입력 복구", keywords: "undo restore", run: restoreInputQuick, disabled: clearedInputStack.length === 0 },
+    { id: "set_recall", label: "현재 입력으로 Recall 저장", keywords: "set recall save current", run: setRecallFromCurrentQuick, disabled: !canSetRecallFromCurrent },
+    { id: "recall", label: "마지막 입력 불러오기", keywords: "recall", run: recallSubmittedInputQuick, disabled: !canRecallSubmittedInput },
+    { id: "rerun", label: "마지막 입력 다시 실행", keywords: "rerun repeat", run: rerunSubmittedInputQuick, disabled: !canRerunSubmittedInput },
+    { id: "forget_recall", label: "Recall 기록 삭제", keywords: "forget recall drop", run: forgetSubmittedInputQuick, disabled: !lastSubmittedInput },
+    { id: "swap_recall", label: "현재 입력과 Recall 교체", keywords: "swap recall", run: swapWithSubmittedInputQuick, disabled: !canSwapSubmittedInput },
+    { id: "merge_recall", label: "Recall 입력 병합", keywords: "merge recall", run: mergeSubmittedInputQuick, disabled: !canMergeRecall },
+    { id: "prepend_recall", label: "Recall 입력 앞에 추가", keywords: "prepend recall", run: prependSubmittedInputQuick, disabled: !canPrependRecall },
+    { id: "reset", label: "입력 상태 초기화", keywords: "reset", run: resetAllInputStateQuick, disabled: !canResetAllQuick },
+    { id: "toggle_terminal", label: "터미널 뷰 토글", keywords: "terminal view", run: () => setTerminalVisible((v) => !v), disabled: false },
+    { id: "toggle_vision", label: "비전 모드 토글", keywords: "vision image", run: () => setVisionMode((v) => !v), disabled: false },
+    { id: "toggle_reasoning", label: showReasoning ? "추론 뷰 숨기기" : "추론 뷰 보이기", keywords: "reasoning think", run: () => onToggleReasoning?.(), disabled: false },
+    { id: "mention_attach", label: "파일 첨부", keywords: "mention attach file @", run: triggerMentionAttach, disabled: false },
+    { id: "plain", label: "일반 입력으로 정리", keywords: "plain normalize prefix", run: normalizeInputToPlain, disabled: !canNormalizeToPlain },
+    { id: "trim", label: "앞뒤 공백 정리", keywords: "trim whitespace", run: trimInputQuick, disabled: !canTrimInput },
+    { id: "squash", label: "연속 공백 압축", keywords: "squash spaces", run: squashInputSpacesQuick, disabled: !canSquashInputSpaces },
+    { id: "clean", label: "입력 정리 (정규화 + 압축)", keywords: "clean trim squash", run: cleanInputQuick, disabled: !canCleanInput },
+    { id: "mode_heavy", label: "헤비 모드 토글 (!!)", keywords: "mode heavy !!", run: () => toggleQuickModePrefix("heavy"), disabled: false },
+    { id: "mode_shell", label: "셸 모드 토글 (!)", keywords: "mode shell !", run: () => toggleQuickModePrefix("shell"), disabled: false },
+    { id: "mode_agent", label: "에이전트 모드 토글 (>>)", keywords: "mode agent >>", run: () => toggleQuickModePrefix("agent"), disabled: false },
+    { id: "mode_explain", label: "설명 모드 토글 (?)", keywords: "mode explain ?", run: () => toggleQuickModePrefix("explain"), disabled: false },
+    { id: "mode_ai_cmd", label: "AI CMD 모드 토글 (#)", keywords: "mode ai cmd #", run: () => toggleQuickModePrefix("aiCmd"), disabled: false },
+    { id: "mode_force_ai", label: "강제 AI 모드 토글 (@)", keywords: "mode force ai @", run: toggleForceAiPrefix, disabled: false },
     { id: "backend_auto", label: "백엔드 자동 토글", keywords: "backend auto", run: clearBackendQuickPrefix, disabled: false },
     { id: "backend_back", label: "백엔드 이전", keywords: "backend back", run: restorePrevBackendQuickPrefix, disabled: !canRestorePrevBackendQuick },
     { id: "backend_last", label: "백엔드 마지막", keywords: "backend last", run: restoreLastBackendQuickPrefix, disabled: !canRestoreLastBackendQuick },
@@ -1899,20 +1899,20 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
 
   const routeMeta = useMemo(() => {
     const route = routeInput(inputBuffer);
-    const backendTag = (backend?: AiBackend) => (backend ? ` @${backend.toUpperCase()}` : " AUTO");
+    const backendTag = (backend?: AiBackend) => (backend ? ` @${backend.toUpperCase()}` : " 자동");
     switch (route.type) {
       case "shell":
-        return { label: "SHELL", tone: "success" as const };
+        return { label: "셸", tone: "success" as const };
       case "ai":
         return { label: `AI${backendTag(route.backend)}`, tone: "accent" as const };
       case "agent":
-        return { label: `AGENT${backendTag(route.backend)}`, tone: "warn" as const };
+        return { label: `에이전트${backendTag(route.backend)}`, tone: "warn" as const };
       case "aiCmd":
-        return { label: "AI CMD #", tone: "accent" as const };
+        return { label: "AI 명령 #", tone: "accent" as const };
       case "explain":
-        return { label: "EXPLAIN ?", tone: "neutral" as const };
+        return { label: "설명 ?", tone: "neutral" as const };
       case "heavy":
-        return { label: "HEAVY !!", tone: "warn" as const };
+        return { label: "헤비 !!", tone: "warn" as const };
       case "empty":
       default:
         return { label: "AUTO 라우팅", tone: "accent" as const };

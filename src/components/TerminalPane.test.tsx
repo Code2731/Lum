@@ -408,7 +408,7 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(invokeMock.mock.calls.filter((c) => c[0] === "write_to_pty").length).toBe(0);
   });
 
-  it("입력 중 라우팅 칩이 동적으로 바뀐다 (SHELL/AI/AGENT)", async () => {
+  it("입력 중 라우팅 칩이 동적으로 바뀐다 (셸/AI/에이전트)", async () => {
     const { container } = render(<TerminalPane id="tab-1" />);
     const input = container.querySelector("input")!;
 
@@ -418,7 +418,7 @@ describe("TerminalPane — 입력 라우팅", () => {
 
     fireEvent.change(input, { target: { value: "ls -la" } });
     fireEvent.blur(input);
-    expect(screen.getByText("SHELL")).toBeInTheDocument();
+    expect(screen.getByText("셸")).toBeInTheDocument();
     expect(screen.queryByText("BACKEND AUTO (LOCAL→OLLAMA→XLLM→GEMINI)")).not.toBeInTheDocument();
     expect(screen.queryByText("WHY HEURISTIC CLI")).not.toBeInTheDocument();
 
@@ -433,16 +433,16 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(screen.queryByText("WHY BACKEND @XLLM")).not.toBeInTheDocument();
 
     fireEvent.change(input, { target: { value: "@local src/utils.ts 함수 수정해줘" } });
-    expect(screen.getByText("AGENT @LOCAL")).toBeInTheDocument();
+    expect(screen.getByText("에이전트 @LOCAL")).toBeInTheDocument();
     expect(screen.getByText("백엔드 강제 @LOCAL")).toBeInTheDocument();
     expect(screen.queryByText("WHY BACKEND @LOCAL")).not.toBeInTheDocument();
 
     fireEvent.change(input, { target: { value: "#로그 요약해줘" } });
-    expect(screen.getByText("AI AUTO")).toBeInTheDocument();
+    expect(screen.getByText("AI 자동")).toBeInTheDocument();
     expect(screen.queryByText("WHY HEURISTIC INTENT")).not.toBeInTheDocument();
 
     fireEvent.change(input, { target: { value: "# 로그 요약해줘" } });
-    expect(screen.getByText("AI CMD #")).toBeInTheDocument();
+    expect(screen.getByText("AI 명령 #")).toBeInTheDocument();
     expect(screen.queryByText("WHY PREFIX #")).not.toBeInTheDocument();
   });
 
@@ -455,7 +455,7 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(screen.queryByText("백엔드 강제 @XLLM")).not.toBeInTheDocument();
 
     fireEvent.change(input, { target: { value: "\t@local\t>>\t" } });
-    expect(screen.queryByText("AGENT @LOCAL")).not.toBeInTheDocument();
+    expect(screen.queryByText("에이전트 @LOCAL")).not.toBeInTheDocument();
     expect(screen.getByText("백엔드 강제 @LOCAL")).toBeInTheDocument();
   });
 
@@ -2287,7 +2287,7 @@ describe("TerminalPane — 입력 라우팅", () => {
 
     fireEvent.keyDown(input, { key: "O", ctrlKey: true, shiftKey: true });
     expect(input).toHaveValue("로그 요약해줘");
-    expect(screen.getByText("AI AUTO")).toBeInTheDocument();
+    expect(screen.getByText("AI 자동")).toBeInTheDocument();
 
     fireEvent.keyDown(input, { key: "O", ctrlKey: true, shiftKey: true });
     expect(input).toHaveValue("@gemini 로그 요약해줘");
@@ -2307,7 +2307,7 @@ describe("TerminalPane — 입력 라우팅", () => {
 
     fireEvent.keyDown(input, { key: "0", code: "Digit0", ctrlKey: true, shiftKey: true });
     expect(input).toHaveValue("로그 요약해줘");
-    expect(screen.getByText("AI AUTO")).toBeInTheDocument();
+    expect(screen.getByText("AI 자동")).toBeInTheDocument();
   });
 
   it("입력 단축키 Cmd/Ctrl+Shift+←/→로 backend를 순환한다", () => {
@@ -2425,10 +2425,10 @@ describe("TerminalPane — 입력 라우팅", () => {
     const input = container.querySelector("input")!;
 
     fireEvent.change(input, { target: { value: "#로그 요약해줘" } });
-    expect(screen.queryByText("AI CMD #")).not.toBeInTheDocument();
+    expect(screen.queryByText("AI 명령 #")).not.toBeInTheDocument();
 
     fireEvent.change(input, { target: { value: "?로그 요약해줘" } });
-    expect(screen.queryByText("EXPLAIN ?")).not.toBeInTheDocument();
+    expect(screen.queryByText("설명 ?")).not.toBeInTheDocument();
   });
 
   it("공백 없는 #/? 입력에서 모드 토글 단축키를 누르면 마커를 중첩하지 않고 정규화한다", () => {

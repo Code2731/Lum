@@ -47,6 +47,15 @@
   - `npm test -- --run src/components/TerminalPane.test.tsx` 결과: 1 file / 160 tests passed
   - `npm test -- --run src/components/TerminalPane.test.tsx -t "Action Palette의 백엔드 액션 라벨이 한국어로 표시된다"` 결과: 1 test passed
   - `npm test -- --run src/components/WarpInputBar.test.tsx` 결과: 1 file / 64 tests passed
+- 라우팅/액션 칩 한글 정합성 추가 보강
+  - `src/components/TerminalPane.tsx`
+    - 라우팅 칩 라벨 기본값을 `SHELL/AGENT/AI CMD #/EXPLAIN ?/HEAVY !!`에서 `셸/에이전트/AI 명령 #/설명 ?/헤비 !!`로 정규화
+    - 자동 라우팅 태그(`AUTO`)를 `자동`으로 정규화
+    - 액션 팔레트 라벨(입력 기록/입력 지우기/실행 중단/복구/Recall 관련/토글류) 일괄 한글화
+  - `src/components/TerminalPane.test.tsx`
+    - 라우팅 칩/액션 라벨 회귀 기대값을 `셸/AI 자동/에이전트/AI 명령 #/설명 ?` 기준으로 갱신
+- 회귀 검증
+  - `npm test -- --run src/components/TerminalPane.test.tsx` 결과: 1 file / 160 tests passed
 
 ## 2026-07-04
 
