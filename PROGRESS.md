@@ -33,6 +33,9 @@
 - TerminalPane action palette backend 액션 라벨 정합성 보강
   - `src/components/TerminalPane.tsx` `Backend Auto Toggle / Back / Last` 라벨을 `백엔드 AUTO 토글 / 백엔드 이전 / 백엔드 마지막`으로 변경
   - `src/components/TerminalPane.test.tsx` 백엔드 액션 라벨 노출 회귀 테스트 추가
+- TerminalPane backend 강제 칩 라벨 정합성 보강
+  - `src/components/TerminalPane.tsx` 입력 칩의 `BACKEND FORCED` 라벨을 `백엔드 강제`로 정규화
+  - `src/components/TerminalPane.test.tsx` 기존 `BACKEND FORCED` 노출/부재 기대값을 `백엔드 강제`로 갱신
 - 회귀 검증
   - `npm test -- --run src/components/WarpInputBar.test.tsx` 결과: 1 file / 64 tests passed
   - `npm test -- --run src/components/WarpInputBar.test.tsx` 결과: 1 file / 63 tests passed

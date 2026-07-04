@@ -1928,7 +1928,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
     ...(shouldShowBackendChip && activeBackendPrefix
       ? [{
         id: "backend",
-        label: `BACKEND FORCED @${activeBackendPrefix.toUpperCase()}`,
+        label: `백엔드 강제 @${activeBackendPrefix.toUpperCase()}`,
         tone: "warn" as const,
       }]
       : []),

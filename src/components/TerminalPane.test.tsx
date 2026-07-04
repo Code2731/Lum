@@ -424,17 +424,17 @@ describe("TerminalPane — 입력 라우팅", () => {
 
     fireEvent.change(input, { target: { value: "@xllm closure가 뭐야?" } });
     expect(screen.getByText("AI @XLLM")).toBeInTheDocument();
-    expect(screen.getByText("BACKEND FORCED @XLLM")).toBeInTheDocument();
+    expect(screen.getByText("백엔드 강제 @XLLM")).toBeInTheDocument();
     expect(screen.queryByText("WHY BACKEND @XLLM")).not.toBeInTheDocument();
 
     fireEvent.change(input, { target: { value: "@sglang closure가 뭐야?" } });
     expect(screen.getByText("AI @XLLM")).toBeInTheDocument();
-    expect(screen.getByText("BACKEND FORCED @XLLM")).toBeInTheDocument();
+    expect(screen.getByText("백엔드 강제 @XLLM")).toBeInTheDocument();
     expect(screen.queryByText("WHY BACKEND @XLLM")).not.toBeInTheDocument();
 
     fireEvent.change(input, { target: { value: "@local src/utils.ts 함수 수정해줘" } });
     expect(screen.getByText("AGENT @LOCAL")).toBeInTheDocument();
-    expect(screen.getByText("BACKEND FORCED @LOCAL")).toBeInTheDocument();
+    expect(screen.getByText("백엔드 강제 @LOCAL")).toBeInTheDocument();
     expect(screen.queryByText("WHY BACKEND @LOCAL")).not.toBeInTheDocument();
 
     fireEvent.change(input, { target: { value: "#로그 요약해줘" } });
@@ -452,11 +452,11 @@ describe("TerminalPane — 입력 라우팅", () => {
 
     fireEvent.change(input, { target: { value: "   @xllm   " } });
     expect(screen.queryByText("AUTO 라우팅")).not.toBeInTheDocument();
-    expect(screen.queryByText("BACKEND FORCED @XLLM")).not.toBeInTheDocument();
+    expect(screen.queryByText("백엔드 강제 @XLLM")).not.toBeInTheDocument();
 
     fireEvent.change(input, { target: { value: "\t@local\t>>\t" } });
     expect(screen.queryByText("AGENT @LOCAL")).not.toBeInTheDocument();
-    expect(screen.getByText("BACKEND FORCED @LOCAL")).toBeInTheDocument();
+    expect(screen.getByText("백엔드 강제 @LOCAL")).toBeInTheDocument();
   });
 
   it("백엔드 단독 입력 alias/대문자 조합도 칩이 표시되지 않는다", () => {
@@ -465,11 +465,11 @@ describe("TerminalPane — 입력 라우팅", () => {
 
     fireEvent.change(input, { target: { value: "@LOCAL" } });
     expect(screen.queryByText("AUTO 라우팅")).not.toBeInTheDocument();
-    expect(screen.queryByText("BACKEND FORCED @LOCAL")).not.toBeInTheDocument();
+    expect(screen.queryByText("백엔드 강제 @LOCAL")).not.toBeInTheDocument();
 
     fireEvent.change(input, { target: { value: " @Cloud   " } });
     expect(screen.queryByText("AUTO 라우팅")).not.toBeInTheDocument();
-    expect(screen.queryByText("BACKEND FORCED @GEMINI")).not.toBeInTheDocument();
+    expect(screen.queryByText("백엔드 강제 @GEMINI")).not.toBeInTheDocument();
   });
 
   it("백엔드 단독 입력(개행/탭 조합)에서도 칩이 표시되지 않는다", () => {
@@ -478,19 +478,19 @@ describe("TerminalPane — 입력 라우팅", () => {
 
     fireEvent.change(input, { target: { value: "\n@cloud   " } });
     expect(screen.queryByText("AUTO 라우팅")).not.toBeInTheDocument();
-    expect(screen.queryByText("BACKEND FORCED @GEMINI")).not.toBeInTheDocument();
+    expect(screen.queryByText("백엔드 강제 @GEMINI")).not.toBeInTheDocument();
 
     fireEvent.change(input, { target: { value: "\t@Embedded\n" } });
     expect(screen.queryByText("AUTO 라우팅")).not.toBeInTheDocument();
-    expect(screen.queryByText("BACKEND FORCED @LOCAL")).not.toBeInTheDocument();
+    expect(screen.queryByText("백엔드 강제 @LOCAL")).not.toBeInTheDocument();
 
     fireEvent.change(input, { target: { value: "\r@xllm\r" } });
     expect(screen.queryByText("AUTO 라우팅")).not.toBeInTheDocument();
-    expect(screen.queryByText("BACKEND FORCED @XLLM")).not.toBeInTheDocument();
+    expect(screen.queryByText("백엔드 강제 @XLLM")).not.toBeInTheDocument();
 
     fireEvent.change(input, { target: { value: "\r\n@Cloud\r\n" } });
     expect(screen.queryByText("AUTO 라우팅")).not.toBeInTheDocument();
-    expect(screen.queryByText("BACKEND FORCED @GEMINI")).not.toBeInTheDocument();
+    expect(screen.queryByText("백엔드 강제 @GEMINI")).not.toBeInTheDocument();
   });
 
   it.each([
