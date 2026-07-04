@@ -164,11 +164,11 @@ describe("WarpInputBar — dumb input, 라우팅은 상위에서", () => {
     fireEvent.change(input, { target: { value: "@local 로그 요약해줘" } });
     expect(screen.getByRole("button", { name: "clear-backend-badge" })).toHaveAttribute(
       "title",
-      expect.stringContaining("Cmd/Ctrl+1~4/0"),
+      expect.stringContaining("Cmd/Ctrl+1~4/0 직접 지정·해제"),
     );
     expect(screen.getByRole("button", { name: "clear-backend-badge" })).toHaveAttribute(
       "title",
-      expect.stringContaining("Cmd/Ctrl+./,"),
+      expect.stringContaining("Cmd/Ctrl+./, 직접 순환"),
     );
   });
 

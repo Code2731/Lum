@@ -617,7 +617,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
                 background: activeBackendStyle.background,
                 cursor: "pointer",
               }}
-              title="현재 backend 강제 상태 (Cmd/Ctrl+1~4/0 direct 지정·해제, Cmd/Ctrl+./, direct 순환, 클릭으로 해제)"
+              title="현재 backend 강제 상태 (Cmd/Ctrl+1~4/0 직접 지정·해제, Cmd/Ctrl+./, 직접 순환, 클릭으로 해제)"
             >
               BACKEND {activeBackendLabel}
             </button>
