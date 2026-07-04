@@ -30,10 +30,14 @@
 - TerminalPane action palette placeholder 정합성 보강
   - `src/components/TerminalPane.tsx` action 검색 예시의 `backend` 표기를 `백엔드`로 통일
   - `src/components/TerminalPane.test.tsx` placeholder 노출 회귀 테스트 추가
+- TerminalPane action palette backend 액션 라벨 정합성 보강
+  - `src/components/TerminalPane.tsx` `Backend Auto Toggle / Back / Last` 라벨을 `백엔드 AUTO 토글 / 백엔드 이전 / 백엔드 마지막`으로 변경
+  - `src/components/TerminalPane.test.tsx` 백엔드 액션 라벨 노출 회귀 테스트 추가
 - 회귀 검증
   - `npm test -- --run src/components/WarpInputBar.test.tsx` 결과: 1 file / 64 tests passed
   - `npm test -- --run src/components/WarpInputBar.test.tsx` 결과: 1 file / 63 tests passed
-  - `npm test -- --run src/components/TerminalPane.test.tsx` 결과: 1 file / 158 tests passed
+  - `npm test -- --run src/components/TerminalPane.test.tsx` 결과: 1 file / 160 tests passed
+  - `npm test -- --run src/components/TerminalPane.test.tsx -t "Action Palette의 백엔드 액션 라벨이 한국어로 표시된다"` 결과: 1 test passed
 
 ## 2026-07-04
 

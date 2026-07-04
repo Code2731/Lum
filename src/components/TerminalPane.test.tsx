@@ -776,6 +776,19 @@ describe("TerminalPane — 입력 라우팅", () => {
     );
   });
 
+  it("Action Palette의 백엔드 액션 라벨이 한국어로 표시된다", () => {
+    const { container } = render(<TerminalPane id="tab-1" />);
+    const input = container.querySelector("input")!;
+
+    fireEvent.keyDown(input, { key: "k", code: "KeyK", ctrlKey: true });
+    const paletteInput = screen.getByRole("textbox", { name: "action-palette-input" });
+    fireEvent.change(paletteInput, { target: { value: "backend" } });
+
+    expect(screen.getByText("백엔드 AUTO 토글")).toBeInTheDocument();
+    expect(screen.getByText("백엔드 이전")).toBeInTheDocument();
+    expect(screen.getByText("백엔드 마지막")).toBeInTheDocument();
+  });
+
   it("입력 단축키 Cmd/Ctrl+Alt+K는 Action Palette를 열지 않는다", () => {
     const { container } = render(<TerminalPane id="tab-1" />);
     const input = container.querySelector("input")!;
