@@ -133,33 +133,33 @@ describe("WarpInputBar — dumb input, 라우팅은 상위에서", () => {
     expect(input).toHaveValue("@ollama ");
   });
 
-  it("backend 프리픽스가 있으면 BACKEND 배지가 표시되고 해제 시 사라진다", () => {
+  it("backend 프리픽스가 있으면 백엔드 배지가 표시되고 해제 시 사라진다", () => {
     const { input } = setup();
     fireEvent.change(input, { target: { value: "@xllm 로그 요약해줘" } });
-    expect(screen.getByText("BACKEND XLLM")).toBeInTheDocument();
+    expect(screen.getByText("백엔드 XLLM")).toBeInTheDocument();
     fireEvent.keyDown(input, { key: "3", ctrlKey: true });
-    expect(screen.queryByText("BACKEND XLLM")).not.toBeInTheDocument();
+    expect(screen.queryByText("백엔드 XLLM")).not.toBeInTheDocument();
   });
 
   it("backend 배지가 @sglang에서 @xllm으로 정규화되어 표시됨", () => {
     const { input } = setup();
     fireEvent.change(input, { target: { value: "@sglang 로그 요약해줘" } });
-    expect(screen.getByText("BACKEND XLLM")).toBeInTheDocument();
+    expect(screen.getByText("백엔드 XLLM")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "clear-backend-badge" }));
     expect(input).toHaveValue("로그 요약해줘");
-    expect(screen.queryByText("BACKEND XLLM")).not.toBeInTheDocument();
+    expect(screen.queryByText("백엔드 XLLM")).not.toBeInTheDocument();
   });
 
-  it("BACKEND 배지를 클릭하면 backend 프리픽스가 해제된다", () => {
+  it("백엔드 배지를 클릭하면 backend 프리픽스가 해제된다", () => {
     const { input } = setup();
     fireEvent.change(input, { target: { value: "@gemini 로그 요약해줘" } });
-    expect(screen.getByText("BACKEND GEMINI")).toBeInTheDocument();
+    expect(screen.getByText("백엔드 GEMINI")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "clear-backend-badge" }));
     expect(input).toHaveValue("로그 요약해줘");
-    expect(screen.queryByText("BACKEND GEMINI")).not.toBeInTheDocument();
+    expect(screen.queryByText("백엔드 GEMINI")).not.toBeInTheDocument();
   });
 
-  it("BACKEND 배지 tooltip은 direct 지정·해제와 순환 단축키를 안내한다", () => {
+  it("백엔드 배지 tooltip은 direct 지정·해제와 순환 단축키를 안내한다", () => {
     const { input } = setup();
     fireEvent.change(input, { target: { value: "@local 로그 요약해줘" } });
     expect(screen.getByRole("button", { name: "clear-backend-badge" })).toHaveAttribute(
@@ -200,7 +200,7 @@ describe("WarpInputBar — dumb input, 라우팅은 상위에서", () => {
     expect(screen.getByText(/자연어는 AI · 명령어는 실행/)).toBeInTheDocument();
   });
 
-  it("BACKEND 단독 상태일 때 백엔드 모드 안내가 표시된다", () => {
+  it("백엔드 단독 상태일 때 백엔드 모드 안내가 표시된다", () => {
     const { input } = setup();
     act(() => {
       fireEvent.change(input, { target: { value: "@local " } });

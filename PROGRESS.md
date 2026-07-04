@@ -36,11 +36,17 @@
 - TerminalPane backend 강제 칩 라벨 정합성 보강
   - `src/components/TerminalPane.tsx` 입력 칩의 `BACKEND FORCED` 라벨을 `백엔드 강제`로 정규화
   - `src/components/TerminalPane.test.tsx` 기존 `BACKEND FORCED` 노출/부재 기대값을 `백엔드 강제`로 갱신
+- WarpInputBar 백엔드 뱃지 및 TerminalPane 백엔드 치트시트 용어 정합성 보강
+  - `src/components/WarpInputBar.tsx` 백엔드 뱃지 라벨을 `BACKEND` → `백엔드`로 정규화
+  - `src/components/WarpInputBar.test.tsx` 뱃지 라벨 노출 회귀 기대값을 `백엔드` 기준으로 갱신
+  - `src/components/TerminalPane.tsx` 백엔드 치트시트 라인(`BACK/LAST`, `AUTO 토글`)을 `백엔드 이전/마지막`, `자동 토글`로 정규화
+  - `src/components/TerminalPane.test.tsx` 치트시트/툴팁 문자열 회귀 기대값을 동일 기준으로 갱신
 - 회귀 검증
   - `npm test -- --run src/components/WarpInputBar.test.tsx` 결과: 1 file / 64 tests passed
   - `npm test -- --run src/components/WarpInputBar.test.tsx` 결과: 1 file / 63 tests passed
   - `npm test -- --run src/components/TerminalPane.test.tsx` 결과: 1 file / 160 tests passed
   - `npm test -- --run src/components/TerminalPane.test.tsx -t "Action Palette의 백엔드 액션 라벨이 한국어로 표시된다"` 결과: 1 test passed
+  - `npm test -- --run src/components/WarpInputBar.test.tsx` 결과: 1 file / 64 tests passed
 
 ## 2026-07-04
 

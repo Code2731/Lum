@@ -619,7 +619,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
               }}
               title="현재 백엔드 강제 상태 (Cmd/Ctrl+1~4/0 직접 지정·해제, Cmd/Ctrl+./, 직접 순환, 클릭으로 해제)"
             >
-              BACKEND {activeBackendLabel}
+              백엔드 {activeBackendLabel}
             </button>
           )}
         </div>

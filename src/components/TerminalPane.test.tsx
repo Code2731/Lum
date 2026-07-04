@@ -146,9 +146,9 @@ function expectClearActionEnabled() {
 }
 
 const TOOLBELT_TIP_FULL =
-  "TIP · Cmd/Ctrl+1~4/0 백엔드 직접 지정·해제 · Cmd/Ctrl+./, 백엔드 직접 순환 · Cmd/Ctrl+Shift+A @첨부 · Cmd/Ctrl+Shift+B/N BACK/LAST · Cmd/Ctrl+Shift+K/Z/R/L/M/P 입력 편집";
+  "TIP · Cmd/Ctrl+1~4/0 백엔드 직접 지정·해제 · Cmd/Ctrl+./, 백엔드 직접 순환 · Cmd/Ctrl+Shift+A @첨부 · Cmd/Ctrl+Shift+B/N 백엔드 이전/마지막 · Cmd/Ctrl+Shift+K/Z/R/L/M/P 입력 편집";
 const TOOLBELT_TIP_NARROW =
-  "TIP · Cmd/Ctrl+1~4/0 백엔드 직접 지정·해제 · Cmd/Ctrl+./, 백엔드 직접 순환 · Shift+A @첨부 · Shift+B/N BACK/LAST · Shift+K/Z/R/L/M/P 편집";
+  "TIP · Cmd/Ctrl+1~4/0 백엔드 직접 지정·해제 · Cmd/Ctrl+./, 백엔드 직접 순환 · Shift+A @첨부 · Shift+B/N 백엔드 이전/마지막 · Shift+K/Z/R/L/M/P 편집";
 
 describe("TerminalPane — 입력 라우팅", () => {
   it("알려진 CLI (ls) → write_to_pty", async () => {
@@ -583,7 +583,7 @@ describe("TerminalPane — 입력 라우팅", () => {
 
   it("툴벨트에 backend 단축키 안내 문구를 기본 노출하지 않는다", () => {
     render(<TerminalPane id="tab-1" />);
-    const fullHint = "Cmd/Ctrl+1~4/0 지정·해제 · Cmd/Ctrl+./, 순환 · Cmd/Ctrl+Shift+←/→ 역순환 · Cmd/Ctrl+Shift+A @첨부 · Cmd/Ctrl+Shift+B/N BACK/LAST · Cmd/Ctrl+Shift+K/Z/R/L/M/P 편집";
+    const fullHint = "Cmd/Ctrl+1~4/0 지정·해제 · Cmd/Ctrl+./, 순환 · Cmd/Ctrl+Shift+←/→ 역순환 · Cmd/Ctrl+Shift+A @첨부 · Cmd/Ctrl+Shift+B/N 백엔드 이전/마지막 · Cmd/Ctrl+Shift+K/Z/R/L/M/P 편집";
     const compactHint = "Cmd/Ctrl+1~4/0 · Cmd/Ctrl+./, · Cmd/Ctrl+Shift+←/→";
     expect(screen.queryByText(fullHint)).not.toBeInTheDocument();
     expect(screen.queryByText(compactHint)).not.toBeInTheDocument();
@@ -784,7 +784,7 @@ describe("TerminalPane — 입력 라우팅", () => {
     const paletteInput = screen.getByRole("textbox", { name: "action-palette-input" });
     fireEvent.change(paletteInput, { target: { value: "backend" } });
 
-    expect(screen.getByText("백엔드 AUTO 토글")).toBeInTheDocument();
+    expect(screen.getByText("백엔드 자동 토글")).toBeInTheDocument();
     expect(screen.getByText("백엔드 이전")).toBeInTheDocument();
     expect(screen.getByText("백엔드 마지막")).toBeInTheDocument();
   });
@@ -2262,7 +2262,7 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(input).toHaveValue("ls -la");
   });
 
-  it("입력 단축키 Cmd/Ctrl+Shift+B/N으로 BACK/LAST backend를 복원한다", () => {
+  it("입력 단축키 Cmd/Ctrl+Shift+B/N으로 이전/마지막 백엔드를 복원한다", () => {
     const { container } = render(<TerminalPane id="tab-1" />);
     const input = container.querySelector("input")!;
     fireEvent.change(input, { target: { value: "로그 요약해줘" } });
@@ -2483,7 +2483,7 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(screen.queryByRole("button", { name: "quick-backend-local" })).not.toBeInTheDocument();
   });
 
-  it("툴벨트에서 BACK/LAST backend 버튼은 노출하지 않는다", () => {
+  it("툴벨트에서 이전/마지막 백엔드 버튼은 노출하지 않는다", () => {
     render(<TerminalPane id="tab-1" />);
     expect(screen.queryByRole("button", { name: "quick-backend-back" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "quick-backend-last" })).not.toBeInTheDocument();
