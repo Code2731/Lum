@@ -189,7 +189,7 @@ describe("WarpInputBar — dumb input, 라우팅은 상위에서", () => {
   it("빈 입력 도움말은 간결한 라우팅/백엔드 안내를 노출한다", () => {
     setup();
     expect(screen.getByText(/자연어는 AI · 명령어는 실행/)).toBeInTheDocument();
-    expect(screen.getByText(/backend @local\/@ollama\/@xllm\/@gemini/)).toBeInTheDocument();
+    expect(screen.getByText(/백엔드 @local\/@ollama\/@xllm\/@gemini/)).toBeInTheDocument();
     expect(screen.getByText(/Cmd\/Ctrl\+1~4\/0 선택·해제/)).toBeInTheDocument();
     expect(screen.getByText(/Cmd\/Ctrl\+\./)).toBeInTheDocument();
   });

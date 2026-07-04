@@ -99,7 +99,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
     const defaultInputHint =
       compactContextChips
         ? "자연어=AI · 명령어=실행 · !/@/>>/#/?"
-        : "자연어는 AI · 명령어는 실행 · !/@/>>/#/? · backend @local/@ollama/@xllm/@gemini · Cmd/Ctrl+1~4/0 선택·해제 · Cmd/Ctrl+./, 순환";
+        : "자연어는 AI · 명령어는 실행 · !/@/>>/#/? · 백엔드 @local/@ollama/@xllm/@gemini · Cmd/Ctrl+1~4/0 선택·해제 · Cmd/Ctrl+./, 순환";
     const activeModeHint =
       isBackendOnly && activeBackend
         ? `${activeBackend.toUpperCase()} 백엔드가 선택되어 있습니다. 엔터로 질의를 입력하면 ${activeBackend}로 처리됩니다. Cmd/Ctrl+0으로 해제하고 Cmd/Ctrl+./,로 순환할 수 있습니다.`

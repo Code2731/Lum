@@ -22,6 +22,9 @@
 - TerminalPane 입력 툴밸트 문구의 백엔드 용어 정합성 보강
   - `src/components/TerminalPane.tsx` 입력 TIP 배너와 치트시트에서 `backend` 표현을 `백엔드`로 통일
   - `src/components/TerminalPane.test.tsx` 문구 검증 기대값을 동일 기준으로 갱신
+- WarpInputBar 기본 힌트 라벨 정합성 보강
+  - `src/components/WarpInputBar.tsx` 기본 입력 힌트의 `backend` 라벨을 `백엔드`로 통일
+  - `src/components/WarpInputBar.test.tsx` 관련 회귀 기대값을 동일 용어로 갱신
 - 회귀 검증
   - `npm test -- --run src/components/WarpInputBar.test.tsx` 결과: 1 file / 64 tests passed
   - `npm test -- --run src/components/WarpInputBar.test.tsx` 결과: 1 file / 63 tests passed
