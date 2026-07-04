@@ -58,6 +58,59 @@ jobs:
       - name: Run Backend Tests
         run: cd src-tauri && cargo test
 
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Playwright Smoke Test (CI noserver)
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          DEV_SERVER_LOG_FILE="/tmp/lum-e2e-dev-server.log"
+          npm run dev -- --host 127.0.0.1 --port 1420 >"${DEV_SERVER_LOG_FILE}" 2>&1 &
+          DEV_SERVER_PID=$!
+
+          cleanup() {
+            if kill -0 "${DEV_SERVER_PID}" >/dev/null 2>&1; then
+              kill "${DEV_SERVER_PID}" || true
+              wait "${DEV_SERVER_PID}" || true
+            fi
+          }
+          trap cleanup EXIT
+
+          echo "Starting Vite dev server for CI E2E..."
+          for attempt in {1..60}; do
+            if curl -fsS http://127.0.0.1:1420 >/dev/null; then
+              echo "Vite server is ready."
+              break
+            fi
+            if ! kill -0 "${DEV_SERVER_PID}" >/dev/null 2>&1; then
+              echo "Vite server exited before readiness check."
+              echo "---- Vite server log (last 200 lines) ----"
+              tail -n 200 "${DEV_SERVER_LOG_FILE}" || true
+              exit 1
+            fi
+            if [ "${attempt}" -eq 60 ]; then
+              echo "Vite server failed to become ready within 60 seconds."
+              echo "---- Vite server log (last 200 lines) ----"
+              tail -n 200 "${DEV_SERVER_LOG_FILE}" || true
+              exit 1
+            fi
+            sleep 1
+          done
+
+          set +e
+          E2E_NO_WEB_SERVER=1 npm run test:e2e:noserver
+          TEST_STATUS=$?
+          set -e
+
+          if [ "${TEST_STATUS}" -ne 0 ]; then
+            echo "Playwright smoke test failed with status ${TEST_STATUS}."
+            echo "---- Playwright/CI log (last 200 lines) ----"
+            tail -n 200 "${DEV_SERVER_LOG_FILE}" || true
+            exit "${TEST_STATUS}"
+          fi
+
       - name: Build Desktop App (Linux CPU smoke)
         # Linux 기본 빌드 경로에서 임베디드 AI 비활성 기준으로 번들링이 깨지지 않는지 점검
         run: npm run tauri build

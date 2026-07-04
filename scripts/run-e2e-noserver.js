@@ -159,9 +159,6 @@ const launchFailureSignatures = [
 ];
 const unrecoverableLaunchSignatures = [
   "chrome_crashpad_handler: --database is required",
-  "Permission denied (1100)",
-  "bootstrap_check_in org.chromium.Chromium.MachPortRendezvousServer",
-  "Check failed: kr == KERN_SUCCESS",
 ];
 
 const launchFailureHints = [

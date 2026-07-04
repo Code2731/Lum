@@ -56,7 +56,7 @@
   - [x] 네트워크 불안정 시 fallback 동작 가드
   - [x] 커맨드 취소 후 UI 이벤트와 상태 정합성 회귀 장치 정리
 
-- [ ] MCP/AI 라우팅 장애 복구
+- [x] MCP/AI 라우팅 장애 복구
   - [x] 네트워크 타임아웃, 라우팅 실패, 백엔드 미연결 상태의 사용자 안내/재시도 동선 고정
   - fallback 전환 시 안내 텍스트의 일관성 유지
 
@@ -116,3 +116,19 @@
   - PR/리뷰 노트 제출용 텍스트로 분류 축을 고정(해결/보류/조건부)
   - 해결군: `ParsedEmbedKey` 데드코드 경고군 3건
   - 보류군: `mcp_server` 유효성 경로 상수 유지 및 `embedded-ai` 빌드 조건부 경고군
+
+## 2026-07-03 추천 라운드 반영
+
+- [x] E2E 런치 폴백 안정성 강화
+  - `Permission denied (1100)`, `bootstrap_check_in...`, `Check failed: kr == KERN_SUCCESS` 계열을 복구 불가 목록에서 제외
+  - `scripts/run-e2e-noserver.js`의 launch profile 순회(`default → bundled-chromium → headful → no-sandbox`)와 힌트 출력이 합치되도록 동작 정합성 정리
+  - `ToolCallCard` MCP 툴 실패 메시지 라우팅/네트워크 안내 가이드 + 재실행 버튼 회귀 테스트 반영
+
+## 2026-07-04 추천 라운드 반영
+
+- [x] MCP 툴 실행 취소 UX 회귀 보강
+  - `ToolCallCard`에서 취소 오류는 pending 상태로 되돌리고 에러 메시지를 표시하지 않도록 처리
+  - 취소 경로 회귀 테스트 추가 (`src/components/ToolCallCard.test.tsx`)
+
+- [x] Linux CI E2E 스모크 정식화
+  - `./.github/workflows/ci.yml` Ubuntu job에 브라우저 설치 후 `npm run dev -- --host 127.0.0.1 --port 1420`를 기동하고 readiness 확인 후 `npm run test:e2e:noserver`를 실행, 종료 시 서버 정리까지 포함

@@ -1,5 +1,30 @@
 # PROGRESS
 
+## 2026-07-04
+
+### 이번 라운드 완료
+
+- MCP/AI 라우팅 장애 대응 정합성 마감
+  - `scripts/run-e2e-noserver.js`의 launch profile 복구 분기 정렬(권한 계열 에러를 복구 가능로 이동) 반영
+  - `scripts/run-e2e-noserver.test.ts` 테스트 기대값 업데이트 및 재시도 동작 보강
+  - `src/components/ToolCallCard.tsx` MCP 툴 실패 메시지 가이드 라우팅 + 재실행 버튼 회귀 반영
+  - `src/utils/errorMessage.ts` 라우팅/네트워크 문구 강화 + 타임아웃 키워드 보완
+  - `src/components/ToolCallCard.test.tsx`, `src/utils/errorMessage.test.ts` 추가/갱신으로 회귀 고정
+- 회귀 검증
+  - `npm test -- --run` 결과: 61 files / 1610 tests passed
+  - `npm run lint` 통과
+  - `cd src-tauri && cargo test` 통과
+  - `npm run test:e2e`는 현재 로컬 샌드박스에서 `127.0.0.1:1420` 바인딩 제한(`EPERM`)으로 실행되지 않아, CI에서는 noserver+사전 기동/준비 확인 플로우로 회피
+  - `cd src-tauri && cargo test --features embedded-ai`는 macOS Metal Toolchain 부재(`cannot execute tool 'metal'`)로 환경 제약 실패
+- `npm test -- --run` 경로로 `scripts/run-e2e-noserver.test.ts`를 포함한 전체 테스트를 통합 검증
+- Linux CI에서 Playwright 스모크 경로를 정식화
+  - `cd .github/workflows/ci.yml`에 Ubuntu job에서 Playwright 설치 후 `npm run dev -- --host 127.0.0.1 --port 1420` 기동 + `npm run test:e2e:noserver`로 noserver 경로 실행(기동 완료 대기/종료 보장 포함) 단계 추가
+
+### 현재 상태 요약
+
+- MCP 툴 실행 실패 경로가 “라우팅 실패/네트워크 불안정/취소/재시도”로 구분되어 사용자 가이던스가 일정해짐
+- Playwright noserver 런치 스크립트는 권한/샌드박스 제약 환경에서 더 넓은 폴백 탐색을 수행하도록 동작 업데이트
+
 ## 2026-06-29
 
 ### 이번 라운드까지 완료

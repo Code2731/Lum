@@ -3,6 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { Play, Check, X, AlertTriangle, Loader2, Wrench, ChevronDown, ChevronRight, Send, Image as ImageIcon } from "lucide-react";
 import type { ToolCall } from "../utils/toolCallParser";
 import { parseMcpResult } from "../utils/mcpContent";
+import { formatAIErrorMessage, isCancelError } from "../utils/errorMessage";
 
 interface Props {
   call: ToolCall;
@@ -42,7 +43,13 @@ const ToolCallCard: React.FC<Props> = ({ call, onAskAIWithResult, visionEnabled 
       setStatus("done");
       setExpandedResult(true);
     } catch (e) {
-      setError(String(e).slice(0, 400));
+      if (isCancelError(e)) {
+        setStatus("pending");
+        setError(null);
+        return;
+      }
+      const msg = formatAIErrorMessage(e);
+      setError(msg);
       setStatus("error");
     }
   };
@@ -121,6 +128,15 @@ const ToolCallCard: React.FC<Props> = ({ call, onAskAIWithResult, visionEnabled 
               <AlertTriangle size={11} />
               실패
             </span>
+          )}
+          {status === "error" && (
+            <button
+              onClick={run}
+              className="flex items-center gap-1 px-2 py-0.5 rounded bg-white/10 hover:bg-white/15 text-white/80 text-sm transition-colors"
+            >
+              <Play size={10} />
+              재실행
+            </button>
           )}
         </div>
       </div>

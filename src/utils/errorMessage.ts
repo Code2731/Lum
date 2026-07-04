@@ -46,6 +46,8 @@ const networkIndicators: string[] = [
   "네트워크",
   "방화벽",
   "연결",
+  "타임아웃",
+  "응답 타임아웃",
   "timed out",
   "timeout",
   "connection",

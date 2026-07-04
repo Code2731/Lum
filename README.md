@@ -179,6 +179,8 @@ node scripts/run-e2e-noserver.js
   - `E2E_VERBOSE=1` : 현재 적용되는 fallback 프로젝트/프로필/커맨드 목록을 콘솔에 출력.
   - `E2E_DRY_RUN=1` : 실제 테스트 실행 없이 계획된 조합만 로그로 출력하고 종료.
   - 실패 시 스크립트가 `Playwright` 종료 로그에서 권한/바이너리 오류 패턴을 감지해 힌트를 출력합니다.
+  - 권한 이슈(예: `Permission denied (1100)`/`bootstrap_check_in...`/`Check failed: kr == KERN_SUCCESS`)는 기본적으로 recoverable로 보고 `bundled-chromium`, `headful`, `no-sandbox` 순으로 추가 시도를 수행합니다.
+  - `chrome_crashpad_handler: --database is required`만 즉시 중단으로 판단되며, 해당 메시지를 우선 확인하세요.
 - CI에서는 기존 환경 변수로 이미 실행 중인 서버를 재사용하지 않도록 설정되어 있습니다.
 
 ### AI Setup (optional)

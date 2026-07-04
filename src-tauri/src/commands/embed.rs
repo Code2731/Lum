@@ -566,7 +566,7 @@ pub async fn embed_infer_stream(
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "embedded-ai"))]
 mod tests {
     use super::*;
 

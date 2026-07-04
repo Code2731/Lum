@@ -573,6 +573,7 @@ mod tests {
 
     struct HomeEnvGuard {
         old_home: Option<OsString>,
+        #[cfg(windows)]
         user_profile: Option<OsString>,
     }
 
@@ -589,8 +590,6 @@ mod tests {
                 old_home,
                 #[cfg(windows)]
                 user_profile: old_user_profile,
-                #[cfg(not(windows))]
-                user_profile: None,
             }
         }
     }

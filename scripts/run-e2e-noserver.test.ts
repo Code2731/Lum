@@ -318,7 +318,7 @@ describe("run-e2e-noserver --project 인자", () => {
     }
   });
 
-  it("unrecoverable launch 실패는 launch profile fallback를 건너뛴다", () => {
+  it("launch profile 실패는 다음 launch profile로 이어서 시도한다", () => {
     const tempDir = mkdtempSync(join(tmpdir(), "lum-playwright-profile-stop-"));
     const localPlaywright = join(tempDir, "node_modules", ".bin", "playwright");
 
@@ -348,12 +348,11 @@ describe("run-e2e-noserver --project 인자", () => {
         tempDir,
       );
 
-      expect(result.status).toBe(1);
+      expect(result.status).toBe(0);
       expect(result.output).toContain(
-        "Playwright 프로젝트 chromium에서 복구 불가 launch 오류가 감지되었습니다. 더 진행하지 않고 중단합니다.",
+        "Playwright 프로젝트 chromium에서 launch profile 'default' 실패를 감지했습니다. 다음 launch profile로 재시도합니다.",
       );
-      expect(result.output).not.toContain("mocked no-sandbox success");
-      expect(result.output).not.toContain("다음 launch profile로 재시도합니다.");
+      expect(result.output).toContain("mocked no-sandbox success");
     } finally {
       rmSync(tempDir, { recursive: true, force: true });
     }
@@ -527,9 +526,9 @@ describe("run-e2e-noserver --project 인자", () => {
     }
   });
 
-  it("복구 불가 launch 에러는 즉시 중단된다", () => {
+  it("복구 불가 launch 에러는 즉시 중단되어 재시도/우회를 하지 않는다", () => {
     const mock = makeMockPlaywright({
-      stderr: "Permission denied (1100)\n",
+      stderr: "chrome_crashpad_handler: --database is required\n",
       exitCode: 1,
     });
 
@@ -545,7 +544,7 @@ describe("run-e2e-noserver --project 인자", () => {
       expect(result.output).toContain(
         "Playwright 프로젝트 chromium에서 복구 불가 launch 오류가 감지되었습니다. 더 진행하지 않고 중단합니다.",
       );
-      expect(result.output).toContain("[E2E-HELP] 권한 제한으로 Mach port 초기화가 실패했습니다.");
+      expect(result.output).toContain("[E2E-HELP] 브라우저 런타임 초기화 충돌이 감지되었습니다.");
     } finally {
       mock.cleanup();
     }
