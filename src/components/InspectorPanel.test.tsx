@@ -21,21 +21,21 @@ vi.mock("./RagPanel", () => ({
 
 vi.mock("./ScriptLibraryPanel", () => ({
   default: ({ compact }: { compact?: boolean }) => (
-    <div data-testid="script-library-panel">Scripts mock {compact ? "compact" : "cozy"}</div>
+    <div data-testid="script-library-panel">스크립트 mock {compact ? "compact" : "cozy"}</div>
   ),
 }));
 
 vi.mock("./SystemMonitorPanel", () => ({
   default: ({ compact }: { compact?: boolean }) => (
-    <div data-testid="system-monitor-panel">System mock {compact ? "compact" : "cozy"}</div>
+    <div data-testid="system-monitor-panel">시스템 mock {compact ? "compact" : "cozy"}</div>
   ),
 }));
 
 const baseTabItems: InspectorTabItem[] = [
   { id: "summary", label: "요약", shortcut: "1" },
   { id: "rag", label: "RAG", shortcut: "2" },
-  { id: "scripts", label: "Scripts", shortcut: "3" },
-  { id: "sysmon", label: "System", shortcut: "4" },
+  { id: "scripts", label: "스크립트", shortcut: "3" },
+  { id: "sysmon", label: "시스템", shortcut: "4" },
 ];
 
 const baseFailedBlocks: InspectorFailedBlock[] = [
@@ -192,7 +192,7 @@ describe("InspectorPanel", () => {
   it("요약 탭에서 Inspector 제목과 요약 정보가 렌더링된다", () => {
     renderInspector();
 
-    expect(screen.getByText("Inspector")).toBeInTheDocument();
+    expect(screen.getByText("인스펙터")).toBeInTheDocument();
     expect(screen.getByText("main")).toBeInTheDocument();
     expect(screen.getByText("/Users/dev")).toBeInTheDocument();
     expect(screen.getByText("실패 블록")).toBeInTheDocument();
@@ -213,24 +213,24 @@ describe("InspectorPanel", () => {
     expect(screen.queryByText("실패 블록")).not.toBeInTheDocument();
   });
 
-  it("Inspector 닫기 버튼이 onClose를 호출한다", () => {
+  it("인스펙터 닫기 버튼이 onClose를 호출한다", () => {
     const onClose = vi.fn();
     renderInspector({ onClose });
 
-    fireEvent.click(screen.getByLabelText("Inspector 닫기"));
+    fireEvent.click(screen.getByLabelText("인스펙터 닫기"));
 
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
-  it("Inspector 밀도 토글 버튼이 onDensityToggle를 호출하고 현재 밀도 라벨을 보여준다", () => {
+  it("인스펙터 밀도 토글 버튼이 onDensityToggle를 호출하고 현재 밀도 라벨을 보여준다", () => {
     const onDensityToggle = vi.fn();
     renderInspector({
       inspectorDensity: "compact",
       onDensityToggle,
     });
 
-    expect(screen.getByText("COMPACT")).toBeInTheDocument();
-    fireEvent.click(screen.getByLabelText("Inspector 밀도 토글"));
+    expect(screen.getByText("컴팩트")).toBeInTheDocument();
+    fireEvent.click(screen.getByLabelText("인스펙터 밀도 토글"));
 
     expect(onDensityToggle).toHaveBeenCalledTimes(1);
   });
@@ -238,8 +238,8 @@ describe("InspectorPanel", () => {
   it("cozy 밀도에서는 Compact 보기 타이틀을 노출한다", () => {
     renderInspector({ inspectorDensity: "cozy" });
 
-    expect(screen.getByLabelText("Inspector 밀도 토글")).toHaveAttribute("title", "Compact 보기");
-    expect(screen.getByText("COZY")).toBeInTheDocument();
+    expect(screen.getByLabelText("인스펙터 밀도 토글")).toHaveAttribute("title", "컴팩트 보기");
+    expect(screen.getByText("여유")).toBeInTheDocument();
   });
 
   it("브랜치와 변경 개수가 있으면 워크스페이스 배지를 보여준다", () => {
@@ -297,7 +297,7 @@ describe("InspectorPanel", () => {
     renderInspector({ quickActionsExpanded: true });
 
     expect(screen.getByText("축소").closest("button")).toHaveAttribute("aria-controls", "inspector-quick-actions-advanced");
-    expect(screen.getByText("History").closest("[data-inspector-quick-actions-advanced]")).toHaveAttribute(
+    expect(screen.getByText("기록").closest("[data-inspector-quick-actions-advanced]")).toHaveAttribute(
       "id",
       "inspector-quick-actions-advanced",
     );
@@ -323,7 +323,7 @@ describe("InspectorPanel", () => {
 
     expect(refs.inspectorQuickActionsToggleRef.current).toBe(screen.getByText("축소").closest("button"));
     expect(refs.inspectorQuickActionsAdvancedRef.current).toBe(
-      screen.getByText("History").closest("[data-inspector-quick-actions-advanced]"),
+      screen.getByText("기록").closest("[data-inspector-quick-actions-advanced]"),
     );
   });
 
@@ -372,11 +372,11 @@ describe("InspectorPanel", () => {
       onTabSelect,
     });
 
-    fireEvent.click(screen.getByText("History"));
-    fireEvent.click(screen.getByText("Diff"));
-    fireEvent.click(screen.getByText("Failed"));
-    fireEvent.click(screen.getAllByText("Scripts")[1]);
-    fireEvent.click(screen.getAllByText("System")[1]);
+    fireEvent.click(screen.getByText("기록"));
+    fireEvent.click(screen.getByText("변경내역"));
+    fireEvent.click(screen.getByText("실패"));
+    fireEvent.click(screen.getAllByText("스크립트")[1]);
+    fireEvent.click(screen.getAllByText("시스템")[1]);
 
     expect(onOpenHistory).toHaveBeenCalledTimes(1);
     expect(onOpenDiffReview).toHaveBeenCalledTimes(1);
@@ -392,7 +392,7 @@ describe("InspectorPanel", () => {
       onQuickActionsAdvancedKeyDown,
     });
 
-    fireEvent.keyDown(screen.getByText("History").closest("[data-inspector-quick-actions-advanced]")!, {
+    fireEvent.keyDown(screen.getByText("기록").closest("[data-inspector-quick-actions-advanced]")!, {
       key: "ArrowRight",
     });
 
@@ -412,7 +412,7 @@ describe("InspectorPanel", () => {
     const onTabKeyDown = vi.fn();
     renderInspector({ onTabKeyDown });
 
-    fireEvent.keyDown(screen.getByRole("tablist", { name: "Inspector 탭" }), { key: "ArrowRight" });
+    fireEvent.keyDown(screen.getByRole("tablist", { name: "인스펙터 탭" }), { key: "ArrowRight" });
 
     expect(onTabKeyDown).toHaveBeenCalledTimes(1);
   });
@@ -469,8 +469,8 @@ describe("InspectorPanel", () => {
 
     expect(refs.inspectorTabRefs.current.summary).toBe(screen.getByRole("tab", { name: /요약/ }));
     expect(refs.inspectorTabRefs.current.rag).toBe(screen.getByRole("tab", { name: /RAG/ }));
-    expect(refs.inspectorTabRefs.current.scripts).toBe(screen.getByRole("tab", { name: /Scripts/ }));
-    expect(refs.inspectorTabRefs.current.sysmon).toBe(screen.getByRole("tab", { name: /System/ }));
+    expect(refs.inspectorTabRefs.current.scripts).toBe(screen.getByRole("tab", { name: /스크립트/ }));
+    expect(refs.inspectorTabRefs.current.sysmon).toBe(screen.getByRole("tab", { name: /시스템/ }));
   });
 
   it("RAG 탭은 RAG 패널에 모델과 밀도 상태를 전달한다", () => {
@@ -491,21 +491,21 @@ describe("InspectorPanel", () => {
     expect(screen.getByRole("tabpanel")).toHaveAttribute("aria-labelledby", "inspector-tab-rag");
   });
 
-  it("Scripts 탭 버튼과 패널도 접근성 속성으로 연결된다", () => {
+  it("스크립트 탭 버튼과 패널도 접근성 속성으로 연결된다", () => {
     renderInspector({ inspectorTab: "scripts" });
 
-    expect(screen.getByRole("tab", { name: /Scripts/ })).toHaveAttribute("aria-controls", "inspector-tabpanel-scripts");
+    expect(screen.getByRole("tab", { name: /스크립트/ })).toHaveAttribute("aria-controls", "inspector-tabpanel-scripts");
     expect(screen.getByRole("tabpanel")).toHaveAttribute("aria-labelledby", "inspector-tab-scripts");
   });
 
-  it("System 탭 버튼과 패널도 접근성 속성으로 연결된다", () => {
+  it("시스템 탭 버튼과 패널도 접근성 속성으로 연결된다", () => {
     renderInspector({ inspectorTab: "sysmon" });
 
-    expect(screen.getByRole("tab", { name: /System/ })).toHaveAttribute("aria-controls", "inspector-tabpanel-sysmon");
+    expect(screen.getByRole("tab", { name: /시스템/ })).toHaveAttribute("aria-controls", "inspector-tabpanel-sysmon");
     expect(screen.getByRole("tabpanel")).toHaveAttribute("aria-labelledby", "inspector-tab-sysmon");
   });
 
-  it("Scripts 탭은 스크립트 라이브러리 패널을 렌더링한다", () => {
+  it("스크립트 탭은 스크립트 라이브러리 패널을 렌더링한다", () => {
     renderInspector({
       inspectorTab: "scripts",
       scriptLibrary: {
@@ -522,17 +522,17 @@ describe("InspectorPanel", () => {
       },
     });
 
-    expect(screen.getByTestId("script-library-panel")).toHaveTextContent("Scripts mock cozy");
+    expect(screen.getByTestId("script-library-panel")).toHaveTextContent("스크립트 mock cozy");
     expect(screen.queryByText("실패 블록")).not.toBeInTheDocument();
   });
 
-  it("System 탭은 시스템 모니터 패널을 렌더링한다", () => {
+  it("시스템 탭은 시스템 모니터 패널을 렌더링한다", () => {
     renderInspector({
       inspectorTab: "sysmon",
       inspectorDensity: "compact",
     });
 
-    expect(screen.getByTestId("system-monitor-panel")).toHaveTextContent("System mock compact");
+    expect(screen.getByTestId("system-monitor-panel")).toHaveTextContent("시스템 mock compact");
     expect(screen.queryByText("실패 블록")).not.toBeInTheDocument();
   });
 
@@ -591,8 +591,8 @@ describe("InspectorPanel", () => {
       onTabSelect,
     });
 
-    fireEvent.click(screen.getByRole("button", { name: /Project Bin/ }));
-    fireEvent.click(screen.getByRole("button", { name: /^Workspace$/ }));
+    fireEvent.click(screen.getByRole("button", { name: /프로젝트 보관함/ }));
+    fireEvent.click(screen.getByRole("button", { name: /^작업공간$/ }));
     fireEvent.click(screen.getByRole("button", { name: /^RAG$/ }));
 
     expect(onToggleProjectBin).toHaveBeenCalledTimes(1);

@@ -28,7 +28,7 @@ const InspectorPanelHeader: React.FC<InspectorPanelHeaderProps> = ({
   return (
     <div className="px-2.5 py-2 border-b border-white/10 bg-white/[0.02] shrink-0">
       <div className="flex items-center justify-between gap-2 mb-2">
-        <span className="text-sm tracking-[0.06em] uppercase text-white/65 font-semibold">Inspector</span>
+        <span className="text-sm tracking-[0.06em] uppercase text-white/65 font-semibold">인스펙터</span>
         <button
           onClick={onDensityToggle}
           className={`px-1.5 py-0.5 rounded border text-xs transition-colors ${
@@ -36,15 +36,15 @@ const InspectorPanelHeader: React.FC<InspectorPanelHeaderProps> = ({
               ? "border-cyan-300/35 bg-cyan-400/16 text-cyan-100"
               : "border-white/[0.1] bg-white/[0.05] text-white/58 hover:text-white/80"
           }`}
-          aria-label="Inspector 밀도 토글"
-          title={isInspectorCompact ? "Cozy 보기" : "Compact 보기"}
+          aria-label="인스펙터 밀도 토글"
+          title={isInspectorCompact ? "여유 보기" : "컴팩트 보기"}
         >
-          {isInspectorCompact ? "COMPACT" : "COZY"}
+          {isInspectorCompact ? "컴팩트" : "여유"}
         </button>
         <button
           onClick={onClose}
           className="p-1 rounded border border-white/[0.1] text-white/42 hover:text-white/78 hover:bg-white/[0.08] transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-          aria-label="Inspector 닫기"
+          aria-label="인스펙터 닫기"
         >
           <X size={12} />
         </button>
@@ -52,7 +52,7 @@ const InspectorPanelHeader: React.FC<InspectorPanelHeaderProps> = ({
       <div
         className="flex items-center gap-1"
         role="tablist"
-        aria-label="Inspector 탭"
+        aria-label="인스펙터 탭"
         onKeyDown={onTabKeyDown}
       >
         {inspectorTabs.map((tab) => (

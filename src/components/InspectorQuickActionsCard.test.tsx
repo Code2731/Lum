@@ -46,7 +46,7 @@ describe("InspectorQuickActionsCard", () => {
 
     expect(screen.getByRole("button", { name: "축소" })).toHaveAttribute("aria-controls", "inspector-quick-actions-advanced");
     expect(toggleRef.current).toBe(screen.getByRole("button", { name: "축소" }));
-    expect(advancedRef.current).toBe(screen.getByText("History").closest("[data-inspector-quick-actions-advanced]"));
+    expect(advancedRef.current).toBe(screen.getByText("기록").closest("[data-inspector-quick-actions-advanced]"));
   });
 
   it("기본 액션과 탭 이동 액션은 각 콜백을 호출한다", () => {
@@ -63,8 +63,8 @@ describe("InspectorQuickActionsCard", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: /Project Bin/ }));
-    fireEvent.click(screen.getByRole("button", { name: /^Workspace$/ }));
+    fireEvent.click(screen.getByRole("button", { name: /프로젝트 보관함/ }));
+    fireEvent.click(screen.getByRole("button", { name: /^작업공간$/ }));
     fireEvent.click(screen.getByRole("button", { name: /^RAG$/ }));
 
     expect(onToggleProjectBin).toHaveBeenCalledTimes(1);
@@ -110,12 +110,12 @@ describe("InspectorQuickActionsCard", () => {
       />,
     );
 
-    fireEvent.click(screen.getByText("History"));
-    fireEvent.click(screen.getByText("Diff"));
-    fireEvent.click(screen.getByText("Failed"));
-    fireEvent.click(screen.getByText("Scripts"));
-    fireEvent.click(screen.getByText("System"));
-    fireEvent.keyDown(screen.getByText("History").closest("[data-inspector-quick-actions-advanced]")!, {
+    fireEvent.click(screen.getByText("기록"));
+    fireEvent.click(screen.getByText("변경내역"));
+    fireEvent.click(screen.getByText("실패"));
+    fireEvent.click(screen.getByText("스크립트"));
+    fireEvent.click(screen.getByText("시스템"));
+    fireEvent.keyDown(screen.getByText("기록").closest("[data-inspector-quick-actions-advanced]")!, {
       key: "ArrowRight",
     });
 

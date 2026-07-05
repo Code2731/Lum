@@ -19,10 +19,10 @@ describe("InspectorSummaryOverviewCard", () => {
   it("workspace와 model 기본 정보를 렌더링한다", () => {
     render(<InspectorSummaryOverviewCard {...createProps()} />);
 
-    expect(screen.getByText("Workspace")).toBeInTheDocument();
+    expect(screen.getByText("작업공간")).toBeInTheDocument();
     expect(screen.getByText("main")).toBeInTheDocument();
     expect(screen.getByText("/Users/dev/project")).toBeInTheDocument();
-    expect(screen.getByText("Model")).toBeInTheDocument();
+    expect(screen.getByText("모델")).toBeInTheDocument();
     expect(screen.getByText("qwen2.5")).toBeInTheDocument();
   });
 

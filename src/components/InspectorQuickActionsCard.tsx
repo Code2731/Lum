@@ -44,7 +44,7 @@ const InspectorQuickActionsCard: React.FC<InspectorQuickActionsCardProps> = ({
   onTabSelect,
 }) => (
   <div className={inspectorCardRegularClass}>
-    <p className="text-white/45 uppercase tracking-[0.06em] text-xs">Quick Actions</p>
+    <p className="text-white/45 uppercase tracking-[0.06em] text-xs">빠른 작업</p>
     <div className={inspectorQuickGridClass}>
       <button
         type="button"
@@ -52,7 +52,7 @@ const InspectorQuickActionsCard: React.FC<InspectorQuickActionsCardProps> = ({
         className="inline-flex w-full h-7 items-center gap-1.5 px-2 rounded-md text-xs border border-white/12 bg-white/[0.05] text-white/74 hover:text-white hover:bg-white/[0.1] transition-colors"
       >
         <FolderTree size={11} />
-        Project Bin
+        프로젝트 보관함
       </button>
       <button
         type="button"
@@ -60,7 +60,7 @@ const InspectorQuickActionsCard: React.FC<InspectorQuickActionsCardProps> = ({
         className="inline-flex w-full h-7 items-center gap-1.5 px-2 rounded-md text-xs border border-white/12 bg-white/[0.05] text-white/74 hover:text-white hover:bg-white/[0.1] transition-colors"
       >
         <Layers size={11} />
-        Workspace
+        작업공간
       </button>
       <button
         type="button"
@@ -104,7 +104,7 @@ const InspectorQuickActionsCard: React.FC<InspectorQuickActionsCardProps> = ({
                 className="inline-flex w-full h-7 items-center gap-1.5 px-2 rounded-md text-xs border border-white/12 bg-white/[0.05] text-white/74 hover:text-white hover:bg-white/[0.1] transition-colors"
               >
                 <Search size={11} />
-                History
+                기록
               </button>
               <button
                 type="button"
@@ -112,7 +112,7 @@ const InspectorQuickActionsCard: React.FC<InspectorQuickActionsCardProps> = ({
                 className="inline-flex w-full h-7 items-center gap-1.5 px-2 rounded-md text-xs border border-white/12 bg-white/[0.05] text-white/74 hover:text-white hover:bg-white/[0.1] transition-colors"
               >
                 <GitCompareArrows size={11} />
-                Diff
+                변경내역
               </button>
               <button
                 type="button"
@@ -120,14 +120,14 @@ const InspectorQuickActionsCard: React.FC<InspectorQuickActionsCardProps> = ({
                 className="inline-flex w-full h-7 items-center gap-1.5 px-2 rounded-md text-xs border border-rose-300/30 bg-rose-400/12 text-rose-100 hover:bg-rose-400/20 transition-colors"
               >
                 <AlertTriangle size={11} />
-                Failed
+                실패
               </button>
               <button
                 type="button"
                 onClick={() => onTabSelect("scripts")}
                 className="inline-flex w-full h-7 items-center gap-1.5 px-2 rounded-md text-xs border border-white/12 bg-white/[0.05] text-white/74 hover:text-white hover:bg-white/[0.1] transition-colors"
               >
-                Scripts
+                스크립트
               </button>
               <button
                 type="button"
@@ -135,7 +135,7 @@ const InspectorQuickActionsCard: React.FC<InspectorQuickActionsCardProps> = ({
                 className="inline-flex w-full h-7 items-center gap-1.5 px-2 rounded-md text-xs border border-white/12 bg-white/[0.05] text-white/74 hover:text-white hover:bg-white/[0.1] transition-colors"
               >
                 <Activity size={11} />
-                System
+                시스템
               </button>
             </div>
           </motion.div>

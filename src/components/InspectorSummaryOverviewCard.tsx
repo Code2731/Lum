@@ -21,7 +21,7 @@ const InspectorSummaryOverviewCard: React.FC<InspectorSummaryOverviewCardProps> 
   <>
     <div className={inspectorCardTightClass}>
       <div className="flex items-center justify-between gap-2">
-        <p className="text-white/45 uppercase tracking-[0.06em] text-xs">Workspace</p>
+        <p className="text-white/45 uppercase tracking-[0.06em] text-xs">작업공간</p>
         {activeTabBranch && (
           <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md border border-cyan-300/30 bg-cyan-400/12 text-cyan-100 text-xs">
             <GitBranch size={10} />
@@ -38,7 +38,7 @@ const InspectorSummaryOverviewCard: React.FC<InspectorSummaryOverviewCardProps> 
       <p className="text-white/55 font-mono break-all">{activeTabPath}</p>
     </div>
     <div className={inspectorCardTightClass}>
-      <p className="text-white/45 uppercase tracking-[0.06em] text-xs">Model</p>
+      <p className="text-white/45 uppercase tracking-[0.06em] text-xs">모델</p>
       <p className="text-white/82 break-all">{selectedModel}</p>
     </div>
   </>

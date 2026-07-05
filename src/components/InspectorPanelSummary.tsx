@@ -81,7 +81,7 @@ const InspectorPanelSummary: React.FC<InspectorPanelSummaryProps> = ({ data, lay
       />
       {noActivity && (
         <div className={inspectorCardRegularClass}>
-          <p className="text-white/45 uppercase tracking-[0.06em] text-xs">INSPECTOR</p>
+          <p className="text-white/45 uppercase tracking-[0.06em] text-xs">인스펙터</p>
           <p className="text-white/72">
             터미널에서 최근 명령을 실행하면 여기에서 실패 블록·추천 커맨드·최근 기록을 확인할 수 있습니다.
           </p>

@@ -7,8 +7,8 @@ import type { InspectorTab, InspectorTabItem } from "./InspectorPanel/types";
 const baseTabs: InspectorTabItem[] = [
   { id: "summary", label: "요약", shortcut: "1" },
   { id: "rag", label: "RAG", shortcut: "2" },
-  { id: "scripts", label: "Scripts", shortcut: "3" },
-  { id: "sysmon", label: "System", shortcut: "4" },
+  { id: "scripts", label: "스크립트", shortcut: "3" },
+  { id: "sysmon", label: "시스템", shortcut: "4" },
 ];
 
 function createProps(overrides: Partial<React.ComponentProps<typeof InspectorPanelHeader>> = {}) {
@@ -29,11 +29,11 @@ describe("InspectorPanelHeader", () => {
   it("헤더 제목과 기본 탭들을 렌더링한다", () => {
     render(<InspectorPanelHeader {...createProps()} />);
 
-    expect(screen.getByText("Inspector")).toBeInTheDocument();
+    expect(screen.getByText("인스펙터")).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: /요약/ })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: /RAG/ })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: /Scripts/ })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: /System/ })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: /스크립트/ })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: /시스템/ })).toBeInTheDocument();
   });
 
   it("밀도 토글은 현재 모드 라벨과 title을 반영하고 콜백을 호출한다", () => {
@@ -47,9 +47,9 @@ describe("InspectorPanelHeader", () => {
       />,
     );
 
-    expect(screen.getByText("COMPACT")).toBeInTheDocument();
-    expect(screen.getByLabelText("Inspector 밀도 토글")).toHaveAttribute("title", "Cozy 보기");
-    fireEvent.click(screen.getByLabelText("Inspector 밀도 토글"));
+    expect(screen.getByText("컴팩트")).toBeInTheDocument();
+    expect(screen.getByLabelText("인스펙터 밀도 토글")).toHaveAttribute("title", "여유 보기");
+    fireEvent.click(screen.getByLabelText("인스펙터 밀도 토글"));
     expect(onDensityToggle).toHaveBeenCalledTimes(1);
   });
 
@@ -57,7 +57,7 @@ describe("InspectorPanelHeader", () => {
     const onClose = vi.fn();
     render(<InspectorPanelHeader {...createProps({ onClose })} />);
 
-    fireEvent.click(screen.getByLabelText("Inspector 닫기"));
+    fireEvent.click(screen.getByLabelText("인스펙터 닫기"));
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
@@ -65,7 +65,7 @@ describe("InspectorPanelHeader", () => {
     const onTabKeyDown = vi.fn();
     render(<InspectorPanelHeader {...createProps({ onTabKeyDown })} />);
 
-    fireEvent.keyDown(screen.getByRole("tablist", { name: "Inspector 탭" }), { key: "ArrowRight" });
+    fireEvent.keyDown(screen.getByRole("tablist", { name: "인스펙터 탭" }), { key: "ArrowRight" });
     expect(onTabKeyDown).toHaveBeenCalledTimes(1);
   });
 
@@ -92,8 +92,8 @@ describe("InspectorPanelHeader", () => {
     render(<InspectorPanelHeader {...createProps({ onTabSelect })} />);
 
     fireEvent.click(screen.getByRole("tab", { name: /RAG/ }));
-    fireEvent.keyDown(screen.getByRole("tab", { name: /Scripts/ }), { key: "Enter" });
-    fireEvent.keyDown(screen.getByRole("tab", { name: /System/ }), { key: " " });
+    fireEvent.keyDown(screen.getByRole("tab", { name: /스크립트/ }), { key: "Enter" });
+    fireEvent.keyDown(screen.getByRole("tab", { name: /시스템/ }), { key: " " });
 
     expect(onTabSelect).toHaveBeenNthCalledWith(1, "rag");
     expect(onTabSelect).toHaveBeenNthCalledWith(2, "scripts");
@@ -106,7 +106,7 @@ describe("InspectorPanelHeader", () => {
 
     expect(inspectorTabRefs.current.summary).toBe(screen.getByRole("tab", { name: /요약/ }));
     expect(inspectorTabRefs.current.rag).toBe(screen.getByRole("tab", { name: /RAG/ }));
-    expect(inspectorTabRefs.current.scripts).toBe(screen.getByRole("tab", { name: /Scripts/ }));
-    expect(inspectorTabRefs.current.sysmon).toBe(screen.getByRole("tab", { name: /System/ }));
+    expect(inspectorTabRefs.current.scripts).toBe(screen.getByRole("tab", { name: /스크립트/ }));
+    expect(inspectorTabRefs.current.sysmon).toBe(screen.getByRole("tab", { name: /시스템/ }));
   });
 });
