@@ -196,7 +196,7 @@ describe("InspectorPanel", () => {
     expect(screen.getByText("main")).toBeInTheDocument();
     expect(screen.getByText("/Users/dev")).toBeInTheDocument();
     expect(screen.getByText("Failed Block")).toBeInTheDocument();
-    expect(screen.getByText("Recent Blocks")).toBeInTheDocument();
+    expect(screen.getByText("최근 블록")).toBeInTheDocument();
   });
 
   it("noActivity 상태에서는 Inspector 안내 문구를 보여준다", () => {
@@ -608,7 +608,7 @@ describe("InspectorPanel", () => {
     });
 
     expect(screen.getByText("DONE")).toBeInTheDocument();
-    expect(screen.getByText("Suggested Commands")).toBeInTheDocument();
+    expect(screen.getByText("추천 커맨드")).toBeInTheDocument();
     expect(screen.getByText("npm test -- --runInBand")).toBeInTheDocument();
 
     fireEvent.click(screen.getByText("RUN #1"));
@@ -625,13 +625,13 @@ describe("InspectorPanel", () => {
     expect(screen.getByText("R 실행 · C 복사 · L 로드")).toBeInTheDocument();
   });
 
-  it("추천 커맨드가 없으면 Suggested Commands 영역을 숨긴다", () => {
+  it("추천 커맨드가 없으면 추천 영역을 숨긴다", () => {
     renderInspector({
       analyzeCache: doneWithoutSuggestionsCache,
       inspectorDensity: "cozy",
     });
 
-    expect(screen.queryByText("Suggested Commands")).not.toBeInTheDocument();
+    expect(screen.queryByText("추천 커맨드")).not.toBeInTheDocument();
     expect(screen.queryByText("R 실행 · C 복사 · L 로드")).not.toBeInTheDocument();
     expect(screen.getByText("RUN #1")).toBeInTheDocument();
   });
@@ -653,7 +653,7 @@ describe("InspectorPanel", () => {
 
     expect(screen.getByText("STREAMING")).toBeInTheDocument();
     expect(screen.getByText("응답을 기다리는 중...")).toBeInTheDocument();
-    expect(screen.queryByText("Suggested Commands")).not.toBeInTheDocument();
+    expect(screen.queryByText("추천 커맨드")).not.toBeInTheDocument();
   });
 
   it("error 분석 캐시는 오류 상태와 결과를 보여준다", () => {
@@ -661,7 +661,7 @@ describe("InspectorPanel", () => {
 
     expect(screen.getByText("ERROR")).toBeInTheDocument();
     expect(screen.getByText("stderr: command failed")).toBeInTheDocument();
-    expect(screen.queryByText("Suggested Commands")).not.toBeInTheDocument();
+    expect(screen.queryByText("추천 커맨드")).not.toBeInTheDocument();
   });
 
   it("분석 캐시가 있으면 COPY와 CLEAR 액션을 호출한다", () => {

@@ -19,7 +19,7 @@ const InspectorRecentBlocksCard: React.FC<InspectorRecentBlocksCardProps> = ({
   onLoadAnalyzePromptToAiBar,
 }) => (
   <div className={inspectorCardRegularClass}>
-    <p className="text-white/45 uppercase tracking-[0.06em] text-xs">Recent Blocks</p>
+    <p className="text-white/45 uppercase tracking-[0.06em] text-xs">최근 블록</p>
     {recentBlocks.map((block) => (
       <div key={block.id} className="flex items-start gap-2 rounded-md border border-white/[0.08] bg-black/20 px-2 py-1.5">
         <span className={`mt-0.5 inline-flex items-center justify-center text-xs px-1.5 py-0.5 rounded ${

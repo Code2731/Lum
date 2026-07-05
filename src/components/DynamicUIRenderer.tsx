@@ -86,9 +86,9 @@ const DynamicUIRenderer: React.FC<Props> = ({ code }) => {
       <div className="bg-white/5 px-3 py-1 flex items-center justify-between text-xs uppercase tracking-wider font-bold">
         <div className="flex items-center gap-2">
           {error ? <ShieldAlert size={12} className="text-red-400" /> : <ShieldCheck size={12} className="text-green-400" />}
-          <span>Sandboxed AI Native UI</span>
+          <span>샌드박스 기반 AI 네이티브 UI</span>
         </div>
-        <div className="text-white/40">Read-Only Sandbox</div>
+        <div className="text-white/40">읽기 전용 샌드박스</div>
       </div>
       
       {error ? (
@@ -98,7 +98,7 @@ const DynamicUIRenderer: React.FC<Props> = ({ code }) => {
       ) : (
         <iframe
           ref={iframeRef}
-          title="AI Generated UI Sandbox"
+          title="AI 생성 UI 샌드박스"
           sandbox="allow-scripts"
           className="w-full h-auto min-h-[150px] border-none bg-transparent"
         />

@@ -29,7 +29,7 @@ const SetupWizard: React.FC<Props> = ({
       <div className="setup-wizard-modal">
         <div className="setup-wizard-header">
           <Zap size={24} className="text-accent animate-pulse" />
-          <h2>LUM Setup Wizard</h2>
+          <h2>LUM 설정 마법사</h2>
         </div>
 
         <div className="setup-wizard-body">

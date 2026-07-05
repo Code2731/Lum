@@ -41,7 +41,7 @@ const InspectorAnalyzeCard: React.FC<InspectorAnalyzeCardProps> = ({
 }) => (
   <div className={inspectorCardRegularClass}>
     <div className="flex items-center justify-between gap-2">
-      <p className="text-white/45 uppercase tracking-[0.06em] text-xs">Last AI Analyze</p>
+      <p className="text-white/45 uppercase tracking-[0.06em] text-xs">마지막 AI 분석</p>
       {analyzeCache && (
         <div className="flex items-center gap-1">
           <button
@@ -94,7 +94,7 @@ const InspectorAnalyzeCard: React.FC<InspectorAnalyzeCardProps> = ({
         {analyzeCache.status === "done" && analyzeCache.suggestedCommands.length > 0 && (
           <div className="space-y-1">
             <div className="flex items-center justify-between gap-2">
-              <p className="text-xs uppercase tracking-[0.06em] text-cyan-100/70">Suggested Commands</p>
+              <p className="text-xs uppercase tracking-[0.06em] text-cyan-100/70">추천 커맨드</p>
               <p className="text-xs text-cyan-100/62">
                 {isInspectorCompact ? "R 실행 · MORE→C/L" : "R 실행 · C 복사 · L 로드"}
               </p>

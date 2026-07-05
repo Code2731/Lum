@@ -29,7 +29,7 @@ describe("InspectorRecentBlocksCard", () => {
   it("최근 블록 정보와 실행 시간을 렌더링한다", () => {
     render(<InspectorRecentBlocksCard {...createProps()} />);
 
-    expect(screen.getByText("Recent Blocks")).toBeInTheDocument();
+    expect(screen.getByText("최근 블록")).toBeInTheDocument();
     expect(screen.getByText("npm run build")).toBeInTheDocument();
     expect(screen.getByText("ERR 1")).toBeInTheDocument();
     expect(screen.getByText("2.3s")).toBeInTheDocument();
