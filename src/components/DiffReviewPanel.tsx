@@ -71,7 +71,7 @@ const DiffReviewPanel: React.FC<Props> = ({ model, repoPat = "", onClose }) => {
         {/* Header */}
         <div className="flex items-center gap-2.5 px-5 py-4 border-b border-white/8 shrink-0">
           <GitCompareArrows size={15} className="text-accent" />
-          <DialogTitle className="text-sm font-semibold">AI Diff Reviewer</DialogTitle>
+          <DialogTitle className="text-sm font-semibold">AI Diff 검토기</DialogTitle>
           <div className="flex ml-3 gap-1">
             {(["staged", "unstaged"] as const).map(mode => (
               <button

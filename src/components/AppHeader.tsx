@@ -230,7 +230,7 @@ const AppHeader: React.FC<Props> = ({
     },
     {
       id: "squad",
-      label: "Worktree Squad",
+      label: "워크트리 스쿼드",
       icon: (size) => <Users size={size} />,
       active: showSquadPanel,
       badge: squadStore.squads.length > 0,
@@ -285,7 +285,7 @@ const AppHeader: React.FC<Props> = ({
     },
     {
       id: "skills",
-      label: "Skills — 절차 라이브러리",
+      label: "스킬 — 절차 라이브러리",
       icon: (size) => <BookMarked size={size} className={size <= SMALL_ICON_SIZE ? "text-cyan-300" : undefined} />,
       active: showSkills,
       newFeatureId: "skills",

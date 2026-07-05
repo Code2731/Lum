@@ -45,7 +45,7 @@ const QuickActionsBar: React.FC<Props> = ({
         ))}
 
         <IconButton
-          tooltip="Quick Actions 편집"
+          tooltip="빠른 액션 편집"
           onClick={() => setShowEditor(true)}
           className="ml-auto p-1.5 rounded-md border border-white/[0.12] text-white/45 hover:text-white/80 hover:bg-white/[0.08] transition-colors shrink-0"
         >

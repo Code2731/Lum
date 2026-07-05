@@ -130,14 +130,14 @@ function classify(
   if (isAllOnDevice) {
     return {
       tone: "ondevice",
-      label: "100% On-Device",
+      label: "100% 온디바이스",
       tooltip: "이번 세션의 모든 AI 호출이 로컬에서 처리됐습니다",
     };
   }
   const ratio = state.onlineCalls / state.total;
   return {
     tone: ratio >= 0.5 ? "cloudHeavy" : "mixed",
-    label: `Cloud ${Math.round(ratio * 100)}%`,
+    label: `클라우드 ${Math.round(ratio * 100)}%`,
     tooltip: `클라우드 호출 ${state.onlineCalls}/${state.total}건 — 클릭으로 상세보기`,
   };
 }
@@ -432,20 +432,20 @@ const PrivacyLedgerBadge: React.FC<Props> = ({
         backgroundColor: "#161b22",
       }}
       className="fixed w-72 flex flex-col border border-white/12 rounded-xl shadow-2xl z-[2200] overflow-hidden"
-      aria-label="Privacy Ledger 상세"
+      aria-label="개인정보 원장 상세"
       id={popoverId}
       role="dialog"
     >
       <div className="flex items-center justify-between px-3 py-2 border-b border-white/5">
         <div className="flex items-center gap-1.5 text-xs font-semibold text-white/85">
           <ShieldCheck size={12} />
-          <span>Privacy Ledger</span>
+          <span>개인정보 원장</span>
         </div>
         <div className="flex items-center gap-1">
           <button
             type="button"
             onClick={closePopover}
-            aria-label="Privacy Ledger 상세 닫기"
+            aria-label="개인정보 원장 상세 닫기"
             className="inline-flex items-center gap-1 text-sm text-white/45 hover:text-white/85 transition-colors rounded px-1.5 py-0.5 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
           >
             <X size={11} />
@@ -549,7 +549,7 @@ const PrivacyLedgerBadge: React.FC<Props> = ({
         <TooltipTrigger asChild>
           <button
             type="button"
-            aria-label={`Privacy Ledger — ${label}`}
+            aria-label={`개인정보 원장 — ${label}`}
             aria-pressed={open}
             aria-expanded={open}
             aria-controls={popoverId}

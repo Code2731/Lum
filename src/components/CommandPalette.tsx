@@ -76,7 +76,7 @@ const CommandPalette: React.FC<Props> = ({
         )}
 
         {quickActions.length > 0 && (
-          <CommandGroup heading="Quick Actions">
+          <CommandGroup heading="빠른 액션">
             {quickActions.map((a) => (
               <CommandItem
                 key={`action-${a.id}`}

@@ -206,7 +206,7 @@ const CommandInput = ({
       <div className={`editor-box ${isAI ? "editor-box-ai" : ""} ${isRecording ? "recording" : ""}`}>
         <div className="editor-header">
           <IconButton
-            tooltip="Voice Command"
+            tooltip="음성 명령"
             className={`mic-btn ${isRecording ? "active" : ""}`}
             onClick={handleMicToggle}
             disabled={voiceBusy}

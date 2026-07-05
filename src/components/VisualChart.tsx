@@ -130,7 +130,7 @@ const VisualChart = ({ visualData }: { visualData: VisualData }) => {
           </PieChart>
         );
       default:
-        return <div>Unsupported chart type</div>;
+        return <div>지원되지 않는 차트 유형</div>;
     }
   };
 

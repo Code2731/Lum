@@ -58,7 +58,7 @@ const SquadPanel: React.FC<Props> = ({
       <DialogContent className="sm:max-w-[600px] max-h-[80vh] flex flex-col gap-0 p-0 overflow-hidden border-white/10 rounded-2xl">
         <div className="flex items-center gap-2.5 px-5 py-4 border-b border-white/8 shrink-0">
           <Users size={15} className="text-accent" />
-          <DialogTitle className="text-sm font-semibold">Worktree Squad</DialogTitle>
+          <DialogTitle className="text-sm font-semibold">워크트리 스쿼드</DialogTitle>
           <span className="text-xs text-white/35 ml-1">병렬 작업 격리</span>
         </div>
 

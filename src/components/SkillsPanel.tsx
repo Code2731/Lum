@@ -125,7 +125,7 @@ const SkillsPanel: React.FC<Props> = ({ onClose }) => {
       <DialogContent className="lum-sidepanel sm:max-w-[760px] max-h-[85vh] flex flex-col gap-0 p-0 overflow-hidden border-white/12 rounded-2xl">
         <div className="flex items-center gap-2.5 px-5 py-4 border-b border-white/10 bg-white/[0.02] shrink-0">
           <Library size={15} className="text-accent" />
-          <DialogTitle className="text-sm font-semibold">Skills — 절차 라이브러리</DialogTitle>
+          <DialogTitle className="text-sm font-semibold">스킬 — 절차 라이브러리</DialogTitle>
           <span className="text-xs text-white/35 ml-1">자연어 매칭 → ReAct에 자동 주입</span>
           <button
             type="button"
@@ -152,7 +152,7 @@ const SkillsPanel: React.FC<Props> = ({ onClose }) => {
               {visibleSkills.length} / {skills.length}
             </span>
             <Button size="sm" className="h-7 gap-1.5 text-xs border border-accent/35 bg-accent/20 hover:bg-accent/30" onClick={startNew}>
-              <Plus size={12} /> 새 Skill
+              <Plus size={12} /> 새 스킬
             </Button>
           </div>
         )}
@@ -214,7 +214,7 @@ const SkillList: React.FC<{
     return (
       <div className="text-center py-10 text-xs text-white/35 space-y-2">
         <Sparkles size={20} className="mx-auto text-white/20" />
-        <p>저장된 Skill이 없습니다.</p>
+        <p>저장된 스킬이 없습니다.</p>
         <p className="text-xs text-white/25 leading-relaxed">
           반복적으로 풀던 문제 절차를 저장해두면<br />
           다음에 ReAct가 자연어 매칭으로 자동 호출합니다.
@@ -262,7 +262,7 @@ const SkillList: React.FC<{
               </button>
               <ConfirmDeleteDialog
                 itemName={s.name}
-                itemType="Skill"
+                itemType="스킬"
                 onConfirm={async () => { await onDelete(s.id); }}
               >
                 <button

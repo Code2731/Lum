@@ -43,7 +43,7 @@ const QuickActionsEditor: React.FC<Props> = ({
         {/* Header */}
         <div className="flex items-center gap-2.5 px-5 py-4 border-b border-white/8 shrink-0">
           <Zap size={14} className="text-accent" />
-          <DialogTitle className="text-sm font-semibold">Quick Actions 편집</DialogTitle>
+          <DialogTitle className="text-sm font-semibold">빠른 액션 편집</DialogTitle>
         </div>
 
         {/* 액션 목록 */}
@@ -100,7 +100,7 @@ const QuickActionsEditor: React.FC<Props> = ({
               <IconButton
                 tooltip="삭제"
                 confirm={{
-                  title: "Quick Action 삭제",
+                  title: "빠른 액션 삭제",
                   description: <><span className="font-medium text-white/85">"{a.label}"</span> 액션이 삭제됩니다.</>,
                 }}
                 onClick={() => onDelete(a.id)}

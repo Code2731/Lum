@@ -232,7 +232,7 @@ describe("AppHeader", () => {
     mcpItem.focus();
     expect(mcpItem).toHaveFocus();
 
-    const squadItem = screen.getByRole("menuitem", { name: "Worktree Squad" });
+    const squadItem = screen.getByRole("menuitem", { name: "워크트리 스쿼드" });
     const focusSpy = vi.spyOn(squadItem, "focus");
 
     fireEvent.keyDown(mcpItem, { key: "ArrowDown" });
@@ -602,7 +602,7 @@ describe("AppHeader", () => {
       { name: "Auto-Heal 학습 데이터셋", featureId: "healing" as NewFeatureId },
       { name: "메모리 검색", featureId: "recall" as NewFeatureId },
       { name: "LoRA Forge", featureId: "lora" as NewFeatureId },
-      { name: "Skills — 절차 라이브러리", featureId: "skills" as NewFeatureId },
+      { name: "스킬 — 절차 라이브러리", featureId: "skills" as NewFeatureId },
     ];
 
     for (const item of cases) {
@@ -638,7 +638,7 @@ describe("AppHeader", () => {
     fireEvent.click(screen.getByRole("button", { name: "Auto-Heal 학습 데이터셋" }));
     fireEvent.click(screen.getByRole("button", { name: "메모리 검색 \(history\/healing\/memory\)" }));
     fireEvent.click(screen.getByRole("button", { name: "LoRA Forge — 내 데이터로 모델 학습" }));
-    fireEvent.click(screen.getByRole("button", { name: "Skills — 절차 라이브러리" }));
+    fireEvent.click(screen.getByRole("button", { name: "스킬 — 절차 라이브러리" }));
 
     expect(onMarkAdvancedSeen).toHaveBeenCalledTimes(4);
     expect(onMarkAdvancedSeen).toHaveBeenCalledWith("healing");

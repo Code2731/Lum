@@ -65,7 +65,7 @@ describe("PrivacyLedgerBadge", () => {
       />,
     );
 
-    const button = screen.getByRole("button", { name: /Privacy Ledger/ });
+    const button = screen.getByRole("button", { name: /개인정보 원장/ });
     fireEvent.click(button);
     expect(screen.getByText("전체 AI 호출")).toBeInTheDocument();
 
@@ -106,7 +106,7 @@ describe("PrivacyLedgerBadge", () => {
         onReset={onReset}
       />,
     );
-    const button = screen.getByRole("button", { name: /Privacy Ledger/ });
+    const button = screen.getByRole("button", { name: /개인정보 원장/ });
     fireEvent.click(button);
 
     const reset = screen.getByText("초기화");
@@ -145,13 +145,13 @@ describe("PrivacyLedgerBadge", () => {
       />,
     );
 
-    const trigger = screen.getByRole("button", { name: /Privacy Ledger/ });
+    const trigger = screen.getByRole("button", { name: /개인정보 원장/ });
     fireEvent.click(trigger);
 
     const buttons = screen.getAllByRole("button").filter((btn) => btn !== trigger);
     expect(buttons.length).toBeGreaterThanOrEqual(2);
 
-    const closeButton = screen.getByRole("button", { name: "Privacy Ledger 상세 닫기" });
+    const closeButton = screen.getByRole("button", { name: "개인정보 원장 상세 닫기" });
     const resetButton = screen.getByRole("button", { name: "세션 카운터 초기화" });
     const closeButtonNode = closeButton as HTMLButtonElement;
 
@@ -201,13 +201,13 @@ describe("PrivacyLedgerBadge", () => {
       />,
     );
 
-    const trigger = screen.getByRole("button", { name: /Privacy Ledger/ });
+    const trigger = screen.getByRole("button", { name: /개인정보 원장/ });
     fireEvent.click(trigger);
 
     const buttons = screen.getAllByRole("button").filter((btn) => btn !== trigger);
     expect(buttons.length).toBeGreaterThanOrEqual(2);
 
-    const closeButton = screen.getByRole("button", { name: "Privacy Ledger 상세 닫기" });
+    const closeButton = screen.getByRole("button", { name: "개인정보 원장 상세 닫기" });
     const resetButton = screen.getByRole("button", { name: "세션 카운터 초기화" });
 
     resetButton.focus();
@@ -230,7 +230,7 @@ describe("PrivacyLedgerBadge", () => {
       />,
     );
 
-    const trigger = screen.getByRole("button", { name: /Privacy Ledger/ });
+    const trigger = screen.getByRole("button", { name: /개인정보 원장/ });
     trigger.focus();
     expect(trigger).toHaveFocus();
 
@@ -253,13 +253,13 @@ describe("PrivacyLedgerBadge", () => {
       />,
     );
 
-    const trigger = screen.getByRole("button", { name: /Privacy Ledger/ });
+    const trigger = screen.getByRole("button", { name: /개인정보 원장/ });
     fireEvent.click(trigger);
 
-    const popover = screen.getByRole("dialog", { name: "Privacy Ledger 상세" });
+    const popover = screen.getByRole("dialog", { name: "개인정보 원장 상세" });
     fireEvent.pointerDown(popover);
 
-    expect(screen.getByRole("dialog", { name: "Privacy Ledger 상세" })).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: "개인정보 원장 상세" })).toBeInTheDocument();
     expect(trigger).toHaveAttribute("aria-pressed", "true");
   });
 
@@ -275,7 +275,7 @@ describe("PrivacyLedgerBadge", () => {
       />,
     );
 
-    const trigger = screen.getByRole("button", { name: /Privacy Ledger/ });
+    const trigger = screen.getByRole("button", { name: /개인정보 원장/ });
     Object.defineProperty(window, "innerHeight", {
       configurable: true,
       value: 180,
@@ -297,7 +297,7 @@ describe("PrivacyLedgerBadge", () => {
 
     fireEvent.click(trigger);
 
-    const popover = screen.getByRole("dialog", { name: "Privacy Ledger 상세" });
+    const popover = screen.getByRole("dialog", { name: "개인정보 원장 상세" });
     const maxHeight = Number.parseFloat(popover.style.maxHeight || "0");
     expect(maxHeight).toBeGreaterThan(0);
     expect(maxHeight).toBeLessThanOrEqual(164);
@@ -320,7 +320,7 @@ describe("PrivacyLedgerBadge", () => {
       />,
     );
 
-    const trigger = screen.getByRole("button", { name: /Privacy Ledger/ });
+    const trigger = screen.getByRole("button", { name: /개인정보 원장/ });
     Object.defineProperty(window, "innerHeight", {
       configurable: true,
       value: 140,
@@ -342,7 +342,7 @@ describe("PrivacyLedgerBadge", () => {
 
     fireEvent.click(trigger);
 
-    const popover = screen.getByRole("dialog", { name: "Privacy Ledger 상세" });
+    const popover = screen.getByRole("dialog", { name: "개인정보 원장 상세" });
     const maxHeight = Number.parseFloat(popover.style.maxHeight || "0");
     expect(maxHeight).toBe(124);
     expect(popover.style.top).toBe("8px");
@@ -380,7 +380,7 @@ describe("PrivacyLedgerBadge", () => {
       />,
     );
 
-    const trigger = screen.getByRole("button", { name: /Privacy Ledger/ });
+    const trigger = screen.getByRole("button", { name: /개인정보 원장/ });
     Object.defineProperty(trigger, "getBoundingClientRect", {
       configurable: true,
       value: () => ({
@@ -397,7 +397,7 @@ describe("PrivacyLedgerBadge", () => {
     });
 
     fireEvent.click(trigger);
-    const popover = screen.getByRole("dialog", { name: "Privacy Ledger 상세" });
+    const popover = screen.getByRole("dialog", { name: "개인정보 원장 상세" });
     const maxHeight = Number.parseFloat(popover.style.maxHeight || "0");
     expect(maxHeight).toBeGreaterThan(300);
 

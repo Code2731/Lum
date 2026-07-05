@@ -154,7 +154,7 @@ describe("CommandInput Component", () => {
 
   it("voice_recording_state 이벤트 수신 시 녹음 상태가 동기화되어야 함", async () => {
     render(<CommandInput {...defaultProps} />);
-    const micButton = screen.getByLabelText("Voice Command");
+    const micButton = screen.getByLabelText("음성 명령");
     expect(micButton).toBeInTheDocument();
     await act(async () => {
       await Promise.resolve();
@@ -173,7 +173,7 @@ describe("CommandInput Component", () => {
       return undefined;
     });
     render(<CommandInput {...defaultProps} />);
-    const micButton = screen.getByLabelText("Voice Command");
+    const micButton = screen.getByLabelText("음성 명령");
     await act(async () => {
       fireEvent.click(micButton);
     });
@@ -193,7 +193,7 @@ describe("CommandInput Component", () => {
       return Promise.resolve(undefined);
     });
     render(<CommandInput {...defaultProps} />);
-    const micButton = screen.getByLabelText("Voice Command");
+    const micButton = screen.getByLabelText("음성 명령");
     await act(async () => {
       fireEvent.click(micButton);
     });
