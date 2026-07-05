@@ -739,29 +739,29 @@ describe("TerminalPane — 입력 라우팅", () => {
   it("Cmd/Ctrl+/로 단축키 치트시트를 열고 Esc로 닫는다", () => {
     const { container } = render(<TerminalPane id="tab-1" />);
     const input = container.querySelector("input")!;
-    expect(screen.queryByText("SHORTCUT CHEATSHEET")).not.toBeInTheDocument();
+    expect(screen.queryByText("단축키 치트시트")).not.toBeInTheDocument();
 
     fireEvent.keyDown(input, { key: "/", code: "Slash", ctrlKey: true });
-    expect(screen.getByText("SHORTCUT CHEATSHEET")).toBeInTheDocument();
+    expect(screen.getByText("단축키 치트시트")).toBeInTheDocument();
     expect(screen.getByText("Cmd/Ctrl+Shift+C · 인터럽트")).toBeInTheDocument();
     expect(screen.getByText("Cmd/Ctrl+1~4/0 · 백엔드 직접 지정/해제")).toBeInTheDocument();
     expect(screen.getByText("Cmd/Ctrl+./, · 백엔드 직접 순환")).toBeInTheDocument();
 
     fireEvent.keyDown(input, { key: "Escape" });
-    expect(screen.queryByText("SHORTCUT CHEATSHEET")).not.toBeInTheDocument();
+    expect(screen.queryByText("단축키 치트시트")).not.toBeInTheDocument();
   });
 
   it("Cmd/Ctrl+K로 Action Palette를 열고 Esc로 닫는다", () => {
     const { container } = render(<TerminalPane id="tab-1" />);
     const input = container.querySelector("input")!;
-    expect(screen.queryByText("ACTION PALETTE")).not.toBeInTheDocument();
+    expect(screen.queryByText("액션 팔레트")).not.toBeInTheDocument();
 
     fireEvent.keyDown(input, { key: "k", code: "KeyK", ctrlKey: true });
-    expect(screen.getByText("ACTION PALETTE")).toBeInTheDocument();
+    expect(screen.getByText("액션 팔레트")).toBeInTheDocument();
 
     const paletteInput = screen.getByRole("textbox", { name: "action-palette-input" });
     fireEvent.keyDown(paletteInput, { key: "Escape" });
-    expect(screen.queryByText("ACTION PALETTE")).not.toBeInTheDocument();
+    expect(screen.queryByText("액션 팔레트")).not.toBeInTheDocument();
   });
 
   it("Action Palette placeholder는 백엔드 예시를 노출한다", () => {
@@ -769,10 +769,10 @@ describe("TerminalPane — 입력 라우팅", () => {
     const input = container.querySelector("input")!;
 
     fireEvent.keyDown(input, { key: "k", code: "KeyK", ctrlKey: true });
-    expect(screen.getByText("ACTION PALETTE")).toBeInTheDocument();
+    expect(screen.getByText("액션 팔레트")).toBeInTheDocument();
     expect(screen.getByRole("textbox", { name: "action-palette-input" })).toHaveAttribute(
       "placeholder",
-      "액션 검색 (예: clear, recall, 백엔드)",
+      "액션 검색 (예: 지우기, 복원, 백엔드)",
     );
   });
 
@@ -792,10 +792,10 @@ describe("TerminalPane — 입력 라우팅", () => {
   it("입력 단축키 Cmd/Ctrl+Alt+K는 Action Palette를 열지 않는다", () => {
     const { container } = render(<TerminalPane id="tab-1" />);
     const input = container.querySelector("input")!;
-    expect(screen.queryByText("ACTION PALETTE")).not.toBeInTheDocument();
+    expect(screen.queryByText("액션 팔레트")).not.toBeInTheDocument();
 
     fireEvent.keyDown(input, { key: "k", code: "KeyK", ctrlKey: true, altKey: true });
-    expect(screen.queryByText("ACTION PALETTE")).not.toBeInTheDocument();
+    expect(screen.queryByText("액션 팔레트")).not.toBeInTheDocument();
     expect(input).toHaveValue("");
   });
 
@@ -805,7 +805,7 @@ describe("TerminalPane — 입력 라우팅", () => {
     fireEvent.change(input, { target: { value: "echo done" } });
 
     fireEvent.keyDown(input, { key: "K", ctrlKey: true, shiftKey: true, altKey: true });
-    expect(screen.queryByText("ACTION PALETTE")).not.toBeInTheDocument();
+    expect(screen.queryByText("액션 팔레트")).not.toBeInTheDocument();
     expect(input).toHaveValue("echo done");
   });
 
@@ -821,10 +821,10 @@ describe("TerminalPane — 입력 라우팅", () => {
   it("입력 단축키 Cmd/Ctrl+Alt+/는 단축키 치트시트를 열지 않는다", () => {
     const { container } = render(<TerminalPane id="tab-1" />);
     const input = container.querySelector("input")!;
-    expect(screen.queryByText("SHORTCUT CHEATSHEET")).not.toBeInTheDocument();
+    expect(screen.queryByText("단축키 치트시트")).not.toBeInTheDocument();
 
     fireEvent.keyDown(input, { key: "/", code: "Slash", ctrlKey: true, altKey: true });
-    expect(screen.queryByText("SHORTCUT CHEATSHEET")).not.toBeInTheDocument();
+    expect(screen.queryByText("단축키 치트시트")).not.toBeInTheDocument();
     expect(input).toHaveValue("");
   });
 
@@ -853,7 +853,7 @@ describe("TerminalPane — 입력 라우팅", () => {
     fireEvent.change(paletteInput, { target: { value: "undo" } });
     fireEvent.keyDown(paletteInput, { key: "Enter" });
 
-    expect(screen.queryByText("ACTION PALETTE")).not.toBeInTheDocument();
+    expect(screen.queryByText("액션 팔레트")).not.toBeInTheDocument();
     expect(input).toHaveValue("alpha");
   });
 
@@ -877,7 +877,7 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(items[0]).toHaveClass("is-active");
 
     fireEvent.keyDown(paletteInput, { key: "Escape" });
-    expect(screen.queryByText("ACTION PALETTE")).not.toBeInTheDocument();
+    expect(screen.queryByText("액션 팔레트")).not.toBeInTheDocument();
   });
 
   it("Action Palette에서 결과가 없을 때 Home/End 입력이 크래시 없이 처리된다", () => {
@@ -1298,14 +1298,14 @@ describe("TerminalPane — 입력 라우팅", () => {
 
     expectHistoryActionEnabled();
     openInputHistoryPanel();
-    expect(screen.getByText("INPUT HISTORY")).toBeInTheDocument();
+    expect(screen.getByText("입력 히스토리")).toBeInTheDocument();
     expect(screen.getByLabelText("input-history-shortcuts")).toHaveTextContent("Del/Backspace 삭제");
     expect(screen.getByLabelText("input-history-shortcuts")).toHaveTextContent("Shift+↑/↓ 범위 선택");
     expect(screen.getByLabelText("input-history-shortcuts")).toHaveTextContent("Shift+클릭 범위 선택");
     expect(screen.getByLabelText("input-history-shortcuts")).toHaveTextContent("Cmd/Ctrl+A 전체 선택");
 
     fireEvent.click(screen.getByRole("button", { name: "quick-input-history-item-1" }));
-    expect(screen.queryByText("INPUT HISTORY")).not.toBeInTheDocument();
+    expect(screen.queryByText("입력 히스토리")).not.toBeInTheDocument();
     expect(input).toHaveValue("ls -la");
   });
 
@@ -1400,13 +1400,13 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(screen.getByRole("button", { name: "quick-input-history-item-0" })).toHaveTextContent("npm test");
 
     fireEvent.keyDown(search, { key: "Enter" });
-    expect(screen.queryByText("INPUT HISTORY")).not.toBeInTheDocument();
+    expect(screen.queryByText("입력 히스토리")).not.toBeInTheDocument();
     expect(input).toHaveValue("npm test");
 
     openInputHistoryPanel();
     const reopenSearch = screen.getByRole("textbox", { name: "input-history-search" });
     fireEvent.keyDown(reopenSearch, { key: "Escape" });
-    expect(screen.queryByText("INPUT HISTORY")).not.toBeInTheDocument();
+    expect(screen.queryByText("입력 히스토리")).not.toBeInTheDocument();
   });
 
   it("HISTORY 검색창에서 Home/End로 항목 선택 포인트를 이동한다", async () => {
@@ -1566,7 +1566,7 @@ describe("TerminalPane — 입력 라우팅", () => {
     expect(screen.getByRole("button", { name: "quick-input-history-item-2" })).toHaveTextContent("ls -la");
 
     fireEvent.keyDown(search, { key: "ArrowDown", shiftKey: true });
-    expect(screen.getByLabelText("input-history-selected-count")).toHaveTextContent("2 selected");
+    expect(screen.getByLabelText("input-history-selected-count")).toHaveTextContent("2개 선택");
     expect(screen.getByLabelText("input-history-selected-preview")).toHaveTextContent("pwd");
     expect(screen.getByLabelText("input-history-selected-preview")).toHaveTextContent("npm test");
     fireEvent.keyDown(search, { key: "Delete" });
@@ -1614,8 +1614,8 @@ describe("TerminalPane — 입력 라우팅", () => {
     const search = screen.getByRole("textbox", { name: "input-history-search" });
     fireEvent.click(screen.getByRole("button", { name: "quick-input-history-item-1" }), { shiftKey: true });
 
-    expect(screen.getByLabelText("input-history-selected-count")).toHaveTextContent("2 selected");
-    expect(screen.getByText("INPUT HISTORY")).toBeInTheDocument();
+    expect(screen.getByLabelText("input-history-selected-count")).toHaveTextContent("2개 선택");
+    expect(screen.getByText("입력 히스토리")).toBeInTheDocument();
 
     fireEvent.keyDown(search, { key: "Delete" });
     expect(screen.queryByLabelText("input-history-selected-count")).not.toBeInTheDocument();
@@ -1659,7 +1659,7 @@ describe("TerminalPane — 입력 라우팅", () => {
     fireEvent.change(search, { target: { value: "p" } });
 
     fireEvent.keyDown(search, { key: "a", ctrlKey: true });
-    expect(screen.getByLabelText("input-history-selected-count")).toHaveTextContent("2 selected");
+    expect(screen.getByLabelText("input-history-selected-count")).toHaveTextContent("2개 선택");
 
     fireEvent.keyDown(search, { key: "Delete" });
     expect(screen.queryByLabelText("input-history-selected-count")).not.toBeInTheDocument();
@@ -1705,7 +1705,7 @@ describe("TerminalPane — 입력 라우팅", () => {
     const search = screen.getByRole("textbox", { name: "input-history-search" });
 
     fireEvent.keyDown(search, { key: "ArrowDown", shiftKey: true });
-    expect(screen.getByLabelText("input-history-selected-count")).toHaveTextContent("2 selected");
+    expect(screen.getByLabelText("input-history-selected-count")).toHaveTextContent("2개 선택");
     expect(screen.getByRole("button", { name: "quick-input-history-clear-selection" })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "quick-input-history-clear-selection" }));
@@ -1751,14 +1751,14 @@ describe("TerminalPane — 입력 라우팅", () => {
     const search = screen.getByRole("textbox", { name: "input-history-search" });
 
     fireEvent.keyDown(search, { key: "ArrowDown", shiftKey: true });
-    expect(screen.getByLabelText("input-history-selected-count")).toHaveTextContent("2 selected");
+    expect(screen.getByLabelText("input-history-selected-count")).toHaveTextContent("2개 선택");
 
     fireEvent.keyDown(search, { key: "Escape" });
     expect(screen.queryByLabelText("input-history-selected-count")).not.toBeInTheDocument();
-    expect(screen.getByText("INPUT HISTORY")).toBeInTheDocument();
+    expect(screen.getByText("입력 히스토리")).toBeInTheDocument();
 
     fireEvent.keyDown(search, { key: "Escape" });
-    expect(screen.queryByText("INPUT HISTORY")).not.toBeInTheDocument();
+    expect(screen.queryByText("입력 히스토리")).not.toBeInTheDocument();
   });
 
   it("RECALL 단축키로 교체된 입력은 UNDO로 직전 입력 복원이 가능하다", async () => {

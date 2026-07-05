@@ -2093,7 +2093,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
                 setActionPaletteQuery("");
                 setActionPaletteSelected(0);
               }}
-              title="Action Palette 열기 (Cmd/Ctrl+K)"
+              title="액션 팔레트 열기 (Cmd/Ctrl+K)"
               style={{
                 fontSize: MICRO_FONT_SIZE,
                 color: "rgba(215,228,255,0.96)",
@@ -2137,7 +2137,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
         >
           <div className="lum-overlay-header lum-overlay-header--bordered">
             <span className="lum-overlay-title">
-              ACTION PALETTE
+              액션 팔레트
             </span>
             <button
               className="lum-overlay-close lum-overlay-close-btn"
@@ -2159,7 +2159,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
                 setActionPaletteSelected(0);
               }}
               onKeyDown={handleActionPaletteKeyDown}
-              placeholder="액션 검색 (예: clear, recall, 백엔드)"
+              placeholder="액션 검색 (예: 지우기, 복원, 백엔드)"
             />
           </div>
           <div className="lum-overlay-list">
@@ -2199,12 +2199,12 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
           <div className="lum-overlay-header lum-overlay-header--bordered">
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <span className="lum-overlay-title">
-                INPUT HISTORY
+                입력 히스토리
               </span>
               {inputHistoryMultiSelected.length > 1 && (
                 <>
                   <span aria-label="input-history-selected-count" className="lum-overlay-pill">
-                    {inputHistoryMultiSelected.length} selected
+                    {inputHistoryMultiSelected.length}개 선택
                   </span>
                   <span
                     aria-label="input-history-selected-preview"
@@ -2219,7 +2219,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
                     aria-label="quick-input-history-clear-selection"
                     onClick={clearInputHistoryMultiSelection}
                   >
-                    SELECTION CLEAR
+                    선택 지우기
                   </button>
                 </>
               )}
@@ -2232,7 +2232,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
                 disabled={submittedInputHistory.length === 0}
                 className={`lum-overlay-danger-btn ${submittedInputHistory.length === 0 ? "is-disabled" : ""}`}
               >
-                CLEAR
+                기록 전체 삭제
               </button>
               <button
                 className="lum-overlay-close lum-overlay-close-btn"
@@ -2322,7 +2322,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
                     }}
                     title="이 항목 삭제"
                   >
-                    DEL
+                    삭제
                   </button>
                 </div>
               );
@@ -2364,7 +2364,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
                     onClick={() => applyMentionItem(item)}
                     className={`lum-overlay-item lum-overlay-item--mention ${selected ? "is-active" : ""}`}
                   >
-                    <span className="lum-overlay-item-kicker lum-overlay-item-kicker--dir">UP</span>
+                    <span className="lum-overlay-item-kicker lum-overlay-item-kicker--dir">상위</span>
                     <span className="lum-overlay-item-text">.. (상위 폴더)</span>
                   </button>
                 );
@@ -2378,7 +2378,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
                   className={`lum-overlay-item lum-overlay-item--mention ${selected ? "is-active" : ""}`}
                 >
                   <span className={`lum-overlay-item-kicker ${entry.is_dir ? "lum-overlay-item-kicker--dir" : ""}`}>
-                    {entry.is_dir ? "DIR" : "FILE"}
+                    {entry.is_dir ? "폴더" : "파일"}
                   </span>
                   <span className="lum-overlay-item-text">
                     @{mentionTrail}{entry.name}{entry.is_dir ? "/" : ""}
@@ -2401,7 +2401,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
         >
           <div className="lum-overlay-header">
             <span className="lum-overlay-title">
-              SHORTCUT CHEATSHEET
+              단축키 치트시트
             </span>
             <button
               className="lum-overlay-close lum-overlay-close-btn"
@@ -2417,9 +2417,9 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
             <span>Cmd/Ctrl+1~4/0 · 백엔드 직접 지정/해제</span><span>Cmd/Ctrl+./, · 백엔드 직접 순환</span>
             <span>Cmd/Ctrl+Shift+1~4/0 · 백엔드 지정/해제</span><span>Cmd/Ctrl+Shift+←/→ · 백엔드 순환</span>
             <span>Cmd/Ctrl+Shift+B/N · 백엔드 이전/마지막</span><span>Cmd/Ctrl+Shift+O · 자동 토글</span>
-            <span>Cmd/Ctrl+Shift+K/Z/R · CLEAR/UNDO/RECALL</span><span>Cmd/Ctrl+Shift+S/F · SET/FORGET RECALL</span>
-            <span>Cmd/Ctrl+Shift+E/W · RERUN/SWAP</span><span>Cmd/Ctrl+Shift+M/P · MERGE/PREPEND</span>
-            <span>Cmd/Ctrl+Shift+G/T/Q/L · PLAIN/TRIM/SQUASH/CLEAN</span><span>Cmd/Ctrl+Shift+A · @ 첨부</span>
+            <span>Cmd/Ctrl+Shift+K/Z/R · 입력 지우기/복구/마지막 입력 불러오기</span><span>Cmd/Ctrl+Shift+S/F · 저장/삭제</span>
+            <span>Cmd/Ctrl+Shift+E/W · 마지막 입력 재실행/교체</span><span>Cmd/Ctrl+Shift+M/P · 병합/앞쪽에 추가</span>
+            <span>Cmd/Ctrl+Shift+G/T/Q/L · 일반 입력 정리/공백 정리/연속 공백 축소/입력 정리</span><span>Cmd/Ctrl+Shift+A · @ 첨부</span>
             <span>Cmd/Ctrl+Shift+H/Y/J/U/V/I · 모드 토글</span><span>Esc · 오버레이 닫기</span>
           </div>
         </div>
@@ -2483,7 +2483,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
                 {aiGhost?.cmd}
               </span>
               <span style={{ fontSize: MICRO_FONT_SIZE, color: "rgba(255,255,255,0.25)", fontFamily: FONT_FAMILY }}>
-                Tab
+              탭
               </span>
             </>
           )}
