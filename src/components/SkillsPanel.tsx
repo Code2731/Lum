@@ -336,7 +336,7 @@ const SkillEditor: React.FC<{
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <div>
-          <label className="text-sm text-white/55 mb-1 block">When to Use</label>
+          <label className="text-sm text-white/55 mb-1 block">사용 시점</label>
           <Textarea
             value={draft.when_to_use ?? ""}
             onChange={(e) => setDraft((d) => ({ ...d, when_to_use: e.target.value }))}
@@ -345,7 +345,7 @@ const SkillEditor: React.FC<{
           />
         </div>
         <div>
-          <label className="text-sm text-white/55 mb-1 block">Quick Reference</label>
+          <label className="text-sm text-white/55 mb-1 block">빠른 참조</label>
           <Textarea
             value={draft.quick_reference ?? ""}
             onChange={(e) => setDraft((d) => ({ ...d, quick_reference: e.target.value }))}
@@ -354,7 +354,7 @@ const SkillEditor: React.FC<{
           />
         </div>
         <div>
-          <label className="text-sm text-white/55 mb-1 block">Pitfalls</label>
+          <label className="text-sm text-white/55 mb-1 block">주의점</label>
           <Textarea
             value={draft.pitfalls ?? ""}
             onChange={(e) => setDraft((d) => ({ ...d, pitfalls: e.target.value }))}
@@ -363,7 +363,7 @@ const SkillEditor: React.FC<{
           />
         </div>
         <div>
-          <label className="text-sm text-white/55 mb-1 block">Verification</label>
+          <label className="text-sm text-white/55 mb-1 block">검증</label>
           <Textarea
             value={draft.verification ?? ""}
             onChange={(e) => setDraft((d) => ({ ...d, verification: e.target.value }))}

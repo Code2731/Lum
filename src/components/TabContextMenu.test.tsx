@@ -199,7 +199,7 @@ describe("TabContextMenu", () => {
     );
 
     const menu = screen.getByRole("menu", { hidden: true });
-    const groupInput = screen.getByPlaceholderText("예: backend, deploy…");
+    const groupInput = screen.getByPlaceholderText("예: 백엔드, 배포…");
     const firstColor = screen.getAllByRole("radio", { hidden: true })[0];
     firstColor.focus();
     expect(firstColor).toHaveFocus();
@@ -229,7 +229,7 @@ describe("TabContextMenu", () => {
       </div>,
     );
 
-    const groupInput = screen.getByPlaceholderText("예: backend, deploy…");
+    const groupInput = screen.getByPlaceholderText("예: 백엔드, 배포…");
     fireEvent.change(groupInput, { target: { value: "backend" } });
     fireEvent.keyDown(groupInput, { key: "Enter" });
 

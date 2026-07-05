@@ -240,7 +240,7 @@ const TabContextMenu: React.FC<Props> = ({
         <input
           ref={inputRef}
           defaultValue={currentGroup ?? ""}
-          placeholder="예: backend, deploy…"
+          placeholder="예: 백엔드, 배포…"
           className="w-full bg-white/5 border border-white/8 rounded-lg px-2 py-1 text-sm text-white/70 placeholder:text-white/20 outline-none focus:border-accent/40"
           onKeyDown={e => {
             if (e.key === "Enter") {
