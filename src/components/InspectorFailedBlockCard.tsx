@@ -27,7 +27,7 @@ const InspectorFailedBlockCard: React.FC<InspectorFailedBlockCardProps> = ({
 }) => (
   <div className={inspectorCardRegularClass}>
     <div className="flex items-center justify-between gap-2">
-      <p className="text-white/45 uppercase tracking-[0.06em] text-xs">Failed Block</p>
+      <p className="text-white/45 uppercase tracking-[0.06em] text-xs">실패 블록</p>
       <span className="text-xs text-rose-200/80">{failedBlocks.length}개</span>
     </div>
     {focusedFailedBlock ? (
@@ -49,41 +49,41 @@ const InspectorFailedBlockCard: React.FC<InspectorFailedBlockCardProps> = ({
             className="inline-flex w-[84px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-rose-300/35 bg-rose-400/14 text-xs text-rose-100 hover:bg-rose-400/22 transition-colors"
           >
             <AlertTriangle size={9} />
-            NEXT FAIL
+            다음 실패
           </button>
           <button
             onClick={() => onAnalyzeFailedBlock(focusedFailedBlock.id)}
             className="inline-flex w-[88px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-cyan-300/35 bg-cyan-400/14 text-xs text-cyan-100 hover:bg-cyan-400/24 transition-colors"
           >
             <Search size={9} />
-            AI ANALYZE
+            AI 분석
           </button>
           <button
             onClick={() => onCopyFailedOutput(focusedFailedBlock.id)}
             className="inline-flex w-[76px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-white/20 bg-white/[0.05] text-xs text-white/75 hover:text-white hover:bg-white/[0.12] transition-colors"
           >
             <Copy size={9} />
-            COPY LOG
+            로그 복사
           </button>
           <button
             onClick={() => onCopyAnalyzePrompt(focusedFailedBlock.id)}
             className="inline-flex w-[92px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-cyan-300/30 bg-cyan-400/10 text-xs text-cyan-100 hover:bg-cyan-400/20 transition-colors"
           >
             <Copy size={9} />
-            COPY PROMPT
+            프롬프트 복사
           </button>
           <button
             onClick={() => onLoadAnalyzePromptToAiBar(focusedFailedBlock.id)}
             className="inline-flex w-[92px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-accent/35 bg-accent/14 text-xs text-accent hover:bg-accent/24 transition-colors"
           >
             <Search size={9} />
-            LOAD PROMPT
+            프롬프트 불러오기
           </button>
           <button
             onClick={() => onSelectBlock(focusedFailedBlock.id)}
             className="inline-flex w-[60px] justify-center items-center px-1.5 py-0.5 rounded border border-white/18 bg-white/[0.05] text-xs text-white/75 hover:text-white hover:bg-white/[0.11] transition-colors"
           >
-            SELECT
+            선택
           </button>
         </div>
       </div>

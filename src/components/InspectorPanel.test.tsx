@@ -195,7 +195,7 @@ describe("InspectorPanel", () => {
     expect(screen.getByText("Inspector")).toBeInTheDocument();
     expect(screen.getByText("main")).toBeInTheDocument();
     expect(screen.getByText("/Users/dev")).toBeInTheDocument();
-    expect(screen.getByText("Failed Block")).toBeInTheDocument();
+    expect(screen.getByText("실패 블록")).toBeInTheDocument();
     expect(screen.getByText("최근 블록")).toBeInTheDocument();
   });
 
@@ -210,7 +210,7 @@ describe("InspectorPanel", () => {
     expect(
       screen.getByText("터미널에서 최근 명령을 실행하면 여기에서 실패 블록·추천 커맨드·최근 기록을 확인할 수 있습니다."),
     ).toBeInTheDocument();
-    expect(screen.queryByText("Failed Block")).not.toBeInTheDocument();
+    expect(screen.queryByText("실패 블록")).not.toBeInTheDocument();
   });
 
   it("Inspector 닫기 버튼이 onClose를 호출한다", () => {
@@ -481,7 +481,7 @@ describe("InspectorPanel", () => {
     });
 
     expect(screen.getByTestId("rag-panel")).toHaveTextContent("local-coder compact");
-    expect(screen.queryByText("Failed Block")).not.toBeInTheDocument();
+    expect(screen.queryByText("실패 블록")).not.toBeInTheDocument();
   });
 
   it("탭 버튼과 패널은 aria-controls와 aria-labelledby로 연결된다", () => {
@@ -523,7 +523,7 @@ describe("InspectorPanel", () => {
     });
 
     expect(screen.getByTestId("script-library-panel")).toHaveTextContent("Scripts mock cozy");
-    expect(screen.queryByText("Failed Block")).not.toBeInTheDocument();
+    expect(screen.queryByText("실패 블록")).not.toBeInTheDocument();
   });
 
   it("System 탭은 시스템 모니터 패널을 렌더링한다", () => {
@@ -533,14 +533,14 @@ describe("InspectorPanel", () => {
     });
 
     expect(screen.getByTestId("system-monitor-panel")).toHaveTextContent("System mock compact");
-    expect(screen.queryByText("Failed Block")).not.toBeInTheDocument();
+    expect(screen.queryByText("실패 블록")).not.toBeInTheDocument();
   });
 
   it("요약 탭 실패 분석 버튼이 onAnalyzeFailedBlock를 호출한다", () => {
     const onAnalyzeFailedBlock = vi.fn();
     renderInspector({ onAnalyzeFailedBlock });
 
-    fireEvent.click(screen.getByText("AI ANALYZE"));
+    fireEvent.click(screen.getByText("AI 분석"));
 
     expect(onAnalyzeFailedBlock).toHaveBeenCalledWith("fail-1");
   });
@@ -568,11 +568,11 @@ describe("InspectorPanel", () => {
       onSelectBlock,
     });
 
-    fireEvent.click(screen.getByText("NEXT FAIL"));
-    fireEvent.click(screen.getByText("COPY LOG"));
-    fireEvent.click(screen.getByText("COPY PROMPT"));
-    fireEvent.click(screen.getByText("LOAD PROMPT"));
-    fireEvent.click(screen.getByText("SELECT"));
+    fireEvent.click(screen.getByText("다음 실패"));
+    fireEvent.click(screen.getByText("로그 복사"));
+    fireEvent.click(screen.getByText("프롬프트 복사"));
+    fireEvent.click(screen.getByText("프롬프트 불러오기"));
+    fireEvent.click(screen.getByText("선택"));
 
     expect(onFocusFailedBlock).toHaveBeenCalledTimes(1);
     expect(onCopyFailedOutput).toHaveBeenCalledWith("fail-1");
