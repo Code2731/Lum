@@ -274,7 +274,7 @@ export function useAIChat(model: string, getTerminalContext: () => string) {
     [model, messages, streaming, getTerminalContext, clearCurrentListener],
   );
 
-  const cancel = useCallback(() => {
+  const stopStream = useCallback(() => {
     clearCurrentListener();
     requestIdRef.current += 1;
     invoke("cancel_ai_stream").catch(() => {});
@@ -282,10 +282,18 @@ export function useAIChat(model: string, getTerminalContext: () => string) {
     setStreaming(false);
   }, [clearCurrentListener]);
 
+  const cancel = useCallback(() => {
+    stopStream();
+    setError(null);
+  }, [stopStream]);
+
   const clear = useCallback(() => {
+    if (isStreamingRef.current || streaming) {
+      stopStream();
+    }
     setMessages([]);
     setError(null);
-  }, []);
+  }, [streaming, stopStream]);
 
   return { messages, streaming, error, sendMessage, cancel, clear };
 }

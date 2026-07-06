@@ -17,6 +17,14 @@
 - 런타임 상태 복구 경로와 스트리밍 취소 UX를 1차 정리
 - Linux CPU 경로 빌드 회귀를 1개 smoke 테스트로 고정
 
+### 이번 라운드 후속 반영
+
+- AI 대화 스트리밍 런타임 복구 반영
+  - `src/hooks/useAIChat.ts`에서 clear 동작 중 진행 중인 스트림을 `cancel_ai_stream`로 강제 종료하도록 보완
+  - 취소 경로와 clear 경로를 분리해, 대화창 정리 시 상태 플래그(`streaming`)와 에러 상태를 즉시 안정화
+- Linux CPU 상태 회귀 기준 정합성 점검
+  - `ci.yml` `Build Desktop App (Linux CPU smoke)`가 1개 주요 회귀 경로로 이미 배치되어 있어 문서 기준을 “고정 테스트 1개”로 확정
+
 ## 2026-07-05
 
 ### 이번 라운드 완료
