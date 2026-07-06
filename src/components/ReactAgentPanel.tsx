@@ -628,7 +628,19 @@ const ReactAgentPanel: React.FC<Props> = ({
           )}
           {undoReport.errors.length > 0 && (
             <div className="text-red-300/80">
-              오류 {undoReport.errors.length}건: {undoReport.errors[0]}
+              <div>오류 {undoReport.errors.length}건</div>
+              <ul className="list-disc pl-5 space-y-0.5">
+                {undoReport.errors.slice(0, 3).map((error, idx) => (
+                  <li key={`${error}-${idx}`} className="truncate">
+                    {error}
+                  </li>
+                ))}
+              </ul>
+              {undoReport.errors.length > 3 && (
+                <div className="text-white/30">
+                  ...추가 오류 {undoReport.errors.length - 3}건
+                </div>
+              )}
             </div>
           )}
         </div>

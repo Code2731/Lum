@@ -3026,7 +3026,10 @@ fn restore_react_backup() -> std::result::Result<UndoReport, String> {
         return Err("되돌릴 변경이 없습니다 (활성 ReAct 백업 없음)".into());
     };
     let mut report = UndoReport::default();
-    for (abs, entry) in &backup.entries {
+    let mut tracked: Vec<(&PathBuf, &BackupEntry)> = backup.entries.iter().collect();
+    tracked.sort_by(|(a, _), (b, _)| a.to_string_lossy().cmp(&b.to_string_lossy()));
+
+    for (abs, entry) in tracked {
         match entry {
             BackupEntry::Created => match std::fs::remove_file(abs) {
                 Ok(()) => report.removed.push(abs.display().to_string()),
@@ -6482,6 +6485,40 @@ ANSWER: 2 + 2는 4입니다."#,
         assert_eq!(
             std::fs::read_to_string(td.path().join("doomed.rs")).unwrap(),
             "삭제 예정"
+        );
+
+        cleanup_backup_state();
+    }
+
+    #[test]
+    fn 백업_복원_결과_항목_정렬() {
+        let td = TempDir::new("bk8");
+        std::fs::write(td.path().join("zeta.rs"), "기존").unwrap();
+        std::fs::write(td.path().join("alpha.rs"), "기존").unwrap();
+        init_react_backup(&td.cwd());
+
+        // 정렬 검증을 위해 생성/삭제가 섞인 순서로 기록.
+        write_file_tool(&serde_json::json!({"path": "fresh.rs", "content": "new"}), &td.cwd());
+        delete_file_tool(&serde_json::json!({"path": "zeta.rs"}), &td.cwd());
+        write_file_tool(&serde_json::json!({"path": "a.rs", "content": "new"}), &td.cwd());
+        delete_file_tool(&serde_json::json!({"path": "alpha.rs"}), &td.cwd());
+
+        let report = restore_react_backup().unwrap();
+        assert_eq!(
+            report.removed,
+            vec![
+                td.path().join("a.rs").display().to_string(),
+                td.path().join("fresh.rs").display().to_string(),
+            ],
+            "새 파일 제거 결과는 정렬돼야 함"
+        );
+        assert_eq!(
+            report.restored,
+            vec![
+                td.path().join("alpha.rs").display().to_string(),
+                td.path().join("zeta.rs").display().to_string(),
+            ],
+            "기존 파일 복원 결과는 정렬돼야 함"
         );
 
         cleanup_backup_state();
