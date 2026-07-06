@@ -1375,7 +1375,7 @@ describe("WarpListView delta actions", () => {
     fireEvent.click(screen.getByRole("button", { name: "Δ Timeline (2)" }));
     const search = screen.getByPlaceholderText("타임라인 검색 (command/preview)");
     fireEvent.change(search, { target: { value: "rm -rf" } });
-    fireEvent.click(screen.getByRole("button", { name: "High 1" }));
+    fireEvent.click(screen.getByRole("button", { name: "고위험 1" }));
     expect(screen.queryByText("$ npm test")).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "필터 리셋" }));
@@ -1596,15 +1596,15 @@ describe("WarpListView delta actions", () => {
     fireEvent.click(screen.getByRole("button", { name: "Δ Timeline (2)" }));
     const search = screen.getByPlaceholderText("타임라인 검색 (command/preview)");
     fireEvent.change(search, { target: { value: "rm -rf" } });
-    fireEvent.click(screen.getByRole("button", { name: "High 1" }));
+    fireEvent.click(screen.getByRole("button", { name: "고위험 1" }));
     fireEvent.click(screen.getByRole("button", { name: "정렬: 최근순" }));
 
     expect(screen.getByRole("button", { name: "상태 검색: rm -rf" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "상태 Risk: High" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "상태 위험도: 고위험" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "상태 정렬: 변화량순" })).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "상태 Risk: High" }));
-    expect(screen.queryByRole("button", { name: "상태 Risk: High" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "상태 위험도: 고위험" }));
+    expect(screen.queryByRole("button", { name: "상태 위험도: 고위험" })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "상태 검색: rm -rf" }));
     expect((search as HTMLInputElement).value).toBe("");
@@ -1670,7 +1670,7 @@ describe("WarpListView delta actions", () => {
     expect(screen.getByText("LOW")).toBeInTheDocument();
   });
 
-  it("Δ Timeline 리스크 필터 High", () => {
+  it("Δ Timeline 리스크 필터 고위험", () => {
     render(
       <WarpListView
         blocks={[
@@ -1721,7 +1721,7 @@ describe("WarpListView delta actions", () => {
       />,
     );
     fireEvent.click(screen.getByRole("button", { name: "Δ Timeline (3)" }));
-    fireEvent.click(screen.getByRole("button", { name: "High 1" }));
+    fireEvent.click(screen.getByRole("button", { name: "고위험 1" }));
     expect(screen.getByText("$ rm -rf ./dist")).toBeInTheDocument();
     expect(screen.queryByText("$ npm test")).not.toBeInTheDocument();
     expect(screen.queryByText("$ npm install")).not.toBeInTheDocument();
@@ -2376,9 +2376,9 @@ describe("WarpListView delta actions", () => {
       />,
     );
     fireEvent.click(screen.getByRole("button", { name: "Δ Timeline (1)" }));
-    fireEvent.click(screen.getByRole("button", { name: "Shortcuts" }));
+    fireEvent.click(screen.getByRole("button", { name: "단축키" }));
     expect(screen.getByText("타임라인 열기/닫기")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Shortcuts" }));
+    fireEvent.click(screen.getByRole("button", { name: "단축키" }));
     expect(screen.queryByText("타임라인 열기/닫기")).not.toBeInTheDocument();
   });
 

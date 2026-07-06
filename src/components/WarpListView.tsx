@@ -465,12 +465,12 @@ const WarpListView: React.FC<Props> = ({
     return retryCompareQueueItems.filter((item) => item.command.toLowerCase().includes(q));
   }, [retryCompareQueueItems, queueQuery]);
   const timelineRiskLabel = timelineRiskFilter === "high"
-    ? "High"
+    ? "고위험"
     : timelineRiskFilter === "medium"
-      ? "Med"
+      ? "중간"
       : timelineRiskFilter === "low"
-        ? "Low"
-        : "All";
+        ? "낮음"
+        : "전체";
 
   useEffect(() => {
     for (const id of Object.keys(blockSearch)) {
@@ -1553,28 +1553,28 @@ const WarpListView: React.FC<Props> = ({
                       />
                       <div className="flex items-center gap-1.5">
                         <RiskChip
-                          label={`All ${comparedTimeline.length}`}
+                          label={`전체 ${comparedTimeline.length}`}
                           active={timelineRiskFilter === "all"}
                           onClick={() => setTimelineRiskFilter("all")}
                           tone="all"
                           title="Alt+0"
                         />
                         <RiskChip
-                          label={`High ${riskCounts.high}`}
+                          label={`고위험 ${riskCounts.high}`}
                           active={timelineRiskFilter === "high"}
                           onClick={() => setTimelineRiskFilter("high")}
                           tone="high"
                           title="Alt+1"
                         />
                         <RiskChip
-                          label={`Med ${riskCounts.medium}`}
+                          label={`중간 ${riskCounts.medium}`}
                           active={timelineRiskFilter === "medium"}
                           onClick={() => setTimelineRiskFilter("medium")}
                           tone="medium"
                           title="Alt+2"
                         />
                         <RiskChip
-                          label={`Low ${riskCounts.low}`}
+                          label={`낮음 ${riskCounts.low}`}
                           active={timelineRiskFilter === "low"}
                           onClick={() => setTimelineRiskFilter("low")}
                           tone="low"
@@ -1600,7 +1600,7 @@ const WarpListView: React.FC<Props> = ({
                               onClick={() => setTimelineRiskFilter("all")}
                               title="위험도 필터 해제"
                             >
-                              상태 Risk: {timelineRiskLabel}
+                              상태 위험도: {timelineRiskLabel}
                             </button>
                           )}
                           {timelinePinnedOnly && (
@@ -1649,7 +1649,7 @@ const WarpListView: React.FC<Props> = ({
                           onClick={() => setShowShortcutHelp((prev) => !prev)}
                           title="Alt+/ / Cmd/Ctrl+/"
                         >
-                          Shortcuts
+                          단축키
                         </button>
                         <button
                           type="button"
@@ -1908,7 +1908,7 @@ const WarpListView: React.FC<Props> = ({
                           <div><span className="text-cyan-50">Alt+I</span> 현재 목록 선택 반전</div>
                           <div><span className="text-cyan-50">Alt+O</span> 선택 항목만 보기 토글</div>
                           <div><span className="text-cyan-50">Alt+H</span> 고위험 항목 빠른 선택</div>
-                          <div><span className="text-cyan-50">Alt+1/2/3/0 / Cmd/Ctrl+1/2/3/0</span> 위험도 필터 High/Med/Low/All</div>
+                          <div><span className="text-cyan-50">Alt+1/2/3/0 / Cmd/Ctrl+1/2/3/0</span> 위험도 필터 고위험/중간/낮음/전체</div>
                           <div><span className="text-cyan-50">Alt+S</span> 타임라인 정렬 토글</div>
                           <div><span className="text-cyan-50">Alt+Shift+P/O / Cmd/Ctrl+Shift+P/O</span> 현재 목록 일괄 핀/핀해제</div>
                           <div><span className="text-cyan-50">Alt+M / Cmd/Ctrl+M</span> 핀만 보기 토글</div>

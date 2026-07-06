@@ -6546,6 +6546,37 @@ ANSWER: 2 + 2는 4입니다."#,
     }
 
     #[test]
+    fn 백업_복원시_경로_범위_외의_원본은_복원_skip_오류로_기록() {
+        let td = TempDir::new("bk11");
+        let mut entries = std::collections::HashMap::new();
+        let cwd = td.path();
+        let outside = std::env::temp_dir().join("lum_react_backup_restore_outside.txt");
+        entries.insert(outside.clone(), BackupEntry::Original);
+
+        {
+            let mut guard = backup_lock().lock().unwrap();
+            *guard = Some(ReactBackup {
+                cwd_input: td.cwd(),
+                cwd: cwd.to_path_buf(),
+                backup_dir: cwd.join(".lum_react_backup"),
+                entries,
+            });
+        }
+
+        let report = restore_react_backup().unwrap();
+        assert!(report.removed.is_empty(), "외부 경로는 삭제 대상이 아님");
+        assert!(report.restored.is_empty(), "외부 경로는 복원 대상이 아님");
+        assert_eq!(report.errors.len(), 1);
+        assert!(
+            report.errors[0].contains("cwd 경계 외 — 복원 skip"),
+            "{}",
+            report.errors[0]
+        );
+
+        cleanup_backup_state();
+    }
+
+    #[test]
     fn 백업_미활성_상태에서_도구는_정상_작동_undo만_err() {
         // init_react_backup 호출 안 함 — 단위 테스트 격리 보장 검증. TempDir이 락 자동 잡음.
         let td = TempDir::new("bk7");
