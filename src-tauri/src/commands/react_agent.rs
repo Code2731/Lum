@@ -6592,6 +6592,29 @@ ANSWER: 2 + 2는 4입니다."#,
     }
 
     #[test]
+    fn 백업_list_tracked_changes_중복_수정은_중복_제거() {
+        let td = TempDir::new("bk10");
+        init_react_backup(&td.cwd());
+        write_file_tool(
+            &serde_json::json!({"path": "a.txt", "content": "1"}),
+            &td.cwd(),
+        );
+        write_file_tool(
+            &serde_json::json!({"path": "a.txt", "content": "2", "overwrite": true}),
+            &td.cwd(),
+        );
+        apply_patch_tool(
+            &serde_json::json!({"path": "a.txt", "search": "2", "replace": "3"}),
+            &td.cwd(),
+        );
+
+        let changes = list_tracked_changes();
+        assert_eq!(changes.len(), 1, "동일 파일은 1건만 추적되어야 함");
+        assert!(changes[0].ends_with("a.txt"));
+        cleanup_backup_state();
+    }
+
+    #[test]
     fn 백업_list_tracked_changes_항목_정렬() {
         let td = TempDir::new("bk9");
         init_react_backup(&td.cwd());

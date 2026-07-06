@@ -771,8 +771,11 @@ describe("WarpListView delta actions", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "블록 액션" }));
     expect(screen.getByRole("menuitem", { name: /동시 복사/ })).toHaveAttribute("aria-keyshortcuts", "Alt+C");
+    expect(screen.getByRole("menuitem", { name: /동시 복사/ })).toHaveAttribute("aria-label", "동시 복사 (Alt+C)");
     expect(screen.getByRole("menuitem", { name: /블록 내 찾기/ })).toHaveAttribute("aria-keyshortcuts", "Alt+F");
+    expect(screen.getByRole("menuitem", { name: /블록 내 찾기/ })).toHaveAttribute("aria-label", "블록 내 찾기 (Alt+F)");
     expect(screen.getByRole("menuitem", { name: /스냅샷 공유/ })).toHaveAttribute("aria-keyshortcuts", "Alt+S");
+    expect(screen.getByRole("menuitem", { name: /스냅샷 공유/ })).toHaveAttribute("aria-label", "스냅샷 공유 (Alt+S)");
   });
 
   it("블록 액션 메뉴는 Alt+C로 동시 복사를 실행한다", () => {
@@ -4830,7 +4833,7 @@ describe("WarpListView delta actions", () => {
     expect(screen.queryAllByText("PIN")).toHaveLength(1);
   });
 
-  it("Δ Timeline 전체 복사 전체 diff를 복사", () => {
+  it("Δ Timeline에서 전체 복사로 전체 diff를 복사", () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     Object.defineProperty(navigator, "clipboard", {
       value: { writeText },
