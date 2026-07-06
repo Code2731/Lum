@@ -1467,14 +1467,14 @@ const WarpListView: React.FC<Props> = ({
               {retryCompareQueueDepth > 0 && (
                 <span
                   className="text-xs px-2 py-0.5 rounded border border-emerald-300/30 bg-emerald-300/12 text-emerald-100 tabular-nums"
-                  title="Retry+Compare 진행 대기/실행 건수"
+                  title="재시도+비교 진행 대기/실행 건수"
                 >
-                  Queue {retryCompareQueueDepth}
+                  큐 {retryCompareQueueDepth}
                 </span>
               )}
               {(retryCompareInFlight || retryCompareQueueWaiting > 0) && (
                 <span className="text-xs text-white/45 tabular-nums">
-                  {retryCompareInFlight ? "실행 중" : "대기"} · wait {retryCompareQueueWaiting}
+                  {retryCompareInFlight ? "실행 중" : "대기"} · 대기 {retryCompareQueueWaiting}
                 </span>
               )}
               {onToggleRetryCompareQueuePaused && (
@@ -1498,7 +1498,7 @@ const WarpListView: React.FC<Props> = ({
                   onClick={() => onResetRetryCompareCompletedCount?.()}
                   title="완료 카운트 리셋 (Alt+D)"
                 >
-                  done {retryCompareCompletedCount}
+                  완료 {retryCompareCompletedCount}
                 </button>
               )}
               {retryCompareInFlight && retryCompareCurrentCommand && (
@@ -1717,7 +1717,7 @@ const WarpListView: React.FC<Props> = ({
                           }}
                           disabled={selectedTimelineItems.length === 0}
                         >
-                          Copy Selected
+                          선택 복사
                         </button>
                         {onRetrySelectedWithDiff && (
                           <button
@@ -1728,7 +1728,7 @@ const WarpListView: React.FC<Props> = ({
                             }}
                             disabled={selectedTimelineItems.length === 0}
                           >
-                            선택 Retry+Compare
+                            선택 재시도+비교
                           </button>
                         )}
                         {onClearRetryCompareQueue && (
@@ -1818,7 +1818,7 @@ const WarpListView: React.FC<Props> = ({
                           title="Alt+Enter"
                           disabled={selectedTimelineIds.length === 0}
                         >
-                          Jump Selected
+                          선택 점프
                         </button>
                         <button
                           type="button"
@@ -1827,7 +1827,7 @@ const WarpListView: React.FC<Props> = ({
                           title="Alt+↑"
                           disabled={selectedTimelineIds.length === 0}
                         >
-                          Prev Selected
+                          이전 선택
                         </button>
                         <button
                           type="button"
@@ -1836,7 +1836,7 @@ const WarpListView: React.FC<Props> = ({
                           title="Alt+↓"
                           disabled={selectedTimelineIds.length === 0}
                         >
-                          Next Selected
+                          다음 선택
                         </button>
                         {onExplainAllDiffs && (
                           <button
@@ -1859,7 +1859,7 @@ const WarpListView: React.FC<Props> = ({
                           }}
                           disabled={timelineFiltered.length === 0}
                         >
-                          Copy All
+                          전체 복사
                         </button>
                         {onExplainAllDiffs && (
                           <button
@@ -1893,10 +1893,10 @@ const WarpListView: React.FC<Props> = ({
                       {showShortcutHelp && (
                         <div className="rounded border border-cyan-300/20 bg-cyan-400/[0.08] px-2 py-1.5 text-xs text-cyan-100/90 space-y-0.5">
                           <div><span className="text-cyan-50">Cmd/Ctrl+Shift+Y</span> 타임라인 열기/닫기</div>
-                          <div><span className="text-cyan-50">Alt+Enter / Alt+↑ / Alt+↓</span> 선택 Jump/이동</div>
+                          <div><span className="text-cyan-50">Alt+Enter / Alt+↑ / Alt+↓</span> 선택 점프/이동</div>
                           <div><span className="text-cyan-50">Alt+/ / Cmd/Ctrl+/</span> 단축키 도움말 토글</div>
                           <div><span className="text-cyan-50">Alt+F / Cmd/Ctrl+F</span> 타임라인 검색창 포커스</div>
-                          <div><span className="text-cyan-50">Cmd/Ctrl+Enter / Cmd/Ctrl+Shift+Enter</span> 선택 항목 다음/이전 Jump</div>
+                          <div><span className="text-cyan-50">Cmd/Ctrl+Enter / Cmd/Ctrl+Shift+Enter</span> 선택 항목 다음/이전 점프</div>
                           <div><span className="text-cyan-50">Cmd/Ctrl+L</span> 타임라인 검색어 초기화/포커스</div>
                           <div><span className="text-cyan-50">Alt+R / Cmd/Ctrl+R</span> 타임라인 필터 상태 리셋</div>
                           <div><span className="text-cyan-50">Alt+A</span> 현재 목록 선택 전체</div>
@@ -1924,7 +1924,7 @@ const WarpListView: React.FC<Props> = ({
                     {retryCompareQueueItems.length > 0 && (
                       <div className="px-2 py-1.5 border-b border-white/10 space-y-1">
                         <div className="flex items-center gap-1.5 text-xs text-white/55">
-                          <span>Retry+Compare Queue</span>
+                          <span>재시도+비교 큐</span>
                           <span className="tabular-nums">표시 {filteredQueueItems.length}/{retryCompareQueueItems.length}</span>
                           <button
                             type="button"
@@ -2166,7 +2166,7 @@ const WarpListView: React.FC<Props> = ({
                                 closeTimelinePanel(false);
                               }}
                             >
-                              Jump
+                              점프
                             </button>
                             {onExecute && block.command.trim() && (
                               <button
@@ -2189,7 +2189,7 @@ const WarpListView: React.FC<Props> = ({
                                   closeTimelinePanel(false);
                                 }}
                               >
-                                Retry+Compare
+                                재시도+비교
                               </button>
                             )}
                             <button
@@ -2199,7 +2199,7 @@ const WarpListView: React.FC<Props> = ({
                                 navigator.clipboard.writeText(buildDiffText(block.command, compare)).catch(() => {});
                               }}
                             >
-                              Copy
+                              복사
                             </button>
                             {onExplainDiff && (
                               <button
@@ -2230,7 +2230,7 @@ const WarpListView: React.FC<Props> = ({
                 title="Cmd/Ctrl+Shift+["
                 className="text-xs px-2 py-0.5 rounded border border-cyan-400/30 text-cyan-200/90 hover:bg-cyan-400/15"
               >
-                Prev Δ
+                이전 Δ
               </button>
               <button
                 type="button"
@@ -2238,7 +2238,7 @@ const WarpListView: React.FC<Props> = ({
                 title="Cmd/Ctrl+Shift+]"
                 className="text-xs px-2 py-0.5 rounded border border-cyan-400/30 text-cyan-200/90 hover:bg-cyan-400/15"
               >
-                Next Δ
+                다음 Δ
               </button>
             </>
           )}
@@ -2349,7 +2349,7 @@ const WarpListView: React.FC<Props> = ({
                             onClick={(e) => e.stopPropagation()}
                           >
                       <div className="px-2.5 py-1.5 border-b border-white/10 text-xs text-cyan-200 tabular-nums">
-                        Retry Compare · +{compare.added} / -{compare.removed}
+                        재시도+비교 · +{compare.added} / -{compare.removed}
                       </div>
                       <div className="px-2 py-1.5 border-b border-white/10 flex items-center gap-1.5">
                         <button
@@ -2359,7 +2359,7 @@ const WarpListView: React.FC<Props> = ({
                             navigator.clipboard.writeText(buildDiffText(b.command, compare)).catch(() => {});
                           }}
                         >
-                          Copy Diff
+                          복사 Diff
                         </button>
                         {onExplainDiff && (
                           <button
@@ -2376,7 +2376,7 @@ const WarpListView: React.FC<Props> = ({
                       <div className="max-h-56 overflow-y-auto p-2 space-y-2">
                         {compare.addedLines.length > 0 && (
                           <div>
-                            <div className="text-xs text-emerald-300 mb-1">Added</div>
+                            <div className="text-xs text-emerald-300 mb-1">추가</div>
                             <pre className="text-xs font-mono whitespace-pre-wrap text-emerald-100/90 bg-emerald-500/[0.08] border border-emerald-400/20 rounded p-1.5">
                               {compare.addedLines.map((l) => `+ ${l}`).join("\n")}
                             </pre>
@@ -2384,7 +2384,7 @@ const WarpListView: React.FC<Props> = ({
                         )}
                         {compare.removedLines.length > 0 && (
                           <div>
-                            <div className="text-xs text-rose-300 mb-1">Removed</div>
+                            <div className="text-xs text-rose-300 mb-1">제거</div>
                             <pre className="text-xs font-mono whitespace-pre-wrap text-rose-100/90 bg-rose-500/[0.08] border border-rose-400/20 rounded p-1.5">
                               {compare.removedLines.map((l) => `- ${l}`).join("\n")}
                             </pre>
@@ -2550,7 +2550,7 @@ const WarpListView: React.FC<Props> = ({
                           <button
                             type="button"
                             role="menuitem"
-                            aria-label="Copy Both (Alt+C)"
+                            aria-label="동시 복사 (Alt+C)"
                             aria-keyshortcuts="Alt+C"
                             title="Alt+C"
                             className="w-full px-2.5 py-1.5 text-left text-sm text-white/78 hover:bg-white/[0.08] flex items-center justify-between gap-2"
@@ -2564,13 +2564,13 @@ const WarpListView: React.FC<Props> = ({
                               closeMenuById(b.id, false);
                             }}
                           >
-                            <span>Copy Both</span>
+                            <span>동시 복사</span>
                             <span className="text-xs text-white/35 tabular-nums">Alt+C</span>
                           </button>
                           <button
                             type="button"
                             role="menuitem"
-                            aria-label="Find Within Block (Alt+F)"
+                            aria-label="블록 내 찾기 (Alt+F)"
                             aria-keyshortcuts="Alt+F"
                             title="Alt+F"
                             className="w-full px-2.5 py-1.5 text-left text-sm text-white/78 hover:bg-white/[0.08] flex items-center justify-between gap-2"
@@ -2581,13 +2581,13 @@ const WarpListView: React.FC<Props> = ({
                             onFocus={() => setMenuActiveIndex(1)}
                             onClick={() => openFindWithin(b.id)}
                           >
-                            <span>Find Within Block</span>
+                            <span>블록 내 찾기</span>
                             <span className="text-xs text-white/35 tabular-nums">Alt+F</span>
                           </button>
                           <button
                             type="button"
                             role="menuitem"
-                            aria-label="Share Snapshot (Alt+S)"
+                            aria-label="스냅샷 공유 (Alt+S)"
                             aria-keyshortcuts="Alt+S"
                             title="Alt+S"
                             className="w-full px-2.5 py-1.5 text-left text-sm text-white/78 hover:bg-white/[0.08] flex items-center justify-between gap-2"
@@ -2612,7 +2612,7 @@ const WarpListView: React.FC<Props> = ({
                           >
                             <span className="inline-flex items-center gap-1.5">
                               <Share2 size={11} />
-                              Share Snapshot
+                              스냅샷 공유
                             </span>
                             <span className="text-xs text-white/35 tabular-nums">Alt+S</span>
                           </button>
@@ -2620,7 +2620,7 @@ const WarpListView: React.FC<Props> = ({
                             <button
                               type="button"
                               role="menuitem"
-                              aria-label="Retry and Compare (Alt+R)"
+                              aria-label="재시도+비교 (Alt+R)"
                               aria-keyshortcuts="Alt+R"
                               title="Alt+R"
                               className="w-full px-2.5 py-1.5 text-left text-sm text-white/78 hover:bg-white/[0.08] flex items-center justify-between gap-2"
@@ -2636,7 +2636,7 @@ const WarpListView: React.FC<Props> = ({
                             >
                               <span className="inline-flex items-center gap-1.5">
                                 <RotateCcw size={11} />
-                                Retry + Compare
+                                재시도+비교
                               </span>
                               <span className="text-xs text-white/35 tabular-nums">Alt+R</span>
                             </button>

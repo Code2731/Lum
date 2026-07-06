@@ -3065,10 +3065,12 @@ fn restore_react_backup() -> std::result::Result<UndoReport, String> {
 #[cfg(test)]
 fn list_tracked_changes() -> Vec<String> {
     let guard = backup_lock().lock().unwrap();
-    guard
+    let mut paths: Vec<String> = guard
         .as_ref()
         .map(|b| b.entries.keys().map(|p| p.display().to_string()).collect())
-        .unwrap_or_default()
+        .unwrap_or_default();
+    paths.sort();
+    paths
 }
 
 fn write_file_tool(args: &serde_json::Value, cwd: &str) -> String {
@@ -6586,6 +6588,33 @@ ANSWER: 2 + 2는 4입니다."#,
         assert_eq!(changes.len(), 2);
         assert!(changes.iter().any(|p| p.ends_with("a.txt")));
         assert!(changes.iter().any(|p| p.ends_with("b.txt")));
+        cleanup_backup_state();
+    }
+
+    #[test]
+    fn 백업_list_tracked_changes_항목_정렬() {
+        let td = TempDir::new("bk9");
+        init_react_backup(&td.cwd());
+        write_file_tool(
+            &serde_json::json!({"path": "zeta.txt", "content": "1"}),
+            &td.cwd(),
+        );
+        write_file_tool(
+            &serde_json::json!({"path": "alpha.txt", "content": "2"}),
+            &td.cwd(),
+        );
+        write_file_tool(
+            &serde_json::json!({"path": "middle.txt", "content": "3"}),
+            &td.cwd(),
+        );
+
+        let changes = list_tracked_changes();
+        assert_eq!(changes, vec![
+            td.path().join("alpha.txt").display().to_string(),
+            td.path().join("middle.txt").display().to_string(),
+            td.path().join("zeta.txt").display().to_string(),
+        ]);
+
         cleanup_backup_state();
     }
 

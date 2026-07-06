@@ -82,7 +82,7 @@ describe("WarpListView delta actions", () => {
     },
   ];
 
-  it("Copy Diff가 비교 텍스트를 클립보드에 복사", async () => {
+  it("Diff 복사가 비교 텍스트를 클립보드에 복사", async () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     Object.defineProperty(navigator, "clipboard", {
       value: { writeText },
@@ -105,7 +105,7 @@ describe("WarpListView delta actions", () => {
     );
 
     fireEvent.click(screen.getByText("Δ +1/-1"));
-    fireEvent.click(screen.getByRole("button", { name: "Copy Diff" }));
+    fireEvent.click(screen.getByRole("button", { name: "Diff 복사" }));
 
     expect(writeText).toHaveBeenCalledTimes(1);
     const copied = String(writeText.mock.calls[0]?.[0] ?? "");
@@ -176,10 +176,10 @@ describe("WarpListView delta actions", () => {
     );
 
     fireEvent.keyDown(window, { key: "]", ctrlKey: true, shiftKey: true });
-    expect(screen.getByText(/Retry Compare/)).toBeInTheDocument();
+    expect(screen.getByText(/재시도+비교/)).toBeInTheDocument();
 
     fireEvent.keyDown(window, { key: "[", ctrlKey: true, shiftKey: true });
-    expect(screen.getByText(/Retry Compare/)).toBeInTheDocument();
+    expect(screen.getByText(/재시도+비교/)).toBeInTheDocument();
   });
 
   it("Cmd/Ctrl+Alt+Shift+[ ] 단축키는 비교 블록 탐색이 동작하지 않는다", () => {
@@ -218,10 +218,10 @@ describe("WarpListView delta actions", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: "Δ +1/-1" }));
-    expect(screen.getByText("Retry Compare · +1 / -1")).toBeInTheDocument();
+    expect(screen.getByText("재시도+비교 · +1 / -1")).toBeInTheDocument();
     fireEvent.keyDown(window, { key: "]", ctrlKey: true, shiftKey: true, altKey: true });
-    expect(screen.getByText("Retry Compare · +1 / -1")).toBeInTheDocument();
-    expect(screen.queryByText("Retry Compare · +2 / -0")).not.toBeInTheDocument();
+    expect(screen.getByText("재시도+비교 · +1 / -1")).toBeInTheDocument();
+    expect(screen.queryByText("재시도+비교 · +2 / -0")).not.toBeInTheDocument();
   });
 
   it("Δ 팝오버는 바깥 클릭으로 닫힘", () => {
@@ -242,9 +242,9 @@ describe("WarpListView delta actions", () => {
     );
 
     fireEvent.click(screen.getByText("Δ +1/-1"));
-    expect(screen.getByText(/Retry Compare/)).toBeInTheDocument();
+    expect(screen.getByText(/재시도+비교/)).toBeInTheDocument();
     fireEvent.pointerDown(document.body);
-    expect(screen.queryByText(/Retry Compare/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/재시도+비교/)).not.toBeInTheDocument();
   });
 
   it("Δ 팝오버 내부 포인터 다운은 바깥 클릭으로 처리되지 않는다", () => {
@@ -265,9 +265,9 @@ describe("WarpListView delta actions", () => {
     );
 
     fireEvent.click(screen.getByText("Δ +1/-1"));
-    const heading = screen.getByText(/Retry Compare/);
+    const heading = screen.getByText(/재시도+비교/);
     fireEvent.pointerDown(heading);
-    expect(screen.getByText(/Retry Compare/)).toBeInTheDocument();
+    expect(screen.getByText(/재시도+비교/)).toBeInTheDocument();
   });
 
   it("Δ 팝오버는 Escape로 닫힘", () => {
@@ -288,9 +288,9 @@ describe("WarpListView delta actions", () => {
     );
 
     fireEvent.click(screen.getByText("Δ +1/-1"));
-    expect(screen.getByText(/Retry Compare/)).toBeInTheDocument();
+    expect(screen.getByText(/재시도+비교/)).toBeInTheDocument();
     fireEvent.keyDown(window, { key: "Escape" });
-    expect(screen.queryByText(/Retry Compare/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/재시도+비교/)).not.toBeInTheDocument();
   });
   it("Δ 팝오버에서 Escape는 상위 키 핸들러로 전파되지 않음", () => {
     const onParentEscape = vi.fn();
@@ -318,10 +318,10 @@ describe("WarpListView delta actions", () => {
       );
 
       fireEvent.click(screen.getByText("Δ +1/-1"));
-      expect(screen.getByText(/Retry Compare/)).toBeInTheDocument();
+      expect(screen.getByText(/재시도+비교/)).toBeInTheDocument();
       window.addEventListener("keydown", onParentKeyDown);
       fireEvent.keyDown(window, { key: "Escape" });
-      expect(screen.queryByText(/Retry Compare/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/재시도+비교/)).not.toBeInTheDocument();
       expect(onParentEscape).not.toHaveBeenCalled();
     } finally {
       window.removeEventListener("keydown", onParentKeyDown);
@@ -347,7 +347,7 @@ describe("WarpListView delta actions", () => {
 
     const deltaButton = screen.getByRole("button", { name: "Δ +1/-1" });
     fireEvent.click(deltaButton);
-    expect(screen.getByText(/Retry Compare/)).toBeInTheDocument();
+    expect(screen.getByText(/재시도+비교/)).toBeInTheDocument();
     fireEvent.keyDown(window, { key: "Escape" });
 
     await waitFor(() => {
@@ -392,8 +392,8 @@ describe("WarpListView delta actions", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Δ Timeline (2)" }));
     expect(screen.getByText("최근 비교 히스토리")).toBeInTheDocument();
-    fireEvent.click(screen.getAllByRole("button", { name: "Jump" })[0]);
-    expect(screen.getByText("Retry Compare · +1 / -1")).toBeInTheDocument();
+    fireEvent.click(screen.getAllByRole("button", { name: "점프" })[0]);
+    expect(screen.getByText("재시도+비교 · +1 / -1")).toBeInTheDocument();
   });
 
   it("Δ Timeline은 Escape로 닫힘", () => {
@@ -477,7 +477,7 @@ describe("WarpListView delta actions", () => {
     }
   });
 
-  it("Δ Timeline에서 Retry+Compare 액션이 콜백을 호출", () => {
+  it("Δ Timeline에서 재시도+비교 액션이 콜백을 호출", () => {
     const onRetryWithDiff = vi.fn();
     render(
       <WarpListView
@@ -497,7 +497,7 @@ describe("WarpListView delta actions", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: "Δ Timeline (1)" }));
-    fireEvent.click(screen.getByRole("button", { name: "Retry+Compare" }));
+    fireEvent.click(screen.getByRole("button", { name: "재시도+비교" }));
     expect(onRetryWithDiff).toHaveBeenCalledTimes(1);
     expect(onRetryWithDiff.mock.calls[0]?.[0]?.id).toBe("b2");
   });
@@ -543,9 +543,9 @@ describe("WarpListView delta actions", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: "블록 액션" }));
-    expect(screen.getByRole("menuitem", { name: /Copy Both/ })).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: /동시 복사/ })).toBeInTheDocument();
     fireEvent.pointerDown(document.body);
-    expect(screen.queryByRole("menuitem", { name: /Copy Both/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("menuitem", { name: /동시 복사/ })).not.toBeInTheDocument();
   });
 
   it("블록 액션 메뉴 내부 포인터 다운은 바깥 클릭으로 처리되지 않는다", () => {
@@ -565,9 +565,9 @@ describe("WarpListView delta actions", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: "블록 액션" }));
-    const menuItem = screen.getByRole("menuitem", { name: /Copy Both/ });
+    const menuItem = screen.getByRole("menuitem", { name: /동시 복사/ });
     fireEvent.pointerDown(menuItem);
-    expect(screen.getByRole("menuitem", { name: /Copy Both/ })).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: /동시 복사/ })).toBeInTheDocument();
   });
 
   it("블록 액션 메뉴는 Escape로 닫힘", () => {
@@ -587,9 +587,9 @@ describe("WarpListView delta actions", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: "블록 액션" }));
-    expect(screen.getByRole("menuitem", { name: /Copy Both/ })).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: /동시 복사/ })).toBeInTheDocument();
     fireEvent.keyDown(window, { key: "Escape" });
-    expect(screen.queryByRole("menuitem", { name: /Copy Both/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("menuitem", { name: /동시 복사/ })).not.toBeInTheDocument();
   });
 
   it("블록 액션 메뉴는 Tab으로 닫힘", () => {
@@ -609,10 +609,10 @@ describe("WarpListView delta actions", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: "블록 액션" }));
-    const firstItem = screen.getByRole("menuitem", { name: /Copy Both/ });
+    const firstItem = screen.getByRole("menuitem", { name: /동시 복사/ });
     firstItem.focus();
     fireEvent.keyDown(firstItem, { key: "Tab" });
-    expect(screen.queryByRole("menuitem", { name: /Copy Both/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("menuitem", { name: /동시 복사/ })).not.toBeInTheDocument();
   });
 
   it("블록 액션 메뉴는 키보드로 탐색하고 Enter로 실행한다", () => {
@@ -638,14 +638,14 @@ describe("WarpListView delta actions", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "블록 액션" }));
     const menu = screen.getByRole("menu", { name: "블록 액션 메뉴" });
-    const first = screen.getByRole("menuitem", { name: /Copy Both/ });
-    const second = screen.getByRole("menuitem", { name: /Find Within Block/ });
+    const first = screen.getByRole("menuitem", { name: /동시 복사/ });
+    const second = screen.getByRole("menuitem", { name: /블록 내 찾기/ });
     expect(first).toHaveFocus();
     fireEvent.keyDown(menu, { key: "ArrowDown" });
     expect(second).toHaveFocus();
     fireEvent.keyDown(menu, { key: "Enter" });
     expect(writeText).toHaveBeenCalledTimes(0);
-    expect(screen.queryByRole("menuitem", { name: /Copy Both/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("menuitem", { name: /동시 복사/ })).not.toBeInTheDocument();
   });
 
   it("블록 액션 메뉴는 Home/End로 첫/끝 항목으로 이동한다", () => {
@@ -770,12 +770,12 @@ describe("WarpListView delta actions", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: "블록 액션" }));
-    expect(screen.getByRole("menuitem", { name: /Copy Both/ })).toHaveAttribute("aria-keyshortcuts", "Alt+C");
-    expect(screen.getByRole("menuitem", { name: /Find Within Block/ })).toHaveAttribute("aria-keyshortcuts", "Alt+F");
-    expect(screen.getByRole("menuitem", { name: /Share Snapshot/ })).toHaveAttribute("aria-keyshortcuts", "Alt+S");
+    expect(screen.getByRole("menuitem", { name: /동시 복사/ })).toHaveAttribute("aria-keyshortcuts", "Alt+C");
+    expect(screen.getByRole("menuitem", { name: /블록 내 찾기/ })).toHaveAttribute("aria-keyshortcuts", "Alt+F");
+    expect(screen.getByRole("menuitem", { name: /스냅샷 공유/ })).toHaveAttribute("aria-keyshortcuts", "Alt+S");
   });
 
-  it("블록 액션 메뉴는 Alt+C로 Copy Both를 실행한다", () => {
+  it("블록 액션 메뉴는 Alt+C로 동시 복사를 실행한다", () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     Object.defineProperty(navigator, "clipboard", {
       value: { writeText },
@@ -797,10 +797,10 @@ describe("WarpListView delta actions", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: "블록 액션" }));
-    expect(screen.getByRole("menuitem", { name: /Copy Both/ })).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: /동시 복사/ })).toBeInTheDocument();
     fireEvent.keyDown(window, { key: "c", altKey: true });
     expect(writeText).toHaveBeenCalledTimes(1);
-    expect(screen.queryByRole("menuitem", { name: /Copy Both/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("menuitem", { name: /동시 복사/ })).not.toBeInTheDocument();
   });
 
   it("블록 액션 메뉴는 Alt+F로 블록 내 검색을 연다", () => {
@@ -820,9 +820,9 @@ describe("WarpListView delta actions", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: "블록 액션" }));
-    expect(screen.getByRole("menuitem", { name: /Find Within Block/ })).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: /블록 내 찾기/ })).toBeInTheDocument();
     fireEvent.keyDown(window, { key: "f", altKey: true });
-    expect(screen.queryByRole("menuitem", { name: /Find Within Block/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("menuitem", { name: /블록 내 찾기/ })).not.toBeInTheDocument();
     expect(screen.getByPlaceholderText("블록 내 검색")).toBeInTheDocument();
   });
 
@@ -848,15 +848,15 @@ describe("WarpListView delta actions", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: "블록 액션" }));
-    expect(screen.getByRole("menuitem", { name: /Share Snapshot/ })).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: /스냅샷 공유/ })).toBeInTheDocument();
     fireEvent.keyDown(window, { key: "s", altKey: true });
     expect(writeText).toHaveBeenCalledTimes(1);
-    expect(screen.queryByRole("menuitem", { name: /Share Snapshot/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("menuitem", { name: /스냅샷 공유/ })).not.toBeInTheDocument();
     expect(String(writeText.mock.calls[0]?.[0] ?? "")).toContain("```sh");
     expect(String(writeText.mock.calls[0]?.[0] ?? "")).toContain("menu ok");
   });
 
-  it("블록 액션 메뉴는 Alt+R로 Retry + Compare를 실행한다", () => {
+  it("블록 액션 메뉴는 Alt+R로 동시 복사를 실행한다", () => {
     const onRetryWithDiff = vi.fn();
     render(
       <WarpListView
@@ -875,12 +875,12 @@ describe("WarpListView delta actions", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: "블록 액션" }));
-    const retryMenuItem = screen.getByRole("menuitem", { name: /Retry/ });
+    const retryMenuItem = screen.getByRole("menuitem", { name: /동시 복사/ });
     expect(retryMenuItem).toBeInTheDocument();
     fireEvent.keyDown(window, { key: "r", altKey: true });
     expect(onRetryWithDiff).toHaveBeenCalledTimes(1);
     expect(onRetryWithDiff.mock.calls[0]?.[0]?.id).toBe("b6e");
-    expect(screen.queryByRole("menuitem", { name: /Retry/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("menuitem", { name: /동시 복사/ })).not.toBeInTheDocument();
   });
 
   it("블록 액션 메뉴는 Escape로 닫히면 트리거 버튼에 포커스를 돌려준다", async () => {
@@ -901,7 +901,7 @@ describe("WarpListView delta actions", () => {
 
     const trigger = screen.getByRole("button", { name: "블록 액션" });
     fireEvent.click(trigger);
-    expect(screen.getByRole("menuitem", { name: /Copy Both/ })).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: /동시 복사/ })).toBeInTheDocument();
     fireEvent.keyDown(window, { key: "Escape" });
     await waitFor(() => expect(trigger).toHaveFocus());
   });
@@ -2004,7 +2004,7 @@ describe("WarpListView delta actions", () => {
     expect(screen.getByRole("button", { name: "정렬: 최근순" })).toBeInTheDocument();
   });
 
-  it("Retry+Compare 큐 뱃지 표시", () => {
+  it("재시도+비교 큐 뱃지 표시", () => {
     render(
       <WarpListView
         blocks={blocks}
@@ -2021,10 +2021,10 @@ describe("WarpListView delta actions", () => {
         }}
       />,
     );
-    expect(screen.getByText("Queue 3")).toBeInTheDocument();
+    expect(screen.getByText("큐 3")).toBeInTheDocument();
   });
 
-  it("Retry+Compare 큐 상태/비우기 액션", () => {
+  it("재시도+비교 큐 상태/비우기 액션", () => {
     const onClearRetryCompareQueue = vi.fn();
     render(
       <WarpListView
@@ -2051,7 +2051,7 @@ describe("WarpListView delta actions", () => {
     expect(onClearRetryCompareQueue).toHaveBeenCalledTimes(1);
   });
 
-  it("Retry+Compare 큐 변경 되돌리기 버튼", () => {
+  it("재시도+비교 큐 변경 되돌리기 버튼", () => {
     const onUndoRetryCompareQueueChange = vi.fn();
     render(
       <WarpListView
@@ -2081,7 +2081,7 @@ describe("WarpListView delta actions", () => {
     expect(onUndoRetryCompareQueueChange).toHaveBeenCalledTimes(1);
   });
 
-  it("Retry+Compare 큐 변경 되돌리기 단축키(Alt+Z)", () => {
+  it("재시도+비교 큐 변경 되돌리기 단축키(Alt+Z)", () => {
     const onUndoRetryCompareQueueChange = vi.fn();
     render(
       <WarpListView
@@ -2111,7 +2111,7 @@ describe("WarpListView delta actions", () => {
     expect(onUndoRetryCompareQueueChange).toHaveBeenCalledTimes(1);
   });
 
-  it("Retry+Compare 큐 변경 되돌리기 단축키(Ctrl+Z)", () => {
+  it("재시도+비교 큐 변경 되돌리기 단축키(Ctrl+Z)", () => {
     const onUndoRetryCompareQueueChange = vi.fn();
     render(
       <WarpListView
@@ -2141,7 +2141,7 @@ describe("WarpListView delta actions", () => {
     expect(onUndoRetryCompareQueueChange).toHaveBeenCalledTimes(1);
   });
 
-  it("Retry+Compare 큐 변경 되돌리기 단축키는 Ctrl+Alt+Z에서 동작하지 않는다", () => {
+  it("재시도+비교 큐 변경 되돌리기 단축키는 Ctrl+Alt+Z에서 동작하지 않는다", () => {
     const onUndoRetryCompareQueueChange = vi.fn();
     const onRedoRetryCompareQueueChange = vi.fn();
     render(
@@ -2176,7 +2176,7 @@ describe("WarpListView delta actions", () => {
     expect(onRedoRetryCompareQueueChange).not.toHaveBeenCalled();
   });
 
-  it("Retry+Compare 큐 변경 다시실행 버튼", () => {
+  it("재시도+비교 큐 변경 다시실행 버튼", () => {
     const onRedoRetryCompareQueueChange = vi.fn();
     render(
       <WarpListView
@@ -2206,7 +2206,7 @@ describe("WarpListView delta actions", () => {
     expect(onRedoRetryCompareQueueChange).toHaveBeenCalledTimes(1);
   });
 
-  it("Retry+Compare 큐 변경 다시실행 단축키(Alt+Shift+Z)", () => {
+  it("재시도+비교 큐 변경 다시실행 단축키(Alt+Shift+Z)", () => {
     const onUndoRetryCompareQueueChange = vi.fn();
     const onRedoRetryCompareQueueChange = vi.fn();
     render(
@@ -2240,7 +2240,7 @@ describe("WarpListView delta actions", () => {
     expect(onUndoRetryCompareQueueChange).toHaveBeenCalledTimes(0);
   });
 
-  it("Retry+Compare 큐 변경 다시실행 단축키(Ctrl+Shift+Z)", () => {
+  it("재시도+비교 큐 변경 다시실행 단축키(Ctrl+Shift+Z)", () => {
     const onUndoRetryCompareQueueChange = vi.fn();
     const onRedoRetryCompareQueueChange = vi.fn();
     render(
@@ -2274,7 +2274,7 @@ describe("WarpListView delta actions", () => {
     expect(onUndoRetryCompareQueueChange).toHaveBeenCalledTimes(0);
   });
 
-  it("Retry+Compare 큐 변경 다시실행 단축키는 Ctrl+Alt+Shift+Z에서 동작하지 않는다", () => {
+  it("재시도+비교 큐 변경 다시실행 단축키는 Ctrl+Alt+Shift+Z에서 동작하지 않는다", () => {
     const onUndoRetryCompareQueueChange = vi.fn();
     const onRedoRetryCompareQueueChange = vi.fn();
     render(
@@ -2309,7 +2309,7 @@ describe("WarpListView delta actions", () => {
     expect(onRedoRetryCompareQueueChange).not.toHaveBeenCalled();
   });
 
-  it("Retry+Compare 큐 일시정지/재개 토글", () => {
+  it("재시도+비교 큐 일시정지/재개 토글", () => {
     const onToggleRetryCompareQueuePaused = vi.fn();
     const view = render(
       <WarpListView
@@ -2448,7 +2448,7 @@ describe("WarpListView delta actions", () => {
     expect(screen.queryByText("타임라인 열기/닫기")).not.toBeInTheDocument();
   });
 
-  it("Retry+Compare 큐 일시정지 단축키(Alt+P)", () => {
+  it("재시도+비교 큐 일시정지 단축키(Alt+P)", () => {
     const onToggleRetryCompareQueuePaused = vi.fn();
     render(
       <WarpListView
@@ -2473,7 +2473,7 @@ describe("WarpListView delta actions", () => {
     expect(onToggleRetryCompareQueuePaused).toHaveBeenCalledTimes(1);
   });
 
-  it("Retry+Compare 큐 일시정지 단축키는 Ctrl+Alt+P 조합에서 동작하지 않는다", () => {
+  it("재시도+비교 큐 일시정지 단축키는 Ctrl+Alt+P 조합에서 동작하지 않는다", () => {
     const onToggleRetryCompareQueuePaused = vi.fn();
     render(
       <WarpListView
@@ -2498,7 +2498,7 @@ describe("WarpListView delta actions", () => {
     expect(onToggleRetryCompareQueuePaused).toHaveBeenCalledTimes(0);
   });
 
-  it("Retry+Compare 큐 상세 목록/개별 제거", () => {
+  it("재시도+비교 큐 상세 목록/개별 제거", () => {
     const onRemoveRetryCompareQueueItem = vi.fn();
     const onPromoteRetryCompareQueueItem = vi.fn();
     const onDemoteRetryCompareQueueItem = vi.fn();
@@ -2534,7 +2534,7 @@ describe("WarpListView delta actions", () => {
       />,
     );
     fireEvent.click(screen.getByRole("button", { name: "Δ Timeline (1)" }));
-    expect(screen.getByText("Retry+Compare Queue")).toBeInTheDocument();
+    expect(screen.getByText("재시도+비교 큐")).toBeInTheDocument();
     expect(screen.getByText("pnpm lint")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "queue-promote-2" }));
     expect(onPromoteRetryCompareQueueItem).toHaveBeenCalledWith("q2");
@@ -2550,7 +2550,7 @@ describe("WarpListView delta actions", () => {
     expect(onRemoveRetryCompareQueueItem).toHaveBeenCalledWith("q2");
   });
 
-  it("Retry+Compare 큐 검색/지우기", () => {
+  it("재시도+비교 큐 검색/지우기", () => {
     render(
       <WarpListView
         blocks={blocks}
@@ -2582,7 +2582,7 @@ describe("WarpListView delta actions", () => {
     expect(screen.getByText("표시 3/3")).toBeInTheDocument();
   });
 
-  it("Retry+Compare 큐 검색 결과 필터 제거", () => {
+  it("재시도+비교 큐 검색 결과 필터 제거", () => {
     const onRemoveFilteredRetryCompareQueueItems = vi.fn();
     render(
       <WarpListView
@@ -2614,7 +2614,7 @@ describe("WarpListView delta actions", () => {
     expect(onRemoveFilteredRetryCompareQueueItems).toHaveBeenCalledWith(["q3"]);
   });
 
-  it("Retry+Compare 큐 검색 결과 필터 맨앞/맨뒤", () => {
+  it("재시도+비교 큐 검색 결과 필터 맨앞/맨뒤", () => {
     const onPromoteFilteredRetryCompareQueueItems = vi.fn();
     const onDemoteFilteredRetryCompareQueueItems = vi.fn();
     const onPrioritizeFilteredRetryCompareQueueItems = vi.fn();
@@ -2653,7 +2653,7 @@ describe("WarpListView delta actions", () => {
     expect(onDemoteFilteredRetryCompareQueueItems).toHaveBeenCalledWith(["q1", "q2", "q3"]);
   });
 
-  it("Retry+Compare 큐 필터 액션 단축키", () => {
+  it("재시도+비교 큐 필터 액션 단축키", () => {
     const onPrioritizeFilteredRetryCompareQueueItems = vi.fn();
     const onPromoteFilteredRetryCompareQueueItems = vi.fn();
     const onDemoteFilteredRetryCompareQueueItems = vi.fn();
@@ -2701,7 +2701,7 @@ describe("WarpListView delta actions", () => {
     expect(onRemoveFilteredRetryCompareQueueItems).toHaveBeenCalledWith(["q3"]);
   });
 
-  it("Retry+Compare 큐 검색 포커스 단축키(Alt+Q)", () => {
+  it("재시도+비교 큐 검색 포커스 단축키(Alt+Q)", () => {
     render(
       <WarpListView
         blocks={blocks}
@@ -2729,7 +2729,7 @@ describe("WarpListView delta actions", () => {
     expect(document.activeElement).toBe(input);
   });
 
-  it("Retry+Compare 큐 검색 포커스 단축키는 Ctrl+Alt+Q 조합에서 동작하지 않는다", () => {
+  it("재시도+비교 큐 검색 포커스 단축키는 Ctrl+Alt+Q 조합에서 동작하지 않는다", () => {
     render(
       <WarpListView
         blocks={blocks}
@@ -2763,7 +2763,7 @@ describe("WarpListView delta actions", () => {
     expect(document.activeElement).not.toBe(queueInput);
   });
 
-  it("Retry+Compare 큐 검색창 ESC로 검색어 초기화", () => {
+  it("재시도+비교 큐 검색창 ESC로 검색어 초기화", () => {
     render(
       <WarpListView
         blocks={blocks}
@@ -2794,7 +2794,7 @@ describe("WarpListView delta actions", () => {
     expect(screen.getByText("표시 2/2")).toBeInTheDocument();
   });
 
-  it("Retry+Compare 큐 패널 접기/펼치기 버튼", () => {
+  it("재시도+비교 큐 패널 접기/펼치기 버튼", () => {
     render(
       <WarpListView
         blocks={blocks}
@@ -2824,7 +2824,7 @@ describe("WarpListView delta actions", () => {
     expect(screen.getByPlaceholderText("큐 검색 (command)")).toBeInTheDocument();
   });
 
-  it("Retry+Compare 큐 패널 토글 단축키(Alt+K)", () => {
+  it("재시도+비교 큐 패널 토글 단축키(Alt+K)", () => {
     render(
       <WarpListView
         blocks={blocks}
@@ -2854,7 +2854,7 @@ describe("WarpListView delta actions", () => {
     expect(screen.getByPlaceholderText("큐 검색 (command)")).toBeInTheDocument();
   });
 
-  it("Retry+Compare 큐 패널 토글 단축키는 Ctrl+Alt+K 조합에서 동작하지 않는다", () => {
+  it("재시도+비교 큐 패널 토글 단축키는 Ctrl+Alt+K 조합에서 동작하지 않는다", () => {
     render(
       <WarpListView
         blocks={blocks}
@@ -2882,7 +2882,7 @@ describe("WarpListView delta actions", () => {
     expect(screen.getByPlaceholderText("큐 검색 (command)")).toBeInTheDocument();
   });
 
-  it("Retry+Compare 현재 실행 커맨드 표시", () => {
+  it("재시도+비교 현재 실행 커맨드 표시", () => {
     render(
       <WarpListView
         blocks={blocks}
@@ -2905,7 +2905,7 @@ describe("WarpListView delta actions", () => {
     expect(screen.getByText("npm test --watch=false")).toBeInTheDocument();
   });
 
-  it("Retry+Compare 완료 카운트 표시", () => {
+  it("재시도+비교 완료 카운트 표시", () => {
     render(
       <WarpListView
         blocks={blocks}
@@ -2925,7 +2925,7 @@ describe("WarpListView delta actions", () => {
     expect(screen.getByText("done 5")).toBeInTheDocument();
   });
 
-  it("Retry+Compare 완료 카운트 리셋 액션", () => {
+  it("재시도+비교 완료 카운트 리셋 액션", () => {
     const onResetRetryCompareCompletedCount = vi.fn();
     render(
       <WarpListView
@@ -2948,7 +2948,7 @@ describe("WarpListView delta actions", () => {
     expect(onResetRetryCompareCompletedCount).toHaveBeenCalledTimes(1);
   });
 
-  it("Retry+Compare 완료 카운트 리셋 단축키(Alt+D)", () => {
+  it("재시도+비교 완료 카운트 리셋 단축키(Alt+D)", () => {
     const onResetRetryCompareCompletedCount = vi.fn();
     render(
       <WarpListView
@@ -2972,7 +2972,7 @@ describe("WarpListView delta actions", () => {
     expect(onResetRetryCompareCompletedCount).toHaveBeenCalledTimes(1);
   });
 
-  it("Retry+Compare 완료 카운트 리셋 단축키는 Ctrl+Alt+D 조합에서 동작하지 않는다", () => {
+  it("재시도+비교 완료 카운트 리셋 단축키는 Ctrl+Alt+D 조합에서 동작하지 않는다", () => {
     const onResetRetryCompareCompletedCount = vi.fn();
     render(
       <WarpListView
@@ -2996,7 +2996,7 @@ describe("WarpListView delta actions", () => {
     expect(onResetRetryCompareCompletedCount).toHaveBeenCalledTimes(0);
   });
 
-  it("Δ Timeline 선택 후 Copy Selected가 선택 항목만 복사", () => {
+  it("Δ Timeline 선택 후 선택 복사가 선택 항목만 복사", () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     Object.defineProperty(navigator, "clipboard", {
       value: { writeText },
@@ -3037,7 +3037,7 @@ describe("WarpListView delta actions", () => {
     );
     fireEvent.click(screen.getByRole("button", { name: "Δ Timeline (2)" }));
     fireEvent.click(screen.getByRole("checkbox", { name: "pnpm lint 선택" }));
-    fireEvent.click(screen.getByRole("button", { name: "Copy Selected" }));
+    fireEvent.click(screen.getByRole("button", { name: "선택 복사" }));
     expect(writeText).toHaveBeenCalledTimes(1);
     const copied = String(writeText.mock.calls[0]?.[0] ?? "");
     expect(copied).toContain("pnpm lint");
@@ -3279,7 +3279,7 @@ describe("WarpListView delta actions", () => {
     expect(copied).toContain("npm test");
   });
 
-  it("Δ Timeline 선택 Retry+Compare가 선택 항목 전달", () => {
+  it("Δ Timeline 선택 재시도+비교가 선택 항목 전달", () => {
     const onRetrySelectedWithDiff = vi.fn();
     render(
       <WarpListView
@@ -3317,7 +3317,7 @@ describe("WarpListView delta actions", () => {
     );
     fireEvent.click(screen.getByRole("button", { name: "Δ Timeline (2)" }));
     fireEvent.click(screen.getByRole("checkbox", { name: "pnpm lint 선택" }));
-    fireEvent.click(screen.getByRole("button", { name: "선택 Retry+Compare" }));
+    fireEvent.click(screen.getByRole("button", { name: "선택 재시도+비교" }));
     expect(onRetrySelectedWithDiff).toHaveBeenCalledTimes(1);
     const payload = onRetrySelectedWithDiff.mock.calls[0]?.[0] ?? [];
     expect(Array.isArray(payload)).toBe(true);
@@ -3875,7 +3875,7 @@ describe("WarpListView delta actions", () => {
     expect(screen.queryByText("$ npm test")).not.toBeInTheDocument();
   });
 
-  it("Δ Timeline 선택 항목 Jump/Prev/Next 탐색", () => {
+  it("Δ Timeline 선택 항목 점프/이전/다음 탐색", () => {
     render(
       <WarpListView
         blocks={[
@@ -3913,14 +3913,14 @@ describe("WarpListView delta actions", () => {
     fireEvent.click(screen.getByRole("checkbox", { name: "npm test 선택" }));
     fireEvent.click(screen.getByRole("checkbox", { name: "pnpm lint 선택" }));
 
-    fireEvent.click(screen.getByRole("button", { name: "Jump Selected" }));
-    expect(screen.getByText("Retry Compare · +1 / -1")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "선택 점프" }));
+    expect(screen.getByText("재시도+비교 · +1 / -1")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Next Selected" }));
-    expect(screen.getByText("Retry Compare · +2 / -0")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "다음 선택" }));
+    expect(screen.getByText("재시도+비교 · +2 / -0")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Prev Selected" }));
-    expect(screen.getByText("Retry Compare · +1 / -1")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "이전 선택" }));
+    expect(screen.getByText("재시도+비교 · +1 / -1")).toBeInTheDocument();
   });
 
   it("Δ Timeline 선택 항목 단축키 탐색(Alt+Enter/↑/↓)", () => {
@@ -3962,13 +3962,13 @@ describe("WarpListView delta actions", () => {
     fireEvent.click(screen.getByRole("checkbox", { name: "pnpm lint 선택" }));
 
     fireEvent.keyDown(window, { key: "Enter", altKey: true });
-    expect(screen.getByText("Retry Compare · +1 / -1")).toBeInTheDocument();
+    expect(screen.getByText("재시도+비교 · +1 / -1")).toBeInTheDocument();
 
     fireEvent.keyDown(window, { key: "ArrowDown", altKey: true });
-    expect(screen.getByText("Retry Compare · +2 / -0")).toBeInTheDocument();
+    expect(screen.getByText("재시도+비교 · +2 / -0")).toBeInTheDocument();
 
     fireEvent.keyDown(window, { key: "ArrowUp", altKey: true });
-    expect(screen.getByText("Retry Compare · +1 / -1")).toBeInTheDocument();
+    expect(screen.getByText("재시도+비교 · +1 / -1")).toBeInTheDocument();
   });
 
   it("Δ Timeline 선택 항목 단축키 탐색(Ctrl+Enter/Ctrl+Shift+Enter)", () => {
@@ -4010,13 +4010,13 @@ describe("WarpListView delta actions", () => {
     fireEvent.click(screen.getByRole("checkbox", { name: "pnpm lint 선택" }));
 
     fireEvent.keyDown(window, { key: "Enter", ctrlKey: true });
-    expect(screen.getByText("Retry Compare · +1 / -1")).toBeInTheDocument();
+    expect(screen.getByText("재시도+비교 · +1 / -1")).toBeInTheDocument();
 
     fireEvent.keyDown(window, { key: "Enter", ctrlKey: true });
-    expect(screen.getByText("Retry Compare · +2 / -0")).toBeInTheDocument();
+    expect(screen.getByText("재시도+비교 · +2 / -0")).toBeInTheDocument();
 
     fireEvent.keyDown(window, { key: "Enter", ctrlKey: true, shiftKey: true });
-    expect(screen.getByText("Retry Compare · +1 / -1")).toBeInTheDocument();
+    expect(screen.getByText("재시도+비교 · +1 / -1")).toBeInTheDocument();
   });
 
   it("Δ Timeline 선택 항목 탐색은 Ctrl+Alt+Enter 조합에서 동작하지 않는다", () => {
@@ -4058,8 +4058,8 @@ describe("WarpListView delta actions", () => {
     fireEvent.click(screen.getByRole("checkbox", { name: "pnpm lint 선택" }));
 
     fireEvent.keyDown(window, { key: "Enter", ctrlKey: true, altKey: true });
-    expect(screen.queryByText("Retry Compare · +1 / -1")).not.toBeInTheDocument();
-    expect(screen.queryByText("Retry Compare · +2 / -0")).not.toBeInTheDocument();
+    expect(screen.queryByText("재시도+비교 · +1 / -1")).not.toBeInTheDocument();
+    expect(screen.queryByText("재시도+비교 · +2 / -0")).not.toBeInTheDocument();
   });
 
   it("Δ Timeline 선택 항목 탐색은 Ctrl+Alt+↑/↓ 조합에서 동작하지 않는다", () => {
@@ -4101,13 +4101,13 @@ describe("WarpListView delta actions", () => {
     fireEvent.click(screen.getByRole("checkbox", { name: "pnpm lint 선택" }));
 
     fireEvent.keyDown(window, { key: "Enter", altKey: true });
-    expect(screen.getByText("Retry Compare · +1 / -1")).toBeInTheDocument();
+    expect(screen.getByText("재시도+비교 · +1 / -1")).toBeInTheDocument();
 
     fireEvent.keyDown(window, { key: "ArrowDown", ctrlKey: true, altKey: true });
-    expect(screen.getByText("Retry Compare · +1 / -1")).toBeInTheDocument();
+    expect(screen.getByText("재시도+비교 · +1 / -1")).toBeInTheDocument();
 
     fireEvent.keyDown(window, { key: "ArrowUp", ctrlKey: true, altKey: true });
-    expect(screen.getByText("Retry Compare · +1 / -1")).toBeInTheDocument();
+    expect(screen.getByText("재시도+비교 · +1 / -1")).toBeInTheDocument();
   });
 
   it("Δ Timeline에서 선택 항목 핀/핀해제", () => {
@@ -4830,7 +4830,7 @@ describe("WarpListView delta actions", () => {
     expect(screen.queryAllByText("PIN")).toHaveLength(1);
   });
 
-  it("Δ Timeline Copy All이 전체 diff를 복사", () => {
+  it("Δ Timeline 전체 복사 전체 diff를 복사", () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     Object.defineProperty(navigator, "clipboard", {
       value: { writeText },
@@ -4852,7 +4852,7 @@ describe("WarpListView delta actions", () => {
       />,
     );
     fireEvent.click(screen.getByRole("button", { name: "Δ Timeline (1)" }));
-    fireEvent.click(screen.getByRole("button", { name: "Copy All" }));
+    fireEvent.click(screen.getByRole("button", { name: "전체 복사" }));
     expect(writeText).toHaveBeenCalledTimes(1);
     expect(String(writeText.mock.calls[0]?.[0] ?? "")).toContain("## 1. npm test");
   });
