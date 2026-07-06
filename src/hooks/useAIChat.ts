@@ -243,12 +243,12 @@ export function useAIChat(model: string, getTerminalContext: () => string) {
         prompt: text,
         model,
         context,
-          images: images && images.length > 0 ? images : null,
-          engine: engine ?? null,
-          backend: backend ?? null,
-          activeFile,
-        });
-        console.log("[AI] stream_ai_command returned, tokens:", tokenCount);
+        images: images && images.length > 0 ? images : null,
+        engine: engine ?? null,
+        backend: backend ?? null,
+        activeFile,
+      });
+      console.log("[AI] stream_ai_command returned, tokens:", tokenCount);
       } catch (e) {
         console.error("[AI] stream_ai_command threw:", e);
         if (isCancelError(e)) {
