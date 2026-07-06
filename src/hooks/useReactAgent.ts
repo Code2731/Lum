@@ -86,6 +86,16 @@ function sameChanges(a: ChangeInfo[], b: ChangeInfo[]): boolean {
   return true;
 }
 
+function normalizeChanges(changes: ChangeInfo[]): ChangeInfo[] {
+  return [...changes].sort((a, b) => {
+    const relPathCmp = a.rel_path.localeCompare(b.rel_path);
+    if (relPathCmp !== 0) {
+      return relPathCmp;
+    }
+    return a.path.localeCompare(b.path);
+  });
+}
+
 export function useReactAgent() {
   const [state, setState] = useState<ReactAgentState>({
     status: "idle",
@@ -110,8 +120,9 @@ export function useReactAgent() {
   const refreshChanges = useCallback(async () => {
     try {
       const list = await invoke<ChangeInfo[]>("react_agent_changes");
+      const sorted = normalizeChanges(list);
       setState((prev) =>
-        sameChanges(prev.changes, list) ? prev : { ...prev, changes: list }
+        sameChanges(prev.changes, sorted) ? prev : { ...prev, changes: sorted }
       );
     } catch {
       // 백엔드 미응답 시 조용히 skip — 변경 사항 표시는 best-effort.

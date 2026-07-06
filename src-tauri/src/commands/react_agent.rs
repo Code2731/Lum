@@ -2989,7 +2989,7 @@ pub fn react_agent_changes() -> Vec<ChangeInfo> {
     let Some(backup) = guard.as_ref() else {
         return Vec::new();
     };
-    backup
+    let mut changes: Vec<ChangeInfo> = backup
         .entries
         .iter()
         .map(|(abs, entry)| {
@@ -3014,7 +3014,9 @@ pub fn react_agent_changes() -> Vec<ChangeInfo> {
                 risk: classify_change_risk(&rel_path),
             }
         })
-        .collect()
+        .collect();
+    changes.sort_by(|a, b| a.rel_path.cmp(&b.rel_path));
+    changes
 }
 
 /// 활성 백업의 모든 변경을 되돌림. 백업 자체는 한 번 사용 후 폐기.
@@ -6701,6 +6703,35 @@ ANSWER: 2 + 2는 4입니다."#,
         for c in &changes {
             assert_eq!(c.risk, ChangeRisk::Medium, "{}: {:?}", c.rel_path, c.risk);
         }
+
+        cleanup_backup_state();
+    }
+
+    #[test]
+    fn react_agent_changes_목록_정렬_안정() {
+        let td = TempDir::new("ch3");
+        init_react_backup(&td.cwd());
+
+        write_file_tool(
+            &serde_json::json!({"path": "zeta.rs", "content": "zzz"}),
+            &td.cwd(),
+        );
+        write_file_tool(
+            &serde_json::json!({"path": "alpha.rs", "content": "aaa"}),
+            &td.cwd(),
+        );
+        write_file_tool(
+            &serde_json::json!({"path": "beta.rs", "content": "bbb"}),
+            &td.cwd(),
+        );
+
+        let changes = react_agent_changes();
+        let rel_paths: Vec<&str> = changes.iter().map(|c| c.rel_path.as_str()).collect();
+        assert_eq!(
+            rel_paths,
+            vec!["alpha.rs", "beta.rs", "zeta.rs"],
+            "react_agent_changes는 rel_path 기준 정렬이 보장되어야 함"
+        );
 
         cleanup_backup_state();
     }
