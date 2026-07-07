@@ -15,6 +15,11 @@
 - [x] AI 대화 clear 회귀 안전성 보강
   - `src/hooks/useAIChat.test.ts`에 스트리밍 미존재 경로에서 `clear`가 `cancel_ai_stream`을 호출하지 않는 테스트 추가
 
+## 2026-07-08 추천 라운드 반영
+
+- [x] AI 대화 취소 UX 회귀 보강
+  - `src/hooks/useAIChat.test.ts`에 진행 중 `cancel()` 호출 시 메시지 히스토리 유지와 `cancel_ai_stream` 동작을 확인하는 테스트 추가
+
 ## 2026-07-07 추천 라운드 2차
 
 - [x] AI 대화 런타임 복구 정리

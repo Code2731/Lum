@@ -184,6 +184,42 @@ describe("useAIChat — 스트리밍 취소 경합 방지", () => {
     expect(result.current.streaming).toBe(false);
     expect(result.current.error).toBeNull();
   });
+
+  it("cancel 호출 시 메시지 히스토리는 유지한다", async () => {
+    let releaseStream: (() => void) | null = null;
+    invokeMock.mockImplementation(async (cmd: string) => {
+      if (cmd === "reset_ai_stream") return;
+      if (cmd === "cancel_ai_stream") return;
+      if (cmd === "mcp_system_prompt") return "";
+      if (cmd === "stream_ai_command") {
+        return new Promise<void>((resolve) => {
+          releaseStream = resolve;
+        });
+      }
+      return "";
+    });
+
+    const { result } = renderHook(() => useAIChat("model", () => "CWD: /tmp"));
+    let sendPromise: Promise<void> | null = null;
+
+    await act(async () => {
+      sendPromise = result.current.sendMessage("안녕");
+      await waitFor(() => {
+        expect(invokeMock.mock.calls.some(([cmd]) => cmd === "stream_ai_command")).toBe(true);
+      });
+    });
+
+    const messageCountBeforeCancel = result.current.messages.length;
+
+    await act(async () => {
+      result.current.cancel();
+      releaseStream?.();
+      await sendPromise;
+    });
+
+    expect(result.current.messages).toHaveLength(messageCountBeforeCancel);
+    expect(result.current.error).toBeNull();
+  });
 });
 
 describe("useAIChat — 스트림 실패 메시지 처리", () => {
