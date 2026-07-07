@@ -248,6 +248,39 @@ describe("useAIChat — 스트리밍 취소 경합 방지", () => {
     expect(result.current.messages).toHaveLength(messageCountBeforeCancel);
     expect(result.current.error).toBeNull();
   });
+
+  it("취소 요청으로 stream_ai_command가 중단되어도 에러 메시지를 남기지 않는다", async () => {
+    let releaseStream: (() => void) | null = null;
+    invokeMock.mockImplementation(async (cmd: string) => {
+      if (cmd === "reset_ai_stream") return;
+      if (cmd === "cancel_ai_stream") return;
+      if (cmd === "mcp_system_prompt") return "";
+      if (cmd === "stream_ai_command") {
+        return new Promise<void>((_, reject) => {
+          releaseStream = () => reject({ error: "cancelled by user" });
+        });
+      }
+      return "";
+    });
+
+    const { result } = renderHook(() => useAIChat("model", () => "CWD: /tmp"));
+    let sendPromise: Promise<void> | null = null;
+
+    await act(async () => {
+      sendPromise = result.current.sendMessage("안녕");
+      await waitFor(() => {
+        expect(invokeMock.mock.calls.some(([cmd]) => cmd === "stream_ai_command")).toBe(true);
+      });
+      result.current.cancel();
+      releaseStream?.();
+      await sendPromise!;
+    });
+
+    expect(result.current.error).toBeNull();
+    const lastMessage = result.current.messages[result.current.messages.length - 1];
+    expect(lastMessage?.content).toBe("");
+    expect(result.current.streaming).toBe(false);
+  });
 });
 
 describe("useAIChat — 스트림 실패 메시지 처리", () => {
