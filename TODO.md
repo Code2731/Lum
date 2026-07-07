@@ -136,6 +136,11 @@
   - `ci.yml`에 Linux `npm run tauri build` smoke 빌드 단계 추가 (`release` 기본 경로와 동일한 CPU 경로)
   - `release.yml` Linux 매트릭스에 `deb/appimage` 번들 추가 (Linux CPU 빌드 산출물 자동 생성)
 
+## 2026-07-09 추천 라운드 반영
+
+- [x] useAIChat 취소/복구 경로 정합성 회귀 정리
+  - `src/hooks/useAIChat.test.ts`에서 clear/cancel/재시작/리스너 정리 회귀를 연속 강화
+
 ## 2026-06-29 추천 라운드 반영
 
 - [x] 테스트 문서/회귀 로그 정합성
