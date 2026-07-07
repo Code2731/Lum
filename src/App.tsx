@@ -1004,7 +1004,7 @@ const App: React.FC = () => {
         return;
       }
       const errorMessage = formatAIErrorMessage(err);
-      updateBlock(blockId, { output: `Error: ${errorMessage}`, status: "error" });
+      updateBlock(blockId, { output: `오류: ${errorMessage}`, status: "error" });
       setAiInput(cmd);
       setShowAiBar(true);
       setTimeout(() => aiInputRef.current?.focus(), 50);

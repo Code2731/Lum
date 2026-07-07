@@ -114,3 +114,6 @@ jobs:
       - name: Build Desktop App (Linux CPU smoke)
         # Linux 기본 빌드 경로에서 임베디드 AI 비활성 기준으로 번들링이 깨지지 않는지 점검
         run: npm run tauri build
+
+      - name: Verify Linux CPU artifacts (deb/appimage)
+        run: bash scripts/verify-linux-tauri-bundles.sh

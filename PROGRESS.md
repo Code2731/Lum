@@ -2,6 +2,15 @@
 
 ## 2026-07-07
 
+## 2026-07-08 추천 라운드 반영
+
+- [x] cmd/app 경계 fallback UX 문구 톤 통일
+  - `src/App.tsx`에서 `Error:` 접두사를 사용자 한글 메시지 `오류:`로 통일
+- [x] Linux CPU 배포 산출물 자동 검증 스크립트 추가
+  - `scripts/verify-linux-tauri-bundles.sh`에서 `deb`/`appimage` 산출물 존재·용량(비어있지 않음)을 CI smoke 단계에서 확인
+- [x] Linux CPU 산출물 검증 CI 반영
+  - `.github/workflows/ci.yml`에 `npm run tauri build` 후 스크립트 실행 단계를 추가
+
 ### 이번 라운드 완료
 
 - 추천 라운드 1~3 실행: 경고 분류/문서 동기화/회귀 테스트 범위 축소
