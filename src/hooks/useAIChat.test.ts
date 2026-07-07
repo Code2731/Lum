@@ -154,6 +154,34 @@ describe("useAIChat — 스트리밍 취소 경합 방지", () => {
     );
   });
 
+  it("스트리밍이 없을 때 cancel을 호출해도 cancel_ai_stream이 호출되지 않는다", async () => {
+    invokeMock.mockImplementation(async (cmd: string) => {
+      if (cmd === "reset_ai_stream") return;
+      if (cmd === "cancel_ai_stream") return;
+      if (cmd === "mcp_system_prompt") return "";
+      if (cmd === "stream_ai_command") return "";
+      return "";
+    });
+
+    const { result } = renderHook(() => useAIChat("model", () => "CWD: /tmp"));
+
+    await act(async () => {
+      await result.current.sendMessage("안녕");
+    });
+
+    const beforeCancelCalls = invokeMock.mock.calls.filter(([cmd]) => cmd === "cancel_ai_stream").length;
+
+    act(() => {
+      result.current.cancel();
+    });
+
+    expect(result.current.streaming).toBe(false);
+    expect(result.current.error).toBeNull();
+    expect(invokeMock.mock.calls.filter(([cmd]) => cmd === "cancel_ai_stream")).toHaveLength(
+      beforeCancelCalls,
+    );
+  });
+
   it("cancel 호출 시 진행 중인 채팅 스트림을 cancel_ai_stream으로 중단하고 에러를 초기화한다", async () => {
     let releaseStream: (() => void) | null = null;
     invokeMock.mockImplementation(async (cmd: string) => {
