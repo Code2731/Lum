@@ -281,6 +281,45 @@ describe("useAIChat — 스트리밍 취소 경합 방지", () => {
     expect(lastMessage?.content).toBe("");
     expect(result.current.streaming).toBe(false);
   });
+
+  it("cancel 후 리스너가 해제되어 추가 토큰 이벤트가 반영되지 않는다", async () => {
+    let releaseStream: (() => void) | null = null;
+    invokeMock.mockImplementation(async (cmd: string) => {
+      if (cmd === "reset_ai_stream") return;
+      if (cmd === "cancel_ai_stream") return;
+      if (cmd === "mcp_system_prompt") return "";
+      if (cmd === "stream_ai_command") {
+        return new Promise<void>((resolve) => {
+          releaseStream = resolve;
+        });
+      }
+      return "";
+    });
+
+    const { result } = renderHook(() => useAIChat("model", () => "CWD: /tmp"));
+    let sendPromise: Promise<void> | null = null;
+    let listener: ((event: { payload: string }) => void) | null = null;
+
+    await act(async () => {
+      sendPromise = result.current.sendMessage("안녕");
+      await waitFor(() => {
+        expect(invokeMock.mock.calls.some(([cmd]) => cmd === "stream_ai_command")).toBe(true);
+      });
+      expect(listeners).toHaveLength(1);
+      listener = listeners[0];
+      result.current.cancel();
+      releaseStream?.();
+      await sendPromise!;
+    });
+
+    const currentMessage = result.current.messages[result.current.messages.length - 1];
+    const prevMessageContent = currentMessage?.content ?? "";
+    listener?.({ payload: "stale token" });
+
+    expect(listeners).toHaveLength(0);
+    expect(result.current.messages[result.current.messages.length - 1]?.content).toBe(prevMessageContent);
+    expect(result.current.streaming).toBe(false);
+  });
 });
 
 describe("useAIChat — 스트림 실패 메시지 처리", () => {

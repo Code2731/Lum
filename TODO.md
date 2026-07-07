@@ -21,8 +21,10 @@
   - `src/hooks/useAIChat.test.ts`에 진행 중 `cancel()` 호출 시 메시지 히스토리 유지와 `cancel_ai_stream` 동작을 확인하는 테스트 추가
 - [x] AI 대화 cancel 경계 회귀 보강
   - `src/hooks/useAIChat.test.ts`에 스트리밍 미작동 상태에서 `cancel()` 호출 시 `cancel_ai_stream` 미호출을 보장하는 테스트 추가
- - [x] AI 대화 취소 에러 정책 회귀 보강
-   - `src/hooks/useAIChat.test.ts`에 `cancel` 경합으로 `stream_ai_command`가 취소되었을 때 에러 배너 미노출을 보장하는 테스트 추가
+- [x] AI 대화 취소 에러 정책 회귀 보강
+  - `src/hooks/useAIChat.test.ts`에 `cancel` 경합으로 `stream_ai_command`가 취소되었을 때 에러 배너 미노출을 보장하는 테스트 추가
+- [x] AI 대화 cancel 이벤트 경합 회귀 보강
+  - `src/hooks/useAIChat.test.ts`에 취소 직후 이벤트 리스너 해제를 확인해 누락 토큰 반영을 방지하는 테스트 추가
 
 ## 2026-07-07 추천 라운드 2차
 
