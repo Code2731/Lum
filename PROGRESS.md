@@ -27,6 +27,8 @@
     - `src/hooks/useAIChat.test.ts`에 `cancel` 경합으로 `stream_ai_command` 취소 시 에러 배너 미노출을 보장하는 테스트 추가
   - AI 대화 cancel 이벤트 경합 회귀 보강
     - `src/hooks/useAIChat.test.ts`에 취소 직후 이벤트 리스너 해제 및 누락 토큰 반영 방지를 보장하는 테스트 추가
+  - AI 대화 복구 경로 회귀 보강
+    - `src/hooks/useAIChat.test.ts`에 cancel 후 즉시 재시작이 가능한지 검증하는 테스트 추가
 
 ### 다음 추천 라운드
 

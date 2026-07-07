@@ -249,6 +249,60 @@ describe("useAIChat — 스트리밍 취소 경합 방지", () => {
     expect(result.current.error).toBeNull();
   });
 
+  it("cancel 후 새로운 스트림을 즉시 재실행할 수 있다", async () => {
+    let releaseFirstStream: (() => void) | null = null;
+    let streamCallCount = 0;
+
+    invokeMock.mockImplementation(async (cmd: string) => {
+      if (cmd === "reset_ai_stream") return;
+      if (cmd === "cancel_ai_stream") return;
+      if (cmd === "mcp_system_prompt") return "";
+      if (cmd === "stream_ai_command") {
+        streamCallCount += 1;
+        if (streamCallCount === 1) {
+          return new Promise<void>((resolve) => {
+            releaseFirstStream = resolve;
+          });
+        }
+        return;
+      }
+      return "";
+    });
+
+    const { result } = renderHook(() => useAIChat("model", () => "CWD: /tmp"));
+    let firstSendPromise: Promise<void> | null = null;
+    let secondSendPromise: Promise<void> | null = null;
+
+    await act(async () => {
+      firstSendPromise = result.current.sendMessage("첫 번째 메시지");
+      await waitFor(() => {
+        expect(streamCallCount).toBe(1);
+      });
+    });
+
+    expect(result.current.streaming).toBe(true);
+    act(() => {
+      result.current.cancel();
+    });
+    releaseFirstStream?.();
+    await firstSendPromise;
+
+    expect(result.current.streaming).toBe(false);
+    expect(result.current.messages).toHaveLength(2);
+
+    await act(async () => {
+      secondSendPromise = result.current.sendMessage("두 번째 메시지");
+      await waitFor(() => {
+        expect(streamCallCount).toBe(2);
+      });
+      await secondSendPromise;
+    });
+
+    expect(result.current.messages).toHaveLength(4);
+    expect(result.current.messages[2]?.content).toBe("두 번째 메시지");
+    expect(result.current.error).toBeNull();
+  });
+
   it("취소 요청으로 stream_ai_command가 중단되어도 에러 메시지를 남기지 않는다", async () => {
     let releaseStream: (() => void) | null = null;
     invokeMock.mockImplementation(async (cmd: string) => {
