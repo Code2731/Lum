@@ -689,7 +689,7 @@ describe("NotificationCenter", () => {
     }
     fireEvent.click(commandFilter);
 
-    fireEvent.click(screen.getByRole("button", { name: "현재 보기 미확인 알림 모두 읽음" }));
+    fireEvent.click(screen.getByRole("button", { name: /현재 보기 미확인 알림 모두 읽음/ }));
     expect(onMarkByIds).toHaveBeenCalledWith(["1"]);
   });
 
@@ -741,7 +741,7 @@ describe("NotificationCenter", () => {
     }
     fireEvent.click(commandFilter);
 
-    fireEvent.click(screen.getByRole("button", { name: "현재 보기 항목 삭제" }));
+    fireEvent.click(screen.getByRole("button", { name: /현재 보기 항목 삭제/ }));
     expect(onDismissByIds).toHaveBeenCalledWith(["1", "2"]);
   });
 
@@ -785,7 +785,51 @@ describe("NotificationCenter", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "현재 보기 미확인 알림 모두 읽음" }));
+    fireEvent.click(screen.getByRole("button", { name: /현재 보기 미확인 알림 모두 읽음/ }));
+    expect(onMarkByIds).toHaveBeenCalledWith(["2", "1"]);
+  });
+
+  it("M 키로 현재 표시된 미확인 알림을 일괄 읽음 처리할 수 있다", () => {
+    const onMarkByIds = vi.fn();
+    const { container } = render(
+      <NotificationCenter
+        notifications={[
+          {
+            id: "1",
+            type: "command",
+            title: "cmd-1",
+            body: "알림 1",
+            timestamp: 1_000,
+            read: false,
+          },
+          {
+            id: "2",
+            type: "agent",
+            title: "agent-1",
+            body: "알림 2",
+            timestamp: 2_000,
+            read: false,
+          },
+          {
+            id: "3",
+            type: "env",
+            title: "env-1",
+            body: "알림 3",
+            timestamp: 3_000,
+            read: true,
+          },
+        ]}
+        unreadCount={2}
+        onMarkAllRead={vi.fn()}
+        onMarkByIds={onMarkByIds}
+        onDismiss={vi.fn()}
+        onDismissByIds={vi.fn()}
+        onClear={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    fireEvent.keyDown(container.querySelector("[role=\"dialog\"]") as HTMLElement, { key: "m" });
     expect(onMarkByIds).toHaveBeenCalledWith(["2", "1"]);
   });
 
@@ -821,8 +865,115 @@ describe("NotificationCenter", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "현재 보기 항목 삭제" }));
+    fireEvent.click(screen.getByRole("button", { name: /현재 보기 항목 삭제/ }));
     expect(onDismissByIds).toHaveBeenCalledWith(["2", "1"]);
+  });
+
+  it("D 키로 현재 표시된 목록을 일괄 삭제할 수 있다", () => {
+    const onDismissByIds = vi.fn();
+    const { container } = render(
+      <NotificationCenter
+        notifications={[
+          {
+            id: "1",
+            type: "command",
+            title: "cmd-1",
+            body: "알림 1",
+            timestamp: 1_000,
+            read: false,
+          },
+          {
+            id: "2",
+            type: "agent",
+            title: "agent-1",
+            body: "알림 2",
+            timestamp: 2_000,
+            read: true,
+          },
+        ]}
+        unreadCount={1}
+        onMarkAllRead={vi.fn()}
+        onMarkByIds={vi.fn()}
+        onDismiss={vi.fn()}
+        onDismissByIds={onDismissByIds}
+        onClear={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    fireEvent.keyDown(container.querySelector("[role=\"dialog\"]") as HTMLElement, { key: "d" });
+    expect(onDismissByIds).toHaveBeenCalledWith(["2", "1"]);
+  });
+
+  it("R 키로 현재 보이는 알림 전체를 읽음 처리할 수 있다", () => {
+    const onMarkAllRead = vi.fn();
+    render(
+      <NotificationCenter
+        notifications={[
+          {
+            id: "1",
+            type: "command",
+            title: "cmd-1",
+            body: "알림 1",
+            timestamp: 1_000,
+            read: false,
+          },
+          {
+            id: "2",
+            type: "agent",
+            title: "agent-1",
+            body: "알림 2",
+            timestamp: 2_000,
+            read: true,
+          },
+        ]}
+        unreadCount={1}
+        onMarkAllRead={onMarkAllRead}
+        onMarkByIds={vi.fn()}
+        onDismiss={vi.fn()}
+        onDismissByIds={vi.fn()}
+        onClear={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    fireEvent.keyDown(screen.getByRole("dialog", { name: "알림 센터" }), { key: "r" });
+    expect(onMarkAllRead).toHaveBeenCalledTimes(1);
+  });
+
+  it("F 키로 미확인 필터를 토글할 수 있다", () => {
+    render(
+      <NotificationCenter
+        notifications={[
+          {
+            id: "1",
+            type: "command",
+            title: "read",
+            body: "이미 확인됨",
+            timestamp: 1_000,
+            read: true,
+          },
+          {
+            id: "2",
+            type: "agent",
+            title: "unread",
+            body: "확인 필요",
+            timestamp: 2_000,
+            read: false,
+          },
+        ]}
+        unreadCount={1}
+        onMarkAllRead={vi.fn()}
+        onDismiss={vi.fn()}
+        onClear={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    fireEvent.keyDown(screen.getByRole("dialog", { name: "알림 센터" }), { key: "f" });
+    expect(screen.getByRole("button", { name: "전체 보기" })).toBeInTheDocument();
+    fireEvent.keyDown(screen.getByRole("dialog", { name: "알림 센터" }), { key: "f" });
+    expect(screen.getByRole("button", { name: /미확인 알림만 보기/ })).toBeInTheDocument();
   });
 
   it("알림이 읽음/미읽음 상태와 시간 기준으로 정렬된다", () => {

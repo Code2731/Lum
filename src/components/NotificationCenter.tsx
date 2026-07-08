@@ -175,6 +175,56 @@ const NotificationCenter: React.FC<Props> = ({
     return true;
   };
 
+  const handlePopupActionKeys = (e: React.KeyboardEvent): boolean => {
+    if (e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) {
+      return false;
+    }
+
+    const key = e.key.toLowerCase();
+    if (key === "m") {
+      if (displayedUnreadIds.length === 0 || !onMarkByIds) {
+        return false;
+      }
+      onMarkByIds(displayedUnreadIds);
+      e.preventDefault();
+      return true;
+    }
+
+    if (key === "d") {
+      if (displayedNotificationIds.length === 0) {
+        return false;
+      }
+      if (onDismissByIds) {
+        onDismissByIds(displayedNotificationIds);
+        e.preventDefault();
+        return true;
+      }
+      displayedNotificationIds.forEach((id) => onDismiss(id));
+      e.preventDefault();
+      return true;
+    }
+
+    if (key === "r") {
+      if (notifications.length === 0) {
+        return false;
+      }
+      onMarkAllRead();
+      e.preventDefault();
+      return true;
+    }
+
+    if (key === "f") {
+      if (unreadCount === 0) {
+        return false;
+      }
+      setShowUnreadOnly((prev) => !prev);
+      e.preventDefault();
+      return true;
+    }
+
+    return false;
+  };
+
   useEffect(() => {
     if (!closeOnDocument) return;
 
@@ -225,7 +275,7 @@ const NotificationCenter: React.FC<Props> = ({
           : "min(440px,calc(100vh-3.5rem))",
       }}
       onKeyDown={(e) => {
-        const handled = handlePopupTabTrap(e) || handlePopupArrowNav(e);
+        const handled = handlePopupTabTrap(e) || handlePopupArrowNav(e) || handlePopupActionKeys(e);
         if (handled) {
           e.stopPropagation();
         }
@@ -313,7 +363,8 @@ const NotificationCenter: React.FC<Props> = ({
                   aria-label="현재 보기 미확인 알림 모두 읽음"
                   className="inline-flex shrink-0 text-[11px] px-2 py-1 rounded border border-emerald-300/35 bg-emerald-400/14 text-emerald-100 hover:bg-emerald-400/22 transition-colors"
                 >
-                  미확인 {displayedUnreadIds.length}개 읽음
+                  <span>미확인 {displayedUnreadIds.length}개 읽음</span>
+                  <span className="ml-1 text-[10px] text-emerald-100/80">[M]</span>
                 </button>
               )}
               <button
@@ -328,7 +379,8 @@ const NotificationCenter: React.FC<Props> = ({
                 aria-label="현재 보기 항목 삭제"
                 className="inline-flex shrink-0 text-[11px] px-2 py-1 rounded border border-white/15 bg-white/[0.04] text-white/55 hover:text-white hover:bg-white/[0.09] transition-colors"
               >
-                모두 삭제
+                <span>모두 삭제</span>
+                <span className="ml-1 text-[10px] text-white/70">[D]</span>
               </button>
             </div>
           )}
