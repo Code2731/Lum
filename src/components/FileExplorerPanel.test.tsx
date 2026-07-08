@@ -4,6 +4,34 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 
 const invokeMock = vi.fn();
 
+type WriteSpy = ReturnType<typeof vi.fn>;
+type RestoreSpy = ReturnType<typeof vi.spyOn>;
+
+function setupClipboardWriteMock() {
+  const writeText = vi.fn().mockResolvedValue(undefined) as WriteSpy;
+  const nav = globalThis.navigator as Navigator & {
+    clipboard?: { writeText: WriteSpy };
+  };
+  const originalClipboard = nav.clipboard;
+
+  if (originalClipboard) {
+    return {
+      writeText,
+      restore: vi.spyOn(originalClipboard, "writeText").mockResolvedValue(undefined) as RestoreSpy,
+    };
+  }
+
+  Object.defineProperty(globalThis.navigator, "clipboard", {
+    value: { writeText },
+    configurable: true,
+  });
+
+  return {
+    writeText,
+    restore: null as RestoreSpy | null,
+  };
+}
+
 vi.mock("@tauri-apps/api/core", () => ({
   invoke: (cmd: string, args?: { path?: string }) => invokeMock(cmd, args),
 }));
@@ -127,5 +155,28 @@ describe("FileExplorerPanel", () => {
     renderPanel("/project");
 
     expect(await screen.findByText("읽기 실패")).toBeInTheDocument();
+  });
+
+  it("목록 조회 실패 시 오류 텍스트를 복사할 수 있다", async () => {
+    const clipboardMock = setupClipboardWriteMock();
+    invokeMock.mockImplementation((cmd: string, args?: { path?: string }) => {
+      if (cmd === "list_directory" && args?.path === "/project") {
+        return Promise.reject({ message: "권한이 없습니다" });
+      }
+      return Promise.resolve([]);
+    });
+
+    renderPanel("/project");
+
+    expect(await screen.findByText("권한이 없습니다")).toBeInTheDocument();
+    const copyButton = screen.getByRole("button", { name: "오류 텍스트 복사" });
+    fireEvent.click(copyButton);
+
+    if (clipboardMock.restore) {
+      expect(clipboardMock.restore).toHaveBeenCalledWith("권한이 없습니다");
+      clipboardMock.restore.mockRestore();
+    } else {
+      expect(clipboardMock.writeText).toHaveBeenCalledWith("권한이 없습니다");
+    }
   });
 });
