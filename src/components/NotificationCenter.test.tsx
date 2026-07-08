@@ -957,6 +957,40 @@ describe("NotificationCenter", () => {
     expect(searchInput).toHaveValue("");
   });
 
+  it("Enter 키로 검색/필터링된 목록의 첫 항목 닫기 버튼으로 포커스 이동한다", () => {
+    render(
+      <NotificationCenter
+        notifications={[
+          {
+            id: "1",
+            type: "command",
+            title: "cmd-1",
+            body: "첫 번째 알림",
+            timestamp: 1_000,
+            read: false,
+          },
+          {
+            id: "2",
+            type: "agent",
+            title: "agent-2",
+            body: "두 번째 알림",
+            timestamp: 2_000,
+            read: false,
+          },
+        ]}
+        unreadCount={2}
+        onMarkAllRead={vi.fn()}
+        onDismiss={vi.fn()}
+        onDismissByIds={vi.fn()}
+        onClear={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    fireEvent.keyDown(screen.getByRole("dialog", { name: "알림 센터" }), { key: "Enter" });
+    expect(screen.getByLabelText("cmd-1 알림 닫기")).toHaveFocus();
+  });
+
   it("현재 표시된 목록의 미확인 항목만 일괄 읽음 처리할 수 있다", () => {
     const onMarkByIds = vi.fn();
     render(

@@ -151,6 +151,28 @@ const NotificationCenter: React.FC<Props> = ({
     return Array.from(panelRef.current.querySelectorAll<HTMLElement>(popupFocusables));
   };
 
+  const focusFirstNotificationCloseButton = (): boolean => {
+    if (!panelRef.current) return false;
+    const firstAlert = panelRef.current.querySelector<HTMLElement>('[role="alert"]');
+    if (!firstAlert) return false;
+
+    const closeButton = firstAlert.querySelector<HTMLButtonElement>(
+      "button[aria-label$=\" 알림 닫기\"]",
+    );
+    if (closeButton) {
+      closeButton.focus();
+      return true;
+    }
+
+    const fallbackButton = firstAlert.querySelector<HTMLButtonElement>("button");
+    if (fallbackButton) {
+      fallbackButton.focus();
+      return true;
+    }
+
+    return false;
+  };
+
   const isTextInputFocused = (): boolean => {
     const active = document.activeElement;
     return (
@@ -272,6 +294,15 @@ const NotificationCenter: React.FC<Props> = ({
         return false;
       }
       setSearchQuery("");
+      e.preventDefault();
+      return true;
+    }
+
+    if (normalizedKey === "enter") {
+      const didFocus = focusFirstNotificationCloseButton();
+      if (!didFocus) {
+        return false;
+      }
       e.preventDefault();
       return true;
     }
