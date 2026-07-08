@@ -17,7 +17,10 @@ interface Props {
 }
 
 const VOICE_ERROR_FONT_SIZE = 11;
-const VOICE_SUCCESS_TIMEOUT_MS = 1800;
+const VOICE_SUCCESS_VISIBLE_MS = 1500;
+const VOICE_SUCCESS_FADE_MS = 180;
+const VOICE_HIGHLIGHT_VISIBLE_MS = 1500;
+const VOICE_HIGHLIGHT_FADE_MS = 180;
 
 const CommandInput = ({
   onCommandSubmit,
@@ -27,32 +30,88 @@ const CommandInput = ({
 }: Props) => {
   const [value, setValue] = useState("");
   const [isComposing, setIsComposing] = useState(false);
-  const [voiceSuccessVisible, setVoiceSuccessVisible] = useState(false);
-  const voiceSuccessTimerRef = useRef<number | null>(null);
+  const [voiceSuccessPhase, setVoiceSuccessPhase] = useState<"hidden" | "visible" | "fading">("hidden");
+  const [voiceHighlight, setVoiceHighlight] = useState<{ start: number; end: number; phase: "visible" | "fading" } | null>(null);
+  const voiceSuccessVisibleTimerRef = useRef<number | null>(null);
+  const voiceSuccessFadeTimerRef = useRef<number | null>(null);
+  const voiceHighlightVisibleTimerRef = useRef<number | null>(null);
+  const voiceHighlightFadeTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
     return () => {
-      if (voiceSuccessTimerRef.current !== null) {
-        window.clearTimeout(voiceSuccessTimerRef.current);
+      if (voiceSuccessVisibleTimerRef.current !== null) {
+        window.clearTimeout(voiceSuccessVisibleTimerRef.current);
+      }
+      if (voiceSuccessFadeTimerRef.current !== null) {
+        window.clearTimeout(voiceSuccessFadeTimerRef.current);
+      }
+      if (voiceHighlightVisibleTimerRef.current !== null) {
+        window.clearTimeout(voiceHighlightVisibleTimerRef.current);
+      }
+      if (voiceHighlightFadeTimerRef.current !== null) {
+        window.clearTimeout(voiceHighlightFadeTimerRef.current);
       }
     };
   }, []);
 
-  const showVoiceSuccess = () => {
-    if (voiceSuccessTimerRef.current !== null) {
-      window.clearTimeout(voiceSuccessTimerRef.current);
+  const clearVoiceHighlight = () => {
+    if (voiceHighlightVisibleTimerRef.current !== null) {
+      window.clearTimeout(voiceHighlightVisibleTimerRef.current);
+      voiceHighlightVisibleTimerRef.current = null;
     }
-    setVoiceSuccessVisible(true);
-    voiceSuccessTimerRef.current = window.setTimeout(() => {
-      setVoiceSuccessVisible(false);
-      voiceSuccessTimerRef.current = null;
-    }, VOICE_SUCCESS_TIMEOUT_MS);
+    if (voiceHighlightFadeTimerRef.current !== null) {
+      window.clearTimeout(voiceHighlightFadeTimerRef.current);
+      voiceHighlightFadeTimerRef.current = null;
+    }
+    setVoiceHighlight(null);
+  };
+
+  const showVoiceHighlight = (start: number, end: number) => {
+    clearVoiceHighlight();
+    setVoiceHighlight({ start, end, phase: "visible" });
+    voiceHighlightVisibleTimerRef.current = window.setTimeout(() => {
+      setVoiceHighlight((prev) => (prev ? { ...prev, phase: "fading" } : prev));
+      voiceHighlightVisibleTimerRef.current = null;
+      voiceHighlightFadeTimerRef.current = window.setTimeout(() => {
+        setVoiceHighlight(null);
+        voiceHighlightFadeTimerRef.current = null;
+      }, VOICE_HIGHLIGHT_FADE_MS);
+    }, VOICE_HIGHLIGHT_VISIBLE_MS);
+  };
+
+  const clearVoiceSuccess = () => {
+    if (voiceSuccessVisibleTimerRef.current !== null) {
+      window.clearTimeout(voiceSuccessVisibleTimerRef.current);
+      voiceSuccessVisibleTimerRef.current = null;
+    }
+    if (voiceSuccessFadeTimerRef.current !== null) {
+      window.clearTimeout(voiceSuccessFadeTimerRef.current);
+      voiceSuccessFadeTimerRef.current = null;
+    }
+    setVoiceSuccessPhase("hidden");
+  };
+
+  const showVoiceSuccess = () => {
+    clearVoiceSuccess();
+    setVoiceSuccessPhase("visible");
+    voiceSuccessVisibleTimerRef.current = window.setTimeout(() => {
+      setVoiceSuccessPhase("fading");
+      voiceSuccessVisibleTimerRef.current = null;
+      voiceSuccessFadeTimerRef.current = window.setTimeout(() => {
+        setVoiceSuccessPhase("hidden");
+        voiceSuccessFadeTimerRef.current = null;
+      }, VOICE_SUCCESS_FADE_MS);
+    }, VOICE_SUCCESS_VISIBLE_MS);
   };
 
   const injectTranscript = (text: string) => {
     const t = text.trim();
     if (!t) return;
-    setValue((prev) => (prev.trim() ? `${prev} ${t}` : t));
+    setValue((prev) => {
+      const joined = prev.trim() ? `${prev} ${t}` : t;
+      showVoiceHighlight(joined.length - t.length, joined.length);
+      return joined;
+    });
     showVoiceSuccess();
   };
 
@@ -201,8 +260,30 @@ const CommandInput = ({
   };
 
   const highlight = (code: string) => {
+    const escapeHtml = (value: string) =>
+      value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    const renderSegment = (segment: string) => {
+      if (!segment) return "";
+      if (segment.startsWith("/")) {
+        return `<span style="color: #a78bfa">${escapeHtml(segment)}</span>`;
+      }
+      return Prism.highlight(
+        segment,
+        Prism.languages.bash || Prism.languages.plain,
+        "bash",
+      );
+    };
+
+    if (voiceHighlight && voiceHighlight.start < voiceHighlight.end && voiceHighlight.end <= code.length) {
+      return [
+        renderSegment(code.slice(0, voiceHighlight.start)),
+        `<span style="background: rgba(63,185,80,0.18); border-radius: 4px; box-shadow: 0 0 0 1px rgba(63,185,80,0.18); opacity: ${voiceHighlight.phase === "fading" ? 0 : 1}; transition: opacity ${VOICE_HIGHLIGHT_FADE_MS}ms ease;">${renderSegment(code.slice(voiceHighlight.start, voiceHighlight.end))}</span>`,
+        renderSegment(code.slice(voiceHighlight.end)),
+      ].join("");
+    }
+
     if (code.startsWith("/")) {
-      return `<span style="color: #a78bfa">${code}</span>`;
+      return `<span style="color: #a78bfa">${escapeHtml(code)}</span>`;
     }
     return Prism.highlight(
       code,
@@ -309,7 +390,7 @@ const CommandInput = ({
           </div>
         )}
 
-        {!voiceError && voiceSuccessVisible && (
+        {!voiceError && voiceSuccessPhase !== "hidden" && (
           <div
             role="status"
             className="voice-success-banner"
@@ -325,6 +406,9 @@ const CommandInput = ({
               color: "rgba(111,227,132,0.95)",
               background: "rgba(63,185,80,0.12)",
               border: "1px solid rgba(63,185,80,0.24)",
+              opacity: voiceSuccessPhase === "fading" ? 0 : 1,
+              transform: voiceSuccessPhase === "fading" ? "translateY(-2px)" : "translateY(0)",
+              transition: `opacity ${VOICE_SUCCESS_FADE_MS}ms ease, transform ${VOICE_SUCCESS_FADE_MS}ms ease`,
             }}
           >
             음성 입력 반영됨
@@ -345,8 +429,11 @@ const CommandInput = ({
                 if (voiceError) {
                   clearVoiceError();
                 }
-                if (voiceSuccessVisible) {
-                  setVoiceSuccessVisible(false);
+                if (voiceSuccessPhase !== "hidden") {
+                  clearVoiceSuccess();
+                }
+                if (voiceHighlight) {
+                  clearVoiceHighlight();
                 }
                 setValue(code);
               }}

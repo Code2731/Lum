@@ -16,7 +16,10 @@ export interface WarpInputBarHandle {
 }
 
 const WARP_SMALL_FONT_SIZE = 10;
-const VOICE_SUCCESS_TIMEOUT_MS = 1800;
+const VOICE_SUCCESS_VISIBLE_MS = 1500;
+const VOICE_SUCCESS_FADE_MS = 180;
+const VOICE_HIGHLIGHT_VISIBLE_MS = 1500;
+const VOICE_HIGHLIGHT_FADE_MS = 180;
 
 interface Props {
   fontFamily: string;
@@ -42,9 +45,13 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
     const [input, setInput] = useState("");
     const [isComposing, setIsComposing] = useState(false);
     const [isFocused, setIsFocused] = useState(false);
-    const [voiceSuccessVisible, setVoiceSuccessVisible] = useState(false);
+    const [voiceSuccessPhase, setVoiceSuccessPhase] = useState<"hidden" | "visible" | "fading">("hidden");
+    const [voiceHighlight, setVoiceHighlight] = useState<{ start: number; end: number; phase: "visible" | "fading" } | null>(null);
     const inputRef = useRef<HTMLInputElement>(null);
-    const voiceSuccessTimerRef = useRef<number | null>(null);
+    const voiceSuccessVisibleTimerRef = useRef<number | null>(null);
+    const voiceSuccessFadeTimerRef = useRef<number | null>(null);
+    const voiceHighlightVisibleTimerRef = useRef<number | null>(null);
+    const voiceHighlightFadeTimerRef = useRef<number | null>(null);
     const history = useRef<string[]>([]);
     const historyIdx = useRef<number>(-1);
     const onChangeRef = useRef(onChange);
@@ -65,8 +72,17 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
 
     useEffect(() => {
       return () => {
-        if (voiceSuccessTimerRef.current !== null) {
-          window.clearTimeout(voiceSuccessTimerRef.current);
+        if (voiceSuccessVisibleTimerRef.current !== null) {
+          window.clearTimeout(voiceSuccessVisibleTimerRef.current);
+        }
+        if (voiceSuccessFadeTimerRef.current !== null) {
+          window.clearTimeout(voiceSuccessFadeTimerRef.current);
+        }
+        if (voiceHighlightVisibleTimerRef.current !== null) {
+          window.clearTimeout(voiceHighlightVisibleTimerRef.current);
+        }
+        if (voiceHighlightFadeTimerRef.current !== null) {
+          window.clearTimeout(voiceHighlightFadeTimerRef.current);
         }
       };
     }, []);
@@ -355,27 +371,69 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
       }
     };
 
+    const clearVoiceHighlight = () => {
+      if (voiceHighlightVisibleTimerRef.current !== null) {
+        window.clearTimeout(voiceHighlightVisibleTimerRef.current);
+        voiceHighlightVisibleTimerRef.current = null;
+      }
+      if (voiceHighlightFadeTimerRef.current !== null) {
+        window.clearTimeout(voiceHighlightFadeTimerRef.current);
+        voiceHighlightFadeTimerRef.current = null;
+      }
+      setVoiceHighlight(null);
+    };
+
+    const showVoiceHighlight = (start: number, end: number) => {
+      clearVoiceHighlight();
+      setVoiceHighlight({ start, end, phase: "visible" });
+      voiceHighlightVisibleTimerRef.current = window.setTimeout(() => {
+        setVoiceHighlight((prev) => (prev ? { ...prev, phase: "fading" } : prev));
+        voiceHighlightVisibleTimerRef.current = null;
+        voiceHighlightFadeTimerRef.current = window.setTimeout(() => {
+          setVoiceHighlight(null);
+          voiceHighlightFadeTimerRef.current = null;
+        }, VOICE_HIGHLIGHT_FADE_MS);
+      }, VOICE_HIGHLIGHT_VISIBLE_MS);
+    };
+
+    const clearVoiceSuccess = () => {
+      if (voiceSuccessVisibleTimerRef.current !== null) {
+        window.clearTimeout(voiceSuccessVisibleTimerRef.current);
+        voiceSuccessVisibleTimerRef.current = null;
+      }
+      if (voiceSuccessFadeTimerRef.current !== null) {
+        window.clearTimeout(voiceSuccessFadeTimerRef.current);
+        voiceSuccessFadeTimerRef.current = null;
+      }
+      setVoiceSuccessPhase("hidden");
+    };
+
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const v = e.target.value;
       if (voiceError) {
         clearVoiceError();
       }
-      if (voiceSuccessVisible) {
-        setVoiceSuccessVisible(false);
+      if (voiceSuccessPhase !== "hidden") {
+        clearVoiceSuccess();
+      }
+      if (voiceHighlight) {
+        clearVoiceHighlight();
       }
       setInput(v);
       onChange?.(v);
     };
 
     const showVoiceSuccess = () => {
-      if (voiceSuccessTimerRef.current !== null) {
-        window.clearTimeout(voiceSuccessTimerRef.current);
-      }
-      setVoiceSuccessVisible(true);
-      voiceSuccessTimerRef.current = window.setTimeout(() => {
-        setVoiceSuccessVisible(false);
-        voiceSuccessTimerRef.current = null;
-      }, VOICE_SUCCESS_TIMEOUT_MS);
+      clearVoiceSuccess();
+      setVoiceSuccessPhase("visible");
+      voiceSuccessVisibleTimerRef.current = window.setTimeout(() => {
+        setVoiceSuccessPhase("fading");
+        voiceSuccessVisibleTimerRef.current = null;
+        voiceSuccessFadeTimerRef.current = window.setTimeout(() => {
+          setVoiceSuccessPhase("hidden");
+          voiceSuccessFadeTimerRef.current = null;
+        }, VOICE_SUCCESS_FADE_MS);
+      }, VOICE_SUCCESS_VISIBLE_MS);
     };
 
     const injectTranscript = (text: string) => {
@@ -383,6 +441,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
       if (!t) return;
       setInput((prev) => {
         const joined = prev.trim() ? `${prev} ${t}` : t;
+        showVoiceHighlight(joined.length - t.length, joined.length);
         onChangeRef.current?.(joined);
         return joined;
       });
@@ -600,7 +659,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
           </div>
         )}
 
-        {!voiceError && voiceSuccessVisible && (
+        {!voiceError && voiceSuccessPhase !== "hidden" && (
           <div
             style={{
               position: "absolute",
@@ -615,6 +674,9 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
               display: "inline-flex",
               alignItems: "center",
               whiteSpace: "nowrap",
+              opacity: voiceSuccessPhase === "fading" ? 0 : 1,
+              transform: voiceSuccessPhase === "fading" ? "translateY(-2px)" : "translateY(0)",
+              transition: `opacity ${VOICE_SUCCESS_FADE_MS}ms ease, transform ${VOICE_SUCCESS_FADE_MS}ms ease`,
             }}
           >
             음성 입력 반영됨
@@ -676,6 +738,28 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
               </span>
             ) : body !== null ? (
               <span style={{ color: TOKEN_COLORS.text }}>{body}</span>
+            ) : voiceHighlight && voiceHighlight.start < voiceHighlight.end ? (
+              <>
+                {tokenizeShell(input.slice(0, voiceHighlight.start)).map((t, idx) => (
+                  <span key={`before-${idx}`} style={{ color: TOKEN_COLORS[t.type] }}>{t.text}</span>
+                ))}
+                <span
+                  style={{
+                    background: "rgba(63,185,80,0.18)",
+                    borderRadius: 4,
+                    boxShadow: "0 0 0 1px rgba(63,185,80,0.18)",
+                    opacity: voiceHighlight.phase === "fading" ? 0 : 1,
+                    transition: `opacity ${VOICE_HIGHLIGHT_FADE_MS}ms ease`,
+                  }}
+                >
+                  {tokenizeShell(input.slice(voiceHighlight.start, voiceHighlight.end)).map((t, idx) => (
+                    <span key={`focus-${idx}`} style={{ color: TOKEN_COLORS[t.type] }}>{t.text}</span>
+                  ))}
+                </span>
+                {tokenizeShell(input.slice(voiceHighlight.end)).map((t, idx) => (
+                  <span key={`after-${idx}`} style={{ color: TOKEN_COLORS[t.type] }}>{t.text}</span>
+                ))}
+              </>
             ) : (
               tokenizeShell(input).map((t, idx) => (
                 <span key={idx} style={{ color: TOKEN_COLORS[t.type] }}>{t.text}</span>
