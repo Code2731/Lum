@@ -48,6 +48,7 @@ const FILTER_LABELS: Record<FilterType, string> = {
   env: "환경",
 };
 const FILTER_TYPES: FilterType[] = ["all", "command", "agent", "healing", "env"];
+type SearchMode = "token" | "regex";
 const popupFocusables = "a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex='-1'])";
 
 function timeAgo(ts: number): string {
@@ -180,6 +181,7 @@ const NotificationCenter: React.FC<Props> = ({
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [showUnreadOnly, setShowUnreadOnly] = useState(false);
   const [typeFilter, setTypeFilter] = useState<FilterType>("all");
+  const [searchMode, setSearchMode] = useState<SearchMode>("token");
   const [searchQuery, setSearchQuery] = useState("");
 
   const orderedNotifications = useMemo(() => {
@@ -198,13 +200,39 @@ const NotificationCenter: React.FC<Props> = ({
   }, [unreadCount, showUnreadOnly]);
 
   const normalizedSearchQuery = useMemo(() => searchQuery.trim(), [searchQuery]);
-  const searchQueryParseResult = useMemo(() => parseSearchQueries(normalizedSearchQuery), [normalizedSearchQuery]);
+  const searchQueryParseResult = useMemo(
+    () => (searchMode === "token" ? parseSearchQueries(normalizedSearchQuery) : {
+      positive: [],
+      negative: [],
+      hasUnclosedQuote: false,
+    }),
+    [normalizedSearchQuery, searchMode],
+  );
   const normalizedSearchQueries = useMemo(() => searchQueryParseResult.positive, [searchQueryParseResult]);
   const excludedSearchQueries = useMemo(() => searchQueryParseResult.negative, [searchQueryParseResult]);
   const hasUnclosedQuote = useMemo(() => searchQueryParseResult.hasUnclosedQuote, [searchQueryParseResult]);
+  const regexSearchError = useMemo(() => {
+    if (searchMode !== "regex" || !normalizedSearchQuery) {
+      return "";
+    }
+    try {
+      new RegExp(normalizedSearchQuery, "i");
+      return "";
+    } catch (err) {
+      return String((err as Error).message);
+    }
+  }, [normalizedSearchQuery, searchMode]);
+  const regexSearch = useMemo(() => {
+    if (searchMode !== "regex" || !normalizedSearchQuery || regexSearchError) {
+      return null;
+    }
+    return new RegExp(normalizedSearchQuery, "i");
+  }, [normalizedSearchQuery, searchMode, regexSearchError]);
 
   const { displayedNotifications, matchedTitleCount, matchedBodyCount } = useMemo(() => {
-    const hasSearchQuery = normalizedSearchQueries.length + excludedSearchQueries.length > 0;
+    const hasSearchQuery = searchMode === "token"
+      ? normalizedSearchQueries.length + excludedSearchQueries.length > 0
+      : Boolean(normalizedSearchQuery);
     const afterUnreadFilter = showUnreadOnly ? orderedNotifications.filter((n) => !n.read) : orderedNotifications;
     const afterTypeFilter = typeFilter === "all"
       ? afterUnreadFilter
@@ -230,6 +258,20 @@ const NotificationCenter: React.FC<Props> = ({
       const normalizedTitle = n.title.toLowerCase();
       const normalizedBody = n.body.toLowerCase();
       const normalizedText = `${normalizedTitle} ${normalizedBody}`;
+      if (searchMode === "regex") {
+        if (!regexSearch) return;
+        if (!regexSearch.test(normalizedText)) return;
+        const titleMatched = regexSearch.test(normalizedTitle);
+        const bodyMatched = regexSearch.test(normalizedBody);
+        if (titleMatched) titleMatchCount += 1;
+        if (bodyMatched) bodyMatchCount += 1;
+        matchList.push({
+          notification: n,
+          score: 0,
+        });
+        return;
+      }
+
       const matchedAllQueries = normalizedSearchQueries.every((query) => normalizedText.includes(query));
       const excludedMatched = excludedSearchQueries.some((query) => normalizedText.includes(query));
       if (!matchedAllQueries || excludedMatched) return;
@@ -238,7 +280,6 @@ const NotificationCenter: React.FC<Props> = ({
       const bodyMatched = isMatch(normalizedBody, normalizedSearchQueries);
       const titleAllMatched = normalizedSearchQueries.every((query) => normalizedTitle.includes(query));
       const bodyAllMatched = normalizedSearchQueries.every((query) => normalizedBody.includes(query));
-
       if (titleMatched) titleMatchCount += 1;
       if (bodyMatched) bodyMatchCount += 1;
       const titleKeywordMatchCount = normalizedSearchQueries.filter((query) => normalizedTitle.includes(query)).length;
@@ -276,6 +317,8 @@ const NotificationCenter: React.FC<Props> = ({
     typeFilter,
     normalizedSearchQueries,
     excludedSearchQueries,
+    searchMode,
+    regexSearch,
   ]);
 
   const displayedNotificationIds = useMemo(
@@ -570,6 +613,32 @@ const NotificationCenter: React.FC<Props> = ({
       {notifications.length > 0 && (
         <div className="border-b border-white/5 px-2 py-1.5 flex items-start gap-1.5 bg-[#12171e]">
           <div className="w-full flex items-center gap-2">
+            <div className="inline-flex rounded border border-white/12 bg-white/[0.05] text-[10px]">
+              <button
+                type="button"
+                onClick={() => setSearchMode("token")}
+                aria-pressed={searchMode === "token"}
+                aria-label="검색 모드: 토큰"
+                className={`px-2 py-1 border-r border-white/12 ${searchMode === "token"
+                  ? "bg-white/20 text-white"
+                  : "text-white/65 hover:text-white/90"
+                }`}
+              >
+                토큰
+              </button>
+              <button
+                type="button"
+                onClick={() => setSearchMode("regex")}
+                aria-pressed={searchMode === "regex"}
+                aria-label="검색 모드: 정규식"
+                className={`px-2 py-1 ${searchMode === "regex"
+                  ? "bg-white/20 text-white"
+                  : "text-white/65 hover:text-white/90"
+                }`}
+              >
+                정규식
+              </button>
+            </div>
             <label htmlFor="notification-search" className="sr-only">
               알림 검색
             </label>
@@ -581,7 +650,7 @@ const NotificationCenter: React.FC<Props> = ({
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="알림 제목/본문 검색"
+                placeholder={searchMode === "regex" ? "정규식 검색 (/error|fail/)" : "알림 제목/본문 검색"}
                 className="w-full pl-6 pr-7 py-1.5 text-xs bg-white/[0.05] border border-white/12 rounded text-white/90 placeholder:text-white/30 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               />
               {searchQuery && (
@@ -597,7 +666,7 @@ const NotificationCenter: React.FC<Props> = ({
             </div>
           </div>
           <div className="w-full px-2 pb-1.5 pt-0 flex flex-wrap items-center gap-1">
-            {(normalizedSearchQueries.length > 0 || excludedSearchQueries.length > 0) && (
+            {searchMode === "token" && (normalizedSearchQueries.length > 0 || excludedSearchQueries.length > 0) && (
               <>
                 {normalizedSearchQueries.map((token) => (
                   <span
@@ -617,7 +686,17 @@ const NotificationCenter: React.FC<Props> = ({
                 ))}
               </>
             )}
-            {hasUnclosedQuote && (
+            {searchMode === "regex" && normalizedSearchQuery && (
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded-full border border-sky-400/30 bg-sky-400/10 text-[10px] text-sky-100">
+                /{normalizedSearchQuery}/
+              </span>
+            )}
+            {searchMode === "regex" && regexSearchError && (
+              <span className="text-[10px] text-rose-300/90">
+                정규식이 유효하지 않습니다.
+              </span>
+            )}
+            {searchMode === "token" && hasUnclosedQuote && (
               <span className="text-[10px] text-amber-300/90">
                 따옴표가 닫히지 않았습니다. 구문 검색은 정확히 닫힌 따옴표만 유효합니다.
               </span>

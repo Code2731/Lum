@@ -1179,6 +1179,76 @@ describe("NotificationCenter", () => {
     ).toBeInTheDocument();
   });
 
+  it("검색 모드를 정규식으로 전환해 패턴 검색을 수행할 수 있다", () => {
+    render(
+      <NotificationCenter
+        notifications={[
+          {
+            id: "1",
+            type: "command",
+            title: "빌드 에러 코드 500",
+            body: "에러 메시지 분석",
+            timestamp: 1_000,
+            read: false,
+          },
+          {
+            id: "2",
+            type: "agent",
+            title: "알림 처리 완료",
+            body: "작업이 정상 동작합니다",
+            timestamp: 2_000,
+            read: false,
+          },
+        ]}
+        unreadCount={2}
+        onMarkAllRead={vi.fn()}
+        onDismiss={vi.fn()}
+        onDismissByIds={vi.fn()}
+        onClear={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "검색 모드: 정규식" }));
+    fireEvent.change(screen.getByLabelText("알림 검색"), {
+      target: { value: "에러|완료" },
+    });
+
+    expect(screen.getByText("빌드 에러 코드 500")).toBeInTheDocument();
+    expect(screen.getByText("알림 처리 완료")).toBeInTheDocument();
+  });
+
+  it("정규식 모드에서 유효하지 않은 패턴이면 오류를 표시한다", () => {
+    render(
+      <NotificationCenter
+        notifications={[
+          {
+            id: "1",
+            type: "command",
+            title: "빌드 에러 코드 500",
+            body: "에러 메시지 분석",
+            timestamp: 1_000,
+            read: false,
+          },
+        ]}
+        unreadCount={1}
+        onMarkAllRead={vi.fn()}
+        onDismiss={vi.fn()}
+        onDismissByIds={vi.fn()}
+        onClear={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "검색 모드: 정규식" }));
+    fireEvent.change(screen.getByLabelText("알림 검색"), {
+      target: { value: "[" },
+    });
+
+    expect(screen.getByText("정규식이 유효하지 않습니다.")).toBeInTheDocument();
+    expect(screen.queryByText("빌드 에러 코드 500")).not.toBeInTheDocument();
+  });
+
   it("Ctrl/Cmd + C로 검색어를 비울 수 있다", () => {
     render(
       <NotificationCenter
