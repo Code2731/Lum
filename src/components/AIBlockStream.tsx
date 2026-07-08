@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback } from "react";
-import { Loader2, Square, X, Sparkles } from "lucide-react";
+import { Copy, Loader2, Settings, Square, X, Sparkles } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 import type { ChatMessage } from "../hooks/useAIChat";
 import { MessageBubble } from "./AIChatPanel";
@@ -8,12 +8,14 @@ import { parseEditBlocks } from "../utils/editBlockParser";
 import { parseToolCalls } from "../utils/toolCallParser";
 import ToolCallCard from "./ToolCallCard";
 import { IconButton } from "@/components/ui/icon-button";
+import { isRoutingError } from "../utils/errorMessage";
 import { SMALL_ICON_SIZE } from "../constants/ui";
 
 interface Props {
   messages: ChatMessage[];
   streaming: boolean;
   error: string | null;
+  onOpenXllmPanel?: () => void;
   onClear: () => void;
   onCancel?: () => void;
   onExecute: (cmd: string) => void;
@@ -41,7 +43,19 @@ const persistFontSize = (size: number) => {
   invoke("save_ui_preferences", { aiChatFontSize: size }).catch(() => {});
 };
 
-const AIBlockStream: React.FC<Props> = ({ messages, streaming, error, onClear, onCancel, onExecute, cwd, fullHeight, onAskAIForFix, visionEnabled }) => {
+const AIBlockStream: React.FC<Props> = ({
+  messages,
+  streaming,
+  error,
+  onOpenXllmPanel,
+  onClear,
+  onCancel,
+  onExecute,
+  cwd,
+  fullHeight,
+  onAskAIForFix,
+  visionEnabled,
+}) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const pinnedToBottomRef = useRef(true);
 
@@ -90,6 +104,12 @@ const AIBlockStream: React.FC<Props> = ({ messages, streaming, error, onClear, o
       return clamped;
     });
   }, []);
+
+  const showRoutingErrorActions = isRoutingError(error);
+  const handleCopyError = () => {
+    if (!error) return;
+    navigator.clipboard?.writeText?.(error).catch(() => {});
+  };
 
   // React 17+에서 wheel은 passive default — preventDefault 위해 native listener로 추가 등록
   useEffect(() => {
@@ -206,7 +226,27 @@ const AIBlockStream: React.FC<Props> = ({ messages, streaming, error, onClear, o
         })}
         {error && (
           <div className="text-xs text-red-400/80 px-2.5 py-1.5 rounded bg-red-500/10 border border-red-500/20">
-            {error}
+            <div className="flex items-start justify-between gap-2">
+              <div className="whitespace-pre-wrap break-all flex-1">{error}</div>
+              <div className="flex items-center gap-1">
+                {showRoutingErrorActions && onOpenXllmPanel && (
+                  <IconButton
+                    tooltip="xLLM/모델 설정 열기"
+                    onClick={onOpenXllmPanel}
+                    className="p-1 rounded text-red-200/85 hover:text-red-100 hover:bg-red-500/20 transition-colors"
+                  >
+                    <Settings size={12} />
+                  </IconButton>
+                )}
+                <IconButton
+                  tooltip="오류 텍스트 복사"
+                  onClick={handleCopyError}
+                  className="p-1 rounded text-red-200/85 hover:text-red-100 hover:bg-red-500/20 transition-colors"
+                >
+                  <Copy size={12} />
+                </IconButton>
+              </div>
+            </div>
           </div>
         )}
       </div>

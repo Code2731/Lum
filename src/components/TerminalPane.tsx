@@ -75,6 +75,7 @@ interface Props {
   aiMessages?: ChatMessage[];
   aiStreaming?: boolean;
   aiError?: string | null;
+  onOpenXllmPanel?: () => void;
   onClearAI?: () => void;
   onCancelAI?: () => void;
   visionEnabled?: boolean;
@@ -140,7 +141,29 @@ const hasExecutableRecallRoute = (raw: string): boolean => {
   return true;
 };
 
-const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme, fontSize, fontFamily, onOutput, onCwdChange, onReady, onAgentTrigger, onAskAI, aiMessages, aiStreaming, aiError, onClearAI, onCancelAI, visionEnabled, showReasoning, onToggleReasoning }) => {
+const TerminalPane: React.FC<Props> = ({
+  id,
+  cwd,
+  sshProfile,
+  model,
+  xtermTheme,
+  fontSize,
+  fontFamily,
+  onOutput,
+  onCwdChange,
+  onReady,
+  onAgentTrigger,
+  onAskAI,
+  aiMessages,
+  aiStreaming,
+  aiError,
+  onOpenXllmPanel,
+  onClearAI,
+  onCancelAI,
+  visionEnabled,
+  showReasoning,
+  onToggleReasoning,
+}) => {
   // 입력 모드 토글 상태 — Heavy(Phase 85b 제거)는 dead, reasoning은 App.tsx props 통해 글로벌 상태 연동
   const [visionMode, setVisionMode] = useState(visionEnabled ?? false);
   const [terminalVisible, setTerminalVisible] = useState(false);
@@ -1989,6 +2012,7 @@ const TerminalPane: React.FC<Props> = ({ id, cwd, sshProfile, model, xtermTheme,
             messages={aiMessages}
             streaming={aiStreaming ?? false}
             error={aiError ?? null}
+            onOpenXllmPanel={onOpenXllmPanel}
             onClear={onClearAI ?? (() => {})}
             onCancel={onCancelAI}
             onExecute={(cmd) => invoke("write_to_pty", { id, data: cmd + "\r" }).catch(() => {})}

@@ -402,6 +402,7 @@ const App: React.FC = () => {
     setShowCommitPanel,
     setShowDiffReview,
     setShowThemePanel,
+    setShowXllmPanel,
     setShowWorkspace,
     showScriptPanel, setShowScriptPanel,
     showSysmon, setShowSysmon,
@@ -1440,6 +1441,7 @@ const App: React.FC = () => {
                             aiMessages={aiChat.messages}
                             aiStreaming={aiChat.streaming}
                             aiError={aiChat.error}
+                            onOpenXllmPanel={() => setShowXllmPanel(true)}
                             onClearAI={aiChat.clear}
                             onCancelAI={aiChat.cancel}
                             visionEnabled={visionEnabled}
@@ -1475,6 +1477,7 @@ const App: React.FC = () => {
                             aiMessages={aiChat.messages}
                             aiStreaming={aiChat.streaming}
                             aiError={aiChat.error}
+                            onOpenXllmPanel={() => setShowXllmPanel(true)}
                             onClearAI={aiChat.clear}
                             onCancelAI={aiChat.cancel}
                             visionEnabled={visionEnabled}
@@ -1504,6 +1507,7 @@ const App: React.FC = () => {
                         aiMessages={aiChat.messages}
                         aiStreaming={aiChat.streaming}
                         aiError={aiChat.error}
+                        onOpenXllmPanel={() => setShowXllmPanel(true)}
                         onClearAI={aiChat.clear}
                         onCancelAI={aiChat.cancel}
                         visionEnabled={visionEnabled}

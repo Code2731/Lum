@@ -31,6 +31,54 @@ describe("AIBlockStream", () => {
     expect(screen.getByText(/Network error/)).toBeInTheDocument();
   });
 
+  it("라우팅 에러이면 xLLM 설정 버튼 표시", () => {
+    const onOpenXllmPanel = vi.fn();
+    render(
+      <AIBlockStream
+        messages={[]}
+        streaming={false}
+        error="라우팅 실패: 임베디드 모델이 로드되지 않았습니다"
+        onClear={vi.fn()}
+        onOpenXllmPanel={onOpenXllmPanel}
+        onExecute={vi.fn()}
+      />,
+    );
+    const openButton = screen.getByLabelText("xLLM/모델 설정 열기");
+    fireEvent.click(openButton);
+    expect(onOpenXllmPanel).toHaveBeenCalledTimes(1);
+  });
+
+  it("에러 배너에서 복사 버튼으로 텍스트를 클립보드에 복사", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    const originalClipboard = (globalThis.navigator as Navigator & { clipboard?: { writeText: typeof writeText } }).clipboard;
+    let spyWriteText: ReturnType<typeof vi.fn> | null = null;
+    if (originalClipboard) {
+      spyWriteText = vi.spyOn(originalClipboard, "writeText").mockResolvedValue(undefined);
+    } else {
+      Object.defineProperty(globalThis.navigator, "clipboard", {
+        value: { writeText },
+        configurable: true,
+      });
+    }
+
+    render(
+      <AIBlockStream
+        messages={[]}
+        streaming={false}
+        error="임시 에러"
+        onClear={vi.fn()}
+        onExecute={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByLabelText("오류 텍스트 복사"));
+    if (spyWriteText) {
+      expect(spyWriteText).toHaveBeenCalledWith("임시 에러");
+    } else {
+      expect(writeText).toHaveBeenCalledWith("임시 에러");
+    }
+  });
+
   it("메시지 카운트 배지 표시", () => {
     render(
       <AIBlockStream
