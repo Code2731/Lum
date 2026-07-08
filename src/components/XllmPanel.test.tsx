@@ -2270,6 +2270,51 @@ function setupClipboardWriteMock() {
     expect(await screen.findByText("저장 실패: 저장 API 오류")).toBeInTheDocument();
   });
 
+  it("recall backend 저장 실패 시 오류 텍스트를 복사할 수 있다", async () => {
+    const clipboardMock = setupClipboardWriteMock();
+    invokeMock.mockReset();
+    invokeMock.mockImplementation((cmd: string, args?: unknown) => {
+      if (cmd === "load_app_config") {
+        return Promise.resolve({
+          recall_vector_backend: "zvec",
+        });
+      }
+      if (cmd === "recall_backend_info") {
+        return Promise.resolve({
+          requested_raw: null,
+          requested: null,
+          active: "local-cosine",
+          supported: ["local-cosine", "zvec"],
+          requested_adjusted: false,
+          active_matches_requested: true,
+        });
+      }
+      if (cmd === "save_recall_vector_backend") {
+        return Promise.reject({ message: "저장 API 오류" });
+      }
+      if (cmd === "list_embed_candidates") return Promise.resolve([]);
+      if (cmd === "list_lora_candidates") return Promise.resolve([]);
+      if (cmd === "embed_loaded_info") return Promise.resolve(null);
+      if (cmd === "save_xllm_settings") return Promise.resolve({});
+      return Promise.resolve(args ?? {});
+    });
+
+    render(<XllmPanel onClose={vi.fn()} />);
+
+    const saveButton = await screen.findByTestId("recall-backend-save");
+    fireEvent.click(saveButton);
+
+    expect(await screen.findByRole("button", { name: "오류 텍스트 복사" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "오류 텍스트 복사" }));
+
+    if (clipboardMock.restore) {
+      expect(clipboardMock.restore).toHaveBeenCalledWith("저장 실패: 저장 API 오류");
+      clipboardMock.restore.mockRestore();
+    } else {
+      expect(clipboardMock.writeText).toHaveBeenCalledWith("저장 실패: 저장 API 오류");
+    }
+  });
+
   it("recall backend 기본값 복원 실패 시 객체 오류도 메시지 문자열로 노출한다", async () => {
     invokeMock.mockReset();
     invokeMock.mockImplementation((cmd: string, args?: unknown) => {

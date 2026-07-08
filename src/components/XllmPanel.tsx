@@ -243,6 +243,46 @@ function formatErrorMessage(error: unknown): string {
   return extractErrorText(error) ?? "알 수 없는 오류";
 }
 
+function copyText(text: string) {
+  navigator.clipboard?.writeText?.(text).catch(() => {});
+}
+
+interface MessageActionRowProps {
+  text: string;
+  messageClassName?: string;
+  routingHintText?: string;
+}
+
+function MessageActionRow({
+  text,
+  messageClassName = "text-xs text-white/50",
+  routingHintText = "라우팅 점검이 필요합니다.",
+}: MessageActionRowProps) {
+  const failureBody = text.replace(/^[^:]+:\s*/, "");
+  const showFailureActions = text.includes("실패:");
+  const isRoutingFailure = isRoutingError(failureBody);
+
+  return (
+    <div className="min-w-0 flex-1">
+      <span className={messageClassName}>{text}</span>
+      {showFailureActions && (
+        <div className="mt-1 flex items-center gap-1.5">
+          <IconButton
+            tooltip="오류 텍스트 복사"
+            onClick={() => copyText(text)}
+            className="p-1 rounded text-white/50 hover:text-white/80 hover:bg-white/10 transition-colors"
+          >
+            <Copy size={11} />
+          </IconButton>
+          {isRoutingFailure && (
+            <span className="text-xs text-rose-300/80">{routingHintText}</span>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 type SafetyMode = "safe" | "balanced" | "max";
 const MODE_DEFAULTS: Record<SafetyMode, number> = { safe: 0.70, balanced: 0.80, max: 0.90 };
 
@@ -283,19 +323,6 @@ const XllmPanel: React.FC<Props> = ({ onClose }) => {
       setIsSaving(false);
     }
   }, [config]);
-
-  const copyStatusMsg = () => {
-    if (!statusMsg) return;
-    navigator.clipboard?.writeText?.(statusMsg).catch(() => {});
-  };
-
-  const isStatusFailure = statusMsg?.includes("실패:") ?? false;
-  const statusErrorMessage = statusMsg?.startsWith("저장 실패:")
-    ? statusMsg.replace(/^저장 실패:\s*/, "")
-    : null;
-  const statusIsRoutingError = statusErrorMessage
-    ? isRoutingError(statusErrorMessage)
-    : false;
 
   return (
     <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
@@ -431,25 +458,11 @@ const XllmPanel: React.FC<Props> = ({ onClose }) => {
         {/* 하단 — 상태 메시지 + 저장 버튼 */}
         <div className="flex items-center gap-3 px-4 py-3 border-t border-white/5 shrink-0">
           {statusMsg && (
-            <div className="min-w-0 flex-1">
-              <span className="text-sm text-white/50 truncate block">{statusMsg}</span>
-              {isStatusFailure && (
-                <div className="mt-1 flex items-center gap-1.5">
-                  <IconButton
-                    tooltip="오류 텍스트 복사"
-                    onClick={copyStatusMsg}
-                    className="p-1 rounded text-white/50 hover:text-white/80 hover:bg-white/10 transition-colors"
-                  >
-                    <Copy size={11} />
-                  </IconButton>
-                  {statusIsRoutingError && statusMsg.startsWith("저장 실패:") && (
-                    <span className="text-xs text-rose-300/80">
-                      저장 라우팅 점검이 필요합니다.
-                    </span>
-                  )}
-                </div>
-              )}
-            </div>
+            <MessageActionRow
+              text={statusMsg}
+              messageClassName="text-sm text-white/50 truncate block"
+              routingHintText="저장 라우팅 점검이 필요합니다."
+            />
           )}
           <button
             onClick={handleSave}
@@ -608,7 +621,7 @@ const RecallBackendSection: React.FC = () => {
         >
           {loading ? "새로고침 중..." : "새로고침"}
         </button>
-        {msg && <span className="text-xs text-white/50 truncate">{msg}</span>}
+        {msg && <MessageActionRow text={msg} messageClassName="text-xs text-white/50 truncate" />}
       </div>
 
       {(activeChanged || requestedAdjusted) && (
@@ -767,10 +780,10 @@ const OllamaSection: React.FC = () => {
           {saving ? <Loader2 size={10} className="animate-spin" /> : null}
           저장
         </button>
-        {msg && <span className="text-xs text-white/50">{msg}</span>}
+        {msg && <MessageActionRow text={msg} messageClassName="text-xs text-white/50" />}
         </div>
       </>)}
-      {msg && !enabled && <span className="text-xs text-white/50">{msg}</span>}
+      {msg && !enabled && <MessageActionRow text={msg} messageClassName="text-xs text-white/50" />}
     </section>
   );
 };
@@ -868,9 +881,10 @@ const LanDiscoverySection: React.FC = () => {
       </div>
 
       {error && (
-        <div className="text-xs text-rose-300 bg-rose-500/10 border border-rose-400/20 rounded px-2.5 py-1.5">
-          {error}
-        </div>
+        <MessageActionRow
+          text={error}
+          messageClassName="text-xs text-rose-300 bg-rose-500/10 border border-rose-400/20 rounded px-2.5 py-1.5 block"
+        />
       )}
 
       {!scanning && results.length === 0 && !error && (
