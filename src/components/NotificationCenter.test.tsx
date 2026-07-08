@@ -915,6 +915,48 @@ describe("NotificationCenter", () => {
     expect(marks[1]).toHaveTextContent("빌드");
   });
 
+  it("Ctrl/Cmd + C로 검색어를 비울 수 있다", () => {
+    render(
+      <NotificationCenter
+        notifications={[
+          {
+            id: "1",
+            type: "command",
+            title: "알림",
+            body: "메시지",
+            timestamp: 1_000,
+            read: false,
+          },
+        ]}
+        unreadCount={1}
+        onMarkAllRead={vi.fn()}
+        onDismiss={vi.fn()}
+        onDismissByIds={vi.fn()}
+        onClear={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    const searchInput = screen.getByLabelText("알림 검색");
+    fireEvent.change(searchInput, { target: { value: "알림" } });
+    expect(searchInput).toHaveValue("알림");
+
+    fireEvent.keyDown(screen.getByRole("dialog", { name: "알림 센터" }), {
+      key: "c",
+      ctrlKey: true,
+    });
+    expect(searchInput).toHaveValue("");
+
+    fireEvent.change(searchInput, { target: { value: "메시지" } });
+    expect(searchInput).toHaveValue("메시지");
+
+    fireEvent.keyDown(screen.getByRole("dialog", { name: "알림 센터" }), {
+      key: "c",
+      metaKey: true,
+    });
+    expect(searchInput).toHaveValue("");
+  });
+
   it("현재 표시된 목록의 미확인 항목만 일괄 읽음 처리할 수 있다", () => {
     const onMarkByIds = vi.fn();
     render(

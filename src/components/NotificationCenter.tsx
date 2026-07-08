@@ -220,12 +220,13 @@ const NotificationCenter: React.FC<Props> = ({
 
   const handlePopupActionKeys = (e: React.KeyboardEvent): boolean => {
     if (isTextInputFocused()) return false;
-    if (e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) {
+    const normalizedKey = e.key.toLowerCase();
+    const isClearSearchShortcut = (e.ctrlKey || e.metaKey) && normalizedKey === "c";
+    if ((e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) && !isClearSearchShortcut) {
       return false;
     }
 
-    const key = e.key.toLowerCase();
-    if (key === "m") {
+    if (normalizedKey === "m") {
       if (displayedUnreadIds.length === 0 || !onMarkByIds) {
         return false;
       }
@@ -234,7 +235,7 @@ const NotificationCenter: React.FC<Props> = ({
       return true;
     }
 
-    if (key === "d") {
+    if (normalizedKey === "d") {
       if (displayedNotificationIds.length === 0) {
         return false;
       }
@@ -248,7 +249,7 @@ const NotificationCenter: React.FC<Props> = ({
       return true;
     }
 
-    if (key === "r") {
+    if (normalizedKey === "r") {
       if (notifications.length === 0) {
         return false;
       }
@@ -257,7 +258,7 @@ const NotificationCenter: React.FC<Props> = ({
       return true;
     }
 
-    if (key === "f") {
+    if (normalizedKey === "f") {
       if (unreadCount === 0) {
         return false;
       }
@@ -266,7 +267,16 @@ const NotificationCenter: React.FC<Props> = ({
       return true;
     }
 
-    if (key === "/") {
+    if (isClearSearchShortcut) {
+      if (!searchQuery) {
+        return false;
+      }
+      setSearchQuery("");
+      e.preventDefault();
+      return true;
+    }
+
+    if (normalizedKey === "/") {
       searchInputRef.current?.focus();
       e.preventDefault();
       return true;
@@ -407,6 +417,10 @@ const NotificationCenter: React.FC<Props> = ({
                 </button>
               )}
             </div>
+          </div>
+          <div className="shrink-0 px-2 py-1.5 text-[10px] text-white/45">
+            {displayedNotifications.length}건
+            {normalizedSearchQuery ? ` · "${normalizedSearchQuery}"` : ""}
           </div>
           <div className="flex items-center gap-1.5 overflow-x-auto">
             {FILTER_TYPES.map((filterType) => {
