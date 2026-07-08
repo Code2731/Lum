@@ -304,13 +304,13 @@ const NotificationCenter: React.FC<Props> = ({
               );
             })}
           </div>
-          {typeFilter !== "all" && displayedNotificationIds.length > 0 && (
+          {displayedNotificationIds.length > 0 && (
             <div className="ml-auto flex shrink-0 items-center gap-1">
               {displayedUnreadIds.length > 0 && onMarkByIds && (
                 <button
                   type="button"
                   onClick={() => onMarkByIds(displayedUnreadIds)}
-                  aria-label={`${FILTER_LABELS[typeFilter]} 타입 미확인 알림 모두 읽음`}
+                  aria-label="현재 보기 미확인 알림 모두 읽음"
                   className="inline-flex shrink-0 text-[11px] px-2 py-1 rounded border border-emerald-300/35 bg-emerald-400/14 text-emerald-100 hover:bg-emerald-400/22 transition-colors"
                 >
                   미확인 {displayedUnreadIds.length}개 읽음
@@ -325,7 +325,7 @@ const NotificationCenter: React.FC<Props> = ({
                   }
                   displayedNotificationIds.forEach((id) => onDismiss(id));
                 }}
-                aria-label={`${FILTER_LABELS[typeFilter]} 타입 표시 항목 삭제`}
+                aria-label="현재 보기 항목 삭제"
                 className="inline-flex shrink-0 text-[11px] px-2 py-1 rounded border border-white/15 bg-white/[0.04] text-white/55 hover:text-white hover:bg-white/[0.09] transition-colors"
               >
                 모두 삭제

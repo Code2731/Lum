@@ -645,7 +645,7 @@ describe("NotificationCenter", () => {
     }
     fireEvent.click(commandFilter);
 
-    fireEvent.click(screen.getByRole("button", { name: "커맨드 타입 미확인 알림 모두 읽음" }));
+    fireEvent.click(screen.getByRole("button", { name: "현재 보기 미확인 알림 모두 읽음" }));
     expect(onMarkByIds).toHaveBeenCalledWith(["1"]);
   });
 
@@ -697,7 +697,87 @@ describe("NotificationCenter", () => {
     }
     fireEvent.click(commandFilter);
 
-    fireEvent.click(screen.getByRole("button", { name: "커맨드 타입 표시 항목 삭제" }));
+    fireEvent.click(screen.getByRole("button", { name: "현재 보기 항목 삭제" }));
+    expect(onDismissByIds).toHaveBeenCalledWith(["1", "2"]);
+  });
+
+  it("현재 표시된 목록의 미확인 항목만 일괄 읽음 처리할 수 있다", () => {
+    const onMarkByIds = vi.fn();
+    render(
+      <NotificationCenter
+        notifications={[
+          {
+            id: "1",
+            type: "command",
+            title: "cmd-1",
+            body: "알림 1",
+            timestamp: 1_000,
+            read: false,
+          },
+          {
+            id: "2",
+            type: "agent",
+            title: "agent-1",
+            body: "알림 2",
+            timestamp: 2_000,
+            read: false,
+          },
+          {
+            id: "3",
+            type: "env",
+            title: "env-1",
+            body: "알림 3",
+            timestamp: 3_000,
+            read: true,
+          },
+        ]}
+        unreadCount={2}
+        onMarkAllRead={vi.fn()}
+        onMarkByIds={onMarkByIds}
+        onDismiss={vi.fn()}
+        onDismissByIds={vi.fn()}
+        onClear={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "현재 보기 미확인 알림 모두 읽음" }));
+    expect(onMarkByIds).toHaveBeenCalledWith(["2", "1"]);
+  });
+
+  it("현재 표시된 목록을 일괄 삭제할 수 있다", () => {
+    const onDismissByIds = vi.fn();
+    render(
+      <NotificationCenter
+        notifications={[
+          {
+            id: "1",
+            type: "command",
+            title: "cmd-1",
+            body: "알림 1",
+            timestamp: 1_000,
+            read: false,
+          },
+          {
+            id: "2",
+            type: "agent",
+            title: "agent-1",
+            body: "알림 2",
+            timestamp: 2_000,
+            read: true,
+          },
+        ]}
+        unreadCount={1}
+        onMarkAllRead={vi.fn()}
+        onMarkByIds={vi.fn()}
+        onDismiss={vi.fn()}
+        onDismissByIds={onDismissByIds}
+        onClear={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "현재 보기 항목 삭제" }));
     expect(onDismissByIds).toHaveBeenCalledWith(["2", "1"]);
   });
 
