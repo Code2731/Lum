@@ -490,6 +490,113 @@ describe("NotificationCenter", () => {
     expect(screen.getByText("read")).toBeInTheDocument();
   });
 
+  it("타입 필터로 알림 종류만 표시할 수 있다", () => {
+    render(
+      <NotificationCenter
+        notifications={[
+          {
+            id: "1",
+            type: "command",
+            title: "cmd1",
+            body: "명령 알림",
+            timestamp: 1_000,
+            read: false,
+          },
+          {
+            id: "2",
+            type: "agent",
+            title: "agent1",
+            body: "에이전트 알림",
+            timestamp: 2_000,
+            read: false,
+          },
+          {
+            id: "3",
+            type: "healing",
+            title: "heal1",
+            body: "치유 알림",
+            timestamp: 3_000,
+            read: false,
+          },
+        ]}
+        unreadCount={3}
+        onMarkAllRead={vi.fn()}
+        onDismiss={vi.fn()}
+        onClear={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("cmd1")).toBeInTheDocument();
+    expect(screen.getByText("agent1")).toBeInTheDocument();
+    expect(screen.getByText("heal1")).toBeInTheDocument();
+
+    const filterButtons = screen.getAllByRole("button");
+    const commandFilter = filterButtons.find((b) => b.textContent?.includes("커맨드"));
+    expect(commandFilter).toBeDefined();
+    if (!commandFilter) {
+      throw new Error("커맨드 필터 버튼을 찾지 못했습니다.");
+    }
+    fireEvent.click(commandFilter);
+
+    expect(screen.getByText("cmd1")).toBeInTheDocument();
+    expect(screen.queryByText("agent1")).not.toBeInTheDocument();
+    expect(screen.queryByText("heal1")).not.toBeInTheDocument();
+  });
+
+  it("타입 필터와 미확인 필터는 조합되어 적용된다", () => {
+    render(
+      <NotificationCenter
+        notifications={[
+          {
+            id: "1",
+            type: "command",
+            title: "cmd-unread",
+            body: "읽지 않은 커맨드",
+            timestamp: 1_000,
+            read: false,
+          },
+          {
+            id: "2",
+            type: "command",
+            title: "cmd-read",
+            body: "읽은 커맨드",
+            timestamp: 2_000,
+            read: true,
+          },
+          {
+            id: "3",
+            type: "agent",
+            title: "agent-unread",
+            body: "읽지 않은 에이전트",
+            timestamp: 3_000,
+            read: false,
+          },
+        ]}
+        unreadCount={2}
+        onMarkAllRead={vi.fn()}
+        onDismiss={vi.fn()}
+        onClear={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    const unreadOnlyButton = screen.getByRole("button", { name: "미확인 알림만 보기" });
+    fireEvent.click(unreadOnlyButton);
+
+    const filterButtons = screen.getAllByRole("button");
+    const commandFilter = filterButtons.find((b) => b.textContent?.includes("커맨드"));
+    expect(commandFilter).toBeDefined();
+    if (!commandFilter) {
+      throw new Error("커맨드 필터 버튼을 찾지 못했습니다.");
+    }
+    fireEvent.click(commandFilter);
+
+    expect(screen.getByText("cmd-unread")).toBeInTheDocument();
+    expect(screen.queryByText("cmd-read")).not.toBeInTheDocument();
+    expect(screen.queryByText("agent-unread")).not.toBeInTheDocument();
+  });
+
   it("알림이 읽음/미읽음 상태와 시간 기준으로 정렬된다", () => {
     const notifications: AppNotification[] = [
       {

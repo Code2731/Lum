@@ -36,6 +36,16 @@ const TYPE_COLOR: Record<NotifType, string> = {
   healing: "text-yellow-400",
   env: "text-green-400",
 };
+
+type FilterType = "all" | NotifType;
+const FILTER_LABELS: Record<FilterType, string> = {
+  all: "전체",
+  command: "커맨드",
+  agent: "에이전트",
+  healing: "치유",
+  env: "환경",
+};
+const FILTER_TYPES: FilterType[] = ["all", "command", "agent", "healing", "env"];
 const popupFocusables = "a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex='-1'])";
 
 function timeAgo(ts: number): string {
@@ -61,6 +71,7 @@ const NotificationCenter: React.FC<Props> = ({
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
   const [showUnreadOnly, setShowUnreadOnly] = useState(false);
+  const [typeFilter, setTypeFilter] = useState<FilterType>("all");
 
   const orderedNotifications = useMemo(() => {
     return [...notifications].sort((a, b) => {
@@ -78,9 +89,16 @@ const NotificationCenter: React.FC<Props> = ({
   }, [unreadCount, showUnreadOnly]);
 
   const displayedNotifications = useMemo(() => {
-    if (!showUnreadOnly) return orderedNotifications;
-    return orderedNotifications.filter((n) => !n.read);
-  }, [orderedNotifications, showUnreadOnly]);
+    const afterUnreadFilter = showUnreadOnly ? orderedNotifications.filter((n) => !n.read) : orderedNotifications;
+    if (typeFilter === "all") return afterUnreadFilter;
+    return afterUnreadFilter.filter((n) => n.type === typeFilter);
+  }, [orderedNotifications, showUnreadOnly, typeFilter]);
+
+  useEffect(() => {
+    if (typeFilter !== "all" && !notifications.some((n) => n.type === typeFilter)) {
+      setTypeFilter("all");
+    }
+  }, [notifications, typeFilter]);
 
   const getPopupElements = () => {
     if (!panelRef.current) return [];
@@ -248,6 +266,31 @@ const NotificationCenter: React.FC<Props> = ({
       </div>
 
       {/* 알림 목록 */}
+      {notifications.length > 0 && (
+        <div className="border-b border-white/5 px-2 py-1.5 flex items-center gap-1.5 overflow-x-auto bg-[#12171e]">
+          {FILTER_TYPES.map((filterType) => {
+            const count = filterType === "all"
+              ? notifications.length
+              : notifications.filter((n) => n.type === filterType).length;
+            return (
+              <button
+                key={filterType}
+                type="button"
+                onClick={() => setTypeFilter(filterType)}
+                aria-pressed={typeFilter === filterType}
+                className={`inline-flex shrink-0 text-[11px] px-2 py-1 rounded border transition-colors ${
+                  typeFilter === filterType
+                    ? "bg-accent/18 border-accent/45 text-accent"
+                    : "bg-white/[0.03] border-white/10 text-white/55 hover:text-white hover:bg-white/[0.06]"
+                }`}
+              >
+                {FILTER_LABELS[filterType]}
+                <span className="ml-1 text-[10px] text-white/50">({count})</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
       <div className="flex-1 overflow-y-auto min-h-0">
         {displayedNotifications.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-2 py-12 text-white/20">
