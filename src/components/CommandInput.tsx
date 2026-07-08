@@ -21,6 +21,7 @@ const VOICE_SUCCESS_VISIBLE_MS = 1500;
 const VOICE_SUCCESS_FADE_MS = 180;
 const VOICE_HIGHLIGHT_VISIBLE_MS = 1500;
 const VOICE_HIGHLIGHT_FADE_MS = 180;
+const VOICE_PULSE_ANIMATION = "lum-voice-pulse 1.35s ease-in-out infinite";
 
 const CommandInput = ({
   onCommandSubmit,
@@ -115,9 +116,20 @@ const CommandInput = ({
     showVoiceSuccess();
   };
 
-  const { isRecording, voiceBusy, voiceError, handleMicToggle, clearVoiceError } = useVoiceInput({
+  const { isRecording, voiceBusy, voiceError, voiceStatus, handleMicToggle, clearVoiceError } = useVoiceInput({
     onTranscript: injectTranscript,
   });
+  const voiceStatusLabel =
+    voiceError ? "음성 오류" :
+    voiceStatus === "listening" ? "듣는 중" :
+    voiceStatus === "processing" ? "텍스트 반영 중" :
+    "음성 대기";
+  const voiceStatusToneClass =
+    voiceError ? "text-red-300 bg-red-500/10 border-red-400/30" :
+    voiceStatus === "listening" ? "text-emerald-300 bg-emerald-500/10 border-emerald-400/30" :
+    voiceStatus === "processing" ? "text-sky-300 bg-sky-500/10 border-sky-400/30" :
+    "text-white/55 bg-white/5 border-white/15";
+  const voicePulseActive = voiceStatus === "listening" || voiceStatus === "processing";
   const [history, setHistory] = useState<string[]>([]);
   const [historyIdx, setHistoryIdx] = useState(-1);
 
@@ -294,6 +306,13 @@ const CommandInput = ({
 
   return (
     <div className="editor">
+      <style>
+        {`@keyframes lum-voice-pulse {
+          0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(88,166,255,0.28); }
+          70% { transform: scale(1.04); box-shadow: 0 0 0 8px rgba(88,166,255,0); }
+          100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(88,166,255,0); }
+        }`}
+      </style>
       {showCompletions && completions.length > 1 && (
         <div className="autocomplete-popover">
           {completions.map((c, i) => (
@@ -314,9 +333,23 @@ const CommandInput = ({
             className={`mic-btn ${isRecording ? "active" : ""}`}
             onClick={handleMicToggle}
             disabled={voiceBusy}
+            style={{
+              animation: voicePulseActive ? VOICE_PULSE_ANIMATION : "none",
+              background:
+                voiceStatus === "processing" ? "rgba(88,166,255,0.18)" :
+                undefined,
+              color:
+                voiceStatus === "processing" ? "rgba(121,192,255,0.95)" :
+                undefined,
+            }}
           >
             {isRecording ? <Mic size={14} /> : <MicOff size={14} />}
           </IconButton>
+          <span
+            className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] leading-none ${voiceStatusToneClass}`}
+          >
+            {voiceStatusLabel}
+          </span>
           <span className="editor-path">{shortPath(context.cwd)}</span>
           {context.git_branch && (
             <>

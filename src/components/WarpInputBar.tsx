@@ -20,6 +20,7 @@ const VOICE_SUCCESS_VISIBLE_MS = 1500;
 const VOICE_SUCCESS_FADE_MS = 180;
 const VOICE_HIGHLIGHT_VISIBLE_MS = 1500;
 const VOICE_HIGHLIGHT_FADE_MS = 180;
+const VOICE_PULSE_ANIMATION = "lum-voice-pulse 1.35s ease-in-out infinite";
 
 interface Props {
   fontFamily: string;
@@ -449,10 +450,36 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
       inputRef.current?.focus();
     };
 
-    const { isRecording, voiceBusy, voiceError, handleMicToggle, clearVoiceError } = useVoiceInput({
+    const { isRecording, voiceBusy, voiceError, voiceStatus, handleMicToggle, clearVoiceError } = useVoiceInput({
       enabled: voiceEnabled,
       onTranscript: injectTranscript,
     });
+    const voiceStatusLabel =
+      voiceError ? "음성 오류" :
+      voiceStatus === "listening" ? "듣는 중" :
+      voiceStatus === "processing" ? "텍스트 반영 중" :
+      "음성 대기";
+    const voiceStatusTone =
+      voiceError ? {
+        color: "#ff7b72",
+        background: "rgba(248,81,73,0.12)",
+        border: "1px solid rgba(248,81,73,0.25)",
+      } :
+      voiceStatus === "listening" ? {
+        color: "rgba(111,227,132,0.95)",
+        background: "rgba(63,185,80,0.12)",
+        border: "1px solid rgba(63,185,80,0.24)",
+      } :
+      voiceStatus === "processing" ? {
+        color: "rgba(121,192,255,0.95)",
+        background: "rgba(88,166,255,0.12)",
+        border: "1px solid rgba(88,166,255,0.24)",
+      } : {
+        color: "rgba(255,255,255,0.58)",
+        background: "rgba(255,255,255,0.05)",
+        border: "1px solid rgba(255,255,255,0.12)",
+      };
+    const voicePulseActive = voiceStatus === "listening" || voiceStatus === "processing";
 
     const body =
       isHeavy      ? trimmedInput.slice(2).trimStart() :
@@ -497,6 +524,13 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
           transition: "border-color 120ms",
         }}
       >
+        <style>
+          {`@keyframes lum-voice-pulse {
+            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(88,166,255,0.28); }
+            70% { transform: scale(1.04); box-shadow: 0 0 0 8px rgba(88,166,255,0); }
+            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(88,166,255,0); }
+          }`}
+        </style>
         {visibleContextChips.length > 0 && (
           <div
             style={{
@@ -700,18 +734,40 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
                 height: 24,
                 borderRadius: 6,
                 border: "1px solid rgba(255,255,255,0.16)",
-                background: isRecording ? "rgba(248,81,73,0.22)" : "rgba(255,255,255,0.06)",
-                color: isRecording ? "#ff7b72" : "rgba(255,255,255,0.78)",
+                background:
+                  voiceStatus === "processing" ? "rgba(88,166,255,0.18)" :
+                  isRecording ? "rgba(248,81,73,0.22)" :
+                  "rgba(255,255,255,0.06)",
+                color:
+                  voiceStatus === "processing" ? "rgba(121,192,255,0.95)" :
+                  isRecording ? "#ff7b72" :
+                  "rgba(255,255,255,0.78)",
                 display: "inline-flex",
                 alignItems: "center",
                 justifyContent: "center",
                 flexShrink: 0,
                 cursor: voiceBusy ? "wait" : "pointer",
                 opacity: voiceBusy ? 0.55 : 1,
+                animation: voicePulseActive ? VOICE_PULSE_ANIMATION : "none",
               }}
             >
               {isRecording ? <Mic size={12} /> : <MicOff size={12} />}
             </button>
+          )}
+
+          {voiceEnabled && (
+            <span
+              style={{
+                flexShrink: 0,
+                fontSize: WARP_SMALL_FONT_SIZE,
+                lineHeight: 1.2,
+                padding: "2px 7px",
+                borderRadius: 999,
+                ...voiceStatusTone,
+              }}
+            >
+              {voiceStatusLabel}
+            </span>
           )}
 
           {/* 입력 영역: 실제 input은 투명, 컬러 오버레이로 syntax highlight */}
