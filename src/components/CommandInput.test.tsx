@@ -2,6 +2,33 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, act } from "@testing-library/react";
 import CommandInput from "./CommandInput";
 
+type WriteSpy = ReturnType<typeof vi.fn>;
+
+function setupClipboardWriteMock() {
+  const nav = globalThis.navigator as Navigator & {
+    clipboard?: { writeText: WriteSpy };
+  };
+  const originalClipboard = nav.clipboard;
+  const writeText = vi.fn().mockResolvedValue(undefined);
+
+  Object.defineProperty(globalThis.navigator, "clipboard", {
+    configurable: true,
+    value: { writeText },
+  });
+
+  return {
+    writeText,
+    restore: () => {
+      if (originalClipboard) {
+        Object.defineProperty(globalThis.navigator, "clipboard", {
+          configurable: true,
+          value: originalClipboard,
+        });
+      }
+    },
+  };
+}
+
 const invokeMock = vi.fn();
 const voiceListeners: Array<(event: { payload: string }) => void> = [];
 const voiceStateListeners: Array<(event: { payload: boolean }) => void> = [];
@@ -167,6 +194,7 @@ describe("CommandInput Component", () => {
   });
 
   it("마이크 시작 실패 시 사용자 친화 오류를 표시해야 함", async () => {
+    const clipboardMock = setupClipboardWriteMock();
     invokeMock.mockImplementation(async (cmd: string) => {
       if (cmd === "voice_recording_status") return false;
       if (cmd === "start_voice_recording") throw new Error("mic permission denied");
@@ -179,6 +207,14 @@ describe("CommandInput Component", () => {
     });
     expect(await screen.findByRole("alert")).toHaveTextContent("마이크 권한이 거부되었습니다.");
     expect(micButton).not.toHaveClass("active");
+
+    const copyButton = screen.getByRole("button", { name: "오류 텍스트 복사" });
+    fireEvent.click(copyButton);
+    expect(clipboardMock.writeText).toHaveBeenCalledWith(
+      "음성 입력 오류: 마이크 권한이 거부되었습니다.",
+    );
+
+    clipboardMock.restore();
   });
 
   it("음성 처리 중에는 마이크 연타를 무시해야 함", async () => {

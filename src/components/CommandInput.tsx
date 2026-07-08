@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Zap, Mic, MicOff } from "lucide-react";
+import { Zap, Mic, MicOff, Copy } from "lucide-react";
 import { IconButton } from "@/components/ui/icon-button";
 import { shortPath } from "../utils";
 import Editor from "react-simple-code-editor";
@@ -238,22 +238,36 @@ const CommandInput = ({
         {voiceError && (
           <div
             role="alert"
+            className="voice-error-banner"
             style={{
               margin: "0 10px 6px 10px",
               padding: "4px 8px",
               borderRadius: 6,
               fontSize: VOICE_ERROR_FONT_SIZE,
               lineHeight: 1.3,
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
               color: "#ff7b72",
               background: "rgba(248,81,73,0.12)",
               border: "1px solid rgba(248,81,73,0.25)",
-              whiteSpace: "nowrap",
-              textOverflow: "ellipsis",
-              overflow: "hidden",
+              whiteSpace: "normal",
+              textOverflow: "initial",
+                overflow: "hidden",
             }}
             title={voiceError}
           >
-            음성 입력 오류: {voiceError}
+            <span className="voice-error-text">음성 입력 오류: {voiceError}</span>
+            <IconButton
+              tooltip="오류 텍스트 복사"
+              onClick={() => {
+                if (!voiceError) return;
+                navigator.clipboard?.writeText?.(`음성 입력 오류: ${voiceError}`).catch(() => {});
+              }}
+              className="p-1 rounded text-red-300 hover:text-red-100 hover:bg-red-500/20 transition-colors shrink-0"
+            >
+              <Copy size={11} />
+            </IconButton>
           </div>
         )}
 
