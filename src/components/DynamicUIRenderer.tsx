@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import * as Babel from "@babel/standalone";
-import { ShieldAlert, ShieldCheck } from "lucide-react";
+import { ShieldAlert, ShieldCheck, Copy } from "lucide-react";
+import { IconButton } from "./ui/icon-button";
 
 interface Props {
   code: string;
@@ -92,8 +93,17 @@ const DynamicUIRenderer: React.FC<Props> = ({ code }) => {
       </div>
       
       {error ? (
-        <div className="p-4 bg-red-900/10 text-red-400 text-xs font-mono whitespace-pre-wrap">
-          {error}
+        <div className="p-4 bg-red-900/10 text-red-400 text-xs font-mono whitespace-pre-wrap flex items-start justify-between gap-2">
+          <span className="flex-1 break-words">{error}</span>
+          <IconButton
+            tooltip="오류 텍스트 복사"
+            onClick={() => {
+              navigator.clipboard?.writeText?.(error).catch(() => {});
+            }}
+            className="p-1 rounded text-red-300 hover:text-red-100 hover:bg-red-500/20 transition-colors shrink-0"
+          >
+            <Copy size={12} />
+          </IconButton>
         </div>
       ) : (
         <iframe
