@@ -1,5 +1,5 @@
 import React, { useEffect, useImperativeHandle, useRef, useState, forwardRef } from "react";
-import { Mic, MicOff } from "lucide-react";
+import { Mic, MicOff, Copy } from "lucide-react";
 import { tokenizeShell, TOKEN_COLORS } from "../utils/shellSyntax";
 import {
   applyBackendPrefixToInput,
@@ -486,7 +486,10 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
               background: "rgba(248,81,73,0.12)",
               border: "1px solid rgba(248,81,73,0.25)",
               borderRadius: 6,
-              padding: "2px 6px",
+              padding: "2px 6px 2px 8px",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
               maxWidth: 420,
               whiteSpace: "nowrap",
               textOverflow: "ellipsis",
@@ -495,6 +498,30 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
             title={voiceError}
           >
             음성 입력 오류: {voiceError}
+            <button
+              type="button"
+              aria-label="오류 텍스트 복사"
+              title="오류 텍스트 복사"
+              onClick={() => {
+                navigator.clipboard?.writeText?.(`음성 입력 오류: ${voiceError}`).catch(() => {});
+              }}
+              style={{
+                flexShrink: 0,
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                width: 14,
+                height: 14,
+                borderRadius: 6,
+                border: "1px solid rgba(255,255,255,0.24)",
+                background: "rgba(255,255,255,0.07)",
+                color: "rgba(248,81,73,0.95)",
+                cursor: "pointer",
+                padding: 0,
+              }}
+            >
+              <Copy size={10} />
+            </button>
           </div>
         )}
 

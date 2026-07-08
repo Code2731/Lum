@@ -4,6 +4,34 @@ import { createRef } from "react";
 import WarpInputBar, { type WarpInputBarHandle } from "./WarpInputBar";
 import { DEFAULT_TERMINAL_FONT_SIZE } from "../hooks/useTerminalTheme";
 
+type WriteSpy = ReturnType<typeof vi.fn>;
+type RestoreSpy = ReturnType<typeof vi.spyOn>;
+
+function setupClipboardWriteMock() {
+  const writeText = vi.fn().mockResolvedValue(undefined) as WriteSpy;
+  const nav = globalThis.navigator as Navigator & {
+    clipboard?: { writeText: WriteSpy };
+  };
+  const originalClipboard = nav.clipboard;
+
+  if (originalClipboard) {
+    return {
+      writeText,
+      restore: vi.spyOn(originalClipboard, "writeText").mockResolvedValue(undefined) as RestoreSpy,
+    };
+  }
+
+  Object.defineProperty(globalThis.navigator, "clipboard", {
+    value: { writeText },
+    configurable: true,
+  });
+
+  return {
+    writeText,
+    restore: null as RestoreSpy | null,
+  };
+}
+
 const invokeMock = vi.fn();
 const voiceListeners: Array<(event: { payload: string }) => void> = [];
 const voiceStateListeners: Array<(event: { payload: boolean }) => void> = [];
@@ -748,6 +776,37 @@ describe("WarpInputBar — dumb input, 라우팅은 상위에서", () => {
 
     expect(await findByText(/음성 입력 오류:/)).toBeInTheDocument();
     expect(getByLabelText("음성 녹음 중지")).toBeInTheDocument();
+  });
+
+  it("음성 입력 오류 배너의 텍스트를 복사할 수 있다", async () => {
+    const clipboardMock = setupClipboardWriteMock();
+
+    invokeMock.mockImplementation(async (cmd: string) => {
+      if (cmd === "start_voice_recording") throw new Error("mic permission denied");
+      return;
+    });
+
+    const { getByLabelText, findByText } = setup();
+    const startBtn = getByLabelText("음성 녹음 시작");
+
+    await act(async () => {
+      fireEvent.click(startBtn);
+    });
+
+    expect(await findByText(/음성 입력 오류:/)).toBeInTheDocument();
+    const copyBtn = await screen.findByRole("button", { name: "오류 텍스트 복사" });
+    fireEvent.click(copyBtn);
+
+    if (clipboardMock.restore) {
+      expect(clipboardMock.restore).toHaveBeenCalledWith(
+        expect.stringContaining("음성 입력 오류: 마이크 권한이 거부되었습니다"),
+      );
+      clipboardMock.restore.mockRestore();
+    } else {
+      expect(clipboardMock.writeText).toHaveBeenCalledWith(
+        expect.stringContaining("음성 입력 오류: 마이크 권한이 거부되었습니다"),
+      );
+    }
   });
 
   it("마운트 시 voice_recording_status 조회", async () => {
