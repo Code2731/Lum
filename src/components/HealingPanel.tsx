@@ -1,5 +1,6 @@
 import React from "react";
-import { AlertTriangle, Zap, Play, X, Loader2, ShieldAlert, ShieldCheck, Shield } from "lucide-react";
+import { AlertTriangle, Zap, Play, X, Loader2, ShieldAlert, ShieldCheck, Shield, Copy } from "lucide-react";
+import { IconButton } from "@/components/ui/icon-button";
 
 export interface HealingResult {
   analysis: string;
@@ -54,9 +55,20 @@ const HealingPanel: React.FC<Props> = ({
 
         {/* 에러 스니펫 */}
         <div className="px-3 py-2 bg-red-500/5 border-b border-white/5">
-          <pre className="text-xs font-mono text-red-300/80 truncate max-h-10 overflow-hidden">
-            {errorSnippet}
-          </pre>
+          <div className="flex items-start gap-1.5">
+            <pre className="text-xs font-mono text-red-300/80 truncate max-h-10 overflow-hidden flex-1">
+              {errorSnippet}
+            </pre>
+            <IconButton
+              tooltip="오류 텍스트 복사"
+              onClick={() => {
+                navigator.clipboard?.writeText?.(errorSnippet).catch(() => {});
+              }}
+              className="p-1 rounded text-red-200/85 hover:text-red-100 hover:bg-red-500/20 transition-colors"
+            >
+              <Copy size={11} />
+            </IconButton>
+          </div>
         </div>
 
         {/* 분석 결과 또는 분석 버튼 */}
