@@ -43,6 +43,7 @@ const CommandInput = ({
 }: Props) => {
   const [value, setValue] = useState("");
   const [isComposing, setIsComposing] = useState(false);
+  const [micHovered, setMicHovered] = useState(false);
   const [voiceSuccessPhase, setVoiceSuccessPhase] = useState<"hidden" | "visible" | "fading">("hidden");
   const [voiceHighlight, setVoiceHighlight] = useState<{ start: number; end: number; phase: "visible" | "fading" } | null>(null);
   const voiceSuccessVisibleTimerRef = useRef<number | null>(null);
@@ -379,16 +380,32 @@ const CommandInput = ({
             className={`mic-btn ${isRecording ? "active" : ""}`}
             onClick={handleMicToggle}
             disabled={voiceBusy}
+            onMouseEnter={() => setMicHovered(true)}
+            onMouseLeave={() => setMicHovered(false)}
             aria-pressed={isRecording}
             aria-label={`${isRecording ? "음성 녹음 중지" : "음성 녹음 시작"} · 현재 ${voiceStatusLabel}`}
             style={{
               animation: voicePulseActive ? VOICE_PULSE_ANIMATION : "none",
               background:
                 voiceStatus === "processing" ? "rgba(88,166,255,0.18)" :
+                micHovered && !voiceBusy ? "rgba(255,255,255,0.10)" :
                 undefined,
               color:
                 voiceStatus === "processing" ? "rgba(121,192,255,0.95)" :
                 undefined,
+              borderColor:
+                voiceStatus === "processing" ? "rgba(121,192,255,0.28)" :
+                micHovered && !voiceBusy ? "rgba(255,255,255,0.28)" :
+                undefined,
+              cursor: voiceBusy ? "wait" : "pointer",
+              opacity: voiceBusy ? 0.55 : 1,
+              transform: micHovered && !voiceBusy ? "translateY(-1px)" : "translateY(0)",
+              boxShadow:
+                voiceBusy ? "none" :
+                micHovered
+                  ? "0 6px 16px rgba(0,0,0,0.22)"
+                  : "0 0 0 rgba(0,0,0,0)",
+              transition: "background 120ms ease, border-color 120ms ease, transform 120ms ease, box-shadow 120ms ease, opacity 120ms ease",
             }}
           >
             {isRecording ? <Mic size={14} /> : <MicOff size={14} />}

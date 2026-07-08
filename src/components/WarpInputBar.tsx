@@ -58,6 +58,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
     const [input, setInput] = useState("");
     const [isComposing, setIsComposing] = useState(false);
     const [isFocused, setIsFocused] = useState(false);
+    const [micHovered, setMicHovered] = useState(false);
     const [voiceSuccessPhase, setVoiceSuccessPhase] = useState<"hidden" | "visible" | "fading">("hidden");
     const [voiceHighlight, setVoiceHighlight] = useState<{ start: number; end: number; phase: "visible" | "fading" } | null>(null);
     const inputRef = useRef<HTMLInputElement>(null);
@@ -809,6 +810,8 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
               type="button"
               onClick={handleMicToggle}
               disabled={voiceBusy}
+              onMouseEnter={() => setMicHovered(true)}
+              onMouseLeave={() => setMicHovered(false)}
               aria-label={`${isRecording ? "음성 녹음 중지" : "음성 녹음 시작"} · 현재 ${voiceStatusLabel}`}
               aria-pressed={isRecording}
               title={`${isRecording ? "음성 녹음 중지" : "음성 녹음 시작"} · 현재 ${voiceStatusLabel}`}
@@ -816,9 +819,13 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
                 width: 24,
                 height: 24,
                 borderRadius: 6,
-                border: "1px solid rgba(255,255,255,0.16)",
+                border:
+                  voiceStatus === "processing" ? "1px solid rgba(121,192,255,0.28)" :
+                  micHovered && !voiceBusy ? "1px solid rgba(255,255,255,0.28)" :
+                  "1px solid rgba(255,255,255,0.16)",
                 background:
                   voiceStatus === "processing" ? "rgba(88,166,255,0.18)" :
+                  micHovered && !voiceBusy ? "rgba(255,255,255,0.10)" :
                   isRecording ? "rgba(248,81,73,0.22)" :
                   "rgba(255,255,255,0.06)",
                 color:
@@ -832,6 +839,13 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
                 cursor: voiceBusy ? "wait" : "pointer",
                 opacity: voiceBusy ? 0.55 : 1,
                 animation: voicePulseActive ? VOICE_PULSE_ANIMATION : "none",
+                transform: micHovered && !voiceBusy ? "translateY(-1px)" : "translateY(0)",
+                boxShadow:
+                  voiceBusy ? "none" :
+                  micHovered
+                    ? "0 6px 16px rgba(0,0,0,0.22)"
+                    : "0 0 0 rgba(0,0,0,0)",
+                transition: "background 120ms ease, border-color 120ms ease, transform 120ms ease, box-shadow 120ms ease, opacity 120ms ease",
               }}
             >
               {isRecording ? <Mic size={12} /> : <MicOff size={12} />}
