@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useMemo, useState } from "react";
-import { Bell, Terminal, Bot, Wrench, Layers, X, CheckCheck, Trash2, Copy, Filter } from "lucide-react";
+import { Bell, Terminal, Bot, Wrench, Layers, X, CheckCheck, Trash2, Copy, Filter, Search } from "lucide-react";
 import { IconButton } from "@/components/ui/icon-button";
 import type { AppNotification, NotifType } from "../hooks/useNotificationCenter";
 import { getActiveFocusableIndex, isPointerOutsideTargets } from "../utils/pointerGuard";
@@ -74,8 +74,10 @@ const NotificationCenter: React.FC<Props> = ({
   const panelRef = useRef<HTMLDivElement>(null);
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const [showUnreadOnly, setShowUnreadOnly] = useState(false);
   const [typeFilter, setTypeFilter] = useState<FilterType>("all");
+  const [searchQuery, setSearchQuery] = useState("");
 
   const orderedNotifications = useMemo(() => {
     return [...notifications].sort((a, b) => {
@@ -93,10 +95,18 @@ const NotificationCenter: React.FC<Props> = ({
   }, [unreadCount, showUnreadOnly]);
 
   const displayedNotifications = useMemo(() => {
+    const normalizedSearch = searchQuery.trim().toLowerCase();
     const afterUnreadFilter = showUnreadOnly ? orderedNotifications.filter((n) => !n.read) : orderedNotifications;
-    if (typeFilter === "all") return afterUnreadFilter;
-    return afterUnreadFilter.filter((n) => n.type === typeFilter);
-  }, [orderedNotifications, showUnreadOnly, typeFilter]);
+    const afterTypeFilter = typeFilter === "all"
+      ? afterUnreadFilter
+      : afterUnreadFilter.filter((n) => n.type === typeFilter);
+
+    if (!normalizedSearch) return afterTypeFilter;
+    return afterTypeFilter.filter((n) => {
+      const target = `${n.title} ${n.body}`.toLowerCase();
+      return target.includes(normalizedSearch);
+    });
+  }, [orderedNotifications, showUnreadOnly, typeFilter, searchQuery]);
 
   const displayedNotificationIds = useMemo(
     () => displayedNotifications.map((n) => n.id),
@@ -118,7 +128,16 @@ const NotificationCenter: React.FC<Props> = ({
     return Array.from(panelRef.current.querySelectorAll<HTMLElement>(popupFocusables));
   };
 
+  const isTextInputFocused = (): boolean => {
+    const active = document.activeElement;
+    return (
+      active instanceof HTMLInputElement
+      || active instanceof HTMLTextAreaElement
+    );
+  };
+
   const handlePopupTabTrap = (e: React.KeyboardEvent): boolean => {
+    if (isTextInputFocused()) return false;
     if (e.key !== "Tab") return false;
 
     const focusables = getPopupElements();
@@ -142,6 +161,7 @@ const NotificationCenter: React.FC<Props> = ({
   };
 
   const handlePopupArrowNav = (e: React.KeyboardEvent): boolean => {
+    if (isTextInputFocused()) return false;
     if (
       e.key !== "ArrowDown" &&
       e.key !== "ArrowUp" &&
@@ -176,6 +196,7 @@ const NotificationCenter: React.FC<Props> = ({
   };
 
   const handlePopupActionKeys = (e: React.KeyboardEvent): boolean => {
+    if (isTextInputFocused()) return false;
     if (e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) {
       return false;
     }
@@ -218,6 +239,12 @@ const NotificationCenter: React.FC<Props> = ({
         return false;
       }
       setShowUnreadOnly((prev) => !prev);
+      e.preventDefault();
+      return true;
+    }
+
+    if (key === "/") {
+      searchInputRef.current?.focus();
       e.preventDefault();
       return true;
     }
@@ -331,6 +358,33 @@ const NotificationCenter: React.FC<Props> = ({
       {/* 알림 목록 */}
       {notifications.length > 0 && (
         <div className="border-b border-white/5 px-2 py-1.5 flex items-start gap-1.5 bg-[#12171e]">
+          <div className="w-full flex items-center gap-2">
+            <label htmlFor="notification-search" className="sr-only">
+              알림 검색
+            </label>
+            <div className="relative flex-1">
+              <Search size={11} className="absolute left-2 top-2 text-white/40" />
+              <input
+                id="notification-search"
+                ref={searchInputRef}
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="알림 제목/본문 검색"
+                className="w-full pl-6 pr-7 py-1.5 text-xs bg-white/[0.05] border border-white/12 rounded text-white/90 placeholder:text-white/30 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  aria-label="검색어 지우기"
+                  className="absolute right-1.5 top-1.5 rounded text-white/50 hover:text-white focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  onClick={() => setSearchQuery("")}
+                >
+                  <X size={11} />
+                </button>
+              )}
+            </div>
+          </div>
           <div className="flex items-center gap-1.5 overflow-x-auto">
             {FILTER_TYPES.map((filterType) => {
               const count = filterType === "all"
@@ -390,7 +444,11 @@ const NotificationCenter: React.FC<Props> = ({
         {displayedNotifications.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-2 py-12 text-white/20">
             <Bell size={24} />
-            <p className="text-sm">{showUnreadOnly ? "미확인 알림이 없습니다" : "알림이 없습니다"}</p>
+            {searchQuery ? (
+              <p className="text-sm">검색 조건에 맞는 알림이 없습니다</p>
+            ) : (
+              <p className="text-sm">{showUnreadOnly ? "미확인 알림이 없습니다" : "알림이 없습니다"}</p>
+            )}
           </div>
         ) : (
           <div className="p-2 space-y-1">

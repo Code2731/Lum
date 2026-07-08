@@ -745,6 +745,145 @@ describe("NotificationCenter", () => {
     expect(onDismissByIds).toHaveBeenCalledWith(["1", "2"]);
   });
 
+  it("검색어 입력으로 알림 제목/본문을 필터링할 수 있다", () => {
+    render(
+      <NotificationCenter
+        notifications={[
+          {
+            id: "1",
+            type: "command",
+            title: "빌드 실패",
+            body: "CI 빌드에서 에러가 발생했어요",
+            timestamp: 1_000,
+            read: false,
+          },
+          {
+            id: "2",
+            type: "agent",
+            title: "에이전트 완료",
+            body: "작업이 정상적으로 끝났습니다",
+            timestamp: 2_000,
+            read: false,
+          },
+          {
+            id: "3",
+            type: "healing",
+            title: "치유 제안",
+            body: "치명적 경로에서 복구를 시도",
+            timestamp: 3_000,
+            read: false,
+          },
+        ]}
+        unreadCount={3}
+        onMarkAllRead={vi.fn()}
+        onDismiss={vi.fn()}
+        onDismissByIds={vi.fn()}
+        onClear={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    const searchInput = screen.getByLabelText("알림 검색");
+    fireEvent.change(searchInput, { target: { value: "치유" } });
+
+    expect(screen.getByText("치유 제안")).toBeInTheDocument();
+    expect(screen.getByText("치명적 경로에서 복구를 시도")).toBeInTheDocument();
+    expect(screen.queryByText("빌드 실패")).not.toBeInTheDocument();
+    expect(screen.queryByText("에이전트 완료")).not.toBeInTheDocument();
+  });
+
+  it("검색어 입력 시 일치 항목이 없으면 검색 결과 메시지를 표시한다", () => {
+    render(
+      <NotificationCenter
+        notifications={[
+          {
+            id: "1",
+            type: "command",
+            title: "빌드 실패",
+            body: "CI 빌드에서 에러가 발생했어요",
+            timestamp: 1_000,
+            read: false,
+          },
+        ]}
+        unreadCount={1}
+        onMarkAllRead={vi.fn()}
+        onDismiss={vi.fn()}
+        onDismissByIds={vi.fn()}
+        onClear={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText("알림 검색"), { target: { value: "찾을 수 없는 텍스트" } });
+    expect(screen.getByText("검색 조건에 맞는 알림이 없습니다")).toBeInTheDocument();
+  });
+
+  it("슬래시 키로 검색 입력에 포커스할 수 있다", () => {
+    render(
+      <NotificationCenter
+        notifications={[
+          {
+            id: "1",
+            type: "command",
+            title: "알림 1",
+            body: "메시지 1",
+            timestamp: 1_000,
+            read: false,
+          },
+        ]}
+        unreadCount={1}
+        onMarkAllRead={vi.fn()}
+        onDismiss={vi.fn()}
+        onDismissByIds={vi.fn()}
+        onClear={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    fireEvent.keyDown(screen.getByRole("dialog", { name: "알림 센터" }), { key: "/" });
+    expect(screen.getByLabelText("알림 검색")).toHaveFocus();
+  });
+
+  it("검색어 지우기 버튼이 동작한다", () => {
+    render(
+      <NotificationCenter
+        notifications={[
+          {
+            id: "1",
+            type: "command",
+            title: "알림 1",
+            body: "메시지 1",
+            timestamp: 1_000,
+            read: false,
+          },
+          {
+            id: "2",
+            type: "agent",
+            title: "메시지 2",
+            body: "테스트",
+            timestamp: 2_000,
+            read: true,
+          },
+        ]}
+        unreadCount={1}
+        onMarkAllRead={vi.fn()}
+        onDismiss={vi.fn()}
+        onDismissByIds={vi.fn()}
+        onClear={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    const searchInput = screen.getByLabelText("알림 검색");
+    fireEvent.change(searchInput, { target: { value: "테스트" } });
+    expect(searchInput).toHaveValue("테스트");
+
+    fireEvent.click(screen.getByLabelText("검색어 지우기"));
+    expect(searchInput).toHaveValue("");
+    expect(screen.getByText("알림 1")).toBeInTheDocument();
+    expect(screen.getByText("메시지 2")).toBeInTheDocument();
+  });
+
   it("현재 표시된 목록의 미확인 항목만 일괄 읽음 처리할 수 있다", () => {
     const onMarkByIds = vi.fn();
     render(
