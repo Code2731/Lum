@@ -783,7 +783,9 @@ const NotificationCenter: React.FC<Props> = ({
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder={searchMode === "regex" ? "정규식 검색 (/error|fail/)" : "알림 제목/본문 검색"}
+                placeholder={searchMode === "regex"
+                  ? "정규식 검색 (/error|warn/i, /error/gi)"
+                  : "알림 제목/본문 검색"}
                 className="w-full pl-6 pr-7 py-1.5 text-xs bg-white/[0.05] border border-white/12 rounded text-white/90 placeholder:text-white/30 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               />
               {searchQuery && (
@@ -822,6 +824,11 @@ const NotificationCenter: React.FC<Props> = ({
             {searchMode === "regex" && normalizedSearchQuery && (
               <span className="inline-flex items-center px-1.5 py-0.5 rounded-full border border-sky-400/30 bg-sky-400/10 text-[10px] text-sky-100">
                 {parsedRegex?.display}
+              </span>
+            )}
+            {searchMode === "regex" && !normalizedSearchQuery && (
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded-full border border-white/15 bg-white/[0.05] text-[10px] text-white/55">
+                정규식 예시: /error/i, /error|warn/g, /에러/gi
               </span>
             )}
             {searchMode === "regex" && regexSearchError && (

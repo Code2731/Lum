@@ -1435,6 +1435,36 @@ describe("NotificationCenter", () => {
     expect(screen.queryByText("빌드 에러 코드 500")).not.toBeInTheDocument();
   });
 
+  it("정규식 모드에서 입력 힌트를 노출한다", () => {
+    render(
+      <NotificationCenter
+        notifications={[
+          {
+            id: "1",
+            type: "command",
+            title: "빌드 에러 코드 500",
+            body: "에러 메시지 분석",
+            timestamp: 1_000,
+            read: false,
+          },
+        ]}
+        unreadCount={1}
+        onMarkAllRead={vi.fn()}
+        onDismiss={vi.fn()}
+        onDismissByIds={vi.fn()}
+        onClear={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByText(/정규식 예시:/)).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "검색 모드: 정규식(2)" }));
+
+    expect(screen.getByText(/정규식 예시: /)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("정규식 검색 (/error|warn/i, /error/gi)")).toBeInTheDocument();
+  });
+
   it("단축키 1/2로 검색 모드를 전환할 수 있다", () => {
     render(
       <NotificationCenter
