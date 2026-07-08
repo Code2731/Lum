@@ -1501,6 +1501,47 @@ describe("NotificationCenter", () => {
     expect(searchInput).toHaveValue("빌드 에러");
   });
 
+  it("최근 검색어 적용 시 입력 포커스가 유지된다", () => {
+    window.localStorage.setItem(
+      "lum_notification_search_history_v1",
+      JSON.stringify([
+        {
+          mode: "token",
+          query: "빌드 히스토리",
+          ts: 1,
+        },
+      ]),
+    );
+
+    render(
+      <NotificationCenter
+        notifications={[
+          {
+            id: "1",
+            type: "command",
+            title: "빌드 에러 코드 500",
+            body: "에러 메시지 분석",
+            timestamp: 1_000,
+            read: false,
+          },
+        ]}
+        unreadCount={1}
+        onMarkAllRead={vi.fn()}
+        onDismiss={vi.fn()}
+        onDismissByIds={vi.fn()}
+        onClear={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    const searchInput = screen.getByLabelText("알림 검색");
+    fireEvent.focus(searchInput);
+
+    fireEvent.click(screen.getByRole("button", { name: /T:\s*빌드 히스토리/ }));
+    expect(searchInput).toHaveValue("빌드 히스토리");
+    expect(searchInput).toHaveFocus();
+  });
+
   it("최근 검색어는 최신 5개까지만 노출된다", () => {
     window.localStorage.setItem(
       "lum_notification_search_history_v1",
@@ -1541,6 +1582,57 @@ describe("NotificationCenter", () => {
     expect(screen.queryByText("6")).toBeInTheDocument();
     expect(screen.queryByText("2")).toBeInTheDocument();
     expect(screen.queryByText("1")).not.toBeInTheDocument();
+  });
+
+  it("검색 기록 전체 삭제 버튼으로 히스토리 스토리지를 비울 수 있다", () => {
+    window.localStorage.setItem(
+      "lum_notification_search_history_v1",
+      JSON.stringify([
+        {
+          mode: "token",
+          query: "임시 검색어 1",
+          ts: 1,
+        },
+        {
+          mode: "token",
+          query: "임시 검색어 2",
+          ts: 2,
+        },
+      ]),
+    );
+
+    render(
+      <NotificationCenter
+        notifications={[
+          {
+            id: "1",
+            type: "command",
+            title: "빌드 에러 코드 500",
+            body: "에러 메시지 분석",
+            timestamp: 1_000,
+            read: false,
+          },
+        ]}
+        unreadCount={1}
+        onMarkAllRead={vi.fn()}
+        onDismiss={vi.fn()}
+        onDismissByIds={vi.fn()}
+        onClear={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    const searchInput = screen.getByLabelText("알림 검색");
+    fireEvent.focus(searchInput);
+
+    expect(screen.getByText("임시 검색어 1")).toBeInTheDocument();
+    expect(screen.getByText("임시 검색어 2")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "검색 기록 전체 삭제" }));
+
+    expect(screen.queryByText("임시 검색어 1")).not.toBeInTheDocument();
+    expect(screen.queryByText("임시 검색어 2")).not.toBeInTheDocument();
+    expect(window.localStorage.getItem("lum_notification_search_history_v1")).toBe("[]");
   });
 
   it("단축키 1/2로 검색 모드를 전환할 수 있다", () => {

@@ -326,6 +326,18 @@ const NotificationCenter: React.FC<Props> = ({
     });
   };
 
+  const clearSearchHistory = () => {
+    setSearchHistory([]);
+    setShowSearchHistory(false);
+  };
+
+  const applySearchHistoryItem = (item: SearchHistoryItem) => {
+    setSearchMode(item.mode);
+    setSearchQuery(item.query);
+    setShowSearchHistory(false);
+    searchInputRef.current?.focus();
+  };
+
   useEffect(() => {
     if (typeof window === "undefined") {
       return;
@@ -944,17 +956,22 @@ const NotificationCenter: React.FC<Props> = ({
                     key={`${item.mode}-${item.query}-${item.ts}`}
                     type="button"
                     onMouseDown={(event) => event.preventDefault()}
-                    onClick={() => {
-                      setSearchMode(item.mode);
-                      setSearchQuery(item.query);
-                      setShowSearchHistory(false);
-                    }}
+                    onClick={() => applySearchHistoryItem(item)}
                     className="inline-flex items-center max-w-[45%] text-[10px] rounded border border-white/10 px-1.5 py-1 bg-white/[0.03] text-white/75 hover:border-white/25 hover:text-white"
                   >
                     <span className="mr-1 text-[9px] text-white/45">{item.mode === "regex" ? "R" : "T"}:</span>
                     <span className="truncate">{item.query}</span>
                   </button>
                 ))}
+              <button
+                type="button"
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={clearSearchHistory}
+                className="inline-flex items-center px-1.5 py-1 text-[10px] rounded border border-white/20 bg-white/[0.07] text-white/60 hover:border-red-300/50 hover:text-red-200 transition-colors"
+                aria-label="검색 기록 전체 삭제"
+              >
+                기록 전체 삭제
+              </button>
             </div>
           )}
           <div className="shrink-0 px-2 py-1.5 text-[10px] text-white/45">
