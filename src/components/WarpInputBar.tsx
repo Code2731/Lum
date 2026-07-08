@@ -20,6 +20,7 @@ const VOICE_SUCCESS_VISIBLE_MS = 1500;
 const VOICE_SUCCESS_FADE_MS = 180;
 const VOICE_HIGHLIGHT_VISIBLE_MS = 1500;
 const VOICE_HIGHLIGHT_FADE_MS = 180;
+const VOICE_HIGHLIGHT_LONG_TEXT_THRESHOLD = 32;
 const VOICE_PULSE_ANIMATION = "lum-voice-pulse 1.35s ease-in-out infinite";
 const SR_ONLY_STYLE: React.CSSProperties = {
   position: "absolute",
@@ -500,6 +501,8 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
       voiceError ? `음성 입력 오류: ${voiceError}` :
       voiceSuccessPhase !== "hidden" ? "음성 입력 반영됨" :
       `음성 상태: ${voiceStatusLabel}`;
+    const voiceHighlightLength = voiceHighlight ? voiceHighlight.end - voiceHighlight.start : 0;
+    const isLongVoiceHighlight = voiceHighlightLength >= VOICE_HIGHLIGHT_LONG_TEXT_THRESHOLD;
 
     const body =
       isHeavy      ? trimmedInput.slice(2).trimStart() :
@@ -850,11 +853,16 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
                 ))}
                 <span
                   style={{
-                    background: "rgba(63,185,80,0.18)",
+                    background: isLongVoiceHighlight
+                      ? "linear-gradient(180deg, rgba(63,185,80,0.22), rgba(63,185,80,0.12))"
+                      : "rgba(63,185,80,0.18)",
                     borderRadius: 4,
-                    boxShadow: "0 0 0 1px rgba(63,185,80,0.18)",
+                    boxShadow: isLongVoiceHighlight
+                      ? "inset 0 0 0 1px rgba(63,185,80,0.22), 0 0 0 1px rgba(63,185,80,0.12)"
+                      : "0 0 0 1px rgba(63,185,80,0.18)",
                     opacity: voiceHighlight.phase === "fading" ? 0 : 1,
                     transition: `opacity ${VOICE_HIGHLIGHT_FADE_MS}ms ease`,
+                    padding: isLongVoiceHighlight ? "0 2px" : undefined,
                   }}
                 >
                   {tokenizeShell(input.slice(voiceHighlight.start, voiceHighlight.end)).map((t, idx) => (

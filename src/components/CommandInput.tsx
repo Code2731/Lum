@@ -21,6 +21,7 @@ const VOICE_SUCCESS_VISIBLE_MS = 1500;
 const VOICE_SUCCESS_FADE_MS = 180;
 const VOICE_HIGHLIGHT_VISIBLE_MS = 1500;
 const VOICE_HIGHLIGHT_FADE_MS = 180;
+const VOICE_HIGHLIGHT_LONG_TEXT_THRESHOLD = 32;
 const VOICE_PULSE_ANIMATION = "lum-voice-pulse 1.35s ease-in-out infinite";
 const SR_ONLY_STYLE: React.CSSProperties = {
   position: "absolute",
@@ -307,9 +308,11 @@ const CommandInput = ({
     };
 
     if (voiceHighlight && voiceHighlight.start < voiceHighlight.end && voiceHighlight.end <= code.length) {
+      const voiceHighlightLength = voiceHighlight.end - voiceHighlight.start;
+      const isLongVoiceHighlight = voiceHighlightLength >= VOICE_HIGHLIGHT_LONG_TEXT_THRESHOLD;
       return [
         renderSegment(code.slice(0, voiceHighlight.start)),
-        `<span style="background: rgba(63,185,80,0.18); border-radius: 4px; box-shadow: 0 0 0 1px rgba(63,185,80,0.18); opacity: ${voiceHighlight.phase === "fading" ? 0 : 1}; transition: opacity ${VOICE_HIGHLIGHT_FADE_MS}ms ease;">${renderSegment(code.slice(voiceHighlight.start, voiceHighlight.end))}</span>`,
+        `<span style="background: ${isLongVoiceHighlight ? "linear-gradient(180deg, rgba(63,185,80,0.22), rgba(63,185,80,0.12))" : "rgba(63,185,80,0.18)"}; border-radius: 4px; box-shadow: ${isLongVoiceHighlight ? "inset 0 0 0 1px rgba(63,185,80,0.22), 0 0 0 1px rgba(63,185,80,0.12)" : "0 0 0 1px rgba(63,185,80,0.18)"}; opacity: ${voiceHighlight.phase === "fading" ? 0 : 1}; transition: opacity ${VOICE_HIGHLIGHT_FADE_MS}ms ease; ${isLongVoiceHighlight ? "padding: 0 2px;" : ""}">${renderSegment(code.slice(voiceHighlight.start, voiceHighlight.end))}</span>`,
         renderSegment(code.slice(voiceHighlight.end)),
       ].join("");
     }
