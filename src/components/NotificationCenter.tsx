@@ -480,6 +480,18 @@ const NotificationCenter: React.FC<Props> = ({
       return false;
     }
 
+    if (normalizedKey === "1") {
+      setSearchMode("token");
+      e.preventDefault();
+      return true;
+    }
+
+    if (normalizedKey === "2") {
+      setSearchMode("regex");
+      e.preventDefault();
+      return true;
+    }
+
     if (normalizedKey === "m") {
       if (displayedUnreadIds.length === 0 || !onMarkByIds) {
         return false;
@@ -660,25 +672,25 @@ const NotificationCenter: React.FC<Props> = ({
                 type="button"
                 onClick={() => setSearchMode("token")}
                 aria-pressed={searchMode === "token"}
-                aria-label="검색 모드: 토큰"
+                aria-label="검색 모드: 토큰(1)"
                 className={`px-2 py-1 border-r border-white/12 ${searchMode === "token"
                   ? "bg-white/20 text-white"
                   : "text-white/65 hover:text-white/90"
                 }`}
               >
-                토큰
+                토큰(1)
               </button>
               <button
                 type="button"
                 onClick={() => setSearchMode("regex")}
                 aria-pressed={searchMode === "regex"}
-                aria-label="검색 모드: 정규식"
+                aria-label="검색 모드: 정규식(2)"
                 className={`px-2 py-1 ${searchMode === "regex"
                   ? "bg-white/20 text-white"
                   : "text-white/65 hover:text-white/90"
                 }`}
               >
-                정규식
+                정규식(2)
               </button>
             </div>
             <label htmlFor="notification-search" className="sr-only">

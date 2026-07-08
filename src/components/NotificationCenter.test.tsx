@@ -1209,7 +1209,7 @@ describe("NotificationCenter", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "검색 모드: 정규식" }));
+    fireEvent.click(screen.getByRole("button", { name: "검색 모드: 정규식(2)" }));
     fireEvent.change(screen.getByLabelText("알림 검색"), {
       target: { value: "에러|완료" },
     });
@@ -1240,7 +1240,7 @@ describe("NotificationCenter", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "검색 모드: 정규식" }));
+    fireEvent.click(screen.getByRole("button", { name: "검색 모드: 정규식(2)" }));
     fireEvent.change(screen.getByLabelText("알림 검색"), {
       target: { value: "[" },
     });
@@ -1279,7 +1279,7 @@ describe("NotificationCenter", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "검색 모드: 정규식" }));
+    fireEvent.click(screen.getByRole("button", { name: "검색 모드: 정규식(2)" }));
     fireEvent.change(screen.getByLabelText("알림 검색"), {
       target: { value: "에러|메시지" },
     });
@@ -1290,6 +1290,37 @@ describe("NotificationCenter", () => {
     expect(highlights[1]).toHaveTextContent("에러");
     expect(highlights[2]).toHaveTextContent("메시지");
     expect(screen.getByText("/에러|메시지/")).toBeInTheDocument();
+  });
+
+  it("단축키 1/2로 검색 모드를 전환할 수 있다", () => {
+    render(
+      <NotificationCenter
+        notifications={[
+          {
+            id: "1",
+            type: "command",
+            title: "빌드 에러 코드 500",
+            body: "에러 메시지 분석",
+            timestamp: 1_000,
+            read: false,
+          },
+        ]}
+        unreadCount={1}
+        onMarkAllRead={vi.fn()}
+        onDismiss={vi.fn()}
+        onDismissByIds={vi.fn()}
+        onClear={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    const dialog = screen.getByRole("dialog", { name: "알림 센터" });
+
+    fireEvent.keyDown(dialog, { key: "2" });
+    expect(screen.getByRole("button", { name: "검색 모드: 정규식(2)" })).toHaveAttribute("aria-pressed", "true");
+
+    fireEvent.keyDown(dialog, { key: "1" });
+    expect(screen.getByRole("button", { name: "검색 모드: 토큰(1)" })).toHaveAttribute("aria-pressed", "true");
   });
 
   it("Ctrl/Cmd + C로 검색어를 비울 수 있다", () => {
