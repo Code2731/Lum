@@ -1292,6 +1292,85 @@ describe("NotificationCenter", () => {
     expect(screen.getByText("/에러|메시지/")).toBeInTheDocument();
   });
 
+  it("정규식 모드에서 /패턴/ 형태를 바로 사용할 수 있다", () => {
+    render(
+      <NotificationCenter
+        notifications={[
+          {
+            id: "1",
+            type: "command",
+            title: "빌드 에러 코드 500",
+            body: "에러 메시지 분석",
+            timestamp: 1_000,
+            read: false,
+          },
+          {
+            id: "2",
+            type: "agent",
+            title: "작업 처리 완료",
+            body: "모든 메시지 정상",
+            timestamp: 2_000,
+            read: false,
+          },
+        ]}
+        unreadCount={2}
+        onMarkAllRead={vi.fn()}
+        onDismiss={vi.fn()}
+        onDismissByIds={vi.fn()}
+        onClear={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "검색 모드: 정규식(2)" }));
+    fireEvent.change(screen.getByLabelText("알림 검색"), {
+      target: { value: "/에러/" },
+    });
+
+    expect(screen.getByText("빌드 에러 코드 500")).toBeInTheDocument();
+    expect(screen.queryByText("작업 처리 완료")).not.toBeInTheDocument();
+    expect(screen.getByText("/에러/")).toBeInTheDocument();
+  });
+
+  it("정규식 모드에서 /패턴/flags 입력을 처리할 수 있다", () => {
+    render(
+      <NotificationCenter
+        notifications={[
+          {
+            id: "1",
+            type: "command",
+            title: "빌드 에러 코드 500",
+            body: "에러 메시지 분석",
+            timestamp: 1_000,
+            read: false,
+          },
+          {
+            id: "2",
+            type: "agent",
+            title: "작업 처리 완료",
+            body: "모든 메시지 정상",
+            timestamp: 2_000,
+            read: false,
+          },
+        ]}
+        unreadCount={2}
+        onMarkAllRead={vi.fn()}
+        onDismiss={vi.fn()}
+        onDismissByIds={vi.fn()}
+        onClear={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "검색 모드: 정규식(2)" }));
+    fireEvent.change(screen.getByLabelText("알림 검색"), {
+      target: { value: "/에러|메시지/i" },
+    });
+
+    expect(screen.getByText("빌드 에러 코드 500")).toBeInTheDocument();
+    expect(screen.getByText("/에러|메시지/i")).toBeInTheDocument();
+  });
+
   it("단축키 1/2로 검색 모드를 전환할 수 있다", () => {
     render(
       <NotificationCenter

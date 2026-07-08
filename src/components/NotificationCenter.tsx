@@ -204,6 +204,64 @@ function renderHighlightedTextByRegex(text: string, regex: RegExp | null): React
   return nodes;
 }
 
+type ParsedRegexInput = {
+  errorMessage: string;
+  pattern: string;
+  flags: string;
+  display: string;
+};
+
+function parseRegexInput(rawQuery: string): ParsedRegexInput {
+  const query = rawQuery.trim();
+  if (!query.startsWith("/")) {
+    return {
+      errorMessage: "",
+      pattern: query,
+      flags: "i",
+      display: `/${query}/`,
+    };
+  }
+
+  const slashIdx = query.lastIndexOf("/");
+  if (slashIdx <= 0) {
+    return {
+      errorMessage: "",
+      pattern: query,
+      flags: "i",
+      display: `/${query}/`,
+    };
+  }
+
+  const extractedPattern = query.slice(1, slashIdx);
+  const extractedFlags = query.slice(slashIdx + 1);
+  const normalizedFlags = extractedFlags
+    .toLowerCase()
+    .split("")
+    .filter((value, index, self) => self.indexOf(value) === index)
+    .join("");
+
+  if (extractedFlags && normalizedFlags.length !== extractedFlags.length) {
+    return {
+      errorMessage: "정규식 플래그가 유효하지 않습니다.",
+      pattern: extractedPattern,
+      flags: normalizedFlags,
+      display: `/${extractedPattern}/${extractedFlags}`,
+    };
+  }
+
+  return {
+    errorMessage: "",
+    pattern: extractedPattern,
+    flags: normalizedFlags,
+    display: `/${extractedPattern}/${extractedFlags}`,
+  };
+}
+
+function buildRegexFlags(flags: string): string {
+  const normalized = new Set(["i", ...flags.toLowerCase().split("")]);
+  return Array.from(normalized).join("");
+}
+
 const NotificationCenter: React.FC<Props> = ({
   notifications,
   unreadCount,
@@ -250,6 +308,10 @@ const NotificationCenter: React.FC<Props> = ({
     }),
     [normalizedSearchQuery, searchMode],
   );
+  const parsedRegex = useMemo(
+    () => (searchMode === "regex" ? parseRegexInput(normalizedSearchQuery) : null),
+    [normalizedSearchQuery, searchMode],
+  );
   const normalizedSearchQueries = useMemo(() => searchQueryParseResult.positive, [searchQueryParseResult]);
   const excludedSearchQueries = useMemo(() => searchQueryParseResult.negative, [searchQueryParseResult]);
   const hasUnclosedQuote = useMemo(() => searchQueryParseResult.hasUnclosedQuote, [searchQueryParseResult]);
@@ -257,19 +319,22 @@ const NotificationCenter: React.FC<Props> = ({
     if (searchMode !== "regex" || !normalizedSearchQuery) {
       return "";
     }
+    if (parsedRegex?.errorMessage) {
+      return parsedRegex.errorMessage;
+    }
     try {
-      new RegExp(normalizedSearchQuery, "i");
+      new RegExp(parsedRegex?.pattern ?? "", buildRegexFlags(parsedRegex?.flags ?? ""));
       return "";
     } catch (err) {
       return String((err as Error).message);
     }
-  }, [normalizedSearchQuery, searchMode]);
+  }, [normalizedSearchQuery, parsedRegex, searchMode]);
   const regexSearch = useMemo(() => {
     if (searchMode !== "regex" || !normalizedSearchQuery || regexSearchError) {
       return null;
     }
-    return new RegExp(normalizedSearchQuery, "i");
-  }, [normalizedSearchQuery, searchMode, regexSearchError]);
+    return new RegExp(parsedRegex?.pattern ?? "", buildRegexFlags(parsedRegex?.flags ?? ""));
+  }, [normalizedSearchQuery, parsedRegex, searchMode, regexSearchError]);
 
   const { displayedNotifications, matchedTitleCount, matchedBodyCount } = useMemo(() => {
     const hasSearchQuery = searchMode === "token"
@@ -742,7 +807,7 @@ const NotificationCenter: React.FC<Props> = ({
             )}
             {searchMode === "regex" && normalizedSearchQuery && (
               <span className="inline-flex items-center px-1.5 py-0.5 rounded-full border border-sky-400/30 bg-sky-400/10 text-[10px] text-sky-100">
-                /{normalizedSearchQuery}/
+                {parsedRegex?.display}
               </span>
             )}
             {searchMode === "regex" && regexSearchError && (
@@ -759,7 +824,7 @@ const NotificationCenter: React.FC<Props> = ({
           <div className="shrink-0 px-2 py-1.5 text-[10px] text-white/45">
             {displayedNotifications.length}건
             {normalizedSearchQuery
-              ? ` · ${searchMode === "regex" ? `/${normalizedSearchQuery}/` : `"${normalizedSearchQuery}"`} · 제목: ${matchedTitleCount}건, 본문: ${matchedBodyCount}건`
+              ? ` · ${searchMode === "regex" ? (parsedRegex?.display ?? `/${normalizedSearchQuery}/`) : `"${normalizedSearchQuery}"`} · 제목: ${matchedTitleCount}건, 본문: ${matchedBodyCount}건`
               : ""}
           </div>
           <div className="flex items-center gap-1.5 overflow-x-auto">
