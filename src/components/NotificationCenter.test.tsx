@@ -1118,6 +1118,67 @@ describe("NotificationCenter", () => {
     expect(screen.getByText(/제목:\s*1건,\s*본문:\s*0건/)).toBeInTheDocument();
   });
 
+  it("검색어 토큰을 시각적으로 구문/부정 구분해 표시한다", () => {
+    render(
+      <NotificationCenter
+        notifications={[
+          {
+            id: "1",
+            type: "command",
+            title: "로그인 실패 알림",
+            body: "요약에서 실패 원인 확인",
+            timestamp: 1_000,
+            read: false,
+          },
+        ]}
+        unreadCount={1}
+        onMarkAllRead={vi.fn()}
+        onDismiss={vi.fn()}
+        onDismissByIds={vi.fn()}
+        onClear={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText("알림 검색"), {
+      target: { value: "\"로그인 실패\" -요약" },
+    });
+
+    expect(screen.getByText("+ 로그인 실패")).toBeInTheDocument();
+    expect(screen.getByText("- 요약")).toBeInTheDocument();
+  });
+
+  it("닫히지 않은 따옴표 입력 시 검색 경고를 표시한다", () => {
+    render(
+      <NotificationCenter
+        notifications={[
+          {
+            id: "1",
+            type: "command",
+            title: "로그인 실패 알림",
+            body: "요약에서 실패 원인 확인",
+            timestamp: 1_000,
+            read: false,
+          },
+        ]}
+        unreadCount={1}
+        onMarkAllRead={vi.fn()}
+        onDismiss={vi.fn()}
+        onDismissByIds={vi.fn()}
+        onClear={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText("알림 검색"), {
+      target: { value: "\"로그인 실패" },
+    });
+
+    expect(
+      screen.getByText(/따옴표가 닫히지 않았습니다\. 구문 검색은 정확히 닫힌 따옴표만 유효합니다\./),
+    ).toBeInTheDocument();
+  });
+
   it("Ctrl/Cmd + C로 검색어를 비울 수 있다", () => {
     render(
       <NotificationCenter

@@ -62,38 +62,84 @@ function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+type SearchQueryParseResult = {
+  positive: string[];
+  negative: string[];
+  hasUnclosedQuote: boolean;
+};
+
 type SearchQueryToken = {
   term: string;
   excluded: boolean;
 };
 
-function parseSearchQueries(query: string): SearchQueryToken[] {
-  const matches = Array.from(query.matchAll(/(?:-"[^"]+"|-\S+|"[^"]+"|\S+)/g));
-  return matches
-    .map((match) => {
-      const raw = match[0].trim();
-      if (!raw) {
-        return null;
+function parseSearchQueries(query: string): SearchQueryParseResult {
+  const tokens: SearchQueryToken[] = [];
+  const trimmedQuery = query.trim();
+  let hasUnclosedQuote = false;
+  let i = 0;
+
+  const pushToken = (rawToken: string, excluded: boolean) => {
+    const normalized = rawToken.trim().toLowerCase();
+    if (!normalized) {
+      return;
+    }
+    tokens.push({ term: normalized, excluded });
+  };
+
+  const isWhitespace = (char: string) => char === " " || char === "\t" || char === "\n" || char === "\r";
+
+  while (i < trimmedQuery.length) {
+    while (i < trimmedQuery.length && isWhitespace(trimmedQuery[i])) {
+      i += 1;
+    }
+    if (i >= trimmedQuery.length) {
+      break;
+    }
+
+    let excluded = false;
+    if (trimmedQuery[i] === "-") {
+      excluded = true;
+      i += 1;
+      while (i < trimmedQuery.length && isWhitespace(trimmedQuery[i])) {
+        i += 1;
       }
-
-      const excluded = raw.startsWith("-");
-      const rawValue = excluded ? raw.slice(1).trim() : raw;
-      const hasQuotes = rawValue.startsWith("\"") && rawValue.endsWith("\"");
-      const normalized = (hasQuotes
-        ? rawValue.slice(1, -1)
-        : rawValue
-      ).trim().toLowerCase();
-
-      if (!normalized) {
-        return null;
+      if (i >= trimmedQuery.length) {
+        break;
       }
+    }
 
-      return {
-        term: normalized,
-        excluded,
-      };
-    })
-    .filter((token): token is SearchQueryToken => token !== null);
+    if (trimmedQuery[i] === "\"") {
+      const close = trimmedQuery.indexOf("\"", i + 1);
+      if (close === -1) {
+        hasUnclosedQuote = true;
+        pushToken(trimmedQuery.slice(i + 1), excluded);
+        break;
+      }
+      pushToken(trimmedQuery.slice(i + 1, close), excluded);
+      i = close + 1;
+      continue;
+    }
+
+    let next = i;
+    while (next < trimmedQuery.length && !isWhitespace(trimmedQuery[next])) {
+      next += 1;
+    }
+    pushToken(trimmedQuery.slice(i, next), excluded);
+    i = next;
+  }
+
+  return tokens.reduce<SearchQueryParseResult>(
+    (acc, token) => {
+      if (token.excluded) {
+        acc.negative.push(token.term);
+      } else {
+        acc.positive.push(token.term);
+      }
+      return acc;
+    },
+    { positive: [], negative: [], hasUnclosedQuote },
+  );
 }
 
 function renderHighlightedText(text: string, queries: string[]): React.ReactNode {
@@ -152,18 +198,13 @@ const NotificationCenter: React.FC<Props> = ({
   }, [unreadCount, showUnreadOnly]);
 
   const normalizedSearchQuery = useMemo(() => searchQuery.trim(), [searchQuery]);
-  const searchTokens = useMemo(() => parseSearchQueries(normalizedSearchQuery), [normalizedSearchQuery]);
-  const normalizedSearchQueries = useMemo(
-    () => searchTokens.filter((token) => !token.excluded).map((token) => token.term),
-    [searchTokens],
-  );
-  const excludedSearchQueries = useMemo(
-    () => searchTokens.filter((token) => token.excluded).map((token) => token.term),
-    [searchTokens],
-  );
+  const searchQueryParseResult = useMemo(() => parseSearchQueries(normalizedSearchQuery), [normalizedSearchQuery]);
+  const normalizedSearchQueries = useMemo(() => searchQueryParseResult.positive, [searchQueryParseResult]);
+  const excludedSearchQueries = useMemo(() => searchQueryParseResult.negative, [searchQueryParseResult]);
+  const hasUnclosedQuote = useMemo(() => searchQueryParseResult.hasUnclosedQuote, [searchQueryParseResult]);
 
   const { displayedNotifications, matchedTitleCount, matchedBodyCount } = useMemo(() => {
-    const hasSearchQuery = searchTokens.length > 0;
+    const hasSearchQuery = normalizedSearchQueries.length + excludedSearchQueries.length > 0;
     const afterUnreadFilter = showUnreadOnly ? orderedNotifications.filter((n) => !n.read) : orderedNotifications;
     const afterTypeFilter = typeFilter === "all"
       ? afterUnreadFilter
@@ -235,7 +276,6 @@ const NotificationCenter: React.FC<Props> = ({
     typeFilter,
     normalizedSearchQueries,
     excludedSearchQueries,
-    searchTokens,
   ]);
 
   const displayedNotificationIds = useMemo(
@@ -555,6 +595,33 @@ const NotificationCenter: React.FC<Props> = ({
                 </button>
               )}
             </div>
+          </div>
+          <div className="w-full px-2 pb-1.5 pt-0 flex flex-wrap items-center gap-1">
+            {(normalizedSearchQueries.length > 0 || excludedSearchQueries.length > 0) && (
+              <>
+                {normalizedSearchQueries.map((token) => (
+                  <span
+                    key={`inc-${token}`}
+                    className="inline-flex items-center px-1.5 py-0.5 rounded-full border border-emerald-400/30 bg-emerald-400/10 text-[10px] text-emerald-100"
+                  >
+                    + {token}
+                  </span>
+                ))}
+                {excludedSearchQueries.map((token) => (
+                  <span
+                    key={`exc-${token}`}
+                    className="inline-flex items-center px-1.5 py-0.5 rounded-full border border-rose-400/35 bg-rose-400/10 text-[10px] text-rose-100"
+                  >
+                    - {token}
+                  </span>
+                ))}
+              </>
+            )}
+            {hasUnclosedQuote && (
+              <span className="text-[10px] text-amber-300/90">
+                따옴표가 닫히지 않았습니다. 구문 검색은 정확히 닫힌 따옴표만 유효합니다.
+              </span>
+            )}
           </div>
           <div className="shrink-0 px-2 py-1.5 text-[10px] text-white/45">
             {displayedNotifications.length}건
