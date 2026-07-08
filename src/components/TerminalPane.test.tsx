@@ -2,6 +2,39 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, fireEvent, waitFor, screen, act } from "@testing-library/react";
 
 const invokeMock = vi.fn();
+type WriteSpy = ReturnType<typeof vi.fn>;
+
+type ClipboardState = {
+  writeText: WriteSpy;
+  restore: () => void;
+};
+
+function setupClipboardWriteMock(): ClipboardState {
+  const nav = globalThis.navigator as Navigator & {
+    clipboard?: { writeText: WriteSpy };
+  };
+  const originalClipboard = nav.clipboard;
+  const writeText = vi.fn().mockResolvedValue(undefined);
+
+  Object.defineProperty(globalThis.navigator, "clipboard", {
+    configurable: true,
+    value: { writeText },
+  });
+
+  return {
+    writeText,
+    restore: () => {
+      if (originalClipboard) {
+        Object.defineProperty(globalThis.navigator, "clipboard", {
+          configurable: true,
+          value: originalClipboard,
+        });
+      } else {
+        delete (globalThis.navigator as Navigator & { clipboard?: { writeText: WriteSpy } }).clipboard;
+      }
+    },
+  };
+}
 
 vi.mock("@tauri-apps/api/core", () => ({
   invoke: (cmd: string, args?: unknown) => invokeMock(cmd, args),
@@ -2678,5 +2711,39 @@ describe("TerminalPane — 입력 라우팅", () => {
       <TerminalPane id="tab-1" aiMessages={messages} aiStreaming={false} />,
     );
     expect(getByTestId("ai-block-stream")).toBeInTheDocument();
+  });
+
+  it("AI 추천 생성 실패 시 오류 배너에서 텍스트 복사가 동작해야 함", async () => {
+    const clipboardMock = setupClipboardWriteMock();
+    try {
+      invokeMock.mockImplementation((cmd: string) => {
+        if (cmd === "load_app_config") {
+          return Promise.resolve({
+            ui_show_input_toolbelt_tip: true,
+          });
+        }
+        if (cmd === "spawn_pty") return Promise.resolve();
+        if (cmd === "write_to_pty") return Promise.resolve();
+        if (cmd === "resize_pty") return Promise.resolve();
+        if (cmd === "get_project_context") return Promise.resolve("");
+        if (cmd === "get_recent_history") return Promise.resolve([]);
+        if (cmd === "generate_ai_command") return Promise.reject(new Error("AI 추천 생성 실패"));
+        return Promise.resolve();
+      });
+
+      const { container } = render(<TerminalPane id="tab-1" />);
+      const input = container.querySelector("input")!;
+      fireEvent.change(input, { target: { value: "#로그 요약해줘" } });
+      fireEvent.keyDown(input, { key: "Enter" });
+
+      expect(await screen.findByText("⚠ AI")).toBeInTheDocument();
+      expect(screen.getByText("Error: AI 추천 생성 실패")).toBeInTheDocument();
+
+      const copyButton = screen.getByRole("button", { name: "오류 텍스트 복사" });
+      fireEvent.click(copyButton);
+      expect(clipboardMock.writeText).toHaveBeenCalledWith("Error: AI 추천 생성 실패");
+    } finally {
+      clipboardMock.restore();
+    }
   });
 });

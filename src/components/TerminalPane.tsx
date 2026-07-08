@@ -25,6 +25,7 @@ import {
 } from "../utils/backendPrefix";
 import type { ChatMessage } from "../hooks/useAIChat";
 import { openUrl } from "@tauri-apps/plugin-opener";
+import { Copy } from "lucide-react";
 import type { XtermTheme } from "../hooks/useTerminalTheme";
 import { DEFAULT_TERMINAL_FONT_SIZE } from "../hooks/useTerminalTheme";
 import type { DangerMatch } from "../utils/pasteGuard";
@@ -2478,7 +2479,7 @@ const TerminalPane: React.FC<Props> = ({
             position: "absolute",
             left: PANE_PADDING_X,
             bottom: 40,
-            pointerEvents: "none",
+            pointerEvents: aiCmdError ? "auto" : "none",
             zIndex: 20,
             display: "flex",
             alignItems: "center",
@@ -2498,9 +2499,18 @@ const TerminalPane: React.FC<Props> = ({
               생성 중…
             </span>
           ) : aiCmdError ? (
-            <span style={{ fontSize: SMALL_FONT_SIZE, color: "rgba(255,123,114,0.85)", fontFamily: FONT_FAMILY, whiteSpace: "pre-wrap" }}>
-              {aiCmdError}
-            </span>
+            <>
+              <span style={{ fontSize: SMALL_FONT_SIZE, color: "rgba(255,123,114,0.85)", fontFamily: FONT_FAMILY, whiteSpace: "pre-wrap", flex: 1 }}>
+                {aiCmdError}
+              </span>
+              <IconButton
+                tooltip="오류 텍스트 복사"
+                onClick={() => navigator.clipboard.writeText(aiCmdError).catch(() => {})}
+                className="p-1 rounded text-red-200/85 hover:text-red-100 hover:bg-red-500/20 transition-colors shrink-0"
+              >
+                <Copy size={12} />
+              </IconButton>
+            </>
           ) : (
             <>
               <span style={{ fontSize: BASE_FONT_SIZE, color: "rgba(88,166,255,0.85)", fontFamily: FONT_FAMILY, whiteSpace: "pre" }}>
