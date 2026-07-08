@@ -1771,7 +1771,7 @@ describe("NotificationCenter", () => {
     expect(screen.queryByLabelText("최근 검색어 삭제 대상 검색 삭제")).not.toBeInTheDocument();
   });
 
-  it("검색 기록 항목 버튼에서 Enter/Space로 항목을 적용할 수 있다", () => {
+  it.each(["Enter", " "])("검색 기록 항목 버튼에서 %s 키로 항목을 적용할 수 있다", (activationKey) => {
     render(
       <NotificationCenter
         notifications={[
@@ -1800,13 +1800,13 @@ describe("NotificationCenter", () => {
     fireEvent.change(searchInput, { target: { value: "" } });
     fireEvent.focus(searchInput);
 
-    const historyDeleteButton = screen.getByLabelText("최근 검색어 엔터 적용 검색 삭제");
-    fireEvent.keyDown(historyDeleteButton, { key: "Enter" });
+    const historyItemButton = screen.getByLabelText("최근 검색어 엔터 적용 검색 적용");
+    fireEvent.keyDown(historyItemButton, { key: activationKey });
     expect(searchInput).toHaveValue("엔터 적용 검색");
     expect(screen.queryByLabelText("최근 검색어 엔터 적용 검색 삭제")).not.toBeInTheDocument();
   });
 
-  it("검색 기록 삭제 버튼에서 Space로 항목을 적용할 수 있다", () => {
+  it.each(["Enter", " ", "Delete", "Backspace"])("검색 기록 삭제 버튼에서 %s 키로 항목을 삭제할 수 있다", (activationKey) => {
     render(
       <NotificationCenter
         notifications={[
@@ -1835,9 +1835,11 @@ describe("NotificationCenter", () => {
     fireEvent.change(searchInput, { target: { value: "" } });
     fireEvent.focus(searchInput);
 
-    const spaceDeleteButton = screen.getByLabelText("최근 검색어 엔터 적용 검색 삭제");
-    fireEvent.keyDown(spaceDeleteButton, { key: " " });
-    expect(searchInput).toHaveValue("엔터 적용 검색");
+    const deleteButton = screen.getByLabelText("최근 검색어 엔터 적용 검색 삭제");
+    fireEvent.keyDown(deleteButton, { key: activationKey });
+
+    expect(screen.queryByLabelText("최근 검색어 엔터 적용 검색 삭제")).not.toBeInTheDocument();
+    expect(searchInput).toHaveValue("");
   });
 
   it("검색 기록 항목 버튼에서 Backspace/Delete 키로 삭제할 수 있다", () => {

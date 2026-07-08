@@ -1020,51 +1020,52 @@ const NotificationCenter: React.FC<Props> = ({
           {showSearchHistory && searchHistory.length > 0 && !searchQuery && (
             <div className="px-2 pb-1.5 pt-0 flex flex-wrap gap-1.5">
               {sortedSearchHistory.map((item, index) => (
-              <div
-                key={`${item.mode}-${item.query}-${item.ts}`}
-                className="inline-flex items-center max-w-[45%] text-[10px] rounded border border-white/10 px-1.5 py-1 bg-white/[0.03] text-white/75"
-                style={activeHistoryIndex === index ? {
-                  background: "rgba(255,255,255,0.12)",
-                } : undefined}
-              >
-                <button
-                  type="button"
-                  onMouseDown={(event) => event.preventDefault()}
-                  onClick={() => applySearchHistoryItem(item)}
-                  className="inline-flex flex-1 min-w-0 items-center text-left hover:border-white/25 hover:text-white"
-                  aria-label={`최근 검색어 ${item.query} 적용`}
+                <div
+                  key={`${item.mode}-${item.query}-${item.ts}`}
+                  className="inline-flex items-center max-w-[45%] text-[10px] rounded border border-white/10 px-1.5 py-1 bg-white/[0.03] text-white/75"
+                  style={activeHistoryIndex === index ? {
+                    background: "rgba(255,255,255,0.12)",
+                  } : undefined}
                 >
-                  <span className="mr-1 text-[9px] text-white/45">{item.mode === "regex" ? "R" : "T"}:</span>
-                  <span className="truncate">{item.query}</span>
-                </button>
-                <button
-                  type="button"
-                  aria-label={`최근 검색어 ${item.query} 삭제`}
-                  onMouseDown={(event) => {
-                    event.preventDefault();
-                    event.stopPropagation();
-                  }}
-                  onKeyDown={(event) => {
-                    if (event.key === "Delete" || event.key === "Backspace") {
+                  <button
+                    type="button"
+                    onMouseDown={(event) => event.preventDefault()}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        applySearchHistoryItem(item);
+                      }
+                    }}
+                    onClick={() => applySearchHistoryItem(item)}
+                    className="inline-flex flex-1 min-w-0 items-center text-left hover:border-white/25 hover:text-white"
+                    aria-label={`최근 검색어 ${item.query} 적용`}
+                  >
+                    <span className="mr-1 text-[9px] text-white/45">{item.mode === "regex" ? "R" : "T"}:</span>
+                    <span className="truncate">{item.query}</span>
+                  </button>
+                  <button
+                    type="button"
+                    aria-label={`최근 검색어 ${item.query} 삭제`}
+                    onMouseDown={(event) => {
                       event.preventDefault();
+                      event.stopPropagation();
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key === "Delete" || event.key === "Backspace" || event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        removeSearchHistoryItem(item);
+                      }
+                    }}
+                    onClick={(event) => {
                       event.stopPropagation();
                       removeSearchHistoryItem(item);
-                    }
-                    if (event.key === "Enter" || event.key === " ") {
-                      event.preventDefault();
-                      event.stopPropagation();
-                      applySearchHistoryItem(item);
-                    }
-                  }}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    removeSearchHistoryItem(item);
-                  }}
-                  className="ml-1 rounded px-1 text-white/45 hover:text-white/80 hover:bg-white/10"
-                >
-                  ×
-                </button>
-              </div>
+                    }}
+                    className="ml-1 rounded px-1 text-white/45 hover:text-white/80 hover:bg-white/10"
+                  >
+                    ×
+                  </button>
+                </div>
                 ))}
               <button
                 type="button"
