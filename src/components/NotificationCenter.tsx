@@ -62,12 +62,14 @@ function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-function buildSearchQueries(query: string): string[] {
-  return query
-    .trim()
-    .toLowerCase()
-    .split(/\s+/)
-    .filter((item) => item.length > 0);
+function parseSearchQueries(query: string): string[] {
+  const matches = query.matchAll(/"([^"]+)"|(\S+)/g);
+  return Array.from(matches)
+    .map(([full, quoted]) => {
+      const token = (quoted ?? full).trim().toLowerCase();
+      return token.length > 0 ? token : "";
+    })
+    .filter((token) => token.length > 0);
 }
 
 function renderHighlightedText(text: string, queries: string[]): React.ReactNode {
@@ -126,7 +128,7 @@ const NotificationCenter: React.FC<Props> = ({
   }, [unreadCount, showUnreadOnly]);
 
   const normalizedSearchQuery = useMemo(() => searchQuery.trim(), [searchQuery]);
-  const normalizedSearchQueries = useMemo(() => buildSearchQueries(normalizedSearchQuery), [normalizedSearchQuery]);
+  const normalizedSearchQueries = useMemo(() => parseSearchQueries(normalizedSearchQuery), [normalizedSearchQuery]);
 
   const { displayedNotifications, matchedTitleCount, matchedBodyCount } = useMemo(() => {
     const hasSearchQuery = normalizedSearchQueries.length > 0;

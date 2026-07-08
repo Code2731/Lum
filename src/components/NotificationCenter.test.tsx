@@ -998,6 +998,43 @@ describe("NotificationCenter", () => {
     expect(marks[1]).toHaveTextContent("실패");
   });
 
+  it("따옴표로 묶인 검색어를 구문 단위로 처리한다", () => {
+    render(
+      <NotificationCenter
+        notifications={[
+          {
+            id: "1",
+            type: "command",
+            title: "빌드 실패 알림",
+            body: "로그에서 실패 원인을 분석합니다",
+            timestamp: 1_000,
+            read: false,
+          },
+          {
+            id: "2",
+            type: "agent",
+            title: "성능 알림",
+            body: "빌드가 진행 중 실패했습니다",
+            timestamp: 2_000,
+            read: false,
+          },
+        ]}
+        unreadCount={2}
+        onMarkAllRead={vi.fn()}
+        onDismiss={vi.fn()}
+        onDismissByIds={vi.fn()}
+        onClear={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText("알림 검색"), { target: { value: "\"빌드 실패\"" } });
+
+    expect(screen.getByText("빌드 실패 알림")).toBeInTheDocument();
+    expect(screen.queryByText("성능 알림")).not.toBeInTheDocument();
+    expect(screen.getByText(/제목:\s*1건,\s*본문:\s*0건/)).toBeInTheDocument();
+  });
+
   it("Ctrl/Cmd + C로 검색어를 비울 수 있다", () => {
     render(
       <NotificationCenter
