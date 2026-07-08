@@ -2,6 +2,7 @@ import React, { useState, useCallback, useRef, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { GitCommit, Loader2, Copy, Play, FolderOpen } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { IconButton } from "@/components/ui/icon-button";
 import { Textarea } from "@/components/ui/textarea";
 import { SMALL_ICON_SIZE } from "../constants/ui";
 
@@ -18,6 +19,10 @@ const CommitPanel: React.FC<Props> = ({ model, onExecute, onClose }) => {
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const pathInputRef = useRef<HTMLInputElement>(null);
+
+  function copyText(text: string) {
+    navigator.clipboard?.writeText?.(text).catch(() => {});
+  }
 
   useEffect(() => {
     pathInputRef.current?.focus();
@@ -113,9 +118,16 @@ const CommitPanel: React.FC<Props> = ({ model, onExecute, onClose }) => {
 
           {/* 에러 */}
           {error && (
-            <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded px-3 py-2">
-              {error}
-            </p>
+            <div className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded px-3 py-2 flex items-start gap-2">
+              <span className="min-w-0 break-words flex-1">{error}</span>
+              <IconButton
+                tooltip="오류 텍스트 복사"
+                onClick={() => copyText(error)}
+                className="p-1 rounded text-white/60 hover:text-white/85 hover:bg-red-500/20 transition-colors"
+              >
+                <Copy size={11} />
+              </IconButton>
+            </div>
           )}
 
           {/* AI 생성 메시지 */}
