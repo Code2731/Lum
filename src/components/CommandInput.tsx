@@ -296,7 +296,12 @@ const CommandInput = ({
           >
             <Editor
               value={value}
-              onValueChange={(code) => setValue(code)}
+              onValueChange={(code) => {
+                if (voiceError) {
+                  clearVoiceError();
+                }
+                setValue(code);
+              }}
               highlight={highlight}
               padding={0}
               onKeyDown={onKeyDown}

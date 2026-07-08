@@ -264,6 +264,24 @@ describe("CommandInput Component", () => {
     expect(startCalls).toHaveLength(2);
   });
 
+  it("수동 입력을 다시 시작하면 음성 입력 오류 배너가 사라진다", async () => {
+    invokeMock.mockImplementation(async (cmd: string) => {
+      if (cmd === "voice_recording_status") return false;
+      if (cmd === "start_voice_recording") throw new Error("mic permission denied");
+      return undefined;
+    });
+    render(<CommandInput {...defaultProps} />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByLabelText("음성 녹음 시작"));
+    });
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("마이크 권한이 거부되었습니다.");
+
+    fireEvent.change(screen.getByTestId("mock-editor"), { target: { value: "hello again" } });
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
   it("음성 처리 중에는 마이크 연타를 무시해야 함", async () => {
     let resolveStart: (() => void) | null = null;
     invokeMock.mockImplementation((cmd: string) => {

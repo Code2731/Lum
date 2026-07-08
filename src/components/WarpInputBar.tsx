@@ -346,6 +346,9 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const v = e.target.value;
+      if (voiceError) {
+        clearVoiceError();
+      }
       setInput(v);
       onChange?.(v);
     };
