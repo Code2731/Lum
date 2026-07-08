@@ -16,6 +16,7 @@ export interface WarpInputBarHandle {
 }
 
 const WARP_SMALL_FONT_SIZE = 10;
+const VOICE_SUCCESS_TIMEOUT_MS = 1800;
 
 interface Props {
   fontFamily: string;
@@ -41,7 +42,9 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
     const [input, setInput] = useState("");
     const [isComposing, setIsComposing] = useState(false);
     const [isFocused, setIsFocused] = useState(false);
+    const [voiceSuccessVisible, setVoiceSuccessVisible] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
+    const voiceSuccessTimerRef = useRef<number | null>(null);
     const history = useRef<string[]>([]);
     const historyIdx = useRef<number>(-1);
     const onChangeRef = useRef(onChange);
@@ -58,6 +61,14 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
 
     useEffect(() => {
       inputRef.current?.focus();
+    }, []);
+
+    useEffect(() => {
+      return () => {
+        if (voiceSuccessTimerRef.current !== null) {
+          window.clearTimeout(voiceSuccessTimerRef.current);
+        }
+      };
     }, []);
 
     // 시각적 prompt char — 라우팅 로직은 상위에서
@@ -349,8 +360,22 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
       if (voiceError) {
         clearVoiceError();
       }
+      if (voiceSuccessVisible) {
+        setVoiceSuccessVisible(false);
+      }
       setInput(v);
       onChange?.(v);
+    };
+
+    const showVoiceSuccess = () => {
+      if (voiceSuccessTimerRef.current !== null) {
+        window.clearTimeout(voiceSuccessTimerRef.current);
+      }
+      setVoiceSuccessVisible(true);
+      voiceSuccessTimerRef.current = window.setTimeout(() => {
+        setVoiceSuccessVisible(false);
+        voiceSuccessTimerRef.current = null;
+      }, VOICE_SUCCESS_TIMEOUT_MS);
     };
 
     const injectTranscript = (text: string) => {
@@ -361,6 +386,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
         onChangeRef.current?.(joined);
         return joined;
       });
+      showVoiceSuccess();
       inputRef.current?.focus();
     };
 
@@ -571,6 +597,27 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
             >
               <X size={10} />
             </button>
+          </div>
+        )}
+
+        {!voiceError && voiceSuccessVisible && (
+          <div
+            style={{
+              position: "absolute",
+              top: -24,
+              right: 10,
+              fontSize: WARP_SMALL_FONT_SIZE,
+              color: "rgba(111,227,132,0.95)",
+              background: "rgba(63,185,80,0.12)",
+              border: "1px solid rgba(63,185,80,0.24)",
+              borderRadius: 6,
+              padding: "2px 8px",
+              display: "inline-flex",
+              alignItems: "center",
+              whiteSpace: "nowrap",
+            }}
+          >
+            음성 입력 반영됨
           </div>
         )}
 

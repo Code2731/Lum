@@ -933,6 +933,7 @@ describe("WarpInputBar — dumb input, 라우팅은 상위에서", () => {
     });
     expect(input).toHaveValue("cargo test");
     expect(onChange).toHaveBeenLastCalledWith("cargo test");
+    expect(screen.getByText("음성 입력 반영됨")).toBeInTheDocument();
   });
 
   it("voice_recording_state 이벤트 수신 시 마이크 라벨 동기화", async () => {

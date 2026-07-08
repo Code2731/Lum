@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { Zap, Mic, MicOff, Copy, RotateCcw, X } from "lucide-react";
 import { IconButton } from "@/components/ui/icon-button";
 import { shortPath } from "../utils";
@@ -17,6 +17,7 @@ interface Props {
 }
 
 const VOICE_ERROR_FONT_SIZE = 11;
+const VOICE_SUCCESS_TIMEOUT_MS = 1800;
 
 const CommandInput = ({
   onCommandSubmit,
@@ -26,11 +27,33 @@ const CommandInput = ({
 }: Props) => {
   const [value, setValue] = useState("");
   const [isComposing, setIsComposing] = useState(false);
+  const [voiceSuccessVisible, setVoiceSuccessVisible] = useState(false);
+  const voiceSuccessTimerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (voiceSuccessTimerRef.current !== null) {
+        window.clearTimeout(voiceSuccessTimerRef.current);
+      }
+    };
+  }, []);
+
+  const showVoiceSuccess = () => {
+    if (voiceSuccessTimerRef.current !== null) {
+      window.clearTimeout(voiceSuccessTimerRef.current);
+    }
+    setVoiceSuccessVisible(true);
+    voiceSuccessTimerRef.current = window.setTimeout(() => {
+      setVoiceSuccessVisible(false);
+      voiceSuccessTimerRef.current = null;
+    }, VOICE_SUCCESS_TIMEOUT_MS);
+  };
 
   const injectTranscript = (text: string) => {
     const t = text.trim();
     if (!t) return;
     setValue((prev) => (prev.trim() ? `${prev} ${t}` : t));
+    showVoiceSuccess();
   };
 
   const { isRecording, voiceBusy, voiceError, handleMicToggle, clearVoiceError } = useVoiceInput({
@@ -286,6 +309,28 @@ const CommandInput = ({
           </div>
         )}
 
+        {!voiceError && voiceSuccessVisible && (
+          <div
+            role="status"
+            className="voice-success-banner"
+            style={{
+              margin: "0 10px 6px 10px",
+              padding: "4px 8px",
+              borderRadius: 6,
+              fontSize: VOICE_ERROR_FONT_SIZE,
+              lineHeight: 1.3,
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+              color: "rgba(111,227,132,0.95)",
+              background: "rgba(63,185,80,0.12)",
+              border: "1px solid rgba(63,185,80,0.24)",
+            }}
+          >
+            음성 입력 반영됨
+          </div>
+        )}
+
         <div className="editor-input-row">
           <span className="editor-prompt">
             {isAI ? <Zap size={14} style={{ color: "#a78bfa" }} /> : "$"}
@@ -299,6 +344,9 @@ const CommandInput = ({
               onValueChange={(code) => {
                 if (voiceError) {
                   clearVoiceError();
+                }
+                if (voiceSuccessVisible) {
+                  setVoiceSuccessVisible(false);
                 }
                 setValue(code);
               }}

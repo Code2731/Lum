@@ -161,6 +161,7 @@ describe("CommandInput Component", () => {
       cb?.({ payload: "npm test" });
     });
     expect(input).toHaveValue("npm test");
+    expect(screen.getByText("음성 입력 반영됨")).toBeInTheDocument();
   });
 
   it("unmount 이후 voice_transcript 이벤트는 무시되어야 함", async () => {
