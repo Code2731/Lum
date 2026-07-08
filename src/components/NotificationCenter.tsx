@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useMemo } from "react";
 import { Bell, Terminal, Bot, Wrench, Layers, X, CheckCheck, Trash2, Copy } from "lucide-react";
 import { IconButton } from "@/components/ui/icon-button";
 import type { AppNotification, NotifType } from "../hooks/useNotificationCenter";
@@ -21,6 +21,13 @@ const TYPE_ICON: Record<NotifType, React.ReactNode> = {
   agent: <Bot size={11} />,
   healing: <Wrench size={11} />,
   env: <Layers size={11} />,
+};
+
+const TYPE_LABEL: Record<NotifType, string> = {
+  command: "커맨드",
+  agent: "에이전트",
+  healing: "치유",
+  env: "환경",
 };
 
 const TYPE_COLOR: Record<NotifType, string> = {
@@ -53,6 +60,15 @@ const NotificationCenter: React.FC<Props> = ({
   const panelRef = useRef<HTMLDivElement>(null);
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
+
+  const orderedNotifications = useMemo(() => {
+    return [...notifications].sort((a, b) => {
+      if (a.read !== b.read) {
+        return a.read ? 1 : -1;
+      }
+      return b.timestamp - a.timestamp;
+    });
+  }, [notifications]);
 
   const getPopupElements = () => {
     if (!panelRef.current) return [];
@@ -216,7 +232,7 @@ const NotificationCenter: React.FC<Props> = ({
           </div>
         ) : (
           <div className="p-2 space-y-1">
-            {notifications.map((n) => (
+            {orderedNotifications.map((n) => (
               <div
                 key={n.id}
                 role="alert"
@@ -228,9 +244,19 @@ const NotificationCenter: React.FC<Props> = ({
                   {TYPE_ICON[n.type]}
                 </span>
                 <div className="flex-1 min-w-0">
-                  <p className={`text-sm font-medium ${n.read ? "text-white/45" : "text-white/75"}`}>
-                    {n.title}
-                  </p>
+                  <div className="flex items-center gap-1.5 flex-wrap mb-0.5">
+                    <p className={`text-sm font-medium ${n.read ? "text-white/45" : "text-white/75"}`}>
+                      {n.title}
+                    </p>
+                    <span className="inline-flex items-center text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-white/[0.08] text-white/50 border border-white/12">
+                      {TYPE_LABEL[n.type]}
+                    </span>
+                    {!n.read && (
+                      <span className="inline-flex items-center text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-emerald-400/12 text-emerald-100 border border-emerald-300/25">
+                        미확인
+                      </span>
+                    )}
+                  </div>
                   <p className="text-xs text-white/35 mt-0.5 break-words leading-relaxed">{n.body}</p>
                   <p className="text-xs text-white/20 mt-1">{timeAgo(n.timestamp)}</p>
                 </div>

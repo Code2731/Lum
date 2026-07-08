@@ -425,6 +425,76 @@ describe("NotificationCenter", () => {
     }
   });
 
+  it("알림이 읽음/미읽음 상태와 시간 기준으로 정렬된다", () => {
+    const notifications: AppNotification[] = [
+      {
+        id: "1",
+        type: "command",
+        title: "읽은 알림",
+        body: "이미 확인",
+        timestamp: 1000,
+        read: true,
+      },
+      {
+        id: "2",
+        type: "agent",
+        title: "미확인 오래된 알림",
+        body: "뒤늦은 항목",
+        timestamp: 2000,
+        read: false,
+      },
+      {
+        id: "3",
+        type: "env",
+        title: "미확인 최신 알림",
+        body: "최신 항목",
+        timestamp: 3000,
+        read: false,
+      },
+    ];
+
+    render(
+      <NotificationCenter
+        notifications={notifications}
+        unreadCount={2}
+        onMarkAllRead={vi.fn()}
+        onDismiss={vi.fn()}
+        onClear={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    const items = screen.getAllByRole("alert");
+    expect(items[0]).toHaveTextContent("미확인 최신 알림");
+    expect(items[1]).toHaveTextContent("미확인 오래된 알림");
+    expect(items[2]).toHaveTextContent("읽은 알림");
+  });
+
+  it("알림 타입 배지가 표시된다", () => {
+    render(
+      <NotificationCenter
+        notifications={[
+          {
+            id: "1",
+            type: "agent",
+            title: "에이전트 알림",
+            body: "타입 배지 확인",
+            timestamp: Date.now(),
+            read: false,
+          },
+        ]}
+        unreadCount={1}
+        onMarkAllRead={vi.fn()}
+        onDismiss={vi.fn()}
+        onClear={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("에이전트")).toBeInTheDocument();
+    expect(screen.getByText("미확인")).toBeInTheDocument();
+  });
+
   it("패널이 열리면 첫 포커스 가능한 요소가 포커스를 받는다", async () => {
     const notifications: AppNotification[] = [
       {
