@@ -211,7 +211,13 @@ const AIBlockStream: React.FC<Props> = ({
             <div key={m.id} className="space-y-2">
               <MessageBubble msg={m} onExecute={onExecute} compact={false} />
               {editBlocks.map((b) => (
-                <EditBlockCard key={`edit-${m.id}-${b.index}`} block={b} cwd={cwd!} onAskAIForFix={onAskAIForFix} />
+                <EditBlockCard
+                  key={`edit-${m.id}-${b.index}`}
+                  block={b}
+                  cwd={cwd!}
+                  onAskAIForFix={onAskAIForFix}
+                  onOpenXllmPanel={onOpenXllmPanel}
+                />
               ))}
               {toolCalls.map((c) => (
                 <ToolCallCard

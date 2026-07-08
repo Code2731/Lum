@@ -1,16 +1,18 @@
 import React, { useState } from "react";
-import { Check, X, FileCode, Loader2, AlertTriangle } from "lucide-react";
+import { Check, X, FileCode, Loader2, AlertTriangle, RefreshCw, Copy, Settings } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 import { IconButton } from "@/components/ui/icon-button";
 import type { EditBlock } from "../utils/editBlockParser";
 import TestResultCard from "./TestResultCard";
 import { SMALL_ICON_SIZE } from "../constants/ui";
+import { isRoutingError } from "../utils/errorMessage";
 
 interface Props {
   block: EditBlock;
   cwd: string;
   /** 테스트 실패 로그를 AI 대화로 재주입 */
   onAskAIForFix?: (failureLog: string) => void;
+  onOpenXllmPanel?: () => void;
 }
 
 type Status = "pending" | "applying" | "applied" | "rejected" | "error";
@@ -50,19 +52,37 @@ function renderActions(status: Status, onApply: () => void, onReject: () => void
       return <span className="text-white/30 text-sm">거부됨</span>;
     case "error":
       return (
-        <span className="flex items-center gap-1 text-red-400 text-sm">
-          <AlertTriangle size={11} />
-          실패
-        </span>
+        <>
+          <span className="flex items-center gap-1 text-red-400 text-sm">
+            <AlertTriangle size={11} />
+            실패
+          </span>
+          <button
+            onClick={onApply}
+            className="flex items-center gap-1 px-2 py-0.5 rounded bg-white/10 hover:bg-white/15 text-white/80 text-sm transition-colors"
+          >
+            <RefreshCw size={10} />
+            다시 적용
+          </button>
+          <button
+            onClick={onReject}
+            className="flex items-center gap-1 px-2 py-0.5 rounded text-white/40 hover:text-white/70 hover:bg-white/5 text-sm transition-colors"
+          >
+            <X size={10} />
+            거부
+          </button>
+        </>
       );
   }
 }
 
-const EditBlockCard: React.FC<Props> = ({ block, cwd, onAskAIForFix }) => {
+const EditBlockCard: React.FC<Props> = ({ block, cwd, onAskAIForFix, onOpenXllmPanel }) => {
   const [status, setStatus] = useState<Status>("pending");
   const [error, setError] = useState<string | null>(null);
   const [fuzzy, setFuzzy] = useState(false);
   const [expanded, setExpanded] = useState(false);
+
+  const showRoutingErrorActions = isRoutingError(error);
 
   const applyEdit = async () => {
     setStatus("applying");
@@ -87,6 +107,11 @@ const EditBlockCard: React.FC<Props> = ({ block, cwd, onAskAIForFix }) => {
   const searchLines = block.search.split("\n").length;
   const replaceLines = block.replace.split("\n").length;
 
+  const handleCopyError = () => {
+    if (!error) return;
+    navigator.clipboard?.writeText?.(error).catch(() => {});
+  };
+
   return (
     <div className="my-2 rounded-lg border border-accent/20 bg-white/[0.02] overflow-hidden">
       <div className="flex items-center justify-between px-3 py-1.5 bg-accent/5 border-b border-accent/10">
@@ -107,7 +132,27 @@ const EditBlockCard: React.FC<Props> = ({ block, cwd, onAskAIForFix }) => {
 
       {error && (
         <div className="px-3 py-1.5 text-sm text-red-400/80 border-b border-red-500/20 bg-red-500/5">
-          {error}
+          <div className="flex items-start justify-between gap-2">
+            <div className="break-all flex-1">{error}</div>
+            <div className="flex items-center gap-1 shrink-0">
+              {showRoutingErrorActions && onOpenXllmPanel && (
+                <IconButton
+                  tooltip="xLLM/모델 설정 열기"
+                  onClick={onOpenXllmPanel}
+                  className="p-1 rounded text-red-200/85 hover:text-red-100 hover:bg-red-500/20 transition-colors"
+                >
+                  <Settings size={12} />
+                </IconButton>
+              )}
+              <IconButton
+                tooltip="오류 텍스트 복사"
+                onClick={handleCopyError}
+                className="p-1 rounded text-red-200/85 hover:text-red-100 hover:bg-red-500/20 transition-colors"
+              >
+                <Copy size={12} />
+              </IconButton>
+            </div>
+          </div>
         </div>
       )}
 
