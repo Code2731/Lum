@@ -362,7 +362,7 @@ const NotificationCenter: React.FC<Props> = ({
     }
 
     const maxIndex = sortedSearchHistory.length - 1;
-    const base = activeHistoryIndex < 0 ? 0 : activeHistoryIndex;
+    const base = activeHistoryIndex;
     const next = (base + nextDelta + maxIndex + 1) % (maxIndex + 1);
     setActiveHistoryIndex(next);
   };
@@ -389,7 +389,11 @@ const NotificationCenter: React.FC<Props> = ({
         && item.query.trim() !== ""
         && typeof item.ts === "number"
       ));
-      setSearchHistory(normalized.slice(0, SEARCH_HISTORY_MAX_ITEMS));
+      setSearchHistory(
+        [...normalized]
+          .sort((left, right) => right.ts - left.ts)
+          .slice(0, SEARCH_HISTORY_MAX_ITEMS),
+      );
     } catch {
       // ignore malformed cache
     }

@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { isPointerOutsideTargets } from "../utils/pointerGuard";
 import NotificationCenter from "./NotificationCenter";
@@ -10,6 +10,37 @@ type ClipboardState = {
   writeText: WriteSpy;
   restore: () => void;
 };
+
+function ensureLocalStorageMock() {
+  if (typeof window === "undefined" || window.localStorage) {
+    return;
+  }
+
+  const store = new Map<string, string>();
+  const localStorageMock = {
+    getItem: (key: string) => store.get(key) ?? null,
+    setItem: (key: string, value: string) => {
+      store.set(key, value);
+    },
+    removeItem: (key: string) => {
+      store.delete(key);
+    },
+    clear: () => {
+      store.clear();
+    },
+    key: (index: number) => Array.from(store.keys())[index] ?? null,
+    get length() {
+      return store.size;
+    },
+  } as Storage;
+
+  Object.defineProperty(window, "localStorage", {
+    configurable: true,
+    value: localStorageMock,
+  });
+}
+
+ensureLocalStorageMock();
 
 function setupClipboardWriteMock(): ClipboardState {
   const nav = globalThis.navigator as Navigator & {
@@ -46,6 +77,10 @@ describe("NotificationCenter", () => {
     onDismiss: vi.fn(),
     onClear: vi.fn(),
   };
+
+  beforeEach(() => {
+    window.localStorage.clear();
+  });
 
   it("바깥 클릭 판정은 ref가 null이어도 안전하게 동작한다", () => {
     const target = document.createElement("div");
@@ -1537,7 +1572,7 @@ describe("NotificationCenter", () => {
     const searchInput = screen.getByLabelText("알림 검색");
     fireEvent.focus(searchInput);
 
-    fireEvent.click(screen.getByRole("button", { name: /T:\s*빌드 히스토리/ }));
+    fireEvent.click(screen.getByLabelText("최근 검색어 빌드 히스토리 적용"));
     expect(searchInput).toHaveValue("빌드 히스토리");
     expect(searchInput).toHaveFocus();
   });
@@ -1579,9 +1614,9 @@ describe("NotificationCenter", () => {
     const searchInput = screen.getByLabelText("알림 검색");
     fireEvent.focus(searchInput);
 
-    expect(screen.queryByText("6")).toBeInTheDocument();
-    expect(screen.queryByText("2")).toBeInTheDocument();
-    expect(screen.queryByText("1")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("최근 검색어 6 적용")).toBeInTheDocument();
+    expect(screen.getByLabelText("최근 검색어 2 적용")).toBeInTheDocument();
+    expect(screen.queryByLabelText("최근 검색어 1 적용")).not.toBeInTheDocument();
   });
 
   it("검색 기록 전체 삭제 버튼으로 히스토리 스토리지를 비울 수 있다", () => {
