@@ -16,6 +16,7 @@ import {
   FileEdit,
   FileX,
   Undo2,
+  Copy,
 } from "lucide-react";
 import type {
   ReactAgentState,
@@ -25,6 +26,7 @@ import type {
   ChangeKind,
 } from "../hooks/useReactAgent";
 import { SMALL_ICON_SIZE } from "../constants/ui";
+import { IconButton } from "./ui/icon-button";
 
 interface ScipBackend {
   language: string;
@@ -123,10 +125,33 @@ const KIND_LABEL_FILE: Record<ChangeKind, string> = {
   deleted: "삭제",
 };
 
+const copyText = (text: string) => {
+  navigator.clipboard?.writeText?.(text).catch(() => {});
+};
+
 const StepRow: React.FC<{ step: ReactStep; idx: number }> = ({ step }) => {
   // file_change는 단계 목록에서 숨김 — 변경 파일 섹션에서 종합 표시.
   if (step.kind === "file_change") {
     return null;
+  }
+  if (step.kind === "error") {
+    return (
+      <div className="flex items-start gap-1.5 py-1 px-1 rounded bg-red-500/6 border border-red-500/10">
+        {KIND_ICON[step.kind]}
+        <div className="flex-1 min-w-0 flex items-start gap-2 justify-between">
+          <span className={`text-sm leading-relaxed ${KIND_COLOR[step.kind]} font-mono whitespace-pre-wrap break-all`}>
+            {step.content}
+          </span>
+          <IconButton
+            tooltip="오류 텍스트 복사"
+            onClick={() => copyText(step.content)}
+            className="p-1 rounded text-red-200/85 hover:text-red-100 hover:bg-red-500/20 transition-colors shrink-0"
+          >
+            <Copy size={11} />
+          </IconButton>
+        </div>
+      </div>
+    );
   }
   if (step.kind === "status") {
     return (

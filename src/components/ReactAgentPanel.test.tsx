@@ -28,6 +28,35 @@ function makeState(overrides: Partial<ReactAgentState> = {}): ReactAgentState {
   };
 }
 
+function setupClipboardWriteMock() {
+  const nav = globalThis.navigator as Navigator & {
+    clipboard?: { writeText: (value: string) => Promise<void> };
+  };
+  const originalClipboard = nav.clipboard;
+  const writeText = vi.fn().mockResolvedValue(undefined);
+  Object.defineProperty(globalThis.navigator, "clipboard", {
+    configurable: true,
+    value: { writeText },
+  });
+
+  return {
+    writeText,
+    restore: () => {
+      if (originalClipboard) {
+        Object.defineProperty(globalThis.navigator, "clipboard", {
+          configurable: true,
+          value: originalClipboard,
+        });
+      } else {
+        Object.defineProperty(globalThis.navigator, "clipboard", {
+          configurable: true,
+          value: undefined,
+        });
+      }
+    },
+  };
+}
+
 function mockConfigAndScip() {
   const status = {
     enabled: true,
@@ -354,6 +383,37 @@ describe("ReactAgentPanel", () => {
     );
 
     expect(screen.getByRole("button", { name: "변경 되돌리기" })).toBeEnabled();
+  });
+
+  it("오류 내용 복사 버튼이 복사 동작을 수행한다", async () => {
+    const clipboardMock = setupClipboardWriteMock();
+    render(
+      <ReactAgentPanel
+        state={makeState({
+          status: "error",
+          steps: [
+            {
+              kind: "error",
+              content: "ReAct 실행 중 심각한 오류 발생",
+            },
+          ],
+        })}
+        onCancel={onCancel}
+        onClose={onClose}
+        onUndo={onUndo}
+        onRunAct={onRunAct}
+      />,
+    );
+
+    const copyButton = await screen.findByRole("button", {
+      name: "오류 텍스트 복사",
+    });
+    fireEvent.click(copyButton);
+
+    expect(clipboardMock.writeText).toHaveBeenCalledWith(
+      "ReAct 실행 중 심각한 오류 발생",
+    );
+    clipboardMock.restore();
   });
 
   it("undo 실행 중에는 변경 되돌리기 버튼이 비활성화되고 되돌리는 중 문구를 노출한다", () => {
