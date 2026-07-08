@@ -211,10 +211,27 @@ describe("CommandInput Component", () => {
     const copyButton = screen.getByRole("button", { name: "오류 텍스트 복사" });
     fireEvent.click(copyButton);
     expect(clipboardMock.writeText).toHaveBeenCalledWith(
-      "음성 입력 오류: 마이크 권한이 거부되었습니다.",
+      "음성 입력 오류: 마이크 권한이 거부되었습니다. 시스템 설정에서 권한을 허용해 주세요.",
     );
 
     clipboardMock.restore();
+  });
+
+  it("음성 입력 오류 배너를 직접 닫을 수 있다", async () => {
+    invokeMock.mockImplementation(async (cmd: string) => {
+      if (cmd === "voice_recording_status") return false;
+      if (cmd === "start_voice_recording") throw new Error("mic permission denied");
+      return undefined;
+    });
+    render(<CommandInput {...defaultProps} />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByLabelText("음성 명령"));
+    });
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("마이크 권한이 거부되었습니다.");
+    fireEvent.click(screen.getByRole("button", { name: "음성 입력 오류 닫기" }));
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
   it("음성 처리 중에는 마이크 연타를 무시해야 함", async () => {

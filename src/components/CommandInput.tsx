@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Zap, Mic, MicOff, Copy } from "lucide-react";
+import { Zap, Mic, MicOff, Copy, X } from "lucide-react";
 import { IconButton } from "@/components/ui/icon-button";
 import { shortPath } from "../utils";
 import Editor from "react-simple-code-editor";
@@ -33,7 +33,7 @@ const CommandInput = ({
     setValue((prev) => (prev.trim() ? `${prev} ${t}` : t));
   };
 
-  const { isRecording, voiceBusy, voiceError, handleMicToggle } = useVoiceInput({
+  const { isRecording, voiceBusy, voiceError, handleMicToggle, clearVoiceError } = useVoiceInput({
     onTranscript: injectTranscript,
   });
   const [history, setHistory] = useState<string[]>([]);
@@ -267,6 +267,13 @@ const CommandInput = ({
               className="p-1 rounded text-red-300 hover:text-red-100 hover:bg-red-500/20 transition-colors shrink-0"
             >
               <Copy size={11} />
+            </IconButton>
+            <IconButton
+              tooltip="음성 입력 오류 닫기"
+              onClick={clearVoiceError}
+              className="p-1 rounded text-red-300 hover:text-red-100 hover:bg-red-500/20 transition-colors shrink-0"
+            >
+              <X size={11} />
             </IconButton>
           </div>
         )}

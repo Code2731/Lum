@@ -14,6 +14,7 @@ interface UseVoiceInputResult {
   voiceBusy: boolean;
   voiceError: string | null;
   handleMicToggle: () => Promise<void>;
+  clearVoiceError: () => void;
 }
 
 const STOP_FALLBACK_DUP_GUARD_MS = 4_000;
@@ -193,5 +194,6 @@ export function useVoiceInput({
     voiceBusy,
     voiceError,
     handleMicToggle,
+    clearVoiceError: () => setVoiceError(null),
   };
 }

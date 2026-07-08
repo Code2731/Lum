@@ -1,5 +1,5 @@
 import React, { useEffect, useImperativeHandle, useRef, useState, forwardRef } from "react";
-import { Mic, MicOff, Copy } from "lucide-react";
+import { Mic, MicOff, Copy, X } from "lucide-react";
 import { tokenizeShell, TOKEN_COLORS } from "../utils/shellSyntax";
 import {
   applyBackendPrefixToInput,
@@ -361,7 +361,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
       inputRef.current?.focus();
     };
 
-    const { isRecording, voiceBusy, voiceError, handleMicToggle } = useVoiceInput({
+    const { isRecording, voiceBusy, voiceError, handleMicToggle, clearVoiceError } = useVoiceInput({
       enabled: voiceEnabled,
       onTranscript: injectTranscript,
     });
@@ -521,6 +521,28 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
               }}
             >
               <Copy size={10} />
+            </button>
+            <button
+              type="button"
+              aria-label="음성 입력 오류 닫기"
+              title="음성 입력 오류 닫기"
+              onClick={clearVoiceError}
+              style={{
+                flexShrink: 0,
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                width: 14,
+                height: 14,
+                borderRadius: 6,
+                border: "1px solid rgba(255,255,255,0.24)",
+                background: "rgba(255,255,255,0.07)",
+                color: "rgba(248,81,73,0.95)",
+                cursor: "pointer",
+                padding: 0,
+              }}
+            >
+              <X size={10} />
             </button>
           </div>
         )}
