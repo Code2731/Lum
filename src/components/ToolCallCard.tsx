@@ -1,9 +1,10 @@
 import React, { useState, useMemo } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { Play, Check, X, AlertTriangle, Loader2, Wrench, ChevronDown, ChevronRight, Send, Image as ImageIcon } from "lucide-react";
+import { Play, Check, X, AlertTriangle, Loader2, Wrench, ChevronDown, ChevronRight, Send, Image as ImageIcon, Copy, Settings } from "lucide-react";
 import type { ToolCall } from "../utils/toolCallParser";
 import { parseMcpResult } from "../utils/mcpContent";
-import { formatAIErrorMessage, isCancelError } from "../utils/errorMessage";
+import { IconButton } from "@/components/ui/icon-button";
+import { formatAIErrorMessage, isCancelError, isRoutingError } from "../utils/errorMessage";
 
 interface Props {
   call: ToolCall;
@@ -11,11 +12,12 @@ interface Props {
   onAskAIWithResult?: (resultSummary: string, images?: string[]) => void;
   /** 비전 모드 활성 여부 — true면 이미지 블록을 base64 data URI로 함께 전달 */
   visionEnabled?: boolean;
+  onOpenXllmPanel?: () => void;
 }
 
 type Status = "pending" | "running" | "done" | "rejected" | "error";
 
-const ToolCallCard: React.FC<Props> = ({ call, onAskAIWithResult, visionEnabled }) => {
+const ToolCallCard: React.FC<Props> = ({ call, onAskAIWithResult, visionEnabled, onOpenXllmPanel }) => {
   const [status, setStatus] = useState<Status>("pending");
   const [result, setResult] = useState<unknown>(null);
   const [error, setError] = useState<string | null>(null);
@@ -55,6 +57,7 @@ const ToolCallCard: React.FC<Props> = ({ call, onAskAIWithResult, visionEnabled 
   };
 
   const parsed = useMemo(() => (result !== null ? parseMcpResult(result) : null), [result]);
+  const showRoutingErrorActions = isRoutingError(error);
 
   const sendResultToAI = () => {
     if (!onAskAIWithResult || !parsed) return;
@@ -80,6 +83,11 @@ const ToolCallCard: React.FC<Props> = ({ call, onAskAIWithResult, visionEnabled 
       "이 결과를 바탕으로 분석 또는 다음 단계를 제시해 주세요.",
     ].filter(Boolean).join("\n");
     onAskAIWithResult(log, images.length > 0 ? images : undefined);
+  };
+
+  const handleCopyError = () => {
+    if (!error) return;
+    navigator.clipboard?.writeText?.(error).catch(() => {});
   };
 
   return (
@@ -158,7 +166,27 @@ const ToolCallCard: React.FC<Props> = ({ call, onAskAIWithResult, visionEnabled 
         {error && (
           <div className="flex items-start gap-1.5 px-2 py-1.5 bg-red-500/10 border border-red-500/20 rounded text-red-300">
             <AlertTriangle size={11} className="mt-0.5 shrink-0" />
-            <div className="font-mono whitespace-pre-wrap break-all text-xs">{error}</div>
+            <div className="flex-1 flex items-start justify-between gap-2">
+              <div className="font-mono whitespace-pre-wrap break-all text-xs">{error}</div>
+              <div className="flex items-center gap-1 shrink-0">
+                {showRoutingErrorActions && onOpenXllmPanel && (
+                  <IconButton
+                    tooltip="xLLM/모델 설정 열기"
+                    onClick={onOpenXllmPanel}
+                    className="p-1 rounded text-red-200/85 hover:text-red-100 hover:bg-red-500/20 transition-colors"
+                  >
+                    <Settings size={12} />
+                  </IconButton>
+                )}
+                <IconButton
+                  tooltip="오류 텍스트 복사"
+                  onClick={handleCopyError}
+                  className="p-1 rounded text-red-200/85 hover:text-red-100 hover:bg-red-500/20 transition-colors"
+                >
+                  <Copy size={12} />
+                </IconButton>
+              </div>
+            </div>
           </div>
         )}
 

@@ -70,6 +70,50 @@ describe("ToolCallCard", () => {
     ).toBeInTheDocument();
   });
 
+  it("라우팅 실패면 xLLM/모델 설정 버튼이 표시되고 동작한다", async () => {
+    const onOpenXllmPanel = vi.fn();
+    invokeMock.mockRejectedValue({
+      message:
+        "백엔드가 미설정/미연결 상태입니다. xLLM 패널에서 모델/URL/API 키를 확인하세요.",
+    });
+
+    render(<ToolCallCard call={mockCall} onOpenXllmPanel={onOpenXllmPanel} />);
+    fireEvent.click(screen.getByRole("button", { name: "실행" }));
+
+    fireEvent.click(await screen.findByLabelText("xLLM/모델 설정 열기"));
+    expect(onOpenXllmPanel).toHaveBeenCalledTimes(1);
+  });
+
+  it("오류 배너의 텍스트를 클립보드에 복사할 수 있다", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    const originalClipboard = (globalThis.navigator as Navigator & { clipboard?: { writeText: typeof writeText } }).clipboard;
+    let spyWriteText: ReturnType<typeof vi.fn> | null = null;
+    if (originalClipboard) {
+      spyWriteText = vi.spyOn(originalClipboard, "writeText").mockResolvedValue(undefined);
+    } else {
+      Object.defineProperty(globalThis.navigator, "clipboard", {
+        value: { writeText },
+        configurable: true,
+      });
+    }
+
+    invokeMock.mockRejectedValue({ message: "MCP 응답 타임아웃 (3000 ms)" });
+    render(<ToolCallCard call={mockCall} />);
+    fireEvent.click(screen.getByRole("button", { name: "실행" }));
+
+    await screen.findByRole("button", { name: "오류 텍스트 복사" });
+    fireEvent.click(screen.getByRole("button", { name: "오류 텍스트 복사" }));
+    if (spyWriteText) {
+      expect(spyWriteText).toHaveBeenCalledWith(
+        expect.stringContaining("네트워크/백엔드 연결 불안정: MCP 응답 타임아웃 (3000 ms)"),
+      );
+    } else {
+      expect(writeText).toHaveBeenCalledWith(
+        expect.stringContaining("네트워크/백엔드 연결 불안정: MCP 응답 타임아웃 (3000 ms)"),
+      );
+    }
+  });
+
   it("취소 오류는 상태를 pending으로 되돌리고 에러를 표시하지 않는다", async () => {
     invokeMock.mockRejectedValue({ message: "canceled by user" });
 

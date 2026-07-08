@@ -219,6 +219,7 @@ const AIBlockStream: React.FC<Props> = ({
                   call={c}
                   onAskAIWithResult={onAskAIForFix}
                   visionEnabled={visionEnabled}
+                  onOpenXllmPanel={onOpenXllmPanel}
                 />
               ))}
             </div>
