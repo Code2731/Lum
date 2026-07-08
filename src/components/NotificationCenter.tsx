@@ -117,18 +117,36 @@ const NotificationCenter: React.FC<Props> = ({
 
   const normalizedSearchQuery = useMemo(() => searchQuery.trim(), [searchQuery]);
 
-  const displayedNotifications = useMemo(() => {
+  const { displayedNotifications, matchedTitleCount, matchedBodyCount } = useMemo(() => {
     const normalizedSearch = normalizedSearchQuery.toLowerCase();
     const afterUnreadFilter = showUnreadOnly ? orderedNotifications.filter((n) => !n.read) : orderedNotifications;
     const afterTypeFilter = typeFilter === "all"
       ? afterUnreadFilter
       : afterUnreadFilter.filter((n) => n.type === typeFilter);
 
-    if (!normalizedSearch) return afterTypeFilter;
-    return afterTypeFilter.filter((n) => {
-      const target = `${n.title} ${n.body}`.toLowerCase();
-      return target.includes(normalizedSearch);
+    if (!normalizedSearch) {
+      return {
+        displayedNotifications: afterTypeFilter,
+        matchedTitleCount: 0,
+        matchedBodyCount: 0,
+      };
+    }
+
+    let titleMatchCount = 0;
+    let bodyMatchCount = 0;
+    const matched = afterTypeFilter.filter((n) => {
+      const titleMatched = n.title.toLowerCase().includes(normalizedSearch);
+      const bodyMatched = n.body.toLowerCase().includes(normalizedSearch);
+      if (titleMatched) titleMatchCount += 1;
+      if (bodyMatched) bodyMatchCount += 1;
+      return titleMatched || bodyMatched;
     });
+
+    return {
+      displayedNotifications: matched,
+      matchedTitleCount: titleMatchCount,
+      matchedBodyCount: bodyMatchCount,
+    };
   }, [orderedNotifications, showUnreadOnly, typeFilter, normalizedSearchQuery]);
 
   const displayedNotificationIds = useMemo(
@@ -451,7 +469,9 @@ const NotificationCenter: React.FC<Props> = ({
           </div>
           <div className="shrink-0 px-2 py-1.5 text-[10px] text-white/45">
             {displayedNotifications.length}건
-            {normalizedSearchQuery ? ` · "${normalizedSearchQuery}"` : ""}
+            {normalizedSearchQuery
+              ? ` · "${normalizedSearchQuery}" · 제목: ${matchedTitleCount}건, 본문: ${matchedBodyCount}건`
+              : ""}
           </div>
           <div className="flex items-center gap-1.5 overflow-x-auto">
             {FILTER_TYPES.map((filterType) => {

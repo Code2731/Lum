@@ -792,6 +792,50 @@ describe("NotificationCenter", () => {
     expect(screen.queryByText("에이전트 완료")).not.toBeInTheDocument();
   });
 
+  it("검색어 매칭 개수를 제목/본문으로 분리해 표시한다", () => {
+    render(
+      <NotificationCenter
+        notifications={[
+          {
+            id: "1",
+            type: "command",
+            title: "빌드 완료",
+            body: "CI 빌드 파이프라인이 끝났습니다",
+            timestamp: 1_000,
+            read: false,
+          },
+          {
+            id: "2",
+            type: "agent",
+            title: "에이전트 알림",
+            body: "빌드 중 에러가 발생했습니다",
+            timestamp: 2_000,
+            read: false,
+          },
+          {
+            id: "3",
+            type: "healing",
+            title: "치유 메시지",
+            body: "수정이 필요합니다",
+            timestamp: 3_000,
+            read: false,
+          },
+        ]}
+        unreadCount={3}
+        onMarkAllRead={vi.fn()}
+        onDismiss={vi.fn()}
+        onDismissByIds={vi.fn()}
+        onClear={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText("알림 검색"), { target: { value: "빌드" } });
+
+    expect(screen.getByText("2건")).toBeInTheDocument();
+    expect(screen.getByText(/제목:\s*1건,\s*본문:\s*2건/)).toBeInTheDocument();
+  });
+
   it("검색어 입력 시 일치 항목이 없으면 검색 결과 메시지를 표시한다", () => {
     render(
       <NotificationCenter
