@@ -142,6 +142,7 @@ const CommandInput = ({
     voiceStatus === "processing" ? "text-sky-300 bg-sky-500/10 border-sky-400/30" :
     "text-white/55 bg-white/5 border-white/15";
   const voicePulseActive = voiceStatus === "listening" || voiceStatus === "processing";
+  const isVoiceProcessing = voiceStatus === "processing";
   const showVoiceStatusBanner =
     !voiceError &&
     voiceSuccessPhase === "hidden" &&
@@ -190,6 +191,12 @@ const CommandInput = ({
   };
 
   const onKeyDown = async (e: React.KeyboardEvent) => {
+    if (isVoiceProcessing) {
+      if (e.key !== "Tab") {
+        e.preventDefault();
+      }
+      return;
+    }
     if (isComposing || e.nativeEvent.isComposing) {
       return;
     }
@@ -291,6 +298,14 @@ const CommandInput = ({
     words.push(completion);
     setValue(words.join(" "));
   };
+
+  useEffect(() => {
+    if (!isVoiceProcessing) return;
+    const editor = document.getElementById("command-editor-textarea");
+    if (editor instanceof HTMLTextAreaElement) {
+      editor.focus();
+    }
+  }, [isVoiceProcessing]);
 
   const highlight = (code: string) => {
     const escapeHtml = (value: string) =>
@@ -516,6 +531,9 @@ const CommandInput = ({
             <Editor
               value={value}
               onValueChange={(code) => {
+                if (isVoiceProcessing) {
+                  return;
+                }
                 if (voiceError) {
                   clearVoiceError();
                 }
@@ -530,6 +548,8 @@ const CommandInput = ({
               highlight={highlight}
               padding={0}
               onKeyDown={onKeyDown}
+              readOnly={isVoiceProcessing}
+              aria-busy={isVoiceProcessing}
               className="editor-input"
               style={{
                 fontFamily: "var(--font-mono)",
@@ -540,6 +560,8 @@ const CommandInput = ({
                 background: "transparent",
                 zIndex: 2,
                 position: "relative",
+                cursor: isVoiceProcessing ? "wait" : "text",
+                opacity: isVoiceProcessing ? 0.92 : 1,
               }}
               textareaId="command-editor-textarea"
               placeholder={isAI ? "AI에게 질문하세요..." : ""}

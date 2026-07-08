@@ -227,6 +227,12 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
     }, [compactContextChips, contextChips]);
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (isVoiceProcessing) {
+        if (e.key !== "Tab") {
+          e.preventDefault();
+        }
+        return;
+      }
       if (isComposing || e.nativeEvent.isComposing) return;
       if (onKeyDownIntercept?.(e, input)) {
         e.preventDefault();
@@ -422,6 +428,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
     };
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (isVoiceProcessing) return;
       const v = e.target.value;
       if (voiceError) {
         clearVoiceError();
@@ -462,6 +469,12 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
       inputRef.current?.focus();
     };
 
+    useEffect(() => {
+      if (isVoiceProcessing) {
+        inputRef.current?.focus();
+      }
+    }, [isVoiceProcessing]);
+
     const { isRecording, voiceBusy, voiceError, voiceStatus, handleMicToggle, clearVoiceError } = useVoiceInput({
       enabled: voiceEnabled,
       onTranscript: injectTranscript,
@@ -492,6 +505,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
         border: "1px solid rgba(255,255,255,0.12)",
       };
     const voicePulseActive = voiceStatus === "listening" || voiceStatus === "processing";
+    const isVoiceProcessing = voiceStatus === "processing";
     const showVoiceStatusBanner =
       !voiceError &&
       voiceSuccessPhase === "hidden" &&
@@ -838,6 +852,8 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
               whiteSpace: "pre",
               overflow: "hidden",
               lineHeight: 1.4,
+              opacity: isVoiceProcessing ? 0.78 : 1,
+              transition: "opacity 120ms ease",
             }}
           >
             {modeHint ? (
@@ -886,6 +902,8 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
             type="text"
             data-lum-main-input="true"
             value={input}
+            readOnly={isVoiceProcessing}
+            aria-busy={isVoiceProcessing}
             onChange={handleChange}
             onKeyDown={handleKeyDown}
             onCompositionStart={() => setIsComposing(true)}
@@ -917,6 +935,8 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
               padding: 0,
               margin: 0,
               lineHeight: 1.4,
+              cursor: isVoiceProcessing ? "wait" : "text",
+              opacity: isVoiceProcessing ? 0.92 : 1,
             }}
           />
           </div>
