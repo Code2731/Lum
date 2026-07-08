@@ -1,5 +1,5 @@
 import React, { useEffect, useImperativeHandle, useRef, useState, forwardRef } from "react";
-import { Mic, MicOff, Copy, X } from "lucide-react";
+import { Mic, MicOff, Copy, RotateCcw, X } from "lucide-react";
 import { tokenizeShell, TOKEN_COLORS } from "../utils/shellSyntax";
 import {
   applyBackendPrefixToInput,
@@ -521,6 +521,30 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
               }}
             >
               <Copy size={10} />
+            </button>
+            <button
+              type="button"
+              aria-label="음성 입력 다시 시도"
+              title="음성 입력 다시 시도"
+              onClick={handleMicToggle}
+              disabled={voiceBusy}
+              style={{
+                flexShrink: 0,
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                width: 14,
+                height: 14,
+                borderRadius: 6,
+                border: "1px solid rgba(255,255,255,0.24)",
+                background: "rgba(255,255,255,0.07)",
+                color: "rgba(248,81,73,0.95)",
+                cursor: voiceBusy ? "wait" : "pointer",
+                padding: 0,
+                opacity: voiceBusy ? 0.55 : 1,
+              }}
+            >
+              <RotateCcw size={10} />
             </button>
             <button
               type="button"

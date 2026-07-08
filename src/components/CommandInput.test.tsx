@@ -234,6 +234,36 @@ describe("CommandInput Component", () => {
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
+  it("음성 입력 오류 배너에서 바로 다시 시도할 수 있다", async () => {
+    let attempts = 0;
+    invokeMock.mockImplementation(async (cmd: string) => {
+      if (cmd === "voice_recording_status") return false;
+      if (cmd === "start_voice_recording") {
+        attempts += 1;
+        if (attempts === 1) {
+          throw new Error("mic permission denied");
+        }
+        return undefined;
+      }
+      return undefined;
+    });
+    render(<CommandInput {...defaultProps} />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByLabelText("음성 명령"));
+    });
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("마이크 권한이 거부되었습니다.");
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "음성 입력 다시 시도" }));
+    });
+
+    expect(screen.getByLabelText("음성 명령")).toHaveClass("active");
+    const startCalls = invokeMock.mock.calls.filter(([cmd]) => cmd === "start_voice_recording");
+    expect(startCalls).toHaveLength(2);
+  });
+
   it("음성 처리 중에는 마이크 연타를 무시해야 함", async () => {
     let resolveStart: (() => void) | null = null;
     invokeMock.mockImplementation((cmd: string) => {

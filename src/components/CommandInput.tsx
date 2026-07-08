@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Zap, Mic, MicOff, Copy, X } from "lucide-react";
+import { Zap, Mic, MicOff, Copy, RotateCcw, X } from "lucide-react";
 import { IconButton } from "@/components/ui/icon-button";
 import { shortPath } from "../utils";
 import Editor from "react-simple-code-editor";
@@ -267,6 +267,14 @@ const CommandInput = ({
               className="p-1 rounded text-red-300 hover:text-red-100 hover:bg-red-500/20 transition-colors shrink-0"
             >
               <Copy size={11} />
+            </IconButton>
+            <IconButton
+              tooltip="음성 입력 다시 시도"
+              onClick={handleMicToggle}
+              disabled={voiceBusy}
+              className="p-1 rounded text-red-300 hover:text-red-100 hover:bg-red-500/20 transition-colors shrink-0"
+            >
+              <RotateCcw size={11} />
             </IconButton>
             <IconButton
               tooltip="음성 입력 오류 닫기"

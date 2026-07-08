@@ -764,6 +764,35 @@ describe("WarpInputBar — dumb input, 라우팅은 상위에서", () => {
     expect(queryByText(/음성 입력 오류:/)).not.toBeInTheDocument();
   });
 
+  it("음성 입력 오류 배지에서 바로 다시 시도할 수 있다", async () => {
+    let attempts = 0;
+    invokeMock.mockImplementation(async (cmd: string) => {
+      if (cmd === "start_voice_recording") {
+        attempts += 1;
+        if (attempts === 1) {
+          throw new Error("mic permission denied");
+        }
+        return;
+      }
+      return;
+    });
+    const { getByLabelText, findByText } = setup();
+
+    await act(async () => {
+      fireEvent.click(getByLabelText("음성 녹음 시작"));
+    });
+
+    expect(await findByText(/음성 입력 오류:/)).toBeInTheDocument();
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "음성 입력 다시 시도" }));
+    });
+
+    expect(getByLabelText("음성 녹음 중지")).toBeInTheDocument();
+    const startCalls = invokeMock.mock.calls.filter(([cmd]) => cmd === "start_voice_recording");
+    expect(startCalls).toHaveLength(2);
+  });
+
   it("마이크 중지 실패 시 voice_recording_status 재조회로 상태를 동기화", async () => {
     let recording = false;
     invokeMock.mockImplementation(async (cmd: string) => {
