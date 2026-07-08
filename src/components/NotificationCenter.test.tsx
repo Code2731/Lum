@@ -1771,6 +1771,110 @@ describe("NotificationCenter", () => {
     expect(screen.queryByLabelText("최근 검색어 삭제 대상 검색 삭제")).not.toBeInTheDocument();
   });
 
+  it("검색 기록 항목 버튼에서 Enter/Space로 항목을 적용할 수 있다", () => {
+    render(
+      <NotificationCenter
+        notifications={[
+          {
+            id: "1",
+            type: "command",
+            title: "빌드 에러 코드 500",
+            body: "에러 메시지 분석",
+            timestamp: 1_000,
+            read: false,
+          },
+        ]}
+        unreadCount={1}
+        onMarkAllRead={vi.fn()}
+        onDismiss={vi.fn()}
+        onDismissByIds={vi.fn()}
+        onClear={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    const searchInput = screen.getByLabelText("알림 검색");
+    fireEvent.focus(searchInput);
+    fireEvent.change(searchInput, { target: { value: "엔터 적용 검색" } });
+    fireEvent.blur(searchInput);
+    fireEvent.change(searchInput, { target: { value: "" } });
+    fireEvent.focus(searchInput);
+
+    const historyDeleteButton = screen.getByLabelText("최근 검색어 엔터 적용 검색 삭제");
+    fireEvent.keyDown(historyDeleteButton, { key: "Enter" });
+    expect(searchInput).toHaveValue("엔터 적용 검색");
+    expect(screen.queryByLabelText("최근 검색어 엔터 적용 검색 삭제")).not.toBeInTheDocument();
+  });
+
+  it("검색 기록 삭제 버튼에서 Space로 항목을 적용할 수 있다", () => {
+    render(
+      <NotificationCenter
+        notifications={[
+          {
+            id: "1",
+            type: "command",
+            title: "빌드 에러 코드 500",
+            body: "에러 메시지 분석",
+            timestamp: 1_000,
+            read: false,
+          },
+        ]}
+        unreadCount={1}
+        onMarkAllRead={vi.fn()}
+        onDismiss={vi.fn()}
+        onDismissByIds={vi.fn()}
+        onClear={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    const searchInput = screen.getByLabelText("알림 검색");
+    fireEvent.focus(searchInput);
+    fireEvent.change(searchInput, { target: { value: "엔터 적용 검색" } });
+    fireEvent.blur(searchInput);
+    fireEvent.change(searchInput, { target: { value: "" } });
+    fireEvent.focus(searchInput);
+
+    const spaceDeleteButton = screen.getByLabelText("최근 검색어 엔터 적용 검색 삭제");
+    fireEvent.keyDown(spaceDeleteButton, { key: " " });
+    expect(searchInput).toHaveValue("엔터 적용 검색");
+  });
+
+  it("검색 기록 항목 버튼에서 Backspace/Delete 키로 삭제할 수 있다", () => {
+    render(
+      <NotificationCenter
+        notifications={[
+          {
+            id: "1",
+            type: "command",
+            title: "빌드 에러 코드 500",
+            body: "에러 메시지 분석",
+            timestamp: 1_000,
+            read: false,
+          },
+        ]}
+        unreadCount={1}
+        onMarkAllRead={vi.fn()}
+        onDismiss={vi.fn()}
+        onDismissByIds={vi.fn()}
+        onClear={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    const searchInput = screen.getByLabelText("알림 검색");
+    fireEvent.focus(searchInput);
+    fireEvent.change(searchInput, { target: { value: "삭제 버튼 키보드 삭제" } });
+    fireEvent.blur(searchInput);
+    fireEvent.change(searchInput, { target: { value: "" } });
+    fireEvent.focus(searchInput);
+
+    const historyDeleteButton = screen.getByLabelText("최근 검색어 삭제 버튼 키보드 삭제 삭제");
+    fireEvent.keyDown(historyDeleteButton, { key: "Delete" });
+
+    expect(screen.queryByLabelText("최근 검색어 삭제 버튼 키보드 삭제 삭제")).not.toBeInTheDocument();
+  });
+
   it("단축키 1/2로 검색 모드를 전환할 수 있다", () => {
     render(
       <NotificationCenter
