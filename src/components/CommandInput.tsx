@@ -141,10 +141,15 @@ const CommandInput = ({
     voiceStatus === "processing" ? "text-sky-300 bg-sky-500/10 border-sky-400/30" :
     "text-white/55 bg-white/5 border-white/15";
   const voicePulseActive = voiceStatus === "listening" || voiceStatus === "processing";
+  const showVoiceStatusBanner =
+    !voiceError &&
+    voiceSuccessPhase === "hidden" &&
+    voiceStatus !== "idle";
+  const showInlineVoiceStatus = !voiceError && voiceSuccessPhase === "hidden" && voiceStatus === "idle";
   const voiceLiveMessage =
     voiceError ? `음성 입력 오류: ${voiceError}` :
     voiceSuccessPhase !== "hidden" ? "음성 입력 반영됨" :
-    `음성 상태: ${voiceStatusLabel}`;
+      `음성 상태: ${voiceStatusLabel}`;
   const [history, setHistory] = useState<string[]>([]);
   const [historyIdx, setHistoryIdx] = useState(-1);
 
@@ -370,12 +375,14 @@ const CommandInput = ({
           >
             {isRecording ? <Mic size={14} /> : <MicOff size={14} />}
           </IconButton>
-          <span
-            aria-hidden="true"
-            className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] leading-none ${voiceStatusToneClass}`}
-          >
-            {voiceStatusLabel}
-          </span>
+          {showInlineVoiceStatus && (
+            <span
+              aria-hidden="true"
+              className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] leading-none ${voiceStatusToneClass}`}
+            >
+              {voiceStatusLabel}
+            </span>
+          )}
           <span className="editor-path">{shortPath(context.cwd)}</span>
           {context.git_branch && (
             <>
@@ -471,6 +478,27 @@ const CommandInput = ({
             }}
           >
             음성 입력 반영됨
+          </div>
+        )}
+
+        {showVoiceStatusBanner && (
+          <div
+            role="status"
+            className="voice-status-banner"
+            style={{
+              margin: "0 10px 6px 10px",
+              padding: "4px 8px",
+              borderRadius: 6,
+              fontSize: VOICE_ERROR_FONT_SIZE,
+              lineHeight: 1.3,
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+            }}
+          >
+            <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] leading-none ${voiceStatusToneClass}`}>
+              {voiceStatusLabel}
+            </span>
           </div>
         )}
 

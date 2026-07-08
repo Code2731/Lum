@@ -491,6 +491,11 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
         border: "1px solid rgba(255,255,255,0.12)",
       };
     const voicePulseActive = voiceStatus === "listening" || voiceStatus === "processing";
+    const showVoiceStatusBanner =
+      !voiceError &&
+      voiceSuccessPhase === "hidden" &&
+      voiceStatus !== "idle";
+    const showInlineVoiceStatus = !voiceError && voiceSuccessPhase === "hidden" && voiceStatus === "idle";
     const voiceLiveMessage =
       voiceError ? `음성 입력 오류: ${voiceError}` :
       voiceSuccessPhase !== "hidden" ? "음성 입력 반영됨" :
@@ -740,6 +745,25 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
           </div>
         )}
 
+        {showVoiceStatusBanner && (
+          <div
+            style={{
+              position: "absolute",
+              top: -24,
+              right: 10,
+              fontSize: WARP_SMALL_FONT_SIZE,
+              borderRadius: 6,
+              padding: "2px 8px",
+              display: "inline-flex",
+              alignItems: "center",
+              whiteSpace: "nowrap",
+              ...voiceStatusTone,
+            }}
+          >
+            {voiceStatusLabel}
+          </div>
+        )}
+
         <div style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, minHeight: 32 }}>
           <span style={{ color: promptColor, fontFamily, fontSize, opacity: 0.85, flexShrink: 0 }}>
             {promptChar}
@@ -779,7 +803,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
             </button>
           )}
 
-          {voiceEnabled && (
+          {voiceEnabled && showInlineVoiceStatus && (
             <span
               aria-hidden="true"
               style={{
