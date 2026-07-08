@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import {
-  Plus, Plug, PlugZap, Trash2, RefreshCw, Download, Play,
+  Plus, Plug, PlugZap, Trash2, RefreshCw, Download, Play, Copy,
   ChevronDown, ChevronRight, Loader2, AlertTriangle, CheckCircle2,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -318,10 +318,22 @@ const McpPanel: React.FC<Props> = ({ onClose }) => {
                       </div>
                     )}
 
-                    {err && (
+                  {err && (
                       <div className="flex items-start gap-1.5 px-2 py-1.5 bg-red-500/10 border border-red-500/20 rounded text-sm text-red-300">
                         <AlertTriangle size={11} className="mt-0.5 shrink-0" />
-                        <div className="font-mono whitespace-pre-wrap break-all">{err}</div>
+                        <div className="flex-1 flex items-start justify-between gap-2">
+                          <div className="font-mono whitespace-pre-wrap break-all">{err}</div>
+                          <IconButton
+                            tooltip="오류 텍스트 복사"
+                            onClick={() => {
+                              if (!err) return;
+                              navigator.clipboard?.writeText?.(err).catch(() => {});
+                            }}
+                            className="p-1 rounded text-red-200/85 hover:text-red-100 hover:bg-red-500/20 transition-colors"
+                          >
+                            <Copy size={12} />
+                          </IconButton>
+                        </div>
                       </div>
                     )}
 
