@@ -480,10 +480,10 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
       onTranscript: injectTranscript,
     });
     const voiceStatusLabel =
-      voiceError ? "음성 오류" :
+      voiceError ? "오류" :
       voiceStatus === "listening" ? "듣는 중" :
-      voiceStatus === "processing" ? "텍스트 반영 중" :
-      "음성 대기";
+      voiceStatus === "processing" ? "반영 중" :
+      "대기 중";
     const voiceStatusTone =
       voiceError ? {
         color: "#ff7b72",

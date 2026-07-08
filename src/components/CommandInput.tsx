@@ -132,10 +132,10 @@ const CommandInput = ({
     onTranscript: injectTranscript,
   });
   const voiceStatusLabel =
-    voiceError ? "음성 오류" :
+    voiceError ? "오류" :
     voiceStatus === "listening" ? "듣는 중" :
-    voiceStatus === "processing" ? "텍스트 반영 중" :
-    "음성 대기";
+    voiceStatus === "processing" ? "반영 중" :
+    "대기 중";
   const voiceStatusToneClass =
     voiceError ? "text-red-300 bg-red-500/10 border-red-400/30" :
     voiceStatus === "listening" ? "text-emerald-300 bg-emerald-500/10 border-emerald-400/30" :
