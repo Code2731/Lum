@@ -3,7 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import {
   SlidersHorizontal, Loader2,
-  Zap, Sparkles, FolderOpen, Wifi, RefreshCw, Check, Database,
+  Zap, Sparkles, FolderOpen, Wifi, RefreshCw, Check, Database, Copy,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { IconButton } from "@/components/ui/icon-button";
@@ -14,6 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { shortPath, parsePathComponents, parseLoadedKey } from "../utils";
 import { SMALL_ICON_SIZE } from "../constants/ui";
+import { isRoutingError } from "../utils/errorMessage";
 
 interface AppConfig {
   coding_model?: string;
@@ -283,6 +284,19 @@ const XllmPanel: React.FC<Props> = ({ onClose }) => {
     }
   }, [config]);
 
+  const copyStatusMsg = () => {
+    if (!statusMsg) return;
+    navigator.clipboard?.writeText?.(statusMsg).catch(() => {});
+  };
+
+  const isStatusFailure = statusMsg?.includes("실패:") ?? false;
+  const statusErrorMessage = statusMsg?.startsWith("저장 실패:")
+    ? statusMsg.replace(/^저장 실패:\s*/, "")
+    : null;
+  const statusIsRoutingError = statusErrorMessage
+    ? isRoutingError(statusErrorMessage)
+    : false;
+
   return (
     <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
       <DialogContent className="sm:max-w-lg top-[12%] translate-y-0 max-h-[80vh] flex flex-col gap-0 p-0 overflow-hidden border-white/10 rounded-xl">
@@ -417,7 +431,25 @@ const XllmPanel: React.FC<Props> = ({ onClose }) => {
         {/* 하단 — 상태 메시지 + 저장 버튼 */}
         <div className="flex items-center gap-3 px-4 py-3 border-t border-white/5 shrink-0">
           {statusMsg && (
-            <span className="text-sm text-white/50 truncate flex-1">{statusMsg}</span>
+            <div className="min-w-0 flex-1">
+              <span className="text-sm text-white/50 truncate block">{statusMsg}</span>
+              {isStatusFailure && (
+                <div className="mt-1 flex items-center gap-1.5">
+                  <IconButton
+                    tooltip="오류 텍스트 복사"
+                    onClick={copyStatusMsg}
+                    className="p-1 rounded text-white/50 hover:text-white/80 hover:bg-white/10 transition-colors"
+                  >
+                    <Copy size={11} />
+                  </IconButton>
+                  {statusIsRoutingError && statusMsg.startsWith("저장 실패:") && (
+                    <span className="text-xs text-rose-300/80">
+                      저장 라우팅 점검이 필요합니다.
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
           )}
           <button
             onClick={handleSave}

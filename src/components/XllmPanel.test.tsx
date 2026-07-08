@@ -74,10 +74,37 @@ function mockInvokeWith(overrides: {
 }
 
 describe("XllmPanel", () => {
-  beforeEach(() => {
-    invokeMock.mockReset();
-    mockInvoke();
+beforeEach(() => {
+  invokeMock.mockReset();
+  mockInvoke();
+});
+
+function setupClipboardWriteMock() {
+  type WriteSpy = ReturnType<typeof vi.fn>;
+  type RestoreSpy = ReturnType<typeof vi.spyOn>;
+  const writeText = vi.fn().mockResolvedValue(undefined);
+  const nav = globalThis.navigator as Navigator & {
+    clipboard?: { writeText: WriteSpy };
+  };
+  const originalClipboard = nav.clipboard;
+
+  if (originalClipboard) {
+    return {
+      writeText,
+      restore: vi.spyOn(originalClipboard, "writeText").mockResolvedValue(undefined) as RestoreSpy,
+    };
+  }
+
+  Object.defineProperty(globalThis.navigator, "clipboard", {
+    value: { writeText },
+    configurable: true,
   });
+
+  return {
+    writeText,
+    restore: null as RestoreSpy | null,
+  };
+}
 
   it("Recall 백엔드 섹션에서 active 상태를 표시한다", async () => {
     render(<XllmPanel onClose={vi.fn()} />);
@@ -114,6 +141,47 @@ describe("XllmPanel", () => {
 
     const saveButton = await screen.findByRole("button", { name: "설정 저장" });
     fireEvent.click(saveButton);
+
+    expect(await screen.findByText("저장 실패: 설정 저장 API 오류")).toBeInTheDocument();
+  });
+
+  it("상단 설정 저장 실패 시 오류 텍스트를 복사할 수 있다", async () => {
+    invokeMock.mockReset();
+    const clipboardMock = setupClipboardWriteMock();
+    invokeMock.mockImplementation((cmd: string, args?: unknown) => {
+      if (cmd === "load_app_config") return Promise.resolve({});
+      if (cmd === "recall_backend_info") {
+        return Promise.resolve({
+          requested_raw: null,
+          requested: null,
+          active: "local-cosine",
+          supported: ["local-cosine", "zvec"],
+          requested_adjusted: false,
+          active_matches_requested: true,
+        });
+      }
+      if (cmd === "save_xllm_settings") return Promise.reject({ message: "설정 저장 API 오류" });
+      if (cmd === "save_recall_vector_backend") return Promise.resolve(args ?? {});
+      if (cmd === "list_embed_candidates") return Promise.resolve([]);
+      if (cmd === "list_lora_candidates") return Promise.resolve([]);
+      if (cmd === "embed_loaded_info") return Promise.resolve(null);
+      return Promise.resolve({});
+    });
+
+    render(<XllmPanel onClose={vi.fn()} />);
+
+    const saveButton = await screen.findByRole("button", { name: "설정 저장" });
+    fireEvent.click(saveButton);
+
+    expect(await screen.findByRole("button", { name: "오류 텍스트 복사" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "오류 텍스트 복사" }));
+
+    if (clipboardMock.restore) {
+      expect(clipboardMock.restore).toHaveBeenCalledWith("저장 실패: 설정 저장 API 오류");
+      clipboardMock.restore.mockRestore();
+    } else {
+      expect(clipboardMock.writeText).toHaveBeenCalledWith("저장 실패: 설정 저장 API 오류");
+    }
 
     expect(await screen.findByText("저장 실패: 설정 저장 API 오류")).toBeInTheDocument();
   });
