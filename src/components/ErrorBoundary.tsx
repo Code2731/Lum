@@ -1,4 +1,6 @@
 import React from "react";
+import { Copy } from "lucide-react";
+import { IconButton } from "@/components/ui/icon-button";
 
 interface State {
   hasError: boolean;
@@ -36,9 +38,20 @@ export class ErrorBoundary extends React.Component<Props, State> {
           {this.props.label ? `${this.props.label} ` : ""}렌더링 오류
         </p>
         {this.state.error?.message && (
-          <pre className="text-xs text-white/20 font-mono text-center max-w-xs break-all whitespace-pre-wrap">
-            {this.state.error.message}
-          </pre>
+          <div className="w-full max-w-xs space-y-1">
+            <pre className="text-xs text-white/20 font-mono text-center break-all whitespace-pre-wrap">
+              {this.state.error.message}
+            </pre>
+            <div className="w-full flex justify-center">
+              <IconButton
+                tooltip="오류 텍스트 복사"
+                onClick={() => navigator.clipboard?.writeText?.(this.state.error?.message ?? "").catch(() => {})}
+                className="p-1 rounded text-white/30 hover:text-white/60 hover:bg-white/10 transition-colors"
+              >
+                <Copy size={12} />
+              </IconButton>
+            </div>
+          </div>
         )}
         <button
           onClick={this.reset}
