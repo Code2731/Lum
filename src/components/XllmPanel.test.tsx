@@ -2544,6 +2544,7 @@ function setupClipboardWriteMock() {
 
   it("임베디드 추론 실패 시 객체 오류를 사람이 읽을 수 있는 메시지로 노출한다", async () => {
     invokeMock.mockReset();
+    const clipboardMock = setupClipboardWriteMock();
     invokeMock.mockImplementation((cmd: string, args?: unknown) => {
       if (cmd === "load_app_config") return Promise.resolve({});
       if (cmd === "recall_backend_info") {
@@ -2574,6 +2575,15 @@ function setupClipboardWriteMock() {
     fireEvent.click(inferButton);
 
     expect(await screen.findByText("❌ 임베디드 추론 오류")).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "오류 텍스트 복사" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "오류 텍스트 복사" }));
+
+    if (clipboardMock.restore) {
+      expect(clipboardMock.restore).toHaveBeenCalledWith("❌ 임베디드 추론 오류");
+      clipboardMock.restore.mockRestore();
+    } else {
+      expect(clipboardMock.writeText).toHaveBeenCalledWith("❌ 임베디드 추론 오류");
+    }
   });
 
   it("임베디드 로드 실패 시 객체 오류를 사람이 읽을 수 있는 메시지로 노출한다", async () => {

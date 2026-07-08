@@ -251,20 +251,27 @@ interface MessageActionRowProps {
   text: string;
   messageClassName?: string;
   routingHintText?: string;
+  asPre?: boolean;
 }
 
 function MessageActionRow({
   text,
   messageClassName = "text-xs text-white/50",
   routingHintText = "라우팅 점검이 필요합니다.",
+  asPre = false,
 }: MessageActionRowProps) {
   const failureBody = text.replace(/^[^:]+:\s*/, "");
-  const showFailureActions = text.includes("실패:");
+  const showFailureActions = text.includes("실패:") || text.startsWith("❌");
   const isRoutingFailure = isRoutingError(failureBody);
+  const messageClass = asPre ? `whitespace-pre-wrap ${messageClassName}` : messageClassName;
 
   return (
     <div className="min-w-0 flex-1">
-      <span className={messageClassName}>{text}</span>
+      {asPre ? (
+        <pre className={messageClass}>{text}</pre>
+      ) : (
+        <span className={messageClass}>{text}</span>
+      )}
       {showFailureActions && (
         <div className="mt-1 flex items-center gap-1.5">
           <IconButton
@@ -1321,8 +1328,13 @@ const EmbeddedInferenceDebug: React.FC = () => {
       </div>
 
       {response && (
-        <div className="bg-black/30 border border-white/5 rounded p-2 text-sm font-mono text-white/80 max-h-48 overflow-y-auto whitespace-pre-wrap">
-          {response}
+        <div className="bg-black/30 border border-white/5 rounded p-2 max-h-48 overflow-y-auto">
+          <MessageActionRow
+            text={response}
+            asPre
+            messageClassName="text-sm text-white/80 font-mono"
+            routingHintText="임베디드/로드 상태를 확인하고 다시 실행하세요."
+          />
         </div>
       )}
     </section>
