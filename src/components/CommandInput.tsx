@@ -23,6 +23,7 @@ const VOICE_HIGHLIGHT_VISIBLE_MS = 1850;
 const VOICE_HIGHLIGHT_FADE_MS = 220;
 const VOICE_HIGHLIGHT_LONG_TEXT_THRESHOLD = 32;
 const VOICE_PULSE_ANIMATION = "lum-voice-pulse 1.35s ease-in-out infinite";
+const VOICE_BANNER_IN_ANIMATION = "lum-voice-banner-in 140ms ease-out";
 const SR_ONLY_STYLE: React.CSSProperties = {
   position: "absolute",
   width: 1,
@@ -350,6 +351,10 @@ const CommandInput = ({
           0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(88,166,255,0.28); }
           70% { transform: scale(1.04); box-shadow: 0 0 0 8px rgba(88,166,255,0); }
           100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(88,166,255,0); }
+        }
+        @keyframes lum-voice-banner-in {
+          0% { opacity: 0; transform: translateY(2px); }
+          100% { opacity: 1; transform: translateY(0); }
         }`}
       </style>
       <span
@@ -524,6 +529,8 @@ const CommandInput = ({
               opacity: voiceSuccessPhase === "fading" ? 0 : 1,
               transform: voiceSuccessPhase === "fading" ? "translateY(-2px)" : "translateY(0)",
               transition: `opacity ${VOICE_SUCCESS_FADE_MS}ms ease, transform ${VOICE_SUCCESS_FADE_MS}ms ease`,
+              animation: VOICE_BANNER_IN_ANIMATION,
+              boxShadow: "0 8px 20px rgba(0,0,0,0.16)",
             }}
           >
             음성 입력 반영됨
@@ -543,6 +550,8 @@ const CommandInput = ({
               display: "flex",
               alignItems: "center",
               gap: "6px",
+              animation: VOICE_BANNER_IN_ANIMATION,
+              boxShadow: "0 8px 20px rgba(0,0,0,0.14)",
             }}
           >
             <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] leading-none ${voiceStatusToneClass}`}>
