@@ -884,6 +884,37 @@ describe("NotificationCenter", () => {
     expect(screen.getByText("메시지 2")).toBeInTheDocument();
   });
 
+  it("검색어에 맞는 텍스트를 제목/본문에서 강조 표시한다", () => {
+    const { container } = render(
+      <NotificationCenter
+        notifications={[
+          {
+            id: "1",
+            type: "command",
+            title: "빌드 실패",
+            body: "CI 빌드에서 에러가 발생했어요",
+            timestamp: 1_000,
+            read: false,
+          },
+        ]}
+        unreadCount={1}
+        onMarkAllRead={vi.fn()}
+        onDismiss={vi.fn()}
+        onDismissByIds={vi.fn()}
+        onClear={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    const searchInput = screen.getByLabelText("알림 검색");
+    fireEvent.change(searchInput, { target: { value: "빌드" } });
+
+    const marks = container.querySelectorAll("mark");
+    expect(marks).toHaveLength(2);
+    expect(marks[0]).toHaveTextContent("빌드");
+    expect(marks[1]).toHaveTextContent("빌드");
+  });
+
   it("현재 표시된 목록의 미확인 항목만 일괄 읽음 처리할 수 있다", () => {
     const onMarkByIds = vi.fn();
     render(

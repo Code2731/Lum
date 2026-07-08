@@ -58,6 +58,27 @@ function timeAgo(ts: number): string {
   return `${Math.floor(diff / 86400)}일 전`;
 }
 
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function renderHighlightedText(text: string, query: string): React.ReactNode {
+  const normalizedQuery = query.trim();
+  if (!normalizedQuery) return text;
+
+  const regex = new RegExp(`(${escapeRegExp(normalizedQuery)})`, "gi");
+  const parts = text.split(regex);
+
+  return parts.map((part, index) => {
+    if (!part) return null;
+    const isMatch = normalizedQuery.toLowerCase() === part.toLowerCase();
+    if (!isMatch) {
+      return <span key={`${text}-${index}`}>{part}</span>;
+    }
+    return <mark key={`${text}-${index}`} className="bg-yellow-300/20 text-yellow-100">{part}</mark>;
+  });
+}
+
 const NotificationCenter: React.FC<Props> = ({
   notifications,
   unreadCount,
@@ -94,8 +115,10 @@ const NotificationCenter: React.FC<Props> = ({
     }
   }, [unreadCount, showUnreadOnly]);
 
+  const normalizedSearchQuery = useMemo(() => searchQuery.trim(), [searchQuery]);
+
   const displayedNotifications = useMemo(() => {
-    const normalizedSearch = searchQuery.trim().toLowerCase();
+    const normalizedSearch = normalizedSearchQuery.toLowerCase();
     const afterUnreadFilter = showUnreadOnly ? orderedNotifications.filter((n) => !n.read) : orderedNotifications;
     const afterTypeFilter = typeFilter === "all"
       ? afterUnreadFilter
@@ -106,7 +129,7 @@ const NotificationCenter: React.FC<Props> = ({
       const target = `${n.title} ${n.body}`.toLowerCase();
       return target.includes(normalizedSearch);
     });
-  }, [orderedNotifications, showUnreadOnly, typeFilter, searchQuery]);
+  }, [orderedNotifications, showUnreadOnly, typeFilter, normalizedSearchQuery]);
 
   const displayedNotificationIds = useMemo(
     () => displayedNotifications.map((n) => n.id),
@@ -466,7 +489,7 @@ const NotificationCenter: React.FC<Props> = ({
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5 flex-wrap mb-0.5">
                     <p className={`text-sm font-medium ${n.read ? "text-white/45" : "text-white/75"}`}>
-                      {n.title}
+                      {renderHighlightedText(n.title, normalizedSearchQuery)}
                     </p>
                     <span className="inline-flex items-center text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-white/[0.08] text-white/50 border border-white/12">
                       {TYPE_LABEL[n.type]}
@@ -477,7 +500,9 @@ const NotificationCenter: React.FC<Props> = ({
                       </span>
                     )}
                   </div>
-                  <p className="text-xs text-white/35 mt-0.5 break-words leading-relaxed">{n.body}</p>
+                  <p className="text-xs text-white/35 mt-0.5 break-words leading-relaxed">
+                    {renderHighlightedText(n.body, normalizedSearchQuery)}
+                  </p>
                   <p className="text-xs text-white/20 mt-1">{timeAgo(n.timestamp)}</p>
                 </div>
                 <IconButton
