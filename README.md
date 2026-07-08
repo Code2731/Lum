@@ -147,6 +147,7 @@ npm run tauri dev                       # external LLM backends only (no on-devi
 ```bash
 npm run tauri build                                # lightweight (no on-device inference)
 npm run tauri build -- --features embedded-ai     # full build — Cargo가 OS에 맞춰 CUDA/Metal 자동 선택
+npm run verify:linux-bundles                        # Linux CPU 번들 산출물(s deb / .AppImage) 존재 확인
 ```
 
 ### Playwright E2E 실행
@@ -321,6 +322,7 @@ npm run tauri dev               # 외부 LLM 백엔드만 (on-device AI 없음)
 ```bash
 npm run tauri build                                # 경량 (on-device 추론 없음)
 npm run tauri build -- --features embedded-ai     # OS별 CUDA/Metal 자동 선택
+npm run verify:linux-bundles                        # Linux CPU 번들 산출물(.deb/.AppImage) 존재 확인
 ```
 
 ### macOS 실행 문제 해결
