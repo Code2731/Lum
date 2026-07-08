@@ -162,6 +162,48 @@ function renderHighlightedText(text: string, queries: string[]): React.ReactNode
   });
 }
 
+function renderHighlightedTextByRegex(text: string, regex: RegExp | null): React.ReactNode {
+  if (!regex) {
+    return text;
+  }
+
+  const globalRegex = new RegExp(regex.source, `${regex.flags.includes("g") ? "" : "g"}${regex.flags}`);
+  const nodes: React.ReactNode[] = [];
+  let lastIndex = 0;
+  let matchCount = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = globalRegex.exec(text)) !== null) {
+    if (match[0].length === 0) {
+      globalRegex.lastIndex += 1;
+      continue;
+    }
+
+    if (match.index > lastIndex) {
+      nodes.push(text.slice(lastIndex, match.index));
+    }
+    nodes.push(
+      <mark
+        key={`${text}-match-${matchCount}`}
+        className="bg-yellow-300/20 text-yellow-100"
+      >
+        {match[0]}
+      </mark>,
+    );
+    matchCount += 1;
+    lastIndex = globalRegex.lastIndex;
+  }
+
+  if (!matchCount) {
+    return text;
+  }
+
+  if (lastIndex < text.length) {
+    nodes.push(text.slice(lastIndex));
+  }
+  return nodes;
+}
+
 const NotificationCenter: React.FC<Props> = ({
   notifications,
   unreadCount,
@@ -705,7 +747,7 @@ const NotificationCenter: React.FC<Props> = ({
           <div className="shrink-0 px-2 py-1.5 text-[10px] text-white/45">
             {displayedNotifications.length}건
             {normalizedSearchQuery
-              ? ` · "${normalizedSearchQuery}" · 제목: ${matchedTitleCount}건, 본문: ${matchedBodyCount}건`
+              ? ` · ${searchMode === "regex" ? `/${normalizedSearchQuery}/` : `"${normalizedSearchQuery}"`} · 제목: ${matchedTitleCount}건, 본문: ${matchedBodyCount}건`
               : ""}
           </div>
           <div className="flex items-center gap-1.5 overflow-x-auto">
@@ -789,7 +831,9 @@ const NotificationCenter: React.FC<Props> = ({
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5 flex-wrap mb-0.5">
                     <p className={`text-sm font-medium ${n.read ? "text-white/45" : "text-white/75"}`}>
-                      {renderHighlightedText(n.title, normalizedSearchQueries)}
+                      {searchMode === "regex"
+                        ? renderHighlightedTextByRegex(n.title, regexSearch)
+                        : renderHighlightedText(n.title, normalizedSearchQueries)}
                     </p>
                     <span className="inline-flex items-center text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-white/[0.08] text-white/50 border border-white/12">
                       {TYPE_LABEL[n.type]}
@@ -801,7 +845,9 @@ const NotificationCenter: React.FC<Props> = ({
                     )}
                   </div>
                   <p className="text-xs text-white/35 mt-0.5 break-words leading-relaxed">
-                    {renderHighlightedText(n.body, normalizedSearchQueries)}
+                    {searchMode === "regex"
+                      ? renderHighlightedTextByRegex(n.body, regexSearch)
+                      : renderHighlightedText(n.body, normalizedSearchQueries)}
                   </p>
                   <p className="text-xs text-white/20 mt-1">{timeAgo(n.timestamp)}</p>
                 </div>

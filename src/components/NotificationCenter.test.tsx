@@ -1249,6 +1249,49 @@ describe("NotificationCenter", () => {
     expect(screen.queryByText("빌드 에러 코드 500")).not.toBeInTheDocument();
   });
 
+  it("정규식 모드에서 매칭 텍스트를 강조 표시한다", () => {
+    const { container } = render(
+      <NotificationCenter
+        notifications={[
+          {
+            id: "1",
+            type: "command",
+            title: "빌드 에러 코드 500",
+            body: "에러 메시지 분석",
+            timestamp: 1_000,
+            read: false,
+          },
+          {
+            id: "2",
+            type: "agent",
+            title: "작업 처리 완료",
+            body: "모든 메시지 정상",
+            timestamp: 2_000,
+            read: false,
+          },
+        ]}
+        unreadCount={2}
+        onMarkAllRead={vi.fn()}
+        onDismiss={vi.fn()}
+        onDismissByIds={vi.fn()}
+        onClear={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "검색 모드: 정규식" }));
+    fireEvent.change(screen.getByLabelText("알림 검색"), {
+      target: { value: "에러|메시지" },
+    });
+
+    const highlights = container.querySelectorAll("mark");
+    expect(highlights).toHaveLength(3);
+    expect(highlights[0]).toHaveTextContent("에러");
+    expect(highlights[1]).toHaveTextContent("에러");
+    expect(highlights[2]).toHaveTextContent("메시지");
+    expect(screen.getByText("/에러|메시지/")).toBeInTheDocument();
+  });
+
   it("Ctrl/Cmd + C로 검색어를 비울 수 있다", () => {
     render(
       <NotificationCenter
