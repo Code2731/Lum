@@ -62,14 +62,38 @@ function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-function parseSearchQueries(query: string): string[] {
-  const matches = query.matchAll(/"([^"]+)"|(\S+)/g);
-  return Array.from(matches)
-    .map(([full, quoted]) => {
-      const token = (quoted ?? full).trim().toLowerCase();
-      return token.length > 0 ? token : "";
+type SearchQueryToken = {
+  term: string;
+  excluded: boolean;
+};
+
+function parseSearchQueries(query: string): SearchQueryToken[] {
+  const matches = Array.from(query.matchAll(/(?:-"[^"]+"|-\S+|"[^"]+"|\S+)/g));
+  return matches
+    .map((match) => {
+      const raw = match[0].trim();
+      if (!raw) {
+        return null;
+      }
+
+      const excluded = raw.startsWith("-");
+      const rawValue = excluded ? raw.slice(1).trim() : raw;
+      const hasQuotes = rawValue.startsWith("\"") && rawValue.endsWith("\"");
+      const normalized = (hasQuotes
+        ? rawValue.slice(1, -1)
+        : rawValue
+      ).trim().toLowerCase();
+
+      if (!normalized) {
+        return null;
+      }
+
+      return {
+        term: normalized,
+        excluded,
+      };
     })
-    .filter((token) => token.length > 0);
+    .filter((token): token is SearchQueryToken => token !== null);
 }
 
 function renderHighlightedText(text: string, queries: string[]): React.ReactNode {
@@ -128,10 +152,18 @@ const NotificationCenter: React.FC<Props> = ({
   }, [unreadCount, showUnreadOnly]);
 
   const normalizedSearchQuery = useMemo(() => searchQuery.trim(), [searchQuery]);
-  const normalizedSearchQueries = useMemo(() => parseSearchQueries(normalizedSearchQuery), [normalizedSearchQuery]);
+  const searchTokens = useMemo(() => parseSearchQueries(normalizedSearchQuery), [normalizedSearchQuery]);
+  const normalizedSearchQueries = useMemo(
+    () => searchTokens.filter((token) => !token.excluded).map((token) => token.term),
+    [searchTokens],
+  );
+  const excludedSearchQueries = useMemo(
+    () => searchTokens.filter((token) => token.excluded).map((token) => token.term),
+    [searchTokens],
+  );
 
   const { displayedNotifications, matchedTitleCount, matchedBodyCount } = useMemo(() => {
-    const hasSearchQuery = normalizedSearchQueries.length > 0;
+    const hasSearchQuery = searchTokens.length > 0;
     const afterUnreadFilter = showUnreadOnly ? orderedNotifications.filter((n) => !n.read) : orderedNotifications;
     const afterTypeFilter = typeFilter === "all"
       ? afterUnreadFilter
@@ -158,7 +190,8 @@ const NotificationCenter: React.FC<Props> = ({
       const normalizedBody = n.body.toLowerCase();
       const normalizedText = `${normalizedTitle} ${normalizedBody}`;
       const matchedAllQueries = normalizedSearchQueries.every((query) => normalizedText.includes(query));
-      if (!matchedAllQueries) return;
+      const excludedMatched = excludedSearchQueries.some((query) => normalizedText.includes(query));
+      if (!matchedAllQueries || excludedMatched) return;
 
       const titleMatched = isMatch(normalizedTitle, normalizedSearchQueries);
       const bodyMatched = isMatch(normalizedBody, normalizedSearchQueries);
@@ -196,7 +229,14 @@ const NotificationCenter: React.FC<Props> = ({
       matchedTitleCount: titleMatchCount,
       matchedBodyCount: bodyMatchCount,
     };
-  }, [orderedNotifications, showUnreadOnly, typeFilter, normalizedSearchQueries]);
+  }, [
+    orderedNotifications,
+    showUnreadOnly,
+    typeFilter,
+    normalizedSearchQueries,
+    excludedSearchQueries,
+    searchTokens,
+  ]);
 
   const displayedNotificationIds = useMemo(
     () => displayedNotifications.map((n) => n.id),

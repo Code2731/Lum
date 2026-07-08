@@ -1043,6 +1043,44 @@ describe("NotificationCenter", () => {
     expect(rows).toHaveLength(3);
   });
 
+  it("부정 키워드(-키워드)로 검색 결과를 제외할 수 있다", () => {
+    render(
+      <NotificationCenter
+        notifications={[
+          {
+            id: "1",
+            type: "command",
+            title: "로그인 실패 알림",
+            body: "요약에 원인이 있습니다",
+            timestamp: 1_000,
+            read: false,
+          },
+          {
+            id: "2",
+            type: "agent",
+            title: "로그인 실패 데이터",
+            body: "로그인 실패 데이터가 포함됩니다",
+            timestamp: 2_000,
+            read: false,
+          },
+        ]}
+        unreadCount={2}
+        onMarkAllRead={vi.fn()}
+        onDismiss={vi.fn()}
+        onDismissByIds={vi.fn()}
+        onClear={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText("알림 검색"), {
+      target: { value: "\"로그인 실패\" -데이터" },
+    });
+
+    expect(screen.getByRole("alert")).toHaveTextContent("로그인 실패 알림");
+    expect(screen.queryByText("로그인 실패 데이터")).not.toBeInTheDocument();
+  });
+
   it("따옴표로 묶인 검색어를 구문 단위로 처리한다", () => {
     render(
       <NotificationCenter
