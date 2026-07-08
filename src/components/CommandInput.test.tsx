@@ -181,7 +181,7 @@ describe("CommandInput Component", () => {
 
   it("voice_recording_state 이벤트 수신 시 녹음 상태가 동기화되어야 함", async () => {
     render(<CommandInput {...defaultProps} />);
-    const micButton = screen.getByLabelText("음성 명령");
+    const micButton = screen.getByLabelText("음성 녹음 시작");
     expect(micButton).toBeInTheDocument();
     await act(async () => {
       await Promise.resolve();
@@ -190,7 +190,7 @@ describe("CommandInput Component", () => {
       const cb = voiceStateListeners[voiceStateListeners.length - 1];
       cb?.({ payload: true });
     });
-    expect(micButton).toHaveClass("active");
+    expect(screen.getByLabelText("음성 녹음 중지")).toHaveClass("active");
   });
 
   it("마이크 시작 실패 시 사용자 친화 오류를 표시해야 함", async () => {
@@ -201,7 +201,7 @@ describe("CommandInput Component", () => {
       return undefined;
     });
     render(<CommandInput {...defaultProps} />);
-    const micButton = screen.getByLabelText("음성 명령");
+    const micButton = screen.getByLabelText("음성 녹음 시작");
     await act(async () => {
       fireEvent.click(micButton);
     });
@@ -226,7 +226,7 @@ describe("CommandInput Component", () => {
     render(<CommandInput {...defaultProps} />);
 
     await act(async () => {
-      fireEvent.click(screen.getByLabelText("음성 명령"));
+      fireEvent.click(screen.getByLabelText("음성 녹음 시작"));
     });
 
     expect(await screen.findByRole("alert")).toHaveTextContent("마이크 권한이 거부되었습니다.");
@@ -250,7 +250,7 @@ describe("CommandInput Component", () => {
     render(<CommandInput {...defaultProps} />);
 
     await act(async () => {
-      fireEvent.click(screen.getByLabelText("음성 명령"));
+      fireEvent.click(screen.getByLabelText("음성 녹음 시작"));
     });
 
     expect(await screen.findByRole("alert")).toHaveTextContent("마이크 권한이 거부되었습니다.");
@@ -259,7 +259,7 @@ describe("CommandInput Component", () => {
       fireEvent.click(screen.getByRole("button", { name: "음성 입력 다시 시도" }));
     });
 
-    expect(screen.getByLabelText("음성 명령")).toHaveClass("active");
+    expect(screen.getByLabelText("음성 녹음 중지")).toHaveClass("active");
     const startCalls = invokeMock.mock.calls.filter(([cmd]) => cmd === "start_voice_recording");
     expect(startCalls).toHaveLength(2);
   });
@@ -276,7 +276,7 @@ describe("CommandInput Component", () => {
       return Promise.resolve(undefined);
     });
     render(<CommandInput {...defaultProps} />);
-    const micButton = screen.getByLabelText("음성 명령");
+    const micButton = screen.getByLabelText("음성 녹음 시작");
     await act(async () => {
       fireEvent.click(micButton);
     });
