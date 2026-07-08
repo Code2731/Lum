@@ -1635,6 +1635,56 @@ describe("NotificationCenter", () => {
     expect(window.localStorage.getItem("lum_notification_search_history_v1")).toBe("[]");
   });
 
+  it("개별 검색 기록은 항목별로 삭제할 수 있다", () => {
+    window.localStorage.setItem(
+      "lum_notification_search_history_v1",
+      JSON.stringify([
+        {
+          mode: "token",
+          query: "임시 검색어 1",
+          ts: 1,
+        },
+        {
+          mode: "regex",
+          query: "임시 검색어 2",
+          ts: 2,
+        },
+      ]),
+    );
+
+    render(
+      <NotificationCenter
+        notifications={[
+          {
+            id: "1",
+            type: "command",
+            title: "빌드 에러 코드 500",
+            body: "에러 메시지 분석",
+            timestamp: 1_000,
+            read: false,
+          },
+        ]}
+        unreadCount={1}
+        onMarkAllRead={vi.fn()}
+        onDismiss={vi.fn()}
+        onDismissByIds={vi.fn()}
+        onClear={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    const searchInput = screen.getByLabelText("알림 검색");
+    fireEvent.focus(searchInput);
+
+    expect(screen.getByText("임시 검색어 1")).toBeInTheDocument();
+    expect(screen.getByText("임시 검색어 2")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByLabelText("최근 검색어 임시 검색어 1 삭제"));
+
+    expect(screen.queryByText("임시 검색어 1")).not.toBeInTheDocument();
+    expect(screen.getByText("임시 검색어 2")).toBeInTheDocument();
+  });
+
   it("단축키 1/2로 검색 모드를 전환할 수 있다", () => {
     render(
       <NotificationCenter

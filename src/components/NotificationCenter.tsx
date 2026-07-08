@@ -338,6 +338,14 @@ const NotificationCenter: React.FC<Props> = ({
     searchInputRef.current?.focus();
   };
 
+  const removeSearchHistoryItem = (item: SearchHistoryItem) => {
+    setSearchHistory((prev) => prev.filter((historyItem) => !(
+      historyItem.mode === item.mode
+      && historyItem.query === item.query
+      && historyItem.ts === item.ts
+    )));
+  };
+
   useEffect(() => {
     if (typeof window === "undefined") {
       return;
@@ -952,16 +960,35 @@ const NotificationCenter: React.FC<Props> = ({
                 .slice()
                 .sort((left, right) => right.ts - left.ts)
                 .map((item) => (
-                  <button
-                    key={`${item.mode}-${item.query}-${item.ts}`}
-                    type="button"
-                    onMouseDown={(event) => event.preventDefault()}
-                    onClick={() => applySearchHistoryItem(item)}
-                    className="inline-flex items-center max-w-[45%] text-[10px] rounded border border-white/10 px-1.5 py-1 bg-white/[0.03] text-white/75 hover:border-white/25 hover:text-white"
-                  >
-                    <span className="mr-1 text-[9px] text-white/45">{item.mode === "regex" ? "R" : "T"}:</span>
-                    <span className="truncate">{item.query}</span>
-                  </button>
+              <div
+                key={`${item.mode}-${item.query}-${item.ts}`}
+                className="inline-flex items-center max-w-[45%] text-[10px] rounded border border-white/10 px-1.5 py-1 bg-white/[0.03] text-white/75"
+              >
+                <button
+                  type="button"
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={() => applySearchHistoryItem(item)}
+                  className="inline-flex flex-1 min-w-0 items-center text-left hover:border-white/25 hover:text-white"
+                >
+                  <span className="mr-1 text-[9px] text-white/45">{item.mode === "regex" ? "R" : "T"}:</span>
+                  <span className="truncate">{item.query}</span>
+                </button>
+                <button
+                  type="button"
+                  aria-label={`최근 검색어 ${item.query} 삭제`}
+                  onMouseDown={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                  }}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    removeSearchHistoryItem(item);
+                  }}
+                  className="ml-1 rounded px-1 text-white/45 hover:text-white/80 hover:bg-white/10"
+                >
+                  ×
+                </button>
+              </div>
                 ))}
               <button
                 type="button"
