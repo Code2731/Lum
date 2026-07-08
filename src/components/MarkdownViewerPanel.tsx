@@ -1,7 +1,8 @@
 import React, { useMemo } from "react";
 import ReactMarkdown from "react-markdown";
-import { Eye, FileText, FileWarning, X } from "lucide-react";
+import { Eye, FileText, FileWarning, X, Copy } from "lucide-react";
 import { SMALL_ICON_SIZE } from "../constants/ui";
+import { IconButton } from "@/components/ui/icon-button";
 
 interface Props {
   path: string;
@@ -22,6 +23,9 @@ function normalizeSourcePath(path: string): string {
 
 const MarkdownViewerPanel: React.FC<Props> = ({ path, title, content, loading, error, onClose }) => {
   const normalizedPath = useMemo(() => normalizeSourcePath(path), [path]);
+  const copyText = (text: string) => {
+    navigator.clipboard?.writeText?.(text).catch(() => {});
+  };
 
   return (
     <div className="lum-markdown-viewer flex flex-col h-full border-l border-white/10 bg-[#0d1117]/95 min-w-[320px] max-w-[480px]">
@@ -50,7 +54,14 @@ const MarkdownViewerPanel: React.FC<Props> = ({ path, title, content, loading, e
         ) : error ? (
           <div className="flex items-start gap-1.5 p-2 rounded-md border border-red-500/30 bg-red-500/12 text-red-200 text-xs">
             <FileWarning size={12} className="mt-0.5 shrink-0" />
-            <p className="leading-relaxed">{error}</p>
+            <p className="leading-relaxed flex-1">{error}</p>
+            <IconButton
+              tooltip="오류 텍스트 복사"
+              onClick={() => copyText(error)}
+              className="p-1 rounded text-white/65 hover:text-white hover:bg-red-500/20 transition-colors shrink-0"
+            >
+              <Copy size={11} />
+            </IconButton>
           </div>
         ) : (
           <article className="lum-markdown-doc prose prose-invert max-w-none text-sm text-white/84 leading-relaxed">
