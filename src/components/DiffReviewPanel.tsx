@@ -2,9 +2,10 @@ import React, { useState, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import {
   GitCompareArrows, Loader2, ChevronDown, ChevronRight,
-  AlertTriangle, CheckCircle2, AlertCircle, RefreshCw,
+  AlertTriangle, CheckCircle2, AlertCircle, RefreshCw, Copy,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { IconButton } from "@/components/ui/icon-button";
 
 interface FileDiffReview {
   path: string;
@@ -65,6 +66,10 @@ const DiffReviewPanel: React.FC<Props> = ({ model, repoPat = "", onClose }) => {
         risk: reviews.filter(r => r.risk === "risk").length }
     : null;
 
+  const copyText = (text: string) => {
+    navigator.clipboard?.writeText?.(text).catch(() => {});
+  };
+
   return (
     <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
       <DialogContent className="sm:max-w-[640px] max-h-[80vh] flex flex-col gap-0 p-0 overflow-hidden border-white/10 rounded-2xl">
@@ -119,8 +124,15 @@ const DiffReviewPanel: React.FC<Props> = ({ model, repoPat = "", onClose }) => {
 
           {/* 오류 */}
           {error && (
-            <div className="rounded-xl bg-red-400/8 border border-red-400/20 p-4 text-sm text-red-400">
-              {error}
+            <div className="rounded-xl bg-red-400/8 border border-red-400/20 p-4 text-sm text-red-400 flex items-start gap-2">
+              <span className="flex-1 break-words">{error}</span>
+              <IconButton
+                tooltip="오류 텍스트 복사"
+                onClick={() => copyText(error)}
+                className="p-1 rounded text-white/60 hover:text-white/85 hover:bg-red-400/20 transition-colors"
+              >
+                <Copy size={11} />
+              </IconButton>
             </div>
           )}
 
