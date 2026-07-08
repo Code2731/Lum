@@ -2,13 +2,14 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { Download, Trash2, HardDrive, ExternalLink, X, FolderOpen } from "lucide-react";
+import { Download, Trash2, HardDrive, ExternalLink, X, FolderOpen, Copy } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete";
 import { IconButton } from "@/components/ui/icon-button";
 import { Input } from "@/components/ui/input";
 import { shortPath } from "../utils";
 import { SMALL_ICON_SIZE } from "../constants/ui";
+import { isRoutingError } from "../utils/errorMessage";
 
 interface MistralLocalModel {
   repo_id: string;
@@ -20,6 +21,40 @@ import { useModelCatalog } from "../hooks/useModelCatalog";
 
 interface Props {
   onClose: () => void;
+}
+
+function copyText(text: string) {
+  navigator.clipboard?.writeText?.(text).catch(() => {});
+}
+
+function FailureMessageRow({
+  text,
+  routingHintText = "라우팅 점검이 필요합니다.",
+}: {
+  text: string;
+  routingHintText?: string;
+}) {
+  const failureBody = text.replace(/^[^:]+:\s*/, "");
+  const showFailureActions = text.includes("실패:") || text.startsWith("❌");
+  const isRoutingFailure = isRoutingError(failureBody);
+
+  return (
+    <div className="mb-2 px-3 py-2 rounded text-sm bg-white/5 border border-white/10 space-y-1">
+      <div className="text-white/70 break-all">{text}</div>
+      {showFailureActions && (
+        <div className="flex items-center gap-1.5">
+          <IconButton
+            tooltip="오류 텍스트 복사"
+            onClick={() => copyText(text)}
+            className="p-1 rounded text-white/50 hover:text-white/80 hover:bg-white/10 transition-colors"
+          >
+            <Copy size={11} />
+          </IconButton>
+          {isRoutingFailure && <span className="text-xs text-rose-300/80">{routingHintText}</span>}
+        </div>
+      )}
+    </div>
+  );
 }
 
 const ModelManager: React.FC<Props> = ({ onClose }) => {
@@ -253,9 +288,7 @@ const ModelManager: React.FC<Props> = ({ onClose }) => {
               </div>
             ) : (
               <>
-                {loadMsg && (
-                  <div className="mb-2 px-3 py-2 rounded text-sm bg-white/5 border border-white/10">{loadMsg}</div>
-                )}
+                {loadMsg && <FailureMessageRow text={loadMsg} />}
 
                 {mistralLocal.map((m) => {
                   const safeName = shortPath(m.path);
@@ -455,7 +488,7 @@ const ModelManager: React.FC<Props> = ({ onClose }) => {
                       </IconButton>
                     </div>
                     {refreshMsg && (
-                      <div className="text-xs text-white/50 mb-1 px-1">{refreshMsg}</div>
+                      <FailureMessageRow text={refreshMsg} routingHintText="레포지토리 조회/네트워크 상태를 확인하세요." />
                     )}
                     <div className="flex flex-wrap gap-1">
                       {catalog.heavy_presets.map((p) => {
