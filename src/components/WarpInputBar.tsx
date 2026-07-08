@@ -21,6 +21,17 @@ const VOICE_SUCCESS_FADE_MS = 180;
 const VOICE_HIGHLIGHT_VISIBLE_MS = 1500;
 const VOICE_HIGHLIGHT_FADE_MS = 180;
 const VOICE_PULSE_ANIMATION = "lum-voice-pulse 1.35s ease-in-out infinite";
+const SR_ONLY_STYLE: React.CSSProperties = {
+  position: "absolute",
+  width: 1,
+  height: 1,
+  padding: 0,
+  margin: -1,
+  overflow: "hidden",
+  clip: "rect(0, 0, 0, 0)",
+  whiteSpace: "nowrap",
+  border: 0,
+};
 
 interface Props {
   fontFamily: string;
@@ -480,6 +491,10 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
         border: "1px solid rgba(255,255,255,0.12)",
       };
     const voicePulseActive = voiceStatus === "listening" || voiceStatus === "processing";
+    const voiceLiveMessage =
+      voiceError ? `음성 입력 오류: ${voiceError}` :
+      voiceSuccessPhase !== "hidden" ? "음성 입력 반영됨" :
+      `음성 상태: ${voiceStatusLabel}`;
 
     const body =
       isHeavy      ? trimmedInput.slice(2).trimStart() :
@@ -531,6 +546,14 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
             100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(88,166,255,0); }
           }`}
         </style>
+        <span
+          role="status"
+          aria-live={voiceError ? "assertive" : "polite"}
+          aria-atomic="true"
+          style={SR_ONLY_STYLE}
+        >
+          {voiceLiveMessage}
+        </span>
         {visibleContextChips.length > 0 && (
           <div
             style={{
@@ -727,8 +750,9 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
               type="button"
               onClick={handleMicToggle}
               disabled={voiceBusy}
-              aria-label={isRecording ? "음성 녹음 중지" : "음성 녹음 시작"}
-              title={isRecording ? "음성 녹음 중지" : "음성 녹음 시작"}
+              aria-label={`${isRecording ? "음성 녹음 중지" : "음성 녹음 시작"} · 현재 ${voiceStatusLabel}`}
+              aria-pressed={isRecording}
+              title={`${isRecording ? "음성 녹음 중지" : "음성 녹음 시작"} · 현재 ${voiceStatusLabel}`}
               style={{
                 width: 24,
                 height: 24,
@@ -757,6 +781,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
 
           {voiceEnabled && (
             <span
+              aria-hidden="true"
               style={{
                 flexShrink: 0,
                 fontSize: WARP_SMALL_FONT_SIZE,

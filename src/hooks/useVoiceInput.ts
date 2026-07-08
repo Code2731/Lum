@@ -202,12 +202,17 @@ export function useVoiceInput({
     }
   }, [emitTranscript, enabled, isRecording]);
 
+  const clearVoiceError = useCallback(() => {
+    setVoiceError(null);
+    setVoiceStatus(isRecordingRef.current ? "listening" : "idle");
+  }, []);
+
   return {
     isRecording,
     voiceBusy,
     voiceError,
     voiceStatus,
     handleMicToggle,
-    clearVoiceError: () => setVoiceError(null),
+    clearVoiceError,
   };
 }

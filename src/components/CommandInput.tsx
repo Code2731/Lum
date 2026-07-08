@@ -22,6 +22,17 @@ const VOICE_SUCCESS_FADE_MS = 180;
 const VOICE_HIGHLIGHT_VISIBLE_MS = 1500;
 const VOICE_HIGHLIGHT_FADE_MS = 180;
 const VOICE_PULSE_ANIMATION = "lum-voice-pulse 1.35s ease-in-out infinite";
+const SR_ONLY_STYLE: React.CSSProperties = {
+  position: "absolute",
+  width: 1,
+  height: 1,
+  padding: 0,
+  margin: -1,
+  overflow: "hidden",
+  clip: "rect(0, 0, 0, 0)",
+  whiteSpace: "nowrap",
+  border: 0,
+};
 
 const CommandInput = ({
   onCommandSubmit,
@@ -130,6 +141,10 @@ const CommandInput = ({
     voiceStatus === "processing" ? "text-sky-300 bg-sky-500/10 border-sky-400/30" :
     "text-white/55 bg-white/5 border-white/15";
   const voicePulseActive = voiceStatus === "listening" || voiceStatus === "processing";
+  const voiceLiveMessage =
+    voiceError ? `음성 입력 오류: ${voiceError}` :
+    voiceSuccessPhase !== "hidden" ? "음성 입력 반영됨" :
+    `음성 상태: ${voiceStatusLabel}`;
   const [history, setHistory] = useState<string[]>([]);
   const [historyIdx, setHistoryIdx] = useState(-1);
 
@@ -313,6 +328,14 @@ const CommandInput = ({
           100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(88,166,255,0); }
         }`}
       </style>
+      <span
+        role="status"
+        aria-live={voiceError ? "assertive" : "polite"}
+        aria-atomic="true"
+        style={SR_ONLY_STYLE}
+      >
+        {voiceLiveMessage}
+      </span>
       {showCompletions && completions.length > 1 && (
         <div className="autocomplete-popover">
           {completions.map((c, i) => (
@@ -329,10 +352,12 @@ const CommandInput = ({
       <div className={`editor-box ${isAI ? "editor-box-ai" : ""} ${isRecording ? "recording" : ""}`}>
         <div className="editor-header">
           <IconButton
-            tooltip={isRecording ? "음성 녹음 중지" : "음성 녹음 시작"}
+            tooltip={`${isRecording ? "음성 녹음 중지" : "음성 녹음 시작"} · 현재 ${voiceStatusLabel}`}
             className={`mic-btn ${isRecording ? "active" : ""}`}
             onClick={handleMicToggle}
             disabled={voiceBusy}
+            aria-pressed={isRecording}
+            aria-label={`${isRecording ? "음성 녹음 중지" : "음성 녹음 시작"} · 현재 ${voiceStatusLabel}`}
             style={{
               animation: voicePulseActive ? VOICE_PULSE_ANIMATION : "none",
               background:
@@ -346,6 +371,7 @@ const CommandInput = ({
             {isRecording ? <Mic size={14} /> : <MicOff size={14} />}
           </IconButton>
           <span
+            aria-hidden="true"
             className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] leading-none ${voiceStatusToneClass}`}
           >
             {voiceStatusLabel}
