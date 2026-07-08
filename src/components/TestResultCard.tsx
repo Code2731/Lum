@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { Play, CheckCircle2, XCircle, Loader2, Clock, RefreshCw, Send } from "lucide-react";
+import { Play, CheckCircle2, XCircle, Loader2, Clock, RefreshCw, Send, Copy } from "lucide-react";
 import { IconButton } from "@/components/ui/icon-button";
 
 interface TestCommand {
@@ -85,6 +85,32 @@ const TestResultCard: React.FC<Props> = ({ cwd, autoDetect = true, onAskAIForFix
       "실패 원인을 분석하고 수정 SEARCH/REPLACE 블록을 제시해 주세요.",
     ].join("\n");
     onAskAIForFix(log);
+  };
+
+  const buildFailureLog = () => {
+    if (!result || result.passed) return null;
+    return [
+      `테스트가 실패했습니다. 커맨드: \`${result.command}\``,
+      `exit code: ${result.exit_code ?? "timeout"}`,
+      `소요 시간: ${(result.duration_ms / 1000).toFixed(1)}s`,
+      "",
+      "## stderr (마지막 8KB)",
+      "```",
+      result.stderr || "(없음)",
+      "```",
+      "## stdout (마지막 8KB)",
+      "```",
+      result.stdout || "(없음)",
+      "```",
+      "",
+      "실패 원인을 분석하고 수정 SEARCH/REPLACE 블록을 제시해 주세요.",
+    ].join("\n");
+  };
+
+  const copyFailureLog = () => {
+    const log = buildFailureLog();
+    if (!log) return;
+    navigator.clipboard?.writeText?.(log).catch(() => {});
   };
 
   if (loadingDetect) {
@@ -203,6 +229,15 @@ const TestResultCard: React.FC<Props> = ({ cwd, autoDetect = true, onAskAIForFix
                 >
                   <Send size={11} />
                   🔄 AI에게 수정 요청 (실패 로그 재주입)
+                </button>
+              )}
+              {!result.passed && (
+                <button
+                  onClick={copyFailureLog}
+                  className="mt-2 w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded bg-white/8 hover:bg-white/12 text-white/70 text-sm transition-colors"
+                >
+                  <Copy size={11} />
+                  실패 로그 복사
                 </button>
               )}
             </div>
