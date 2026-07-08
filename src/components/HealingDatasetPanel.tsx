@@ -2,11 +2,12 @@
 // 사용자가 승인/거부한 자동치유 결정을 누적 → 외부 LoRA fine-tune(mlx-lm/axolotl)에 사용.
 
 import React, { useCallback, useEffect, useState } from "react";
-import { Sparkles, Download, Trash2, Check, X as XIcon, Wrench } from "lucide-react";
+import { Sparkles, Download, Trash2, Check, X as XIcon, Wrench, Copy } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete";
 import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
 import { fmtShortDate } from "../utils";
 
 type SafetyLevel = "Safe" | "Warning" | "Dangerous" | "Blocked";
@@ -34,6 +35,10 @@ const SAFETY_TONE: Record<SafetyLevel, string> = {
   Dangerous: "text-rose-300 bg-rose-400/10",
   Blocked: "text-rose-400 bg-rose-500/15",
 };
+
+function copyText(text: string) {
+  navigator.clipboard?.writeText?.(text).catch(() => {});
+}
 
 const HealingDatasetPanel: React.FC<Props> = ({ onClose }) => {
   const [records, setRecords] = useState<HealingRecord[]>([]);
@@ -133,8 +138,15 @@ const HealingDatasetPanel: React.FC<Props> = ({ onClose }) => {
         )}
 
         {error && (
-          <div className="px-5 py-2 text-sm text-rose-300 bg-rose-500/10 border-b border-rose-400/20 shrink-0">
-            {error}
+          <div className="px-5 py-2 text-sm text-rose-300 bg-rose-500/10 border-b border-rose-400/20 shrink-0 flex items-center justify-between gap-1.5">
+            <span className="truncate">{error}</span>
+            <IconButton
+              tooltip="오류 텍스트 복사"
+              onClick={() => copyText(error)}
+              className="p-1 rounded text-rose-200/80 hover:text-rose-100 hover:bg-rose-500/20 transition-colors"
+            >
+              <Copy size={12} />
+            </IconButton>
           </div>
         )}
 
