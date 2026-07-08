@@ -435,42 +435,56 @@ const CommandInput = ({
               lineHeight: 1.3,
               display: "flex",
               alignItems: "center",
-              gap: "6px",
+              justifyContent: "space-between",
+              gap: "8px",
               color: "#ff7b72",
               background: "rgba(248,81,73,0.12)",
               border: "1px solid rgba(248,81,73,0.25)",
               whiteSpace: "normal",
               textOverflow: "initial",
-                overflow: "hidden",
+              overflow: "hidden",
             }}
             title={voiceError}
           >
-            <span className="voice-error-text">음성 입력 오류: {voiceError}</span>
-            <IconButton
-              tooltip="오류 텍스트 복사"
-              onClick={() => {
-                if (!voiceError) return;
-                navigator.clipboard?.writeText?.(`음성 입력 오류: ${voiceError}`).catch(() => {});
+            <span className="voice-error-text" style={{ minWidth: 0, flex: 1 }}>
+              음성 입력 오류: {voiceError}
+            </span>
+            <span
+              style={{
+                flexShrink: 0,
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 4,
+                paddingLeft: 6,
+                borderLeft: "1px solid rgba(255,255,255,0.12)",
               }}
-              className="p-1 rounded text-red-300 hover:text-red-100 hover:bg-red-500/20 transition-colors shrink-0"
             >
-              <Copy size={11} />
-            </IconButton>
-            <IconButton
-              tooltip="음성 입력 다시 시도"
-              onClick={handleMicToggle}
-              disabled={voiceBusy}
-              className="p-1 rounded text-red-300 hover:text-red-100 hover:bg-red-500/20 transition-colors shrink-0"
-            >
-              <RotateCcw size={11} />
-            </IconButton>
-            <IconButton
-              tooltip="음성 입력 오류 닫기"
-              onClick={clearVoiceError}
-              className="p-1 rounded text-red-300 hover:text-red-100 hover:bg-red-500/20 transition-colors shrink-0"
-            >
-              <X size={11} />
-            </IconButton>
+              <IconButton
+                tooltip="오류 텍스트 복사"
+                onClick={() => {
+                  if (!voiceError) return;
+                  navigator.clipboard?.writeText?.(`음성 입력 오류: ${voiceError}`).catch(() => {});
+                }}
+                className="p-1 rounded text-red-300 hover:text-red-100 hover:bg-red-500/20 transition-colors shrink-0"
+              >
+                <Copy size={11} />
+              </IconButton>
+              <IconButton
+                tooltip="음성 입력 다시 시도"
+                onClick={handleMicToggle}
+                disabled={voiceBusy}
+                className="p-1 rounded text-red-300 hover:text-red-100 hover:bg-red-500/20 transition-colors shrink-0"
+              >
+                <RotateCcw size={11} />
+              </IconButton>
+              <IconButton
+                tooltip="음성 입력 오류 닫기"
+                onClick={clearVoiceError}
+                className="p-1 rounded text-red-300 hover:text-red-100 hover:bg-red-500/20 transition-colors shrink-0"
+              >
+                <X size={11} />
+              </IconButton>
+            </span>
           </div>
         )}
 

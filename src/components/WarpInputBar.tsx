@@ -654,87 +654,105 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
               border: "1px solid rgba(248,81,73,0.25)",
               borderRadius: 6,
               padding: "2px 6px 2px 8px",
-              display: "inline-flex",
+              display: "flex",
               alignItems: "center",
               gap: 6,
               maxWidth: 420,
-              whiteSpace: "nowrap",
-              textOverflow: "ellipsis",
-              overflow: "hidden",
             }}
             title={voiceError}
           >
-            음성 입력 오류: {voiceError}
-            <button
-              type="button"
-              aria-label="오류 텍스트 복사"
-              title="오류 텍스트 복사"
-              onClick={() => {
-                navigator.clipboard?.writeText?.(`음성 입력 오류: ${voiceError}`).catch(() => {});
+            <span
+              style={{
+                minWidth: 0,
+                flex: 1,
+                whiteSpace: "nowrap",
+                textOverflow: "ellipsis",
+                overflow: "hidden",
               }}
+            >
+              음성 입력 오류: {voiceError}
+            </span>
+            <span
               style={{
                 flexShrink: 0,
                 display: "inline-flex",
                 alignItems: "center",
-                justifyContent: "center",
-                width: 14,
-                height: 14,
-                borderRadius: 6,
-                border: "1px solid rgba(255,255,255,0.24)",
-                background: "rgba(255,255,255,0.07)",
-                color: "rgba(248,81,73,0.95)",
-                cursor: "pointer",
-                padding: 0,
+                gap: 4,
+                paddingLeft: 4,
+                borderLeft: "1px solid rgba(255,255,255,0.12)",
               }}
             >
-              <Copy size={10} />
-            </button>
-            <button
-              type="button"
-              aria-label="음성 입력 다시 시도"
-              title="음성 입력 다시 시도"
-              onClick={handleMicToggle}
-              disabled={voiceBusy}
-              style={{
-                flexShrink: 0,
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                width: 14,
-                height: 14,
-                borderRadius: 6,
-                border: "1px solid rgba(255,255,255,0.24)",
-                background: "rgba(255,255,255,0.07)",
-                color: "rgba(248,81,73,0.95)",
-                cursor: voiceBusy ? "wait" : "pointer",
-                padding: 0,
-                opacity: voiceBusy ? 0.55 : 1,
-              }}
-            >
-              <RotateCcw size={10} />
-            </button>
-            <button
-              type="button"
-              aria-label="음성 입력 오류 닫기"
-              title="음성 입력 오류 닫기"
-              onClick={clearVoiceError}
-              style={{
-                flexShrink: 0,
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                width: 14,
-                height: 14,
-                borderRadius: 6,
-                border: "1px solid rgba(255,255,255,0.24)",
-                background: "rgba(255,255,255,0.07)",
-                color: "rgba(248,81,73,0.95)",
-                cursor: "pointer",
-                padding: 0,
-              }}
-            >
-              <X size={10} />
-            </button>
+              <button
+                type="button"
+                aria-label="오류 텍스트 복사"
+                title="오류 텍스트 복사"
+                onClick={() => {
+                  navigator.clipboard?.writeText?.(`음성 입력 오류: ${voiceError}`).catch(() => {});
+                }}
+                style={{
+                  flexShrink: 0,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  width: 14,
+                  height: 14,
+                  borderRadius: 6,
+                  border: "1px solid rgba(255,255,255,0.24)",
+                  background: "rgba(255,255,255,0.07)",
+                  color: "rgba(248,81,73,0.95)",
+                  cursor: "pointer",
+                  padding: 0,
+                }}
+              >
+                <Copy size={10} />
+              </button>
+              <button
+                type="button"
+                aria-label="음성 입력 다시 시도"
+                title="음성 입력 다시 시도"
+                onClick={handleMicToggle}
+                disabled={voiceBusy}
+                style={{
+                  flexShrink: 0,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  width: 14,
+                  height: 14,
+                  borderRadius: 6,
+                  border: "1px solid rgba(255,255,255,0.24)",
+                  background: "rgba(255,255,255,0.07)",
+                  color: "rgba(248,81,73,0.95)",
+                  cursor: voiceBusy ? "wait" : "pointer",
+                  padding: 0,
+                  opacity: voiceBusy ? 0.55 : 1,
+                }}
+              >
+                <RotateCcw size={10} />
+              </button>
+              <button
+                type="button"
+                aria-label="음성 입력 오류 닫기"
+                title="음성 입력 오류 닫기"
+                onClick={clearVoiceError}
+                style={{
+                  flexShrink: 0,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  width: 14,
+                  height: 14,
+                  borderRadius: 6,
+                  border: "1px solid rgba(255,255,255,0.24)",
+                  background: "rgba(255,255,255,0.07)",
+                  color: "rgba(248,81,73,0.95)",
+                  cursor: "pointer",
+                  padding: 0,
+                }}
+              >
+                <X size={10} />
+              </button>
+            </span>
           </div>
         )}
 
