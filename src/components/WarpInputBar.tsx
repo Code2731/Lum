@@ -489,22 +489,22 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
     const voiceStatusTone =
       voiceError ? {
         color: "#ff7b72",
-        background: "rgba(248,81,73,0.12)",
-        border: "1px solid rgba(248,81,73,0.25)",
+        background: "rgba(248,81,73,0.15)",
+        border: "1px solid rgba(248,81,73,0.30)",
       } :
       voiceStatus === "listening" ? {
-        color: "rgba(111,227,132,0.95)",
-        background: "rgba(63,185,80,0.12)",
-        border: "1px solid rgba(63,185,80,0.24)",
+        color: "rgba(142,241,160,0.98)",
+        background: "rgba(46,160,67,0.18)",
+        border: "1px solid rgba(63,185,80,0.34)",
       } :
       voiceStatus === "processing" ? {
-        color: "rgba(121,192,255,0.95)",
-        background: "rgba(88,166,255,0.12)",
-        border: "1px solid rgba(88,166,255,0.24)",
+        color: "rgba(145,205,255,0.98)",
+        background: "rgba(56,139,253,0.18)",
+        border: "1px solid rgba(88,166,255,0.34)",
       } : {
-        color: "rgba(255,255,255,0.58)",
-        background: "rgba(255,255,255,0.05)",
-        border: "1px solid rgba(255,255,255,0.12)",
+        color: "rgba(255,255,255,0.72)",
+        background: "rgba(255,255,255,0.08)",
+        border: "1px solid rgba(255,255,255,0.18)",
       };
     const voicePulseActive = voiceStatus === "listening" || voiceStatus === "processing";
     const isVoiceProcessing = voiceStatus === "processing";

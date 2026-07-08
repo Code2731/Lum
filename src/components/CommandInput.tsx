@@ -139,10 +139,10 @@ const CommandInput = ({
     voiceStatus === "processing" ? "반영 중" :
     "대기 중";
   const voiceStatusToneClass =
-    voiceError ? "text-red-300 bg-red-500/10 border-red-400/30" :
-    voiceStatus === "listening" ? "text-emerald-300 bg-emerald-500/10 border-emerald-400/30" :
-    voiceStatus === "processing" ? "text-sky-300 bg-sky-500/10 border-sky-400/30" :
-    "text-white/55 bg-white/5 border-white/15";
+    voiceError ? "text-red-300 bg-red-500/15 border-red-400/35" :
+    voiceStatus === "listening" ? "text-emerald-200 bg-emerald-500/15 border-emerald-400/40" :
+    voiceStatus === "processing" ? "text-sky-200 bg-sky-500/15 border-sky-400/40" :
+    "text-white/70 bg-white/10 border-white/20";
   const voicePulseActive = voiceStatus === "listening" || voiceStatus === "processing";
   const isVoiceProcessing = voiceStatus === "processing";
   const showVoiceStatusBanner =
