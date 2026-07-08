@@ -16,6 +16,7 @@
     "test:e2e:noserver": "node scripts/run-e2e-noserver.js",
     "mvp:readiness": "node scripts/mvp-readiness.mjs",
     "mvp:readiness:json": "node scripts/mvp-readiness.mjs --json",
+    "verify:linux-bundles": "bash scripts/verify-linux-tauri-bundles.sh",
     "lint": "eslint . --ext ts,tsx --max-warnings 0",
     "format": "prettier --write \"src/**/*.{ts,tsx,css,json}\""
   },
