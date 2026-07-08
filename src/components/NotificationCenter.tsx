@@ -62,16 +62,26 @@ function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-function renderHighlightedText(text: string, query: string): React.ReactNode {
-  const normalizedQuery = query.trim();
-  if (!normalizedQuery) return text;
+function buildSearchQueries(query: string): string[] {
+  return query
+    .trim()
+    .toLowerCase()
+    .split(/\s+/)
+    .filter((item) => item.length > 0);
+}
 
-  const regex = new RegExp(`(${escapeRegExp(normalizedQuery)})`, "gi");
+function renderHighlightedText(text: string, queries: string[]): React.ReactNode {
+  if (queries.length === 0) {
+    return text;
+  }
+
+  const sortedQueries = [...queries].sort((a, b) => b.length - a.length);
+  const regex = new RegExp(`(${sortedQueries.map(escapeRegExp).join("|")})`, "gi");
   const parts = text.split(regex);
 
   return parts.map((part, index) => {
     if (!part) return null;
-    const isMatch = normalizedQuery.toLowerCase() === part.toLowerCase();
+    const isMatch = queries.some((query) => query.toLowerCase() === part.toLowerCase());
     if (!isMatch) {
       return <span key={`${text}-${index}`}>{part}</span>;
     }
@@ -116,15 +126,16 @@ const NotificationCenter: React.FC<Props> = ({
   }, [unreadCount, showUnreadOnly]);
 
   const normalizedSearchQuery = useMemo(() => searchQuery.trim(), [searchQuery]);
+  const normalizedSearchQueries = useMemo(() => buildSearchQueries(normalizedSearchQuery), [normalizedSearchQuery]);
 
   const { displayedNotifications, matchedTitleCount, matchedBodyCount } = useMemo(() => {
-    const normalizedSearch = normalizedSearchQuery.toLowerCase();
+    const hasSearchQuery = normalizedSearchQueries.length > 0;
     const afterUnreadFilter = showUnreadOnly ? orderedNotifications.filter((n) => !n.read) : orderedNotifications;
     const afterTypeFilter = typeFilter === "all"
       ? afterUnreadFilter
       : afterUnreadFilter.filter((n) => n.type === typeFilter);
 
-    if (!normalizedSearch) {
+    if (!hasSearchQuery) {
       return {
         displayedNotifications: afterTypeFilter,
         matchedTitleCount: 0,
@@ -134,9 +145,19 @@ const NotificationCenter: React.FC<Props> = ({
 
     let titleMatchCount = 0;
     let bodyMatchCount = 0;
+    const isMatch = (text: string, queries: string[]) => queries.some((query) => text.includes(query));
     const matched = afterTypeFilter.filter((n) => {
-      const titleMatched = n.title.toLowerCase().includes(normalizedSearch);
-      const bodyMatched = n.body.toLowerCase().includes(normalizedSearch);
+      const normalizedTitle = n.title.toLowerCase();
+      const normalizedBody = n.body.toLowerCase();
+      const normalizedText = `${normalizedTitle} ${normalizedBody}`;
+      const matchedAllQueries = normalizedSearchQueries.every((query) => normalizedText.includes(query));
+      if (!matchedAllQueries) {
+        return false;
+      }
+
+      const titleMatched = isMatch(normalizedTitle, normalizedSearchQueries);
+      const bodyMatched = isMatch(normalizedBody, normalizedSearchQueries);
+
       if (titleMatched) titleMatchCount += 1;
       if (bodyMatched) bodyMatchCount += 1;
       return titleMatched || bodyMatched;
@@ -147,7 +168,7 @@ const NotificationCenter: React.FC<Props> = ({
       matchedTitleCount: titleMatchCount,
       matchedBodyCount: bodyMatchCount,
     };
-  }, [orderedNotifications, showUnreadOnly, typeFilter, normalizedSearchQuery]);
+  }, [orderedNotifications, showUnreadOnly, typeFilter, normalizedSearchQueries]);
 
   const displayedNotificationIds = useMemo(
     () => displayedNotifications.map((n) => n.id),
@@ -554,7 +575,7 @@ const NotificationCenter: React.FC<Props> = ({
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5 flex-wrap mb-0.5">
                     <p className={`text-sm font-medium ${n.read ? "text-white/45" : "text-white/75"}`}>
-                      {renderHighlightedText(n.title, normalizedSearchQuery)}
+                      {renderHighlightedText(n.title, normalizedSearchQueries)}
                     </p>
                     <span className="inline-flex items-center text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-white/[0.08] text-white/50 border border-white/12">
                       {TYPE_LABEL[n.type]}
@@ -566,7 +587,7 @@ const NotificationCenter: React.FC<Props> = ({
                     )}
                   </div>
                   <p className="text-xs text-white/35 mt-0.5 break-words leading-relaxed">
-                    {renderHighlightedText(n.body, normalizedSearchQuery)}
+                    {renderHighlightedText(n.body, normalizedSearchQueries)}
                   </p>
                   <p className="text-xs text-white/20 mt-1">{timeAgo(n.timestamp)}</p>
                 </div>

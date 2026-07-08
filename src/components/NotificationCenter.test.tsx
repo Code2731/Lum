@@ -959,6 +959,45 @@ describe("NotificationCenter", () => {
     expect(marks[1]).toHaveTextContent("빌드");
   });
 
+  it("검색어를 공백 기준 다중 키워드로 처리하고 제목/본문 매칭 건수를 분리한다", () => {
+    const { container } = render(
+      <NotificationCenter
+        notifications={[
+          {
+            id: "1",
+            type: "command",
+            title: "빌드 실패 알림",
+            body: "요약 없이 종료됨",
+            timestamp: 1_000,
+            read: false,
+          },
+          {
+            id: "2",
+            type: "agent",
+            title: "에이전트 알림",
+            body: "빌드 진행 중 실패가 발생했습니다",
+            timestamp: 2_000,
+            read: false,
+          },
+        ]}
+        unreadCount={2}
+        onMarkAllRead={vi.fn()}
+        onDismiss={vi.fn()}
+        onDismissByIds={vi.fn()}
+        onClear={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText("알림 검색"), { target: { value: "빌드 실패" } });
+
+    expect(screen.getByText(/제목:\s*1건,\s*본문:\s*1건/)).toBeInTheDocument();
+    const marks = container.querySelectorAll("mark");
+    expect(marks).toHaveLength(4);
+    expect(marks[0]).toHaveTextContent("빌드");
+    expect(marks[1]).toHaveTextContent("실패");
+  });
+
   it("Ctrl/Cmd + C로 검색어를 비울 수 있다", () => {
     render(
       <NotificationCenter
