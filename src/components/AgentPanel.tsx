@@ -10,9 +10,11 @@ import {
   X,
   ChevronRight,
   BookOpen,
+  Copy,
 } from "lucide-react";
 import type { AgentState, AgentStep, CompletedStep } from "../hooks/useAgentLoop";
 import { SMALL_ICON_SIZE } from "../constants/ui";
+import { IconButton } from "@/components/ui/icon-button";
 
 interface Props {
   state: AgentState;
@@ -83,6 +85,9 @@ const CompletedStepRow: React.FC<{ step: CompletedStep }> = ({ step }) => {
 
 const AgentPanel: React.FC<Props> = ({ state, onApprove, onCancel, onClose, onSaveScript }) => {
   const { status, task, plan, currentStepIdx, completed, message } = state;
+  const copyText = (text: string) => {
+    navigator.clipboard?.writeText?.(text).catch(() => {});
+  };
 
   const currentStep = plan[currentStepIdx] ?? null;
   const totalSteps = plan.length;
@@ -234,7 +239,14 @@ const AgentPanel: React.FC<Props> = ({ state, onApprove, onCancel, onClose, onSa
           <div className="p-4 space-y-3">
             <div className="flex items-start gap-2">
               <XCircle size={16} className="text-red-400 shrink-0 mt-0.5" />
-              <span className="text-xs text-red-400 leading-relaxed">{message || "태스크 실행 중 오류가 발생했습니다."}</span>
+              <span className="text-xs text-red-400 leading-relaxed flex-1">{message || "태스크 실행 중 오류가 발생했습니다."}</span>
+              <IconButton
+                tooltip="오류 텍스트 복사"
+                onClick={() => copyText(message || "태스크 실행 중 오류가 발생했습니다.")}
+                className="p-1 rounded text-white/60 hover:text-white/85 hover:bg-red-500/20 transition-colors"
+              >
+                <Copy size={11} />
+              </IconButton>
             </div>
             {completed.length > 0 && (
               <div>
