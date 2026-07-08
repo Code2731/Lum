@@ -4,6 +4,40 @@ import { isPointerOutsideTargets } from "../utils/pointerGuard";
 import NotificationCenter from "./NotificationCenter";
 import type { AppNotification } from "../hooks/useNotificationCenter";
 
+type WriteSpy = ReturnType<typeof vi.fn>;
+
+type ClipboardState = {
+  writeText: WriteSpy;
+  restore: () => void;
+};
+
+function setupClipboardWriteMock(): ClipboardState {
+  const nav = globalThis.navigator as Navigator & {
+    clipboard?: { writeText: WriteSpy };
+  };
+  const originalClipboard = nav.clipboard;
+  const writeText = vi.fn().mockResolvedValue(undefined);
+
+  Object.defineProperty(globalThis.navigator, "clipboard", {
+    configurable: true,
+    value: { writeText },
+  });
+
+  return {
+    writeText,
+    restore: () => {
+      if (originalClipboard) {
+        Object.defineProperty(globalThis.navigator, "clipboard", {
+          configurable: true,
+          value: originalClipboard,
+        });
+      } else {
+        delete (globalThis.navigator as Navigator & { clipboard?: { writeText: WriteSpy } }).clipboard;
+      }
+    },
+  };
+}
+
 describe("NotificationCenter", () => {
   const baseProps = {
     notifications: [] as AppNotification[],
@@ -355,6 +389,40 @@ describe("NotificationCenter", () => {
     );
 
     expect(getByLabelText("cmd 알림 닫기")).toBeInTheDocument();
+  });
+
+  it("알림 텍스트를 복사할 수 있다", () => {
+    const clipboardMock = setupClipboardWriteMock();
+    try {
+      const notifications: AppNotification[] = [
+        {
+          id: "1",
+          type: "command",
+          title: "cmd",
+          body: "실패 알림 메시지",
+          timestamp: Date.now(),
+          read: false,
+        },
+      ];
+
+      render(
+        <NotificationCenter
+          notifications={notifications}
+          unreadCount={1}
+          onMarkAllRead={vi.fn()}
+          onDismiss={vi.fn()}
+          onClear={vi.fn()}
+          onClose={vi.fn()}
+        />,
+      );
+
+      fireEvent.mouseOver(screen.getByText("실패 알림 메시지"));
+      const copyButton = screen.getByRole("button", { name: "알림 텍스트 복사" });
+      fireEvent.click(copyButton);
+      expect(clipboardMock.writeText).toHaveBeenCalledWith("cmd\n실패 알림 메시지");
+    } finally {
+      clipboardMock.restore();
+    }
   });
 
   it("패널이 열리면 첫 포커스 가능한 요소가 포커스를 받는다", async () => {

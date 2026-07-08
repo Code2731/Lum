@@ -1,5 +1,5 @@
 import React, { useRef, useEffect } from "react";
-import { Bell, Terminal, Bot, Wrench, Layers, X, CheckCheck, Trash2 } from "lucide-react";
+import { Bell, Terminal, Bot, Wrench, Layers, X, CheckCheck, Trash2, Copy } from "lucide-react";
 import { IconButton } from "@/components/ui/icon-button";
 import type { AppNotification, NotifType } from "../hooks/useNotificationCenter";
 import { getActiveFocusableIndex, isPointerOutsideTargets } from "../utils/pointerGuard";
@@ -234,6 +234,13 @@ const NotificationCenter: React.FC<Props> = ({
                   <p className="text-xs text-white/35 mt-0.5 break-words leading-relaxed">{n.body}</p>
                   <p className="text-xs text-white/20 mt-1">{timeAgo(n.timestamp)}</p>
                 </div>
+                <IconButton
+                  tooltip="알림 텍스트 복사"
+                  onClick={() => navigator.clipboard.writeText(`${n.title}\n${n.body}`).catch(() => {})}
+                  className="shrink-0 mt-0.5 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 text-white/20 hover:text-white/50 transition-all p-0.5 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                >
+                  <Copy size={10} />
+                </IconButton>
                 <button
                   type="button"
                   onClick={() => onDismiss(n.id)}
