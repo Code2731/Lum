@@ -148,22 +148,48 @@ const NotificationCenter: React.FC<Props> = ({
     let titleMatchCount = 0;
     let bodyMatchCount = 0;
     const isMatch = (text: string, queries: string[]) => queries.some((query) => text.includes(query));
-    const matched = afterTypeFilter.filter((n) => {
+    const matchList: Array<{
+      notification: AppNotification;
+      score: number;
+    }> = [];
+
+    afterTypeFilter.forEach((n) => {
       const normalizedTitle = n.title.toLowerCase();
       const normalizedBody = n.body.toLowerCase();
       const normalizedText = `${normalizedTitle} ${normalizedBody}`;
       const matchedAllQueries = normalizedSearchQueries.every((query) => normalizedText.includes(query));
-      if (!matchedAllQueries) {
-        return false;
-      }
+      if (!matchedAllQueries) return;
 
       const titleMatched = isMatch(normalizedTitle, normalizedSearchQueries);
       const bodyMatched = isMatch(normalizedBody, normalizedSearchQueries);
+      const titleAllMatched = normalizedSearchQueries.every((query) => normalizedTitle.includes(query));
+      const bodyAllMatched = normalizedSearchQueries.every((query) => normalizedBody.includes(query));
 
       if (titleMatched) titleMatchCount += 1;
       if (bodyMatched) bodyMatchCount += 1;
-      return titleMatched || bodyMatched;
+      const titleKeywordMatchCount = normalizedSearchQueries.filter((query) => normalizedTitle.includes(query)).length;
+      const bodyKeywordMatchCount = normalizedSearchQueries.filter((query) => normalizedBody.includes(query)).length;
+      const score = (titleAllMatched ? 80 : 0)
+        + (bodyAllMatched ? 60 : 0)
+        + (titleKeywordMatchCount * 20)
+        + (bodyKeywordMatchCount * 5);
+      matchList.push({
+        notification: n,
+        score,
+      });
     });
+
+    const matched = matchList
+      .sort((left, right) => {
+        if (right.score !== left.score) {
+          return right.score - left.score;
+        }
+        if (left.notification.read !== right.notification.read) {
+          return left.notification.read ? 1 : -1;
+        }
+        return right.notification.timestamp - left.notification.timestamp;
+      })
+      .map((item) => item.notification);
 
     return {
       displayedNotifications: matched,

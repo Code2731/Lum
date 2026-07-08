@@ -998,6 +998,51 @@ describe("NotificationCenter", () => {
     expect(marks[1]).toHaveTextContent("실패");
   });
 
+  it("검색어 매칭 결과를 제목 우선 관련성 순서로 정렬한다", () => {
+    render(
+      <NotificationCenter
+        notifications={[
+          {
+            id: "1",
+            type: "command",
+            title: "데이터 베이스 로그인 실패",
+            body: "세션에서 실패 메시지를 받았습니다",
+            timestamp: 1_000,
+            read: false,
+          },
+          {
+            id: "2",
+            type: "agent",
+            title: "로그인 성공 알림",
+            body: "로그인 실패 케이스를 재현했습니다",
+            timestamp: 2_000,
+            read: false,
+          },
+          {
+            id: "3",
+            type: "healing",
+            title: "상태 알림",
+            body: "로그인 실패 이후 회복 시도",
+            timestamp: 3_000,
+            read: false,
+          },
+        ]}
+        unreadCount={3}
+        onMarkAllRead={vi.fn()}
+        onDismiss={vi.fn()}
+        onDismissByIds={vi.fn()}
+        onClear={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText("알림 검색"), { target: { value: "\"로그인 실패\"" } });
+
+    const rows = screen.getAllByRole("alert");
+    expect(rows[0]).toHaveTextContent("데이터 베이스 로그인 실패");
+    expect(rows).toHaveLength(3);
+  });
+
   it("따옴표로 묶인 검색어를 구문 단위로 처리한다", () => {
     render(
       <NotificationCenter
