@@ -1,10 +1,11 @@
 import React, { useRef, useEffect, useState, useCallback } from "react";
 import ReactMarkdown from "react-markdown";
-import { Bot, User, Trash2, X, Loader2, Send, Play, StopCircle } from "lucide-react";
+import { Bot, Copy, Settings, User, Trash2, X, Loader2, Send, Play, StopCircle } from "lucide-react";
 import { IconButton } from "@/components/ui/icon-button";
 import { Textarea } from "@/components/ui/textarea";
 import type { ChatMessage } from "../hooks/useAIChat";
 import { SMALL_ICON_SIZE } from "../constants/ui";
+import { isRoutingError } from "../utils/errorMessage";
 
 interface Props {
   messages: ChatMessage[];
@@ -15,9 +16,20 @@ interface Props {
   onClear: () => void;
   onClose: () => void;
   onExecute: (cmd: string) => void;
+  onOpenXllmPanel?: () => void;
 }
 
-const AIChatPanel: React.FC<Props> = ({ messages, streaming, error, onSend, onCancel, onClear, onClose, onExecute }) => {
+const AIChatPanel: React.FC<Props> = ({
+  messages,
+  streaming,
+  error,
+  onSend,
+  onCancel,
+  onClear,
+  onClose,
+  onExecute,
+  onOpenXllmPanel,
+}) => {
   const [input, setInput] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -45,6 +57,11 @@ const AIChatPanel: React.FC<Props> = ({ messages, streaming, error, onSend, onCa
       e.preventDefault();
       onClose();
     }
+  };
+  const showRoutingErrorActions = isRoutingError(error);
+  const handleCopyError = () => {
+    if (!error) return;
+    navigator.clipboard?.writeText?.(error).catch(() => {});
   };
 
   return (
@@ -79,7 +96,27 @@ const AIChatPanel: React.FC<Props> = ({ messages, streaming, error, onSend, onCa
       {/* 에러 배너 */}
       {error && (
         <div className="shrink-0 px-3 py-1.5 bg-red-500/10 border-b border-red-500/20 text-xs text-red-400 leading-relaxed">
-          {error}
+          <div className="flex items-start justify-between gap-2">
+            <div className="whitespace-pre-wrap break-all flex-1">{error}</div>
+            <div className="flex items-center gap-1">
+              {showRoutingErrorActions && onOpenXllmPanel && (
+                <IconButton
+                  tooltip="xLLM/모델 설정 열기"
+                  onClick={onOpenXllmPanel}
+                  className="p-1 rounded text-red-200/85 hover:text-red-100 hover:bg-red-500/20 transition-colors"
+                >
+                  <Settings size={12} />
+                </IconButton>
+              )}
+              <IconButton
+                tooltip="오류 텍스트 복사"
+                onClick={handleCopyError}
+                className="p-1 rounded text-red-200/85 hover:text-red-100 hover:bg-red-500/20 transition-colors"
+              >
+                <Copy size={12} />
+              </IconButton>
+            </div>
+          </div>
         </div>
       )}
 

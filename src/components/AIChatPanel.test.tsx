@@ -30,4 +30,46 @@ describe("AIChatPanel", () => {
 
     expect(screen.getByText("Esc 로 닫기")).toBeInTheDocument();
   });
+
+  it("라우팅 에러면 xLLM 설정 버튼이 표시되고 동작한다", () => {
+    const onOpenXllmPanel = vi.fn();
+    render(
+      <AIChatPanel
+        {...createProps()}
+        error="라우팅 실패: 임베디드 모델이 로드되지 않았습니다"
+        onOpenXllmPanel={onOpenXllmPanel}
+      />,
+    );
+
+    fireEvent.click(screen.getByLabelText("xLLM/모델 설정 열기"));
+    expect(onOpenXllmPanel).toHaveBeenCalledTimes(1);
+  });
+
+  it("에러 배너에서 오류 텍스트를 복사할 수 있다", () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    const originalClipboard = (globalThis.navigator as Navigator & { clipboard?: { writeText: typeof writeText } }).clipboard;
+    let spyWriteText: ReturnType<typeof vi.fn> | null = null;
+    if (originalClipboard) {
+      spyWriteText = vi.spyOn(originalClipboard, "writeText").mockResolvedValue(undefined);
+    } else {
+      Object.defineProperty(globalThis.navigator, "clipboard", {
+        value: { writeText },
+        configurable: true,
+      });
+    }
+
+    render(
+      <AIChatPanel
+        {...createProps()}
+        error="임시 에러"
+      />,
+    );
+
+    fireEvent.click(screen.getByLabelText("오류 텍스트 복사"));
+    if (spyWriteText) {
+      expect(spyWriteText).toHaveBeenCalledWith("임시 에러");
+    } else {
+      expect(writeText).toHaveBeenCalledWith("임시 에러");
+    }
+  });
 });
