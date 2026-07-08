@@ -425,6 +425,71 @@ describe("NotificationCenter", () => {
     }
   });
 
+  it("미확인 알림 필터를 토글해 미확인 목록만 볼 수 있다", () => {
+    render(
+      <NotificationCenter
+        notifications={[
+          {
+            id: "1",
+            type: "command",
+            title: "read",
+            body: "이미 확인됨",
+            timestamp: 1_000,
+            read: true,
+          },
+          {
+            id: "2",
+            type: "agent",
+            title: "unread",
+            body: "확인 필요",
+            timestamp: 2_000,
+            read: false,
+          },
+        ]}
+        unreadCount={1}
+        onMarkAllRead={vi.fn()}
+        onDismiss={vi.fn()}
+        onClear={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    const alerts = screen.getAllByRole("alert");
+    expect(alerts).toHaveLength(2);
+
+    const unreadOnlyButton = screen.getByRole("button", { name: "미확인 알림만 보기" });
+    fireEvent.click(unreadOnlyButton);
+
+    const filtered = screen.getAllByRole("alert");
+    expect(filtered).toHaveLength(1);
+    expect(filtered[0]).toHaveTextContent("unread");
+  });
+
+  it("미확인 알림이 없으면 미확인 필터 버튼이 표시되지 않는다", () => {
+    render(
+      <NotificationCenter
+        notifications={[
+          {
+            id: "1",
+            type: "command",
+            title: "read",
+            body: "이미 확인됨",
+            timestamp: 1_000,
+            read: true,
+          },
+        ]}
+        unreadCount={0}
+        onMarkAllRead={vi.fn()}
+        onDismiss={vi.fn()}
+        onClear={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByRole("button", { name: /미확인/ })).not.toBeInTheDocument();
+    expect(screen.getByText("read")).toBeInTheDocument();
+  });
+
   it("알림이 읽음/미읽음 상태와 시간 기준으로 정렬된다", () => {
     const notifications: AppNotification[] = [
       {

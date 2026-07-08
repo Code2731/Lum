@@ -1,5 +1,5 @@
-import React, { useRef, useEffect, useMemo } from "react";
-import { Bell, Terminal, Bot, Wrench, Layers, X, CheckCheck, Trash2, Copy } from "lucide-react";
+import React, { useRef, useEffect, useMemo, useState } from "react";
+import { Bell, Terminal, Bot, Wrench, Layers, X, CheckCheck, Trash2, Copy, Filter } from "lucide-react";
 import { IconButton } from "@/components/ui/icon-button";
 import type { AppNotification, NotifType } from "../hooks/useNotificationCenter";
 import { getActiveFocusableIndex, isPointerOutsideTargets } from "../utils/pointerGuard";
@@ -60,6 +60,7 @@ const NotificationCenter: React.FC<Props> = ({
   const panelRef = useRef<HTMLDivElement>(null);
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
+  const [showUnreadOnly, setShowUnreadOnly] = useState(false);
 
   const orderedNotifications = useMemo(() => {
     return [...notifications].sort((a, b) => {
@@ -69,6 +70,17 @@ const NotificationCenter: React.FC<Props> = ({
       return b.timestamp - a.timestamp;
     });
   }, [notifications]);
+
+  useEffect(() => {
+    if (unreadCount === 0 && showUnreadOnly) {
+      setShowUnreadOnly(false);
+    }
+  }, [unreadCount, showUnreadOnly]);
+
+  const displayedNotifications = useMemo(() => {
+    if (!showUnreadOnly) return orderedNotifications;
+    return orderedNotifications.filter((n) => !n.read);
+  }, [orderedNotifications, showUnreadOnly]);
 
   const getPopupElements = () => {
     if (!panelRef.current) return [];
@@ -199,6 +211,18 @@ const NotificationCenter: React.FC<Props> = ({
             <CheckCheck size={11} />
           </IconButton>
         )}
+        {unreadCount > 0 && (
+          <button
+            type="button"
+            onClick={() => setShowUnreadOnly((prev) => !prev)}
+            aria-pressed={showUnreadOnly}
+            aria-label={showUnreadOnly ? "전체 알림 보기" : "미확인 알림만 보기"}
+            className="inline-flex items-center gap-1 px-2 py-1 text-xs rounded border border-white/12 bg-white/[0.05] text-white/70 hover:text-white hover:bg-white/[0.1] transition-colors"
+          >
+            <Filter size={11} />
+            <span>{showUnreadOnly ? "전체 보기" : `미확인 ${unreadCount}개`}</span>
+          </button>
+        )}
         {notifications.length > 0 && (
           <IconButton
             tooltip="전체 삭제"
@@ -225,14 +249,14 @@ const NotificationCenter: React.FC<Props> = ({
 
       {/* 알림 목록 */}
       <div className="flex-1 overflow-y-auto min-h-0">
-        {notifications.length === 0 ? (
+        {displayedNotifications.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-2 py-12 text-white/20">
             <Bell size={24} />
-            <p className="text-sm">알림이 없습니다</p>
+            <p className="text-sm">{showUnreadOnly ? "미확인 알림이 없습니다" : "알림이 없습니다"}</p>
           </div>
         ) : (
           <div className="p-2 space-y-1">
-            {orderedNotifications.map((n) => (
+            {displayedNotifications.map((n) => (
               <div
                 key={n.id}
                 role="alert"
