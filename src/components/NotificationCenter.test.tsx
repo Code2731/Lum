@@ -1685,6 +1685,54 @@ describe("NotificationCenter", () => {
     expect(screen.getByText("임시 검색어 2")).toBeInTheDocument();
   });
 
+  it("히스토리 패널에서 방향키로 검색 기록을 선택하고 Enter로 적용할 수 있다", () => {
+    window.localStorage.setItem(
+      "lum_notification_search_history_v1",
+      JSON.stringify([
+        {
+          mode: "token",
+          query: "구버전 검색",
+          ts: 1,
+        },
+        {
+          mode: "token",
+          query: "최신 검색",
+          ts: 2,
+        },
+      ]),
+    );
+
+    render(
+      <NotificationCenter
+        notifications={[
+          {
+            id: "1",
+            type: "command",
+            title: "빌드 에러 코드 500",
+            body: "에러 메시지 분석",
+            timestamp: 1_000,
+            read: false,
+          },
+        ]}
+        unreadCount={1}
+        onMarkAllRead={vi.fn()}
+        onDismiss={vi.fn()}
+        onDismissByIds={vi.fn()}
+        onClear={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    const searchInput = screen.getByLabelText("알림 검색");
+    fireEvent.focus(searchInput);
+
+    fireEvent.keyDown(searchInput, { key: "ArrowDown" });
+    fireEvent.keyDown(searchInput, { key: "Enter" });
+
+    expect(searchInput).toHaveValue("최신 검색");
+    expect(searchInput).toHaveFocus();
+  });
+
   it("단축키 1/2로 검색 모드를 전환할 수 있다", () => {
     render(
       <NotificationCenter

@@ -308,6 +308,7 @@ const NotificationCenter: React.FC<Props> = ({
   const [searchQuery, setSearchQuery] = useState("");
   const [searchHistory, setSearchHistory] = useState<SearchHistoryItem[]>([]);
   const [showSearchHistory, setShowSearchHistory] = useState(false);
+  const [activeHistoryIndex, setActiveHistoryIndex] = useState(-1);
 
   const saveSearchHistory = (mode: SearchMode, query: string) => {
     const nextQuery = query.trim();
@@ -329,12 +330,14 @@ const NotificationCenter: React.FC<Props> = ({
   const clearSearchHistory = () => {
     setSearchHistory([]);
     setShowSearchHistory(false);
+    setActiveHistoryIndex(-1);
   };
 
   const applySearchHistoryItem = (item: SearchHistoryItem) => {
     setSearchMode(item.mode);
     setSearchQuery(item.query);
     setShowSearchHistory(false);
+    setActiveHistoryIndex(-1);
     searchInputRef.current?.focus();
   };
 
@@ -344,6 +347,24 @@ const NotificationCenter: React.FC<Props> = ({
       && historyItem.query === item.query
       && historyItem.ts === item.ts
     )));
+    setActiveHistoryIndex(-1);
+  };
+
+  const sortedSearchHistory = useMemo(
+    () => [...searchHistory].sort((left, right) => right.ts - left.ts),
+    [searchHistory],
+  );
+
+  const moveHistoryIndex = (nextDelta: number) => {
+    if (sortedSearchHistory.length === 0) {
+      setActiveHistoryIndex(-1);
+      return;
+    }
+
+    const maxIndex = sortedSearchHistory.length - 1;
+    const base = activeHistoryIndex < 0 ? 0 : activeHistoryIndex;
+    const next = (base + nextDelta + maxIndex + 1) % (maxIndex + 1);
+    setActiveHistoryIndex(next);
   };
 
   useEffect(() => {
@@ -869,21 +890,52 @@ const NotificationCenter: React.FC<Props> = ({
                 ref={searchInputRef}
                 type="text"
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onFocus={() => setShowSearchHistory(true)}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setActiveHistoryIndex(-1);
+                }}
+                onFocus={() => {
+                  setShowSearchHistory(true);
+                  setActiveHistoryIndex(-1);
+                }}
                 onBlur={() => {
                   setShowSearchHistory(false);
+                  setActiveHistoryIndex(-1);
                   if (searchQuery.trim()) {
                     saveSearchHistory(searchMode, searchQuery);
                   }
                 }}
                 onKeyDown={(e) => {
+                  if (showSearchHistory && !searchQuery && sortedSearchHistory.length > 0) {
+                    if (e.key === "ArrowDown") {
+                      moveHistoryIndex(1);
+                      e.preventDefault();
+                      e.stopPropagation();
+                      return;
+                    }
+                    if (e.key === "ArrowUp") {
+                      moveHistoryIndex(-1);
+                      e.preventDefault();
+                      e.stopPropagation();
+                      return;
+                    }
+
+                    if (e.key === "Enter" && activeHistoryIndex >= 0) {
+                      applySearchHistoryItem(sortedSearchHistory[activeHistoryIndex]!);
+                      e.preventDefault();
+                      e.stopPropagation();
+                      return;
+                    }
+                  }
+
                   if (e.key === "Escape") {
                     setShowSearchHistory(false);
+                    setActiveHistoryIndex(-1);
                   }
                   if (e.key === "Enter") {
                     saveSearchHistory(searchMode, searchQuery);
                     setShowSearchHistory(false);
+                    setActiveHistoryIndex(-1);
                   }
                 }}
                 placeholder={searchMode === "regex"
@@ -899,6 +951,7 @@ const NotificationCenter: React.FC<Props> = ({
                   onClick={() => {
                     setSearchQuery("");
                     setShowSearchHistory(true);
+                    setActiveHistoryIndex(-1);
                     searchInputRef.current?.focus();
                   }}
                 >
@@ -956,19 +1009,20 @@ const NotificationCenter: React.FC<Props> = ({
           </div>
           {showSearchHistory && searchHistory.length > 0 && !searchQuery && (
             <div className="px-2 pb-1.5 pt-0 flex flex-wrap gap-1.5">
-              {searchHistory
-                .slice()
-                .sort((left, right) => right.ts - left.ts)
-                .map((item) => (
+              {sortedSearchHistory.map((item, index) => (
               <div
                 key={`${item.mode}-${item.query}-${item.ts}`}
                 className="inline-flex items-center max-w-[45%] text-[10px] rounded border border-white/10 px-1.5 py-1 bg-white/[0.03] text-white/75"
+                style={activeHistoryIndex === index ? {
+                  background: "rgba(255,255,255,0.12)",
+                } : undefined}
               >
                 <button
                   type="button"
                   onMouseDown={(event) => event.preventDefault()}
                   onClick={() => applySearchHistoryItem(item)}
                   className="inline-flex flex-1 min-w-0 items-center text-left hover:border-white/25 hover:text-white"
+                  aria-label={`최근 검색어 ${item.query} 적용`}
                 >
                   <span className="mr-1 text-[9px] text-white/45">{item.mode === "regex" ? "R" : "T"}:</span>
                   <span className="truncate">{item.query}</span>
