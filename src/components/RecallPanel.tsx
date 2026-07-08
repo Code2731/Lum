@@ -4,10 +4,20 @@
 
 import React, { useCallback, useState } from "react";
 import {
-  Library, Search, Loader2, Trash2, Wrench, TerminalSquare, BrainCircuit, ArrowUpRight, Clock,
+  Library,
+  Search,
+  Loader2,
+  Trash2,
+  Wrench,
+  TerminalSquare,
+  BrainCircuit,
+  ArrowUpRight,
+  Clock,
+  Copy,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { IconButton } from "@/components/ui/icon-button";
 import { Button } from "@/components/ui/button";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete";
 import { useRecall, type RecallEntry, type RecallSource } from "../hooks/useRecall";
@@ -33,6 +43,10 @@ const TIME_RANGES: { label: string; sinceFromNow: number | null }[] = [
   { label: "1주", sinceFromNow: 7 * 24 * 60 * 60 * 1000 },
   { label: "1달", sinceFromNow: 30 * 24 * 60 * 60 * 1000 },
 ];
+
+function copyText(text: string) {
+  navigator.clipboard?.writeText?.(text).catch(() => {});
+}
 
 const RecallPanel: React.FC<Props> = ({ model, onInjectToChat, onClose }) => {
   const { results, stats, loading, error, search, forget, forgetBefore } = useRecall(model);
@@ -153,8 +167,15 @@ const RecallPanel: React.FC<Props> = ({ model, onInjectToChat, onClose }) => {
         </div>
 
         {error && (
-          <div className="px-5 py-2 text-sm text-rose-300 bg-rose-500/10 border-b border-rose-400/20 shrink-0">
-            {error}
+          <div className="px-5 py-2 text-sm text-rose-300 bg-rose-500/10 border-b border-rose-400/20 shrink-0 flex items-start gap-2">
+            <span className="min-w-0 break-words flex-1">{error}</span>
+            <IconButton
+              tooltip="오류 텍스트 복사"
+              onClick={() => copyText(error)}
+              className="p-1 rounded text-white/60 hover:text-white/85 hover:bg-white/10 transition-colors"
+            >
+              <Copy size={11} />
+            </IconButton>
           </div>
         )}
 
