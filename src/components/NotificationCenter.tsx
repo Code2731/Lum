@@ -284,8 +284,8 @@ const NotificationCenter: React.FC<Props> = ({
           <div className="flex items-center gap-1.5 overflow-x-auto">
             {FILTER_TYPES.map((filterType) => {
               const count = filterType === "all"
-                ? notifications.length
-                : notifications.filter((n) => n.type === filterType).length;
+                ? displayedNotificationIds.length
+                : displayedNotifications.filter((n) => n.type === filterType).length;
               return (
                 <button
                   key={filterType}

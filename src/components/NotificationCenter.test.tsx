@@ -490,6 +490,50 @@ describe("NotificationCenter", () => {
     expect(screen.getByText("read")).toBeInTheDocument();
   });
 
+  it("미확인 필터에서 타입/전체 칩 카운트가 미확인 기준으로 표시된다", () => {
+    render(
+      <NotificationCenter
+        notifications={[
+          {
+            id: "1",
+            type: "command",
+            title: "cmd-read",
+            body: "읽은 커맨드",
+            timestamp: 1_000,
+            read: true,
+          },
+          {
+            id: "2",
+            type: "command",
+            title: "cmd-unread",
+            body: "미확인 커맨드",
+            timestamp: 2_000,
+            read: false,
+          },
+          {
+            id: "3",
+            type: "agent",
+            title: "agent-unread",
+            body: "미확인 에이전트",
+            timestamp: 3_000,
+            read: false,
+          },
+        ]}
+        unreadCount={2}
+        onMarkAllRead={vi.fn()}
+        onDismiss={vi.fn()}
+        onClear={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "미확인 알림만 보기" }));
+
+    expect(screen.getByRole("button", { name: /전체 \(2\)/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /커맨드 \(1\)/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /에이전트 \(1\)/ })).toBeInTheDocument();
+  });
+
   it("타입 필터로 알림 종류만 표시할 수 있다", () => {
     render(
       <NotificationCenter
