@@ -5,10 +5,11 @@
 // 즉시 효과. 두 시스템 직교적.
 
 import React, { useCallback, useMemo, useState } from "react";
-import { Library, Plus, Trash2, Save, X as XIcon, Search, Sparkles } from "lucide-react";
+import { Library, Plus, Trash2, Save, X as XIcon, Search, Sparkles, Copy } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete";
 import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useSkills, type Skill, type SkillDraft } from "../hooks/useSkills";
@@ -28,6 +29,10 @@ const EMPTY_DRAFT: SkillDraft = {
   pitfalls: "",
   verification: "",
 };
+
+function copyText(text: string) {
+  navigator.clipboard?.writeText?.(text).catch(() => {});
+}
 
 const SkillsPanel: React.FC<Props> = ({ onClose }) => {
   const { skills, loading, error, save, remove, importFromUrl } = useSkills();
@@ -172,8 +177,15 @@ const SkillsPanel: React.FC<Props> = ({ onClose }) => {
         )}
 
         {error && (
-          <div className="px-5 py-2 text-sm text-rose-300 bg-rose-500/10 border-b border-rose-400/20 shrink-0">
-            {error}
+          <div className="px-5 py-2 text-sm text-rose-300 bg-rose-500/10 border-b border-rose-400/20 shrink-0 flex items-start gap-2">
+            <span className="min-w-0 break-words">{error}</span>
+            <IconButton
+              tooltip="오류 텍스트 복사"
+              onClick={() => copyText(error)}
+              className="p-1 rounded text-white/60 hover:text-white/85 hover:bg-white/10 transition-colors"
+            >
+              <Copy size={11} />
+            </IconButton>
           </div>
         )}
 
@@ -373,8 +385,15 @@ const SkillEditor: React.FC<{
         </div>
       </div>
       {error && (
-        <div className="text-sm text-rose-300 bg-rose-500/10 border border-rose-400/20 rounded px-2.5 py-1.5">
-          {error}
+        <div className="text-sm text-rose-300 bg-rose-500/10 border border-rose-400/20 rounded px-2.5 py-1.5 flex items-start gap-2">
+          <span className="min-w-0 break-words flex-1">{error}</span>
+          <IconButton
+            tooltip="오류 텍스트 복사"
+            onClick={() => copyText(error)}
+            className="p-1 rounded text-white/60 hover:text-white/85 hover:bg-white/10 transition-colors"
+          >
+            <Copy size={11} />
+          </IconButton>
         </div>
       )}
       <div className="flex items-center justify-end gap-2 pt-2 border-t border-white/8">
