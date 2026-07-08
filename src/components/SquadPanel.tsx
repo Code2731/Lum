@@ -3,10 +3,11 @@
 // 임베디드 mistralrs는 단일 인스턴스를 공유 — N개 squad는 ReAct를 직렬로 실행.
 
 import React, { useState } from "react";
-import { Users, Plus, Trash2, FolderOpen, GitBranch } from "lucide-react";
+import { Users, Plus, Trash2, FolderOpen, GitBranch, Copy } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete";
 import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
 import { Input } from "@/components/ui/input";
 import type { Squad } from "../hooks/useSquads";
 import { shortPath, fmtShortDate } from "../utils";
@@ -20,6 +21,10 @@ interface Props {
   onRemove: (id: string) => Promise<void>;
   onOpenInTab: (squad: Squad) => void;
   onClose: () => void;
+}
+
+function copyText(text: string) {
+  navigator.clipboard?.writeText?.(text).catch(() => {});
 }
 
 const SquadPanel: React.FC<Props> = ({
@@ -95,9 +100,16 @@ const SquadPanel: React.FC<Props> = ({
             <p className="text-xs text-white/30 font-mono truncate">repo 위치: {shortPath(currentCwd)}</p>
           )}
           {createError && (
-            <p className="text-sm text-red-400 bg-red-500/10 border border-red-400/20 rounded px-2 py-1">
-              {createError}
-            </p>
+            <div className="text-sm text-red-400 bg-red-500/10 border border-red-400/20 rounded px-2 py-1 flex items-start gap-2">
+              <span className="min-w-0 break-words flex-1">{createError}</span>
+              <IconButton
+                tooltip="오류 텍스트 복사"
+                onClick={() => copyText(createError)}
+                className="p-1 rounded text-white/60 hover:text-white/85 hover:bg-red-500/20 transition-colors"
+              >
+                <Copy size={11} />
+              </IconButton>
+            </div>
           )}
         </div>
 
@@ -107,7 +119,16 @@ const SquadPanel: React.FC<Props> = ({
             <p className="text-xs text-white/40 text-center py-6">로딩 중…</p>
           )}
           {!loading && error && (
-            <p className="text-sm text-red-400 text-center py-4">{error}</p>
+            <div className="mx-2 px-3 py-2 text-sm text-red-400 bg-red-500/10 border border-red-400/20 rounded-lg flex items-start gap-2">
+              <span className="min-w-0 break-words flex-1">{error}</span>
+              <IconButton
+                tooltip="오류 텍스트 복사"
+                onClick={() => copyText(error)}
+                className="p-1 rounded text-white/60 hover:text-white/85 hover:bg-red-500/20 transition-colors"
+              >
+                <Copy size={11} />
+              </IconButton>
+            </div>
           )}
           {!loading && !error && squads.length === 0 && (
             <p className="text-xs text-white/35 text-center py-6">활성 Squad가 없습니다.</p>
