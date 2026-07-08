@@ -597,6 +597,110 @@ describe("NotificationCenter", () => {
     expect(screen.queryByText("agent-unread")).not.toBeInTheDocument();
   });
 
+  it("타입 필터에서 미확인 항목만 읽음 처리할 수 있다", () => {
+    const onMarkByIds = vi.fn();
+    render(
+      <NotificationCenter
+        notifications={[
+          {
+            id: "1",
+            type: "command",
+            title: "cmd-unread-1",
+            body: "커맨드 1",
+            timestamp: 1_000,
+            read: false,
+          },
+          {
+            id: "2",
+            type: "command",
+            title: "cmd-read-1",
+            body: "커맨드 2",
+            timestamp: 2_000,
+            read: true,
+          },
+          {
+            id: "3",
+            type: "agent",
+            title: "agent-unread",
+            body: "에이전트 1",
+            timestamp: 3_000,
+            read: false,
+          },
+        ]}
+        unreadCount={2}
+        onMarkAllRead={vi.fn()}
+        onMarkByIds={onMarkByIds}
+        onDismiss={vi.fn()}
+        onDismissByIds={vi.fn()}
+        onClear={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    const filterButtons = screen.getAllByRole("button");
+    const commandFilter = filterButtons.find((b) => b.textContent?.includes("커맨드"));
+    expect(commandFilter).toBeDefined();
+    if (!commandFilter) {
+      throw new Error("커맨드 필터 버튼을 찾지 못했습니다.");
+    }
+    fireEvent.click(commandFilter);
+
+    fireEvent.click(screen.getByRole("button", { name: "커맨드 타입 미확인 알림 모두 읽음" }));
+    expect(onMarkByIds).toHaveBeenCalledWith(["1"]);
+  });
+
+  it("타입 필터에서 표시된 항목을 일괄 삭제할 수 있다", () => {
+    const onDismissByIds = vi.fn();
+    render(
+      <NotificationCenter
+        notifications={[
+          {
+            id: "1",
+            type: "command",
+            title: "cmd-unread-1",
+            body: "커맨드 1",
+            timestamp: 1_000,
+            read: false,
+          },
+          {
+            id: "2",
+            type: "command",
+            title: "cmd-unread-2",
+            body: "커맨드 2",
+            timestamp: 2_000,
+            read: false,
+          },
+          {
+            id: "3",
+            type: "agent",
+            title: "agent-unread",
+            body: "에이전트 1",
+            timestamp: 3_000,
+            read: false,
+          },
+        ]}
+        unreadCount={3}
+        onMarkAllRead={vi.fn()}
+        onMarkByIds={vi.fn()}
+        onDismiss={vi.fn()}
+        onDismissByIds={onDismissByIds}
+        onClear={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    const filterButtons = screen.getAllByRole("button");
+    const commandFilter = filterButtons.find((b) => b.textContent?.includes("커맨드"));
+    expect(commandFilter).toBeDefined();
+    if (!commandFilter) {
+      throw new Error("커맨드 필터 버튼을 찾지 못했습니다.");
+    }
+    fireEvent.click(commandFilter);
+
+    fireEvent.click(screen.getByRole("button", { name: "커맨드 타입 표시 항목 삭제" }));
+    expect(onDismissByIds).toHaveBeenCalledWith(["2", "1"]);
+  });
+
   it("알림이 읽음/미읽음 상태와 시간 기준으로 정렬된다", () => {
     const notifications: AppNotification[] = [
       {

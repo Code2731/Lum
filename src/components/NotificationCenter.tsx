@@ -11,6 +11,8 @@ interface Props {
   maxHeight?: number;
   onMarkAllRead: () => void;
   onDismiss: (id: string) => void;
+  onMarkByIds?: (ids: string[]) => void;
+  onDismissByIds?: (ids: string[]) => void;
   onClear: () => void;
   onClose: () => void;
   closeOnDocument?: boolean;
@@ -63,6 +65,8 @@ const NotificationCenter: React.FC<Props> = ({
   maxHeight,
   onMarkAllRead,
   onDismiss,
+  onMarkByIds,
+  onDismissByIds,
   onClear,
   onClose,
   closeOnDocument = true,
@@ -93,6 +97,15 @@ const NotificationCenter: React.FC<Props> = ({
     if (typeFilter === "all") return afterUnreadFilter;
     return afterUnreadFilter.filter((n) => n.type === typeFilter);
   }, [orderedNotifications, showUnreadOnly, typeFilter]);
+
+  const displayedNotificationIds = useMemo(
+    () => displayedNotifications.map((n) => n.id),
+    [displayedNotifications],
+  );
+  const displayedUnreadIds = useMemo(
+    () => displayedNotifications.filter((n) => !n.read).map((n) => n.id),
+    [displayedNotifications],
+  );
 
   useEffect(() => {
     if (typeFilter !== "all" && !notifications.some((n) => n.type === typeFilter)) {
@@ -267,28 +280,58 @@ const NotificationCenter: React.FC<Props> = ({
 
       {/* 알림 목록 */}
       {notifications.length > 0 && (
-        <div className="border-b border-white/5 px-2 py-1.5 flex items-center gap-1.5 overflow-x-auto bg-[#12171e]">
-          {FILTER_TYPES.map((filterType) => {
-            const count = filterType === "all"
-              ? notifications.length
-              : notifications.filter((n) => n.type === filterType).length;
-            return (
+        <div className="border-b border-white/5 px-2 py-1.5 flex items-start gap-1.5 bg-[#12171e]">
+          <div className="flex items-center gap-1.5 overflow-x-auto">
+            {FILTER_TYPES.map((filterType) => {
+              const count = filterType === "all"
+                ? notifications.length
+                : notifications.filter((n) => n.type === filterType).length;
+              return (
+                <button
+                  key={filterType}
+                  type="button"
+                  onClick={() => setTypeFilter(filterType)}
+                  aria-pressed={typeFilter === filterType}
+                  className={`inline-flex shrink-0 text-[11px] px-2 py-1 rounded border transition-colors ${
+                    typeFilter === filterType
+                      ? "bg-accent/18 border-accent/45 text-accent"
+                      : "bg-white/[0.03] border-white/10 text-white/55 hover:text-white hover:bg-white/[0.06]"
+                  }`}
+                >
+                  {FILTER_LABELS[filterType]}
+                  <span className="ml-1 text-[10px] text-white/50">({count})</span>
+                </button>
+              );
+            })}
+          </div>
+          {typeFilter !== "all" && displayedNotificationIds.length > 0 && (
+            <div className="ml-auto flex shrink-0 items-center gap-1">
+              {displayedUnreadIds.length > 0 && onMarkByIds && (
+                <button
+                  type="button"
+                  onClick={() => onMarkByIds(displayedUnreadIds)}
+                  aria-label={`${FILTER_LABELS[typeFilter]} 타입 미확인 알림 모두 읽음`}
+                  className="inline-flex shrink-0 text-[11px] px-2 py-1 rounded border border-emerald-300/35 bg-emerald-400/14 text-emerald-100 hover:bg-emerald-400/22 transition-colors"
+                >
+                  미확인 {displayedUnreadIds.length}개 읽음
+                </button>
+              )}
               <button
-                key={filterType}
                 type="button"
-                onClick={() => setTypeFilter(filterType)}
-                aria-pressed={typeFilter === filterType}
-                className={`inline-flex shrink-0 text-[11px] px-2 py-1 rounded border transition-colors ${
-                  typeFilter === filterType
-                    ? "bg-accent/18 border-accent/45 text-accent"
-                    : "bg-white/[0.03] border-white/10 text-white/55 hover:text-white hover:bg-white/[0.06]"
-                }`}
+                onClick={() => {
+                  if (onDismissByIds) {
+                    onDismissByIds(displayedNotificationIds);
+                    return;
+                  }
+                  displayedNotificationIds.forEach((id) => onDismiss(id));
+                }}
+                aria-label={`${FILTER_LABELS[typeFilter]} 타입 표시 항목 삭제`}
+                className="inline-flex shrink-0 text-[11px] px-2 py-1 rounded border border-white/15 bg-white/[0.04] text-white/55 hover:text-white hover:bg-white/[0.09] transition-colors"
               >
-                {FILTER_LABELS[filterType]}
-                <span className="ml-1 text-[10px] text-white/50">({count})</span>
+                모두 삭제
               </button>
-            );
-          })}
+            </div>
+          )}
         </div>
       )}
       <div className="flex-1 overflow-y-auto min-h-0">

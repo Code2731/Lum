@@ -37,6 +37,16 @@ export function useNotificationCenter() {
     setNotifications((prev) => prev.filter((n) => n.id !== id));
   }, []);
 
+  const dismissByIds = useCallback((ids: string[]) => {
+    const remove = new Set(ids);
+    setNotifications((prev) => prev.filter((n) => !remove.has(n.id)));
+  }, []);
+
+  const markByIds = useCallback((ids: string[]) => {
+    const target = new Set(ids);
+    setNotifications((prev) => prev.map((n) => (target.has(n.id) ? { ...n, read: true } : n)));
+  }, []);
+
   const clear = useCallback(() => setNotifications([]), []);
 
   const unreadCount = useMemo(
@@ -44,5 +54,14 @@ export function useNotificationCenter() {
     [notifications],
   );
 
-  return { notifications, unreadCount, addNotification, markAllRead, dismiss, clear };
+  return {
+    notifications,
+    unreadCount,
+    addNotification,
+    markAllRead,
+    markByIds,
+    dismiss,
+    dismissByIds,
+    clear,
+  };
 }
