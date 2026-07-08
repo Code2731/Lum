@@ -1733,6 +1733,44 @@ describe("NotificationCenter", () => {
     expect(searchInput).toHaveFocus();
   });
 
+  it("선택한 검색 기록은 키보드 Delete/Backspace로 삭제할 수 있다", () => {
+    render(
+      <NotificationCenter
+        notifications={[
+          {
+            id: "1",
+            type: "command",
+            title: "빌드 에러 코드 500",
+            body: "에러 메시지 분석",
+            timestamp: 1_000,
+            read: false,
+          },
+        ]}
+        unreadCount={1}
+        onMarkAllRead={vi.fn()}
+        onDismiss={vi.fn()}
+        onDismissByIds={vi.fn()}
+        onClear={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    const searchInput = screen.getByLabelText("알림 검색");
+    fireEvent.focus(searchInput);
+    fireEvent.change(searchInput, { target: { value: "삭제 대상 검색" } });
+    fireEvent.blur(searchInput);
+    fireEvent.change(searchInput, { target: { value: "" } });
+    fireEvent.focus(searchInput);
+
+    const historyDeleteButton = screen.getByLabelText("최근 검색어 삭제 대상 검색 삭제");
+    expect(historyDeleteButton).toBeInTheDocument();
+
+    fireEvent.keyDown(searchInput, { key: "ArrowDown" });
+    fireEvent.keyDown(searchInput, { key: "Delete" });
+
+    expect(screen.queryByLabelText("최근 검색어 삭제 대상 검색 삭제")).not.toBeInTheDocument();
+  });
+
   it("단축키 1/2로 검색 모드를 전환할 수 있다", () => {
     render(
       <NotificationCenter

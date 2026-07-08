@@ -920,6 +920,16 @@ const NotificationCenter: React.FC<Props> = ({
                       return;
                     }
 
+                    if ((e.key === "Delete" || e.key === "Backspace") && activeHistoryIndex >= 0) {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      const target = sortedSearchHistory[activeHistoryIndex];
+                      if (target) {
+                        removeSearchHistoryItem(target);
+                      }
+                      return;
+                    }
+
                     if (e.key === "Enter" && activeHistoryIndex >= 0) {
                       applySearchHistoryItem(sortedSearchHistory[activeHistoryIndex]!);
                       e.preventDefault();
@@ -1033,6 +1043,18 @@ const NotificationCenter: React.FC<Props> = ({
                   onMouseDown={(event) => {
                     event.preventDefault();
                     event.stopPropagation();
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === "Delete" || event.key === "Backspace") {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      removeSearchHistoryItem(item);
+                    }
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      applySearchHistoryItem(item);
+                    }
                   }}
                   onClick={(event) => {
                     event.stopPropagation();
