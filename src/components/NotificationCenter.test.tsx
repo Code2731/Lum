@@ -1465,6 +1465,84 @@ describe("NotificationCenter", () => {
     expect(screen.getByPlaceholderText("정규식 검색 (/error|warn/i, /error/gi)")).toBeInTheDocument();
   });
 
+  it("검색어 힌트에서 최근 검색어를 저장하고 재적용할 수 있다", () => {
+    window.localStorage.clear();
+    render(
+      <NotificationCenter
+        notifications={[
+          {
+            id: "1",
+            type: "command",
+            title: "빌드 에러 코드 500",
+            body: "에러 메시지 분석",
+            timestamp: 1_000,
+            read: false,
+          },
+        ]}
+        unreadCount={1}
+        onMarkAllRead={vi.fn()}
+        onDismiss={vi.fn()}
+        onDismissByIds={vi.fn()}
+        onClear={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    const searchInput = screen.getByLabelText("알림 검색");
+
+    fireEvent.change(searchInput, { target: { value: "빌드 에러" } });
+    fireEvent.keyDown(searchInput, { key: "Enter" });
+    fireEvent.click(screen.getByLabelText("검색어 지우기"));
+
+    const historyItem = screen.getByText("T:");
+    expect(historyItem).toBeInTheDocument();
+
+    fireEvent.click(historyItem.closest("button") as HTMLButtonElement);
+    expect(searchInput).toHaveValue("빌드 에러");
+  });
+
+  it("최근 검색어는 최신 5개까지만 노출된다", () => {
+    window.localStorage.setItem(
+      "lum_notification_search_history_v1",
+      JSON.stringify([
+        { mode: "token", query: "1", ts: 6 },
+        { mode: "token", query: "2", ts: 7 },
+        { mode: "token", query: "3", ts: 8 },
+        { mode: "token", query: "4", ts: 9 },
+        { mode: "token", query: "5", ts: 10 },
+        { mode: "token", query: "6", ts: 11 },
+      ]),
+    );
+
+    render(
+      <NotificationCenter
+        notifications={[
+          {
+            id: "1",
+            type: "command",
+            title: "빌드 에러 코드 500",
+            body: "에러 메시지 분석",
+            timestamp: 1_000,
+            read: false,
+          },
+        ]}
+        unreadCount={1}
+        onMarkAllRead={vi.fn()}
+        onDismiss={vi.fn()}
+        onDismissByIds={vi.fn()}
+        onClear={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    const searchInput = screen.getByLabelText("알림 검색");
+    fireEvent.focus(searchInput);
+
+    expect(screen.queryByText("6")).toBeInTheDocument();
+    expect(screen.queryByText("2")).toBeInTheDocument();
+    expect(screen.queryByText("1")).not.toBeInTheDocument();
+  });
+
   it("단축키 1/2로 검색 모드를 전환할 수 있다", () => {
     render(
       <NotificationCenter

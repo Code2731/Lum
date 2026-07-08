@@ -211,6 +211,15 @@ type ParsedRegexInput = {
   display: string;
 };
 
+type SearchHistoryItem = {
+  mode: SearchMode;
+  query: string;
+  ts: number;
+};
+
+const SEARCH_HISTORY_KEY = "lum_notification_search_history_v1";
+const SEARCH_HISTORY_MAX_ITEMS = 5;
+
 function parseRegexInput(rawQuery: string): ParsedRegexInput {
   const query = rawQuery.trim();
   if (!query.startsWith("/")) {
@@ -297,6 +306,64 @@ const NotificationCenter: React.FC<Props> = ({
   const [typeFilter, setTypeFilter] = useState<FilterType>("all");
   const [searchMode, setSearchMode] = useState<SearchMode>("token");
   const [searchQuery, setSearchQuery] = useState("");
+  const [searchHistory, setSearchHistory] = useState<SearchHistoryItem[]>([]);
+  const [showSearchHistory, setShowSearchHistory] = useState(false);
+
+  const saveSearchHistory = (mode: SearchMode, query: string) => {
+    const nextQuery = query.trim();
+    if (!nextQuery) {
+      return;
+    }
+    const next: SearchHistoryItem = {
+      mode,
+      query: nextQuery,
+      ts: Date.now(),
+    };
+
+    setSearchHistory((prev) => {
+      const deduped = prev.filter((item) => !(item.mode === mode && item.query === nextQuery));
+      return [next, ...deduped].slice(0, SEARCH_HISTORY_MAX_ITEMS);
+    });
+  };
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    try {
+      const raw = window.localStorage.getItem(SEARCH_HISTORY_KEY);
+      if (!raw) {
+        return;
+      }
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) {
+        return;
+      }
+
+      const normalized = parsed.filter((item): item is SearchHistoryItem => (
+        item
+        && typeof item === "object"
+        && (item.mode === "token" || item.mode === "regex")
+        && typeof item.query === "string"
+        && item.query.trim() !== ""
+        && typeof item.ts === "number"
+      ));
+      setSearchHistory(normalized.slice(0, SEARCH_HISTORY_MAX_ITEMS));
+    } catch {
+      // ignore malformed cache
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    try {
+      window.localStorage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(searchHistory));
+    } catch {
+      // ignore storage quota errors
+    }
+  }, [searchHistory]);
 
   const orderedNotifications = useMemo(() => {
     return [...notifications].sort((a, b) => {
@@ -783,6 +850,22 @@ const NotificationCenter: React.FC<Props> = ({
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                onFocus={() => setShowSearchHistory(true)}
+                onBlur={() => {
+                  setShowSearchHistory(false);
+                  if (searchQuery.trim()) {
+                    saveSearchHistory(searchMode, searchQuery);
+                  }
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Escape") {
+                    setShowSearchHistory(false);
+                  }
+                  if (e.key === "Enter") {
+                    saveSearchHistory(searchMode, searchQuery);
+                    setShowSearchHistory(false);
+                  }
+                }}
                 placeholder={searchMode === "regex"
                   ? "정규식 검색 (/error|warn/i, /error/gi)"
                   : "알림 제목/본문 검색"}
@@ -793,7 +876,11 @@ const NotificationCenter: React.FC<Props> = ({
                   type="button"
                   aria-label="검색어 지우기"
                   className="absolute right-1.5 top-1.5 rounded text-white/50 hover:text-white focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                  onClick={() => setSearchQuery("")}
+                  onClick={() => {
+                    setSearchQuery("");
+                    setShowSearchHistory(true);
+                    searchInputRef.current?.focus();
+                  }}
                 >
                   <X size={11} />
                 </button>
@@ -831,6 +918,11 @@ const NotificationCenter: React.FC<Props> = ({
                 정규식 예시: /error/i, /error|warn/g, /에러/gi
               </span>
             )}
+            {searchHistory.length > 0 && showSearchHistory && !searchQuery && (
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded-full border border-white/15 bg-white/[0.05] text-[10px] text-white/55">
+                최근 검색어 {`(${searchHistory.length}개 / 최대 ${SEARCH_HISTORY_MAX_ITEMS}개)`}
+              </span>
+            )}
             {searchMode === "regex" && regexSearchError && (
               <span className="text-[10px] text-rose-300/90">
                 정규식이 유효하지 않습니다.
@@ -842,6 +934,29 @@ const NotificationCenter: React.FC<Props> = ({
               </span>
             )}
           </div>
+          {showSearchHistory && searchHistory.length > 0 && !searchQuery && (
+            <div className="px-2 pb-1.5 pt-0 flex flex-wrap gap-1.5">
+              {searchHistory
+                .slice()
+                .sort((left, right) => right.ts - left.ts)
+                .map((item) => (
+                  <button
+                    key={`${item.mode}-${item.query}-${item.ts}`}
+                    type="button"
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={() => {
+                      setSearchMode(item.mode);
+                      setSearchQuery(item.query);
+                      setShowSearchHistory(false);
+                    }}
+                    className="inline-flex items-center max-w-[45%] text-[10px] rounded border border-white/10 px-1.5 py-1 bg-white/[0.03] text-white/75 hover:border-white/25 hover:text-white"
+                  >
+                    <span className="mr-1 text-[9px] text-white/45">{item.mode === "regex" ? "R" : "T"}:</span>
+                    <span className="truncate">{item.query}</span>
+                  </button>
+                ))}
+            </div>
+          )}
           <div className="shrink-0 px-2 py-1.5 text-[10px] text-white/45">
             {displayedNotifications.length}건
             {normalizedSearchQuery
