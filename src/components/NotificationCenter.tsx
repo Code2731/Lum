@@ -225,15 +225,29 @@ function parseRegexInput(rawQuery: string): ParsedRegexInput {
   const slashIdx = query.lastIndexOf("/");
   if (slashIdx <= 0) {
     return {
-      errorMessage: "",
+      errorMessage: "정규식 패턴이 닫히지 않았습니다. /패턴/ 또는 /패턴/플래그 형식으로 입력하세요.",
       pattern: query,
       flags: "i",
-      display: `/${query}/`,
+      display: `/${query}`,
     };
   }
 
   const extractedPattern = query.slice(1, slashIdx);
   const extractedFlags = query.slice(slashIdx + 1);
+  const validFlags = new Set(["i", "g", "m", "s", "u", "y"]);
+  const invalidFlags = extractedFlags
+    .toLowerCase()
+    .split("")
+    .filter((flag) => !validFlags.has(flag));
+  if (invalidFlags.length > 0) {
+    return {
+      errorMessage: "정규식 플래그가 유효하지 않습니다.",
+      pattern: extractedPattern,
+      flags: extractedFlags,
+      display: `/${extractedPattern}/${extractedFlags}`,
+    };
+  }
+
   const normalizedFlags = extractedFlags
     .toLowerCase()
     .split("")

@@ -1371,6 +1371,70 @@ describe("NotificationCenter", () => {
     expect(screen.getByText("/에러|메시지/i")).toBeInTheDocument();
   });
 
+  it("정규식 모드에서 닫히지 않은 슬래시 패턴은 에러로 처리한다", () => {
+    render(
+      <NotificationCenter
+        notifications={[
+          {
+            id: "1",
+            type: "command",
+            title: "빌드 에러 코드 500",
+            body: "에러 메시지 분석",
+            timestamp: 1_000,
+            read: false,
+          },
+        ]}
+        unreadCount={1}
+        onMarkAllRead={vi.fn()}
+        onDismiss={vi.fn()}
+        onDismissByIds={vi.fn()}
+        onClear={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "검색 모드: 정규식(2)" }));
+    fireEvent.change(screen.getByLabelText("알림 검색"), {
+      target: { value: "/에러" },
+    });
+
+    expect(
+      screen.getByText("정규식 패턴이 닫히지 않았습니다. /패턴/ 또는 /패턴/플래그 형식으로 입력하세요."),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("빌드 에러 코드 500")).not.toBeInTheDocument();
+  });
+
+  it("정규식 모드에서 잘못된 플래그 입력은 에러로 처리한다", () => {
+    render(
+      <NotificationCenter
+        notifications={[
+          {
+            id: "1",
+            type: "command",
+            title: "빌드 에러 코드 500",
+            body: "에러 메시지 분석",
+            timestamp: 1_000,
+            read: false,
+          },
+        ]}
+        unreadCount={1}
+        onMarkAllRead={vi.fn()}
+        onDismiss={vi.fn()}
+        onDismissByIds={vi.fn()}
+        onClear={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "검색 모드: 정규식(2)" }));
+    fireEvent.change(screen.getByLabelText("알림 검색"), {
+      target: { value: "/에러/q" },
+    });
+
+    expect(screen.getByText("정규식 플래그가 유효하지 않습니다.")).toBeInTheDocument();
+    expect(screen.queryByText("빌드 에러 코드 500")).not.toBeInTheDocument();
+  });
+
   it("단축키 1/2로 검색 모드를 전환할 수 있다", () => {
     render(
       <NotificationCenter
