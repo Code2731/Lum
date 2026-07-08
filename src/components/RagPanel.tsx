@@ -1,7 +1,8 @@
 import React, { useState, useCallback, useEffect, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { Search, FolderOpen, Loader2, Database, Share2, FileCode, X } from "lucide-react";
+import { Search, FolderOpen, Loader2, Database, Share2, FileCode, X, Copy } from "lucide-react";
+import { IconButton } from "@/components/ui/icon-button";
 
 interface SearchResult {
   content: string;
@@ -178,11 +179,25 @@ const RagPanel: React.FC<Props> = ({ model, onClose, compact = false }) => {
             </button>
           </div>
           {indexStatus && (
-            <p className={`text-xs ${indexStatus.ok ? "text-green-400" : "text-red-400"}`}>
-              {indexStatus.ok
-                ? `${indexStatus.files}개 파일 · ${indexStatus.chunks}개 청크 인덱싱 완료`
-                : `인덱싱 실패 — ${indexStatus.error}`}
-            </p>
+            <div className={`text-xs ${indexStatus.ok ? "text-green-400" : "text-red-400"}`}>
+              {indexStatus.ok ? (
+                <p>{`${indexStatus.files}개 파일 · ${indexStatus.chunks}개 청크 인덱싱 완료`}</p>
+              ) : (
+                <div className="flex items-start justify-between gap-2">
+                  <p className="font-mono whitespace-pre-wrap break-all">{`인덱싱 실패 — ${indexStatus.error}`}</p>
+                  <IconButton
+                    tooltip="오류 텍스트 복사"
+                    onClick={() => {
+                      if (!indexStatus.error) return;
+                      navigator.clipboard?.writeText?.(`인덱싱 실패 — ${indexStatus.error}`).catch(() => {});
+                    }}
+                    className="p-1 rounded text-red-200/85 hover:text-red-100 hover:bg-red-500/20 transition-colors"
+                  >
+                    <Copy size={11} />
+                  </IconButton>
+                </div>
+              )}
+            </div>
           )}
         </section>
 
