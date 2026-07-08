@@ -12,6 +12,7 @@ import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { IconButton } from "@/components/ui/icon-button";
 import { Switch } from "@/components/ui/switch";
 import { useLoraForge, type ForgeRun, type ForgeStatus, type AutoEvent } from "../hooks/useLoraForge";
 import { fmtShortDate } from "../utils";
@@ -39,6 +40,10 @@ const DEFAULTS = {
   loraRank: 8,
   learningRate: 1e-5,
 };
+
+function copyText(text: string) {
+  navigator.clipboard?.writeText?.(text).catch(() => {});
+}
 
 const LoraForgePanel: React.FC<Props> = ({ onLoadAdapter, onRevealPath, onClose }) => {
   const {
@@ -254,15 +259,29 @@ const LoraForgePanel: React.FC<Props> = ({ onLoadAdapter, onRevealPath, onClose 
           </div>
 
           {submitError && (
-            <p className="text-sm text-rose-300 bg-rose-500/10 border border-rose-400/20 rounded px-2 py-1.5">
-              {submitError}
-            </p>
+            <div className="text-sm text-rose-300 bg-rose-500/10 border border-rose-400/20 rounded px-2 py-1.5 flex items-start gap-2">
+              <span className="min-w-0 break-words flex-1">{submitError}</span>
+              <IconButton
+                tooltip="오류 텍스트 복사"
+                onClick={() => copyText(submitError)}
+                className="p-1 rounded text-white/60 hover:text-white/85 hover:bg-rose-500/20 transition-colors"
+              >
+                <Copy size={11} />
+              </IconButton>
+            </div>
           )}
         </div>
 
         {error && (
-          <div className="px-5 py-2 text-sm text-rose-300 bg-rose-500/10 border-b border-rose-400/20 shrink-0">
-            {error}
+          <div className="px-5 py-2 text-sm text-rose-300 bg-rose-500/10 border-b border-rose-400/20 shrink-0 flex items-start gap-2">
+            <span className="min-w-0 break-words flex-1">{error}</span>
+            <IconButton
+              tooltip="오류 텍스트 복사"
+              onClick={() => copyText(error)}
+              className="p-1 rounded text-white/60 hover:text-white/85 hover:bg-rose-500/20 transition-colors"
+            >
+              <Copy size={11} />
+            </IconButton>
           </div>
         )}
 
@@ -596,7 +615,18 @@ const AutoTrainCard: React.FC<AutoCardProps> = ({
       )}
 
       {saving && <p className="text-xs text-white/35">저장 중…</p>}
-      {saveError && <p className="text-xs text-rose-300 bg-rose-500/10 border border-rose-400/20 rounded px-2 py-1">{saveError}</p>}
+      {saveError && (
+        <div className="text-xs text-rose-300 bg-rose-500/10 border border-rose-400/20 rounded px-2 py-1 flex items-start gap-2">
+          <span className="min-w-0 break-words flex-1">{saveError}</span>
+          <IconButton
+            tooltip="오류 텍스트 복사"
+            onClick={() => copyText(saveError)}
+            className="p-1 rounded text-white/60 hover:text-white/85 hover:bg-rose-500/20 transition-colors"
+          >
+            <Copy size={10} />
+          </IconButton>
+        </div>
+      )}
 
       {recentEvents.length > 0 && (
         <div className="space-y-1 pt-0.5">
