@@ -528,7 +528,8 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
       isRecording ? "음성 녹음 중지" :
       "음성 녹음 시작";
     const micAssistLabel =
-      !voiceEnabled ? "음성 기능이 꺼져 있습니다" :
+      !voiceEnabled ? "설정에서 켜세요" :
+      voiceBusy ? "잠시만 기다려 주세요" :
       `현재 ${voiceStatusLabel}`;
     const inlineVoiceLabel = !voiceEnabled ? "꺼짐" : voiceStatusLabel;
     const inlineVoiceTone = !voiceEnabled ? voiceDisabledTone : voiceStatusTone;
@@ -714,8 +715,8 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
             >
               <button
                 type="button"
-                aria-label="오류 텍스트 복사"
-                title="오류 텍스트 복사"
+                aria-label="오류 복사"
+                title="오류 복사"
                 onClick={() => {
                   navigator.clipboard?.writeText?.(`음성 입력 오류: ${voiceError}`).catch(() => {});
                 }}
@@ -738,8 +739,8 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
               </button>
               <button
                 type="button"
-                aria-label="음성 입력 다시 시도"
-                title="음성 입력 다시 시도"
+                aria-label="다시 시도"
+                title="다시 시도"
                 onClick={handleMicToggle}
                 disabled={voiceBusy}
                 style={{
@@ -762,8 +763,8 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
               </button>
               <button
                 type="button"
-                aria-label="음성 입력 오류 닫기"
-                title="음성 입력 오류 닫기"
+                aria-label="오류 닫기"
+                title="오류 닫기"
                 onClick={clearVoiceError}
                 style={{
                   flexShrink: 0,

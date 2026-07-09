@@ -149,7 +149,9 @@ const CommandInput = ({
     voiceBusy ? "음성 입력 준비 중" :
     isRecording ? "음성 녹음 중지" :
     "음성 녹음 시작";
-  const micAssistLabel = `현재 ${voiceStatusLabel}`;
+  const micAssistLabel =
+    voiceBusy ? "잠시만 기다려 주세요" :
+    `현재 ${voiceStatusLabel}`;
   const voicePulseActive = voiceStatus === "listening" || voiceStatus === "processing";
   const isVoiceProcessing = voiceStatus === "processing";
   const showVoiceStatusBanner =
@@ -500,7 +502,7 @@ const CommandInput = ({
               }}
             >
               <IconButton
-                tooltip="오류 텍스트 복사"
+                tooltip="오류 복사"
                 onClick={() => {
                   if (!voiceError) return;
                   navigator.clipboard?.writeText?.(`음성 입력 오류: ${voiceError}`).catch(() => {});
@@ -510,7 +512,7 @@ const CommandInput = ({
                 <Copy size={11} />
               </IconButton>
               <IconButton
-                tooltip="음성 입력 다시 시도"
+                tooltip="다시 시도"
                 onClick={handleMicToggle}
                 disabled={voiceBusy}
                 className="p-1 rounded text-red-300 hover:text-red-100 hover:bg-red-500/20 transition-colors shrink-0"
@@ -518,7 +520,7 @@ const CommandInput = ({
                 <RotateCcw size={11} />
               </IconButton>
               <IconButton
-                tooltip="음성 입력 오류 닫기"
+                tooltip="오류 닫기"
                 onClick={clearVoiceError}
                 className="p-1 rounded text-red-300 hover:text-red-100 hover:bg-red-500/20 transition-colors shrink-0"
               >
