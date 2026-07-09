@@ -17,8 +17,8 @@ interface Props {
 }
 
 const VOICE_ERROR_FONT_SIZE = 11;
-const VOICE_INLINE_BANNER_MARGIN = "0 10px 6px 10px";
-const VOICE_INLINE_BANNER_PADDING = "4px 8px";
+const VOICE_INLINE_BANNER_MARGIN = "0 10px 4px 10px";
+const VOICE_INLINE_BANNER_PADDING = "3px 7px";
 const VOICE_SUCCESS_VISIBLE_MS = 1050;
 const VOICE_SUCCESS_FADE_MS = 150;
 const VOICE_HIGHLIGHT_VISIBLE_MS = 1850;
@@ -431,9 +431,9 @@ const CommandInput = ({
           {showInlineVoiceStatus && (
             <span
               aria-hidden="true"
-              className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] leading-none ${voiceStatusToneClass}`}
+              className={`inline-flex items-center rounded-full border px-1.5 py-0.5 text-[10px] leading-none ${voiceStatusToneClass}`}
               style={{
-                minHeight: 18,
+                minHeight: 17,
                 justifyContent: "center",
                 marginLeft: 4,
                 transform: "translateY(0.5px)",
@@ -542,7 +542,7 @@ const CommandInput = ({
               lineHeight: 1.3,
               display: "flex",
               alignItems: "center",
-              gap: "6px",
+              gap: "5px",
               color: "rgba(166,244,180,0.94)",
               background: "rgba(46,160,67,0.1)",
               border: "1px solid rgba(63,185,80,0.18)",
@@ -569,12 +569,12 @@ const CommandInput = ({
               lineHeight: 1.3,
               display: "flex",
               alignItems: "center",
-              gap: "6px",
+              gap: "5px",
               animation: VOICE_BANNER_IN_ANIMATION,
               boxShadow: "0 8px 20px rgba(0,0,0,0.14)",
             }}
           >
-            <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] leading-none ${voiceStatusToneClass}`}>
+            <span className={`inline-flex items-center rounded-full border px-1.5 py-0.5 text-[10px] leading-none ${voiceStatusToneClass}`}>
               {voiceStatusLabel}
             </span>
           </div>
