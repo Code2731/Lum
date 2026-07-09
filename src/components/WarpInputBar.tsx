@@ -531,10 +531,10 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
       !voiceEnabled ? "설정에서 켜기" :
       voiceBusy ? "처리 중" :
       `상태 ${voiceStatusLabel}`;
-    const inlineVoiceLabel = !voiceEnabled ? "꺼짐" : voiceStatusLabel;
+    const inlineVoiceLabel = !voiceEnabled ? "비활성" : voiceStatusLabel;
     const inlineVoiceTone = !voiceEnabled ? voiceDisabledTone : voiceStatusTone;
     const voiceLiveMessage =
-      !voiceEnabled ? "음성 꺼짐" :
+      !voiceEnabled ? "음성 비활성" :
       voiceError ? `오류: ${voiceError}` :
       voiceSuccessPhase !== "hidden" ? "음성 반영됨" :
       `음성 ${voiceStatusLabel}`;
