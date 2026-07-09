@@ -355,6 +355,10 @@ const CommandInput = ({
         @keyframes lum-voice-banner-in {
           0% { opacity: 0; transform: translateY(2px); }
           100% { opacity: 1; transform: translateY(0); }
+        }
+        .lum-voice-mic-btn:focus-visible {
+          outline: none;
+          box-shadow: 0 0 0 2px rgba(13,17,23,0.95), 0 0 0 4px rgba(121,192,255,0.52), 0 10px 24px rgba(88,166,255,0.18);
         }`}
       </style>
       <span
@@ -382,7 +386,7 @@ const CommandInput = ({
         <div className="editor-header">
           <IconButton
             tooltip={`${isRecording ? "음성 녹음 중지" : "음성 녹음 시작"} · 현재 ${voiceStatusLabel}`}
-            className={`mic-btn ${isRecording ? "active" : ""}`}
+            className={`mic-btn lum-voice-mic-btn ${isRecording ? "active" : ""}`}
             onClick={handleMicToggle}
             disabled={voiceBusy}
             onMouseEnter={() => setMicHovered(true)}

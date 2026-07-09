@@ -572,6 +572,10 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
           @keyframes lum-voice-banner-in {
             0% { opacity: 0; transform: translateY(2px); }
             100% { opacity: 1; transform: translateY(0); }
+          }
+          .lum-voice-mic-btn:focus-visible {
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(13,17,23,0.95), 0 0 0 4px rgba(121,192,255,0.52), 0 10px 24px rgba(88,166,255,0.18);
           }`}
         </style>
         <span
@@ -816,6 +820,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
 
           {voiceEnabled && (
             <button
+              className="lum-voice-mic-btn"
               type="button"
               onClick={handleMicToggle}
               disabled={voiceBusy}
