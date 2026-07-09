@@ -16,6 +16,8 @@ export interface WarpInputBarHandle {
 }
 
 const WARP_SMALL_FONT_SIZE = 10;
+const VOICE_FLOATING_BANNER_TOP = -24;
+const VOICE_FLOATING_BANNER_RIGHT = 10;
 const VOICE_SUCCESS_VISIBLE_MS = 1050;
 const VOICE_SUCCESS_FADE_MS = 150;
 const VOICE_HIGHLIGHT_VISIBLE_MS = 1850;
@@ -656,8 +658,8 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
           <div
             style={{
               position: "absolute",
-              top: -24,
-              right: 10,
+              top: VOICE_FLOATING_BANNER_TOP,
+              right: VOICE_FLOATING_BANNER_RIGHT,
               fontSize: WARP_SMALL_FONT_SIZE,
               color: "#ff7b72",
               background: "rgba(248,81,73,0.12)",
@@ -770,8 +772,8 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
           <div
             style={{
               position: "absolute",
-              top: -24,
-              right: 10,
+              top: VOICE_FLOATING_BANNER_TOP,
+              right: VOICE_FLOATING_BANNER_RIGHT,
               fontSize: WARP_SMALL_FONT_SIZE,
               color: "rgba(111,227,132,0.95)",
               background: "rgba(63,185,80,0.12)",
@@ -796,8 +798,8 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
           <div
             style={{
               position: "absolute",
-              top: -24,
-              right: 10,
+              top: VOICE_FLOATING_BANNER_TOP,
+              right: VOICE_FLOATING_BANNER_RIGHT,
               fontSize: WARP_SMALL_FONT_SIZE,
               borderRadius: 6,
               padding: "2px 8px",

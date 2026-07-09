@@ -17,6 +17,8 @@ interface Props {
 }
 
 const VOICE_ERROR_FONT_SIZE = 11;
+const VOICE_INLINE_BANNER_MARGIN = "0 10px 6px 10px";
+const VOICE_INLINE_BANNER_PADDING = "4px 8px";
 const VOICE_SUCCESS_VISIBLE_MS = 1050;
 const VOICE_SUCCESS_FADE_MS = 150;
 const VOICE_HIGHLIGHT_VISIBLE_MS = 1850;
@@ -461,7 +463,8 @@ const CommandInput = ({
             className="voice-error-banner"
             style={{
               margin: "0 10px 6px 10px",
-              padding: "4px 8px",
+              margin: VOICE_INLINE_BANNER_MARGIN,
+              padding: VOICE_INLINE_BANNER_PADDING,
               borderRadius: 6,
               fontSize: VOICE_ERROR_FONT_SIZE,
               lineHeight: 1.3,
@@ -525,8 +528,8 @@ const CommandInput = ({
             role="status"
             className="voice-success-banner"
             style={{
-              margin: "0 10px 6px 10px",
-              padding: "4px 8px",
+              margin: VOICE_INLINE_BANNER_MARGIN,
+              padding: VOICE_INLINE_BANNER_PADDING,
               borderRadius: 6,
               fontSize: VOICE_ERROR_FONT_SIZE,
               lineHeight: 1.3,
@@ -552,8 +555,8 @@ const CommandInput = ({
             role="status"
             className="voice-status-banner"
             style={{
-              margin: "0 10px 6px 10px",
-              padding: "4px 8px",
+              margin: VOICE_INLINE_BANNER_MARGIN,
+              padding: VOICE_INLINE_BANNER_PADDING,
               borderRadius: 6,
               fontSize: VOICE_ERROR_FONT_SIZE,
               lineHeight: 1.3,
