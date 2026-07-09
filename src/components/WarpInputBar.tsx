@@ -813,7 +813,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
           </div>
         )}
 
-        <div style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, minHeight: 32 }}>
+        <div style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, minHeight: 32 }}>
           <span style={{ color: promptColor, fontFamily, fontSize, opacity: 0.85, flexShrink: 0 }}>
             {promptChar}
           </span>
@@ -872,9 +872,14 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
               style={{
                 flexShrink: 0,
                 fontSize: WARP_SMALL_FONT_SIZE,
-                lineHeight: 1.2,
-                padding: "2px 7px",
+                lineHeight: 1,
+                minHeight: 18,
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                padding: "1px 7px",
                 borderRadius: 999,
+                transform: "translateY(0.5px)",
                 ...voiceStatusTone,
               }}
             >

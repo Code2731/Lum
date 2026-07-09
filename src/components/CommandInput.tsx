@@ -423,6 +423,12 @@ const CommandInput = ({
             <span
               aria-hidden="true"
               className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] leading-none ${voiceStatusToneClass}`}
+              style={{
+                minHeight: 18,
+                justifyContent: "center",
+                marginLeft: 4,
+                transform: "translateY(0.5px)",
+              }}
             >
               {voiceStatusLabel}
             </span>
