@@ -492,21 +492,21 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
       voiceError ? {
         color: "#ff7b72",
         background: "rgba(248,81,73,0.15)",
-        border: "1px solid rgba(248,81,73,0.30)",
+        border: "1px solid rgba(248,81,73,0.24)",
       } :
       voiceStatus === "listening" ? {
         color: "rgba(142,241,160,0.98)",
         background: "rgba(46,160,67,0.18)",
-        border: "1px solid rgba(63,185,80,0.34)",
+        border: "1px solid rgba(63,185,80,0.26)",
       } :
       voiceStatus === "processing" ? {
         color: "rgba(145,205,255,0.98)",
         background: "rgba(56,139,253,0.18)",
-        border: "1px solid rgba(88,166,255,0.34)",
+        border: "1px solid rgba(88,166,255,0.26)",
       } : {
         color: "rgba(255,255,255,0.72)",
         background: "rgba(255,255,255,0.08)",
-        border: "1px solid rgba(255,255,255,0.18)",
+        border: "1px solid rgba(255,255,255,0.14)",
       };
     const voiceDisabledTone = {
       color: "rgba(255,255,255,0.54)",
@@ -796,7 +796,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
               fontSize: WARP_SMALL_FONT_SIZE,
               color: "rgba(166,244,180,0.94)",
               background: "rgba(46,160,67,0.1)",
-              border: "1px solid rgba(63,185,80,0.18)",
+              border: "1px solid rgba(63,185,80,0.14)",
               borderRadius: 6,
               padding: "2px 7px",
               display: "inline-flex",
