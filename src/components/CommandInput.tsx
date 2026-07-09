@@ -338,7 +338,7 @@ const CommandInput = ({
       const isLongVoiceHighlight = voiceHighlightLength >= VOICE_HIGHLIGHT_LONG_TEXT_THRESHOLD;
       return [
         renderSegment(code.slice(0, voiceHighlight.start)),
-        `<span style="background: ${isLongVoiceHighlight ? "linear-gradient(180deg, rgba(63,185,80,0.22), rgba(63,185,80,0.12))" : "rgba(63,185,80,0.18)"}; border-radius: 4px; box-shadow: ${isLongVoiceHighlight ? "inset 0 0 0 1px rgba(63,185,80,0.22), 0 0 0 1px rgba(63,185,80,0.12)" : "0 0 0 1px rgba(63,185,80,0.18)"}; opacity: ${voiceHighlight.phase === "fading" ? 0 : 1}; transition: opacity ${VOICE_HIGHLIGHT_FADE_MS}ms ease; ${isLongVoiceHighlight ? "padding: 0 2px;" : ""}">${renderSegment(code.slice(voiceHighlight.start, voiceHighlight.end))}</span>`,
+        `<span style="background: ${isLongVoiceHighlight ? "linear-gradient(180deg, rgba(88,166,255,0.18), rgba(88,166,255,0.1))" : "rgba(88,166,255,0.14)"}; border-radius: 4px; box-shadow: ${isLongVoiceHighlight ? "inset 0 0 0 1px rgba(88,166,255,0.18), 0 0 0 1px rgba(88,166,255,0.1)" : "0 0 0 1px rgba(88,166,255,0.16)"}; opacity: ${voiceHighlight.phase === "fading" ? 0 : 1}; transition: opacity ${VOICE_HIGHLIGHT_FADE_MS}ms ease; ${isLongVoiceHighlight ? "padding: 0 2px;" : ""}">${renderSegment(code.slice(voiceHighlight.start, voiceHighlight.end))}</span>`,
         renderSegment(code.slice(voiceHighlight.end)),
       ].join("");
     }
