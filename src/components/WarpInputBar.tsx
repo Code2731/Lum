@@ -504,9 +504,9 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
         background: "rgba(56,139,253,0.18)",
         border: "1px solid rgba(88,166,255,0.26)",
       } : {
-        color: "rgba(255,255,255,0.72)",
-        background: "rgba(255,255,255,0.08)",
-        border: "1px solid rgba(255,255,255,0.14)",
+        color: "rgba(255,255,255,0.78)",
+        background: "rgba(255,255,255,0.10)",
+        border: "1px solid rgba(255,255,255,0.16)",
       };
     const voiceDisabledTone = {
       color: "rgba(255,255,255,0.54)",

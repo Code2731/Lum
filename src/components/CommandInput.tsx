@@ -144,7 +144,7 @@ const CommandInput = ({
     voiceError ? "text-red-300 bg-red-500/15 border-red-400/25" :
     voiceStatus === "listening" ? "text-emerald-200 bg-emerald-500/15 border-emerald-400/30" :
     voiceStatus === "processing" ? "text-sky-200 bg-sky-500/15 border-sky-400/30" :
-    "text-white/70 bg-white/10 border-white/15";
+    "text-white/75 bg-white/12 border-white/20";
   const micActionLabel =
     voiceBusy ? "음성 입력 준비 중" :
     isRecording ? "음성 녹음 중지" :
