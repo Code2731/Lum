@@ -150,8 +150,8 @@ const CommandInput = ({
     isRecording ? "음성 녹음 중지" :
     "음성 녹음 시작";
   const micAssistLabel =
-    voiceBusy ? "잠시만 기다려 주세요" :
-    `현재 ${voiceStatusLabel}`;
+    voiceBusy ? "처리 중" :
+    `상태 ${voiceStatusLabel}`;
   const voicePulseActive = voiceStatus === "listening" || voiceStatus === "processing";
   const isVoiceProcessing = voiceStatus === "processing";
   const showVoiceStatusBanner =
@@ -160,9 +160,9 @@ const CommandInput = ({
     voiceStatus !== "idle";
   const showInlineVoiceStatus = !voiceError && voiceSuccessPhase === "hidden" && voiceStatus === "idle";
   const voiceLiveMessage =
-    voiceError ? `음성 입력 오류: ${voiceError}` :
-    voiceSuccessPhase !== "hidden" ? "음성 입력 반영됨" :
-      `음성 상태: ${voiceStatusLabel}`;
+    voiceError ? `오류: ${voiceError}` :
+    voiceSuccessPhase !== "hidden" ? "음성 반영됨" :
+      `음성 ${voiceStatusLabel}`;
   const [history, setHistory] = useState<string[]>([]);
   const [historyIdx, setHistoryIdx] = useState(-1);
 
@@ -553,7 +553,7 @@ const CommandInput = ({
               boxShadow: "0 8px 20px rgba(0,0,0,0.16)",
             }}
           >
-            음성 입력 반영됨
+            음성 반영됨
           </div>
         )}
 

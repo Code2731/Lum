@@ -528,16 +528,16 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
       isRecording ? "음성 녹음 중지" :
       "음성 녹음 시작";
     const micAssistLabel =
-      !voiceEnabled ? "설정에서 켜세요" :
-      voiceBusy ? "잠시만 기다려 주세요" :
-      `현재 ${voiceStatusLabel}`;
+      !voiceEnabled ? "설정에서 켜기" :
+      voiceBusy ? "처리 중" :
+      `상태 ${voiceStatusLabel}`;
     const inlineVoiceLabel = !voiceEnabled ? "꺼짐" : voiceStatusLabel;
     const inlineVoiceTone = !voiceEnabled ? voiceDisabledTone : voiceStatusTone;
     const voiceLiveMessage =
-      !voiceEnabled ? "음성 기능이 꺼져 있습니다" :
-      voiceError ? `음성 입력 오류: ${voiceError}` :
-      voiceSuccessPhase !== "hidden" ? "음성 입력 반영됨" :
-      `음성 상태: ${voiceStatusLabel}`;
+      !voiceEnabled ? "음성 꺼짐" :
+      voiceError ? `오류: ${voiceError}` :
+      voiceSuccessPhase !== "hidden" ? "음성 반영됨" :
+      `음성 ${voiceStatusLabel}`;
     const voiceHighlightLength = voiceHighlight ? voiceHighlight.end - voiceHighlight.start : 0;
     const isLongVoiceHighlight = voiceHighlightLength >= VOICE_HIGHLIGHT_LONG_TEXT_THRESHOLD;
 
@@ -809,7 +809,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
               boxShadow: "0 8px 20px rgba(0,0,0,0.16)",
             }}
           >
-            음성 입력 반영됨
+            음성 반영됨
           </div>
         )}
 
