@@ -508,14 +508,32 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
         background: "rgba(255,255,255,0.08)",
         border: "1px solid rgba(255,255,255,0.18)",
       };
+    const voiceDisabledTone = {
+      color: "rgba(255,255,255,0.54)",
+      background: "rgba(255,255,255,0.04)",
+      border: "1px solid rgba(255,255,255,0.12)",
+    };
     const voicePulseActive = voiceStatus === "listening" || voiceStatus === "processing";
     const isVoiceProcessing = voiceStatus === "processing";
     const showVoiceStatusBanner =
       !voiceError &&
+      voiceEnabled &&
       voiceSuccessPhase === "hidden" &&
       voiceStatus !== "idle";
-    const showInlineVoiceStatus = !voiceError && voiceSuccessPhase === "hidden" && voiceStatus === "idle";
+    const showInlineVoiceStatus =
+      (!voiceError && voiceSuccessPhase === "hidden" && voiceStatus === "idle") || !voiceEnabled;
+    const micActionLabel =
+      !voiceEnabled ? "음성 입력 사용 안 함" :
+      voiceBusy ? "음성 입력 준비 중" :
+      isRecording ? "음성 녹음 중지" :
+      "음성 녹음 시작";
+    const micAssistLabel =
+      !voiceEnabled ? "음성 기능이 꺼져 있습니다" :
+      `현재 ${voiceStatusLabel}`;
+    const inlineVoiceLabel = !voiceEnabled ? "꺼짐" : voiceStatusLabel;
+    const inlineVoiceTone = !voiceEnabled ? voiceDisabledTone : voiceStatusTone;
     const voiceLiveMessage =
+      !voiceEnabled ? "음성 기능이 꺼져 있습니다" :
       voiceError ? `음성 입력 오류: ${voiceError}` :
       voiceSuccessPhase !== "hidden" ? "음성 입력 반영됨" :
       `음성 상태: ${voiceStatusLabel}`;
@@ -820,55 +838,56 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
             {promptChar}
           </span>
 
-          {voiceEnabled && (
-            <button
-              className="lum-voice-mic-btn"
-              type="button"
-              onClick={handleMicToggle}
-              disabled={voiceBusy}
-              onMouseEnter={() => setMicHovered(true)}
-              onMouseLeave={() => setMicHovered(false)}
-              aria-label={`${isRecording ? "음성 녹음 중지" : "음성 녹음 시작"} · 현재 ${voiceStatusLabel}`}
-              aria-pressed={isRecording}
-              title={`${isRecording ? "음성 녹음 중지" : "음성 녹음 시작"} · 현재 ${voiceStatusLabel}`}
-              style={{
-                width: 24,
-                height: 24,
-                borderRadius: 6,
-                border:
-                  voiceStatus === "processing" ? "1px solid rgba(121,192,255,0.28)" :
-                  micHovered && !voiceBusy ? "1px solid rgba(255,255,255,0.28)" :
-                  "1px solid rgba(255,255,255,0.16)",
-                background:
-                  voiceStatus === "processing" ? "rgba(88,166,255,0.18)" :
-                  micHovered && !voiceBusy ? "rgba(255,255,255,0.10)" :
-                  isRecording ? "rgba(248,81,73,0.22)" :
-                  "rgba(255,255,255,0.06)",
-                color:
-                  voiceStatus === "processing" ? "rgba(121,192,255,0.95)" :
-                  isRecording ? "#ff7b72" :
-                  "rgba(255,255,255,0.78)",
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                flexShrink: 0,
-                cursor: voiceBusy ? "wait" : "pointer",
-                opacity: voiceBusy ? 0.55 : 1,
-                animation: voicePulseActive ? VOICE_PULSE_ANIMATION : "none",
-                transform: micHovered && !voiceBusy ? "translateY(-1px)" : "translateY(0)",
-                boxShadow:
-                  voiceBusy ? "none" :
-                  micHovered
-                    ? "0 6px 16px rgba(0,0,0,0.22)"
-                    : "0 0 0 rgba(0,0,0,0)",
-                transition: "background 120ms ease, border-color 120ms ease, transform 120ms ease, box-shadow 120ms ease, opacity 120ms ease",
-              }}
-            >
-              {isRecording ? <Mic size={12} /> : <MicOff size={12} />}
-            </button>
-          )}
+          <button
+            className="lum-voice-mic-btn"
+            type="button"
+            onClick={handleMicToggle}
+            disabled={!voiceEnabled || voiceBusy}
+            onMouseEnter={() => setMicHovered(true)}
+            onMouseLeave={() => setMicHovered(false)}
+            aria-label={`${micActionLabel} · ${micAssistLabel}`}
+            aria-pressed={voiceEnabled ? isRecording : undefined}
+            title={`${micActionLabel} · ${micAssistLabel}`}
+            style={{
+              width: 24,
+              height: 24,
+              borderRadius: 6,
+              border:
+                !voiceEnabled ? "1px solid rgba(255,255,255,0.12)" :
+                voiceStatus === "processing" ? "1px solid rgba(121,192,255,0.28)" :
+                micHovered && !voiceBusy ? "1px solid rgba(255,255,255,0.28)" :
+                "1px solid rgba(255,255,255,0.16)",
+              background:
+                !voiceEnabled ? "rgba(255,255,255,0.03)" :
+                voiceStatus === "processing" ? "rgba(88,166,255,0.18)" :
+                micHovered && !voiceBusy ? "rgba(255,255,255,0.10)" :
+                isRecording ? "rgba(248,81,73,0.22)" :
+                "rgba(255,255,255,0.06)",
+              color:
+                !voiceEnabled ? "rgba(255,255,255,0.42)" :
+                voiceStatus === "processing" ? "rgba(121,192,255,0.95)" :
+                isRecording ? "#ff7b72" :
+                "rgba(255,255,255,0.78)",
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0,
+              cursor: !voiceEnabled ? "not-allowed" : voiceBusy ? "wait" : "pointer",
+              opacity: !voiceEnabled ? 0.8 : voiceBusy ? 0.55 : 1,
+              animation: voiceEnabled && voicePulseActive ? VOICE_PULSE_ANIMATION : "none",
+              transform: micHovered && voiceEnabled && !voiceBusy ? "translateY(-1px)" : "translateY(0)",
+              boxShadow:
+                !voiceEnabled || voiceBusy ? "none" :
+                micHovered
+                  ? "0 6px 16px rgba(0,0,0,0.22)"
+                  : "0 0 0 rgba(0,0,0,0)",
+              transition: "background 120ms ease, border-color 120ms ease, transform 120ms ease, box-shadow 120ms ease, opacity 120ms ease",
+            }}
+          >
+            {voiceEnabled && isRecording ? <Mic size={12} /> : <MicOff size={12} />}
+          </button>
 
-          {voiceEnabled && showInlineVoiceStatus && (
+          {showInlineVoiceStatus && (
             <span
               aria-hidden="true"
               style={{
@@ -882,10 +901,10 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
                 padding: "1px 7px",
                 borderRadius: 999,
                 transform: "translateY(0.5px)",
-                ...voiceStatusTone,
+                ...inlineVoiceTone,
               }}
             >
-              {voiceStatusLabel}
+              {inlineVoiceLabel}
             </span>
           )}
 

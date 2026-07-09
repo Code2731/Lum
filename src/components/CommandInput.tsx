@@ -145,6 +145,11 @@ const CommandInput = ({
     voiceStatus === "listening" ? "text-emerald-200 bg-emerald-500/15 border-emerald-400/40" :
     voiceStatus === "processing" ? "text-sky-200 bg-sky-500/15 border-sky-400/40" :
     "text-white/70 bg-white/10 border-white/20";
+  const micActionLabel =
+    voiceBusy ? "음성 입력 준비 중" :
+    isRecording ? "음성 녹음 중지" :
+    "음성 녹음 시작";
+  const micAssistLabel = `현재 ${voiceStatusLabel}`;
   const voicePulseActive = voiceStatus === "listening" || voiceStatus === "processing";
   const isVoiceProcessing = voiceStatus === "processing";
   const showVoiceStatusBanner =
@@ -387,14 +392,14 @@ const CommandInput = ({
       <div className={`editor-box ${isAI ? "editor-box-ai" : ""} ${isRecording ? "recording" : ""}`}>
         <div className="editor-header">
           <IconButton
-            tooltip={`${isRecording ? "음성 녹음 중지" : "음성 녹음 시작"} · 현재 ${voiceStatusLabel}`}
+            tooltip={`${micActionLabel} · ${micAssistLabel}`}
             className={`mic-btn lum-voice-mic-btn ${isRecording ? "active" : ""}`}
             onClick={handleMicToggle}
             disabled={voiceBusy}
             onMouseEnter={() => setMicHovered(true)}
             onMouseLeave={() => setMicHovered(false)}
             aria-pressed={isRecording}
-            aria-label={`${isRecording ? "음성 녹음 중지" : "음성 녹음 시작"} · 현재 ${voiceStatusLabel}`}
+            aria-label={`${micActionLabel} · ${micAssistLabel}`}
             style={{
               animation: voicePulseActive ? VOICE_PULSE_ANIMATION : "none",
               background:
