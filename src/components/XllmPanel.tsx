@@ -974,6 +974,7 @@ const VoiceHookDiagnosticsSection: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copyMsg, setCopyMsg] = useState<string | null>(null);
+  const [nowMs, setNowMs] = useState(() => Date.now());
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -1013,6 +1014,13 @@ const VoiceHookDiagnosticsSection: React.FC = () => {
     return () => window.clearTimeout(timer);
   }, [copyMsg]);
 
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setNowMs(Date.now());
+    }, 30_000);
+    return () => window.clearInterval(timer);
+  }, []);
+
   const unixTemplateCopyCommand = [
     "mkdir -p ~/.lum_whisper",
     "cp scripts/voice-hooks/start.example.sh ~/.lum_whisper/start.sh",
@@ -1029,6 +1037,26 @@ const VoiceHookDiagnosticsSection: React.FC = () => {
       ? new Date(info.transcript_modified_ms).toLocaleString("ko-KR")
       : "수정 이력 없음";
   const voiceHookFolderPath = info?.transcript_path.replace(/[\\/][^\\/]+$/, "") ?? "";
+  const transcriptAgeMs =
+    info?.transcript_modified_ms != null
+      ? Math.max(0, nowMs - info.transcript_modified_ms)
+      : null;
+  const transcriptStaleWhileRecording =
+    Boolean(info?.recording) &&
+    transcriptAgeMs != null &&
+    transcriptAgeMs >= 8_000;
+  const transcriptStaleWhileIdle =
+    Boolean(!info?.recording && info?.transcript_exists) &&
+    transcriptAgeMs != null &&
+    transcriptAgeMs >= 10 * 60_000;
+  const transcriptStale =
+    transcriptStaleWhileRecording || transcriptStaleWhileIdle;
+  const transcriptAgeLabel =
+    transcriptAgeMs == null
+      ? "갱신 이력 없음"
+      : transcriptAgeMs < 1_000
+        ? "방금 전"
+        : `${Math.floor(transcriptAgeMs / 1000)}초 전`;
 
   return (
     <section className="space-y-2 border border-emerald-400/20 rounded-lg p-3 bg-emerald-400/5">
@@ -1076,7 +1104,23 @@ const VoiceHookDiagnosticsSection: React.FC = () => {
             <span className={`text-xs px-1.5 py-0.5 rounded border ${info.transcript_exists ? "text-emerald-200 bg-emerald-500/10 border-emerald-400/25" : "text-white/70 bg-white/5 border-white/10"}`}>
               transcript {info.transcript_exists ? "감지됨" : "없음"}
             </span>
+            {info.transcript_exists && (
+              <span className={`text-xs px-1.5 py-0.5 rounded border ${transcriptStale ? "text-amber-200 bg-amber-500/10 border-amber-400/25" : "text-cyan-200 bg-cyan-500/10 border-cyan-400/25"}`}>
+                {transcriptStale ? "stale 의심" : `최근 갱신 ${transcriptAgeLabel}`}
+              </span>
+            )}
           </div>
+
+          {transcriptStale && (
+            <MessageActionRow
+              text={
+                transcriptStaleWhileRecording
+                  ? `녹음 중인데 transcript 파일 갱신이 ${transcriptAgeLabel} 멈춰 있습니다. partial transcript 쓰기 파이프라인을 확인하세요.`
+                  : `이 transcript 파일은 ${transcriptAgeLabel} 갱신됐습니다. 이전 세션 잔여 파일일 수 있습니다.`
+              }
+              messageClassName="text-xs text-amber-200 bg-amber-500/10 border border-amber-400/20 rounded px-2.5 py-1.5 block"
+            />
+          )}
 
           <div className="space-y-1.5 rounded-lg border border-white/8 bg-white/[0.03] p-2.5">
             <div className="text-xs text-white/40">시작 훅</div>
