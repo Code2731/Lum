@@ -948,12 +948,12 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
                 <span
                   style={{
                     background: isLongVoiceHighlight
-                      ? "linear-gradient(180deg, rgba(88,166,255,0.18), rgba(88,166,255,0.1))"
-                      : "rgba(88,166,255,0.14)",
+                      ? "linear-gradient(180deg, rgba(88,166,255,0.20), rgba(88,166,255,0.12))"
+                      : "rgba(88,166,255,0.16)",
                     borderRadius: 4,
                     boxShadow: isLongVoiceHighlight
-                      ? "inset 0 0 0 1px rgba(88,166,255,0.18), 0 0 0 1px rgba(88,166,255,0.1)"
-                      : "0 0 0 1px rgba(88,166,255,0.16)",
+                      ? "inset 0 0 0 1px rgba(88,166,255,0.20), 0 0 0 1px rgba(88,166,255,0.12)"
+                      : "0 0 0 1px rgba(88,166,255,0.18)",
                     opacity: voiceHighlight.phase === "fading" ? 0 : 1,
                     transition: `opacity ${VOICE_HIGHLIGHT_FADE_MS}ms ease`,
                     padding: isLongVoiceHighlight ? "0 2px" : undefined,
