@@ -183,6 +183,7 @@ const CommandInput = ({
     [normalizedVoiceHistoryQuery, voiceTranscriptHistory]
   );
   const currentVoiceHistoryScopeKey = (context.cwd ?? "").trim() || "__global__";
+  const isVoiceHistoryScopeOverridden = activeVoiceHistoryScope !== currentVoiceHistoryScopeKey;
   const voiceHistoryScopeLabel =
     activeVoiceHistoryScope === "__global__" ? "전역 기록" : shortPath(activeVoiceHistoryScope);
   const visibleVoiceHistoryScopes = showAllVoiceHistoryScopes
@@ -960,9 +961,15 @@ const CommandInput = ({
               <span
                 style={{
                   borderRadius: 999,
-                  border: "1px solid rgba(88,166,255,0.12)",
-                  background: "rgba(88,166,255,0.06)",
-                  color: "rgba(214,231,255,0.76)",
+                  border: isVoiceHistoryScopeOverridden
+                    ? "1px solid rgba(251,191,36,0.24)"
+                    : "1px solid rgba(88,166,255,0.12)",
+                  background: isVoiceHistoryScopeOverridden
+                    ? "rgba(251,191,36,0.10)"
+                    : "rgba(88,166,255,0.06)",
+                  color: isVoiceHistoryScopeOverridden
+                    ? "rgba(255,244,214,0.88)"
+                    : "rgba(214,231,255,0.76)",
                   padding: "2px 7px",
                   fontSize: 10,
                   lineHeight: 1.2,
@@ -970,6 +977,25 @@ const CommandInput = ({
               >
                 {voiceHistoryScopeLabel}
               </span>
+              {isVoiceHistoryScopeOverridden && (
+                <button
+                  type="button"
+                  onClick={() => setVoiceHistoryScopeOverride(null)}
+                  title="현재 프로젝트 기록으로 복귀"
+                  style={{
+                    borderRadius: 999,
+                    border: "1px solid rgba(88,166,255,0.16)",
+                    background: "rgba(88,166,255,0.08)",
+                    color: "rgba(214,231,255,0.82)",
+                    padding: "2px 7px",
+                    fontSize: 10,
+                    lineHeight: 1.2,
+                    cursor: "pointer",
+                  }}
+                >
+                  현재 프로젝트로 복귀
+                </button>
+              )}
               <span
                 style={{
                   fontSize: 10,
@@ -1000,13 +1026,14 @@ const CommandInput = ({
                         title={`${label}${recentHint ? ` · 최근 ${recentHint}` : ""} · 고정 ${scopeInfo.pinnedCount} · 최근 ${scopeInfo.recentCount} · 기록 ${scopeInfo.historyCount}`}
                         style={{
                           borderRadius: 999,
-                          border: isActive ? "1px solid rgba(88,166,255,0.24)" : "1px solid rgba(255,255,255,0.10)",
-                          background: isActive ? "rgba(88,166,255,0.12)" : "rgba(255,255,255,0.04)",
-                          color: isActive ? "rgba(214,231,255,0.88)" : "rgba(255,255,255,0.62)",
+                          border: isActive ? "1px solid rgba(88,166,255,0.34)" : "1px solid rgba(255,255,255,0.10)",
+                          background: isActive ? "rgba(88,166,255,0.16)" : "rgba(255,255,255,0.04)",
+                          color: isActive ? "rgba(214,231,255,0.92)" : "rgba(255,255,255,0.62)",
                           padding: "2px 7px",
                           fontSize: 10,
                           lineHeight: 1.2,
                           cursor: "pointer",
+                          boxShadow: isActive ? "0 0 0 1px rgba(88,166,255,0.08) inset" : "none",
                         }}
                       >
                         <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
