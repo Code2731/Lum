@@ -147,7 +147,7 @@ const CommandInput = ({
     "text-white/75 bg-white/12 border-white/20";
   const micActionLabel =
     !voiceEnabled ? "음성 비활성" :
-    voiceBusy ? "음성 입력 준비 중" :
+    voiceBusy ? "음성 준비 중" :
     isRecording ? "음성 녹음 중지" :
     "음성 녹음 시작";
   const micAssistLabel =

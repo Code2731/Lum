@@ -526,7 +526,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
       (!voiceError && voiceSuccessPhase === "hidden" && voiceStatus === "idle") || !voiceEnabled;
     const micActionLabel =
       !voiceEnabled ? "음성 비활성" :
-      voiceBusy ? "음성 입력 준비 중" :
+      voiceBusy ? "음성 준비 중" :
       isRecording ? "음성 녹음 중지" :
       "음성 녹음 시작";
     const micAssistLabel =
