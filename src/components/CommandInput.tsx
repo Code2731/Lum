@@ -445,9 +445,23 @@ const CommandInput = ({
                 marginRight: 2,
                 transform: "translateY(0)",
                 opacity: !voiceEnabled ? 0.82 : voiceStatus === "idle" ? 0.9 : 0.98,
+                gap: 3,
               }}
             >
-              {voiceStatusLabel}
+              <span
+                style={{
+                  width: 5,
+                  height: 5,
+                  borderRadius: 999,
+                  background:
+                    !voiceEnabled ? "rgba(255,255,255,0.46)" :
+                    voiceStatus === "listening" ? "rgba(142,241,160,0.98)" :
+                    voiceStatus === "processing" ? "rgba(145,205,255,0.98)" :
+                    "rgba(255,255,255,0.72)",
+                  flexShrink: 0,
+                }}
+              />
+              <span>{voiceStatusLabel}</span>
             </span>
           )}
           <span className="editor-path">{shortPath(context.cwd)}</span>

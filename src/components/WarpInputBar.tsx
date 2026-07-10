@@ -828,13 +828,23 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
               padding: "2px 6px",
               display: "inline-flex",
               alignItems: "center",
+              gap: 4,
               whiteSpace: "nowrap",
               animation: VOICE_BANNER_IN_ANIMATION,
               boxShadow: "0 6px 16px rgba(0,0,0,0.10)",
               ...voiceStatusTone,
             }}
           >
-            {voiceStatusLabel}
+            <span
+              style={{
+                width: 5,
+                height: 5,
+                borderRadius: 999,
+                background: voiceStatusTone.color,
+                flexShrink: 0,
+              }}
+            />
+            <span>{voiceStatusLabel}</span>
           </div>
         )}
 
@@ -903,6 +913,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
                 display: "inline-flex",
                 alignItems: "center",
                 justifyContent: "center",
+                gap: 4,
                 padding: "1px 6px",
                 marginLeft: 2,
                 marginRight: 2,
@@ -912,7 +923,16 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
                 ...inlineVoiceTone,
               }}
             >
-              {inlineVoiceLabel}
+              <span
+                style={{
+                  width: 5,
+                  height: 5,
+                  borderRadius: 999,
+                  background: inlineVoiceTone.color,
+                  flexShrink: 0,
+                }}
+              />
+              <span>{inlineVoiceLabel}</span>
             </span>
           )}
 
