@@ -143,7 +143,7 @@ const CommandInput = ({
   const voiceStatusToneClass =
     voiceError ? "text-red-300 bg-red-500/15 border-red-400/25" :
     voiceStatus === "listening" ? "text-emerald-200 bg-emerald-500/18 border-emerald-400/35" :
-    voiceStatus === "processing" ? "text-sky-200 bg-sky-500/18 border-sky-400/35" :
+    voiceStatus === "processing" ? "text-sky-200 bg-sky-500/20 border-sky-400/40" :
     "text-white/75 bg-white/12 border-white/20";
   const micActionLabel =
     !voiceEnabled ? "음성 비활성" :

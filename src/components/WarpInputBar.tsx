@@ -503,8 +503,8 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
       } :
       voiceStatus === "processing" ? {
         color: "rgba(145,205,255,0.98)",
-        background: "rgba(56,139,253,0.20)",
-        border: "1px solid rgba(88,166,255,0.30)",
+        background: "rgba(56,139,253,0.22)",
+        border: "1px solid rgba(88,166,255,0.34)",
       } : {
         color: "rgba(255,255,255,0.78)",
         background: "rgba(255,255,255,0.10)",
