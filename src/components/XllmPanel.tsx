@@ -40,6 +40,18 @@ interface RecallBackendInfo {
   active_matches_requested?: boolean;
 }
 
+interface VoiceHookDiagnostics {
+  recording: boolean;
+  transcript_path: string;
+  transcript_exists: boolean;
+  start_hook_kind: string;
+  start_hook_configured: boolean;
+  start_hook_target: string;
+  stop_hook_kind: string;
+  stop_hook_configured: boolean;
+  stop_hook_target: string;
+}
+
 function normalizeRecallBackend(
   value: string | null | undefined,
   supported: string[],
@@ -458,6 +470,7 @@ const XllmPanel: React.FC<Props> = ({ onClose }) => {
 
           <RecallBackendSection />
           <OllamaSection />
+          <VoiceHookDiagnosticsSection />
           <LanDiscoverySection />
           <EmbeddedInferenceDebug />
         </div>
@@ -948,6 +961,95 @@ const LanDiscoverySection: React.FC = () => {
             );
           })}
         </div>
+      )}
+    </section>
+  );
+};
+
+const VoiceHookDiagnosticsSection: React.FC = () => {
+  const [info, setInfo] = useState<VoiceHookDiagnostics | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const next = await invoke<VoiceHookDiagnostics>("voice_hook_diagnostics");
+      setInfo(next);
+    } catch (e) {
+      setError(`음성 진단 조회 실패: ${formatErrorMessage(e)}`);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
+
+  const hookTone = (configured: boolean, kind: string) => {
+    if (configured && kind === "env") return "text-emerald-200 bg-emerald-500/10 border-emerald-400/25";
+    if (configured) return "text-cyan-200 bg-cyan-500/10 border-cyan-400/25";
+    return "text-amber-200 bg-amber-500/10 border-amber-400/25";
+  };
+
+  return (
+    <section className="space-y-2 border border-emerald-400/20 rounded-lg p-3 bg-emerald-400/5">
+      <div className="flex items-center justify-between gap-2">
+        <label className="text-xs text-emerald-200/85 uppercase tracking-wider flex items-center gap-1.5">
+          <Sparkles size={10} /> 음성 훅 진단
+          <span className="ml-1 text-xs text-white/30 font-normal normal-case">start/stop 훅 + transcript 파일 상태</span>
+        </label>
+        <button
+          onClick={refresh}
+          disabled={loading}
+          className="flex items-center gap-1.5 px-2.5 py-1 rounded border border-emerald-400/30 bg-emerald-500/10 hover:bg-emerald-500/20 text-sm text-emerald-100 disabled:opacity-40 transition-colors"
+        >
+          {loading ? <Loader2 size={11} className="animate-spin" /> : <RefreshCw size={11} />}
+          {loading ? "새로고침 중…" : "새로고침"}
+        </button>
+      </div>
+
+      {error && (
+        <MessageActionRow
+          text={error}
+          messageClassName="text-xs text-rose-300 bg-rose-500/10 border border-rose-400/20 rounded px-2.5 py-1.5 block"
+        />
+      )}
+
+      {info && (
+        <>
+          <div className="flex flex-wrap gap-1.5">
+            <span className={`text-xs px-1.5 py-0.5 rounded border ${info.recording ? "text-red-200 bg-red-500/10 border-red-400/25" : "text-white/70 bg-white/5 border-white/10"}`}>
+              {info.recording ? "녹음 중" : "대기 중"}
+            </span>
+            <span className={`text-xs px-1.5 py-0.5 rounded border ${hookTone(info.start_hook_configured, info.start_hook_kind)}`}>
+              시작 훅 {info.start_hook_configured ? info.start_hook_kind : "없음"}
+            </span>
+            <span className={`text-xs px-1.5 py-0.5 rounded border ${hookTone(info.stop_hook_configured, info.stop_hook_kind)}`}>
+              종료 훅 {info.stop_hook_configured ? info.stop_hook_kind : "없음"}
+            </span>
+            <span className={`text-xs px-1.5 py-0.5 rounded border ${info.transcript_exists ? "text-emerald-200 bg-emerald-500/10 border-emerald-400/25" : "text-white/70 bg-white/5 border-white/10"}`}>
+              transcript {info.transcript_exists ? "감지됨" : "없음"}
+            </span>
+          </div>
+
+          <div className="space-y-1.5 rounded-lg border border-white/8 bg-white/[0.03] p-2.5">
+            <div className="text-xs text-white/40">시작 훅</div>
+            <code className="block text-[11px] leading-relaxed text-white/70 break-all">{info.start_hook_target}</code>
+            <div className="text-xs text-white/40">종료 훅</div>
+            <code className="block text-[11px] leading-relaxed text-white/70 break-all">{info.stop_hook_target}</code>
+            <div className="text-xs text-white/40">Transcript 파일</div>
+            <code className="block text-[11px] leading-relaxed text-white/70 break-all">{info.transcript_path}</code>
+          </div>
+
+          <p className="text-xs text-white/35 leading-relaxed">
+            훅이 없으면 기본적으로 <code className="text-xs">~/.lum_whisper/start.sh</code> 또는 <code className="text-xs">start.cmd</code>,
+            <code className="text-xs"> stop.sh</code> 또는 <code className="text-xs">stop.cmd</code> 를 찾습니다.
+            녹음 중에는 <code className="text-xs">last_transcript.txt</code> 를 계속 덮어쓰면 live preview에 바로 반영됩니다.
+          </p>
+        </>
       )}
     </section>
   );

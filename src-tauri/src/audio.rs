@@ -1,4 +1,5 @@
 use crate::platform;
+use serde::Serialize;
 use std::path::{Path, PathBuf};
 use std::sync::{Mutex, OnceLock};
 use tauri::Emitter;
@@ -144,6 +145,19 @@ enum VoiceHook {
     Script(PathBuf),
 }
 
+#[derive(Debug, Clone, Serialize)]
+pub struct VoiceHookDiagnostics {
+    recording: bool,
+    transcript_path: String,
+    transcript_exists: bool,
+    start_hook_kind: String,
+    start_hook_configured: bool,
+    start_hook_target: String,
+    stop_hook_kind: String,
+    stop_hook_configured: bool,
+    stop_hook_target: String,
+}
+
 fn resolve_voice_hook(env_key: &str, kind: &str) -> Option<VoiceHook> {
     if let Ok(cmd) = std::env::var(env_key) {
         let trimmed = cmd.trim();
@@ -156,6 +170,18 @@ fn resolve_voice_hook(env_key: &str, kind: &str) -> Option<VoiceHook> {
         Some(VoiceHook::Script(script))
     } else {
         None
+    }
+}
+
+fn voice_hook_descriptor(env_key: &str, kind: &str) -> (String, bool, String) {
+    match resolve_voice_hook(env_key, kind) {
+        Some(VoiceHook::Shell(cmd)) => ("env".into(), true, cmd),
+        Some(VoiceHook::Script(path)) => ("script".into(), true, path.display().to_string()),
+        None => (
+            "missing".into(),
+            false,
+            default_voice_hook_script_path(kind).display().to_string(),
+        ),
     }
 }
 
@@ -443,6 +469,29 @@ pub fn voice_recording_status() -> Result<bool, String> {
     // stop 전환 중(stopping=true)에도 프론트는 녹음 active로 취급해야
     // 마이크 버튼이 중간 상태에서 깜빡이며 잘못된 재시도를 유도하지 않는다.
     Ok(state.recording || state.stopping)
+}
+
+#[tauri::command]
+pub fn voice_hook_diagnostics() -> Result<VoiceHookDiagnostics, String> {
+    let transcript_path = transcript_file_path();
+    let transcript_exists = transcript_path.is_file();
+    let recording = voice_recording_status()?;
+    let (start_hook_kind, start_hook_configured, start_hook_target) =
+        voice_hook_descriptor("LUM_VOICE_START_CMD", "start");
+    let (stop_hook_kind, stop_hook_configured, stop_hook_target) =
+        voice_hook_descriptor("LUM_VOICE_STOP_CMD", "stop");
+
+    Ok(VoiceHookDiagnostics {
+        recording,
+        transcript_path: transcript_path.display().to_string(),
+        transcript_exists,
+        start_hook_kind,
+        start_hook_configured,
+        start_hook_target,
+        stop_hook_kind,
+        stop_hook_configured,
+        stop_hook_target,
+    })
 }
 
 /// 음성 입력 중지 + 텍스트 반환.
