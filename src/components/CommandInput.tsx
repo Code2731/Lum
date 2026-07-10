@@ -162,6 +162,7 @@ const CommandInput = ({
     voiceStatus !== "idle";
   const showInlineVoiceStatus = !voiceError && voiceSuccessPhase === "hidden" && voiceStatus === "idle";
   const voiceLiveMessage =
+    !voiceEnabled ? "음성 비활성" :
     voiceError ? `오류: ${voiceError}` :
     voiceSuccessPhase !== "hidden" ? "음성 반영됨" :
       `음성 ${voiceStatusLabel}`;
