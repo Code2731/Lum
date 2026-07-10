@@ -121,6 +121,7 @@ const CommandInput = ({
     toggleVoiceTranscriptHistory,
     togglePinVoiceTranscript,
     movePinnedVoiceTranscript,
+    movePinnedVoiceTranscriptToEdge,
     setPinnedVoiceTranscriptLabel,
     getPinnedVoiceTranscriptLabel,
     isVoiceTranscriptPinned,
@@ -989,8 +990,10 @@ const CommandInput = ({
                 </span>
                 {filteredPinnedVoiceTranscripts.map((item) => {
                   const pinnedIndex = pinnedVoiceTranscripts.indexOf(item);
+                  const canMoveToTop = pinnedIndex > 0;
                   const canMoveUp = pinnedIndex > 0;
                   const canMoveDown = pinnedIndex >= 0 && pinnedIndex < pinnedVoiceTranscripts.length - 1;
+                  const canMoveToBottom = pinnedIndex >= 0 && pinnedIndex < pinnedVoiceTranscripts.length - 1;
                   const pinnedLabel = getPinnedVoiceTranscriptLabel(item);
                   return (
                     <span
@@ -1044,6 +1047,24 @@ const CommandInput = ({
                       </button>
                       <button
                         type="button"
+                        disabled={!canMoveToTop}
+                        onClick={() => movePinnedVoiceTranscriptToEdge(item, "start")}
+                        title="맨 위로 이동"
+                        style={{
+                          borderRadius: 999,
+                          border: "1px solid rgba(255,255,255,0.10)",
+                          background: "rgba(255,255,255,0.05)",
+                          color: canMoveToTop ? "rgba(255,255,255,0.72)" : "rgba(255,255,255,0.28)",
+                          padding: "0 4px",
+                          fontSize: 9,
+                          lineHeight: 1.4,
+                          cursor: canMoveToTop ? "pointer" : "default",
+                        }}
+                      >
+                        맨위
+                      </button>
+                      <button
+                        type="button"
                         disabled={!canMoveUp}
                         onClick={() => movePinnedVoiceTranscript(item, -1)}
                         title="위로 이동"
@@ -1077,6 +1098,24 @@ const CommandInput = ({
                         }}
                       >
                         아래
+                      </button>
+                      <button
+                        type="button"
+                        disabled={!canMoveToBottom}
+                        onClick={() => movePinnedVoiceTranscriptToEdge(item, "end")}
+                        title="맨 아래로 이동"
+                        style={{
+                          borderRadius: 999,
+                          border: "1px solid rgba(255,255,255,0.10)",
+                          background: "rgba(255,255,255,0.05)",
+                          color: canMoveToBottom ? "rgba(255,255,255,0.72)" : "rgba(255,255,255,0.28)",
+                          padding: "0 4px",
+                          fontSize: 9,
+                          lineHeight: 1.4,
+                          cursor: canMoveToBottom ? "pointer" : "default",
+                        }}
+                      >
+                        맨아래
                       </button>
                       <button
                         type="button"
