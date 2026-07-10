@@ -37,8 +37,9 @@ const formatVoiceDuration = (totalSeconds: number) => {
 };
 const VOICE_PREVIEW_SENTENCE_BOUNDARY = /[.!?。！？]/;
 const VOICE_PREVIEW_WORD_BOUNDARY = /\s/;
+const normalizeVoiceComparisonText = (text: string) => text.replace(/\s+/g, " ").trim();
 const formatVoicePreview = (text: string) => {
-  const normalized = text.replace(/\s+/g, " ").trim();
+  const normalized = normalizeVoiceComparisonText(text);
   if (normalized.length <= VOICE_PREVIEW_SOFT_LIMIT) {
     return normalized;
   }
@@ -119,6 +120,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
     const [voiceSuccessPhase, setVoiceSuccessPhase] = useState<"hidden" | "visible" | "fading">("hidden");
     const [voiceHighlight, setVoiceHighlight] = useState<{ start: number; end: number; phase: "visible" | "fading" } | null>(null);
     const [lastVoiceTranscript, setLastVoiceTranscript] = useState("");
+    const [lastVoicePartialTranscript, setLastVoicePartialTranscript] = useState("");
     const inputRef = useRef<HTMLInputElement>(null);
     const voiceSuccessVisibleTimerRef = useRef<number | null>(null);
     const voiceSuccessFadeTimerRef = useRef<number | null>(null);
@@ -541,6 +543,16 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
       onTranscript: injectTranscript,
     });
     useEffect(() => {
+      if (isRecording) {
+        setLastVoicePartialTranscript("");
+      }
+    }, [isRecording]);
+    useEffect(() => {
+      const partial = voicePartialTranscript.trim();
+      if (!partial) return;
+      setLastVoicePartialTranscript(partial);
+    }, [voicePartialTranscript]);
+    useEffect(() => {
       if (!isRecording) {
         setRecordingSeconds(0);
         return;
@@ -612,8 +624,23 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
       voicePartialTranscript && voiceStatus !== "idle"
         ? formatVoicePreview(voicePartialTranscript)
         : "";
+    const normalizedFinalVoiceTranscript = normalizeVoiceComparisonText(lastVoiceTranscript);
+    const normalizedLastVoicePartialTranscript = normalizeVoiceComparisonText(lastVoicePartialTranscript);
+    const voiceTranscriptRefined =
+      Boolean(normalizedFinalVoiceTranscript) &&
+      Boolean(normalizedLastVoicePartialTranscript) &&
+      normalizedFinalVoiceTranscript !== normalizedLastVoicePartialTranscript &&
+      !normalizedFinalVoiceTranscript.startsWith(normalizedLastVoicePartialTranscript);
     const voiceSuccessMessage =
-      lastVoiceTranscript ? `음성 반영 완료 · ${formatVoicePreview(lastVoiceTranscript)}` : "음성 반영 완료";
+      lastVoiceTranscript
+        ? voiceTranscriptRefined
+          ? `음성 반영 완료 · 최종 보정 ${formatVoicePreview(lastVoiceTranscript)}`
+          : `음성 반영 완료 · ${formatVoicePreview(lastVoiceTranscript)}`
+        : "음성 반영 완료";
+    const voiceSuccessTitle =
+      voiceTranscriptRefined
+        ? `중간 인식: ${lastVoicePartialTranscript}\n최종 인식: ${lastVoiceTranscript}`
+        : lastVoiceTranscript || "음성 반영 완료";
     const voiceLiveMessage =
       !voiceEnabled ? "음성 비활성" :
       voiceError ? `음성 오류: ${voiceError}` :
@@ -873,15 +900,15 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
 
         {!voiceError && voiceSuccessPhase !== "hidden" && (
           <div
-            title={lastVoiceTranscript || "음성 반영 완료"}
+            title={voiceSuccessTitle}
             style={{
               position: "absolute",
               top: VOICE_FLOATING_STATUS_BANNER_TOP,
               right: VOICE_FLOATING_BANNER_RIGHT,
               fontSize: WARP_SMALL_FONT_SIZE,
-              color: "rgba(166,244,180,0.88)",
-              background: "rgba(46,160,67,0.08)",
-              border: "1px solid rgba(63,185,80,0.12)",
+              color: voiceTranscriptRefined ? "rgba(198,255,208,0.96)" : "rgba(166,244,180,0.88)",
+              background: voiceTranscriptRefined ? "rgba(46,160,67,0.12)" : "rgba(46,160,67,0.08)",
+              border: voiceTranscriptRefined ? "1px solid rgba(63,185,80,0.22)" : "1px solid rgba(63,185,80,0.12)",
               borderRadius: 6,
               padding: "2px 6px",
               display: "inline-flex",
@@ -892,7 +919,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
               transform: voiceSuccessPhase === "fading" ? "translateY(-1px)" : "translateY(0)",
               transition: `opacity ${VOICE_SUCCESS_FADE_MS}ms ease, transform ${VOICE_SUCCESS_FADE_MS}ms ease`,
               animation: VOICE_BANNER_IN_ANIMATION,
-              boxShadow: "0 6px 16px rgba(0,0,0,0.10)",
+              boxShadow: voiceTranscriptRefined ? "0 8px 20px rgba(16,185,129,0.14)" : "0 6px 16px rgba(0,0,0,0.10)",
             }}
           >
             <span
