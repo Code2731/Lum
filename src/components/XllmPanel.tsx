@@ -55,6 +55,11 @@ interface VoiceHookDiagnostics {
   stop_hook_target: string;
 }
 
+interface VoiceHookTemplateCreateResult {
+  created: string[];
+  skipped: string[];
+}
+
 function normalizeRecallBackend(
   value: string | null | undefined,
   supported: string[],
@@ -1041,6 +1046,8 @@ const VoiceHookDiagnosticsSection: React.FC = () => {
     Boolean(info?.start_hook_target) && info?.start_hook_kind !== "env";
   const canOpenStopHookFile =
     Boolean(info?.stop_hook_target) && info?.stop_hook_kind !== "env";
+  const canCreateDefaultTemplates =
+    Boolean(info) && (!info.start_hook_configured || !info.stop_hook_configured);
   const transcriptAgeMs =
     info?.transcript_modified_ms != null
       ? Math.max(0, nowMs - info.transcript_modified_ms)
@@ -1168,6 +1175,26 @@ const VoiceHookDiagnosticsSection: React.FC = () => {
               className="flex items-center gap-1.5 px-2.5 py-1 rounded border border-cyan-400/25 bg-cyan-500/10 hover:bg-cyan-500/20 text-xs text-cyan-100 disabled:opacity-40 transition-colors"
             >
               <FolderOpen size={11} /> ~/.lum_whisper 열기
+            </button>
+            <button
+              onClick={async () => {
+                try {
+                  const result = await invoke<VoiceHookTemplateCreateResult>("create_default_voice_hook_files");
+                  if (result.created.length > 0) {
+                    setCopyMsg(`기본 템플릿 ${result.created.length}개를 만들었습니다.`);
+                  } else {
+                    setCopyMsg("이미 훅 파일이 있어서 새 템플릿을 만들지 않았습니다.");
+                  }
+                  await refresh();
+                } catch (e) {
+                  setError(`기본 훅 템플릿 생성 실패: ${formatErrorMessage(e)}`);
+                }
+              }}
+              disabled={!canCreateDefaultTemplates}
+              title={canCreateDefaultTemplates ? "누락된 기본 음성 훅 템플릿 만들기" : "이미 시작/종료 훅이 모두 준비되어 있습니다"}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded border border-emerald-400/25 bg-emerald-500/10 hover:bg-emerald-500/20 text-xs text-emerald-100 disabled:opacity-40 transition-colors"
+            >
+              <Check size={11} /> 기본 템플릿 만들기
             </button>
             <button
               onClick={async () => {

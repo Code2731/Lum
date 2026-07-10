@@ -160,6 +160,17 @@ pub struct VoiceHookDiagnostics {
     stop_hook_target: String,
 }
 
+#[derive(Debug, Clone, Serialize)]
+pub struct VoiceHookTemplateCreateResult {
+    created: Vec<String>,
+    skipped: Vec<String>,
+}
+
+const START_TEMPLATE_SH: &str = include_str!("../../scripts/voice-hooks/start.example.sh");
+const STOP_TEMPLATE_SH: &str = include_str!("../../scripts/voice-hooks/stop.example.sh");
+const START_TEMPLATE_CMD: &str = include_str!("../../scripts/voice-hooks/start.example.cmd");
+const STOP_TEMPLATE_CMD: &str = include_str!("../../scripts/voice-hooks/stop.example.cmd");
+
 fn resolve_voice_hook(env_key: &str, kind: &str) -> Option<VoiceHook> {
     if let Ok(cmd) = std::env::var(env_key) {
         let trimmed = cmd.trim();
@@ -184,6 +195,16 @@ fn voice_hook_descriptor(env_key: &str, kind: &str) -> (String, bool, String) {
             false,
             default_voice_hook_script_path(kind).display().to_string(),
         ),
+    }
+}
+
+fn voice_hook_template(kind: &str) -> &'static str {
+    match (cfg!(windows), kind) {
+        (true, "start") => START_TEMPLATE_CMD,
+        (true, "stop") => STOP_TEMPLATE_CMD,
+        (false, "start") => START_TEMPLATE_SH,
+        (false, "stop") => STOP_TEMPLATE_SH,
+        _ => "",
     }
 }
 
@@ -506,6 +527,37 @@ pub fn voice_hook_diagnostics() -> Result<VoiceHookDiagnostics, String> {
         stop_hook_configured,
         stop_hook_target,
     })
+}
+
+#[tauri::command]
+pub fn create_default_voice_hook_files() -> Result<VoiceHookTemplateCreateResult, String> {
+    let mut created = Vec::new();
+    let mut skipped = Vec::new();
+
+    for kind in ["start", "stop"] {
+        let path = default_voice_hook_script_path(kind);
+        if path.exists() {
+            skipped.push(path.display().to_string());
+            continue;
+        }
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent).map_err(|e| {
+                voice_error(
+                    "HOOK_TEMPLATE_CREATE_FAILED",
+                    format!("음성 훅 디렉터리 생성 실패: {e}"),
+                )
+            })?;
+        }
+        std::fs::write(&path, voice_hook_template(kind)).map_err(|e| {
+            voice_error(
+                "HOOK_TEMPLATE_CREATE_FAILED",
+                format!("음성 훅 템플릿 생성 실패: {e}"),
+            )
+        })?;
+        created.push(path.display().to_string());
+    }
+
+    Ok(VoiceHookTemplateCreateResult { created, skipped })
 }
 
 /// 음성 입력 중지 + 텍스트 반환.
