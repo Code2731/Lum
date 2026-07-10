@@ -588,6 +588,10 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
       inputRef.current?.focus();
     };
 
+    const removeRecentVoiceTranscript = (text: string) => {
+      setRecentVoiceTranscripts((prev) => prev.filter((item) => item !== text));
+    };
+
     useEffect(() => {
       if (isVoiceProcessing) {
         inputRef.current?.focus();
@@ -1178,6 +1182,27 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
                   }}
                 >
                   <Copy size={8} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => removeRecentVoiceTranscript(item)}
+                  title="이 음성 문장 숨기기"
+                  style={{
+                    flexShrink: 0,
+                    width: 14,
+                    height: 14,
+                    borderRadius: 999,
+                    border: "1px solid rgba(255,255,255,0.10)",
+                    background: "rgba(255,255,255,0.04)",
+                    color: "rgba(255,255,255,0.60)",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    cursor: "pointer",
+                    padding: 0,
+                  }}
+                >
+                  <X size={8} />
                 </button>
               </span>
             ))}
