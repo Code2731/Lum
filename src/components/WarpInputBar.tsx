@@ -562,10 +562,12 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
       `상태 ${voiceStatusDisplayLabel}`;
     const inlineVoiceLabel = !voiceEnabled ? "비활성" : voiceStatusDisplayLabel;
     const inlineVoiceTone = !voiceEnabled ? voiceDisabledTone : voiceStatusTone;
+    const voiceSuccessMessage =
+      lastVoiceTranscript ? `음성 반영 완료 · ${formatVoicePreview(lastVoiceTranscript)}` : "음성 반영 완료";
     const voiceLiveMessage =
       !voiceEnabled ? "음성 비활성" :
       voiceError ? `음성 오류: ${voiceError}` :
-      voiceSuccessPhase !== "hidden" ? "음성 반영 완료" :
+      voiceSuccessPhase !== "hidden" ? voiceSuccessMessage :
       `음성 ${voiceStatusDisplayLabel}`;
     const voiceHighlightLength = voiceHighlight ? voiceHighlight.end - voiceHighlight.start : 0;
     const isLongVoiceHighlight = voiceHighlightLength >= VOICE_HIGHLIGHT_LONG_TEXT_THRESHOLD;
@@ -820,6 +822,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
 
         {!voiceError && voiceSuccessPhase !== "hidden" && (
           <div
+            title={lastVoiceTranscript || "음성 반영 완료"}
             style={{
               position: "absolute",
               top: VOICE_FLOATING_STATUS_BANNER_TOP,
@@ -850,10 +853,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
                 flexShrink: 0,
               }}
             />
-            <span>
-              음성 반영 완료
-              {lastVoiceTranscript ? ` · ${formatVoicePreview(lastVoiceTranscript)}` : ""}
-            </span>
+            <span>{voiceSuccessMessage}</span>
           </div>
         )}
 

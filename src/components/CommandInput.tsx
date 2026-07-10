@@ -188,10 +188,12 @@ const CommandInput = ({
     voiceSuccessPhase === "hidden" &&
     voiceStatus !== "idle";
   const showInlineVoiceStatus = !voiceError && voiceSuccessPhase === "hidden" && voiceStatus === "idle";
+  const voiceSuccessMessage =
+    lastVoiceTranscript ? `음성 반영 완료 · ${formatVoicePreview(lastVoiceTranscript)}` : "음성 반영 완료";
   const voiceLiveMessage =
     !voiceEnabled ? "음성 비활성" :
     voiceError ? `음성 오류: ${voiceError}` :
-    voiceSuccessPhase !== "hidden" ? "음성 반영 완료" :
+    voiceSuccessPhase !== "hidden" ? voiceSuccessMessage :
       `음성 ${voiceStatusDisplayLabel}`;
   const [history, setHistory] = useState<string[]>([]);
   const [historyIdx, setHistoryIdx] = useState(-1);
@@ -589,6 +591,7 @@ const CommandInput = ({
           <div
             role="status"
             className="voice-success-banner"
+            title={lastVoiceTranscript || "음성 반영 완료"}
             style={{
               margin: VOICE_INLINE_BANNER_MARGIN,
               padding: VOICE_INLINE_BANNER_PADDING,
@@ -608,8 +611,7 @@ const CommandInput = ({
               boxShadow: "0 6px 16px rgba(0,0,0,0.12)",
             }}
           >
-            음성 반영 완료
-            {lastVoiceTranscript ? ` · ${formatVoicePreview(lastVoiceTranscript)}` : ""}
+            {voiceSuccessMessage}
           </div>
         )}
 
