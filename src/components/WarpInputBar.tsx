@@ -44,6 +44,16 @@ const normalizeVoiceComparisonText = (text: string) => text.replace(/\s+/g, " ")
 const normalizeVoiceSearchTerm = (text: string) => normalizeVoiceComparisonText(text).toLocaleLowerCase();
 const matchesVoiceSearchTerm = (text: string, query: string) =>
   query.length === 0 || normalizeVoiceSearchTerm(text).includes(query);
+const formatVoiceScopeRecentHint = (ts: number) => {
+  if (!ts) return "";
+  const diffMs = Math.max(0, Date.now() - ts);
+  const diffMinutes = Math.floor(diffMs / 60000);
+  if (diffMinutes < 1) return "방금";
+  if (diffMinutes < 60) return `${diffMinutes}m`;
+  const diffHours = Math.floor(diffMinutes / 60);
+  if (diffHours < 24) return `${diffHours}h`;
+  return `${Math.floor(diffHours / 24)}d`;
+};
 const formatVoicePreview = (text: string) => {
   const normalized = normalizeVoiceComparisonText(text);
   if (normalized.length <= VOICE_PREVIEW_SOFT_LIMIT) {
@@ -1273,12 +1283,13 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
                   {visibleVoiceHistoryScopes.map((scopeInfo) => {
                     const isActive = scopeInfo.scopeKey === activeVoiceHistoryScope;
                     const label = scopeInfo.scopeKey === "__global__" ? "전역" : shortPath(scopeInfo.scopeKey);
+                    const recentHint = formatVoiceScopeRecentHint(scopeInfo.lastAccessedAt);
                     return (
                       <button
                         key={scopeInfo.scopeKey}
                         type="button"
                         onClick={() => setVoiceHistoryScopeOverride(scopeInfo.scopeKey === currentVoiceHistoryScopeKey ? null : scopeInfo.scopeKey)}
-                        title={`${label} · 고정 ${scopeInfo.pinnedCount} · 최근 ${scopeInfo.recentCount} · 기록 ${scopeInfo.historyCount}`}
+                        title={`${label}${recentHint ? ` · 최근 ${recentHint}` : ""} · 고정 ${scopeInfo.pinnedCount} · 최근 ${scopeInfo.recentCount} · 기록 ${scopeInfo.historyCount}`}
                         style={{
                           borderRadius: 999,
                           border: isActive ? "1px solid rgba(88,166,255,0.24)" : "1px solid rgba(255,255,255,0.10)",
@@ -1290,7 +1301,14 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
                           cursor: "pointer",
                         }}
                       >
-                        {label}
+                        <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                          <span>{label}</span>
+                          {recentHint && (
+                            <span style={{ color: isActive ? "rgba(214,231,255,0.62)" : "rgba(255,255,255,0.42)" }}>
+                              {recentHint}
+                            </span>
+                          )}
+                        </span>
                       </button>
                     );
                   })}
