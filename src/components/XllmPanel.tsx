@@ -1058,6 +1058,12 @@ const VoiceHookDiagnosticsSection: React.FC = () => {
     Boolean(info?.stop_hook_target) && info?.stop_hook_kind !== "env";
   const canCreateDefaultTemplates =
     Boolean(info) && (!info.start_hook_configured || !info.stop_hook_configured);
+  const chmodTargets = [
+    info?.start_hook_kind === "script" && !info.start_hook_runnable ? info.start_hook_target : null,
+    info?.stop_hook_kind === "script" && !info.stop_hook_runnable ? info.stop_hook_target : null,
+  ].filter((value): value is string => Boolean(value));
+  const canCopyChmodGuide = chmodTargets.length > 0;
+  const chmodGuideCommand = chmodTargets.map((target) => `chmod +x "${target}"`).join("\n");
   const transcriptAgeMs =
     info?.transcript_modified_ms != null
       ? Math.max(0, nowMs - info.transcript_modified_ms)
@@ -1211,6 +1217,14 @@ const VoiceHookDiagnosticsSection: React.FC = () => {
               className="flex items-center gap-1.5 px-2.5 py-1 rounded border border-emerald-400/25 bg-emerald-500/10 hover:bg-emerald-500/20 text-xs text-emerald-100 disabled:opacity-40 transition-colors"
             >
               <Check size={11} /> 기본 템플릿 만들기
+            </button>
+            <button
+              onClick={() => copyText(chmodGuideCommand, "chmod +x 가이드를 클립보드에 담았습니다.")}
+              disabled={!canCopyChmodGuide}
+              title={canCopyChmodGuide ? "실행 권한이 없는 훅 파일용 chmod +x 가이드 복사" : "실행 권한 안내가 필요한 훅 파일이 없습니다"}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded border border-amber-400/25 bg-amber-500/10 hover:bg-amber-500/20 text-xs text-amber-100 disabled:opacity-40 transition-colors"
+            >
+              <Copy size={11} /> chmod +x 가이드
             </button>
             <button
               onClick={async () => {
