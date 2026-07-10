@@ -504,7 +504,7 @@ const CommandInput = ({
               }}
             >
               <IconButton
-                tooltip="오류 복사"
+                tooltip="복사"
                 onClick={() => {
                   if (!voiceError) return;
                   navigator.clipboard?.writeText?.(`음성 오류: ${voiceError}`).catch(() => {});

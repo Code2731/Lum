@@ -715,8 +715,8 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
             >
               <button
                 type="button"
-                aria-label="오류 복사"
-                title="오류 복사"
+                aria-label="복사"
+                title="복사"
                 onClick={() => {
                   navigator.clipboard?.writeText?.(`음성 오류: ${voiceError}`).catch(() => {});
                 }}
