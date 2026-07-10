@@ -211,6 +211,14 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
     const visibleVoiceHistoryScopes = showAllVoiceHistoryScopes
       ? availableVoiceHistoryScopes
       : availableVoiceHistoryScopes.slice(0, 4);
+    const collapsedPinnedVoiceSummary = React.useMemo(() => {
+      const preview = filteredPinnedVoiceTranscripts
+        .slice(0, 2)
+        .map((item) => getPinnedVoiceTranscriptLabel(item) || formatVoicePreview(item))
+        .join(" · ");
+      const suffix = filteredPinnedVoiceTranscripts.length > 2 ? ` +${filteredPinnedVoiceTranscripts.length - 2}` : "";
+      return `${filteredPinnedVoiceTranscripts.length}개${preview ? ` · ${preview}${suffix}` : ""}`;
+    }, [filteredPinnedVoiceTranscripts, getPinnedVoiceTranscriptLabel]);
 
     useEffect(() => {
       onChangeRef.current = onChange;
@@ -1436,6 +1444,17 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
                 >
                   {pinnedVoiceTranscriptsCollapsed ? "펼치기" : "접기"}
                 </button>
+                {pinnedVoiceTranscriptsCollapsed && (
+                  <span
+                    style={{
+                      fontSize: WARP_SMALL_FONT_SIZE,
+                      color: "rgba(255,230,160,0.72)",
+                      lineHeight: 1.2,
+                    }}
+                  >
+                    {collapsedPinnedVoiceSummary}
+                  </span>
+                )}
                 {!pinnedVoiceTranscriptsCollapsed && filteredPinnedVoiceTranscripts.map((item) => {
                   const pinnedIndex = pinnedVoiceTranscripts.indexOf(item);
                   const canMoveToTop = pinnedIndex > 0;

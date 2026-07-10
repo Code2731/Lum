@@ -188,6 +188,14 @@ const CommandInput = ({
   const visibleVoiceHistoryScopes = showAllVoiceHistoryScopes
     ? availableVoiceHistoryScopes
     : availableVoiceHistoryScopes.slice(0, 4);
+  const collapsedPinnedVoiceSummary = useMemo(() => {
+    const preview = filteredPinnedVoiceTranscripts
+      .slice(0, 2)
+      .map((item) => getPinnedVoiceTranscriptLabel(item) || formatVoicePreview(item))
+      .join(" · ");
+    const suffix = filteredPinnedVoiceTranscripts.length > 2 ? ` +${filteredPinnedVoiceTranscripts.length - 2}` : "";
+    return `${filteredPinnedVoiceTranscripts.length}개${preview ? ` · ${preview}${suffix}` : ""}`;
+  }, [filteredPinnedVoiceTranscripts, getPinnedVoiceTranscriptLabel]);
 
   useEffect(() => {
     return () => {
@@ -1120,6 +1128,17 @@ const CommandInput = ({
                 >
                   {pinnedVoiceTranscriptsCollapsed ? "펼치기" : "접기"}
                 </button>
+                {pinnedVoiceTranscriptsCollapsed && (
+                  <span
+                    style={{
+                      fontSize: 10,
+                      color: "rgba(255,230,160,0.72)",
+                      lineHeight: 1.2,
+                    }}
+                  >
+                    {collapsedPinnedVoiceSummary}
+                  </span>
+                )}
                 {!pinnedVoiceTranscriptsCollapsed && filteredPinnedVoiceTranscripts.map((item) => {
                   const pinnedIndex = pinnedVoiceTranscripts.indexOf(item);
                   const canMoveToTop = pinnedIndex > 0;
