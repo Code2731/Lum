@@ -809,7 +809,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
               transform: voiceSuccessPhase === "fading" ? "translateY(-1px)" : "translateY(0)",
               transition: `opacity ${VOICE_SUCCESS_FADE_MS}ms ease, transform ${VOICE_SUCCESS_FADE_MS}ms ease`,
               animation: VOICE_BANNER_IN_ANIMATION,
-              boxShadow: "0 6px 16px rgba(0,0,0,0.12)",
+              boxShadow: "0 6px 16px rgba(0,0,0,0.10)",
             }}
           >
             음성 반영됨
