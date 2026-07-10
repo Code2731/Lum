@@ -970,6 +970,7 @@ const VoiceHookDiagnosticsSection: React.FC = () => {
   const [info, setInfo] = useState<VoiceHookDiagnostics | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [copyMsg, setCopyMsg] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -994,6 +995,33 @@ const VoiceHookDiagnosticsSection: React.FC = () => {
     return "text-amber-200 bg-amber-500/10 border-amber-400/25";
   };
 
+  const copyText = useCallback(async (text: string, message: string) => {
+    try {
+      await navigator.clipboard?.writeText?.(text);
+      setCopyMsg(message);
+    } catch {
+      setCopyMsg("복사에 실패했습니다.");
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!copyMsg) return;
+    const timer = window.setTimeout(() => setCopyMsg(null), 1800);
+    return () => window.clearTimeout(timer);
+  }, [copyMsg]);
+
+  const unixTemplateCopyCommand = [
+    "mkdir -p ~/.lum_whisper",
+    "cp scripts/voice-hooks/start.example.sh ~/.lum_whisper/start.sh",
+    "cp scripts/voice-hooks/stop.example.sh ~/.lum_whisper/stop.sh",
+  ].join("\n");
+  const windowsTemplatePaths = [
+    "scripts\\voice-hooks\\start.example.cmd",
+    "scripts\\voice-hooks\\stop.example.cmd",
+    "%USERPROFILE%\\.lum_whisper\\start.cmd",
+    "%USERPROFILE%\\.lum_whisper\\stop.cmd",
+  ].join("\n");
+
   return (
     <section className="space-y-2 border border-emerald-400/20 rounded-lg p-3 bg-emerald-400/5">
       <div className="flex items-center justify-between gap-2">
@@ -1015,6 +1043,13 @@ const VoiceHookDiagnosticsSection: React.FC = () => {
         <MessageActionRow
           text={error}
           messageClassName="text-xs text-rose-300 bg-rose-500/10 border border-rose-400/20 rounded px-2.5 py-1.5 block"
+        />
+      )}
+
+      {copyMsg && (
+        <MessageActionRow
+          text={copyMsg}
+          messageClassName="text-xs text-emerald-200 bg-emerald-500/10 border border-emerald-400/20 rounded px-2.5 py-1.5 block"
         />
       )}
 
@@ -1042,6 +1077,21 @@ const VoiceHookDiagnosticsSection: React.FC = () => {
             <code className="block text-[11px] leading-relaxed text-white/70 break-all">{info.stop_hook_target}</code>
             <div className="text-xs text-white/40">Transcript 파일</div>
             <code className="block text-[11px] leading-relaxed text-white/70 break-all">{info.transcript_path}</code>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => copyText(unixTemplateCopyCommand, "macOS/Linux 예제 복사 명령을 클립보드에 담았습니다.")}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded border border-emerald-400/25 bg-emerald-500/10 hover:bg-emerald-500/20 text-xs text-emerald-100 transition-colors"
+            >
+              <Copy size={11} /> macOS/Linux 복사 명령
+            </button>
+            <button
+              onClick={() => copyText(windowsTemplatePaths, "Windows 예제 템플릿 경로를 클립보드에 담았습니다.")}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded border border-white/10 bg-white/5 hover:bg-white/10 text-xs text-white/75 transition-colors"
+            >
+              <Copy size={11} /> Windows 템플릿 경로
+            </button>
           </div>
 
           <p className="text-xs text-white/35 leading-relaxed">
