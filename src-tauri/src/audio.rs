@@ -170,6 +170,12 @@ pub struct VoiceHookTemplateCreateResult {
     skipped: Vec<String>,
 }
 
+#[derive(Debug, Clone, Serialize)]
+pub struct VoiceTranscriptClearResult {
+    removed: bool,
+    path: String,
+}
+
 const START_TEMPLATE_SH: &str = include_str!("../../scripts/voice-hooks/start.example.sh");
 const STOP_TEMPLATE_SH: &str = include_str!("../../scripts/voice-hooks/stop.example.sh");
 const START_TEMPLATE_CMD: &str = include_str!("../../scripts/voice-hooks/start.example.cmd");
@@ -603,6 +609,27 @@ pub fn create_default_voice_hook_files() -> Result<VoiceHookTemplateCreateResult
     }
 
     Ok(VoiceHookTemplateCreateResult { created, skipped })
+}
+
+#[tauri::command]
+pub fn clear_voice_transcript_file() -> Result<VoiceTranscriptClearResult, String> {
+    let path = transcript_file_path();
+    let removed = if path.exists() {
+        std::fs::remove_file(&path).map_err(|e| {
+            voice_error(
+                "TRANSCRIPT_CLEAR_FAILED",
+                format!("transcript 파일 삭제 실패: {e}"),
+            )
+        })?;
+        true
+    } else {
+        false
+    };
+
+    Ok(VoiceTranscriptClearResult {
+        removed,
+        path: path.display().to_string(),
+    })
 }
 
 /// 음성 입력 중지 + 텍스트 반환.

@@ -64,6 +64,11 @@ interface VoiceHookTemplateCreateResult {
   skipped: string[];
 }
 
+interface VoiceTranscriptClearResult {
+  removed: boolean;
+  path: string;
+}
+
 function normalizeRecallBackend(
   value: string | null | undefined,
   supported: string[],
@@ -1225,6 +1230,26 @@ const VoiceHookDiagnosticsSection: React.FC = () => {
               className="flex items-center gap-1.5 px-2.5 py-1 rounded border border-amber-400/25 bg-amber-500/10 hover:bg-amber-500/20 text-xs text-amber-100 disabled:opacity-40 transition-colors"
             >
               <Copy size={11} /> chmod +x 가이드
+            </button>
+            <button
+              onClick={async () => {
+                try {
+                  const result = await invoke<VoiceTranscriptClearResult>("clear_voice_transcript_file");
+                  setCopyMsg(
+                    result.removed
+                      ? "transcript 파일을 비웠습니다."
+                      : "지울 transcript 파일이 없었습니다.",
+                  );
+                  await refresh();
+                } catch (e) {
+                  setError(`transcript 파일 비우기 실패: ${formatErrorMessage(e)}`);
+                }
+              }}
+              disabled={Boolean(info?.recording)}
+              title={info?.recording ? "녹음 중에는 transcript 파일을 비울 수 없습니다" : "last_transcript.txt 비우기"}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded border border-rose-400/25 bg-rose-500/10 hover:bg-rose-500/20 text-xs text-rose-100 disabled:opacity-40 transition-colors"
+            >
+              <X size={11} /> transcript 비우기
             </button>
             <button
               onClick={async () => {

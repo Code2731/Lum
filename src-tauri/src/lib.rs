@@ -151,6 +151,7 @@ pub fn run() {
             audio::voice_recording_status,
             audio::voice_hook_diagnostics,
             audio::create_default_voice_hook_files,
+            audio::clear_voice_transcript_file,
             memory::add_to_memory,
             memory::search_memory,
             // Terminal Completions
