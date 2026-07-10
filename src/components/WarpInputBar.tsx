@@ -40,6 +40,9 @@ const formatVoiceDuration = (totalSeconds: number) => {
 const VOICE_PREVIEW_SENTENCE_BOUNDARY = /[.!?。！？]/;
 const VOICE_PREVIEW_WORD_BOUNDARY = /\s/;
 const normalizeVoiceComparisonText = (text: string) => text.replace(/\s+/g, " ").trim();
+const normalizeVoiceSearchTerm = (text: string) => normalizeVoiceComparisonText(text).toLocaleLowerCase();
+const matchesVoiceSearchTerm = (text: string, query: string) =>
+  query.length === 0 || normalizeVoiceSearchTerm(text).includes(query);
 const formatVoicePreview = (text: string) => {
   const normalized = normalizeVoiceComparisonText(text);
   if (normalized.length <= VOICE_PREVIEW_SOFT_LIMIT) {
@@ -123,6 +126,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
     const [voiceHighlight, setVoiceHighlight] = useState<{ start: number; end: number; phase: "visible" | "fading" } | null>(null);
     const [lastVoiceTranscript, setLastVoiceTranscript] = useState("");
     const [lastVoicePartialTranscript, setLastVoicePartialTranscript] = useState("");
+    const [voiceHistoryQuery, setVoiceHistoryQuery] = useState("");
     const {
       pinnedVoiceTranscripts,
       recentVoiceTranscripts,
@@ -145,6 +149,22 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
     const history = useRef<string[]>([]);
     const historyIdx = useRef<number>(-1);
     const onChangeRef = useRef(onChange);
+    const normalizedVoiceHistoryQuery = React.useMemo(
+      () => normalizeVoiceSearchTerm(voiceHistoryQuery),
+      [voiceHistoryQuery]
+    );
+    const filteredPinnedVoiceTranscripts = React.useMemo(
+      () => pinnedVoiceTranscripts.filter((item) => matchesVoiceSearchTerm(item, normalizedVoiceHistoryQuery)),
+      [normalizedVoiceHistoryQuery, pinnedVoiceTranscripts]
+    );
+    const filteredRecentVoiceTranscripts = React.useMemo(
+      () => recentVoiceTranscripts.filter((item) => matchesVoiceSearchTerm(item, normalizedVoiceHistoryQuery)),
+      [normalizedVoiceHistoryQuery, recentVoiceTranscripts]
+    );
+    const filteredVoiceTranscriptHistory = React.useMemo(
+      () => voiceTranscriptHistory.filter((item) => matchesVoiceSearchTerm(item.text, normalizedVoiceHistoryQuery)),
+      [normalizedVoiceHistoryQuery, voiceTranscriptHistory]
+    );
 
     useEffect(() => {
       onChangeRef.current = onChange;
@@ -607,6 +627,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
 
     const clearRecentVoiceTranscripts = () => {
       clearVoiceTranscripts();
+      setVoiceHistoryQuery("");
     };
 
     const replaceInputWithVoiceTranscript = (text: string) => {
@@ -1143,7 +1164,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
           </div>
         )}
 
-        {!voiceError && (recentVoiceTranscripts.length > 0 || pinnedVoiceTranscripts.length > 0) && voiceStatus === "idle" && (
+        {!voiceError && (recentVoiceTranscripts.length > 0 || pinnedVoiceTranscripts.length > 0 || voiceTranscriptHistory.length > 0) && voiceStatus === "idle" && (
           <div
             style={{
               width: "100%",
@@ -1155,7 +1176,68 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
               marginBottom: 1,
             }}
           >
-            {pinnedVoiceTranscripts.length > 0 && (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                flexWrap: "wrap",
+              }}
+            >
+              <input
+                type="text"
+                value={voiceHistoryQuery}
+                onChange={(event) => setVoiceHistoryQuery(event.target.value)}
+                placeholder="고정/기록 검색"
+                style={{
+                  minWidth: 0,
+                  flex: "1 1 180px",
+                  maxWidth: 260,
+                  borderRadius: 8,
+                  border: "1px solid rgba(255,255,255,0.10)",
+                  background: "rgba(255,255,255,0.04)",
+                  color: "rgba(255,255,255,0.86)",
+                  padding: "4px 9px",
+                  fontSize: 11,
+                  lineHeight: 1.3,
+                  outline: "none",
+                }}
+              />
+              {normalizedVoiceHistoryQuery && (
+                <>
+                  <span
+                    style={{
+                      fontSize: WARP_SMALL_FONT_SIZE,
+                      color: "rgba(255,255,255,0.48)",
+                      lineHeight: 1.2,
+                    }}
+                  >
+                    {filteredPinnedVoiceTranscripts.length + filteredRecentVoiceTranscripts.length + filteredVoiceTranscriptHistory.length}개 표시
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setVoiceHistoryQuery("")}
+                    title="음성 검색 지우기"
+                    style={{
+                      width: 18,
+                      height: 18,
+                      borderRadius: 999,
+                      border: "1px solid rgba(255,255,255,0.10)",
+                      background: "rgba(255,255,255,0.04)",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      padding: 0,
+                      color: "rgba(255,255,255,0.64)",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <X size={10} />
+                  </button>
+                </>
+              )}
+            </div>
+            {filteredPinnedVoiceTranscripts.length > 0 && (
               <div
                 style={{
                   display: "flex",
@@ -1174,7 +1256,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
                 >
                   고정 음성
                 </span>
-                {pinnedVoiceTranscripts.map((item) => (
+                {filteredPinnedVoiceTranscripts.map((item) => (
                   <span
                     key={`pinned-${item}`}
                     style={{
@@ -1303,7 +1385,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
               >
                 전체 지우기
               </button>
-              {recentVoiceTranscripts.map((item) => (
+              {filteredRecentVoiceTranscripts.map((item) => (
                 <span
                   key={item}
                   style={{
@@ -1393,7 +1475,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
                   padding: "8px 10px",
                 }}
               >
-                {voiceTranscriptHistory.map((item) => (
+                {filteredVoiceTranscriptHistory.length > 0 ? filteredVoiceTranscriptHistory.map((item) => (
                   <div
                     key={item.id}
                     style={{
@@ -1541,7 +1623,21 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
                       </button>
                     </div>
                   </div>
-                ))}
+                )) : (
+                  <div
+                    style={{
+                      borderRadius: 8,
+                      border: "1px dashed rgba(255,255,255,0.08)",
+                      background: "rgba(0,0,0,0.10)",
+                      padding: "8px",
+                      fontSize: 11,
+                      lineHeight: 1.35,
+                      color: "rgba(255,255,255,0.46)",
+                    }}
+                  >
+                    검색 결과가 없습니다.
+                  </div>
+                )}
               </div>
             )}
           </div>

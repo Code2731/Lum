@@ -39,6 +39,9 @@ const formatVoiceDuration = (totalSeconds: number) => {
 const VOICE_PREVIEW_SENTENCE_BOUNDARY = /[.!?。！？]/;
 const VOICE_PREVIEW_WORD_BOUNDARY = /\s/;
 const normalizeVoiceComparisonText = (text: string) => text.replace(/\s+/g, " ").trim();
+const normalizeVoiceSearchTerm = (text: string) => normalizeVoiceComparisonText(text).toLocaleLowerCase();
+const matchesVoiceSearchTerm = (text: string, query: string) =>
+  query.length === 0 || normalizeVoiceSearchTerm(text).includes(query);
 const formatVoicePreview = (text: string) => {
   const normalized = normalizeVoiceComparisonText(text);
   if (normalized.length <= VOICE_PREVIEW_SOFT_LIMIT) {
@@ -106,6 +109,7 @@ const CommandInput = ({
   const [voiceHighlight, setVoiceHighlight] = useState<{ start: number; end: number; phase: "visible" | "fading" } | null>(null);
   const [lastVoiceTranscript, setLastVoiceTranscript] = useState("");
   const [lastVoicePartialTranscript, setLastVoicePartialTranscript] = useState("");
+  const [voiceHistoryQuery, setVoiceHistoryQuery] = useState("");
   const {
     pinnedVoiceTranscripts,
     recentVoiceTranscripts,
@@ -124,6 +128,22 @@ const CommandInput = ({
   const voiceHighlightVisibleTimerRef = useRef<number | null>(null);
   const voiceHighlightFadeTimerRef = useRef<number | null>(null);
   const voiceCopyFeedbackTimerRef = useRef<number | null>(null);
+  const normalizedVoiceHistoryQuery = useMemo(
+    () => normalizeVoiceSearchTerm(voiceHistoryQuery),
+    [voiceHistoryQuery]
+  );
+  const filteredPinnedVoiceTranscripts = useMemo(
+    () => pinnedVoiceTranscripts.filter((item) => matchesVoiceSearchTerm(item, normalizedVoiceHistoryQuery)),
+    [normalizedVoiceHistoryQuery, pinnedVoiceTranscripts]
+  );
+  const filteredRecentVoiceTranscripts = useMemo(
+    () => recentVoiceTranscripts.filter((item) => matchesVoiceSearchTerm(item, normalizedVoiceHistoryQuery)),
+    [normalizedVoiceHistoryQuery, recentVoiceTranscripts]
+  );
+  const filteredVoiceTranscriptHistory = useMemo(
+    () => voiceTranscriptHistory.filter((item) => matchesVoiceSearchTerm(item.text, normalizedVoiceHistoryQuery)),
+    [normalizedVoiceHistoryQuery, voiceTranscriptHistory]
+  );
 
   useEffect(() => {
     return () => {
@@ -270,6 +290,7 @@ const CommandInput = ({
 
   const clearRecentVoiceTranscripts = () => {
     clearVoiceTranscripts();
+    setVoiceHistoryQuery("");
   };
 
   const replaceInputWithVoiceTranscript = (text: string) => {
@@ -828,7 +849,7 @@ const CommandInput = ({
           </div>
         )}
 
-        {!voiceError && (recentVoiceTranscripts.length > 0 || pinnedVoiceTranscripts.length > 0) && voiceStatus === "idle" && (
+        {!voiceError && (recentVoiceTranscripts.length > 0 || pinnedVoiceTranscripts.length > 0 || voiceTranscriptHistory.length > 0) && voiceStatus === "idle" && (
           <div
             style={{
               margin: VOICE_INLINE_BANNER_MARGIN,
@@ -839,7 +860,68 @@ const CommandInput = ({
               gap: 6,
             }}
           >
-            {pinnedVoiceTranscripts.length > 0 && (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                flexWrap: "wrap",
+              }}
+            >
+              <input
+                type="text"
+                value={voiceHistoryQuery}
+                onChange={(event) => setVoiceHistoryQuery(event.target.value)}
+                placeholder="고정/기록 검색"
+                style={{
+                  minWidth: 0,
+                  flex: "1 1 180px",
+                  maxWidth: 260,
+                  borderRadius: 8,
+                  border: "1px solid rgba(255,255,255,0.10)",
+                  background: "rgba(255,255,255,0.04)",
+                  color: "rgba(255,255,255,0.86)",
+                  padding: "4px 9px",
+                  fontSize: 11,
+                  lineHeight: 1.3,
+                  outline: "none",
+                }}
+              />
+              {normalizedVoiceHistoryQuery && (
+                <>
+                  <span
+                    style={{
+                      fontSize: 10,
+                      color: "rgba(255,255,255,0.48)",
+                      lineHeight: 1.2,
+                    }}
+                  >
+                    {filteredPinnedVoiceTranscripts.length + filteredRecentVoiceTranscripts.length + filteredVoiceTranscriptHistory.length}개 표시
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setVoiceHistoryQuery("")}
+                    title="음성 검색 지우기"
+                    style={{
+                      width: 18,
+                      height: 18,
+                      borderRadius: 999,
+                      border: "1px solid rgba(255,255,255,0.10)",
+                      background: "rgba(255,255,255,0.04)",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      padding: 0,
+                      color: "rgba(255,255,255,0.64)",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <X size={10} />
+                  </button>
+                </>
+              )}
+            </div>
+            {filteredPinnedVoiceTranscripts.length > 0 && (
               <div
                 style={{
                   display: "flex",
@@ -857,7 +939,7 @@ const CommandInput = ({
                 >
                   고정 음성
                 </span>
-                {pinnedVoiceTranscripts.map((item) => (
+                {filteredPinnedVoiceTranscripts.map((item) => (
                   <span
                     key={`pinned-${item}`}
                     style={{
@@ -984,7 +1066,7 @@ const CommandInput = ({
               >
                 전체 지우기
               </button>
-              {recentVoiceTranscripts.map((item) => (
+              {filteredRecentVoiceTranscripts.map((item) => (
                 <span
                   key={item}
                   style={{
@@ -1071,7 +1153,7 @@ const CommandInput = ({
                   gap: 6,
                 }}
               >
-                {voiceTranscriptHistory.map((item) => (
+                {filteredVoiceTranscriptHistory.length > 0 ? filteredVoiceTranscriptHistory.map((item) => (
                   <div
                     key={item.id}
                     className="flex items-start justify-between gap-3 rounded-md border border-white/6 bg-black/10 px-2 py-1.5"
@@ -1133,7 +1215,11 @@ const CommandInput = ({
                       </button>
                     </div>
                   </div>
-                ))}
+                )) : (
+                  <div className="rounded-md border border-dashed border-white/8 bg-black/10 px-2 py-2 text-[11px] text-white/46">
+                    검색 결과가 없습니다.
+                  </div>
+                )}
               </div>
             )}
           </div>
