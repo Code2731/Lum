@@ -630,6 +630,16 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
       setVoiceHistoryQuery("");
     };
 
+    const applyVoiceTranscriptRoute = (text: string, mode: "ai" | "shell") => {
+      const t = text.trim();
+      if (!t) return;
+      const next = mode === "ai" ? `@ ${t}` : `!${t}`;
+      setInput(next);
+      onChangeRef.current?.(next);
+      showVoiceHighlight(mode === "ai" ? 2 : 1, next.length);
+      inputRef.current?.focus();
+    };
+
     const replaceInputWithVoiceTranscript = (text: string) => {
       const t = text.trim();
       if (!t) return;
@@ -1535,6 +1545,38 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
                         flexShrink: 0,
                       }}
                     >
+                      <button
+                        type="button"
+                        onClick={() => applyVoiceTranscriptRoute(item.text, "ai")}
+                        style={{
+                          borderRadius: 6,
+                          border: "1px solid rgba(217,70,239,0.18)",
+                          background: "rgba(217,70,239,0.10)",
+                          color: "rgba(250,232,255,0.86)",
+                          padding: "1px 6px",
+                          fontSize: WARP_SMALL_FONT_SIZE,
+                          lineHeight: 1.4,
+                          cursor: "pointer",
+                        }}
+                      >
+                        AI
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => applyVoiceTranscriptRoute(item.text, "shell")}
+                        style={{
+                          borderRadius: 6,
+                          border: "1px solid rgba(251,191,36,0.18)",
+                          background: "rgba(251,191,36,0.10)",
+                          color: "rgba(255,247,214,0.86)",
+                          padding: "1px 6px",
+                          fontSize: WARP_SMALL_FONT_SIZE,
+                          lineHeight: 1.4,
+                          cursor: "pointer",
+                        }}
+                      >
+                        셸
+                      </button>
                       <button
                         type="button"
                         onClick={() => reuseRecentVoiceTranscript(item.text)}

@@ -293,6 +293,19 @@ const CommandInput = ({
     setVoiceHistoryQuery("");
   };
 
+  const submitVoiceTranscript = (text: string, type: "shell" | "ai") => {
+    const t = text.trim();
+    if (!t) return;
+    const historyValue = type === "ai" ? `/ ${t}` : t;
+    setHistory((prev) =>
+      [historyValue, ...prev.filter((item) => item !== historyValue)].slice(0, 100),
+    );
+    setHistoryIdx(-1);
+    onCommandSubmit(t, type);
+    setValue("");
+    setShowCompletions(false);
+  };
+
   const replaceInputWithVoiceTranscript = (text: string) => {
     const t = text.trim();
     if (!t) return;
@@ -1174,6 +1187,20 @@ const CommandInput = ({
                       </button>
                     </div>
                     <div className="flex shrink-0 items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => submitVoiceTranscript(item.text, "ai")}
+                        className="rounded border border-fuchsia-300/16 bg-fuchsia-400/8 px-1.5 py-0.5 text-[10px] text-fuchsia-100/84 transition-colors hover:bg-fuchsia-400/16"
+                      >
+                        AI 전송
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => submitVoiceTranscript(item.text, "shell")}
+                        className="rounded border border-amber-300/16 bg-amber-400/8 px-1.5 py-0.5 text-[10px] text-amber-100/84 transition-colors hover:bg-amber-400/16"
+                      >
+                        셸 전송
+                      </button>
                       <button
                         type="button"
                         onClick={() => reuseRecentVoiceTranscript(item.text)}
