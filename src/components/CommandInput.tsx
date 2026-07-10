@@ -459,6 +459,10 @@ const CommandInput = ({
                     voiceStatus === "processing" ? "rgba(145,205,255,0.98)" :
                     "rgba(255,255,255,0.72)",
                   flexShrink: 0,
+                  animation:
+                    voiceEnabled && (voiceStatus === "listening" || voiceStatus === "processing")
+                      ? VOICE_PULSE_ANIMATION
+                      : "none",
                 }}
               />
               <span>{voiceStatusLabel}</span>
