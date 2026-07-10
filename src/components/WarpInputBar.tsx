@@ -140,6 +140,8 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
       toggleVoiceTranscriptHistory,
       togglePinVoiceTranscript,
       movePinnedVoiceTranscript,
+      setPinnedVoiceTranscriptLabel,
+      getPinnedVoiceTranscriptLabel,
       isVoiceTranscriptPinned,
     } = useVoiceTranscriptHistory(voiceHistoryScope);
     const [voiceCopyFeedback, setVoiceCopyFeedback] = useState(false);
@@ -632,6 +634,15 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
     const clearRecentVoiceTranscripts = () => {
       clearVoiceTranscripts();
       setVoiceHistoryQuery("");
+    };
+
+    const editPinnedVoiceTranscriptLabel = (text: string) => {
+      const currentLabel = getPinnedVoiceTranscriptLabel(text);
+      const nextLabel = window.prompt("고정 음성 별칭", currentLabel);
+      if (nextLabel === null) {
+        return;
+      }
+      setPinnedVoiceTranscriptLabel(text, nextLabel);
     };
 
     const applyVoiceTranscriptRoute = (text: string, mode: "ai" | "shell") => {
@@ -1296,6 +1307,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
                   const pinnedIndex = pinnedVoiceTranscripts.indexOf(item);
                   const canMoveUp = pinnedIndex > 0;
                   const canMoveDown = pinnedIndex >= 0 && pinnedIndex < pinnedVoiceTranscripts.length - 1;
+                  const pinnedLabel = getPinnedVoiceTranscriptLabel(item);
                   return (
                     <span
                       key={`pinned-${item}`}
@@ -1318,7 +1330,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
                           fontSize: WARP_SMALL_FONT_SIZE,
                           lineHeight: 1.2,
                           cursor: "pointer",
-                          maxWidth: 164,
+                          maxWidth: 196,
                           whiteSpace: "nowrap",
                           overflow: "hidden",
                           textOverflow: "ellipsis",
@@ -1327,7 +1339,24 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
                           padding: 0,
                         }}
                       >
-                        {formatVoicePreview(item)}
+                        {pinnedLabel ? `${pinnedLabel} · ${formatVoicePreview(item)}` : formatVoicePreview(item)}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => editPinnedVoiceTranscriptLabel(item)}
+                        title="고정 음성 별칭 편집"
+                        style={{
+                          borderRadius: 999,
+                          border: "1px solid rgba(255,215,100,0.14)",
+                          background: "rgba(255,215,100,0.06)",
+                          color: "rgba(255,230,160,0.78)",
+                          padding: "0 5px",
+                          fontSize: 9,
+                          lineHeight: 1.4,
+                          cursor: "pointer",
+                        }}
+                      >
+                        {pinnedLabel ? "이름" : "별칭"}
                       </button>
                       <button
                         type="button"
@@ -1581,6 +1610,21 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
                         <span>{formatVoiceHistoryTime(item.createdAt)}</span>
                         <span>세션 기록</span>
                         {isVoiceTranscriptPinned(item.text) && <span style={{ color: "rgba(255,215,100,0.82)" }}>고정됨</span>}
+                        {getPinnedVoiceTranscriptLabel(item.text) && (
+                          <span
+                            style={{
+                              borderRadius: 999,
+                              border: "1px solid rgba(255,215,100,0.14)",
+                              background: "rgba(255,215,100,0.06)",
+                              color: "rgba(255,244,214,0.80)",
+                              padding: "1px 6px",
+                              fontSize: 9,
+                              lineHeight: 1.1,
+                            }}
+                          >
+                            {getPinnedVoiceTranscriptLabel(item.text)}
+                          </span>
+                        )}
                       </div>
                       <button
                         type="button"

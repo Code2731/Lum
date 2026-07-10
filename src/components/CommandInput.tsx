@@ -121,6 +121,8 @@ const CommandInput = ({
     toggleVoiceTranscriptHistory,
     togglePinVoiceTranscript,
     movePinnedVoiceTranscript,
+    setPinnedVoiceTranscriptLabel,
+    getPinnedVoiceTranscriptLabel,
     isVoiceTranscriptPinned,
   } = useVoiceTranscriptHistory(context.cwd);
   const [voiceCopyFeedback, setVoiceCopyFeedback] = useState(false);
@@ -293,6 +295,15 @@ const CommandInput = ({
   const clearRecentVoiceTranscripts = () => {
     clearVoiceTranscripts();
     setVoiceHistoryQuery("");
+  };
+
+  const editPinnedVoiceTranscriptLabel = (text: string) => {
+    const currentLabel = getPinnedVoiceTranscriptLabel(text);
+    const nextLabel = window.prompt("고정 음성 별칭", currentLabel);
+    if (nextLabel === null) {
+      return;
+    }
+    setPinnedVoiceTranscriptLabel(text, nextLabel);
   };
 
   const submitVoiceTranscript = (text: string, type: "shell" | "ai") => {
@@ -980,6 +991,7 @@ const CommandInput = ({
                   const pinnedIndex = pinnedVoiceTranscripts.indexOf(item);
                   const canMoveUp = pinnedIndex > 0;
                   const canMoveDown = pinnedIndex >= 0 && pinnedIndex < pinnedVoiceTranscripts.length - 1;
+                  const pinnedLabel = getPinnedVoiceTranscriptLabel(item);
                   return (
                     <span
                       key={`pinned-${item}`}
@@ -1002,7 +1014,7 @@ const CommandInput = ({
                           fontSize: 10,
                           lineHeight: 1.2,
                           cursor: "pointer",
-                          maxWidth: 156,
+                          maxWidth: 188,
                           whiteSpace: "nowrap",
                           overflow: "hidden",
                           textOverflow: "ellipsis",
@@ -1011,7 +1023,24 @@ const CommandInput = ({
                           padding: 0,
                         }}
                       >
-                        {formatVoicePreview(item)}
+                        {pinnedLabel ? `${pinnedLabel} · ${formatVoicePreview(item)}` : formatVoicePreview(item)}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => editPinnedVoiceTranscriptLabel(item)}
+                        title="고정 음성 별칭 편집"
+                        style={{
+                          borderRadius: 999,
+                          border: "1px solid rgba(255,215,100,0.14)",
+                          background: "rgba(255,215,100,0.06)",
+                          color: "rgba(255,230,160,0.78)",
+                          padding: "0 5px",
+                          fontSize: 9,
+                          lineHeight: 1.4,
+                          cursor: "pointer",
+                        }}
+                      >
+                        {pinnedLabel ? "이름" : "별칭"}
                       </button>
                       <button
                         type="button"
@@ -1241,6 +1270,11 @@ const CommandInput = ({
                         <span>{formatVoiceHistoryTime(item.createdAt)}</span>
                         <span>세션 기록</span>
                         {isVoiceTranscriptPinned(item.text) && <span className="text-amber-200/80">고정됨</span>}
+                        {getPinnedVoiceTranscriptLabel(item.text) && (
+                          <span className="rounded-full border border-amber-300/14 bg-amber-400/6 px-1.5 py-0.5 text-[9px] leading-none text-amber-100/80">
+                            {getPinnedVoiceTranscriptLabel(item.text)}
+                          </span>
+                        )}
                       </div>
                       <button
                         type="button"

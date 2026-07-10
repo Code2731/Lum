@@ -13,6 +13,7 @@ export type VoiceTranscriptHistoryItem = {
 };
 
 type VoiceTranscriptStore = {
+  pinnedVoiceTranscriptLabels: Record<string, string>;
   pinnedVoiceTranscripts: string[];
   recentVoiceTranscripts: string[];
   voiceTranscriptHistory: VoiceTranscriptHistoryItem[];
@@ -22,6 +23,7 @@ type VoiceTranscriptStore = {
 type VoiceTranscriptStoreCollection = Record<string, VoiceTranscriptStore>;
 
 const DEFAULT_STORE: VoiceTranscriptStore = {
+  pinnedVoiceTranscriptLabels: {},
   pinnedVoiceTranscripts: [],
   recentVoiceTranscripts: [],
   voiceTranscriptHistory: [],
@@ -44,6 +46,16 @@ const sanitizeScopedStore = (value: unknown): VoiceTranscriptStore => {
   }
 
   const candidate = value as Partial<VoiceTranscriptStore>;
+  const pinnedVoiceTranscriptLabels = candidate.pinnedVoiceTranscriptLabels
+    && typeof candidate.pinnedVoiceTranscriptLabels === "object"
+    && !Array.isArray(candidate.pinnedVoiceTranscriptLabels)
+      ? Object.fromEntries(
+          Object.entries(candidate.pinnedVoiceTranscriptLabels)
+            .filter(([key, value]) => typeof key === "string" && typeof value === "string")
+            .map(([key, value]) => [normalizeVoiceTranscript(key), normalizeVoiceTranscript(value)])
+            .filter(([key, value]) => key.length > 0 && value.length > 0),
+        )
+      : {};
   const pinnedVoiceTranscripts = Array.isArray(candidate.pinnedVoiceTranscripts)
     ? candidate.pinnedVoiceTranscripts
         .filter((item): item is string => typeof item === "string")
@@ -77,6 +89,7 @@ const sanitizeScopedStore = (value: unknown): VoiceTranscriptStore => {
     : [];
 
   return {
+    pinnedVoiceTranscriptLabels,
     pinnedVoiceTranscripts,
     recentVoiceTranscripts,
     voiceTranscriptHistory,
@@ -172,6 +185,7 @@ export const useVoiceTranscriptHistory = (scope?: string | null) => {
   }, [scopeKey]);
 
   return {
+    pinnedVoiceTranscriptLabels: store.pinnedVoiceTranscriptLabels,
     pinnedVoiceTranscripts: store.pinnedVoiceTranscripts,
     recentVoiceTranscripts: store.recentVoiceTranscripts,
     voiceTranscriptHistory: store.voiceTranscriptHistory,
@@ -209,6 +223,9 @@ export const useVoiceTranscriptHistory = (scope?: string | null) => {
         const nextHistory = prev.voiceTranscriptHistory.filter((item) => item.text !== normalized);
         return {
           ...prev,
+          pinnedVoiceTranscriptLabels: Object.fromEntries(
+            Object.entries(prev.pinnedVoiceTranscriptLabels).filter(([key]) => key !== normalized),
+          ),
           pinnedVoiceTranscripts: prev.pinnedVoiceTranscripts.filter((item) => item !== normalized),
           recentVoiceTranscripts: prev.recentVoiceTranscripts.filter((item) => item !== normalized),
           voiceTranscriptHistory: nextHistory,
@@ -236,6 +253,11 @@ export const useVoiceTranscriptHistory = (scope?: string | null) => {
         const alreadyPinned = prev.pinnedVoiceTranscripts.includes(normalized);
         return {
           ...prev,
+          pinnedVoiceTranscriptLabels: alreadyPinned
+            ? Object.fromEntries(
+                Object.entries(prev.pinnedVoiceTranscriptLabels).filter(([key]) => key !== normalized),
+              )
+            : prev.pinnedVoiceTranscriptLabels,
           pinnedVoiceTranscripts: alreadyPinned
             ? prev.pinnedVoiceTranscripts.filter((item) => item !== normalized)
             : [normalized, ...prev.pinnedVoiceTranscripts].slice(0, MAX_PINNED_VOICE_TRANSCRIPTS),
@@ -268,6 +290,29 @@ export const useVoiceTranscriptHistory = (scope?: string | null) => {
           pinnedVoiceTranscripts: nextPinned,
         };
       });
+    },
+    setPinnedVoiceTranscriptLabel: (text: string, label: string) => {
+      const normalized = normalizeVoiceTranscript(text);
+      if (!normalized) {
+        return;
+      }
+
+      const normalizedLabel = normalizeVoiceTranscript(label);
+      updateStore(scopeKey, (prev) => ({
+        ...prev,
+        pinnedVoiceTranscriptLabels: normalizedLabel
+          ? {
+              ...prev.pinnedVoiceTranscriptLabels,
+              [normalized]: normalizedLabel,
+            }
+          : Object.fromEntries(
+              Object.entries(prev.pinnedVoiceTranscriptLabels).filter(([key]) => key !== normalized),
+            ),
+      }));
+    },
+    getPinnedVoiceTranscriptLabel: (text: string) => {
+      const normalized = normalizeVoiceTranscript(text);
+      return normalized ? store.pinnedVoiceTranscriptLabels[normalized] ?? "" : "";
     },
     isVoiceTranscriptPinned: (text: string) => {
       const normalized = normalizeVoiceTranscript(text);
