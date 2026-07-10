@@ -514,7 +514,7 @@ const CommandInput = ({
                   if (!voiceError) return;
                   navigator.clipboard?.writeText?.(`음성 오류: ${voiceError}`).catch(() => {});
                 }}
-                className="p-1 rounded text-white/70 hover:text-white/90 hover:bg-white/10 transition-colors shrink-0"
+                className="p-1 rounded text-white/70 hover:text-white/85 hover:bg-white/5 transition-colors shrink-0"
               >
                 <Copy size={11} />
               </IconButton>
@@ -522,14 +522,14 @@ const CommandInput = ({
                 tooltip="다시 시도"
                 onClick={handleMicToggle}
                 disabled={voiceBusy}
-                className="p-1 rounded text-red-300 hover:text-red-100 hover:bg-red-500/20 transition-colors shrink-0"
+                className="p-1 rounded text-red-300 hover:text-red-200 hover:bg-red-500/15 transition-colors shrink-0"
               >
                 <RotateCcw size={11} />
               </IconButton>
               <IconButton
                 tooltip="닫기"
                 onClick={clearVoiceError}
-                className="p-1 rounded text-white/65 hover:text-white/85 hover:bg-white/10 transition-colors shrink-0"
+                className="p-1 rounded text-white/65 hover:text-white/80 hover:bg-white/5 transition-colors shrink-0"
               >
                 <X size={11} />
               </IconButton>
