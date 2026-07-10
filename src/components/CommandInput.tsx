@@ -202,6 +202,12 @@ const CommandInput = ({
     }
   };
 
+  const copyLastVoiceTranscript = () => {
+    const t = lastVoiceTranscript.trim();
+    if (!t) return;
+    navigator.clipboard?.writeText?.(t).catch(() => {});
+  };
+
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const { isRecording, voiceBusy, voiceError, voicePartialTranscript, voiceStatus, handleMicToggle, clearVoiceError } = useVoiceInput({
     onTranscript: injectTranscript,
@@ -705,14 +711,24 @@ const CommandInput = ({
           >
             <span style={{ minWidth: 0, flex: 1 }}>{voiceSuccessMessage}</span>
             {lastVoiceTranscript && (
-              <button
-                type="button"
-                onClick={restoreLastVoiceTranscript}
-                className="shrink-0 rounded border border-emerald-400/20 bg-emerald-500/10 px-1.5 py-0.5 text-[10px] text-emerald-100 hover:bg-emerald-500/20 transition-colors"
-                title="마지막 음성 문장을 다시 입력창에 넣기"
-              >
-                다시 넣기
-              </button>
+              <>
+                <button
+                  type="button"
+                  onClick={copyLastVoiceTranscript}
+                  className="shrink-0 rounded border border-emerald-400/16 bg-emerald-500/8 px-1.5 py-0.5 text-[10px] text-emerald-50/90 hover:bg-emerald-500/16 transition-colors"
+                  title="마지막 음성 문장을 복사"
+                >
+                  복사
+                </button>
+                <button
+                  type="button"
+                  onClick={restoreLastVoiceTranscript}
+                  className="shrink-0 rounded border border-emerald-400/20 bg-emerald-500/10 px-1.5 py-0.5 text-[10px] text-emerald-100 hover:bg-emerald-500/20 transition-colors"
+                  title="마지막 음성 문장을 다시 입력창에 넣기"
+                >
+                  다시 넣기
+                </button>
+              </>
             )}
           </div>
         )}
