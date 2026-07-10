@@ -537,7 +537,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
     const inlineVoiceTone = !voiceEnabled ? voiceDisabledTone : voiceStatusTone;
     const voiceLiveMessage =
       !voiceEnabled ? "음성 비활성" :
-      voiceError ? `오류: ${voiceError}` :
+      voiceError ? `음성 오류: ${voiceError}` :
       voiceSuccessPhase !== "hidden" ? "음성 반영됨" :
       `음성 ${voiceStatusLabel}`;
     const voiceHighlightLength = voiceHighlight ? voiceHighlight.end - voiceHighlight.start : 0;
