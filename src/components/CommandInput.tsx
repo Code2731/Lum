@@ -505,7 +505,7 @@ const CommandInput = ({
                 alignItems: "center",
                 gap: 4,
                 paddingLeft: 6,
-                borderLeft: "1px solid rgba(255,255,255,0.12)",
+                borderLeft: "1px solid rgba(255,255,255,0.08)",
               }}
             >
               <IconButton
