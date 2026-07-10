@@ -13,6 +13,7 @@ interface UseVoiceInputResult {
   isRecording: boolean;
   voiceBusy: boolean;
   voiceError: string | null;
+  voicePartialTranscript: string;
   voiceStatus: "idle" | "listening" | "processing" | "error";
   handleMicToggle: () => Promise<void>;
   clearVoiceError: () => void;
@@ -28,6 +29,7 @@ export function useVoiceInput({
   const [isRecording, setIsRecording] = useState(false);
   const [voiceBusy, setVoiceBusy] = useState(false);
   const [voiceError, setVoiceError] = useState<string | null>(null);
+  const [voicePartialTranscript, setVoicePartialTranscript] = useState("");
   const [voiceStatus, setVoiceStatus] = useState<"idle" | "listening" | "processing" | "error">("idle");
   const mountedRef = useRef(true);
   const voiceBusyRef = useRef(false);
@@ -75,6 +77,7 @@ export function useVoiceInput({
       .catch(() => {});
 
     let unlistenTranscript: (() => void) | null = null;
+    let unlistenPartial: (() => void) | null = null;
     let unlistenState: (() => void) | null = null;
     let disposed = false;
 
@@ -97,6 +100,7 @@ export function useVoiceInput({
           if (!mountedRef.current) return;
           setIsRecording(false);
           setVoiceError(null);
+          setVoicePartialTranscript("");
           setVoiceStatus("idle");
           return;
         }
@@ -104,6 +108,7 @@ export function useVoiceInput({
       if (awaitingStopEventRef.current) {
         stopEventReceivedRef.current = true;
       }
+      setVoicePartialTranscript("");
       emitTranscript(payload);
       setIsRecording(false);
       setVoiceError(null);
@@ -118,11 +123,36 @@ export function useVoiceInput({
       })
       .catch(() => {});
 
+    const partialPromise = listen<string>("voice_transcript_partial", (event) => {
+      if (!mountedRef.current) return;
+      if (!isRecordingRef.current && !awaitingStopEventRef.current) {
+        return;
+      }
+      const payload = (event.payload ?? "").trim();
+      if (!payload) return;
+      setVoicePartialTranscript(payload);
+    })
+      .then((off) => {
+        if (disposed) {
+          off();
+          return;
+        }
+        unlistenPartial = off;
+      })
+      .catch(() => {});
+
     const statePromise = listen<boolean>("voice_recording_state", (event) => {
       const on = Boolean(event.payload);
       if (!mountedRef.current) return;
       setIsRecording(on);
-      if (on) setVoiceError(null);
+      if (on) {
+        setVoiceError(null);
+        if (!awaitingStopEventRef.current) {
+          setVoicePartialTranscript("");
+        }
+      } else if (!awaitingStopEventRef.current) {
+        setVoicePartialTranscript("");
+      }
       setVoiceStatus(on ? "listening" : awaitingStopEventRef.current ? "processing" : "idle");
     })
       .then((off) => {
@@ -137,8 +167,10 @@ export function useVoiceInput({
     return () => {
       disposed = true;
       unlistenTranscript?.();
+      unlistenPartial?.();
       unlistenState?.();
       void transcriptPromise;
+      void partialPromise;
       void statePromise;
     };
   }, [enabled, emitTranscript]);
@@ -174,6 +206,7 @@ export function useVoiceInput({
         if (!mountedRef.current) return;
         setIsRecording(true);
         setVoiceError(null);
+        setVoicePartialTranscript("");
         setVoiceStatus("listening");
         stopFallbackGuardRef.current = null;
       }
@@ -192,6 +225,7 @@ export function useVoiceInput({
       }
       if (!mountedRef.current) return;
       setVoiceError(parseVoiceError(e));
+      setVoicePartialTranscript("");
       setVoiceStatus("error");
     } finally {
       awaitingStopEventRef.current = false;
@@ -211,6 +245,7 @@ export function useVoiceInput({
     isRecording,
     voiceBusy,
     voiceError,
+    voicePartialTranscript,
     voiceStatus,
     handleMicToggle,
     clearVoiceError,

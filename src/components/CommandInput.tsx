@@ -143,7 +143,7 @@ const CommandInput = ({
   };
 
   const [recordingSeconds, setRecordingSeconds] = useState(0);
-  const { isRecording, voiceBusy, voiceError, voiceStatus, handleMicToggle, clearVoiceError } = useVoiceInput({
+  const { isRecording, voiceBusy, voiceError, voicePartialTranscript, voiceStatus, handleMicToggle, clearVoiceError } = useVoiceInput({
     onTranscript: injectTranscript,
   });
   useEffect(() => {
@@ -180,7 +180,9 @@ const CommandInput = ({
   const micAssistLabel =
     !voiceEnabled ? "설정 필요" :
     voiceBusy ? "처리 중" :
-    `상태 ${voiceStatusDisplayLabel}`;
+    voicePartialTranscript && voiceStatus !== "idle"
+      ? `상태 ${voiceStatusDisplayLabel} · ${formatVoicePreview(voicePartialTranscript)}`
+      : `상태 ${voiceStatusDisplayLabel}`;
   const voicePulseActive = voiceStatus === "listening" || voiceStatus === "processing";
   const isVoiceProcessing = voiceStatus === "processing";
   const showVoiceStatusBanner =
@@ -188,12 +190,17 @@ const CommandInput = ({
     voiceSuccessPhase === "hidden" &&
     voiceStatus !== "idle";
   const showInlineVoiceStatus = !voiceError && voiceSuccessPhase === "hidden" && voiceStatus === "idle";
+  const voicePartialPreview =
+    voicePartialTranscript && voiceStatus !== "idle"
+      ? formatVoicePreview(voicePartialTranscript)
+      : "";
   const voiceSuccessMessage =
     lastVoiceTranscript ? `음성 반영 완료 · ${formatVoicePreview(lastVoiceTranscript)}` : "음성 반영 완료";
   const voiceLiveMessage =
     !voiceEnabled ? "음성 비활성" :
     voiceError ? `음성 오류: ${voiceError}` :
     voiceSuccessPhase !== "hidden" ? voiceSuccessMessage :
+    voicePartialPreview ? `음성 ${voiceStatusDisplayLabel} · ${voicePartialPreview}` :
       `음성 ${voiceStatusDisplayLabel}`;
   const [history, setHistory] = useState<string[]>([]);
   const [historyIdx, setHistoryIdx] = useState(-1);
@@ -633,8 +640,22 @@ const CommandInput = ({
             }}
           >
             <span className={`inline-flex items-center rounded-full border px-1.5 py-0.5 text-[10px] leading-none ${voiceStatusToneClass}`}>
-              {voiceStatusLabel}
+              {voiceStatusDisplayLabel}
             </span>
+            {voicePartialPreview && (
+              <span
+                style={{
+                  minWidth: 0,
+                  maxWidth: 180,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                  color: "rgba(255,255,255,0.72)",
+                }}
+              >
+                {voicePartialPreview}
+              </span>
+            )}
           </div>
         )}
 

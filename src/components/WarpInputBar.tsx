@@ -492,7 +492,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
     }, [isVoiceProcessing]);
 
     const [recordingSeconds, setRecordingSeconds] = useState(0);
-    const { isRecording, voiceBusy, voiceError, voiceStatus, handleMicToggle, clearVoiceError } = useVoiceInput({
+    const { isRecording, voiceBusy, voiceError, voicePartialTranscript, voiceStatus, handleMicToggle, clearVoiceError } = useVoiceInput({
       enabled: voiceEnabled,
       onTranscript: injectTranscript,
     });
@@ -559,15 +559,22 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
     const micAssistLabel =
       !voiceEnabled ? "설정 필요" :
       voiceBusy ? "처리 중" :
-      `상태 ${voiceStatusDisplayLabel}`;
+      voicePartialTranscript && voiceStatus !== "idle"
+        ? `상태 ${voiceStatusDisplayLabel} · ${formatVoicePreview(voicePartialTranscript)}`
+        : `상태 ${voiceStatusDisplayLabel}`;
     const inlineVoiceLabel = !voiceEnabled ? "비활성" : voiceStatusDisplayLabel;
     const inlineVoiceTone = !voiceEnabled ? voiceDisabledTone : voiceStatusTone;
+    const voicePartialPreview =
+      voicePartialTranscript && voiceStatus !== "idle"
+        ? formatVoicePreview(voicePartialTranscript)
+        : "";
     const voiceSuccessMessage =
       lastVoiceTranscript ? `음성 반영 완료 · ${formatVoicePreview(lastVoiceTranscript)}` : "음성 반영 완료";
     const voiceLiveMessage =
       !voiceEnabled ? "음성 비활성" :
       voiceError ? `음성 오류: ${voiceError}` :
       voiceSuccessPhase !== "hidden" ? voiceSuccessMessage :
+      voicePartialPreview ? `음성 ${voiceStatusDisplayLabel} · ${voicePartialPreview}` :
       `음성 ${voiceStatusDisplayLabel}`;
     const voiceHighlightLength = voiceHighlight ? voiceHighlight.end - voiceHighlight.start : 0;
     const isLongVoiceHighlight = voiceHighlightLength >= VOICE_HIGHLIGHT_LONG_TEXT_THRESHOLD;
@@ -889,6 +896,19 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
                 }}
               />
             <span>{voiceStatusDisplayLabel}</span>
+            {voicePartialPreview && (
+              <span
+                style={{
+                  minWidth: 0,
+                  maxWidth: 160,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  color: "rgba(255,255,255,0.78)",
+                }}
+              >
+                {voicePartialPreview}
+              </span>
+            )}
           </div>
         )}
 

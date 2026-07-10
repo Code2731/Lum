@@ -10,6 +10,7 @@ struct VoiceState {
     recording: bool,
     started_ms: u64,
     stopping: bool,
+    session_id: u64,
 }
 
 static VOICE_STATE: OnceLock<Mutex<VoiceState>> = OnceLock::new();
@@ -55,6 +56,7 @@ fn mark_recording_started() -> Result<u64, String> {
         ));
     }
     let started_ms = now_ms();
+    state.session_id = state.session_id.saturating_add(1);
     state.recording = true;
     state.started_ms = started_ms;
     Ok(started_ms)
@@ -88,6 +90,13 @@ fn now_ms() -> u64 {
         .duration_since(std::time::UNIX_EPOCH)
         .map(|d| d.as_millis() as u64)
         .unwrap_or(0)
+}
+
+fn voice_state_snapshot() -> Result<VoiceState, String> {
+    voice_state_lock()
+        .lock()
+        .map(|state| state.clone())
+        .map_err(|_| voice_error("STATE_LOCK_POISONED", "voice state lock poisoned"))
 }
 
 const VOICE_ERR_PREFIX: &str = "LUM_VOICE_ERROR";
@@ -196,6 +205,46 @@ fn read_transcript_file(path: &Path, min_modified_ms: u64) -> Option<String> {
     }
 }
 
+/// 전사 파일을 읽되 삭제하지 않는다.
+/// 외부 STT가 중간 결과를 같은 파일에 갱신하는 경우 live preview에 사용한다.
+fn read_partial_transcript_file(path: &Path, min_modified_ms: u64) -> Option<String> {
+    let Some(text) = std::fs::read_to_string(path)
+        .ok()
+        .map(|raw| raw.trim().to_string())
+    else {
+        return None;
+    };
+
+    let is_fresh = if min_modified_ms == 0 {
+        true
+    } else {
+        if let Ok(meta) = std::fs::metadata(path) {
+            if let Ok(modified) = meta.modified() {
+                if let Ok(modified_ms) = modified
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .map(|d| d.as_millis() as u64)
+                {
+                    let min_modified_ms =
+                        min_modified_ms.saturating_sub(TRANSCRIPT_STALE_TOLERANCE_MS);
+                    modified_ms >= min_modified_ms
+                } else {
+                    true
+                }
+            } else {
+                true
+            }
+        } else {
+            true
+        }
+    };
+
+    if !is_fresh || text.is_empty() {
+        return None;
+    }
+
+    Some(text)
+}
+
 /// 전사 파일이 외부 프로세스에서 늦게 생성될 수 있어 짧게 폴링 대기.
 async fn wait_transcript_file(path: &Path, min_modified_ms: u64, wait_ms: u64) -> Option<String> {
     if let Some(text) = read_transcript_file(path, min_modified_ms) {
@@ -216,6 +265,37 @@ async fn wait_transcript_file(path: &Path, min_modified_ms: u64, wait_ms: u64) -
             return None;
         }
     }
+}
+
+fn spawn_partial_transcript_watcher(app: tauri::AppHandle, session_id: u64, min_modified_ms: u64) {
+    tauri::async_runtime::spawn(async move {
+        let path = transcript_file_path();
+        let poll = Duration::from_millis(250);
+        let mut last_emitted = String::new();
+
+        loop {
+            tokio::time::sleep(poll).await;
+
+            let snapshot = match voice_state_snapshot() {
+                Ok(snapshot) => snapshot,
+                Err(_) => break,
+            };
+
+            if snapshot.session_id != session_id {
+                break;
+            }
+            if !snapshot.recording && !snapshot.stopping {
+                break;
+            }
+
+            if let Some(text) = read_partial_transcript_file(&path, min_modified_ms) {
+                if text != last_emitted {
+                    last_emitted = text.clone();
+                    let _ = app.emit("voice_transcript_partial", text);
+                }
+            }
+        }
+    });
 }
 
 async fn run_shell_capture(cmd: &str, timeout_ms: u64) -> Result<String, String> {
@@ -337,6 +417,11 @@ pub async fn start_voice_recording(app: tauri::AppHandle) -> Result<(), String> 
     match start_voice_recording_inner().await {
         Ok(()) => {
             let _ = app.emit("voice_recording_state", true);
+            if let Ok(state) = voice_state_snapshot() {
+                if state.recording {
+                    spawn_partial_transcript_watcher(app.clone(), state.session_id, state.started_ms);
+                }
+            }
             Ok(())
         }
         Err(e) => {
@@ -523,6 +608,24 @@ mod tests {
         let out = read_transcript_file(&f, 0);
         assert_eq!(out.as_deref(), Some("git status"));
         assert!(!f.exists(), "읽은 뒤 파일이 삭제되어야 함");
+        let _ = std::fs::remove_dir_all(&base);
+    }
+
+    #[test]
+    fn read_partial_transcript_file_정상_반환_후_파일_유지() {
+        let _g = AUDIO_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        let base = std::env::temp_dir().join(format!(
+            "lum_voice_partial_test_{}_{}",
+            std::process::id(),
+            now_ms()
+        ));
+        std::fs::create_dir_all(&base).unwrap();
+        let f = base.join("last_transcript.txt");
+        std::fs::write(&f, "  중간 전사  ").unwrap();
+        let out = read_partial_transcript_file(&f, 0);
+        assert_eq!(out.as_deref(), Some("중간 전사"));
+        assert!(f.exists(), "partial preview 읽기 후에는 파일이 유지되어야 함");
+        let _ = std::fs::remove_file(&f);
         let _ = std::fs::remove_dir_all(&base);
     }
 
