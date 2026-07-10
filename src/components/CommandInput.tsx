@@ -30,6 +30,7 @@ const VOICE_PREVIEW_HARD_LIMIT = 26;
 const VOICE_PREVIEW_BACKTRACK_LIMIT = 8;
 const VOICE_PULSE_ANIMATION = "lum-voice-pulse 1.35s ease-in-out infinite";
 const VOICE_BANNER_IN_ANIMATION = "lum-voice-banner-in 140ms ease-out";
+const VOICE_SCOPE_EXPANDED_STORAGE_KEY = "lum.voiceHistory.command.scopeExpanded";
 
 const formatVoiceDuration = (totalSeconds: number) => {
   const minutes = Math.floor(totalSeconds / 60);
@@ -42,6 +43,14 @@ const normalizeVoiceComparisonText = (text: string) => text.replace(/\s+/g, " ")
 const normalizeVoiceSearchTerm = (text: string) => normalizeVoiceComparisonText(text).toLocaleLowerCase();
 const matchesVoiceSearchTerm = (text: string, query: string) =>
   query.length === 0 || normalizeVoiceSearchTerm(text).includes(query);
+const loadStoredVoiceScopeExpanded = () => {
+  if (typeof window === "undefined") return false;
+  try {
+    return window.sessionStorage.getItem(VOICE_SCOPE_EXPANDED_STORAGE_KEY) === "1";
+  } catch {
+    return false;
+  }
+};
 const formatVoiceScopeRecentHint = (ts: number) => {
   if (!ts) return "";
   const diffMs = Math.max(0, Date.now() - ts);
@@ -121,7 +130,7 @@ const CommandInput = ({
   const [lastVoicePartialTranscript, setLastVoicePartialTranscript] = useState("");
   const [voiceHistoryQuery, setVoiceHistoryQuery] = useState("");
   const [voiceHistoryScopeOverride, setVoiceHistoryScopeOverride] = useState<string | null>(null);
-  const [showAllVoiceHistoryScopes, setShowAllVoiceHistoryScopes] = useState(false);
+  const [showAllVoiceHistoryScopes, setShowAllVoiceHistoryScopes] = useState(loadStoredVoiceScopeExpanded);
   const effectiveVoiceHistoryScope = voiceHistoryScopeOverride ?? context.cwd ?? null;
   const {
     activeVoiceHistoryScope,
@@ -206,8 +215,14 @@ const CommandInput = ({
     }
     previousVoiceHistoryScopeRef.current = activeVoiceHistoryScope;
     setVoiceHistoryQuery("");
-    setShowAllVoiceHistoryScopes(false);
   }, [activeVoiceHistoryScope]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      window.sessionStorage.setItem(VOICE_SCOPE_EXPANDED_STORAGE_KEY, showAllVoiceHistoryScopes ? "1" : "0");
+    } catch {}
+  }, [showAllVoiceHistoryScopes]);
 
   const clearVoiceHighlight = () => {
     if (voiceHighlightVisibleTimerRef.current !== null) {
