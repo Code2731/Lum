@@ -29,6 +29,14 @@ const VOICE_PREVIEW_HARD_LIMIT = 26;
 const VOICE_PREVIEW_BACKTRACK_LIMIT = 8;
 const VOICE_PULSE_ANIMATION = "lum-voice-pulse 1.35s ease-in-out infinite";
 const VOICE_BANNER_IN_ANIMATION = "lum-voice-banner-in 140ms ease-out";
+const MAX_RECENT_VOICE_HISTORY_ITEMS = 10;
+
+type VoiceTranscriptHistoryItem = {
+  id: string;
+  text: string;
+  createdAt: number;
+};
+
 const formatVoiceDuration = (totalSeconds: number) => {
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
@@ -105,6 +113,8 @@ const CommandInput = ({
   const [lastVoiceTranscript, setLastVoiceTranscript] = useState("");
   const [lastVoicePartialTranscript, setLastVoicePartialTranscript] = useState("");
   const [recentVoiceTranscripts, setRecentVoiceTranscripts] = useState<string[]>([]);
+  const [voiceTranscriptHistory, setVoiceTranscriptHistory] = useState<VoiceTranscriptHistoryItem[]>([]);
+  const [showVoiceTranscriptHistory, setShowVoiceTranscriptHistory] = useState(false);
   const [voiceCopyFeedback, setVoiceCopyFeedback] = useState(false);
   const voiceSuccessVisibleTimerRef = useRef<number | null>(null);
   const voiceSuccessFadeTimerRef = useRef<number | null>(null);
@@ -131,6 +141,12 @@ const CommandInput = ({
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (voiceTranscriptHistory.length === 0 && showVoiceTranscriptHistory) {
+      setShowVoiceTranscriptHistory(false);
+    }
+  }, [showVoiceTranscriptHistory, voiceTranscriptHistory.length]);
 
   const clearVoiceHighlight = () => {
     if (voiceHighlightVisibleTimerRef.current !== null) {
@@ -185,8 +201,13 @@ const CommandInput = ({
   const injectTranscript = (text: string) => {
     const t = text.trim();
     if (!t) return;
+    const createdAt = Date.now();
     setLastVoiceTranscript(t);
     setRecentVoiceTranscripts((prev) => [t, ...prev.filter((item) => item !== t)].slice(0, 3));
+    setVoiceTranscriptHistory((prev) => [
+      { id: `${createdAt}-${Math.random().toString(36).slice(2, 8)}`, text: t, createdAt },
+      ...prev.filter((item) => item.text !== t),
+    ].slice(0, MAX_RECENT_VOICE_HISTORY_ITEMS));
     setValue((prev) => {
       const joined = prev.trim() ? `${prev} ${t}` : t;
       showVoiceHighlight(joined.length - t.length, joined.length);
@@ -253,11 +274,37 @@ const CommandInput = ({
 
   const removeRecentVoiceTranscript = (text: string) => {
     setRecentVoiceTranscripts((prev) => prev.filter((item) => item !== text));
+    setVoiceTranscriptHistory((prev) => prev.filter((item) => item.text !== text));
   };
 
   const clearRecentVoiceTranscripts = () => {
     setRecentVoiceTranscripts([]);
+    setVoiceTranscriptHistory([]);
+    setShowVoiceTranscriptHistory(false);
   };
+
+  const replaceInputWithVoiceTranscript = (text: string) => {
+    const t = text.trim();
+    if (!t) return;
+    setValue(t);
+    showVoiceHighlight(0, t.length);
+    const editor = document.getElementById("command-editor-textarea");
+    if (editor instanceof HTMLTextAreaElement) {
+      editor.focus();
+    }
+  };
+
+  const copyVoiceTranscriptItem = (text: string) => {
+    const t = text.trim();
+    if (!t) return;
+    navigator.clipboard?.writeText?.(t).catch(() => {});
+  };
+
+  const formatVoiceHistoryTime = (createdAt: number) =>
+    new Date(createdAt).toLocaleTimeString("ko-KR", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
 
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const { isRecording, voiceBusy, voiceError, voicePartialTranscript, voiceStatus, handleMicToggle, clearVoiceError } = useVoiceInput({
@@ -798,116 +845,204 @@ const CommandInput = ({
               margin: VOICE_INLINE_BANNER_MARGIN,
               marginTop: "0",
               display: "flex",
-              alignItems: "center",
+              flexDirection: "column",
+              alignItems: "stretch",
               gap: 6,
-              flexWrap: "wrap",
             }}
           >
-            <span
+            <div
               style={{
-                fontSize: 10,
-                color: "rgba(255,255,255,0.44)",
-                lineHeight: 1.2,
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                flexWrap: "wrap",
               }}
             >
-              최근 음성
-            </span>
-            <button
-              type="button"
-              onClick={clearRecentVoiceTranscripts}
-              title="최근 음성 전체 지우기"
-              style={{
-                borderRadius: 999,
-                border: "1px solid rgba(255,255,255,0.10)",
-                background: "rgba(255,255,255,0.04)",
-                color: "rgba(255,255,255,0.56)",
-                padding: "1px 6px",
-                fontSize: 10,
-                lineHeight: 1.2,
-                cursor: "pointer",
-              }}
-            >
-              전체 지우기
-            </button>
-            {recentVoiceTranscripts.map((item) => (
               <span
-                key={item}
                 style={{
-                  borderRadius: 999,
-                  border: "1px solid rgba(88,166,255,0.16)",
-                  background: "rgba(88,166,255,0.08)",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 4,
-                  padding: "2px 5px 2px 7px",
+                  fontSize: 10,
+                  color: "rgba(255,255,255,0.44)",
+                  lineHeight: 1.2,
                 }}
               >
+                최근 음성
+              </span>
+              {voiceTranscriptHistory.length > 0 && (
                 <button
                   type="button"
-                  onClick={() => reuseRecentVoiceTranscript(item)}
-                  title={item}
+                  onClick={() => setShowVoiceTranscriptHistory((prev) => !prev)}
+                  title="세션 음성 기록 펼치기"
                   style={{
-                    color: "rgba(214,231,255,0.88)",
+                    borderRadius: 999,
+                    border: "1px solid rgba(88,166,255,0.14)",
+                    background: showVoiceTranscriptHistory ? "rgba(88,166,255,0.12)" : "rgba(88,166,255,0.06)",
+                    color: "rgba(214,231,255,0.74)",
+                    padding: "1px 6px",
                     fontSize: 10,
                     lineHeight: 1.2,
                     cursor: "pointer",
-                    maxWidth: 156,
-                    whiteSpace: "nowrap",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    background: "transparent",
-                    border: "none",
-                    padding: 0,
                   }}
                 >
-                  {formatVoicePreview(item)}
+                  {showVoiceTranscriptHistory ? "기록 접기" : `기록 ${voiceTranscriptHistory.length}개`}
                 </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    navigator.clipboard?.writeText?.(item).catch(() => {});
-                  }}
-                  title="이 음성 문장 복사"
+              )}
+              <button
+                type="button"
+                onClick={clearRecentVoiceTranscripts}
+                title="최근 음성 전체 지우기"
+                style={{
+                  borderRadius: 999,
+                  border: "1px solid rgba(255,255,255,0.10)",
+                  background: "rgba(255,255,255,0.04)",
+                  color: "rgba(255,255,255,0.56)",
+                  padding: "1px 6px",
+                  fontSize: 10,
+                  lineHeight: 1.2,
+                  cursor: "pointer",
+                }}
+              >
+                전체 지우기
+              </button>
+              {recentVoiceTranscripts.map((item) => (
+                <span
+                  key={item}
                   style={{
-                    flexShrink: 0,
-                    width: 14,
-                    height: 14,
                     borderRadius: 999,
-                    border: "1px solid rgba(255,255,255,0.12)",
-                    background: "rgba(255,255,255,0.06)",
-                    color: "rgba(255,255,255,0.72)",
+                    border: "1px solid rgba(88,166,255,0.16)",
+                    background: "rgba(88,166,255,0.08)",
                     display: "inline-flex",
                     alignItems: "center",
-                    justifyContent: "center",
-                    cursor: "pointer",
-                    padding: 0,
+                    gap: 4,
+                    padding: "2px 5px 2px 7px",
                   }}
                 >
-                  <Copy size={8} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => removeRecentVoiceTranscript(item)}
-                  title="이 음성 문장 숨기기"
-                  style={{
-                    flexShrink: 0,
-                    width: 14,
-                    height: 14,
-                    borderRadius: 999,
-                    border: "1px solid rgba(255,255,255,0.10)",
-                    background: "rgba(255,255,255,0.04)",
-                    color: "rgba(255,255,255,0.60)",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    cursor: "pointer",
-                    padding: 0,
-                  }}
-                >
-                  <X size={8} />
-                </button>
-              </span>
-            ))}
+                  <button
+                    type="button"
+                    onClick={() => reuseRecentVoiceTranscript(item)}
+                    title={item}
+                    style={{
+                      color: "rgba(214,231,255,0.88)",
+                      fontSize: 10,
+                      lineHeight: 1.2,
+                      cursor: "pointer",
+                      maxWidth: 156,
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      background: "transparent",
+                      border: "none",
+                      padding: 0,
+                    }}
+                  >
+                    {formatVoicePreview(item)}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => copyVoiceTranscriptItem(item)}
+                    title="이 음성 문장 복사"
+                    style={{
+                      flexShrink: 0,
+                      width: 14,
+                      height: 14,
+                      borderRadius: 999,
+                      border: "1px solid rgba(255,255,255,0.12)",
+                      background: "rgba(255,255,255,0.06)",
+                      color: "rgba(255,255,255,0.72)",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      cursor: "pointer",
+                      padding: 0,
+                    }}
+                  >
+                    <Copy size={8} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => removeRecentVoiceTranscript(item)}
+                    title="이 음성 문장 숨기기"
+                    style={{
+                      flexShrink: 0,
+                      width: 14,
+                      height: 14,
+                      borderRadius: 999,
+                      border: "1px solid rgba(255,255,255,0.10)",
+                      background: "rgba(255,255,255,0.04)",
+                      color: "rgba(255,255,255,0.60)",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      cursor: "pointer",
+                      padding: 0,
+                    }}
+                  >
+                    <X size={8} />
+                  </button>
+                </span>
+              ))}
+            </div>
+            {showVoiceTranscriptHistory && voiceTranscriptHistory.length > 0 && (
+              <div
+                className="rounded-lg border border-white/8 bg-white/[0.03] px-2.5 py-2"
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 6,
+                }}
+              >
+                {voiceTranscriptHistory.map((item) => (
+                  <div
+                    key={item.id}
+                    className="flex items-start justify-between gap-3 rounded-md border border-white/6 bg-black/10 px-2 py-1.5"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="mb-1 flex items-center gap-2 text-[10px] leading-none text-white/42">
+                        <span>{formatVoiceHistoryTime(item.createdAt)}</span>
+                        <span>세션 기록</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => reuseRecentVoiceTranscript(item.text)}
+                        title={item.text}
+                        className="block max-w-full truncate bg-transparent p-0 text-left text-[11px] text-slate-100/90 transition-colors hover:text-slate-50"
+                      >
+                        {item.text}
+                      </button>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => reuseRecentVoiceTranscript(item.text)}
+                        className="rounded border border-sky-400/15 bg-sky-500/8 px-1.5 py-0.5 text-[10px] text-sky-100/88 transition-colors hover:bg-sky-500/16"
+                      >
+                        다시 넣기
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => replaceInputWithVoiceTranscript(item.text)}
+                        className="rounded border border-emerald-400/18 bg-emerald-500/10 px-1.5 py-0.5 text-[10px] text-emerald-100/88 transition-colors hover:bg-emerald-500/18"
+                      >
+                        치환
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => copyVoiceTranscriptItem(item.text)}
+                        className="rounded border border-white/10 bg-white/5 px-1.5 py-0.5 text-[10px] text-white/72 transition-colors hover:bg-white/10"
+                      >
+                        복사
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => removeRecentVoiceTranscript(item.text)}
+                        className="rounded border border-rose-400/14 bg-rose-500/8 px-1.5 py-0.5 text-[10px] text-rose-100/80 transition-colors hover:bg-rose-500/16"
+                      >
+                        삭제
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
