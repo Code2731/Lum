@@ -900,8 +900,11 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
                 alignItems: "center",
                 justifyContent: "center",
                 padding: "1px 7px",
+                marginLeft: 2,
+                marginRight: 2,
                 borderRadius: 999,
                 transform: "translateY(0.5px)",
+                opacity: 0.94,
                 ...inlineVoiceTone,
               }}
             >

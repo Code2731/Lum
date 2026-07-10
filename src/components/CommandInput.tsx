@@ -440,8 +440,10 @@ const CommandInput = ({
               style={{
                 minHeight: 17,
                 justifyContent: "center",
-                marginLeft: 4,
+                marginLeft: 6,
+                marginRight: 2,
                 transform: "translateY(0.5px)",
+                opacity: 0.94,
               }}
             >
               {voiceStatusLabel}
