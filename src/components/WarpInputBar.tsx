@@ -801,7 +801,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
               background: "rgba(46,160,67,0.08)",
               border: "1px solid rgba(63,185,80,0.12)",
               borderRadius: 6,
-              padding: "2px 7px",
+              padding: "2px 6px",
               display: "inline-flex",
               alignItems: "center",
               whiteSpace: "nowrap",
