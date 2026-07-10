@@ -554,7 +554,7 @@ const CommandInput = ({
               background: "rgba(46,160,67,0.08)",
               border: "1px solid rgba(63,185,80,0.12)",
               opacity: voiceSuccessPhase === "fading" ? 0 : 1,
-              transform: voiceSuccessPhase === "fading" ? "translateY(-2px)" : "translateY(0)",
+              transform: voiceSuccessPhase === "fading" ? "translateY(-1px)" : "translateY(0)",
               transition: `opacity ${VOICE_SUCCESS_FADE_MS}ms ease, transform ${VOICE_SUCCESS_FADE_MS}ms ease`,
               animation: VOICE_BANNER_IN_ANIMATION,
               boxShadow: "0 8px 20px rgba(0,0,0,0.16)",
