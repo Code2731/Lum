@@ -130,6 +130,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
     const [lastVoicePartialTranscript, setLastVoicePartialTranscript] = useState("");
     const [voiceHistoryQuery, setVoiceHistoryQuery] = useState("");
     const [voiceHistoryScopeOverride, setVoiceHistoryScopeOverride] = useState<string | null>(null);
+    const [showAllVoiceHistoryScopes, setShowAllVoiceHistoryScopes] = useState(false);
     const effectiveVoiceHistoryScope = voiceHistoryScopeOverride ?? voiceHistoryScope ?? null;
     const {
       activeVoiceHistoryScope,
@@ -187,6 +188,9 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
     const currentVoiceHistoryScopeKey = (voiceHistoryScope ?? "").trim().replace(/\\/g, "/") || "__global__";
     const voiceHistoryScopeLabel =
       activeVoiceHistoryScope === "__global__" ? "전역 기록" : shortPath(activeVoiceHistoryScope);
+    const visibleVoiceHistoryScopes = showAllVoiceHistoryScopes
+      ? availableVoiceHistoryScopes
+      : availableVoiceHistoryScopes.slice(0, 4);
 
     useEffect(() => {
       onChangeRef.current = onChange;
@@ -1256,7 +1260,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
                     flexWrap: "wrap",
                   }}
                 >
-                  {availableVoiceHistoryScopes.slice(0, 4).map((scopeInfo) => {
+                  {visibleVoiceHistoryScopes.map((scopeInfo) => {
                     const isActive = scopeInfo.scopeKey === activeVoiceHistoryScope;
                     const label = scopeInfo.scopeKey === "__global__" ? "전역" : shortPath(scopeInfo.scopeKey);
                     return (
@@ -1280,6 +1284,24 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
                       </button>
                     );
                   })}
+                  {availableVoiceHistoryScopes.length > 4 && (
+                    <button
+                      type="button"
+                      onClick={() => setShowAllVoiceHistoryScopes((prev) => !prev)}
+                      style={{
+                        borderRadius: 999,
+                        border: "1px solid rgba(255,255,255,0.10)",
+                        background: "rgba(255,255,255,0.04)",
+                        color: "rgba(255,255,255,0.62)",
+                        padding: "2px 7px",
+                        fontSize: WARP_SMALL_FONT_SIZE,
+                        lineHeight: 1.2,
+                        cursor: "pointer",
+                      }}
+                    >
+                      {showAllVoiceHistoryScopes ? "접기" : `더보기 +${availableVoiceHistoryScopes.length - 4}`}
+                    </button>
+                  )}
                 </div>
               )}
               <input

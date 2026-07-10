@@ -111,6 +111,7 @@ const CommandInput = ({
   const [lastVoicePartialTranscript, setLastVoicePartialTranscript] = useState("");
   const [voiceHistoryQuery, setVoiceHistoryQuery] = useState("");
   const [voiceHistoryScopeOverride, setVoiceHistoryScopeOverride] = useState<string | null>(null);
+  const [showAllVoiceHistoryScopes, setShowAllVoiceHistoryScopes] = useState(false);
   const effectiveVoiceHistoryScope = voiceHistoryScopeOverride ?? context.cwd ?? null;
   const {
     activeVoiceHistoryScope,
@@ -164,6 +165,9 @@ const CommandInput = ({
   const currentVoiceHistoryScopeKey = (context.cwd ?? "").trim() || "__global__";
   const voiceHistoryScopeLabel =
     activeVoiceHistoryScope === "__global__" ? "전역 기록" : shortPath(activeVoiceHistoryScope);
+  const visibleVoiceHistoryScopes = showAllVoiceHistoryScopes
+    ? availableVoiceHistoryScopes
+    : availableVoiceHistoryScopes.slice(0, 4);
 
   useEffect(() => {
     return () => {
@@ -941,7 +945,7 @@ const CommandInput = ({
                     flexWrap: "wrap",
                   }}
                 >
-                  {availableVoiceHistoryScopes.slice(0, 4).map((scopeInfo) => {
+                  {visibleVoiceHistoryScopes.map((scopeInfo) => {
                     const isActive = scopeInfo.scopeKey === activeVoiceHistoryScope;
                     const label = scopeInfo.scopeKey === "__global__" ? "전역" : shortPath(scopeInfo.scopeKey);
                     return (
@@ -965,6 +969,24 @@ const CommandInput = ({
                       </button>
                     );
                   })}
+                  {availableVoiceHistoryScopes.length > 4 && (
+                    <button
+                      type="button"
+                      onClick={() => setShowAllVoiceHistoryScopes((prev) => !prev)}
+                      style={{
+                        borderRadius: 999,
+                        border: "1px solid rgba(255,255,255,0.10)",
+                        background: "rgba(255,255,255,0.04)",
+                        color: "rgba(255,255,255,0.62)",
+                        padding: "2px 7px",
+                        fontSize: 10,
+                        lineHeight: 1.2,
+                        cursor: "pointer",
+                      }}
+                    >
+                      {showAllVoiceHistoryScopes ? "접기" : `더보기 +${availableVoiceHistoryScopes.length - 4}`}
+                    </button>
+                  )}
                 </div>
               )}
               <input
