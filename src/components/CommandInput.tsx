@@ -24,6 +24,9 @@ const VOICE_SUCCESS_FADE_MS = 110;
 const VOICE_HIGHLIGHT_VISIBLE_MS = 1850;
 const VOICE_HIGHLIGHT_FADE_MS = 260;
 const VOICE_HIGHLIGHT_LONG_TEXT_THRESHOLD = 32;
+const VOICE_PREVIEW_SOFT_LIMIT = 18;
+const VOICE_PREVIEW_HARD_LIMIT = 26;
+const VOICE_PREVIEW_BACKTRACK_LIMIT = 8;
 const VOICE_PULSE_ANIMATION = "lum-voice-pulse 1.35s ease-in-out infinite";
 const VOICE_BANNER_IN_ANIMATION = "lum-voice-banner-in 140ms ease-out";
 const formatVoiceDuration = (totalSeconds: number) => {
@@ -31,9 +34,50 @@ const formatVoiceDuration = (totalSeconds: number) => {
   const seconds = totalSeconds % 60;
   return `${minutes}:${String(seconds).padStart(2, "0")}`;
 };
-const formatVoicePreview = (text: string) => (
-  text.length > 18 ? `${text.slice(0, 18)}...` : text
-);
+const VOICE_PREVIEW_SENTENCE_BOUNDARY = /[.!?。！？]/;
+const VOICE_PREVIEW_WORD_BOUNDARY = /\s/;
+const formatVoicePreview = (text: string) => {
+  const normalized = text.replace(/\s+/g, " ").trim();
+  if (normalized.length <= VOICE_PREVIEW_SOFT_LIMIT) {
+    return normalized;
+  }
+
+  let cutIndex = -1;
+  const backtrackStart = Math.max(0, VOICE_PREVIEW_SOFT_LIMIT - VOICE_PREVIEW_BACKTRACK_LIMIT);
+
+  for (let i = VOICE_PREVIEW_SOFT_LIMIT - 1; i >= backtrackStart; i -= 1) {
+    const char = normalized[i] ?? "";
+    if (VOICE_PREVIEW_SENTENCE_BOUNDARY.test(char)) {
+      cutIndex = i + 1;
+      break;
+    }
+    if (VOICE_PREVIEW_WORD_BOUNDARY.test(char)) {
+      cutIndex = i;
+      break;
+    }
+  }
+
+  if (cutIndex < 0) {
+    const forwardLimit = Math.min(normalized.length, VOICE_PREVIEW_HARD_LIMIT);
+    for (let i = VOICE_PREVIEW_SOFT_LIMIT; i < forwardLimit; i += 1) {
+      const char = normalized[i] ?? "";
+      if (VOICE_PREVIEW_SENTENCE_BOUNDARY.test(char)) {
+        cutIndex = i + 1;
+        break;
+      }
+      if (VOICE_PREVIEW_WORD_BOUNDARY.test(char)) {
+        cutIndex = i;
+        break;
+      }
+    }
+  }
+
+  if (cutIndex < 0) {
+    cutIndex = VOICE_PREVIEW_SOFT_LIMIT;
+  }
+
+  return `${normalized.slice(0, cutIndex).trimEnd()}...`;
+};
 const SR_ONLY_STYLE: React.CSSProperties = {
   position: "absolute",
   width: 1,
