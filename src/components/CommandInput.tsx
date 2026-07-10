@@ -31,6 +31,9 @@ const formatVoiceDuration = (totalSeconds: number) => {
   const seconds = totalSeconds % 60;
   return `${minutes}:${String(seconds).padStart(2, "0")}`;
 };
+const formatVoicePreview = (text: string) => (
+  text.length > 18 ? `${text.slice(0, 18)}...` : text
+);
 const SR_ONLY_STYLE: React.CSSProperties = {
   position: "absolute",
   width: 1,
@@ -54,6 +57,7 @@ const CommandInput = ({
   const [micHovered, setMicHovered] = useState(false);
   const [voiceSuccessPhase, setVoiceSuccessPhase] = useState<"hidden" | "visible" | "fading">("hidden");
   const [voiceHighlight, setVoiceHighlight] = useState<{ start: number; end: number; phase: "visible" | "fading" } | null>(null);
+  const [lastVoiceTranscript, setLastVoiceTranscript] = useState("");
   const voiceSuccessVisibleTimerRef = useRef<number | null>(null);
   const voiceSuccessFadeTimerRef = useRef<number | null>(null);
   const voiceHighlightVisibleTimerRef = useRef<number | null>(null);
@@ -129,6 +133,7 @@ const CommandInput = ({
   const injectTranscript = (text: string) => {
     const t = text.trim();
     if (!t) return;
+    setLastVoiceTranscript(t);
     setValue((prev) => {
       const joined = prev.trim() ? `${prev} ${t}` : t;
       showVoiceHighlight(joined.length - t.length, joined.length);
@@ -604,6 +609,7 @@ const CommandInput = ({
             }}
           >
             음성 반영 완료
+            {lastVoiceTranscript ? ` · ${formatVoicePreview(lastVoiceTranscript)}` : ""}
           </div>
         )}
 
