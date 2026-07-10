@@ -516,7 +516,7 @@ const CommandInput = ({
                 }}
                 className="p-1 rounded text-white/70 hover:text-white/85 hover:bg-white/5 transition-colors shrink-0"
               >
-                <Copy size={11} />
+                <Copy size={10} />
               </IconButton>
               <IconButton
                 tooltip="다시 시도"
@@ -531,7 +531,7 @@ const CommandInput = ({
                 onClick={clearVoiceError}
                 className="p-1 rounded text-white/65 hover:text-white/80 hover:bg-white/5 transition-colors shrink-0"
               >
-                <X size={11} />
+                <X size={10} />
               </IconButton>
             </span>
           </div>

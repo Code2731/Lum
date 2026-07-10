@@ -737,7 +737,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
                   opacity: 0.94,
                 }}
               >
-                <Copy size={10} />
+                <Copy size={9} />
               </button>
               <button
                 type="button"
@@ -783,7 +783,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
                   padding: 0,
                 }}
               >
-                <X size={10} />
+                <X size={9} />
               </button>
             </span>
           </div>
