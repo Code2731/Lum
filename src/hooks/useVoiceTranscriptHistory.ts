@@ -21,6 +21,12 @@ type VoiceTranscriptStore = {
 };
 
 type VoiceTranscriptStoreCollection = Record<string, VoiceTranscriptStore>;
+type VoiceTranscriptScopeSummary = {
+  scopeKey: string;
+  pinnedCount: number;
+  recentCount: number;
+  historyCount: number;
+};
 
 const DEFAULT_STORE: VoiceTranscriptStore = {
   pinnedVoiceTranscriptLabels: {},
@@ -167,14 +173,37 @@ const updateStore = (scopeKey: string, updater: (prev: VoiceTranscriptStore) => 
 
 export const useVoiceTranscriptHistory = (scope?: string | null) => {
   const scopeKey = useMemo(() => normalizeScopeKey(scope), [scope]);
+  const [stores, setStores] = useState<VoiceTranscriptStoreCollection>(() => voiceTranscriptStores);
   const [store, setStore] = useState<VoiceTranscriptStore>(() => getStoreForScope(scopeKey));
+  const availableVoiceHistoryScopes = useMemo<VoiceTranscriptScopeSummary[]>(
+    () =>
+      Object.entries(stores)
+        .map(([candidateScopeKey, candidateStore]) => ({
+          scopeKey: candidateScopeKey,
+          pinnedCount: candidateStore.pinnedVoiceTranscripts.length,
+          recentCount: candidateStore.recentVoiceTranscripts.length,
+          historyCount: candidateStore.voiceTranscriptHistory.length,
+        }))
+        .filter((item) => item.pinnedCount + item.recentCount + item.historyCount > 0)
+        .sort((a, b) => {
+          if (a.scopeKey === scopeKey) return -1;
+          if (b.scopeKey === scopeKey) return 1;
+          const aTotal = a.pinnedCount + a.recentCount + a.historyCount;
+          const bTotal = b.pinnedCount + b.recentCount + b.historyCount;
+          if (aTotal !== bTotal) return bTotal - aTotal;
+          return a.scopeKey.localeCompare(b.scopeKey);
+        }),
+    [scopeKey, stores]
+  );
 
   useEffect(() => {
     const nextStores = loadStores();
     voiceTranscriptStores = nextStores;
+    setStores(nextStores);
     setStore(getStoreForScope(scopeKey));
 
     const listener = () => {
+      setStores({ ...voiceTranscriptStores });
       setStore(getStoreForScope(scopeKey));
     };
 
@@ -185,6 +214,8 @@ export const useVoiceTranscriptHistory = (scope?: string | null) => {
   }, [scopeKey]);
 
   return {
+    activeVoiceHistoryScope: scopeKey,
+    availableVoiceHistoryScopes,
     pinnedVoiceTranscriptLabels: store.pinnedVoiceTranscriptLabels,
     pinnedVoiceTranscripts: store.pinnedVoiceTranscripts,
     recentVoiceTranscripts: store.recentVoiceTranscripts,

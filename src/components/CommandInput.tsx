@@ -110,7 +110,11 @@ const CommandInput = ({
   const [lastVoiceTranscript, setLastVoiceTranscript] = useState("");
   const [lastVoicePartialTranscript, setLastVoicePartialTranscript] = useState("");
   const [voiceHistoryQuery, setVoiceHistoryQuery] = useState("");
+  const [voiceHistoryScopeOverride, setVoiceHistoryScopeOverride] = useState<string | null>(null);
+  const effectiveVoiceHistoryScope = voiceHistoryScopeOverride ?? context.cwd ?? null;
   const {
+    activeVoiceHistoryScope,
+    availableVoiceHistoryScopes,
     pinnedVoiceTranscripts,
     recentVoiceTranscripts,
     voiceTranscriptHistory,
@@ -125,7 +129,7 @@ const CommandInput = ({
     setPinnedVoiceTranscriptLabel,
     getPinnedVoiceTranscriptLabel,
     isVoiceTranscriptPinned,
-  } = useVoiceTranscriptHistory(context.cwd);
+  } = useVoiceTranscriptHistory(effectiveVoiceHistoryScope);
   const [voiceCopyFeedback, setVoiceCopyFeedback] = useState(false);
   const voiceSuccessVisibleTimerRef = useRef<number | null>(null);
   const voiceSuccessFadeTimerRef = useRef<number | null>(null);
@@ -155,7 +159,9 @@ const CommandInput = ({
     () => voiceTranscriptHistory.filter((item) => matchesScopedVoiceSearch(item.text)),
     [normalizedVoiceHistoryQuery, voiceTranscriptHistory]
   );
-  const voiceHistoryScopeLabel = context.cwd ? shortPath(context.cwd) : "전역 기록";
+  const currentVoiceHistoryScopeKey = (context.cwd ?? "").trim() || "__global__";
+  const voiceHistoryScopeLabel =
+    activeVoiceHistoryScope === "__global__" ? "전역 기록" : shortPath(activeVoiceHistoryScope);
 
   useEffect(() => {
     return () => {
@@ -924,6 +930,41 @@ const CommandInput = ({
               >
                 고정 {pinnedVoiceTranscripts.length} · 최근 {recentVoiceTranscripts.length} · 기록 {voiceTranscriptHistory.length}
               </span>
+              {availableVoiceHistoryScopes.length > 1 && (
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 4,
+                    flexWrap: "wrap",
+                  }}
+                >
+                  {availableVoiceHistoryScopes.slice(0, 4).map((scopeInfo) => {
+                    const isActive = scopeInfo.scopeKey === activeVoiceHistoryScope;
+                    const label = scopeInfo.scopeKey === "__global__" ? "전역" : shortPath(scopeInfo.scopeKey);
+                    return (
+                      <button
+                        key={scopeInfo.scopeKey}
+                        type="button"
+                        onClick={() => setVoiceHistoryScopeOverride(scopeInfo.scopeKey === currentVoiceHistoryScopeKey ? null : scopeInfo.scopeKey)}
+                        title={`${label} · 고정 ${scopeInfo.pinnedCount} · 최근 ${scopeInfo.recentCount} · 기록 ${scopeInfo.historyCount}`}
+                        style={{
+                          borderRadius: 999,
+                          border: isActive ? "1px solid rgba(88,166,255,0.24)" : "1px solid rgba(255,255,255,0.10)",
+                          background: isActive ? "rgba(88,166,255,0.12)" : "rgba(255,255,255,0.04)",
+                          color: isActive ? "rgba(214,231,255,0.88)" : "rgba(255,255,255,0.62)",
+                          padding: "2px 7px",
+                          fontSize: 10,
+                          lineHeight: 1.2,
+                          cursor: "pointer",
+                        }}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
               <input
                 type="text"
                 value={voiceHistoryQuery}
