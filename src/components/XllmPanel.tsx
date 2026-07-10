@@ -50,9 +50,13 @@ interface VoiceHookDiagnostics {
   start_hook_kind: string;
   start_hook_configured: boolean;
   start_hook_target: string;
+  start_hook_runnable: boolean;
+  start_hook_runtime_label: string;
   stop_hook_kind: string;
   stop_hook_configured: boolean;
   stop_hook_target: string;
+  stop_hook_runnable: boolean;
+  stop_hook_runtime_label: string;
 }
 
 interface VoiceHookTemplateCreateResult {
@@ -1003,6 +1007,12 @@ const VoiceHookDiagnosticsSection: React.FC = () => {
     if (configured) return "text-cyan-200 bg-cyan-500/10 border-cyan-400/25";
     return "text-amber-200 bg-amber-500/10 border-amber-400/25";
   };
+  const hookRuntimeTone = (configured: boolean, runnable: boolean, kind: string) => {
+    if (!configured) return "text-amber-200 bg-amber-500/10 border-amber-400/25";
+    if (kind === "env") return "text-emerald-200 bg-emerald-500/10 border-emerald-400/25";
+    if (runnable) return "text-cyan-200 bg-cyan-500/10 border-cyan-400/25";
+    return "text-rose-200 bg-rose-500/10 border-rose-400/25";
+  };
 
   const copyText = useCallback(async (text: string, message: string) => {
     try {
@@ -1109,8 +1119,14 @@ const VoiceHookDiagnosticsSection: React.FC = () => {
             <span className={`text-xs px-1.5 py-0.5 rounded border ${hookTone(info.start_hook_configured, info.start_hook_kind)}`}>
               시작 훅 {info.start_hook_configured ? info.start_hook_kind : "없음"}
             </span>
+            <span className={`text-xs px-1.5 py-0.5 rounded border ${hookRuntimeTone(info.start_hook_configured, info.start_hook_runnable, info.start_hook_kind)}`}>
+              시작 상태 {info.start_hook_runtime_label}
+            </span>
             <span className={`text-xs px-1.5 py-0.5 rounded border ${hookTone(info.stop_hook_configured, info.stop_hook_kind)}`}>
               종료 훅 {info.stop_hook_configured ? info.stop_hook_kind : "없음"}
+            </span>
+            <span className={`text-xs px-1.5 py-0.5 rounded border ${hookRuntimeTone(info.stop_hook_configured, info.stop_hook_runnable, info.stop_hook_kind)}`}>
+              종료 상태 {info.stop_hook_runtime_label}
             </span>
             <span className={`text-xs px-1.5 py-0.5 rounded border ${info.transcript_exists ? "text-emerald-200 bg-emerald-500/10 border-emerald-400/25" : "text-white/70 bg-white/5 border-white/10"}`}>
               transcript {info.transcript_exists ? "감지됨" : "없음"}

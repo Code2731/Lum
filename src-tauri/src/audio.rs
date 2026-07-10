@@ -155,9 +155,13 @@ pub struct VoiceHookDiagnostics {
     start_hook_kind: String,
     start_hook_configured: bool,
     start_hook_target: String,
+    start_hook_runnable: bool,
+    start_hook_runtime_label: String,
     stop_hook_kind: String,
     stop_hook_configured: bool,
     stop_hook_target: String,
+    stop_hook_runnable: bool,
+    stop_hook_runtime_label: String,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -195,6 +199,39 @@ fn voice_hook_descriptor(env_key: &str, kind: &str) -> (String, bool, String) {
             false,
             default_voice_hook_script_path(kind).display().to_string(),
         ),
+    }
+}
+
+fn voice_hook_runtime_status(env_key: &str, kind: &str) -> (bool, String) {
+    match resolve_voice_hook(env_key, kind) {
+        Some(VoiceHook::Shell(_)) => (true, "env 명령".into()),
+        Some(VoiceHook::Script(path)) => {
+            if cfg!(windows) {
+                (true, "파일 준비됨".into())
+            } else {
+                #[cfg(unix)]
+                {
+                    use std::os::unix::fs::PermissionsExt;
+                    let runnable = std::fs::metadata(&path)
+                        .ok()
+                        .map(|meta| meta.permissions().mode() & 0o111 != 0)
+                        .unwrap_or(false);
+                    (
+                        runnable,
+                        if runnable {
+                            "실행 가능".into()
+                        } else {
+                            "실행 권한 없음".into()
+                        },
+                    )
+                }
+                #[cfg(not(unix))]
+                {
+                    (true, "파일 준비됨".into())
+                }
+            }
+        }
+        None => (false, "파일 없음".into()),
     }
 }
 
@@ -511,8 +548,12 @@ pub fn voice_hook_diagnostics() -> Result<VoiceHookDiagnostics, String> {
     let recording = voice_recording_status()?;
     let (start_hook_kind, start_hook_configured, start_hook_target) =
         voice_hook_descriptor("LUM_VOICE_START_CMD", "start");
+    let (start_hook_runnable, start_hook_runtime_label) =
+        voice_hook_runtime_status("LUM_VOICE_START_CMD", "start");
     let (stop_hook_kind, stop_hook_configured, stop_hook_target) =
         voice_hook_descriptor("LUM_VOICE_STOP_CMD", "stop");
+    let (stop_hook_runnable, stop_hook_runtime_label) =
+        voice_hook_runtime_status("LUM_VOICE_STOP_CMD", "stop");
 
     Ok(VoiceHookDiagnostics {
         recording,
@@ -523,9 +564,13 @@ pub fn voice_hook_diagnostics() -> Result<VoiceHookDiagnostics, String> {
         start_hook_kind,
         start_hook_configured,
         start_hook_target,
+        start_hook_runnable,
+        start_hook_runtime_label,
         stop_hook_kind,
         stop_hook_configured,
         stop_hook_target,
+        stop_hook_runnable,
+        stop_hook_runtime_label,
     })
 }
 
