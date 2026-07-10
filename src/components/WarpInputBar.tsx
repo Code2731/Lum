@@ -782,6 +782,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
                   color: "rgba(255,255,255,0.72)",
                   cursor: "pointer",
                   padding: 0,
+                  opacity: 0.9,
                 }}
               >
                 <X size={9} />
