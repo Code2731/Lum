@@ -505,6 +505,7 @@ const CommandInput = ({
                 alignItems: "center",
                 gap: 5,
                 paddingLeft: 6,
+                paddingRight: 2,
                 borderLeft: "1px solid rgba(255,255,255,0.08)",
               }}
             >
