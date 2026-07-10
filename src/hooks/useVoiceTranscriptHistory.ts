@@ -13,6 +13,7 @@ export type VoiceTranscriptHistoryItem = {
 };
 
 type VoiceTranscriptStore = {
+  lastAccessedAt: number;
   pinnedVoiceTranscriptLabels: Record<string, string>;
   pinnedVoiceTranscripts: string[];
   recentVoiceTranscripts: string[];
@@ -23,12 +24,14 @@ type VoiceTranscriptStore = {
 type VoiceTranscriptStoreCollection = Record<string, VoiceTranscriptStore>;
 type VoiceTranscriptScopeSummary = {
   scopeKey: string;
+  lastAccessedAt: number;
   pinnedCount: number;
   recentCount: number;
   historyCount: number;
 };
 
 const DEFAULT_STORE: VoiceTranscriptStore = {
+  lastAccessedAt: 0,
   pinnedVoiceTranscriptLabels: {},
   pinnedVoiceTranscripts: [],
   recentVoiceTranscripts: [],
@@ -52,6 +55,10 @@ const sanitizeScopedStore = (value: unknown): VoiceTranscriptStore => {
   }
 
   const candidate = value as Partial<VoiceTranscriptStore>;
+  const lastAccessedAt =
+    typeof candidate.lastAccessedAt === "number" && Number.isFinite(candidate.lastAccessedAt)
+      ? candidate.lastAccessedAt
+      : 0;
   const pinnedVoiceTranscriptLabels = candidate.pinnedVoiceTranscriptLabels
     && typeof candidate.pinnedVoiceTranscriptLabels === "object"
     && !Array.isArray(candidate.pinnedVoiceTranscriptLabels)
@@ -95,6 +102,7 @@ const sanitizeScopedStore = (value: unknown): VoiceTranscriptStore => {
     : [];
 
   return {
+    lastAccessedAt,
     pinnedVoiceTranscriptLabels,
     pinnedVoiceTranscripts,
     recentVoiceTranscripts,
@@ -163,9 +171,13 @@ const emitStore = () => {
 const getStoreForScope = (scopeKey: string) => voiceTranscriptStores[scopeKey] ?? DEFAULT_STORE;
 
 const updateStore = (scopeKey: string, updater: (prev: VoiceTranscriptStore) => VoiceTranscriptStore) => {
+  const now = Date.now();
   voiceTranscriptStores = {
     ...voiceTranscriptStores,
-    [scopeKey]: sanitizeScopedStore(updater(getStoreForScope(scopeKey))),
+    [scopeKey]: sanitizeScopedStore({
+      ...updater(getStoreForScope(scopeKey)),
+      lastAccessedAt: now,
+    }),
   };
   persistStore();
   emitStore();
@@ -180,6 +192,7 @@ export const useVoiceTranscriptHistory = (scope?: string | null) => {
       Object.entries(stores)
         .map(([candidateScopeKey, candidateStore]) => ({
           scopeKey: candidateScopeKey,
+          lastAccessedAt: candidateStore.lastAccessedAt,
           pinnedCount: candidateStore.pinnedVoiceTranscripts.length,
           recentCount: candidateStore.recentVoiceTranscripts.length,
           historyCount: candidateStore.voiceTranscriptHistory.length,
@@ -188,6 +201,7 @@ export const useVoiceTranscriptHistory = (scope?: string | null) => {
         .sort((a, b) => {
           if (a.scopeKey === scopeKey) return -1;
           if (b.scopeKey === scopeKey) return 1;
+          if (a.lastAccessedAt !== b.lastAccessedAt) return b.lastAccessedAt - a.lastAccessedAt;
           const aTotal = a.pinnedCount + a.recentCount + a.historyCount;
           const bTotal = b.pinnedCount + b.recentCount + b.historyCount;
           if (aTotal !== bTotal) return bTotal - aTotal;
@@ -208,6 +222,7 @@ export const useVoiceTranscriptHistory = (scope?: string | null) => {
     };
 
     listeners.add(listener);
+    updateStore(scopeKey, (prev) => prev);
     return () => {
       listeners.delete(listener);
     };
