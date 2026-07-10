@@ -104,10 +104,12 @@ const CommandInput = ({
   const [voiceHighlight, setVoiceHighlight] = useState<{ start: number; end: number; phase: "visible" | "fading" } | null>(null);
   const [lastVoiceTranscript, setLastVoiceTranscript] = useState("");
   const [lastVoicePartialTranscript, setLastVoicePartialTranscript] = useState("");
+  const [voiceCopyFeedback, setVoiceCopyFeedback] = useState(false);
   const voiceSuccessVisibleTimerRef = useRef<number | null>(null);
   const voiceSuccessFadeTimerRef = useRef<number | null>(null);
   const voiceHighlightVisibleTimerRef = useRef<number | null>(null);
   const voiceHighlightFadeTimerRef = useRef<number | null>(null);
+  const voiceCopyFeedbackTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
     return () => {
@@ -122,6 +124,9 @@ const CommandInput = ({
       }
       if (voiceHighlightFadeTimerRef.current !== null) {
         window.clearTimeout(voiceHighlightFadeTimerRef.current);
+      }
+      if (voiceCopyFeedbackTimerRef.current !== null) {
+        window.clearTimeout(voiceCopyFeedbackTimerRef.current);
       }
     };
   }, []);
@@ -205,7 +210,18 @@ const CommandInput = ({
   const copyLastVoiceTranscript = () => {
     const t = lastVoiceTranscript.trim();
     if (!t) return;
-    navigator.clipboard?.writeText?.(t).catch(() => {});
+    navigator.clipboard?.writeText?.(t)
+      .then(() => {
+        setVoiceCopyFeedback(true);
+        if (voiceCopyFeedbackTimerRef.current !== null) {
+          window.clearTimeout(voiceCopyFeedbackTimerRef.current);
+        }
+        voiceCopyFeedbackTimerRef.current = window.setTimeout(() => {
+          setVoiceCopyFeedback(false);
+          voiceCopyFeedbackTimerRef.current = null;
+        }, 1200);
+      })
+      .catch(() => {});
   };
 
   const [recordingSeconds, setRecordingSeconds] = useState(0);
@@ -718,7 +734,7 @@ const CommandInput = ({
                   className="shrink-0 rounded border border-emerald-400/16 bg-emerald-500/8 px-1.5 py-0.5 text-[10px] text-emerald-50/90 hover:bg-emerald-500/16 transition-colors"
                   title="마지막 음성 문장을 복사"
                 >
-                  복사
+                  {voiceCopyFeedback ? "복사됨" : "복사"}
                 </button>
                 <button
                   type="button"

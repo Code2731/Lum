@@ -121,11 +121,13 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
     const [voiceHighlight, setVoiceHighlight] = useState<{ start: number; end: number; phase: "visible" | "fading" } | null>(null);
     const [lastVoiceTranscript, setLastVoiceTranscript] = useState("");
     const [lastVoicePartialTranscript, setLastVoicePartialTranscript] = useState("");
+    const [voiceCopyFeedback, setVoiceCopyFeedback] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
     const voiceSuccessVisibleTimerRef = useRef<number | null>(null);
     const voiceSuccessFadeTimerRef = useRef<number | null>(null);
     const voiceHighlightVisibleTimerRef = useRef<number | null>(null);
     const voiceHighlightFadeTimerRef = useRef<number | null>(null);
+    const voiceCopyFeedbackTimerRef = useRef<number | null>(null);
     const history = useRef<string[]>([]);
     const historyIdx = useRef<number>(-1);
     const onChangeRef = useRef(onChange);
@@ -157,6 +159,9 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
         }
         if (voiceHighlightFadeTimerRef.current !== null) {
           window.clearTimeout(voiceHighlightFadeTimerRef.current);
+        }
+        if (voiceCopyFeedbackTimerRef.current !== null) {
+          window.clearTimeout(voiceCopyFeedbackTimerRef.current);
         }
       };
     }, []);
@@ -546,7 +551,18 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
     const copyLastVoiceTranscript = () => {
       const t = lastVoiceTranscript.trim();
       if (!t) return;
-      navigator.clipboard?.writeText?.(t).catch(() => {});
+      navigator.clipboard?.writeText?.(t)
+        .then(() => {
+          setVoiceCopyFeedback(true);
+          if (voiceCopyFeedbackTimerRef.current !== null) {
+            window.clearTimeout(voiceCopyFeedbackTimerRef.current);
+          }
+          voiceCopyFeedbackTimerRef.current = window.setTimeout(() => {
+            setVoiceCopyFeedback(false);
+            voiceCopyFeedbackTimerRef.current = null;
+          }, 1200);
+        })
+        .catch(() => {});
     };
 
     useEffect(() => {
@@ -969,7 +985,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
                     cursor: "pointer",
                   }}
                 >
-                  복사
+                  {voiceCopyFeedback ? "복사됨" : "복사"}
                 </button>
                 <button
                   type="button"
