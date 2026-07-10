@@ -854,18 +854,18 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
               height: 24,
               borderRadius: 6,
               border:
-                !voiceEnabled ? "1px solid rgba(255,255,255,0.12)" :
+                !voiceEnabled ? "1px solid rgba(255,255,255,0.10)" :
                 voiceStatus === "processing" ? "1px solid rgba(121,192,255,0.28)" :
                 micHovered && !voiceBusy ? "1px solid rgba(255,255,255,0.28)" :
                 "1px solid rgba(255,255,255,0.16)",
               background:
-                !voiceEnabled ? "rgba(255,255,255,0.03)" :
+                !voiceEnabled ? "rgba(255,255,255,0.025)" :
                 voiceStatus === "processing" ? "rgba(88,166,255,0.18)" :
                 micHovered && !voiceBusy ? "rgba(255,255,255,0.10)" :
                 isRecording ? "rgba(248,81,73,0.22)" :
                 "rgba(255,255,255,0.06)",
               color:
-                !voiceEnabled ? "rgba(255,255,255,0.42)" :
+                !voiceEnabled ? "rgba(255,255,255,0.36)" :
                 voiceStatus === "processing" ? "rgba(121,192,255,0.95)" :
                 isRecording ? "#ff7b72" :
                 "rgba(255,255,255,0.78)",
@@ -874,7 +874,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
               justifyContent: "center",
               flexShrink: 0,
               cursor: !voiceEnabled ? "not-allowed" : voiceBusy ? "wait" : "pointer",
-              opacity: !voiceEnabled ? 0.8 : voiceBusy ? 0.55 : 1,
+              opacity: !voiceEnabled ? 0.72 : voiceBusy ? 0.55 : 1,
               animation: voiceEnabled && voicePulseActive ? VOICE_PULSE_ANIMATION : "none",
               transform: micHovered && voiceEnabled && !voiceBusy ? "translateY(-1px)" : "translateY(0)",
               boxShadow:
