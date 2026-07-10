@@ -19,6 +19,7 @@ const WARP_SMALL_FONT_SIZE = 10;
 const VOICE_FLOATING_BANNER_TOP = -24;
 const VOICE_FLOATING_STATUS_BANNER_TOP = -22;
 const VOICE_FLOATING_BANNER_RIGHT = 10;
+const VOICE_FLOATING_SUCCESS_BANNER_RIGHT = 9;
 const VOICE_SUCCESS_VISIBLE_MS = 980;
 const VOICE_SUCCESS_FADE_MS = 150;
 const VOICE_HIGHLIGHT_VISIBLE_MS = 1850;
@@ -679,7 +680,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
             style={{
               position: "absolute",
               top: VOICE_FLOATING_STATUS_BANNER_TOP,
-              right: VOICE_FLOATING_BANNER_RIGHT,
+              right: VOICE_FLOATING_SUCCESS_BANNER_RIGHT,
               fontSize: WARP_SMALL_FONT_SIZE,
               color: "#ff7b72",
               background: "rgba(248,81,73,0.12)",
