@@ -159,6 +159,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
     const voiceHighlightVisibleTimerRef = useRef<number | null>(null);
     const voiceHighlightFadeTimerRef = useRef<number | null>(null);
     const voiceCopyFeedbackTimerRef = useRef<number | null>(null);
+    const previousVoiceHistoryScopeRef = useRef(activeVoiceHistoryScope);
     const history = useRef<string[]>([]);
     const historyIdx = useRef<number>(-1);
     const onChangeRef = useRef(onChange);
@@ -225,6 +226,15 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
         }
       };
     }, []);
+
+    useEffect(() => {
+      if (previousVoiceHistoryScopeRef.current === activeVoiceHistoryScope) {
+        return;
+      }
+      previousVoiceHistoryScopeRef.current = activeVoiceHistoryScope;
+      setVoiceHistoryQuery("");
+      setShowAllVoiceHistoryScopes(false);
+    }, [activeVoiceHistoryScope]);
 
     // 시각적 prompt char — 라우팅 로직은 상위에서
     const trimmedInput = input.trimStart();

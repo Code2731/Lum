@@ -139,6 +139,7 @@ const CommandInput = ({
   const voiceHighlightVisibleTimerRef = useRef<number | null>(null);
   const voiceHighlightFadeTimerRef = useRef<number | null>(null);
   const voiceCopyFeedbackTimerRef = useRef<number | null>(null);
+  const previousVoiceHistoryScopeRef = useRef(activeVoiceHistoryScope);
   const normalizedVoiceHistoryQuery = useMemo(
     () => normalizeVoiceSearchTerm(voiceHistoryQuery),
     [voiceHistoryQuery]
@@ -188,6 +189,15 @@ const CommandInput = ({
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (previousVoiceHistoryScopeRef.current === activeVoiceHistoryScope) {
+      return;
+    }
+    previousVoiceHistoryScopeRef.current = activeVoiceHistoryScope;
+    setVoiceHistoryQuery("");
+    setShowAllVoiceHistoryScopes(false);
+  }, [activeVoiceHistoryScope]);
 
   const clearVoiceHighlight = () => {
     if (voiceHighlightVisibleTimerRef.current !== null) {
