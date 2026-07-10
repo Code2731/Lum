@@ -139,6 +139,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
       clearVoiceTranscripts,
       toggleVoiceTranscriptHistory,
       togglePinVoiceTranscript,
+      movePinnedVoiceTranscript,
       isVoiceTranscriptPinned,
     } = useVoiceTranscriptHistory(voiceHistoryScope);
     const [voiceCopyFeedback, setVoiceCopyFeedback] = useState(false);
@@ -1291,79 +1292,120 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
                 >
                   고정 음성
                 </span>
-                {filteredPinnedVoiceTranscripts.map((item) => (
-                  <span
-                    key={`pinned-${item}`}
-                    style={{
-                      borderRadius: 999,
-                      border: "1px solid rgba(255,215,100,0.18)",
-                      background: "rgba(255,215,100,0.08)",
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: 4,
-                      padding: "1px 5px 1px 7px",
-                    }}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => reuseRecentVoiceTranscript(item)}
-                      title={item}
+                {filteredPinnedVoiceTranscripts.map((item) => {
+                  const pinnedIndex = pinnedVoiceTranscripts.indexOf(item);
+                  const canMoveUp = pinnedIndex > 0;
+                  const canMoveDown = pinnedIndex >= 0 && pinnedIndex < pinnedVoiceTranscripts.length - 1;
+                  return (
+                    <span
+                      key={`pinned-${item}`}
                       style={{
-                        color: "rgba(255,244,214,0.92)",
-                        fontSize: WARP_SMALL_FONT_SIZE,
-                        lineHeight: 1.2,
-                        cursor: "pointer",
-                        maxWidth: 164,
-                        whiteSpace: "nowrap",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        background: "transparent",
-                        border: "none",
-                        padding: 0,
-                      }}
-                    >
-                      {formatVoicePreview(item)}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => copyVoiceTranscriptItem(item)}
-                      title="고정 음성 복사"
-                      style={{
-                        flexShrink: 0,
-                        width: 14,
-                        height: 14,
                         borderRadius: 999,
-                        border: "1px solid rgba(255,255,255,0.12)",
-                        background: "rgba(255,255,255,0.06)",
+                        border: "1px solid rgba(255,215,100,0.18)",
+                        background: "rgba(255,215,100,0.08)",
                         display: "inline-flex",
                         alignItems: "center",
-                        justifyContent: "center",
-                        padding: 0,
-                        color: "rgba(255,255,255,0.72)",
-                        cursor: "pointer",
+                        gap: 4,
+                        padding: "1px 5px 1px 7px",
                       }}
                     >
-                      <Copy size={8} />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => togglePinVoiceTranscript(item)}
-                      title="고정 해제"
-                      style={{
-                        borderRadius: 999,
-                        border: "1px solid rgba(255,215,100,0.16)",
-                        background: "rgba(255,215,100,0.10)",
-                        color: "rgba(255,230,160,0.86)",
-                        padding: "0 5px",
-                        fontSize: 9,
-                        lineHeight: 1.4,
-                        cursor: "pointer",
-                      }}
-                    >
-                      해제
-                    </button>
-                  </span>
-                ))}
+                      <button
+                        type="button"
+                        onClick={() => reuseRecentVoiceTranscript(item)}
+                        title={item}
+                        style={{
+                          color: "rgba(255,244,214,0.92)",
+                          fontSize: WARP_SMALL_FONT_SIZE,
+                          lineHeight: 1.2,
+                          cursor: "pointer",
+                          maxWidth: 164,
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          background: "transparent",
+                          border: "none",
+                          padding: 0,
+                        }}
+                      >
+                        {formatVoicePreview(item)}
+                      </button>
+                      <button
+                        type="button"
+                        disabled={!canMoveUp}
+                        onClick={() => movePinnedVoiceTranscript(item, -1)}
+                        title="위로 이동"
+                        style={{
+                          borderRadius: 999,
+                          border: "1px solid rgba(255,255,255,0.10)",
+                          background: "rgba(255,255,255,0.05)",
+                          color: canMoveUp ? "rgba(255,255,255,0.72)" : "rgba(255,255,255,0.28)",
+                          padding: "0 4px",
+                          fontSize: 9,
+                          lineHeight: 1.4,
+                          cursor: canMoveUp ? "pointer" : "default",
+                        }}
+                      >
+                        위
+                      </button>
+                      <button
+                        type="button"
+                        disabled={!canMoveDown}
+                        onClick={() => movePinnedVoiceTranscript(item, 1)}
+                        title="아래로 이동"
+                        style={{
+                          borderRadius: 999,
+                          border: "1px solid rgba(255,255,255,0.10)",
+                          background: "rgba(255,255,255,0.05)",
+                          color: canMoveDown ? "rgba(255,255,255,0.72)" : "rgba(255,255,255,0.28)",
+                          padding: "0 4px",
+                          fontSize: 9,
+                          lineHeight: 1.4,
+                          cursor: canMoveDown ? "pointer" : "default",
+                        }}
+                      >
+                        아래
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => copyVoiceTranscriptItem(item)}
+                        title="고정 음성 복사"
+                        style={{
+                          flexShrink: 0,
+                          width: 14,
+                          height: 14,
+                          borderRadius: 999,
+                          border: "1px solid rgba(255,255,255,0.12)",
+                          background: "rgba(255,255,255,0.06)",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          padding: 0,
+                          color: "rgba(255,255,255,0.72)",
+                          cursor: "pointer",
+                        }}
+                      >
+                        <Copy size={8} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => togglePinVoiceTranscript(item)}
+                        title="고정 해제"
+                        style={{
+                          borderRadius: 999,
+                          border: "1px solid rgba(255,215,100,0.16)",
+                          background: "rgba(255,215,100,0.10)",
+                          color: "rgba(255,230,160,0.86)",
+                          padding: "0 5px",
+                          fontSize: 9,
+                          lineHeight: 1.4,
+                          cursor: "pointer",
+                        }}
+                      >
+                        해제
+                      </button>
+                    </span>
+                  );
+                })}
               </div>
             )}
             <div

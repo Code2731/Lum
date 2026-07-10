@@ -242,6 +242,33 @@ export const useVoiceTranscriptHistory = (scope?: string | null) => {
         };
       });
     },
+    movePinnedVoiceTranscript: (text: string, direction: -1 | 1) => {
+      const normalized = normalizeVoiceTranscript(text);
+      if (!normalized) {
+        return;
+      }
+
+      updateStore(scopeKey, (prev) => {
+        const currentIndex = prev.pinnedVoiceTranscripts.indexOf(normalized);
+        if (currentIndex < 0) {
+          return prev;
+        }
+
+        const nextIndex = currentIndex + direction;
+        if (nextIndex < 0 || nextIndex >= prev.pinnedVoiceTranscripts.length) {
+          return prev;
+        }
+
+        const nextPinned = [...prev.pinnedVoiceTranscripts];
+        const [target] = nextPinned.splice(currentIndex, 1);
+        nextPinned.splice(nextIndex, 0, target);
+
+        return {
+          ...prev,
+          pinnedVoiceTranscripts: nextPinned,
+        };
+      });
+    },
     isVoiceTranscriptPinned: (text: string) => {
       const normalized = normalizeVoiceTranscript(text);
       return normalized.length > 0 && store.pinnedVoiceTranscripts.includes(normalized);
