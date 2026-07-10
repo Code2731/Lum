@@ -522,9 +522,9 @@ const CommandInput = ({
                 <RotateCcw size={11} />
               </IconButton>
               <IconButton
-                tooltip="오류 닫기"
+                tooltip="닫기"
                 onClick={clearVoiceError}
-                className="p-1 rounded text-red-300 hover:text-red-100 hover:bg-red-500/20 transition-colors shrink-0"
+                className="p-1 rounded text-white/65 hover:text-white/85 hover:bg-white/10 transition-colors shrink-0"
               >
                 <X size={11} />
               </IconButton>

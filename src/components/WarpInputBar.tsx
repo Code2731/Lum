@@ -763,8 +763,8 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
               </button>
               <button
                 type="button"
-                aria-label="오류 닫기"
-                title="오류 닫기"
+                aria-label="닫기"
+                title="닫기"
                 onClick={clearVoiceError}
                 style={{
                   flexShrink: 0,
@@ -774,9 +774,9 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
                   width: 14,
                   height: 14,
                   borderRadius: 6,
-                  border: "1px solid rgba(255,255,255,0.24)",
-                  background: "rgba(255,255,255,0.07)",
-                  color: "rgba(248,81,73,0.95)",
+                  border: "1px solid rgba(255,255,255,0.18)",
+                  background: "rgba(255,255,255,0.05)",
+                  color: "rgba(255,255,255,0.72)",
                   cursor: "pointer",
                   padding: 0,
                 }}
