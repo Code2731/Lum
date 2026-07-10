@@ -197,6 +197,27 @@ LUM works as a plain terminal with no AI server. To enable embedded local AI:
 
 **No GPU / no CUDA?** Set `GEMINI_API_KEY` in your environment — LUM falls back to Gemini cloud automatically.
 
+### Voice input hook setup (optional)
+
+LUM voice input is hook-based. It does not bundle a recorder or STT engine by default.
+
+1. Copy the matching example files from `scripts/voice-hooks/` to `~/.lum_whisper/`
+2. Rename them to `start.sh` / `stop.sh` on macOS/Linux or `start.cmd` / `stop.cmd` on Windows
+3. Replace the placeholder commands with your actual recorder + STT pipeline
+
+Live preview support works like this:
+
+- While recording, your external process can keep overwriting `~/.lum_whisper/last_transcript.txt`
+- LUM reads that file as a partial transcript and shows it inline in the mic status UI
+- On stop, return the final transcript through `stdout` or write the final text to the same `last_transcript.txt`
+
+Included templates:
+
+- `scripts/voice-hooks/start.example.sh`
+- `scripts/voice-hooks/stop.example.sh`
+- `scripts/voice-hooks/start.example.cmd`
+- `scripts/voice-hooks/stop.example.cmd`
+
 ### macOS launch troubleshooting
 
 If LUM cannot start on macOS, check these steps in order:
@@ -355,6 +376,27 @@ macOS에서 LUM이 실행되지 않을 때는 순서대로 확인하세요.
 **핫스왑**: 다른 폴더/파일 선택 → *로드* 다시 클릭 → 이전 모델 VRAM 해제 + 새 모델 로드, 앱 재시작 불필요.
 
 **GPU 또는 CUDA 없음?** 환경변수에 `GEMINI_API_KEY` 설정 → LUM이 자동으로 Gemini 클라우드 폴백.
+
+### 음성 입력 훅 설정 (선택)
+
+LUM의 음성 입력은 훅 기반입니다. 기본적으로 녹음기나 STT 엔진을 번들하지 않습니다.
+
+1. `scripts/voice-hooks/`의 예제 파일 중 OS에 맞는 쌍을 `~/.lum_whisper/`로 복사합니다.
+2. macOS/Linux는 `start.sh` / `stop.sh`, Windows는 `start.cmd` / `stop.cmd`로 이름을 맞춥니다.
+3. 예제 안의 placeholder 부분을 실제 녹음/STT 파이프라인으로 교체합니다.
+
+실시간 partial transcript 연동 규칙은 단순합니다.
+
+- 녹음 중에는 외부 프로세스가 `~/.lum_whisper/last_transcript.txt`를 계속 덮어쓰면 됩니다.
+- LUM이 그 파일을 partial transcript로 읽어서 마이크 상태 UI에 바로 보여줍니다.
+- 중지 시점에는 최종 transcript를 `stdout`으로 반환하거나 같은 `last_transcript.txt`에 최종 문장을 써 주면 됩니다.
+
+포함된 템플릿:
+
+- `scripts/voice-hooks/start.example.sh`
+- `scripts/voice-hooks/stop.example.sh`
+- `scripts/voice-hooks/start.example.cmd`
+- `scripts/voice-hooks/stop.example.cmd`
 
 ### 개발 로드맵
 
