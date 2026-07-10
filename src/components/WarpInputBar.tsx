@@ -159,16 +159,23 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
       () => normalizeVoiceSearchTerm(voiceHistoryQuery),
       [voiceHistoryQuery]
     );
+    const matchesScopedVoiceSearch = (text: string) => {
+      if (matchesVoiceSearchTerm(text, normalizedVoiceHistoryQuery)) {
+        return true;
+      }
+      const label = getPinnedVoiceTranscriptLabel(text);
+      return label.length > 0 && matchesVoiceSearchTerm(label, normalizedVoiceHistoryQuery);
+    };
     const filteredPinnedVoiceTranscripts = React.useMemo(
-      () => pinnedVoiceTranscripts.filter((item) => matchesVoiceSearchTerm(item, normalizedVoiceHistoryQuery)),
+      () => pinnedVoiceTranscripts.filter((item) => matchesScopedVoiceSearch(item)),
       [normalizedVoiceHistoryQuery, pinnedVoiceTranscripts]
     );
     const filteredRecentVoiceTranscripts = React.useMemo(
-      () => recentVoiceTranscripts.filter((item) => matchesVoiceSearchTerm(item, normalizedVoiceHistoryQuery)),
+      () => recentVoiceTranscripts.filter((item) => matchesScopedVoiceSearch(item)),
       [normalizedVoiceHistoryQuery, recentVoiceTranscripts]
     );
     const filteredVoiceTranscriptHistory = React.useMemo(
-      () => voiceTranscriptHistory.filter((item) => matchesVoiceSearchTerm(item.text, normalizedVoiceHistoryQuery)),
+      () => voiceTranscriptHistory.filter((item) => matchesScopedVoiceSearch(item.text)),
       [normalizedVoiceHistoryQuery, voiceTranscriptHistory]
     );
     const voiceHistoryScopeLabel = voiceHistoryScope?.trim() ? shortPath(voiceHistoryScope) : "전역 기록";
