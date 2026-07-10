@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 const STORAGE_KEY = "lum.voiceTranscriptHistory.v1";
 const MAX_RECENT_VOICE_TRANSCRIPTS = 3;
 const MAX_RECENT_VOICE_HISTORY_ITEMS = 10;
+const MAX_PINNED_VOICE_TRANSCRIPTS = 6;
 
 export type VoiceTranscriptHistoryItem = {
   id: string;
@@ -11,12 +12,14 @@ export type VoiceTranscriptHistoryItem = {
 };
 
 type VoiceTranscriptStore = {
+  pinnedVoiceTranscripts: string[];
   recentVoiceTranscripts: string[];
   voiceTranscriptHistory: VoiceTranscriptHistoryItem[];
   showVoiceTranscriptHistory: boolean;
 };
 
 const DEFAULT_STORE: VoiceTranscriptStore = {
+  pinnedVoiceTranscripts: [],
   recentVoiceTranscripts: [],
   voiceTranscriptHistory: [],
   showVoiceTranscriptHistory: false,
@@ -34,6 +37,13 @@ const sanitizeStore = (value: unknown): VoiceTranscriptStore => {
   }
 
   const candidate = value as Partial<VoiceTranscriptStore>;
+  const pinnedVoiceTranscripts = Array.isArray(candidate.pinnedVoiceTranscripts)
+    ? candidate.pinnedVoiceTranscripts
+        .filter((item): item is string => typeof item === "string")
+        .map(normalizeVoiceTranscript)
+        .filter(Boolean)
+        .slice(0, MAX_PINNED_VOICE_TRANSCRIPTS)
+    : [];
   const recentVoiceTranscripts = Array.isArray(candidate.recentVoiceTranscripts)
     ? candidate.recentVoiceTranscripts
         .filter((item): item is string => typeof item === "string")
@@ -60,6 +70,7 @@ const sanitizeStore = (value: unknown): VoiceTranscriptStore => {
     : [];
 
   return {
+    pinnedVoiceTranscripts,
     recentVoiceTranscripts,
     voiceTranscriptHistory,
     showVoiceTranscriptHistory:
@@ -124,6 +135,7 @@ export const useVoiceTranscriptHistory = () => {
   }, []);
 
   return {
+    pinnedVoiceTranscripts: store.pinnedVoiceTranscripts,
     recentVoiceTranscripts: store.recentVoiceTranscripts,
     voiceTranscriptHistory: store.voiceTranscriptHistory,
     showVoiceTranscriptHistory: store.showVoiceTranscriptHistory,
@@ -160,6 +172,7 @@ export const useVoiceTranscriptHistory = () => {
         const nextHistory = prev.voiceTranscriptHistory.filter((item) => item.text !== normalized);
         return {
           ...prev,
+          pinnedVoiceTranscripts: prev.pinnedVoiceTranscripts.filter((item) => item !== normalized),
           recentVoiceTranscripts: prev.recentVoiceTranscripts.filter((item) => item !== normalized),
           voiceTranscriptHistory: nextHistory,
           showVoiceTranscriptHistory: nextHistory.length > 0 ? prev.showVoiceTranscriptHistory : false,
@@ -175,6 +188,26 @@ export const useVoiceTranscriptHistory = () => {
           ? prev
           : { ...prev, showVoiceTranscriptHistory: !prev.showVoiceTranscriptHistory }
       );
+    },
+    togglePinVoiceTranscript: (text: string) => {
+      const normalized = normalizeVoiceTranscript(text);
+      if (!normalized) {
+        return;
+      }
+
+      updateStore((prev) => {
+        const alreadyPinned = prev.pinnedVoiceTranscripts.includes(normalized);
+        return {
+          ...prev,
+          pinnedVoiceTranscripts: alreadyPinned
+            ? prev.pinnedVoiceTranscripts.filter((item) => item !== normalized)
+            : [normalized, ...prev.pinnedVoiceTranscripts].slice(0, MAX_PINNED_VOICE_TRANSCRIPTS),
+        };
+      });
+    },
+    isVoiceTranscriptPinned: (text: string) => {
+      const normalized = normalizeVoiceTranscript(text);
+      return normalized.length > 0 && store.pinnedVoiceTranscripts.includes(normalized);
     },
   };
 };

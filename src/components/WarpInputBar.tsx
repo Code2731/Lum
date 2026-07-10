@@ -124,6 +124,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
     const [lastVoiceTranscript, setLastVoiceTranscript] = useState("");
     const [lastVoicePartialTranscript, setLastVoicePartialTranscript] = useState("");
     const {
+      pinnedVoiceTranscripts,
       recentVoiceTranscripts,
       voiceTranscriptHistory,
       showVoiceTranscriptHistory,
@@ -131,6 +132,8 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
       removeVoiceTranscript,
       clearVoiceTranscripts,
       toggleVoiceTranscriptHistory,
+      togglePinVoiceTranscript,
+      isVoiceTranscriptPinned,
     } = useVoiceTranscriptHistory();
     const [voiceCopyFeedback, setVoiceCopyFeedback] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
@@ -1140,7 +1143,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
           </div>
         )}
 
-        {!voiceError && recentVoiceTranscripts.length > 0 && voiceStatus === "idle" && (
+        {!voiceError && (recentVoiceTranscripts.length > 0 || pinnedVoiceTranscripts.length > 0) && voiceStatus === "idle" && (
           <div
             style={{
               width: "100%",
@@ -1152,6 +1155,100 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
               marginBottom: 1,
             }}
           >
+            {pinnedVoiceTranscripts.length > 0 && (
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  flexWrap: "wrap",
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: WARP_SMALL_FONT_SIZE,
+                    color: "rgba(255,215,100,0.78)",
+                    lineHeight: 1.2,
+                    flexShrink: 0,
+                  }}
+                >
+                  고정 음성
+                </span>
+                {pinnedVoiceTranscripts.map((item) => (
+                  <span
+                    key={`pinned-${item}`}
+                    style={{
+                      borderRadius: 999,
+                      border: "1px solid rgba(255,215,100,0.18)",
+                      background: "rgba(255,215,100,0.08)",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 4,
+                      padding: "1px 5px 1px 7px",
+                    }}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => reuseRecentVoiceTranscript(item)}
+                      title={item}
+                      style={{
+                        color: "rgba(255,244,214,0.92)",
+                        fontSize: WARP_SMALL_FONT_SIZE,
+                        lineHeight: 1.2,
+                        cursor: "pointer",
+                        maxWidth: 164,
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        background: "transparent",
+                        border: "none",
+                        padding: 0,
+                      }}
+                    >
+                      {formatVoicePreview(item)}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => copyVoiceTranscriptItem(item)}
+                      title="고정 음성 복사"
+                      style={{
+                        flexShrink: 0,
+                        width: 14,
+                        height: 14,
+                        borderRadius: 999,
+                        border: "1px solid rgba(255,255,255,0.12)",
+                        background: "rgba(255,255,255,0.06)",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        padding: 0,
+                        color: "rgba(255,255,255,0.72)",
+                        cursor: "pointer",
+                      }}
+                    >
+                      <Copy size={8} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => togglePinVoiceTranscript(item)}
+                      title="고정 해제"
+                      style={{
+                        borderRadius: 999,
+                        border: "1px solid rgba(255,215,100,0.16)",
+                        background: "rgba(255,215,100,0.10)",
+                        color: "rgba(255,230,160,0.86)",
+                        padding: "0 5px",
+                        fontSize: 9,
+                        lineHeight: 1.4,
+                        cursor: "pointer",
+                      }}
+                    >
+                      해제
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
             <div
               style={{
                 display: "flex",
@@ -1324,6 +1421,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
                       >
                         <span>{formatVoiceHistoryTime(item.createdAt)}</span>
                         <span>세션 기록</span>
+                        {isVoiceTranscriptPinned(item.text) && <span style={{ color: "rgba(255,215,100,0.82)" }}>고정됨</span>}
                       </div>
                       <button
                         type="button"
@@ -1386,6 +1484,28 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
                         }}
                       >
                         치환
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => togglePinVoiceTranscript(item.text)}
+                        style={{
+                          borderRadius: 6,
+                          border: isVoiceTranscriptPinned(item.text)
+                            ? "1px solid rgba(255,215,100,0.20)"
+                            : "1px solid rgba(255,215,100,0.14)",
+                          background: isVoiceTranscriptPinned(item.text)
+                            ? "rgba(255,215,100,0.12)"
+                            : "rgba(255,215,100,0.06)",
+                          color: isVoiceTranscriptPinned(item.text)
+                            ? "rgba(255,244,214,0.90)"
+                            : "rgba(255,230,160,0.78)",
+                          padding: "1px 6px",
+                          fontSize: WARP_SMALL_FONT_SIZE,
+                          lineHeight: 1.4,
+                          cursor: "pointer",
+                        }}
+                      >
+                        {isVoiceTranscriptPinned(item.text) ? "고정 해제" : "고정"}
                       </button>
                       <button
                         type="button"

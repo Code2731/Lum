@@ -107,6 +107,7 @@ const CommandInput = ({
   const [lastVoiceTranscript, setLastVoiceTranscript] = useState("");
   const [lastVoicePartialTranscript, setLastVoicePartialTranscript] = useState("");
   const {
+    pinnedVoiceTranscripts,
     recentVoiceTranscripts,
     voiceTranscriptHistory,
     showVoiceTranscriptHistory,
@@ -114,6 +115,8 @@ const CommandInput = ({
     removeVoiceTranscript,
     clearVoiceTranscripts,
     toggleVoiceTranscriptHistory,
+    togglePinVoiceTranscript,
+    isVoiceTranscriptPinned,
   } = useVoiceTranscriptHistory();
   const [voiceCopyFeedback, setVoiceCopyFeedback] = useState(false);
   const voiceSuccessVisibleTimerRef = useRef<number | null>(null);
@@ -825,7 +828,7 @@ const CommandInput = ({
           </div>
         )}
 
-        {!voiceError && recentVoiceTranscripts.length > 0 && voiceStatus === "idle" && (
+        {!voiceError && (recentVoiceTranscripts.length > 0 || pinnedVoiceTranscripts.length > 0) && voiceStatus === "idle" && (
           <div
             style={{
               margin: VOICE_INLINE_BANNER_MARGIN,
@@ -836,6 +839,98 @@ const CommandInput = ({
               gap: 6,
             }}
           >
+            {pinnedVoiceTranscripts.length > 0 && (
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  flexWrap: "wrap",
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: 10,
+                    color: "rgba(255,215,100,0.78)",
+                    lineHeight: 1.2,
+                  }}
+                >
+                  고정 음성
+                </span>
+                {pinnedVoiceTranscripts.map((item) => (
+                  <span
+                    key={`pinned-${item}`}
+                    style={{
+                      borderRadius: 999,
+                      border: "1px solid rgba(255,215,100,0.18)",
+                      background: "rgba(255,215,100,0.08)",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 4,
+                      padding: "2px 5px 2px 7px",
+                    }}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => reuseRecentVoiceTranscript(item)}
+                      title={item}
+                      style={{
+                        color: "rgba(255,244,214,0.92)",
+                        fontSize: 10,
+                        lineHeight: 1.2,
+                        cursor: "pointer",
+                        maxWidth: 156,
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        background: "transparent",
+                        border: "none",
+                        padding: 0,
+                      }}
+                    >
+                      {formatVoicePreview(item)}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => copyVoiceTranscriptItem(item)}
+                      title="고정 음성 복사"
+                      style={{
+                        width: 14,
+                        height: 14,
+                        borderRadius: 999,
+                        border: "1px solid rgba(255,255,255,0.12)",
+                        background: "rgba(255,255,255,0.06)",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        padding: 0,
+                        color: "rgba(255,255,255,0.72)",
+                        cursor: "pointer",
+                      }}
+                    >
+                      <Copy size={8} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => togglePinVoiceTranscript(item)}
+                      title="고정 해제"
+                      style={{
+                        borderRadius: 999,
+                        border: "1px solid rgba(255,215,100,0.16)",
+                        background: "rgba(255,215,100,0.10)",
+                        color: "rgba(255,230,160,0.86)",
+                        padding: "0 5px",
+                        fontSize: 9,
+                        lineHeight: 1.4,
+                        cursor: "pointer",
+                      }}
+                    >
+                      해제
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
             <div
               style={{
                 display: "flex",
@@ -985,6 +1080,7 @@ const CommandInput = ({
                       <div className="mb-1 flex items-center gap-2 text-[10px] leading-none text-white/42">
                         <span>{formatVoiceHistoryTime(item.createdAt)}</span>
                         <span>세션 기록</span>
+                        {isVoiceTranscriptPinned(item.text) && <span className="text-amber-200/80">고정됨</span>}
                       </div>
                       <button
                         type="button"
@@ -1009,6 +1105,17 @@ const CommandInput = ({
                         className="rounded border border-emerald-400/18 bg-emerald-500/10 px-1.5 py-0.5 text-[10px] text-emerald-100/88 transition-colors hover:bg-emerald-500/18"
                       >
                         치환
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => togglePinVoiceTranscript(item.text)}
+                        className={`rounded border px-1.5 py-0.5 text-[10px] transition-colors ${
+                          isVoiceTranscriptPinned(item.text)
+                            ? "border-amber-300/20 bg-amber-400/10 text-amber-100/88 hover:bg-amber-400/18"
+                            : "border-amber-300/14 bg-amber-400/6 text-amber-100/72 hover:bg-amber-400/14"
+                        }`}
+                      >
+                        {isVoiceTranscriptPinned(item.text) ? "고정 해제" : "고정"}
                       </button>
                       <button
                         type="button"
