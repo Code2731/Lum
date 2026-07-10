@@ -1205,6 +1205,22 @@ const VoiceHookDiagnosticsSection: React.FC = () => {
             </button>
             <button
               onClick={async () => {
+                if (!info?.transcript_exists || !info.transcript_path) return;
+                try {
+                  await openPath(info.transcript_path);
+                  setCopyMsg("transcript 파일을 열었습니다.");
+                } catch (e) {
+                  setError(`transcript 파일 열기 실패: ${formatErrorMessage(e)}`);
+                }
+              }}
+              disabled={!info?.transcript_exists}
+              title={info?.transcript_exists ? "last_transcript.txt 열기" : "열 수 있는 transcript 파일이 없습니다"}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded border border-cyan-400/20 bg-cyan-500/8 hover:bg-cyan-500/16 text-xs text-cyan-100 disabled:opacity-40 transition-colors"
+            >
+              <FolderOpen size={11} /> transcript 열기
+            </button>
+            <button
+              onClick={async () => {
                 try {
                   const result = await invoke<VoiceHookTemplateCreateResult>("create_default_voice_hook_files");
                   if (result.created.length > 0) {
