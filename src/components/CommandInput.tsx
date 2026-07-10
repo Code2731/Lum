@@ -188,6 +188,20 @@ const CommandInput = ({
     showVoiceSuccess();
   };
 
+  const restoreLastVoiceTranscript = () => {
+    const t = lastVoiceTranscript.trim();
+    if (!t) return;
+    setValue((prev) => {
+      const joined = prev.trim() ? `${prev} ${t}` : t;
+      showVoiceHighlight(joined.length - t.length, joined.length);
+      return joined;
+    });
+    const editor = document.getElementById("command-editor-textarea");
+    if (editor instanceof HTMLTextAreaElement) {
+      editor.focus();
+    }
+  };
+
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const { isRecording, voiceBusy, voiceError, voicePartialTranscript, voiceStatus, handleMicToggle, clearVoiceError } = useVoiceInput({
     onTranscript: injectTranscript,
@@ -689,7 +703,17 @@ const CommandInput = ({
               boxShadow: voiceTranscriptRefined ? "0 8px 20px rgba(16,185,129,0.14)" : "0 6px 16px rgba(0,0,0,0.12)",
             }}
           >
-            {voiceSuccessMessage}
+            <span style={{ minWidth: 0, flex: 1 }}>{voiceSuccessMessage}</span>
+            {lastVoiceTranscript && (
+              <button
+                type="button"
+                onClick={restoreLastVoiceTranscript}
+                className="shrink-0 rounded border border-emerald-400/20 bg-emerald-500/10 px-1.5 py-0.5 text-[10px] text-emerald-100 hover:bg-emerald-500/20 transition-colors"
+                title="마지막 음성 문장을 다시 입력창에 넣기"
+              >
+                다시 넣기
+              </button>
+            )}
           </div>
         )}
 

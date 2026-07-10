@@ -531,6 +531,18 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
       inputRef.current?.focus();
     };
 
+    const restoreLastVoiceTranscript = () => {
+      const t = lastVoiceTranscript.trim();
+      if (!t) return;
+      setInput((prev) => {
+        const joined = prev.trim() ? `${prev} ${t}` : t;
+        showVoiceHighlight(joined.length - t.length, joined.length);
+        onChangeRef.current?.(joined);
+        return joined;
+      });
+      inputRef.current?.focus();
+    };
+
     useEffect(() => {
       if (isVoiceProcessing) {
         inputRef.current?.focus();
@@ -932,6 +944,27 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
               }}
             />
             <span>{voiceSuccessMessage}</span>
+            {lastVoiceTranscript && (
+              <button
+                type="button"
+                onClick={restoreLastVoiceTranscript}
+                title="마지막 음성 문장을 다시 입력창에 넣기"
+                style={{
+                  marginLeft: 2,
+                  flexShrink: 0,
+                  borderRadius: 5,
+                  border: "1px solid rgba(63,185,80,0.18)",
+                  background: "rgba(46,160,67,0.12)",
+                  color: "rgba(230,255,236,0.92)",
+                  padding: "0 5px",
+                  fontSize: 10,
+                  lineHeight: 1.5,
+                  cursor: "pointer",
+                }}
+              >
+                다시 넣기
+              </button>
+            )}
           </div>
         )}
 
