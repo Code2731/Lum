@@ -20,6 +20,22 @@ interface UseVoiceInputResult {
 }
 
 const STOP_FALLBACK_DUP_GUARD_MS = 4_000;
+const VOICE_PARTIAL_UPDATE_THROTTLE_MS = 180;
+const VOICE_PARTIAL_FORCE_COMMIT_DELTA = 10;
+
+function shouldFlushPartialTranscriptImmediately(
+  prev: string,
+  next: string,
+  now: number,
+  lastTs: number,
+): boolean {
+  if (!prev) return true;
+  if (now - lastTs >= VOICE_PARTIAL_UPDATE_THROTTLE_MS) return true;
+  if (Math.abs(next.length - prev.length) >= VOICE_PARTIAL_FORCE_COMMIT_DELTA) return true;
+  if (/[.!?。！？]$/.test(next)) return true;
+  if (!next.startsWith(prev) && !prev.startsWith(next)) return true;
+  return false;
+}
 
 export function useVoiceInput({
   enabled = true,
@@ -35,6 +51,9 @@ export function useVoiceInput({
   const voiceBusyRef = useRef(false);
   const onTranscriptRef = useRef(onTranscript);
   const isRecordingRef = useRef(false);
+  const lastPartialTranscriptRef = useRef<{ text: string; ts: number }>({ text: "", ts: 0 });
+  const pendingPartialTranscriptRef = useRef("");
+  const partialTranscriptTimerRef = useRef<number | null>(null);
   const lastTranscriptRef = useRef<{ text: string; ts: number } | null>(null);
   const awaitingStopEventRef = useRef(false);
   const stopEventReceivedRef = useRef(false);
@@ -48,6 +67,10 @@ export function useVoiceInput({
     mountedRef.current = true;
     return () => {
       mountedRef.current = false;
+      if (partialTranscriptTimerRef.current !== null) {
+        window.clearTimeout(partialTranscriptTimerRef.current);
+        partialTranscriptTimerRef.current = null;
+      }
     };
   }, []);
 
@@ -64,6 +87,29 @@ export function useVoiceInput({
     lastTranscriptRef.current = { text, ts: now };
     onTranscriptRef.current(text);
   }, [dedupeMs]);
+
+  const flushPendingPartialTranscript = useCallback((text?: string) => {
+    const next = (text ?? pendingPartialTranscriptRef.current).trim();
+    if (!next) return;
+    pendingPartialTranscriptRef.current = "";
+    if (partialTranscriptTimerRef.current !== null) {
+      window.clearTimeout(partialTranscriptTimerRef.current);
+      partialTranscriptTimerRef.current = null;
+    }
+    const now = Date.now();
+    lastPartialTranscriptRef.current = { text: next, ts: now };
+    setVoicePartialTranscript(next);
+  }, []);
+
+  const clearPartialTranscript = useCallback(() => {
+    pendingPartialTranscriptRef.current = "";
+    lastPartialTranscriptRef.current = { text: "", ts: 0 };
+    if (partialTranscriptTimerRef.current !== null) {
+      window.clearTimeout(partialTranscriptTimerRef.current);
+      partialTranscriptTimerRef.current = null;
+    }
+    setVoicePartialTranscript("");
+  }, []);
 
   useEffect(() => {
     if (!enabled) return;
@@ -100,7 +146,7 @@ export function useVoiceInput({
           if (!mountedRef.current) return;
           setIsRecording(false);
           setVoiceError(null);
-          setVoicePartialTranscript("");
+          clearPartialTranscript();
           setVoiceStatus("idle");
           return;
         }
@@ -108,7 +154,7 @@ export function useVoiceInput({
       if (awaitingStopEventRef.current) {
         stopEventReceivedRef.current = true;
       }
-      setVoicePartialTranscript("");
+      clearPartialTranscript();
       emitTranscript(payload);
       setIsRecording(false);
       setVoiceError(null);
@@ -130,7 +176,21 @@ export function useVoiceInput({
       }
       const payload = (event.payload ?? "").trim();
       if (!payload) return;
-      setVoicePartialTranscript(payload);
+      const now = Date.now();
+      const last = lastPartialTranscriptRef.current;
+      if (shouldFlushPartialTranscriptImmediately(last.text, payload, now, last.ts)) {
+        flushPendingPartialTranscript(payload);
+        return;
+      }
+      pendingPartialTranscriptRef.current = payload;
+      if (partialTranscriptTimerRef.current !== null) {
+        return;
+      }
+      partialTranscriptTimerRef.current = window.setTimeout(() => {
+        partialTranscriptTimerRef.current = null;
+        if (!mountedRef.current) return;
+        flushPendingPartialTranscript();
+      }, VOICE_PARTIAL_UPDATE_THROTTLE_MS);
     })
       .then((off) => {
         if (disposed) {
@@ -148,10 +208,10 @@ export function useVoiceInput({
       if (on) {
         setVoiceError(null);
         if (!awaitingStopEventRef.current) {
-          setVoicePartialTranscript("");
+          clearPartialTranscript();
         }
       } else if (!awaitingStopEventRef.current) {
-        setVoicePartialTranscript("");
+        clearPartialTranscript();
       }
       setVoiceStatus(on ? "listening" : awaitingStopEventRef.current ? "processing" : "idle");
     })
@@ -173,7 +233,7 @@ export function useVoiceInput({
       void partialPromise;
       void statePromise;
     };
-  }, [enabled, emitTranscript]);
+  }, [clearPartialTranscript, enabled, emitTranscript, flushPendingPartialTranscript]);
 
   const handleMicToggle = useCallback(async () => {
     if (!enabled || voiceBusyRef.current) return;
@@ -206,7 +266,7 @@ export function useVoiceInput({
         if (!mountedRef.current) return;
         setIsRecording(true);
         setVoiceError(null);
-        setVoicePartialTranscript("");
+        clearPartialTranscript();
         setVoiceStatus("listening");
         stopFallbackGuardRef.current = null;
       }
@@ -225,7 +285,7 @@ export function useVoiceInput({
       }
       if (!mountedRef.current) return;
       setVoiceError(parseVoiceError(e));
-      setVoicePartialTranscript("");
+      clearPartialTranscript();
       setVoiceStatus("error");
     } finally {
       awaitingStopEventRef.current = false;
@@ -234,7 +294,7 @@ export function useVoiceInput({
       if (!mountedRef.current) return;
       setVoiceBusy(false);
     }
-  }, [emitTranscript, enabled, isRecording]);
+  }, [clearPartialTranscript, emitTranscript, enabled, isRecording]);
 
   const clearVoiceError = useCallback(() => {
     setVoiceError(null);
