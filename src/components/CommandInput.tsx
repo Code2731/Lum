@@ -436,9 +436,9 @@ const CommandInput = ({
           {showInlineVoiceStatus && (
             <span
               aria-hidden="true"
-              className={`inline-flex items-center rounded-full border px-1.5 py-0.5 text-[10px] leading-none ${voiceStatusToneClass}`}
+              className={`inline-flex items-center rounded-full border px-1 py-0.5 text-[10px] leading-none ${voiceStatusToneClass}`}
               style={{
-                minHeight: 17,
+                minHeight: 16,
                 justifyContent: "center",
                 marginLeft: 6,
                 marginRight: 2,
