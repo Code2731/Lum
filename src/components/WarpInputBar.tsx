@@ -509,9 +509,9 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
         border: "1px solid rgba(255,255,255,0.16)",
       };
     const voiceDisabledTone = {
-      color: "rgba(255,255,255,0.54)",
-      background: "rgba(255,255,255,0.04)",
-      border: "1px solid rgba(255,255,255,0.12)",
+      color: "rgba(255,255,255,0.62)",
+      background: "rgba(255,255,255,0.06)",
+      border: "1px solid rgba(255,255,255,0.14)",
     };
     const voicePulseActive = voiceStatus === "listening" || voiceStatus === "processing";
     const isVoiceProcessing = voiceStatus === "processing";
