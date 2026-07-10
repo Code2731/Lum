@@ -824,7 +824,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
               right: VOICE_FLOATING_BANNER_RIGHT,
               fontSize: WARP_SMALL_FONT_SIZE,
               borderRadius: 6,
-              padding: "2px 7px",
+              padding: "2px 6px",
               display: "inline-flex",
               alignItems: "center",
               whiteSpace: "nowrap",
