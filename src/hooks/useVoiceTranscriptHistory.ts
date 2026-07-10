@@ -30,6 +30,9 @@ type VoiceTranscriptScopeSummary = {
   recentCount: number;
   historyCount: number;
 };
+type VoiceTranscriptScopeMatchSummary = VoiceTranscriptScopeSummary & {
+  matchedCount: number;
+};
 
 const DEFAULT_STORE: VoiceTranscriptStore = {
   lastAccessedAt: 0,
@@ -46,6 +49,7 @@ const listeners = new Set<() => void>();
 const canUseBrowserStore = () => typeof window !== "undefined";
 
 const normalizeVoiceTranscript = (text: string) => text.replace(/\s+/g, " ").trim();
+const normalizeVoiceSearchQuery = (text: string) => normalizeVoiceTranscript(text).toLocaleLowerCase();
 const normalizeScopeKey = (scope?: string | null) => {
   const normalized = (scope ?? "").trim().replace(/\\/g, "/");
   return normalized || DEFAULT_SCOPE_KEY;
@@ -213,6 +217,57 @@ export const useVoiceTranscriptHistory = (scope?: string | null) => {
         }),
     [scopeKey, stores]
   );
+  const findMatchingVoiceHistoryScopes = useMemo(
+    () => (query: string): VoiceTranscriptScopeMatchSummary[] => {
+      const normalizedQuery = normalizeVoiceSearchQuery(query);
+      if (!normalizedQuery) {
+        return [];
+      }
+
+      return Object.entries(stores)
+        .map(([candidateScopeKey, candidateStore]) => {
+          const matchedTexts = new Set<string>();
+          const matchesQuery = (value: string) =>
+            normalizeVoiceSearchQuery(value).includes(normalizedQuery);
+          const collectMatch = (text: string) => {
+            const normalizedText = normalizeVoiceTranscript(text);
+            if (!normalizedText || matchedTexts.has(normalizedText)) {
+              return;
+            }
+
+            const label = candidateStore.pinnedVoiceTranscriptLabels[normalizedText] ?? "";
+            if (matchesQuery(normalizedText) || (label && matchesQuery(label))) {
+              matchedTexts.add(normalizedText);
+            }
+          };
+
+          candidateStore.pinnedVoiceTranscripts.forEach(collectMatch);
+          candidateStore.recentVoiceTranscripts.forEach(collectMatch);
+          candidateStore.voiceTranscriptHistory.forEach((item) => collectMatch(item.text));
+
+          return {
+            scopeKey: candidateScopeKey,
+            lastAccessedAt: candidateStore.lastAccessedAt,
+            pinnedCount: candidateStore.pinnedVoiceTranscripts.length,
+            recentCount: candidateStore.recentVoiceTranscripts.length,
+            historyCount: candidateStore.voiceTranscriptHistory.length,
+            matchedCount: matchedTexts.size,
+          };
+        })
+        .filter((item) => item.matchedCount > 0)
+        .sort((a, b) => {
+          if (a.scopeKey === scopeKey) return -1;
+          if (b.scopeKey === scopeKey) return 1;
+          if (a.matchedCount !== b.matchedCount) return b.matchedCount - a.matchedCount;
+          if (a.lastAccessedAt !== b.lastAccessedAt) return b.lastAccessedAt - a.lastAccessedAt;
+          const aTotal = a.pinnedCount + a.recentCount + a.historyCount;
+          const bTotal = b.pinnedCount + b.recentCount + b.historyCount;
+          if (aTotal !== bTotal) return bTotal - aTotal;
+          return a.scopeKey.localeCompare(b.scopeKey);
+        });
+    },
+    [scopeKey, stores]
+  );
 
   useEffect(() => {
     const nextStores = loadStores();
@@ -235,6 +290,7 @@ export const useVoiceTranscriptHistory = (scope?: string | null) => {
   return {
     activeVoiceHistoryScope: scopeKey,
     availableVoiceHistoryScopes,
+    findMatchingVoiceHistoryScopes,
     pinnedVoiceTranscriptsCollapsed: store.pinnedVoiceTranscriptsCollapsed,
     pinnedVoiceTranscriptLabels: store.pinnedVoiceTranscriptLabels,
     pinnedVoiceTranscripts: store.pinnedVoiceTranscripts,

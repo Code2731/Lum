@@ -154,6 +154,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
     const {
       activeVoiceHistoryScope,
       availableVoiceHistoryScopes,
+      findMatchingVoiceHistoryScopes,
       pinnedVoiceTranscriptsCollapsed,
       pinnedVoiceTranscripts,
       recentVoiceTranscripts,
@@ -212,6 +213,15 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
     const visibleVoiceHistoryScopes = showAllVoiceHistoryScopes
       ? availableVoiceHistoryScopes
       : availableVoiceHistoryScopes.slice(0, 4);
+    const otherMatchingVoiceHistoryScopes = React.useMemo(
+      () =>
+        normalizedVoiceHistoryQuery
+          ? findMatchingVoiceHistoryScopes(normalizedVoiceHistoryQuery)
+              .filter((scopeInfo) => scopeInfo.scopeKey !== activeVoiceHistoryScope)
+              .slice(0, 3)
+          : [],
+      [activeVoiceHistoryScope, findMatchingVoiceHistoryScopes, normalizedVoiceHistoryQuery]
+    );
     const collapsedPinnedVoiceSummary = React.useMemo(() => {
       const preview = filteredPinnedVoiceTranscripts
         .slice(0, 2)
@@ -2005,7 +2015,71 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
                       color: "rgba(255,255,255,0.46)",
                     }}
                   >
-                    검색 결과가 없습니다.
+                    <div>검색 결과가 없습니다.</div>
+                    {otherMatchingVoiceHistoryScopes.length > 0 && (
+                      <div
+                        style={{
+                          marginTop: 8,
+                          display: "flex",
+                          flexWrap: "wrap",
+                          alignItems: "center",
+                          gap: 6,
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontSize: 10,
+                            letterSpacing: "0.18em",
+                            textTransform: "uppercase",
+                            color: "rgba(255,255,255,0.28)",
+                          }}
+                        >
+                          다른 scope
+                        </span>
+                        {otherMatchingVoiceHistoryScopes.map((scopeInfo) => (
+                          <button
+                            key={scopeInfo.scopeKey}
+                            type="button"
+                            onClick={() => setVoiceHistoryScopeOverride(scopeInfo.scopeKey === currentVoiceHistoryScopeKey ? null : scopeInfo.scopeKey)}
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 6,
+                              maxWidth: "100%",
+                              borderRadius: 999,
+                              border: "1px solid rgba(255,255,255,0.10)",
+                              background: "rgba(255,255,255,0.06)",
+                              color: "rgba(255,255,255,0.62)",
+                              padding: "4px 8px",
+                              fontSize: 10,
+                              lineHeight: 1.2,
+                              cursor: "pointer",
+                            }}
+                          >
+                            <span
+                              style={{
+                                maxWidth: 160,
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              {scopeInfo.scopeKey === "__global__" ? "전역 기록" : shortPath(scopeInfo.scopeKey)}
+                            </span>
+                            <span
+                              style={{
+                                borderRadius: 999,
+                                background: "rgba(255,255,255,0.08)",
+                                padding: "1px 5px",
+                                color: "rgba(255,255,255,0.44)",
+                              }}
+                            >
+                              {scopeInfo.matchedCount}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

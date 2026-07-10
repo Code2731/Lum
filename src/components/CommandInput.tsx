@@ -135,6 +135,7 @@ const CommandInput = ({
   const {
     activeVoiceHistoryScope,
     availableVoiceHistoryScopes,
+    findMatchingVoiceHistoryScopes,
     pinnedVoiceTranscriptsCollapsed,
     pinnedVoiceTranscripts,
     recentVoiceTranscripts,
@@ -189,6 +190,15 @@ const CommandInput = ({
   const visibleVoiceHistoryScopes = showAllVoiceHistoryScopes
     ? availableVoiceHistoryScopes
     : availableVoiceHistoryScopes.slice(0, 4);
+  const otherMatchingVoiceHistoryScopes = useMemo(
+    () =>
+      normalizedVoiceHistoryQuery
+        ? findMatchingVoiceHistoryScopes(normalizedVoiceHistoryQuery)
+            .filter((scopeInfo) => scopeInfo.scopeKey !== activeVoiceHistoryScope)
+            .slice(0, 3)
+        : [],
+    [activeVoiceHistoryScope, findMatchingVoiceHistoryScopes, normalizedVoiceHistoryQuery]
+  );
   const collapsedPinnedVoiceSummary = useMemo(() => {
     const preview = filteredPinnedVoiceTranscripts
       .slice(0, 2)
@@ -1560,7 +1570,29 @@ const CommandInput = ({
                   </div>
                 )) : (
                   <div className="rounded-md border border-dashed border-white/8 bg-black/10 px-2 py-2 text-[11px] text-white/46">
-                    검색 결과가 없습니다.
+                    <div>검색 결과가 없습니다.</div>
+                    {otherMatchingVoiceHistoryScopes.length > 0 && (
+                      <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                        <span className="text-[10px] uppercase tracking-[0.18em] text-white/28">
+                          다른 scope
+                        </span>
+                        {otherMatchingVoiceHistoryScopes.map((scopeInfo) => (
+                          <button
+                            key={scopeInfo.scopeKey}
+                            type="button"
+                            onClick={() => setVoiceHistoryScopeOverride(scopeInfo.scopeKey === currentVoiceHistoryScopeKey ? null : scopeInfo.scopeKey)}
+                            className="inline-flex max-w-full items-center gap-1 rounded-full border border-white/10 bg-white/6 px-2 py-1 text-[10px] text-white/62 transition-colors hover:bg-white/10 hover:text-white/86"
+                          >
+                            <span className="max-w-[160px] truncate">
+                              {scopeInfo.scopeKey === "__global__" ? "전역 기록" : shortPath(scopeInfo.scopeKey)}
+                            </span>
+                            <span className="rounded-full bg-white/8 px-1 py-[1px] text-[10px] text-white/44">
+                              {scopeInfo.matchedCount}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
