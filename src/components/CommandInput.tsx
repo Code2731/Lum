@@ -26,6 +26,11 @@ const VOICE_HIGHLIGHT_FADE_MS = 260;
 const VOICE_HIGHLIGHT_LONG_TEXT_THRESHOLD = 32;
 const VOICE_PULSE_ANIMATION = "lum-voice-pulse 1.35s ease-in-out infinite";
 const VOICE_BANNER_IN_ANIMATION = "lum-voice-banner-in 140ms ease-out";
+const formatVoiceDuration = (totalSeconds: number) => {
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes}:${String(seconds).padStart(2, "0")}`;
+};
 const SR_ONLY_STYLE: React.CSSProperties = {
   position: "absolute",
   width: 1,
@@ -132,14 +137,31 @@ const CommandInput = ({
     showVoiceSuccess();
   };
 
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
   const { isRecording, voiceBusy, voiceError, voiceStatus, handleMicToggle, clearVoiceError } = useVoiceInput({
     onTranscript: injectTranscript,
   });
+  useEffect(() => {
+    if (!isRecording) {
+      setRecordingSeconds(0);
+      return;
+    }
+    const startedAt = Date.now();
+    setRecordingSeconds(0);
+    const timer = window.setInterval(() => {
+      setRecordingSeconds(Math.floor((Date.now() - startedAt) / 1000));
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [isRecording]);
   const voiceStatusLabel =
     voiceError ? "오류" :
     voiceStatus === "listening" ? "듣는 중" :
     voiceStatus === "processing" ? "반영 중" :
     "대기 중";
+  const voiceStatusDisplayLabel =
+    voiceStatus === "listening" && recordingSeconds > 0
+      ? `${voiceStatusLabel} ${formatVoiceDuration(recordingSeconds)}`
+      : voiceStatusLabel;
   const voiceStatusToneClass =
     voiceError ? "text-red-300 bg-red-500/15 border-red-400/25" :
     voiceStatus === "listening" ? "text-emerald-200 bg-emerald-500/18 border-emerald-400/35" :
@@ -153,7 +175,7 @@ const CommandInput = ({
   const micAssistLabel =
     !voiceEnabled ? "설정 필요" :
     voiceBusy ? "처리 중" :
-    `상태 ${voiceStatusLabel}`;
+    `상태 ${voiceStatusDisplayLabel}`;
   const voicePulseActive = voiceStatus === "listening" || voiceStatus === "processing";
   const isVoiceProcessing = voiceStatus === "processing";
   const showVoiceStatusBanner =
@@ -165,7 +187,7 @@ const CommandInput = ({
     !voiceEnabled ? "음성 비활성" :
     voiceError ? `음성 오류: ${voiceError}` :
     voiceSuccessPhase !== "hidden" ? "음성 반영 완료" :
-      `음성 ${voiceStatusLabel}`;
+      `음성 ${voiceStatusDisplayLabel}`;
   const [history, setHistory] = useState<string[]>([]);
   const [historyIdx, setHistoryIdx] = useState(-1);
 
@@ -465,7 +487,7 @@ const CommandInput = ({
                       : "none",
                 }}
               />
-              <span>{voiceStatusLabel}</span>
+              <span>{voiceStatusDisplayLabel}</span>
             </span>
           )}
           <span className="editor-path">{shortPath(context.cwd)}</span>

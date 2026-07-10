@@ -27,6 +27,11 @@ const VOICE_HIGHLIGHT_FADE_MS = 260;
 const VOICE_HIGHLIGHT_LONG_TEXT_THRESHOLD = 32;
 const VOICE_PULSE_ANIMATION = "lum-voice-pulse 1.35s ease-in-out infinite";
 const VOICE_BANNER_IN_ANIMATION = "lum-voice-banner-in 140ms ease-out";
+const formatVoiceDuration = (totalSeconds: number) => {
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes}:${String(seconds).padStart(2, "0")}`;
+};
 const SR_ONLY_STYLE: React.CSSProperties = {
   position: "absolute",
   width: 1,
@@ -481,15 +486,32 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
       }
     }, [isVoiceProcessing]);
 
+    const [recordingSeconds, setRecordingSeconds] = useState(0);
     const { isRecording, voiceBusy, voiceError, voiceStatus, handleMicToggle, clearVoiceError } = useVoiceInput({
       enabled: voiceEnabled,
       onTranscript: injectTranscript,
     });
+    useEffect(() => {
+      if (!isRecording) {
+        setRecordingSeconds(0);
+        return;
+      }
+      const startedAt = Date.now();
+      setRecordingSeconds(0);
+      const timer = window.setInterval(() => {
+        setRecordingSeconds(Math.floor((Date.now() - startedAt) / 1000));
+      }, 1000);
+      return () => window.clearInterval(timer);
+    }, [isRecording]);
     const voiceStatusLabel =
       voiceError ? "오류" :
       voiceStatus === "listening" ? "듣는 중" :
       voiceStatus === "processing" ? "반영 중" :
       "대기 중";
+    const voiceStatusDisplayLabel =
+      voiceStatus === "listening" && recordingSeconds > 0
+        ? `${voiceStatusLabel} ${formatVoiceDuration(recordingSeconds)}`
+        : voiceStatusLabel;
     const voiceStatusTone =
       voiceError ? {
         color: "#ff7b72",
@@ -532,14 +554,14 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
     const micAssistLabel =
       !voiceEnabled ? "설정 필요" :
       voiceBusy ? "처리 중" :
-      `상태 ${voiceStatusLabel}`;
-    const inlineVoiceLabel = !voiceEnabled ? "비활성" : voiceStatusLabel;
+      `상태 ${voiceStatusDisplayLabel}`;
+    const inlineVoiceLabel = !voiceEnabled ? "비활성" : voiceStatusDisplayLabel;
     const inlineVoiceTone = !voiceEnabled ? voiceDisabledTone : voiceStatusTone;
     const voiceLiveMessage =
       !voiceEnabled ? "음성 비활성" :
       voiceError ? `음성 오류: ${voiceError}` :
       voiceSuccessPhase !== "hidden" ? "음성 반영 완료" :
-      `음성 ${voiceStatusLabel}`;
+      `음성 ${voiceStatusDisplayLabel}`;
     const voiceHighlightLength = voiceHighlight ? voiceHighlight.end - voiceHighlight.start : 0;
     const isLongVoiceHighlight = voiceHighlightLength >= VOICE_HIGHLIGHT_LONG_TEXT_THRESHOLD;
 
@@ -858,7 +880,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
                       : "none",
                 }}
               />
-            <span>{voiceStatusLabel}</span>
+            <span>{voiceStatusDisplayLabel}</span>
           </div>
         )}
 
