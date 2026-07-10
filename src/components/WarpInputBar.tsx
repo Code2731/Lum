@@ -7,6 +7,7 @@ import {
   detectBackendPrefixFromInput,
   isBackendOnlyInput,
 } from "../utils/backendPrefix";
+import { shortPath } from "../utils";
 import { useVoiceInput } from "../hooks/useVoiceInput";
 import { useVoiceTranscriptHistory } from "../hooks/useVoiceTranscriptHistory";
 
@@ -166,6 +167,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
       () => voiceTranscriptHistory.filter((item) => matchesVoiceSearchTerm(item.text, normalizedVoiceHistoryQuery)),
       [normalizedVoiceHistoryQuery, voiceTranscriptHistory]
     );
+    const voiceHistoryScopeLabel = voiceHistoryScope?.trim() ? shortPath(voiceHistoryScope) : "전역 기록";
 
     useEffect(() => {
       onChangeRef.current = onChange;
@@ -1195,6 +1197,28 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
                 flexWrap: "wrap",
               }}
             >
+              <span
+                style={{
+                  borderRadius: 999,
+                  border: "1px solid rgba(88,166,255,0.12)",
+                  background: "rgba(88,166,255,0.06)",
+                  color: "rgba(214,231,255,0.76)",
+                  padding: "2px 7px",
+                  fontSize: WARP_SMALL_FONT_SIZE,
+                  lineHeight: 1.2,
+                }}
+              >
+                {voiceHistoryScopeLabel}
+              </span>
+              <span
+                style={{
+                  fontSize: WARP_SMALL_FONT_SIZE,
+                  color: "rgba(255,255,255,0.42)",
+                  lineHeight: 1.2,
+                }}
+              >
+                고정 {pinnedVoiceTranscripts.length} · 최근 {recentVoiceTranscripts.length} · 기록 {voiceTranscriptHistory.length}
+              </span>
               <input
                 type="text"
                 value={voiceHistoryQuery}
