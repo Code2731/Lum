@@ -44,6 +44,8 @@ interface VoiceHookDiagnostics {
   recording: boolean;
   transcript_path: string;
   transcript_exists: boolean;
+  transcript_modified_ms?: number | null;
+  transcript_preview?: string | null;
   start_hook_kind: string;
   start_hook_configured: boolean;
   start_hook_target: string;
@@ -1021,6 +1023,10 @@ const VoiceHookDiagnosticsSection: React.FC = () => {
     "%USERPROFILE%\\.lum_whisper\\start.cmd",
     "%USERPROFILE%\\.lum_whisper\\stop.cmd",
   ].join("\n");
+  const transcriptModifiedLabel =
+    info?.transcript_modified_ms != null
+      ? new Date(info.transcript_modified_ms).toLocaleString("ko-KR")
+      : "수정 이력 없음";
 
   return (
     <section className="space-y-2 border border-emerald-400/20 rounded-lg p-3 bg-emerald-400/5">
@@ -1077,6 +1083,12 @@ const VoiceHookDiagnosticsSection: React.FC = () => {
             <code className="block text-[11px] leading-relaxed text-white/70 break-all">{info.stop_hook_target}</code>
             <div className="text-xs text-white/40">Transcript 파일</div>
             <code className="block text-[11px] leading-relaxed text-white/70 break-all">{info.transcript_path}</code>
+            <div className="text-xs text-white/40">마지막 수정 시각</div>
+            <div className="text-[11px] leading-relaxed text-white/70">{transcriptModifiedLabel}</div>
+            <div className="text-xs text-white/40">마지막 transcript 미리보기</div>
+            <div className="text-[11px] leading-relaxed text-white/70 break-all">
+              {info.transcript_preview || "아직 transcript 내용이 없습니다."}
+            </div>
           </div>
 
           <div className="flex flex-wrap gap-2">

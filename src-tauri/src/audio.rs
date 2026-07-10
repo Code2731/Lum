@@ -150,6 +150,8 @@ pub struct VoiceHookDiagnostics {
     recording: bool,
     transcript_path: String,
     transcript_exists: bool,
+    transcript_modified_ms: Option<u64>,
+    transcript_preview: Option<String>,
     start_hook_kind: String,
     start_hook_configured: bool,
     start_hook_target: String,
@@ -475,6 +477,16 @@ pub fn voice_recording_status() -> Result<bool, String> {
 pub fn voice_hook_diagnostics() -> Result<VoiceHookDiagnostics, String> {
     let transcript_path = transcript_file_path();
     let transcript_exists = transcript_path.is_file();
+    let transcript_modified_ms = std::fs::metadata(&transcript_path)
+        .ok()
+        .and_then(|meta| meta.modified().ok())
+        .and_then(|modified| modified.duration_since(std::time::UNIX_EPOCH).ok())
+        .map(|duration| duration.as_millis() as u64);
+    let transcript_preview = std::fs::read_to_string(&transcript_path)
+        .ok()
+        .map(|raw| raw.split_whitespace().collect::<Vec<_>>().join(" "))
+        .map(|trimmed| trimmed.trim().to_string())
+        .filter(|text| !text.is_empty());
     let recording = voice_recording_status()?;
     let (start_hook_kind, start_hook_configured, start_hook_target) =
         voice_hook_descriptor("LUM_VOICE_START_CMD", "start");
@@ -485,6 +497,8 @@ pub fn voice_hook_diagnostics() -> Result<VoiceHookDiagnostics, String> {
         recording,
         transcript_path: transcript_path.display().to_string(),
         transcript_exists,
+        transcript_modified_ms,
+        transcript_preview,
         start_hook_kind,
         start_hook_configured,
         start_hook_target,
