@@ -255,6 +255,10 @@ const CommandInput = ({
     setRecentVoiceTranscripts((prev) => prev.filter((item) => item !== text));
   };
 
+  const clearRecentVoiceTranscripts = () => {
+    setRecentVoiceTranscripts([]);
+  };
+
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const { isRecording, voiceBusy, voiceError, voicePartialTranscript, voiceStatus, handleMicToggle, clearVoiceError } = useVoiceInput({
     onTranscript: injectTranscript,
@@ -808,6 +812,23 @@ const CommandInput = ({
             >
               최근 음성
             </span>
+            <button
+              type="button"
+              onClick={clearRecentVoiceTranscripts}
+              title="최근 음성 전체 지우기"
+              style={{
+                borderRadius: 999,
+                border: "1px solid rgba(255,255,255,0.10)",
+                background: "rgba(255,255,255,0.04)",
+                color: "rgba(255,255,255,0.56)",
+                padding: "1px 6px",
+                fontSize: 10,
+                lineHeight: 1.2,
+                cursor: "pointer",
+              }}
+            >
+              전체 지우기
+            </button>
             {recentVoiceTranscripts.map((item) => (
               <span
                 key={item}
