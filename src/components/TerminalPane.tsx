@@ -2140,6 +2140,7 @@ const TerminalPane: React.FC<Props> = ({
           ref={warpInputRef}
           fontFamily={fontFamily ? `"${fontFamily}", ${FONT_FAMILY}` : FONT_FAMILY}
           fontSize={fontSize ?? DEFAULT_TERMINAL_FONT_SIZE}
+          voiceHistoryScope={cwd}
           onSubmit={handleSubmit}
           onInterrupt={handleInterrupt}
           onKeyDownIntercept={handleInputKeyDownIntercept}

@@ -100,6 +100,7 @@ const SR_ONLY_STYLE: React.CSSProperties = {
 interface Props {
   fontFamily: string;
   fontSize: number;
+  voiceHistoryScope?: string;
   /** Enter 시 호출 — 라우팅(shell/AI/agent)은 상위에서 */
   onSubmit: (cmd: string) => void;
   onInterrupt?: () => void;          // Ctrl+C
@@ -117,7 +118,7 @@ interface Props {
 }
 
 const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
-  ({ fontFamily, fontSize, onSubmit, onInterrupt, onTab, onChange, onFocusChange, onKeyDownIntercept, voiceEnabled = true, compactContextChips = false, contextChips = [] }, ref) => {
+  ({ fontFamily, fontSize, voiceHistoryScope, onSubmit, onInterrupt, onTab, onChange, onFocusChange, onKeyDownIntercept, voiceEnabled = true, compactContextChips = false, contextChips = [] }, ref) => {
     const [input, setInput] = useState("");
     const [isComposing, setIsComposing] = useState(false);
     const [isFocused, setIsFocused] = useState(false);
@@ -138,7 +139,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
       toggleVoiceTranscriptHistory,
       togglePinVoiceTranscript,
       isVoiceTranscriptPinned,
-    } = useVoiceTranscriptHistory();
+    } = useVoiceTranscriptHistory(voiceHistoryScope);
     const [voiceCopyFeedback, setVoiceCopyFeedback] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
     const voiceSuccessVisibleTimerRef = useRef<number | null>(null);

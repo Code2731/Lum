@@ -121,7 +121,7 @@ const CommandInput = ({
     toggleVoiceTranscriptHistory,
     togglePinVoiceTranscript,
     isVoiceTranscriptPinned,
-  } = useVoiceTranscriptHistory();
+  } = useVoiceTranscriptHistory(context.cwd);
   const [voiceCopyFeedback, setVoiceCopyFeedback] = useState(false);
   const voiceSuccessVisibleTimerRef = useRef<number | null>(null);
   const voiceSuccessFadeTimerRef = useRef<number | null>(null);
