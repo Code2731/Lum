@@ -906,7 +906,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
                 marginRight: 2,
                 borderRadius: 999,
                 transform: "translateY(0.5px)",
-                opacity: 0.94,
+                opacity: !voiceEnabled ? 0.92 : voiceStatus === "idle" ? 0.9 : 0.98,
                 ...inlineVoiceTone,
               }}
             >

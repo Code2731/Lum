@@ -443,7 +443,7 @@ const CommandInput = ({
                 marginLeft: 6,
                 marginRight: 2,
                 transform: "translateY(0.5px)",
-                opacity: 0.94,
+                opacity: voiceStatus === "idle" ? 0.9 : 0.98,
               }}
             >
               {voiceStatusLabel}
