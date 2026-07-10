@@ -793,7 +793,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
           <div
             style={{
               position: "absolute",
-              top: VOICE_FLOATING_BANNER_TOP,
+              top: VOICE_FLOATING_STATUS_BANNER_TOP,
               right: VOICE_FLOATING_BANNER_RIGHT,
               fontSize: WARP_SMALL_FONT_SIZE,
               color: "rgba(166,244,180,0.88)",
@@ -905,7 +905,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
                 marginLeft: 2,
                 marginRight: 2,
                 borderRadius: 999,
-                transform: "translateY(0.5px)",
+                transform: "translateY(0)",
                 opacity: !voiceEnabled ? 0.92 : voiceStatus === "idle" ? 0.9 : 0.98,
                 ...inlineVoiceTone,
               }}

@@ -442,7 +442,7 @@ const CommandInput = ({
                 justifyContent: "center",
                 marginLeft: 6,
                 marginRight: 2,
-                transform: "translateY(0.5px)",
+                transform: "translateY(0)",
                 opacity: voiceStatus === "idle" ? 0.9 : 0.98,
               }}
             >
