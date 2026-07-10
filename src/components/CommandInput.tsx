@@ -8,6 +8,7 @@ import Prism from "prismjs";
 import "prismjs/components/prism-bash";
 import "prismjs/themes/prism-tomorrow.css";
 import { useVoiceInput } from "../hooks/useVoiceInput";
+import { useVoiceTranscriptHistory } from "../hooks/useVoiceTranscriptHistory";
 
 interface Props {
   onCommandSubmit: (cmd: string, type: "shell" | "ai") => void;
@@ -29,13 +30,6 @@ const VOICE_PREVIEW_HARD_LIMIT = 26;
 const VOICE_PREVIEW_BACKTRACK_LIMIT = 8;
 const VOICE_PULSE_ANIMATION = "lum-voice-pulse 1.35s ease-in-out infinite";
 const VOICE_BANNER_IN_ANIMATION = "lum-voice-banner-in 140ms ease-out";
-const MAX_RECENT_VOICE_HISTORY_ITEMS = 10;
-
-type VoiceTranscriptHistoryItem = {
-  id: string;
-  text: string;
-  createdAt: number;
-};
 
 const formatVoiceDuration = (totalSeconds: number) => {
   const minutes = Math.floor(totalSeconds / 60);
@@ -112,9 +106,15 @@ const CommandInput = ({
   const [voiceHighlight, setVoiceHighlight] = useState<{ start: number; end: number; phase: "visible" | "fading" } | null>(null);
   const [lastVoiceTranscript, setLastVoiceTranscript] = useState("");
   const [lastVoicePartialTranscript, setLastVoicePartialTranscript] = useState("");
-  const [recentVoiceTranscripts, setRecentVoiceTranscripts] = useState<string[]>([]);
-  const [voiceTranscriptHistory, setVoiceTranscriptHistory] = useState<VoiceTranscriptHistoryItem[]>([]);
-  const [showVoiceTranscriptHistory, setShowVoiceTranscriptHistory] = useState(false);
+  const {
+    recentVoiceTranscripts,
+    voiceTranscriptHistory,
+    showVoiceTranscriptHistory,
+    pushVoiceTranscript,
+    removeVoiceTranscript,
+    clearVoiceTranscripts,
+    toggleVoiceTranscriptHistory,
+  } = useVoiceTranscriptHistory();
   const [voiceCopyFeedback, setVoiceCopyFeedback] = useState(false);
   const voiceSuccessVisibleTimerRef = useRef<number | null>(null);
   const voiceSuccessFadeTimerRef = useRef<number | null>(null);
@@ -141,12 +141,6 @@ const CommandInput = ({
       }
     };
   }, []);
-
-  useEffect(() => {
-    if (voiceTranscriptHistory.length === 0 && showVoiceTranscriptHistory) {
-      setShowVoiceTranscriptHistory(false);
-    }
-  }, [showVoiceTranscriptHistory, voiceTranscriptHistory.length]);
 
   const clearVoiceHighlight = () => {
     if (voiceHighlightVisibleTimerRef.current !== null) {
@@ -201,13 +195,8 @@ const CommandInput = ({
   const injectTranscript = (text: string) => {
     const t = text.trim();
     if (!t) return;
-    const createdAt = Date.now();
     setLastVoiceTranscript(t);
-    setRecentVoiceTranscripts((prev) => [t, ...prev.filter((item) => item !== t)].slice(0, 3));
-    setVoiceTranscriptHistory((prev) => [
-      { id: `${createdAt}-${Math.random().toString(36).slice(2, 8)}`, text: t, createdAt },
-      ...prev.filter((item) => item.text !== t),
-    ].slice(0, MAX_RECENT_VOICE_HISTORY_ITEMS));
+    pushVoiceTranscript(t);
     setValue((prev) => {
       const joined = prev.trim() ? `${prev} ${t}` : t;
       showVoiceHighlight(joined.length - t.length, joined.length);
@@ -273,14 +262,11 @@ const CommandInput = ({
   };
 
   const removeRecentVoiceTranscript = (text: string) => {
-    setRecentVoiceTranscripts((prev) => prev.filter((item) => item !== text));
-    setVoiceTranscriptHistory((prev) => prev.filter((item) => item.text !== text));
+    removeVoiceTranscript(text);
   };
 
   const clearRecentVoiceTranscripts = () => {
-    setRecentVoiceTranscripts([]);
-    setVoiceTranscriptHistory([]);
-    setShowVoiceTranscriptHistory(false);
+    clearVoiceTranscripts();
   };
 
   const replaceInputWithVoiceTranscript = (text: string) => {
@@ -870,7 +856,7 @@ const CommandInput = ({
               {voiceTranscriptHistory.length > 0 && (
                 <button
                   type="button"
-                  onClick={() => setShowVoiceTranscriptHistory((prev) => !prev)}
+                  onClick={toggleVoiceTranscriptHistory}
                   title="세션 음성 기록 펼치기"
                   style={{
                     borderRadius: 999,
