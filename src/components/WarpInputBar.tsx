@@ -701,7 +701,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
                 overflow: "hidden",
               }}
             >
-              음성 입력 오류: {voiceError}
+              음성 오류: {voiceError}
             </span>
             <span
               style={{
@@ -718,7 +718,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
                 aria-label="오류 복사"
                 title="오류 복사"
                 onClick={() => {
-                  navigator.clipboard?.writeText?.(`음성 입력 오류: ${voiceError}`).catch(() => {});
+                  navigator.clipboard?.writeText?.(`음성 오류: ${voiceError}`).catch(() => {});
                 }}
                 style={{
                   flexShrink: 0,

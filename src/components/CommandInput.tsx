@@ -489,7 +489,7 @@ const CommandInput = ({
             title={voiceError}
           >
             <span className="voice-error-text" style={{ minWidth: 0, flex: 1 }}>
-              음성 입력 오류: {voiceError}
+              음성 오류: {voiceError}
             </span>
             <span
               style={{
@@ -505,7 +505,7 @@ const CommandInput = ({
                 tooltip="오류 복사"
                 onClick={() => {
                   if (!voiceError) return;
-                  navigator.clipboard?.writeText?.(`음성 입력 오류: ${voiceError}`).catch(() => {});
+                  navigator.clipboard?.writeText?.(`음성 오류: ${voiceError}`).catch(() => {});
                 }}
                 className="p-1 rounded text-red-300 hover:text-red-100 hover:bg-red-500/20 transition-colors shrink-0"
               >
