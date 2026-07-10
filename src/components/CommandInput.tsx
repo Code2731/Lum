@@ -495,7 +495,7 @@ const CommandInput = ({
             }}
             title={voiceError}
           >
-            <span className="voice-error-text" style={{ minWidth: 0, flex: 1 }}>
+            <span className="voice-error-text" style={{ minWidth: 0, flex: 1, paddingRight: 2 }}>
               음성 오류: {voiceError}
             </span>
             <span
