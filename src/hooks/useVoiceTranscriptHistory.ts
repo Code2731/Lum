@@ -14,6 +14,7 @@ export type VoiceTranscriptHistoryItem = {
 
 type VoiceTranscriptStore = {
   lastAccessedAt: number;
+  pinnedVoiceTranscriptsCollapsed: boolean;
   pinnedVoiceTranscriptLabels: Record<string, string>;
   pinnedVoiceTranscripts: string[];
   recentVoiceTranscripts: string[];
@@ -32,6 +33,7 @@ type VoiceTranscriptScopeSummary = {
 
 const DEFAULT_STORE: VoiceTranscriptStore = {
   lastAccessedAt: 0,
+  pinnedVoiceTranscriptsCollapsed: false,
   pinnedVoiceTranscriptLabels: {},
   pinnedVoiceTranscripts: [],
   recentVoiceTranscripts: [],
@@ -59,6 +61,7 @@ const sanitizeScopedStore = (value: unknown): VoiceTranscriptStore => {
     typeof candidate.lastAccessedAt === "number" && Number.isFinite(candidate.lastAccessedAt)
       ? candidate.lastAccessedAt
       : 0;
+  const pinnedVoiceTranscriptsCollapsed = candidate.pinnedVoiceTranscriptsCollapsed === true;
   const pinnedVoiceTranscriptLabels = candidate.pinnedVoiceTranscriptLabels
     && typeof candidate.pinnedVoiceTranscriptLabels === "object"
     && !Array.isArray(candidate.pinnedVoiceTranscriptLabels)
@@ -103,6 +106,7 @@ const sanitizeScopedStore = (value: unknown): VoiceTranscriptStore => {
 
   return {
     lastAccessedAt,
+    pinnedVoiceTranscriptsCollapsed,
     pinnedVoiceTranscriptLabels,
     pinnedVoiceTranscripts,
     recentVoiceTranscripts,
@@ -231,6 +235,7 @@ export const useVoiceTranscriptHistory = (scope?: string | null) => {
   return {
     activeVoiceHistoryScope: scopeKey,
     availableVoiceHistoryScopes,
+    pinnedVoiceTranscriptsCollapsed: store.pinnedVoiceTranscriptsCollapsed,
     pinnedVoiceTranscriptLabels: store.pinnedVoiceTranscriptLabels,
     pinnedVoiceTranscripts: store.pinnedVoiceTranscripts,
     recentVoiceTranscripts: store.recentVoiceTranscripts,
@@ -287,6 +292,13 @@ export const useVoiceTranscriptHistory = (scope?: string | null) => {
         prev.voiceTranscriptHistory.length === 0
           ? prev
           : { ...prev, showVoiceTranscriptHistory: !prev.showVoiceTranscriptHistory }
+      );
+    },
+    togglePinnedVoiceTranscriptsCollapsed: () => {
+      updateStore(scopeKey, (prev) =>
+        prev.pinnedVoiceTranscripts.length === 0
+          ? prev
+          : { ...prev, pinnedVoiceTranscriptsCollapsed: !prev.pinnedVoiceTranscriptsCollapsed }
       );
     },
     togglePinVoiceTranscript: (text: string) => {

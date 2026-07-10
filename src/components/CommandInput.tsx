@@ -115,6 +115,7 @@ const CommandInput = ({
   const {
     activeVoiceHistoryScope,
     availableVoiceHistoryScopes,
+    pinnedVoiceTranscriptsCollapsed,
     pinnedVoiceTranscripts,
     recentVoiceTranscripts,
     voiceTranscriptHistory,
@@ -123,6 +124,7 @@ const CommandInput = ({
     removeVoiceTranscript,
     clearVoiceTranscripts,
     toggleVoiceTranscriptHistory,
+    togglePinnedVoiceTranscriptsCollapsed,
     togglePinVoiceTranscript,
     movePinnedVoiceTranscript,
     movePinnedVoiceTranscriptToEdge,
@@ -1036,7 +1038,24 @@ const CommandInput = ({
                 >
                   고정 음성
                 </span>
-                {filteredPinnedVoiceTranscripts.map((item) => {
+                <button
+                  type="button"
+                  onClick={togglePinnedVoiceTranscriptsCollapsed}
+                  title="고정 음성 접기/펼치기"
+                  style={{
+                    borderRadius: 999,
+                    border: "1px solid rgba(255,215,100,0.14)",
+                    background: "rgba(255,215,100,0.06)",
+                    color: "rgba(255,230,160,0.78)",
+                    padding: "0 6px",
+                    fontSize: 9,
+                    lineHeight: 1.5,
+                    cursor: "pointer",
+                  }}
+                >
+                  {pinnedVoiceTranscriptsCollapsed ? "펼치기" : "접기"}
+                </button>
+                {!pinnedVoiceTranscriptsCollapsed && filteredPinnedVoiceTranscripts.map((item) => {
                   const pinnedIndex = pinnedVoiceTranscripts.indexOf(item);
                   const canMoveToTop = pinnedIndex > 0;
                   const canMoveUp = pinnedIndex > 0;
