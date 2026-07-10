@@ -805,28 +805,62 @@ const CommandInput = ({
               최근 음성
             </span>
             {recentVoiceTranscripts.map((item) => (
-              <button
+              <span
                 key={item}
-                type="button"
-                onClick={() => reuseRecentVoiceTranscript(item)}
-                title={item}
                 style={{
                   borderRadius: 999,
                   border: "1px solid rgba(88,166,255,0.16)",
                   background: "rgba(88,166,255,0.08)",
-                  color: "rgba(214,231,255,0.88)",
-                  padding: "2px 7px",
-                  fontSize: 10,
-                  lineHeight: 1.2,
-                  cursor: "pointer",
-                  maxWidth: 180,
-                  whiteSpace: "nowrap",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 4,
+                  padding: "2px 5px 2px 7px",
                 }}
               >
-                {formatVoicePreview(item)}
-              </button>
+                <button
+                  type="button"
+                  onClick={() => reuseRecentVoiceTranscript(item)}
+                  title={item}
+                  style={{
+                    color: "rgba(214,231,255,0.88)",
+                    fontSize: 10,
+                    lineHeight: 1.2,
+                    cursor: "pointer",
+                    maxWidth: 156,
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    background: "transparent",
+                    border: "none",
+                    padding: 0,
+                  }}
+                >
+                  {formatVoicePreview(item)}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard?.writeText?.(item).catch(() => {});
+                  }}
+                  title="이 음성 문장 복사"
+                  style={{
+                    flexShrink: 0,
+                    width: 14,
+                    height: 14,
+                    borderRadius: 999,
+                    border: "1px solid rgba(255,255,255,0.12)",
+                    background: "rgba(255,255,255,0.06)",
+                    color: "rgba(255,255,255,0.72)",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    cursor: "pointer",
+                    padding: 0,
+                  }}
+                >
+                  <Copy size={8} />
+                </button>
+              </span>
             ))}
           </div>
         )}

@@ -1124,28 +1124,62 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
               최근 음성
             </span>
             {recentVoiceTranscripts.map((item) => (
-              <button
+              <span
                 key={item}
-                type="button"
-                onClick={() => reuseRecentVoiceTranscript(item)}
-                title={item}
                 style={{
                   borderRadius: 999,
                   border: "1px solid rgba(88,166,255,0.14)",
                   background: "rgba(88,166,255,0.08)",
-                  color: "rgba(214,231,255,0.88)",
-                  padding: "1px 7px",
-                  fontSize: WARP_SMALL_FONT_SIZE,
-                  lineHeight: 1.2,
-                  cursor: "pointer",
-                  maxWidth: 190,
-                  whiteSpace: "nowrap",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 4,
+                  padding: "1px 5px 1px 7px",
                 }}
               >
-                {formatVoicePreview(item)}
-              </button>
+                <button
+                  type="button"
+                  onClick={() => reuseRecentVoiceTranscript(item)}
+                  title={item}
+                  style={{
+                    color: "rgba(214,231,255,0.88)",
+                    fontSize: WARP_SMALL_FONT_SIZE,
+                    lineHeight: 1.2,
+                    cursor: "pointer",
+                    maxWidth: 164,
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    background: "transparent",
+                    border: "none",
+                    padding: 0,
+                  }}
+                >
+                  {formatVoicePreview(item)}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard?.writeText?.(item).catch(() => {});
+                  }}
+                  title="이 음성 문장 복사"
+                  style={{
+                    flexShrink: 0,
+                    width: 14,
+                    height: 14,
+                    borderRadius: 999,
+                    border: "1px solid rgba(255,255,255,0.12)",
+                    background: "rgba(255,255,255,0.06)",
+                    color: "rgba(255,255,255,0.72)",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    cursor: "pointer",
+                    padding: 0,
+                  }}
+                >
+                  <Copy size={8} />
+                </button>
+              </span>
             ))}
           </div>
         )}
