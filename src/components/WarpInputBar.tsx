@@ -121,6 +121,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
     const [voiceHighlight, setVoiceHighlight] = useState<{ start: number; end: number; phase: "visible" | "fading" } | null>(null);
     const [lastVoiceTranscript, setLastVoiceTranscript] = useState("");
     const [lastVoicePartialTranscript, setLastVoicePartialTranscript] = useState("");
+    const [recentVoiceTranscripts, setRecentVoiceTranscripts] = useState<string[]>([]);
     const [voiceCopyFeedback, setVoiceCopyFeedback] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
     const voiceSuccessVisibleTimerRef = useRef<number | null>(null);
@@ -526,6 +527,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
       const t = text.trim();
       if (!t) return;
       setLastVoiceTranscript(t);
+      setRecentVoiceTranscripts((prev) => [t, ...prev.filter((item) => item !== t)].slice(0, 3));
       setInput((prev) => {
         const joined = prev.trim() ? `${prev} ${t}` : t;
         showVoiceHighlight(joined.length - t.length, joined.length);
@@ -563,6 +565,18 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
           }, 1200);
         })
         .catch(() => {});
+    };
+
+    const reuseRecentVoiceTranscript = (text: string) => {
+      const t = text.trim();
+      if (!t) return;
+      setInput((prev) => {
+        const joined = prev.trim() ? `${prev} ${t}` : t;
+        showVoiceHighlight(joined.length - t.length, joined.length);
+        onChangeRef.current?.(joined);
+        return joined;
+      });
+      inputRef.current?.focus();
     };
 
     useEffect(() => {
@@ -1056,6 +1070,55 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
                 {voicePartialPreview}
               </span>
             )}
+          </div>
+        )}
+
+        {!voiceError && recentVoiceTranscripts.length > 0 && voiceStatus === "idle" && (
+          <div
+            style={{
+              width: "100%",
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              flexWrap: "wrap",
+              marginTop: 2,
+              marginBottom: 1,
+            }}
+          >
+            <span
+              style={{
+                fontSize: WARP_SMALL_FONT_SIZE,
+                color: "rgba(255,255,255,0.42)",
+                lineHeight: 1.2,
+                flexShrink: 0,
+              }}
+            >
+              최근 음성
+            </span>
+            {recentVoiceTranscripts.map((item) => (
+              <button
+                key={item}
+                type="button"
+                onClick={() => reuseRecentVoiceTranscript(item)}
+                title={item}
+                style={{
+                  borderRadius: 999,
+                  border: "1px solid rgba(88,166,255,0.14)",
+                  background: "rgba(88,166,255,0.08)",
+                  color: "rgba(214,231,255,0.88)",
+                  padding: "1px 7px",
+                  fontSize: WARP_SMALL_FONT_SIZE,
+                  lineHeight: 1.2,
+                  cursor: "pointer",
+                  maxWidth: 190,
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }}
+              >
+                {formatVoicePreview(item)}
+              </button>
+            ))}
           </div>
         )}
 

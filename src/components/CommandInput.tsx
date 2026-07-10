@@ -104,6 +104,7 @@ const CommandInput = ({
   const [voiceHighlight, setVoiceHighlight] = useState<{ start: number; end: number; phase: "visible" | "fading" } | null>(null);
   const [lastVoiceTranscript, setLastVoiceTranscript] = useState("");
   const [lastVoicePartialTranscript, setLastVoicePartialTranscript] = useState("");
+  const [recentVoiceTranscripts, setRecentVoiceTranscripts] = useState<string[]>([]);
   const [voiceCopyFeedback, setVoiceCopyFeedback] = useState(false);
   const voiceSuccessVisibleTimerRef = useRef<number | null>(null);
   const voiceSuccessFadeTimerRef = useRef<number | null>(null);
@@ -185,6 +186,7 @@ const CommandInput = ({
     const t = text.trim();
     if (!t) return;
     setLastVoiceTranscript(t);
+    setRecentVoiceTranscripts((prev) => [t, ...prev.filter((item) => item !== t)].slice(0, 3));
     setValue((prev) => {
       const joined = prev.trim() ? `${prev} ${t}` : t;
       showVoiceHighlight(joined.length - t.length, joined.length);
@@ -222,6 +224,20 @@ const CommandInput = ({
         }, 1200);
       })
       .catch(() => {});
+  };
+
+  const reuseRecentVoiceTranscript = (text: string) => {
+    const t = text.trim();
+    if (!t) return;
+    setValue((prev) => {
+      const joined = prev.trim() ? `${prev} ${t}` : t;
+      showVoiceHighlight(joined.length - t.length, joined.length);
+      return joined;
+    });
+    const editor = document.getElementById("command-editor-textarea");
+    if (editor instanceof HTMLTextAreaElement) {
+      editor.focus();
+    }
   };
 
   const [recordingSeconds, setRecordingSeconds] = useState(0);
@@ -746,6 +762,53 @@ const CommandInput = ({
                 </button>
               </>
             )}
+          </div>
+        )}
+
+        {!voiceError && recentVoiceTranscripts.length > 0 && voiceStatus === "idle" && (
+          <div
+            style={{
+              margin: VOICE_INLINE_BANNER_MARGIN,
+              marginTop: "0",
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              flexWrap: "wrap",
+            }}
+          >
+            <span
+              style={{
+                fontSize: 10,
+                color: "rgba(255,255,255,0.44)",
+                lineHeight: 1.2,
+              }}
+            >
+              최근 음성
+            </span>
+            {recentVoiceTranscripts.map((item) => (
+              <button
+                key={item}
+                type="button"
+                onClick={() => reuseRecentVoiceTranscript(item)}
+                title={item}
+                style={{
+                  borderRadius: 999,
+                  border: "1px solid rgba(88,166,255,0.16)",
+                  background: "rgba(88,166,255,0.08)",
+                  color: "rgba(214,231,255,0.88)",
+                  padding: "2px 7px",
+                  fontSize: 10,
+                  lineHeight: 1.2,
+                  cursor: "pointer",
+                  maxWidth: 180,
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }}
+              >
+                {formatVoicePreview(item)}
+              </button>
+            ))}
           </div>
         )}
 
