@@ -1037,6 +1037,10 @@ const VoiceHookDiagnosticsSection: React.FC = () => {
       ? new Date(info.transcript_modified_ms).toLocaleString("ko-KR")
       : "수정 이력 없음";
   const voiceHookFolderPath = info?.transcript_path.replace(/[\\/][^\\/]+$/, "") ?? "";
+  const canOpenStartHookFile =
+    Boolean(info?.start_hook_target) && info?.start_hook_kind !== "env";
+  const canOpenStopHookFile =
+    Boolean(info?.stop_hook_target) && info?.stop_hook_kind !== "env";
   const transcriptAgeMs =
     info?.transcript_modified_ms != null
       ? Math.max(0, nowMs - info.transcript_modified_ms)
@@ -1164,6 +1168,46 @@ const VoiceHookDiagnosticsSection: React.FC = () => {
               className="flex items-center gap-1.5 px-2.5 py-1 rounded border border-cyan-400/25 bg-cyan-500/10 hover:bg-cyan-500/20 text-xs text-cyan-100 disabled:opacity-40 transition-colors"
             >
               <FolderOpen size={11} /> ~/.lum_whisper 열기
+            </button>
+            <button
+              onClick={async () => {
+                if (!canOpenStartHookFile || !info?.start_hook_target) return;
+                try {
+                  await openPath(info.start_hook_target);
+                  setCopyMsg("시작 훅 파일을 열었습니다.");
+                } catch (e) {
+                  setError(`시작 훅 파일 열기 실패: ${formatErrorMessage(e)}`);
+                }
+              }}
+              disabled={!canOpenStartHookFile}
+              title={
+                canOpenStartHookFile
+                  ? "시작 훅 파일 열기"
+                  : "env 명령 기반 훅은 파일로 직접 열 수 없습니다"
+              }
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded border border-white/10 bg-white/5 hover:bg-white/10 text-xs text-white/75 disabled:opacity-40 transition-colors"
+            >
+              <FolderOpen size={11} /> 시작 훅 열기
+            </button>
+            <button
+              onClick={async () => {
+                if (!canOpenStopHookFile || !info?.stop_hook_target) return;
+                try {
+                  await openPath(info.stop_hook_target);
+                  setCopyMsg("종료 훅 파일을 열었습니다.");
+                } catch (e) {
+                  setError(`종료 훅 파일 열기 실패: ${formatErrorMessage(e)}`);
+                }
+              }}
+              disabled={!canOpenStopHookFile}
+              title={
+                canOpenStopHookFile
+                  ? "종료 훅 파일 열기"
+                  : "env 명령 기반 훅은 파일로 직접 열 수 없습니다"
+              }
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded border border-white/10 bg-white/5 hover:bg-white/10 text-xs text-white/75 disabled:opacity-40 transition-colors"
+            >
+              <FolderOpen size={11} /> 종료 훅 열기
             </button>
           </div>
 
