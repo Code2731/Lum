@@ -146,10 +146,12 @@ const CommandInput = ({
     voiceStatus === "processing" ? "text-sky-200 bg-sky-500/15 border-sky-400/30" :
     "text-white/75 bg-white/12 border-white/20";
   const micActionLabel =
+    !voiceEnabled ? "음성 비활성" :
     voiceBusy ? "음성 입력 준비 중" :
     isRecording ? "음성 녹음 중지" :
     "음성 녹음 시작";
   const micAssistLabel =
+    !voiceEnabled ? "사용 불가" :
     voiceBusy ? "처리 중" :
     `상태 ${voiceStatusLabel}`;
   const voicePulseActive = voiceStatus === "listening" || voiceStatus === "processing";

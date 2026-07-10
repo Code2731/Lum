@@ -523,12 +523,12 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
     const showInlineVoiceStatus =
       (!voiceError && voiceSuccessPhase === "hidden" && voiceStatus === "idle") || !voiceEnabled;
     const micActionLabel =
-      !voiceEnabled ? "음성 입력 사용 안 함" :
+      !voiceEnabled ? "음성 비활성" :
       voiceBusy ? "음성 입력 준비 중" :
       isRecording ? "음성 녹음 중지" :
       "음성 녹음 시작";
     const micAssistLabel =
-      !voiceEnabled ? "설정에서 켜기" :
+      !voiceEnabled ? "사용 불가" :
       voiceBusy ? "처리 중" :
       `상태 ${voiceStatusLabel}`;
     const inlineVoiceLabel = !voiceEnabled ? "비활성" : voiceStatusLabel;
