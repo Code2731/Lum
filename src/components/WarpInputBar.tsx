@@ -805,6 +805,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
               padding: "2px 6px",
               display: "inline-flex",
               alignItems: "center",
+              gap: 4,
               whiteSpace: "nowrap",
               opacity: voiceSuccessPhase === "fading" ? 0 : 1,
               transform: voiceSuccessPhase === "fading" ? "translateY(-1px)" : "translateY(0)",
@@ -813,7 +814,16 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
               boxShadow: "0 6px 16px rgba(0,0,0,0.10)",
             }}
           >
-            음성 반영 완료
+            <span
+              style={{
+                width: 5,
+                height: 5,
+                borderRadius: 999,
+                background: "rgba(166,244,180,0.88)",
+                flexShrink: 0,
+              }}
+            />
+            <span>음성 반영 완료</span>
           </div>
         )}
 
