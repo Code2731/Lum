@@ -828,7 +828,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
               alignItems: "center",
               whiteSpace: "nowrap",
               animation: VOICE_BANNER_IN_ANIMATION,
-              boxShadow: "0 8px 20px rgba(0,0,0,0.14)",
+              boxShadow: "0 6px 16px rgba(0,0,0,0.11)",
               ...voiceStatusTone,
             }}
           >
