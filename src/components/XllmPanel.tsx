@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
+import { openPath } from "@tauri-apps/plugin-opener";
 import {
   SlidersHorizontal, Loader2,
   Zap, Sparkles, FolderOpen, Wifi, RefreshCw, Check, Database, Copy,
@@ -1027,6 +1028,7 @@ const VoiceHookDiagnosticsSection: React.FC = () => {
     info?.transcript_modified_ms != null
       ? new Date(info.transcript_modified_ms).toLocaleString("ko-KR")
       : "수정 이력 없음";
+  const voiceHookFolderPath = info?.transcript_path.replace(/[\\/][^\\/]+$/, "") ?? "";
 
   return (
     <section className="space-y-2 border border-emerald-400/20 rounded-lg p-3 bg-emerald-400/5">
@@ -1103,6 +1105,21 @@ const VoiceHookDiagnosticsSection: React.FC = () => {
               className="flex items-center gap-1.5 px-2.5 py-1 rounded border border-white/10 bg-white/5 hover:bg-white/10 text-xs text-white/75 transition-colors"
             >
               <Copy size={11} /> Windows 템플릿 경로
+            </button>
+            <button
+              onClick={async () => {
+                if (!voiceHookFolderPath) return;
+                try {
+                  await openPath(voiceHookFolderPath);
+                  setCopyMsg("~/.lum_whisper 폴더를 열었습니다.");
+                } catch (e) {
+                  setError(`음성 훅 폴더 열기 실패: ${formatErrorMessage(e)}`);
+                }
+              }}
+              disabled={!voiceHookFolderPath}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded border border-cyan-400/25 bg-cyan-500/10 hover:bg-cyan-500/20 text-xs text-cyan-100 disabled:opacity-40 transition-colors"
+            >
+              <FolderOpen size={11} /> ~/.lum_whisper 열기
             </button>
           </div>
 
