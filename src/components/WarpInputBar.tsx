@@ -550,6 +550,15 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
       inputRef.current?.focus();
     };
 
+    const replaceWithLastVoiceTranscript = () => {
+      const t = lastVoiceTranscript.trim();
+      if (!t) return;
+      setInput(t);
+      onChangeRef.current?.(t);
+      showVoiceHighlight(0, t.length);
+      inputRef.current?.focus();
+    };
+
     const copyLastVoiceTranscript = () => {
       const t = lastVoiceTranscript.trim();
       if (!t) return;
@@ -1019,6 +1028,25 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
                   }}
                 >
                   다시 넣기
+                </button>
+                <button
+                  type="button"
+                  onClick={replaceWithLastVoiceTranscript}
+                  title="현재 입력을 마지막 음성 문장으로 치환"
+                  style={{
+                    marginLeft: 2,
+                    flexShrink: 0,
+                    borderRadius: 5,
+                    border: "1px solid rgba(63,185,80,0.22)",
+                    background: "rgba(46,160,67,0.16)",
+                    color: "rgba(230,255,236,0.94)",
+                    padding: "0 5px",
+                    fontSize: 10,
+                    lineHeight: 1.5,
+                    cursor: "pointer",
+                  }}
+                >
+                  치환
                 </button>
               </>
             )}

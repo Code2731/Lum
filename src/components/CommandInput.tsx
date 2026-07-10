@@ -209,6 +209,17 @@ const CommandInput = ({
     }
   };
 
+  const replaceWithLastVoiceTranscript = () => {
+    const t = lastVoiceTranscript.trim();
+    if (!t) return;
+    setValue(t);
+    showVoiceHighlight(0, t.length);
+    const editor = document.getElementById("command-editor-textarea");
+    if (editor instanceof HTMLTextAreaElement) {
+      editor.focus();
+    }
+  };
+
   const copyLastVoiceTranscript = () => {
     const t = lastVoiceTranscript.trim();
     if (!t) return;
@@ -759,6 +770,14 @@ const CommandInput = ({
                   title="마지막 음성 문장을 다시 입력창에 넣기"
                 >
                   다시 넣기
+                </button>
+                <button
+                  type="button"
+                  onClick={replaceWithLastVoiceTranscript}
+                  className="shrink-0 rounded border border-emerald-400/24 bg-emerald-500/14 px-1.5 py-0.5 text-[10px] text-emerald-100 hover:bg-emerald-500/24 transition-colors"
+                  title="현재 입력을 마지막 음성 문장으로 치환"
+                >
+                  치환
                 </button>
               </>
             )}
