@@ -735,7 +735,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
                   color: "rgba(255,255,255,0.78)",
                   cursor: "pointer",
                   padding: 0,
-                  opacity: 0.94,
+                  opacity: 0.9,
                 }}
               >
                 <Copy size={9} />
@@ -759,7 +759,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
                   color: "rgba(248,81,73,0.95)",
                   cursor: voiceBusy ? "wait" : "pointer",
                   padding: 0,
-                  opacity: voiceBusy ? 0.55 : 1,
+                  opacity: voiceBusy ? 0.55 : 0.98,
                 }}
               >
                 <RotateCcw size={10} />
