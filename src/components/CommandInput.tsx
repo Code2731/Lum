@@ -503,7 +503,7 @@ const CommandInput = ({
                 flexShrink: 0,
                 display: "inline-flex",
                 alignItems: "center",
-                gap: 4,
+                gap: 5,
                 paddingLeft: 6,
                 borderLeft: "1px solid rgba(255,255,255,0.08)",
               }}
