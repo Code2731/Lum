@@ -538,7 +538,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
     const voiceLiveMessage =
       !voiceEnabled ? "음성 비활성" :
       voiceError ? `음성 오류: ${voiceError}` :
-      voiceSuccessPhase !== "hidden" ? "음성 반영됨" :
+      voiceSuccessPhase !== "hidden" ? "음성 반영 완료" :
       `음성 ${voiceStatusLabel}`;
     const voiceHighlightLength = voiceHighlight ? voiceHighlight.end - voiceHighlight.start : 0;
     const isLongVoiceHighlight = voiceHighlightLength >= VOICE_HIGHLIGHT_LONG_TEXT_THRESHOLD;
@@ -812,7 +812,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
               boxShadow: "0 6px 16px rgba(0,0,0,0.10)",
             }}
           >
-            음성 반영됨
+            음성 반영 완료
           </div>
         )}
 

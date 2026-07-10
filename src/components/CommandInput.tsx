@@ -164,7 +164,7 @@ const CommandInput = ({
   const voiceLiveMessage =
     !voiceEnabled ? "음성 비활성" :
     voiceError ? `음성 오류: ${voiceError}` :
-    voiceSuccessPhase !== "hidden" ? "음성 반영됨" :
+    voiceSuccessPhase !== "hidden" ? "음성 반영 완료" :
       `음성 ${voiceStatusLabel}`;
   const [history, setHistory] = useState<string[]>([]);
   const [historyIdx, setHistoryIdx] = useState(-1);
@@ -563,7 +563,7 @@ const CommandInput = ({
               boxShadow: "0 6px 16px rgba(0,0,0,0.12)",
             }}
           >
-            음성 반영됨
+            음성 반영 완료
           </div>
         )}
 
