@@ -165,7 +165,7 @@ export function getNotificationCardRecoveryHint(notification: AppNotification): 
 
   return notification.read
     ? "복구 기록입니다. 필요하면 인스펙터에서 같은 실패 흐름을 다시 열어 제안 커맨드를 이어서 확인하세요."
-    : "새 복구 알림입니다. 먼저 인스펙터에서 실패 분석과 첫 제안 실행 흐름으로 바로 이어가세요.";
+    : "새 복구 알림입니다. 먼저 복구 시작을 눌러 인스펙터에서 실패 분석과 첫 제안 실행 흐름으로 바로 이어가세요.";
 }
 
 export interface NotificationCardRecoveryPresentation {
@@ -502,6 +502,11 @@ const NotificationCenter: React.FC<Props> = ({
     setSearchHistory([]);
     setShowSearchHistory(false);
     setActiveHistoryIndex(-1);
+  };
+
+  const focusRecoveryAction = () => {
+    const recoveryButton = panelRef.current?.querySelector<HTMLButtonElement>("[data-notification-recovery-action]");
+    recoveryButton?.focus();
   };
 
   const applySearchHistoryItem = (item: SearchHistoryItem) => {
@@ -1090,6 +1095,17 @@ const NotificationCenter: React.FC<Props> = ({
                   {recoveryMeta.badges[2]}
                 </span>
                 <span className="text-[10px] text-white/34">{recoveryMeta.helper}</span>
+                <button
+                  type="button"
+                  onClick={focusRecoveryAction}
+                  className={`ml-auto inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[10px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring ${
+                    recoveryMeta.tone === "amber"
+                      ? "border-amber-300/28 bg-amber-400/14 text-amber-100 hover:bg-amber-400/22"
+                      : "border-cyan-300/28 bg-cyan-400/14 text-cyan-100 hover:bg-cyan-400/22"
+                  }`}
+                >
+                  복구 카드 보기
+                </button>
               </div>
             )}
             <div className="flex items-center gap-2">
@@ -1573,7 +1589,7 @@ const NotificationCenter: React.FC<Props> = ({
                               : "border-cyan-300/28 bg-cyan-400/14 text-cyan-100 hover:bg-cyan-400/22"
                           }`}
                         >
-                          인스펙터 열기
+                          복구 시작
                         </button>
                       )}
                     </div>

@@ -154,7 +154,7 @@ describe("NotificationCenter", () => {
       body: "실패 블록 분석 준비",
       timestamp: 3,
       read: false,
-    })).toBe("새 복구 알림입니다. 먼저 인스펙터에서 실패 분석과 첫 제안 실행 흐름으로 바로 이어가세요.");
+    })).toBe("새 복구 알림입니다. 먼저 복구 시작을 눌러 인스펙터에서 실패 분석과 첫 제안 실행 흐름으로 바로 이어가세요.");
     expect(getNotificationCardRecoveryPresentation({
       id: "heal-2",
       type: "healing",
@@ -338,6 +338,7 @@ describe("NotificationCenter", () => {
     expect(screen.getByText("먼저 확인")).toBeInTheDocument();
     expect(screen.getByText("인스펙터 연계")).toBeInTheDocument();
     expect(screen.getByText("자동 복구 알림이 도착했습니다. 먼저 최근 복구 흐름을 확인한 뒤 인스펙터에서 실패 분석과 제안 커맨드 실행으로 이어가면 됩니다.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "복구 카드 보기" })).toBeInTheDocument();
   });
 
   it("healing 알림 카드에는 바로 복구 보기 가이드를 노출한다", () => {
@@ -365,7 +366,7 @@ describe("NotificationCenter", () => {
     expect(screen.getByText("먼저 복구")).toBeInTheDocument();
     expect(screen.getByText("분석 확인")).toBeInTheDocument();
     expect(screen.getByText("첫 제안 실행")).toBeInTheDocument();
-    expect(screen.getByText("새 복구 알림입니다. 먼저 인스펙터에서 실패 분석과 첫 제안 실행 흐름으로 바로 이어가세요.")).toBeInTheDocument();
+    expect(screen.getByText("새 복구 알림입니다. 먼저 복구 시작을 눌러 인스펙터에서 실패 분석과 첫 제안 실행 흐름으로 바로 이어가세요.")).toBeInTheDocument();
   });
 
   it("healing 알림 카드의 인스펙터 열기 버튼은 복구 흐름 콜백을 호출한다", () => {
@@ -393,7 +394,7 @@ describe("NotificationCenter", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "인스펙터 열기" }));
+    fireEvent.click(screen.getByRole("button", { name: "복구 시작" }));
 
     expect(onMarkByIds).toHaveBeenCalledWith(["1"]);
     expect(onOpenRecoveryFlow).toHaveBeenCalledTimes(1);
@@ -458,7 +459,44 @@ describe("NotificationCenter", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: "인스펙터 열기" })).toHaveFocus();
+      expect(screen.getByRole("button", { name: "복구 시작" })).toHaveFocus();
+    });
+  });
+
+  it("상단 복구 카드 보기 버튼은 첫 healing 액션으로 포커스를 이동한다", async () => {
+    const notifications: AppNotification[] = [
+      {
+        id: "cmd-1",
+        type: "command",
+        title: "테스트 완료",
+        body: "npm test finished",
+        timestamp: Date.now(),
+        read: false,
+      },
+      {
+        id: "heal-1",
+        type: "healing",
+        title: "복구 제안",
+        body: "실패 블록 분석이 준비되었습니다.",
+        timestamp: Date.now() - 1000,
+        read: false,
+      },
+    ];
+
+    render(
+      <NotificationCenter
+        {...baseProps}
+        notifications={notifications}
+        unreadCount={2}
+        onClose={vi.fn()}
+        onOpenRecoveryFlow={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "복구 카드 보기" }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "복구 시작" })).toHaveFocus();
     });
   });
 
