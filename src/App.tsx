@@ -1784,29 +1784,28 @@ const App: React.FC = () => {
               }}
             />
           )}
+          {showInspector && (
+            <section
+              aria-label="인스펙터 상태 요약"
+              className="border-t border-white/[0.03] bg-[#0b1017]/88 px-3 py-2"
+            >
+              <ActionFlowBar
+                badges={[
+                  inspectorBundleMeta.hasActiveTab ? "탭 문맥 연결됨" : "탭 문맥 대기",
+                  inspectorBundleMeta.hasFailedBlocks ? "실패 블록 감지" : "실패 블록 없음",
+                  inspectorBundleMeta.hasAnalyzeResult ? "분석 결과 준비" : "분석 결과 없음",
+                  inspectorBundleMeta.normalizedSelectedBlockId ? "블록 포커스 유지" : "블록 포커스 없음",
+                ]}
+                helper={
+                  inspectorBundleMeta.hasRecentBlocks
+                    ? "인스펙터가 최근 실행 기록과 선택된 블록 기준으로 바로 이어서 분석을 시작할 수 있습니다."
+                    : "아직 실행 기록이 없어도 탭 문맥과 빠른 작업 메뉴는 그대로 유지됩니다."
+                }
+                tone={inspectorBundleMeta.hasFailedBlocks ? "amber" : "cyan"}
+              />
+            </section>
+          )}
         </div>
-
-        {showInspector && (
-          <section
-            aria-label="인스펙터 상태 요약"
-            className="shrink-0 border-t border-white/[0.03] bg-[#0b1017]/88 px-3 py-2"
-          >
-            <ActionFlowBar
-              badges={[
-                inspectorBundleMeta.hasActiveTab ? "탭 문맥 연결됨" : "탭 문맥 대기",
-                inspectorBundleMeta.hasFailedBlocks ? "실패 블록 감지" : "실패 블록 없음",
-                inspectorBundleMeta.hasAnalyzeResult ? "분석 결과 준비" : "분석 결과 없음",
-                inspectorBundleMeta.normalizedSelectedBlockId ? "블록 포커스 유지" : "블록 포커스 없음",
-              ]}
-              helper={
-                inspectorBundleMeta.hasRecentBlocks
-                  ? "인스펙터가 최근 실행 기록과 선택된 블록 기준으로 바로 이어서 분석을 시작할 수 있습니다."
-                  : "아직 실행 기록이 없어도 탭 문맥과 빠른 작업 메뉴는 그대로 유지됩니다."
-              }
-              tone={inspectorBundleMeta.hasFailedBlocks ? "amber" : "cyan"}
-            />
-          </section>
-        )}
 
         <InspectorPanel {...inspectorPanelProps} />
 
