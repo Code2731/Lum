@@ -17,7 +17,11 @@ vi.mock("@tauri-apps/api/window", () => ({
     toggleMaximize: vi.fn(() => Promise.resolve()),
   })),
 }));
-import AppHeader, { type NewFeatureId } from "./AppHeader";
+import AppHeader, {
+  getAppHeaderModelBadgeMeta,
+  getAppHeaderRecoveryBadgeMeta,
+  type NewFeatureId,
+} from "./AppHeader";
 
 const buildProps = () => {
   return {
@@ -143,7 +147,7 @@ const domRect = (top: number, left: number, width: number, height: number): DOMR
   toJSON: () => ({}),
 });
 
-const ADVANCED_BUTTON_NAME = /^고급 기능 \(MCP \/ Squad \/ Healing \/ Recall \/ LoRA \/ RAG \/ xLLM\)(?: \(새 고급 기능이 있습니다\))?$/;
+const ADVANCED_BUTTON_NAME = /^고급 기능 \(MCP \/ Squad \/ Healing \/ Recall \/ LoRA \/ RAG \/ xLLM\)(?: \([^)]+\))?$/;
 
 const installResizeObserverMock = () => {
   const originalResizeObserver = (globalThis as any).ResizeObserver;
@@ -172,6 +176,40 @@ const installResizeObserverMock = () => {
 };
 
 describe("AppHeader", () => {
+  it("모델 배지 메타를 계산한다", () => {
+    expect(
+      getAppHeaderModelBadgeMeta({
+        fastEmpty: true,
+        loadedModelId: null,
+        heavyModelId: null,
+      }),
+    ).toEqual({
+      fastTitle: "모델이 로드되지 않았습니다 — 모델 패널에서 모델을 [사용]하세요",
+      heavyTitle: undefined,
+    });
+
+    expect(
+      getAppHeaderModelBadgeMeta({
+        fastEmpty: false,
+        loadedModelId: "mock-model",
+        heavyModelId: "mock-heavy",
+      }),
+    ).toEqual({
+      fastTitle: "Fast (xLLM): mock-model",
+      heavyTitle: "Heavy Track (mistral.rs): mock-heavy",
+    });
+
+    expect(getAppHeaderRecoveryBadgeMeta({
+      healingCount: 2,
+      unreadHealingCount: 1,
+    })).toEqual({
+      label: "복구 1건",
+      title: "미확인 자동 복구 흐름이 있습니다. 이 배지를 눌러 알림 센터를 열고, 이어서 인스펙터 복구 흐름으로 바로 들어가세요.",
+      tone: "amber",
+      emphasize: true,
+    });
+  });
+
   it("팝오버 외부 클릭 판정은 ref가 null이어도 안전하게 동작한다", () => {
     const target = document.createElement("div");
     document.body.appendChild(target);
@@ -215,6 +253,112 @@ describe("AppHeader", () => {
       "title",
       "모델이 로드되지 않았습니다 — 모델 패널에서 모델을 [사용]하세요",
     );
+  });
+
+  it("고급 기능이 숨겨진 상태에서는 요약 칩으로 신규 상태를 바로 노출한다", () => {
+    render(<AppHeader {...buildProps() as any} />);
+
+    const summaryButton = screen.getByRole("button", { name: "고급 기능 요약: 새 고급 기능 4개" });
+    expect(summaryButton).toHaveTextContent("새 4");
+  });
+
+  it("고급 메뉴 상단에 추천 시작점 섹션과 설명을 노출한다", async () => {
+    render(
+      <AppHeader
+        {...buildProps() as any}
+        showAdvancedOverflow={true}
+      />,
+    );
+
+    expect(screen.getByText("추천 시작점")).toBeInTheDocument();
+    expect(screen.getByText("지금 바로 이어갈 만한 고급 기능만 먼저 추렸습니다.")).toBeInTheDocument();
+    expect(screen.getByText(/개 항목/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Auto-Heal 학습 데이터셋/ })).toBeInTheDocument();
+    expect(screen.getByText("자동 수정 승인 기록을 학습 데이터로 쌓아봅니다.")).toBeInTheDocument();
+    expect(screen.getByText(/먼저 확인/)).toBeInTheDocument();
+    expect(screen.getByText("1순위")).toBeInTheDocument();
+    expect(screen.getByText("2순위")).toBeInTheDocument();
+    expect(screen.getByText("새 기능")).toBeInTheDocument();
+    expect(await screen.findByRole("menu", { name: "고급 기능 메뉴" })).toBeInTheDocument();
+  });
+
+  it("활성 squad가 있으면 추천 시작점에서 복귀 라벨을 우선 노출한다", async () => {
+    const props = buildProps() as any;
+    props.showAdvancedOverflow = true;
+    props.seenAdvancedFeatures = ["skills", "healing", "recall", "lora"];
+    props.squadStore = {
+      squads: [{ id: "sq-1", name: "UI Polish" }],
+      load: vi.fn(),
+    };
+
+    render(<AppHeader {...props} />);
+
+    expect(screen.getByText("복귀")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /워크트리 스쿼드/ })).toBeInTheDocument();
+    expect(await screen.findByRole("menu", { name: "고급 기능 메뉴" })).toBeInTheDocument();
+  });
+
+  it("고급 메뉴 기본 항목도 설명과 상태 배지를 함께 노출한다", async () => {
+    const props = buildProps() as any;
+    props.showAdvancedOverflow = true;
+    props.panels.showMcpPanel = true;
+
+    render(<AppHeader {...props} />);
+
+    expect(screen.getByText("전체 고급 기능")).toBeInTheDocument();
+    expect(screen.getByText("추천 시작점 외의 연결, 설정, 운영 흐름을 여기서 이어갑니다.")).toBeInTheDocument();
+    expect(screen.getByText("도구 탐색")).toBeInTheDocument();
+    expect(screen.getByText("연결 설정")).toBeInTheDocument();
+    expect(screen.getByText("운영 점검")).toBeInTheDocument();
+    expect(screen.getByText("상태 요약")).toBeInTheDocument();
+    expect(screen.getByText("확장 도구")).toBeInTheDocument();
+    expect(screen.getByText("연결, 운영, 상태 요약, 확장 탐색을 한 흐름으로 이어갑니다.")).toBeInTheDocument();
+    expect(screen.getByText("호출 대기")).toBeInTheDocument();
+    expect(screen.getByText("AI 호출이 시작되면 로컬/클라우드 흐름을 여기서 함께 점검합니다.")).toBeInTheDocument();
+    expect(screen.getByText("연결 · 운영")).toBeInTheDocument();
+    expect(screen.getByText("서버 연결, 코드 검색, 기록 점검처럼 기반 흐름을 먼저 확인합니다.")).toBeInTheDocument();
+    expect(screen.getByText("기반 우선")).toBeInTheDocument();
+    expect(screen.getByText("확장 · 학습")).toBeInTheDocument();
+    expect(screen.getByText("메모리, 자동화, 학습, 스킬 같은 확장 흐름을 이어갑니다.")).toBeInTheDocument();
+    expect(screen.getByText("확장 흐름")).toBeInTheDocument();
+    expect(screen.getByText("외부 도구와 모델 서버 연결을 관리합니다.")).toBeInTheDocument();
+    expect(screen.getByText("열림")).toBeInTheDocument();
+    expect(screen.getByText("먼저")).toBeInTheDocument();
+    expect(screen.getByText("다음")).toBeInTheDocument();
+    expect(screen.getByText("열기")).toBeInTheDocument();
+    expect(await screen.findByRole("menuitem", { name: "MCP 서버" })).toBeInTheDocument();
+  });
+
+  it("열린 고급 기능은 추천 시작점에서 작업 중 라벨을 사용한다", async () => {
+    const props = buildProps() as any;
+    props.showAdvancedOverflow = true;
+    props.seenAdvancedFeatures = ["skills", "healing", "recall", "lora"];
+    props.panels.showMcpPanel = true;
+
+    render(<AppHeader {...props} />);
+
+    expect(screen.getByText("작업 중")).toBeInTheDocument();
+    expect(await screen.findByRole("menu", { name: "고급 기능 메뉴" })).toBeInTheDocument();
+  });
+
+  it("온디바이스 세션이면 고급 메뉴에 로컬 우선 상태를 연결해 보여준다", async () => {
+    const props = buildProps() as any;
+    props.showAdvancedOverflow = true;
+    props.privacyLedger = {
+      ...props.privacyLedger,
+      state: {
+        ...props.privacyLedger.state,
+        total: 2,
+        onlineCalls: 0,
+      },
+      isAllOnDevice: true,
+    };
+
+    render(<AppHeader {...props} />);
+
+    expect(screen.getByText("로컬 우선")).toBeInTheDocument();
+    expect(screen.getByText("현재 세션은 온디바이스 중심으로 이어지고 있습니다.")).toBeInTheDocument();
+    expect(await screen.findByRole("menu", { name: "고급 기능 메뉴" })).toBeInTheDocument();
   });
 
   it("고급 메뉴에서 화살표 키로 포커스가 순환 이동한다", async () => {
@@ -594,6 +738,78 @@ describe("AppHeader", () => {
     expect(screen.getByRole("button", { name: "시스템 모니터" })).toHaveAttribute("aria-keyshortcuts", "Meta+Shift+M");
     expect(screen.getByRole("button", { name: "터미널 테마" })).toHaveAttribute("aria-keyshortcuts", "Meta+,");
     expect(screen.getByRole("button", { name: "모델 관리" })).not.toHaveAttribute("aria-keyshortcuts");
+  });
+
+  it("healing 알림이 있으면 헤더에 복구 배지를 노출한다", () => {
+    const props = buildProps();
+    props.notifCenter = {
+      ...props.notifCenter,
+      notifications: [
+        {
+          id: "heal-1",
+          type: "healing",
+          title: "복구 제안",
+          body: "실패 블록 분석 준비",
+          timestamp: Date.now(),
+          read: false,
+        },
+      ],
+      unreadCount: 1,
+    };
+
+    render(<AppHeader {...props} />);
+
+    expect(screen.getByText("복구 1건")).toBeInTheDocument();
+  });
+
+  it("헤더 복구 배지를 누르면 알림 센터를 연다", async () => {
+    const props = buildProps();
+    props.notifCenter = {
+      ...props.notifCenter,
+      notifications: [
+        {
+          id: "heal-1",
+          type: "healing",
+          title: "복구 제안",
+          body: "실패 블록 분석 준비",
+          timestamp: Date.now(),
+          read: false,
+        },
+      ],
+      unreadCount: 1,
+    };
+
+    render(<AppHeader {...props} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "복구 1건 열기" }));
+
+    expect(await screen.findByRole("dialog", { name: "알림 센터" })).toBeInTheDocument();
+  });
+
+  it("알림 센터의 인스펙터 열기 버튼은 인스펙터 토글을 호출한다", async () => {
+    const props = buildProps();
+    props.onToggleInspector = vi.fn();
+    props.notifCenter = {
+      ...props.notifCenter,
+      notifications: [
+        {
+          id: "heal-1",
+          type: "healing",
+          title: "복구 제안",
+          body: "실패 블록 분석 준비",
+          timestamp: Date.now(),
+          read: false,
+        },
+      ],
+      unreadCount: 1,
+    };
+
+    render(<AppHeader {...props} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "복구 1건 열기" }));
+    fireEvent.click(await screen.findByRole("button", { name: "인스펙터 열기" }));
+
+    expect(props.onToggleInspector).toHaveBeenCalledTimes(1);
   });
 
   it("고급 메뉴에서 새 기능 항목은 클릭 시 seen 플래그를 기록한다", () => {

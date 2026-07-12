@@ -1,7 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { isPointerOutsideTargets } from "../utils/pointerGuard";
-import NotificationCenter from "./NotificationCenter";
+import NotificationCenter, {
+  getNotificationCardRecoveryHint,
+  getNotificationCardRecoveryPresentation,
+  getNotificationEmptyStateMeta,
+  getNotificationRecoveryMeta,
+  getNotificationResultMeta,
+  getNotificationTypeMeta,
+} from "./NotificationCenter";
 import type { AppNotification } from "../hooks/useNotificationCenter";
 
 type WriteSpy = ReturnType<typeof vi.fn>;
@@ -80,6 +87,85 @@ describe("NotificationCenter", () => {
 
   beforeEach(() => {
     window.localStorage.clear();
+  });
+
+  it("알림 타입 메타를 일관되게 계산한다", () => {
+    expect(getNotificationTypeMeta("agent")).toEqual({
+      label: "에이전트",
+      colorClass: "text-accent",
+      badgeClass: "border-cyan-300/22 bg-cyan-400/[0.1] text-cyan-100/82",
+      hint: "에이전트 흐름",
+      cardClass: "border-cyan-300/20 bg-cyan-400/[0.08]",
+    });
+  });
+
+  it("결과 메타와 빈 상태 메타를 상태에 따라 계산한다", () => {
+    expect(getNotificationResultMeta(false, false)).toEqual({
+      flowLabel: "전체 흐름",
+      scopeLabel: "최신 우선",
+      description: "최신 알림 흐름을 먼저 보고, 필요하면 종류별로 좁혀서 정리합니다.",
+    });
+
+    expect(getNotificationResultMeta(true, true)).toEqual({
+      flowLabel: "검색 반영",
+      scopeLabel: "필터 적용",
+      description: "검색 결과를 먼저 보고, 아래에서 종류를 좁히거나 현재 보기만 정리합니다.",
+    });
+
+    expect(getNotificationEmptyStateMeta({ hasSearchQuery: true, showUnreadOnly: false })).toEqual({
+      badges: ["검색 조정", "기록 재적용", "필터 확인"],
+      title: "검색 조건에 맞는 알림이 없습니다",
+      description: "검색어를 줄이거나 최근 검색 기록을 다시 적용해 보세요.",
+    });
+
+    expect(getNotificationEmptyStateMeta({ hasSearchQuery: false, showUnreadOnly: true })).toEqual({
+      badges: ["전체 보기", "지난 흐름", "다시 확인"],
+      title: "미확인 알림이 없습니다",
+      description: "전체 보기로 전환하면 지난 알림 흐름을 다시 확인할 수 있습니다.",
+    });
+
+    expect(getNotificationRecoveryMeta([
+      {
+        id: "heal-1",
+        type: "healing",
+        title: "복구 제안 도착",
+        body: "에러 복구 제안이 준비되었습니다.",
+        timestamp: 1,
+        read: false,
+      },
+      {
+        id: "cmd-1",
+        type: "command",
+        title: "테스트 완료",
+        body: "npm test finished",
+        timestamp: 2,
+        read: true,
+      },
+    ])).toEqual({
+      badges: ["복구 1건", "먼저 확인", "인스펙터 연계"],
+      helper: "자동 복구 알림이 도착했습니다. 먼저 최근 복구 흐름을 확인한 뒤 인스펙터에서 실패 분석과 제안 커맨드 실행으로 이어가면 됩니다.",
+      tone: "amber",
+    });
+
+    expect(getNotificationCardRecoveryHint({
+      id: "heal-2",
+      type: "healing",
+      title: "복구 제안",
+      body: "실패 블록 분석 준비",
+      timestamp: 3,
+      read: false,
+    })).toBe("새 복구 알림입니다. 먼저 인스펙터에서 실패 분석과 첫 제안 실행 흐름으로 바로 이어가세요.");
+    expect(getNotificationCardRecoveryPresentation({
+      id: "heal-2",
+      type: "healing",
+      title: "복구 제안",
+      body: "실패 블록 분석 준비",
+      timestamp: 3,
+      read: false,
+    })).toEqual({
+      badges: ["먼저 복구", "분석 확인", "첫 제안 실행"],
+      tone: "amber",
+    });
   });
 
   it("바깥 클릭 판정은 ref가 null이어도 안전하게 동작한다", () => {
@@ -225,6 +311,298 @@ describe("NotificationCenter", () => {
     );
 
     expect(getByText("agent done")).toBeInTheDocument();
+  });
+
+  it("healing 알림이 있으면 상단에 복구 가능 상태 요약을 노출한다", () => {
+    const notifications: AppNotification[] = [
+      {
+        id: "1",
+        type: "healing",
+        title: "복구 제안",
+        body: "실패 블록 분석이 준비되었습니다.",
+        timestamp: Date.now(),
+        read: false,
+      },
+    ];
+
+    render(
+      <NotificationCenter
+        {...baseProps}
+        notifications={notifications}
+        unreadCount={1}
+        onClose={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("복구 1건")).toBeInTheDocument();
+    expect(screen.getByText("먼저 확인")).toBeInTheDocument();
+    expect(screen.getByText("인스펙터 연계")).toBeInTheDocument();
+    expect(screen.getByText("자동 복구 알림이 도착했습니다. 먼저 최근 복구 흐름을 확인한 뒤 인스펙터에서 실패 분석과 제안 커맨드 실행으로 이어가면 됩니다.")).toBeInTheDocument();
+  });
+
+  it("healing 알림 카드에는 바로 복구 보기 가이드를 노출한다", () => {
+    const notifications: AppNotification[] = [
+      {
+        id: "1",
+        type: "healing",
+        title: "복구 제안",
+        body: "실패 블록 분석이 준비되었습니다.",
+        timestamp: Date.now(),
+        read: false,
+      },
+    ];
+
+    render(
+      <NotificationCenter
+        {...baseProps}
+        notifications={notifications}
+        unreadCount={1}
+        onClose={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("바로 복구 보기")).toBeInTheDocument();
+    expect(screen.getByText("먼저 복구")).toBeInTheDocument();
+    expect(screen.getByText("분석 확인")).toBeInTheDocument();
+    expect(screen.getByText("첫 제안 실행")).toBeInTheDocument();
+    expect(screen.getByText("새 복구 알림입니다. 먼저 인스펙터에서 실패 분석과 첫 제안 실행 흐름으로 바로 이어가세요.")).toBeInTheDocument();
+  });
+
+  it("healing 알림 카드의 인스펙터 열기 버튼은 복구 흐름 콜백을 호출한다", () => {
+    const notifications: AppNotification[] = [
+      {
+        id: "1",
+        type: "healing",
+        title: "복구 제안",
+        body: "실패 블록 분석이 준비되었습니다.",
+        timestamp: Date.now(),
+        read: false,
+      },
+    ];
+    const onOpenRecoveryFlow = vi.fn();
+    const onMarkByIds = vi.fn();
+
+    render(
+      <NotificationCenter
+        {...baseProps}
+        notifications={notifications}
+        unreadCount={1}
+        onClose={vi.fn()}
+        onMarkByIds={onMarkByIds}
+        onOpenRecoveryFlow={onOpenRecoveryFlow}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "인스펙터 열기" }));
+
+    expect(onMarkByIds).toHaveBeenCalledWith(["1"]);
+    expect(onOpenRecoveryFlow).toHaveBeenCalledTimes(1);
+  });
+
+  it("복구 강조 상태에서는 healing 알림을 먼저 보여준다", () => {
+    const notifications: AppNotification[] = [
+      {
+        id: "cmd-1",
+        type: "command",
+        title: "테스트 완료",
+        body: "npm test finished",
+        timestamp: Date.now(),
+        read: false,
+      },
+      {
+        id: "heal-1",
+        type: "healing",
+        title: "복구 제안",
+        body: "실패 블록 분석이 준비되었습니다.",
+        timestamp: Date.now() - 1000,
+        read: false,
+      },
+    ];
+
+    const { container } = render(
+      <NotificationCenter
+        {...baseProps}
+        notifications={notifications}
+        unreadCount={2}
+        onClose={vi.fn()}
+        highlightRecovery={true}
+      />,
+    );
+
+    const alerts = Array.from(container.querySelectorAll('[role="alert"]'));
+    expect(alerts[0]?.textContent).toContain("복구 제안");
+  });
+
+  it("복구 자동 포커스가 켜지면 healing 액션 버튼으로 포커스가 이동한다", async () => {
+    const notifications: AppNotification[] = [
+      {
+        id: "heal-1",
+        type: "healing",
+        title: "복구 제안",
+        body: "실패 블록 분석이 준비되었습니다.",
+        timestamp: Date.now(),
+        read: false,
+      },
+    ];
+
+    render(
+      <NotificationCenter
+        {...baseProps}
+        notifications={notifications}
+        unreadCount={1}
+        onClose={vi.fn()}
+        onOpenRecoveryFlow={vi.fn()}
+        highlightRecovery={true}
+        autoFocusRecoveryAction={true}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "인스펙터 열기" })).toHaveFocus();
+    });
+  });
+
+  it("알림 카드 헤더의 타입 배지는 종류별 색상 대비를 가진다", () => {
+    const notifications: AppNotification[] = [
+      {
+        id: "1",
+        type: "agent",
+        title: "agent done",
+        body: "테스트 메시지",
+        timestamp: Date.now(),
+        read: false,
+      },
+      {
+        id: "2",
+        type: "healing",
+        title: "heal done",
+        body: "복구 메시지",
+        timestamp: Date.now() - 1_000,
+        read: false,
+      },
+    ];
+
+    render(
+      <NotificationCenter
+        {...baseProps}
+        notifications={notifications}
+        unreadCount={2}
+        onDismissByIds={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("에이전트").className).toContain("bg-cyan-400/[0.1]");
+    expect(screen.getByText("치유").className).toContain("bg-amber-400/[0.1]");
+  });
+
+  it("알림 카드는 메타 줄에서 흐름과 확인 상태를 함께 보여준다", () => {
+    const notifications: AppNotification[] = [
+      {
+        id: "1",
+        type: "healing",
+        title: "auto heal",
+        body: "복구 제안이 도착했습니다",
+        timestamp: Date.now(),
+        read: false,
+      },
+      {
+        id: "2",
+        type: "env",
+        title: "env status",
+        body: "환경 점검이 완료되었습니다",
+        timestamp: Date.now() - 3_000,
+        read: true,
+      },
+    ];
+
+    render(
+      <NotificationCenter
+        notifications={notifications}
+        unreadCount={1}
+        onMarkAllRead={vi.fn()}
+        onDismiss={vi.fn()}
+        onClear={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("복구 흐름")).toBeInTheDocument();
+    expect(screen.getByText("환경 흐름")).toBeInTheDocument();
+    expect(screen.getByText("지금 확인")).toBeInTheDocument();
+    expect(screen.getByText("읽음")).toBeInTheDocument();
+  });
+
+  it("알림 카드 액션 버튼은 복사와 닫기를 기본 노출한다", () => {
+    const notifications: AppNotification[] = [
+      {
+        id: "1",
+        type: "agent",
+        title: "agent run",
+        body: "에이전트 작업이 완료되었습니다",
+        timestamp: Date.now(),
+        read: false,
+      },
+    ];
+
+    render(
+      <NotificationCenter
+        notifications={notifications}
+        unreadCount={1}
+        onMarkAllRead={vi.fn()}
+        onDismiss={vi.fn()}
+        onClear={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByLabelText("agent run 알림 복사")).toBeInTheDocument();
+    expect(screen.getByLabelText("agent run 알림 닫기")).toBeInTheDocument();
+  });
+
+  it("미확인 알림은 타입별 강조 배경으로 우선순위를 드러낸다", () => {
+    const notifications: AppNotification[] = [
+      {
+        id: "1",
+        type: "healing",
+        title: "auto heal",
+        body: "복구 제안이 도착했습니다",
+        timestamp: Date.now(),
+        read: false,
+      },
+      {
+        id: "2",
+        type: "command",
+        title: "build done",
+        body: "빌드가 완료되었습니다",
+        timestamp: Date.now() - 1_000,
+        read: false,
+      },
+      {
+        id: "3",
+        type: "env",
+        title: "env stable",
+        body: "환경 점검이 완료되었습니다",
+        timestamp: Date.now() - 2_000,
+        read: true,
+      },
+    ];
+
+    render(
+      <NotificationCenter
+        notifications={notifications}
+        unreadCount={2}
+        onMarkAllRead={vi.fn()}
+        onDismiss={vi.fn()}
+        onClear={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    const alerts = screen.getAllByRole("alert");
+    expect(alerts[0]?.className).toContain("bg-amber-400/[0.09]");
+    expect(alerts[1]?.className).toContain("bg-sky-400/[0.07]");
+    expect(alerts[2]?.className).toContain("bg-transparent");
   });
 
   it("알림 센터에서 화살표 키로 포커스가 순환 이동한다", () => {
@@ -500,6 +878,70 @@ describe("NotificationCenter", () => {
     expect(filtered[0]).toHaveTextContent("unread");
   });
 
+  it("미확인 토글은 활성 상태에서 emerald 톤으로 강조된다", () => {
+    render(
+      <NotificationCenter
+        notifications={[
+          {
+            id: "1",
+            type: "command",
+            title: "빌드 실패",
+            body: "CI 빌드에서 에러가 발생했어요",
+            timestamp: 1_000,
+            read: false,
+          },
+          {
+            id: "2",
+            type: "env",
+            title: "환경 점검",
+            body: "환경 점검이 완료되었습니다",
+            timestamp: 900,
+            read: true,
+          },
+        ]}
+        unreadCount={1}
+        onMarkAllRead={vi.fn()}
+        onDismiss={vi.fn()}
+        onDismissByIds={vi.fn()}
+        onClear={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "미확인 알림만 보기" }));
+
+    const unreadToggle = screen.getByRole("button", { name: "전체 알림 보기" });
+    expect(unreadToggle).toHaveAttribute("aria-pressed", "true");
+    expect(unreadToggle.className).toContain("bg-emerald-400/14");
+  });
+
+  it("상단 헤더 액션은 역할별 색상 톤을 유지한다", () => {
+    render(
+      <NotificationCenter
+        notifications={[
+          {
+            id: "1",
+            type: "command",
+            title: "빌드 실패",
+            body: "CI 빌드에서 에러가 발생했어요",
+            timestamp: 1_000,
+            read: false,
+          },
+        ]}
+        unreadCount={1}
+        onMarkAllRead={vi.fn()}
+        onDismiss={vi.fn()}
+        onDismissByIds={vi.fn()}
+        onClear={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByLabelText("모든 알림 읽음 처리").className).toContain("bg-emerald-400/[0.08]");
+    expect(screen.getByLabelText("알림 전체 삭제").className).toContain("bg-rose-400/[0.08]");
+    expect(screen.getByLabelText("알림 센터 닫기").className).toContain("bg-white/[0.03]");
+  });
+
   it("미확인 알림이 없으면 미확인 필터 버튼이 표시되지 않는다", () => {
     render(
       <NotificationCenter
@@ -621,6 +1063,45 @@ describe("NotificationCenter", () => {
     expect(screen.getByText("cmd1")).toBeInTheDocument();
     expect(screen.queryByText("agent1")).not.toBeInTheDocument();
     expect(screen.queryByText("heal1")).not.toBeInTheDocument();
+  });
+
+  it("타입 필터는 선택된 종류를 색상 대비로 더 강하게 보여준다", () => {
+    render(
+      <NotificationCenter
+        notifications={[
+          {
+            id: "1",
+            type: "healing",
+            title: "복구 제안",
+            body: "오류를 자동으로 고칠 수 있습니다",
+            timestamp: 1_000,
+            read: false,
+          },
+          {
+            id: "2",
+            type: "command",
+            title: "빌드 완료",
+            body: "커맨드가 성공적으로 끝났습니다",
+            timestamp: 900,
+            read: false,
+          },
+        ]}
+        unreadCount={2}
+        onMarkAllRead={vi.fn()}
+        onDismiss={vi.fn()}
+        onDismissByIds={vi.fn()}
+        onClear={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /치유/ }));
+
+    const healingFilter = screen.getByRole("button", { name: /치유/ });
+    const commandFilter = screen.getByRole("button", { name: /커맨드/ });
+    expect(healingFilter).toHaveAttribute("aria-pressed", "true");
+    expect(healingFilter.className).toContain("bg-amber-400/16");
+    expect(commandFilter.className).toContain("bg-sky-400/[0.04]");
   });
 
   it("타입 필터와 미확인 필터는 조합되어 적용된다", () => {
@@ -895,6 +1376,81 @@ describe("NotificationCenter", () => {
 
     fireEvent.change(screen.getByLabelText("알림 검색"), { target: { value: "찾을 수 없는 텍스트" } });
     expect(screen.getByText("검색 조건에 맞는 알림이 없습니다")).toBeInTheDocument();
+    expect(screen.getByText("검색 조정")).toBeInTheDocument();
+    expect(screen.getByText("기록 재적용")).toBeInTheDocument();
+    expect(screen.getByText("검색어를 줄이거나 최근 검색 기록을 다시 적용해 보세요.")).toBeInTheDocument();
+  });
+
+  it("알림 검색 상단에 정리 흐름 안내를 보여준다", () => {
+    render(
+      <NotificationCenter
+        notifications={[
+          {
+            id: "1",
+            type: "command",
+            title: "빌드 실패",
+            body: "CI 빌드에서 에러가 발생했어요",
+            timestamp: 1_000,
+            read: false,
+          },
+        ]}
+        unreadCount={1}
+        onMarkAllRead={vi.fn()}
+        onDismiss={vi.fn()}
+        onDismissByIds={vi.fn()}
+        onClear={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("먼저 검색")).toBeInTheDocument();
+    expect(screen.getAllByText("다음 필터").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("마지막 정리").length).toBeGreaterThan(0);
+    expect(screen.getByText("현재 결과")).toBeInTheDocument();
+    expect(screen.getByText("검색 반영")).toBeInTheDocument();
+    expect(screen.getByText("먼저 찾고, 다음으로 좁히고, 마지막에 현재 보기를 정리합니다.")).toBeInTheDocument();
+  });
+
+  it("필터와 일괄 액션 영역도 순서형 라벨을 함께 보여준다", () => {
+    render(
+      <NotificationCenter
+        notifications={[
+          {
+            id: "1",
+            type: "command",
+            title: "빌드 실패",
+            body: "CI 빌드에서 에러가 발생했어요",
+            timestamp: 1_000,
+            read: false,
+          },
+        ]}
+        unreadCount={1}
+        onMarkAllRead={vi.fn()}
+        onDismiss={vi.fn()}
+        onDismissByIds={vi.fn()}
+        onClear={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    expect(screen.getAllByText("다음 필터").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("마지막 정리").length).toBeGreaterThan(0);
+    expect(screen.getByText("현재 보기 삭제")).toBeInTheDocument();
+  });
+
+  it("빈 알림 센터는 다음에 쌓일 흐름을 안내한다", () => {
+    render(
+      <NotificationCenter
+        {...baseProps}
+        onClose={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("알림이 없습니다")).toBeInTheDocument();
+    expect(screen.getByText("다음 알림")).toBeInTheDocument();
+    expect(screen.getByText("실행 흐름")).toBeInTheDocument();
+    expect(screen.getByText("자동 복구")).toBeInTheDocument();
+    expect(screen.getByText("명령 실행, 에이전트 작업, 자동 복구 흐름이 생기면 여기에서 이어집니다.")).toBeInTheDocument();
   });
 
   it("슬래시 키로 검색 입력에 포커스할 수 있다", () => {
@@ -1531,6 +2087,10 @@ describe("NotificationCenter", () => {
 
     const historyItem = screen.getByText("T:");
     expect(historyItem).toBeInTheDocument();
+    expect(screen.getByText("먼저 기록")).toBeInTheDocument();
+    expect(screen.getByText("다음 적용")).toBeInTheDocument();
+    expect(screen.getAllByText("마지막 정리").length).toBeGreaterThan(0);
+    expect(screen.getByText("최근 검색어를 고르고 다시 적용한 뒤 필요 없는 기록을 정리합니다.")).toBeInTheDocument();
 
     fireEvent.click(historyItem.closest("button") as HTMLButtonElement);
     expect(searchInput).toHaveValue("빌드 에러");
@@ -1718,6 +2278,41 @@ describe("NotificationCenter", () => {
 
     expect(screen.queryByText("임시 검색어 1")).not.toBeInTheDocument();
     expect(screen.getByText("임시 검색어 2")).toBeInTheDocument();
+  });
+
+  it("검색 모드 토글은 선택된 모드별 색상 대비를 보여준다", () => {
+    render(
+      <NotificationCenter
+        notifications={[
+          {
+            id: "1",
+            type: "command",
+            title: "빌드 에러 코드 500",
+            body: "에러 메시지 분석",
+            timestamp: 1_000,
+            read: false,
+          },
+        ]}
+        unreadCount={1}
+        onMarkAllRead={vi.fn()}
+        onDismiss={vi.fn()}
+        onDismissByIds={vi.fn()}
+        onClear={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    const tokenButton = screen.getByRole("button", { name: "검색 모드: 토큰(1)" });
+    const regexButton = screen.getByRole("button", { name: "검색 모드: 정규식(2)" });
+
+    expect(tokenButton.className).toContain("bg-cyan-400/16");
+    expect(regexButton.className).toContain("hover:bg-amber-400/[0.08]");
+
+    fireEvent.click(regexButton);
+
+    expect(regexButton).toHaveAttribute("aria-pressed", "true");
+    expect(regexButton.className).toContain("bg-amber-400/16");
+    expect(tokenButton.className).toContain("hover:bg-cyan-400/[0.08]");
   });
 
   it("히스토리 패널에서 방향키로 검색 기록을 선택하고 Enter로 적용할 수 있다", () => {

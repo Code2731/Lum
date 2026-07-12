@@ -45,6 +45,32 @@ export interface UseInspectorPanelPropsBundleOptions {
   handlers: InspectorPanelActionHandlerProps;
 }
 
+export interface InspectorPanelPropsBundleMeta {
+  hasActiveTab: boolean;
+  hasFailedBlocks: boolean;
+  hasRecentBlocks: boolean;
+  hasAnalyzeResult: boolean;
+  normalizedSelectedBlockId: string | null;
+}
+
+export function getInspectorPanelPropsBundleMeta(
+  options: Pick<
+    UseInspectorPanelPropsBundleOptions,
+    "activeTab" | "cmdBlocks" | "selectedBlockId" | "inspectorAnalyzeCache"
+  >,
+): InspectorPanelPropsBundleMeta {
+  const normalizedSelectedBlockId = normalizeBlockId(options.selectedBlockId);
+  const hasFailedBlocks = options.cmdBlocks.some((block) => (block.exitCode ?? 0) !== 0);
+
+  return {
+    hasActiveTab: options.activeTab !== null,
+    hasFailedBlocks,
+    hasRecentBlocks: options.cmdBlocks.length > 0,
+    hasAnalyzeResult: options.inspectorAnalyzeCache !== null,
+    normalizedSelectedBlockId,
+  };
+}
+
 export function useInspectorPanelPropsBundle({
   showInspector,
   selectedModel,
@@ -66,7 +92,12 @@ export function useInspectorPanelPropsBundle({
   scriptLibrary,
   handlers,
 }: UseInspectorPanelPropsBundleOptions): InspectorPanelProps {
-  const normalizedSelectedBlockId = normalizeBlockId(selectedBlockId);
+  const { normalizedSelectedBlockId } = getInspectorPanelPropsBundleMeta({
+    activeTab,
+    cmdBlocks,
+    selectedBlockId,
+    inspectorAnalyzeCache,
+  });
 
   const data = useInspectorPanelData({
     showInspector,

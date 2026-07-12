@@ -1,5 +1,17 @@
 # TODO
 
+## 2026-07-12 복구 UX 라운드 반영
+
+- [x] 헤더/알림 센터/인스펙터 복구 진입 흐름 정합성 보강
+  - `AppHeader` 복구 배지 → `NotificationCenter` healing 카드 → `Inspector` 복구 흐름으로 이어지는 CTA 체인 정리
+- [x] 인스펙터 복구 카드 언어 통일
+  - `InspectorFailedBlockCard`, `InspectorAnalyzeCard`, `InspectorSummaryOverviewCard`, `InspectorQuickActionsCard`의 핵심 카피를 `복구 시작/분석 연결/첫 제안 실행` 기준으로 정렬
+- [x] healing 알림 액션 직접화
+  - `NotificationCenter` healing 카드에 `인스펙터 열기` 액션 추가
+  - 클릭 시 읽음 처리 + 복구 진입이 동시에 수행되도록 연결
+- [x] 진행 문서 반영
+  - `PROGRESS.md`와 `TODO.md`에 이번 복구 UX 개선 범위 및 다음 추천 라운드 반영
+
 ## 2026-07-07 추천 라운드 반영
 
 - [x] 경고 분류 기준 정합화

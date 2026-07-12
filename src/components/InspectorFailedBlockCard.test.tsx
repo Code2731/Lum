@@ -1,7 +1,10 @@
 import React from "react";
 import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
-import InspectorFailedBlockCard from "./InspectorFailedBlockCard";
+import InspectorFailedBlockCard, {
+  getInspectorFailedBlockActionLabel,
+  getInspectorFailedBlockMeta,
+} from "./InspectorFailedBlockCard";
 import type { InspectorFailedBlock } from "./InspectorPanel/types";
 
 const baseFailedBlocks: InspectorFailedBlock[] = [
@@ -24,13 +27,34 @@ function createProps(overrides: Partial<React.ComponentProps<typeof InspectorFai
 }
 
 describe("InspectorFailedBlockCard", () => {
+  it("실패 블록 메타와 액션 라벨을 계산한다", () => {
+    expect(getInspectorFailedBlockMeta(baseFailedBlocks[0])).toEqual({
+      exitLabel: "실패 1",
+      guide: "실패 블록을 먼저 보고, 다음으로 AI 분석을 열고, 마지막에 로그나 프롬프트를 넘깁니다.",
+      badges: ["먼저 실패 확인", "다음 분석 열기", "마지막 로그/프롬프트"],
+      primaryActionHelper: "현재 실패 블록을 기준으로 분석을 열면 첫 제안 실행 흐름까지 가장 빠르게 이어집니다.",
+    });
+    expect(getInspectorFailedBlockActionLabel("focus")).toBe("다음 실패 확인");
+    expect(getInspectorFailedBlockActionLabel("analyze")).toBe("실패 분석 열기");
+    expect(getInspectorFailedBlockActionLabel("copyLog")).toBe("실패 로그 복사");
+    expect(getInspectorFailedBlockActionLabel("copyPrompt")).toBe("분석 프롬프트 복사");
+    expect(getInspectorFailedBlockActionLabel("loadPrompt")).toBe("분석 입력 불러오기");
+    expect(getInspectorFailedBlockActionLabel("select")).toBe("블록 선택");
+  });
+
   it("실패 블록 정보와 개수를 렌더링한다", () => {
     render(<InspectorFailedBlockCard {...createProps()} />);
 
     expect(screen.getByText("실패 블록")).toBeInTheDocument();
     expect(screen.getByText("1개")).toBeInTheDocument();
     expect(screen.getByText("npm test")).toBeInTheDocument();
-    expect(screen.getByText("ERR 1")).toBeInTheDocument();
+    expect(screen.getByText("실패 1")).toBeInTheDocument();
+    expect(screen.getByText("먼저 실패 확인")).toBeInTheDocument();
+    expect(screen.getByText("다음 분석 열기")).toBeInTheDocument();
+    expect(screen.getByText("마지막 로그/프롬프트")).toBeInTheDocument();
+    expect(screen.getByText("실패 블록을 먼저 보고, 다음으로 AI 분석을 열고, 마지막에 로그나 프롬프트를 넘깁니다.")).toBeInTheDocument();
+    expect(screen.getByText("바로 복구 시작")).toBeInTheDocument();
+    expect(screen.getByText("현재 실패 블록을 기준으로 분석을 열면 첫 제안 실행 흐름까지 가장 빠르게 이어집니다.")).toBeInTheDocument();
     expect(screen.getByText("ERR_FAIL")).toBeInTheDocument();
   });
 

@@ -12,11 +12,17 @@ import {
   BookOpen, Bell, Activity, FolderTree, Brain, PlugZap, Users, Sparkles, Library, Hammer, Layers, BookMarked, GitBranch,
   PanelRightOpen,
 } from "lucide-react";
+import { RecommendationReasonBadge } from "@/components/ui/recommendation-reason-badge";
+import { SectionIntroHeader } from "@/components/ui/section-intro-header";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { ToolbarIconButton, ToolbarSeparator } from "@/components/ui/toolbar-icon-button";
+import { RecommendationCard } from "@/components/ui/recommendation-card";
 import WindowControls from "./WindowControls";
 import PrivacyLedgerBadge from "./PrivacyLedgerBadge";
 import NotificationCenter from "./NotificationCenter";
 import { SMALL_ICON_SIZE } from "../constants/ui";
+import { getAdvancedRecommendationCardPresentation } from "../utils/advanced-recommendation-card";
+import { getAdvancedRecommendation } from "../utils/advanced-recommendation";
 import { getActiveFocusableIndex, isPointerOutsideTargets } from "../utils/pointerGuard";
 import type { usePanelVisibility } from "../hooks/usePanelVisibility";
 import type { useSquads } from "../hooks/useSquads";
@@ -26,6 +32,56 @@ import type { useScriptLibrary } from "../hooks/useScriptLibrary";
 import type { useHardwareSpecs } from "../hooks/useHardwareSpecs";
 
 type ViewMode = "terminal" | "canvas" | "list";
+
+export interface AppHeaderModelBadgeMeta {
+  fastTitle: string;
+  heavyTitle?: string;
+}
+
+export interface AppHeaderRecoveryBadgeMeta {
+  label: string;
+  title: string;
+  tone: "amber" | "cyan";
+  emphasize: boolean;
+}
+
+export function getAppHeaderModelBadgeMeta(input: {
+  fastEmpty: boolean;
+  loadedModelId: string | null;
+  heavyModelId: string | null;
+}): AppHeaderModelBadgeMeta {
+  return {
+    fastTitle: input.fastEmpty
+      ? "모델이 로드되지 않았습니다 — 모델 패널에서 모델을 [사용]하세요"
+      : `Fast (xLLM): ${input.loadedModelId}`,
+    heavyTitle: input.heavyModelId ? `Heavy Track (mistral.rs): ${input.heavyModelId}` : undefined,
+  };
+}
+
+export function getAppHeaderRecoveryBadgeMeta(input: {
+  healingCount: number;
+  unreadHealingCount: number;
+}): AppHeaderRecoveryBadgeMeta | null {
+  if (input.healingCount === 0) {
+    return null;
+  }
+
+  if (input.unreadHealingCount > 0) {
+    return {
+      label: `복구 ${input.unreadHealingCount}건`,
+      title: "미확인 자동 복구 흐름이 있습니다. 이 배지를 눌러 알림 센터를 열고, 이어서 인스펙터 복구 흐름으로 바로 들어가세요.",
+      tone: "amber",
+      emphasize: true,
+    };
+  }
+
+  return {
+    label: `복구 기록 ${input.healingCount}건`,
+    title: "최근 자동 복구 기록이 남아 있습니다. 이 배지에서 알림 센터를 열고, 필요하면 인스펙터에서 같은 복구 흐름을 다시 확인하세요.",
+    tone: "cyan",
+    emphasize: false,
+  };
+}
 
 const VIEW_BUTTONS: { mode: ViewMode; icon: React.ReactNode; label: string }[] = [
   { mode: "terminal", icon: <TerminalSquare size={14} />, label: "터미널" },
@@ -42,6 +98,7 @@ export type NewFeatureId = typeof NEW_ADVANCED_FEATURES[number];
 type AdvancedAction = {
   id: string;
   label: string;
+  description: string;
   icon: (size: number) => React.ReactNode;
   active: boolean;
   /** 신규 feature 배지 대상 ID */
@@ -196,11 +253,6 @@ const AppHeader: React.FC<Props> = ({
     (NEW_ADVANCED_FEATURES as readonly string[]).includes(id) && !seenAdvancedFeatures.includes(id);
   const hasUnseenAdvanced = NEW_ADVANCED_FEATURES.some((id) => !seenAdvancedFeatures.includes(id));
   const unseenAdvancedCount = NEW_ADVANCED_FEATURES.reduce((acc, id) => (isNew(id) ? acc + 1 : acc), 0);
-  const advancedBadgeLabel = hasUnseenAdvanced
-    ? "새 고급 기능이 있습니다"
-    : squadStore.squads.length > 0
-      ? "활성 Squad가 있습니다"
-      : undefined;
   const {
     setShowModelManager,
     showRagPanel, setShowRagPanel,
@@ -224,6 +276,7 @@ const AppHeader: React.FC<Props> = ({
     {
       id: "mcp",
       label: "MCP 서버",
+      description: "외부 도구와 모델 서버 연결을 관리합니다.",
       icon: (size) => <PlugZap size={size} />,
       active: showMcpPanel,
       onActivate: () => setShowMcpPanel(v => !v),
@@ -231,6 +284,7 @@ const AppHeader: React.FC<Props> = ({
     {
       id: "squad",
       label: "워크트리 스쿼드",
+      description: "병렬 작업용 worktree와 squad 세션을 빠르게 엽니다.",
       icon: (size) => <Users size={size} />,
       active: showSquadPanel,
       badge: squadStore.squads.length > 0,
@@ -242,6 +296,7 @@ const AppHeader: React.FC<Props> = ({
     {
       id: "healing",
       label: "Auto-Heal 학습 데이터셋",
+      description: "자동 수정 승인 기록을 학습 데이터로 쌓아봅니다.",
       icon: (size) => <Sparkles size={size} className={size <= SMALL_ICON_SIZE ? "text-cyan-300" : undefined} />,
       active: showHealingDataset,
       newFeatureId: "healing",
@@ -254,6 +309,7 @@ const AppHeader: React.FC<Props> = ({
     {
       id: "history",
       label: "시맨틱 히스토리 그래프",
+      description: "명령과 변경 흐름을 시맨틱 히스토리로 훑어봅니다.",
       icon: (size) => <GitBranch size={size} />,
       active: showHistoryGraph,
       onActivate: () => setShowHistoryGraph(v => !v),
@@ -262,6 +318,7 @@ const AppHeader: React.FC<Props> = ({
     {
       id: "recall",
       label: "메모리 검색 (history/healing/memory)",
+      description: "과거 명령, 승인, 메모를 한 번에 다시 찾습니다.",
       icon: (size) => <Library size={size} className={size <= SMALL_ICON_SIZE ? "text-cyan-300" : undefined} />,
       active: showRecall,
       newFeatureId: "recall",
@@ -274,6 +331,7 @@ const AppHeader: React.FC<Props> = ({
     {
       id: "lora",
       label: "LoRA Forge — 내 데이터로 모델 학습",
+      description: "내 승인 데이터로 로컬 모델 학습 흐름을 시작합니다.",
       icon: (size) => <Hammer size={size} className={size <= SMALL_ICON_SIZE ? "text-cyan-300" : undefined} />,
       active: showLoraForge,
       newFeatureId: "lora",
@@ -286,6 +344,7 @@ const AppHeader: React.FC<Props> = ({
     {
       id: "skills",
       label: "스킬 — 절차 라이브러리",
+      description: "반복 작업 절차를 스킬로 저장하고 재사용합니다.",
       icon: (size) => <BookMarked size={size} className={size <= SMALL_ICON_SIZE ? "text-cyan-300" : undefined} />,
       active: showSkills,
       newFeatureId: "skills",
@@ -298,6 +357,7 @@ const AppHeader: React.FC<Props> = ({
     {
       id: "rag",
       label: "RAG 코드 검색",
+      description: "코드베이스를 인덱싱하고 맥락 검색 결과를 확인합니다.",
       icon: (size) => <Database size={size} />,
       active: showRagPanel,
       onActivate: () => setShowRagPanel(v => !v),
@@ -305,6 +365,7 @@ const AppHeader: React.FC<Props> = ({
     {
       id: "xllm",
       label: "xLLM 최적화 설정",
+      description: "외부 추론 서버와 최적화 옵션을 조정합니다.",
       icon: (size) => <SlidersHorizontal size={size} />,
       active: false,
       onActivate: () => setShowXllmPanel(true),
@@ -331,6 +392,16 @@ const AppHeader: React.FC<Props> = ({
     setShowRagPanel,
     setShowXllmPanel,
   ]);
+  const activeAdvancedCount = advancedActions.reduce((acc, action) => acc + (action.active ? 1 : 0), 0);
+  const advancedStatusSummary = [
+    unseenAdvancedCount > 0 ? { short: `새 ${unseenAdvancedCount}`, long: `새 고급 기능 ${unseenAdvancedCount}개` } : null,
+    activeAdvancedCount > 0 ? { short: `열림 ${activeAdvancedCount}`, long: `열린 고급 패널 ${activeAdvancedCount}개` } : null,
+    squadStore.squads.length > 0 ? { short: `스쿼드 ${squadStore.squads.length}`, long: `활성 스쿼드 ${squadStore.squads.length}개` } : null,
+  ].filter(Boolean) as Array<{ short: string; long: string }>;
+  const advancedBadgeLabel = advancedStatusSummary.length > 0
+    ? advancedStatusSummary.map((item) => item.long).join(", ")
+    : undefined;
+  const advancedStatusSummaryLabel = advancedStatusSummary.map((item) => item.short).join(" · ");
 
   const compactQuickAccessActions = React.useMemo<QuickAccessAction[]>(() => [
     {
@@ -406,6 +477,25 @@ const AppHeader: React.FC<Props> = ({
       })
       .map((entry) => entry.action);
   }, [advancedActions, seenAdvancedFeatures]);
+  const recommendedOverflowActions = React.useMemo(() => {
+    return orderedOverflowActions
+      .map((action) => {
+        const isActionNew = action.newFeatureId != null && isNew(action.newFeatureId);
+        const isPinnedContext = action.id === "squad" && squadStore.squads.length > 0;
+        const isStarter = ["recall", "rag", "skills"].includes(action.id);
+        const { reason, score } = getAdvancedRecommendation({
+          isNew: isActionNew,
+          isActive: action.active,
+          isPinnedContext,
+          isStarter,
+          hasBadge: Boolean(action.badge),
+        });
+        return { action, reason, score };
+      })
+      .filter((entry) => entry.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 2);
+  }, [orderedOverflowActions, seenAdvancedFeatures, squadStore.squads.length]);
 
 
   // 모델명 짧게 — 마지막 segment에서 흔한 suffix 제거
@@ -437,6 +527,7 @@ const AppHeader: React.FC<Props> = ({
   const [notifCenterPosition, setNotifCenterPosition] = React.useState<PopupPosition>(POPUP_OFFSCREEN_POSITION);
   const [advancedOverflowReady, setAdvancedOverflowReady] = React.useState(false);
   const [notifCenterReady, setNotifCenterReady] = React.useState(false);
+  const [notifCenterRecoveryFocus, setNotifCenterRecoveryFocus] = React.useState(false);
   const ADVANCED_OVERFLOW_PANEL_ID = "advanced-overflow-panel";
   const NOTIF_CENTER_PANEL_ID = "notification-center-panel";
   const POPUP_GUTTER = 8;
@@ -610,6 +701,16 @@ const AppHeader: React.FC<Props> = ({
   };
   const notifCenterPanelOrigin = notifCenterPlacement === "up" ? "bottom right" : "top right";
   const notifCenterPanelOffsetY = notifCenterPlacement === "up" ? 4 : -4;
+  const modelBadgeMeta = getAppHeaderModelBadgeMeta({
+    fastEmpty,
+    loadedModelId,
+    heavyModelId,
+  });
+  const healingNotifications = notifCenter.notifications.filter((notification) => notification.type === "healing");
+  const recoveryBadgeMeta = getAppHeaderRecoveryBadgeMeta({
+    healingCount: healingNotifications.length,
+    unreadHealingCount: healingNotifications.filter((notification) => !notification.read).length,
+  });
 
   const getPopupElements = (panelRef: React.RefObject<HTMLDivElement | null>): HTMLElement[] => {
     if (!panelRef.current) return [];
@@ -687,6 +788,7 @@ const AppHeader: React.FC<Props> = ({
   const closeNotifCenter = React.useCallback(() => {
     setShowNotifCenter(false);
     setNotifCenterReady(false);
+    setNotifCenterRecoveryFocus(false);
     requestAnimationFrame(() => {
       notifCenterButtonRef.current?.focus();
     });
@@ -708,6 +810,7 @@ const AppHeader: React.FC<Props> = ({
   const toggleNotifCenter = React.useCallback(() => {
     setShowAdvancedOverflow(false);
     setAdvancedOverflowReady(false);
+    setNotifCenterRecoveryFocus(false);
     setShowNotifCenter((prev) => {
       const next = !prev;
       if (next) {
@@ -946,11 +1049,7 @@ const AppHeader: React.FC<Props> = ({
                 ? "bg-white/[0.04] border-white/10 text-white/35 italic"
                 : "bg-emerald-400/10 border-emerald-400/25 text-emerald-300"
             }`}
-            title={
-              fastEmpty
-                ? "모델이 로드되지 않았습니다 — 모델 패널에서 모델을 [사용]하세요"
-                : `Fast (xLLM): ${loadedModelId}`
-            }
+            title={modelBadgeMeta.fastTitle}
           >
             {fastEmpty ? "EMPTY" : "FAST"} · {fast}
           </div>
@@ -958,7 +1057,7 @@ const AppHeader: React.FC<Props> = ({
             <div
               data-tauri-drag-region
               className="text-sm px-2 py-1 rounded-md bg-amber-400/10 border border-amber-400/25 text-amber-200 truncate max-w-[148px]"
-              title={`Heavy Track (mistral.rs): ${heavyModelId}`}
+              title={modelBadgeMeta.heavyTitle}
             >
               HEAVY · {heavy}
             </div>
@@ -970,6 +1069,36 @@ const AppHeader: React.FC<Props> = ({
           isAllOnDevice={privacyLedger.isAllOnDevice}
           onReset={privacyLedger.reset}
         />
+        {recoveryBadgeMeta && (
+          <button
+            type="button"
+            onClick={() => {
+              setShowAdvancedOverflow(false);
+              setAdvancedOverflowReady(false);
+              setNotifCenterRecoveryFocus(true);
+              setShowNotifCenter(true);
+              setNotifCenterReady(false);
+              setNotifCenterPosition(POPUP_OFFSCREEN_POSITION);
+            }}
+            className={`inline-flex items-center gap-1.5 text-xs px-2 py-1 rounded-md border truncate max-w-[132px] transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring ${
+              recoveryBadgeMeta.tone === "amber"
+                ? recoveryBadgeMeta.emphasize
+                  ? "bg-amber-400/16 border-amber-300/40 text-amber-50 shadow-[0_0_0_1px_rgba(251,191,36,0.08),0_10px_24px_rgba(245,158,11,0.16)] hover:bg-amber-400/24"
+                  : "bg-amber-400/10 border-amber-400/25 text-amber-100 hover:bg-amber-400/18"
+                : "bg-cyan-400/10 border-cyan-300/25 text-cyan-100 hover:bg-cyan-400/18"
+            }`}
+            title={recoveryBadgeMeta.title}
+            aria-label={`${recoveryBadgeMeta.label} 열기`}
+          >
+            {recoveryBadgeMeta.emphasize && (
+              <span className="relative flex h-2 w-2 shrink-0" aria-hidden="true">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-300/70" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-amber-200" />
+              </span>
+            )}
+            {recoveryBadgeMeta.label}
+          </button>
+        )}
         <ToolbarSeparator />
 
         {/* 그룹 1 — 워크스페이스 / 탐색 */}
@@ -1048,7 +1177,7 @@ const AppHeader: React.FC<Props> = ({
         )}
 
         {(!toolbarShowAdvanced || compactMode) && (
-          <div className="relative" ref={advancedOverflowRef}>
+          <div className="relative flex items-center gap-1.5" ref={advancedOverflowRef}>
             <ToolbarIconButton
               ref={advancedOverflowButtonRef}
               label={compactMode
@@ -1064,6 +1193,17 @@ const AppHeader: React.FC<Props> = ({
             >
               <SlidersHorizontal size={14} />
             </ToolbarIconButton>
+            {!compactMode && advancedStatusSummaryLabel && (
+              <button
+                type="button"
+                onClick={toggleAdvancedOverflow}
+                aria-label={`고급 기능 요약: ${advancedBadgeLabel}`}
+                title={advancedBadgeLabel}
+                className="inline-flex h-7 max-w-[120px] items-center rounded-full border border-white/10 bg-white/[0.06] px-2.5 text-[11px] font-medium text-white/68 transition-colors hover:border-white/16 hover:bg-white/[0.1] hover:text-white/88 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              >
+                <span className="truncate">{advancedStatusSummaryLabel}</span>
+              </button>
+            )}
             {(showAdvancedOverflow && typeof document !== "undefined") ? createPortal(
               <motion.div
                 ref={advancedOverflowPanelRef}
@@ -1100,19 +1240,161 @@ const AppHeader: React.FC<Props> = ({
                     </p>
                   </div>
                 )}
-                {orderedOverflowActions.map((action) => (
-                  <AdvancedRow
-                    key={`advanced-overflow-${action.id}`}
-                    icon={action.icon(SMALL_ICON_SIZE)}
-                    label={action.label}
-                    badge={action.badge}
-                    isNew={action.newFeatureId ? isNew(action.newFeatureId) : false}
-                    onClick={() => {
-                      setShowAdvancedOverflow(false);
-                      action.onActivate();
-                    }}
-                  />
-                ))}
+                {recommendedOverflowActions.length > 0 && (
+                  <div className="px-2 py-1.5 mb-1 border-b border-white/10">
+                    <SectionIntroHeader
+                      title="추천 시작점"
+                      description="지금 바로 이어갈 만한 고급 기능만 먼저 추렸습니다."
+                      titleClassName="text-[11px] font-semibold tracking-[0.06em] text-cyan-300 uppercase"
+                      descriptionClassName="mt-1 text-[11px] text-white/52"
+                      aside={<StatusBadge tone="neutral">{recommendedOverflowActions.length}개 항목</StatusBadge>}
+                    />
+                    <div className="mt-2 space-y-2">
+                      {recommendedOverflowActions.map(({ action, reason }, index) => {
+                        const isPrimaryRecommendation = index === 0;
+                        const presentation = getAdvancedRecommendationCardPresentation(index, action.description, reason?.tone);
+
+                        const cardClassName = isPrimaryRecommendation
+                          ? `${presentation.className} border-cyan-300/24 bg-cyan-400/[0.14] shadow-[0_12px_32px_rgba(34,211,238,0.14)]`
+                          : `${presentation.className} border-white/8 bg-white/[0.04] opacity-90`;
+
+                        return (
+                          <RecommendationCard
+                            key={`advanced-recommend-${action.id}`}
+                            onClick={() => {
+                              setShowAdvancedOverflow(false);
+                              action.onActivate();
+                            }}
+                            icon={action.icon(SMALL_ICON_SIZE)}
+                            title={action.label}
+                            description={presentation.description}
+                            badges={(
+                              <>
+                                <StatusBadge tone={presentation.priorityTone}>
+                                  {index + 1}순위
+                                </StatusBadge>
+                                {reason ? <RecommendationReasonBadge label={reason.label} tone={reason.tone} /> : null}
+                              </>
+                            )}
+                            actionAlign="center"
+                            surfaceTone={presentation.surfaceTone}
+                            density="compact"
+                            className={cardClassName}
+                          />
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+                {orderedOverflowActions.length > 0 && (
+                  <div className="px-2 py-1.5 mb-1 border-b border-white/8">
+                    <SectionIntroHeader
+                      title="전체 고급 기능"
+                      description="추천 시작점 외의 연결, 설정, 운영 흐름을 여기서 이어갑니다."
+                      titleClassName="text-[11px] font-semibold tracking-[0.06em] text-white/58 uppercase"
+                      descriptionClassName="mt-1 text-[11px] text-white/44"
+                      aside={(
+                        <div className="flex items-center gap-1.5">
+                          <StatusBadge tone="neutral">{orderedOverflowActions.length}개 항목</StatusBadge>
+                          <StatusBadge tone="neutral">도구 탐색</StatusBadge>
+                        </div>
+                      )}
+                    />
+                    <div className="mt-2 flex flex-wrap items-center gap-1.5 rounded-xl border border-white/8 bg-white/[0.03] px-2.5 py-2">
+                      <StatusBadge tone="neutral">연결 설정</StatusBadge>
+                      <StatusBadge tone="neutral">운영 점검</StatusBadge>
+                      <StatusBadge tone="neutral">상태 요약</StatusBadge>
+                      <StatusBadge tone="neutral">확장 도구</StatusBadge>
+                      <span className="text-[10px] text-white/34">
+                        연결, 운영, 상태 요약, 확장 탐색을 한 흐름으로 이어갑니다.
+                      </span>
+                    </div>
+                    <div
+                      className={`mt-2 flex flex-wrap items-center gap-1.5 rounded-xl border px-2.5 py-2 ${
+                        privacyLedger.state.total === 0
+                          ? "border-white/8 bg-white/[0.025]"
+                          : privacyLedger.isAllOnDevice
+                            ? "border-cyan-300/18 bg-cyan-400/[0.07]"
+                            : "border-amber-300/18 bg-amber-400/[0.08]"
+                      }`}
+                    >
+                      <StatusBadge tone="neutral">
+                        {privacyLedger.state.total === 0
+                          ? "호출 대기"
+                          : privacyLedger.isAllOnDevice
+                            ? "로컬 우선"
+                            : `클라우드 ${privacyLedger.state.onlineCalls}건`}
+                      </StatusBadge>
+                      <span
+                        className={`text-[10px] ${
+                          privacyLedger.state.total === 0
+                            ? "text-white/36"
+                            : privacyLedger.isAllOnDevice
+                              ? "text-cyan-100/76"
+                              : "text-amber-100/78"
+                        }`}
+                      >
+                        {privacyLedger.state.total === 0
+                          ? "AI 호출이 시작되면 로컬/클라우드 흐름을 여기서 함께 점검합니다."
+                          : privacyLedger.isAllOnDevice
+                            ? "현재 세션은 온디바이스 중심으로 이어지고 있습니다."
+                            : "현재 세션은 클라우드가 섞인 라우팅을 함께 점검합니다."}
+                      </span>
+                    </div>
+                  </div>
+                )}
+                {[
+                  {
+                    title: "연결 · 운영",
+                    description: "서버 연결, 코드 검색, 기록 점검처럼 기반 흐름을 먼저 확인합니다.",
+                    ids: ["mcp", "xllm", "rag", "history", "squad"],
+                  },
+                  {
+                    title: "확장 · 학습",
+                    description: "메모리, 자동화, 학습, 스킬 같은 확장 흐름을 이어갑니다.",
+                    ids: ["healing", "recall", "lora", "skills"],
+                  },
+                ].map((group) => {
+                  const groupActions = orderedOverflowActions.filter((action) => group.ids.includes(action.id));
+                  if (groupActions.length === 0) return null;
+
+                  return (
+                    <div key={`advanced-group-${group.title}`} className="mb-1">
+                      <div className="px-2 py-1">
+                        <SectionIntroHeader
+                          title={group.title}
+                          description={group.description}
+                          titleClassName="text-[10px] font-semibold tracking-[0.06em] text-white/54 uppercase"
+                          descriptionClassName="mt-1 text-[10px] text-white/36"
+                          aside={(
+                            <div className="flex items-center gap-1.5">
+                              <StatusBadge tone="neutral">{groupActions.length}개</StatusBadge>
+                              <StatusBadge tone="neutral">
+                                {group.title === "연결 · 운영" ? "기반 우선" : "확장 흐름"}
+                              </StatusBadge>
+                            </div>
+                          )}
+                        />
+                      </div>
+                      {groupActions.map((action, index) => (
+                        <AdvancedRow
+                          key={`advanced-overflow-${action.id}`}
+                          icon={action.icon(SMALL_ICON_SIZE)}
+                          label={action.label}
+                          description={action.description}
+                          statusLabel={action.active ? "열림" : action.badge ? "활성" : index === 0 ? "먼저" : index === 1 ? "다음" : "열기"}
+                          priority={index === 0 ? "primary" : index === 1 ? "secondary" : "default"}
+                          badge={action.badge}
+                          isNew={action.newFeatureId ? isNew(action.newFeatureId) : false}
+                          onClick={() => {
+                            setShowAdvancedOverflow(false);
+                            action.onActivate();
+                          }}
+                        />
+                      ))}
+                    </div>
+                  );
+                })}
                 {compactMode && (
                   <>
                     <p className="px-2 py-1.5 text-xs font-semibold tracking-[0.06em] text-white/50 uppercase">
@@ -1242,6 +1524,14 @@ const AppHeader: React.FC<Props> = ({
                   onDismiss={notifCenter.dismiss}
                   onClear={notifCenter.clear}
                   panelId={NOTIF_CENTER_PANEL_ID}
+                  onOpenRecoveryFlow={() => {
+                    closeNotifCenter();
+                    if (!showInspector) {
+                      onToggleInspector();
+                    }
+                  }}
+                  highlightRecovery={notifCenterRecoveryFocus}
+                  autoFocusRecoveryAction={notifCenterRecoveryFocus}
                   onClose={closeNotifCenter}
                   closeOnDocument={false}
                 />
@@ -1258,26 +1548,68 @@ const AppHeader: React.FC<Props> = ({
 const AdvancedRow: React.FC<{
   icon: React.ReactNode;
   label: string;
+  description?: string;
+  statusLabel?: string;
+  priority?: "default" | "primary" | "secondary";
   /** 카운트 dot — squad 활성 등 상태성 마커. emerald. */
   badge?: boolean;
   /** Phase 126: "처음 보는 기능" 마커 — 클릭 시 영구 dismiss. amber + "NEW" 라벨로 더 눈에 띄게. */
   isNew?: boolean;
   onClick: () => void;
-}> = ({ icon, label, badge, isNew, onClick }) => (
+}> = ({ icon, label, description, statusLabel, priority = "default", badge, isNew, onClick }) => (
   <button
     type="button"
     role="menuitem"
+    aria-label={label}
     onClick={onClick}
-        className="w-full flex items-center gap-2 px-2 py-1.5 rounded text-sm text-white/75 hover:text-white hover:bg-white/[0.07] transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+    className={
+      priority === "primary"
+        ? "w-full flex items-start gap-2 rounded-xl border border-cyan-300/14 bg-cyan-400/[0.06] px-2.5 py-2 text-sm text-white/82 hover:text-white hover:border-cyan-300/22 hover:bg-cyan-400/[0.1] transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+        : priority === "secondary"
+          ? "w-full flex items-start gap-2 rounded-lg border border-white/10 bg-white/[0.04] px-2.5 py-2 text-sm text-white/80 hover:text-white hover:border-white/16 hover:bg-white/[0.07] transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          : "w-full flex items-start gap-2 px-2 py-1.5 rounded text-sm text-white/75 hover:text-white hover:bg-white/[0.07] transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+    }
   >
-    <span className="shrink-0 text-white/50">{icon}</span>
-    <span className="flex-1 text-left">{label}</span>
+    <span className={priority === "primary" ? "mt-0.5 shrink-0 text-cyan-100/72" : priority === "secondary" ? "mt-0.5 shrink-0 text-white/62" : "mt-0.5 shrink-0 text-white/50"}>{icon}</span>
+    <span className="min-w-0 flex-1 text-left">
+      <span className={priority === "primary" ? "block truncate font-medium text-white/88" : priority === "secondary" ? "block truncate font-medium text-white/82" : "block truncate"}>{label}</span>
+      {description && (
+        <span
+          aria-hidden="true"
+          className={
+            priority === "primary"
+              ? "mt-0.5 block text-xs leading-5 text-cyan-100/52"
+              : priority === "secondary"
+                ? "mt-0.5 block text-xs leading-5 text-white/48"
+                : "mt-0.5 block text-xs leading-5 text-white/42"
+          }
+        >
+          {description}
+        </span>
+      )}
+    </span>
     {isNew && (
-        <span className="text-xs font-semibold tracking-wide px-1.5 py-0.5 rounded bg-amber-400/15 text-amber-300 border border-amber-400/30">
+      <span aria-hidden="true" className="text-xs font-semibold tracking-wide px-1.5 py-0.5 rounded bg-amber-400/15 text-amber-300 border border-amber-400/30">
         NEW
       </span>
     )}
-    {badge && !isNew && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" aria-hidden="true" />}
+    {!isNew && statusLabel && (
+      <span
+        aria-hidden="true"
+        className={
+          statusLabel === "열림" || statusLabel === "활성"
+            ? "shrink-0 rounded-full border border-emerald-300/18 bg-emerald-400/10 px-1.5 py-0.5 text-[10px] font-medium text-emerald-200/90"
+            : priority === "primary"
+              ? "shrink-0 rounded-full border border-cyan-300/18 bg-cyan-400/10 px-1.5 py-0.5 text-[10px] font-medium text-cyan-100/90"
+              : priority === "secondary"
+                ? "shrink-0 rounded-full border border-white/10 bg-white/[0.04] px-1.5 py-0.5 text-[10px] font-medium text-white/58"
+                : "shrink-0 rounded-full border border-white/10 bg-white/[0.03] px-1.5 py-0.5 text-[10px] font-medium text-white/48"
+        }
+      >
+        {statusLabel}
+      </span>
+    )}
+    {badge && !isNew && !statusLabel && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" aria-hidden="true" />}
   </button>
 );
 

@@ -1,6 +1,9 @@
 import { renderHook } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { useInspectorPanelPropsBundle } from "./useInspectorPanelPropsBundle";
+import {
+  getInspectorPanelPropsBundleMeta,
+  useInspectorPanelPropsBundle,
+} from "./useInspectorPanelPropsBundle";
 import type {
   InspectorPanelActionHandlerProps,
   UseInspectorPanelPropsBundleOptions,
@@ -83,6 +86,114 @@ function createHandlers(): InspectorPanelActionHandlerProps {
 }
 
 describe("useInspectorPanelPropsBundle", () => {
+  it("번들 입력 기준으로 인스펙터 조합 상태 메타를 계산한다", () => {
+    const meta = getInspectorPanelPropsBundleMeta({
+      activeTab: { title: "Shell 1", cwd: "/repo" },
+      cmdBlocks: [
+        makeCommandBlock({ id: "ok", command: "echo hi", output: "ok", exitCode: 0 }),
+        makeCommandBlock({ id: "bad", command: "bad cmd", output: "ERR", exitCode: 2 }),
+      ],
+      selectedBlockId: "\uFEFF bad \n",
+      inspectorAnalyzeCache: {
+        blockId: "stream",
+        command: "stream cmd",
+        requestedAt: 10,
+        status: "done",
+        result: "ok",
+        rawResult: "ok",
+        suggestedCommands: ["echo done"],
+      },
+    });
+
+    expect(meta).toEqual({
+      hasActiveTab: true,
+      hasFailedBlocks: true,
+      hasRecentBlocks: true,
+      hasAnalyzeResult: true,
+      normalizedSelectedBlockId: "bad",
+    });
+  });
+
+  it("selectedBlockId의 공백/BOM 정규화가 번들 수준에서도 실패 블록 선택으로 이어진다", () => {
+    const handlers = createHandlers();
+
+    const { result } = renderHook(() =>
+      useInspectorPanelPropsBundle({
+        showInspector: true,
+        selectedModel: "test-model",
+        inspectorTab: "summary" as const,
+        inspectorDensity: "cozy" as const,
+        inspectorTabs: INSPECTOR_TABS,
+        inspectorTabRefs: makeRef({
+          summary: null,
+          rag: null,
+          scripts: null,
+          sysmon: null,
+        }),
+        activeTab: { title: "Shell 1", cwd: "/repo" },
+        activeTabGitInfo: { branch: "main", changed: 2 },
+        cmdBlocks: [
+          makeCommandBlock({ id: "fail-1", command: "bad1", output: "err1", exitCode: 1 }),
+          makeCommandBlock({ id: "fail-2", command: "bad2", output: "err2", exitCode: 2 }),
+        ],
+        selectedBlockId: "\uFEFF fail-2 \n",
+        inspectorAnalyzeCache: null,
+        commandMenuIndex: null,
+        showInspectorQuickActionsExpanded: false,
+        inspectorMoreButtonRefs: makeRef({} as Record<number, HTMLButtonElement | null>),
+        inspectorMenuFirstActionRefs: makeRef({} as Record<number, HTMLButtonElement | null>),
+        inspectorQuickActionsToggleRef: makeRef(null as HTMLButtonElement | null),
+        inspectorQuickActionsAdvancedRef: makeRef(null as HTMLDivElement | null),
+        scriptLibrary: createScriptLibrary(),
+        handlers,
+      }),
+    );
+
+    expect(result.current.focusedFailedBlock).toEqual({
+      id: "fail-2",
+      command: "bad2",
+      exitCode: 2,
+      outputTail: "err2",
+    });
+  });
+
+  it("활동 내역이 없고 analyze cache도 없으면 noActivity가 유지된다", () => {
+    const handlers = createHandlers();
+
+    const { result } = renderHook(() =>
+      useInspectorPanelPropsBundle({
+        showInspector: true,
+        selectedModel: "test-model",
+        inspectorTab: "summary" as const,
+        inspectorDensity: "cozy" as const,
+        inspectorTabs: INSPECTOR_TABS,
+        inspectorTabRefs: makeRef({
+          summary: null,
+          rag: null,
+          scripts: null,
+          sysmon: null,
+        }),
+        activeTab: { title: "Shell 1", cwd: "/repo" },
+        activeTabGitInfo: null,
+        cmdBlocks: [],
+        selectedBlockId: null,
+        inspectorAnalyzeCache: null,
+        commandMenuIndex: null,
+        showInspectorQuickActionsExpanded: false,
+        inspectorMoreButtonRefs: makeRef({} as Record<number, HTMLButtonElement | null>),
+        inspectorMenuFirstActionRefs: makeRef({} as Record<number, HTMLButtonElement | null>),
+        inspectorQuickActionsToggleRef: makeRef(null as HTMLButtonElement | null),
+        inspectorQuickActionsAdvancedRef: makeRef(null as HTMLDivElement | null),
+        scriptLibrary: createScriptLibrary(),
+        handlers,
+      }),
+    );
+
+    expect(result.current.noActivity).toBe(true);
+    expect(result.current.failedBlocks).toEqual([]);
+    expect(result.current.recentBlocks).toEqual([]);
+  });
+
   it("useInspectorPanelData와 handlers를 정확히 결합해 InspectorPanelProps를 반환한다", () => {
     const handlers = createHandlers();
     const resultData: UseInspectorPanelPropsBundleOptions = {

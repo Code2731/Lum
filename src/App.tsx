@@ -35,7 +35,10 @@ import type { SshProfile } from "./hooks/useTabManager";
 import type { InspectorAnalyzeCache, InspectorDensity, InspectorTab } from "./components/InspectorPanel/types";
 import { isTextInputTarget } from "./utils/event";
 import { useInspectorPanelCommands } from "./hooks/useInspectorPanelCommands";
-import { useInspectorPanelPropsBundle } from "./hooks/useInspectorPanelPropsBundle";
+import {
+  getInspectorPanelPropsBundleMeta,
+  useInspectorPanelPropsBundle,
+} from "./hooks/useInspectorPanelPropsBundle";
 import { focusMainInput } from "./utils/focus";
 import InfiniteCanvas from "./components/layout/InfiniteCanvas";
 import TerminalPane from "./components/TerminalPane";
@@ -50,6 +53,7 @@ import TabBar from "./components/TabBar";
 import AppHeader from "./components/AppHeader";
 import AppOverlays from "./components/AppOverlays";
 import AiBar from "./components/AiBar";
+import { ActionFlowBar } from "./components/ui/action-flow-bar";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import type { AiBackend } from "./utils/inputRouter";
 import type {
@@ -1236,6 +1240,12 @@ const App: React.FC = () => {
       onOpenFailedBlock: inspectorPanelActionHandlers.onOpenFailedBlock,
     },
   });
+  const inspectorBundleMeta = getInspectorPanelPropsBundleMeta({
+    activeTab: activeInspectorTab,
+    cmdBlocks,
+    selectedBlockId: resolvedSelectedBlockId,
+    inspectorAnalyzeCache,
+  });
 
   return (
     <TooltipProvider delayDuration={300} skipDelayDuration={150}>
@@ -1368,6 +1378,33 @@ const App: React.FC = () => {
           onMove={moveAction}
         />
       )}
+
+      <section
+        aria-label="앱 작업 상태"
+        className="shrink-0 border-t border-white/[0.03] border-b border-white/[0.05] bg-[#0c121a]/88 px-3 py-2"
+      >
+        <ActionFlowBar
+          badges={[
+            viewMode === "terminal" ? "터미널 보기" : viewMode === "canvas" ? "캔버스 보기" : "리스트 보기",
+            showInspector ? "인스펙터 열림" : "인스펙터 숨김",
+            markdownView
+              ? "문서 미리보기"
+              : showFileExplorer
+                ? "파일 탐색기 열림"
+                : showAiBar
+                  ? "AI 바 활성"
+                  : "작업 패널 준비",
+          ]}
+          helper={
+            markdownView
+              ? "문서 뷰어가 열린 동안에도 현재 작업 문맥은 그대로 유지됩니다."
+              : showFileExplorer
+                ? "파일 탐색기와 메인 작업 영역이 같은 탭 문맥을 공유합니다."
+                : "보기 모드, 보조 패널, 입력 흐름이 현재 작업 문맥을 함께 유지합니다."
+          }
+          tone={showAiBar ? "amber" : "cyan"}
+        />
+      </section>
 
       {/* ── 메인 콘텐츠 ──────────────────────────────────────── */}
       <main className="flex-1 overflow-hidden flex relative border-t border-white/[0.03]">
@@ -1748,6 +1785,28 @@ const App: React.FC = () => {
             />
           )}
         </div>
+
+        {showInspector && (
+          <section
+            aria-label="인스펙터 상태 요약"
+            className="shrink-0 border-t border-white/[0.03] bg-[#0b1017]/88 px-3 py-2"
+          >
+            <ActionFlowBar
+              badges={[
+                inspectorBundleMeta.hasActiveTab ? "탭 문맥 연결됨" : "탭 문맥 대기",
+                inspectorBundleMeta.hasFailedBlocks ? "실패 블록 감지" : "실패 블록 없음",
+                inspectorBundleMeta.hasAnalyzeResult ? "분석 결과 준비" : "분석 결과 없음",
+                inspectorBundleMeta.normalizedSelectedBlockId ? "블록 포커스 유지" : "블록 포커스 없음",
+              ]}
+              helper={
+                inspectorBundleMeta.hasRecentBlocks
+                  ? "인스펙터가 최근 실행 기록과 선택된 블록 기준으로 바로 이어서 분석을 시작할 수 있습니다."
+                  : "아직 실행 기록이 없어도 탭 문맥과 빠른 작업 메뉴는 그대로 유지됩니다."
+              }
+              tone={inspectorBundleMeta.hasFailedBlocks ? "amber" : "cyan"}
+            />
+          </section>
+        )}
 
         <InspectorPanel {...inspectorPanelProps} />
 

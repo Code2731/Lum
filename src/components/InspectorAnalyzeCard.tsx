@@ -1,5 +1,6 @@
 import React from "react";
 import { Copy, Loader2, MoreHorizontal, Search, TerminalSquare } from "lucide-react";
+import { StatusBadge } from "@/components/ui/status-badge";
 import type { InspectorAnalyzeCache } from "./InspectorPanel/types";
 
 interface InspectorAnalyzeCardProps {
@@ -21,6 +22,110 @@ interface InspectorAnalyzeCardProps {
   onCloseCommandMenu: (restoreFocus?: boolean) => void;
 }
 
+export interface InspectorAnalyzeStatusMeta {
+  statusLabel: string;
+  statusClassName: string;
+  summaryTone: "amber" | "cyan";
+  resultClassName: string;
+}
+
+export function getInspectorAnalyzeStatusMeta(
+  status: InspectorAnalyzeCache["status"],
+): InspectorAnalyzeStatusMeta {
+  if (status === "error") {
+    return {
+      statusLabel: "분석 오류",
+      statusClassName: "text-xs px-1.5 py-0.5 rounded bg-rose-400/20 text-rose-100",
+      summaryTone: "amber",
+      resultClassName: "text-xs font-mono break-words text-rose-100/80",
+    };
+  }
+
+  if (status === "streaming") {
+    return {
+      statusLabel: "진행 중",
+      statusClassName: "inline-flex items-center gap-1 text-xs text-cyan-100",
+      summaryTone: "cyan",
+      resultClassName: "text-xs font-mono break-words text-cyan-100/78",
+    };
+  }
+
+  return {
+    statusLabel: "분석 완료",
+    statusClassName: "text-xs px-1.5 py-0.5 rounded bg-emerald-400/20 text-emerald-100",
+    summaryTone: "cyan",
+    resultClassName: "text-xs font-mono break-words text-cyan-100/78",
+  };
+}
+
+export function getInspectorAnalyzeActionHint(isInspectorCompact: boolean): string {
+  return isInspectorCompact ? "실행 · 추가 액션에서 복사/입력" : "실행 · 복사 · 입력";
+}
+
+export interface InspectorSuggestedCommandMeta {
+  badge: string;
+  tone: "cyan" | "amber" | "neutral";
+  helper: string;
+}
+
+export function getInspectorSuggestedCommandMeta(
+  index: number,
+  total: number,
+): InspectorSuggestedCommandMeta {
+  if (index === 0) {
+    return {
+      badge: "먼저 실행",
+      tone: "cyan",
+      helper: "가장 가능성 높은 복구 커맨드입니다.",
+    };
+  }
+
+  if (index === total - 1) {
+    return {
+      badge: "추가 점검",
+      tone: "neutral",
+      helper: "앞선 제안으로 충분하지 않을 때 이어서 확인합니다.",
+    };
+  }
+
+  return {
+    badge: "대안",
+    tone: "amber",
+    helper: "첫 제안이 맞지 않을 때 바로 전환할 후보입니다.",
+  };
+}
+
+export function getInspectorAnalyzePrimaryCta(options: {
+  status: InspectorAnalyzeCache["status"];
+  suggestedCommandCount: number;
+  isInspectorCompact: boolean;
+}): {
+  label: string;
+  helper: string;
+  showQuickLoad: boolean;
+  badges: [string, string, string];
+  shortcutHint: string;
+  remainingHint: string;
+} | null {
+  const { status, suggestedCommandCount, isInspectorCompact } = options;
+
+  if (status !== "done" || suggestedCommandCount === 0) return null;
+
+  return {
+    label: isInspectorCompact ? "첫 제안 실행" : "첫 제안 바로 실행",
+    helper: "분석이 끝났다면 가장 먼저 첫 번째 추천 커맨드부터 실행해 복구 가능성을 빠르게 확인합니다.",
+    showQuickLoad: !isInspectorCompact,
+    badges: isInspectorCompact
+      ? ["먼저 실행", "필요시 복사", "추가 액션"]
+      : ["먼저 실행", "필요시 복사", "AI 입력 전환"],
+    shortcutHint: isInspectorCompact ? "R 실행 · 추가 메뉴에서 C/L" : "R 실행 · C 복사 · L 입력",
+    remainingHint:
+      suggestedCommandCount > 1
+        ? `대안 ${suggestedCommandCount - 1}개가 더 준비되어 있습니다.`
+        : "현재는 이 제안이 가장 직접적인 복구 후보입니다.",
+  };
+}
+
 const InspectorAnalyzeCard: React.FC<InspectorAnalyzeCardProps> = ({
   analyzeCache,
   commandMenuIndex,
@@ -38,7 +143,17 @@ const InspectorAnalyzeCard: React.FC<InspectorAnalyzeCardProps> = ({
   onCompactMenuKeyDown,
   onOpenCompactMenu,
   onCloseCommandMenu,
-}) => (
+}) => {
+  const statusMeta = analyzeCache ? getInspectorAnalyzeStatusMeta(analyzeCache.status) : null;
+  const primaryCta = analyzeCache
+    ? getInspectorAnalyzePrimaryCta({
+        status: analyzeCache.status,
+        suggestedCommandCount: analyzeCache.suggestedCommands.length,
+        isInspectorCompact,
+      })
+    : null;
+
+  return (
   <div className={inspectorCardRegularClass}>
     <div className="flex items-center justify-between gap-2">
       <p className="text-white/45 uppercase tracking-[0.06em] text-xs">마지막 AI 분석</p>
@@ -49,13 +164,13 @@ const InspectorAnalyzeCard: React.FC<InspectorAnalyzeCardProps> = ({
             className="inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded border border-white/18 bg-white/[0.05] text-white/72 hover:text-white hover:bg-white/[0.1] transition-colors"
           >
             <Copy size={9} />
-            COPY
+            결과 복사
           </button>
           <button
             onClick={onClearAnalyzeCache}
             className="text-xs px-1.5 py-0.5 rounded border border-white/18 bg-white/[0.05] text-white/70 hover:text-white hover:bg-white/[0.1] transition-colors"
           >
-            CLEAR
+            결과 지우기
           </button>
         </div>
       )}
@@ -72,31 +187,104 @@ const InspectorAnalyzeCard: React.FC<InspectorAnalyzeCardProps> = ({
         <div className="flex items-center justify-between gap-2">
           <p className="text-white/82 truncate">{analyzeCache.command}</p>
           {analyzeCache.status === "streaming" ? (
-            <span className="inline-flex items-center gap-1 text-xs text-cyan-100">
+            <span className={statusMeta?.statusClassName}>
               <Loader2 size={9} className="animate-spin" />
-              STREAMING
+              {statusMeta?.statusLabel}
             </span>
           ) : analyzeCache.status === "error" ? (
-            <span className="text-xs px-1.5 py-0.5 rounded bg-rose-400/20 text-rose-100">
-              ERROR
+            <span className={statusMeta?.statusClassName}>
+              {statusMeta?.statusLabel}
             </span>
           ) : (
-            <span className="text-xs px-1.5 py-0.5 rounded bg-emerald-400/20 text-emerald-100">
-              DONE
+            <span className={statusMeta?.statusClassName}>
+              {statusMeta?.statusLabel}
             </span>
           )}
         </div>
-        <p className={`text-xs font-mono break-words ${
-          analyzeCache.status === "error" ? "text-rose-100/80" : "text-cyan-100/78"
-        }`}>
+        <div className="flex flex-wrap items-center gap-1.5 rounded-xl border border-cyan-300/14 bg-black/10 px-2 py-1.5">
+          <StatusBadge tone={statusMeta?.summaryTone}>
+            먼저 결과
+          </StatusBadge>
+          <StatusBadge tone="neutral">다음 제안</StatusBadge>
+          <StatusBadge tone="neutral">마지막 실행</StatusBadge>
+          <span className={`text-[10px] ${
+            analyzeCache.status === "error" ? "text-rose-100/58" : "text-cyan-100/58"
+          }`}>
+            분석 결과를 먼저 확인하고, 추천 커맨드를 고른 뒤 실행하거나 입력에 넣습니다.
+          </span>
+        </div>
+        <p className={statusMeta?.resultClassName}>
           {analyzeCache.result || "응답을 기다리는 중..."}
         </p>
+        {primaryCta && (
+          <div className="flex flex-wrap items-center gap-2 rounded-xl border border-emerald-300/18 bg-emerald-400/[0.08] px-2 py-1.5">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <StatusBadge tone="cyan">{primaryCta.badges[0]}</StatusBadge>
+              <StatusBadge tone="neutral">{primaryCta.badges[1]}</StatusBadge>
+              <StatusBadge tone="neutral">{primaryCta.badges[2]}</StatusBadge>
+            </div>
+            <div className="w-full rounded-lg border border-emerald-300/16 bg-black/10 px-2 py-1.5">
+              <p className="text-[10px] uppercase tracking-[0.08em] text-emerald-100/50">첫 제안 커맨드</p>
+              <p className="mt-1 truncate font-mono text-xs text-emerald-100/92" title={analyzeCache.suggestedCommands[0]}>
+                {analyzeCache.suggestedCommands[0]}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => onApplySuggestedCommand(0)}
+              className="inline-flex items-center gap-1 rounded-lg border border-emerald-300/35 bg-emerald-400/16 px-2.5 py-1 text-xs font-medium text-emerald-100 transition-colors hover:bg-emerald-400/26 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              title="첫 번째 추천 커맨드 바로 실행"
+            >
+              <TerminalSquare size={10} />
+              {primaryCta.label}
+            </button>
+            <span className="text-[11px] leading-relaxed text-emerald-100/72">
+              {primaryCta.helper}
+            </span>
+            <span className="text-[10px] text-emerald-100/52">
+              {primaryCta.shortcutHint}
+            </span>
+            <span className="text-[10px] text-emerald-100/52">
+              {primaryCta.remainingHint}
+            </span>
+            <div className="ml-auto flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => onCopySuggestedCommand(0)}
+                className="inline-flex items-center gap-1 rounded-lg border border-white/20 bg-white/[0.05] px-2 py-1 text-xs text-white/78 transition-colors hover:bg-white/[0.12] hover:text-white focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                title="첫 번째 추천 커맨드 복사"
+              >
+                <Copy size={10} />
+                복사
+              </button>
+              {primaryCta.showQuickLoad && (
+                <button
+                  type="button"
+                  onClick={() => onLoadSuggestedCommandToAiBar(0)}
+                  className="inline-flex items-center gap-1 rounded-lg border border-accent/35 bg-accent/14 px-2 py-1 text-xs text-accent transition-colors hover:bg-accent/24 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  title="첫 번째 추천 커맨드 입력바 로드"
+                >
+                  <Search size={10} />
+                  입력
+                </button>
+              )}
+            </div>
+            {analyzeCache.suggestedCommands[1] && (
+              <div className="w-full rounded-lg border border-white/10 bg-white/[0.04] px-2 py-1.5">
+                <p className="text-[10px] uppercase tracking-[0.08em] text-white/42">다음 대안</p>
+                <p className="mt-1 truncate font-mono text-xs text-white/78" title={analyzeCache.suggestedCommands[1]}>
+                  {analyzeCache.suggestedCommands[1]}
+                </p>
+              </div>
+            )}
+          </div>
+        )}
         {analyzeCache.status === "done" && analyzeCache.suggestedCommands.length > 0 && (
           <div className="space-y-1">
             <div className="flex items-center justify-between gap-2">
               <p className="text-xs uppercase tracking-[0.06em] text-cyan-100/70">추천 커맨드</p>
               <p className="text-xs text-cyan-100/62">
-                {isInspectorCompact ? "R 실행 · MORE→C/L" : "R 실행 · C 복사 · L 로드"}
+                {getInspectorAnalyzeActionHint(isInspectorCompact)}
               </p>
             </div>
             <div className="space-y-1">
@@ -109,6 +297,18 @@ const InspectorAnalyzeCard: React.FC<InspectorAnalyzeCardProps> = ({
                   onBlurCapture={(e) => onCommandMenuRowBlurCapture(e, idx)}
                   onKeyDown={(e) => onSuggestedCommandRowKeyDown(e, idx)}
                 >
+                  {(() => {
+                    const commandMeta = getInspectorSuggestedCommandMeta(
+                      idx,
+                      analyzeCache.suggestedCommands.length,
+                    );
+
+                    return (
+                      <>
+                  <div className="mb-1 flex flex-wrap items-center gap-1.5">
+                    <StatusBadge tone={commandMeta.tone}>{commandMeta.badge}</StatusBadge>
+                    <span className="text-[10px] text-cyan-100/58">{commandMeta.helper}</span>
+                  </div>
                   <div className="flex items-center gap-1.5">
                     <span className="inline-flex items-center justify-center min-w-4 h-4 rounded bg-cyan-400/20 text-xs text-cyan-100">
                       {idx + 1}
@@ -127,7 +327,7 @@ const InspectorAnalyzeCard: React.FC<InspectorAnalyzeCardProps> = ({
                           title={`${idx + 1}번 커맨드 실행 (R)`}
                         >
                           <TerminalSquare size={9} />
-                          RUN (R)
+                          실행 (R)
                         </button>
                         <button
                           ref={(el) => { inspectorMoreButtonRefs.current[idx] = el; }}
@@ -149,7 +349,7 @@ const InspectorAnalyzeCard: React.FC<InspectorAnalyzeCardProps> = ({
                           title={`${idx + 1}번 추가 액션 (C/L 단축키 활성화)`}
                         >
                           <MoreHorizontal size={9} />
-                          MORE
+                          추가
                         </button>
                       </div>
                     ) : (
@@ -160,7 +360,7 @@ const InspectorAnalyzeCard: React.FC<InspectorAnalyzeCardProps> = ({
                           title={`${idx + 1}번 커맨드 복사 (C)`}
                         >
                           <Copy size={9} />
-                          COPY
+                          복사
                         </button>
                         <button
                           onClick={() => onLoadSuggestedCommandToAiBar(idx)}
@@ -168,7 +368,7 @@ const InspectorAnalyzeCard: React.FC<InspectorAnalyzeCardProps> = ({
                           title={`${idx + 1}번 커맨드 AI 입력바 로드 (L)`}
                         >
                           <Search size={9} />
-                          LOAD
+                          입력
                         </button>
                         <button
                           onClick={() => onApplySuggestedCommand(idx)}
@@ -176,7 +376,7 @@ const InspectorAnalyzeCard: React.FC<InspectorAnalyzeCardProps> = ({
                           title={`${idx + 1}번 커맨드 실행 (R)`}
                         >
                           <TerminalSquare size={9} />
-                          RUN
+                          실행
                         </button>
                       </div>
                     )}
@@ -200,7 +400,7 @@ const InspectorAnalyzeCard: React.FC<InspectorAnalyzeCardProps> = ({
                         title={`${idx + 1}번 커맨드 복사 (C)`}
                       >
                         <Copy size={9} />
-                        COPY (C)
+                        복사 (C)
                       </button>
                       <button
                         role="menuitem"
@@ -212,10 +412,13 @@ const InspectorAnalyzeCard: React.FC<InspectorAnalyzeCardProps> = ({
                         title={`${idx + 1}번 커맨드 AI 입력바 로드 (L)`}
                       >
                         <Search size={9} />
-                        LOAD (L)
+                        입력 (L)
                       </button>
                     </div>
                   )}
+                      </>
+                    );
+                  })()}
                 </div>
               ))}
             </div>
@@ -229,7 +432,7 @@ const InspectorAnalyzeCard: React.FC<InspectorAnalyzeCardProps> = ({
               className="inline-flex w-[74px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-emerald-300/35 bg-emerald-400/16 text-xs text-emerald-100 hover:bg-emerald-400/26 transition-colors"
             >
               <TerminalSquare size={9} />
-              RUN #1
+              첫 실행
             </button>
             <button
               onClick={onCopyAnalyzeResult}
@@ -237,13 +440,14 @@ const InspectorAnalyzeCard: React.FC<InspectorAnalyzeCardProps> = ({
               className="inline-flex w-[64px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-white/20 bg-white/[0.05] text-xs text-white/76 hover:text-white hover:bg-white/[0.12] transition-colors"
             >
               <Copy size={9} />
-              COPY
+              결과 복사
             </button>
           </div>
         )}
       </div>
     )}
   </div>
-);
+  );
+};
 
 export default InspectorAnalyzeCard;

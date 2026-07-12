@@ -15,6 +15,9 @@ interface Props {
   onDismissByIds?: (ids: string[]) => void;
   onClear: () => void;
   onClose: () => void;
+  onOpenRecoveryFlow?: () => void;
+  highlightRecovery?: boolean;
+  autoFocusRecoveryAction?: boolean;
   closeOnDocument?: boolean;
 }
 
@@ -39,6 +42,157 @@ const TYPE_COLOR: Record<NotifType, string> = {
   env: "text-green-400",
 };
 
+const TYPE_BADGE_CLASS: Record<NotifType, string> = {
+  command: "border-sky-300/22 bg-sky-400/[0.1] text-sky-100/82",
+  agent: "border-cyan-300/22 bg-cyan-400/[0.1] text-cyan-100/82",
+  healing: "border-amber-300/22 bg-amber-400/[0.1] text-amber-100/82",
+  env: "border-emerald-300/22 bg-emerald-400/[0.1] text-emerald-100/82",
+};
+
+const TYPE_META_HINT: Record<NotifType, string> = {
+  command: "실행 흐름",
+  agent: "에이전트 흐름",
+  healing: "복구 흐름",
+  env: "환경 흐름",
+};
+
+const TYPE_CARD_CLASS: Record<NotifType, string> = {
+  command: "border-sky-300/20 bg-sky-400/[0.07]",
+  agent: "border-cyan-300/20 bg-cyan-400/[0.08]",
+  healing: "border-amber-300/24 bg-amber-400/[0.09]",
+  env: "border-emerald-300/20 bg-emerald-400/[0.08]",
+};
+
+export interface NotificationTypeMeta {
+  label: string;
+  colorClass: string;
+  badgeClass: string;
+  hint: string;
+  cardClass: string;
+}
+
+export function getNotificationTypeMeta(type: NotifType): NotificationTypeMeta {
+  return {
+    label: TYPE_LABEL[type],
+    colorClass: TYPE_COLOR[type],
+    badgeClass: TYPE_BADGE_CLASS[type],
+    hint: TYPE_META_HINT[type],
+    cardClass: TYPE_CARD_CLASS[type],
+  };
+}
+
+export interface NotificationResultMeta {
+  flowLabel: string;
+  scopeLabel: string;
+  description: string;
+}
+
+export function getNotificationResultMeta(hasSearchQuery: boolean, hasScopedFilter: boolean): NotificationResultMeta {
+  return {
+    flowLabel: hasSearchQuery ? "검색 반영" : "전체 흐름",
+    scopeLabel: hasScopedFilter ? "필터 적용" : "최신 우선",
+    description: hasSearchQuery
+      ? "검색 결과를 먼저 보고, 아래에서 종류를 좁히거나 현재 보기만 정리합니다."
+      : "최신 알림 흐름을 먼저 보고, 필요하면 종류별로 좁혀서 정리합니다.",
+  };
+}
+
+export interface NotificationEmptyStateMeta {
+  badges: [string, string, string];
+  title: string;
+  description: string;
+}
+
+export function getNotificationEmptyStateMeta(input: {
+  hasSearchQuery: boolean;
+  showUnreadOnly: boolean;
+}): NotificationEmptyStateMeta {
+  if (input.hasSearchQuery) {
+    return {
+      badges: ["검색 조정", "기록 재적용", "필터 확인"],
+      title: "검색 조건에 맞는 알림이 없습니다",
+      description: "검색어를 줄이거나 최근 검색 기록을 다시 적용해 보세요.",
+    };
+  }
+
+  if (input.showUnreadOnly) {
+    return {
+      badges: ["전체 보기", "지난 흐름", "다시 확인"],
+      title: "미확인 알림이 없습니다",
+      description: "전체 보기로 전환하면 지난 알림 흐름을 다시 확인할 수 있습니다.",
+    };
+  }
+
+  return {
+    badges: ["다음 알림", "실행 흐름", "자동 복구"],
+    title: "알림이 없습니다",
+    description: "명령 실행, 에이전트 작업, 자동 복구 흐름이 생기면 여기에서 이어집니다.",
+  };
+}
+
+export interface NotificationRecoveryMeta {
+  badges: [string, string, string];
+  helper: string;
+  tone: "amber" | "cyan";
+}
+
+export function getNotificationRecoveryMeta(notifications: AppNotification[]): NotificationRecoveryMeta | null {
+  const healingNotifications = notifications.filter((notification) => notification.type === "healing");
+  if (healingNotifications.length === 0) {
+    return null;
+  }
+
+  const unreadHealingCount = healingNotifications.filter((notification) => !notification.read).length;
+  const hasUnreadHealing = unreadHealingCount > 0;
+
+  return {
+    badges: [
+      hasUnreadHealing ? `복구 ${unreadHealingCount}건` : `복구 기록 ${healingNotifications.length}건`,
+      hasUnreadHealing ? "먼저 확인" : "기록 확인",
+      "인스펙터 연계",
+    ],
+    helper: hasUnreadHealing
+      ? "자동 복구 알림이 도착했습니다. 먼저 최근 복구 흐름을 확인한 뒤 인스펙터에서 실패 분석과 제안 커맨드 실행으로 이어가면 됩니다."
+      : "최근 복구 기록이 남아 있습니다. 필요하면 인스펙터에서 같은 흐름을 다시 열어 복구 단서를 이어서 확인할 수 있습니다.",
+    tone: hasUnreadHealing ? "amber" : "cyan",
+  };
+}
+
+export function getNotificationCardRecoveryHint(notification: AppNotification): string | null {
+  if (notification.type !== "healing") {
+    return null;
+  }
+
+  return notification.read
+    ? "복구 기록입니다. 필요하면 인스펙터에서 같은 실패 흐름을 다시 열어 제안 커맨드를 이어서 확인하세요."
+    : "새 복구 알림입니다. 먼저 인스펙터에서 실패 분석과 첫 제안 실행 흐름으로 바로 이어가세요.";
+}
+
+export interface NotificationCardRecoveryPresentation {
+  badges: [string, string, string];
+  tone: "amber" | "cyan";
+}
+
+export function getNotificationCardRecoveryPresentation(
+  notification: AppNotification,
+): NotificationCardRecoveryPresentation | null {
+  if (notification.type !== "healing") {
+    return null;
+  }
+
+  if (notification.read) {
+    return {
+      badges: ["복구 기록", "다시 확인", "인스펙터 열기"],
+      tone: "cyan",
+    };
+  }
+
+  return {
+    badges: ["먼저 복구", "분석 확인", "첫 제안 실행"],
+    tone: "amber",
+  };
+}
+
 type FilterType = "all" | NotifType;
 const FILTER_LABELS: Record<FilterType, string> = {
   all: "전체",
@@ -48,6 +202,20 @@ const FILTER_LABELS: Record<FilterType, string> = {
   env: "환경",
 };
 const FILTER_TYPES: FilterType[] = ["all", "command", "agent", "healing", "env"];
+const FILTER_ACTIVE_CLASS: Record<FilterType, string> = {
+  all: "bg-cyan-400/16 border-cyan-300/40 text-cyan-100",
+  command: "bg-sky-400/16 border-sky-300/40 text-sky-100",
+  agent: "bg-cyan-400/16 border-cyan-300/40 text-cyan-100",
+  healing: "bg-amber-400/16 border-amber-300/40 text-amber-100",
+  env: "bg-emerald-400/16 border-emerald-300/40 text-emerald-100",
+};
+const FILTER_IDLE_CLASS: Record<FilterType, string> = {
+  all: "bg-white/[0.03] border-white/10 text-white/58 hover:text-white hover:bg-white/[0.06]",
+  command: "bg-sky-400/[0.04] border-sky-300/12 text-sky-100/60 hover:text-sky-100 hover:bg-sky-400/[0.08]",
+  agent: "bg-cyan-400/[0.04] border-cyan-300/12 text-cyan-100/60 hover:text-cyan-100 hover:bg-cyan-400/[0.08]",
+  healing: "bg-amber-400/[0.04] border-amber-300/12 text-amber-100/60 hover:text-amber-100 hover:bg-amber-400/[0.08]",
+  env: "bg-emerald-400/[0.04] border-emerald-300/12 text-emerald-100/60 hover:text-emerald-100 hover:bg-emerald-400/[0.08]",
+};
 type SearchMode = "token" | "regex";
 const popupFocusables = "a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex='-1'])";
 
@@ -296,6 +464,9 @@ const NotificationCenter: React.FC<Props> = ({
   onDismissByIds,
   onClear,
   onClose,
+  onOpenRecoveryFlow,
+  highlightRecovery = false,
+  autoFocusRecoveryAction = false,
   closeOnDocument = true,
 }) => {
   const panelRef = useRef<HTMLDivElement>(null);
@@ -539,8 +710,25 @@ const NotificationCenter: React.FC<Props> = ({
       })
       .map((item) => item.notification);
 
+    if (!highlightRecovery) {
+      return {
+        displayedNotifications: matched,
+        matchedTitleCount: titleMatchCount,
+        matchedBodyCount: bodyMatchCount,
+      };
+    }
+
+    const recoveryPrioritized = [...matched].sort((left, right) => {
+      const leftHealingScore = left.type === "healing" ? (left.read ? 1 : 2) : 0;
+      const rightHealingScore = right.type === "healing" ? (right.read ? 1 : 2) : 0;
+      if (rightHealingScore !== leftHealingScore) {
+        return rightHealingScore - leftHealingScore;
+      }
+      return 0;
+    });
+
     return {
-      displayedNotifications: matched,
+      displayedNotifications: recoveryPrioritized,
       matchedTitleCount: titleMatchCount,
       matchedBodyCount: bodyMatchCount,
     };
@@ -552,6 +740,7 @@ const NotificationCenter: React.FC<Props> = ({
     excludedSearchQueries,
     searchMode,
     regexSearch,
+    highlightRecovery,
   ]);
 
   const displayedNotificationIds = useMemo(
@@ -786,7 +975,27 @@ const NotificationCenter: React.FC<Props> = ({
     });
   }, []);
 
+  useEffect(() => {
+    if (!autoFocusRecoveryAction) return;
+
+    const timer = requestAnimationFrame(() => {
+      const recoveryButton = panelRef.current?.querySelector<HTMLButtonElement>("[data-notification-recovery-action]");
+      recoveryButton?.focus();
+    });
+
+    return () => cancelAnimationFrame(timer);
+  }, [autoFocusRecoveryAction, displayedNotifications]);
+
   const popupPositionClass = "";
+  const resultMeta = getNotificationResultMeta(
+    Boolean(normalizedSearchQuery),
+    showUnreadOnly || typeFilter !== "all",
+  );
+  const recoveryMeta = getNotificationRecoveryMeta(displayedNotifications);
+  const emptyStateMeta = getNotificationEmptyStateMeta({
+    hasSearchQuery: Boolean(searchQuery),
+    showUnreadOnly,
+  });
 
   return (
     <div
@@ -812,9 +1021,11 @@ const NotificationCenter: React.FC<Props> = ({
         <Bell size={12} className="text-accent shrink-0" />
         <span className="text-sm font-semibold text-white/80 flex-1">알림 센터</span>
         {unreadCount > 0 && (
-          <IconButton tooltip="모두 읽음" onClick={onMarkAllRead}
+          <IconButton tooltip="모두 읽음"
+            description="현재 보이는 알림 흐름을 모두 읽음 상태로 바꿔, 새로 확인할 항목만 다시 남깁니다."
+            onClick={onMarkAllRead}
             aria-label="모든 알림 읽음 처리"
-            className="text-white/30 hover:text-accent transition-colors p-0.5 rounded">
+            className="rounded border border-emerald-300/18 bg-emerald-400/[0.08] p-1 text-emerald-100/76 transition-colors hover:bg-emerald-400/[0.16] hover:text-emerald-50">
             <CheckCheck size={11} />
           </IconButton>
         )}
@@ -824,7 +1035,11 @@ const NotificationCenter: React.FC<Props> = ({
             onClick={() => setShowUnreadOnly((prev) => !prev)}
             aria-pressed={showUnreadOnly}
             aria-label={showUnreadOnly ? "전체 알림 보기" : "미확인 알림만 보기"}
-            className="inline-flex items-center gap-1 px-2 py-1 text-xs rounded border border-white/12 bg-white/[0.05] text-white/70 hover:text-white hover:bg-white/[0.1] transition-colors"
+            className={`inline-flex items-center gap-1 px-2 py-1 text-xs rounded border transition-colors ${
+              showUnreadOnly
+                ? "border-emerald-300/35 bg-emerald-400/14 text-emerald-100 hover:bg-emerald-400/22"
+                : "border-white/12 bg-white/[0.05] text-white/70 hover:text-white hover:bg-white/[0.1]"
+            }`}
           >
             <Filter size={11} />
             <span>{showUnreadOnly ? "전체 보기" : `미확인 ${unreadCount}개`}</span>
@@ -833,13 +1048,14 @@ const NotificationCenter: React.FC<Props> = ({
         {notifications.length > 0 && (
           <IconButton
             tooltip="전체 삭제"
+            description="알림 센터에 쌓인 항목을 한 번에 비웁니다. 필요한 내용은 삭제 전에 복사해 두는 편이 안전합니다."
             confirm={{
               title: "알림 전체 삭제",
               description: `${notifications.length}개 알림이 모두 삭제됩니다.`,
             }}
             onClick={onClear}
             aria-label="알림 전체 삭제"
-            className="text-white/30 hover:text-red-400 transition-colors p-0.5 rounded"
+            className="rounded border border-rose-300/18 bg-rose-400/[0.08] p-1 text-rose-100/72 transition-colors hover:bg-rose-400/[0.16] hover:text-rose-50"
           >
             <Trash2 size={11} />
           </IconButton>
@@ -848,7 +1064,7 @@ const NotificationCenter: React.FC<Props> = ({
           type="button"
           onClick={onClose}
           aria-label="알림 센터 닫기"
-          className="text-white/25 hover:text-white/60 transition-colors p-0.5 rounded focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          className="rounded border border-white/12 bg-white/[0.03] p-1 text-white/38 transition-colors hover:border-white/20 hover:bg-white/[0.08] hover:text-white/72 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
         >
           <X size={11} />
         </button>
@@ -857,16 +1073,35 @@ const NotificationCenter: React.FC<Props> = ({
       {/* 알림 목록 */}
       {notifications.length > 0 && (
         <div className="border-b border-white/5 px-2 py-1.5 flex items-start gap-1.5 bg-[#12171e]">
-          <div className="w-full flex items-center gap-2">
-            <div className="inline-flex rounded border border-white/12 bg-white/[0.05] text-[10px]">
+          <div className="w-full">
+            {recoveryMeta && (
+              <div className="mb-2 flex flex-wrap items-center gap-1.5 rounded-xl border border-white/8 bg-white/[0.03] px-2.5 py-2">
+                <span className={`inline-flex items-center rounded-full border px-1.5 py-0.5 text-[10px] font-medium ${
+                  recoveryMeta.tone === "amber"
+                    ? "border-amber-300/24 bg-amber-400/10 text-amber-100"
+                    : "border-cyan-300/22 bg-cyan-400/10 text-cyan-100/90"
+                }`}>
+                  {recoveryMeta.badges[0]}
+                </span>
+                <span className="inline-flex items-center rounded-full border border-white/12 bg-white/[0.05] px-1.5 py-0.5 text-[10px] font-medium text-white/62">
+                  {recoveryMeta.badges[1]}
+                </span>
+                <span className="inline-flex items-center rounded-full border border-white/12 bg-white/[0.05] px-1.5 py-0.5 text-[10px] font-medium text-white/62">
+                  {recoveryMeta.badges[2]}
+                </span>
+                <span className="text-[10px] text-white/34">{recoveryMeta.helper}</span>
+              </div>
+            )}
+            <div className="flex items-center gap-2">
+              <div className="inline-flex rounded border border-white/12 bg-white/[0.05] text-[10px]">
               <button
                 type="button"
                 onClick={() => setSearchMode("token")}
                 aria-pressed={searchMode === "token"}
                 aria-label="검색 모드: 토큰(1)"
                 className={`px-2 py-1 border-r border-white/12 ${searchMode === "token"
-                  ? "bg-white/20 text-white"
-                  : "text-white/65 hover:text-white/90"
+                  ? "bg-cyan-400/16 text-cyan-100"
+                  : "text-white/65 hover:text-cyan-100 hover:bg-cyan-400/[0.08]"
                 }`}
               >
                 토큰(1)
@@ -877,101 +1112,102 @@ const NotificationCenter: React.FC<Props> = ({
                 aria-pressed={searchMode === "regex"}
                 aria-label="검색 모드: 정규식(2)"
                 className={`px-2 py-1 ${searchMode === "regex"
-                  ? "bg-white/20 text-white"
-                  : "text-white/65 hover:text-white/90"
+                  ? "bg-amber-400/16 text-amber-100"
+                  : "text-white/65 hover:text-amber-100 hover:bg-amber-400/[0.08]"
                 }`}
               >
                 정규식(2)
               </button>
-            </div>
-            <label htmlFor="notification-search" className="sr-only">
-              알림 검색
-            </label>
-            <div className="relative flex-1">
-              <Search size={11} className="absolute left-2 top-2 text-white/40" />
-              <input
-                id="notification-search"
-                ref={searchInputRef}
-                type="text"
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  setActiveHistoryIndex(-1);
-                }}
-                onFocus={() => {
-                  setShowSearchHistory(true);
-                  setActiveHistoryIndex(-1);
-                }}
-                onBlur={() => {
-                  setShowSearchHistory(false);
-                  setActiveHistoryIndex(-1);
-                  if (searchQuery.trim()) {
-                    saveSearchHistory(searchMode, searchQuery);
-                  }
-                }}
-                onKeyDown={(e) => {
-                  if (showSearchHistory && !searchQuery && sortedSearchHistory.length > 0) {
-                    if (e.key === "ArrowDown") {
-                      moveHistoryIndex(1);
-                      e.preventDefault();
-                      e.stopPropagation();
-                      return;
-                    }
-                    if (e.key === "ArrowUp") {
-                      moveHistoryIndex(-1);
-                      e.preventDefault();
-                      e.stopPropagation();
-                      return;
-                    }
-
-                    if ((e.key === "Delete" || e.key === "Backspace") && activeHistoryIndex >= 0) {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      const target = sortedSearchHistory[activeHistoryIndex];
-                      if (target) {
-                        removeSearchHistoryItem(target);
-                      }
-                      return;
-                    }
-
-                    if (e.key === "Enter" && activeHistoryIndex >= 0) {
-                      applySearchHistoryItem(sortedSearchHistory[activeHistoryIndex]!);
-                      e.preventDefault();
-                      e.stopPropagation();
-                      return;
-                    }
-                  }
-
-                  if (e.key === "Escape") {
-                    setShowSearchHistory(false);
+              </div>
+              <label htmlFor="notification-search" className="sr-only">
+                알림 검색
+              </label>
+              <div className="relative flex-1">
+                <Search size={11} className="absolute left-2 top-2 text-white/52" />
+                <input
+                  id="notification-search"
+                  ref={searchInputRef}
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
                     setActiveHistoryIndex(-1);
-                  }
-                  if (e.key === "Enter") {
-                    saveSearchHistory(searchMode, searchQuery);
-                    setShowSearchHistory(false);
-                    setActiveHistoryIndex(-1);
-                  }
-                }}
-                placeholder={searchMode === "regex"
-                  ? "정규식 검색 (/error|warn/i, /error/gi)"
-                  : "알림 제목/본문 검색"}
-                className="w-full pl-6 pr-7 py-1.5 text-xs bg-white/[0.05] border border-white/12 rounded text-white/90 placeholder:text-white/30 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-              />
-              {searchQuery && (
-                <button
-                  type="button"
-                  aria-label="검색어 지우기"
-                  className="absolute right-1.5 top-1.5 rounded text-white/50 hover:text-white focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                  onClick={() => {
-                    setSearchQuery("");
+                  }}
+                  onFocus={() => {
                     setShowSearchHistory(true);
                     setActiveHistoryIndex(-1);
-                    searchInputRef.current?.focus();
                   }}
-                >
-                  <X size={11} />
-                </button>
-              )}
+                  onBlur={() => {
+                    setShowSearchHistory(false);
+                    setActiveHistoryIndex(-1);
+                    if (searchQuery.trim()) {
+                      saveSearchHistory(searchMode, searchQuery);
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (showSearchHistory && !searchQuery && sortedSearchHistory.length > 0) {
+                      if (e.key === "ArrowDown") {
+                        moveHistoryIndex(1);
+                        e.preventDefault();
+                        e.stopPropagation();
+                        return;
+                      }
+                      if (e.key === "ArrowUp") {
+                        moveHistoryIndex(-1);
+                        e.preventDefault();
+                        e.stopPropagation();
+                        return;
+                      }
+
+                      if ((e.key === "Delete" || e.key === "Backspace") && activeHistoryIndex >= 0) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const target = sortedSearchHistory[activeHistoryIndex];
+                        if (target) {
+                          removeSearchHistoryItem(target);
+                        }
+                        return;
+                      }
+
+                      if (e.key === "Enter" && activeHistoryIndex >= 0) {
+                        applySearchHistoryItem(sortedSearchHistory[activeHistoryIndex]!);
+                        e.preventDefault();
+                        e.stopPropagation();
+                        return;
+                      }
+                    }
+
+                    if (e.key === "Escape") {
+                      setShowSearchHistory(false);
+                      setActiveHistoryIndex(-1);
+                    }
+                    if (e.key === "Enter") {
+                      saveSearchHistory(searchMode, searchQuery);
+                      setShowSearchHistory(false);
+                      setActiveHistoryIndex(-1);
+                    }
+                  }}
+                  placeholder={searchMode === "regex"
+                    ? "정규식 검색 (/error|warn/i, /error/gi)"
+                    : "알림 제목/본문 검색"}
+                  className="w-full rounded border border-white/14 bg-white/[0.07] pl-6 pr-7 py-1.5 text-xs text-white/92 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] placeholder:text-white/34 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    aria-label="검색어 지우기"
+                    className="absolute right-1.5 top-1.5 rounded border border-white/10 bg-white/[0.05] p-0.5 text-white/54 hover:border-white/16 hover:bg-white/[0.1] hover:text-white focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                    onClick={() => {
+                      setSearchQuery("");
+                      setShowSearchHistory(true);
+                      setActiveHistoryIndex(-1);
+                      searchInputRef.current?.focus();
+                    }}
+                  >
+                    <X size={11} />
+                  </button>
+                )}
+              </div>
             </div>
           </div>
           <div className="w-full px-2 pb-1.5 pt-0 flex flex-wrap items-center gap-1">
@@ -1026,9 +1262,10 @@ const NotificationCenter: React.FC<Props> = ({
               {sortedSearchHistory.map((item, index) => (
                 <div
                   key={`${item.mode}-${item.query}-${item.ts}`}
-                  className="inline-flex items-center max-w-[45%] text-[10px] rounded border border-white/10 px-1.5 py-1 bg-white/[0.03] text-white/75"
+                  className="inline-flex items-center max-w-[45%] text-[10px] rounded-lg border border-white/12 px-1.5 py-1 bg-white/[0.05] text-white/78 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]"
                   style={activeHistoryIndex === index ? {
-                    background: "rgba(255,255,255,0.12)",
+                    background: "rgba(34,211,238,0.14)",
+                    borderColor: "rgba(34,211,238,0.3)",
                   } : undefined}
                 >
                   <button
@@ -1044,7 +1281,7 @@ const NotificationCenter: React.FC<Props> = ({
                     className="inline-flex flex-1 min-w-0 items-center text-left hover:border-white/25 hover:text-white"
                     aria-label={`최근 검색어 ${item.query} 적용`}
                   >
-                    <span className="mr-1 text-[9px] text-white/45">{item.mode === "regex" ? "R" : "T"}:</span>
+                    <span className="mr-1 text-[9px] text-white/52">{item.mode === "regex" ? "R" : "T"}:</span>
                     <span className="truncate">{item.query}</span>
                   </button>
                   <button
@@ -1065,7 +1302,7 @@ const NotificationCenter: React.FC<Props> = ({
                       event.stopPropagation();
                       removeSearchHistoryItem(item);
                     }}
-                    className="ml-1 rounded px-1 text-white/45 hover:text-white/80 hover:bg-white/10"
+                    className="ml-1 rounded-md border border-white/10 bg-white/[0.05] px-1 text-white/56 hover:border-white/18 hover:bg-white/[0.1] hover:text-white/88"
                   >
                     ×
                   </button>
@@ -1075,20 +1312,65 @@ const NotificationCenter: React.FC<Props> = ({
                 type="button"
                 onMouseDown={(event) => event.preventDefault()}
                 onClick={clearSearchHistory}
-                className="inline-flex items-center px-1.5 py-1 text-[10px] rounded border border-white/20 bg-white/[0.07] text-white/60 hover:border-red-300/50 hover:text-red-200 transition-colors"
+                className="inline-flex items-center rounded-lg border border-rose-300/20 bg-rose-400/[0.08] px-2 py-1 text-[10px] font-medium text-rose-100/74 transition-colors hover:border-rose-300/34 hover:bg-rose-400/[0.14] hover:text-rose-50"
                 aria-label="검색 기록 전체 삭제"
               >
                 기록 전체 삭제
               </button>
+              <div className="flex w-full flex-wrap items-center gap-1.5 rounded-xl border border-white/8 bg-white/[0.03] px-2.5 py-2">
+                <span className="inline-flex items-center rounded-full border border-white/12 bg-white/[0.05] px-1.5 py-0.5 text-[10px] font-medium text-white/55">
+                  먼저 기록
+                </span>
+                <span className="inline-flex items-center rounded-full border border-cyan-300/22 bg-cyan-400/10 px-1.5 py-0.5 text-[10px] font-medium text-cyan-100/90">
+                  다음 적용
+                </span>
+                <span className="inline-flex items-center rounded-full border border-white/12 bg-white/[0.05] px-1.5 py-0.5 text-[10px] font-medium text-white/55">
+                  마지막 정리
+                </span>
+                <span className="text-[10px] text-white/34">
+                  최근 검색어를 고르고 다시 적용한 뒤 필요 없는 기록을 정리합니다.
+                </span>
+              </div>
             </div>
           )}
-          <div className="shrink-0 px-2 py-1.5 text-[10px] text-white/45">
-            {displayedNotifications.length}건
-            {normalizedSearchQuery
-              ? ` · ${searchMode === "regex" ? (parsedRegex?.display ?? `/${normalizedSearchQuery}/`) : `"${normalizedSearchQuery}"`} · 제목: ${matchedTitleCount}건, 본문: ${matchedBodyCount}건`
-              : ""}
+          <div className="px-2 pb-1.5 pt-0 flex flex-wrap items-center gap-1.5">
+            <span className="inline-flex items-center rounded-full border border-emerald-300/24 bg-emerald-400/10 px-1.5 py-0.5 text-[10px] font-medium text-emerald-100">
+              먼저 검색
+            </span>
+            <span className="inline-flex items-center rounded-full border border-white/12 bg-white/[0.05] px-1.5 py-0.5 text-[10px] font-medium text-white/62">
+              다음 필터
+            </span>
+            <span className="inline-flex items-center rounded-full border border-cyan-300/22 bg-cyan-400/10 px-1.5 py-0.5 text-[10px] font-medium text-cyan-100/90">
+              마지막 정리
+            </span>
+            <span className="text-[10px] text-white/34">
+              먼저 찾고, 다음으로 좁히고, 마지막에 현재 보기를 정리합니다.
+            </span>
+          </div>
+          <div className="px-2 pb-1.5 pt-0">
+            <div className="flex flex-wrap items-center gap-1.5 rounded-xl border border-white/8 bg-white/[0.03] px-2.5 py-2">
+              <span className="inline-flex items-center rounded-full border border-cyan-300/22 bg-cyan-400/10 px-1.5 py-0.5 text-[10px] font-medium text-cyan-100/90">
+                현재 결과
+              </span>
+              <span className="inline-flex items-center rounded-full border border-white/12 bg-white/[0.05] px-1.5 py-0.5 text-[10px] font-medium text-white/62">
+                {resultMeta.flowLabel}
+              </span>
+              <span className="inline-flex items-center rounded-full border border-white/12 bg-white/[0.05] px-1.5 py-0.5 text-[10px] font-medium text-white/62">
+                {resultMeta.scopeLabel}
+              </span>
+              <span className="text-[10px] text-white/34">{resultMeta.description}</span>
+            </div>
+            <div className="shrink-0 py-1.5 text-[10px] text-white/42">
+              <span className="font-medium text-white/62">{displayedNotifications.length}건</span>
+              {normalizedSearchQuery
+                ? ` · ${searchMode === "regex" ? (parsedRegex?.display ?? `/${normalizedSearchQuery}/`) : `"${normalizedSearchQuery}"`} · 제목: ${matchedTitleCount}건, 본문: ${matchedBodyCount}건`
+                : ""}
+            </div>
           </div>
           <div className="flex items-center gap-1.5 overflow-x-auto">
+            <span className="inline-flex shrink-0 items-center rounded-full border border-white/12 bg-white/[0.05] px-1.5 py-0.5 text-[10px] font-medium text-white/55">
+              다음 필터
+            </span>
             {FILTER_TYPES.map((filterType) => {
               const count = filterType === "all"
                 ? displayedNotificationIds.length
@@ -1101,8 +1383,8 @@ const NotificationCenter: React.FC<Props> = ({
                   aria-pressed={typeFilter === filterType}
                   className={`inline-flex shrink-0 text-[11px] px-2 py-1 rounded border transition-colors ${
                     typeFilter === filterType
-                      ? "bg-accent/18 border-accent/45 text-accent"
-                      : "bg-white/[0.03] border-white/10 text-white/55 hover:text-white hover:bg-white/[0.06]"
+                      ? FILTER_ACTIVE_CLASS[filterType]
+                      : FILTER_IDLE_CLASS[filterType]
                   }`}
                 >
                   {FILTER_LABELS[filterType]}
@@ -1113,6 +1395,9 @@ const NotificationCenter: React.FC<Props> = ({
           </div>
           {displayedNotificationIds.length > 0 && (
             <div className="ml-auto flex shrink-0 items-center gap-1">
+              <span className="inline-flex shrink-0 items-center rounded-full border border-white/12 bg-white/[0.05] px-1.5 py-0.5 text-[10px] font-medium text-white/55">
+                마지막 정리
+              </span>
               {displayedUnreadIds.length > 0 && onMarkByIds && (
                 <button
                   type="button"
@@ -1136,7 +1421,8 @@ const NotificationCenter: React.FC<Props> = ({
                 aria-label="현재 보기 항목 삭제"
                 className="inline-flex shrink-0 text-[11px] px-2 py-1 rounded border border-white/15 bg-white/[0.04] text-white/55 hover:text-white hover:bg-white/[0.09] transition-colors"
               >
-                <span>모두 삭제</span>
+                <span>현재 보기 삭제</span>
+                <span className="sr-only">모두 삭제</span>
                 <span className="ml-1 text-[10px] text-white/70">[D]</span>
               </button>
             </div>
@@ -1145,12 +1431,42 @@ const NotificationCenter: React.FC<Props> = ({
       )}
       <div className="flex-1 overflow-y-auto min-h-0">
         {displayedNotifications.length === 0 ? (
-          <div className="flex flex-col items-center justify-center gap-2 py-12 text-white/20">
-            <Bell size={24} />
+          <div className="mx-2 my-3 flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-white/10 bg-white/[0.03] px-4 py-10 text-white/20">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/[0.04]">
+              <Bell size={20} />
+            </div>
             {searchQuery ? (
-              <p className="text-sm">검색 조건에 맞는 알림이 없습니다</p>
+              <>
+                <div className="flex flex-wrap items-center justify-center gap-1.5">
+                  <span className="inline-flex items-center rounded-full border border-amber-300/24 bg-amber-400/10 px-1.5 py-0.5 text-[10px] font-medium text-amber-100">
+                    {emptyStateMeta.badges[0]}
+                  </span>
+                  <span className="inline-flex items-center rounded-full border border-white/12 bg-white/[0.05] px-1.5 py-0.5 text-[10px] font-medium text-white/62">
+                    {emptyStateMeta.badges[1]}
+                  </span>
+                  <span className="inline-flex items-center rounded-full border border-white/12 bg-white/[0.05] px-1.5 py-0.5 text-[10px] font-medium text-white/62">
+                    {emptyStateMeta.badges[2]}
+                  </span>
+                </div>
+                <p className="text-sm text-white/72">{emptyStateMeta.title}</p>
+                <p className="text-[11px] text-white/34">{emptyStateMeta.description}</p>
+              </>
             ) : (
-              <p className="text-sm">{showUnreadOnly ? "미확인 알림이 없습니다" : "알림이 없습니다"}</p>
+              <>
+                <div className="flex flex-wrap items-center justify-center gap-1.5">
+                  <span className="inline-flex items-center rounded-full border border-cyan-300/22 bg-cyan-400/10 px-1.5 py-0.5 text-[10px] font-medium text-cyan-100/90">
+                    {emptyStateMeta.badges[0]}
+                  </span>
+                  <span className="inline-flex items-center rounded-full border border-white/12 bg-white/[0.05] px-1.5 py-0.5 text-[10px] font-medium text-white/62">
+                    {emptyStateMeta.badges[1]}
+                  </span>
+                  <span className="inline-flex items-center rounded-full border border-white/12 bg-white/[0.05] px-1.5 py-0.5 text-[10px] font-medium text-white/62">
+                    {emptyStateMeta.badges[2]}
+                  </span>
+                </div>
+                <p className="text-sm text-white/72">{emptyStateMeta.title}</p>
+                <p className="text-[11px] text-white/34">{emptyStateMeta.description}</p>
+              </>
             )}
           </div>
         ) : (
@@ -1160,10 +1476,18 @@ const NotificationCenter: React.FC<Props> = ({
                 key={n.id}
                 role="alert"
                 className={`group flex items-start gap-2 px-2.5 py-2 rounded-lg border transition-colors ${
-                  n.read ? "bg-transparent border-white/3" : "bg-white/3 border-white/8"
+                  n.read
+                    ? "bg-transparent border-white/3"
+                    : `${getNotificationTypeMeta(n.type).cardClass} shadow-[0_8px_24px_rgba(0,0,0,0.14)]`
                 }`}
               >
-                <span className={`mt-0.5 shrink-0 ${TYPE_COLOR[n.type]}`}>
+                {(() => {
+                  const recoveryHint = getNotificationCardRecoveryHint(n);
+                  const recoveryPresentation = getNotificationCardRecoveryPresentation(n);
+
+                  return (
+                    <>
+                <span className={`mt-0.5 shrink-0 ${getNotificationTypeMeta(n.type).colorClass}`}>
                   {TYPE_ICON[n.type]}
                 </span>
                 <div className="flex-1 min-w-0">
@@ -1173,8 +1497,8 @@ const NotificationCenter: React.FC<Props> = ({
                         ? renderHighlightedTextByRegex(n.title, regexSearch)
                         : renderHighlightedText(n.title, normalizedSearchQueries)}
                     </p>
-                    <span className="inline-flex items-center text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-white/[0.08] text-white/50 border border-white/12">
-                      {TYPE_LABEL[n.type]}
+                    <span className={`inline-flex items-center text-[10px] font-semibold px-1.5 py-0.5 rounded-full border ${getNotificationTypeMeta(n.type).badgeClass}`}>
+                      {getNotificationTypeMeta(n.type).label}
                     </span>
                     {!n.read && (
                       <span className="inline-flex items-center text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-emerald-400/12 text-emerald-100 border border-emerald-300/25">
@@ -1182,28 +1506,109 @@ const NotificationCenter: React.FC<Props> = ({
                       </span>
                     )}
                   </div>
+                  <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[10px]">
+                    <span className="inline-flex items-center rounded-full border border-white/10 bg-white/[0.04] px-1.5 py-0.5 text-white/42">
+                      {timeAgo(n.timestamp)}
+                    </span>
+                    <span className="inline-flex items-center rounded-full border border-white/10 bg-white/[0.04] px-1.5 py-0.5 text-white/50">
+                      {getNotificationTypeMeta(n.type).hint}
+                    </span>
+                    <span
+                      className={`inline-flex items-center rounded-full border px-1.5 py-0.5 ${
+                        n.read
+                          ? "border-white/10 bg-white/[0.04] text-white/40"
+                          : "border-emerald-300/25 bg-emerald-400/12 text-emerald-100"
+                      }`}
+                    >
+                      {n.read ? "읽음" : "지금 확인"}
+                    </span>
+                  </div>
                   <p className="text-xs text-white/35 mt-0.5 break-words leading-relaxed">
                     {searchMode === "regex"
                       ? renderHighlightedTextByRegex(n.body, regexSearch)
                       : renderHighlightedText(n.body, normalizedSearchQueries)}
                   </p>
-                  <p className="text-xs text-white/20 mt-1">{timeAgo(n.timestamp)}</p>
+                  {recoveryHint && recoveryPresentation && (
+                    <div className={`mt-2 flex flex-wrap items-center gap-1.5 rounded-lg border px-2 py-1.5 ${
+                      recoveryPresentation.tone === "amber"
+                        ? "border-amber-300/18 bg-amber-400/[0.08]"
+                        : "border-cyan-300/18 bg-cyan-400/[0.08]"
+                    }`}>
+                      <span className={`inline-flex items-center rounded-full border px-1.5 py-0.5 text-[10px] font-medium ${
+                        recoveryPresentation.tone === "amber"
+                          ? "border-amber-300/24 bg-amber-400/10 text-amber-100"
+                          : "border-cyan-300/22 bg-cyan-400/10 text-cyan-100/90"
+                      }`}>
+                        바로 복구 보기
+                      </span>
+                      <span className={`inline-flex items-center rounded-full border px-1.5 py-0.5 text-[10px] font-medium ${
+                        recoveryPresentation.tone === "amber"
+                          ? "border-white/12 bg-white/[0.05] text-white/62"
+                          : "border-white/12 bg-white/[0.05] text-white/62"
+                      }`}>
+                        {recoveryPresentation.badges[0]}
+                      </span>
+                      <span className="inline-flex items-center rounded-full border border-white/12 bg-white/[0.05] px-1.5 py-0.5 text-[10px] font-medium text-white/62">
+                        {recoveryPresentation.badges[1]}
+                      </span>
+                      <span className="inline-flex items-center rounded-full border border-white/12 bg-white/[0.05] px-1.5 py-0.5 text-[10px] font-medium text-white/62">
+                        {recoveryPresentation.badges[2]}
+                      </span>
+                      <span className={`text-[10px] leading-relaxed ${
+                        recoveryPresentation.tone === "amber" ? "text-amber-100/78" : "text-cyan-100/76"
+                      }`}>
+                        {recoveryHint}
+                      </span>
+                      {onOpenRecoveryFlow && (
+                        <button
+                          type="button"
+                          data-notification-recovery-action
+                          onClick={() => {
+                            onMarkByIds?.([n.id]);
+                            onOpenRecoveryFlow();
+                          }}
+                          className={`inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[10px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring ${
+                            recoveryPresentation.tone === "amber"
+                              ? "border-amber-300/28 bg-amber-400/14 text-amber-100 hover:bg-amber-400/22"
+                              : "border-cyan-300/28 bg-cyan-400/14 text-cyan-100 hover:bg-cyan-400/22"
+                          }`}
+                        >
+                          인스펙터 열기
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
-                <IconButton
-                  tooltip="알림 텍스트 복사"
-                  onClick={() => navigator.clipboard.writeText(`${n.title}\n${n.body}`).catch(() => {})}
-                  className="shrink-0 mt-0.5 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 text-white/20 hover:text-white/50 transition-all p-0.5 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                >
-                  <Copy size={10} />
-                </IconButton>
-                <button
-                  type="button"
-                  onClick={() => onDismiss(n.id)}
-                  aria-label={`${n.title} 알림 닫기`}
-                  className="shrink-0 mt-0.5 opacity-0 group-hover:opacity-100 focus:opacity-100 text-white/20 hover:text-white/50 transition-all p-0.5 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                >
-                  <X size={10} />
-                </button>
+                <div className="mt-0.5 flex shrink-0 flex-col items-center gap-1">
+                  <IconButton
+                    tooltip="알림 텍스트 복사"
+                    description="제목과 본문을 함께 복사해 이슈 공유나 후속 작업 메모로 바로 가져갈 수 있습니다."
+                    aria-label={`${n.title} 알림 복사`}
+                    onClick={() => navigator.clipboard.writeText(`${n.title}\n${n.body}`).catch(() => {})}
+                    className={`rounded-md border p-1 transition-all focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring ${
+                      n.read
+                        ? "border-white/8 bg-white/[0.03] text-white/24 opacity-55 hover:border-white/14 hover:bg-white/[0.08] hover:text-white/58"
+                        : "border-white/10 bg-white/[0.05] text-white/38 opacity-80 hover:border-white/18 hover:bg-white/[0.1] hover:text-white/78"
+                    }`}
+                  >
+                    <Copy size={10} />
+                  </IconButton>
+                  <button
+                    type="button"
+                    onClick={() => onDismiss(n.id)}
+                    aria-label={`${n.title} 알림 닫기`}
+                    className={`rounded-md border p-1 transition-all focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring ${
+                      n.read
+                        ? "border-white/8 bg-white/[0.03] text-white/24 opacity-55 hover:border-white/14 hover:bg-white/[0.08] hover:text-white/58"
+                        : "border-white/10 bg-white/[0.05] text-white/38 opacity-80 hover:border-white/18 hover:bg-white/[0.1] hover:text-white/78"
+                    }`}
+                  >
+                    <X size={10} />
+                  </button>
+                </div>
+                    </>
+                  );
+                })()}
               </div>
             ))}
           </div>
