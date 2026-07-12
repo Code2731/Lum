@@ -459,9 +459,19 @@ const PrivacyLedgerBadge: React.FC<Props> = ({
   }, [open]);
 
   const { tone, label, tooltip: tooltipText } = getPrivacyLedgerToneMeta(state, isAllOnDevice);
+  const isVeryNarrowHeader = typeof window !== "undefined" && window.innerWidth < 1120;
+  const isUltraNarrowHeader = typeof window !== "undefined" && window.innerWidth < 980;
   const localCalls = Math.max(0, state.total - state.onlineCalls);
   const summaryBadges = getPrivacyLedgerSummaryBadges(state, isAllOnDevice);
   const Icon = tone === "ondevice" || tone === "neutral" ? ShieldCheck : Cloud;
+  const compactLabel =
+    tone === "neutral"
+      ? "대기"
+      : tone === "ondevice"
+        ? "온디바이스"
+        : tone === "cloudHeavy"
+          ? "클라우드"
+          : "혼합";
   const popupYOffset = placement === "up" ? 4 : -4;
   const popupOrigin = placement === "up" ? "bottom right" : "top right";
   const popupStyle: React.CSSProperties = {
@@ -651,22 +661,32 @@ const PrivacyLedgerBadge: React.FC<Props> = ({
             )}
           >
             <Icon size={12} />
-            <span className="tabular-nums">{label}</span>
+            <span className="tabular-nums">
+              {isUltraNarrowHeader
+                ? compactLabel.slice(0, 2)
+                : isVeryNarrowHeader
+                  ? compactLabel
+                  : label}
+            </span>
             {state.total > 0 && (
               <>
-                <span className="rounded-full border border-white/12 bg-black/10 px-1.5 py-0.5 text-[10px] font-medium text-current/80">
-                  {state.total}건
-                </span>
-                <span
-                  className={cn(
-                    "rounded-full border px-1.5 py-0.5 text-[10px] font-medium",
-                    state.onlineCalls > 0
-                      ? "border-amber-300/28 bg-amber-400/12 text-amber-100"
-                      : "border-emerald-300/24 bg-emerald-400/12 text-emerald-100",
-                  )}
-                >
-                  {state.onlineCalls > 0 ? `클라우드 ${state.onlineCalls}` : "로컬"}
-                </span>
+                {!isUltraNarrowHeader && (
+                  <span className="rounded-full border border-white/12 bg-black/10 px-1.5 py-0.5 text-[10px] font-medium text-current/80">
+                    {isVeryNarrowHeader ? state.total : `${state.total}건`}
+                  </span>
+                )}
+                {!isVeryNarrowHeader && (
+                  <span
+                    className={cn(
+                      "rounded-full border px-1.5 py-0.5 text-[10px] font-medium",
+                      state.onlineCalls > 0
+                        ? "border-amber-300/28 bg-amber-400/12 text-amber-100"
+                        : "border-emerald-300/24 bg-emerald-400/12 text-emerald-100",
+                    )}
+                  >
+                    {state.onlineCalls > 0 ? `클라우드 ${state.onlineCalls}` : "로컬"}
+                  </span>
+                )}
               </>
             )}
           </button>

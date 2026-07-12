@@ -19,8 +19,8 @@ export interface WarpInputBarHandle {
 
 export function getWarpDefaultInputHint(compactContextChips: boolean): string {
   return compactContextChips
-    ? "먼저 자연어/명령 · 필요 시 !/@/>>/#/?"
-    : "먼저 자연어는 AI, 명령어는 실행 · 필요 시 !/@/>>/#/? · 백엔드 @local/@ollama/@xllm/@gemini · Cmd/Ctrl+1~4/0 선택·해제 · Cmd/Ctrl+./, 순환";
+    ? "질문·명령 입력 · 필요 시 ! @ >>"
+    : "질문은 AI, 명령은 실행 · 필요 시 ! @ >> # ? · 백엔드 선택과 단축키도 바로 지원";
 }
 
 export function getWarpActiveModeHint(input: {
@@ -34,15 +34,40 @@ export function getWarpActiveModeHint(input: {
   isForceAI: boolean;
 }): string | null {
   if (input.isBackendOnly && input.activeBackend) {
-    return `${input.activeBackend.toUpperCase()} 백엔드가 먼저 선택되어 있습니다. 내용을 입력하고 Enter를 누르면 ${input.activeBackend}로 처리됩니다. Cmd/Ctrl+0으로 해제하고 Cmd/Ctrl+./,로 바로 순환할 수 있습니다.`;
+    return `${input.activeBackend.toUpperCase()} 백엔드가 선택되었습니다. 내용을 입력하고 Enter를 누르면 바로 이 경로로 처리됩니다.`;
   }
-  if (input.isHeavy) return "헤비 모드: 먼저 긴 작업 지시를 입력하면 AI가 큰 문맥으로 처리합니다.";
-  if (input.isAgent) return "에이전트 모드: 먼저 작업 지시를 입력하면 ReAct가 실행합니다.";
-  if (input.isAICmd) return "AI 제안 모드: # 뒤에 물어볼 내용을 입력하면 바로 제안 흐름으로 이어집니다.";
-  if (input.isExplain) return "설명 모드: ? 뒤에 설명이 필요한 내용을 입력하면 해설 흐름으로 이어집니다.";
-  if (input.isForceShell) return "셸 강제 모드: ! 뒤에 실행할 명령어를 입력하면 바로 터미널로 보냅니다.";
-  if (input.isForceAI) return "AI 강제 모드: @ 뒤에 질의할 내용을 입력하면 바로 AI로 보냅니다.";
+  if (input.isHeavy) return "헤비 AI 모드입니다. 긴 작업 지시나 넓은 문맥 분석에 적합합니다.";
+  if (input.isAgent) return "에이전트 모드입니다. 작업 지시를 입력하면 ReAct 흐름으로 실행합니다.";
+  if (input.isAICmd) return "AI 제안 모드입니다. 질문을 입력하면 제안/명령 추천 흐름으로 이어집니다.";
+  if (input.isExplain) return "설명 모드입니다. 개념이나 에러 의미를 해설 중심으로 답합니다.";
+  if (input.isForceShell) return "셸 강제 모드입니다. 입력 내용을 바로 터미널 명령으로 실행합니다.";
+  if (input.isForceAI) return "AI 강제 모드입니다. 입력 내용을 바로 AI 질의로 보냅니다.";
   return null;
+}
+
+export function getWarpModeExample(input: {
+  activeBackend: "local" | "ollama" | "xllm" | "gemini" | null;
+  isBackendOnly: boolean;
+  isHeavy: boolean;
+  isAgent: boolean;
+  isAICmd: boolean;
+  isExplain: boolean;
+  isForceShell: boolean;
+  isForceAI: boolean;
+  looksShell: boolean;
+  isEffectivelyEmpty: boolean;
+}): string {
+  if (input.isBackendOnly && input.activeBackend) {
+    return `예: ${input.activeBackend === "local" ? "코드베이스 구조 요약해줘" : "이 에러 원인 분석해줘"}`;
+  }
+  if (input.isHeavy) return "예: !! 이 저장소의 아키텍처 병목과 리팩터 우선순위를 정리해줘";
+  if (input.isAgent) return "예: >> 로그인 모달 접근성 문제를 찾아서 수정해줘";
+  if (input.isAICmd) return "예: # 방금 실패한 테스트를 고치기 위한 명령 3개 추천";
+  if (input.isExplain) return "예: ? 이 Rust 에러 메시지가 의미하는 바를 설명해줘";
+  if (input.isForceShell) return "예: ! npm run tauri dev";
+  if (input.isForceAI) return "예: @ 이 컴포넌트 구조를 개선할 방법 제안해줘";
+  if (input.looksShell && !input.isEffectivelyEmpty) return "예: git status, npm test, cargo check";
+  return "예: 버그 원인 분석해줘 · src/components/AppHeader.tsx 구조 설명해줘 · npm run tauri dev";
 }
 
 const WARP_SMALL_FONT_SIZE = 10;
@@ -355,6 +380,46 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
       isForceShell,
       isForceAI,
     });
+    const activeModeExample = getWarpModeExample({
+      activeBackend,
+      isBackendOnly,
+      isHeavy,
+      isAgent,
+      isAICmd,
+      isExplain,
+      isForceShell,
+      isForceAI,
+      looksShell,
+      isEffectivelyEmpty,
+    });
+    const exampleLabel = compactContextChips ? "ex" : "example";
+    const visibleModeExample = compactContextChips
+      ? activeModeExample
+          .replace(/^예:\s*/, "")
+          .replace(/\s*·\s*/g, " / ")
+      : activeModeExample;
+    const voiceHistorySummaryLabel = compactContextChips
+      ? `고 ${pinnedVoiceTranscripts.length} · 최 ${recentVoiceTranscripts.length} · 기 ${voiceTranscriptHistory.length}`
+      : `고정 ${pinnedVoiceTranscripts.length} · 최근 ${recentVoiceTranscripts.length} · 기록 ${voiceTranscriptHistory.length}`;
+    const restoreVoiceScopeLabel = compactContextChips ? "현재로" : "현재 프로젝트로 복귀";
+    const compactVoiceHistoryScopeLabel =
+      activeVoiceHistoryScope === "__global__" ? "전역" : "프로젝트";
+    const hasActiveRouteMode =
+      isHeavy || isAgent || isAICmd || isExplain || isForceShell || isForceAI || isBackendOnly || activeBackend !== null;
+    const hasTypedInput = input.trim().length > 0;
+    const showModeSummaryRow = !compactContextChips || hasActiveRouteMode || hasTypedInput;
+    const showExampleRow = !compactContextChips || hasActiveRouteMode || isFocused || hasTypedInput;
+    const showPinnedVoiceExpanded = !compactContextChips || !pinnedVoiceTranscriptsCollapsed;
+    const showRecentVoiceExpanded = !compactContextChips || showVoiceTranscriptHistory;
+    const showVoiceScopeControls =
+      !compactContextChips
+      || isVoiceHistoryScopeOverridden
+      || showVoiceTranscriptHistory
+      || normalizedVoiceHistoryQuery.length > 0;
+    const showVoiceSearchInput =
+      !compactContextChips
+      || showVoiceTranscriptHistory
+      || normalizedVoiceHistoryQuery.length > 0;
 
     const activeBackendStyle = activeBackend === "local"
       ? { color: "rgba(121,192,255,0.95)", border: "1px solid rgba(88,166,255,0.35)", background: "rgba(88,166,255,0.12)" }
@@ -363,6 +428,74 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
         : activeBackend === "xllm"
           ? { color: "rgba(121,192,255,0.95)", border: "1px solid rgba(121,192,255,0.35)", background: "rgba(121,192,255,0.12)" }
           : { color: "rgba(233,194,105,0.96)", border: "1px solid rgba(227,179,65,0.35)", background: "rgba(227,179,65,0.12)" };
+    const backendQuickActions: Array<{
+      id: "local" | "ollama" | "xllm" | "gemini";
+      label: string;
+      shortLabel: string;
+      tone: "accent" | "success" | "warn";
+    }> = [
+      { id: "local", label: "Local", shortLabel: "L", tone: "accent" },
+      { id: "ollama", label: "Ollama", shortLabel: "O", tone: "success" },
+      { id: "xllm", label: "xLLM", shortLabel: "X", tone: "accent" },
+      { id: "gemini", label: "Gemini", shortLabel: "G", tone: "warn" },
+    ];
+    const visibleBackendQuickActions = compactContextChips
+      ? backendQuickActions.filter((action) =>
+          action.id === "local" || action.id === "xllm" || action.id === activeBackend)
+      : backendQuickActions;
+    const prefixQuickActions: Array<{
+      id: "shell" | "ai" | "agent" | "explain" | "aicmd";
+      label: string;
+      shortLabel: string;
+      active: boolean;
+      tone: "accent" | "success" | "warn";
+      title: string;
+    }> = [
+      {
+        id: "shell",
+        label: "!",
+        shortLabel: "!",
+        active: isForceShell,
+        tone: "success",
+        title: "셸 강제 모드",
+      },
+      {
+        id: "ai",
+        label: "@",
+        shortLabel: "@",
+        active: isForceAI,
+        tone: "accent",
+        title: "AI 강제 모드",
+      },
+      {
+        id: "agent",
+        label: ">>",
+        shortLabel: "≫",
+        active: isAgent,
+        tone: "warn",
+        title: "에이전트 모드",
+      },
+      {
+        id: "explain",
+        label: "?",
+        shortLabel: "?",
+        active: isExplain,
+        tone: "success",
+        title: "설명 모드",
+      },
+      {
+        id: "aicmd",
+        label: "#",
+        shortLabel: "#",
+        active: isAICmd,
+        tone: "accent",
+        title: "AI 제안 모드",
+      },
+    ];
+    const visiblePrefixQuickActions = compactContextChips
+      ? prefixQuickActions.filter((action) =>
+          action.active || action.id === "shell" || action.id === "ai" || action.id === "agent")
+      : prefixQuickActions;
 
     const applyBackendPrefix = (backend: "local" | "ollama" | "xllm" | "gemini") => {
       const active = detectBackendPrefixFromInput(input);
@@ -409,14 +542,41 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
       setInput(next);
       onChange?.(next);
     };
+    const applyQuickRouteMode = (mode: "shell" | "ai" | "agent" | "explain" | "aicmd") => {
+      const stripped = input.replace(/^(?:>>|!|@|#|\?)\s*/, "");
+      const nextPrefix =
+        mode === "shell"
+          ? "!"
+          : mode === "ai"
+            ? "@"
+            : mode === "agent"
+              ? ">>"
+              : mode === "explain"
+                ? "?"
+                : "#";
+      const next = prefixQuickActions.find((action) => action.id === mode)?.active
+        ? stripped
+        : `${nextPrefix} ${stripped}`.trimEnd();
+      setInput(next);
+      onChange?.(next);
+    };
     const visibleContextChips = React.useMemo(() => {
       if (!compactContextChips) return contextChips;
       const primaryIds = new Set(["route", "backend", "term"]);
       const primary = contextChips.filter((chip) => primaryIds.has(chip.id));
-      const extraCount = contextChips.length - primary.length;
-      if (extraCount <= 0) return primary;
+      const emphasized = contextChips.filter(
+        (chip) => chip.tone === "accent" || chip.tone === "success" || chip.tone === "warn",
+      );
+      const visible = [...primary];
+      emphasized.forEach((chip) => {
+        if (visible.some((item) => item.id === chip.id)) return;
+        visible.push(chip);
+      });
+      const limitedVisible = visible.slice(0, 4);
+      const extraCount = contextChips.length - limitedVisible.length;
+      if (extraCount <= 0) return limitedVisible;
       return [
-        ...primary,
+        ...limitedVisible,
         {
           id: "__extra_count__",
           label: `추가 ${extraCount}개`,
@@ -424,6 +584,121 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
         },
       ];
     }, [compactContextChips, contextChips]);
+    const modeSummaryChips = React.useMemo(() => {
+      const chips: Array<{
+        id: string;
+        label: string;
+        tone: "neutral" | "accent" | "success" | "warn";
+        title: string;
+      }> = [];
+
+      const routeChip = activeHeavy
+        ? {
+            id: "mode-heavy",
+            label: "헤비 AI",
+            tone: "accent" as const,
+            title: "긴 작업이나 큰 문맥 분석을 바로 헤비 트랙으로 보냅니다.",
+          }
+        : isAgent
+          ? {
+              id: "mode-agent",
+              label: "에이전트",
+              tone: "warn" as const,
+              title: "지시를 입력하면 ReAct 작업 흐름으로 이어집니다.",
+            }
+          : isAICmd
+            ? {
+                id: "mode-aicmd",
+                label: "AI 제안",
+                tone: "accent" as const,
+                title: "질문을 입력하면 제안/요약 중심의 AI 응답으로 이어집니다.",
+              }
+            : isExplain
+              ? {
+                  id: "mode-explain",
+                  label: "설명 모드",
+                  tone: "success" as const,
+                  title: "설명이 필요한 내용을 입력하면 해설 중심 흐름으로 이어집니다.",
+                }
+              : isForceShell
+                ? {
+                    id: "mode-shell",
+                    label: "셸 고정",
+                    tone: "success" as const,
+                    title: "입력 내용을 바로 터미널 명령으로 실행합니다.",
+                  }
+                : isForceAI
+                  ? {
+                      id: "mode-ai",
+                      label: "AI 고정",
+                      tone: "accent" as const,
+                      title: "입력 내용을 바로 AI 질의로 보냅니다.",
+                    }
+                  : isBackendOnly && activeBackend
+                    ? {
+                        id: "mode-backend-waiting",
+                        label: `${activeBackend.toUpperCase()} 대기`,
+                        tone: "warn" as const,
+                        title: `${activeBackend.toUpperCase()} 백엔드를 먼저 골라 둔 상태입니다. 내용을 입력한 뒤 Enter로 실행합니다.`,
+                      }
+                    : looksShell && !isEffectivelyEmpty
+                      ? {
+                          id: "mode-shell-detected",
+                          label: "명령어 입력",
+                          tone: "success" as const,
+                          title: "현재 입력은 명령어 형태로 보입니다.",
+                        }
+                      : {
+                          id: "mode-auto",
+                          label: "자동 라우팅",
+                          tone: "neutral" as const,
+                          title: "자연어/명령어를 보고 AI 또는 실행 흐름으로 자동 분기합니다.",
+                        };
+
+      chips.push(routeChip);
+
+      if (activeBackend) {
+        chips.push({
+          id: "backend",
+          label: `백엔드 ${activeBackend.toUpperCase()}`,
+          tone: activeBackend === "ollama" ? "success" : activeBackend === "gemini" ? "warn" : "accent",
+          title: `${activeBackend.toUpperCase()} 백엔드가 강제 선택되어 있습니다. Cmd/Ctrl+0 또는 우측 배지 클릭으로 해제할 수 있습니다.`,
+        });
+      }
+
+      chips.push(
+        activeBackend
+          ? {
+              id: "hint-clear",
+              label: "Cmd/Ctrl+0 해제",
+              tone: "neutral",
+              title: "현재 강제 백엔드를 해제합니다.",
+            }
+          : {
+              id: "hint-prefix",
+              label: "! 셸 · @ AI · >> 에이전트",
+              tone: "neutral",
+              title: "필요하면 접두사로 실행 경로를 즉시 고정할 수 있습니다.",
+            },
+      );
+
+      return chips;
+    }, [
+      activeBackend,
+      activeHeavy,
+      isAgent,
+      isAICmd,
+      isBackendOnly,
+      isEffectivelyEmpty,
+      isExplain,
+      isForceAI,
+      isForceShell,
+      looksShell,
+    ]);
+    const hasTopMetaRow =
+      visibleContextChips.length > 0
+      || (showModeSummaryRow && modeSummaryChips.length > 0)
+      || showExampleRow;
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
       if (isVoiceProcessing) {
@@ -807,10 +1082,19 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
       voiceStatus === "listening" ? "듣는 중" :
       voiceStatus === "processing" ? "반영 중" :
       "대기 중";
+    const compactVoiceStatusLabel =
+      voiceError ? "오류" :
+      voiceStatus === "listening" ? "듣는중" :
+      voiceStatus === "processing" ? "반영중" :
+      "대기";
     const voiceStatusDisplayLabel =
       voiceStatus === "listening" && recordingSeconds > 0
         ? `${voiceStatusLabel} ${formatVoiceDuration(recordingSeconds)}`
         : voiceStatusLabel;
+    const compactVoiceStatusDisplayLabel =
+      voiceStatus === "listening" && recordingSeconds > 0
+        ? `${compactVoiceStatusLabel} ${formatVoiceDuration(recordingSeconds)}`
+        : compactVoiceStatusLabel;
     const voiceStatusTone =
       voiceError ? {
         color: "#ff7b72",
@@ -856,7 +1140,11 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
       voicePartialTranscript && voiceStatus !== "idle"
         ? `상태 ${voiceStatusDisplayLabel} · ${formatVoicePreview(voicePartialTranscript)}`
         : `상태 ${voiceStatusDisplayLabel}`;
-    const inlineVoiceLabel = !voiceEnabled ? "비활성" : voiceStatusDisplayLabel;
+    const inlineVoiceLabel = !voiceEnabled
+      ? (compactContextChips ? "OFF" : "비활성")
+      : compactContextChips
+        ? compactVoiceStatusDisplayLabel
+        : voiceStatusDisplayLabel;
     const inlineVoiceTone = !voiceEnabled ? voiceDisabledTone : voiceStatusTone;
     const voicePartialPreview =
       voicePartialTranscript && voiceStatus !== "idle"
@@ -903,6 +1191,10 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
       : body !== null && body.trim() === "" && activeModeHint
         ? activeModeHint
         : null;
+    const showOverlayHint = Boolean(modeHint) || input.length === 0;
+    const overlayContentTransitionStyle: React.CSSProperties = {
+      transition: "opacity 160ms ease, transform 160ms ease, color 160ms ease",
+    };
 
     return (
       <div
@@ -919,16 +1211,16 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
           borderTop: `1px solid ${isFocused ? "rgba(88,166,255,0.64)" : "rgba(255,255,255,0.14)"}`,
           borderBottom: "1px solid rgba(255,255,255,0.05)",
           boxShadow: isFocused ? "0 -10px 28px rgba(88,166,255,0.12)" : "inset 0 1px 0 rgba(255,255,255,0.02)",
-          padding: visibleContextChips.length > 0 ? (compactContextChips ? "4px 10px" : "6px 12px") : "0 12px",
+          padding: hasTopMetaRow ? (compactContextChips ? "4px 10px" : "6px 12px") : "0 12px",
           display: "flex",
           flexDirection: "column",
           justifyContent: "center",
-          gap: visibleContextChips.length > 0 ? (compactContextChips ? 3 : 5) : 0,
-          minHeight: visibleContextChips.length > 0 ? (compactContextChips ? 48 : 56) : 40,
+          gap: hasTopMetaRow ? (compactContextChips ? 3 : 5) : 0,
+          minHeight: hasTopMetaRow ? (compactContextChips ? 52 : 60) : 40,
           cursor: "text",
           boxSizing: "border-box",
           position: "relative",
-          transition: "border-color 120ms",
+          transition: "border-color 160ms ease, box-shadow 160ms ease, padding 180ms ease, min-height 180ms ease, gap 180ms ease",
         }}
       >
         <style>
@@ -966,6 +1258,9 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
               flexWrap: compactContextChips ? "wrap" : "nowrap",
               overflowX: "auto",
               scrollbarWidth: "none",
+              opacity: 1,
+              transform: "translateY(0)",
+              transition: "opacity 150ms ease, transform 150ms ease",
             }}
           >
             {visibleContextChips.map((chip) => {
@@ -1019,6 +1314,94 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
             })}
           </div>
         )}
+        {showModeSummaryRow && modeSummaryChips.length > 0 && (
+          <div
+            style={{
+              width: "100%",
+              display: "flex",
+              alignItems: "center",
+              alignContent: "flex-start",
+              columnGap: 6,
+              rowGap: 4,
+              flexWrap: "wrap",
+              opacity: 1,
+              transform: "translateY(0)",
+              transition: "opacity 160ms ease, transform 160ms ease",
+            }}
+          >
+            {modeSummaryChips.map((chip) => (
+              <span
+                key={chip.id}
+                title={chip.title}
+                style={{
+                  flexShrink: 0,
+                  fontSize: WARP_SMALL_FONT_SIZE,
+                  lineHeight: 1.2,
+                  padding: compactContextChips ? "1px 6px" : "2px 7px",
+                  borderRadius: 999,
+                  border:
+                    chip.tone === "accent" ? "1px solid rgba(88,166,255,0.35)" :
+                    chip.tone === "success" ? "1px solid rgba(63,185,80,0.35)" :
+                    chip.tone === "warn" ? "1px solid rgba(227,179,65,0.35)" :
+                    "1px solid rgba(255,255,255,0.14)",
+                  color:
+                    chip.tone === "accent" ? "rgba(121,192,255,0.95)" :
+                    chip.tone === "success" ? "rgba(111,227,132,0.95)" :
+                    chip.tone === "warn" ? "rgba(233,194,105,0.96)" :
+                    "rgba(255,255,255,0.58)",
+                  background:
+                    chip.tone === "accent" ? "rgba(88,166,255,0.12)" :
+                    chip.tone === "success" ? "rgba(63,185,80,0.12)" :
+                    chip.tone === "warn" ? "rgba(227,179,65,0.12)" :
+                    "rgba(255,255,255,0.035)",
+                }}
+              >
+                {chip.label}
+              </span>
+            ))}
+          </div>
+        )}
+        {showExampleRow && (
+          <div
+            style={{
+              width: "100%",
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              minHeight: compactContextChips ? 14 : 16,
+              marginTop: hasTopMetaRow ? -1 : 0,
+              opacity: 1,
+              transform: "translateY(0)",
+              transition: "opacity 180ms ease, transform 180ms ease",
+            }}
+          >
+            <span
+              style={{
+                flexShrink: 0,
+                fontSize: WARP_SMALL_FONT_SIZE,
+                letterSpacing: "0.08em",
+                textTransform: "uppercase",
+                color: "rgba(255,255,255,0.28)",
+              }}
+            >
+              {exampleLabel}
+            </span>
+            <span
+              style={{
+                minWidth: 0,
+                fontSize: WARP_SMALL_FONT_SIZE,
+                lineHeight: 1.35,
+                color: activeModeHint ? "rgba(255,255,255,0.54)" : "rgba(255,255,255,0.42)",
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+              }}
+              title={activeModeExample}
+            >
+              {visibleModeExample}
+            </span>
+          </div>
+        )}
 
         {voiceError && (
           <div
@@ -1036,6 +1419,10 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
               alignItems: "center",
               gap: 6,
               maxWidth: 420,
+              transform: "translateY(-1px) scale(1.01)",
+              boxShadow: "0 8px 20px rgba(0,0,0,0.18), inset 0 0 0 1px rgba(255,255,255,0.04)",
+              transition: "transform 160ms ease, box-shadow 160ms ease, opacity 160ms ease, background 160ms ease, border-color 160ms ease",
+              animation: VOICE_BANNER_IN_ANIMATION,
             }}
             title={voiceError}
           >
@@ -1081,6 +1468,8 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
                   cursor: "pointer",
                   padding: 0,
                   opacity: 0.9,
+                  transition: "background 160ms ease, border-color 160ms ease, transform 160ms ease, box-shadow 160ms ease, opacity 160ms ease",
+                  boxShadow: "0 4px 12px rgba(0,0,0,0.14)",
                 }}
               >
                 <Copy size={9} />
@@ -1105,6 +1494,8 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
                   cursor: voiceBusy ? "wait" : "pointer",
                   padding: 0,
                   opacity: voiceBusy ? 0.55 : 0.98,
+                  transition: "background 160ms ease, border-color 160ms ease, transform 160ms ease, box-shadow 160ms ease, opacity 160ms ease",
+                  boxShadow: voiceBusy ? "none" : "0 4px 12px rgba(0,0,0,0.14)",
                 }}
               >
                 <RotateCcw size={10} />
@@ -1128,6 +1519,8 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
                   cursor: "pointer",
                   padding: 0,
                   opacity: 0.9,
+                  transition: "background 160ms ease, border-color 160ms ease, transform 160ms ease, box-shadow 160ms ease, opacity 160ms ease",
+                  boxShadow: "0 4px 12px rgba(0,0,0,0.14)",
                 }}
               >
                 <X size={9} />
@@ -1154,10 +1547,10 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
               gap: 4,
               whiteSpace: "nowrap",
               opacity: voiceSuccessPhase === "fading" ? 0 : 1,
-              transform: voiceSuccessPhase === "fading" ? "translateY(-1px)" : "translateY(0)",
-              transition: `opacity ${VOICE_SUCCESS_FADE_MS}ms ease, transform ${VOICE_SUCCESS_FADE_MS}ms ease`,
+              transform: voiceSuccessPhase === "fading" ? "translateY(-2px) scale(1.01)" : "translateY(-1px) scale(1.01)",
+              transition: `opacity ${VOICE_SUCCESS_FADE_MS}ms ease, transform ${VOICE_SUCCESS_FADE_MS}ms ease, box-shadow 160ms ease, background 160ms ease, border-color 160ms ease`,
               animation: VOICE_BANNER_IN_ANIMATION,
-              boxShadow: voiceTranscriptRefined ? "0 8px 20px rgba(16,185,129,0.14)" : "0 6px 16px rgba(0,0,0,0.10)",
+              boxShadow: voiceTranscriptRefined ? "0 8px 20px rgba(16,185,129,0.14), inset 0 0 0 1px rgba(255,255,255,0.04)" : "0 8px 20px rgba(0,0,0,0.14), inset 0 0 0 1px rgba(255,255,255,0.04)",
             }}
           >
             <span
@@ -1303,6 +1696,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
               }}
             >
               <span
+                title={voiceHistoryScopeLabel}
                 style={{
                   borderRadius: 999,
                   border: isVoiceHistoryScopeOverridden
@@ -1319,7 +1713,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
                   lineHeight: 1.2,
                 }}
               >
-                {voiceHistoryScopeLabel}
+                {compactContextChips ? compactVoiceHistoryScopeLabel : voiceHistoryScopeLabel}
               </span>
               {isVoiceHistoryScopeOverridden && (
                 <button
@@ -1337,7 +1731,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
                     cursor: "pointer",
                   }}
                 >
-                  현재 프로젝트로 복귀
+                  {restoreVoiceScopeLabel}
                 </button>
               )}
               <span
@@ -1347,9 +1741,9 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
                   lineHeight: 1.2,
                 }}
               >
-                고정 {pinnedVoiceTranscripts.length} · 최근 {recentVoiceTranscripts.length} · 기록 {voiceTranscriptHistory.length}
+                {voiceHistorySummaryLabel}
               </span>
-              {availableVoiceHistoryScopes.length > 1 && (
+              {showVoiceScopeControls && availableVoiceHistoryScopes.length > 1 && (
                 <div
                   style={{
                     display: "flex",
@@ -1411,58 +1805,72 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
                   )}
                 </div>
               )}
-              <input
-                type="text"
-                value={voiceHistoryQuery}
-                onChange={(event) => setVoiceHistoryQuery(event.target.value)}
-                placeholder="고정/기록 검색"
-                style={{
-                  minWidth: 0,
-                  flex: "1 1 180px",
-                  maxWidth: 260,
-                  borderRadius: 8,
-                  border: "1px solid rgba(255,255,255,0.10)",
-                  background: "rgba(255,255,255,0.04)",
-                  color: "rgba(255,255,255,0.86)",
-                  padding: "4px 9px",
-                  fontSize: 11,
-                  lineHeight: 1.3,
-                  outline: "none",
-                }}
-              />
-              {normalizedVoiceHistoryQuery && (
+              {showVoiceSearchInput ? (
                 <>
-                  <span
+                  <input
+                    type="text"
+                    value={voiceHistoryQuery}
+                    onChange={(event) => setVoiceHistoryQuery(event.target.value)}
+                    placeholder="고정/기록 검색"
                     style={{
-                      fontSize: WARP_SMALL_FONT_SIZE,
-                      color: "rgba(255,255,255,0.48)",
-                      lineHeight: 1.2,
-                    }}
-                  >
-                    {filteredPinnedVoiceTranscripts.length + filteredRecentVoiceTranscripts.length + filteredVoiceTranscriptHistory.length}개 표시
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setVoiceHistoryQuery("")}
-                    title="음성 검색 지우기"
-                    style={{
-                      width: 18,
-                      height: 18,
-                      borderRadius: 999,
+                      minWidth: 0,
+                      flex: "1 1 180px",
+                      maxWidth: 260,
+                      borderRadius: 8,
                       border: "1px solid rgba(255,255,255,0.10)",
                       background: "rgba(255,255,255,0.04)",
-                      display: "inline-flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      padding: 0,
-                      color: "rgba(255,255,255,0.64)",
-                      cursor: "pointer",
+                      color: "rgba(255,255,255,0.86)",
+                      padding: "4px 9px",
+                      fontSize: 11,
+                      lineHeight: 1.3,
+                      outline: "none",
                     }}
-                  >
-                    <X size={10} />
-                  </button>
+                  />
+                  {normalizedVoiceHistoryQuery && (
+                    <>
+                      <span
+                        style={{
+                          fontSize: WARP_SMALL_FONT_SIZE,
+                          color: "rgba(255,255,255,0.48)",
+                          lineHeight: 1.2,
+                        }}
+                      >
+                        {filteredPinnedVoiceTranscripts.length + filteredRecentVoiceTranscripts.length + filteredVoiceTranscriptHistory.length}개 표시
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setVoiceHistoryQuery("")}
+                        title="음성 검색 지우기"
+                        style={{
+                          width: 18,
+                          height: 18,
+                          borderRadius: 999,
+                          border: "1px solid rgba(255,255,255,0.10)",
+                          background: "rgba(255,255,255,0.04)",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          padding: 0,
+                          color: "rgba(255,255,255,0.64)",
+                          cursor: "pointer",
+                        }}
+                      >
+                        <X size={10} />
+                      </button>
+                    </>
+                  )}
                 </>
-              )}
+              ) : compactContextChips ? (
+                <span
+                  style={{
+                    fontSize: WARP_SMALL_FONT_SIZE,
+                    color: "rgba(255,255,255,0.34)",
+                    lineHeight: 1.2,
+                  }}
+                >
+                  기록 펼치기 시 검색과 scope 전환이 표시됩니다.
+                </span>
+              ) : null}
             </div>
             {filteredPinnedVoiceTranscripts.length > 0 && (
               <div
@@ -1511,7 +1919,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
                     {collapsedPinnedVoiceSummary}
                   </span>
                 )}
-                {!pinnedVoiceTranscriptsCollapsed && filteredPinnedVoiceTranscripts.map((item) => {
+                {showPinnedVoiceExpanded && filteredPinnedVoiceTranscripts.map((item) => {
                   const pinnedIndex = pinnedVoiceTranscripts.indexOf(item);
                   const canMoveToTop = pinnedIndex > 0;
                   const canMoveUp = pinnedIndex > 0;
@@ -1737,7 +2145,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
               >
                 전체 지우기
               </button>
-              {filteredRecentVoiceTranscripts.map((item) => (
+              {showRecentVoiceExpanded && filteredRecentVoiceTranscripts.map((item) => (
                 <span
                   key={item}
                   style={{
@@ -1814,6 +2222,17 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
                   </button>
                 </span>
               ))}
+              {compactContextChips && !showVoiceTranscriptHistory && filteredRecentVoiceTranscripts.length > 0 && (
+                <span
+                  style={{
+                    fontSize: WARP_SMALL_FONT_SIZE,
+                    color: "rgba(214,231,255,0.66)",
+                    lineHeight: 1.2,
+                  }}
+                >
+                  최근 {filteredRecentVoiceTranscripts.length}개
+                </span>
+              )}
             </div>
             {showVoiceTranscriptHistory && voiceTranscriptHistory.length > 0 && (
               <div
@@ -2113,17 +2532,37 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
             alignItems: "center",
             gap: 8,
             minHeight: 32,
-            border: isFocused ? "1px solid rgba(121,192,255,0.34)" : "1px solid rgba(255,255,255,0.12)",
-            background: isFocused ? "rgba(121,192,255,0.08)" : "rgba(255,255,255,0.04)",
+            border: isFocused
+              ? `1px solid ${promptColor}55`
+              : input.trim().length > 0
+                ? `1px solid ${promptColor}2a`
+                : "1px solid rgba(255,255,255,0.12)",
+            background: isFocused
+              ? `color-mix(in srgb, ${promptColor} 12%, rgba(255,255,255,0.04))`
+              : input.trim().length > 0
+                ? `color-mix(in srgb, ${promptColor} 7%, rgba(255,255,255,0.04))`
+                : "rgba(255,255,255,0.04)",
             borderRadius: 10,
             padding: "6px 10px",
             boxShadow: isFocused
-              ? "0 0 0 1px rgba(121,192,255,0.12), 0 10px 24px rgba(88,166,255,0.08)"
-              : "inset 0 1px 0 rgba(255,255,255,0.03)",
-            transition: "border-color 120ms ease, background 120ms ease, box-shadow 120ms ease",
+              ? `0 0 0 1px ${promptColor}22, 0 10px 24px ${promptColor}1c`
+              : input.trim().length > 0
+                ? `inset 0 1px 0 rgba(255,255,255,0.03), 0 6px 16px ${promptColor}12`
+                : "inset 0 1px 0 rgba(255,255,255,0.03)",
+            transform: isFocused || input.trim().length > 0 ? "translateY(-1px)" : "translateY(0)",
+            transition: "border-color 160ms ease, background 160ms ease, box-shadow 160ms ease, transform 160ms ease",
           }}
         >
-          <span style={{ color: promptColor, fontFamily, fontSize, opacity: 0.85, flexShrink: 0 }}>
+          <span style={{
+            color: promptColor,
+            fontFamily,
+            fontSize,
+            opacity: isFocused || input.trim().length > 0 ? 1 : 0.85,
+            flexShrink: 0,
+            transform: isFocused || input.trim().length > 0 ? "translateY(-1px) scale(1.04)" : "translateY(0) scale(1)",
+            textShadow: isFocused || input.trim().length > 0 ? `0 0 12px ${promptColor}33` : "0 0 0 transparent",
+            transition: "opacity 160ms ease, transform 160ms ease, text-shadow 160ms ease, color 160ms ease",
+          }}>
             {promptChar}
           </span>
 
@@ -2164,13 +2603,16 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
               cursor: !voiceEnabled ? "not-allowed" : voiceBusy ? "wait" : "pointer",
               opacity: !voiceEnabled ? 0.72 : voiceBusy ? 0.55 : 1,
               animation: voiceEnabled && voicePulseActive ? VOICE_PULSE_ANIMATION : "none",
-              transform: micHovered && voiceEnabled && !voiceBusy ? "translateY(-1px)" : "translateY(0)",
+              transform:
+                voiceEnabled && !voiceBusy && (micHovered || isRecording || voiceStatus === "processing")
+                  ? "translateY(-1px) scale(1.02)"
+                  : "translateY(0) scale(1)",
               boxShadow:
                 !voiceEnabled || voiceBusy ? "none" :
-                micHovered
-                  ? "0 6px 16px rgba(0,0,0,0.22)"
+                (micHovered || isRecording || voiceStatus === "processing")
+                  ? "0 6px 16px rgba(0,0,0,0.18), inset 0 0 0 1px rgba(255,255,255,0.06)"
                   : "0 0 0 rgba(0,0,0,0)",
-              transition: "background 120ms ease, border-color 120ms ease, transform 120ms ease, box-shadow 120ms ease, opacity 120ms ease",
+              transition: "background 160ms ease, border-color 160ms ease, transform 160ms ease, box-shadow 160ms ease, opacity 160ms ease, color 160ms ease",
             }}
           >
             {voiceEnabled && isRecording ? <Mic size={12} /> : <MicOff size={12} />}
@@ -2192,8 +2634,16 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
                 marginLeft: 2,
                 marginRight: 2,
                 borderRadius: 999,
-                transform: "translateY(0)",
+                transform:
+                  !voiceEnabled || voiceStatus === "idle"
+                    ? "translateY(0) scale(1)"
+                    : "translateY(-1px) scale(1.02)",
                 opacity: !voiceEnabled ? 0.78 : voiceStatus === "idle" ? 0.9 : 0.98,
+                boxShadow:
+                  !voiceEnabled || voiceStatus === "idle"
+                    ? "0 0 0 rgba(0,0,0,0)"
+                    : "0 6px 16px rgba(0,0,0,0.16), inset 0 0 0 1px rgba(255,255,255,0.05)",
+                transition: "transform 160ms ease, box-shadow 160ms ease, opacity 160ms ease, background 160ms ease, border-color 160ms ease, color 160ms ease",
                 ...inlineVoiceTone,
               }}
             >
@@ -2230,20 +2680,21 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
               whiteSpace: "pre",
               overflow: "hidden",
               lineHeight: 1.4,
-              opacity: isVoiceProcessing ? 0.78 : 1,
-              transition: "opacity 120ms ease",
+              opacity: isVoiceProcessing ? 0.78 : showOverlayHint ? 0.94 : 1,
+              transform: showOverlayHint ? "translateY(0.5px)" : "translateY(0)",
+              transition: "opacity 160ms ease, transform 160ms ease",
             }}
           >
             {modeHint ? (
-              <span style={{ color: "rgba(255,255,255,0.28)" }}>
+              <span style={{ color: "rgba(255,255,255,0.28)", ...overlayContentTransitionStyle }}>
                 {modeHint}
               </span>
             ) : input.length === 0 ? (
-              <span style={{ color: "rgba(255,255,255,0.26)" }}>
+              <span style={{ color: "rgba(255,255,255,0.26)", ...overlayContentTransitionStyle }}>
                 {defaultInputHint}
               </span>
             ) : body !== null ? (
-              <span style={{ color: TOKEN_COLORS.text }}>{body}</span>
+              <span style={{ color: TOKEN_COLORS.text, ...overlayContentTransitionStyle }}>{body}</span>
             ) : voiceHighlight && voiceHighlight.start < voiceHighlight.end ? (
               <>
                 {tokenizeShell(input.slice(0, voiceHighlight.start)).map((t, idx) => (
@@ -2311,7 +2762,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
               border: "none",
               outline: "none",
               color: "transparent",
-              caretColor: "#79c0ff",
+              caretColor: promptColor,
               fontFamily,
               fontSize,
               padding: 0,
@@ -2323,27 +2774,135 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
           />
           </div>
 
-          {activeBackendLabel && (
-            <button
-              type="button"
-              aria-label="clear-backend-badge"
-              onClick={clearBackendPrefix}
-              style={{
-                flexShrink: 0,
-                fontSize: WARP_SMALL_FONT_SIZE,
-                color: activeBackendStyle.color,
-                border: activeBackendStyle.border,
-                borderRadius: 6,
-                padding: "1px 6px",
-                lineHeight: 1.2,
-                background: activeBackendStyle.background,
-                cursor: "pointer",
-              }}
-              title="현재 백엔드 강제 상태 (Cmd/Ctrl+1~4/0 직접 지정·해제, Cmd/Ctrl+./, 직접 순환, 클릭으로 해제)"
-            >
-              백엔드 {activeBackendLabel}
-            </button>
-          )}
+          <div
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 4,
+              flexShrink: 0,
+              marginLeft: 2,
+            }}
+          >
+            {visiblePrefixQuickActions.map((action) => {
+              const toneStyles =
+                action.tone === "success"
+                  ? {
+                      color: "rgba(111,227,132,0.95)",
+                      border: "1px solid rgba(63,185,80,0.35)",
+                      background: action.active ? "rgba(63,185,80,0.18)" : "rgba(63,185,80,0.08)",
+                    }
+                  : action.tone === "warn"
+                    ? {
+                        color: "rgba(233,194,105,0.96)",
+                        border: "1px solid rgba(227,179,65,0.35)",
+                        background: action.active ? "rgba(227,179,65,0.18)" : "rgba(227,179,65,0.08)",
+                      }
+                    : {
+                        color: "rgba(121,192,255,0.95)",
+                        border: "1px solid rgba(88,166,255,0.35)",
+                        background: action.active ? "rgba(88,166,255,0.18)" : "rgba(88,166,255,0.08)",
+                      };
+
+              return (
+                <button
+                  key={action.id}
+                  type="button"
+                  aria-pressed={action.active}
+                  onClick={() => applyQuickRouteMode(action.id)}
+                  style={{
+                    minWidth: compactContextChips ? 20 : action.id === "agent" ? 28 : 22,
+                    height: 22,
+                    borderRadius: 7,
+                    padding: compactContextChips ? "0 5px" : "0 6px",
+                    fontSize: WARP_SMALL_FONT_SIZE,
+                    lineHeight: 1,
+                    fontWeight: action.active ? 700 : 600,
+                    cursor: "pointer",
+                    transition: "background 160ms ease, border-color 160ms ease, transform 160ms ease, color 160ms ease, box-shadow 160ms ease, opacity 160ms ease",
+                    transform: action.active ? "translateY(-1px) scale(1.02)" : "translateY(0) scale(1)",
+                    opacity: action.active ? 1 : 0.82,
+                    boxShadow: action.active ? "0 6px 16px rgba(0,0,0,0.18), inset 0 0 0 1px rgba(255,255,255,0.06)" : "0 0 0 rgba(0,0,0,0)",
+                    ...toneStyles,
+                  }}
+                  title={`${action.title} ${action.active ? "해제" : "선택"}`}
+                >
+                  {compactContextChips ? action.shortLabel : action.label}
+                </button>
+              );
+            })}
+            {visibleBackendQuickActions.map((backendAction) => {
+              const selected = activeBackend === backendAction.id;
+              const toneStyles =
+                backendAction.tone === "success"
+                  ? {
+                      color: "rgba(111,227,132,0.95)",
+                      border: "1px solid rgba(63,185,80,0.35)",
+                      background: selected ? "rgba(63,185,80,0.18)" : "rgba(63,185,80,0.08)",
+                    }
+                  : backendAction.tone === "warn"
+                    ? {
+                        color: "rgba(233,194,105,0.96)",
+                        border: "1px solid rgba(227,179,65,0.35)",
+                        background: selected ? "rgba(227,179,65,0.18)" : "rgba(227,179,65,0.08)",
+                      }
+                    : {
+                        color: "rgba(121,192,255,0.95)",
+                        border: "1px solid rgba(88,166,255,0.35)",
+                        background: selected ? "rgba(88,166,255,0.18)" : "rgba(88,166,255,0.08)",
+                      };
+
+              return (
+                <button
+                  key={backendAction.id}
+                  type="button"
+                  aria-pressed={selected}
+                  onClick={() => applyBackendPrefix(backendAction.id)}
+                  style={{
+                    minWidth: compactContextChips ? 20 : 26,
+                    height: 22,
+                    borderRadius: 7,
+                    padding: compactContextChips ? "0 5px" : "0 7px",
+                    fontSize: WARP_SMALL_FONT_SIZE,
+                    lineHeight: 1,
+                    fontWeight: selected ? 700 : 600,
+                    cursor: "pointer",
+                    transition: "background 160ms ease, border-color 160ms ease, transform 160ms ease, color 160ms ease, box-shadow 160ms ease, opacity 160ms ease",
+                    transform: selected ? "translateY(-1px) scale(1.02)" : "translateY(0) scale(1)",
+                    opacity: selected ? 1 : 0.86,
+                    boxShadow: selected ? "0 6px 16px rgba(0,0,0,0.18), inset 0 0 0 1px rgba(255,255,255,0.06)" : "0 0 0 rgba(0,0,0,0)",
+                    ...toneStyles,
+                  }}
+                  title={`${backendAction.label} 백엔드 ${selected ? "선택 해제" : "바로 선택"} (Cmd/Ctrl+${backendAction.id === "local" ? "1" : backendAction.id === "ollama" ? "2" : backendAction.id === "xllm" ? "3" : "4"})`}
+                >
+                  {compactContextChips ? backendAction.shortLabel : backendAction.label}
+                </button>
+              );
+            })}
+            {activeBackendLabel && (
+              <button
+                type="button"
+                aria-label="clear-backend-badge"
+                onClick={clearBackendPrefix}
+                style={{
+                  flexShrink: 0,
+                  fontSize: WARP_SMALL_FONT_SIZE,
+                  color: activeBackendStyle.color,
+                  border: activeBackendStyle.border,
+                  borderRadius: 7,
+                  padding: compactContextChips ? "0 6px" : "1px 7px",
+                  lineHeight: 1.2,
+                  background: activeBackendStyle.background,
+                  cursor: "pointer",
+                  height: 22,
+                  transition: "background 160ms ease, border-color 160ms ease, transform 160ms ease, box-shadow 160ms ease",
+                  boxShadow: "0 4px 12px rgba(0,0,0,0.14)",
+                }}
+                title="현재 백엔드 강제 상태 해제 (Cmd/Ctrl+0)"
+              >
+                해제
+              </button>
+            )}
+          </div>
         </div>
 
       </div>

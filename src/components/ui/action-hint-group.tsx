@@ -11,7 +11,7 @@ export function getActionReasonLabel(label: string): string {
 export const ActionHintButton: React.FC<{
   label: string;
   onClick: () => void;
-  tone?: "primary" | "secondary";
+  tone?: "primary" | "secondary" | "warn";
   shortcut?: string;
 }> = ({ label, onClick, tone = "secondary", shortcut }) => {
   const buttonTitle = getActionHintButtonTitle(label, shortcut);
@@ -23,8 +23,10 @@ export const ActionHintButton: React.FC<{
       title={buttonTitle}
       className={
         tone === "primary"
-          ? "inline-flex items-center gap-2 rounded-full border border-cyan-300/18 bg-cyan-400/10 px-2 py-1 text-[11px] font-medium text-cyan-200/90 transition-colors hover:bg-cyan-400/18 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-          : "inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.05] px-2 py-1 text-[11px] font-medium text-white/62 transition-colors hover:bg-white/[0.1] hover:text-white/82 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          ? "inline-flex items-center gap-2 rounded-full border border-cyan-300/18 bg-cyan-400/10 px-2 py-1 text-[11px] font-medium text-cyan-200/90 transition-[background-color,box-shadow,transform] hover:bg-cyan-400/18 hover:shadow-[0_8px_20px_rgba(34,211,238,0.16)] hover:-translate-y-[1px] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-cyan-300/40"
+          : tone === "warn"
+            ? "inline-flex items-center gap-2 rounded-full border border-amber-300/20 bg-amber-400/10 px-2 py-1 text-[11px] font-medium text-amber-100 transition-[background-color,box-shadow,transform] hover:bg-amber-400/18 hover:shadow-[0_8px_20px_rgba(245,158,11,0.16)] hover:-translate-y-[1px] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-amber-300/40"
+            : "inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.05] px-2 py-1 text-[11px] font-medium text-white/62 transition-[background-color,box-shadow,transform,color] hover:bg-white/[0.1] hover:text-white/82 hover:shadow-[0_8px_18px_rgba(0,0,0,0.14)] hover:-translate-y-[1px] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/25"
       }
     >
       <span>{label}</span>
@@ -53,12 +55,14 @@ export const ActionHintGroup: React.FC<{
     onClick: () => void;
     shortcut?: string;
     reason: string;
+    tone?: "primary" | "secondary" | "warn";
   };
   secondary?: {
     label: string;
     onClick: () => void;
     shortcut?: string;
     reason: string;
+    tone?: "primary" | "secondary" | "warn";
   };
 }> = ({ primary, secondary }) => (
   <div aria-label="추천 작업" className="mt-2">
@@ -66,13 +70,14 @@ export const ActionHintGroup: React.FC<{
       <ActionHintButton
         label={primary.label}
         onClick={primary.onClick}
-        tone="primary"
+        tone={primary.tone ?? "primary"}
         shortcut={primary.shortcut}
       />
       {secondary && (
         <ActionHintButton
           label={secondary.label}
           onClick={secondary.onClick}
+          tone={secondary.tone}
           shortcut={secondary.shortcut}
         />
       )}

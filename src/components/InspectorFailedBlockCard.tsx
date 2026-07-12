@@ -66,9 +66,12 @@ const InspectorFailedBlockCard: React.FC<InspectorFailedBlockCardProps> = ({
   const blockMeta = focusedFailedBlock ? getInspectorFailedBlockMeta(focusedFailedBlock) : null;
 
   return (
-  <div className={inspectorCardRegularClass}>
+  <div className={`${inspectorCardRegularClass} border-rose-300/10 bg-rose-400/[0.04] shadow-[0_10px_24px_rgba(248,81,73,0.06)]`}>
     <div className="flex items-center justify-between gap-2">
-      <p className="text-white/45 uppercase tracking-[0.06em] text-xs">실패 블록</p>
+      <div className="flex items-center gap-1.5">
+        <StatusBadge tone="warn">1단계</StatusBadge>
+        <p className="text-white/45 uppercase tracking-[0.06em] text-xs">실패 블록 확인</p>
+      </div>
       <span className="text-xs text-rose-200/80">{failedBlocks.length}개</span>
     </div>
     {focusedFailedBlock ? (

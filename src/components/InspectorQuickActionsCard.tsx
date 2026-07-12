@@ -48,20 +48,20 @@ export function getInspectorQuickActionsPrimaryFlowSummary(
 ): InspectorQuickActionsFlowSummary {
   return {
     badges: [
-      "먼저 작업공간 복귀",
-      "다음 RAG 분석",
-      quickActionsExpanded ? "마지막 고급 닫기" : "마지막 고급 열기",
+      "작업공간 복귀",
+      "RAG·보관함 이동",
+      quickActionsExpanded ? "운영 단계 닫기" : "운영 단계 열기",
     ],
     helper: quickActionsExpanded
-      ? "핵심 흐름을 확인한 뒤 지금은 고급 작업까지 펼쳐진 상태입니다. 필요 없는 경우 접고 기본 작업에 집중할 수 있습니다."
-      : "지금 필요한 기본 흐름부터 고르고, 더 깊은 복구나 검토가 필요하면 고급 영역으로 이어갑니다.",
+      ? "복구와 분석 이후에 지금은 운영/검토 단계까지 펼쳐진 상태입니다. 필요 없으면 접고 핵심 흐름만 유지할 수 있습니다."
+      : "복구와 분석이 끝났다면 작업공간 복귀, 코드 맥락 이동, 운영 점검 같은 후속 흐름으로 이어갑니다.",
   };
 }
 
 export function getInspectorQuickActionsAdvancedFlowSummary(): InspectorQuickActionsFlowSummary {
   return {
-    badges: ["먼저 실패 복구", "다음 변경 검토", "마지막 기록·자동화"],
-    helper: "실패 원인을 먼저 복구하고, 변경과 기록을 확인한 뒤 반복 작업은 스크립트로 넘깁니다.",
+    badges: ["변경 검토", "기록 확인", "자동화 연결"],
+    helper: "복구가 끝난 뒤 변경과 기록을 확인하고, 반복 작업은 스크립트나 운영 패널로 넘깁니다.",
   };
 }
 
@@ -93,13 +93,13 @@ const InspectorQuickActionsCard: React.FC<InspectorQuickActionsCardProps> = ({
   const recoveryFlow = getInspectorQuickActionsRecoverySummary();
 
   return (
-    <div className={inspectorCardRegularClass}>
+    <div className={`${inspectorCardRegularClass} border-white/10 bg-white/[0.03] shadow-[0_8px_18px_rgba(0,0,0,0.08)]`}>
       <SectionIntroHeader
-        title="빠른 작업"
-        description="지금 바로 자주 쓰는 흐름으로 이동합니다."
+        title="4단계 운영 · 이동"
+        description="복구 이후 자주 쓰는 작업공간 복귀와 운영 흐름으로 이동합니다."
         aside={(
-          <span className="rounded-full border border-cyan-300/16 bg-cyan-400/10 px-2 py-0.5 text-[10px] font-medium text-cyan-200/90">
-            바로 시작
+          <span className="rounded-full border border-white/12 bg-white/[0.06] px-2 py-0.5 text-[10px] font-medium text-white/72">
+            후속 단계
           </span>
         )}
       />
@@ -162,15 +162,15 @@ const InspectorQuickActionsCard: React.FC<InspectorQuickActionsCardProps> = ({
           onClick={onQuickActionsToggle}
           className="inline-flex w-full min-h-[52px] items-start gap-2 rounded-md border border-white/12 bg-white/[0.05] px-2.5 py-2 text-left text-white/74 transition-colors hover:bg-white/[0.1] hover:text-white"
         >
-          <span className="min-w-0 flex-1">
-            <span className="flex items-center gap-1.5">
-              <span className="truncate text-xs font-medium">{quickActionsExpanded ? "고급 닫기" : "고급 열기"}</span>
+              <span className="min-w-0 flex-1">
+                <span className="flex items-center gap-1.5">
+              <span className="truncate text-xs font-medium">{quickActionsExpanded ? "운영 단계 닫기" : "운영 단계 열기"}</span>
               <span className="shrink-0 rounded-full border border-white/10 bg-white/[0.04] px-1.5 py-0.5 text-[10px] font-medium text-white/50">
                 후속
               </span>
             </span>
             <span aria-hidden="true" className="mt-1 block text-[11px] leading-4 text-white/42">
-              {quickActionsExpanded ? "고급 흐름을 접고 핵심 작업으로 돌아갑니다." : "복구, 검토, 이력 확인, 자동화 흐름을 이어서 엽니다."}
+              {quickActionsExpanded ? "운영/검토 흐름을 접고 핵심 작업으로 돌아갑니다." : "변경 검토, 이력 확인, 자동화, 시스템 점검 흐름을 이어서 엽니다."}
             </span>
           </span>
         </button>
@@ -204,12 +204,12 @@ const InspectorQuickActionsCard: React.FC<InspectorQuickActionsCardProps> = ({
               />
             </div>
             <div className="mb-2 flex flex-wrap items-center gap-1.5 rounded-xl border border-white/8 bg-white/[0.03] px-2.5 py-2">
-              <StatusBadge tone="amber">우선 복구</StatusBadge>
-              <StatusBadge tone="neutral">다음 검토</StatusBadge>
+              <StatusBadge tone="neutral">복구 이후</StatusBadge>
+              <StatusBadge tone="amber">다음 검토</StatusBadge>
               <StatusBadge tone="neutral">이력 확인</StatusBadge>
               <StatusBadge tone="neutral">반복 자동화</StatusBadge>
               <span className="text-[10px] text-white/34">
-                실패 대응 뒤 변경과 기록을 확인하고, 마지막에 반복 작업으로 넘깁니다.
+                복구가 끝난 뒤 변경과 기록을 확인하고, 마지막에 반복 작업과 시스템 점검으로 넘깁니다.
               </span>
             </div>
             <div className={inspectorQuickGridClass}>

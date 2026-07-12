@@ -52,9 +52,9 @@ export function getAppHeaderModelBadgeMeta(input: {
 }): AppHeaderModelBadgeMeta {
   return {
     fastTitle: input.fastEmpty
-      ? "모델이 로드되지 않았습니다 — 모델 패널에서 모델을 [사용]하세요"
-      : `Fast (xLLM): ${input.loadedModelId}`,
-    heavyTitle: input.heavyModelId ? `Heavy Track (mistral.rs): ${input.heavyModelId}` : undefined,
+      ? "빠른 응답용 모델이 아직 준비되지 않았습니다. 모델 패널에서 모델을 [사용]하세요."
+      : `빠른 응답 모델 준비됨 · ${input.loadedModelId}`,
+    heavyTitle: input.heavyModelId ? `헤비 분석 모델 준비됨 · ${input.heavyModelId}` : undefined,
   };
 }
 
@@ -68,16 +68,16 @@ export function getAppHeaderRecoveryBadgeMeta(input: {
 
   if (input.unreadHealingCount > 0) {
     return {
-      label: `복구 ${input.unreadHealingCount}건`,
-      title: "미확인 자동 복구 흐름이 있습니다. 이 배지를 눌러 알림 센터를 열고, 이어서 인스펙터 복구 흐름으로 바로 들어가세요.",
+      label: input.unreadHealingCount === 1 ? "복구 확인 필요" : `복구 확인 ${input.unreadHealingCount}건`,
+      title: `미확인 자동 복구 흐름이 ${input.unreadHealingCount}건 있습니다. 이 배지를 눌러 알림 센터를 열고, 이어서 인스펙터 복구 흐름으로 바로 들어가세요.`,
       tone: "amber",
       emphasize: true,
     };
   }
 
   return {
-    label: `복구 기록 ${input.healingCount}건`,
-    title: "최근 자동 복구 기록이 남아 있습니다. 이 배지에서 알림 센터를 열고, 필요하면 인스펙터에서 같은 복구 흐름을 다시 확인하세요.",
+    label: input.healingCount === 1 ? "복구 기록 있음" : `복구 기록 ${input.healingCount}건`,
+    title: `최근 자동 복구 기록이 ${input.healingCount}건 남아 있습니다. 이 배지에서 알림 센터를 열고, 필요하면 인스펙터에서 같은 복구 흐름을 다시 확인하세요.`,
     tone: "cyan",
     emphasize: false,
   };
@@ -401,7 +401,33 @@ const AppHeader: React.FC<Props> = ({
   const advancedBadgeLabel = advancedStatusSummary.length > 0
     ? advancedStatusSummary.map((item) => item.long).join(", ")
     : undefined;
-  const advancedStatusSummaryLabel = advancedStatusSummary.map((item) => item.short).join(" · ");
+  const advancedStateSignals = [
+    activeAdvancedCount > 0 ? "복귀 가능" : null,
+    unseenAdvancedCount > 0 ? "새 기능 탐색" : null,
+    squadStore.squads.length > 0 ? "스쿼드 진행 중" : null,
+  ].filter(Boolean) as string[];
+  const advancedStatusSummaryLabel = advancedStateSignals.length > 0
+    ? advancedStateSignals.join(" · ")
+    : advancedStatusSummary.map((item) => item.short).join(" · ");
+  const primaryAdvancedRecommendation = recommendedOverflowActions[0] ?? null;
+  const advancedSummaryButtonLabel = primaryAdvancedRecommendation
+    ? `추천 · ${primaryAdvancedRecommendation.action.label}`
+    : advancedStatusSummaryLabel;
+  const advancedSummaryButtonTitle = primaryAdvancedRecommendation
+    ? [
+        `지금 바로 열어볼 추천 기능: ${primaryAdvancedRecommendation.action.label}`,
+        primaryAdvancedRecommendation.reason?.label
+          ? `추천 이유: ${primaryAdvancedRecommendation.reason.label}`
+          : "추천 이유: 현재 작업 흐름과 가까운 시작점",
+        advancedStateSignals.length > 0
+          ? `현재 상태: ${advancedStateSignals.join(", ")}`
+          : undefined,
+        advancedBadgeLabel,
+      ].filter(Boolean).join("\n")
+    : [
+        advancedStateSignals.length > 0 ? `현재 상태: ${advancedStateSignals.join(", ")}` : undefined,
+        advancedBadgeLabel,
+      ].filter(Boolean).join("\n");
 
   const compactQuickAccessActions = React.useMemo<QuickAccessAction[]>(() => [
     {
@@ -496,6 +522,14 @@ const AppHeader: React.FC<Props> = ({
       .sort((a, b) => b.score - a.score)
       .slice(0, 2);
   }, [orderedOverflowActions, seenAdvancedFeatures, squadStore.squads.length]);
+  const recoveryOverflowActions = React.useMemo(
+    () => recommendedOverflowActions.filter(({ reason }) => reason?.label === "작업 중" || reason?.label === "복귀"),
+    [recommendedOverflowActions],
+  );
+  const discoveryOverflowActions = React.useMemo(
+    () => recommendedOverflowActions.filter(({ reason }) => reason?.label !== "작업 중" && reason?.label !== "복귀"),
+    [recommendedOverflowActions],
+  );
 
 
   // 모델명 짧게 — 마지막 segment에서 흔한 suffix 제거
@@ -706,11 +740,25 @@ const AppHeader: React.FC<Props> = ({
     loadedModelId,
     heavyModelId,
   });
+  const isNarrowHeader = typeof window !== "undefined" && window.innerWidth < 1280;
+  const isVeryNarrowHeader = typeof window !== "undefined" && window.innerWidth < 1120;
+  const isUltraNarrowHeader = typeof window !== "undefined" && window.innerWidth < 980;
+  const hideHardwareChip = typeof window !== "undefined" && window.innerWidth < 920;
+  const activeViewLabel = VIEW_BUTTONS.find(({ mode }) => mode === viewMode)?.label ?? "터미널";
   const healingNotifications = notifCenter.notifications.filter((notification) => notification.type === "healing");
   const recoveryBadgeMeta = getAppHeaderRecoveryBadgeMeta({
     healingCount: healingNotifications.length,
     unreadHealingCount: healingNotifications.filter((notification) => !notification.read).length,
   });
+  const recoveryBadgeLabel = !recoveryBadgeMeta
+    ? null
+    : isUltraNarrowHeader
+      ? "복구"
+      : isVeryNarrowHeader
+      ? recoveryBadgeMeta.emphasize
+        ? "복구 확인"
+        : "복구 기록"
+      : recoveryBadgeMeta.label;
 
   const getPopupElements = (panelRef: React.RefObject<HTMLDivElement | null>): HTMLElement[] => {
     if (!panelRef.current) return [];
@@ -1001,40 +1049,52 @@ const AppHeader: React.FC<Props> = ({
     >
       <div data-tauri-drag-region className="flex items-center gap-3 shrink-0">
         <WindowControls />
-        <div data-tauri-drag-region className="flex items-center gap-1.5 text-xs text-white/55 font-medium shrink-0 whitespace-nowrap">
-          <Cpu size={12} />
-          {specsLoading ? (
-            <Loader2 size={12} className="animate-spin" />
-          ) : specs ? (
-            <span title={specs.recommendation_reason}>
-              {(() => {
-                if (specs.gpu_vram_gb && specs.gpu_vram_gb > 0) {
-                  return `${specs.gpu_vram_gb}GB VRAM`;
-                }
-                const isMac = typeof navigator !== "undefined" && /Mac/i.test(navigator.platform);
-                if (specs.gpu_type === "integrated" || isMac) {
-                  return `${specs.total_memory_gb}GB 통합메모리`;
-                }
-                return `${specs.total_memory_gb}GB RAM`;
-              })()}
-            </span>
-          ) : null}
-        </div>
+        {!hideHardwareChip && (
+          <div data-tauri-drag-region className="flex items-center gap-1.5 text-xs text-white/55 font-medium shrink-0 whitespace-nowrap">
+            <Cpu size={12} />
+            {specsLoading ? (
+              <Loader2 size={12} className="animate-spin" />
+            ) : specs ? (
+              <span title={specs.recommendation_reason}>
+                {(() => {
+                  if (specs.gpu_vram_gb && specs.gpu_vram_gb > 0) {
+                    return isVeryNarrowHeader ? `${specs.gpu_vram_gb}G` : `GPU ${specs.gpu_vram_gb}G`;
+                  }
+                  const isMac = typeof navigator !== "undefined" && /Mac/i.test(navigator.platform);
+                  if (specs.gpu_type === "integrated" || isMac) {
+                    return isVeryNarrowHeader ? `${specs.total_memory_gb}G` : `통합 ${specs.total_memory_gb}G`;
+                  }
+                  return isVeryNarrowHeader ? `${specs.total_memory_gb}G` : `메모리 ${specs.total_memory_gb}G`;
+                })()}
+              </span>
+            ) : null}
+          </div>
+        )}
 
-        <div className="flex bg-white/[0.04] border border-white/[0.08] p-0.5 rounded-lg">
-          {VIEW_BUTTONS.map(({ mode, icon, label }) => (
-            <button
-              key={mode}
-              aria-label={label}
-              aria-pressed={viewMode === mode}
-              onClick={() => setViewMode(mode)}
-              className={`p-1 rounded-md transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring ${
-                viewMode === mode ? "bg-accent/20 text-accent" : "text-white/45 hover:text-white/80 hover:bg-white/[0.06]"
-              }`}
+        <div className="flex items-center gap-1.5">
+          <div className="flex bg-white/[0.04] border border-white/[0.08] p-0.5 rounded-lg">
+            {VIEW_BUTTONS.map(({ mode, icon, label }) => (
+              <button
+                key={mode}
+                aria-label={label}
+                aria-pressed={viewMode === mode}
+                onClick={() => setViewMode(mode)}
+                className={`p-1 rounded-md transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring ${
+                  viewMode === mode ? "bg-accent/20 text-accent" : "text-white/45 hover:text-white/80 hover:bg-white/[0.06]"
+                }`}
+              >
+                {icon}
+              </button>
+            ))}
+          </div>
+          {!isVeryNarrowHeader && (
+            <span
+              className="inline-flex items-center rounded-full border border-white/10 bg-white/[0.04] px-2 py-0.5 text-[11px] font-medium text-white/62 whitespace-nowrap"
+              title={`현재 뷰: ${activeViewLabel}`}
             >
-              {icon}
-            </button>
-          ))}
+              {isNarrowHeader ? activeViewLabel : `뷰 · ${activeViewLabel}`}
+            </span>
+          )}
         </div>
       </div>
 
@@ -1051,15 +1111,19 @@ const AppHeader: React.FC<Props> = ({
             }`}
             title={modelBadgeMeta.fastTitle}
           >
-            {fastEmpty ? "EMPTY" : "FAST"} · {fast}
+            {isUltraNarrowHeader
+              ? (fastEmpty ? "없음" : "응답")
+              : isNarrowHeader
+                ? (fastEmpty ? "응답 없음" : "응답 준비")
+                : (fastEmpty ? "빠른 응답 없음" : "빠른 응답 준비")}
           </div>
-          {heavyEnabled && heavy && (
+          {heavyEnabled && heavy && !isVeryNarrowHeader && (
             <div
               data-tauri-drag-region
               className="text-sm px-2 py-1 rounded-md bg-amber-400/10 border border-amber-400/25 text-amber-200 truncate max-w-[148px]"
               title={modelBadgeMeta.heavyTitle}
             >
-              HEAVY · {heavy}
+              {isNarrowHeader ? "분석 준비" : "헤비 분석 준비"}
             </div>
           )}
         </div>
@@ -1088,7 +1152,7 @@ const AppHeader: React.FC<Props> = ({
                 : "bg-cyan-400/10 border-cyan-300/25 text-cyan-100 hover:bg-cyan-400/18"
             }`}
             title={recoveryBadgeMeta.title}
-            aria-label={`${recoveryBadgeMeta.label} 열기`}
+            aria-label={`${recoveryBadgeLabel ?? recoveryBadgeMeta.label} 열기`}
           >
             {recoveryBadgeMeta.emphasize && (
               <span className="relative flex h-2 w-2 shrink-0" aria-hidden="true">
@@ -1096,7 +1160,7 @@ const AppHeader: React.FC<Props> = ({
                 <span className="relative inline-flex h-2 w-2 rounded-full bg-amber-200" />
               </span>
             )}
-            {recoveryBadgeMeta.label}
+            {recoveryBadgeLabel ?? recoveryBadgeMeta.label}
           </button>
         )}
         <ToolbarSeparator />
@@ -1197,11 +1261,16 @@ const AppHeader: React.FC<Props> = ({
               <button
                 type="button"
                 onClick={toggleAdvancedOverflow}
-                aria-label={`고급 기능 요약: ${advancedBadgeLabel}`}
-                title={advancedBadgeLabel}
-                className="inline-flex h-7 max-w-[120px] items-center rounded-full border border-white/10 bg-white/[0.06] px-2.5 text-[11px] font-medium text-white/68 transition-colors hover:border-white/16 hover:bg-white/[0.1] hover:text-white/88 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                aria-label={`고급 기능 요약: ${advancedSummaryButtonTitle ?? advancedBadgeLabel ?? "고급 기능 메뉴"}`}
+                title={advancedSummaryButtonTitle}
+                className={`inline-flex h-7 max-w-[148px] items-center gap-1.5 rounded-full border px-2.5 text-[11px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring ${
+                  primaryAdvancedRecommendation
+                    ? "border-cyan-300/22 bg-cyan-400/[0.14] text-cyan-50 hover:border-cyan-200/30 hover:bg-cyan-400/[0.2] hover:text-white"
+                    : "border-white/10 bg-white/[0.06] text-white/68 hover:border-white/16 hover:bg-white/[0.1] hover:text-white/88"
+                }`}
               >
-                <span className="truncate">{advancedStatusSummaryLabel}</span>
+                {primaryAdvancedRecommendation ? <Sparkles size={12} className="shrink-0 text-cyan-200" /> : null}
+                <span className="truncate">{advancedSummaryButtonLabel}</span>
               </button>
             )}
             {(showAdvancedOverflow && typeof document !== "undefined") ? createPortal(
@@ -1249,6 +1318,46 @@ const AppHeader: React.FC<Props> = ({
                       descriptionClassName="mt-1 text-[11px] text-white/52"
                       aside={<StatusBadge tone="neutral">{recommendedOverflowActions.length}개 항목</StatusBadge>}
                     />
+                    {(recoveryOverflowActions.length > 0 || discoveryOverflowActions.length > 0) && (
+                      <div className="mt-2 space-y-2">
+                        {recoveryOverflowActions.length > 0 && (
+                          <div className="rounded-xl border border-emerald-300/14 bg-emerald-400/[0.08] px-2.5 py-2">
+                            <SectionIntroHeader
+                              title="최근 작업 복귀"
+                              description="이미 열려 있거나 직전 흐름과 이어지는 기능을 먼저 보여줍니다."
+                              titleClassName="text-[10px] font-semibold tracking-[0.06em] text-emerald-200 uppercase"
+                              descriptionClassName="mt-1 text-[10px] text-emerald-50/68"
+                              aside={<StatusBadge tone="neutral">{recoveryOverflowActions.length}개</StatusBadge>}
+                            />
+                            <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                              {recoveryOverflowActions.map(({ action, reason }) => (
+                                <StatusBadge key={`advanced-recovery-${action.id}`} tone="neutral">
+                                  {action.label}{reason ? ` · ${reason.label}` : ""}
+                                </StatusBadge>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {discoveryOverflowActions.length > 0 && (
+                          <div className="rounded-xl border border-amber-300/14 bg-amber-400/[0.08] px-2.5 py-2">
+                            <SectionIntroHeader
+                              title="새 기능 탐색"
+                              description="이번 세션에서 아직 열지 않은 신규/시작점 기능을 먼저 둘러봅니다."
+                              titleClassName="text-[10px] font-semibold tracking-[0.06em] text-amber-200 uppercase"
+                              descriptionClassName="mt-1 text-[10px] text-amber-50/68"
+                              aside={<StatusBadge tone="neutral">{discoveryOverflowActions.length}개</StatusBadge>}
+                            />
+                            <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                              {discoveryOverflowActions.map(({ action, reason }) => (
+                                <StatusBadge key={`advanced-discovery-${action.id}`} tone="neutral">
+                                  {action.label}{reason ? ` · ${reason.label}` : ""}
+                                </StatusBadge>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
                     <div className="mt-2 space-y-2">
                       {recommendedOverflowActions.map(({ action, reason }, index) => {
                         const isPrimaryRecommendation = index === 0;

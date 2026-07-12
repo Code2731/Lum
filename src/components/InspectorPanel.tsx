@@ -74,6 +74,12 @@ const InspectorPanel: React.FC<InspectorPanelProps> = ({
   scriptLibrary,
 }) => {
   const isInspectorCompact = inspectorDensity === "compact";
+  const viewportWidth = typeof window !== "undefined" ? window.innerWidth : 1440;
+  const inspectorPanelWidth = viewportWidth < 1180
+    ? (isInspectorCompact ? 280 : 304)
+    : viewportWidth < 1440
+      ? (isInspectorCompact ? 292 : 320)
+      : (isInspectorCompact ? 308 : 344);
   const inspectorSummaryWrapClass = isInspectorCompact
     ? "h-full overflow-y-auto p-2 space-y-1.5 text-xs"
     : "h-full overflow-y-auto p-3 space-y-2 text-sm";
@@ -204,10 +210,10 @@ const InspectorPanel: React.FC<InspectorPanelProps> = ({
         <motion.div
           key="inspector-panel"
           initial={{ width: 0, opacity: 0 }}
-          animate={{ width: isInspectorCompact ? 304 : 336, opacity: 1 }}
+          animate={{ width: inspectorPanelWidth, opacity: 1 }}
           exit={{ width: 0, opacity: 0 }}
           transition={{ duration: 0.2, ease: "easeOut" }}
-          className="border-l border-white/8 shrink-0 overflow-hidden bg-[#0e141d]/88"
+          className="border-l border-white/8 shrink-0 overflow-hidden bg-[#0e141d]/88 backdrop-blur-sm"
           aria-label="인스펙터 패널"
         >
           <div className="h-full flex flex-col">
@@ -222,7 +228,10 @@ const InspectorPanel: React.FC<InspectorPanelProps> = ({
               onTabKeyDown={onTabKeyDown}
             />
 
-            <div className="border-b border-white/8 bg-white/[0.02] px-3 py-2">
+            <div className={isInspectorCompact
+              ? "border-b border-white/8 bg-white/[0.02] px-2.5 py-1.5"
+              : "border-b border-white/8 bg-white/[0.02] px-3 py-2"}
+            >
               <ActionFlowBar
                 badges={[currentTabLabel, panelFlowSummary.badges[1], panelFlowSummary.badges[2]]}
                 helper={panelFlowSummary.helper}

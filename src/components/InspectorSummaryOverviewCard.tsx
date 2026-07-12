@@ -82,9 +82,12 @@ const InspectorSummaryOverviewCard: React.FC<InspectorSummaryOverviewCardProps> 
 
   return (
     <>
-      <div className={inspectorCardTightClass}>
+      <div className={`${inspectorCardTightClass} border-cyan-300/12 bg-cyan-400/[0.05]`}>
         <div className="flex items-center justify-between gap-2">
-          <p className="text-white/45 uppercase tracking-[0.06em] text-xs">작업공간</p>
+          <div className="flex items-center gap-1.5">
+            <StatusBadge tone="cyan">시작점</StatusBadge>
+            <p className="text-white/45 uppercase tracking-[0.06em] text-xs">현재 작업공간</p>
+          </div>
           {activeTabBranch && (
             <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md border border-cyan-300/30 bg-cyan-400/12 text-cyan-100 text-xs">
               <GitBranch size={10} />
@@ -128,19 +131,24 @@ const InspectorSummaryOverviewCard: React.FC<InspectorSummaryOverviewCardProps> 
             onClick: workspacePrimaryAction.onClick,
             shortcut: workspacePrimaryAction.shortcut,
             reason: workspacePrimaryReason,
+            tone: hasFailures ? "warn" : "primary",
           }}
           secondary={{
             label: workspaceSecondaryAction.label,
             onClick: workspaceSecondaryAction.onClick,
             shortcut: "⌘⇧S",
             reason: workspaceSecondaryReason,
+            tone: "secondary",
           }}
         />
       </div>
-      <div className={inspectorCardTightClass}>
+      <div className={`${inspectorCardTightClass} border-white/12 bg-white/[0.04]`}>
         <div className="flex items-center justify-between gap-2">
-          <p className="text-white/45 uppercase tracking-[0.06em] text-xs">모델</p>
-          <StatusBadge tone="cyan">준비됨</StatusBadge>
+          <div className="flex items-center gap-1.5">
+            <StatusBadge tone="neutral">분석 준비</StatusBadge>
+            <p className="text-white/45 uppercase tracking-[0.06em] text-xs">현재 모델</p>
+          </div>
+          <StatusBadge tone="cyan">{selectedModel.trim().length > 0 ? "준비됨" : "확인 필요"}</StatusBadge>
         </div>
         <p className="mt-2 text-white/82 break-all">{selectedModel}</p>
         <p className="mt-2 text-[11px] leading-4 text-white/38">{modelStatus}</p>
@@ -156,6 +164,7 @@ const InspectorSummaryOverviewCard: React.FC<InspectorSummaryOverviewCardProps> 
             label: "모델로 분석 시작",
             onClick: onOpenRag,
             reason: "선택된 모델로 현재 프로젝트 맥락 분석을 바로 이어갑니다.",
+            tone: selectedModel.trim().length > 0 ? "primary" : "warn",
           }}
         />
       </div>

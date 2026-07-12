@@ -154,9 +154,16 @@ const InspectorAnalyzeCard: React.FC<InspectorAnalyzeCardProps> = ({
     : null;
 
   return (
-  <div className={inspectorCardRegularClass}>
+  <div className={`${inspectorCardRegularClass} border-cyan-300/10 bg-cyan-400/[0.04] shadow-[0_10px_24px_rgba(34,211,238,0.05)]`}>
     <div className="flex items-center justify-between gap-2">
-      <p className="text-white/45 uppercase tracking-[0.06em] text-xs">마지막 AI 분석</p>
+      <div className="flex items-center gap-1.5">
+        <StatusBadge tone={analyzeCache?.status === "done" ? "cyan" : analyzeCache?.status === "error" ? "warn" : "neutral"}>
+          2단계
+        </StatusBadge>
+        <p className="text-white/45 uppercase tracking-[0.06em] text-xs">
+          {analyzeCache?.status === "done" ? "분석 결과 확인" : analyzeCache?.status === "error" ? "분석 오류 확인" : "AI 분석 대기"}
+        </p>
+      </div>
       {analyzeCache && (
         <div className="flex items-center gap-1">
           <button
@@ -184,6 +191,32 @@ const InspectorAnalyzeCard: React.FC<InspectorAnalyzeCardProps> = ({
           ? "border-rose-300/25 bg-rose-400/8"
           : "border-cyan-300/20 bg-cyan-400/8"
       }`}>
+        <div className={`rounded-lg border px-2 py-1 ${
+          analyzeCache.status === "error"
+            ? "border-rose-300/16 bg-black/10"
+            : analyzeCache.status === "done"
+              ? "border-emerald-300/16 bg-emerald-400/[0.08]"
+              : "border-cyan-300/16 bg-black/10"
+        }`}>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <StatusBadge tone={statusMeta?.summaryTone ?? "neutral"}>
+              {analyzeCache.status === "done" ? "결과 준비" : analyzeCache.status === "error" ? "오류 상태" : "응답 대기"}
+            </StatusBadge>
+            <span className={`text-[10px] ${
+              analyzeCache.status === "error"
+                ? "text-rose-100/58"
+                : analyzeCache.status === "done"
+                  ? "text-emerald-100/68"
+                  : "text-cyan-100/58"
+            }`}>
+              {analyzeCache.status === "done"
+                ? "추천 커맨드를 비교하고 바로 실행 단계로 넘어갈 수 있습니다."
+                : analyzeCache.status === "error"
+                  ? "분석이 실패해도 결과 메시지를 보고 다시 분석하거나 다른 복구 흐름으로 전환할 수 있습니다."
+                  : "응답이 도착하면 복구 후보 커맨드가 아래에 정리됩니다."}
+            </span>
+          </div>
+        </div>
         <div className="flex items-center justify-between gap-2">
           <p className="text-white/82 truncate">{analyzeCache.command}</p>
           {analyzeCache.status === "streaming" ? (
@@ -232,7 +265,7 @@ const InspectorAnalyzeCard: React.FC<InspectorAnalyzeCardProps> = ({
             <button
               type="button"
               onClick={() => onApplySuggestedCommand(0)}
-              className="inline-flex items-center gap-1 rounded-lg border border-emerald-300/35 bg-emerald-400/16 px-2.5 py-1 text-xs font-medium text-emerald-100 transition-colors hover:bg-emerald-400/26 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              className="inline-flex items-center gap-1 rounded-lg border border-emerald-300/35 bg-emerald-400/16 px-2.5 py-1 text-xs font-medium text-emerald-100 transition-[background-color,box-shadow,transform] hover:bg-emerald-400/26 hover:shadow-[0_8px_20px_rgba(16,185,129,0.18)] hover:-translate-y-[1px] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-emerald-300/45"
               title="첫 번째 추천 커맨드 바로 실행"
             >
               <TerminalSquare size={10} />
@@ -251,7 +284,7 @@ const InspectorAnalyzeCard: React.FC<InspectorAnalyzeCardProps> = ({
               <button
                 type="button"
                 onClick={() => onCopySuggestedCommand(0)}
-                className="inline-flex items-center gap-1 rounded-lg border border-white/20 bg-white/[0.05] px-2 py-1 text-xs text-white/78 transition-colors hover:bg-white/[0.12] hover:text-white focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                className="inline-flex items-center gap-1 rounded-lg border border-white/20 bg-white/[0.05] px-2 py-1 text-xs text-white/78 transition-[background-color,box-shadow,transform,color] hover:bg-white/[0.12] hover:text-white hover:shadow-[0_8px_18px_rgba(0,0,0,0.14)] hover:-translate-y-[1px] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/25"
                 title="첫 번째 추천 커맨드 복사"
               >
                 <Copy size={10} />
@@ -261,11 +294,11 @@ const InspectorAnalyzeCard: React.FC<InspectorAnalyzeCardProps> = ({
                 <button
                   type="button"
                   onClick={() => onLoadSuggestedCommandToAiBar(0)}
-                  className="inline-flex items-center gap-1 rounded-lg border border-accent/35 bg-accent/14 px-2 py-1 text-xs text-accent transition-colors hover:bg-accent/24 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                  title="첫 번째 추천 커맨드 입력바 로드"
+                  className="inline-flex items-center gap-1 rounded-lg border border-amber-300/32 bg-amber-400/14 px-2 py-1 text-xs text-amber-100 transition-[background-color,box-shadow,transform] hover:bg-amber-400/22 hover:shadow-[0_8px_20px_rgba(245,158,11,0.16)] hover:-translate-y-[1px] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-amber-300/40"
+                  title="첫 번째 추천 커맨드를 입력바로 넘기기"
                 >
                   <Search size={10} />
-                  입력
+                  입력 넘기기
                 </button>
               )}
             </div>
@@ -356,7 +389,7 @@ const InspectorAnalyzeCard: React.FC<InspectorAnalyzeCardProps> = ({
                       <div className="flex items-center gap-1 shrink-0">
                         <button
                           onClick={() => onCopySuggestedCommand(idx)}
-                          className="inline-flex w-[58px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-white/22 bg-white/[0.05] text-xs text-white/76 hover:text-white hover:bg-white/[0.12] transition-colors"
+                          className="inline-flex w-[58px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-white/22 bg-white/[0.05] text-xs text-white/76 hover:text-white hover:bg-white/[0.12] hover:shadow-[0_8px_18px_rgba(0,0,0,0.14)] hover:-translate-y-[1px] transition-[background-color,box-shadow,transform,color]"
                           title={`${idx + 1}번 커맨드 복사 (C)`}
                         >
                           <Copy size={9} />
@@ -364,15 +397,15 @@ const InspectorAnalyzeCard: React.FC<InspectorAnalyzeCardProps> = ({
                         </button>
                         <button
                           onClick={() => onLoadSuggestedCommandToAiBar(idx)}
-                          className="inline-flex w-[58px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-accent/35 bg-accent/14 text-xs text-accent hover:bg-accent/24 transition-colors"
-                          title={`${idx + 1}번 커맨드 AI 입력바 로드 (L)`}
+                          className="inline-flex w-[64px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-amber-300/30 bg-amber-400/14 text-xs text-amber-100 hover:bg-amber-400/22 hover:shadow-[0_8px_20px_rgba(245,158,11,0.16)] hover:-translate-y-[1px] transition-[background-color,box-shadow,transform]"
+                          title={`${idx + 1}번 커맨드를 입력바로 넘기기 (L)`}
                         >
                           <Search size={9} />
                           입력
                         </button>
                         <button
                           onClick={() => onApplySuggestedCommand(idx)}
-                          className="inline-flex w-[58px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-emerald-300/35 bg-emerald-400/16 text-xs text-emerald-100 hover:bg-emerald-400/26 transition-colors"
+                          className="inline-flex w-[58px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-emerald-300/35 bg-emerald-400/16 text-xs text-emerald-100 hover:bg-emerald-400/26 hover:shadow-[0_8px_20px_rgba(16,185,129,0.18)] hover:-translate-y-[1px] transition-[background-color,box-shadow,transform]"
                           title={`${idx + 1}번 커맨드 실행 (R)`}
                         >
                           <TerminalSquare size={9} />
@@ -396,7 +429,7 @@ const InspectorAnalyzeCard: React.FC<InspectorAnalyzeCardProps> = ({
                           onCopySuggestedCommand(idx);
                           onCloseCommandMenu(true);
                         }}
-                        className="inline-flex w-[72px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-white/22 bg-white/[0.05] text-xs text-white/76 hover:text-white hover:bg-white/[0.12] transition-colors"
+                        className="inline-flex w-[72px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-white/22 bg-white/[0.05] text-xs text-white/76 hover:text-white hover:bg-white/[0.12] hover:shadow-[0_8px_18px_rgba(0,0,0,0.14)] hover:-translate-y-[1px] transition-[background-color,box-shadow,transform,color]"
                         title={`${idx + 1}번 커맨드 복사 (C)`}
                       >
                         <Copy size={9} />
@@ -408,11 +441,11 @@ const InspectorAnalyzeCard: React.FC<InspectorAnalyzeCardProps> = ({
                           onLoadSuggestedCommandToAiBar(idx);
                           onCloseCommandMenu(false);
                         }}
-                        className="inline-flex w-[72px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-accent/35 bg-accent/14 text-xs text-accent hover:bg-accent/24 transition-colors"
-                        title={`${idx + 1}번 커맨드 AI 입력바 로드 (L)`}
+                        className="inline-flex w-[78px] justify-center items-center gap-1 px-1.5 py-0.5 rounded border border-amber-300/30 bg-amber-400/14 text-xs text-amber-100 hover:bg-amber-400/22 hover:shadow-[0_8px_20px_rgba(245,158,11,0.16)] hover:-translate-y-[1px] transition-[background-color,box-shadow,transform]"
+                        title={`${idx + 1}번 커맨드를 입력바로 넘기기 (L)`}
                       >
                         <Search size={9} />
-                        입력 (L)
+                        입력 넘기기
                       </button>
                     </div>
                   )}
