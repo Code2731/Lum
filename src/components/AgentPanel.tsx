@@ -15,6 +15,7 @@ import {
 import type { AgentState, AgentStep, CompletedStep } from "../hooks/useAgentLoop";
 import { SMALL_ICON_SIZE } from "../constants/ui";
 import { IconButton } from "@/components/ui/icon-button";
+import { ActionFlowBar } from "@/components/ui/action-flow-bar";
 
 interface Props {
   state: AgentState;
@@ -22,6 +23,11 @@ interface Props {
   onCancel: () => void;
   onClose: () => void;
   onSaveScript?: (commands: string[]) => void;
+}
+
+export interface AgentPanelFlowSummary {
+  badges: [string, string, string];
+  helper: string;
 }
 
 // 위험도 배지 스타일
@@ -83,6 +89,52 @@ const CompletedStepRow: React.FC<{ step: CompletedStep }> = ({ step }) => {
   );
 };
 
+export function getAgentPanelHeaderFlowSummary(status: AgentState["status"]): AgentPanelFlowSummary {
+  if (status === "awaiting_approval") {
+    return {
+      badges: ["먼저 계획 확인", "다음 승인", "마지막 관찰"],
+      helper: "계획과 위험도를 먼저 보고, 승인 후 실행 흐름으로 넘기면 관찰 결과가 아래에 이어집니다.",
+    };
+  }
+
+  if (status === "executing" || status === "observing") {
+    return {
+      badges: ["현재 단계", "다음 관찰", "마지막 완료"],
+      helper: "현재 단계와 완료된 기록을 함께 보면서 실행 흐름이 어디까지 왔는지 바로 파악합니다.",
+    };
+  }
+
+  if (status === "done" || status === "failed" || status === "cancelled") {
+    return {
+      badges: ["현재 결과", "다음 기록 확인", "마지막 닫기"],
+      helper:
+        status === "failed"
+          ? "오류를 복사해 공유하거나, 아래에서 어디까지 실행됐는지 확인한 뒤 같은 작업을 다시 정리할 수 있습니다."
+          : "결과를 먼저 확인하고, 아래 실행 기록을 훑은 뒤 닫거나 다음 작업으로 이어갑니다.",
+    };
+  }
+
+  return {
+    badges: ["먼저 계획", "다음 실행", "마지막 결과"],
+    helper: "계획이 잡히면 실행, 관찰, 결과 확인 순서로 같은 패널에서 이어집니다.",
+  };
+}
+
+export function getAgentPanelApprovalFlowSummary(
+  totalSteps: number,
+  cautionCount: number,
+  dangerCount: number,
+): AgentPanelFlowSummary {
+  return {
+    badges: [
+      `총 ${totalSteps}단계`,
+      dangerCount > 0 ? `위험 ${dangerCount}개` : cautionCount > 0 ? `주의 ${cautionCount}개` : "바로 승인",
+      "실행 대기",
+    ],
+    helper: "실행 전에 단계 수와 위험도를 먼저 보고, 승인 후 같은 순서대로 실행이 진행됩니다.",
+  };
+}
+
 const AgentPanel: React.FC<Props> = ({ state, onApprove, onCancel, onClose, onSaveScript }) => {
   const { status, task, plan, currentStepIdx, completed, message } = state;
   const copyText = (text: string) => {
@@ -91,6 +143,10 @@ const AgentPanel: React.FC<Props> = ({ state, onApprove, onCancel, onClose, onSa
 
   const currentStep = plan[currentStepIdx] ?? null;
   const totalSteps = plan.length;
+  const cautionCount = plan.filter((step) => step.risk === "caution").length;
+  const dangerCount = plan.filter((step) => step.risk === "danger").length;
+  const headerFlow = getAgentPanelHeaderFlowSummary(status);
+  const approvalFlow = getAgentPanelApprovalFlowSummary(totalSteps, cautionCount, dangerCount);
 
   return (
     <div className="w-[520px] max-h-[80vh] flex flex-col bg-[#161b22] border border-white/10 rounded-xl shadow-2xl overflow-hidden">
@@ -147,6 +203,10 @@ const AgentPanel: React.FC<Props> = ({ state, onApprove, onCancel, onClose, onSa
         )}
       </div>
 
+      <div className="px-3 py-2 border-b border-white/5 bg-white/[0.035] shrink-0">
+        <ActionFlowBar badges={headerFlow.badges} helper={headerFlow.helper} />
+      </div>
+
       {/* ── 메인 콘텐츠 (스크롤 영역) ────────────────────── */}
       <div className="flex-1 overflow-y-auto min-h-0">
 
@@ -160,7 +220,13 @@ const AgentPanel: React.FC<Props> = ({ state, onApprove, onCancel, onClose, onSa
 
         {/* 승인 대기 — 계획 목록 표시 */}
         {status === "awaiting_approval" && (
-          <div className="p-3 space-y-1">
+          <div className="p-3 space-y-3">
+            <div className="rounded-xl border border-white/10 bg-white/[0.035] px-3 py-2">
+              <ActionFlowBar
+                badges={approvalFlow.badges}
+                helper={approvalFlow.helper}
+              />
+            </div>
             <p className="text-xs text-white/30 mb-2 uppercase tracking-wider">실행 계획</p>
             {plan.map((step, idx) => (
               <div
@@ -221,6 +287,9 @@ const AgentPanel: React.FC<Props> = ({ state, onApprove, onCancel, onClose, onSa
               <CheckCircle2 size={16} className="text-green-400 shrink-0" />
               <span className="text-xs text-green-400 font-medium">{message || "태스크가 완료되었습니다."}</span>
             </div>
+            <p className="text-xs leading-relaxed text-white/45">
+              실행된 단계를 확인한 뒤 필요한 명령만 스크립트로 저장하거나, 다음 태스크로 바로 이어갈 수 있습니다.
+            </p>
             {completed.length > 0 && (
               <div>
                 <p className="text-xs text-white/25 uppercase tracking-wider mb-1">실행된 단계</p>
@@ -248,6 +317,9 @@ const AgentPanel: React.FC<Props> = ({ state, onApprove, onCancel, onClose, onSa
                 <Copy size={11} />
               </IconButton>
             </div>
+            <p className="text-xs leading-relaxed text-white/45">
+              오류를 복사해 공유하거나, 아래에서 어디까지 실행됐는지 확인한 뒤 같은 작업을 다시 정리할 수 있습니다.
+            </p>
             {completed.length > 0 && (
               <div>
                 <p className="text-xs text-white/25 uppercase tracking-wider mb-1">실행된 단계</p>

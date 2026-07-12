@@ -30,6 +30,7 @@ import type { XtermTheme } from "../hooks/useTerminalTheme";
 import { DEFAULT_TERMINAL_FONT_SIZE } from "../hooks/useTerminalTheme";
 import type { DangerMatch } from "../utils/pasteGuard";
 import type { SshProfile } from "../hooks/useTabManager";
+import { ActionFlowBar } from "@/components/ui/action-flow-bar";
 import { IconButton } from "@/components/ui/icon-button";
 
 interface PtyData {
@@ -2023,12 +2024,15 @@ const TerminalPane: React.FC<Props> = ({
             visionEnabled={visionMode}
           />
         ) : !terminalVisible ? (
-          <div style={{
-            flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-            gap: 16, color: "rgba(255,255,255,0.18)", userSelect: "none",
-          }}>
+          <section
+            aria-label="터미널 시작 안내"
+            style={{
+              flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+              gap: 16, color: "rgba(255,255,255,0.18)", userSelect: "none", padding: "0 20px",
+            }}
+          >
             <div style={{ fontSize: HERO_FONT_SIZE, opacity: 0.5 }}>✨</div>
-            <div style={{ textAlign: "center", lineHeight: 1.8 }}>
+            <div style={{ textAlign: "center", lineHeight: 1.8, maxWidth: 480 }}>
               <div style={{ fontSize: TITLE_FONT_SIZE, color: "rgba(255,255,255,0.35)", marginBottom: 6 }}>LUM AI 터미널</div>
               <div style={{ fontSize: BASE_FONT_SIZE }}>자연어로 질문하거나 명령어를 입력하세요</div>
               <div style={{ fontSize: SMALL_FONT_SIZE, marginTop: 8, opacity: 0.6 }}>
@@ -2036,13 +2040,21 @@ const TerminalPane: React.FC<Props> = ({
                 <span style={{ color: "#3fb950" }}>?</span> 명령어 설명 &nbsp;·&nbsp;
                 <span style={{ color: "#ff7b72" }}>{">>"}</span> 에이전트
               </div>
+              <div style={{ marginTop: 12 }}>
+                <ActionFlowBar
+                  badges={["질문 또는 명령 입력", "라우팅 확인", "터미널·AI 결과 검토"]}
+                  helper="자연어는 AI/에이전트로, 실행 가능한 명령은 터미널로 자동 분기됩니다."
+                  tone="cyan"
+                />
+              </div>
             </div>
-          </div>
+          </section>
         ) : null}
       </div>
 
       <div
         ref={inputDockRef}
+        aria-label="터미널 입력 도크"
         className={`lum-input-dock ${inputDockNarrow ? "lum-input-dock--narrow" : ""} ${inputDockCompact ? "lum-input-dock--compact" : ""} ${inputFocusCompact ? "lum-input-dock--focus" : ""}`}
         style={{
           padding: "6px 10px 8px",
@@ -2097,6 +2109,15 @@ const TerminalPane: React.FC<Props> = ({
             gap: inputDockNarrow ? 6 : 8,
           }}
         >
+          <ActionFlowBar
+            badges={[
+              terminalVisible ? "터미널 연결" : "AI 랜딩",
+              visionMode ? "이미지 첨부 준비" : "텍스트 입력 준비",
+              aiStreaming ? "응답 생성 중" : "입력 대기",
+            ]}
+            helper="입력창 하나로 셸, AI 질의, 에이전트 작업을 같은 흐름에서 전환합니다."
+            tone={aiStreaming ? "amber" : "cyan"}
+          />
           <div
             className={`lum-toolbelt-rail ${inputDockNarrow ? "lum-toolbelt-rail--narrow" : ""} ${inputDockCompact ? "lum-toolbelt-rail--compact" : ""} ${inputFocusCompact ? "lum-toolbelt-rail--focus" : ""}`}
             style={{

@@ -2,7 +2,11 @@ import { act, renderHook } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { invoke } from "@tauri-apps/api/core";
 import { useState } from "react";
-import { useInspectorPanelActionHandlers } from "./useInspectorPanelActionHandlers";
+import {
+  getInspectorPanelActionFlowSummary,
+  getInspectorPanelActionsMeta,
+  useInspectorPanelActionHandlers,
+} from "./useInspectorPanelActionHandlers";
 
 vi.mock("@tauri-apps/api/core", () => ({
   invoke: vi.fn().mockResolvedValue(undefined),
@@ -13,6 +17,31 @@ const invokeMock = vi.mocked(invoke);
 describe("useInspectorPanelActionHandlers", () => {
   beforeEach(() => {
     invokeMock.mockClear();
+  });
+
+  it("액션별 흐름 요약을 반환한다", () => {
+    expect(getInspectorPanelActionFlowSummary("density")).toEqual({
+      badges: ["표시 밀도", "요약 형태 전환", "시야 조정"],
+      helper: "인스펙터 정보 밀도를 현재 작업 집중도에 맞게 바꾸는 흐름입니다.",
+    });
+    expect(getInspectorPanelActionFlowSummary("workspace")).toEqual({
+      badges: ["워크스페이스", "저장된 복귀 지점", "세션 재개"],
+      helper: "저장된 탭 구성을 불러와 현재 작업 흐름을 빠르게 복구하는 액션입니다.",
+    });
+    expect(getInspectorPanelActionFlowSummary("failed_block")).toEqual({
+      badges: ["실패 블록", "오류 원인 확인", "복구 진입"],
+      helper: "실패한 실행 블록을 바로 열어 원인과 복구 단서를 먼저 확인하는 액션입니다.",
+    });
+    expect(getInspectorPanelActionsMeta({
+      inspectorDensity: "compact",
+      showWorkspace: true,
+      showHistorySearch: false,
+      showDiffReview: false,
+    })).toEqual({
+      title: "인스펙터 빠른 액션",
+      badges: ["밀도 compact", "보조 패널 열림", "실패·히스토리·워크스페이스"],
+      helper: "현재 인스펙터에서는 밀도 전환, 프로젝트 탐색, 워크스페이스 복귀, 히스토리 검색, diff 검토 흐름으로 빠르게 이동할 수 있습니다.",
+    });
   });
 
   it("밀도 토글이 cozy/compact를 정확히 왕복한다", () => {

@@ -1,7 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactAgentState } from "../hooks/useReactAgent";
-import ReactAgentPanel from "./ReactAgentPanel";
+import ReactAgentPanel, {
+  getReactAgentChangesFlowSummary,
+  getReactAgentPlannedToolsFlowSummary,
+} from "./ReactAgentPanel";
 
 const invokeMock = vi.fn();
 
@@ -118,6 +121,44 @@ describe("ReactAgentPanel", () => {
     onUndo.mockReset();
     onRunAct.mockReset();
     mockConfigAndScip();
+  });
+
+  it("Plan 도구와 변경 파일 흐름 요약을 계산한다", () => {
+    expect(getReactAgentPlannedToolsFlowSummary(2)).toEqual({
+      badges: ["읽기 도구 2개", "Act 실행 준비", "변경 검토 예정"],
+      helper: "Plan에서 사용한 읽기 도구를 확인한 뒤 실행하면, 변경 파일과 되돌리기 흐름이 바로 아래에 이어집니다.",
+    });
+
+    expect(getReactAgentChangesFlowSummary(3, 1, true)).toEqual({
+      badges: ["변경 3개", "높음 1개", "되돌리기 가능"],
+      helper: "변경 파일을 먼저 훑고, 높음 위험도를 우선 확인한 뒤 필요하면 전체 되돌리기로 정리합니다.",
+    });
+  });
+
+  it("Plan 완료 상태에서 상단과 도구 요약 흐름을 함께 보여준다", async () => {
+    render(
+      <ReactAgentPanel
+        state={makeState({
+          status: "done",
+          mode: "plan",
+          planId: "plan-1",
+          plannedTools: ["read_file", "list_files"],
+          steps: [{ kind: "status", content: "plan" }],
+        })}
+        onCancel={onCancel}
+        onClose={onClose}
+        onUndo={onUndo}
+        onRunAct={onRunAct}
+      />,
+    );
+
+    expect(screen.getByText("먼저 Plan 확인")).toBeInTheDocument();
+    expect(screen.getByText("다음 실행")).toBeInTheDocument();
+    expect(
+      screen.getByText("Plan에서 확인한 도구를 먼저 보고, 실행을 시작한 뒤 변경 파일과 결과를 같은 패널에서 이어서 검토합니다."),
+    ).toBeInTheDocument();
+    expect(screen.getByText("읽기 도구 2개")).toBeInTheDocument();
+    expect(screen.getByText("Act 실행 준비")).toBeInTheDocument();
   });
 
   it("SCIP 재생성은 cwd가 비어 있으면 비활성화된다", async () => {
@@ -249,6 +290,10 @@ describe("ReactAgentPanel", () => {
     expect(screen.getByText("변경 3")).toBeInTheDocument();
     const summaryBadge = screen.getByTitle("1건의 빌드/설정 파일 변경 — 높음 위험도");
     expect(summaryBadge).toHaveTextContent("· 높음 1");
+    expect(screen.getByText("검토 준비")).toBeInTheDocument();
+    expect(
+      screen.getByText("변경 파일을 먼저 훑고, 높음 위험도를 우선 확인한 뒤 필요하면 전체 되돌리기로 정리합니다."),
+    ).toBeInTheDocument();
   });
 
   it("변경 파일 종류 라벨을 생성/수정/삭제에 따라 구분해 보여준다", () => {

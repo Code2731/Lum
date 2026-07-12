@@ -27,6 +27,7 @@ import type {
 } from "../hooks/useReactAgent";
 import { SMALL_ICON_SIZE } from "../constants/ui";
 import { IconButton } from "./ui/icon-button";
+import { ActionFlowBar } from "./ui/action-flow-bar";
 
 interface ScipBackend {
   language: string;
@@ -66,6 +67,33 @@ interface Props {
   onClose: () => void;
   onUndo: () => void;
   onRunAct: (toolWhitelist: string[] | null) => void;
+}
+
+export interface ReactAgentPanelFlowSummary {
+  badges: [string, string, string];
+  helper: string;
+}
+
+export function getReactAgentPlannedToolsFlowSummary(toolCount: number): ReactAgentPanelFlowSummary {
+  return {
+    badges: [`읽기 도구 ${toolCount}개`, "Act 실행 준비", "변경 검토 예정"],
+    helper: "Plan에서 사용한 읽기 도구를 확인한 뒤 실행하면, 변경 파일과 되돌리기 흐름이 바로 아래에 이어집니다.",
+  };
+}
+
+export function getReactAgentChangesFlowSummary(
+  changeCount: number,
+  highRiskCount: number,
+  showUndoButton: boolean,
+): ReactAgentPanelFlowSummary {
+  return {
+    badges: [
+      `변경 ${changeCount}개`,
+      highRiskCount > 0 ? `높음 ${highRiskCount}개` : "검토 준비",
+      showUndoButton ? "되돌리기 가능" : "실행 중 추적",
+    ],
+    helper: "변경 파일을 먼저 훑고, 높음 위험도를 우선 확인한 뒤 필요하면 전체 되돌리기로 정리합니다.",
+  };
 }
 
 const KIND_ICON: Record<ReactStep["kind"], React.ReactNode> = {
@@ -313,6 +341,20 @@ const ReactAgentPanel: React.FC<Props> = ({
   const showUndoButton =
     hasChanges &&
     (status === "done" || status === "error" || status === "cancelled");
+  const headerFlowBadges = isPlanDone
+    ? ["먼저 Plan 확인", "다음 실행", "마지막 변경 검토"]
+    : isActive
+      ? ["현재 단계", "다음 관찰", "마지막 변경 확인"]
+      : status === "done" || status === "error" || status === "cancelled"
+        ? ["현재 결과", "다음 변경 검토", "마지막 닫기"]
+        : ["먼저 목표 확인", "다음 도구 선택", "마지막 실행"];
+  const headerFlowHelper = isPlanDone
+    ? "Plan에서 확인한 도구를 먼저 보고, 실행을 시작한 뒤 변경 파일과 결과를 같은 패널에서 이어서 검토합니다."
+    : isActive
+      ? "현재 단계와 관찰 로그를 보면서 진행 상황을 확인하고, 끝나면 아래 변경 파일로 바로 이어집니다."
+      : status === "done" || status === "error" || status === "cancelled"
+        ? "결과를 먼저 확인한 뒤 변경 파일과 되돌리기 여부를 검토하고 패널을 닫습니다."
+        : "목표와 도구 상태를 먼저 확인한 뒤 ReAct 실행으로 바로 이어갈 수 있습니다.";
 
   // 새 단계 추가 시 자동 스크롤
   useEffect(() => {
@@ -567,6 +609,10 @@ const ReactAgentPanel: React.FC<Props> = ({
         </label>
       </div>
 
+      <div className="px-3 py-2 border-b border-white/5 bg-white/[0.035] shrink-0">
+        <ActionFlowBar badges={headerFlowBadges} helper={headerFlowHelper} />
+      </div>
+
       {scipRebuildMessage && (
         <div className="px-3 py-1.5 text-xs text-white/55 border-b border-white/5 bg-white/2">
           {scipRebuildMessage}
@@ -600,6 +646,15 @@ const ReactAgentPanel: React.FC<Props> = ({
 
       {isPlanDone && state.plannedTools.length > 0 && (
         <div className="shrink-0 border-t border-white/5 bg-cyan-500/5 px-3 py-2">
+          {(() => {
+            const plannedToolsFlow = getReactAgentPlannedToolsFlowSummary(state.plannedTools.length);
+            return (
+          <ActionFlowBar
+            badges={plannedToolsFlow.badges}
+            helper={plannedToolsFlow.helper}
+          />
+            );
+          })()}
           <div className="text-xs text-cyan-200/80 mb-1">
             Plan에서 사용한 읽기 도구
           </div>
@@ -629,6 +684,17 @@ const ReactAgentPanel: React.FC<Props> = ({
                 · {RISK_BADGE.high.label} {highRiskCount}
               </span>
             )}
+          </div>
+          <div className="px-3 py-2 border-b border-white/5 bg-white/[0.035]">
+            {(() => {
+              const changesFlow = getReactAgentChangesFlowSummary(changes.length, highRiskCount, showUndoButton);
+              return (
+            <ActionFlowBar
+              badges={changesFlow.badges}
+              helper={changesFlow.helper}
+            />
+              );
+            })()}
           </div>
           <div className="p-1.5 space-y-0.5">
             {changes.map((c) => (

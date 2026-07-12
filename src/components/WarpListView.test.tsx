@@ -24,6 +24,41 @@ describe("WarpListView pointer outside helper", () => {
   });
 });
 
+describe("WarpListView overview states", () => {
+  it("빈 상태에서 작업 흐름 안내를 보여준다", () => {
+    render(<WarpListView blocks={[]} />);
+
+    expect(screen.getByLabelText("명령 블록 빈 상태")).toBeInTheDocument();
+    expect(screen.getByText("명령 실행")).toBeInTheDocument();
+    expect(screen.getByText("블록 생성")).toBeInTheDocument();
+    expect(screen.getByText("결과 검토")).toBeInTheDocument();
+  });
+
+  it("상단 검색/필터 영역에 흐름 안내와 표시 건수를 보여준다", () => {
+    render(
+      <WarpListView
+        blocks={[
+          {
+            id: "b-top",
+            command: "echo hello",
+            output: "hello",
+            exitCode: 0,
+            startedAt: now - 1000,
+            endedAt: now,
+          },
+        ]}
+      />,
+    );
+
+    expect(screen.getByLabelText("명령 블록 리스트")).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "블록 검색" })).toBeInTheDocument();
+    expect(screen.getByText("전체 탐색")).toBeInTheDocument();
+    expect(screen.getByText("상태 전체")).toBeInTheDocument();
+    expect(screen.getByText("전체 표시")).toBeInTheDocument();
+    expect(screen.getByText("표시 1/1")).toBeInTheDocument();
+  });
+});
+
 describe("WarpListView block search navigation", () => {
   const blocks = [
     {

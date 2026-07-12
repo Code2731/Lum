@@ -129,6 +129,45 @@ export interface ChatMessage {
   timestamp: number;
 }
 
+export interface AIChatMeta {
+  title: string;
+  badges: [string, string, string];
+  helper: string;
+}
+
+export function getAIChatMeta(input: {
+  messages: ChatMessage[];
+  streaming: boolean;
+  error: string | null;
+}): AIChatMeta {
+  const userCount = input.messages.filter((message) => message.role === "user").length;
+  const assistantCount = input.messages.filter((message) => message.role === "assistant").length;
+
+  if (input.error) {
+    return {
+      title: "AI 대화 오류 상태",
+      badges: [`사용자 ${userCount}개`, `응답 ${assistantCount}개`, "오류 확인 필요"],
+      helper: input.error,
+    };
+  }
+
+  if (input.streaming) {
+    return {
+      title: "AI 응답 스트리밍 중",
+      badges: [`사용자 ${userCount}개`, `응답 ${assistantCount}개`, "실시간 응답 중"],
+      helper: "현재 대화 문맥을 유지한 채 AI 응답을 토큰 단위로 이어 받고 있습니다.",
+    };
+  }
+
+  return {
+    title: input.messages.length > 0 ? `AI 대화 ${input.messages.length}개 메시지` : "AI 대화 대기 중",
+    badges: [`사용자 ${userCount}개`, `응답 ${assistantCount}개`, input.messages.length > 0 ? "추가 질문 가능" : "첫 질문 대기"],
+    helper: input.messages.length > 0
+      ? "이전 대화 문맥을 유지한 채 후속 질문이나 실행 요청을 이어갈 수 있습니다."
+      : "질문을 보내면 터미널 문맥, 첨부 파일, 최근 대화를 함께 반영해 응답합니다.",
+  };
+}
+
 export function useAIChat(model: string, getTerminalContext: () => string) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [streaming, setStreaming] = useState(false);

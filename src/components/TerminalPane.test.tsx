@@ -183,6 +183,26 @@ const TOOLBELT_TIP_FULL =
 const TOOLBELT_TIP_NARROW =
   "TIP · Cmd/Ctrl+1~4/0 백엔드 직접 지정·해제 · Cmd/Ctrl+./, 백엔드 직접 순환 · Shift+A @첨부 · Shift+B/N 백엔드 이전/마지막 · Shift+K/Z/R/L/M/P 편집";
 
+describe("TerminalPane — 시작 안내와 입력 도크", () => {
+  it("초기 랜딩 상태에서 입력 흐름 안내를 보여준다", () => {
+    render(<TerminalPane id="tab-landing" />);
+
+    expect(screen.getByLabelText("터미널 시작 안내")).toBeInTheDocument();
+    expect(screen.getByText("질문 또는 명령 입력")).toBeInTheDocument();
+    expect(screen.getByText("라우팅 확인")).toBeInTheDocument();
+    expect(screen.getByText("터미널·AI 결과 검토")).toBeInTheDocument();
+  });
+
+  it("입력 도크에 현재 입력 상태 흐름을 보여준다", () => {
+    render(<TerminalPane id="tab-dock" />);
+
+    expect(screen.getByLabelText("터미널 입력 도크")).toBeInTheDocument();
+    expect(screen.getByText("AI 랜딩")).toBeInTheDocument();
+    expect(screen.getByText("텍스트 입력 준비")).toBeInTheDocument();
+    expect(screen.getByText("입력 대기")).toBeInTheDocument();
+  });
+});
+
 describe("TerminalPane — 입력 라우팅", () => {
   it("알려진 CLI (ls) → write_to_pty", async () => {
     const { container } = render(<TerminalPane id="tab-1" />);

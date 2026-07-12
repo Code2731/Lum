@@ -35,6 +35,42 @@ interface SearchOpts {
   limit?: number;
 }
 
+export interface RecallMeta {
+  title: string;
+  badges: [string, string, string];
+  helper: string;
+}
+
+export function getRecallMeta(input: {
+  results: RecallEntry[];
+  stats: RecallStats | null;
+  loading: boolean;
+}): RecallMeta {
+  if (input.loading) {
+    return {
+      title: "Recall 검색 중",
+      badges: ["먼저 질의 해석", "다음 소스 검색", "마지막 결과 정렬"],
+      helper: "history, healing, memory 소스를 함께 검색해 관련 기억을 정리하고 있습니다.",
+    };
+  }
+
+  const totalIndexed = input.stats
+    ? input.stats.history.count + input.stats.healing.count + input.stats.memory.count
+    : 0;
+
+  return {
+    title: input.results.length > 0 ? `Recall 결과 ${input.results.length}건` : "Recall 결과가 없습니다",
+    badges: [
+      `결과 ${input.results.length}건`,
+      `인덱스 ${totalIndexed}건`,
+      input.stats ? "소스 3종 준비" : "통계 대기",
+    ],
+    helper: input.results.length > 0
+      ? "최근 기억 검색 결과를 바탕으로 과거 명령, 복구, 메모 흐름을 현재 작업에 다시 연결할 수 있습니다."
+      : "질문을 입력하면 history, healing, memory 전반에서 관련 기억을 찾아 현재 작업에 다시 연결합니다.",
+  };
+}
+
 export function useRecall(model: string) {
   const [results, setResults] = useState<RecallEntry[]>([]);
   const [stats, setStats] = useState<RecallStats | null>(null);

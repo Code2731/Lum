@@ -34,6 +34,12 @@ type VoiceTranscriptScopeMatchSummary = VoiceTranscriptScopeSummary & {
   matchedCount: number;
 };
 
+export interface VoiceTranscriptHistoryFlowSummary {
+  primary: string;
+  secondary: string;
+  detail: string;
+}
+
 const DEFAULT_STORE: VoiceTranscriptStore = {
   lastAccessedAt: 0,
   pinnedVoiceTranscriptsCollapsed: false,
@@ -54,6 +60,70 @@ const normalizeScopeKey = (scope?: string | null) => {
   const normalized = (scope ?? "").trim().replace(/\\/g, "/");
   return normalized || DEFAULT_SCOPE_KEY;
 };
+
+export function getVoiceTranscriptHistoryFlowSummary(input: {
+  scopeKey: string;
+  pinnedCount: number;
+  recentCount: number;
+  historyCount: number;
+  showHistory: boolean;
+}): VoiceTranscriptHistoryFlowSummary {
+  const { scopeKey, pinnedCount, recentCount, historyCount, showHistory } = input;
+  const total = pinnedCount + recentCount + historyCount;
+  const scopeLabel = scopeKey === DEFAULT_SCOPE_KEY ? "전역" : scopeKey;
+
+  if (total === 0) {
+    return {
+      primary: "음성 기록 비어 있음",
+      secondary: scopeLabel,
+      detail: "아직 저장된 음성 전사 기록이 없어 새 입력을 기다리고 있습니다.",
+    };
+  }
+
+  if (showHistory) {
+    return {
+      primary: "음성 기록 펼침",
+      secondary: `${scopeLabel} · 고정 ${pinnedCount} · 최근 ${recentCount} · 기록 ${historyCount}`,
+      detail: "현재 스코프의 고정 항목과 최근 전사 기록을 함께 검토할 수 있습니다.",
+    };
+  }
+
+  return {
+    primary: "음성 기록 준비됨",
+    secondary: `${scopeLabel} · 총 ${total}개`,
+    detail: "필요할 때 기록 패널을 열어 이전 전사와 고정 항목을 다시 사용할 수 있습니다.",
+  };
+}
+
+export function getVoiceTranscriptScopeSearchSummary(input: {
+  query: string;
+  matches: Array<{ scopeKey: string; matchedCount: number }>;
+}): VoiceTranscriptHistoryFlowSummary {
+  const normalizedQuery = normalizeVoiceSearchQuery(input.query);
+  if (!normalizedQuery) {
+    return {
+      primary: "스코프 검색 대기",
+      secondary: "검색어 없음",
+      detail: "음성 기록 스코프를 찾으려면 검색어를 입력하세요.",
+    };
+  }
+
+  if (input.matches.length === 0) {
+    return {
+      primary: "검색 결과 없음",
+      secondary: normalizedQuery,
+      detail: "현재 저장된 음성 기록 스코프에서 일치하는 전사를 찾지 못했습니다.",
+    };
+  }
+
+  const first = input.matches[0];
+  const firstScopeLabel = first.scopeKey === DEFAULT_SCOPE_KEY ? "전역" : first.scopeKey;
+  return {
+    primary: `${input.matches.length}개 스코프 일치`,
+    secondary: `${firstScopeLabel} · ${first.matchedCount}개 매치`,
+    detail: "일치한 스코프부터 순서대로 이동해 관련 전사를 다시 사용할 수 있습니다.",
+  };
+}
 
 const sanitizeScopedStore = (value: unknown): VoiceTranscriptStore => {
   if (!value || typeof value !== "object") {

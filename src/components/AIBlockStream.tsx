@@ -38,6 +38,38 @@ const FONT_MIN = 10;
 const FONT_MAX = 24;
 const FONT_DEFAULT = 14;
 
+export interface AIBlockStreamHeaderMeta {
+  ariaLabel: string;
+  title: string;
+  countLabel: string;
+  streamingLabel: string | null;
+}
+
+export function getAIBlockStreamHeaderMeta(messageCount: number, streaming: boolean): AIBlockStreamHeaderMeta {
+  return {
+    ariaLabel: `AI 대화 헤더 · 메시지 ${messageCount}개${streaming ? " · 응답 생성 중" : ""}`,
+    title: "AI 대화",
+    countLabel: `${messageCount}개 메시지`,
+    streamingLabel: streaming ? "응답 생성 중" : null,
+  };
+}
+
+export interface AIBlockStreamErrorMeta {
+  ariaLabel: string;
+  settingsDescription: string;
+  copyDescription: string;
+}
+
+export function getAIBlockStreamErrorMeta(error: string, canOpenSettings: boolean): AIBlockStreamErrorMeta {
+  return {
+    ariaLabel: canOpenSettings ? `라우팅 오류 배너 · ${error}` : `AI 오류 배너 · ${error}`,
+    settingsDescription:
+      "현재 라우팅 실패를 해결할 수 있도록 모델 로드 상태와 xLLM 연결 설정 화면을 바로 엽니다.",
+    copyDescription:
+      "현재 에러 메시지를 그대로 복사해 이슈 공유나 후속 AI 질문에 바로 붙여넣을 수 있습니다.",
+  };
+}
+
 // Phase 126: invoke로 fontSize 영속. 실패해도 silent — UI는 메모리 상태로 동작.
 const persistFontSize = (size: number) => {
   invoke("save_ui_preferences", { aiChatFontSize: size }).catch(() => {});
@@ -106,6 +138,8 @@ const AIBlockStream: React.FC<Props> = ({
   }, []);
 
   const showRoutingErrorActions = isRoutingError(error);
+  const headerMeta = getAIBlockStreamHeaderMeta(messages.length, streaming);
+  const errorMeta = error ? getAIBlockStreamErrorMeta(error, showRoutingErrorActions) : null;
   const handleCopyError = () => {
     if (!error) return;
     navigator.clipboard?.writeText?.(error).catch(() => {});
@@ -161,16 +195,21 @@ const AIBlockStream: React.FC<Props> = ({
         className="flex items-center justify-between px-4 py-2 border-b border-white/5"
         style={{ position: "sticky", top: 0, background: "#0d1117", zIndex: 1 }}
       >
-        <div className="flex items-center gap-2 text-xs text-white/50">
+        <div className="flex items-center gap-2 text-xs text-white/50" aria-label={headerMeta.ariaLabel}>
           <Sparkles size={SMALL_ICON_SIZE} className="text-accent" />
-          <span>AI 대화</span>
-          <span className="text-white/25">· {messages.length}개 메시지</span>
-          {streaming && <Loader2 size={12} className="animate-spin text-accent/70 ml-1" />}
+          <span>{headerMeta.title}</span>
+          <span className="text-white/25">· {headerMeta.countLabel}</span>
+          {streaming && (
+            <span className="inline-flex items-center gap-1 text-accent/70" aria-label={headerMeta.streamingLabel ?? undefined}>
+              <Loader2 size={12} className="animate-spin text-accent/70 ml-1" />
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-1">
           {streaming && (
             <IconButton
               tooltip="응답 중지"
+              description="현재 생성 중인 답변만 멈추고, 지금까지 받은 내용은 그대로 유지합니다."
               onClick={onCancel}
               className="p-1 rounded text-red-300/70 hover:text-red-200 hover:bg-red-500/10 transition-colors"
             >
@@ -179,6 +218,7 @@ const AIBlockStream: React.FC<Props> = ({
           )}
           <IconButton
             tooltip="폰트 크기 초기화 (Ctrl+휠로 조절)"
+            description="AI 대화 글자 크기를 기본값으로 되돌립니다. 확대·축소는 Ctrl/Cmd와 휠로 바로 조절할 수 있습니다."
             onClick={() => {
               setFontSize(FONT_DEFAULT);
               persistFontSize(FONT_DEFAULT);
@@ -189,6 +229,7 @@ const AIBlockStream: React.FC<Props> = ({
           </IconButton>
           <IconButton
             tooltip="대화 지우기"
+            description="현재 AI 대화 타임라인만 비우고, 터미널이나 다른 패널 상태는 그대로 둡니다."
             onClick={onClear}
             className="p-1 rounded text-white/30 hover:text-white/70 hover:bg-white/5 transition-colors"
           >
@@ -232,13 +273,18 @@ const AIBlockStream: React.FC<Props> = ({
           );
         })}
         {error && (
-          <div className="text-xs text-red-400/80 px-2.5 py-1.5 rounded bg-red-500/10 border border-red-500/20">
+          <div
+            role="alert"
+            aria-label={errorMeta?.ariaLabel}
+            className="text-xs text-red-400/80 px-2.5 py-1.5 rounded bg-red-500/10 border border-red-500/20"
+          >
             <div className="flex items-start justify-between gap-2">
               <div className="whitespace-pre-wrap break-all flex-1">{error}</div>
               <div className="flex items-center gap-1">
                 {showRoutingErrorActions && onOpenXllmPanel && (
                   <IconButton
                     tooltip="xLLM/모델 설정 열기"
+                    description={errorMeta?.settingsDescription}
                     onClick={onOpenXllmPanel}
                     className="p-1 rounded text-red-200/85 hover:text-red-100 hover:bg-red-500/20 transition-colors"
                   >
@@ -247,6 +293,7 @@ const AIBlockStream: React.FC<Props> = ({
                 )}
                 <IconButton
                   tooltip="오류 텍스트 복사"
+                  description={errorMeta?.copyDescription}
                   onClick={handleCopyError}
                   className="p-1 rounded text-red-200/85 hover:text-red-100 hover:bg-red-500/20 transition-colors"
                 >

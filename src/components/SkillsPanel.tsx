@@ -12,11 +12,52 @@ import { Button } from "@/components/ui/button";
 import { IconButton } from "@/components/ui/icon-button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { useSkills, type Skill, type SkillDraft } from "../hooks/useSkills";
+import { ActionFlowBar } from "@/components/ui/action-flow-bar";
+import { getSkillsMeta, useSkills, type Skill, type SkillDraft } from "../hooks/useSkills";
 import { fmtShortDate } from "../utils";
 
 interface Props {
   onClose: () => void;
+}
+
+export interface SkillsPanelFlowSummary {
+  badges: [string, string, string];
+  helper: string;
+}
+
+export interface SkillsPanelListStateMeta {
+  ariaLabel: string;
+  title: string;
+  description: string;
+}
+
+export function getSkillsListStateMeta(loading: boolean, skillCount: number): SkillsPanelListStateMeta {
+  if (loading) {
+    return {
+      ariaLabel: "스킬 라이브러리 로딩 중",
+      title: "로딩 중…",
+      description: "저장된 스킬 절차를 불러오고 있습니다.",
+    };
+  }
+
+  if (skillCount === 0) {
+    return {
+      ariaLabel: "스킬 라이브러리 빈 상태",
+      title: "저장된 스킬이 없습니다.",
+      description: "반복적으로 풀던 문제 절차를 저장해두면 다음에 ReAct가 자연어 매칭으로 자동 호출합니다.",
+    };
+  }
+
+  return {
+    ariaLabel: `스킬 라이브러리 목록 · ${skillCount}개`,
+    title: `스킬 ${skillCount}개`,
+    description: "저장된 스킬 절차를 바로 편집하거나 삭제할 수 있습니다.",
+  };
+}
+
+export interface SkillEditorFooterMeta {
+  helper: string;
+  saveLabel: string;
 }
 
 const EMPTY_DRAFT: SkillDraft = {
@@ -32,6 +73,56 @@ const EMPTY_DRAFT: SkillDraft = {
 
 function copyText(text: string) {
   navigator.clipboard?.writeText?.(text).catch(() => {});
+}
+
+export function getSkillsLibraryFlowSummary(
+  skills: Skill[],
+  visibleSkills: Skill[],
+  importUrl: string,
+): SkillsPanelFlowSummary {
+  const hasFilter = visibleSkills.length !== skills.length;
+  const hasImportUrl = importUrl.trim().length > 0;
+
+  return {
+    badges: [
+      hasFilter ? `검색 결과 ${visibleSkills.length}개` : `전체 스킬 ${skills.length}개`,
+      hasImportUrl ? "가져오기 URL 준비" : "다음 URL 가져오기",
+      "마지막 새 스킬 작성",
+    ],
+    helper: hasFilter
+      ? "검색으로 필요한 스킬 범위를 좁혔습니다. 결과를 확인한 뒤 URL 가져오기나 새 스킬 작성으로 바로 이어갈 수 있습니다."
+      : "기존 스킬을 먼저 훑고, 필요하면 URL로 가져오거나 새 스킬을 작성해 라이브러리를 확장합니다.",
+  };
+}
+
+export function getSkillsEmptyFlowSummary(): SkillsPanelFlowSummary {
+  return {
+    badges: ["현재 스킬 없음", "다음 절차 저장", "마지막 ReAct 자동 호출"],
+    helper: "반복 작업 절차를 스킬로 저장해두면 다음에는 자연어 goal과 매칭되어 ReAct에 자동 주입됩니다.",
+  };
+}
+
+export function getSkillEditorFlowSummary(draft: SkillDraft): SkillsPanelFlowSummary {
+  const triggerCount = draft.triggers.length;
+  const hasVerification = (draft.verification ?? "").trim().length > 0;
+
+  return {
+    badges: [
+      draft.name.trim() ? "이름 입력 완료" : "먼저 이름 입력",
+      triggerCount > 0 ? `트리거 ${triggerCount}개 연결` : "다음 트리거 정리",
+      hasVerification ? "마지막 검증까지 작성" : "마지막 검증 저장",
+    ],
+    helper: hasVerification
+      ? "이름, 트리거, 검증까지 채워져 있습니다. 절차를 다듬고 저장하면 다음 ReAct 흐름에서 바로 재사용됩니다."
+      : "이름과 트리거로 검색 가능성을 먼저 정하고, 절차와 검증을 채운 뒤 저장하면 다음 ReAct 흐름에서 바로 재사용됩니다.",
+  };
+}
+
+export function getSkillEditorFooterMeta(saving: boolean): SkillEditorFooterMeta {
+  return {
+    helper: "저장하면 검색과 자연어 매칭 흐름에 즉시 반영됩니다.",
+    saveLabel: saving ? "저장 중…" : "저장",
+  };
 }
 
 const SkillsPanel: React.FC<Props> = ({ onClose }) => {
@@ -124,6 +215,8 @@ const SkillsPanel: React.FC<Props> = ({ onClose }) => {
   }, [importFromUrl, importUrl]);
 
   const isEditing = editingId !== null;
+  const libraryFlow = getSkillsLibraryFlowSummary(skills, visibleSkills, importUrl);
+  const skillsMeta = getSkillsMeta(skills, loading);
 
   return (
     <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
@@ -159,6 +252,19 @@ const SkillsPanel: React.FC<Props> = ({ onClose }) => {
             <Button size="sm" className="h-7 gap-1.5 text-xs border border-accent/35 bg-accent/20 hover:bg-accent/30" onClick={startNew}>
               <Plus size={12} /> 새 스킬
             </Button>
+          </div>
+        )}
+
+        {!isEditing && (
+          <div className="px-5 py-2 border-b border-white/10 bg-white/[0.015] shrink-0">
+            <div className="mb-2 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2">
+              <p className="text-sm font-medium text-white/88">{skillsMeta.title}</p>
+              <p className="mt-1 text-xs text-white/42">{skillsMeta.helper}</p>
+            </div>
+            <ActionFlowBar
+              badges={libraryFlow.badges}
+              helper={libraryFlow.helper}
+            />
           </div>
         )}
 
@@ -219,23 +325,34 @@ const SkillList: React.FC<{
   onEdit: (s: Skill) => void;
   onDelete: (id: string) => Promise<void>;
 }> = ({ loading, skills, onEdit, onDelete }) => {
+  const emptyFlow = getSkillsEmptyFlowSummary();
+  const listStateMeta = getSkillsListStateMeta(loading, skills.length);
+
   if (loading) {
-    return <p className="text-xs text-white/40 text-center py-8">로딩 중…</p>;
+    return (
+      <div aria-label={listStateMeta.ariaLabel} className="text-center py-8 space-y-1">
+        <p className="text-xs text-white/40">{listStateMeta.title}</p>
+        <p className="text-xs text-white/25">{listStateMeta.description}</p>
+      </div>
+    );
   }
   if (skills.length === 0) {
     return (
-      <div className="text-center py-10 text-xs text-white/35 space-y-2">
+      <div aria-label={listStateMeta.ariaLabel} className="text-center py-10 text-xs text-white/35 space-y-3 px-5">
         <Sparkles size={20} className="mx-auto text-white/20" />
-        <p>저장된 스킬이 없습니다.</p>
-        <p className="text-xs text-white/25 leading-relaxed">
-          반복적으로 풀던 문제 절차를 저장해두면<br />
-          다음에 ReAct가 자연어 매칭으로 자동 호출합니다.
-        </p>
+        <div className="max-w-md mx-auto rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-left">
+          <ActionFlowBar
+            badges={emptyFlow.badges}
+            helper={emptyFlow.helper}
+          />
+        </div>
+        <p>{listStateMeta.title}</p>
+        <p className="text-xs text-white/25 leading-relaxed">{listStateMeta.description}</p>
       </div>
     );
   }
   return (
-    <div className="px-5 py-3 space-y-2">
+    <div aria-label={listStateMeta.ariaLabel} className="px-5 py-3 space-y-2">
       {skills.map((s) => (
         <div key={s.id} className="rounded-lg bg-white/[0.03] border border-white/[0.1] px-3 py-2.5 hover:bg-white/[0.06] transition-colors">
           <div className="flex items-start gap-2">
@@ -302,8 +419,17 @@ const SkillEditor: React.FC<{
   onCancel: () => void;
 }> = ({ draft, setDraft, saving, error, onSave, onCancel }) => {
   const triggerInput = draft.triggers.join(", ");
+  const editorFlow = getSkillEditorFlowSummary(draft);
+  const footerMeta = getSkillEditorFooterMeta(saving);
+
   return (
     <div className="px-5 py-4 space-y-3 bg-white/[0.01]">
+      <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2">
+        <ActionFlowBar
+          badges={editorFlow.badges}
+          helper={editorFlow.helper}
+        />
+      </div>
       <div>
         <label className="text-sm text-white/55 mb-1 block">이름 *</label>
         <Input
@@ -397,11 +523,12 @@ const SkillEditor: React.FC<{
         </div>
       )}
       <div className="flex items-center justify-end gap-2 pt-2 border-t border-white/8">
+        <span className="mr-auto text-xs text-white/35">{footerMeta.helper}</span>
         <Button size="sm" variant="outline" className="h-7 gap-1.5 text-xs border-white/[0.2] bg-white/[0.03] hover:bg-white/[0.08]" onClick={onCancel} disabled={saving}>
           <XIcon size={12} /> 취소
         </Button>
         <Button size="sm" className="h-7 gap-1.5 text-xs border border-accent/35 bg-accent/20 hover:bg-accent/30" onClick={onSave} disabled={saving}>
-          <Save size={12} /> {saving ? "저장 중…" : "저장"}
+          <Save size={12} /> {footerMeta.saveLabel}
         </Button>
       </div>
     </div>

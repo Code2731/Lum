@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { IconButton } from "@/components/ui/icon-button";
+import { StatusBadge } from "@/components/ui/status-badge";
 
 interface McpServerSpec {
   name: string;
@@ -45,6 +46,39 @@ interface Props {
   onClose: () => void;
 }
 
+export interface McpPanelFlowMeta {
+  badges: [string, string, string];
+  helper: string;
+}
+
+export function getMcpPanelFlowMeta(): McpPanelFlowMeta {
+  return {
+    badges: ["먼저 연결", "다음 도구 확인", "마지막 정리"],
+    helper: "서버를 켜고 도구 목록을 확인한 뒤, 필요 없는 연결만 정리합니다.",
+  };
+}
+
+export interface McpPanelEmptyMeta {
+  badges: [string, string, string];
+  title: string;
+  actionLabel: string;
+}
+
+export function getMcpPanelEmptyMeta(): McpPanelEmptyMeta {
+  return {
+    badges: ["추천 설치", "도구 시작", "바로 사용"],
+    title: "등록된 MCP 서버가 없습니다.",
+    actionLabel: "공식 프리셋 설치 (filesystem · playwright · git)",
+  };
+}
+
+export function getMcpServerDetailMeta(enabled: boolean): McpPanelFlowMeta {
+  return {
+    badges: ["현재 서버", enabled ? "활성 연결" : "연결 대기", "도구 확인"],
+    helper: "실행 명령과 도구 목록을 먼저 보고, 필요한 서버만 유지합니다.",
+  };
+}
+
 // 서버별 런타임 상태 (툴 목록·로딩·에러) — 3개 상태 객체를 하나로
 interface ServerRuntime {
   tools?: McpTool[];
@@ -61,6 +95,8 @@ const McpPanel: React.FC<Props> = ({ onClose }) => {
   const [recommended, setRecommended] = useState<McpRecommendedServer[]>([]);
   const [installingRecommended, setInstallingRecommended] = useState<string | null>(null);
   const [addForm, setAddForm] = useState<McpServerSpec | null>(null);
+  const flowMeta = getMcpPanelFlowMeta();
+  const emptyMeta = getMcpPanelEmptyMeta();
 
   const patchRuntime = (name: string, patch: Partial<ServerRuntime>) =>
     setRuntime((prev) => ({ ...prev, [name]: { ...prev[name], ...patch } }));
@@ -191,6 +227,16 @@ const McpPanel: React.FC<Props> = ({ onClose }) => {
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
+          <div className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2.5">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <StatusBadge tone="neutral">{flowMeta.badges[0]}</StatusBadge>
+              <StatusBadge tone="neutral">{flowMeta.badges[1]}</StatusBadge>
+              <StatusBadge tone="neutral">{flowMeta.badges[2]}</StatusBadge>
+              <span className="text-[10px] text-white/38">
+                {flowMeta.helper}
+              </span>
+            </div>
+          </div>
 
           {recommended.length > 0 && (
             <div className="p-3 rounded-lg border border-white/10 bg-white/[0.03] space-y-2.5">
@@ -250,14 +296,19 @@ const McpPanel: React.FC<Props> = ({ onClose }) => {
 
           {servers.length === 0 && !loadingList && (
             <div className="p-4 bg-white/[0.03] border border-white/[0.1] rounded-lg text-center space-y-2">
-              <p className="text-xs text-white/60">등록된 MCP 서버가 없습니다.</p>
+              <div className="flex flex-wrap items-center justify-center gap-1.5">
+                <StatusBadge tone="neutral">{emptyMeta.badges[0]}</StatusBadge>
+                <StatusBadge tone="neutral">{emptyMeta.badges[1]}</StatusBadge>
+                <StatusBadge tone="neutral">{emptyMeta.badges[2]}</StatusBadge>
+              </div>
+              <p className="text-xs text-white/60">{emptyMeta.title}</p>
               <button
                 onClick={installPresets}
                 disabled={installing}
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-accent/35 bg-accent/18 hover:bg-accent/30 text-accent text-sm transition-colors disabled:opacity-50"
               >
                 {installing ? <Loader2 size={11} className="animate-spin" /> : <Download size={11} />}
-                공식 프리셋 설치 (filesystem · playwright · git)
+                {emptyMeta.actionLabel}
               </button>
             </div>
           )}
@@ -307,6 +358,21 @@ const McpPanel: React.FC<Props> = ({ onClose }) => {
 
                 {isExpanded && (
                   <div className="border-t border-white/8 p-3 space-y-2 bg-black/12">
+                    {(() => {
+                      const detailMeta = getMcpServerDetailMeta(s.enabled);
+                      return (
+                    <div className="flex flex-wrap items-center gap-1.5 rounded-xl border border-white/8 bg-white/[0.03] px-2 py-1.5">
+                      <StatusBadge tone="neutral">{detailMeta.badges[0]}</StatusBadge>
+                      <StatusBadge tone={s.enabled ? "cyan" : "neutral"}>
+                        {detailMeta.badges[1]}
+                      </StatusBadge>
+                      <StatusBadge tone="neutral">{detailMeta.badges[2]}</StatusBadge>
+                      <span className="text-[10px] text-white/38">
+                        {detailMeta.helper}
+                      </span>
+                    </div>
+                      );
+                    })()}
                     <div className="font-mono text-xs text-white/40 break-all">
                       <span className="text-white/30">$ </span>
                       {s.command} {s.args.join(" ")}

@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { CheckCircle2, XCircle, Clock, ChevronDown, ChevronRight, Copy, TerminalSquare, Search, MoreHorizontal, Share2, RotateCcw } from "lucide-react";
+import { ActionFlowBar } from "@/components/ui/action-flow-bar";
 import { IconButton } from "@/components/ui/icon-button";
 import { tokenizeShell, TOKEN_COLORS } from "../utils/shellSyntax";
 import { isTextInputTarget } from "../utils/event";
@@ -352,12 +353,22 @@ const WarpListView: React.FC<Props> = ({
 
   if (blocks.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center h-full gap-3 text-white/20 select-none">
+      <section
+        className="flex h-full flex-col items-center justify-center gap-4 px-4 text-white/20 select-none"
+        aria-label="명령 블록 빈 상태"
+      >
         <TerminalSquare size={32} />
-        <p className="text-xs text-center leading-relaxed">
-          명령어를 실행하면<br />블록으로 표시됩니다.
-        </p>
-      </div>
+        <div className="max-w-sm space-y-3 text-center">
+          <p className="text-xs leading-relaxed">
+            명령어를 실행하면<br />블록으로 표시됩니다.
+          </p>
+          <ActionFlowBar
+            badges={["명령 실행", "블록 생성", "결과 검토"]}
+            helper="실패 블록은 검색, 재실행, 비교 흐름으로 바로 이어집니다."
+            tone="neutral"
+          />
+        </div>
+      </section>
     );
   }
 
@@ -1440,22 +1451,38 @@ const WarpListView: React.FC<Props> = ({
   ]);
 
   return (
-    <div className="p-3 space-y-1.5 overflow-y-auto h-full">
+    <section className="p-3 space-y-1.5 overflow-y-auto h-full" aria-label="명령 블록 리스트">
       <div className="sticky top-0 z-10 mb-2 rounded-xl border border-white/10 bg-[#0f151f]/92 backdrop-blur-sm p-2 space-y-2">
         <div className="flex items-center gap-2 px-1">
           <Search size={12} className="text-white/35 shrink-0" />
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
+            aria-label="블록 검색"
             placeholder="블록 검색 (명령/출력)"
             className="w-full bg-transparent border-none outline-none text-xs text-white/82 placeholder:text-white/30"
           />
         </div>
+        <ActionFlowBar
+          badges={[
+            query.trim() ? "검색 적용" : "전체 탐색",
+            statusFilter === "all" ? "상태 전체" : statusFilter === "failed" ? "실패 중심" : statusFilter === "success" ? "성공 중심" : "비교 중심",
+            filtered.length === blocks.length ? "전체 표시" : `${filtered.length}개 표시`,
+          ]}
+          helper="검색과 상태 필터를 조합해 원하는 블록만 빠르게 좁힐 수 있습니다."
+          tone={statusFilter === "failed" ? "amber" : "cyan"}
+        />
         <div className="flex items-center gap-1.5 px-1">
           <FilterChip active={statusFilter === "all"} onClick={() => setStatusFilter("all")} label={`전체 ${blocks.length}`} />
           <FilterChip active={statusFilter === "failed"} onClick={() => setStatusFilter("failed")} label={`실패 ${failedCount}`} tone="danger" />
           <FilterChip active={statusFilter === "success"} onClick={() => setStatusFilter("success")} label={`성공 ${successCount}`} tone="success" />
           <FilterChip active={statusFilter === "compared"} onClick={() => setStatusFilter("compared")} label={`비교 ${comparedCount}`} title="Cmd/Ctrl+Shift+C" tone="info" />
+          <span
+            className="text-xs px-2 py-0.5 rounded border border-white/10 bg-white/[0.04] text-white/60 tabular-nums"
+            title="현재 필터 기준으로 표시 중인 블록 수"
+          >
+            표시 {filtered.length}/{blocks.length}
+          </span>
           {comparedCount > 0 && (
             <>
               <span
@@ -2738,7 +2765,7 @@ const WarpListView: React.FC<Props> = ({
           </div>
         );
       })}
-    </div>
+    </section>
   );
 };
 

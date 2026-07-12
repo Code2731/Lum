@@ -20,7 +20,32 @@ import type { useTerminalTheme } from "../hooks/useTerminalTheme";
 import type { useWorkspace, Workspace } from "../hooks/useWorkspace";
 import type { useQuickActions } from "../hooks/useQuickActions";
 import type { Tab, SshProfile, TabColor } from "../hooks/useTabManager";
+import { ActionFlowBar } from "./ui/action-flow-bar";
 import { focusMainInput } from "@/utils/focus";
+
+export interface AppOverlaysFlowSummary {
+  badges: [string, string, string];
+  helper: string;
+}
+
+export function getAppOverlaysFlowSummary(
+  openOverlayLabels: string[],
+): AppOverlaysFlowSummary | null {
+  if (openOverlayLabels.length === 0) {
+    return null;
+  }
+
+  return {
+    badges: [
+      `${openOverlayLabels.length}개 오버레이 열림`,
+      openOverlayLabels.length === 1
+        ? `${openOverlayLabels[0]} 확인`
+        : `${openOverlayLabels[0]} 외 ${openOverlayLabels.length - 1}개`,
+      "닫기 후 메인 입력 복귀",
+    ],
+    helper: "전역 패널을 닫으면 포커스가 메인 입력으로 돌아갑니다.",
+  };
+}
 
 const ReactAgentPanel = lazy(() => import("./ReactAgentPanel"));
 const ModelManager = lazy(() => import("./ModelManager"));
@@ -131,8 +156,47 @@ const AppOverlays: React.FC<Props> = ({
     restoreMainInputFocus();
   };
 
+  const openOverlayLabels = [
+    showModelManager && "모델",
+    showHistorySearch && "히스토리",
+    showCommitPanel && "커밋",
+    showXllmPanel && "xLLM",
+    showMcpPanel && "MCP",
+    showHealingDataset && "힐링 데이터셋",
+    showHistoryGraph && "히스토리 그래프",
+    showRecall && "리콜",
+    showSkills && "스킬",
+    showLoraForge && "LoRA Forge",
+    showSquadPanel && "Squad",
+    showDiffReview && "Diff 리뷰",
+    showThemePanel && "테마",
+    showWorkspace && "워크스페이스",
+    showOnboarding && "온보딩",
+    showPalette && "명령어 팔레트",
+    showSshModal && "SSH",
+    showWelcome && "웰컴",
+  ].filter(Boolean) as string[];
+  const hasOpenOverlays = openOverlayLabels.length > 0;
+  const overlayFlow = getAppOverlaysFlowSummary(openOverlayLabels);
+
   return (
     <>
+      <section
+        aria-label="전역 오버레이 상태"
+        aria-live="polite"
+        className="sr-only"
+      >
+        {hasOpenOverlays ? (
+          <ActionFlowBar
+            badges={overlayFlow!.badges}
+            helper={overlayFlow!.helper}
+            tone="cyan"
+          />
+        ) : (
+          <span>열린 전역 오버레이가 없습니다.</span>
+        )}
+      </section>
+
       {showModelManager && (
         <Suspense fallback={null}>
           <ModelManager onClose={() => closeWithFocus(() => setShowModelManager(false))} />

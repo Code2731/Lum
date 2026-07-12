@@ -3,6 +3,19 @@ import * as SelectPrimitive from "@radix-ui/react-select";
 import { Check, ChevronDown, ChevronUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+export interface SelectTriggerAccessibleText {
+  title?: string;
+}
+
+export function getSelectTriggerAccessibleText(input: {
+  title?: string;
+  ariaLabel?: string;
+}): SelectTriggerAccessibleText {
+  return {
+    title: input.title ?? input.ariaLabel,
+  };
+}
+
 const Select = SelectPrimitive.Root;
 const SelectGroup = SelectPrimitive.Group;
 const SelectValue = SelectPrimitive.Value;
@@ -10,23 +23,33 @@ const SelectValue = SelectPrimitive.Value;
 const SelectTrigger = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Trigger>,
   React.ComponentPropsWithoutRef<typeof SelectPrimitive.Trigger>
->(({ className, children, ...props }, ref) => (
-  <SelectPrimitive.Trigger
-    ref={ref}
-    className={cn(
-      "flex w-full items-center justify-between gap-2 rounded border border-white/10 bg-white/5 px-2.5 py-1.5 text-sm font-mono outline-none",
-      "focus:border-purple-400/50 disabled:cursor-not-allowed disabled:opacity-50",
-      "transition-colors [&>span]:line-clamp-1",
-      className,
-    )}
-    {...props}
-  >
-    {children}
-    <SelectPrimitive.Icon asChild>
-      <ChevronDown size={12} className="shrink-0 text-white/40" />
-    </SelectPrimitive.Icon>
-  </SelectPrimitive.Trigger>
-));
+>(({ className, children, title, ...props }, ref) => {
+  const accessibleText = getSelectTriggerAccessibleText({
+    title,
+    ariaLabel: props["aria-label"],
+  });
+
+  return (
+    <SelectPrimitive.Trigger
+      ref={ref}
+      className={cn(
+        "flex w-full items-center justify-between gap-2 rounded border border-white/10 bg-white/5 px-2.5 py-1.5 text-sm font-mono outline-none",
+        "focus:border-accent/50 focus-visible:ring-1 focus-visible:ring-ring",
+        "disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 disabled:bg-white/[0.03]",
+        "aria-[busy=true]:cursor-progress aria-[busy=true]:opacity-70",
+        "transition-colors [&>span]:line-clamp-1",
+        className,
+      )}
+      title={accessibleText.title}
+      {...props}
+    >
+      {children}
+      <SelectPrimitive.Icon asChild>
+        <ChevronDown size={12} className="shrink-0 text-white/40" />
+      </SelectPrimitive.Icon>
+    </SelectPrimitive.Trigger>
+  );
+});
 SelectTrigger.displayName = SelectPrimitive.Trigger.displayName;
 
 const SelectScrollUpButton = React.forwardRef<
@@ -110,7 +133,7 @@ const SelectItem = React.forwardRef<
     ref={ref}
     className={cn(
       "relative flex w-full cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm font-mono text-white/80 outline-none",
-      "focus:bg-white/8 focus:text-white data-[disabled]:pointer-events-none data-[disabled]:opacity-40",
+      "focus:bg-white/8 focus:text-white focus-visible:ring-1 focus-visible:ring-ring data-[disabled]:pointer-events-none data-[disabled]:opacity-40",
       className,
     )}
     {...props}

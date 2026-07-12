@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, act, waitFor } from "@testing-library/react";
-import { useAIChat } from "./useAIChat";
+import { getAIChatMeta, useAIChat } from "./useAIChat";
 
 const invokeMock = vi.fn();
 const listeners: Array<(event: { payload: string }) => void> = [];
@@ -37,6 +37,52 @@ beforeEach(() => {
       throw new Error("stream should be skipped when canceled before start");
     }
     return "";
+  });
+});
+
+describe("useAIChat helpers", () => {
+  it("대화 상태 메타를 idle/streaming/error 상태에 맞게 계산한다", () => {
+    expect(
+      getAIChatMeta({
+        messages: [],
+        streaming: false,
+        error: null,
+      }),
+    ).toEqual({
+      title: "AI 대화 대기 중",
+      badges: ["사용자 0개", "응답 0개", "첫 질문 대기"],
+      helper: "질문을 보내면 터미널 문맥, 첨부 파일, 최근 대화를 함께 반영해 응답합니다.",
+    });
+
+    expect(
+      getAIChatMeta({
+        messages: [
+          { id: "1", role: "user", content: "안녕", timestamp: 1 },
+          { id: "2", role: "assistant", content: "", timestamp: 2 },
+        ],
+        streaming: true,
+        error: null,
+      }),
+    ).toEqual({
+      title: "AI 응답 스트리밍 중",
+      badges: ["사용자 1개", "응답 1개", "실시간 응답 중"],
+      helper: "현재 대화 문맥을 유지한 채 AI 응답을 토큰 단위로 이어 받고 있습니다.",
+    });
+
+    expect(
+      getAIChatMeta({
+        messages: [
+          { id: "1", role: "user", content: "안녕", timestamp: 1 },
+          { id: "2", role: "assistant", content: "실패", timestamp: 2 },
+        ],
+        streaming: false,
+        error: "network error",
+      }),
+    ).toEqual({
+      title: "AI 대화 오류 상태",
+      badges: ["사용자 1개", "응답 1개", "오류 확인 필요"],
+      helper: "network error",
+    });
   });
 });
 

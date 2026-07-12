@@ -90,6 +90,37 @@ interface StatusEvent {
 const LIVE_LOG_CAP = 200;
 const AUTO_EVENT_CAP = 20;
 
+export interface LoraForgeMeta {
+  title: string;
+  badges: [string, string, string];
+  helper: string;
+}
+
+export function getLoraForgeMeta(input: {
+  runs: ForgeRun[];
+  autoStatus: AutoTrainStatus | null;
+  liveLogs: Record<string, string[]>;
+}): LoraForgeMeta {
+  const runCount = input.runs.length;
+  const runningCount = input.runs.filter((run) => run.status === "running").length;
+  const trackedLiveCount = Object.values(input.liveLogs).filter((lines) => lines.length > 0).length;
+  const blockedReason = input.autoStatus?.blocked_reason;
+
+  return {
+    title: runCount > 0 ? `LoRA 학습 run ${runCount}개` : "LoRA 학습 run이 없습니다",
+    badges: [
+      `실행 중 ${runningCount}개`,
+      blockedReason ? "자동 학습 대기" : "자동 학습 준비",
+      trackedLiveCount > 0 ? `라이브 로그 ${trackedLiveCount}개` : "라이브 로그 대기",
+    ],
+    helper: blockedReason
+      ? `자동 학습은 현재 ${blockedReason} 때문에 대기 중입니다. 수동 run은 바로 시작할 수 있습니다.`
+      : runCount > 0
+        ? "학습 run 상태와 라이브 로그를 보면서 수동/자동 학습 흐름을 함께 추적할 수 있습니다."
+        : "첫 학습 run을 시작하면 런타임, 자동 학습 상태, 라이브 로그를 여기서 함께 추적할 수 있습니다.",
+  };
+}
+
 export function useLoraForge() {
   const [runs, setRuns] = useState<ForgeRun[]>([]);
   const [runtimes, setRuntimes] = useState<RuntimeStatus | null>(null);

@@ -2,6 +2,7 @@ import React, { useState, useCallback, useRef, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { GitCommit, Loader2, Copy, Play, FolderOpen } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { ActionFlowBar } from "@/components/ui/action-flow-bar";
 import { IconButton } from "@/components/ui/icon-button";
 import { Textarea } from "@/components/ui/textarea";
 import { SMALL_ICON_SIZE } from "../constants/ui";
@@ -12,6 +13,45 @@ interface Props {
   onClose: () => void;
 }
 
+export interface CommitPanelFlowSummary {
+  badges: [string, string, string];
+  helper: string;
+}
+
+export function getCommitPanelInputFlowSummary(repoPath: string): CommitPanelFlowSummary {
+  const hasRepoPath = repoPath.trim().length > 0;
+
+  return {
+    badges: [
+      hasRepoPath ? "저장소 경로 입력됨" : "먼저 저장소 경로 확인",
+      "다음 커밋 메시지 생성",
+      "마지막 복사·실행",
+    ],
+    helper: hasRepoPath
+      ? "저장소 위치가 준비됐습니다. AI 메시지를 생성한 뒤 내용을 다듬어 복사하거나 바로 git commit으로 이어갈 수 있습니다."
+      : "저장소 위치를 먼저 확인하고 AI 메시지를 만든 뒤, 내용을 다듬어 복사하거나 바로 git commit으로 이어갑니다.",
+  };
+}
+
+export function getCommitPanelMessageFlowSummary(message: string): CommitPanelFlowSummary {
+  const lines = message
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+  const hasBody = lines.length > 1;
+
+  return {
+    badges: [
+      `생성 문구 ${lines.length || 1}줄`,
+      hasBody ? "다음 본문까지 검토" : "다음 제목 문구 수정",
+      "마지막 복사·실행",
+    ],
+    helper: hasBody
+      ? "생성된 제목과 본문을 먼저 읽고 필요한 문구를 수정한 뒤, 복사하거나 바로 커밋 명령으로 실행합니다."
+      : "생성된 커밋 제목을 확인했습니다. 필요하면 본문을 보강하거나 문구를 다듬은 뒤 복사 또는 실행으로 이어갑니다.",
+  };
+}
+
 const CommitPanel: React.FC<Props> = ({ model, onExecute, onClose }) => {
   const [repoPath, setRepoPath] = useState("");
   const [message, setMessage] = useState("");
@@ -19,6 +59,8 @@ const CommitPanel: React.FC<Props> = ({ model, onExecute, onClose }) => {
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const pathInputRef = useRef<HTMLInputElement>(null);
+  const inputFlow = getCommitPanelInputFlowSummary(repoPath);
+  const messageFlow = getCommitPanelMessageFlowSummary(message);
 
   function copyText(text: string) {
     navigator.clipboard?.writeText?.(text).catch(() => {});
@@ -75,6 +117,13 @@ const CommitPanel: React.FC<Props> = ({ model, onExecute, onClose }) => {
         </div>
 
         <div className="p-4 space-y-3">
+          <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5">
+            <ActionFlowBar
+              badges={inputFlow.badges}
+              helper={inputFlow.helper}
+              tone="neutral"
+            />
+          </div>
           {/* 저장소 경로 */}
           <div className="space-y-1">
             <label className="text-xs text-white/40 uppercase tracking-wider">
@@ -122,6 +171,7 @@ const CommitPanel: React.FC<Props> = ({ model, onExecute, onClose }) => {
               <span className="min-w-0 break-words flex-1">{error}</span>
               <IconButton
                 tooltip="오류 텍스트 복사"
+                description="현재 생성 실패 원인을 그대로 복사해 이슈 공유나 AI 재질문에 바로 붙여 넣을 수 있습니다."
                 onClick={() => copyText(error)}
                 className="p-1 rounded text-white/60 hover:text-white/85 hover:bg-red-500/20 transition-colors"
               >
@@ -136,6 +186,13 @@ const CommitPanel: React.FC<Props> = ({ model, onExecute, onClose }) => {
               <label className="text-xs text-white/40 uppercase tracking-wider">
                 AI 생성 메시지
               </label>
+              <div className="flex flex-wrap items-center gap-1.5 rounded-xl border border-white/8 bg-white/[0.03] px-2 py-1.5">
+                <ActionFlowBar
+                  badges={messageFlow.badges}
+                  helper={messageFlow.helper}
+                  tone="neutral"
+                />
+              </div>
               <Textarea
                 className="px-3 py-2 font-mono focus:border-accent/50"
                 rows={Math.min(message.split("\n").length + 2, 10)}

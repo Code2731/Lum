@@ -26,8 +26,15 @@ describe("EditBlockCard", () => {
     invokeMock.mockRejectedValueOnce({ message: "임베디드 모델이 로드되지 않았습니다" });
 
     render(<EditBlockCard block={block} cwd="/tmp" onOpenXllmPanel={onOpenXllmPanel} />);
+    expect(screen.getByText("1개 편집 블록 감지")).toBeInTheDocument();
+    expect(screen.getByText("src/main.ts")).toBeInTheDocument();
+    expect(screen.getByText("마지막 테스트·복구")).toBeInTheDocument();
+    expect(screen.getByText(/첫 번째 변경안을 바로 검토할 수 있습니다/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "적용" }));
 
+    expect(await screen.findByText("오류 확인")).toBeInTheDocument();
+    expect(screen.getByText("설정 점검")).toBeInTheDocument();
+    expect(screen.getByText("마지막 다시 적용")).toBeInTheDocument();
     fireEvent.click(await screen.findByLabelText("xLLM/모델 설정 열기"));
     expect(onOpenXllmPanel).toHaveBeenCalledTimes(1);
   });

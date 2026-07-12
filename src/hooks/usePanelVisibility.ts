@@ -1,5 +1,64 @@
 import { useState, useCallback } from "react";
 
+export interface PanelVisibilitySnapshot {
+  showModelManager: boolean;
+  showRagPanel: boolean;
+  showHistorySearch: boolean;
+  showCommitPanel: boolean;
+  showXllmPanel: boolean;
+  showDiffReview: boolean;
+  showThemePanel: boolean;
+  showWorkspace: boolean;
+  showScriptPanel: boolean;
+  showSysmon: boolean;
+  showNotifCenter: boolean;
+  showMcpPanel: boolean;
+  showPalette: boolean;
+  showSshModal: boolean;
+  showSquadPanel: boolean;
+  showHealingDataset: boolean;
+  showRecall: boolean;
+  showHistoryGraph: boolean;
+  showLoraForge: boolean;
+  showSkills: boolean;
+}
+
+export interface PanelVisibilityMeta {
+  title: string;
+  badges: [string, string, string];
+  helper: string;
+}
+
+export function getPanelVisibilityMeta(snapshot: PanelVisibilitySnapshot): PanelVisibilityMeta {
+  const entries = Object.entries(snapshot) as Array<[keyof PanelVisibilitySnapshot, boolean]>;
+  const openEntries = entries.filter(([, open]) => open);
+  const overlayKeys: Array<keyof PanelVisibilitySnapshot> = [
+    "showWorkspace",
+    "showHistorySearch",
+    "showDiffReview",
+    "showPalette",
+    "showSshModal",
+    "showSquadPanel",
+    "showHealingDataset",
+    "showRecall",
+    "showLoraForge",
+    "showSkills",
+  ];
+  const openOverlayCount = overlayKeys.filter((key) => snapshot[key]).length;
+
+  return {
+    title: openEntries.length > 0 ? `열린 패널 ${openEntries.length}개` : "열린 패널이 없습니다",
+    badges: [
+      `전체 ${entries.length}개`,
+      `열림 ${openEntries.length}개`,
+      openOverlayCount > 0 ? `오버레이 ${openOverlayCount}개` : "오버레이 없음",
+    ],
+    helper: openEntries.length > 0
+      ? "현재 열린 보조 패널과 오버레이 흐름을 기준으로 작업 문맥을 전환하거나 정리할 수 있습니다."
+      : "필요한 보조 패널을 열면 모델, 검색, 워크스페이스, 자동화 흐름으로 바로 이동할 수 있습니다.",
+  };
+}
+
 export function usePanelVisibility() {
   const [showModelManager, setShowModelManager] = useState(false);
   const [showRagPanel, setShowRagPanel] = useState(false);

@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { parseToolCalls, hasToolCalls } from "./toolCallParser";
+import {
+  parseToolCalls,
+  hasToolCalls,
+  getToolCallParseFlowSummary,
+} from "./toolCallParser";
 
 describe("parseToolCalls", () => {
   it("단일 self-closing 태그", () => {
@@ -96,5 +100,50 @@ describe("hasToolCalls", () => {
   it("태그 없으면 false", () => {
     expect(hasToolCalls("plain text")).toBe(false);
     expect(hasToolCalls("<tool_use server=\"x\">")).toBe(false); // 자기 닫기 안 한 태그는 불완전
+  });
+});
+
+describe("getToolCallParseFlowSummary", () => {
+  it("태그가 없으면 일반 응답 상태를 반환한다", () => {
+    expect(getToolCallParseFlowSummary("plain text")).toEqual({
+      primary: "툴 호출 없음",
+      secondary: "일반 응답 유지",
+      detail: "tool_use 태그가 없어 텍스트 응답만 표시합니다.",
+    });
+  });
+
+  it("태그는 있지만 필수 속성이 없으면 확인 필요 상태를 반환한다", () => {
+    expect(getToolCallParseFlowSummary(`<tool_use name="open" />`)).toEqual({
+      primary: "툴 호출 확인 필요",
+      secondary: "필수 속성 누락",
+      detail: "tool_use 태그는 있지만 server 또는 name 속성이 비어 있습니다.",
+    });
+  });
+
+  it("단일 툴 호출은 첫 호출 요약을 반환한다", () => {
+    expect(
+      getToolCallParseFlowSummary(
+        `<tool_use server="playwright" name="screenshot" args='{}' />`,
+      ),
+    ).toEqual({
+      primary: "1개 툴 호출 감지",
+      secondary: "playwright/screenshot",
+      detail: "첫 번째 툴 호출을 바로 검토할 수 있습니다.",
+    });
+  });
+
+  it("복수 툴 호출은 개수와 첫 호출을 함께 반환한다", () => {
+    expect(
+      getToolCallParseFlowSummary(
+        [
+          `<tool_use server="fs" name="read" args='{}' />`,
+          `<tool_use server="git" name="status" args='{}' />`,
+        ].join("\n"),
+      ),
+    ).toEqual({
+      primary: "2개 툴 호출 감지",
+      secondary: "fs/read",
+      detail: "첫 호출 포함 2개 순서대로 검토할 수 있습니다.",
+    });
   });
 });

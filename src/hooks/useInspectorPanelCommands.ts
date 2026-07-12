@@ -65,6 +65,32 @@ interface UseInspectorPanelCommandsResult {
   clearInspectorAnalyzeCache: () => void;
 }
 
+export interface InspectorPanelCommandsMeta {
+  title: string;
+  badges: [string, string, string];
+  helper: string;
+}
+
+export function getInspectorPanelCommandsMeta(input: {
+  failedBlockCount: number;
+  selectedBlockId: string | null;
+  inspectorAnalyzeCache: InspectorAnalyzeCache | null;
+  isInspectorCompact: boolean;
+}): InspectorPanelCommandsMeta {
+  const analyzeStatus = input.inspectorAnalyzeCache?.status ?? "idle";
+  return {
+    title: input.failedBlockCount > 0 ? `실패 블록 ${input.failedBlockCount}건` : "실패 블록 없음",
+    badges: [
+      input.selectedBlockId ? "선택 블록 있음" : "선택 블록 없음",
+      `분석 ${analyzeStatus}`,
+      input.isInspectorCompact ? "compact 메뉴" : "기본 메뉴",
+    ],
+    helper: input.failedBlockCount > 0
+      ? "실패 블록을 기준으로 분석 프롬프트 복사, AI 재질문, 추천 커맨드 적용 흐름을 이어갈 수 있습니다."
+      : "실패 블록이 생기면 인스펙터에서 분석과 복구 커맨드 흐름이 자동으로 열립니다.",
+  };
+}
+
 function summarizeAssistantResult(content: string, maxChars = 520): string {
   const normalized = content.replace(/\s+/g, " ").trim();
   if (!normalized) return "";

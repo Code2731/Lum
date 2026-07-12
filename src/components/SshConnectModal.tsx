@@ -4,12 +4,45 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import { ActionFlowBar } from "@/components/ui/action-flow-bar";
 import type { SshProfile } from "../hooks/useTabManager";
 import { useSshProfiles, type SshProfileEntry } from "../hooks/useSshProfiles";
 
 interface Props {
   onConnect: (profile: SshProfile) => void;
   onClose: () => void;
+}
+
+export interface SshConnectFlowSummary {
+  primary: string;
+  secondary: string;
+  detail: string;
+}
+
+export function getSshConnectFlowSummary(input: {
+  profileCount: number;
+  host: string;
+  username: string;
+  authType: "agent" | "key";
+}): SshConnectFlowSummary {
+  const trimmedHost = input.host.trim();
+  const trimmedUser = input.username.trim();
+
+  if (!trimmedHost && !trimmedUser) {
+    return {
+      primary: "SSH 연결 준비",
+      secondary: `저장 프로필 ${input.profileCount}개`,
+      detail: "저장된 프로필을 고르거나 호스트와 사용자명을 입력해 연결 흐름을 시작할 수 있습니다.",
+    };
+  }
+
+  const targetLabel =
+    trimmedHost && trimmedUser ? `${trimmedUser}@${trimmedHost}` : trimmedHost || trimmedUser;
+  return {
+    primary: "접속 정보 확인",
+    secondary: `${targetLabel} · ${input.authType === "key" ? "키 파일" : "에이전트"}`,
+    detail: "호스트, 사용자명, 인증 방식을 확인한 뒤 바로 SSH 연결을 시도할 수 있습니다.",
+  };
 }
 
 const SshConnectModal: React.FC<Props> = ({ onConnect, onClose }) => {
@@ -23,6 +56,12 @@ const SshConnectModal: React.FC<Props> = ({ onConnect, onClose }) => {
 
   const hostRef = useRef<HTMLInputElement>(null);
   const { profiles, save: saveToStore, remove } = useSshProfiles();
+  const flowSummary = getSshConnectFlowSummary({
+    profileCount: profiles.length,
+    host,
+    username,
+    authType,
+  });
 
   useEffect(() => { hostRef.current?.focus(); }, []);
 
@@ -64,8 +103,21 @@ const SshConnectModal: React.FC<Props> = ({ onConnect, onClose }) => {
           <DialogTitle className="text-sm font-semibold">SSH 연결</DialogTitle>
         </div>
 
+        <div className="px-5 py-2.5 border-b border-white/10 bg-white/[0.02]">
+          <ActionFlowBar
+            badges={[flowSummary.primary, flowSummary.secondary, "마지막 연결"]}
+            helper={flowSummary.detail}
+          />
+        </div>
+
         {profiles.length > 0 && (
           <div className="px-5 pt-4 space-y-1.5">
+            <div className="rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-2">
+              <ActionFlowBar
+                badges={["저장된 연결", "한 번 클릭 채우기", "필요 시 삭제"]}
+                helper="자주 쓰는 SSH 대상은 한 번 눌러 입력칸을 채우고, 오래된 프로필만 정리합니다."
+              />
+            </div>
             <p className="text-xs text-white/40 uppercase tracking-wider flex items-center gap-1">
               <Bookmark size={9} />
               저장된 프로필

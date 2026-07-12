@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
-import { useReactAgent, type ReactStep } from "./useReactAgent";
+import { getReactAgentMeta, useReactAgent, type ReactStep } from "./useReactAgent";
 
 const invokeMock = vi.fn();
 const listeners: Array<(event: { payload: ReactStep }) => void> = [];
@@ -57,6 +57,50 @@ describe("useReactAgent — Phase 129 Plan/Act", () => {
       if (cmd === "react_agent_cancel") return;
       if (cmd === "react_agent_undo") return { restored: [], removed: [], errors: [] };
       return;
+    });
+  });
+
+  it("idle/실행 상태를 메타로 요약한다", () => {
+    expect(getReactAgentMeta({
+      status: "idle",
+      mode: "plan",
+      goal: "",
+      cwd: "",
+      planId: null,
+      backend: null,
+      model: null,
+      plannedTools: [],
+      steps: [],
+      answer: "",
+      changes: [],
+      undoing: false,
+      undoReport: null,
+    })).toEqual({
+      title: "React Agent 대기 중",
+      badges: ["먼저 goal 입력", "다음 계획/실행", "마지막 변경 검토"],
+      helper: "코드 작업 goal을 시작하면 계획 수립, 실행, 변경 검토, 되돌리기 흐름으로 이어집니다.",
+    });
+
+    expect(getReactAgentMeta({
+      status: "running",
+      mode: "act",
+      goal: "버그 수정",
+      cwd: "/tmp/lum",
+      planId: "plan-1",
+      backend: null,
+      model: null,
+      plannedTools: ["read_file"],
+      steps: [{ kind: "action", content: "run", tool: "shell" }],
+      answer: "",
+      changes: [
+        { path: "/tmp/lum/a.ts", rel_path: "a.ts", kind: "modified", risk: "medium" },
+      ],
+      undoing: false,
+      undoReport: null,
+    })).toEqual({
+      title: "React Agent running",
+      badges: ["모드 act", "스텝 1개", "변경 1개"],
+      helper: "계획, 실행, 변경 추적 결과를 바탕으로 다음 승인이나 되돌리기 결정을 이어갈 수 있습니다.",
     });
   });
 

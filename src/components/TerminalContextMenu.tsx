@@ -1,7 +1,8 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Copy, Play, Search, ExternalLink, Sparkles } from "lucide-react";
-import { isPointerOutsideTargets } from "../utils/pointerGuard";
+import { getPointerContainmentFlowSummary, isPointerOutsideTargets } from "../utils/pointerGuard";
+import { ActionFlowBar } from "@/components/ui/action-flow-bar";
 
 interface Props {
   x: number;
@@ -45,6 +46,10 @@ const TerminalContextMenu: React.FC<Props> = ({
   const [isReady, setIsReady] = useState(false);
   const fallbackHeight = isPathOrUrl ? MENU_FALLBACK_HEIGHT_WITH_LINK : MENU_FALLBACK_HEIGHT_WITHOUT_LINK;
   const [position, setPosition] = useState(() => clampMenuPos(x, y, MENU_WIDTH, fallbackHeight));
+  const pointerSummary = getPointerContainmentFlowSummary({
+    inside: true,
+    targetCount: 1,
+  });
 
   const menuItems = [
     { label: "복사", shortcut: "Cmd/Ctrl+C", action: onCopy },
@@ -183,6 +188,17 @@ const TerminalContextMenu: React.FC<Props> = ({
       onContextMenu={(e) => e.preventDefault()}
       onKeyDown={handleMenuKeyDown}
     >
+      <div className="px-3 pt-3 pb-1.5">
+        <ActionFlowBar
+          badges={[pointerSummary.primary, "다음 실행·설명", isPathOrUrl ? "마지막 열기" : "마지막 검색"]}
+          helper={
+            isPathOrUrl
+              ? `${pointerSummary.detail} 선택한 텍스트를 먼저 확인하고, 실행이나 설명이 필요하면 처리한 뒤 경로나 링크는 바로 열 수 있습니다.`
+              : `${pointerSummary.detail} 선택한 텍스트를 먼저 확인하고, 실행할지 AI로 설명을 볼지 결정한 뒤 필요하면 웹에서 이어서 찾습니다.`
+          }
+        />
+      </div>
+
       {/* 선택 텍스트 미리보기 */}
       <div className="px-3 py-1.5 mb-0.5 border-b border-white/5">
         <p className="text-xs font-mono text-white/25 truncate">{preview}</p>
@@ -214,6 +230,10 @@ const TerminalContextMenu: React.FC<Props> = ({
             {entry.shortcut && <span className="text-white/20 text-xs shrink-0">{entry.shortcut}</span>}
           </button>
         ))}
+      </div>
+
+      <div className="px-3 py-1.5 mt-0.5 border-t border-white/5">
+        <p className="text-[11px] text-white/22">Esc로 닫기 · 방향키와 Enter로 선택</p>
       </div>
     </div>
   );

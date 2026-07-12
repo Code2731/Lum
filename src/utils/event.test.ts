@@ -222,4 +222,41 @@ describe("isTextInputTarget", () => {
     expect(isTextInputTarget(fileInput)).toBe(false);
     cleanup();
   });
+
+  it("inert 컨테이너 내부 요소는 텍스트 입력 대상으로 제외한다", () => {
+    const wrapper = document.createElement("div");
+    wrapper.setAttribute("inert", "");
+    const input = document.createElement("input");
+    input.type = "text";
+    wrapper.appendChild(input);
+    const cleanup = appendAndCleanup([wrapper]);
+
+    expect(isTextInputTarget(input)).toBe(false);
+    cleanup();
+  });
+
+  it("disabled fieldset 내부 입력은 텍스트 입력 대상으로 제외한다", () => {
+    const fieldset = document.createElement("fieldset");
+    fieldset.disabled = true;
+    const input = document.createElement("input");
+    input.type = "text";
+    fieldset.appendChild(input);
+    const cleanup = appendAndCleanup([fieldset]);
+
+    expect(isTextInputTarget(input)).toBe(false);
+    cleanup();
+  });
+
+  it("aria-readonly role=textbox는 텍스트 입력 대상으로 제외한다", () => {
+    const wrapper = document.createElement("div");
+    wrapper.setAttribute("role", "textbox");
+    wrapper.setAttribute("aria-readonly", "true");
+    const child = document.createElement("span");
+    wrapper.appendChild(child);
+    const cleanup = appendAndCleanup([wrapper]);
+
+    expect(isTextInputTarget(child)).toBe(false);
+    expect(isTextInputTarget(wrapper)).toBe(false);
+    cleanup();
+  });
 });

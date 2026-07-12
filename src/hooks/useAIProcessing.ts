@@ -4,6 +4,43 @@ import { listen } from "@tauri-apps/api/event";
 
 const XLLM_TOKEN_EVENT = "xllm_token";
 
+export type AIProcessingPhase = "idle" | "generating" | "analyzing" | "verifying" | "streaming";
+
+export interface AIProcessingPhaseMeta {
+  label: string;
+  description: string;
+}
+
+export function getAIProcessingPhaseMeta(phase: AIProcessingPhase): AIProcessingPhaseMeta {
+  switch (phase) {
+    case "generating":
+      return {
+        label: "명령 생성 중",
+        description: "프롬프트와 문맥을 바탕으로 다음 실행 제안을 만들고 있습니다.",
+      };
+    case "analyzing":
+      return {
+        label: "오류 분석 중",
+        description: "stderr와 실행 문맥을 바탕으로 원인과 복구 제안을 정리하고 있습니다.",
+      };
+    case "verifying":
+      return {
+        label: "화면 검증 중",
+        description: "현재 화면이 목표를 만족하는지 확인하고 다음 액션을 계산하고 있습니다.",
+      };
+    case "streaming":
+      return {
+        label: "응답 스트리밍 중",
+        description: "AI 응답을 토큰 단위로 받아 UI에 이어 붙이고 있습니다.",
+      };
+    default:
+      return {
+        label: "대기 중",
+        description: "다음 AI 작업을 바로 시작할 수 있는 상태입니다.",
+      };
+  }
+}
+
 function parseJsonResponse<T>(response: string, command: string): T {
   try {
     return JSON.parse(response) as T;
@@ -15,6 +52,7 @@ function parseJsonResponse<T>(response: string, command: string): T {
 
 export const useAIProcessing = () => {
   const [isProcessing, setIsProcessing] = useState(false);
+  const [phase, setPhase] = useState<AIProcessingPhase>("idle");
   const requestIdRef = useRef(0);
   const unlistenRef = useRef<(() => void) | null>(null);
   const isStreamingRef = useRef(false);
@@ -46,6 +84,7 @@ export const useAIProcessing = () => {
     imageData?: string | null,
   ) => {
     setIsProcessing(true);
+    setPhase("generating");
     try {
       const response = await invoke<string>("generate_ai_command", {
         prompt,
@@ -59,6 +98,7 @@ export const useAIProcessing = () => {
       throw e;
     } finally {
       setIsProcessing(false);
+      setPhase("idle");
     }
   }, []);
 
@@ -69,6 +109,7 @@ export const useAIProcessing = () => {
     context: string,
   ): Promise<{ analysis?: string; suggestion?: string } | null> => {
     setIsProcessing(true);
+    setPhase("analyzing");
     try {
       const response = await invoke<string>("analyze_error", {
         command,
@@ -82,6 +123,7 @@ export const useAIProcessing = () => {
       throw e;
     } finally {
       setIsProcessing(false);
+      setPhase("idle");
     }
   }, []);
 
@@ -91,10 +133,17 @@ export const useAIProcessing = () => {
     model: string,
     iteration: number,
   ) => {
-    return invoke<{ achieved: boolean; reason: string; nextActions: any[] }>(
-      "verify_vision_goal",
-      { goal, screenshotBase64, model, iteration },
-    );
+    setIsProcessing(true);
+    setPhase("verifying");
+    try {
+      return await invoke<{ achieved: boolean; reason: string; nextActions: any[] }>(
+        "verify_vision_goal",
+        { goal, screenshotBase64, model, iteration },
+      );
+    } finally {
+      setIsProcessing(false);
+      setPhase("idle");
+    }
   }, []);
 
   const streamAICommand = useCallback(async (
@@ -109,6 +158,7 @@ export const useAIProcessing = () => {
     const requestId = requestIdRef.current;
     isStreamingRef.current = true;
     setIsProcessing(true);
+    setPhase("streaming");
     let accumulated = "";
 
     const unlisten = await listen<string>(XLLM_TOKEN_EVENT, (event) => {
@@ -129,6 +179,7 @@ export const useAIProcessing = () => {
         clearCurrentStreamListener();
         isStreamingRef.current = false;
         setIsProcessing(false);
+        setPhase("idle");
       }
     }
   }, [clearCurrentStreamListener]);
@@ -139,10 +190,12 @@ export const useAIProcessing = () => {
     invoke("cancel_ai_stream").catch(() => {});
     isStreamingRef.current = false;
     setIsProcessing(false);
+    setPhase("idle");
   }, [clearCurrentStreamListener]);
 
   return {
     isProcessing,
+    phase,
     processAICommand,
     analyzeError,
     verifyVisionGoal,

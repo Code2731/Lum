@@ -13,8 +13,26 @@ export interface UpdateProgress {
   total: number;
 }
 
+export interface UpdateProgressMeta {
+  percent: number;
+  label: string;
+}
+
+export function getUpdateProgressMeta(progress: UpdateProgress | null): UpdateProgressMeta | null {
+  if (!progress || progress.total <= 0) {
+    return null;
+  }
+  const percent = Math.max(0, Math.min(100, Math.round((progress.downloaded / progress.total) * 100)));
+  return {
+    percent,
+    label: `${percent}% · ${progress.downloaded}/${progress.total}`,
+  };
+}
+
 export function useUpdateCheck() {
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
+  const [checking, setChecking] = useState(true);
+  const [checkError, setCheckError] = useState<string | null>(null);
   const [installing, setInstalling] = useState(false);
   const [progress, setProgress] = useState<UpdateProgress | null>(null);
   const [installError, setInstallError] = useState<string | null>(null);
@@ -32,7 +50,12 @@ export function useUpdateCheck() {
           });
         }
       })
-      .catch(() => {});
+      .catch((error) => {
+        setCheckError(String(error));
+      })
+      .finally(() => {
+        setChecking(false);
+      });
   }, []);
 
   // 다운로드 진행률 이벤트 수신 — 설치 중일 때만 구독
@@ -60,12 +83,15 @@ export function useUpdateCheck() {
 
   return {
     updateInfo,
+    checking,
+    checkError,
     installing,
     progress,
     installError,
     installUpdate,
     dismissUpdate: () => {
       setUpdateInfo(null);
+      setCheckError(null);
       setInstallError(null);
     },
   };

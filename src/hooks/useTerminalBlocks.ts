@@ -24,6 +24,29 @@ export interface TerminalBlock {
   links: string[]; // 연결된 다른 블록의 ID 리스트
 }
 
+export interface TerminalBlocksMeta {
+  title: string;
+  badges: [string, string, string];
+  helper: string;
+}
+
+export function getTerminalBlocksMeta(blocks: TerminalBlock[]): TerminalBlocksMeta {
+  const total = blocks.length;
+  const executing = blocks.filter((block) => block.status === "executing").length;
+  const last = blocks[blocks.length - 1];
+  const lastLabel = last
+    ? `최근 ${last.status}`
+    : "최근 블록 대기";
+
+  return {
+    title: total > 0 ? `터미널 블록 ${total}개` : "터미널 블록이 없습니다",
+    badges: [`전체 ${total}개`, `실행 중 ${executing}개`, lastLabel],
+    helper: total > 0
+      ? "실행 블록, AI 블록, 리뷰 블록 흐름을 같은 캔버스에서 이어 보며 이동과 연결을 관리할 수 있습니다."
+      : "명령 실행이나 AI 응답이 시작되면 블록이 쌓이고 이후 캔버스에서 관계를 정리할 수 있습니다.",
+  };
+}
+
 export const useTerminalBlocks = () => {
   const [blocks, setBlocks] = useState<TerminalBlock[]>([]);
   const [activeTab, setActiveTab] = useState<string>("default");

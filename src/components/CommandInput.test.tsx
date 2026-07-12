@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, act } from "@testing-library/react";
 import CommandInput from "./CommandInput";
+import { getCommandInputRouteFlowSummary } from "./CommandInput";
 
 type WriteSpy = ReturnType<typeof vi.fn>;
 
@@ -99,11 +100,28 @@ describe("CommandInput Component", () => {
     });
   });
 
+  it("입력 모드별 하단 안내 요약을 계산해야 함", () => {
+    expect(getCommandInputRouteFlowSummary(false)).toEqual({
+      badges: ["현재 셸", "Enter 실행", "/ 로 AI"],
+      helper: "명령어를 적고 Enter로 실행하거나, /로 시작해 AI 질문으로 전환합니다.",
+    });
+
+    expect(getCommandInputRouteFlowSummary(true)).toEqual({
+      badges: ["현재 AI", "Enter 질문", "/ 지우면 셸"],
+      helper: "AI로 보낼 질문을 적고 Enter로 바로 이어갑니다.",
+    });
+  });
+
   it("기본적으로 셸 모드로 렌더링되어야 함", () => {
     render(<CommandInput {...defaultProps} />);
     // 셸 프롬프트 '$'가 렌더링되어야 함
     expect(screen.getByText("$")).toBeInTheDocument();
     expect(screen.getByText("main")).toBeInTheDocument();
+    expect(screen.getByText("현재 셸")).toBeInTheDocument();
+    expect(screen.getByText("Enter 실행")).toBeInTheDocument();
+    expect(screen.getByText("/ 로 AI")).toBeInTheDocument();
+    expect(screen.getByText("명령어를 적고 Enter로 실행하거나, /로 시작해 AI 질문으로 전환합니다.")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("명령어를 입력하거나 /로 AI 질문을 시작하세요...")).toBeInTheDocument();
   });
 
   it("/ 입력 시 AI 모드로 전환되어야 함", () => {
@@ -114,6 +132,10 @@ describe("CommandInput Component", () => {
 
     // AI 모델 뱃지가 나타나야 함
     expect(screen.getByText(/AI · llama3/i)).toBeInTheDocument();
+    expect(screen.getByText("현재 AI")).toBeInTheDocument();
+    expect(screen.getByText("Enter 질문")).toBeInTheDocument();
+    expect(screen.getByText("/ 지우면 셸")).toBeInTheDocument();
+    expect(screen.getByText("AI로 보낼 질문을 적고 Enter로 바로 이어갑니다.")).toBeInTheDocument();
     // placeholder가 AI 모드용으로 변경되어야 함
     expect(input).toHaveAttribute("placeholder", "AI에게 질문하세요...");
   });

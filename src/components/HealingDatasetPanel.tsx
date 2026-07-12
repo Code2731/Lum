@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete";
 import { Button } from "@/components/ui/button";
 import { IconButton } from "@/components/ui/icon-button";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { fmtShortDate } from "../utils";
 
 type SafetyLevel = "Safe" | "Warning" | "Dangerous" | "Blocked";
@@ -27,6 +28,32 @@ interface HealingRecord {
 
 interface Props {
   onClose: () => void;
+}
+
+export interface HealingDatasetFlowMeta {
+  badges: [string, string, string];
+  helper: string;
+}
+
+export function getHealingDatasetFlowMeta(): HealingDatasetFlowMeta {
+  return {
+    badges: ["먼저 검토", "다음 사유 확인", "마지막 export 정리"],
+    helper: "승인·거부 기록을 먼저 보고, reject 사유를 확인한 뒤 학습용으로 내보내거나 정리합니다.",
+  };
+}
+
+export interface HealingDatasetEmptyMeta {
+  badges: [string, string, string];
+  title: string;
+  description: string;
+}
+
+export function getHealingDatasetEmptyMeta(): HealingDatasetEmptyMeta {
+  return {
+    badges: ["제안 대기", "승인·거부 누적", "학습 준비"],
+    title: "아직 수집된 결정이 없습니다.",
+    description: "자동치유 제안을 승인/거부할 때마다 여기에 누적됩니다.",
+  };
 }
 
 const SAFETY_TONE: Record<SafetyLevel, string> = {
@@ -88,6 +115,8 @@ const HealingDatasetPanel: React.FC<Props> = ({ onClose }) => {
 
   const approveCount = records.filter((r) => r.decision === "approve").length;
   const rejectCount = records.length - approveCount;
+  const flowMeta = getHealingDatasetFlowMeta();
+  const emptyMeta = getHealingDatasetEmptyMeta();
 
   return (
     <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
@@ -99,6 +128,14 @@ const HealingDatasetPanel: React.FC<Props> = ({ onClose }) => {
         </div>
 
         <div className="px-5 py-3 border-b border-white/8 shrink-0 flex items-center gap-2 flex-wrap">
+          <div className="flex w-full flex-wrap items-center gap-1.5 rounded-xl border border-white/8 bg-white/[0.03] px-2.5 py-2">
+            <StatusBadge tone="neutral">{flowMeta.badges[0]}</StatusBadge>
+            <StatusBadge tone="neutral">{flowMeta.badges[1]}</StatusBadge>
+            <StatusBadge tone="neutral">{flowMeta.badges[2]}</StatusBadge>
+            <span className="text-[10px] text-white/38">
+              {flowMeta.helper}
+            </span>
+          </div>
           <div className="flex items-center gap-3 text-sm text-white/60">
             <span>총 <span className="tabular-nums text-white/85 font-semibold">{records.length}</span>개</span>
             <span className="flex items-center gap-1 text-emerald-300">
@@ -155,8 +192,13 @@ const HealingDatasetPanel: React.FC<Props> = ({ onClose }) => {
           {!loading && records.length === 0 && (
             <div className="text-center py-8 text-xs text-white/35 space-y-1.5">
               <Wrench size={20} className="mx-auto text-white/20" />
-              <p>아직 수집된 결정이 없습니다.</p>
-              <p className="text-xs text-white/25">자동치유 제안을 승인/거부할 때마다 여기에 누적됩니다.</p>
+              <div className="flex flex-wrap items-center justify-center gap-1.5">
+                <StatusBadge tone="neutral">{emptyMeta.badges[0]}</StatusBadge>
+                <StatusBadge tone="neutral">{emptyMeta.badges[1]}</StatusBadge>
+                <StatusBadge tone="neutral">{emptyMeta.badges[2]}</StatusBadge>
+              </div>
+              <p>{emptyMeta.title}</p>
+              <p className="text-xs text-white/25">{emptyMeta.description}</p>
             </div>
           )}
 

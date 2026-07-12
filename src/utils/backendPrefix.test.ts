@@ -3,6 +3,7 @@ import {
   applyBackendPrefixToInput,
   clearBackendPrefixFromInput,
   detectBackendPrefixFromInput,
+  getBackendPrefixFlowSummary,
   parseBackendPrefixFromInput,
   isBackendOnlyInput,
 } from "./backendPrefix";
@@ -257,5 +258,28 @@ describe("isBackendOnlyInput", () => {
     expect(isBackendOnlyInput("@ ")).toBe(false);
     expect(isBackendOnlyInput("@local!")).toBe(false);
     expect(isBackendOnlyInput("@xllm?")).toBe(false);
+  });
+});
+
+describe("getBackendPrefixFlowSummary", () => {
+  it("backend prefix가 없으면 자동 선택 흐름을 반환한다", () => {
+    expect(getBackendPrefixFlowSummary("로그 요약해줘")).toEqual({
+      badges: ["백엔드 미지정", "기본 라우팅", "자동 선택"],
+      helper: "입력에 backend prefix가 없어 기존 라우팅 규칙에 따라 로컬·외부 백엔드가 자동 선택됩니다.",
+    });
+  });
+
+  it("backend-only 입력은 대기 흐름을 반환한다", () => {
+    expect(getBackendPrefixFlowSummary("@local")).toEqual({
+      badges: ["@local", "백엔드만 지정", "다음 입력 대기"],
+      helper: "백엔드만 미리 고른 상태라 다음 질문이나 작업 지시가 들어오면 이 백엔드로 바로 이어집니다.",
+    });
+  });
+
+  it("backend+본문 입력은 강제 라우팅 흐름을 반환한다", () => {
+    expect(getBackendPrefixFlowSummary("@xllm src/utils.ts 수정")).toEqual({
+      badges: ["@xllm", "본문 포함", "강제 라우팅"],
+      helper: "backend prefix가 본문과 함께 있어 이번 입력은 지정한 백엔드로 바로 라우팅됩니다.",
+    });
   });
 });

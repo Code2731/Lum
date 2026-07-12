@@ -1,5 +1,6 @@
 import { Sparkles, Hash, HelpCircle, Search, GitBranch, FolderTree, Command } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { ActionFlowBar } from "@/components/ui/action-flow-bar";
 import { SMALL_ICON_SIZE } from "../constants/ui";
 
 interface Props {
@@ -15,13 +16,35 @@ const HINTS = [
   { icon: GitBranch,   keys: "Cmd/Ctrl+Shift+G", desc: "AI 커밋 메시지 생성" },
 ];
 
+export interface WelcomeHintsFlowSummary {
+  primary: string;
+  secondary: string;
+  detail: string;
+}
+
+export function getWelcomeHintsFlowSummary(hintCount: number): WelcomeHintsFlowSummary {
+  return {
+    primary: "시작 힌트 확인",
+    secondary: `${hintCount}개 단축키`,
+    detail: "AI 입력 방식과 핵심 단축키를 먼저 훑고, 탐색·검색 기능까지 익힌 뒤 바로 터미널 흐름을 시작할 수 있습니다.",
+  };
+}
+
 export default function WelcomeHints({ onClose }: Props) {
+  const flowSummary = getWelcomeHintsFlowSummary(HINTS.length);
   return (
     <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
       <DialogContent className="sm:max-w-[460px] gap-0 p-0 overflow-hidden border-white/10 rounded-xl bg-[#141824]">
         <div className="flex items-center gap-2 px-4 py-3 border-b border-white/8">
           <Sparkles size={14} className="text-accent" />
           <DialogTitle className="text-sm font-semibold text-white/90">LUM — AI 터미널 힌트</DialogTitle>
+        </div>
+
+        <div className="px-4 py-2.5 border-b border-white/10 bg-white/[0.02]">
+          <ActionFlowBar
+            badges={[flowSummary.primary, flowSummary.secondary, "마지막 바로 시작"]}
+            helper={flowSummary.detail}
+          />
         </div>
 
         <div className="px-4 py-4 space-y-2">
@@ -38,7 +61,13 @@ export default function WelcomeHints({ onClose }: Props) {
             </div>
           ))}
 
-          <div className="mt-3 pt-3 border-t border-white/5 text-xs text-white/40">
+          <div className="mt-3 pt-3 border-t border-white/5 text-xs text-white/40 space-y-2">
+            <div className="rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-2">
+              <ActionFlowBar
+                badges={["예시 확인", "바로 입력", "명령 초안 시작"]}
+                helper="예시 문장을 그대로 따라 입력해 보면 자연어에서 명령 초안으로 이어지는 흐름을 바로 체감할 수 있습니다."
+              />
+            </div>
             💡 자연어 예시: <code className="text-white/55">#현재 폴더의 큰 파일 찾기</code>
           </div>
         </div>

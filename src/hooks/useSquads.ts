@@ -14,6 +14,37 @@ export interface Squad {
   created_at: number;
 }
 
+export interface SquadsMeta {
+  title: string;
+  badges: [string, string, string];
+  helper: string;
+}
+
+export function getSquadsMeta(squads: Squad[], loading: boolean): SquadsMeta {
+  if (loading) {
+    return {
+      title: "Squad 작업공간 불러오는 중",
+      badges: ["먼저 분기 목록", "다음 worktree 상태", "마지막 병렬 작업 복귀"],
+      helper: "분기된 작업공간과 worktree 목록을 읽어 여러 작업을 병렬로 이어갈 준비를 하고 있습니다.",
+    };
+  }
+
+  const squadCount = squads.length;
+  const baseBranchCount = new Set(squads.map((squad) => squad.base_branch)).size;
+
+  return {
+    title: squadCount > 0 ? `Squad ${squadCount}개 준비됨` : "활성 Squad가 없습니다",
+    badges: [
+      `Squad ${squadCount}개`,
+      `기준 브랜치 ${baseBranchCount}개`,
+      squadCount > 0 ? "바로 분업 가능" : "새 Squad 생성",
+    ],
+    helper: squadCount > 0
+      ? "각 task를 분리된 worktree로 나눠 현재 작업을 끊지 않고 병렬로 진행할 수 있습니다."
+      : "복잡한 작업을 분리해야 할 때 Squad를 만들면 별도 worktree에서 동시에 진행할 수 있습니다.",
+  };
+}
+
 export function useSquads() {
   const [squads, setSquads] = useState<Squad[]>([]);
   const [loading, setLoading] = useState(false);

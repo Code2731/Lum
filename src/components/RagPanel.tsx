@@ -3,6 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { Search, FolderOpen, Loader2, Database, Share2, FileCode, X, Copy } from "lucide-react";
 import { IconButton } from "@/components/ui/icon-button";
+import { StatusBadge } from "@/components/ui/status-badge";
 
 interface SearchResult {
   content: string;
@@ -23,6 +24,32 @@ interface Props {
   model: string;
   onClose: () => void;
   compact?: boolean;
+}
+
+export interface RagPanelFlowMeta {
+  badges: [string, string, string];
+  helper: string;
+}
+
+export function getRagPanelFlowMeta(): RagPanelFlowMeta {
+  return {
+    badges: ["먼저 인덱싱", "다음 질의", "마지막 결과 확인"],
+    helper: "프로젝트를 먼저 읽어 두고, 질문을 던진 뒤 관련 코드 조각을 바로 확인합니다.",
+  };
+}
+
+export function getRagPanelIndexMeta(): RagPanelFlowMeta {
+  return {
+    badges: ["현재 경로", "인덱싱 실행", "오류 복사"],
+    helper: "경로를 확인하고 인덱싱한 뒤, 실패하면 오류를 복사해 바로 점검합니다.",
+  };
+}
+
+export function getRagPanelSearchMeta(): RagPanelFlowMeta {
+  return {
+    badges: ["먼저 질문", "다음 로컬 검색", "스웜 확장"],
+    helper: "질문을 입력하고 로컬에서 먼저 찾은 뒤, 필요하면 스웜으로 같은 질의를 넓힙니다.",
+  };
 }
 
 const RagPanel: React.FC<Props> = ({ model, onClose, compact = false }) => {
@@ -130,6 +157,9 @@ const RagPanel: React.FC<Props> = ({ model, onClose, compact = false }) => {
   const sectionGapClass = compact ? "space-y-1.5" : "space-y-2";
   const titleSizeClass = compact ? "text-xs" : "text-sm";
   const bodyInputTextClass = compact ? "text-xs" : "text-sm";
+  const flowMeta = getRagPanelFlowMeta();
+  const indexMeta = getRagPanelIndexMeta();
+  const searchMeta = getRagPanelSearchMeta();
 
   return (
     <div className={`lum-sidepanel flex flex-col h-full text-white ${panelTextClass}`}>
@@ -149,9 +179,28 @@ const RagPanel: React.FC<Props> = ({ model, onClose, compact = false }) => {
       </div>
 
       <div className={bodyPadClass}>
+        <div className="rounded-xl border border-white/8 bg-white/[0.03] px-2.5 py-2">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <StatusBadge tone="neutral">{flowMeta.badges[0]}</StatusBadge>
+            <StatusBadge tone="neutral">{flowMeta.badges[1]}</StatusBadge>
+            <StatusBadge tone="neutral">{flowMeta.badges[2]}</StatusBadge>
+            <span className="text-[10px] text-white/38">
+              {flowMeta.helper}
+            </span>
+          </div>
+        </div>
+
         {/* 인덱싱 섹션 */}
         <section className={sectionGapClass}>
           <p className="text-xs text-white/45 font-semibold uppercase tracking-wider">프로젝트 인덱싱</p>
+          <div className="flex flex-wrap items-center gap-1.5 rounded-xl border border-white/8 bg-white/[0.03] px-2 py-1.5">
+            <StatusBadge tone="neutral">{indexMeta.badges[0]}</StatusBadge>
+            <StatusBadge tone="neutral">{indexMeta.badges[1]}</StatusBadge>
+            <StatusBadge tone="neutral">{indexMeta.badges[2]}</StatusBadge>
+            <span className="text-[10px] text-white/38">
+              {indexMeta.helper}
+            </span>
+          </div>
           <div className="flex gap-2">
             <div className="relative flex-1">
               <FolderOpen size={11} className="absolute left-2 top-1/2 -translate-y-1/2 text-white/30" />
@@ -204,6 +253,14 @@ const RagPanel: React.FC<Props> = ({ model, onClose, compact = false }) => {
         {/* 검색 섹션 */}
         <section className={sectionGapClass}>
           <p className="text-xs text-white/45 font-semibold uppercase tracking-wider">코드베이스 검색</p>
+          <div className="flex flex-wrap items-center gap-1.5 rounded-xl border border-white/8 bg-white/[0.03] px-2 py-1.5">
+            <StatusBadge tone="neutral">{searchMeta.badges[0]}</StatusBadge>
+            <StatusBadge tone="neutral">{searchMeta.badges[1]}</StatusBadge>
+            <StatusBadge tone="neutral">{searchMeta.badges[2]}</StatusBadge>
+            <span className="text-[10px] text-white/38">
+              {searchMeta.helper}
+            </span>
+          </div>
           <div className="flex gap-2">
             <div className="relative flex-1">
               <Search size={11} className="absolute left-2 top-1/2 -translate-y-1/2 text-white/30" />
@@ -269,7 +326,14 @@ const RagPanel: React.FC<Props> = ({ model, onClose, compact = false }) => {
         )}
 
         {results.length === 0 && swarmResults.length === 0 && !isSearching && query && (
-          <p className="text-xs text-white/24 text-center py-4">검색 결과가 없습니다.</p>
+          <div className="py-4 text-center space-y-1.5">
+            <div className="flex flex-wrap items-center justify-center gap-1.5">
+              <StatusBadge tone="neutral">질문 조정</StatusBadge>
+              <StatusBadge tone="neutral">인덱스 확인</StatusBadge>
+              <StatusBadge tone="neutral">스웜 재시도</StatusBadge>
+            </div>
+            <p className="text-xs text-white/24">검색 결과가 없습니다.</p>
+          </div>
         )}
       </div>
     </div>

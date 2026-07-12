@@ -13,9 +13,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Slider } from "@/components/ui/slider";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { shortPath, parsePathComponents, parseLoadedKey } from "../utils";
 import { SMALL_ICON_SIZE } from "../constants/ui";
 import { isRoutingError } from "../utils/errorMessage";
+import { getVoiceHookDiagnosticsFlowSummary } from "../utils/voiceHookDiagnostics";
 
 interface AppConfig {
   coding_model?: string;
@@ -373,6 +375,16 @@ const XllmPanel: React.FC<Props> = ({ onClose }) => {
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-5">
+          <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <StatusBadge tone="neutral">먼저 연결</StatusBadge>
+              <StatusBadge tone="neutral">다음 저장</StatusBadge>
+              <StatusBadge tone="neutral">마지막 상태 확인</StatusBadge>
+              <span className="text-[10px] text-white/38">
+                로컬·원격 백엔드 설정을 고르고 저장한 뒤, 아래 섹션에서 실제 동작 상태를 확인합니다.
+              </span>
+            </div>
+          </div>
 
           {/* GPU 안전 모드 + VRAM Cap */}
           <section className="space-y-2">
@@ -609,6 +621,15 @@ const RecallBackendSection: React.FC = () => {
         </span>
       </div>
 
+      <div className="flex flex-wrap items-center gap-1.5 rounded-xl border border-emerald-400/16 bg-black/10 px-2 py-1.5">
+        <StatusBadge tone="neutral">먼저 선택</StatusBadge>
+        <StatusBadge tone="neutral">다음 저장</StatusBadge>
+        <StatusBadge tone="neutral">마지막 새로고침</StatusBadge>
+        <span className="text-[10px] text-emerald-100/58">
+          원하는 백엔드를 고르고 저장한 뒤, 실제 실행값이 어떻게 반영됐는지 확인합니다.
+        </span>
+      </div>
+
       <div className="space-y-1">
         <span className="text-xs text-white/35">백엔드 선택</span>
         <Select value={selected} onValueChange={setSelected} disabled={loading || saving}>
@@ -754,6 +775,14 @@ const OllamaSection: React.FC = () => {
           }}
           className="scale-75"
         />
+      </div>
+      <div className="flex flex-wrap items-center gap-1.5 rounded-xl border border-orange-400/14 bg-black/10 px-2 py-1.5">
+        <StatusBadge tone="neutral">먼저 URL 확인</StatusBadge>
+        <StatusBadge tone="neutral">다음 모델 선택</StatusBadge>
+        <StatusBadge tone="neutral">마지막 연결 저장</StatusBadge>
+        <span className="text-[10px] text-orange-100/58">
+          서버 주소를 확인하고 모델을 고른 뒤, 저장 후 온라인 상태를 다시 확인합니다.
+        </span>
       </div>
       <p className="text-xs text-white/40 leading-relaxed">
         {enabled
@@ -915,6 +944,15 @@ const LanDiscoverySection: React.FC = () => {
           {scanning ? <Loader2 size={11} className="animate-spin" /> : <RefreshCw size={11} />}
           {scanning ? "스캔 중…" : "검색"}
         </button>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-1.5 rounded-xl border border-cyan-400/14 bg-black/10 px-2 py-1.5">
+        <StatusBadge tone="neutral">먼저 검색</StatusBadge>
+        <StatusBadge tone="neutral">다음 서버 선택</StatusBadge>
+        <StatusBadge tone="neutral">마지막 적용</StatusBadge>
+        <span className="text-[10px] text-cyan-100/58">
+          같은 네트워크의 후보를 찾고, 원하는 서버를 고른 뒤 바로 현재 백엔드에 적용합니다.
+        </span>
       </div>
 
       {error && (
@@ -1089,6 +1127,22 @@ const VoiceHookDiagnosticsSection: React.FC = () => {
       : transcriptAgeMs < 1_000
         ? "방금 전"
         : `${Math.floor(transcriptAgeMs / 1000)}초 전`;
+  const voiceHookSummary = getVoiceHookDiagnosticsFlowSummary({
+    loading,
+    error,
+    info,
+    transcriptStale,
+    transcriptAgeLabel,
+    transcriptStaleWhileRecording,
+  });
+  const voiceHookSummaryTone =
+    voiceHookSummary.tone === "danger"
+      ? "text-rose-200 bg-rose-500/10 border-rose-400/25"
+      : voiceHookSummary.tone === "warning"
+        ? "text-amber-200 bg-amber-500/10 border-amber-400/25"
+        : voiceHookSummary.tone === "success"
+          ? "text-emerald-200 bg-emerald-500/10 border-emerald-400/25"
+          : "text-white/75 bg-white/5 border-white/10";
 
   return (
     <section className="space-y-2 border border-emerald-400/20 rounded-lg p-3 bg-emerald-400/5">
@@ -1105,6 +1159,18 @@ const VoiceHookDiagnosticsSection: React.FC = () => {
           {loading ? <Loader2 size={11} className="animate-spin" /> : <RefreshCw size={11} />}
           {loading ? "새로고침 중…" : "새로고침"}
         </button>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-1.5 rounded-xl border border-emerald-400/16 bg-black/10 px-2 py-1.5">
+        <StatusBadge tone="neutral">{voiceHookSummary.primary}</StatusBadge>
+        <span className={`text-xs px-1.5 py-0.5 rounded border ${voiceHookSummaryTone}`}>
+          {voiceHookSummary.secondary}
+        </span>
+        <StatusBadge tone="neutral">다음 파일 열기</StatusBadge>
+        <StatusBadge tone="neutral">마지막 복사·수정</StatusBadge>
+        <span className="text-[10px] text-emerald-100/58">
+          {voiceHookSummary.detail}
+        </span>
       </div>
 
       {error && (

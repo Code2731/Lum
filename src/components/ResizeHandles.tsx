@@ -3,12 +3,12 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import type React from "react";
 
 type ResizeDirection = "East" | "North" | "NorthEast" | "NorthWest" | "South" | "SouthEast" | "SouthWest" | "West";
-type Handle = { dir: ResizeDirection; style: React.CSSProperties };
+export type ResizeHandleMeta = { dir: ResizeDirection; style: React.CSSProperties };
 
 const EDGE = 5;
 const CORNER = 10;
 
-const HANDLES: Handle[] = [
+export const RESIZE_HANDLES: ResizeHandleMeta[] = [
   { dir: "North",     style: { top: 0,    left: CORNER,  right: CORNER,  height: EDGE,   cursor: "n-resize"  } },
   { dir: "South",     style: { bottom: 0, left: CORNER,  right: CORNER,  height: EDGE,   cursor: "s-resize"  } },
   { dir: "West",      style: { left: 0,   top: CORNER,   bottom: CORNER, width: EDGE,    cursor: "w-resize"  } },
@@ -19,7 +19,7 @@ const HANDLES: Handle[] = [
   { dir: "SouthEast", style: { bottom: 0, right: 0,      width: CORNER,  height: CORNER, cursor: "se-resize" } },
 ];
 
-const createResizeHandler = (dir: ResizeDirection) => (e: React.MouseEvent) => {
+export const createResizeHandler = (dir: ResizeDirection) => (e: React.MouseEvent) => {
   e.preventDefault();
   getCurrentWindow().startResizeDragging(dir).catch(() => {});
 };
@@ -41,9 +41,12 @@ export default function ResizeHandles() {
 
   return (
     <>
-      {HANDLES.map(({ dir, style }) => (
+      {RESIZE_HANDLES.map(({ dir, style }) => (
         <div
           key={dir}
+          aria-hidden="true"
+          data-resize-direction={dir}
+          tabIndex={-1}
           onMouseDown={handlers[dir]}
           style={{ position: "fixed", zIndex: 9999, ...style }}
         />

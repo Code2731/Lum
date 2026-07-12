@@ -59,11 +59,63 @@ body {
     linear-gradient(180deg, #0c1118 0%, #0d1117 58%, #090d13 100%);
   font-family: var(--font-ui);
   overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 #root {
   width: 100vw;
   height: 100vh;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+::selection {
+  background: rgba(88, 166, 255, 0.32);
+  color: #f0f6fc;
+}
+
+* {
+  scrollbar-color: rgba(121, 192, 255, 0.34) rgba(255, 255, 255, 0.05);
+  scrollbar-width: thin;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+*::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(121, 192, 255, 0.55), rgba(88, 166, 255, 0.32));
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, rgba(121, 192, 255, 0.72), rgba(88, 166, 255, 0.44));
+  background-clip: padding-box;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 /* 앱 프레임에 은은한 깊이감을 주는 배경 레이어 */

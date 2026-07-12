@@ -8,6 +8,8 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { ActionFlowBar } from "@/components/ui/action-flow-bar";
+import { getSmartPasteFlowSummary } from "../utils/smartPaste";
 
 interface Props {
   lines: string[];
@@ -23,6 +25,7 @@ const SmartPasteModal: React.FC<Props> = ({
 }) => {
   const [stepping, setStepping] = useState(false);
   const [currentIdx, setCurrentIdx] = useState(0);
+  const smartPasteSummary = getSmartPasteFlowSummary(rawText);
 
   const done = stepping && currentIdx >= lines.length;
 
@@ -31,6 +34,12 @@ const SmartPasteModal: React.FC<Props> = ({
       <DialogContent className="sm:max-w-lg gap-3 border-white/10">
         {!stepping && (
           <>
+            <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2">
+              <ActionFlowBar
+                badges={[smartPasteSummary.primary, smartPasteSummary.secondary, "마지막 붙여넣기 결정"]}
+                helper={`${smartPasteSummary.detail} 단계별 실행이나 한 번에 실행, 텍스트만 붙여넣기 중 하나를 선택합니다.`}
+              />
+            </div>
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2 text-base">
                 <Clipboard size={16} className="text-accent" />
@@ -76,6 +85,12 @@ const SmartPasteModal: React.FC<Props> = ({
 
         {stepping && !done && (
           <>
+            <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2">
+              <ActionFlowBar
+                badges={["현재 명령 확인", "다음 명령 미리보기", "마지막 실행·건너뛰기"]}
+                helper="현재 명령을 먼저 보고, 뒤에 이어질 명령을 확인한 뒤 실행하거나 건너뛰면서 진행합니다."
+              />
+            </div>
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2 text-base">
                 <Play size={14} className="text-accent" />
@@ -140,6 +155,12 @@ const SmartPasteModal: React.FC<Props> = ({
 
         {done && (
           <div className="py-4 flex flex-col items-center gap-3">
+            <div className="w-full rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2">
+              <ActionFlowBar
+                badges={["실행 완료", "결과 확인", "마지막 닫기"]}
+                helper="모든 명령 처리가 끝났으니 결과를 확인하고 이 모달을 닫아 현재 터미널 흐름으로 돌아갑니다."
+              />
+            </div>
             <span className="text-sm text-green-400 font-medium">✓ 모든 명령어 실행 완료</span>
             <Button size="sm" variant="secondary" onClick={onClose}>닫기</Button>
           </div>

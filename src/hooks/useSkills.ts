@@ -25,6 +25,37 @@ export type SkillDraft = Omit<
   id?: string;
 };
 
+export interface SkillsMeta {
+  title: string;
+  badges: [string, string, string];
+  helper: string;
+}
+
+export function getSkillsMeta(skills: Skill[], loading: boolean): SkillsMeta {
+  if (loading) {
+    return {
+      title: "스킬 라이브러리 불러오는 중",
+      badges: ["먼저 저장 스킬", "다음 트리거 연결", "마지막 ReAct 재사용"],
+      helper: "저장된 절차 스킬과 트리거 매칭 정보를 불러오고 있습니다.",
+    };
+  }
+
+  const skillCount = skills.length;
+  const triggerCount = skills.reduce((sum, skill) => sum + skill.triggers.length, 0);
+
+  return {
+    title: skillCount > 0 ? `스킬 ${skillCount}개 준비됨` : "저장된 스킬이 없습니다",
+    badges: [
+      `스킬 ${skillCount}개`,
+      `트리거 ${triggerCount}개`,
+      skillCount > 0 ? "즉시 재사용 가능" : "새 절차 저장",
+    ],
+    helper: skillCount > 0
+      ? "저장된 절차와 트리거를 기반으로 다음 ReAct 흐름에서 바로 재사용할 수 있습니다."
+      : "반복 작업 절차를 스킬로 저장해두면 다음부터는 자연어 goal과 자동으로 연결할 수 있습니다.",
+  };
+}
+
 export function useSkills() {
   const [skills, setSkills] = useState<Skill[]>([]);
   const [loading, setLoading] = useState(false);

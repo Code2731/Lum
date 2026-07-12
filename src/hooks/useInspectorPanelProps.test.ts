@@ -1,7 +1,7 @@
 import { renderHook } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { InspectorPanelProps, InspectorAnalyzeCache, InspectorTab, InspectorTabItem } from "../components/InspectorPanel/types";
-import { useInspectorPanelProps } from "./useInspectorPanelProps";
+import { getInspectorPanelPropsMeta, useInspectorPanelProps } from "./useInspectorPanelProps";
 
 const INSPECTOR_TABS: readonly InspectorTabItem[] = [
   { id: "summary", label: "개요", shortcut: "1" },
@@ -115,6 +115,29 @@ function createProps(overrides: Partial<InspectorPanelProps> = {}): InspectorPan
 }
 
 describe("useInspectorPanelProps", () => {
+  it("인스펙터 상위 props 상태를 메타로 요약한다", () => {
+    const props = createProps({
+      showInspector: true,
+      activeTabTitle: "Shell 1",
+      inspectorTab: "summary",
+      quickActionsExpanded: true,
+      failedBlocks: [
+        {
+          id: "fail-1",
+          command: "npm test",
+          exitCode: 1,
+          outputTail: "error",
+        },
+      ],
+    });
+
+    expect(getInspectorPanelPropsMeta(props)).toEqual({
+      title: "Shell 1 인스펙터",
+      badges: ["탭 summary", "실패 1개", "빠른 액션 펼침"],
+      helper: "현재 탭의 실패 블록, 최근 실행, 빠른 액션, 분석 흐름을 하나의 인스펙터 패널로 묶어 보여줍니다.",
+    });
+  });
+
   it("Data/Action 속성 이름을 정확히 InspectorPanelProps 형태로 조립한다", () => {
     const analyzeCache = createAnalyzeCache();
     const handlerOverrides = createHandlers();
@@ -203,6 +226,73 @@ describe("useInspectorPanelProps", () => {
     expect(result.current.onCompactMenuKeyDown).toBe(handlers.onCompactMenuKeyDown);
     expect(result.current.onOpenCompactMenu).toBe(handlers.onOpenCompactMenu);
     expect(result.current.activeTabChanged).toBe(2);
+  });
+
+  it("quickActionsExpanded 변경은 데이터 props만 갱신하고 액션 핸들러 레퍼런스는 유지한다", () => {
+    const handlers = createHandlers();
+    const base = createProps({
+      ...handlers,
+      quickActionsExpanded: false,
+    });
+
+    const { result, rerender } = renderHook((quickActionsExpanded: boolean) => {
+      return useInspectorPanelProps({
+        ...base,
+        quickActionsExpanded,
+      });
+    }, {
+      initialProps: false,
+    });
+
+    const before = result.current;
+    expect(before.quickActionsExpanded).toBe(false);
+
+    rerender(true);
+
+    expect(result.current.quickActionsExpanded).toBe(true);
+    expect(result.current.onQuickActionsToggle).toBe(handlers.onQuickActionsToggle);
+    expect(result.current.onQuickActionsToggleKeyDown).toBe(handlers.onQuickActionsToggleKeyDown);
+    expect(result.current.onQuickActionsAdvancedKeyDown).toBe(handlers.onQuickActionsAdvancedKeyDown);
+  });
+
+  it("scriptLibrary 참조 변경 시 최신 scriptLibrary만 갱신된다", () => {
+    const handlers = createHandlers();
+    const libraryA = createScriptLibrary();
+    const libraryB = createScriptLibrary();
+    libraryB.loading = true;
+    libraryB.scripts = [
+      {
+        id: "script-2",
+        name: "배포",
+        description: "배포 스크립트",
+        commands: ["npm run deploy"],
+        created_at: 2,
+      },
+    ];
+
+    const base = createProps({
+      ...handlers,
+      scriptLibrary: libraryA,
+    });
+
+    const { result, rerender } = renderHook((scriptLibrary: InspectorPanelProps["scriptLibrary"]) => {
+      return useInspectorPanelProps({
+        ...base,
+        scriptLibrary,
+      });
+    }, {
+      initialProps: libraryA,
+    });
+
+    expect(result.current.scriptLibrary).toBe(libraryA);
+    expect(result.current.onOpenWorkspace).toBe(handlers.onOpenWorkspace);
+
+    rerender(libraryB);
+
+    expect(result.current.scriptLibrary).toBe(libraryB);
+    expect(result.current.scriptLibrary.loading).toBe(true);
+    expect(result.current.scriptLibrary.scripts).toHaveLength(1);
+    expect(result.current.onOpenWorkspace).toBe(handlers.onOpenWorkspace);
   });
 
   it("inspectorDensity 변경 시 메뉴 인덱스 및 핸들러 전달이 유지된다", () => {

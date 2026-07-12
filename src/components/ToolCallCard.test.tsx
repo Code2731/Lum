@@ -26,6 +26,10 @@ describe("ToolCallCard", () => {
     invokeMock.mockResolvedValue("result text");
 
     render(<ToolCallCard call={mockCall} />);
+    expect(screen.getByText("1개 툴 호출 감지")).toBeInTheDocument();
+    expect(screen.getByText("filesystem/read_text_file")).toBeInTheDocument();
+    expect(screen.getByText("마지막 결과 후속조치")).toBeInTheDocument();
+    expect(screen.getByText(/첫 번째 툴 호출을 바로 검토할 수 있습니다/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "실행" }));
 
     await waitFor(() =>
@@ -36,6 +40,9 @@ describe("ToolCallCard", () => {
       }),
     );
     await waitFor(() => expect(screen.getByText("완료")).toBeInTheDocument());
+    expect(screen.getByText("결과 읽기")).toBeInTheDocument();
+    expect(screen.getByText("텍스트 블록 확인")).toBeInTheDocument();
+    expect(screen.getByText("마지막 AI 전달")).toBeInTheDocument();
     expect(screen.getByText("result text")).toBeInTheDocument();
   });
 
@@ -53,6 +60,9 @@ describe("ToolCallCard", () => {
         content.includes("해결: 백엔드 설정(모델/URL/API 키) 확인 후 다시 시도해 주세요."),
       ),
     ).toBeInTheDocument();
+    expect(screen.getByText("오류 확인")).toBeInTheDocument();
+    expect(screen.getByText("설정 복구")).toBeInTheDocument();
+    expect(screen.getByText("마지막 재실행")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "재실행" })).toBeInTheDocument();
   });
 

@@ -2,7 +2,9 @@ import React, { useState } from "react";
 import { Check, X, FileCode, Loader2, AlertTriangle, RefreshCw, Copy, Settings } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 import { IconButton } from "@/components/ui/icon-button";
+import { ActionFlowBar } from "@/components/ui/action-flow-bar";
 import type { EditBlock } from "../utils/editBlockParser";
+import { getEditBlockParseFlowSummary } from "../utils/editBlockParser";
 import TestResultCard from "./TestResultCard";
 import { SMALL_ICON_SIZE } from "../constants/ui";
 import { isRoutingError } from "../utils/errorMessage";
@@ -81,6 +83,9 @@ const EditBlockCard: React.FC<Props> = ({ block, cwd, onAskAIForFix, onOpenXllmP
   const [error, setError] = useState<string | null>(null);
   const [fuzzy, setFuzzy] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  const editBlockSummary = getEditBlockParseFlowSummary(
+    ["```", block.file, "<<<<<<< SEARCH", block.search, "=======", block.replace, ">>>>>>> REPLACE", "```"].join("\n"),
+  );
 
   const showRoutingErrorActions = isRoutingError(error);
 
@@ -114,6 +119,12 @@ const EditBlockCard: React.FC<Props> = ({ block, cwd, onAskAIForFix, onOpenXllmP
 
   return (
     <div className="my-2 rounded-lg border border-accent/20 bg-white/[0.02] overflow-hidden">
+      <div className="px-3 py-2 border-b border-accent/10 bg-white/[0.02]">
+        <ActionFlowBar
+          badges={[editBlockSummary.primary, editBlockSummary.secondary, "마지막 테스트·복구"]}
+          helper={`${editBlockSummary.detail} diff를 확인한 뒤 적용 후 테스트나 오류 복구 흐름으로 이어갑니다.`}
+        />
+      </div>
       <div className="flex items-center justify-between px-3 py-1.5 bg-accent/5 border-b border-accent/10">
         <div className="flex items-center gap-2 text-xs">
           <FileCode size={SMALL_ICON_SIZE} className="text-accent/70" />
@@ -131,26 +142,32 @@ const EditBlockCard: React.FC<Props> = ({ block, cwd, onAskAIForFix, onOpenXllmP
       </div>
 
       {error && (
-        <div className="px-3 py-1.5 text-sm text-red-400/80 border-b border-red-500/20 bg-red-500/5">
-          <div className="flex items-start justify-between gap-2">
-            <div className="break-all flex-1">{error}</div>
-            <div className="flex items-center gap-1 shrink-0">
-              {showRoutingErrorActions && onOpenXllmPanel && (
+        <div className="space-y-2 border-b border-red-500/20 bg-red-500/5 px-3 py-2">
+          <ActionFlowBar
+            badges={["오류 확인", "설정 점검", "마지막 다시 적용"]}
+            helper="적용 실패 원인을 먼저 읽고, 필요하면 설정을 점검한 뒤 다시 적용합니다."
+          />
+          <div className="text-sm text-red-400/80">
+            <div className="flex items-start justify-between gap-2">
+              <div className="break-all flex-1">{error}</div>
+              <div className="flex items-center gap-1 shrink-0">
+                {showRoutingErrorActions && onOpenXllmPanel && (
+                  <IconButton
+                    tooltip="xLLM/모델 설정 열기"
+                    onClick={onOpenXllmPanel}
+                    className="p-1 rounded text-red-200/85 hover:text-red-100 hover:bg-red-500/20 transition-colors"
+                  >
+                    <Settings size={12} />
+                  </IconButton>
+                )}
                 <IconButton
-                  tooltip="xLLM/모델 설정 열기"
-                  onClick={onOpenXllmPanel}
+                  tooltip="오류 텍스트 복사"
+                  onClick={handleCopyError}
                   className="p-1 rounded text-red-200/85 hover:text-red-100 hover:bg-red-500/20 transition-colors"
                 >
-                  <Settings size={12} />
+                  <Copy size={12} />
                 </IconButton>
-              )}
-              <IconButton
-                tooltip="오류 텍스트 복사"
-                onClick={handleCopyError}
-                className="p-1 rounded text-red-200/85 hover:text-red-100 hover:bg-red-500/20 transition-colors"
-              >
-                <Copy size={12} />
-              </IconButton>
+              </div>
             </div>
           </div>
         </div>

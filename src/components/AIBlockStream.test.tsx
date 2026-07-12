@@ -1,6 +1,9 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
-import AIBlockStream from "./AIBlockStream";
+import AIBlockStream, {
+  getAIBlockStreamErrorMeta,
+  getAIBlockStreamHeaderMeta,
+} from "./AIBlockStream";
 import type { ChatMessage } from "../hooks/useAIChat";
 
 const msg = (role: "user" | "assistant", content: string): ChatMessage => ({
@@ -11,6 +14,26 @@ const msg = (role: "user" | "assistant", content: string): ChatMessage => ({
 });
 
 describe("AIBlockStream", () => {
+  it("헤더 메타는 메시지 수와 스트리밍 상태를 함께 요약한다", () => {
+    expect(getAIBlockStreamHeaderMeta(2, false)).toEqual({
+      ariaLabel: "AI 대화 헤더 · 메시지 2개",
+      title: "AI 대화",
+      countLabel: "2개 메시지",
+      streamingLabel: null,
+    });
+    expect(getAIBlockStreamHeaderMeta(3, true)).toEqual({
+      ariaLabel: "AI 대화 헤더 · 메시지 3개 · 응답 생성 중",
+      title: "AI 대화",
+      countLabel: "3개 메시지",
+      streamingLabel: "응답 생성 중",
+    });
+  });
+
+  it("에러 메타는 라우팅 오류 여부에 따라 배너 라벨을 구분한다", () => {
+    expect(getAIBlockStreamErrorMeta("라우팅 실패", true).ariaLabel).toBe("라우팅 오류 배너 · 라우팅 실패");
+    expect(getAIBlockStreamErrorMeta("임시 에러", false).ariaLabel).toBe("AI 오류 배너 · 임시 에러");
+  });
+
   it("메시지 없고 에러 없으면 렌더링 안 됨", () => {
     const { container } = render(
       <AIBlockStream messages={[]} streaming={false} error={null} onClear={vi.fn()} onExecute={vi.fn()} />,
@@ -90,6 +113,7 @@ describe("AIBlockStream", () => {
       />,
     );
     expect(screen.getByText(/2개 메시지/)).toBeInTheDocument();
+    expect(screen.getByLabelText("AI 대화 헤더 · 메시지 2개")).toBeInTheDocument();
   });
 
   it("사용자 메시지와 AI 답변 모두 렌더링", () => {

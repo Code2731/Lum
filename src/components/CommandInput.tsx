@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { Zap, Mic, MicOff, Copy, RotateCcw, X } from "lucide-react";
+import { ActionFlowBar } from "@/components/ui/action-flow-bar";
 import { IconButton } from "@/components/ui/icon-button";
 import { shortPath } from "../utils";
 import Editor from "react-simple-code-editor";
@@ -15,6 +16,22 @@ interface Props {
   selectedModel: string;
   xllmOnline: boolean;
   context: { cwd: string; git_branch: string | null };
+}
+
+export function getCommandInputRouteFlowSummary(isAI: boolean): {
+  badges: [string, string, string];
+  helper: string;
+} {
+  return {
+    badges: [
+      isAI ? "현재 AI" : "현재 셸",
+      isAI ? "Enter 질문" : "Enter 실행",
+      isAI ? "/ 지우면 셸" : "/ 로 AI",
+    ],
+    helper: isAI
+      ? "AI로 보낼 질문을 적고 Enter로 바로 이어갑니다."
+      : "명령어를 적고 Enter로 실행하거나, /로 시작해 AI 질문으로 전환합니다.",
+  };
 }
 
 const VOICE_ERROR_FONT_SIZE = 11;
@@ -510,6 +527,7 @@ const CommandInput = ({
   const [showCompletions, setShowCompletions] = useState(false);
 
   const isAI = value.startsWith("/");
+  const routeFlow = getCommandInputRouteFlowSummary(isAI);
 
   // 고스트 텍스트 예측 (히스토리 기반)
   const ghostText = useMemo(() => {
@@ -733,6 +751,13 @@ const CommandInput = ({
         <div className="editor-header">
           <IconButton
             tooltip={`${micActionLabel} · ${micAssistLabel}`}
+            description={
+              !voiceEnabled
+                ? "현재 환경에서는 음성 입력을 사용할 수 없습니다. 마이크 권한과 지원 상태를 먼저 확인해 주세요."
+                : isRecording
+                  ? "지금 듣고 있는 음성을 멈추고, 인식된 텍스트를 현재 입력창에 그대로 남깁니다."
+                  : "마이크로 말한 내용을 현재 입력창에 바로 붙여 넣어, 명령어나 AI 질문 초안을 빠르게 시작합니다."
+            }
             className={`mic-btn lum-voice-mic-btn ${isRecording ? "active" : ""}`}
             onClick={handleMicToggle}
             disabled={!voiceEnabled || voiceBusy}
@@ -825,6 +850,13 @@ const CommandInput = ({
             </span>
           )}
         </div>
+        <div className="mx-2.5 mb-1">
+          <ActionFlowBar
+            badges={routeFlow.badges}
+            helper={routeFlow.helper}
+            tone={isAI ? "cyan" : "neutral"}
+          />
+        </div>
         {voiceError && (
           <div
             role="alert"
@@ -866,6 +898,7 @@ const CommandInput = ({
             >
               <IconButton
                 tooltip="복사"
+                description="현재 음성 입력 오류 문구를 그대로 복사해 이슈 공유나 권한 문제 확인에 바로 사용할 수 있습니다."
                 onClick={() => {
                   if (!voiceError) return;
                   navigator.clipboard?.writeText?.(`음성 오류: ${voiceError}`).catch(() => {});
@@ -876,6 +909,7 @@ const CommandInput = ({
               </IconButton>
               <IconButton
                 tooltip="다시 시도"
+                description="마이크 연결이나 권한 상태를 확인한 뒤, 같은 위치에서 음성 입력을 바로 다시 시작합니다."
                 onClick={handleMicToggle}
                 disabled={voiceBusy}
                 className="p-[3px] rounded text-red-300 hover:text-red-200 hover:bg-red-500/15 transition-colors shrink-0"
@@ -884,6 +918,7 @@ const CommandInput = ({
               </IconButton>
               <IconButton
                 tooltip="닫기"
+                description="현재 음성 오류 배너만 닫고, 입력창 내용과 다른 작업 상태는 그대로 유지합니다."
                 onClick={clearVoiceError}
                 className="p-[3px] rounded text-white/65 hover:text-white/80 hover:bg-white/5 transition-colors shrink-0"
               >
@@ -1681,7 +1716,7 @@ const CommandInput = ({
                 opacity: isVoiceProcessing ? 0.92 : 1,
               }}
               textareaId="command-editor-textarea"
-              placeholder={isAI ? "AI에게 질문하세요..." : ""}
+              placeholder={isAI ? "AI에게 질문하세요..." : "명령어를 입력하거나 /로 AI 질문을 시작하세요..."}
               autoFocus
               onCompositionStart={() => setIsComposing(true)}
               onCompositionEnd={() => setIsComposing(false)}

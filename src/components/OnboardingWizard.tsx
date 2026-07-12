@@ -9,6 +9,7 @@ import {
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { IconButton } from "@/components/ui/icon-button";
 import { SMALL_ICON_SIZE } from "../constants/ui";
+import { ActionFlowBar } from "@/components/ui/action-flow-bar";
 
 interface DownloadProgress {
   file: string;
@@ -17,7 +18,42 @@ interface DownloadProgress {
   done: boolean;
 }
 
+export interface OnboardingStepFlowSummary {
+  badges: [string, string, string];
+  helper: string;
+}
+
 const STEPS = ["시작", "하드웨어", "성능 모드", "xLLM 서버", "AI 모델", "완료"];
+const STEP_FLOW_META: readonly OnboardingStepFlowSummary[] = [
+  {
+    badges: ["먼저 소개 확인", "다음 환경 분석", "마지막 시작"],
+    helper: "LUM이 어떤 흐름으로 준비되는지 먼저 보고, 다음 단계에서 하드웨어와 실행 환경을 차례대로 확인합니다.",
+  },
+  {
+    badges: ["현재 장치 확인", "추천 모델 확인", "다음 성능 모드"],
+    helper: "하드웨어와 추천 모델을 먼저 읽고, 그 정보를 바탕으로 다음 단계에서 성능 모드를 정합니다.",
+  },
+  {
+    badges: ["안정성 선택", "VRAM 상한 확인", "다음 서버 연결"],
+    helper: "안정성과 성능의 균형을 먼저 정하고, VRAM 사용 상한을 확인한 뒤 서버 연결 단계로 넘어갑니다.",
+  },
+  {
+    badges: ["연결 상태 확인", "설치 가이드 확인", "다음 모델 준비"],
+    helper: "xLLM 연결 여부를 먼저 보고, 미연결이면 가이드를 확인한 뒤 모델 준비 단계로 이어갑니다.",
+  },
+  {
+    badges: ["모델 준비 확인", "다운로드 진행", "다음 사용 시작"],
+    helper: "추천 모델이 이미 있는지 먼저 확인하고, 없으면 다운로드를 시작한 뒤 바로 사용 단계로 넘어갑니다.",
+  },
+  {
+    badges: ["설정 완료", "단축키 확인", "터미널 시작"],
+    helper: "설정 결과와 핵심 단축키를 확인한 뒤 바로 터미널 작업을 시작합니다.",
+  },
+] as const;
+
+export function getOnboardingStepFlowSummary(step: number): OnboardingStepFlowSummary {
+  return STEP_FLOW_META[Math.max(0, Math.min(step, STEP_FLOW_META.length - 1))];
+}
 
 type SafetyMode = "safe" | "balanced" | "max";
 const MODE_META: Record<SafetyMode, { label: string; pct: number; desc: string; icon: React.ReactNode }> = {
@@ -118,6 +154,7 @@ const OnboardingWizard: React.FC<Props> = ({ onComplete }) => {
     dlProgress && dlProgress.total > 0
       ? Math.round((dlProgress.downloaded / dlProgress.total) * 100)
       : null;
+  const stepFlow = getOnboardingStepFlowSummary(step);
 
   return (
     <Dialog open onOpenChange={() => {}}>
@@ -141,6 +178,13 @@ const OnboardingWizard: React.FC<Props> = ({ onComplete }) => {
         <p className="px-6 pt-2 text-xs text-white/25 uppercase tracking-wider">
           {STEPS[step]}
         </p>
+
+        <div className="px-6 pt-3">
+          <ActionFlowBar
+            badges={stepFlow.badges}
+            helper={stepFlow.helper}
+          />
+        </div>
 
         <div className="px-6 pb-6 pt-3 min-h-[280px] flex flex-col gap-4">
           {/* ── Step 0: 환영 ── */}

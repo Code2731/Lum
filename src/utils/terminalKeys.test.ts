@@ -1,5 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { classifyTerminalKey } from "./terminalKeys";
+import {
+  classifyTerminalKey,
+  getTerminalKeyFlowSummary,
+} from "./terminalKeys";
 
 const k = (over: Partial<{ type: string; key: string; ctrlKey: boolean; metaKey: boolean; altKey: boolean }>) => ({
   type: "keydown",
@@ -93,6 +96,25 @@ describe("classifyTerminalKey", () => {
     });
     expect(classifyTerminalKey(k({ key: "x", ctrlKey: true }), "")).toEqual({
       kind: "passthrough",
+    });
+  });
+
+  it("키 분기별 흐름 요약을 반환한다", () => {
+    expect(getTerminalKeyFlowSummary("copy")).toEqual({
+      badges: ["선택 영역 있음", "복사 동작", "터미널 포커스 유지"],
+      helper: "선택된 출력이 있을 때만 복사로 전환하고, 그렇지 않으면 기본 Ctrl/Cmd+C 동작을 그대로 유지합니다.",
+    });
+    expect(getTerminalKeyFlowSummary("paste")).toEqual({
+      badges: ["붙여넣기 요청", "입력 전 검사", "PTY 전달"],
+      helper: "붙여넣기는 이후 위험도 검사나 Smart Paste 흐름을 거쳐 터미널 입력으로 전달됩니다.",
+    });
+    expect(getTerminalKeyFlowSummary("search")).toEqual({
+      badges: ["검색 열기", "출력 탐색", "현재 세션 유지"],
+      helper: "현재 터미널 세션을 그대로 둔 채 출력 검색 UI로 전환하는 흐름입니다.",
+    });
+    expect(getTerminalKeyFlowSummary("passthrough")).toEqual({
+      badges: ["기본 키 처리", "xterm 위임", "터미널 동작 유지"],
+      helper: "단축키로 가로채지 않는 입력은 xterm 기본 동작으로 넘겨 기존 터미널 동작을 보존합니다.",
     });
   });
 });

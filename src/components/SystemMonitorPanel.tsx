@@ -2,10 +2,17 @@ import React from "react";
 import { X, Cpu, MemoryStick, RefreshCw } from "lucide-react";
 import { useSystemMonitor, type SystemStats } from "../hooks/useSystemMonitor";
 import { SMALL_ICON_SIZE } from "../constants/ui";
+import { ActionFlowBar } from "@/components/ui/action-flow-bar";
 
 interface Props {
   onClose: () => void;
   compact?: boolean;
+}
+
+export interface SystemMonitorFlowSummary {
+  primary: string;
+  secondary: string;
+  detail: string;
 }
 
 function GaugeBar({ pct, color }: { pct: number; color: string }) {
@@ -23,6 +30,22 @@ function color(pct: number) {
   if (pct >= 90) return "bg-red-400";
   if (pct >= 70) return "bg-amber-300";
   return "bg-accent/90";
+}
+
+export function getSystemMonitorFlowSummary(stats: SystemStats | null): SystemMonitorFlowSummary {
+  if (!stats) {
+    return {
+      primary: "시스템 수집 대기",
+      secondary: "첫 상태 준비 중",
+      detail: "초기 수집이 끝나면 CPU와 메모리 전체 상태를 바로 확인할 수 있습니다.",
+    };
+  }
+
+  return {
+    primary: "시스템 상태 확인",
+    secondary: `CPU ${stats.cpu_usage.toFixed(1)}% · 메모리 ${stats.memory_percent.toFixed(0)}%`,
+    detail: "전체 자원 점유율을 먼저 보고, 아래 상위 프로세스로 원인을 빠르게 좁힐 수 있습니다.",
+  };
 }
 
 function ProcTable({
@@ -66,6 +89,7 @@ function ProcTable({
 
 const SystemMonitorPanel: React.FC<Props> = ({ onClose, compact = false }) => {
   const stats = useSystemMonitor(true);
+  const flowSummary = getSystemMonitorFlowSummary(stats);
   const panelTextClass = compact ? "text-xs" : "text-xs";
   const headerPadClass = compact ? "px-2.5 py-1.5" : "px-3 py-2";
   const bodyPadClass = compact
@@ -94,9 +118,22 @@ const SystemMonitorPanel: React.FC<Props> = ({ onClose, compact = false }) => {
         </button>
       </div>
 
+      <div className="px-3 py-2 border-b border-white/10 bg-white/[0.015] shrink-0">
+        <ActionFlowBar
+          badges={[flowSummary.primary, flowSummary.secondary, "마지막 상위 프로세스"]}
+          helper={flowSummary.detail}
+        />
+      </div>
+
       {!stats ? (
-        <div className="flex-1 flex items-center justify-center text-sm text-white/24">
-          수집 중…
+        <div className="flex-1 flex flex-col items-center justify-center gap-3 text-sm text-white/24 px-4">
+          <div className="w-full max-w-md rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-left">
+            <ActionFlowBar
+              badges={["수집 시작", "2초 갱신", "첫 상태 대기"]}
+              helper="초기 수집이 끝나면 2초 간격으로 갱신되며, 첫 상태가 보이는 즉시 자원 변화를 읽을 수 있습니다."
+            />
+          </div>
+          <div>수집 중…</div>
         </div>
       ) : (
         <div className={bodyPadClass}>

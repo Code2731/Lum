@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { parseEditBlocks, hasEditBlocks } from "./editBlockParser";
+import {
+  parseEditBlocks,
+  hasEditBlocks,
+  getEditBlockParseFlowSummary,
+} from "./editBlockParser";
 
 describe("parseEditBlocks", () => {
   it("단일 블록 파싱", () => {
@@ -118,5 +122,80 @@ describe("hasEditBlocks", () => {
   });
   it("일반 텍스트 false", () => {
     expect(hasEditBlocks("hello world")).toBe(false);
+  });
+});
+
+describe("getEditBlockParseFlowSummary", () => {
+  it("마커가 없으면 일반 응답 상태를 반환한다", () => {
+    expect(getEditBlockParseFlowSummary("hello world")).toEqual({
+      primary: "편집 블록 없음",
+      secondary: "일반 응답 유지",
+      detail: "SEARCH/REPLACE 블록이 없어 편집 제안 없이 텍스트만 표시합니다.",
+    });
+  });
+
+  it("마커는 있지만 경로가 없으면 확인 필요 상태를 반환한다", () => {
+    expect(
+      getEditBlockParseFlowSummary(
+        ["```", "<<<<<<< SEARCH", "foo", "=======", "bar", ">>>>>>> REPLACE", "```"].join(
+          "\n",
+        ),
+      ),
+    ).toEqual({
+      primary: "편집 블록 확인 필요",
+      secondary: "경로 또는 구문 누락",
+      detail: "마커는 있지만 파일 경로 또는 완전한 SEARCH/REPLACE 구문이 없습니다.",
+    });
+  });
+
+  it("단일 편집 블록은 첫 파일 요약을 반환한다", () => {
+    expect(
+      getEditBlockParseFlowSummary(
+        [
+          "```ts",
+          "src/foo.ts",
+          "<<<<<<< SEARCH",
+          "old",
+          "=======",
+          "new",
+          ">>>>>>> REPLACE",
+          "```",
+        ].join("\n"),
+      ),
+    ).toEqual({
+      primary: "1개 편집 블록 감지",
+      secondary: "src/foo.ts",
+      detail: "첫 번째 변경안을 바로 검토할 수 있습니다.",
+    });
+  });
+
+  it("복수 편집 블록은 개수와 첫 파일을 함께 반환한다", () => {
+    expect(
+      getEditBlockParseFlowSummary(
+        [
+          "```ts",
+          "src/a.ts",
+          "<<<<<<< SEARCH",
+          "a",
+          "=======",
+          "b",
+          ">>>>>>> REPLACE",
+          "```",
+          "",
+          "```ts",
+          "src/b.ts",
+          "<<<<<<< SEARCH",
+          "c",
+          "=======",
+          "d",
+          ">>>>>>> REPLACE",
+          "```",
+        ].join("\n"),
+      ),
+    ).toEqual({
+      primary: "2개 편집 블록 감지",
+      secondary: "src/a.ts",
+      detail: "첫 파일 포함 2개 변경안을 순서대로 검토할 수 있습니다.",
+    });
   });
 });

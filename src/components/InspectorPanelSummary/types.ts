@@ -61,6 +61,7 @@ export interface InspectorPanelSummaryActions {
   onOpenHistory: () => void;
   onOpenDiffReview: () => void;
   onOpenFailedBlock: () => void;
+  onOpenRag: () => void;
   onTabSelect: (tab: "summary" | "rag" | "scripts" | "sysmon") => void;
 }
 

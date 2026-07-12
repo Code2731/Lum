@@ -13,10 +13,36 @@ type ThemeProviderState = {
   setTheme: (theme: Theme) => void;
 };
 
+export function getThemeLabel(theme: Theme): string {
+  switch (theme) {
+    case "dark":
+      return "dark";
+    case "light":
+      return "light";
+    default:
+      return "system";
+  }
+}
+
 const initialState: ThemeProviderState = {
   theme: "system",
   setTheme: () => null,
 };
+
+const isTheme = (value: unknown): value is Theme =>
+  value === "dark" || value === "light" || value === "system";
+
+const readStoredTheme = (storageKey: string, fallback: Theme): Theme => {
+  try {
+    const stored = typeof localStorage !== "undefined" ? localStorage.getItem(storageKey) : null;
+    return isTheme(stored) ? stored : fallback;
+  } catch {
+    return fallback;
+  }
+};
+
+const getSystemTheme = (): "dark" | "light" =>
+  window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 
 const ThemeProviderContext = createContext<ThemeProviderState>(initialState);
 
@@ -26,32 +52,41 @@ export function ThemeProvider({
   storageKey = "lum-ui-theme",
   ...props
 }: ThemeProviderProps) {
-  const [theme, setTheme] = useState<Theme>(
-    () => (typeof localStorage !== "undefined" ? localStorage.getItem(storageKey) as Theme : undefined) || defaultTheme
-  );
+  const [theme, setTheme] = useState<Theme>(() => readStoredTheme(storageKey, defaultTheme));
 
   useEffect(() => {
     const root = window.document.documentElement;
+    const media = window.matchMedia("(prefers-color-scheme: dark)");
 
-    root.classList.remove("light", "dark");
+    const applyTheme = (nextTheme: "dark" | "light") => {
+      root.classList.remove("light", "dark");
+      root.classList.add(nextTheme);
+      root.style.colorScheme = nextTheme;
+    };
 
     if (theme === "system") {
-      const systemTheme = window.matchMedia("(prefers-color-scheme: dark)")
-        .matches
-        ? "dark"
-        : "light";
+      applyTheme(getSystemTheme());
 
-      root.classList.add(systemTheme);
-      return;
+      const onChange = () => applyTheme(getSystemTheme());
+      if (typeof media.addEventListener === "function") {
+        media.addEventListener("change", onChange);
+        return () => media.removeEventListener("change", onChange);
+      }
+      media.addListener?.(onChange);
+      return () => media.removeListener?.(onChange);
     }
 
-    root.classList.add(theme);
+    applyTheme(theme);
   }, [theme]);
 
   const value = {
     theme,
     setTheme: (theme: Theme) => {
-      localStorage.setItem(storageKey, theme);
+      try {
+        localStorage.setItem(storageKey, theme);
+      } catch {
+        // noop
+      }
       setTheme(theme);
     },
   };

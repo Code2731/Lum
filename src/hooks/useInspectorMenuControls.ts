@@ -43,6 +43,30 @@ interface UseInspectorMenuControlsResult {
   handleInspectorQuickActionsAdvancedKeyDown: (e: KeyboardEvent<HTMLDivElement>) => void;
 }
 
+export interface InspectorMenuControlsMeta {
+  title: string;
+  badges: [string, string, string];
+  helper: string;
+}
+
+export function getInspectorMenuControlsMeta(input: {
+  isInspectorCompact: boolean;
+  inspectorCommandMenuIndex: number | null;
+  showInspectorQuickActionsExpanded: boolean;
+}): InspectorMenuControlsMeta {
+  return {
+    title: input.isInspectorCompact ? "인스펙터 compact 메뉴" : "인스펙터 기본 메뉴",
+    badges: [
+      input.inspectorCommandMenuIndex != null ? `행 메뉴 ${input.inspectorCommandMenuIndex + 1}번 열림` : "행 메뉴 닫힘",
+      input.showInspectorQuickActionsExpanded ? "고급 액션 펼침" : "고급 액션 접힘",
+      input.isInspectorCompact ? "키보드 이동 지원" : "기본 버튼 흐름",
+    ],
+    helper: input.isInspectorCompact
+      ? "compact 모드에서는 roving focus와 blur 제어로 행별 메뉴를 빠르게 이동하고 닫을 수 있습니다."
+      : "기본 모드에서는 메뉴가 펼쳐지지 않고 일반 버튼 흐름으로 유지됩니다.",
+  };
+}
+
 export function useInspectorMenuControls({
   isInspectorCompact,
   inspectorCommandMenuIndex,

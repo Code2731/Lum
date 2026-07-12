@@ -36,6 +36,25 @@ describe("focusMainInput", () => {
     expect(document.activeElement).toBe(fallbackInput);
   });
 
+  it("fallback textarea로도 포커스를 복구한다", () => {
+    const fallbackTextarea = document.createElement("textarea");
+    document.body.appendChild(fallbackTextarea);
+
+    focusMainInput({ withAnimationFrame: false });
+
+    expect(document.activeElement).toBe(fallbackTextarea);
+  });
+
+  it("fallback contenteditable 요소로도 포커스를 복구한다", () => {
+    const editable = document.createElement("div");
+    editable.setAttribute("contenteditable", "true");
+    document.body.appendChild(editable);
+
+    focusMainInput({ withAnimationFrame: false });
+
+    expect(document.activeElement).toBe(editable);
+  });
+
   it("비활성 메인 입력은 건너뛰고 fallback 입력으로 이동한다", () => {
     const disabledMain = document.createElement("input");
     disabledMain.type = "text";

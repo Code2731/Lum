@@ -1,7 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, fireEvent, act, screen } from "@testing-library/react";
 import { createRef } from "react";
-import WarpInputBar, { type WarpInputBarHandle } from "./WarpInputBar";
+import WarpInputBar, {
+  getWarpActiveModeHint,
+  getWarpDefaultInputHint,
+  type WarpInputBarHandle,
+} from "./WarpInputBar";
 import { DEFAULT_TERMINAL_FONT_SIZE } from "../hooks/useTerminalTheme";
 
 type WriteSpy = ReturnType<typeof vi.fn>;
@@ -88,6 +92,35 @@ describe("WarpInputBar — dumb input, 라우팅은 상위에서", () => {
       if (cmd === "voice_recording_status") return false;
       return undefined;
     });
+  });
+
+  it("기본 입력 힌트와 활성 모드 힌트를 계산한다", () => {
+    expect(getWarpDefaultInputHint(true)).toBe("먼저 자연어/명령 · 필요 시 !/@/>>/#/?");
+    expect(getWarpDefaultInputHint(false)).toContain("먼저 자연어는 AI, 명령어는 실행");
+    expect(
+      getWarpActiveModeHint({
+        activeBackend: "local",
+        isBackendOnly: true,
+        isHeavy: false,
+        isAgent: false,
+        isAICmd: false,
+        isExplain: false,
+        isForceShell: false,
+        isForceAI: true,
+      }),
+    ).toContain("LOCAL 백엔드가 먼저 선택되어 있습니다.");
+    expect(
+      getWarpActiveModeHint({
+        activeBackend: null,
+        isBackendOnly: false,
+        isHeavy: false,
+        isAgent: false,
+        isAICmd: false,
+        isExplain: false,
+        isForceShell: true,
+        isForceAI: false,
+      }),
+    ).toBe("셸 강제 모드: ! 뒤에 실행할 명령어를 입력하면 바로 터미널로 보냅니다.");
   });
 
   it("Enter → onSubmit(input 원본) 호출, 입력 비워짐", () => {
@@ -216,7 +249,7 @@ describe("WarpInputBar — dumb input, 라우팅은 상위에서", () => {
 
   it("빈 입력 도움말은 간결한 라우팅/백엔드 안내를 노출한다", () => {
     setup();
-    expect(screen.getByText(/자연어는 AI · 명령어는 실행/)).toBeInTheDocument();
+    expect(screen.getByText(/먼저 자연어는 AI, 명령어는 실행/)).toBeInTheDocument();
     expect(screen.getByText(/백엔드 @local\/@ollama\/@xllm\/@gemini/)).toBeInTheDocument();
     expect(screen.getByText(/Cmd\/Ctrl\+1~4\/0 선택·해제/)).toBeInTheDocument();
     expect(screen.getByText(/Cmd\/Ctrl\+\./)).toBeInTheDocument();
@@ -225,7 +258,7 @@ describe("WarpInputBar — dumb input, 라우팅은 상위에서", () => {
   it("공백만 입력된 상태에서도 빈 입력 도움말을 유지한다", () => {
     const { input } = setup();
     fireEvent.change(input, { target: { value: "   " } });
-    expect(screen.getByText(/자연어는 AI · 명령어는 실행/)).toBeInTheDocument();
+    expect(screen.getByText(/먼저 자연어는 AI, 명령어는 실행/)).toBeInTheDocument();
   });
 
   it("백엔드 단독 상태일 때 백엔드 모드 안내가 표시된다", () => {
@@ -233,10 +266,10 @@ describe("WarpInputBar — dumb input, 라우팅은 상위에서", () => {
     act(() => {
       fireEvent.change(input, { target: { value: "@local " } });
     });
-    expect(screen.getByText(/LOCAL 백엔드가 선택되어 있습니다/)).toBeInTheDocument();
+    expect(screen.getByText(/LOCAL 백엔드가 먼저 선택되어 있습니다/)).toBeInTheDocument();
     expect(screen.getByText(/Cmd\/Ctrl\+0으로 해제/)).toBeInTheDocument();
     expect(screen.getByText(/Cmd\/Ctrl\+\./)).toBeInTheDocument();
-    expect(screen.getByText(/순환할 수 있습니다/)).toBeInTheDocument();
+    expect(screen.getByText(/바로 순환할 수 있습니다/)).toBeInTheDocument();
   });
 
   it("강제 셸 모드 단독 입력일 때 셸 모드 안내가 표시된다", () => {
@@ -262,7 +295,7 @@ describe("WarpInputBar — dumb input, 라우팅은 상위에서", () => {
     expect(screen.getByText("AI")).toBeInTheDocument();
     expect(screen.getByText("@local")).toBeInTheDocument();
     expect(screen.getByText("Terminal 1")).toBeInTheDocument();
-    expect(screen.getByText("+2 more")).toBeInTheDocument();
+    expect(screen.getByText("추가 2개")).toBeInTheDocument();
     expect(screen.queryByText("Lum")).not.toBeInTheDocument();
     expect(screen.queryByText("main")).not.toBeInTheDocument();
   });

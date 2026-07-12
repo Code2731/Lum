@@ -9,6 +9,7 @@ import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete";
 import { Button } from "@/components/ui/button";
 import { IconButton } from "@/components/ui/icon-button";
 import { Input } from "@/components/ui/input";
+import { ActionFlowBar } from "@/components/ui/action-flow-bar";
 import type { Squad } from "../hooks/useSquads";
 import { shortPath, fmtShortDate } from "../utils";
 
@@ -23,8 +24,46 @@ interface Props {
   onClose: () => void;
 }
 
+export interface SquadPanelFlowSummary {
+  badges: [string, string, string];
+  helper: string;
+}
+
 function copyText(text: string) {
   navigator.clipboard?.writeText?.(text).catch(() => {});
+}
+
+export function getSquadCreateFlowSummary(
+  task: string,
+  baseBranch: string,
+  squadCount: number,
+): SquadPanelFlowSummary {
+  const hasTask = task.trim().length > 0;
+  const hasBaseBranch = baseBranch.trim().length > 0;
+
+  return {
+    badges: [
+      hasTask ? "작업 설명 입력됨" : "먼저 작업 정의",
+      hasBaseBranch ? "다음 베이스 브랜치 고정" : "다음 새 탭 열기",
+      squadCount > 0 ? `마지막 기존 Squad ${squadCount}개 정리` : "마지막 정리",
+    ],
+    helper: hasBaseBranch
+      ? "작업 설명과 베이스 브랜치를 정해 squad를 만들 준비가 됐습니다. 생성 후 새 탭에서 바로 이어가고, 끝난 squad는 정리해 흐름을 유지합니다."
+      : "작업 설명과 베이스 브랜치를 먼저 정하고, squad를 만든 뒤 새 탭에서 이어가며 끝나면 정리합니다.",
+  };
+}
+
+export function getSquadEmptyFlowSummary(currentCwd: string): SquadPanelFlowSummary {
+  return {
+    badges: [
+      "현재 Squad 없음",
+      currentCwd ? "다음 현재 저장소에서 분기" : "다음 저장소 선택",
+      "마지막 새 탭 시작",
+    ],
+    helper: currentCwd
+      ? "반복 작업이나 위험한 수정을 분리하고 싶을 때 squad를 만들면 현재 저장소 기준의 독립 worktree에서 바로 시작할 수 있습니다."
+      : "반복 작업이나 위험한 수정을 분리하고 싶을 때 squad를 만들면 독립 worktree에서 바로 시작할 수 있습니다.",
+  };
 }
 
 const SquadPanel: React.FC<Props> = ({
@@ -41,6 +80,8 @@ const SquadPanel: React.FC<Props> = ({
   const [baseBranch, setBaseBranch] = useState("");
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+  const createFlow = getSquadCreateFlowSummary(task, baseBranch, squads.length);
+  const emptyFlow = getSquadEmptyFlowSummary(currentCwd);
 
   const handleCreate = async () => {
     if (!task.trim() || creating) return;
@@ -65,6 +106,13 @@ const SquadPanel: React.FC<Props> = ({
           <Users size={15} className="text-accent" />
           <DialogTitle className="text-sm font-semibold">워크트리 스쿼드</DialogTitle>
           <span className="text-xs text-white/35 ml-1">병렬 작업 격리</span>
+        </div>
+
+        <div className="px-5 py-2.5 border-b border-white/10 bg-white/[0.02] shrink-0">
+          <ActionFlowBar
+            badges={createFlow.badges}
+            helper={createFlow.helper}
+          />
         </div>
 
         {/* 새 squad 생성 폼 */}
@@ -131,7 +179,15 @@ const SquadPanel: React.FC<Props> = ({
             </div>
           )}
           {!loading && !error && squads.length === 0 && (
-            <p className="text-xs text-white/35 text-center py-6">활성 Squad가 없습니다.</p>
+            <div className="py-6 space-y-3">
+              <p className="text-xs text-white/35 text-center">활성 Squad가 없습니다.</p>
+              <div className="max-w-md mx-auto rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2">
+                <ActionFlowBar
+                  badges={emptyFlow.badges}
+                  helper={emptyFlow.helper}
+                />
+              </div>
+            </div>
           )}
 
           <div className="space-y-1.5">

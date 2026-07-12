@@ -1,7 +1,10 @@
 import React from "react";
 import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
-import InspectorPanelHeader from "./InspectorPanelHeader";
+import InspectorPanelHeader, {
+  getInspectorPanelHeaderMeta,
+  getInspectorTabTitle,
+} from "./InspectorPanelHeader";
 import type { InspectorTab, InspectorTabItem } from "./InspectorPanel/types";
 
 const baseTabs: InspectorTabItem[] = [
@@ -26,10 +29,28 @@ function createProps(overrides: Partial<React.ComponentProps<typeof InspectorPan
 }
 
 describe("InspectorPanelHeader", () => {
+  it("밀도 메타와 탭 title을 계산한다", () => {
+    expect(getInspectorPanelHeaderMeta("cozy")).toEqual({
+      densityLabel: "여유 흐름",
+      densityToggleTitle: "컴팩트 보기",
+    });
+    expect(getInspectorPanelHeaderMeta("compact")).toEqual({
+      densityLabel: "컴팩트 흐름",
+      densityToggleTitle: "여유 보기",
+    });
+    expect(getInspectorTabTitle(baseTabs[1])).toBe("Alt+2 : RAG");
+  });
+
   it("헤더 제목과 기본 탭들을 렌더링한다", () => {
     render(<InspectorPanelHeader {...createProps()} />);
 
     expect(screen.getByText("인스펙터")).toBeInTheDocument();
+    expect(screen.getByText("현재 탭")).toBeInTheDocument();
+    expect(screen.getAllByText("요약").length).toBeGreaterThan(0);
+    expect(screen.getByText("여유 흐름")).toBeInTheDocument();
+    expect(screen.getByText("Alt+1")).toBeInTheDocument();
+    expect(screen.getByText("탭, 보기 밀도, 단축키를 먼저 확인하고 바로 아래에서 전환합니다.")).toBeInTheDocument();
+    expect(screen.getByText("바로 전환")).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: /요약/ })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: /RAG/ })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: /스크립트/ })).toBeInTheDocument();
@@ -48,7 +69,9 @@ describe("InspectorPanelHeader", () => {
     );
 
     expect(screen.getByText("컴팩트")).toBeInTheDocument();
+    expect(screen.getByText("컴팩트 흐름")).toBeInTheDocument();
     expect(screen.getByLabelText("인스펙터 밀도 토글")).toHaveAttribute("title", "여유 보기");
+    expect(screen.getByLabelText("인스펙터 밀도 토글").className).toContain("bg-cyan-400/18");
     fireEvent.click(screen.getByLabelText("인스펙터 밀도 토글"));
     expect(onDensityToggle).toHaveBeenCalledTimes(1);
   });
@@ -57,6 +80,7 @@ describe("InspectorPanelHeader", () => {
     const onClose = vi.fn();
     render(<InspectorPanelHeader {...createProps({ onClose })} />);
 
+    expect(screen.getByLabelText("인스펙터 닫기").className).toContain("bg-white/[0.03]");
     fireEvent.click(screen.getByLabelText("인스펙터 닫기"));
     expect(onClose).toHaveBeenCalledTimes(1);
   });
@@ -72,10 +96,16 @@ describe("InspectorPanelHeader", () => {
   it("활성 탭은 aria-selected=true와 tabIndex 0을 가진다", () => {
     render(<InspectorPanelHeader {...createProps({ inspectorTab: "summary" })} />);
 
-    expect(screen.getByRole("tab", { name: /요약/ })).toHaveAttribute("aria-selected", "true");
-    expect(screen.getByRole("tab", { name: /요약/ })).toHaveAttribute("tabindex", "0");
-    expect(screen.getByRole("tab", { name: /RAG/ })).toHaveAttribute("aria-selected", "false");
-    expect(screen.getByRole("tab", { name: /RAG/ })).toHaveAttribute("tabindex", "-1");
+    const summaryTab = screen.getByRole("tab", { name: /요약/ });
+    const ragTab = screen.getByRole("tab", { name: /RAG/ });
+
+    expect(summaryTab).toHaveAttribute("aria-selected", "true");
+    expect(summaryTab).toHaveAttribute("tabindex", "0");
+    expect(summaryTab.className).toContain("bg-cyan-400/[0.22]");
+    expect(summaryTab.className).toContain("shadow-[0_8px_24px_rgba(34,211,238,0.16)]");
+    expect(ragTab).toHaveAttribute("aria-selected", "false");
+    expect(ragTab).toHaveAttribute("tabindex", "-1");
+    expect(ragTab.className).toContain("bg-white/[0.03]");
   });
 
   it("탭 버튼은 aria-controls, aria-keyshortcuts, title을 노출한다", () => {

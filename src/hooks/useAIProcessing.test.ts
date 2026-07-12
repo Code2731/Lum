@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, act, waitFor } from "@testing-library/react";
-import { useAIProcessing } from "./useAIProcessing";
+import { getAIProcessingPhaseMeta, useAIProcessing } from "./useAIProcessing";
 
 const invokeMock = vi.fn();
 const listeners: Array<(event: { payload: string }) => void> = [];
@@ -94,6 +94,17 @@ describe("useAIProcessing — 스트리밍 취소 경합 방지", () => {
 });
 
 describe("useAIProcessing — JSON 응답 파싱", () => {
+  it("phase meta는 각 처리 단계를 사용자 문구로 변환한다", () => {
+    expect(getAIProcessingPhaseMeta("idle")).toEqual({
+      label: "대기 중",
+      description: "다음 AI 작업을 바로 시작할 수 있는 상태입니다.",
+    });
+    expect(getAIProcessingPhaseMeta("streaming")).toEqual({
+      label: "응답 스트리밍 중",
+      description: "AI 응답을 토큰 단위로 받아 UI에 이어 붙이고 있습니다.",
+    });
+  });
+
   it("processAICommand는 JSON 문자열을 객체로 파싱한다", async () => {
     invokeMock.mockImplementation(async (cmd: string) => {
       if (cmd === "generate_ai_command") {
@@ -103,8 +114,11 @@ describe("useAIProcessing — JSON 응답 파싱", () => {
     });
 
     const { result } = renderHook(() => useAIProcessing());
-    const parsed = await result.current.processAICommand("p", "m", "c");
+    const pending = result.current.processAICommand("p", "m", "c");
+    expect(result.current.phase).toBe("generating");
+    const parsed = await pending;
     expect(parsed).toEqual({ action: "run", command: "npm test" });
+    expect(result.current.phase).toBe("idle");
   });
 
   it("analyzeError는 파싱 실패 시 명확한 에러 메시지를 던진다", async () => {
@@ -117,5 +131,25 @@ describe("useAIProcessing — JSON 응답 파싱", () => {
     await expect(result.current.analyzeError("ls", "err", "m", "c")).rejects.toThrow(
       "analyze_error 응답 JSON 파싱 실패: not-json-response",
     );
+    expect(result.current.phase).toBe("idle");
+  });
+
+  it("verifyVisionGoal은 검증 단계 동안 phase를 verifying으로 유지한다", async () => {
+    let releaseVerify: (() => void) | null = null;
+    invokeMock.mockImplementation(async (cmd: string) => {
+      if (cmd === "verify_vision_goal") {
+        return new Promise<{ achieved: boolean; reason: string; nextActions: never[] }>((resolve) => {
+          releaseVerify = () => resolve({ achieved: true, reason: "ok", nextActions: [] });
+        });
+      }
+      return;
+    });
+
+    const { result } = renderHook(() => useAIProcessing());
+    const pending = result.current.verifyVisionGoal("goal", "img", "model", 1);
+    expect(result.current.phase).toBe("verifying");
+    releaseVerify?.();
+    await expect(pending).resolves.toEqual({ achieved: true, reason: "ok", nextActions: [] });
+    expect(result.current.phase).toBe("idle");
   });
 });

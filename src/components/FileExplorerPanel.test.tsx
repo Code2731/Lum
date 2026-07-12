@@ -36,7 +36,7 @@ vi.mock("@tauri-apps/api/core", () => ({
   invoke: (cmd: string, args?: { path?: string }) => invokeMock(cmd, args),
 }));
 
-import FileExplorerPanel from "./FileExplorerPanel";
+import FileExplorerPanel, { getFileExplorerFlowSummary } from "./FileExplorerPanel";
 
 beforeEach(() => {
   invokeMock.mockReset();
@@ -74,9 +74,13 @@ describe("FileExplorerPanel", () => {
 
     renderPanel("/project");
 
+    expect(screen.getByText("파일 탐색 준비")).toBeInTheDocument();
+    expect(screen.getByText("마지막 열기·cd")).toBeInTheDocument();
+
     await waitFor(() => {
       expect(invokeMock).toHaveBeenCalledWith("list_directory", { path: "/project" });
     });
+    expect(screen.getByText("/project · 1개 항목")).toBeInTheDocument();
     expect(screen.getByText("readme.md")).toBeInTheDocument();
     expect(
       invokeMock.mock.calls.filter(([cmd, args]) => cmd === "list_directory" && args?.path === "/project").length,
@@ -155,6 +159,56 @@ describe("FileExplorerPanel", () => {
     renderPanel("/project");
 
     expect(await screen.findByText("읽기 실패")).toBeInTheDocument();
+  });
+
+  it("빈 폴더일 때 다음 탐색 흐름 안내를 보여준다", async () => {
+    invokeMock.mockResolvedValue([]);
+
+    renderPanel("/empty");
+
+    expect(await screen.findByText("빈 폴더")).toBeInTheDocument();
+    expect(screen.getByText("현재 위치")).toBeInTheDocument();
+    expect(screen.getByText("/empty")).toBeInTheDocument();
+    expect(screen.getByText("파일 생성 준비")).toBeInTheDocument();
+  });
+
+  it("요약 함수는 로딩/오류/빈 폴더 상태를 반환한다", () => {
+    expect(
+      getFileExplorerFlowSummary({
+        currentPath: "/repo",
+        loading: true,
+        error: null,
+        entriesCount: 0,
+      }),
+    ).toEqual({
+      primary: "폴더 읽는 중",
+      secondary: "/repo",
+      detail: "현재 경로의 파일과 폴더 목록을 불러오고 있습니다.",
+    });
+    expect(
+      getFileExplorerFlowSummary({
+        currentPath: "/repo",
+        loading: false,
+        error: "권한이 없습니다",
+        entriesCount: 0,
+      }),
+    ).toEqual({
+      primary: "탐색 오류 확인",
+      secondary: "/repo",
+      detail: "권한이 없습니다",
+    });
+    expect(
+      getFileExplorerFlowSummary({
+        currentPath: "/repo",
+        loading: false,
+        error: null,
+        entriesCount: 0,
+      }),
+    ).toEqual({
+      primary: "빈 폴더",
+      secondary: "/repo",
+      detail: "다른 경로로 이동하거나 상위 폴더로 돌아가 작업 위치를 다시 고를 수 있습니다.",
+    });
   });
 
   it("목록 조회 실패 시 오류 텍스트를 복사할 수 있다", async () => {

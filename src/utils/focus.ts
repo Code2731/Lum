@@ -5,7 +5,11 @@ interface FocusMainInputOptions {
 
 const MAIN_INPUT_SELECTOR = "[data-lum-main-input='true']";
 const FALLBACK_INPUT_SELECTOR =
-  "input[type='text']:not([data-lum-main-input='true']):not([type='hidden']):not([type='checkbox']):not([type='radio']):not([type='button']):not([type='submit']):not([type='reset']):not([type='file'])";
+  [
+    "input[type='text']:not([data-lum-main-input='true']):not([type='hidden']):not([type='checkbox']):not([type='radio']):not([type='button']):not([type='submit']):not([type='reset']):not([type='file'])",
+    "textarea:not([data-lum-main-input='true'])",
+    "[contenteditable='true']:not([data-lum-main-input='true'])",
+  ].join(", ");
 
 function isHidden(element: HTMLElement): boolean {
   const { display, visibility, opacity } = getComputedStyle(element);
@@ -14,8 +18,12 @@ function isHidden(element: HTMLElement): boolean {
   return hiddenByHiddenAttr || hiddenByAriaHidden || display === "none" || visibility === "hidden" || Number(opacity) === 0;
 }
 
-function isUsableInput(input: HTMLInputElement, skipDisabled: boolean): boolean {
-  if (skipDisabled && input.disabled) {
+function isFormControl(element: HTMLElement): element is HTMLInputElement | HTMLTextAreaElement {
+  return element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement;
+}
+
+function isUsableInput(input: HTMLElement, skipDisabled: boolean): boolean {
+  if (skipDisabled && isFormControl(input) && input.disabled) {
     return false;
   }
   if (isHidden(input)) {
@@ -29,12 +37,12 @@ export function focusMainInput({
   skipDisabled = true,
 }: FocusMainInputOptions = {}): boolean {
   const findUsableInput = () => {
-    const mainInput = document.querySelector<HTMLInputElement>(MAIN_INPUT_SELECTOR);
+    const mainInput = document.querySelector<HTMLElement>(MAIN_INPUT_SELECTOR);
     if (mainInput && isUsableInput(mainInput, skipDisabled)) {
       return mainInput;
     }
 
-    const fallbackInput = document.querySelector<HTMLInputElement>(FALLBACK_INPUT_SELECTOR);
+    const fallbackInput = document.querySelector<HTMLElement>(FALLBACK_INPUT_SELECTOR);
     if (fallbackInput && isUsableInput(fallbackInput, skipDisabled)) {
       return fallbackInput;
     }

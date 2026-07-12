@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Plus, Trash2, ChevronUp, ChevronDown, Zap } from "lucide-react";
+import { ActionFlowBar } from "@/components/ui/action-flow-bar";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { IconButton } from "@/components/ui/icon-button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -15,10 +16,35 @@ interface Props {
   onClose: () => void;
 }
 
+export interface QuickActionsEditorFlowSummary {
+  primary: string;
+  secondary: string;
+  detail: string;
+}
+
 const SHORTCUT_OPTIONS = [
   { label: "없음", value: undefined },
   ...[1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => ({ label: `Cmd/Ctrl+${n}`, value: n })),
 ];
+
+export function getQuickActionsEditorFlowSummary(input: {
+  actionCount: number;
+  shortcutCount: number;
+}): QuickActionsEditorFlowSummary {
+  if (input.actionCount === 0) {
+    return {
+      primary: "첫 액션 준비",
+      secondary: "등록 0개",
+      detail: "개발 서버, 테스트, 빌드처럼 자주 쓰는 명령부터 먼저 등록해 작업 전환을 줄일 수 있습니다.",
+    };
+  }
+
+  return {
+    primary: "빠른 액션 정리",
+    secondary: `등록 ${input.actionCount}개 · 단축키 ${input.shortcutCount}개`,
+    detail: "자주 쓰는 액션 순서를 먼저 다듬고, 이름·명령·단축키를 정리해 즉시 실행 흐름을 빠르게 만들 수 있습니다.",
+  };
+}
 
 const QuickActionsEditor: React.FC<Props> = ({
   actions, onAdd, onUpdate, onDelete, onMove, onClose,
@@ -26,6 +52,11 @@ const QuickActionsEditor: React.FC<Props> = ({
   const [newLabel, setNewLabel] = useState("");
   const [newCmd, setNewCmd] = useState("");
   const [newShortcut, setNewShortcut] = useState<number | undefined>(undefined);
+  const shortcutCount = actions.filter((action) => action.shortcut != null).length;
+  const flowSummary = getQuickActionsEditorFlowSummary({
+    actionCount: actions.length,
+    shortcutCount,
+  });
 
   const handleAdd = () => {
     if (!newLabel.trim() || !newCmd.trim()) return;
@@ -46,10 +77,26 @@ const QuickActionsEditor: React.FC<Props> = ({
           <DialogTitle className="text-sm font-semibold">빠른 액션 편집</DialogTitle>
         </div>
 
+        <div className="px-5 py-3 border-b border-white/8 shrink-0 space-y-2">
+          <ActionFlowBar
+            badges={[flowSummary.primary, flowSummary.secondary, "마지막 단축키 연결"]}
+            helper={flowSummary.detail}
+            tone="amber"
+          />
+          <p className="text-[11px] text-white/42">
+            등록 {actions.length}개 · 단축키 {shortcutCount}개 사용 중
+          </p>
+        </div>
+
         {/* 액션 목록 */}
         <div className="flex-1 overflow-y-auto px-5 py-3 space-y-1.5 min-h-0">
           {actions.length === 0 && (
-            <p className="text-xs text-white/25 text-center py-6">아직 등록된 액션이 없습니다</p>
+            <div className="rounded-xl border border-dashed border-white/10 bg-white/[0.02] px-4 py-6 text-center">
+              <p className="text-xs text-white/32">아직 등록된 액션이 없습니다</p>
+              <p className="mt-1 text-[11px] text-white/24">
+                개발 서버, 테스트, 빌드처럼 반복 실행하는 명령부터 먼저 등록해 두면 작업 전환이 빨라집니다.
+              </p>
+            </div>
           )}
 
           {actions.map((a, idx) => (
@@ -114,7 +161,10 @@ const QuickActionsEditor: React.FC<Props> = ({
 
         {/* 새 액션 추가 */}
         <div className="px-5 py-4 border-t border-white/8 shrink-0">
-          <p className="text-xs text-white/30 mb-2">새 액션 추가</p>
+          <div className="mb-2 flex items-center justify-between gap-3">
+            <p className="text-xs text-white/30">새 액션 추가</p>
+            <p className="text-[10px] text-white/24">이름과 명령을 입력한 뒤 Enter 또는 추가 버튼으로 저장</p>
+          </div>
           <div className="flex items-center gap-2">
             <Input value={newLabel} onChange={e => setNewLabel(e.target.value)}
               onKeyDown={(e) => {

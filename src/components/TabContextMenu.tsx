@@ -3,7 +3,8 @@ import { createPortal } from "react-dom";
 import { Palette, Tag, X } from "lucide-react";
 import { TAB_COLORS } from "../hooks/useTabManager";
 import type { TabColor } from "../hooks/useTabManager";
-import { isPointerOutsideTargets } from "../utils/pointerGuard";
+import { getPointerContainmentFlowSummary, isPointerOutsideTargets } from "../utils/pointerGuard";
+import { ActionFlowBar } from "@/components/ui/action-flow-bar";
 
 interface Props {
   tabId: string;
@@ -36,6 +37,10 @@ const TabContextMenu: React.FC<Props> = ({
   const [position, setPosition] = useState({
     left: clampValue(x, 0, Math.max(0, window.innerWidth - MENU_FALLBACK_WIDTH - MENU_EDGE_GAP)),
     top: clampValue(y, 0, Math.max(0, window.innerHeight - MENU_FALLBACK_HEIGHT - MENU_EDGE_GAP)),
+  });
+  const pointerSummary = getPointerContainmentFlowSummary({
+    inside: true,
+    targetCount: 1,
   });
 
   useEffect(() => {
@@ -171,6 +176,13 @@ const TabContextMenu: React.FC<Props> = ({
       onContextMenu={e => e.preventDefault()}
       onKeyDown={handleMenuKeyDown}
     >
+      <div className="px-3 pt-3 pb-1.5">
+        <ActionFlowBar
+          badges={[pointerSummary.primary, "다음 그룹 이름", "마지막 Enter 적용"]}
+          helper={`${pointerSummary.detail} 탭 색으로 흐름을 먼저 구분하고, 필요하면 그룹 이름을 넣은 뒤 Enter로 바로 적용합니다.`}
+        />
+      </div>
+
       <div className="px-3 pt-3 pb-2">
         <div className="flex items-center gap-1.5 mb-2">
           <Palette size={11} className="text-white/30" />
@@ -260,7 +272,7 @@ const TabContextMenu: React.FC<Props> = ({
           }}
           onClick={e => e.stopPropagation()}
         />
-        <p className="text-xs text-white/20 mt-1">Enter로 적용</p>
+        <p className="text-xs text-white/20 mt-1">Enter로 적용 · Esc로 닫기</p>
       </div>
     </div>
   );

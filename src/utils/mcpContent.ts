@@ -20,6 +20,11 @@ export interface ParsedMcpResult {
   textSummary: string;
 }
 
+export interface McpResultFlowSummary {
+  badges: [string, string, string];
+  helper: string;
+}
+
 function isContentArray(v: unknown): v is Array<Record<string, unknown>> {
   return Array.isArray(v) && v.every((x) => typeof x === "object" && x !== null);
 }
@@ -82,4 +87,31 @@ export function parseMcpResult(raw: unknown): ParsedMcpResult {
     .join("\n");
 
   return { blocks, hasImage, textSummary };
+}
+
+export function getMcpResultFlowSummary(result: ParsedMcpResult): McpResultFlowSummary {
+  const textCount = result.blocks.filter((block) => block.kind === "text").length;
+  const jsonCount = result.blocks.filter((block) => block.kind === "json").length;
+
+  if (result.blocks.length === 0) {
+    return {
+      badges: ["응답 없음", "블록 없음", "추가 호출 필요"],
+      helper: "아직 표시할 MCP 응답 블록이 없어 도구 호출 결과를 다시 확인해야 합니다.",
+    };
+  }
+
+  if (result.hasImage) {
+    return {
+      badges: [`블록 ${result.blocks.length}개`, "이미지 포함", textCount > 0 ? `텍스트 ${textCount}개` : "비전 중심 응답"],
+      helper: "이미지 응답이 포함되어 있어 텍스트 요약과 함께 시각 정보까지 같이 확인하는 흐름입니다.",
+    };
+  }
+
+  return {
+    badges: [`블록 ${result.blocks.length}개`, textCount > 0 ? `텍스트 ${textCount}개` : "텍스트 없음", jsonCount > 0 ? `JSON ${jsonCount}개` : "구조화 응답 없음"],
+    helper:
+      jsonCount > 0
+        ? "텍스트와 구조화 응답을 함께 읽으며 필요한 값을 추려 다음 액션으로 넘기는 흐름입니다."
+        : "텍스트 중심 MCP 응답이라 바로 읽고 요약하거나 다음 프롬프트 문맥으로 넘기기 좋습니다.",
+  };
 }

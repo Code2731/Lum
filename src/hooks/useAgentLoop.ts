@@ -40,6 +40,35 @@ export interface AgentState {
   message: string;
 }
 
+export interface AgentLoopMeta {
+  title: string;
+  badges: [string, string, string];
+  helper: string;
+}
+
+export function getAgentLoopMeta(state: AgentState): AgentLoopMeta {
+  const remainingSteps = Math.max(0, state.plan.length - state.currentStepIdx);
+  const completedCount = state.completed.length;
+
+  if (state.status === "idle") {
+    return {
+      title: "에이전트 대기 중",
+      badges: ["먼저 작업 입력", "다음 계획 생성", "마지막 실행 승인"],
+      helper: "작업을 시작하면 계획 생성, 승인, 실행, 관찰 순서로 진행됩니다.",
+    };
+  }
+
+  return {
+    title: `에이전트 ${state.status}`,
+    badges: [
+      `계획 ${state.plan.length}단계`,
+      `완료 ${completedCount}단계`,
+      `남은 ${remainingSteps}단계`,
+    ],
+    helper: state.message || "현재 상태에 맞춰 계획, 실행, 관찰 흐름을 이어가고 있습니다.",
+  };
+}
+
 export function useAgentLoop(model: string) {
   const [state, setState] = useState<AgentState>({
     status: "idle",

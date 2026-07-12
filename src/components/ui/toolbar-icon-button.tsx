@@ -7,6 +7,8 @@ type ToolbarTone = "accent" | "cyan";
 interface ToolbarIconButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   /** 툴팁/aria 라벨 — 필수 */
   label: string;
+  /** 툴팁 보조 설명 */
+  description?: React.ReactNode;
   /** 키보드 단축키 — 툴팁 우측 kbd 표시 (e.g. "⌘B") */
   shortcut?: string;
   /** 활성 상태 — 패널 열림/토글 ON 시 강조 */
@@ -17,6 +19,12 @@ interface ToolbarIconButtonProps extends React.ButtonHTMLAttributes<HTMLButtonEl
   badgeLabel?: string;
   /** 활성 컬러 — 기본 accent, 특수 토글(추론 등)은 cyan */
   tone?: ToolbarTone;
+}
+
+export interface ToolbarIconButtonAccessibleMeta {
+  ariaLabel: string;
+  title: string;
+  ariaKeyshortcuts?: string;
 }
 
 const toneActive: Record<ToolbarTone, string> = {
@@ -97,22 +105,43 @@ const toAriaKeyShortcut = (shortcut?: string): string | undefined => {
   return tokens.join("+");
 };
 
+export function getToolbarIconButtonAccessibleMeta(input: {
+  label: string;
+  shortcut?: string;
+  badge?: boolean;
+  badgeLabel?: string;
+  title?: string;
+}): ToolbarIconButtonAccessibleMeta {
+  return {
+    ariaLabel: input.badge && input.badgeLabel ? `${input.label} (${input.badgeLabel})` : input.label,
+    title: input.title ?? input.label,
+    ariaKeyshortcuts: toAriaKeyShortcut(input.shortcut),
+  };
+}
+
 export const ToolbarIconButton = React.forwardRef<HTMLButtonElement, ToolbarIconButtonProps>(
-  ({ label, shortcut, active, badge, badgeLabel, tone = "accent", className, children, ...props }, ref) => {
-    const a11yLabel = badge && badgeLabel ? `${label} (${badgeLabel})` : label;
-    const ariaShortcut = toAriaKeyShortcut(shortcut);
+  ({ label, description, shortcut, active, badge, badgeLabel, tone = "accent", className, children, title, ...props }, ref) => {
+    const accessibleMeta = getToolbarIconButtonAccessibleMeta({
+      label,
+      shortcut,
+      badge,
+      badgeLabel,
+      title,
+    });
     return (
     <Tooltip>
       <TooltipTrigger asChild>
         <button
           ref={ref}
-          aria-label={a11yLabel}
-          aria-keyshortcuts={ariaShortcut}
+          aria-label={accessibleMeta.ariaLabel}
+          aria-keyshortcuts={accessibleMeta.ariaKeyshortcuts}
           aria-pressed={active}
+          title={accessibleMeta.title}
           {...props}
           className={cn(
-            "relative inline-flex items-center justify-center h-7 w-7 rounded-md transition-colors",
+            "relative inline-flex h-7 w-7 items-center justify-center rounded-md transition-colors",
             "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+            "disabled:pointer-events-none disabled:opacity-40",
             active
               ? toneActive[tone]
               : "text-white/45 hover:text-white hover:bg-white/8",
@@ -128,16 +157,25 @@ export const ToolbarIconButton = React.forwardRef<HTMLButtonElement, ToolbarIcon
           )}
         </button>
       </TooltipTrigger>
-      <TooltipContent side="bottom" className="flex items-center gap-2">
-        <span>{label}</span>
-        {badge && badgeLabel && (
-          <span className="text-xs text-accent">[{badgeLabel}]</span>
-        )}
-        {shortcut && (
-          <kbd className="text-xs text-white/50 border border-white/15 rounded px-1 py-px font-mono leading-none">
-            {shortcut}
-          </kbd>
-        )}
+      <TooltipContent side="bottom" className="max-w-[220px]">
+        <div className="flex items-start gap-2">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <span>{label}</span>
+              {badge && badgeLabel && (
+                <span className="text-xs text-accent">[{badgeLabel}]</span>
+              )}
+            </div>
+            {description && (
+              <p className="mt-1 text-[11px] leading-4 text-white/60">{description}</p>
+            )}
+          </div>
+          {shortcut && (
+            <kbd className="shrink-0 rounded border border-white/15 px-1 py-px font-mono text-xs leading-none text-white/50">
+              {shortcut}
+            </kbd>
+          )}
+        </div>
       </TooltipContent>
     </Tooltip>
   );

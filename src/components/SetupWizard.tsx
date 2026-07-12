@@ -1,5 +1,6 @@
 import React from "react";
 import { Zap } from "lucide-react";
+import { ActionFlowBar } from "@/components/ui/action-flow-bar";
 
 interface Props {
   step: number;
@@ -13,6 +14,50 @@ interface Props {
   syncXllm: () => Promise<void>;
 }
 
+export interface SetupWizardFlowSummary {
+  primary: string;
+  secondary: string;
+  detail: string;
+}
+
+export function getSetupWizardFlowSummary(input: {
+  step: number;
+  recommendedModel: string;
+  pullProgress: any;
+}): SetupWizardFlowSummary {
+  if (input.step === 1) {
+    return {
+      primary: "xLLM 연결 준비",
+      secondary: "서버 확인 필요",
+      detail: "xLLM 서버를 먼저 실행하고 연결 여부를 확인한 뒤 다음 단계에서 추천 모델을 선택할 수 있습니다.",
+    };
+  }
+
+  if (input.step === 2) {
+    if (input.pullProgress) {
+      const percent = Math.round(
+        (((input.pullProgress.completed || 0) / (input.pullProgress.total || 1)) * 100),
+      );
+      return {
+        primary: "모델 로드 진행 중",
+        secondary: `${input.recommendedModel} · ${percent}%`,
+        detail: "추천 모델을 불러오는 중이며 완료되면 다음 단계로 바로 이어갈 수 있습니다.",
+      };
+    }
+    return {
+      primary: "추천 모델 준비",
+      secondary: input.recommendedModel,
+      detail: "감지된 사양과 추천 모델을 확인한 뒤 바로 로드를 시작할 수 있습니다.",
+    };
+  }
+
+  return {
+    primary: "설정 완료 준비",
+    secondary: "시작 직전",
+    detail: "핵심 준비가 끝나 있어 바로 터미널과 에이전트 흐름을 시작할 수 있습니다.",
+  };
+}
+
 const SetupWizard: React.FC<Props> = ({
   step,
   setStep,
@@ -24,6 +69,12 @@ const SetupWizard: React.FC<Props> = ({
   recommendedModel,
   syncXllm,
 }) => {
+  const flowSummary = getSetupWizardFlowSummary({
+    step,
+    recommendedModel,
+    pullProgress,
+  });
+
   return (
     <div className="setup-wizard-overlay">
       <div className="setup-wizard-modal">
@@ -33,6 +84,12 @@ const SetupWizard: React.FC<Props> = ({
         </div>
 
         <div className="setup-wizard-body">
+          <div className="mb-4 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2">
+            <ActionFlowBar
+              badges={[flowSummary.primary, flowSummary.secondary, "마지막 시작"]}
+              helper={flowSummary.detail}
+            />
+          </div>
           {step === 1 && (
             <div className="setup-step">
               <h3>1. xLLM 서버를 찾을 수 없습니다</h3>

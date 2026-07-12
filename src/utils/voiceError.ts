@@ -18,6 +18,12 @@ function unwrapErrorText(raw: unknown): string {
   return String(raw ?? "");
 }
 
+export interface VoiceErrorFlowSummary {
+  primary: string;
+  secondary: string;
+  detail: string;
+}
+
 export function parseVoiceError(raw: unknown): string {
   const text = unwrapErrorText(raw);
   const marker = text.indexOf(VOICE_ERROR_PREFIX);
@@ -34,6 +40,9 @@ export function parseVoiceError(raw: unknown): string {
     ) {
       return message;
     }
+    if (extra === message || extra.startsWith(message)) {
+      return message;
+    }
     return `${message} (${extra})`;
   }
 
@@ -41,8 +50,78 @@ export function parseVoiceError(raw: unknown): string {
   if (lower.includes("permission") || lower.includes("not allowed") || lower.includes("denied")) {
     return "마이크 권한이 거부되었습니다. 시스템 설정에서 권한을 허용해 주세요.";
   }
+  if (
+    lower.includes("busy")
+    || lower.includes("in use")
+    || lower.includes("resource busy")
+    || lower.includes("device busy")
+  ) {
+    return "다른 앱이 이미 마이크를 사용 중입니다. 사용 중인 녹음 앱을 닫고 다시 시도해 주세요.";
+  }
   if (lower.includes("not found") || lower.includes("no such file")) {
     return "음성 모델/전사 파일을 찾지 못했습니다.";
   }
+  if (
+    lower.includes("command not found")
+    || lower.includes("executable file not found")
+    || lower.includes("module not found")
+    || lower.includes("python")
+    || lower.includes("whisper")
+  ) {
+    return "음성 입력 실행 환경을 찾지 못했습니다. Python/Whisper 설정을 확인해 주세요.";
+  }
+  if (lower.includes("timed out") || lower.includes("timeout")) {
+    return "음성 입력 처리 시간이 오래 걸리고 있습니다. 잠시 후 다시 시도해 주세요.";
+  }
   return text || "음성 입력 처리 중 오류가 발생했습니다.";
+}
+
+export function getVoiceErrorFlowSummary(raw: unknown): VoiceErrorFlowSummary {
+  const message = parseVoiceError(raw);
+
+  if (message.includes("마이크 권한")) {
+    return {
+      primary: "마이크 권한 확인",
+      secondary: "권한 허용 필요",
+      detail: message,
+    };
+  }
+
+  if (message.includes("마이크를 사용 중")) {
+    return {
+      primary: "마이크 사용 중",
+      secondary: "다른 앱 점유",
+      detail: message,
+    };
+  }
+
+  if (message.includes("실행 환경")) {
+    return {
+      primary: "음성 런타임 확인",
+      secondary: "Python/Whisper 점검",
+      detail: message,
+    };
+  }
+
+  if (message.includes("제한 시간") || message.includes("오래 걸리고")) {
+    return {
+      primary: "음성 처리 지연",
+      secondary: "타임아웃 발생",
+      detail: message,
+    };
+  }
+
+  if (message.includes("진행 중")) {
+    return {
+      primary: "이전 작업 정리 중",
+      secondary: "잠시 후 재시도",
+      detail: message,
+    };
+  }
+
+  return {
+    primary: "음성 입력 오류",
+    secondary: "원인 확인 필요",
+    detail: message,
+  };
 }

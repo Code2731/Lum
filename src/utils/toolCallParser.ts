@@ -20,6 +20,12 @@ export interface ToolCall {
   index: number;
 }
 
+export interface ToolCallParseFlowSummary {
+  primary: string;
+  secondary: string;
+  detail: string;
+}
+
 // 속성: key="..." 또는 key='...'
 const ATTR_RE = /(\w+)\s*=\s*(?:"([^"]*)"|'([^']*)')/g;
 
@@ -87,4 +93,34 @@ export function parseToolCalls(raw: string): ToolCall[] {
 
 export function hasToolCalls(content: string): boolean {
   return /<tool_use\b[^>]*(\/>|><\/tool_use>)/i.test(content);
+}
+
+export function getToolCallParseFlowSummary(raw: string): ToolCallParseFlowSummary {
+  const hasTag = hasToolCalls(raw);
+  if (!hasTag) {
+    return {
+      primary: "툴 호출 없음",
+      secondary: "일반 응답 유지",
+      detail: "tool_use 태그가 없어 텍스트 응답만 표시합니다.",
+    };
+  }
+
+  const calls = parseToolCalls(raw);
+  if (calls.length === 0) {
+    return {
+      primary: "툴 호출 확인 필요",
+      secondary: "필수 속성 누락",
+      detail: "tool_use 태그는 있지만 server 또는 name 속성이 비어 있습니다.",
+    };
+  }
+
+  const first = calls[0];
+  return {
+    primary: `${calls.length}개 툴 호출 감지`,
+    secondary: `${first.server}/${first.name}`,
+    detail:
+      calls.length === 1
+        ? "첫 번째 툴 호출을 바로 검토할 수 있습니다."
+        : `첫 호출 포함 ${calls.length}개 순서대로 검토할 수 있습니다.`,
+  };
 }

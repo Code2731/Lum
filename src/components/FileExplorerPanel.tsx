@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { ChevronRight, Folder, FolderOpen, File, ArrowUp, RefreshCw, Home, X, Copy } from "lucide-react";
 import { IconButton } from "@/components/ui/icon-button";
+import { ActionFlowBar } from "@/components/ui/action-flow-bar";
 
 interface DirEntry {
   name: string;
@@ -15,6 +16,12 @@ interface Props {
   onClose: () => void;
   onCdTo: (path: string) => void;  // 터미널에 `cd <path>` 주입
   onOpenFile: (path: string) => void;  // 터미널에 파일 open 주입
+}
+
+export interface FileExplorerFlowSummary {
+  primary: string;
+  secondary: string;
+  detail: string;
 }
 
 function formatSize(bytes: number): string {
@@ -40,11 +47,56 @@ function copyText(text: string) {
   navigator.clipboard?.writeText?.(text).catch(() => {});
 }
 
+export function getFileExplorerFlowSummary(input: {
+  currentPath: string;
+  loading: boolean;
+  error: string | null;
+  entriesCount: number;
+}): FileExplorerFlowSummary {
+  const pathLabel = input.currentPath || "~";
+
+  if (input.loading) {
+    return {
+      primary: "폴더 읽는 중",
+      secondary: pathLabel,
+      detail: "현재 경로의 파일과 폴더 목록을 불러오고 있습니다.",
+    };
+  }
+
+  if (input.error) {
+    return {
+      primary: "탐색 오류 확인",
+      secondary: pathLabel,
+      detail: input.error,
+    };
+  }
+
+  if (input.entriesCount === 0) {
+    return {
+      primary: "빈 폴더",
+      secondary: pathLabel,
+      detail: "다른 경로로 이동하거나 상위 폴더로 돌아가 작업 위치를 다시 고를 수 있습니다.",
+    };
+  }
+
+  return {
+    primary: "파일 탐색 준비",
+    secondary: `${pathLabel} · ${input.entriesCount}개 항목`,
+    detail: "이동할 폴더를 먼저 고르고, 필요하면 더블클릭으로 열거나 현재 위치로 cd 할 수 있습니다.",
+  };
+}
+
 export default function FileExplorerPanel({ cwd, onClose, onCdTo, onOpenFile }: Props) {
   const [currentPath, setCurrentPath] = useState(cwd || "~");
   const [entries, setEntries] = useState<DirEntry[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const flowSummary = getFileExplorerFlowSummary({
+    currentPath,
+    loading,
+    error,
+    entriesCount: entries.length,
+  });
 
   const load = useCallback(async (path: string) => {
     setLoading(true);
@@ -117,6 +169,13 @@ export default function FileExplorerPanel({ cwd, onClose, onCdTo, onOpenFile }: 
         </IconButton>
       </div>
 
+      <div className="px-3 py-2 border-b border-white/8 bg-white/[0.015]">
+        <ActionFlowBar
+          badges={[flowSummary.primary, flowSummary.secondary, "마지막 열기·cd"]}
+          helper={flowSummary.detail}
+        />
+      </div>
+
       <div className="px-3 py-1.5 text-xs text-white/45 font-mono truncate border-b border-white/8 bg-black/10" title={currentPath}>
         {segments.length === 0 ? "/" : segments.map((s, i) => (
           <span key={i}>
@@ -141,7 +200,15 @@ export default function FileExplorerPanel({ cwd, onClose, onCdTo, onOpenFile }: 
           </div>
         )}
         {!loading && !error && entries.length === 0 && (
-          <div className="text-xs text-white/25 px-3 py-2">빈 폴더</div>
+          <div className="px-3 py-3 space-y-2 text-xs text-white/25">
+            <div>빈 폴더</div>
+            <div className="max-w-md rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2">
+              <ActionFlowBar
+                badges={["현재 위치", currentPath || "~", "파일 생성 준비"]}
+                helper="다른 경로로 이동하거나 상위 폴더로 돌아가면서 작업할 위치를 먼저 정리할 수 있습니다."
+              />
+            </div>
+          </div>
         )}
         {entries.map((e) => (
           <div

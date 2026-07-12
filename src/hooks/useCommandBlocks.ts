@@ -9,6 +9,31 @@ export interface CommandBlock {
   endedAt: number | null;
 }
 
+export interface CommandBlocksMeta {
+  title: string;
+  badges: [string, string, string];
+  helper: string;
+}
+
+export function getCommandBlocksMeta(blocks: CommandBlock[]): CommandBlocksMeta {
+  const total = blocks.length;
+  const failed = blocks.filter((block) => block.exitCode !== null && block.exitCode !== 0).length;
+  const last = blocks[blocks.length - 1];
+  const lastLabel = last
+    ? last.exitCode === 0 || last.exitCode === null
+      ? "최근 성공"
+      : "최근 실패"
+    : "최근 실행 대기";
+
+  return {
+    title: total > 0 ? `커맨드 블록 ${total}개` : "커맨드 블록이 없습니다",
+    badges: [`전체 ${total}개`, `실패 ${failed}개`, lastLabel],
+    helper: total > 0
+      ? "최근 실행 히스토리를 기반으로 성공/실패 흐름과 후속 비교 작업을 이어갈 수 있습니다."
+      : "터미널 실행이 시작되면 커맨드 블록이 쌓이고 이후 실패 분석이나 비교 흐름으로 이어집니다.",
+  };
+}
+
 // ANSI CSI 시퀀스 및 캐리지 리턴 제거 (OSC는 별도 파싱)
 const stripCsi = (s: string) =>
   s.replace(/\x1b\[[0-9;]*[a-zA-Z]/g, "").replace(/\r/g, "");

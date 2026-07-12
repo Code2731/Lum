@@ -1,15 +1,33 @@
 import React, { useState, useEffect, useRef } from "react";
 import * as Babel from "@babel/standalone";
 import { ShieldAlert, ShieldCheck, Copy } from "lucide-react";
+import { ActionFlowBar } from "./ui/action-flow-bar";
 import { IconButton } from "./ui/icon-button";
 
 interface Props {
   code: string;
 }
 
+export interface DynamicUIRendererFlowSummary {
+  badges: [string, string, string];
+  helper: string;
+  tone: "cyan" | "amber";
+}
+
+export function getDynamicUIRendererFlowSummary(error: string | null): DynamicUIRendererFlowSummary {
+  return {
+    badges: ["JSX 변환", "샌드박스 주입", error ? "오류 확인" : "미리보기 확인"],
+    helper: error
+      ? "오류 내용을 복사해 AI 응답이나 코드 블록으로 다시 넘길 수 있습니다."
+      : "실행 결과는 iframe 안에서만 렌더링되며 앱 외부 상태는 변경하지 않습니다.",
+    tone: error ? "amber" : "cyan",
+  };
+}
+
 const DynamicUIRenderer: React.FC<Props> = ({ code }) => {
   const [error, setError] = useState<string | null>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const flowSummary = getDynamicUIRendererFlowSummary(error);
 
   useEffect(() => {
     try {
@@ -83,7 +101,10 @@ const DynamicUIRenderer: React.FC<Props> = ({ code }) => {
   }, [code]);
 
   return (
-    <div className="dynamic-ui-wrapper border border-white/10 rounded-lg overflow-hidden my-4">
+    <section
+      className="dynamic-ui-wrapper my-4 overflow-hidden rounded-lg border border-white/10"
+      aria-label="동적 UI 렌더러"
+    >
       <div className="bg-white/5 px-3 py-1 flex items-center justify-between text-xs uppercase tracking-wider font-bold">
         <div className="flex items-center gap-2">
           {error ? <ShieldAlert size={12} className="text-red-400" /> : <ShieldCheck size={12} className="text-green-400" />}
@@ -91,12 +112,25 @@ const DynamicUIRenderer: React.FC<Props> = ({ code }) => {
         </div>
         <div className="text-white/40">읽기 전용 샌드박스</div>
       </div>
-      
+
+      <div className="border-b border-white/10 bg-white/[0.03] px-3 py-2">
+        <ActionFlowBar
+          badges={flowSummary.badges}
+          helper={flowSummary.helper}
+          tone={flowSummary.tone}
+        />
+      </div>
+
       {error ? (
-        <div className="p-4 bg-red-900/10 text-red-400 text-xs font-mono whitespace-pre-wrap flex items-start justify-between gap-2">
+        <div
+          className="flex items-start justify-between gap-2 bg-red-900/10 p-4 text-xs font-mono text-red-400 whitespace-pre-wrap"
+          role="alert"
+          aria-live="polite"
+        >
           <span className="flex-1 break-words">{error}</span>
           <IconButton
             tooltip="오류 텍스트 복사"
+            description="샌드박스 렌더링 오류 문구를 복사합니다."
             onClick={() => {
               navigator.clipboard?.writeText?.(error).catch(() => {});
             }}
@@ -110,10 +144,11 @@ const DynamicUIRenderer: React.FC<Props> = ({ code }) => {
           ref={iframeRef}
           title="AI 생성 UI 샌드박스"
           sandbox="allow-scripts"
+          aria-label="AI 생성 UI 미리보기"
           className="w-full h-auto min-h-[150px] border-none bg-transparent"
         />
       )}
-    </div>
+    </section>
   );
 };
 

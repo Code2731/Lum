@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import OnboardingWizard from "./OnboardingWizard";
+import OnboardingWizard, { getOnboardingStepFlowSummary } from "./OnboardingWizard";
 
 const mockSpecs = {
   total_memory_gb: 32,
@@ -30,10 +30,30 @@ vi.mock("@tauri-apps/api/event", () => ({
 }));
 
 describe("OnboardingWizard", () => {
+  it("온보딩 단계별 흐름 요약을 계산한다", () => {
+    expect(getOnboardingStepFlowSummary(0)).toEqual({
+      badges: ["먼저 소개 확인", "다음 환경 분석", "마지막 시작"],
+      helper: "LUM이 어떤 흐름으로 준비되는지 먼저 보고, 다음 단계에서 하드웨어와 실행 환경을 차례대로 확인합니다.",
+    });
+
+    expect(getOnboardingStepFlowSummary(3)).toEqual({
+      badges: ["연결 상태 확인", "설치 가이드 확인", "다음 모델 준비"],
+      helper: "xLLM 연결 여부를 먼저 보고, 미연결이면 가이드를 확인한 뒤 모델 준비 단계로 이어갑니다.",
+    });
+
+    expect(getOnboardingStepFlowSummary(99)).toEqual({
+      badges: ["설정 완료", "단축키 확인", "터미널 시작"],
+      helper: "설정 결과와 핵심 단축키를 확인한 뒤 바로 터미널 작업을 시작합니다.",
+    });
+  });
+
   it("Step 0: 환영 화면 렌더링", () => {
     render(<OnboardingWizard onComplete={vi.fn()} />);
     expect(screen.getByText("LUM에 오신 것을 환영합니다")).toBeInTheDocument();
     expect(screen.getByText("시작하기")).toBeInTheDocument();
+    expect(screen.getByText("먼저 소개 확인")).toBeInTheDocument();
+    expect(screen.getByText("다음 환경 분석")).toBeInTheDocument();
+    expect(screen.getByText("마지막 시작")).toBeInTheDocument();
   });
 
   it("Step 0 → Step 1: 시작하기 클릭 시 하드웨어 분석 단계로 이동", async () => {
@@ -95,6 +115,9 @@ describe("OnboardingWizard", () => {
     await waitFor(() => screen.getByText("성능 모드 선택"));
     fireEvent.click(screen.getByText("다음")); // → xLLM
     await waitFor(() => {
+      expect(screen.getByText("연결 상태 확인")).toBeInTheDocument();
+      expect(screen.getByText("설치 가이드 확인")).toBeInTheDocument();
+      expect(screen.getByText("다음 모델 준비")).toBeInTheDocument();
       expect(screen.getByText(/pip install tabbyapi/)).toBeInTheDocument();
       expect(
         screen.getByText(/tabbyapi --model-dir ~\/tabby\/models --port 8080/)

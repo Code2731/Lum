@@ -19,6 +19,12 @@ export interface TerminalAppearance {
   fontFamily: string;
 }
 
+export interface TerminalThemeMeta {
+  title: string;
+  badges: [string, string, string];
+  helper: string;
+}
+
 export const FONT_FAMILIES = [
   "JetBrains Mono",
   "Fira Code",
@@ -29,6 +35,8 @@ export const FONT_FAMILIES = [
 ] as const;
 
 export const DEFAULT_TERMINAL_FONT_SIZE = 13;
+export const MIN_TERMINAL_FONT_SIZE = 11;
+export const MAX_TERMINAL_FONT_SIZE = 24;
 
 export const THEMES: Record<string, XtermTheme> = {
   "GitHub Dark": {
@@ -81,6 +89,26 @@ export const THEMES: Record<string, XtermTheme> = {
     brightYellow: "#657b83", brightBlue: "#839496", brightMagenta: "#6c71c4",
     brightCyan: "#93a1a1", brightWhite: "#fdf6e3",
   },
+  "Catppuccin Mocha": {
+    background: "#1e1e2e", foreground: "#cdd6f4",
+    cursor: "#89b4fa", cursorAccent: "#1e1e2e",
+    selectionBackground: "#45475a99",
+    black: "#45475a", red: "#f38ba8", green: "#a6e3a1", yellow: "#f9e2af",
+    blue: "#89b4fa", magenta: "#cba6f7", cyan: "#94e2d5", white: "#bac2de",
+    brightBlack: "#585b70", brightRed: "#f38ba8", brightGreen: "#a6e3a1",
+    brightYellow: "#f9e2af", brightBlue: "#89b4fa", brightMagenta: "#cba6f7",
+    brightCyan: "#94e2d5", brightWhite: "#a6adc8",
+  },
+  "Nord": {
+    background: "#2e3440", foreground: "#d8dee9",
+    cursor: "#88c0d0", cursorAccent: "#2e3440",
+    selectionBackground: "#4c566a99",
+    black: "#3b4252", red: "#bf616a", green: "#a3be8c", yellow: "#ebcb8b",
+    blue: "#81a1c1", magenta: "#b48ead", cyan: "#88c0d0", white: "#e5e9f0",
+    brightBlack: "#4c566a", brightRed: "#bf616a", brightGreen: "#a3be8c",
+    brightYellow: "#ebcb8b", brightBlue: "#81a1c1", brightMagenta: "#b48ead",
+    brightCyan: "#8fbcbb", brightWhite: "#eceff4",
+  },
 };
 
 const DEFAULT_APPEARANCE: TerminalAppearance = {
@@ -89,27 +117,59 @@ const DEFAULT_APPEARANCE: TerminalAppearance = {
   fontFamily: "JetBrains Mono",
 };
 
+const sanitizeThemeName = (theme?: string) =>
+  theme && THEMES[theme] ? theme : DEFAULT_APPEARANCE.themeName;
+
+const sanitizeFontSize = (fontSize?: number) => {
+  if (typeof fontSize !== "number" || !Number.isFinite(fontSize)) {
+    return DEFAULT_APPEARANCE.fontSize;
+  }
+  return Math.max(MIN_TERMINAL_FONT_SIZE, Math.min(MAX_TERMINAL_FONT_SIZE, Math.round(fontSize)));
+};
+
+const sanitizeFontFamily = (fontFamily?: string) =>
+  fontFamily && FONT_FAMILIES.includes(fontFamily as (typeof FONT_FAMILIES)[number])
+    ? fontFamily
+    : DEFAULT_APPEARANCE.fontFamily;
+
+const sanitizeAppearance = (
+  input: Partial<{ theme?: string; font_size?: number; font_family?: string }> | TerminalAppearance,
+): TerminalAppearance => ({
+  themeName: sanitizeThemeName("themeName" in input ? input.themeName : input.theme),
+  fontSize: sanitizeFontSize("fontSize" in input ? input.fontSize : input.font_size),
+  fontFamily: sanitizeFontFamily("fontFamily" in input ? input.fontFamily : input.font_family),
+});
+
+export function getTerminalThemeMeta(appearance: TerminalAppearance): TerminalThemeMeta {
+  return {
+    title: `터미널 테마 · ${appearance.themeName}`,
+    badges: [
+      `테마 ${appearance.themeName}`,
+      `폰트 ${appearance.fontFamily}`,
+      `크기 ${appearance.fontSize}px`,
+    ],
+    helper: "현재 터미널 팔레트와 폰트 설정이 적용된 상태입니다. 바꾸면 즉시 프리뷰와 저장 흐름에 반영됩니다.",
+  };
+}
+
 export function useTerminalTheme() {
   const [appearance, setAppearance] = useState<TerminalAppearance>(DEFAULT_APPEARANCE);
 
   useEffect(() => {
     invoke<{ theme?: string; font_size?: number; font_family?: string }>("load_app_config")
       .then(cfg => {
-        setAppearance({
-          themeName: cfg.theme && THEMES[cfg.theme] ? cfg.theme : DEFAULT_APPEARANCE.themeName,
-          fontSize: cfg.font_size ?? DEFAULT_APPEARANCE.fontSize,
-          fontFamily: cfg.font_family ?? DEFAULT_APPEARANCE.fontFamily,
-        });
+        setAppearance(sanitizeAppearance(cfg));
       })
       .catch(() => {});
   }, []);
 
   const saveAppearance = useCallback(async (next: TerminalAppearance) => {
-    setAppearance(next);
+    const sanitized = sanitizeAppearance(next);
+    setAppearance(sanitized);
     await invoke("save_terminal_appearance", {
-      theme: next.themeName,
-      fontSize: next.fontSize,
-      fontFamily: next.fontFamily,
+      theme: sanitized.themeName,
+      fontSize: sanitized.fontSize,
+      fontFamily: sanitized.fontFamily,
       opacity: null,
     }).catch(() => {});
   }, []);

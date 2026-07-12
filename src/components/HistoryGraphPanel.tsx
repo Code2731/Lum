@@ -20,6 +20,7 @@ import {
 import "@xyflow/react/dist/style.css";
 import { invoke } from "@tauri-apps/api/core";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { GitBranch, RefreshCw, X, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { IconButton } from "@/components/ui/icon-button";
@@ -62,6 +63,30 @@ interface GraphData {
 
 interface Props {
   onClose: () => void;
+}
+
+export interface HistoryGraphPanelFlowMeta {
+  badges: [string, string, string];
+  helper: string;
+}
+
+export function getHistoryGraphPanelFlowMeta(): HistoryGraphPanelFlowMeta {
+  return {
+    badges: ["먼저 새로고침", "다음 노드 선택", "마지막 라벨 확인"],
+    helper: "그래프를 갱신한 뒤 관심 노드를 눌러 의미 묶음을 확인합니다.",
+  };
+}
+
+export interface HistoryGraphPanelErrorMeta {
+  badges: [string, string, string];
+  copyTooltip: string;
+}
+
+export function getHistoryGraphPanelErrorMeta(): HistoryGraphPanelErrorMeta {
+  return {
+    badges: ["오류 확인", "텍스트 복사", "다시 계산"],
+    copyTooltip: "오류 텍스트 복사",
+  };
 }
 
 function copyText(text: string) {
@@ -168,6 +193,8 @@ export function HistoryGraphPanel({ onClose }: Props) {
   const [selectedLabel, setSelectedLabel] = useState<string | null>(null);
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
+  const flowMeta = getHistoryGraphPanelFlowMeta();
+  const errorMeta = getHistoryGraphPanelErrorMeta();
 
   const loadGraph = useCallback(async () => {
     setLoading(true);
@@ -266,6 +293,16 @@ export function HistoryGraphPanel({ onClose }: Props) {
         </div>
 
         <div className="flex-1 relative">
+          <div className="absolute left-4 top-4 z-10 rounded-xl border border-white/8 bg-[#161b22]/90 px-3 py-2 backdrop-blur-sm">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <StatusBadge tone="neutral">{flowMeta.badges[0]}</StatusBadge>
+              <StatusBadge tone="neutral">{flowMeta.badges[1]}</StatusBadge>
+              <StatusBadge tone="neutral">{flowMeta.badges[2]}</StatusBadge>
+              <span className="text-[10px] text-white/42">
+                {flowMeta.helper}
+              </span>
+            </div>
+          </div>
           {loading && (
             <div className="absolute inset-0 flex items-center justify-center text-slate-400 text-sm">
               그래프 계산 중…
@@ -273,15 +310,22 @@ export function HistoryGraphPanel({ onClose }: Props) {
           )}
           {error && !loading && (
             <div className="absolute inset-0 flex items-start justify-center pt-10 px-8 text-slate-500 text-sm">
-              <div className="max-w-[72%] flex items-start gap-2">
-                <span className="min-w-0 break-words flex-1">{error}</span>
-                <IconButton
-                  tooltip="오류 텍스트 복사"
-                  onClick={() => copyText(error)}
-                  className="p-1 rounded text-white/60 hover:text-white/85 hover:bg-white/10 transition-colors"
-                >
-                  <Copy size={11} />
-                </IconButton>
+              <div className="max-w-[72%] space-y-2">
+                <div className="flex flex-wrap items-center gap-1.5 justify-center">
+                  <StatusBadge tone="neutral">{errorMeta.badges[0]}</StatusBadge>
+                  <StatusBadge tone="neutral">{errorMeta.badges[1]}</StatusBadge>
+                  <StatusBadge tone="neutral">{errorMeta.badges[2]}</StatusBadge>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="min-w-0 break-words flex-1">{error}</span>
+                  <IconButton
+                    tooltip={errorMeta.copyTooltip}
+                    onClick={() => copyText(error)}
+                    className="p-1 rounded text-white/60 hover:text-white/85 hover:bg-white/10 transition-colors"
+                  >
+                    <Copy size={11} />
+                  </IconButton>
+                </div>
               </div>
             </div>
           )}

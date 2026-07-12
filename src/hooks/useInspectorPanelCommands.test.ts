@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { type KeyboardEvent, type SetStateAction, useState } from "react";
 import type { ChatMessage } from "./useAIChat";
 import type { InspectorAnalyzeCache } from "../components/InspectorPanel/types";
-import { useInspectorPanelCommands } from "./useInspectorPanelCommands";
+import { getInspectorPanelCommandsMeta, useInspectorPanelCommands } from "./useInspectorPanelCommands";
 import { normalizeBlockId } from "../utils";
 
 interface Notif {
@@ -185,6 +185,42 @@ describe("useInspectorPanelCommands", () => {
     vi.clearAllMocks();
   });
 
+  it("실패 블록 수와 분석 상태를 메타로 요약한다", () => {
+    expect(
+      getInspectorPanelCommandsMeta({
+        failedBlockCount: 2,
+        selectedBlockId: "b2",
+        inspectorAnalyzeCache: {
+          blockId: "b2",
+          command: "npm test",
+          requestedAt: 1,
+          status: "streaming",
+          result: "",
+          rawResult: "",
+          suggestedCommands: [],
+        },
+        isInspectorCompact: true,
+      }),
+    ).toEqual({
+      title: "실패 블록 2건",
+      badges: ["선택 블록 있음", "분석 streaming", "compact 메뉴"],
+      helper: "실패 블록을 기준으로 분석 프롬프트 복사, AI 재질문, 추천 커맨드 적용 흐름을 이어갈 수 있습니다.",
+    });
+
+    expect(
+      getInspectorPanelCommandsMeta({
+        failedBlockCount: 0,
+        selectedBlockId: null,
+        inspectorAnalyzeCache: null,
+        isInspectorCompact: false,
+      }),
+    ).toEqual({
+      title: "실패 블록 없음",
+      badges: ["선택 블록 없음", "분석 idle", "기본 메뉴"],
+      helper: "실패 블록이 생기면 인스펙터에서 분석과 복구 커맨드 흐름이 자동으로 열립니다.",
+    });
+  });
+
   it("실패한 블록이 있으면 가장 최근 실패 블록으로 분석 프롬프트를 생성한다", () => {
     const { result, spies } = setupInspectorCommands({
       cmdBlocks: [
@@ -287,6 +323,88 @@ describe("useInspectorPanelCommands", () => {
       title: "AI 분석 프롬프트 복사 실패",
       body: "클립보드 접근 권한을 확인해 주세요.",
     }));
+  });
+
+  it("AI 스트림이 완료되면 analyze cache를 done 상태와 추천 커맨드로 갱신한다", async () => {
+    const { result } = setupInspectorCommands({
+      cmdBlocks: [
+        buildBlock("b", "npm test", "fail", 1),
+      ],
+      selectedBlockId: "b",
+      inspectorAnalyzeCache: {
+        blockId: "b",
+        command: "npm test",
+        requestedAt: 100,
+        status: "streaming",
+        result: "",
+        rawResult: "",
+        suggestedCommands: [],
+      },
+    });
+
+    await act(async () => {
+      result.current.setAiChat({
+        messages: [
+          {
+            role: "assistant",
+            content: [
+              "실패 원인: snapshot mismatch",
+              "RUN: npm test -- --runInBand",
+              "RUN: npm run lint",
+            ].join("\n"),
+            timestamp: 101,
+          },
+        ],
+        streaming: false,
+      });
+    });
+
+    expect(result.current.inspectorAnalyzeCache).toMatchObject({
+      blockId: "b",
+      command: "npm test",
+      status: "done",
+      suggestedCommands: ["npm test -- --runInBand", "npm run lint"],
+    });
+    expect(result.current.inspectorAnalyzeCache?.rawResult).toContain("snapshot mismatch");
+  });
+
+  it("AI 응답이 오류 형식이면 analyze cache를 error 상태로 갱신한다", async () => {
+    const { result } = setupInspectorCommands({
+      cmdBlocks: [
+        buildBlock("b", "npm test", "fail", 1),
+      ],
+      selectedBlockId: "b",
+      inspectorAnalyzeCache: {
+        blockId: "b",
+        command: "npm test",
+        requestedAt: 200,
+        status: "streaming",
+        result: "",
+        rawResult: "",
+        suggestedCommands: [],
+      },
+    });
+
+    await act(async () => {
+      result.current.setAiChat({
+        messages: [
+          {
+            role: "assistant",
+            content: "❌ model timeout",
+            timestamp: 201,
+          },
+        ],
+        streaming: false,
+      });
+    });
+
+    expect(result.current.inspectorAnalyzeCache).toMatchObject({
+      blockId: "b",
+      command: "npm test",
+      status: "error",
+      suggestedCommands: [],
+    });
+    expect(result.current.inspectorAnalyzeCache?.rawResult).toBe("❌ model timeout");
   });
 
   it.each([

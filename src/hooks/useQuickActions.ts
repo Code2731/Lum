@@ -8,6 +8,29 @@ export interface QuickAction {
   shortcut?: number; // 1-9
 }
 
+export interface QuickActionsMeta {
+  title: string;
+  badges: [string, string, string];
+  helper: string;
+}
+
+export function getQuickActionsMeta(actions: QuickAction[]): QuickActionsMeta {
+  const actionCount = actions.length;
+  const shortcutCount = actions.filter((action) => typeof action.shortcut === "number").length;
+
+  return {
+    title: actionCount > 0 ? `빠른 액션 ${actionCount}개 준비됨` : "빠른 액션이 비어 있습니다",
+    badges: [
+      `액션 ${actionCount}개`,
+      `단축키 ${shortcutCount}개`,
+      actionCount > 0 ? "즉시 실행 가능" : "새 액션 추가",
+    ],
+    helper: actionCount > 0
+      ? "자주 쓰는 명령을 저장해 두고 단축키까지 연결하면 현재 터미널에서 바로 실행할 수 있습니다."
+      : "반복 명령을 빠른 액션으로 저장하면 다음부터는 검색이나 타이핑 없이 바로 실행할 수 있습니다.",
+  };
+}
+
 const SAVE_DEBOUNCE_MS = 800;
 
 export function useQuickActions() {

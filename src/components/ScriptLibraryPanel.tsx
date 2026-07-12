@@ -3,6 +3,7 @@ import { BookOpen, Play, Trash2, X, Plus, Terminal } from "lucide-react";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete";
 import { IconButton } from "@/components/ui/icon-button";
 import { Textarea } from "@/components/ui/textarea";
+import { ActionFlowBar } from "@/components/ui/action-flow-bar";
 import type { Script } from "../hooks/useScriptLibrary";
 import { SMALL_ICON_SIZE } from "../constants/ui";
 
@@ -17,6 +18,48 @@ interface Props {
   compact?: boolean;
 }
 
+export interface ScriptLibraryFlowSummary {
+  primary: string;
+  secondary: string;
+  detail: string;
+}
+
+export function getScriptLibraryFlowSummary(input: {
+  loading: boolean;
+  scriptsCount: number;
+  creating: boolean;
+}): ScriptLibraryFlowSummary {
+  if (input.loading) {
+    return {
+      primary: "스크립트 불러오는 중",
+      secondary: "목록 갱신",
+      detail: "저장된 스크립트 목록을 불러오는 중이며 완료되면 바로 실행 또는 편집할 수 있습니다.",
+    };
+  }
+
+  if (input.creating) {
+    return {
+      primary: "새 스크립트 작성 중",
+      secondary: `기존 ${input.scriptsCount}개`,
+      detail: "이름과 명령을 정리해 저장하면 라이브러리에 바로 추가할 수 있습니다.",
+    };
+  }
+
+  if (input.scriptsCount === 0) {
+    return {
+      primary: "첫 스크립트 준비",
+      secondary: "저장 없음",
+      detail: "반복 작업을 저장해두면 다음에는 목록에서 골라 한 번에 실행할 수 있습니다.",
+    };
+  }
+
+  return {
+    primary: "스크립트 라이브러리 확인",
+    secondary: `${input.scriptsCount}개 저장`,
+    detail: "기존 스크립트를 훑고 필요한 항목을 선택한 뒤 바로 실행하거나 새 스크립트를 추가할 수 있습니다.",
+  };
+}
+
 const ScriptLibraryPanel: React.FC<Props> = ({
   scripts, loading, onLoad, onRun, onDelete, onSave, onClose, compact = false,
 }) => {
@@ -25,6 +68,11 @@ const ScriptLibraryPanel: React.FC<Props> = ({
   const [newDesc, setNewDesc] = useState("");
   const [newCmds, setNewCmds] = useState("");
   const [saving, setSaving] = useState(false);
+  const flowSummary = getScriptLibraryFlowSummary({
+    loading,
+    scriptsCount: scripts.length,
+    creating,
+  });
 
   useEffect(() => { onLoad(); }, [onLoad]);
 
@@ -74,9 +122,22 @@ const ScriptLibraryPanel: React.FC<Props> = ({
         </button>
       </div>
 
+      <div className="px-3 py-2 border-b border-white/10 bg-white/[0.015] shrink-0">
+        <ActionFlowBar
+          badges={[flowSummary.primary, flowSummary.secondary, "마지막 실행·저장"]}
+          helper={flowSummary.detail}
+        />
+      </div>
+
       {/* 새 스크립트 폼 */}
       {creating && (
         <div className={`shrink-0 border-b border-white/8 ${cardPadClass} ${formSpaceClass} bg-white/[0.03]`}>
+          <div className="mb-2 rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-2">
+            <ActionFlowBar
+              badges={["이름 입력", "명령 정리", "저장 완료"]}
+              helper="스크립트 이름과 설명을 먼저 적고, 명령을 줄 단위로 정리한 뒤 저장하면 바로 라이브러리에 추가됩니다."
+            />
+          </div>
           <input
             className={`w-full bg-white/[0.05] border border-white/[0.12] rounded-md px-2 py-1 ${bodyTextClass} text-white/84 placeholder-white/25 outline-none focus:border-accent/50`}
             placeholder="스크립트 이름"
@@ -124,6 +185,12 @@ const ScriptLibraryPanel: React.FC<Props> = ({
         {!loading && scripts.length === 0 && !creating && (
           <div className="flex flex-col items-center justify-center h-full gap-2 text-white/20 py-12">
             <BookOpen size={24} />
+            <div className="w-full max-w-md rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-left">
+              <ActionFlowBar
+                badges={["첫 스크립트 추가", "반복 작업 저장", "한 번에 실행"]}
+                helper="반복 명령을 저장해두면 다음에는 목록에서 바로 골라 한 번에 실행할 수 있습니다."
+              />
+            </div>
             <p className={`${bodyTextClass} text-center leading-relaxed`}>
               저장된 스크립트가 없습니다.
               <br />

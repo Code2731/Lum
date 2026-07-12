@@ -2,7 +2,7 @@ import React from "react";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { invoke } from "@tauri-apps/api/core";
-import AppOverlays from "./AppOverlays";
+import AppOverlays, { getAppOverlaysFlowSummary } from "./AppOverlays";
 
 vi.mock("@tauri-apps/api/core", () => ({
   invoke: vi.fn(() => Promise.resolve(null)),
@@ -263,6 +263,35 @@ function OverlayHarness({
 describe("AppOverlays", () => {
   beforeEach(() => {
     vi.mocked(invoke).mockClear();
+  });
+
+  it("열린 오버레이 상태 흐름 요약을 계산한다", () => {
+    expect(getAppOverlaysFlowSummary([])).toBeNull();
+    expect(getAppOverlaysFlowSummary(["히스토리"])).toEqual({
+      badges: ["1개 오버레이 열림", "히스토리 확인", "닫기 후 메인 입력 복귀"],
+      helper: "전역 패널을 닫으면 포커스가 메인 입력으로 돌아갑니다.",
+    });
+    expect(getAppOverlaysFlowSummary(["워크스페이스", "명령어 팔레트"])).toEqual({
+      badges: ["2개 오버레이 열림", "워크스페이스 외 1개", "닫기 후 메인 입력 복귀"],
+      helper: "전역 패널을 닫으면 포커스가 메인 입력으로 돌아갑니다.",
+    });
+  });
+
+  it("열린 오버레이가 없으면 전역 오버레이 상태를 비어 있음으로 노출한다", () => {
+    render(<OverlayHarness />);
+
+    expect(screen.getByLabelText("전역 오버레이 상태")).toHaveTextContent(
+      "열린 전역 오버레이가 없습니다.",
+    );
+  });
+
+  it("열린 오버레이가 있으면 공통 흐름 안내를 노출한다", async () => {
+    render(<OverlayHarness initialHistorySearch />);
+
+    const status = screen.getByLabelText("전역 오버레이 상태");
+    expect(status).toHaveTextContent("1개 오버레이 열림");
+    expect(status).toHaveTextContent("히스토리 확인");
+    expect(status).toHaveTextContent("닫기 후 메인 입력 복귀");
   });
 
   it("웰컴 힌트를 닫으면 메인 입력으로 포커스를 복귀한다", async () => {

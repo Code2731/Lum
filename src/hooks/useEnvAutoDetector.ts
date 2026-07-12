@@ -8,6 +8,34 @@ export interface EnvSuggestion {
   description: string;
 }
 
+export interface EnvSuggestionMeta {
+  title: string;
+  badges: [string, string, string];
+  helper: string;
+}
+
+export function getEnvSuggestionMeta(suggestions: EnvSuggestion[]): EnvSuggestionMeta {
+  const first = suggestions[0];
+  const runtime = first?.runtime?.trim() || "환경";
+  const primaryFile = first?.file?.trim() || "감지 파일";
+
+  return {
+    title: suggestions.length > 1 ? `${runtime} 실행 환경 후보 ${suggestions.length}개` : `${runtime} 실행 환경 제안`,
+    badges: [
+      `먼저 ${primaryFile}`,
+      suggestions.length > 1 ? `다음 후보 ${suggestions.length - 1}개` : "다음 바로 실행",
+      "마지막 현재 터미널 적용",
+    ],
+    helper: suggestions.length > 1
+      ? `${primaryFile} 기준으로 실행 명령 후보를 정리했습니다. 내용을 확인한 뒤 현재 터미널에 바로 적용할 수 있습니다.`
+      : `${primaryFile} 기준으로 바로 실행할 명령을 준비했습니다. 현재 터미널 흐름을 끊지 않고 이어서 적용할 수 있습니다.`,
+  };
+}
+
+export function shouldShowEnvSuggestions(next: EnvSuggestion[]): boolean {
+  return next.length > 0;
+}
+
 export function useEnvAutoDetector(
   activePaneIdRef: React.MutableRefObject<string>,
   ptyWriteRefs: React.MutableRefObject<Map<string, (d: string) => void>>,
@@ -27,7 +55,7 @@ export function useEnvAutoDetector(
       lastCwdRef.current = cwd;
       try {
         const result = await invoke<EnvSuggestion[]>("detect_env_files", { cwd });
-        if (result.length > 0) {
+        if (shouldShowEnvSuggestions(result)) {
           setSuggestions(result);
           setVisible(true);
         } else {

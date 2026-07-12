@@ -19,6 +19,11 @@ export interface RetryCompareRuntimeCache {
   completedCount: number;
 }
 
+export interface RetryCompareRuntimeSummary {
+  badges: [string, string, string];
+  helper: string;
+}
+
 const RETRY_COMPARE_STORAGE_KEY = "lum.retryCompareByBlock.v1";
 const RETRY_COMPARE_RUNTIME_STORAGE_KEY = "lum.retryCompareRuntime.v1";
 
@@ -127,4 +132,30 @@ export function saveRetryCompareRuntimeCache(cache: RetryCompareRuntimeCache): v
   } catch {
     // noop
   }
+}
+
+export function getRetryCompareRuntimeSummary(cache: RetryCompareRuntimeCache): RetryCompareRuntimeSummary {
+  const queuedCount = cache.queue.length;
+  const progressBadge = queuedCount > 0
+    ? `대기 ${queuedCount}건`
+    : cache.completedCount > 0
+      ? `완료 ${cache.completedCount}건`
+      : "비교 대기 없음";
+  const stateBadge = cache.paused
+    ? "큐 일시정지"
+    : queuedCount > 0
+      ? "자동 비교 진행"
+      : "큐 유휴";
+  const helper = cache.paused
+    ? "대기열은 유지되고 있으며 재개하면 다음 비교부터 순차적으로 이어집니다."
+    : queuedCount > 0
+      ? "실패나 재실행 결과를 순서대로 비교하면서 변화량을 누적합니다."
+      : cache.completedCount > 0
+        ? "직전 비교 결과를 유지한 채 다음 비교를 기다리는 상태입니다."
+        : "아직 비교 대기열이 없어 새 비교를 추가하면 여기서부터 흐름이 시작됩니다.";
+
+  return {
+    badges: ["재시도+비교", stateBadge, progressBadge],
+    helper,
+  };
 }

@@ -54,6 +54,39 @@ export interface ReactAgentState {
   undoReport: UndoReport | null;
 }
 
+export interface ReactAgentMeta {
+  title: string;
+  badges: [string, string, string];
+  helper: string;
+}
+
+export function getReactAgentMeta(state: ReactAgentState): ReactAgentMeta {
+  const changeCount = state.changes.length;
+  const stepCount = state.steps.length;
+
+  if (state.status === "idle") {
+    return {
+      title: "React Agent 대기 중",
+      badges: ["먼저 goal 입력", "다음 계획/실행", "마지막 변경 검토"],
+      helper: "코드 작업 goal을 시작하면 계획 수립, 실행, 변경 검토, 되돌리기 흐름으로 이어집니다.",
+    };
+  }
+
+  return {
+    title: `React Agent ${state.status}`,
+    badges: [
+      `모드 ${state.mode}`,
+      `스텝 ${stepCount}개`,
+      changeCount > 0 ? `변경 ${changeCount}개` : "변경 없음",
+    ],
+    helper: state.undoing
+      ? "현재 변경 사항을 되돌리는 중입니다."
+      : state.undoReport
+        ? `되돌리기 결과 · 복원 ${state.undoReport.restored.length}개 / 삭제 ${state.undoReport.removed.length}개 / 오류 ${state.undoReport.errors.length}개`
+        : "계획, 실행, 변경 추적 결과를 바탕으로 다음 승인이나 되돌리기 결정을 이어갈 수 있습니다.",
+  };
+}
+
 // 백엔드 Plan 모드 정책과 같은 차단 목록.
 // Plan 중 LLM이 실행/쓰기 도구를 환각 호출해도 승인 후보로 표시하지 않는다.
 const PLAN_BLOCKED_TOOLS = new Set([

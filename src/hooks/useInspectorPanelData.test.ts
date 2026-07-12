@@ -1,7 +1,11 @@
 import { renderHook } from "@testing-library/react";
 import { describe, it, expect } from "vitest";
 import type { InspectorAnalyzeCache } from "../components/InspectorPanel/types";
-import { useInspectorPanelData } from "./useInspectorPanelData";
+import {
+  getInspectorPanelDataMeta,
+  getInspectorPanelFlowSummary,
+  useInspectorPanelData,
+} from "./useInspectorPanelData";
 import type { CommandBlock } from "./useCommandBlocks";
 
 const INSPECTOR_TABS = [
@@ -43,6 +47,72 @@ function buildBlock(overrides: Partial<CommandBlock> & { id: string; command: st
 }
 
 describe("useInspectorPanelData", () => {
+  it("인스펙터 상태 요약은 noActivity/실패/정상 흐름을 반환한다", () => {
+    expect(
+      getInspectorPanelFlowSummary({
+        activeTabTitle: "main",
+        noActivity: true,
+        failedBlockCount: 0,
+        recentBlockCount: 0,
+      }),
+    ).toEqual({
+      badges: ["main", "실행 대기", "첫 기록 수집 전"],
+      helper: "아직 실행 기록이 없어 첫 명령을 실행하면 실패 분석과 최근 기록 흐름이 여기서부터 시작됩니다.",
+    });
+
+    expect(
+      getInspectorPanelFlowSummary({
+        activeTabTitle: "main",
+        noActivity: false,
+        failedBlockCount: 2,
+        recentBlockCount: 5,
+      }),
+    ).toEqual({
+      badges: ["main", "실패 2개", "최근 5개"],
+      helper: "실패 블록이 있어 복구나 재실행을 먼저 보고, 이후 최근 기록 흐름으로 이어가는 상태입니다.",
+    });
+
+    expect(
+      getInspectorPanelFlowSummary({
+        activeTabTitle: "main",
+        noActivity: false,
+        failedBlockCount: 0,
+        recentBlockCount: 4,
+      }),
+    ).toEqual({
+      badges: ["main", "실패 없음", "최근 4개"],
+      helper: "현재는 치명적인 실패 없이 최근 실행 기록을 중심으로 흐름을 확인할 수 있는 상태입니다.",
+    });
+
+    expect(
+      getInspectorPanelDataMeta({
+        activeTabTitle: "main",
+        failedBlockCount: 2,
+        recentBlockCount: 5,
+        inspectorAnalyzeStatus: "streaming",
+        quickActionsExpanded: true,
+      }),
+    ).toEqual({
+      title: "main 인스펙터 상태",
+      badges: ["실패 2개", "최근 5개", "빠른 액션 펼침 · 분석 streaming"],
+      helper: "실패 블록, 최근 실행 기록, 분석 캐시를 함께 보며 복구나 재실행 흐름을 이어갈 수 있습니다.",
+    });
+
+    expect(
+      getInspectorPanelDataMeta({
+        activeTabTitle: "main",
+        failedBlockCount: 0,
+        recentBlockCount: 4,
+        inspectorAnalyzeStatus: null,
+        quickActionsExpanded: false,
+      }),
+    ).toEqual({
+      title: "main 실행 요약",
+      badges: ["실패 0개", "최근 4개", "빠른 액션 접힘 · 분석 idle"],
+      helper: "최근 실행 기록과 빠른 액션을 중심으로 현재 탭의 작업 흐름을 점검할 수 있습니다.",
+    });
+  });
+
   it("실패 블록만 역순으로 정렬되고 선택 블록이 있으면 우선 반환한다", () => {
     const cmdBlocks = [
       buildBlock({ id: "a", command: "echo ok", output: "출력 1", exitCode: 0 }),

@@ -110,6 +110,19 @@ function setupClipboardWriteMock() {
     render(<XllmPanel onClose={vi.fn()} />);
 
     await waitFor(() => {
+      expect(screen.getByText("먼저 연결")).toBeInTheDocument();
+      expect(screen.getByText("다음 저장")).toBeInTheDocument();
+      expect(screen.getByText("마지막 상태 확인")).toBeInTheDocument();
+      expect(screen.getByText("먼저 선택")).toBeInTheDocument();
+      expect(screen.getByText("마지막 새로고침")).toBeInTheDocument();
+      expect(screen.getByText("먼저 URL 확인")).toBeInTheDocument();
+      expect(screen.getByText("다음 모델 선택")).toBeInTheDocument();
+      expect(screen.getByText("마지막 연결 저장")).toBeInTheDocument();
+      expect(screen.getByText("먼저 상태 확인")).toBeInTheDocument();
+      expect(screen.getByText("다음 파일 열기")).toBeInTheDocument();
+      expect(screen.getByText("마지막 복사·수정")).toBeInTheDocument();
+      expect(screen.getByText("시작·종료 훅과 transcript 상태를 확인한 뒤 필요한 파일을 열고, 마지막에 가이드를 복사해 수정합니다.")).toBeInTheDocument();
+      expect(screen.getByText("서버 주소를 확인하고 모델을 고른 뒤, 저장 후 온라인 상태를 다시 확인합니다.")).toBeInTheDocument();
       expect(invokeMock).toHaveBeenCalledWith("recall_backend_info", undefined);
       expect(screen.getByText("active: local-cosine")).toBeInTheDocument();
     });
@@ -2377,6 +2390,10 @@ function setupClipboardWriteMock() {
     render(<XllmPanel onClose={vi.fn()} />);
 
     const discoverButton = await screen.findByRole("button", { name: "검색" });
+    expect(screen.getAllByText("먼저 검색").length).toBeGreaterThan(0);
+    expect(screen.getByText("다음 서버 선택")).toBeInTheDocument();
+    expect(screen.getByText("마지막 적용")).toBeInTheDocument();
+    expect(screen.getByText("같은 네트워크의 후보를 찾고, 원하는 서버를 고른 뒤 바로 현재 백엔드에 적용합니다.")).toBeInTheDocument();
     fireEvent.click(discoverButton);
 
     expect(await screen.findByText("검색 실패: LAN 탐색 API 오류")).toBeInTheDocument();

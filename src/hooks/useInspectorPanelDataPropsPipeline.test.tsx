@@ -70,6 +70,96 @@ function createActionHandlers(): Pick<InspectorPanelProps, "onDensityToggle" | "
 }
 
 describe("Inspector panel data + props pipeline", () => {
+  it("선택 ID 정규화와 noActivity 상태가 data→props 파이프라인 전체에서 유지된다", () => {
+    const handlers = createActionHandlers();
+
+    const { result, rerender } = renderHook(
+      ({
+        selectedBlockId,
+        cmdBlocks,
+        inspectorAnalyzeCache,
+      }: {
+        selectedBlockId: string | null;
+        cmdBlocks: CommandBlock[];
+        inspectorAnalyzeCache: InspectorAnalyzeCache | null;
+      }) => {
+        const data = useInspectorPanelData({
+          showInspector: true,
+          selectedModel: "test-model",
+          inspectorTab: "summary" as const,
+          inspectorDensity: "cozy" as const,
+          inspectorTabs: INSPECTOR_TABS,
+          inspectorTabRefs: makeRef({
+            summary: null,
+            rag: null,
+            scripts: null,
+            sysmon: null,
+          }),
+          activeTab: { title: "Shell 1", cwd: "/repo" },
+          activeTabGitInfo: null,
+          cmdBlocks,
+          selectedBlockId,
+          inspectorAnalyzeCache,
+          inspectorCommandMenuIndex: null,
+          quickActionsExpanded: false,
+          inspectorMoreButtonRefs: makeRef({} as Record<number, HTMLButtonElement | null>),
+          inspectorMenuFirstActionRefs: makeRef({} as Record<number, HTMLButtonElement | null>),
+          inspectorQuickActionsToggleRef: makeRef(null as HTMLButtonElement | null),
+          inspectorQuickActionsAdvancedRef: makeRef(null as HTMLDivElement | null),
+          scriptLibrary: {
+            scripts: [],
+            loading: false,
+            onLoad: vi.fn(async () => undefined),
+            onRun: vi.fn(),
+            onDelete: vi.fn(async () => undefined),
+            onSave: vi.fn(async () => ({
+              id: "script-1",
+              name: "test",
+              description: "test",
+              commands: [],
+              created_at: 1,
+            })),
+          },
+        });
+        return {
+          data,
+          props: useInspectorPanelProps({
+            ...data,
+            ...handlers,
+          }),
+        };
+      },
+      {
+        initialProps: {
+          selectedBlockId: null,
+          cmdBlocks: [],
+          inspectorAnalyzeCache: null,
+        },
+      },
+    );
+
+    expect(result.current.data.noActivity).toBe(true);
+    expect(result.current.props.noActivity).toBe(true);
+    expect(result.current.props.failedBlocks).toEqual([]);
+
+    rerender({
+      selectedBlockId: "\uFEFF fail-2 \n",
+      cmdBlocks: [
+        makeCommandBlock({ id: "fail-1", command: "bad1", output: "err1", exitCode: 1 }),
+        makeCommandBlock({ id: "fail-2", command: "bad2", output: "err2", exitCode: 2 }),
+      ],
+      inspectorAnalyzeCache: null,
+    });
+
+    expect(result.current.data.noActivity).toBe(false);
+    expect(result.current.props.focusedFailedBlock).toEqual({
+      id: "fail-2",
+      command: "bad2",
+      exitCode: 2,
+      outputTail: "err2",
+    });
+  });
+
   it("useInspectorPanelData 산출값이 useInspectorPanelProps에서 그대로 재사용된다", () => {
     const common: InspectorPanelDataOptions = {
       showInspector: true,

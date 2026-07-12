@@ -3,7 +3,10 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import type { ReactElement } from "react";
 import { isPointerOutsideTargets } from "../utils/pointerGuard";
-import PrivacyLedgerBadge from "./PrivacyLedgerBadge";
+import PrivacyLedgerBadge, {
+  getPrivacyLedgerSummaryBadges,
+  getPrivacyLedgerToneMeta,
+} from "./PrivacyLedgerBadge";
 import type { LedgerState } from "../hooks/usePrivacyLedger";
 
 vi.mock("framer-motion", () => ({
@@ -29,6 +32,25 @@ describe("PrivacyLedgerBadge", () => {
     },
     last: null,
   };
+
+  it("톤 메타와 요약 배지를 상태에 따라 계산한다", () => {
+    expect(getPrivacyLedgerToneMeta(defaultState, true)).toEqual({
+      tone: "neutral",
+      label: "호출 대기",
+      tooltip: "이번 세션에 AI 호출이 아직 없습니다 — 호출이 시작되면 로컬/클라우드 흐름을 추적합니다",
+    });
+
+    expect(getPrivacyLedgerSummaryBadges(defaultState, true)).toEqual([
+      {
+        label: "호출 대기",
+        className: "border-white/12 bg-white/[0.05] text-white/58",
+      },
+      {
+        label: "로컬 우선",
+        className: "border-emerald-300/24 bg-emerald-400/10 text-emerald-100",
+      },
+    ]);
+  });
 
   it("팝오버 외부 클릭 판정은 ref가 null이어도 안전하게 동작한다", () => {
     const target = document.createElement("div");
@@ -74,6 +96,98 @@ describe("PrivacyLedgerBadge", () => {
     expect(button).toHaveFocus();
   });
 
+  it("트리거 버튼은 온디바이스 상태와 호출 수를 함께 보여준다", () => {
+    const state: LedgerState = {
+      ...defaultState,
+      total: 2,
+      onlineCalls: 0,
+      perBackend: {
+        ...defaultState.perBackend,
+        embedded: {
+          count: 2,
+          totalPromptChars: 80,
+          totalLatencyMs: 320,
+          lastTs: Date.now(),
+        },
+      },
+      last: {
+        backend: "embedded",
+        online: false,
+        model: "local-test",
+        prompt_chars: 40,
+        latency_ms: 160,
+        ts_ms: Date.now(),
+      },
+    };
+
+    renderWithProvider(
+      <PrivacyLedgerBadge
+        state={state}
+        isAllOnDevice
+        onReset={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("온디바이스 100%")).toBeInTheDocument();
+    expect(screen.getByText("2건")).toBeInTheDocument();
+    expect(screen.getByText("로컬")).toBeInTheDocument();
+  });
+
+  it("호출이 없으면 호출 대기 상태를 보여준다", () => {
+    renderWithProvider(
+      <PrivacyLedgerBadge
+        state={defaultState}
+        isAllOnDevice
+        onReset={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("호출 대기")).toBeInTheDocument();
+  });
+
+  it("클라우드 호출이 섞이면 트리거에서 클라우드 건수를 바로 보여준다", () => {
+    const state: LedgerState = {
+      ...defaultState,
+      total: 3,
+      onlineCalls: 1,
+      perBackend: {
+        ...defaultState.perBackend,
+        embedded: {
+          count: 2,
+          totalPromptChars: 120,
+          totalLatencyMs: 360,
+          lastTs: Date.now(),
+        },
+        gemini: {
+          count: 1,
+          totalPromptChars: 40,
+          totalLatencyMs: 220,
+          lastTs: Date.now(),
+        },
+      },
+      last: {
+        backend: "gemini",
+        online: true,
+        model: "cloud-test",
+        prompt_chars: 40,
+        latency_ms: 220,
+        ts_ms: Date.now(),
+      },
+    };
+
+    renderWithProvider(
+      <PrivacyLedgerBadge
+        state={state}
+        isAllOnDevice={false}
+        onReset={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("클라우드 33%")).toBeInTheDocument();
+    expect(screen.getByText("3건")).toBeInTheDocument();
+    expect(screen.getByText("클라우드 1")).toBeInTheDocument();
+  });
+
   it("초기화 버튼이 표시되고 동작한다", () => {
     const onReset = vi.fn();
     const state: LedgerState = {
@@ -111,6 +225,48 @@ describe("PrivacyLedgerBadge", () => {
 
     const reset = screen.getByText("초기화");
     expect(reset).toBeInTheDocument();
+    expect(screen.getByText("클라우드 혼합")).toBeInTheDocument();
+    expect(screen.getByText("라우팅 점검")).toBeInTheDocument();
+    expect(screen.getByText("세션의 AI 라우팅 흐름을 한눈에 요약합니다.")).toBeInTheDocument();
+    expect(screen.getByText("마지막 라우팅")).toBeInTheDocument();
+    expect(screen.getByText("마지막 요청이 어떤 경로로 처리됐는지 바로 확인합니다.")).toBeInTheDocument();
+  });
+
+  it("온디바이스 세션은 로컬 중심 요약 배지를 노출한다", () => {
+    const state: LedgerState = {
+      ...defaultState,
+      total: 2,
+      onlineCalls: 0,
+      perBackend: {
+        ...defaultState.perBackend,
+        embedded: {
+          count: 2,
+          totalPromptChars: 80,
+          totalLatencyMs: 340,
+          lastTs: Date.now(),
+        },
+      },
+      last: {
+        backend: "embedded",
+        online: false,
+        model: "local-test",
+        prompt_chars: 40,
+        latency_ms: 170,
+        ts_ms: Date.now(),
+      },
+    };
+
+    renderWithProvider(
+      <PrivacyLedgerBadge
+        state={state}
+        isAllOnDevice
+        onReset={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /개인정보 원장/ }));
+    expect(screen.getByText("온디바이스 유지")).toBeInTheDocument();
+    expect(screen.getByText("네트워크 없음")).toBeInTheDocument();
   });
 
   it("팝오버에서 Tab/Arrow 키로 포커스를 순환한다", () => {

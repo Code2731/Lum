@@ -7,8 +7,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { ActionFlowBar } from "@/components/ui/action-flow-bar";
 import { cn } from "@/lib/utils";
 import type { DangerMatch } from "../utils/pasteGuard";
+import { getSmartPasteFlowSummary } from "../utils/smartPaste";
 
 interface Props {
   match: DangerMatch;
@@ -16,8 +18,24 @@ interface Props {
   onCancel: () => void;
 }
 
+export interface PasteGuardFlowSummary {
+  badges: [string, string, string];
+  helper: string;
+}
+
+export function getPasteGuardFlowSummary(match: DangerMatch): PasteGuardFlowSummary {
+  const pasteSummary = getSmartPasteFlowSummary(match.pattern);
+  const decisionLabel = match.level === "danger" ? "마지막 실행 여부 재확인" : "마지막 계속 여부 결정";
+
+  return {
+    badges: [pasteSummary.primary, pasteSummary.secondary, decisionLabel],
+    helper: `${pasteSummary.detail} 탐지된 이유를 읽고 ${match.level === "danger" ? "정말 실행할지 한 번 더 확인합니다." : "그대로 실행할지 취소할지 결정합니다."}`,
+  };
+}
+
 const PasteGuardModal: React.FC<Props> = ({ match, onConfirm, onCancel }) => {
   const isDanger = match.level === "danger";
+  const flow = getPasteGuardFlowSummary(match);
   const Icon = isDanger ? ShieldAlert : AlertTriangle;
   const tone = isDanger
     ? { title: "text-red-300", icon: "text-red-400", border: "border-red-500/20", bg: "bg-red-500/5", reasonBorder: "border-red-500/15", btn: "bg-red-500/15 hover:bg-red-500/25 text-red-400" }
@@ -31,6 +49,13 @@ const PasteGuardModal: React.FC<Props> = ({ match, onConfirm, onCancel }) => {
           <DialogTitle className={cn("text-sm font-semibold", tone.title)}>
             {isDanger ? "위험한 커맨드 감지" : "주의 필요"}
           </DialogTitle>
+        </div>
+
+        <div className="px-5 py-2.5 border-b border-white/10 bg-white/[0.02]">
+          <ActionFlowBar
+            badges={flow.badges}
+            helper={flow.helper}
+          />
         </div>
 
         <div className="px-5 py-4 space-y-3">

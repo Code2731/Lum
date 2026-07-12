@@ -2,6 +2,7 @@ import type { ComponentProps } from "react";
 import { describe, it, expect, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import InspectorPanel from "./InspectorPanel";
+import { getInspectorPanelSummaryEmptyStateFlow } from "./InspectorPanelSummary";
 import type {
   InspectorAnalyzeCache,
   InspectorFailedBlock,
@@ -183,6 +184,18 @@ function renderInspector(overrides: Partial<InspectorPanelProps> = {}) {
 }
 
 describe("InspectorPanel", () => {
+  it("요약 탭 빈 상태 흐름 요약을 계산한다", () => {
+    expect(getInspectorPanelSummaryEmptyStateFlow("main")).toEqual({
+      badges: ["현재 탭", "main", "실행 대기"],
+      helper: "이 탭에서 첫 명령을 실행하면 이후 실패 분석과 최근 기록이 같은 문맥으로 쌓입니다.",
+    });
+
+    expect(getInspectorPanelSummaryEmptyStateFlow()).toEqual({
+      badges: ["현재 탭", "터미널", "실행 대기"],
+      helper: "첫 명령을 실행하면 이후 실패 분석과 최근 기록이 현재 터미널 문맥으로 쌓입니다.",
+    });
+  });
+
   it("showInspector가 false면 패널이 렌더링되지 않는다", () => {
     const { container } = renderInspector({ showInspector: false });
 
@@ -192,7 +205,10 @@ describe("InspectorPanel", () => {
   it("요약 탭에서 Inspector 제목과 요약 정보가 렌더링된다", () => {
     renderInspector();
 
+    expect(screen.getByLabelText("인스펙터 패널")).toBeInTheDocument();
     expect(screen.getByText("인스펙터")).toBeInTheDocument();
+    expect(screen.getByText("요약")).toBeInTheDocument();
+    expect(screen.getByText("최근 1개")).toBeInTheDocument();
     expect(screen.getByText("main")).toBeInTheDocument();
     expect(screen.getByText("/Users/dev")).toBeInTheDocument();
     expect(screen.getByText("실패 블록")).toBeInTheDocument();
@@ -207,8 +223,20 @@ describe("InspectorPanel", () => {
       recentBlocks: [],
     });
 
+    expect(screen.getByText("실행 대기")).toBeInTheDocument();
+    expect(screen.getByText("먼저 실행")).toBeInTheDocument();
+    expect(screen.getByText("다음 실패 확인")).toBeInTheDocument();
+    expect(screen.getByText("마지막 기록 확인")).toBeInTheDocument();
+    expect(screen.getByText("명령을 한 번 실행하면 실패 블록, 추천 커맨드, 최근 기록 흐름이 차례로 열립니다.")).toBeInTheDocument();
+    expect(screen.getAllByText("현재 탭").length).toBeGreaterThan(0);
+    expect(screen.getByText("main")).toBeInTheDocument();
+    expect(screen.getByText("실행 대기")).toBeInTheDocument();
+    expect(screen.getByText("이 탭에서 첫 명령을 실행하면 이후 실패 분석과 최근 기록이 같은 문맥으로 쌓입니다.")).toBeInTheDocument();
     expect(
       screen.getByText("터미널에서 최근 명령을 실행하면 여기에서 실패 블록·추천 커맨드·최근 기록을 확인할 수 있습니다."),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("먼저 한 번 실행해 두면 복구, 재실행, 기록 확인 흐름이 모두 현재 탭 기준으로 이어집니다."),
     ).toBeInTheDocument();
     expect(screen.queryByText("실패 블록")).not.toBeInTheDocument();
   });
@@ -540,7 +568,7 @@ describe("InspectorPanel", () => {
     const onAnalyzeFailedBlock = vi.fn();
     renderInspector({ onAnalyzeFailedBlock });
 
-    fireEvent.click(screen.getByText("AI 분석"));
+    fireEvent.click(screen.getByText("실패 분석 열기"));
 
     expect(onAnalyzeFailedBlock).toHaveBeenCalledWith("fail-1");
   });
@@ -568,11 +596,11 @@ describe("InspectorPanel", () => {
       onSelectBlock,
     });
 
-    fireEvent.click(screen.getByText("다음 실패"));
-    fireEvent.click(screen.getByText("로그 복사"));
-    fireEvent.click(screen.getByText("프롬프트 복사"));
-    fireEvent.click(screen.getByText("프롬프트 불러오기"));
-    fireEvent.click(screen.getByText("선택"));
+    fireEvent.click(screen.getByText("다음 실패 확인"));
+    fireEvent.click(screen.getByText("실패 로그 복사"));
+    fireEvent.click(screen.getByText("분석 프롬프트 복사"));
+    fireEvent.click(screen.getByText("분석 입력 불러오기"));
+    fireEvent.click(screen.getByText("블록 선택"));
 
     expect(onFocusFailedBlock).toHaveBeenCalledTimes(1);
     expect(onCopyFailedOutput).toHaveBeenCalledWith("fail-1");
@@ -607,11 +635,11 @@ describe("InspectorPanel", () => {
       onApplySuggestedCommand,
     });
 
-    expect(screen.getByText("DONE")).toBeInTheDocument();
+    expect(screen.getByText("분석 완료")).toBeInTheDocument();
     expect(screen.getByText("추천 커맨드")).toBeInTheDocument();
     expect(screen.getByText("npm test -- --runInBand")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByText("RUN #1"));
+    fireEvent.click(screen.getByText("첫 실행"));
 
     expect(onApplySuggestedCommand).toHaveBeenCalledWith(0);
   });
@@ -622,7 +650,7 @@ describe("InspectorPanel", () => {
       inspectorDensity: "cozy",
     });
 
-    expect(screen.getByText("R 실행 · C 복사 · L 로드")).toBeInTheDocument();
+    expect(screen.getByText("실행 · 복사 · 입력")).toBeInTheDocument();
   });
 
   it("추천 커맨드가 없으면 추천 영역을 숨긴다", () => {
@@ -632,8 +660,8 @@ describe("InspectorPanel", () => {
     });
 
     expect(screen.queryByText("추천 커맨드")).not.toBeInTheDocument();
-    expect(screen.queryByText("R 실행 · C 복사 · L 로드")).not.toBeInTheDocument();
-    expect(screen.getByText("RUN #1")).toBeInTheDocument();
+    expect(screen.queryByText("실행 · 복사 · 입력")).not.toBeInTheDocument();
+    expect(screen.getByText("첫 실행")).toBeInTheDocument();
   });
 
   it("분석 캐시가 없으면 빈 상태 문구를 보여준다", () => {
@@ -645,13 +673,13 @@ describe("InspectorPanel", () => {
   it("분석 캐시가 없으면 상단 CLEAR 액션을 숨긴다", () => {
     renderInspector({ analyzeCache: null });
 
-    expect(screen.queryByText("CLEAR")).not.toBeInTheDocument();
+    expect(screen.queryByText("결과 지우기")).not.toBeInTheDocument();
   });
 
   it("streaming 분석 캐시는 진행 중 상태 문구를 보여준다", () => {
     renderInspector({ analyzeCache: streamingAnalyzeCache });
 
-    expect(screen.getByText("STREAMING")).toBeInTheDocument();
+    expect(screen.getByText("진행 중")).toBeInTheDocument();
     expect(screen.getByText("응답을 기다리는 중...")).toBeInTheDocument();
     expect(screen.queryByText("추천 커맨드")).not.toBeInTheDocument();
   });
@@ -659,12 +687,12 @@ describe("InspectorPanel", () => {
   it("error 분석 캐시는 오류 상태와 결과를 보여준다", () => {
     renderInspector({ analyzeCache: errorAnalyzeCache });
 
-    expect(screen.getByText("ERROR")).toBeInTheDocument();
+    expect(screen.getByText("분석 오류")).toBeInTheDocument();
     expect(screen.getByText("stderr: command failed")).toBeInTheDocument();
     expect(screen.queryByText("추천 커맨드")).not.toBeInTheDocument();
   });
 
-  it("분석 캐시가 있으면 COPY와 CLEAR 액션을 호출한다", () => {
+  it("분석 캐시가 있으면 결과 복사와 결과 지우기 액션을 호출한다", () => {
     const onCopyAnalyzeResult = vi.fn();
     const onClearAnalyzeCache = vi.fn();
     renderInspector({
@@ -673,8 +701,8 @@ describe("InspectorPanel", () => {
       onClearAnalyzeCache,
     });
 
-    fireEvent.click(screen.getAllByText("COPY")[0]);
-    fireEvent.click(screen.getByText("CLEAR"));
+    fireEvent.click(screen.getAllByText("결과 복사")[0]);
+    fireEvent.click(screen.getByText("결과 지우기"));
 
     expect(onCopyAnalyzeResult).toHaveBeenCalledTimes(1);
     expect(onClearAnalyzeCache).toHaveBeenCalledTimes(1);
@@ -699,9 +727,16 @@ describe("InspectorPanel", () => {
       onLoadAnalyzePromptToAiBar,
     });
 
-    fireEvent.click(screen.getByText("SEL"));
-    fireEvent.click(screen.getByText("RUN"));
-    fireEvent.click(screen.getByText("LOAD"));
+    expect(screen.getByText("먼저 재실행")).toBeInTheDocument();
+    expect(screen.getByText("다음 분석")).toBeInTheDocument();
+    expect(screen.getByText("마지막 선택")).toBeInTheDocument();
+    expect(
+      screen.getByText("방금 실행한 흐름을 다시 돌리고, 실패 시 분석으로 이어가고, 필요하면 해당 블록을 고정합니다."),
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText("블록 선택"));
+    fireEvent.click(screen.getByText("다시 실행"));
+    fireEvent.click(screen.getByText("분석 열기"));
 
     expect(onSelectBlock).toHaveBeenCalledWith("block-2");
     expect(onRerunBlock).toHaveBeenCalledWith("npm run build");
@@ -721,10 +756,12 @@ describe("InspectorPanel", () => {
       ],
     });
 
-    expect(screen.queryByText("LOAD")).not.toBeInTheDocument();
+    expect(screen.getByText("성공 흐름")).toBeInTheDocument();
+    expect(screen.getByText("바로 재실행")).toBeInTheDocument();
+    expect(screen.queryByText("분석 열기")).not.toBeInTheDocument();
   });
 
-  it("compact 분석 메뉴의 MORE 버튼은 닫힌 상태에서 메뉴 열기 콜백을 호출한다", () => {
+  it("compact 분석 메뉴의 추가 버튼은 닫힌 상태에서 메뉴 열기 콜백을 호출한다", () => {
     const onOpenCompactMenu = vi.fn();
     renderInspector({
       analyzeCache: baseAnalyzeCache,
@@ -732,13 +769,13 @@ describe("InspectorPanel", () => {
       onOpenCompactMenu,
     });
 
-    fireEvent.click(screen.getAllByText("MORE")[0]);
+    fireEvent.click(screen.getAllByText("추가")[0]);
 
     expect(onOpenCompactMenu).toHaveBeenCalledWith(0);
     expect(screen.queryByRole("menu")).not.toBeInTheDocument();
   });
 
-  it("compact 분석 카드의 RUN (R)은 두 번째 추천 커맨드 인덱스를 전달한다", () => {
+  it("compact 분석 카드의 실행 (R)은 두 번째 추천 커맨드 인덱스를 전달한다", () => {
     const onApplySuggestedCommand = vi.fn();
     renderInspector({
       analyzeCache: multiAnalyzeCache,
@@ -746,7 +783,7 @@ describe("InspectorPanel", () => {
       onApplySuggestedCommand,
     });
 
-    fireEvent.click(screen.getAllByText("RUN (R)")[1]);
+    fireEvent.click(screen.getAllByText("실행 (R)")[1]);
 
     expect(onApplySuggestedCommand).toHaveBeenCalledWith(1);
   });
@@ -757,7 +794,7 @@ describe("InspectorPanel", () => {
       inspectorDensity: "compact",
     });
 
-    expect(screen.getByText("R 실행 · MORE→C/L")).toBeInTheDocument();
+    expect(screen.getByText("실행 · 추가 액션에서 복사/입력")).toBeInTheDocument();
   });
 
   it("cozy 추천 커맨드 행은 tabIndex -1을 가진다", () => {
@@ -860,7 +897,7 @@ describe("InspectorPanel", () => {
     expect(onSuggestedCommandRowKeyDown.mock.calls[0]?.[1]).toBe(0);
   });
 
-  it("compact 분석 메뉴의 MORE 버튼은 키보드로도 메뉴 열기 콜백을 호출한다", () => {
+  it("compact 분석 메뉴의 추가 버튼은 키보드로도 메뉴 열기 콜백을 호출한다", () => {
     const onOpenCompactMenu = vi.fn();
     renderInspector({
       analyzeCache: baseAnalyzeCache,
@@ -868,7 +905,7 @@ describe("InspectorPanel", () => {
       onOpenCompactMenu,
     });
 
-    const moreButton = screen.getAllByText("MORE")[0];
+    const moreButton = screen.getAllByText("추가")[0];
     fireEvent.keyDown(moreButton, { key: "ArrowDown" });
     fireEvent.keyDown(moreButton, { key: "Enter" });
     fireEvent.keyDown(moreButton, { key: "Escape" });
@@ -878,7 +915,7 @@ describe("InspectorPanel", () => {
     expect(onOpenCompactMenu).toHaveBeenCalledTimes(2);
   });
 
-  it("compact MORE 버튼의 비지원 키는 onOpenCompactMenu를 호출하지 않는다", () => {
+  it("compact 추가 버튼의 비지원 키는 onOpenCompactMenu를 호출하지 않는다", () => {
     const onOpenCompactMenu = vi.fn();
     renderInspector({
       analyzeCache: baseAnalyzeCache,
@@ -886,7 +923,7 @@ describe("InspectorPanel", () => {
       onOpenCompactMenu,
     });
 
-    const moreButton = screen.getAllByText("MORE")[0];
+    const moreButton = screen.getAllByText("추가")[0];
     fireEvent.keyDown(moreButton, { key: "Tab" });
     fireEvent.keyDown(moreButton, { key: "ArrowUp" });
 
@@ -900,20 +937,20 @@ describe("InspectorPanel", () => {
       commandMenuIndex: 1,
     });
 
-    const moreButtons = screen.getAllByText("MORE");
+    const moreButtons = screen.getAllByText("추가");
     expect(moreButtons[0].closest("button")).toHaveAttribute("aria-expanded", "false");
     expect(moreButtons[1].closest("button")).toHaveAttribute("aria-expanded", "true");
     expect(screen.getByRole("menu")).toBeInTheDocument();
   });
 
-  it("compact MORE 버튼은 각 추천 행의 메뉴 id를 aria-controls로 연결한다", () => {
+  it("compact 추가 버튼은 각 추천 행의 메뉴 id를 aria-controls로 연결한다", () => {
     renderInspector({
       analyzeCache: multiAnalyzeCache,
       inspectorDensity: "compact",
       commandMenuIndex: 1,
     });
 
-    const moreButtons = screen.getAllByText("MORE");
+    const moreButtons = screen.getAllByText("추가");
     expect(moreButtons[0].closest("button")).toHaveAttribute("aria-controls", "inspector-command-menu-0");
     expect(moreButtons[1].closest("button")).toHaveAttribute("aria-controls", "inspector-command-menu-1");
     expect(screen.getByRole("menu")).toHaveAttribute("id", "inspector-command-menu-1");
@@ -932,8 +969,8 @@ describe("InspectorPanel", () => {
 
     expect(screen.getByRole("menu")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByText("COPY (C)"));
-    fireEvent.click(screen.getByText("LOAD (L)"));
+    fireEvent.click(screen.getByText("복사 (C)"));
+    fireEvent.click(screen.getByText("입력 (L)"));
 
     expect(onCopySuggestedCommand).toHaveBeenCalledWith(0);
     expect(onLoadSuggestedCommandToAiBar).toHaveBeenCalledWith(0);
@@ -948,11 +985,11 @@ describe("InspectorPanel", () => {
 
     const menuItems = screen.getAllByRole("menuitem");
     expect(menuItems).toHaveLength(2);
-    expect(menuItems[0]).toHaveTextContent("COPY (C)");
-    expect(menuItems[1]).toHaveTextContent("LOAD (L)");
+    expect(menuItems[0]).toHaveTextContent("복사 (C)");
+    expect(menuItems[1]).toHaveTextContent("입력 (L)");
   });
 
-  it("compact 분석 메뉴가 열리면 첫 메뉴 액션 ref가 COPY 버튼을 가리킨다", () => {
+  it("compact 분석 메뉴가 열리면 첫 메뉴 액션 ref가 복사 버튼을 가리킨다", () => {
     const refs = createRefs();
     render(
       <InspectorPanel
@@ -965,10 +1002,10 @@ describe("InspectorPanel", () => {
       />,
     );
 
-    expect(refs.inspectorMenuFirstActionRefs.current[0]).toBe(screen.getByText("COPY (C)").closest("button"));
+    expect(refs.inspectorMenuFirstActionRefs.current[0]).toBe(screen.getByText("복사 (C)").closest("button"));
   });
 
-  it("compact 추천 커맨드 MORE 버튼 ref는 각 행의 버튼 DOM을 보관한다", () => {
+  it("compact 추천 커맨드 추가 버튼 ref는 각 행의 버튼 DOM을 보관한다", () => {
     const refs = createRefs();
     render(
       <InspectorPanel
@@ -980,7 +1017,7 @@ describe("InspectorPanel", () => {
       />,
     );
 
-    const moreButtons = screen.getAllByText("MORE");
+    const moreButtons = screen.getAllByText("추가");
     expect(refs.inspectorMoreButtonRefs.current[0]).toBe(moreButtons[0].closest("button"));
     expect(refs.inspectorMoreButtonRefs.current[1]).toBe(moreButtons[1].closest("button"));
   });
@@ -1065,7 +1102,7 @@ describe("InspectorPanel", () => {
     expect(onCompactMenuKeyDown.mock.calls[0][1]).toBe(1);
   });
 
-  it("compact 분석 메뉴가 열린 상태에서 MORE 버튼을 다시 누르면 메뉴 닫기 콜백을 호출한다", () => {
+  it("compact 분석 메뉴가 열린 상태에서 추가 버튼을 다시 누르면 메뉴 닫기 콜백을 호출한다", () => {
     const onCloseCommandMenu = vi.fn();
     renderInspector({
       analyzeCache: baseAnalyzeCache,
@@ -1074,7 +1111,7 @@ describe("InspectorPanel", () => {
       onCloseCommandMenu,
     });
 
-    fireEvent.click(screen.getAllByText("MORE")[0]);
+    fireEvent.click(screen.getAllByText("추가")[0]);
 
     expect(onCloseCommandMenu).toHaveBeenCalledWith(true);
   });

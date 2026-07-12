@@ -29,6 +29,35 @@ export interface ModelCatalog {
   heavy_presets: HeavyPreset[];
 }
 
+export interface ModelCatalogMeta {
+  title: string;
+  badges: [string, string, string];
+  helper: string;
+}
+
+export function getModelCatalogMeta(catalog: ModelCatalog, loading: boolean): ModelCatalogMeta {
+  if (loading) {
+    return {
+      title: "모델 카탈로그 불러오는 중",
+      badges: ["먼저 경량 모델", "다음 추론/코딩 모델", "마지막 헤비 프리셋"],
+      helper: "온디바이스 실행에 맞는 추천 모델 목록을 읽는 중입니다.",
+    };
+  }
+
+  const mlxCount = catalog.mlx.length;
+  const exl2Count = catalog.exl2.length;
+  const heavyCount = catalog.heavy_presets.length;
+  const total = mlxCount + exl2Count + heavyCount;
+
+  return {
+    title: total > 0 ? `추천 모델 ${total}개 준비됨` : "추천 모델이 비어 있습니다",
+    badges: [`MLX ${mlxCount}개`, `EXL2 ${exl2Count}개`, `헤비 ${heavyCount}개`],
+    helper: total > 0
+      ? "경량 로컬 모델부터 헤비 프리셋까지 준비 상태를 비교하고 현재 장치에 맞는 구성을 고를 수 있습니다."
+      : "models.json이 비어 있거나 불러오지 못했습니다. 추천 모델 구성을 확인해 보세요.",
+  };
+}
+
 const EMPTY: ModelCatalog = { mlx: [], exl2: [], heavy_presets: [] };
 
 let cache: ModelCatalog | null = null;

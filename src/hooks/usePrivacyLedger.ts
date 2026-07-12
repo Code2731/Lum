@@ -52,6 +52,30 @@ const initialState = (): LedgerState => ({
   last: null,
 });
 
+export interface PrivacyLedgerMeta {
+  title: string;
+  badges: [string, string, string];
+  helper: string;
+}
+
+export function getPrivacyLedgerMeta(state: LedgerState): PrivacyLedgerMeta {
+  const onDeviceCalls = state.total - state.onlineCalls;
+  const onDevicePercent = state.total === 0 ? 100 : Math.round((onDeviceCalls / state.total) * 100);
+  const lastBackend = state.last?.backend ? state.last.backend.toUpperCase() : "기록 없음";
+
+  return {
+    title: state.total > 0 ? `온디바이스 ${onDevicePercent}% · 호출 ${state.total}회` : "아직 AI 호출이 없습니다",
+    badges: [
+      `온디바이스 ${onDeviceCalls}회`,
+      `클라우드 ${state.onlineCalls}회`,
+      `마지막 ${lastBackend}`,
+    ],
+    helper: state.total > 0
+      ? "이번 세션에서 어떤 백엔드로 라우팅됐는지와 온디바이스 비중을 빠르게 확인할 수 있습니다."
+      : "AI 호출이 시작되면 세션 단위로 온디바이스/클라우드 흐름이 누적됩니다.",
+  };
+}
+
 export function usePrivacyLedger() {
   const [state, setState] = useState<LedgerState>(initialState);
 

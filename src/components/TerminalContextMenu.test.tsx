@@ -47,6 +47,14 @@ describe("TerminalContextMenu", () => {
       />,
     );
 
+    expect(screen.getByText("대상 내부 클릭")).toBeInTheDocument();
+    expect(screen.getByText("다음 실행·설명")).toBeInTheDocument();
+    expect(screen.getByText("마지막 검색")).toBeInTheDocument();
+    expect(
+      screen.getByText(/현재 포인터 이벤트는 추적 중인 영역 안에서 발생했습니다/),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Esc로 닫기 · 방향키와 Enter로 선택")).toBeInTheDocument();
+
     fireEvent.keyDown(document, { key: "Escape" });
     expect(onClose).toHaveBeenCalledTimes(1);
   });
@@ -140,6 +148,7 @@ describe("TerminalContextMenu", () => {
     );
 
     expect(screen.getByLabelText("열기")).toBeInTheDocument();
+    expect(screen.getByText("마지막 열기")).toBeInTheDocument();
   });
 
   it("복사 항목은 Cmd/Ctrl+C 단축키 힌트를 표시한다", () => {

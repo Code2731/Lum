@@ -5,6 +5,24 @@ import { Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 
+export function getCommandDialogTitle(title = "커맨드 팔레트"): string {
+  return title;
+}
+
+export interface CommandInputAccessibleText {
+  title?: string;
+}
+
+export function getCommandInputAccessibleText(input: {
+  title?: string;
+  placeholder?: string;
+  ariaLabel?: string;
+}): CommandInputAccessibleText {
+  return {
+    title: input.title ?? input.placeholder ?? input.ariaLabel,
+  };
+}
+
 const Command = React.forwardRef<
   React.ElementRef<typeof CommandPrimitive>,
   React.ComponentPropsWithoutRef<typeof CommandPrimitive>
@@ -26,33 +44,52 @@ interface CommandDialogProps extends React.ComponentProps<typeof Dialog> {
   title?: string;
 }
 
-const CommandDialog = ({ children, title = "커맨드 팔레트", ...props }: CommandDialogProps) => (
-  <Dialog {...props}>
-    <DialogContent className="overflow-hidden p-0 sm:max-w-[600px] gap-0 border-white/10">
-      <DialogTitle className="sr-only">{title}</DialogTitle>
-      <Command className="[&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-wider [&_[cmdk-group-heading]]:text-white/30">
-        {children}
-      </Command>
-    </DialogContent>
-  </Dialog>
-);
+const CommandDialog = ({ children, title = "커맨드 팔레트", ...props }: CommandDialogProps) => {
+  const dialogTitle = getCommandDialogTitle(title);
+
+  return (
+    <Dialog {...props}>
+      <DialogContent className="overflow-hidden p-0 sm:max-w-[600px] gap-0 border-white/10">
+        <DialogTitle className="sr-only">{dialogTitle}</DialogTitle>
+        <Command className="[&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-wider [&_[cmdk-group-heading]]:text-white/30">
+          {children}
+        </Command>
+      </DialogContent>
+    </Dialog>
+  );
+};
 
 const CommandInput = React.forwardRef<
   React.ElementRef<typeof CommandPrimitive.Input>,
   React.ComponentPropsWithoutRef<typeof CommandPrimitive.Input>
->(({ className, ...props }, ref) => (
-  <div className="flex items-center border-b border-white/8 px-4" cmdk-input-wrapper="">
-    <Search className="mr-2 h-3.5 w-3.5 shrink-0 text-white/30" />
-    <CommandPrimitive.Input
-      ref={ref}
-      className={cn(
-        "flex h-11 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-white/25 disabled:cursor-not-allowed disabled:opacity-50",
-        className,
-      )}
-      {...props}
-    />
-  </div>
-));
+>(({ className, title, placeholder, ...props }, ref) => {
+  const accessibleText = getCommandInputAccessibleText({
+    title,
+    placeholder,
+    ariaLabel: props["aria-label"],
+  });
+
+  return (
+    <div
+      className="flex items-center border-b border-white/8 px-4 focus-within:ring-1 focus-within:ring-ring"
+      cmdk-input-wrapper=""
+    >
+      <Search className="mr-2 h-3.5 w-3.5 shrink-0 text-white/30" />
+      <CommandPrimitive.Input
+        ref={ref}
+        className={cn(
+          "flex h-11 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-white/25",
+          "disabled:cursor-not-allowed disabled:opacity-50",
+          "aria-[busy=true]:cursor-progress aria-[busy=true]:opacity-70",
+          className,
+        )}
+        title={accessibleText.title}
+        placeholder={placeholder}
+        {...props}
+      />
+    </div>
+  );
+});
 CommandInput.displayName = CommandPrimitive.Input.displayName;
 
 const CommandList = React.forwardRef<
@@ -73,7 +110,7 @@ const CommandEmpty = React.forwardRef<
 >((props, ref) => (
   <CommandPrimitive.Empty
     ref={ref}
-    className="py-8 text-center text-xs text-white/25"
+    className="px-4 py-8 text-center text-xs leading-5 text-white/32"
     {...props}
   />
 ));
@@ -110,7 +147,9 @@ const CommandItem = React.forwardRef<
   <CommandPrimitive.Item
     ref={ref}
     className={cn(
-      "relative flex cursor-pointer select-none items-center gap-3 rounded-md px-3 py-2 text-xs outline-none transition-colors data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50 data-[selected=true]:bg-white/6 hover:bg-white/3",
+      "relative flex cursor-pointer select-none items-center gap-3 rounded-md px-3 py-2 text-xs outline-none transition-colors",
+      "focus-visible:ring-1 focus-visible:ring-ring data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50",
+      "data-[selected=true]:bg-white/6 data-[selected=true]:text-white hover:bg-white/3",
       className,
     )}
     {...props}

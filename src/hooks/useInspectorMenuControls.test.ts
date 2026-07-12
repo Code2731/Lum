@@ -1,7 +1,7 @@
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { type FocusEvent, type KeyboardEvent, useState } from "react";
-import { useInspectorMenuControls } from "./useInspectorMenuControls";
+import { getInspectorMenuControlsMeta, useInspectorMenuControls } from "./useInspectorMenuControls";
 import type { InspectorPanelDataProps } from "../components/InspectorPanel/types";
 
 function createQuickActionsAdvancedRef(): InspectorPanelDataProps["inspectorQuickActionsAdvancedRef"] {
@@ -34,6 +34,32 @@ function createDivFocusEvent(
 describe("useInspectorMenuControls", () => {
   afterEach(() => {
     document.body.innerHTML = "";
+  });
+
+  it("compact/basic 상태에 따라 메뉴 메타를 요약한다", () => {
+    expect(
+      getInspectorMenuControlsMeta({
+        isInspectorCompact: true,
+        inspectorCommandMenuIndex: 1,
+        showInspectorQuickActionsExpanded: true,
+      }),
+    ).toEqual({
+      title: "인스펙터 compact 메뉴",
+      badges: ["행 메뉴 2번 열림", "고급 액션 펼침", "키보드 이동 지원"],
+      helper: "compact 모드에서는 roving focus와 blur 제어로 행별 메뉴를 빠르게 이동하고 닫을 수 있습니다.",
+    });
+
+    expect(
+      getInspectorMenuControlsMeta({
+        isInspectorCompact: false,
+        inspectorCommandMenuIndex: null,
+        showInspectorQuickActionsExpanded: false,
+      }),
+    ).toEqual({
+      title: "인스펙터 기본 메뉴",
+      badges: ["행 메뉴 닫힘", "고급 액션 접힘", "기본 버튼 흐름"],
+      helper: "기본 모드에서는 메뉴가 펼쳐지지 않고 일반 버튼 흐름으로 유지됩니다.",
+    });
   });
 
   it("compact 메뉴에서 방향 키 이동 시 다음 메뉴 항목에 포커스를 이동한다", () => {
@@ -1671,5 +1697,63 @@ describe("useInspectorMenuControls", () => {
 
     requestAnimationFrameSpy.mockRestore();
     window.requestAnimationFrame = originalRequestAnimationFrame;
+  });
+
+  it("바깥 pointerdown이면 열린 compact 메뉴를 닫는다", () => {
+    const moreRef = { current: { 0: document.createElement("button") } };
+    const firstActionRefs = { current: {} as Record<number, HTMLButtonElement | null> };
+    const quickActionsAdvancedRef = createQuickActionsAdvancedRef();
+    const closeQuickActions = vi.fn();
+
+    const { result } = renderHook(() => {
+      const [inspectorCommandMenuIndex, setInspectorCommandMenuIndex] = useState<number | null>(0);
+      const controls = useInspectorMenuControls({
+        isInspectorCompact: true,
+        inspectorCommandMenuIndex,
+        setInspectorCommandMenuIndex,
+        inspectorMoreButtonRefs: moreRef,
+        inspectorMenuFirstActionRefs: firstActionRefs,
+        inspectorQuickActionsAdvancedRef: quickActionsAdvancedRef,
+        showInspectorQuickActionsExpanded: false,
+        closeInspectorQuickActions: closeQuickActions,
+      });
+      return { controls, inspectorCommandMenuIndex };
+    });
+
+    act(() => {
+      window.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+    });
+
+    expect(result.current.inspectorCommandMenuIndex).toBeNull();
+  });
+
+  it("compact 모드가 해제되면 열려 있던 command menu를 자동으로 닫는다", () => {
+    const moreRef = { current: { 0: document.createElement("button") } };
+    const firstActionRefs = { current: {} as Record<number, HTMLButtonElement | null> };
+    const quickActionsAdvancedRef = createQuickActionsAdvancedRef();
+    const closeQuickActions = vi.fn();
+
+    const { result, rerender } = renderHook((isInspectorCompact: boolean) => {
+      const [inspectorCommandMenuIndex, setInspectorCommandMenuIndex] = useState<number | null>(0);
+      const controls = useInspectorMenuControls({
+        isInspectorCompact,
+        inspectorCommandMenuIndex,
+        setInspectorCommandMenuIndex,
+        inspectorMoreButtonRefs: moreRef,
+        inspectorMenuFirstActionRefs: firstActionRefs,
+        inspectorQuickActionsAdvancedRef: quickActionsAdvancedRef,
+        showInspectorQuickActionsExpanded: false,
+        closeInspectorQuickActions: closeQuickActions,
+      });
+      return { controls, inspectorCommandMenuIndex };
+    }, {
+      initialProps: true,
+    });
+
+    expect(result.current.inspectorCommandMenuIndex).toBe(0);
+
+    rerender(false);
+
+    expect(result.current.inspectorCommandMenuIndex).toBeNull();
   });
 });

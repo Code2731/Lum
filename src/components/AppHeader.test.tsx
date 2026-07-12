@@ -807,7 +807,7 @@ describe("AppHeader", () => {
     render(<AppHeader {...props} />);
 
     fireEvent.click(screen.getByRole("button", { name: "복구 1건 열기" }));
-    fireEvent.click(await screen.findByRole("button", { name: "인스펙터 열기" }));
+    fireEvent.click(await screen.findByRole("button", { name: "복구 시작" }));
 
     expect(props.onToggleInspector).toHaveBeenCalledTimes(1);
   });

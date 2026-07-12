@@ -17,6 +17,34 @@ export interface WarpInputBarHandle {
   getValue: () => string;
 }
 
+export function getWarpDefaultInputHint(compactContextChips: boolean): string {
+  return compactContextChips
+    ? "먼저 자연어/명령 · 필요 시 !/@/>>/#/?"
+    : "먼저 자연어는 AI, 명령어는 실행 · 필요 시 !/@/>>/#/? · 백엔드 @local/@ollama/@xllm/@gemini · Cmd/Ctrl+1~4/0 선택·해제 · Cmd/Ctrl+./, 순환";
+}
+
+export function getWarpActiveModeHint(input: {
+  activeBackend: "local" | "ollama" | "xllm" | "gemini" | null;
+  isBackendOnly: boolean;
+  isHeavy: boolean;
+  isAgent: boolean;
+  isAICmd: boolean;
+  isExplain: boolean;
+  isForceShell: boolean;
+  isForceAI: boolean;
+}): string | null {
+  if (input.isBackendOnly && input.activeBackend) {
+    return `${input.activeBackend.toUpperCase()} 백엔드가 먼저 선택되어 있습니다. 내용을 입력하고 Enter를 누르면 ${input.activeBackend}로 처리됩니다. Cmd/Ctrl+0으로 해제하고 Cmd/Ctrl+./,로 바로 순환할 수 있습니다.`;
+  }
+  if (input.isHeavy) return "헤비 모드: 먼저 긴 작업 지시를 입력하면 AI가 큰 문맥으로 처리합니다.";
+  if (input.isAgent) return "에이전트 모드: 먼저 작업 지시를 입력하면 ReAct가 실행합니다.";
+  if (input.isAICmd) return "AI 제안 모드: # 뒤에 물어볼 내용을 입력하면 바로 제안 흐름으로 이어집니다.";
+  if (input.isExplain) return "설명 모드: ? 뒤에 설명이 필요한 내용을 입력하면 해설 흐름으로 이어집니다.";
+  if (input.isForceShell) return "셸 강제 모드: ! 뒤에 실행할 명령어를 입력하면 바로 터미널로 보냅니다.";
+  if (input.isForceAI) return "AI 강제 모드: @ 뒤에 질의할 내용을 입력하면 바로 AI로 보냅니다.";
+  return null;
+}
+
 const WARP_SMALL_FONT_SIZE = 10;
 const VOICE_FLOATING_BANNER_TOP = -24;
 const VOICE_FLOATING_STATUS_BANNER_TOP = -23;
@@ -316,26 +344,17 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
       isVisuallyEmpty ? "✨" :
       looksShell   ? "$" : "✨";
     const activeBackendLabel = activeBackend ? activeBackend.toUpperCase() : null;
-    const defaultInputHint =
-      compactContextChips
-        ? "자연어=AI · 명령어=실행 · !/@/>>/#/?"
-        : "자연어는 AI · 명령어는 실행 · !/@/>>/#/? · 백엔드 @local/@ollama/@xllm/@gemini · Cmd/Ctrl+1~4/0 선택·해제 · Cmd/Ctrl+./, 순환";
-    const activeModeHint =
-      isBackendOnly && activeBackend
-        ? `${activeBackend.toUpperCase()} 백엔드가 선택되어 있습니다. 엔터로 질의를 입력하면 ${activeBackend}로 처리됩니다. Cmd/Ctrl+0으로 해제하고 Cmd/Ctrl+./,로 순환할 수 있습니다.`
-        : isHeavy
-          ? "헤비 모드: AI에게 긴 컨텍스트 작업 지시를 입력하세요."
-          : isAgent
-            ? "에이전트 모드: 작업 지시를 입력하면 ReAct가 실행합니다."
-            : isAICmd
-              ? "AI 제안 모드: # 뒤에 질의할 내용을 입력하세요."
-              : isExplain
-                ? "설명 모드: ? 뒤에 설명이 필요한 내용을 입력하세요."
-                : isForceShell
-                  ? "셸 강제 모드: ! 뒤에 실행할 명령어를 입력하세요."
-                  : isForceAI
-                    ? "AI 강제 모드: @ 뒤에 질의할 내용을 입력하세요."
-                    : null;
+    const defaultInputHint = getWarpDefaultInputHint(compactContextChips);
+    const activeModeHint = getWarpActiveModeHint({
+      activeBackend,
+      isBackendOnly,
+      isHeavy,
+      isAgent,
+      isAICmd,
+      isExplain,
+      isForceShell,
+      isForceAI,
+    });
 
     const activeBackendStyle = activeBackend === "local"
       ? { color: "rgba(121,192,255,0.95)", border: "1px solid rgba(88,166,255,0.35)", background: "rgba(88,166,255,0.12)" }
@@ -400,7 +419,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
         ...primary,
         {
           id: "__extra_count__",
-          label: `+${extraCount} more`,
+          label: `추가 ${extraCount}개`,
           tone: "neutral" as const,
         },
       ];

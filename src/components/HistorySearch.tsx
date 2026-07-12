@@ -4,6 +4,7 @@ import { CheckCircle2, XCircle } from "lucide-react";
 import {
   Dialog, DialogContent, DialogTitle,
 } from "@/components/ui/dialog";
+import { ActionFlowBar } from "@/components/ui/action-flow-bar";
 import {
   Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem,
 } from "@/components/ui/command";
@@ -23,12 +24,56 @@ interface Props {
   onClose: () => void;
 }
 
+export interface HistorySearchFlowSummary {
+  primary: string;
+  secondary: string;
+  detail: string;
+}
+
 function relativeTime(ts: number): string {
   const diff = Date.now() / 1000 - ts;
   if (diff < 60) return "방금";
   if (diff < 3600) return `${Math.floor(diff / 60)}분 전`;
   if (diff < 86400) return `${Math.floor(diff / 3600)}시간 전`;
   return `${Math.floor(diff / 86400)}일 전`;
+}
+
+export function getHistorySearchFlowSummary(input: {
+  query: string;
+  isSearching: boolean;
+  resultsCount: number;
+  recentCount: number;
+}): HistorySearchFlowSummary {
+  const trimmedQuery = input.query.trim();
+  if (input.isSearching) {
+    return {
+      primary: "히스토리 검색 중",
+      secondary: trimmedQuery || "질문 분석",
+      detail: "자연어 질문을 바탕으로 이전 명령 기록을 찾고 있습니다.",
+    };
+  }
+
+  if (!trimmedQuery) {
+    return {
+      primary: "최근 기록 탐색",
+      secondary: `${input.recentCount}개 최근 항목`,
+      detail: "최근 실행한 명령을 먼저 훑은 뒤 필요한 커맨드를 다시 불러올 수 있습니다.",
+    };
+  }
+
+  if (input.resultsCount === 0) {
+    return {
+      primary: "검색 결과 없음",
+      secondary: trimmedQuery,
+      detail: "질문 표현을 조금 넓히거나 최근 기록을 함께 확인하면 원하는 명령을 더 빨리 찾을 수 있습니다.",
+    };
+  }
+
+  return {
+    primary: "검색 결과 준비",
+    secondary: `${input.resultsCount}개 일치`,
+    detail: "찾은 명령을 확인한 뒤 필요한 커맨드만 다시 실행 흐름으로 이어갈 수 있습니다.",
+  };
 }
 
 const HistorySearch: React.FC<Props> = ({ model, onSelect, onClose }) => {
@@ -75,6 +120,12 @@ const HistorySearch: React.FC<Props> = ({ model, onSelect, onClose }) => {
   }, [query, model, recent]);
 
   const displayList = query.trim() ? results : recent;
+  const flowSummary = getHistorySearchFlowSummary({
+    query,
+    isSearching,
+    resultsCount: results.length,
+    recentCount: recent.length,
+  });
 
   const handleSelect = (cmd: string) => {
     if (cmd.trim()) {
@@ -88,6 +139,12 @@ const HistorySearch: React.FC<Props> = ({ model, onSelect, onClose }) => {
       <DialogContent className="sm:max-w-2xl overflow-hidden p-0 gap-0 border-white/10">
         <DialogTitle className="sr-only">히스토리 검색</DialogTitle>
         <Command shouldFilter={false}>
+          <div className="px-3 py-2 border-b border-white/8 bg-white/[0.02]">
+            <ActionFlowBar
+              badges={[flowSummary.primary, flowSummary.secondary, "마지막 재실행"]}
+              helper={flowSummary.detail}
+            />
+          </div>
           <CommandInput
             value={query}
             onValueChange={setQuery}
@@ -96,7 +153,19 @@ const HistorySearch: React.FC<Props> = ({ model, onSelect, onClose }) => {
           <CommandList className="max-h-80">
             {displayList.length === 0 && !isSearching ? (
               <CommandEmpty>
-                {query ? "결과 없음" : "실행한 커맨드가 없습니다"}
+                <div className="space-y-2 py-2">
+                  <div>{query ? "결과 없음" : "실행한 커맨드가 없습니다"}</div>
+                  <div className="rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-2 text-left">
+                    <ActionFlowBar
+                      badges={query ? ["질문 조정", "최근 기록 확인", "다시 검색"] : ["첫 실행 대기", "최근 기록 누적", "다음 검색 준비"]}
+                      helper={
+                        query
+                          ? "검색어를 조금 넓히거나 최근 기록을 확인한 뒤 다시 찾으면 원하는 명령을 더 빨리 찾을 수 있습니다."
+                          : "명령을 몇 번 실행해 두면 최근 기록과 자연어 검색 흐름이 바로 이어집니다."
+                      }
+                    />
+                  </div>
+                </div>
               </CommandEmpty>
             ) : (
               <CommandGroup heading={query.trim() ? "시맨틱 검색 결과" : "최근 커맨드"}>

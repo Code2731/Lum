@@ -45,6 +45,13 @@ describe("TabContextMenu", () => {
       />,
     );
 
+    expect(screen.getByText("대상 내부 클릭")).toBeInTheDocument();
+    expect(screen.getByText("다음 그룹 이름")).toBeInTheDocument();
+    expect(screen.getByText("마지막 Enter 적용")).toBeInTheDocument();
+    expect(
+      screen.getByText(/현재 포인터 이벤트는 추적 중인 영역 안에서 발생했습니다/),
+    ).toBeInTheDocument();
+
     fireEvent.keyDown(document, { key: "Escape" });
     expect(onClose).toHaveBeenCalledTimes(1);
   });
@@ -143,6 +150,7 @@ describe("TabContextMenu", () => {
 
     expect(screen.getByLabelText("탭 색상 초기화")).toBeInTheDocument();
     expect(screen.getByLabelText("탭 그룹 초기화")).toBeInTheDocument();
+    expect(screen.getByText("Enter로 적용 · Esc로 닫기")).toBeInTheDocument();
   });
 
   it("방향키로 색상을 변경하고 Enter로 적용한다", () => {

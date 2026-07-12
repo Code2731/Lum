@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseMcpResult } from "./mcpContent";
+import { getMcpResultFlowSummary, parseMcpResult } from "./mcpContent";
 
 describe("parseMcpResult", () => {
   it("plain string → 단일 text 블록", () => {
@@ -67,5 +67,33 @@ describe("parseMcpResult", () => {
     const r = parseMcpResult({ content: [{ type: "unknown", payload: circular }] });
     expect(r.blocks[0].kind).toBe("json");
     expect(r.textSummary).toBe("[직렬화 불가]");
+  });
+
+  it("이미지 포함 응답은 비전 중심 흐름 요약을 반환한다", () => {
+    const result = parseMcpResult({
+      content: [
+        { type: "text", text: "스크린샷입니다" },
+        { type: "image", data: "BASE64==", mimeType: "image/png" },
+      ],
+    });
+
+    expect(getMcpResultFlowSummary(result)).toEqual({
+      badges: ["블록 2개", "이미지 포함", "텍스트 1개"],
+      helper: "이미지 응답이 포함되어 있어 텍스트 요약과 함께 시각 정보까지 같이 확인하는 흐름입니다.",
+    });
+  });
+
+  it("텍스트+JSON 응답은 구조화 응답 흐름 요약을 반환한다", () => {
+    const result = parseMcpResult({
+      content: [
+        { type: "text", text: "done" },
+        { type: "unknown", value: { ok: true } },
+      ],
+    });
+
+    expect(getMcpResultFlowSummary(result)).toEqual({
+      badges: ["블록 2개", "텍스트 1개", "JSON 1개"],
+      helper: "텍스트와 구조화 응답을 함께 읽으며 필요한 값을 추려 다음 액션으로 넘기는 흐름입니다.",
+    });
   });
 });

@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  getRetryCompareRuntimeSummary,
   loadRetryCompareCache,
   loadRetryCompareRuntimeCache,
   saveRetryCompareCache,
@@ -102,5 +103,44 @@ describe("retryCompare cache parser", () => {
     };
     saveRetryCompareRuntimeCache(runtime);
     expect(loadRetryCompareRuntimeCache()).toEqual(runtime);
+  });
+
+  it("runtime summary는 대기열이 없을 때 유휴 상태를 반환한다", () => {
+    expect(
+      getRetryCompareRuntimeSummary({
+        queue: [],
+        paused: false,
+        completedCount: 0,
+      }),
+    ).toEqual({
+      badges: ["재시도+비교", "큐 유휴", "비교 대기 없음"],
+      helper: "아직 비교 대기열이 없어 새 비교를 추가하면 여기서부터 흐름이 시작됩니다.",
+    });
+  });
+
+  it("runtime summary는 대기열이 있으면 진행 상태를 반환한다", () => {
+    expect(
+      getRetryCompareRuntimeSummary({
+        queue: [{ id: "q1", command: "npm test", baselineOutput: "before" }],
+        paused: false,
+        completedCount: 2,
+      }),
+    ).toEqual({
+      badges: ["재시도+비교", "자동 비교 진행", "대기 1건"],
+      helper: "실패나 재실행 결과를 순서대로 비교하면서 변화량을 누적합니다.",
+    });
+  });
+
+  it("runtime summary는 pause 상태를 우선 반영한다", () => {
+    expect(
+      getRetryCompareRuntimeSummary({
+        queue: [{ id: "q1", command: "npm test", baselineOutput: "before" }],
+        paused: true,
+        completedCount: 5,
+      }),
+    ).toEqual({
+      badges: ["재시도+비교", "큐 일시정지", "대기 1건"],
+      helper: "대기열은 유지되고 있으며 재개하면 다음 비교부터 순차적으로 이어집니다.",
+    });
   });
 });

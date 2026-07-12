@@ -5,6 +5,26 @@ import type {
   InspectorPanelProps,
 } from "../components/InspectorPanel/types";
 
+export interface InspectorPanelPropsMeta {
+  title: string;
+  badges: [string, string, string];
+  helper: string;
+}
+
+export function getInspectorPanelPropsMeta(props: InspectorPanelProps): InspectorPanelPropsMeta {
+  return {
+    title: props.showInspector ? `${props.activeTabTitle} 인스펙터` : "인스펙터 숨김",
+    badges: [
+      `탭 ${props.inspectorTab}`,
+      `실패 ${props.failedBlocks.length}개`,
+      props.quickActionsExpanded ? "빠른 액션 펼침" : "빠른 액션 접힘",
+    ],
+    helper: props.showInspector
+      ? "현재 탭의 실패 블록, 최근 실행, 빠른 액션, 분석 흐름을 하나의 인스펙터 패널로 묶어 보여줍니다."
+      : "인스펙터를 열면 현재 탭의 실행 흐름과 복구 단서를 한 번에 확인할 수 있습니다.",
+  };
+}
+
 export function useInspectorPanelProps(
   props: InspectorPanelProps,
 ): InspectorPanelProps {

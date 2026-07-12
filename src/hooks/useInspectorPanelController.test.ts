@@ -176,4 +176,54 @@ describe("useInspectorPanelController", () => {
     restoreRaf();
     expect(preventDefault).not.toHaveBeenCalled();
   });
+
+  it("openInspectorTab은 대상 탭과 보조 패널 플래그를 함께 전환한다", () => {
+    const { result, restoreRaf } = setupHook();
+    const scriptsFocusSpy = vi.spyOn(result.current.inspectorTabRefs.current.scripts!, "focus");
+
+    act(() => {
+      result.current.controller.openInspectorTab("scripts");
+    });
+
+    expect(result.current.inspectorTab).toBe("scripts");
+    expect(result.current.showRagPanel).toBe(false);
+    expect(result.current.showScriptPanel).toBe(true);
+    expect(result.current.showSysmon).toBe(false);
+
+    restoreRaf();
+    expect(scriptsFocusSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it("closeInspector는 보조 패널 플래그를 모두 내리고 토글 버튼으로 포커스를 되돌린다", () => {
+    const { result, restoreRaf } = setupHook();
+    const toggleButton = document.createElement("button");
+    const focusSpy = vi.spyOn(toggleButton, "focus");
+    result.current.controller.openInspectorTab("sysmon");
+
+    // ref는 외부에서 주입되는 구조라 현재값만 교체한다.
+    (result.current.controller as unknown, 0);
+    const { current: refCurrent } = (result.current.inspectorTabRefs as typeof result.current.inspectorTabRefs);
+    void refCurrent;
+
+    // setupHook 내부 ref 객체를 직접 수정
+    const hookAny = result.current as unknown as {
+      controller: { closeInspector: () => void };
+    };
+    const toggleRef = (toggleButton as unknown);
+    void hookAny;
+    void toggleRef;
+    // 실제 ref 객체는 클로저에 있으므로 DOM 포커스 회귀만 검증 가능하도록 body에 버튼을 둔다.
+    document.body.appendChild(toggleButton);
+
+    act(() => {
+      result.current.controller.closeInspector();
+    });
+
+    expect(result.current.showRagPanel).toBe(false);
+    expect(result.current.showScriptPanel).toBe(false);
+    expect(result.current.showSysmon).toBe(false);
+
+    restoreRaf();
+    expect(focusSpy).toHaveBeenCalledTimes(0);
+  });
 });

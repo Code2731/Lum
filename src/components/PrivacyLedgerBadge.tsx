@@ -47,6 +47,17 @@ function avg(total: number, count: number): string {
 
 type LedgerTone = "neutral" | "ondevice" | "mixed" | "cloudHeavy";
 
+export interface PrivacyLedgerToneMeta {
+  tone: LedgerTone;
+  label: string;
+  tooltip: string;
+}
+
+export interface PrivacyLedgerSummaryBadge {
+  label: string;
+  className: string;
+}
+
 const TONE_CLASS: Record<LedgerTone, string> = {
   neutral: "bg-white/5 text-white/40 border-white/10",
   ondevice: "bg-emerald-400/10 text-emerald-300 border-emerald-400/30",
@@ -112,25 +123,21 @@ const getPopupAvailableSpace = (
   return Math.max(1, Math.floor(preferredSpace - 4));
 };
 
-function classify(
+export function getPrivacyLedgerToneMeta(
   state: LedgerState,
   isAllOnDevice: boolean,
-): {
-  tone: LedgerTone;
-  label: string;
-  tooltip: string;
-} {
+): PrivacyLedgerToneMeta {
   if (state.total === 0) {
     return {
       tone: "neutral",
-      label: "AI 호출 없음",
-      tooltip: "이번 세션에 AI 호출이 아직 없습니다 — 클릭으로 패널 열기",
+      label: "호출 대기",
+      tooltip: "이번 세션에 AI 호출이 아직 없습니다 — 호출이 시작되면 로컬/클라우드 흐름을 추적합니다",
     };
   }
   if (isAllOnDevice) {
     return {
       tone: "ondevice",
-      label: "100% 온디바이스",
+      label: "온디바이스 100%",
       tooltip: "이번 세션의 모든 AI 호출이 로컬에서 처리됐습니다",
     };
   }
@@ -140,6 +147,60 @@ function classify(
     label: `클라우드 ${Math.round(ratio * 100)}%`,
     tooltip: `클라우드 호출 ${state.onlineCalls}/${state.total}건 — 클릭으로 상세보기`,
   };
+}
+
+export function getPrivacyLedgerSummaryBadges(
+  state: LedgerState,
+  isAllOnDevice: boolean,
+): PrivacyLedgerSummaryBadge[] {
+  if (state.total === 0) {
+    return [
+      {
+        label: "호출 대기",
+        className: "border-white/12 bg-white/[0.05] text-white/58",
+      },
+      {
+        label: "로컬 우선",
+        className: "border-emerald-300/24 bg-emerald-400/10 text-emerald-100",
+      },
+    ];
+  }
+
+  if (isAllOnDevice) {
+    return [
+      {
+        label: "온디바이스 유지",
+        className: "border-emerald-300/24 bg-emerald-400/10 text-emerald-100",
+      },
+      {
+        label: "네트워크 없음",
+        className: "border-cyan-300/24 bg-cyan-400/10 text-cyan-100",
+      },
+    ];
+  }
+
+  const ratio = state.onlineCalls / state.total;
+  return ratio >= 0.5
+    ? [
+      {
+        label: "클라우드 혼합",
+        className: "border-rose-300/24 bg-rose-400/10 text-rose-100",
+      },
+      {
+        label: "라우팅 점검",
+        className: "border-amber-300/24 bg-amber-400/10 text-amber-100",
+      },
+    ]
+    : [
+      {
+        label: "로컬 우선",
+        className: "border-emerald-300/24 bg-emerald-400/10 text-emerald-100",
+      },
+      {
+        label: "일부 클라우드",
+        className: "border-amber-300/24 bg-amber-400/10 text-amber-100",
+      },
+    ];
 }
 
 const PrivacyLedgerBadge: React.FC<Props> = ({
@@ -397,7 +458,9 @@ const PrivacyLedgerBadge: React.FC<Props> = ({
     focusables[0]?.focus();
   }, [open]);
 
-  const { tone, label, tooltip: tooltipText } = classify(state, isAllOnDevice);
+  const { tone, label, tooltip: tooltipText } = getPrivacyLedgerToneMeta(state, isAllOnDevice);
+  const localCalls = Math.max(0, state.total - state.onlineCalls);
+  const summaryBadges = getPrivacyLedgerSummaryBadges(state, isAllOnDevice);
   const Icon = tone === "ondevice" || tone === "neutral" ? ShieldCheck : Cloud;
   const popupYOffset = placement === "up" ? 4 : -4;
   const popupOrigin = placement === "up" ? "bottom right" : "top right";
@@ -471,8 +534,25 @@ const PrivacyLedgerBadge: React.FC<Props> = ({
             {state.total}
           </span>
           <span className="text-sm text-white/50">
-            · 클라우드 <span className="tabular-nums">{state.onlineCalls}</span>
+            · 온디바이스 <span className="tabular-nums">{localCalls}</span>
+            건 · 클라우드 <span className="tabular-nums">{state.onlineCalls}</span>
             건 ({pct(state.onlineCalls, state.total)})
+          </span>
+        </div>
+        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+          {summaryBadges.map((badge) => (
+            <span
+              key={badge.label}
+              className={cn(
+                "inline-flex items-center rounded-full border px-1.5 py-0.5 text-[10px] font-medium",
+                badge.className,
+              )}
+            >
+              {badge.label}
+            </span>
+          ))}
+          <span className="text-[10px] text-white/36">
+            세션의 AI 라우팅 흐름을 한눈에 요약합니다.
           </span>
         </div>
       </div>
@@ -512,7 +592,10 @@ const PrivacyLedgerBadge: React.FC<Props> = ({
       {state.last && (
         <div className="px-3 py-2 border-t border-white/5 bg-white/2">
           <div className="text-xs uppercase tracking-wide text-white/40 font-semibold">
-            최근 호출
+            마지막 라우팅
+          </div>
+          <div className="mt-1 text-[10px] text-white/34">
+            마지막 요청이 어떤 경로로 처리됐는지 바로 확인합니다.
           </div>
           <div className="flex items-center gap-2 mt-1 text-sm text-white/70">
             <span
@@ -569,6 +652,23 @@ const PrivacyLedgerBadge: React.FC<Props> = ({
           >
             <Icon size={12} />
             <span className="tabular-nums">{label}</span>
+            {state.total > 0 && (
+              <>
+                <span className="rounded-full border border-white/12 bg-black/10 px-1.5 py-0.5 text-[10px] font-medium text-current/80">
+                  {state.total}건
+                </span>
+                <span
+                  className={cn(
+                    "rounded-full border px-1.5 py-0.5 text-[10px] font-medium",
+                    state.onlineCalls > 0
+                      ? "border-amber-300/28 bg-amber-400/12 text-amber-100"
+                      : "border-emerald-300/24 bg-emerald-400/12 text-emerald-100",
+                  )}
+                >
+                  {state.onlineCalls > 0 ? `클라우드 ${state.onlineCalls}` : "로컬"}
+                </span>
+              </>
+            )}
           </button>
         </TooltipTrigger>
         <TooltipContent side="bottom">{tooltipText}</TooltipContent>

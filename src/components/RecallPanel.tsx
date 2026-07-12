@@ -20,6 +20,7 @@ import { Input } from "@/components/ui/input";
 import { IconButton } from "@/components/ui/icon-button";
 import { Button } from "@/components/ui/button";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { useRecall, type RecallEntry, type RecallSource } from "../hooks/useRecall";
 import { fmtShortDate } from "../utils";
 import { cn } from "@/lib/utils";
@@ -29,6 +30,38 @@ interface Props {
   model: string;
   onInjectToChat?: (text: string) => void;
   onClose: () => void;
+}
+
+export interface RecallPanelFlowMeta {
+  badges: [string, string, string];
+  helper: string;
+}
+
+export function getRecallPanelFlowMeta(): RecallPanelFlowMeta {
+  return {
+    badges: ["먼저 검색", "다음 주입", "마지막 잊기"],
+    helper: "자연어로 지난 흐름을 찾고, 필요한 기록만 AI로 다시 넣은 뒤 오래된 데이터는 정리합니다.",
+  };
+}
+
+export interface RecallPanelEmptyMeta {
+  badges: [string, string, string];
+  title: string;
+  description?: string;
+}
+
+export function getRecallPanelEmptyMeta(hasQuery: boolean): RecallPanelEmptyMeta {
+  return hasQuery
+    ? {
+      badges: ["검색 조정", "필터 완화", "다시 찾기"],
+      title: "결과 없음",
+      description: "검색어를 줄이거나 소스·시간 필터를 넓혀 다시 찾습니다.",
+    }
+    : {
+      badges: ["자연어 검색", "과거 흐름", "AI 주입"],
+      title: "쿼리를 입력하세요",
+      description: "자연어로 과거 명령·치유·메모리를 검색합니다.",
+    };
 }
 
 const SOURCE_META: Record<RecallSource, { label: string; icon: React.ReactNode; tone: string }> = {
@@ -76,6 +109,8 @@ const RecallPanel: React.FC<Props> = ({ model, onInjectToChat, onClose }) => {
   const totalEntries = stats
     ? stats.history.count + stats.healing.count + stats.memory.count
     : 0;
+  const flowMeta = getRecallPanelFlowMeta();
+  const emptyMeta = getRecallPanelEmptyMeta(Boolean(query.trim()));
 
   return (
     <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
@@ -91,6 +126,14 @@ const RecallPanel: React.FC<Props> = ({ model, onInjectToChat, onClose }) => {
 
         {/* 검색 입력 */}
         <div className="px-5 py-3 border-b border-white/8 shrink-0 space-y-2">
+          <div className="flex flex-wrap items-center gap-1.5 rounded-xl border border-white/8 bg-white/[0.03] px-2.5 py-2">
+            <StatusBadge tone="neutral">{flowMeta.badges[0]}</StatusBadge>
+            <StatusBadge tone="neutral">{flowMeta.badges[1]}</StatusBadge>
+            <StatusBadge tone="neutral">{flowMeta.badges[2]}</StatusBadge>
+            <span className="text-[10px] text-white/38">
+              {flowMeta.helper}
+            </span>
+          </div>
           <div className="flex items-center gap-2">
             <Search size={SMALL_ICON_SIZE} className="text-white/40 shrink-0" />
             <Input
@@ -164,6 +207,10 @@ const RecallPanel: React.FC<Props> = ({ model, onInjectToChat, onClose }) => {
               </button>
             ))}
           </div>
+          <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-white/34">
+            <StatusBadge tone="neutral">자연어 질문</StatusBadge>
+            <span>예: 지난 배포 실패를 어떻게 고쳤는지, 어떤 명령을 썼는지</span>
+          </div>
         </div>
 
         {error && (
@@ -184,9 +231,14 @@ const RecallPanel: React.FC<Props> = ({ model, onInjectToChat, onClose }) => {
           {results.length === 0 && !loading && (
             <div className="text-center py-12 text-xs text-white/35 space-y-1.5">
               <Library size={20} className="mx-auto text-white/20" />
-              <p>{query.trim() ? "결과 없음" : "쿼리를 입력하세요"}</p>
-              {!query.trim() && (
-                <p className="text-xs text-white/25">자연어로 과거 명령·치유·메모리를 검색합니다.</p>
+              <div className="flex flex-wrap items-center justify-center gap-1.5">
+                <StatusBadge tone="neutral">{emptyMeta.badges[0]}</StatusBadge>
+                <StatusBadge tone="neutral">{emptyMeta.badges[1]}</StatusBadge>
+                <StatusBadge tone="neutral">{emptyMeta.badges[2]}</StatusBadge>
+              </div>
+              <p>{emptyMeta.title}</p>
+              {emptyMeta.description && (
+                <p className="text-xs text-white/25">{emptyMeta.description}</p>
               )}
             </div>
           )}
@@ -203,7 +255,7 @@ const RecallPanel: React.FC<Props> = ({ model, onInjectToChat, onClose }) => {
         {/* 잊혀질 권리 풋터 */}
         {stats && totalEntries > 0 && (
           <div className="px-5 py-2.5 border-t border-white/8 shrink-0 flex items-center justify-between text-xs text-white/40">
-            <span>오래된 데이터를 잊을 수 있습니다 (GDPR-style 잊혀질 권리)</span>
+            <span>먼저 필요한 기록을 확인한 뒤 오래된 데이터를 잊을 수 있습니다 (GDPR-style 잊혀질 권리)</span>
             <ConfirmDeleteDialog
               itemName="1달 이전 데이터"
               itemType="메모리"
@@ -260,7 +312,7 @@ const RecallRow: React.FC<{
               className="inline-flex items-center gap-1 text-xs text-accent hover:text-accent/80 rounded px-1.5 py-0.5 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             >
               <ArrowUpRight size={10} />
-              AI 챗에 주입
+              AI에 넣기
             </button>
           )}
           <ConfirmDeleteDialog

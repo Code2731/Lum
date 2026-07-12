@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   getRovingMenuNextIndex,
+  getRovingMenuFlowSummary,
   isRovingMenuInputKey,
   normalizeRovingMenuNavKey,
 } from "./menuRoving";
@@ -44,5 +45,20 @@ describe("getRovingMenuNextIndex", () => {
     expect(normalizeRovingMenuNavKey("Tab", true)).toBe("ArrowLeft");
     expect(normalizeRovingMenuNavKey("Home", false)).toBe("Home");
     expect(normalizeRovingMenuNavKey("End", false)).toBe("End");
+  });
+
+  it("Roving menu 키별 흐름 요약을 반환한다", () => {
+    expect(getRovingMenuFlowSummary("Tab")).toEqual({
+      badges: ["Tab 이동", "다음 항목 순회", "포커스 유지"],
+      helper: "Tab 계열 입력도 같은 roving 흐름으로 처리해 메뉴 안에서 포커스를 안정적으로 순환시킵니다.",
+    });
+    expect(getRovingMenuFlowSummary("Home")).toEqual({
+      badges: ["처음 이동", "경계 점프", "빠른 탐색"],
+      helper: "Home/End는 메뉴 양 끝으로 즉시 이동해 긴 액션 목록을 빠르게 훑을 때 유용합니다.",
+    });
+    expect(getRovingMenuFlowSummary("ArrowUp")).toEqual({
+      badges: ["방향 이동", "이전 항목", "순환 탐색"],
+      helper: "화살표 입력을 같은 roving 규칙으로 정규화해 현재 메뉴 안에서 끊김 없이 이동할 수 있게 합니다.",
+    });
   });
 });

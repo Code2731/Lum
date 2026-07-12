@@ -3,6 +3,7 @@ import ReactMarkdown from "react-markdown";
 import { Bot, Copy, Settings, User, Trash2, X, Loader2, Send, Play, StopCircle } from "lucide-react";
 import { IconButton } from "@/components/ui/icon-button";
 import { Textarea } from "@/components/ui/textarea";
+import { ActionFlowBar } from "@/components/ui/action-flow-bar";
 import type { ChatMessage } from "../hooks/useAIChat";
 import { SMALL_ICON_SIZE } from "../constants/ui";
 import { isRoutingError } from "../utils/errorMessage";
@@ -19,6 +20,48 @@ interface Props {
   onOpenXllmPanel?: () => void;
 }
 
+export interface AIChatFlowSummary {
+  primary: string;
+  secondary: string;
+  detail: string;
+}
+
+export function getAIChatFlowSummary(input: {
+  messages: ChatMessage[];
+  streaming: boolean;
+  error: string | null;
+}): AIChatFlowSummary {
+  if (input.error) {
+    return {
+      primary: "채팅 오류 확인",
+      secondary: "설정 또는 재시도 필요",
+      detail: "오류 내용을 읽고 설정 복구 또는 재질문으로 이어갈 수 있습니다.",
+    };
+  }
+
+  if (input.streaming) {
+    return {
+      primary: "응답 생성 중",
+      secondary: `${input.messages.length}개 메시지`,
+      detail: "생성 중인 응답을 기다리거나 필요하면 중단한 뒤 다음 질문으로 이어갈 수 있습니다.",
+    };
+  }
+
+  if (input.messages.length === 0) {
+    return {
+      primary: "질문 준비",
+      secondary: "대화 시작 전",
+      detail: "터미널 문맥에 맞는 질문이나 명령 초안을 먼저 보내 작업 흐름을 시작할 수 있습니다.",
+    };
+  }
+
+  return {
+    primary: "대화 이어가기",
+    secondary: `${input.messages.length}개 메시지`,
+    detail: "최근 응답을 확인하고 필요한 명령 실행이나 추가 질문으로 바로 이어갈 수 있습니다.",
+  };
+}
+
 const AIChatPanel: React.FC<Props> = ({
   messages,
   streaming,
@@ -32,6 +75,7 @@ const AIChatPanel: React.FC<Props> = ({
 }) => {
   const [input, setInput] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
+  const chatSummary = getAIChatFlowSummary({ messages, streaming, error });
 
   useEffect(() => {
     const bottom = bottomRef.current;
@@ -93,6 +137,13 @@ const AIChatPanel: React.FC<Props> = ({
         </button>
       </div>
 
+      <div className="px-3 py-2 border-b border-white/5 bg-white/[0.025] shrink-0">
+        <ActionFlowBar
+          badges={[chatSummary.primary, chatSummary.secondary, "마지막 실행 연결"]}
+          helper={chatSummary.detail}
+        />
+      </div>
+
       {/* 에러 배너 */}
       {error && (
         <div className="shrink-0 px-3 py-1.5 bg-red-500/10 border-b border-red-500/20 text-xs text-red-400 leading-relaxed">
@@ -125,6 +176,12 @@ const AIChatPanel: React.FC<Props> = ({
         {messages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full gap-2 text-white/20 py-12">
             <Bot size={28} />
+            <div className="w-full max-w-md rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-left">
+              <ActionFlowBar
+                badges={["현재 컨텍스트", "질문·명령 정리", "터미널 작업 연결"]}
+                helper="현재 터미널 상태를 바탕으로 질문하거나 명령 초안을 만들고, 필요하면 바로 실행 단계로 넘길 수 있습니다."
+              />
+            </div>
             <p className="text-sm text-center leading-relaxed">
               터미널 컨텍스트를 인식합니다.
               <br />
@@ -156,6 +213,16 @@ const AIChatPanel: React.FC<Props> = ({
 
       {/* 입력 영역 */}
       <div className="shrink-0 border-t border-white/5 p-2">
+        <div className="mb-2 rounded-lg border border-white/8 bg-white/[0.03] px-2.5 py-2">
+          <ActionFlowBar
+            badges={streaming ? ["응답 생성 중", "중단 가능", "다음 질문 준비"] : ["입력 준비", "Enter 전송", "실행 가능한 응답 대기"]}
+            helper={
+              streaming
+                ? "생성이 길어지면 중단하고, 응답을 확인한 뒤 다음 질문으로 바로 이어갈 수 있습니다."
+                : "질문을 정리해 Enter로 보내고, 응답에서 필요한 명령만 골라 다음 작업으로 연결합니다."
+            }
+          />
+        </div>
         <div className="flex items-end gap-1.5 bg-white/5 rounded-lg border border-white/8 px-2.5 py-1.5">
           <Textarea
             value={input}
@@ -182,7 +249,9 @@ const AIChatPanel: React.FC<Props> = ({
             </button>
           )}
         </div>
-        <p className="text-xs text-white/15 text-center mt-1">Esc 로 닫기</p>
+        <p className="text-xs text-white/15 text-center mt-1">
+          Enter 전송 · Shift+Enter 줄바꿈 · Esc 로 닫기
+        </p>
       </div>
     </div>
   );

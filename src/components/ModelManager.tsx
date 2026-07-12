@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete";
 import { IconButton } from "@/components/ui/icon-button";
 import { Input } from "@/components/ui/input";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { shortPath } from "../utils";
 import { SMALL_ICON_SIZE } from "../constants/ui";
 import { isRoutingError } from "../utils/errorMessage";
@@ -21,6 +22,34 @@ import { useModelCatalog } from "../hooks/useModelCatalog";
 
 interface Props {
   onClose: () => void;
+}
+
+export interface ModelManagerFlowMeta {
+  badges: [string, string, string];
+  helper: string;
+}
+
+export function getModelManagerFlowMeta(): ModelManagerFlowMeta {
+  return {
+    badges: ["먼저 선택", "다음 역할 지정", "마지막 정리"],
+    helper: "설치된 모델을 고르고, 코딩·문서 역할을 지정한 뒤 필요 없는 모델만 정리합니다.",
+  };
+}
+
+export interface ModelManagerEmptyMeta {
+  badges: [string, string, string];
+  title: string;
+  description: string;
+  detail: string;
+}
+
+export function getModelManagerEmptyMeta(): ModelManagerEmptyMeta {
+  return {
+    badges: ["먼저 다운로드", "다음 역할 지정", "마지막 관리"],
+    title: "설치된 모델이 없습니다.",
+    description: "다운로드 탭에서 mistral.rs용 모델을 받으세요.",
+    detail: "모델을 받은 뒤 코딩·문서 역할을 정하고, 필요 없는 모델만 남겨 관리합니다.",
+  };
 }
 
 function copyText(text: string) {
@@ -253,6 +282,8 @@ const ModelManager: React.FC<Props> = ({ onClose }) => {
 
   const formatMb = (mb: number) =>
     mb >= 1024 ? `${(mb / 1024).toFixed(1)} GB` : `${mb.toFixed(0)} MB`;
+  const flowMeta = getModelManagerFlowMeta();
+  const emptyMeta = getModelManagerEmptyMeta();
 
   return (
     <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
@@ -280,11 +311,29 @@ const ModelManager: React.FC<Props> = ({ onClose }) => {
 
         {/* 콘텐츠 */}
         <div className="flex-1 overflow-y-auto p-4 space-y-2">
+          <div className="mb-2 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <StatusBadge tone="neutral">{flowMeta.badges[0]}</StatusBadge>
+              <StatusBadge tone="neutral">{flowMeta.badges[1]}</StatusBadge>
+              <StatusBadge tone="neutral">{flowMeta.badges[2]}</StatusBadge>
+              <span className="text-[10px] text-white/38">
+                {flowMeta.helper}
+              </span>
+            </div>
+          </div>
           {tab === "installed" ? (
             mistralLocal.length === 0 ? (
-              <div className="text-center text-white/30 py-12 text-sm">
-                설치된 모델이 없습니다.
-                <div className="text-xs text-white/20 mt-1">다운로드 탭에서 mistral.rs용 모델을 받으세요.</div>
+              <div className="text-center text-white/30 py-12 text-sm space-y-2">
+                <div className="flex flex-wrap items-center justify-center gap-1.5">
+                  <StatusBadge tone="neutral">{emptyMeta.badges[0]}</StatusBadge>
+                  <StatusBadge tone="neutral">{emptyMeta.badges[1]}</StatusBadge>
+                  <StatusBadge tone="neutral">{emptyMeta.badges[2]}</StatusBadge>
+                </div>
+                <div>{emptyMeta.title}</div>
+                <div className="text-xs text-white/20 mt-1">{emptyMeta.description}</div>
+                <div className="text-[11px] text-white/24">
+                  {emptyMeta.detail}
+                </div>
               </div>
             ) : (
               <>
@@ -300,6 +349,14 @@ const ModelManager: React.FC<Props> = ({ onClose }) => {
                       key={m.path}
                       className="flex flex-col gap-2 p-3 bg-white/5 rounded-lg border border-white/5 transition-colors"
                     >
+                      <div className="flex flex-wrap items-center gap-1.5 rounded-xl border border-white/8 bg-white/[0.03] px-2 py-1.5">
+                        <StatusBadge tone="neutral">현재 모델</StatusBadge>
+                        <StatusBadge tone="neutral">역할 지정</StatusBadge>
+                        <StatusBadge tone="neutral">삭제 가능</StatusBadge>
+                        <span className="text-[10px] text-white/38">
+                          모델 정보를 먼저 보고, 역할을 정한 뒤 마지막에 삭제 여부를 판단합니다.
+                        </span>
+                      </div>
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex-1 min-w-0 mr-2">
                           <div className="flex items-center gap-1.5 flex-wrap">

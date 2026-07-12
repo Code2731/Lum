@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { IconButton } from "@/components/ui/icon-button";
+import { ActionFlowBar } from "@/components/ui/action-flow-bar";
 
 interface FileDiffReview {
   path: string;
@@ -19,11 +20,53 @@ interface Props {
   onClose: () => void;
 }
 
+export interface DiffReviewFlowSummary {
+  badges: [string, string, string];
+  helper: string;
+}
+
 const RISK_META = {
   safe:    { label: "안전",   color: "text-green-400",  bg: "bg-green-400/10 border-green-400/20",  Icon: CheckCircle2 },
   caution: { label: "주의",   color: "text-yellow-400", bg: "bg-yellow-400/10 border-yellow-400/20", Icon: AlertTriangle },
   risk:    { label: "위험",   color: "text-red-400",    bg: "bg-red-400/10 border-red-400/20",       Icon: AlertCircle },
 };
+
+export function getDiffReviewPrimaryFlowSummary(staged: boolean): DiffReviewFlowSummary {
+  return {
+    badges: [
+      "먼저 범위 선택",
+      staged ? "다음 스테이징 분석" : "다음 워킹 트리 분석",
+      "마지막 위험 확인",
+    ],
+    helper: "스테이징과 워킹 트리 중 범위를 먼저 고르고, 분석 후 파일별 위험도를 펼쳐서 확인합니다.",
+  };
+}
+
+export function getDiffReviewEmptyFlowSummary(staged: boolean): DiffReviewFlowSummary {
+  return {
+    badges: ["현재 범위", staged ? "스테이징 diff" : "워킹 트리 diff", "AI 파일별 검토"],
+    helper: "범위를 확인한 뒤 분석을 누르면 파일별 요약과 위험도가 같은 순서로 정리됩니다.",
+  };
+}
+
+export function getDiffReviewResultFlowSummary(
+  reviews: FileDiffReview[],
+): DiffReviewFlowSummary {
+  const counts = {
+    safe: reviews.filter((review) => review.risk === "safe").length,
+    caution: reviews.filter((review) => review.risk === "caution").length,
+    risk: reviews.filter((review) => review.risk === "risk").length,
+  };
+
+  return {
+    badges: [
+      `검토 ${reviews.length}개`,
+      counts.risk > 0 ? `위험 ${counts.risk}개` : counts.caution > 0 ? `주의 ${counts.caution}개` : "안전 중심",
+      "요약 펼치기",
+    ],
+    helper: "위험 파일부터 먼저 열고, 주의 파일을 이어서 확인한 뒤 각 요약으로 수정 우선순위를 정합니다.",
+  };
+}
 
 const DiffReviewPanel: React.FC<Props> = ({ model, repoPat = "", onClose }) => {
   const [staged, setStaged] = useState(true);
@@ -31,6 +74,7 @@ const DiffReviewPanel: React.FC<Props> = ({ model, repoPat = "", onClose }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const primaryFlow = getDiffReviewPrimaryFlowSummary(staged);
 
   const runAnalysis = useCallback(async () => {
     setLoading(true);
@@ -65,6 +109,8 @@ const DiffReviewPanel: React.FC<Props> = ({ model, repoPat = "", onClose }) => {
         caution: reviews.filter(r => r.risk === "caution").length,
         risk: reviews.filter(r => r.risk === "risk").length }
     : null;
+  const emptyFlow = getDiffReviewEmptyFlowSummary(staged);
+  const resultFlow = reviews ? getDiffReviewResultFlowSummary(reviews) : null;
 
   const copyText = (text: string) => {
     navigator.clipboard?.writeText?.(text).catch(() => {});
@@ -102,12 +148,25 @@ const DiffReviewPanel: React.FC<Props> = ({ model, repoPat = "", onClose }) => {
           </button>
         </div>
 
+        <div className="px-5 py-2.5 border-b border-white/10 bg-white/[0.02] shrink-0">
+          <ActionFlowBar
+            badges={primaryFlow.badges}
+            helper={primaryFlow.helper}
+          />
+        </div>
+
         {/* Body */}
         <div className="flex-1 overflow-y-auto px-5 py-4 space-y-2 min-h-0">
           {/* 초기 상태 */}
           {!reviews && !loading && !error && (
             <div className="flex flex-col items-center justify-center h-48 gap-3 text-white/25">
               <GitCompareArrows size={28} strokeWidth={1.2} />
+              <div className="w-full max-w-md rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-left">
+                <ActionFlowBar
+                  badges={emptyFlow.badges}
+                  helper={emptyFlow.helper}
+                />
+              </div>
               <p className="text-sm">위 버튼을 눌러 분석을 시작하세요</p>
               <p className="text-xs text-white/15">
                 {staged ? "git diff --cached" : "git diff"} 결과를 AI가 파일별로 검토합니다
@@ -140,11 +199,21 @@ const DiffReviewPanel: React.FC<Props> = ({ model, repoPat = "", onClose }) => {
           {reviews && counts && (
             <>
               {reviews.length === 0 ? (
-                <div className="flex items-center justify-center h-32 text-white/30 text-sm gap-2">
-                  <CheckCircle2 size={14} className="text-green-400" /> 변경사항이 없습니다
+                <div className="flex flex-col items-center justify-center h-32 text-white/30 text-sm gap-2">
+                  <CheckCircle2 size={14} className="text-green-400" />
+                  <span>변경사항이 없습니다</span>
+                  <span className="text-xs text-white/20">
+                    다른 범위로 바꾸거나 새 변경 후 다시 분석할 수 있습니다.
+                  </span>
                 </div>
               ) : (
                 <>
+                  <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2">
+                    <ActionFlowBar
+                      badges={resultFlow!.badges}
+                      helper={resultFlow!.helper}
+                    />
+                  </div>
                   {/* 집계 배지 */}
                   <div className="flex gap-2 mb-3">
                     {(["safe", "caution", "risk"] as const).map(level => {

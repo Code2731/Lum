@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   formatAIErrorMessage,
+  isAuthError,
   isCancelError,
+  isModelError,
   isNetworkError,
   isRoutingError,
   toErrorMessage,
@@ -31,5 +33,19 @@ describe("errorMessage", () => {
     expect(isRoutingError({ foo: "other info" })).toBe(false);
     expect(toErrorMessage({ errorMessage: "message-by-key" })).toBe("message-by-key");
     expect(isNetworkError({ error_description: "연결 오류" })).toBe(true);
+  });
+
+  it("인증/API 키 오류는 별도 가이드를 붙인다", () => {
+    const msg = formatAIErrorMessage("401 unauthorized: invalid api key");
+    expect(isAuthError("401 unauthorized: invalid api key")).toBe(true);
+    expect(msg).toContain("인증/API 키 확인 필요");
+    expect(msg).toContain("API 키와 권한 범위");
+  });
+
+  it("모델 누락 오류는 모델 설정 가이드를 붙인다", () => {
+    const msg = formatAIErrorMessage("model not found");
+    expect(isModelError("model not found")).toBe(true);
+    expect(msg).toContain("모델 설정 확인 필요");
+    expect(msg).toContain("모델 이름을 다시 선택");
   });
 });

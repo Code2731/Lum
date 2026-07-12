@@ -3,6 +3,7 @@ import ReactMarkdown from "react-markdown";
 import { Eye, FileText, FileWarning, X, Copy } from "lucide-react";
 import { SMALL_ICON_SIZE } from "../constants/ui";
 import { IconButton } from "@/components/ui/icon-button";
+import { ActionFlowBar } from "@/components/ui/action-flow-bar";
 
 interface Props {
   path: string;
@@ -13,6 +14,12 @@ interface Props {
   onClose: () => void;
 }
 
+export interface MarkdownViewerFlowSummary {
+  primary: string;
+  secondary: string;
+  detail: string;
+}
+
 function normalizeSourcePath(path: string): string {
   if (path === "") return "로컬 문서";
   return path
@@ -21,8 +28,46 @@ function normalizeSourcePath(path: string): string {
     .replace(/^~\//, "~/");
 }
 
+export function getMarkdownViewerFlowSummary(input: {
+  title: string;
+  path: string;
+  content: string;
+  loading: boolean;
+  error: string | null;
+}): MarkdownViewerFlowSummary {
+  const normalizedPath = normalizeSourcePath(input.path);
+  if (input.loading) {
+    return {
+      primary: "문서 로드 중",
+      secondary: normalizedPath,
+      detail: "파일 내용을 읽어 마크다운 미리보기를 준비하고 있습니다.",
+    };
+  }
+
+  if (input.error) {
+    return {
+      primary: "문서 열기 실패",
+      secondary: normalizedPath,
+      detail: input.error,
+    };
+  }
+
+  const hasContent = input.content.trim().length > 0;
+  return {
+    primary: hasContent ? "문서 미리보기 준비" : "빈 문서 미리보기",
+    secondary: input.title || normalizedPath,
+    detail: hasContent
+      ? "문서 제목과 경로를 확인한 뒤 본문을 읽고 필요한 정보만 복사할 수 있습니다."
+      : "표시할 본문이 없어 제목과 경로만 확인할 수 있습니다.",
+  };
+}
+
 const MarkdownViewerPanel: React.FC<Props> = ({ path, title, content, loading, error, onClose }) => {
   const normalizedPath = useMemo(() => normalizeSourcePath(path), [path]);
+  const flowSummary = useMemo(
+    () => getMarkdownViewerFlowSummary({ path, title, content, loading, error }),
+    [path, title, content, loading, error],
+  );
   const copyText = (text: string) => {
     navigator.clipboard?.writeText?.(text).catch(() => {});
   };
@@ -48,9 +93,24 @@ const MarkdownViewerPanel: React.FC<Props> = ({ path, title, content, loading, e
         {normalizedPath}
       </div>
 
+      <div className="px-3 py-2 border-b border-white/10 bg-white/[0.015]">
+        <ActionFlowBar
+          badges={[flowSummary.primary, flowSummary.secondary, "마지막 복사·닫기"]}
+          helper={flowSummary.detail}
+        />
+      </div>
+
       <div className="flex-1 overflow-auto p-3">
         {loading ? (
-          <div className="text-xs text-white/45">마크다운 문서를 읽고 있습니다…</div>
+          <div className="space-y-2">
+            <div className="rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-2">
+              <ActionFlowBar
+                badges={["문서 로드 중", normalizedPath, "읽기 대기"]}
+                helper="파일 내용을 읽어 마크다운으로 렌더링하는 중이며, 완료되면 바로 본문을 확인할 수 있습니다."
+              />
+            </div>
+            <div className="text-xs text-white/45">마크다운 문서를 읽고 있습니다…</div>
+          </div>
         ) : error ? (
           <div className="flex items-start gap-1.5 p-2 rounded-md border border-red-500/30 bg-red-500/12 text-red-200 text-xs">
             <FileWarning size={12} className="mt-0.5 shrink-0" />

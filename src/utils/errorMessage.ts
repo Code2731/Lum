@@ -41,6 +41,21 @@ export function toErrorMessage(error: unknown): string {
   return "알 수 없는 오류";
 }
 
+const AUTH_INDICATORS: string[] = [
+  "api key",
+  "apikey",
+  "unauthorized",
+  "forbidden",
+  "401",
+  "403",
+  "invalid key",
+  "invalid api key",
+  "authentication",
+  "인증",
+  "권한 없음",
+  "허용되지 않음",
+];
+
 const networkIndicators: string[] = [
   "network",
   "네트워크",
@@ -56,9 +71,25 @@ const networkIndicators: string[] = [
   "server access",
 ];
 
+const MODEL_INDICATORS: string[] = [
+  "model not found",
+  "unknown model",
+  "no model",
+  "지원하지 않는 모델",
+  "모델을 찾을 수 없습니다",
+  "모델이 없습니다",
+  "model is required",
+  "model missing",
+];
+
 export function isNetworkError(error: unknown): boolean {
   const message = toErrorMessage(error).toLowerCase();
   return networkIndicators.some((keyword) => message.includes(keyword));
+}
+
+export function isAuthError(error: unknown): boolean {
+  const message = toErrorMessage(error).toLowerCase();
+  return AUTH_INDICATORS.some((keyword) => message.includes(keyword));
 }
 
 export function isCancelError(error: unknown): boolean {
@@ -88,13 +119,24 @@ export function isRoutingError(error: unknown): boolean {
   return ROUTING_FAIL_INDICATORS.some((keyword) => message.includes(keyword.toLowerCase()));
 }
 
+export function isModelError(error: unknown): boolean {
+  const message = toErrorMessage(error).toLowerCase();
+  return MODEL_INDICATORS.some((keyword) => message.includes(keyword));
+}
+
 export function formatAIErrorMessage(error: unknown): string {
   const message = toErrorMessage(error);
 
   if (!message) return "알 수 없는 오류";
   if (isCancelError(error)) return "";
+  if (isAuthError(error)) {
+    return `인증/API 키 확인 필요: ${message}\n해결: 사용 중인 백엔드의 API 키와 권한 범위를 확인한 뒤 다시 시도해 주세요.`;
+  }
   if (isRoutingError(message)) {
     return `라우팅 실패: ${message}\n해결: 백엔드 설정(모델/URL/API 키) 확인 후 다시 시도해 주세요.`;
+  }
+  if (isModelError(error)) {
+    return `모델 설정 확인 필요: ${message}\n해결: 사용할 모델이 실제로 로드되어 있는지 확인하고, 모델 이름을 다시 선택해 주세요.`;
   }
   if (isNetworkError(error)) {
     return `네트워크/백엔드 연결 불안정: ${message}\n해결: 네트워크 상태와 백엔드 URL을 확인한 뒤 재시도하세요.`;

@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { IconButton } from "@/components/ui/icon-button";
 import { Switch } from "@/components/ui/switch";
+import { ActionFlowBar } from "@/components/ui/action-flow-bar";
 import { useLoraForge, type ForgeRun, type ForgeStatus, type AutoEvent } from "../hooks/useLoraForge";
 import { fmtShortDate } from "../utils";
 import { cn } from "@/lib/utils";
@@ -23,6 +24,11 @@ interface Props {
   onLoadAdapter?: (run: ForgeRun) => void;
   onRevealPath?: (path: string) => void;
   onClose: () => void;
+}
+
+export interface LoraForgeFlowSummary {
+  badges: [string, string, string];
+  helper: string;
 }
 
 const STATUS_META: Record<ForgeStatus, { label: string; tone: string; icon: React.ReactNode }> = {
@@ -43,6 +49,36 @@ const DEFAULTS = {
 
 function copyText(text: string) {
   navigator.clipboard?.writeText?.(text).catch(() => {});
+}
+
+export function getLoraForgePrimaryFlowSummary(): LoraForgeFlowSummary {
+  return {
+    badges: ["먼저 데이터 준비", "다음 Forge 실행", "마지막 어댑터 활용"],
+    helper: "healing 데이터셋과 베이스 모델을 먼저 확인하고, Forge 실행 후 완료된 어댑터를 추론이나 후속 학습 흐름에 연결합니다.",
+  };
+}
+
+export function getLoraForgeFormFlowSummary(
+  task: string,
+  runtimeAvailable: boolean,
+): LoraForgeFlowSummary {
+  return {
+    badges: [
+      task.trim() ? "작업 이름 입력됨" : "작업 이름",
+      runtimeAvailable ? "런타임·모델 준비" : "런타임·모델 확인",
+      "iters·rank·lr",
+    ],
+    helper: runtimeAvailable
+      ? "학습 목적을 먼저 적고, 사용할 런타임과 베이스 모델을 정한 뒤 학습 파라미터를 조절해 Forge를 시작합니다."
+      : "학습 목적을 적기 전에 사용할 런타임 설치 상태와 베이스 모델을 먼저 확인한 뒤 Forge를 준비합니다.",
+  };
+}
+
+export function getLoraForgeEmptyFlowSummary(): LoraForgeFlowSummary {
+  return {
+    badges: ["첫 Forge 시작", "로그 확인", "완료 후 로드"],
+    helper: "학습을 한 번 시작하면 진행 로그와 결과 디렉터리를 이 패널에서 계속 확인하고, 완료 후 어댑터 활용 여부를 결정할 수 있습니다.",
+  };
 }
 
 const LoraForgePanel: React.FC<Props> = ({ onLoadAdapter, onRevealPath, onClose }) => {
@@ -68,6 +104,9 @@ const LoraForgePanel: React.FC<Props> = ({ onLoadAdapter, onRevealPath, onClose 
     if (!runtimes) return false;
     return runtime === "mlx-lm" ? runtimes.mlx_lm : runtimes.axolotl;
   }, [runtimes, runtime]);
+  const primaryFlow = getLoraForgePrimaryFlowSummary();
+  const formFlow = getLoraForgeFormFlowSummary(task, runtimeAvailable);
+  const emptyFlow = getLoraForgeEmptyFlowSummary();
 
   const handleSubmit = async () => {
     if (!task.trim() || !baseModel.trim() || submitting) return;
@@ -115,6 +154,13 @@ const LoraForgePanel: React.FC<Props> = ({ onLoadAdapter, onRevealPath, onClose 
           </button>
         </div>
 
+        <div className="px-5 py-2.5 border-b border-white/10 bg-white/[0.02] shrink-0">
+          <ActionFlowBar
+            badges={primaryFlow.badges}
+            helper={primaryFlow.helper}
+          />
+        </div>
+
         {runtimes && (
           <div
             className={cn(
@@ -147,6 +193,12 @@ const LoraForgePanel: React.FC<Props> = ({ onLoadAdapter, onRevealPath, onClose 
 
         {/* 학습 시작 폼 */}
         <div className="px-5 py-3.5 border-b border-white/10 bg-white/[0.015] shrink-0 space-y-2.5">
+          <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2">
+            <ActionFlowBar
+              badges={formFlow.badges}
+              helper={formFlow.helper}
+            />
+          </div>
           <div className="space-y-1">
             <Label htmlFor="forge-task" className="text-xs text-white/55">작업 이름</Label>
             <Input
@@ -290,6 +342,12 @@ const LoraForgePanel: React.FC<Props> = ({ onLoadAdapter, onRevealPath, onClose 
           {runs.length === 0 && (
             <div className="text-center py-12 text-xs text-white/35 space-y-1.5">
               <Hammer size={20} className="mx-auto text-white/20" />
+              <div className="max-w-md mx-auto rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-left">
+                <ActionFlowBar
+                  badges={emptyFlow.badges}
+                  helper={emptyFlow.helper}
+                />
+              </div>
               <p>아직 학습 실행 기록이 없습니다.</p>
               <p className="text-xs text-white/25">위 폼에서 task를 입력하고 Forge를 누르면 시작합니다.</p>
             </div>

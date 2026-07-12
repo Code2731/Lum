@@ -32,6 +32,52 @@ type AnalyzeErrorFn = (
   context: string,
 ) => Promise<{ analysis?: string; suggestion?: string } | null>;
 
+export interface AutoHealingMeta {
+  title: string;
+  badges: [string, string, string];
+  helper: string;
+}
+
+export function getAutoHealingMeta(input: {
+  healingError: string | null;
+  healingResult: HealingResult | null;
+  isHealingAnalyzing: boolean;
+}): AutoHealingMeta {
+  if (input.isHealingAnalyzing) {
+    return {
+      title: "자동 복구 분석 중",
+      badges: ["먼저 오류 감지", "다음 AI 분석", "마지막 실행 제안"],
+      helper: "최근 오류 출력과 문맥을 바탕으로 복구 제안과 안전도를 계산하고 있습니다.",
+    };
+  }
+
+  if (input.healingResult) {
+    return {
+      title: "자동 복구 제안 준비됨",
+      badges: [
+        "오류 감지 완료",
+        `안전도 ${input.healingResult.safetyLevel}`,
+        input.healingResult.suggestion ? "바로 실행 가능" : "제안 재검토 필요",
+      ],
+      helper: input.healingResult.analysis || "복구 제안을 검토한 뒤 바로 실행하거나 닫을 수 있습니다.",
+    };
+  }
+
+  if (input.healingError) {
+    return {
+      title: "자동 복구 오류 감지",
+      badges: ["오류 감지됨", "다음 분석 실행", "마지막 제안 확인"],
+      helper: input.healingError,
+    };
+  }
+
+  return {
+    title: "자동 복구 대기 중",
+    badges: ["먼저 오류 감지", "다음 AI 분석", "마지막 승인 실행"],
+    helper: "실행 오류가 감지되면 최근 출력 조각을 바탕으로 복구 제안 흐름이 시작됩니다.",
+  };
+}
+
 export function useAutoHealing(
   selectedModel: string,
   activePaneIdRef: React.MutableRefObject<string>,

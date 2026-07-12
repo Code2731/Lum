@@ -19,6 +19,20 @@ interface UseVoiceInputResult {
   clearVoiceError: () => void;
 }
 
+export interface VoiceInputStatusSummary {
+  primary: string;
+  secondary: string;
+  detail: string;
+}
+
+interface VoiceInputStatusSummaryInput {
+  enabled: boolean;
+  voiceBusy: boolean;
+  voiceError: string | null;
+  voicePartialTranscript: string;
+  voiceStatus: "idle" | "listening" | "processing" | "error";
+}
+
 const STOP_FALLBACK_DUP_GUARD_MS = 4_000;
 const VOICE_PARTIAL_UPDATE_THROTTLE_MS = 180;
 const VOICE_PARTIAL_FORCE_COMMIT_DELTA = 10;
@@ -35,6 +49,62 @@ function shouldFlushPartialTranscriptImmediately(
   if (/[.!?。！？]$/.test(next)) return true;
   if (!next.startsWith(prev) && !prev.startsWith(next)) return true;
   return false;
+}
+
+export function getVoiceInputStatusSummary({
+  enabled,
+  voiceBusy,
+  voiceError,
+  voicePartialTranscript,
+  voiceStatus,
+}: VoiceInputStatusSummaryInput): VoiceInputStatusSummary {
+  const partial = voicePartialTranscript.trim();
+
+  if (!enabled) {
+    return {
+      primary: "음성 입력 비활성",
+      secondary: "설정 필요",
+      detail: "음성 입력이 꺼져 있어 마이크를 사용할 수 없습니다.",
+    };
+  }
+
+  if (voiceError) {
+    return {
+      primary: "음성 오류",
+      secondary: "원인 확인 필요",
+      detail: voiceError,
+    };
+  }
+
+  if (voiceBusy) {
+    return {
+      primary: "음성 준비 중",
+      secondary: "요청 처리 중",
+      detail: "마이크 토글 요청을 처리하고 있습니다.",
+    };
+  }
+
+  if (voiceStatus === "listening") {
+    return {
+      primary: "음성 듣는 중",
+      secondary: partial ? "실시간 전사 수신" : "마이크 활성",
+      detail: partial || "입력 중인 음성을 실시간으로 수집하고 있습니다.",
+    };
+  }
+
+  if (voiceStatus === "processing") {
+    return {
+      primary: "음성 반영 중",
+      secondary: partial ? "전사 마무리 중" : "전사 처리 중",
+      detail: partial || "녹음을 마친 뒤 전사 결과를 정리하고 있습니다.",
+    };
+  }
+
+  return {
+    primary: "음성 대기",
+    secondary: "마이크 준비됨",
+    detail: "필요할 때 바로 음성 입력을 시작할 수 있습니다.",
+  };
 }
 
 export function useVoiceInput({

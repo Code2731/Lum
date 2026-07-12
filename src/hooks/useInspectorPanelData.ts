@@ -32,6 +32,17 @@ interface UseInspectorPanelDataOptions {
   scriptLibrary: ScriptLibraryLike;
 }
 
+export interface InspectorPanelFlowSummary {
+  badges: [string, string, string];
+  helper: string;
+}
+
+export interface InspectorPanelDataMeta {
+  title: string;
+  badges: [string, string, string];
+  helper: string;
+}
+
 const FAILED_BLOCK_OUTPUT_TAIL_MAX_CHARS = 160;
 const RECENT_BLOCK_OUTPUT_TAIL_MAX_CHARS = 120;
 
@@ -83,6 +94,58 @@ function normalizeNonNegativeInteger(value: number | undefined): number | undefi
   if (!Number.isSafeInteger(next)) return undefined;
   if (next < 0) return undefined;
   return next;
+}
+
+export function getInspectorPanelFlowSummary({
+  activeTabTitle,
+  noActivity,
+  failedBlockCount,
+  recentBlockCount,
+}: {
+  activeTabTitle: string;
+  noActivity: boolean;
+  failedBlockCount: number;
+  recentBlockCount: number;
+}): InspectorPanelFlowSummary {
+  if (noActivity) {
+    return {
+      badges: [activeTabTitle || "현재 탭", "실행 대기", "첫 기록 수집 전"],
+      helper: "아직 실행 기록이 없어 첫 명령을 실행하면 실패 분석과 최근 기록 흐름이 여기서부터 시작됩니다.",
+    };
+  }
+
+  if (failedBlockCount > 0) {
+    return {
+      badges: [activeTabTitle || "현재 탭", `실패 ${failedBlockCount}개`, `최근 ${recentBlockCount}개`],
+      helper: "실패 블록이 있어 복구나 재실행을 먼저 보고, 이후 최근 기록 흐름으로 이어가는 상태입니다.",
+    };
+  }
+
+  return {
+    badges: [activeTabTitle || "현재 탭", "실패 없음", `최근 ${recentBlockCount}개`],
+    helper: "현재는 치명적인 실패 없이 최근 실행 기록을 중심으로 흐름을 확인할 수 있는 상태입니다.",
+  };
+}
+
+export function getInspectorPanelDataMeta(input: {
+  activeTabTitle: string;
+  failedBlockCount: number;
+  recentBlockCount: number;
+  inspectorAnalyzeStatus: InspectorPanelDataProps["analyzeCache"] extends { status: infer T } ? T | null : string | null;
+  quickActionsExpanded: boolean;
+}): InspectorPanelDataMeta {
+  const analyzeLabel = input.inspectorAnalyzeStatus ?? "idle";
+  return {
+    title: input.failedBlockCount > 0 ? `${input.activeTabTitle} 인스펙터 상태` : `${input.activeTabTitle} 실행 요약`,
+    badges: [
+      `실패 ${input.failedBlockCount}개`,
+      `최근 ${input.recentBlockCount}개`,
+      input.quickActionsExpanded ? `빠른 액션 펼침 · 분석 ${analyzeLabel}` : `빠른 액션 접힘 · 분석 ${analyzeLabel}`,
+    ],
+    helper: input.failedBlockCount > 0
+      ? "실패 블록, 최근 실행 기록, 분석 캐시를 함께 보며 복구나 재실행 흐름을 이어갈 수 있습니다."
+      : "최근 실행 기록과 빠른 액션을 중심으로 현재 탭의 작업 흐름을 점검할 수 있습니다.",
+  };
 }
 
 export function useInspectorPanelData({

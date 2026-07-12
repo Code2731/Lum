@@ -2,8 +2,10 @@ import React, { useState, useMemo } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { Play, Check, X, AlertTriangle, Loader2, Wrench, ChevronDown, ChevronRight, Send, Image as ImageIcon, Copy, Settings } from "lucide-react";
 import type { ToolCall } from "../utils/toolCallParser";
+import { getToolCallParseFlowSummary } from "../utils/toolCallParser";
 import { parseMcpResult } from "../utils/mcpContent";
 import { IconButton } from "@/components/ui/icon-button";
+import { ActionFlowBar } from "@/components/ui/action-flow-bar";
 import { formatAIErrorMessage, isCancelError, isRoutingError } from "../utils/errorMessage";
 
 interface Props {
@@ -23,6 +25,7 @@ const ToolCallCard: React.FC<Props> = ({ call, onAskAIWithResult, visionEnabled,
   const [error, setError] = useState<string | null>(null);
   const [expandedArgs, setExpandedArgs] = useState(false);
   const [expandedResult, setExpandedResult] = useState(false);
+  const toolCallSummary = getToolCallParseFlowSummary(call.raw);
 
   const argsParseError =
     typeof call.args === "object" && call.args !== null && "_parse_error" in (call.args as object);
@@ -92,6 +95,12 @@ const ToolCallCard: React.FC<Props> = ({ call, onAskAIWithResult, visionEnabled,
 
   return (
     <div className="my-2 rounded-lg border border-accent/25 bg-accent/[0.03] overflow-hidden">
+      <div className="px-3 py-2 border-b border-accent/10 bg-white/[0.02]">
+        <ActionFlowBar
+          badges={[toolCallSummary.primary, toolCallSummary.secondary, "마지막 결과 후속조치"]}
+          helper={`${toolCallSummary.detail} 인자와 결과를 확인한 뒤 AI 전달이나 재실행으로 이어갑니다.`}
+        />
+      </div>
       <div className="flex items-center justify-between px-3 py-1.5 bg-accent/5 border-b border-accent/10">
         <div className="flex items-center gap-2 text-xs">
           <Wrench size={12} className="text-accent/70" />
@@ -164,27 +173,35 @@ const ToolCallCard: React.FC<Props> = ({ call, onAskAIWithResult, visionEnabled,
         )}
 
         {error && (
-          <div className="flex items-start gap-1.5 px-2 py-1.5 bg-red-500/10 border border-red-500/20 rounded text-red-300">
-            <AlertTriangle size={11} className="mt-0.5 shrink-0" />
-            <div className="flex-1 flex items-start justify-between gap-2">
-              <div className="font-mono whitespace-pre-wrap break-all text-xs">{error}</div>
-              <div className="flex items-center gap-1 shrink-0">
-                {showRoutingErrorActions && onOpenXllmPanel && (
+          <div className="space-y-2">
+            <div className="rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-2">
+              <ActionFlowBar
+                badges={["오류 확인", "설정 복구", "마지막 재실행"]}
+                helper="오류 원인을 먼저 읽고, 필요하면 설정 화면으로 이동한 뒤 다시 실행합니다."
+              />
+            </div>
+            <div className="flex items-start gap-1.5 px-2 py-1.5 bg-red-500/10 border border-red-500/20 rounded text-red-300">
+              <AlertTriangle size={11} className="mt-0.5 shrink-0" />
+              <div className="flex-1 flex items-start justify-between gap-2">
+                <div className="font-mono whitespace-pre-wrap break-all text-xs">{error}</div>
+                <div className="flex items-center gap-1 shrink-0">
+                  {showRoutingErrorActions && onOpenXllmPanel && (
+                    <IconButton
+                      tooltip="xLLM/모델 설정 열기"
+                      onClick={onOpenXllmPanel}
+                      className="p-1 rounded text-red-200/85 hover:text-red-100 hover:bg-red-500/20 transition-colors"
+                    >
+                      <Settings size={12} />
+                    </IconButton>
+                  )}
                   <IconButton
-                    tooltip="xLLM/모델 설정 열기"
-                    onClick={onOpenXllmPanel}
+                    tooltip="오류 텍스트 복사"
+                    onClick={handleCopyError}
                     className="p-1 rounded text-red-200/85 hover:text-red-100 hover:bg-red-500/20 transition-colors"
                   >
-                    <Settings size={12} />
+                    <Copy size={12} />
                   </IconButton>
-                )}
-                <IconButton
-                  tooltip="오류 텍스트 복사"
-                  onClick={handleCopyError}
-                  className="p-1 rounded text-red-200/85 hover:text-red-100 hover:bg-red-500/20 transition-colors"
-                >
-                  <Copy size={12} />
-                </IconButton>
+                </div>
               </div>
             </div>
           </div>
@@ -202,6 +219,12 @@ const ToolCallCard: React.FC<Props> = ({ call, onAskAIWithResult, visionEnabled,
             </button>
             {expandedResult && (
               <div className="space-y-1.5">
+                <div className="rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-2">
+                  <ActionFlowBar
+                    badges={["결과 읽기", parsed.hasImage ? "이미지·텍스트 확인" : "텍스트 블록 확인", "마지막 AI 전달"]}
+                    helper="도구 결과를 먼저 읽고, 필요한 블록만 확인한 뒤 다음 분석을 위해 AI에 다시 전달할 수 있습니다."
+                  />
+                </div>
                 {parsed.blocks.map((b, i) => {
                   if (b.kind === "text") {
                     return (

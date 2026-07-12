@@ -1,1 +1,100 @@
 /* LUM Terminal - App-specific styles (global styles in index.css) */
+
+.react-flow__controls {
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 14px;
+  background: rgba(10, 16, 24, 0.92);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22);
+  backdrop-filter: blur(10px);
+}
+
+.react-flow__controls-button {
+  width: 32px;
+  height: 32px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.72);
+  transition: background 120ms ease, color 120ms ease;
+}
+
+.react-flow__controls-button:last-child {
+  border-bottom: 0;
+}
+
+.react-flow__controls-button:hover {
+  background: rgba(88, 166, 255, 0.12);
+  color: rgba(255, 255, 255, 0.96);
+}
+
+.react-flow__controls-button svg {
+  max-width: 14px;
+  max-height: 14px;
+}
+
+.canvas-block-node {
+  min-width: 220px;
+  max-width: 280px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.01)),
+    rgba(10, 16, 24, 0.96);
+  box-shadow:
+    0 14px 30px rgba(0, 0, 0, 0.26),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.9);
+  overflow: hidden;
+}
+
+.canvas-block-node.status-running {
+  border-color: rgba(88, 166, 255, 0.36);
+  box-shadow:
+    0 16px 34px rgba(0, 0, 0, 0.3),
+    0 0 0 1px rgba(88, 166, 255, 0.16);
+}
+
+.canvas-block-node.status-done {
+  border-color: rgba(63, 185, 80, 0.28);
+}
+
+.canvas-block-node.status-error {
+  border-color: rgba(248, 81, 73, 0.32);
+}
+
+.canvas-node-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.node-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 12px 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  background: linear-gradient(180deg, rgba(88, 166, 255, 0.08), rgba(88, 166, 255, 0.01));
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(240, 246, 252, 0.94);
+  cursor: grab;
+}
+
+.node-header:active {
+  cursor: grabbing;
+}
+
+.node-output {
+  margin: 0;
+  padding: 10px 12px 12px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.45;
+  color: rgba(255, 255, 255, 0.58);
+}
+
+.react-flow__attribution {
+  display: none;
+}

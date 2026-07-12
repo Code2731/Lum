@@ -2,6 +2,38 @@ import { useEffect, useRef } from "react";
 import type { CommandBlock } from "./useCommandBlocks";
 
 const THRESHOLD_MS = 10_000; // 10초 이상이면 알림
+const COMMAND_PREVIEW_MAX = 60;
+
+function isSuccessfulExit(exitCode: number | null) {
+  return exitCode === 0 || exitCode === null;
+}
+
+export function getCommandNotificationBadge(exitCode: number | null): string {
+  return isSuccessfulExit(exitCode) ? "✅ LUM" : "❌ LUM";
+}
+
+export function getCommandNotificationTitle(exitCode: number | null): string {
+  return isSuccessfulExit(exitCode) ? "✅ 커맨드 성공" : "❌ 커맨드 실패";
+}
+
+export function getCommandNotificationPreview(command: string): string {
+  const trimmed = command.trim();
+  if (trimmed.length <= COMMAND_PREVIEW_MAX) {
+    return trimmed;
+  }
+  return `${trimmed.slice(0, COMMAND_PREVIEW_MAX)}…`;
+}
+
+export function getCommandNotificationBody(
+  command: string,
+  exitCode: number | null,
+  durationSec: number,
+): string {
+  const statusLine = isSuccessfulExit(exitCode)
+    ? `성공 · ${durationSec}초 소요`
+    : `실패 · ${durationSec}초 소요 · 종료 코드 ${exitCode}`;
+  return `명령: ${getCommandNotificationPreview(command)}\n${statusLine}`;
+}
 
 async function requestNotificationPermission() {
   if (!("Notification" in window)) return false;
@@ -12,10 +44,8 @@ async function requestNotificationPermission() {
 }
 
 function sendNotification(command: string, exitCode: number | null, durationSec: number) {
-  const ok = exitCode === 0 || exitCode === null;
-  const icon = ok ? "✅" : "❌";
-  const title = `${icon} 커맨드 완료`;
-  const body = `${command.slice(0, 60)}${command.length > 60 ? "…" : ""}\n${durationSec}초 소요 · 종료 코드: ${exitCode ?? 0}`;
+  const title = getCommandNotificationTitle(exitCode);
+  const body = getCommandNotificationBody(command, exitCode, durationSec);
   try {
     new Notification(title, { body, silent: false });
   } catch {}
@@ -53,7 +83,7 @@ export function useCommandNotifier(
 
 function flashTitle(exitCode: number | null) {
   const original = document.title;
-  const badge = exitCode === 0 || exitCode === null ? "✅ LUM" : "❌ LUM";
+  const badge = getCommandNotificationBadge(exitCode);
   let count = 0;
   const iv = setInterval(() => {
     document.title = count % 2 === 0 ? badge : original;
