@@ -81,8 +81,8 @@ const InspectorSummaryOverviewCard: React.FC<InspectorSummaryOverviewCardProps> 
     : "모델을 먼저 확인한 뒤 분석과 실행 흐름으로 넘어갑니다.";
 
   return (
-    <>
-      <div className={`${inspectorCardTightClass} border-cyan-300/12 bg-cyan-400/[0.05]`}>
+    <div className="grid grid-cols-1 gap-2 min-[300px]:grid-cols-2">
+      <div className={`${inspectorCardTightClass} min-w-0 border-cyan-300/12 bg-cyan-400/[0.05]`}>
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-1.5">
             <StatusBadge tone="cyan">시작점</StatusBadge>
@@ -142,7 +142,7 @@ const InspectorSummaryOverviewCard: React.FC<InspectorSummaryOverviewCardProps> 
           }}
         />
       </div>
-      <div className={`${inspectorCardTightClass} border-white/12 bg-white/[0.04]`}>
+      <div className={`${inspectorCardTightClass} min-w-0 border-white/12 bg-white/[0.04]`}>
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-1.5">
             <StatusBadge tone="neutral">분석 준비</StatusBadge>
@@ -168,7 +168,7 @@ const InspectorSummaryOverviewCard: React.FC<InspectorSummaryOverviewCardProps> 
           }}
         />
       </div>
-    </>
+    </div>
   );
 };
 

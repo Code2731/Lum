@@ -23,7 +23,7 @@ export interface QuickActionsEditorFlowSummary {
 }
 
 const SHORTCUT_OPTIONS = [
-  { label: "없음", value: undefined },
+  { label: "없음", value: "none" },
   ...[1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => ({ label: `Cmd/Ctrl+${n}`, value: n })),
 ];
 
@@ -128,15 +128,15 @@ const QuickActionsEditor: React.FC<Props> = ({
                 placeholder="실행할 커맨드" className="flex-1 px-2 py-1 font-mono" />
 
               <Select
-                value={a.shortcut != null ? String(a.shortcut) : ""}
-                onValueChange={v => onUpdate(a.id, { shortcut: v !== "" ? Number(v) : undefined })}
+                value={a.shortcut != null ? String(a.shortcut) : "none"}
+                onValueChange={v => onUpdate(a.id, { shortcut: v !== "none" ? Number(v) : undefined })}
               >
                 <SelectTrigger className="w-16 shrink-0 py-1 text-xs justify-center">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   {SHORTCUT_OPTIONS.map(o => (
-                    <SelectItem key={String(o.value)} value={o.value != null ? String(o.value) : ""} disabled={o.value != null && usedShortcuts.has(o.value) && a.shortcut !== o.value}>
+                    <SelectItem key={String(o.value)} value={String(o.value)} disabled={typeof o.value === "number" && usedShortcuts.has(o.value) && a.shortcut !== o.value}>
                       {o.label}
                     </SelectItem>
                   ))}
@@ -185,15 +185,15 @@ const QuickActionsEditor: React.FC<Props> = ({
               }}
               placeholder="실행할 커맨드 (예: npm run dev)" className="flex-1 px-2 font-mono" />
             <Select
-              value={newShortcut != null ? String(newShortcut) : ""}
-              onValueChange={v => setNewShortcut(v !== "" ? Number(v) : undefined)}
+              value={newShortcut != null ? String(newShortcut) : "none"}
+              onValueChange={v => setNewShortcut(v !== "none" ? Number(v) : undefined)}
             >
               <SelectTrigger className="w-16 shrink-0 py-1.5 text-xs justify-center">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 {SHORTCUT_OPTIONS.map(o => (
-                  <SelectItem key={String(o.value)} value={o.value != null ? String(o.value) : ""} disabled={o.value != null && usedShortcuts.has(o.value)}>
+                  <SelectItem key={String(o.value)} value={String(o.value)} disabled={typeof o.value === "number" && usedShortcuts.has(o.value)}>
                     {o.label}
                   </SelectItem>
                 ))}

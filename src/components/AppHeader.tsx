@@ -409,26 +409,6 @@ const AppHeader: React.FC<Props> = ({
   const advancedStatusSummaryLabel = advancedStateSignals.length > 0
     ? advancedStateSignals.join(" · ")
     : advancedStatusSummary.map((item) => item.short).join(" · ");
-  const primaryAdvancedRecommendation = recommendedOverflowActions[0] ?? null;
-  const advancedSummaryButtonLabel = primaryAdvancedRecommendation
-    ? `추천 · ${primaryAdvancedRecommendation.action.label}`
-    : advancedStatusSummaryLabel;
-  const advancedSummaryButtonTitle = primaryAdvancedRecommendation
-    ? [
-        `지금 바로 열어볼 추천 기능: ${primaryAdvancedRecommendation.action.label}`,
-        primaryAdvancedRecommendation.reason?.label
-          ? `추천 이유: ${primaryAdvancedRecommendation.reason.label}`
-          : "추천 이유: 현재 작업 흐름과 가까운 시작점",
-        advancedStateSignals.length > 0
-          ? `현재 상태: ${advancedStateSignals.join(", ")}`
-          : undefined,
-        advancedBadgeLabel,
-      ].filter(Boolean).join("\n")
-    : [
-        advancedStateSignals.length > 0 ? `현재 상태: ${advancedStateSignals.join(", ")}` : undefined,
-        advancedBadgeLabel,
-      ].filter(Boolean).join("\n");
-
   const compactQuickAccessActions = React.useMemo<QuickAccessAction[]>(() => [
     {
       id: "workspace",
@@ -522,6 +502,25 @@ const AppHeader: React.FC<Props> = ({
       .sort((a, b) => b.score - a.score)
       .slice(0, 2);
   }, [orderedOverflowActions, seenAdvancedFeatures, squadStore.squads.length]);
+  const primaryAdvancedRecommendation = recommendedOverflowActions[0] ?? null;
+  const advancedSummaryButtonLabel = primaryAdvancedRecommendation
+    ? `추천 · ${primaryAdvancedRecommendation.action.label}`
+    : advancedStatusSummaryLabel;
+  const advancedSummaryButtonTitle = primaryAdvancedRecommendation
+    ? [
+        `지금 바로 열어볼 추천 기능: ${primaryAdvancedRecommendation.action.label}`,
+        primaryAdvancedRecommendation.reason?.label
+          ? `추천 이유: ${primaryAdvancedRecommendation.reason.label}`
+          : "추천 이유: 현재 작업 흐름과 가까운 시작점",
+        advancedStateSignals.length > 0
+          ? `현재 상태: ${advancedStateSignals.join(", ")}`
+          : undefined,
+        advancedBadgeLabel,
+      ].filter(Boolean).join("\n")
+    : [
+        advancedStateSignals.length > 0 ? `현재 상태: ${advancedStateSignals.join(", ")}` : undefined,
+        advancedBadgeLabel,
+      ].filter(Boolean).join("\n");
   const recoveryOverflowActions = React.useMemo(
     () => recommendedOverflowActions.filter(({ reason }) => reason?.label === "작업 중" || reason?.label === "복귀"),
     [recommendedOverflowActions],

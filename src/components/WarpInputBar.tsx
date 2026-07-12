@@ -1044,17 +1044,17 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
         minute: "2-digit",
       });
 
-    useEffect(() => {
-      if (isVoiceProcessing) {
-        inputRef.current?.focus();
-      }
-    }, [isVoiceProcessing]);
-
     const [recordingSeconds, setRecordingSeconds] = useState(0);
     const { isRecording, voiceBusy, voiceError, voicePartialTranscript, voiceStatus, handleMicToggle, clearVoiceError } = useVoiceInput({
       enabled: voiceEnabled,
       onTranscript: injectTranscript,
     });
+    const isVoiceProcessing = voiceStatus === "processing";
+    useEffect(() => {
+      if (isVoiceProcessing) {
+        inputRef.current?.focus();
+      }
+    }, [isVoiceProcessing]);
     useEffect(() => {
       if (isRecording) {
         setLastVoicePartialTranscript("");
@@ -1121,7 +1121,6 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
       border: "1px solid rgba(255,255,255,0.10)",
     };
     const voicePulseActive = voiceStatus === "listening" || voiceStatus === "processing";
-    const isVoiceProcessing = voiceStatus === "processing";
     const showVoiceStatusBanner =
       !voiceError &&
       voiceEnabled &&
