@@ -2106,7 +2106,23 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
           </div>
         )}
 
-        <div style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, minHeight: 32 }}>
+        <div
+          style={{
+            width: "100%",
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            minHeight: 32,
+            border: isFocused ? "1px solid rgba(121,192,255,0.34)" : "1px solid rgba(255,255,255,0.12)",
+            background: isFocused ? "rgba(121,192,255,0.08)" : "rgba(255,255,255,0.04)",
+            borderRadius: 10,
+            padding: "6px 10px",
+            boxShadow: isFocused
+              ? "0 0 0 1px rgba(121,192,255,0.12), 0 10px 24px rgba(88,166,255,0.08)"
+              : "inset 0 1px 0 rgba(255,255,255,0.03)",
+            transition: "border-color 120ms ease, background 120ms ease, box-shadow 120ms ease",
+          }}
+        >
           <span style={{ color: promptColor, fontFamily, fontSize, opacity: 0.85, flexShrink: 0 }}>
             {promptChar}
           </span>
@@ -2221,6 +2237,10 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
             {modeHint ? (
               <span style={{ color: "rgba(255,255,255,0.28)" }}>
                 {modeHint}
+              </span>
+            ) : input.length === 0 ? (
+              <span style={{ color: "rgba(255,255,255,0.26)" }}>
+                {defaultInputHint}
               </span>
             ) : body !== null ? (
               <span style={{ color: TOKEN_COLORS.text }}>{body}</span>
