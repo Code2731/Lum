@@ -2,9 +2,11 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import type { AiBackend } from "../utils/inputRouter";
+import type { AiRouteEvent } from "./usePrivacyLedger";
 import { isCancelError, formatAIErrorMessage } from "../utils/errorMessage";
 
 const XLLM_TOKEN_EVENT = "xllm_token";
+const EMBEDDED_RESTORE_FAILED_EVENT = "embedded_restore_failed";
 
 const GIT_KEYWORDS =
   /\b(git|커밋|commit|푸시|push|풀|pull|브랜치|branch|diff|머지|merge|리베이스|rebase|스태시|stash|상태|status|log|원격|remote|클론|clone|체크아웃|checkout)\b/i;
@@ -127,6 +129,10 @@ export interface ChatMessage {
   role: "user" | "assistant";
   content: string;
   timestamp: number;
+  /** 백엔드가 성공 응답 뒤 발행한 실제 처리 경로. */
+  backend?: AiRouteEvent["backend"];
+  /** 자동 모드에서 mistral.rs 복원에 실패해 다른 백엔드로 폴백한 사유. */
+  fallbackReason?: string;
 }
 
 export interface AIChatMeta {
@@ -259,7 +265,8 @@ export function useAIChat(model: string, getTerminalContext: () => string) {
       clearCurrentListener();
 
       let tokenCount = 0;
-      const unlisten = await listen<string>(XLLM_TOKEN_EVENT, (event) => {
+      let embeddedRestoreFailure: string | null = null;
+      const unlistenToken = await listen<string>(XLLM_TOKEN_EVENT, (event) => {
         if (requestIdRef.current !== requestId) return;
         tokenCount++;
         if (tokenCount === 1) console.log("[AI] first token received");
@@ -270,7 +277,28 @@ export function useAIChat(model: string, getTerminalContext: () => string) {
           ),
         );
       });
-      unlistenRef.current = unlisten;
+      const unlistenRoute = await listen<AiRouteEvent>("ai_route_event", (event) => {
+        if (requestIdRef.current !== requestId) return;
+        setMessages((prev) =>
+          prev.map((message) =>
+            message.id === assistantId ? { ...message, backend: event.payload.backend } : message,
+          ),
+        );
+      });
+      const unlistenRestoreFailure = await listen<string>(EMBEDDED_RESTORE_FAILED_EVENT, (event) => {
+        if (requestIdRef.current !== requestId) return;
+        embeddedRestoreFailure = event.payload;
+        setMessages((prev) =>
+          prev.map((message) =>
+            message.id === assistantId ? { ...message, fallbackReason: event.payload } : message,
+          ),
+        );
+      });
+      unlistenRef.current = () => {
+        unlistenToken();
+        unlistenRoute();
+        unlistenRestoreFailure();
+      };
 
     try {
       console.log("[AI] invoking stream_ai_command, context len:", context.length);
@@ -293,7 +321,10 @@ export function useAIChat(model: string, getTerminalContext: () => string) {
         if (isCancelError(e)) {
           return;
         }
-        const msg = formatAIErrorMessage(e);
+        const baseMessage = formatAIErrorMessage(e);
+        const msg = embeddedRestoreFailure
+          ? `mistral.rs 자동 복원 실패: ${embeddedRestoreFailure}\n\n${baseMessage}`
+          : baseMessage;
         if (requestIdRef.current === requestId) {
           setError(msg);
           setMessages((prev) =>

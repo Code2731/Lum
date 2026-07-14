@@ -10,7 +10,8 @@ if [ ! -d "node_modules" ]; then
 fi
 
 # xLLM 서버 상태 확인 (선택 — 없어도 앱 내에서 시작 가능)
-XLLM_URL="${XLLM_URL:-http://127.0.0.1:5000}"
+# 앱의 기본 xLLM 주소와 통일. 환경변수 지정 시에는 해당 주소를 그대로 사용한다.
+XLLM_URL="${XLLM_URL:-http://127.0.0.1:8080}"
 if curl -sf --max-time 2 "${XLLM_URL}/v1/models" >/dev/null 2>&1; then
     echo "xLLM 서버 온라인 (${XLLM_URL})"
 else

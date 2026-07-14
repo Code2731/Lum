@@ -38,6 +38,34 @@ const FONT_MIN = 10;
 const FONT_MAX = 24;
 const FONT_DEFAULT = 14;
 
+const RESPONSE_BACKEND_META = {
+  embedded: { label: "mistral.rs · 로컬", className: "border-cyan-300/25 bg-cyan-400/10 text-cyan-100/85" },
+  ollama: { label: "Ollama", className: "border-emerald-300/25 bg-emerald-400/10 text-emerald-100/85" },
+  xllm: { label: "xLLM", className: "border-blue-300/25 bg-blue-400/10 text-blue-100/85" },
+  gemini: { label: "Gemini · 클라우드", className: "border-amber-300/25 bg-amber-400/10 text-amber-100/85" },
+} as const;
+
+const ResponseBackendBadge: React.FC<{ backend?: ChatMessage["backend"] }> = ({ backend }) => {
+  if (!backend) return null;
+  const meta = RESPONSE_BACKEND_META[backend];
+  return (
+    <div className="mb-1 flex">
+      <span className={`rounded-full border px-1.5 py-0.5 text-[10px] font-medium ${meta.className}`}>
+        실제 응답: {meta.label}
+      </span>
+    </div>
+  );
+};
+
+const EmbeddedFallbackNotice: React.FC<{ reason?: string }> = ({ reason }) => {
+  if (!reason) return null;
+  return (
+    <p className="mb-1 rounded-md border border-amber-300/20 bg-amber-400/[0.08] px-2 py-1 text-[10px] leading-4 text-amber-100/85">
+      mistral.rs 자동 복원 실패 후 다른 백엔드로 처리됨: {reason}
+    </p>
+  );
+};
+
 export interface AIBlockStreamHeaderMeta {
   ariaLabel: string;
   title: string;
@@ -246,10 +274,18 @@ const AIBlockStream: React.FC<Props> = ({
           const editBlocks = cwd ? parseEditBlocks(m.content) : [];
           const toolCalls = parseToolCalls(m.content);
           if (editBlocks.length === 0 && toolCalls.length === 0) {
-            return <MessageBubble key={m.id} msg={m} onExecute={onExecute} compact={false} />;
+            return (
+              <div key={m.id}>
+                <ResponseBackendBadge backend={m.backend} />
+                <EmbeddedFallbackNotice reason={m.fallbackReason} />
+                <MessageBubble msg={m} onExecute={onExecute} compact={false} />
+              </div>
+            );
           }
           return (
             <div key={m.id} className="space-y-2">
+              <ResponseBackendBadge backend={m.backend} />
+              <EmbeddedFallbackNotice reason={m.fallbackReason} />
               <MessageBubble msg={m} onExecute={onExecute} compact={false} />
               {editBlocks.map((b) => (
                 <EditBlockCard

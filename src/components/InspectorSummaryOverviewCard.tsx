@@ -81,7 +81,7 @@ const InspectorSummaryOverviewCard: React.FC<InspectorSummaryOverviewCardProps> 
     : "모델을 먼저 확인한 뒤 분석과 실행 흐름으로 넘어갑니다.";
 
   return (
-    <div className="grid grid-cols-1 gap-2 min-[300px]:grid-cols-2">
+    <div className="grid grid-cols-2 gap-2">
       <div className={`${inspectorCardTightClass} min-w-0 border-cyan-300/12 bg-cyan-400/[0.05]`}>
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-1.5">
@@ -126,20 +126,22 @@ const InspectorSummaryOverviewCard: React.FC<InspectorSummaryOverviewCardProps> 
           />
         </div>
         <ActionHintGroup
-          primary={{
+          actions={[
+            {
             label: workspacePrimaryAction.label,
             onClick: workspacePrimaryAction.onClick,
             shortcut: workspacePrimaryAction.shortcut,
             reason: workspacePrimaryReason,
             tone: hasFailures ? "warn" : "primary",
-          }}
-          secondary={{
+            },
+            {
             label: workspaceSecondaryAction.label,
             onClick: workspaceSecondaryAction.onClick,
             shortcut: "⌘⇧S",
             reason: workspaceSecondaryReason,
             tone: "secondary",
-          }}
+            },
+          ]}
         />
       </div>
       <div className={`${inspectorCardTightClass} min-w-0 border-white/12 bg-white/[0.04]`}>
@@ -160,12 +162,14 @@ const InspectorSummaryOverviewCard: React.FC<InspectorSummaryOverviewCardProps> 
           />
         </div>
         <ActionHintGroup
-          primary={{
+          actions={[
+            {
             label: "모델로 분석 시작",
             onClick: onOpenRag,
             reason: "선택된 모델로 현재 프로젝트 맥락 분석을 바로 이어갑니다.",
             tone: selectedModel.trim().length > 0 ? "primary" : "warn",
-          }}
+            },
+          ]}
         />
       </div>
     </div>

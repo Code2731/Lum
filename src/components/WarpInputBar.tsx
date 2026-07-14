@@ -8,6 +8,7 @@ import {
   isBackendOnlyInput,
 } from "../utils/backendPrefix";
 import { shortPath } from "../utils";
+import { routeInput } from "../utils/inputRouter";
 import { useVoiceInput } from "../hooks/useVoiceInput";
 import { useVoiceTranscriptHistory } from "../hooks/useVoiceTranscriptHistory";
 
@@ -34,7 +35,9 @@ export function getWarpActiveModeHint(input: {
   isForceAI: boolean;
 }): string | null {
   if (input.isBackendOnly && input.activeBackend) {
-    return `${input.activeBackend.toUpperCase()} 백엔드가 선택되었습니다. 내용을 입력하고 Enter를 누르면 바로 이 경로로 처리됩니다.`;
+    return input.activeBackend === "local"
+      ? "LOCAL(mistral.rs 엔진)이 선택되었습니다. 설치된 로컬 모델(Qwen 등)로만 처리되며 xLLM에는 연결하지 않습니다."
+      : `${input.activeBackend.toUpperCase()} 백엔드가 선택되었습니다. 내용을 입력하고 Enter를 누르면 바로 이 경로로 처리됩니다.`;
   }
   if (input.isHeavy) return "헤비 AI 모드입니다. 긴 작업 지시나 넓은 문맥 분석에 적합합니다.";
   if (input.isAgent) return "에이전트 모드입니다. 작업 지시를 입력하면 ReAct 흐름으로 실행합니다.";
@@ -346,6 +349,8 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
     const isBackendOnly =
       isBackendOnlyInput(input);
     const isEffectivelyEmpty = isVisuallyEmpty || isBackendOnly;
+    // 실제 실행 경로와 동일한 판정 결과를 노출해, Enter 전에도 자동 라우팅을 예고한다.
+    const resolvedRoute = React.useMemo(() => routeInput(input), [input]);
     const activeHeavy  = isHeavy;
     // 첫 토큰에서 `ls` 등 shell 냄새 풍기면 $, 아니면 기본값을 "AI 모드"로 표시 (★)
     const firstTok = trimmedInput.split(/\s+/)[0] ?? "";
@@ -641,12 +646,19 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
                         tone: "warn" as const,
                         title: `${activeBackend.toUpperCase()} 백엔드를 먼저 골라 둔 상태입니다. 내용을 입력한 뒤 Enter로 실행합니다.`,
                       }
-                    : looksShell && !isEffectivelyEmpty
+                    : resolvedRoute.type === "agent"
+                      ? {
+                          id: "mode-agent-detected",
+                          label: "자동 에이전트",
+                          tone: "warn" as const,
+                          title: "코딩·리뷰·치유 의도로 판단되어 ReAct 작업 흐름으로 실행합니다.",
+                        }
+                      : resolvedRoute.type === "shell"
                       ? {
                           id: "mode-shell-detected",
                           label: "명령어 입력",
                           tone: "success" as const,
-                          title: "현재 입력은 명령어 형태로 보입니다.",
+                          title: "터미널 명령으로 판단되어 바로 실행 흐름으로 이어집니다.",
                         }
                       : {
                           id: "mode-auto",
@@ -660,9 +672,13 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
       if (activeBackend) {
         chips.push({
           id: "backend",
-          label: `백엔드 ${activeBackend.toUpperCase()}`,
+          label: activeBackend === "local"
+            ? "LOCAL · mistral.rs"
+            : `백엔드 ${activeBackend.toUpperCase()}`,
           tone: activeBackend === "ollama" ? "success" : activeBackend === "gemini" ? "warn" : "accent",
-          title: `${activeBackend.toUpperCase()} 백엔드가 강제 선택되어 있습니다. Cmd/Ctrl+0 또는 우측 배지 클릭으로 해제할 수 있습니다.`,
+          title: activeBackend === "local"
+            ? "mistral.rs 엔진을 강제 선택했습니다. 현재 설치된 로컬 모델(Qwen 등)로 실행하며 xLLM 폴백을 사용하지 않습니다."
+            : `${activeBackend.toUpperCase()} 백엔드가 강제 선택되어 있습니다. Cmd/Ctrl+0 또는 우측 배지 클릭으로 해제할 수 있습니다.`,
         });
       }
 
@@ -693,7 +709,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
       isExplain,
       isForceAI,
       isForceShell,
-      looksShell,
+      resolvedRoute.type,
     ]);
     const hasTopMetaRow =
       visibleContextChips.length > 0

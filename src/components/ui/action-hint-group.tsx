@@ -49,48 +49,44 @@ export const ActionReasonText: React.FC<{
   </p>
 );
 
+export interface ActionHintItem {
+  label: string;
+  onClick: () => void;
+  shortcut?: string;
+  reason: string;
+  tone?: "primary" | "secondary" | "warn";
+}
+
 export const ActionHintGroup: React.FC<{
-  primary: {
-    label: string;
-    onClick: () => void;
-    shortcut?: string;
-    reason: string;
-    tone?: "primary" | "secondary" | "warn";
-  };
-  secondary?: {
-    label: string;
-    onClick: () => void;
-    shortcut?: string;
-    reason: string;
-    tone?: "primary" | "secondary" | "warn";
-  };
-}> = ({ primary, secondary }) => (
+  /** 새 화면은 actions 배열을 사용한다. primary/secondary는 기존 호출 호환용이다. */
+  actions?: ActionHintItem[];
+  primary?: ActionHintItem;
+  secondary?: ActionHintItem;
+}> = ({ actions, primary, secondary }) => {
+  const items = actions ?? [primary, secondary].filter((item): item is ActionHintItem => Boolean(item));
+
+  if (items.length === 0) return null;
+
+  return (
   <div aria-label="추천 작업" className="mt-2">
     <div className="flex flex-wrap gap-1.5" role="group" aria-label="실행 가능한 작업">
-      <ActionHintButton
-        label={primary.label}
-        onClick={primary.onClick}
-        tone={primary.tone ?? "primary"}
-        shortcut={primary.shortcut}
-      />
-      {secondary && (
+      {items.map((item, index) => (
         <ActionHintButton
-          label={secondary.label}
-          onClick={secondary.onClick}
-          tone={secondary.tone}
-          shortcut={secondary.shortcut}
+          key={item.label}
+          label={item.label}
+          onClick={item.onClick}
+          tone={item.tone ?? (index === 0 ? "primary" : "secondary")}
+          shortcut={item.shortcut}
         />
-      )}
+      ))}
     </div>
     <div className="mt-2 space-y-1" role="list" aria-label="작업 이유">
-      <div role="listitem">
-        <ActionReasonText label={getActionReasonLabel(primary.label)}>{primary.reason}</ActionReasonText>
-      </div>
-      {secondary && (
+      {items.map((item) => (
         <div role="listitem">
-          <ActionReasonText label={getActionReasonLabel(secondary.label)}>{secondary.reason}</ActionReasonText>
+          <ActionReasonText label={getActionReasonLabel(item.label)}>{item.reason}</ActionReasonText>
         </div>
-      )}
+      ))}
     </div>
   </div>
-);
+  );
+};

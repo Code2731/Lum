@@ -21,6 +21,8 @@ const EMBEDDED_READY_POLL_MS: u64 = 120;
 
 // Phase 115 — Privacy Ledger 이벤트 이름. 프론트 usePrivacyLedger 훅이 구독.
 const AI_ROUTE_EVENT: &str = "ai_route_event";
+/// 자동 라우팅에서 임베디드 모델 복원에 실패했을 때, 폴백 출처를 UI에 남긴다.
+const EMBEDDED_RESTORE_FAILED_EVENT: &str = "embedded_restore_failed";
 const AI_READY_HINT: &str = "패널에서 모델/URL/API 키를 확인하고 다시 시도하세요.";
 
 /// Phase 115 — 단일 AI 호출의 라우팅 결과. 백엔드명 + 외부 네트워크 여부 + latency.
@@ -337,10 +339,12 @@ async fn try_embedded_inference_stream(
             Ok(false) => return None,
             Err(e) => {
                 if allow_fallback {
+                    let reason = e.to_string();
                     let _ = app.emit(
                         "embed_load_progress",
-                        format!("⚠️ 임베디드 모델 자동 복원 실패 (fallback): {e}"),
+                        format!("⚠️ 임베디드 모델 자동 복원 실패 (fallback): {reason}"),
                     );
+                    let _ = app.emit(EMBEDDED_RESTORE_FAILED_EVENT, reason);
                     return None;
                 }
                 return Some(Err(LumError::AiEngine(format!(
