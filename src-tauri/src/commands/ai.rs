@@ -86,6 +86,40 @@ fn local_embed_unavailable_message() -> String {
     }
 }
 
+#[cfg(feature = "embedded-ai")]
+fn local_embed_not_ready_message() -> String {
+    if let Some(error) = crate::commands::mistralrs_inline::last_load_error() {
+        return format!(
+            "임베디드 mistral.rs 모델을 불러오지 못했습니다: {error}. 모델 파일/경로를 확인하고 다시 시도하세요."
+        );
+    }
+
+    if crate::commands::embed::list_embed_candidates().is_empty() {
+        return format!(
+            "임베디드 mistral.rs 모델 후보를 찾지 못했습니다. 모델 저장 경로에 GGUF 파일 또는 config.json+safetensors 모델 폴더가 있는지 확인하세요."
+        );
+    }
+
+    local_embed_unavailable_message()
+}
+
+#[cfg(not(feature = "embedded-ai"))]
+fn local_embed_not_ready_message() -> String {
+    local_embed_unavailable_message()
+}
+
+#[cfg(feature = "embedded-ai")]
+fn local_embed_still_loading_message() -> String {
+    if let Some(error) = crate::commands::mistralrs_inline::last_load_error() {
+        return format!(
+            "임베디드 mistral.rs 모델 로드가 실패했습니다: {error}. 모델 파일/경로를 확인하고 다시 시도하세요."
+        );
+    }
+
+    "임베디드 mistral.rs 모델 로드가 아직 끝나지 않았습니다. 큰 모델이면 시간이 더 걸릴 수 있습니다. 로드 로그를 확인한 뒤 다시 시도하세요."
+        .to_string()
+}
+
 fn backend_not_ready_message(backend_label: &'static str) -> String {
     format!("{backend_label} 백엔드가 미설정/미연결 상태입니다. {AI_READY_HINT}")
 }
@@ -245,10 +279,7 @@ async fn try_embedded_inference(prompt: &str, images: &[String]) -> Option<Resul
                         .map_err(|e| LumError::AiEngine(format!("embedded inference failed: {e}"))),
                 );
             }
-            return Some(Err(LumError::AiEngine(
-                "임베디드 mistral.rs 모델을 로딩 중입니다. 로드 완료 후 다시 시도하세요."
-                    .to_string(),
-            )));
+            return Some(Err(LumError::AiEngine(local_embed_still_loading_message())));
         }
         return None;
     }
@@ -283,7 +314,10 @@ async fn try_embedded_inference_or_restore(
                 .await
                 .map_err(|e| LumError::AiEngine(format!("embedded inference failed: {e}"))),
         ),
-        _ => None,
+        Ok(false) => None,
+        Err(e) => Some(Err(LumError::AiEngine(format!(
+            "임베디드 mistral.rs 모델 자동 로드 실패: {e}"
+        )))),
     }
 }
 
@@ -329,14 +363,16 @@ async fn try_embedded_inference_stream(
             if allow_fallback {
                 return None;
             }
-            return Some(Err(LumError::AiEngine(
-                "임베디드 mistral.rs 모델을 로딩 중입니다. 로드 완료 후 다시 시도하세요."
-                    .to_string(),
-            )));
+            return Some(Err(LumError::AiEngine(local_embed_still_loading_message())));
         }
         match crate::commands::embed::restore_last_embedded_model(app.clone()).await {
             Ok(true) => {}
-            Ok(false) => return None,
+            Ok(false) => {
+                if allow_fallback {
+                    return None;
+                }
+                return Some(Err(LumError::AiEngine(local_embed_not_ready_message())));
+            }
             Err(e) => {
                 if allow_fallback {
                     let reason = e.to_string();
@@ -578,7 +614,7 @@ pub async fn call_ai_with_backend(
             if let Some(result) = embedded_result {
                 return result;
             }
-            Err(LumError::AiEngine(local_embed_unavailable_message()))
+            Err(LumError::AiEngine(local_embed_not_ready_message()))
         }
         "ollama" => {
             if let Some(result) = try_ollama_once(prompt).await {
@@ -1269,7 +1305,7 @@ pub async fn stream_ai_command(
                     }
                     return result;
                 }
-                return Err(LumError::AiEngine(local_embed_unavailable_message()));
+                return Err(LumError::AiEngine(local_embed_not_ready_message()));
             }
             "ollama" => {
                 if let Some(result) = try_ollama_stream(&app, &full_prompt, &cancel_flag).await {
@@ -1398,7 +1434,7 @@ pub async fn stream_ai_command(
                 }
                 return result;
             }
-            return Err(LumError::AiEngine(local_embed_unavailable_message()));
+            return Err(LumError::AiEngine(local_embed_not_ready_message()));
         }
         // 임베디드 GGUF 로드돼있으면 토큰별 스트리밍 — HTTP 우회.
         let show_reasoning = config.show_reasoning.unwrap_or(true);

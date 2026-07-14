@@ -110,6 +110,34 @@ pub struct LoraCandidate {
     pub folder_label: String,
 }
 
+#[cfg_attr(not(feature = "embedded-ai"), allow(dead_code))]
+fn gguf_default_rank(file: &str) -> Option<usize> {
+    let name = file.to_ascii_lowercase();
+    if name.starts_with("mmproj") || name.contains("mmproj-") || name.contains("-bf16") {
+        return None;
+    }
+
+    let priorities = [
+        "q4_k_m", "q4_k_s", "q4_0", "q4_1", "iq4_xs", "iq4_nl", "q5_k_m", "q5_k_s", "q6_k",
+        "q8_0", "q3_k_m", "q3_k_s", "ud-q4", "ud-iq4", "ud-q5", "ud-q3", "ud-iq3", "ud-q2",
+        "ud-iq2",
+    ];
+
+    priorities
+        .iter()
+        .position(|needle| name.contains(needle))
+        .or(Some(priorities.len()))
+}
+
+#[cfg_attr(not(feature = "embedded-ai"), allow(dead_code))]
+fn preferred_gguf_file(files: &[String]) -> Option<String> {
+    files
+        .iter()
+        .filter_map(|file| gguf_default_rank(file).map(|rank| (rank, file)))
+        .min_by(|(rank_a, file_a), (rank_b, file_b)| rank_a.cmp(rank_b).then(file_a.cmp(file_b)))
+        .map(|(_, file)| file.clone())
+}
+
 /// 모델 저장 루트 디렉토리 안의 모델 폴더 목록 반환.
 /// GGUF 파일이 있으면 `gguf_files`, BF16 safetensors 폴더면 `has_safetensors = true`.
 /// embedded-ai feature 무관하게 항상 동작.
@@ -243,10 +271,10 @@ fn pick_default_local_embed_key_with_hint(hint: Option<&str>) -> Option<ParsedEm
                 .iter()
                 .any(|f| f.to_lowercase().contains(&hint));
             if haystack.contains(&hint) || folder_match {
-                let key = if let Some(gguf_file) = candidate.gguf_files.first() {
+                let key = if let Some(gguf_file) = preferred_gguf_file(&candidate.gguf_files) {
                     ParsedEmbedKey::Gguf {
                         model_dir: candidate.folder.clone(),
-                        gguf_file: gguf_file.clone(),
+                        gguf_file,
                     }
                 } else if candidate.has_safetensors {
                     ParsedEmbedKey::Isq {
@@ -262,10 +290,10 @@ fn pick_default_local_embed_key_with_hint(hint: Option<&str>) -> Option<ParsedEm
     }
 
     list_embed_candidates().into_iter().find_map(|candidate| {
-        if let Some(gguf_file) = candidate.gguf_files.first() {
+        if let Some(gguf_file) = preferred_gguf_file(&candidate.gguf_files) {
             return Some(ParsedEmbedKey::Gguf {
                 model_dir: candidate.folder,
-                gguf_file: gguf_file.clone(),
+                gguf_file,
             });
         }
         if candidate.has_safetensors {
@@ -563,6 +591,36 @@ pub async fn embed_infer_stream(
     {
         let _ = (app, prompt, cancel_flag);
         Err(DISABLED_MSG.to_string())
+    }
+}
+
+#[cfg(test)]
+mod gguf_selection_tests {
+    use super::*;
+
+    #[test]
+    fn preferred_gguf_skips_bf16_and_mmproj() {
+        let files = vec![
+            "gemma-4-E4B-it-BF16.gguf".to_string(),
+            "mmproj-F16.gguf".to_string(),
+            "gemma-4-E4B-it-Q4_K_M.gguf".to_string(),
+        ];
+
+        assert_eq!(
+            preferred_gguf_file(&files),
+            Some("gemma-4-E4B-it-Q4_K_M.gguf".to_string())
+        );
+    }
+
+    #[test]
+    fn preferred_gguf_uses_practical_quant_before_larger_quant() {
+        let files = vec![
+            "model-Q8_0.gguf".to_string(),
+            "model-Q5_K_M.gguf".to_string(),
+            "model-Q4_K_S.gguf".to_string(),
+        ];
+
+        assert_eq!(preferred_gguf_file(&files), Some("model-Q4_K_S.gguf".to_string()));
     }
 }
 

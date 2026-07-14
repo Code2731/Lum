@@ -10,7 +10,7 @@ use mistralrs::{
 };
 use mistralrs_core::Ordering as LoraOrdering;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, OnceLock};
+use std::sync::{Arc, Mutex as StdMutex, OnceLock};
 use tauri::{AppHandle, Emitter};
 use tokio::sync::Mutex;
 
@@ -21,9 +21,31 @@ struct LoadedState {
 }
 
 static ENGINE: OnceLock<Mutex<Option<LoadedState>>> = OnceLock::new();
+static LAST_LOAD_ERROR: OnceLock<StdMutex<Option<String>>> = OnceLock::new();
 
 fn engine_mutex() -> &'static Mutex<Option<LoadedState>> {
     ENGINE.get_or_init(|| Mutex::new(None))
+}
+
+fn load_error_mutex() -> &'static StdMutex<Option<String>> {
+    LAST_LOAD_ERROR.get_or_init(|| StdMutex::new(None))
+}
+
+fn clear_load_error() {
+    if let Ok(mut guard) = load_error_mutex().lock() {
+        *guard = None;
+    }
+}
+
+fn record_load_error(message: String) {
+    if let Ok(mut guard) = load_error_mutex().lock() {
+        *guard = Some(message);
+    }
+}
+
+/// 마지막 모델 로드 실패 사유. 사용자가 "로딩 중"과 "로드 실패"를 구분할 수 있게 한다.
+pub fn last_load_error() -> Option<String> {
+    load_error_mutex().lock().ok().and_then(|g| g.clone())
 }
 
 /// GGUF 모델을 로드. 이미 같은 모델이 올라와 있으면 스킵.
@@ -40,6 +62,7 @@ pub async fn load_model(
         return Ok(format!("이미 로드됨: {gguf_filename}"));
     }
     *guard = None;
+    clear_load_error();
     let _ = app.emit(
         "embed_load_progress",
         format!("🔄 {gguf_filename} GGUF 파싱 + 레이어 로드 중..."),
@@ -48,13 +71,16 @@ pub async fn load_model(
         .build()
         .await
         .map_err(|e| {
+            let message = format!("mistralrs GGUF 로드 실패 ({key}): {e}");
+            record_load_error(message.clone());
             let _ = app.emit("embed_load_progress", format!("❌ 로드 실패: {e}"));
-            format!("mistralrs GGUF 로드 실패: {e}")
+            message
         })?;
     *guard = Some(LoadedState {
         model: Arc::new(model),
         key: key.clone(),
     });
+    clear_load_error();
     let _ = app.emit(
         "embed_load_progress",
         format!("✅ {gguf_filename} 로드 완료"),
@@ -65,6 +91,7 @@ pub async fn load_model(
 /// 로드된 모델을 Drop해 VRAM을 해제.
 pub async fn unload_model() {
     *engine_mutex().lock().await = None;
+    clear_load_error();
 }
 
 /// 현재 로드된 모델 키 반환 (`"<dir>/<file>"`). 미로드면 None.
@@ -190,6 +217,7 @@ pub async fn load_model_with_lora(
         return Ok(format!("이미 로드됨: {} + LoRA", gguf_filename));
     }
     *guard = None;
+    clear_load_error();
     let ordering = resolve_lora_ordering(lora_adapter, gguf_filename)?;
     let _ = app.emit(
         "embed_load_progress",
@@ -200,13 +228,16 @@ pub async fn load_model_with_lora(
         .build()
         .await
         .map_err(|e| {
+            let message = format!("LoRA 로드 실패 ({key}): {e}");
+            record_load_error(message.clone());
             let _ = app.emit("embed_load_progress", format!("❌ LoRA 로드 실패: {e}"));
-            format!("LoRA 로드 실패: {e}")
+            message
         })?;
     *guard = Some(LoadedState {
         model: Arc::new(model),
         key: key.clone(),
     });
+    clear_load_error();
     let _ = app.emit(
         "embed_load_progress",
         format!("✅ {gguf_filename} + LoRA 로드 완료"),
@@ -228,6 +259,7 @@ pub async fn load_model_normal(
         return Ok(format!("이미 로드됨: {model_path}"));
     }
     *guard = None;
+    clear_load_error();
     let _ = app.emit(
         "embed_load_progress",
         format!("🔄 {model_path} BF16→ISQ {isq:?} 변환 로드 중 (RAM 여유 필요)..."),
@@ -238,13 +270,16 @@ pub async fn load_model_normal(
         IsqSetting::Specific(ty) => base.with_isq(ty),
     };
     let model = builder.build().await.map_err(|e| {
+        let message = format!("BF16 ISQ 로드 실패 ({key}): {e}");
+        record_load_error(message.clone());
         let _ = app.emit("embed_load_progress", format!("❌ 로드 실패: {e}"));
-        format!("BF16 ISQ 로드 실패: {e}")
+        message
     })?;
     *guard = Some(LoadedState {
         model: Arc::new(model),
         key: key.clone(),
     });
+    clear_load_error();
     let _ = app.emit(
         "embed_load_progress",
         format!("✅ ISQ {isq:?} 로드 완료: {model_path}"),
