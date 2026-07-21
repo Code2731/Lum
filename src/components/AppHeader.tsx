@@ -1048,7 +1048,7 @@ const AppHeader: React.FC<Props> = ({
     >
       <div data-tauri-drag-region className="flex items-center gap-3 shrink-0">
         <WindowControls />
-        {!hideHardwareChip && (
+        {!compactMode && !hideHardwareChip && (
           <div data-tauri-drag-region className="flex items-center gap-1.5 text-xs text-white/55 font-medium shrink-0 whitespace-nowrap">
             <Cpu size={12} />
             {specsLoading ? (
