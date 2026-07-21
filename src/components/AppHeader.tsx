@@ -1086,7 +1086,7 @@ const AppHeader: React.FC<Props> = ({
               </button>
             ))}
           </div>
-          {!isVeryNarrowHeader && (
+          {!compactMode && !isVeryNarrowHeader && (
             <span
               className="inline-flex items-center rounded-full border border-white/10 bg-white/[0.04] px-2 py-0.5 text-[11px] font-medium text-white/62 whitespace-nowrap"
               title={`현재 뷰: ${activeViewLabel}`}
