@@ -1569,43 +1569,43 @@ describe("App (LUM 터미널)", () => {
   it("Cmd/Ctrl+Shift+Q는 Quick Actions 바를 토글한다", () => {
     render(<App />);
 
-    expect(screen.getByText("빠른 실행 없음 · 오른쪽 설정에서 추가")).toBeInTheDocument();
-
-    fireEvent.keyDown(window, { key: "q", metaKey: true, shiftKey: true });
     expect(screen.queryByText("빠른 실행 없음 · 오른쪽 설정에서 추가")).not.toBeInTheDocument();
 
     fireEvent.keyDown(window, { key: "q", metaKey: true, shiftKey: true });
     expect(screen.getByText("빠른 실행 없음 · 오른쪽 설정에서 추가")).toBeInTheDocument();
+
+    fireEvent.keyDown(window, { key: "q", metaKey: true, shiftKey: true });
+    expect(screen.queryByText("빠른 실행 없음 · 오른쪽 설정에서 추가")).not.toBeInTheDocument();
   });
 
   it("Ctrl+Shift+Q도 Quick Actions 바를 토글한다", () => {
     render(<App />);
 
-    expect(screen.getByText("빠른 실행 없음 · 오른쪽 설정에서 추가")).toBeInTheDocument();
-
-    fireEvent.keyDown(window, { key: "q", ctrlKey: true, shiftKey: true });
     expect(screen.queryByText("빠른 실행 없음 · 오른쪽 설정에서 추가")).not.toBeInTheDocument();
 
     fireEvent.keyDown(window, { key: "q", ctrlKey: true, shiftKey: true });
     expect(screen.getByText("빠른 실행 없음 · 오른쪽 설정에서 추가")).toBeInTheDocument();
+
+    fireEvent.keyDown(window, { key: "q", ctrlKey: true, shiftKey: true });
+    expect(screen.queryByText("빠른 실행 없음 · 오른쪽 설정에서 추가")).not.toBeInTheDocument();
   });
 
   it("Ctrl+Alt+Shift+Q는 Quick Actions 바 단축키로 처리되지 않는다", () => {
     render(<App />);
 
-    expect(screen.getByText("빠른 실행 없음 · 오른쪽 설정에서 추가")).toBeInTheDocument();
+    expect(screen.queryByText("빠른 실행 없음 · 오른쪽 설정에서 추가")).not.toBeInTheDocument();
 
     fireEvent.keyDown(window, { key: "q", ctrlKey: true, altKey: true, shiftKey: true });
-    expect(screen.getByText("빠른 실행 없음 · 오른쪽 설정에서 추가")).toBeInTheDocument();
+    expect(screen.queryByText("빠른 실행 없음 · 오른쪽 설정에서 추가")).not.toBeInTheDocument();
   });
 
   it("Cmd+Alt+Shift+Q는 Quick Actions 바 단축키로 처리되지 않는다", () => {
     render(<App />);
 
-    expect(screen.getByText("빠른 실행 없음 · 오른쪽 설정에서 추가")).toBeInTheDocument();
+    expect(screen.queryByText("빠른 실행 없음 · 오른쪽 설정에서 추가")).not.toBeInTheDocument();
 
     fireEvent.keyDown(window, { key: "q", metaKey: true, altKey: true, shiftKey: true });
-    expect(screen.getByText("빠른 실행 없음 · 오른쪽 설정에서 추가")).toBeInTheDocument();
+    expect(screen.queryByText("빠른 실행 없음 · 오른쪽 설정에서 추가")).not.toBeInTheDocument();
   });
 
   it("Cmd+Shift+L로 스크립트 패널이 열리고, Ctrl/Cmd+Shift+H는 SSH 모달로 동작한다", async () => {

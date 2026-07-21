@@ -591,7 +591,7 @@ const App: React.FC = () => {
   const aiChat = useAIChat(selectedModel, getTerminalContext);
 
   const [showOnboarding, setShowOnboarding] = useState(false);
-  const [showQuickBar, setShowQuickBar] = useState(true);
+  const [showQuickBar, setShowQuickBar] = useState(false);
   // 탭 더블클릭 rename 상태
   const [renamingTabId, setRenamingTabId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
