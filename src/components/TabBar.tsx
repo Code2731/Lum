@@ -2,8 +2,6 @@ import React, { useCallback, useRef } from "react";
 import { X, Plus, Lock, Columns2, Rows2, GitBranch, TerminalSquare, Package, Cpu, Container, Zap } from "lucide-react";
 import type { Tab } from "../hooks/useTabManager";
 import { TAB_COLORS } from "../hooks/useTabManager";
-import { ActionFlowBar } from "@/components/ui/action-flow-bar";
-import { getTabIconFlowSummary } from "../utils/tabIcon";
 
 interface GitTabInfo {
   branch: string;
@@ -62,8 +60,6 @@ const TabBar: React.FC<TabBarProps> = ({
   onContextMenu,
 }) => {
   const tabRefs = useRef<Record<string, HTMLDivElement | null>>({});
-  const activeTabSummary = getTabIconFlowSummary(activeTab?.cwd ?? "");
-  const activeTabPathLabel = activeTab?.cwd?.trim() ? activeTab.cwd : "작업 경로 미확인";
 
   const handleTabKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>, tabId: string) => {
     if (renamingTabId) return;
@@ -226,12 +222,6 @@ const TabBar: React.FC<TabBarProps> = ({
         </div>
       </div>
 
-      <div className="px-2.5 py-2 border-t border-white/8 bg-white/[0.015]">
-        <ActionFlowBar
-          badges={["먼저 탭 전환", activeTabSummary.secondary, "마지막 분할"]}
-          helper={`${activeTabSummary.detail} 현재 작업 경로: ${activeTabPathLabel}`}
-        />
-      </div>
     </div>
   );
 };

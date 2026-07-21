@@ -15,7 +15,7 @@ const tabs = [
 ];
 
 describe("TabBar", () => {
-  it("탭 바 흐름 안내를 보여준다", () => {
+  it("탭 바에는 탭과 분할 조작만 표시한다", () => {
     render(
       <TabBar
         tabs={tabs as any}
@@ -38,12 +38,10 @@ describe("TabBar", () => {
       />,
     );
 
-    expect(screen.getByText("먼저 탭 전환")).toBeInTheDocument();
-    expect(screen.getByText("Git 작업공간")).toBeInTheDocument();
-    expect(screen.getByText("마지막 분할")).toBeInTheDocument();
-    expect(
-      screen.getByText("현재 작업 경로: /repo"),
-    ).toBeInTheDocument();
+    expect(screen.getByText("main")).toBeInTheDocument();
+    expect(screen.getByLabelText("수평 분할 (Cmd/Ctrl+Shift+D)")).toBeInTheDocument();
+    expect(screen.getByLabelText("수직 분할 (Cmd/Ctrl+Shift+E)")).toBeInTheDocument();
+    expect(screen.queryByText("먼저 탭 전환")).not.toBeInTheDocument();
   });
 
   it("탭 aria-label에 작업공간 유형을 포함한다", () => {
