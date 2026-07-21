@@ -184,12 +184,12 @@ const TOOLBELT_TIP_NARROW =
   "TIP · Cmd/Ctrl+1~4/0 백엔드 직접 지정·해제 · Cmd/Ctrl+./, 백엔드 직접 순환 · Shift+A @첨부 · Shift+B/N 백엔드 이전/마지막 · Shift+K/Z/R/L/M/P 편집";
 
 describe("TerminalPane — 시작 안내와 입력 도크", () => {
-  it("초기 랜딩 상태에서 핵심 입력 안내를 보여준다", () => {
+  it("초기 랜딩 상태에서 축약된 입력 안내를 보여준다", () => {
     render(<TerminalPane id="tab-landing" />);
 
     expect(screen.getByLabelText("터미널 시작 안내")).toBeInTheDocument();
-    expect(screen.getByText("LUM AI 터미널")).toBeInTheDocument();
-    expect(screen.getByText("자연어로 질문하거나 명령어를 입력하세요")).toBeInTheDocument();
+    expect(screen.getByText("명령을 입력하거나 AI에 작업을 요청하세요")).toBeInTheDocument();
+    expect(screen.queryByText("LUM AI 터미널")).not.toBeInTheDocument();
   });
 
   it("입력 도크에 컴팩트 액션 팔레트 접근을 제공한다", () => {

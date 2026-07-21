@@ -128,8 +128,6 @@ const UI_TEXT_MICRO = "var(--lum-ui-text-micro)";
 const MICRO_FONT_SIZE = 10;
 const SMALL_FONT_SIZE = 11;
 const BASE_FONT_SIZE = 12;
-const TITLE_FONT_SIZE = 14;
-const HERO_FONT_SIZE = 36;
 
 const hasExecutableRecallRoute = (raw: string): boolean => {
   const normalized = raw.trim();
@@ -2027,14 +2025,12 @@ const TerminalPane: React.FC<Props> = ({
             aria-label="터미널 시작 안내"
             style={{
               flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-              gap: 16, color: "rgba(255,255,255,0.18)", userSelect: "none", padding: "0 20px",
+              gap: 8, color: "rgba(255,255,255,0.18)", userSelect: "none", padding: "0 20px",
             }}
           >
-            <div style={{ fontSize: HERO_FONT_SIZE, opacity: 0.5 }}>✨</div>
             <div style={{ textAlign: "center", lineHeight: 1.8, maxWidth: 480 }}>
-              <div style={{ fontSize: TITLE_FONT_SIZE, color: "rgba(255,255,255,0.35)", marginBottom: 6 }}>LUM AI 터미널</div>
-              <div style={{ fontSize: BASE_FONT_SIZE }}>자연어로 질문하거나 명령어를 입력하세요</div>
-              <div style={{ fontSize: SMALL_FONT_SIZE, marginTop: 8, opacity: 0.6 }}>
+              <div style={{ fontSize: BASE_FONT_SIZE, color: "rgba(255,255,255,0.42)" }}>명령을 입력하거나 AI에 작업을 요청하세요</div>
+              <div style={{ fontSize: SMALL_FONT_SIZE, marginTop: 4, opacity: 0.5 }}>
                 <span style={{ color: "#58a6ff" }}>#</span> AI 명령 제안 &nbsp;·&nbsp;
                 <span style={{ color: "#3fb950" }}>?</span> 명령어 설명 &nbsp;·&nbsp;
                 <span style={{ color: "#ff7b72" }}>{">>"}</span> 에이전트
