@@ -1100,38 +1100,41 @@ const AppHeader: React.FC<Props> = ({
       <div data-tauri-drag-region className="flex-1 h-full" />
 
       <div data-tauri-drag-region className="flex items-center gap-1 min-w-0">
-        <div data-tauri-drag-region className="flex items-center gap-1 min-w-0 overflow-hidden mr-1">
-          <div
-            data-tauri-drag-region
-            className={`text-sm px-2 py-1 rounded-md truncate max-w-[148px] border ${
-              fastEmpty
-                ? "bg-white/[0.04] border-white/10 text-white/35 italic"
-                : "bg-emerald-400/10 border-emerald-400/25 text-emerald-300"
-            }`}
-            title={modelBadgeMeta.fastTitle}
-          >
-            {isUltraNarrowHeader
-              ? (fastEmpty ? "없음" : "응답")
-              : isNarrowHeader
-                ? (fastEmpty ? "응답 없음" : "응답 준비")
-                : (fastEmpty ? "빠른 응답 없음" : "빠른 응답 준비")}
-          </div>
-          {heavyEnabled && heavy && !isVeryNarrowHeader && (
-            <div
-              data-tauri-drag-region
-              className="text-sm px-2 py-1 rounded-md bg-amber-400/10 border border-amber-400/25 text-amber-200 truncate max-w-[148px]"
-              title={modelBadgeMeta.heavyTitle}
-            >
-              {isNarrowHeader ? "분석 준비" : "헤비 분석 준비"}
+        {!compactMode && (
+          <>
+            <div data-tauri-drag-region className="flex items-center gap-1 min-w-0 overflow-hidden mr-1">
+              <div
+                data-tauri-drag-region
+                className={`text-sm px-2 py-1 rounded-md truncate max-w-[148px] border ${
+                  fastEmpty
+                    ? "bg-white/[0.04] border-white/10 text-white/35 italic"
+                    : "bg-emerald-400/10 border-emerald-400/25 text-emerald-300"
+                }`}
+                title={modelBadgeMeta.fastTitle}
+              >
+                {isUltraNarrowHeader
+                  ? (fastEmpty ? "없음" : "응답")
+                  : isNarrowHeader
+                    ? (fastEmpty ? "응답 없음" : "응답 준비")
+                    : (fastEmpty ? "빠른 응답 없음" : "빠른 응답 준비")}
+              </div>
+              {heavyEnabled && heavy && !isVeryNarrowHeader && (
+                <div
+                  data-tauri-drag-region
+                  className="text-sm px-2 py-1 rounded-md bg-amber-400/10 border border-amber-400/25 text-amber-200 truncate max-w-[148px]"
+                  title={modelBadgeMeta.heavyTitle}
+                >
+                  {isNarrowHeader ? "분석 준비" : "헤비 분석 준비"}
+                </div>
+              )}
             </div>
-          )}
-        </div>
-
-        <PrivacyLedgerBadge
-          state={privacyLedger.state}
-          isAllOnDevice={privacyLedger.isAllOnDevice}
-          onReset={privacyLedger.reset}
-        />
+            <PrivacyLedgerBadge
+              state={privacyLedger.state}
+              isAllOnDevice={privacyLedger.isAllOnDevice}
+              onReset={privacyLedger.reset}
+            />
+          </>
+        )}
         {recoveryBadgeMeta && (
           <button
             type="button"
