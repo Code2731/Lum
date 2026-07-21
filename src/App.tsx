@@ -228,7 +228,7 @@ const App: React.FC = () => {
   // 고급 기능은 항상 "더보기" 팝오버에서 제공한다. 헤더의 주 작업 밀도를 고정한다.
   const [toolbarShowAdvanced, setToolbarShowAdvanced] = useState(false);
   const [showAdvancedOverflow, setShowAdvancedOverflow] = useState(false);
-  const [compactToolbar, setCompactToolbar] = useState(false);
+  const [compactToolbar, setCompactToolbar] = useState(true);
   const [inspectorCommandMenuIndex, setInspectorCommandMenuIndex] = useState<number | null>(null);
   const inspectorMoreButtonRefs = useRef<Record<number, HTMLButtonElement | null>>({});
   const inspectorMenuFirstActionRefs = useRef<Record<number, HTMLButtonElement | null>>({});
@@ -277,7 +277,12 @@ const App: React.FC = () => {
         if (c.toolbar_show_advanced) {
           invoke("save_toolbar_show_advanced", { show: false }).catch(() => {});
         }
-        setCompactToolbar(c.ui_compact_toolbar ?? false);
+        // 기본 헤더는 핵심 액션만 보이는 컴팩트 모드로 시작한다.
+        // 이전의 확장 설정은 자동으로 마이그레이션하되, 사용자는 현재 세션에서 확장할 수 있다.
+        setCompactToolbar(true);
+        if (c.ui_compact_toolbar !== true) {
+          invoke("save_ui_preferences", { compactToolbar: true }).catch(() => {});
+        }
         setSeenAdvancedFeatures(c.ui_seen_advanced_features ?? []);
 
         // Phase 126 — UI 환경설정 통합. config가 있으면 그 값, 없으면 localStorage에서 1회 마이그레이션.

@@ -116,7 +116,7 @@ vi.mock("@tauri-apps/api/core", () => ({
       show_reasoning: true,
       vision_enabled: false,
       toolbar_show_advanced: false,
-      ui_compact_toolbar: false,
+      ui_compact_toolbar: true,
       ui_show_file_explorer: true,
       ui_show_inspector: true,
       ui_inspector_density: "compact",
@@ -599,11 +599,11 @@ describe("App (LUM 터미널)", () => {
   it("툴바 모드 토글은 compactToolbar 키로 저장한다", async () => {
     render(<App />);
 
-    const compactButton = await screen.findByRole("button", { name: "툴바 단순 모드" });
+    const compactButton = await screen.findByRole("button", { name: "툴바 확장 모드" });
     fireEvent.click(compactButton);
 
     await waitFor(() => {
-      expect(invoke).toHaveBeenCalledWith("save_ui_preferences", { compactToolbar: true });
+      expect(invoke).toHaveBeenCalledWith("save_ui_preferences", { compactToolbar: false });
     });
   });
 
@@ -2517,7 +2517,7 @@ describe("App (LUM 터미널)", () => {
           show_reasoning: true,
           vision_enabled: false,
           toolbar_show_advanced: false,
-          ui_compact_toolbar: false,
+          ui_compact_toolbar: true,
           ui_show_file_explorer: true,
           ui_show_inspector: true,
           ui_inspector_density: "compact",
