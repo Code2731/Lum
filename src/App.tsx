@@ -226,7 +226,7 @@ const App: React.FC = () => {
   // Phase 72 — 추론 토큰 표시 전역 토글 (툴바 + XllmPanel 공통 상태)
   const [showReasoning, setShowReasoning] = useState(true);
   const [visionEnabled, setVisionEnabled] = useState(false);
-  // Phase 121: 툴바 고급 기능 표시 모드 (기본 false — "더보기" 팝오버에 숨김).
+  // 고급 기능은 항상 "더보기" 팝오버에서 제공한다. 헤더의 주 작업 밀도를 고정한다.
   const [toolbarShowAdvanced, setToolbarShowAdvanced] = useState(false);
   const [showAdvancedOverflow, setShowAdvancedOverflow] = useState(false);
   const [compactToolbar, setCompactToolbar] = useState(false);
@@ -272,7 +272,12 @@ const App: React.FC = () => {
       .then(async (c) => {
         setShowReasoning(c.show_reasoning ?? true);
         setVisionEnabled(c.vision_enabled ?? false);
-        setToolbarShowAdvanced(c.toolbar_show_advanced ?? false);
+        // 이전 버전에서 저장된 인라인 고급 툴바 설정도 더보기 메뉴로 정리한다.
+        // 기능 접근성은 유지하면서 헤더가 다시 과밀해지는 것을 막는다.
+        setToolbarShowAdvanced(false);
+        if (c.toolbar_show_advanced) {
+          invoke("save_toolbar_show_advanced", { show: false }).catch(() => {});
+        }
         setCompactToolbar(c.ui_compact_toolbar ?? false);
         setSeenAdvancedFeatures(c.ui_seen_advanced_features ?? []);
 
@@ -334,13 +339,13 @@ const App: React.FC = () => {
       .catch(() => {});
   }, []);
   const toggleToolbarAdvanced = useCallback(async () => {
-    const next = !toolbarShowAdvanced;
-    setToolbarShowAdvanced(next);
-    if (next) setShowAdvancedOverflow(false);
+    // 고급 기능은 헤더에 인라인으로 펼치지 않는다. 이전 UI 설정을 복구할 때도
+    // 일관되게 더보기 메뉴에 유지한다.
+    setToolbarShowAdvanced(false);
     try {
-      await invoke("save_toolbar_show_advanced", { show: next });
+      await invoke("save_toolbar_show_advanced", { show: false });
     } catch { /* noop */ }
-  }, [toolbarShowAdvanced]);
+  }, []);
   const handleMarkAdvancedSeen = useCallback((id: string) => {
     setSeenAdvancedFeatures((prev) => (prev.includes(id) ? prev : [...prev, id]));
     invoke("mark_advanced_feature_seen", { featureId: id }).catch(() => {});
