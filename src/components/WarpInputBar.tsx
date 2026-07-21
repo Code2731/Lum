@@ -1331,7 +1331,6 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
           {voiceLiveMessage}
         </span>
         {visibleContextChips.length > 0 && (
-          {showQuickRouteControls && (
           <div
             style={{
               width: "100%",
@@ -2859,6 +2858,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
           />
           </div>
 
+          {showQuickRouteControls && (
           <div
             style={{
               display: "inline-flex",
