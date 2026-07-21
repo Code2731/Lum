@@ -467,7 +467,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
     // 실제 입력이나 강제 라우팅이 시작된 경우에만 즉시 전환 버튼을 보여준다.
     const showQuickRouteControls = hasActiveRouteMode || hasTypedInput;
     const showModeSummaryRow = !compactContextChips || hasActiveRouteMode || hasTypedInput;
-    const showExampleRow = !compactContextChips || hasActiveRouteMode || isFocused || hasTypedInput;
+    const showExampleRow = !compactContextChips || hasActiveRouteMode || hasTypedInput;
     const showPinnedVoiceExpanded = !compactContextChips || !pinnedVoiceTranscriptsCollapsed;
     const showRecentVoiceExpanded = !compactContextChips || showVoiceTranscriptHistory;
     const showVoiceScopeControls =
