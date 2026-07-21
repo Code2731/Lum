@@ -463,6 +463,9 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
     const hasActiveRouteMode =
       isHeavy || isAgent || isAICmd || isExplain || isForceShell || isForceAI || isBackendOnly || activeBackend !== null;
     const hasTypedInput = input.trim().length > 0;
+    // 빈 입력창은 하나의 명확한 입력 행동만 남긴다. 프리픽스/팔레트는 언제든 사용할 수 있고,
+    // 실제 입력이나 강제 라우팅이 시작된 경우에만 즉시 전환 버튼을 보여준다.
+    const showQuickRouteControls = hasActiveRouteMode || hasTypedInput;
     const showModeSummaryRow = !compactContextChips || hasActiveRouteMode || hasTypedInput;
     const showExampleRow = !compactContextChips || hasActiveRouteMode || isFocused || hasTypedInput;
     const showPinnedVoiceExpanded = !compactContextChips || !pinnedVoiceTranscriptsCollapsed;
@@ -1328,6 +1331,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
           {voiceLiveMessage}
         </span>
         {visibleContextChips.length > 0 && (
+          {showQuickRouteControls && (
           <div
             style={{
               width: "100%",
@@ -2984,6 +2988,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
               </button>
             )}
           </div>
+          )}
         </div>
 
       </div>
