@@ -30,7 +30,6 @@ import type { XtermTheme } from "../hooks/useTerminalTheme";
 import { DEFAULT_TERMINAL_FONT_SIZE } from "../hooks/useTerminalTheme";
 import type { DangerMatch } from "../utils/pasteGuard";
 import type { SshProfile } from "../hooks/useTabManager";
-import { ActionFlowBar } from "@/components/ui/action-flow-bar";
 import { IconButton } from "@/components/ui/icon-button";
 
 interface PtyData {
@@ -2040,13 +2039,6 @@ const TerminalPane: React.FC<Props> = ({
                 <span style={{ color: "#3fb950" }}>?</span> 명령어 설명 &nbsp;·&nbsp;
                 <span style={{ color: "#ff7b72" }}>{">>"}</span> 에이전트
               </div>
-              <div style={{ marginTop: 12 }}>
-                <ActionFlowBar
-                  badges={["질문 또는 명령 입력", "라우팅 확인", "터미널·AI 결과 검토"]}
-                  helper="자연어는 AI/에이전트로, 실행 가능한 명령은 터미널로 자동 분기됩니다."
-                  tone="cyan"
-                />
-              </div>
             </div>
           </section>
         ) : null}
@@ -2109,15 +2101,6 @@ const TerminalPane: React.FC<Props> = ({
             gap: inputDockNarrow ? 6 : 8,
           }}
         >
-          <ActionFlowBar
-            badges={[
-              terminalVisible ? "터미널 연결" : "AI 랜딩",
-              visionMode ? "이미지 첨부 준비" : "텍스트 입력 준비",
-              aiStreaming ? "응답 생성 중" : "입력 대기",
-            ]}
-            helper="입력창 하나로 셸, AI 질의, 에이전트 작업을 같은 흐름에서 전환합니다."
-            tone={aiStreaming ? "amber" : "cyan"}
-          />
           <div
             className={`lum-toolbelt-rail ${inputDockNarrow ? "lum-toolbelt-rail--narrow" : ""} ${inputDockCompact ? "lum-toolbelt-rail--compact" : ""} ${inputFocusCompact ? "lum-toolbelt-rail--focus" : ""}`}
             style={{
@@ -2169,7 +2152,7 @@ const TerminalPane: React.FC<Props> = ({
           onChange={handleInputChange}
           onFocusChange={setWarpInputFocused}
           contextChips={visibleInputChips}
-          compactContextChips={inputFocusCompact}
+          compactContextChips
         />
       </div>
 
