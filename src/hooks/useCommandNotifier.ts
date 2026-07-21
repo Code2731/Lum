@@ -35,14 +35,6 @@ export function getCommandNotificationBody(
   return `명령: ${getCommandNotificationPreview(command)}\n${statusLine}`;
 }
 
-async function requestNotificationPermission() {
-  if (!("Notification" in window)) return false;
-  if (Notification.permission === "granted") return true;
-  if (Notification.permission === "denied") return false;
-  const perm = await Notification.requestPermission();
-  return perm === "granted";
-}
-
 function sendNotification(command: string, exitCode: number | null, durationSec: number) {
   const title = getCommandNotificationTitle(exitCode);
   const body = getCommandNotificationBody(command, exitCode, durationSec);
@@ -56,11 +48,13 @@ export function useCommandNotifier(
   thresholdMs = THRESHOLD_MS,
 ) {
   const notifiedRef = useRef<Set<string>>(new Set());
-  const permGrantedRef = useRef(false);
-
-  useEffect(() => {
-    requestNotificationPermission().then(ok => { permGrantedRef.current = ok; });
-  }, []);
+  // WebKit은 사용자 제스처 밖의 권한 요청을 거부한다. 앱 시작 시 프롬프트를 띄우지 않고,
+  // 이미 허용된 환경에서만 장시간 명령 완료 알림을 보낸다.
+  const permGrantedRef = useRef(
+    typeof window !== "undefined"
+      && "Notification" in window
+      && Notification.permission === "granted",
+  );
 
   useEffect(() => {
     for (const b of blocks) {
