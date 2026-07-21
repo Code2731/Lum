@@ -2,6 +2,7 @@ import React, { useCallback, useRef } from "react";
 import { X, Plus, Lock, Columns2, Rows2, GitBranch, TerminalSquare, Package, Cpu, Container, Zap } from "lucide-react";
 import type { Tab } from "../hooks/useTabManager";
 import { TAB_COLORS } from "../hooks/useTabManager";
+import { getTabIconFlowSummary } from "../utils/tabIcon";
 
 interface GitTabInfo {
   branch: string;
