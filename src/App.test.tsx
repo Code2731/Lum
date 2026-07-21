@@ -318,15 +318,6 @@ describe("App (LUM 터미널)", () => {
     expect(matches.length).toBe(0);
   });
 
-  it("헤더 아래에 현재 앱 작업 상태 흐름을 노출한다", () => {
-    render(<App />);
-
-    expect(screen.getByLabelText("앱 작업 상태")).toBeInTheDocument();
-    expect(screen.getByText("터미널 보기")).toBeInTheDocument();
-    expect(screen.getByText("인스펙터 열림")).toBeInTheDocument();
-    expect(screen.getByText("작업 패널 준비")).toBeInTheDocument();
-  });
-
   it("기본 뷰가 터미널이어야 함 — TerminalPane이 최소 1개 렌더링됨", () => {
     render(<App />);
     const panes = screen.getAllByTestId(/^terminal-pane-/);

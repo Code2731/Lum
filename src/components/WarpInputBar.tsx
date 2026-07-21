@@ -1,4 +1,6 @@
 import React, { useEffect, useImperativeHandle, useRef, useState, forwardRef } from "react";
+import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import { Mic, MicOff, Copy, RotateCcw, X } from "lucide-react";
 import { tokenizeShell, TOKEN_COLORS } from "../utils/shellSyntax";
 import {
@@ -206,6 +208,9 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
     const [voiceHistoryQuery, setVoiceHistoryQuery] = useState("");
     const [voiceHistoryScopeOverride, setVoiceHistoryScopeOverride] = useState<string | null>(null);
     const [showAllVoiceHistoryScopes, setShowAllVoiceHistoryScopes] = useState(loadStoredVoiceScopeExpanded);
+    const [embeddedModelKey, setEmbeddedModelKey] = useState<string | null>(null);
+    const [embeddedLoadState, setEmbeddedLoadState] = useState<"idle" | "loading" | "failed">("idle");
+    const [embeddedLoadMessage, setEmbeddedLoadMessage] = useState<string | null>(null);
     const effectiveVoiceHistoryScope = voiceHistoryScopeOverride ?? voiceHistoryScope ?? null;
     const {
       activeVoiceHistoryScope,
@@ -346,6 +351,52 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
     const isForceAI    = trimmedInput.startsWith("@");
     const isVisuallyEmpty = input.trim() === "";
     const activeBackend = detectBackendPrefixFromInput(input);
+    useEffect(() => {
+      if (activeBackend !== "local") return;
+      let active = true;
+      let unlistenProgress: (() => void) | null = null;
+      const refreshEmbeddedModelStatus = () => {
+        invoke<string | null>("embed_loaded_info")
+          .then((key) => {
+            if (!active) return;
+            setEmbeddedModelKey(key);
+            if (key) {
+              setEmbeddedLoadState("idle");
+              setEmbeddedLoadMessage(null);
+            }
+          })
+          .catch(() => {
+            if (active) setEmbeddedModelKey(null);
+          });
+      };
+      refreshEmbeddedModelStatus();
+      listen<string>("embed_load_progress", (event) => {
+        if (!active) return;
+        if (event.payload.startsWith("🔄")) {
+          setEmbeddedLoadState("loading");
+          setEmbeddedLoadMessage(event.payload);
+        } else if (event.payload.startsWith("❌")) {
+          setEmbeddedLoadState("failed");
+          setEmbeddedLoadMessage(event.payload);
+        } else if (event.payload.startsWith("✅")) {
+          setEmbeddedLoadState("idle");
+          setEmbeddedLoadMessage(event.payload);
+          refreshEmbeddedModelStatus();
+        }
+      }).then((unlisten) => {
+        if (active) unlistenProgress = unlisten;
+        else unlisten();
+      }).catch(() => {});
+      // 자동 복원 중일 때만 재확인한다. 준비 완료 뒤에는 이벤트로만 상태를 갱신한다.
+      const timer = embeddedModelKey
+        ? null
+        : window.setInterval(refreshEmbeddedModelStatus, 1500);
+      return () => {
+        active = false;
+        if (timer !== null) window.clearInterval(timer);
+        unlistenProgress?.();
+      };
+    }, [activeBackend, embeddedModelKey]);
     const isBackendOnly =
       isBackendOnlyInput(input);
     const isEffectivelyEmpty = isVisuallyEmpty || isBackendOnly;
@@ -673,11 +724,23 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
         chips.push({
           id: "backend",
           label: activeBackend === "local"
-            ? "LOCAL · mistral.rs"
+            ? embeddedModelKey
+              ? "LOCAL · mistral.rs 준비"
+              : embeddedLoadState === "loading"
+                ? "LOCAL · mistral.rs 로딩"
+                : embeddedLoadState === "failed"
+                  ? "LOCAL · mistral.rs 오류"
+              : "LOCAL · mistral.rs 미로드"
             : `백엔드 ${activeBackend.toUpperCase()}`,
-          tone: activeBackend === "ollama" ? "success" : activeBackend === "gemini" ? "warn" : "accent",
+          tone: activeBackend === "local"
+            ? embeddedModelKey ? "success" : embeddedLoadState === "loading" ? "accent" : "warn"
+            : activeBackend === "ollama" ? "success" : activeBackend === "gemini" ? "warn" : "accent",
           title: activeBackend === "local"
-            ? "mistral.rs 엔진을 강제 선택했습니다. 현재 설치된 로컬 모델(Qwen 등)로 실행하며 xLLM 폴백을 사용하지 않습니다."
+            ? embeddedModelKey
+              ? `mistral.rs 엔진에 로컬 모델이 로드되어 있습니다: ${embeddedModelKey}`
+              : embeddedLoadMessage
+                ? embeddedLoadMessage
+              : "mistral.rs 엔진은 선택됐지만 모델이 아직 로드되지 않았습니다. Enter 시 자동 복원을 시도하며, 실패하면 원인을 직접 표시합니다."
             : `${activeBackend.toUpperCase()} 백엔드가 강제 선택되어 있습니다. Cmd/Ctrl+0 또는 우측 배지 클릭으로 해제할 수 있습니다.`,
         });
       }
@@ -702,6 +765,9 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
     }, [
       activeBackend,
       activeHeavy,
+      embeddedLoadMessage,
+      embeddedLoadState,
+      embeddedModelKey,
       isAgent,
       isAICmd,
       isBackendOnly,

@@ -1379,33 +1379,6 @@ const App: React.FC = () => {
         />
       )}
 
-      <section
-        aria-label="앱 작업 상태"
-        className="shrink-0 border-t border-white/[0.03] border-b border-white/[0.05] bg-[#0c121a]/88 px-3 py-2"
-      >
-        <ActionFlowBar
-          badges={[
-            viewMode === "terminal" ? "터미널 보기" : viewMode === "canvas" ? "캔버스 보기" : "리스트 보기",
-            showInspector ? "인스펙터 열림" : "인스펙터 숨김",
-            markdownView
-              ? "문서 미리보기"
-              : showFileExplorer
-                ? "파일 탐색기 열림"
-                : showAiBar
-                  ? "AI 바 활성"
-                  : "작업 패널 준비",
-          ]}
-          helper={
-            markdownView
-              ? "문서 뷰어가 열린 동안에도 현재 작업 문맥은 그대로 유지됩니다."
-              : showFileExplorer
-                ? "파일 탐색기와 메인 작업 영역이 같은 탭 문맥을 공유합니다."
-                : "보기 모드, 보조 패널, 입력 흐름이 현재 작업 문맥을 함께 유지합니다."
-          }
-          tone={showAiBar ? "amber" : "cyan"}
-        />
-      </section>
-
       {/* ── 메인 콘텐츠 ──────────────────────────────────────── */}
       <main className="flex-1 overflow-hidden flex relative border-t border-white/[0.03]">
         {showFileExplorer && (
