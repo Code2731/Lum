@@ -377,9 +377,17 @@ macOS에서 LUM이 실행되지 않을 때는 순서대로 확인하세요.
 
 **GPU 또는 CUDA 없음?** 환경변수에 `GEMINI_API_KEY` 설정 → LUM이 자동으로 Gemini 클라우드 폴백.
 
-### 음성 입력 훅 설정 (선택)
+### 로컬 음성 입력 설정 (선택)
 
-LUM의 음성 입력은 훅 기반입니다. 기본적으로 녹음기나 STT 엔진을 번들하지 않습니다.
+LUM은 시작/종료 훅이 없으면 기본 마이크를 앱 안에서 캡처하고, 로컬 `whisper.cpp`로 전사합니다. 음성 데이터는 `~/.lum_whisper/recordings/`의 임시 WAV로만 처리되며 전사가 끝나면 삭제됩니다. macOS에서는 첫 녹음 시 마이크 권한을 허용해야 합니다.
+
+1. `whisper.cpp`의 `whisper-cli` 실행 파일을 `~/.lum_whisper/whisper-cli`에 둡니다. Windows는 `whisper-cli.exe`를 사용합니다.
+2. 다국어 모델 `ggml-base.bin`을 `~/.lum_whisper/models/ggml-base.bin`에 둡니다. 다른 위치를 쓸 때는 `LUM_WHISPER_MODEL`에 모델 경로를 설정합니다.
+3. 마이크 버튼을 누르고 말한 뒤 다시 누르면 전사 결과가 입력창에 들어갑니다.
+
+사용자별 실행 명령을 쓰려면 `LUM_WHISPER_CPP_CMD`를 설정할 수 있습니다. 명령에는 `{audio}`와 `{model}` 자리표시자가 모두 필요하며, 전사 텍스트를 stdout으로 출력해야 합니다.
+
+기존의 외부 녹음/STT 파이프라인도 계속 지원합니다. `LUM_VOICE_START_CMD` 또는 `~/.lum_whisper/start.(sh|cmd)`가 있으면 아래 훅 경로가 우선됩니다.
 
 1. `scripts/voice-hooks/`의 예제 파일 중 OS에 맞는 쌍을 `~/.lum_whisper/`로 복사합니다.
 2. macOS/Linux는 `start.sh` / `stop.sh`, Windows는 `start.cmd` / `stop.cmd`로 이름을 맞춥니다.

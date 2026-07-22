@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <!-- Phase 135: CPAL 기반 로컬 음성 입력에 필요한 macOS 권한 안내. -->
+  <key>NSMicrophoneUsageDescription</key>
+  <string>LUM은 음성 명령을 기기 안에서 텍스트로 변환하기 위해 마이크 접근 권한이 필요합니다.</string>
+</dict>
+</plist>

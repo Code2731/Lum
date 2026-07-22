@@ -1,7 +1,9 @@
 use crate::platform;
+use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
+use cpal::{SampleFormat, StreamConfig};
 use serde::Serialize;
 use std::path::{Path, PathBuf};
-use std::sync::{Mutex, OnceLock};
+use std::sync::{Arc, Mutex, OnceLock};
 use tauri::Emitter;
 use tokio::process::Command as TokioCommand;
 use tokio::time::{timeout, Duration};
@@ -15,6 +17,24 @@ struct VoiceState {
 }
 
 static VOICE_STATE: OnceLock<Mutex<VoiceState>> = OnceLock::new();
+
+/// CPAL의 macOS Stream은 Send가 아니다. 별도 스레드가 Stream을 소유하고,
+/// Tauri 명령은 안전한 채널로 시작/종료만 요청한다.
+struct CapturedVoiceSamples {
+    samples: Arc<Mutex<Vec<f32>>>,
+    sample_rate: u32,
+}
+
+struct NativeVoiceCaptureController {
+    stop_tx: std::sync::mpsc::Sender<std::sync::mpsc::Sender<Result<CapturedVoiceSamples, String>>>,
+}
+
+static NATIVE_VOICE_CAPTURE: OnceLock<Mutex<Option<NativeVoiceCaptureController>>> =
+    OnceLock::new();
+
+fn native_voice_capture_lock() -> &'static Mutex<Option<NativeVoiceCaptureController>> {
+    NATIVE_VOICE_CAPTURE.get_or_init(|| Mutex::new(None))
+}
 
 fn voice_state_lock() -> &'static Mutex<VoiceState> {
     VOICE_STATE.get_or_init(|| Mutex::new(VoiceState::default()))
@@ -130,6 +150,332 @@ fn transcript_file_path() -> PathBuf {
     platform::home_dir()
         .join(".lum_whisper")
         .join("last_transcript.txt")
+}
+
+fn voice_recordings_dir() -> PathBuf {
+    platform::home_dir().join(".lum_whisper").join("recordings")
+}
+
+fn default_whisper_model_path() -> PathBuf {
+    platform::home_dir()
+        .join(".lum_whisper")
+        .join("models")
+        .join("ggml-base.bin")
+}
+
+fn default_whisper_cli_path() -> PathBuf {
+    let name = if cfg!(windows) {
+        "whisper-cli.exe"
+    } else {
+        "whisper-cli"
+    };
+    platform::home_dir().join(".lum_whisper").join(name)
+}
+
+const DEFAULT_NATIVE_MAX_SECONDS: u32 = 10 * 60;
+
+fn native_max_samples(sample_rate: u32) -> usize {
+    let seconds = std::env::var("LUM_VOICE_NATIVE_MAX_SECONDS")
+        .ok()
+        .and_then(|raw| raw.trim().parse::<u32>().ok())
+        .filter(|seconds| *seconds > 0)
+        .unwrap_or(DEFAULT_NATIVE_MAX_SECONDS);
+    sample_rate
+        .saturating_mul(seconds)
+        .try_into()
+        .unwrap_or(usize::MAX)
+}
+
+fn append_native_samples(target: &Arc<Mutex<Vec<f32>>>, data: &[f32], channels: usize, cap: usize) {
+    if channels == 0 {
+        return;
+    }
+    let Ok(mut samples) = target.lock() else {
+        return;
+    };
+    if samples.len() >= cap {
+        return;
+    }
+    for frame in data.chunks(channels) {
+        let mixed = frame.iter().copied().sum::<f32>() / frame.len() as f32;
+        samples.push(mixed.clamp(-1.0, 1.0));
+        if samples.len() >= cap {
+            break;
+        }
+    }
+}
+
+fn create_native_input_stream() -> Result<(cpal::Stream, Arc<Mutex<Vec<f32>>>, u32), String> {
+    let host = cpal::default_host();
+    let device = host.default_input_device().ok_or_else(|| {
+        voice_error(
+            "INPUT_DEVICE_UNAVAILABLE",
+            "사용 가능한 기본 마이크를 찾지 못했습니다.",
+        )
+    })?;
+    let supported = device.default_input_config().map_err(|e| {
+        voice_error(
+            "INPUT_CONFIG_UNAVAILABLE",
+            format!("마이크 설정을 읽지 못했습니다: {e}"),
+        )
+    })?;
+    let sample_format = supported.sample_format();
+    let config: StreamConfig = supported.into();
+    let channels = config.channels as usize;
+    let sample_rate = config.sample_rate.0;
+    let samples = Arc::new(Mutex::new(Vec::new()));
+    let cap = native_max_samples(sample_rate);
+    let err_fn = |err| eprintln!("LUM native voice input stream error: {err}");
+
+    let stream = match sample_format {
+        SampleFormat::F32 => {
+            let target = Arc::clone(&samples);
+            device.build_input_stream(
+                &config,
+                move |data: &[f32], _| {
+                    append_native_samples(&target, data, channels, cap);
+                },
+                err_fn,
+                None,
+            )
+        }
+        SampleFormat::I16 => {
+            let target = Arc::clone(&samples);
+            device.build_input_stream(
+                &config,
+                move |data: &[i16], _| {
+                    let converted: Vec<f32> =
+                        data.iter().map(|v| *v as f32 / i16::MAX as f32).collect();
+                    append_native_samples(&target, &converted, channels, cap);
+                },
+                err_fn,
+                None,
+            )
+        }
+        SampleFormat::U16 => {
+            let target = Arc::clone(&samples);
+            device.build_input_stream(
+                &config,
+                move |data: &[u16], _| {
+                    let converted: Vec<f32> = data
+                        .iter()
+                        .map(|v| (*v as f32 - 32768.0) / 32768.0)
+                        .collect();
+                    append_native_samples(&target, &converted, channels, cap);
+                },
+                err_fn,
+                None,
+            )
+        }
+        format => {
+            return Err(voice_error(
+                "INPUT_FORMAT_UNSUPPORTED",
+                format!("지원하지 않는 마이크 샘플 형식입니다: {format:?}"),
+            ))
+        }
+    }
+    .map_err(|e| {
+        voice_error(
+            "INPUT_STREAM_CREATE_FAILED",
+            format!("마이크 스트림을 열지 못했습니다: {e}"),
+        )
+    })?;
+
+    Ok((stream, samples, sample_rate))
+}
+
+fn start_native_voice_capture() -> Result<(), String> {
+    let (ready_tx, ready_rx) = std::sync::mpsc::sync_channel(1);
+    let (stop_tx, stop_rx) =
+        std::sync::mpsc::channel::<std::sync::mpsc::Sender<Result<CapturedVoiceSamples, String>>>();
+    std::thread::Builder::new()
+        .name("lum-native-voice".into())
+        .spawn(move || {
+            let (stream, samples, sample_rate) = match create_native_input_stream() {
+                Ok(capture) => capture,
+                Err(err) => {
+                    let _ = ready_tx.send(Err(err));
+                    return;
+                }
+            };
+            if let Err(err) = stream.play() {
+                let _ = ready_tx.send(Err(voice_error(
+                    "INPUT_STREAM_START_FAILED",
+                    format!("마이크를 시작하지 못했습니다: {err}"),
+                )));
+                return;
+            }
+            let _ = ready_tx.send(Ok(()));
+            if let Ok(reply_tx) = stop_rx.recv() {
+                // stream은 이 스레드에서 drop되어 CoreAudio 캡처가 즉시 멈춘다.
+                drop(stream);
+                let _ = reply_tx.send(Ok(CapturedVoiceSamples {
+                    samples,
+                    sample_rate,
+                }));
+            }
+        })
+        .map_err(|e| {
+            voice_error(
+                "INPUT_THREAD_CREATE_FAILED",
+                format!("마이크 스레드를 시작하지 못했습니다: {e}"),
+            )
+        })?;
+
+    ready_rx
+        .recv_timeout(Duration::from_secs(5))
+        .map_err(|_| voice_error("INPUT_START_TIMEOUT", "마이크 시작 시간이 초과되었습니다."))??;
+    let mut slot = native_voice_capture_lock()
+        .lock()
+        .map_err(|_| voice_error("STATE_LOCK_POISONED", "native voice capture lock poisoned"))?;
+    *slot = Some(NativeVoiceCaptureController { stop_tx });
+    Ok(())
+}
+
+fn take_native_voice_capture() -> Result<Option<CapturedVoiceSamples>, String> {
+    let controller = native_voice_capture_lock()
+        .lock()
+        .map_err(|_| voice_error("STATE_LOCK_POISONED", "native voice capture lock poisoned"))
+        .map(|mut slot| slot.take())?;
+    let Some(controller) = controller else {
+        return Ok(None);
+    };
+    let (reply_tx, reply_rx) = std::sync::mpsc::channel();
+    controller.stop_tx.send(reply_tx).map_err(|_| {
+        voice_error(
+            "INPUT_THREAD_STOP_FAILED",
+            "마이크 캡처 스레드가 이미 종료되었습니다.",
+        )
+    })?;
+    reply_rx
+        .recv_timeout(Duration::from_secs(3))
+        .map_err(|_| {
+            voice_error(
+                "INPUT_STOP_TIMEOUT",
+                "마이크 캡처 종료 시간이 초과되었습니다.",
+            )
+        })?
+        .map(Some)
+}
+
+fn write_native_wav(capture: CapturedVoiceSamples) -> Result<PathBuf, String> {
+    let samples = capture
+        .samples
+        .lock()
+        .map_err(|_| voice_error("STATE_LOCK_POISONED", "native voice samples lock poisoned"))?
+        .clone();
+    if samples.is_empty() {
+        return Err(voice_error(
+            "NO_AUDIO_CAPTURED",
+            "마이크에서 음성을 받지 못했습니다. 권한과 입력 장치를 확인하세요.",
+        ));
+    }
+    let dir = voice_recordings_dir();
+    std::fs::create_dir_all(&dir).map_err(|e| {
+        voice_error(
+            "RECORDING_DIR_CREATE_FAILED",
+            format!("음성 녹음 폴더 생성 실패: {e}"),
+        )
+    })?;
+    let path = dir.join(format!("voice-{}.wav", now_ms()));
+    let spec = hound::WavSpec {
+        channels: 1,
+        sample_rate: capture.sample_rate,
+        bits_per_sample: 16,
+        sample_format: hound::SampleFormat::Int,
+    };
+    let mut writer = hound::WavWriter::create(&path, spec)
+        .map_err(|e| voice_error("WAV_WRITE_FAILED", format!("음성 WAV 파일 생성 실패: {e}")))?;
+    for sample in samples {
+        writer
+            .write_sample((sample.clamp(-1.0, 1.0) * i16::MAX as f32) as i16)
+            .map_err(|e| voice_error("WAV_WRITE_FAILED", format!("음성 WAV 쓰기 실패: {e}")))?;
+    }
+    writer
+        .finalize()
+        .map_err(|e| voice_error("WAV_WRITE_FAILED", format!("음성 WAV 마무리 실패: {e}")))?;
+    Ok(path)
+}
+
+async fn transcribe_native_wav(wav: &Path) -> Result<String, String> {
+    // 모델/CLI 검증 실패도 포함해 녹음 원본은 항상 정리한다.
+    let result = transcribe_native_wav_inner(wav).await;
+    let _ = std::fs::remove_file(wav);
+    result
+}
+
+async fn transcribe_native_wav_inner(wav: &Path) -> Result<String, String> {
+    let model = std::env::var("LUM_WHISPER_MODEL")
+        .map(PathBuf::from)
+        .unwrap_or_else(|_| default_whisper_model_path());
+    if !model.is_file() {
+        return Err(voice_error("WHISPER_MODEL_NOT_FOUND", format!("Whisper 모델을 찾지 못했습니다: {}. ggml-base.bin을 배치하거나 LUM_WHISPER_MODEL을 설정하세요.", model.display())));
+    }
+    let output_base = wav.with_extension("");
+    let output_txt = output_base.with_extension("txt");
+    let cli = default_whisper_cli_path();
+    let output = if let Ok(template) = std::env::var("LUM_WHISPER_CPP_CMD") {
+        if !template.contains("{audio}") || !template.contains("{model}") {
+            return Err(voice_error(
+                "WHISPER_COMMAND_INVALID",
+                "LUM_WHISPER_CPP_CMD에는 {audio}와 {model} 자리표시자가 모두 필요합니다.",
+            ));
+        }
+        run_shell_capture(
+            &template
+                .replace("{audio}", &wav.display().to_string())
+                .replace("{model}", &model.display().to_string()),
+            parse_voice_timeout_ms("LUM_WHISPER_CPP_TIMEOUT_MS", 90_000),
+        )
+        .await?
+    } else {
+        if !cli.is_file() {
+            return Err(voice_error("WHISPER_CLI_NOT_FOUND", format!("whisper-cli를 찾지 못했습니다: {}. 설치하거나 LUM_WHISPER_CPP_CMD를 설정하세요.", cli.display())));
+        }
+        let out = timeout(
+            Duration::from_millis(parse_voice_timeout_ms("LUM_WHISPER_CPP_TIMEOUT_MS", 90_000)),
+            TokioCommand::new(&cli)
+                .args([
+                    "-m",
+                    model.to_string_lossy().as_ref(),
+                    "-f",
+                    wav.to_string_lossy().as_ref(),
+                    "-otxt",
+                    "-of",
+                    output_base.to_string_lossy().as_ref(),
+                ])
+                .output(),
+        )
+        .await
+        .map_err(|_| {
+            voice_error(
+                "WHISPER_TIMEOUT",
+                "Whisper 전사가 시간 제한을 초과했습니다.",
+            )
+        })?
+        .map_err(|e| voice_error("WHISPER_EXEC_FAILED", format!("whisper-cli 실행 실패: {e}")))?;
+        if !out.status.success() {
+            return Err(voice_error(
+                "WHISPER_FAILED",
+                String::from_utf8_lossy(&out.stderr).trim(),
+            ));
+        }
+        String::from_utf8_lossy(&out.stdout).trim().to_string()
+    };
+    let text = std::fs::read_to_string(&output_txt)
+        .ok()
+        .unwrap_or(output)
+        .trim()
+        .to_string();
+    let _ = std::fs::remove_file(&output_txt);
+    if text.is_empty() {
+        Err(voice_error(
+            "EMPTY_TRANSCRIPT",
+            "Whisper가 비어 있는 전사 결과를 반환했습니다.",
+        ))
+    } else {
+        Ok(text)
+    }
 }
 
 fn default_voice_hook_script_path(kind: &str) -> PathBuf {
@@ -473,10 +819,11 @@ async fn run_voice_hook_capture(hook: &VoiceHook, timeout_ms: u64) -> Result<Str
 }
 
 /// 음성 입력 시작.
-/// 현재 구현은 상태 머신 + 외부 훅 오케스트레이션:
+/// 외부 시작 훅이 있으면 기존 훅 오케스트레이션을 사용하고,
+/// 없으면 기본 마이크를 CPAL로 캡처한다.
 /// - `LUM_VOICE_START_CMD`가 있으면 실행 (예: 외부 녹음 프로세스 시작)
 /// - 미설정 시 `~/.lum_whisper/start.(sh|cmd)`가 있으면 자동 실행
-/// - 내부적으로 recording=true 상태만 관리
+/// - 둘 다 없으면 앱 내 캡처 후 `whisper.cpp`로 전사한다.
 async fn start_voice_recording_inner() -> Result<(), String> {
     let started_ms = mark_recording_started()?;
 
@@ -496,6 +843,10 @@ async fn start_voice_recording_inner() -> Result<(), String> {
                 format!("음성 시작 훅 실패: {e}"),
             ));
         }
+    } else if let Err(e) = start_native_voice_capture() {
+        // 네이티브 마이크 권한 거부/장치 부재도 기존 상태 머신을 남기지 않는다.
+        set_voice_state(false, 0)?;
+        return Err(e);
     }
 
     // started_ms는 실패 롤백/디버깅 추적용으로 내부에서만 사용.
@@ -511,7 +862,11 @@ pub async fn start_voice_recording(app: tauri::AppHandle) -> Result<(), String> 
             let _ = app.emit("voice_recording_state", true);
             if let Ok(state) = voice_state_snapshot() {
                 if state.recording {
-                    spawn_partial_transcript_watcher(app.clone(), state.session_id, state.started_ms);
+                    spawn_partial_transcript_watcher(
+                        app.clone(),
+                        state.session_id,
+                        state.started_ms,
+                    );
                 }
             }
             Ok(())
@@ -640,6 +995,20 @@ pub fn clear_voice_transcript_file() -> Result<VoiceTranscriptClearResult, Strin
 /// 없으면 명확한 에러 반환.
 async fn stop_voice_recording_inner() -> Result<String, String> {
     let started_ms = mark_recording_stopped()?;
+    // 시작 훅이 없었던 경우에만 슬롯이 채워진다. stream을 여기서 drop해 캡처를 즉시 중단한다.
+    if let Some(capture) = take_native_voice_capture()? {
+        let wav = match write_native_wav(capture) {
+            Ok(wav) => wav,
+            Err(err) => {
+                finish_stop(false, 0)?;
+                return Err(err);
+            }
+        };
+        let transcript = transcribe_native_wav(&wav).await;
+        finish_stop(false, 0)?;
+        return transcript;
+    }
+
     if let Some(hook) = resolve_voice_hook("LUM_VOICE_STOP_CMD", "stop") {
         let out = run_voice_hook_capture(
             &hook,
@@ -710,6 +1079,10 @@ mod tests {
             s.started_ms = 0;
             s.stopping = false;
         }
+        // 실제 마이크를 열었던 테스트가 다음 훅 기반 테스트에 영향을 주지 않게 정리.
+        if let Ok(mut capture) = native_voice_capture_lock().lock() {
+            *capture = None;
+        }
     }
 
     fn with_temp_home(prefix: &str) -> (PathBuf, Option<String>) {
@@ -733,11 +1106,70 @@ mod tests {
         }
     }
 
+    #[test]
+    fn native_capture_wav는_단일채널_16비트로_저장된다() {
+        let _g = AUDIO_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        let (_tmp_home, old_home) = with_temp_home("native_wav");
+        let capture = CapturedVoiceSamples {
+            samples: Arc::new(Mutex::new(vec![-1.0, 0.0, 1.0])),
+            sample_rate: 16_000,
+        };
+
+        let path = write_native_wav(capture).expect("native wav should be written");
+        let reader = hound::WavReader::open(&path).expect("written wav should be readable");
+        assert_eq!(reader.spec().channels, 1);
+        assert_eq!(reader.spec().sample_rate, 16_000);
+        assert_eq!(reader.spec().bits_per_sample, 16);
+        assert_eq!(reader.into_samples::<i16>().count(), 3);
+
+        let _ = std::fs::remove_file(path);
+        restore_home(old_home);
+    }
+
+    #[test]
+    fn native_whisper_기본경로는_lum_whisper_아래다() {
+        let _g = AUDIO_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        let (_tmp_home, old_home) = with_temp_home("native_paths");
+        assert!(default_whisper_cli_path().ends_with(if cfg!(windows) {
+            "whisper-cli.exe"
+        } else {
+            "whisper-cli"
+        }));
+        assert!(default_whisper_model_path().ends_with("models/ggml-base.bin"));
+        restore_home(old_home);
+    }
+
+    #[tokio::test]
+    async fn native_전사실패에도_녹음_wav는_삭제된다() {
+        let _g = AUDIO_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        let (_tmp_home, old_home) = with_temp_home("native_cleanup");
+        std::env::remove_var("LUM_WHISPER_MODEL");
+        std::env::remove_var("LUM_WHISPER_CPP_CMD");
+        let capture = CapturedVoiceSamples {
+            samples: Arc::new(Mutex::new(vec![0.1, -0.1])),
+            sample_rate: 16_000,
+        };
+        let wav = write_native_wav(capture).expect("native wav should be written");
+        let result = transcribe_native_wav(&wav).await;
+        assert!(result
+            .unwrap_err()
+            .contains("LUM_VOICE_ERROR::WHISPER_MODEL_NOT_FOUND::"));
+        assert!(
+            !wav.exists(),
+            "전사 실패에도 원본 음성 파일은 남기지 않아야 함"
+        );
+        restore_home(old_home);
+    }
+
     #[tokio::test]
     async fn double_start_거부() {
         let _g = AUDIO_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         reset_state();
-        std::env::remove_var("LUM_VOICE_START_CMD");
+        // 상태 머신만 검증한다. CI/개발 장비의 실제 마이크 권한에는 의존하지 않는다.
+        std::env::set_var(
+            "LUM_VOICE_START_CMD",
+            if cfg!(windows) { "exit /b 0" } else { "true" },
+        );
         let r1 = start_voice_recording_inner().await;
         assert!(r1.is_ok());
         let r2 = start_voice_recording_inner().await;
@@ -746,6 +1178,7 @@ mod tests {
                 .contains("LUM_VOICE_ERROR::ALREADY_RECORDING::"),
             "already recording 에러 코드가 포함되어야 함"
         );
+        std::env::remove_var("LUM_VOICE_START_CMD");
         reset_state();
     }
 
@@ -811,7 +1244,10 @@ mod tests {
         std::fs::write(&f, "  중간 전사  ").unwrap();
         let out = read_partial_transcript_file(&f, 0);
         assert_eq!(out.as_deref(), Some("중간 전사"));
-        assert!(f.exists(), "partial preview 읽기 후에는 파일이 유지되어야 함");
+        assert!(
+            f.exists(),
+            "partial preview 읽기 후에는 파일이 유지되어야 함"
+        );
         let _ = std::fs::remove_file(&f);
         let _ = std::fs::remove_dir_all(&base);
     }

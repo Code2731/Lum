@@ -55,6 +55,9 @@ futures = "0.3"
 thiserror = "2.0.18"
 sysinfo = "0.32"
 dirs = "5"
+# Phase 135 — 기본 마이크 캡처(CPAL) + WAV 기록. 전사는 로컬 whisper.cpp에 위임한다.
+cpal = "0.15.3"
+hound = "3.5.1"
 
 # Phase 70 — Repo Map (tree-sitter AST + PageRank)
 tree-sitter = "0.23"
