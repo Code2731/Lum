@@ -111,13 +111,19 @@ function voiceStatus() {
     /pub async fn start_voice_recording/.test(text) &&
     /pub async fn stop_voice_recording/.test(text);
   const hasHook = /resolve_voice_hook/.test(text);
-  const hasEmbeddedEngine = /cpal|whisper[_-]rs|whisper\.cpp/.test(text);
+  const hasNativeCapture =
+    /start_native_voice_capture/.test(text) &&
+    /transcribe_native_wav/.test(text) &&
+    /WHISPER_SAMPLE_RATE/.test(text);
 
   if (!hasApi) {
     return { status: "FAIL", detail: "음성 시작/중지 API 없음" };
   }
-  if (hasEmbeddedEngine && !hasHook) {
-    return { status: "PASS", detail: "임베디드 STT 경로로 보임" };
+  if (hasNativeCapture) {
+    return {
+      status: "PARTIAL",
+      detail: "CPAL 로컬 캡처 + whisper.cpp 전사 경로(VAD·모델 자동 배포 대기)",
+    };
   }
   if (hasHook) {
     return { status: "PARTIAL", detail: "외부 hook 기반(STT 임베디드 완전통합 전 단계)" };

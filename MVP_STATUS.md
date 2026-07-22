@@ -13,7 +13,7 @@ node scripts/mvp-readiness.mjs --strict-voice
 ## 판정 규칙
 
 - 필수 코어 항목은 모두 `PASS`여야 MVP 코어 충족으로 판정합니다.
-- Voice 입력은 현재 아키텍처상 별도 고도화 트랙으로 `PARTIAL`을 허용합니다.
+- Voice 입력은 CPAL 로컬 캡처 + `whisper.cpp` 전사까지 구현됐지만, VAD 자동 종료와 모델 자동 배포가 남아 있어 `PARTIAL`을 허용합니다.
 - `--strict-voice`를 사용하면 Voice가 `PASS`가 아닐 때 전체 판정을 실패로 처리합니다.
 
 ## 포함 항목(자동 점검)

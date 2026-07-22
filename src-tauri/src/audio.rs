@@ -21,8 +21,16 @@ static VOICE_STATE: OnceLock<Mutex<VoiceState>> = OnceLock::new();
 /// CPAL의 macOS Stream은 Send가 아니다. 별도 스레드가 Stream을 소유하고,
 /// Tauri 명령은 안전한 채널로 시작/종료만 요청한다.
 struct CapturedVoiceSamples {
-    samples: Arc<Mutex<Vec<f32>>>,
-    sample_rate: u32,
+    samples: Vec<f32>,
+    truncated: bool,
+}
+
+/// 캡처 콜백 전용 버퍼. 잠금 경합 시 콜백을 기다리지 않고 해당 블록만 버린다.
+/// stop은 stream drop 이후에만 버퍼를 회수하므로 정상 흐름에서 경합은 없다.
+struct NativeSampleBuffer {
+    samples: Vec<f32>,
+    phase: f64,
+    truncated: bool,
 }
 
 struct NativeVoiceCaptureController {
@@ -172,40 +180,63 @@ fn default_whisper_cli_path() -> PathBuf {
     platform::home_dir().join(".lum_whisper").join(name)
 }
 
+const WHISPER_SAMPLE_RATE: u32 = 16_000;
 const DEFAULT_NATIVE_MAX_SECONDS: u32 = 10 * 60;
+const MAX_NATIVE_SECONDS: u32 = 30 * 60;
 
-fn native_max_samples(sample_rate: u32) -> usize {
+fn native_max_samples() -> usize {
     let seconds = std::env::var("LUM_VOICE_NATIVE_MAX_SECONDS")
         .ok()
         .and_then(|raw| raw.trim().parse::<u32>().ok())
         .filter(|seconds| *seconds > 0)
-        .unwrap_or(DEFAULT_NATIVE_MAX_SECONDS);
-    sample_rate
+        .unwrap_or(DEFAULT_NATIVE_MAX_SECONDS)
+        .min(MAX_NATIVE_SECONDS);
+    WHISPER_SAMPLE_RATE
         .saturating_mul(seconds)
         .try_into()
         .unwrap_or(usize::MAX)
 }
 
-fn append_native_samples(target: &Arc<Mutex<Vec<f32>>>, data: &[f32], channels: usize, cap: usize) {
+fn append_native_samples<T: Copy>(
+    target: &Arc<Mutex<NativeSampleBuffer>>,
+    data: &[T],
+    channels: usize,
+    input_sample_rate: u32,
+    cap: usize,
+    to_f32: impl Fn(T) -> f32,
+) {
     if channels == 0 {
         return;
     }
-    let Ok(mut samples) = target.lock() else {
+    // 오디오 스레드는 lock을 기다리면 안 된다. stop 시의 짧은 경합은 다음 block으로 회복된다.
+    let Ok(mut buffer) = target.try_lock() else {
         return;
     };
-    if samples.len() >= cap {
+    if buffer.samples.len() >= cap {
+        buffer.truncated = true;
         return;
     }
     for frame in data.chunks(channels) {
-        let mixed = frame.iter().copied().sum::<f32>() / frame.len() as f32;
-        samples.push(mixed.clamp(-1.0, 1.0));
-        if samples.len() >= cap {
-            break;
+        let mixed = frame
+            .iter()
+            .copied()
+            .map(|sample| to_f32(sample))
+            .sum::<f32>()
+            / frame.len() as f32;
+        // Whisper 입력은 16kHz다. 위상 누적으로 장치 기본 44.1/48kHz를 결정적으로 다운샘플한다.
+        buffer.phase += WHISPER_SAMPLE_RATE as f64 / input_sample_rate as f64;
+        while buffer.phase >= 1.0 {
+            if buffer.samples.len() >= cap {
+                buffer.truncated = true;
+                return;
+            }
+            buffer.samples.push(mixed.clamp(-1.0, 1.0));
+            buffer.phase -= 1.0;
         }
     }
 }
 
-fn create_native_input_stream() -> Result<(cpal::Stream, Arc<Mutex<Vec<f32>>>, u32), String> {
+fn create_native_input_stream() -> Result<(cpal::Stream, Arc<Mutex<NativeSampleBuffer>>), String> {
     let host = cpal::default_host();
     let device = host.default_input_device().ok_or_else(|| {
         voice_error(
@@ -222,9 +253,14 @@ fn create_native_input_stream() -> Result<(cpal::Stream, Arc<Mutex<Vec<f32>>>, u
     let sample_format = supported.sample_format();
     let config: StreamConfig = supported.into();
     let channels = config.channels as usize;
-    let sample_rate = config.sample_rate.0;
-    let samples = Arc::new(Mutex::new(Vec::new()));
-    let cap = native_max_samples(sample_rate);
+    let input_sample_rate = config.sample_rate.0;
+    let samples = Arc::new(Mutex::new(NativeSampleBuffer {
+        // 콜백 중 재할당을 막기 위해 허용 녹음 시간만큼 시작 시 확보한다.
+        samples: Vec::with_capacity(native_max_samples()),
+        phase: 0.0,
+        truncated: false,
+    }));
+    let cap = native_max_samples();
     let err_fn = |err| eprintln!("LUM native voice input stream error: {err}");
 
     let stream = match sample_format {
@@ -233,7 +269,7 @@ fn create_native_input_stream() -> Result<(cpal::Stream, Arc<Mutex<Vec<f32>>>, u
             device.build_input_stream(
                 &config,
                 move |data: &[f32], _| {
-                    append_native_samples(&target, data, channels, cap);
+                    append_native_samples(&target, data, channels, input_sample_rate, cap, |v| v);
                 },
                 err_fn,
                 None,
@@ -244,9 +280,9 @@ fn create_native_input_stream() -> Result<(cpal::Stream, Arc<Mutex<Vec<f32>>>, u
             device.build_input_stream(
                 &config,
                 move |data: &[i16], _| {
-                    let converted: Vec<f32> =
-                        data.iter().map(|v| *v as f32 / i16::MAX as f32).collect();
-                    append_native_samples(&target, &converted, channels, cap);
+                    append_native_samples(&target, data, channels, input_sample_rate, cap, |v| {
+                        v as f32 / i16::MAX as f32
+                    });
                 },
                 err_fn,
                 None,
@@ -257,11 +293,9 @@ fn create_native_input_stream() -> Result<(cpal::Stream, Arc<Mutex<Vec<f32>>>, u
             device.build_input_stream(
                 &config,
                 move |data: &[u16], _| {
-                    let converted: Vec<f32> = data
-                        .iter()
-                        .map(|v| (*v as f32 - 32768.0) / 32768.0)
-                        .collect();
-                    append_native_samples(&target, &converted, channels, cap);
+                    append_native_samples(&target, data, channels, input_sample_rate, cap, |v| {
+                        (v as f32 - 32768.0) / 32768.0
+                    });
                 },
                 err_fn,
                 None,
@@ -281,7 +315,35 @@ fn create_native_input_stream() -> Result<(cpal::Stream, Arc<Mutex<Vec<f32>>>, u
         )
     })?;
 
-    Ok((stream, samples, sample_rate))
+    Ok((stream, samples))
+}
+
+fn recover_native_samples(
+    mut samples: Arc<Mutex<NativeSampleBuffer>>,
+) -> Result<CapturedVoiceSamples, String> {
+    // CoreAudio callback이 stream drop 직후 한 번 더 반환 중일 수 있다.
+    // 콜백과 경쟁하지 않는 worker에서만 짧게 기다린 뒤 버퍼 소유권을 회수한다.
+    for _ in 0..20 {
+        match Arc::try_unwrap(samples) {
+            Ok(buffer) => {
+                let buffer = buffer.into_inner().map_err(|_| {
+                    voice_error("STATE_LOCK_POISONED", "native voice samples lock poisoned")
+                })?;
+                return Ok(CapturedVoiceSamples {
+                    samples: buffer.samples,
+                    truncated: buffer.truncated,
+                });
+            }
+            Err(shared) => {
+                samples = shared;
+                std::thread::sleep(Duration::from_millis(5));
+            }
+        }
+    }
+    Err(voice_error(
+        "INPUT_BUFFER_BUSY",
+        "마이크 버퍼가 종료 시간 안에 해제되지 않았습니다.",
+    ))
 }
 
 fn start_native_voice_capture() -> Result<(), String> {
@@ -291,7 +353,7 @@ fn start_native_voice_capture() -> Result<(), String> {
     std::thread::Builder::new()
         .name("lum-native-voice".into())
         .spawn(move || {
-            let (stream, samples, sample_rate) = match create_native_input_stream() {
+            let (stream, samples) = match create_native_input_stream() {
                 Ok(capture) => capture,
                 Err(err) => {
                     let _ = ready_tx.send(Err(err));
@@ -309,10 +371,8 @@ fn start_native_voice_capture() -> Result<(), String> {
             if let Ok(reply_tx) = stop_rx.recv() {
                 // stream은 이 스레드에서 drop되어 CoreAudio 캡처가 즉시 멈춘다.
                 drop(stream);
-                let _ = reply_tx.send(Ok(CapturedVoiceSamples {
-                    samples,
-                    sample_rate,
-                }));
+                let captured = recover_native_samples(samples);
+                let _ = reply_tx.send(captured);
             }
         })
         .map_err(|e| {
@@ -359,11 +419,7 @@ fn take_native_voice_capture() -> Result<Option<CapturedVoiceSamples>, String> {
 }
 
 fn write_native_wav(capture: CapturedVoiceSamples) -> Result<PathBuf, String> {
-    let samples = capture
-        .samples
-        .lock()
-        .map_err(|_| voice_error("STATE_LOCK_POISONED", "native voice samples lock poisoned"))?
-        .clone();
+    let CapturedVoiceSamples { samples, truncated } = capture;
     if samples.is_empty() {
         return Err(voice_error(
             "NO_AUDIO_CAPTURED",
@@ -380,7 +436,7 @@ fn write_native_wav(capture: CapturedVoiceSamples) -> Result<PathBuf, String> {
     let path = dir.join(format!("voice-{}.wav", now_ms()));
     let spec = hound::WavSpec {
         channels: 1,
-        sample_rate: capture.sample_rate,
+        sample_rate: WHISPER_SAMPLE_RATE,
         bits_per_sample: 16,
         sample_format: hound::SampleFormat::Int,
     };
@@ -394,6 +450,10 @@ fn write_native_wav(capture: CapturedVoiceSamples) -> Result<PathBuf, String> {
     writer
         .finalize()
         .map_err(|e| voice_error("WAV_WRITE_FAILED", format!("음성 WAV 마무리 실패: {e}")))?;
+    if truncated {
+        // 전체 파일은 남겨 전사할 수 있지만 사용자가 결과가 잘렸음을 알 수 있게 한다.
+        eprintln!("LUM native voice recording reached configured sample limit");
+    }
     Ok(path)
 }
 
@@ -1111,8 +1171,8 @@ mod tests {
         let _g = AUDIO_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         let (_tmp_home, old_home) = with_temp_home("native_wav");
         let capture = CapturedVoiceSamples {
-            samples: Arc::new(Mutex::new(vec![-1.0, 0.0, 1.0])),
-            sample_rate: 16_000,
+            samples: vec![-1.0, 0.0, 1.0],
+            truncated: false,
         };
 
         let path = write_native_wav(capture).expect("native wav should be written");
@@ -1124,6 +1184,21 @@ mod tests {
 
         let _ = std::fs::remove_file(path);
         restore_home(old_home);
+    }
+
+    #[test]
+    fn native_capture는_48khz를_16khz로_다운샘플한다() {
+        let _g = AUDIO_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        let target = Arc::new(Mutex::new(NativeSampleBuffer {
+            samples: Vec::with_capacity(160),
+            phase: 0.0,
+            truncated: false,
+        }));
+        let input = vec![0.25_f32; 480]; // 48kHz에서 10ms = 16kHz에서 160 samples
+        append_native_samples(&target, &input, 1, 48_000, 160, |v| v);
+        let buffer = target.lock().unwrap();
+        assert_eq!(buffer.samples.len(), 160);
+        assert!(!buffer.truncated);
     }
 
     #[test]
@@ -1146,8 +1221,8 @@ mod tests {
         std::env::remove_var("LUM_WHISPER_MODEL");
         std::env::remove_var("LUM_WHISPER_CPP_CMD");
         let capture = CapturedVoiceSamples {
-            samples: Arc::new(Mutex::new(vec![0.1, -0.1])),
-            sample_rate: 16_000,
+            samples: vec![0.1, -0.1],
+            truncated: false,
         };
         let wav = write_native_wav(capture).expect("native wav should be written");
         let result = transcribe_native_wav(&wav).await;
