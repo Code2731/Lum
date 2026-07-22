@@ -115,6 +115,7 @@ function voiceStatus() {
     /start_native_voice_capture/.test(text) &&
     /transcribe_native_wav/.test(text) &&
     /WHISPER_SAMPLE_RATE/.test(text);
+  const hasVad = /native_vad_stop_requested/.test(text) && /DEFAULT_VAD_SILENCE_MS/.test(text);
 
   if (!hasApi) {
     return { status: "FAIL", detail: "음성 시작/중지 API 없음" };
@@ -122,7 +123,9 @@ function voiceStatus() {
   if (hasNativeCapture) {
     return {
       status: "PARTIAL",
-      detail: "CPAL 로컬 캡처 + whisper.cpp 전사 경로(VAD·모델 자동 배포 대기)",
+      detail: hasVad
+        ? "CPAL 로컬 캡처 + VAD 자동 종료 + whisper.cpp 전사 경로(모델 자동 배포 대기)"
+        : "CPAL 로컬 캡처 + whisper.cpp 전사 경로(VAD·모델 자동 배포 대기)",
     };
   }
   if (hasHook) {

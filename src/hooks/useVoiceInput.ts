@@ -195,6 +195,7 @@ export function useVoiceInput({
     let unlistenTranscript: (() => void) | null = null;
     let unlistenPartial: (() => void) | null = null;
     let unlistenState: (() => void) | null = null;
+    let unlistenError: (() => void) | null = null;
     let disposed = false;
 
     const transcriptPromise = listen<string>("voice_transcript", (event) => {
@@ -294,14 +295,32 @@ export function useVoiceInput({
       })
       .catch(() => {});
 
+    const errorPromise = listen<string>("voice_recording_error", (event) => {
+      if (!mountedRef.current) return;
+      clearPartialTranscript();
+      setIsRecording(false);
+      setVoiceError(parseVoiceError(String(event.payload ?? "")));
+      setVoiceStatus("error");
+    })
+      .then((off) => {
+        if (disposed) {
+          off();
+          return;
+        }
+        unlistenError = off;
+      })
+      .catch(() => {});
+
     return () => {
       disposed = true;
       unlistenTranscript?.();
       unlistenPartial?.();
       unlistenState?.();
+      unlistenError?.();
       void transcriptPromise;
       void partialPromise;
       void statePromise;
+      void errorPromise;
     };
   }, [clearPartialTranscript, enabled, emitTranscript, flushPendingPartialTranscript]);
 

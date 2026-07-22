@@ -22,7 +22,7 @@
 | 132 SKILL.md 표준 | 3일 명세 | ✅ **DONE** | `skills.rs:38-42` `when_to_use/quick_reference/procedure/pitfalls/verification` 5섹션, `:193` `split_frontmatter`, `:246` `parse_frontmatter_yaml`, `:295` 헤더 alias 매핑. |
 | 133 Reflexion 1턴 | 1주 명세 | ✅ **DONE** | `react_agent.rs:301` `run_reflexion`, `:1545` config 토글, `:1588/:1625/:1710` 통합. config.rs:111 `react_reflexion_enabled`. |
 | 134 Healing 자연어 | 3-4일 명세 | ✅ **DONE** | `react_agent.rs:381` `query_healing` + `analyze_failure_reasons` 도구. `inputRouter.ts:122-130,160-167,236` `HEALING_INTENT_KO/EN` + `detectHealingIntent` + 라우팅. `HealingDatasetPanel.tsx:182-186` reject 카드 amber `failure_reason` 노출. |
-| 135 Voice 입력 | 1~1.5주 명세 (CPAL+로컬 Whisper) | 🟡 **PARTIAL** | 2026-07-22: 훅이 없을 때 CPAL로 기본 마이크를 전용 스레드에서 캡처하고, 콜백에서 재할당·대기를 피하면서 16kHz mono PCM으로 다운샘플한 뒤 로컬 `whisper.cpp`(`~/.lum_whisper/whisper-cli` + `models/ggml-base.bin`)로 전사. macOS 마이크 권한 설명과 회귀 테스트 포함. VAD 자동 종료·모델 lazy download는 후속. |
+| 135 Voice 입력 | 1~1.5주 명세 (CPAL+로컬 Whisper) | 🟡 **PARTIAL** | 2026-07-22: 훅이 없을 때 CPAL로 기본 마이크를 전용 스레드에서 캡처하고, 콜백에서 재할당·대기를 피하면서 16kHz mono PCM으로 다운샘플한 뒤 로컬 `whisper.cpp`(`~/.lum_whisper/whisper-cli` + `models/ggml-base.bin`)로 전사. 발화 후 0.8초 무음이면 VAD가 자동 종료·전사를 시작한다. 남은 범위는 모델 lazy download. |
 | 136 Magentic 2-ledger | 2-3주 명세 | ✅ **DONE (136-A+B)** | `ProgressLedger` (inner) + `is_complex_goal/parse_task_plan/generate_task_plan` (outer). 복잡한 목표 → 사전계획 주입. L2 stuck → outer re-plan (최대 2회) → 강제ANSWER. 독립 orchestrator.rs 없이 react_agent_run에 통합. |
 
 **결론**: NEXT_PHASES.md(자연어 표면)는 작성 당시 거의 다 done이었음. 외부 리서치는 정확했지만 내부 감사 부족 — Codex 핸드오프 가치는 **135 음성 입력의 VAD·모델 배포 마무리**가 유의미합니다. 나머지는 **이미 done**이므로 새로 구현은 최소화. Code Intelligence 축은 `NEXT_PHASES_CODE_INTEL.md` 별도 문서 참조 — 그쪽이 실제 미완 항목입니다.
@@ -249,13 +249,14 @@
 
 ---
 
-## 8. Phase 135 — Voice 입력 (chunk 기반) (1~1.5주) 🟡 PARTIAL — CPAL 캡처 + 로컬 whisper.cpp 전사 완료, VAD/모델 배포 미구현
+## 8. Phase 135 — Voice 입력 (chunk 기반) (1~1.5주) 🟡 PARTIAL — CPAL 캡처 + VAD 자동 종료 + 로컬 whisper.cpp 전사 완료, 모델 배포 미구현
 
-**근거**: 2026-03 Anthropic·OpenAI 코딩 agent voice mode 출하. LUM은 `audio.rs`의 `start_voice_recording`/`stop_voice_recording`에 CPAL 기반 마이크 캡처와 로컬 Whisper 전사 경로를 갖췄으며, 남은 범위는 VAD 자동 종료와 모델 배포다.
+**근거**: 2026-03 Anthropic·OpenAI 코딩 agent voice mode 출하. LUM은 `audio.rs`의 `start_voice_recording`/`stop_voice_recording`에 CPAL 기반 마이크 캡처·VAD 자동 종료·로컬 Whisper 전사 경로를 갖췄으며, 남은 범위는 모델 배포다.
 
 ### 변경 범위
 - `src-tauri/src/audio.rs`
   - ✅ `cpal`로 마이크 캡처 + 16kHz mono 다운샘플 + 로컬 `whisper.cpp` 서브프로세스 전사. CPAL Stream이 `Send`가 아닌 플랫폼에서도 안전하도록 전용 스레드가 stream을 소유하고 채널로 종료한다.
+  - ✅ RMS 기반 VAD: 발화가 감지된 뒤 0.8초 무음이면 캡처를 종료하고 비동기 전사를 시작한다. `LUM_VOICE_VAD_SILENCE_MS`/`LUM_VOICE_VAD_THRESHOLD`로 조정 가능.
   - `start_voice_recording` / `stop_voice_recording` 실제 구현, `voice_transcript` 이벤트 emit.
 - `src/components/WarpInputBar.tsx`
   - 마이크 토글 버튼 → `voice_transcript` 이벤트 수신 시 입력창에 inject.
@@ -266,7 +267,7 @@
 - [x] 마이크 토글 OFF → CPAL stream drop으로 입력 차단.
 - [x] STT 실패 시 명확한 에러 (모델 미설치/마이크 권한 거부/실행 파일 없음).
 - [x] 회귀 가드 — WAV 저장·기본 모델/CLI 경로·전사 실패 시 원본 삭제 + 기존 음성 상태 머신 22건.
-- [ ] VAD(silence 0.8초)로 자동 종료.
+- [x] VAD(silence 0.8초)로 자동 종료.
 - [ ] 첫 사용 시 모델 lazy download.
 
 ### 주의

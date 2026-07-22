@@ -31,6 +31,9 @@ struct NativeSampleBuffer {
     samples: Vec<f32>,
     phase: f64,
     truncated: bool,
+    speech_detected: bool,
+    silent_input_frames: u64,
+    auto_stop: bool,
 }
 
 struct NativeVoiceCaptureController {
@@ -183,6 +186,8 @@ fn default_whisper_cli_path() -> PathBuf {
 const WHISPER_SAMPLE_RATE: u32 = 16_000;
 const DEFAULT_NATIVE_MAX_SECONDS: u32 = 10 * 60;
 const MAX_NATIVE_SECONDS: u32 = 30 * 60;
+const DEFAULT_VAD_SILENCE_MS: u64 = 800;
+const DEFAULT_VAD_THRESHOLD: f32 = 0.015;
 
 fn native_max_samples() -> usize {
     let seconds = std::env::var("LUM_VOICE_NATIVE_MAX_SECONDS")
@@ -195,6 +200,45 @@ fn native_max_samples() -> usize {
         .saturating_mul(seconds)
         .try_into()
         .unwrap_or(usize::MAX)
+}
+
+fn native_vad_silence_ms() -> u64 {
+    parse_voice_timeout_ms("LUM_VOICE_VAD_SILENCE_MS", DEFAULT_VAD_SILENCE_MS)
+}
+
+fn native_vad_threshold() -> f32 {
+    std::env::var("LUM_VOICE_VAD_THRESHOLD")
+        .ok()
+        .and_then(|raw| raw.trim().parse::<f32>().ok())
+        .filter(|value| value.is_finite() && *value > 0.0 && *value <= 1.0)
+        .unwrap_or(DEFAULT_VAD_THRESHOLD)
+}
+
+fn update_native_vad(
+    buffer: &mut NativeSampleBuffer,
+    rms: f32,
+    input_frames: usize,
+    input_sample_rate: u32,
+) {
+    if buffer.auto_stop || input_frames == 0 {
+        return;
+    }
+    if rms >= native_vad_threshold() {
+        buffer.speech_detected = true;
+        buffer.silent_input_frames = 0;
+        return;
+    }
+    if !buffer.speech_detected {
+        return;
+    }
+    buffer.silent_input_frames = buffer
+        .silent_input_frames
+        .saturating_add(input_frames as u64);
+    let required_frames =
+        (input_sample_rate as u64).saturating_mul(native_vad_silence_ms()) / 1_000;
+    if buffer.silent_input_frames >= required_frames.max(1) {
+        buffer.auto_stop = true;
+    }
 }
 
 fn append_native_samples<T: Copy>(
@@ -217,12 +261,16 @@ fn append_native_samples<T: Copy>(
         return;
     }
     for frame in data.chunks(channels) {
-        let mixed = frame
-            .iter()
-            .copied()
-            .map(|sample| to_f32(sample))
-            .sum::<f32>()
-            / frame.len() as f32;
+        let mut sum = 0.0_f32;
+        let mut square_sum = 0.0_f32;
+        for sample in frame.iter().copied() {
+            let sample = to_f32(sample);
+            sum += sample;
+            square_sum += sample * sample;
+        }
+        let mixed = sum / frame.len() as f32;
+        let rms = (square_sum / frame.len() as f32).sqrt();
+        update_native_vad(&mut buffer, rms, 1, input_sample_rate);
         // Whisper 입력은 16kHz다. 위상 누적으로 장치 기본 44.1/48kHz를 결정적으로 다운샘플한다.
         buffer.phase += WHISPER_SAMPLE_RATE as f64 / input_sample_rate as f64;
         while buffer.phase >= 1.0 {
@@ -259,6 +307,9 @@ fn create_native_input_stream() -> Result<(cpal::Stream, Arc<Mutex<NativeSampleB
         samples: Vec::with_capacity(native_max_samples()),
         phase: 0.0,
         truncated: false,
+        speech_detected: false,
+        silent_input_frames: 0,
+        auto_stop: false,
     }));
     let cap = native_max_samples();
     let err_fn = |err| eprintln!("LUM native voice input stream error: {err}");
@@ -346,7 +397,60 @@ fn recover_native_samples(
     ))
 }
 
-fn start_native_voice_capture() -> Result<(), String> {
+fn native_vad_stop_requested(samples: &Arc<Mutex<NativeSampleBuffer>>) -> bool {
+    let detected = samples
+        .try_lock()
+        .map(|buffer| buffer.auto_stop)
+        .unwrap_or(false);
+    // 사용자가 수동 중지를 먼저 시작했다면 VAD는 캡처 스레드에 개입하지 않는다.
+    // 수동 경로가 stream 회수와 전사 결과 반환을 일관되게 소유한다.
+    detected
+        && voice_state_snapshot()
+            .map(|state| state.recording && !state.stopping)
+            .unwrap_or(false)
+}
+
+fn clear_native_voice_capture() {
+    if let Ok(mut slot) = native_voice_capture_lock().lock() {
+        let _ = slot.take();
+    }
+}
+
+fn emit_native_auto_transcript(
+    app: tauri::AppHandle,
+    session_id: u64,
+    capture: Result<CapturedVoiceSamples, String>,
+) {
+    tauri::async_runtime::spawn(async move {
+        let result = match capture {
+            Ok(capture) => match write_native_wav(capture) {
+                Ok(wav) => transcribe_native_wav(&wav).await,
+                Err(err) => Err(err),
+            },
+            Err(err) => Err(err),
+        };
+        // 자동 종료 뒤 새 녹음이 시작됐다면 이전 세션의 결과를 입력창에 섞지 않는다.
+        let current_session = voice_state_snapshot()
+            .map(|state| state.session_id == session_id && !state.recording)
+            .unwrap_or(false);
+        if !current_session {
+            return;
+        }
+        match result {
+            Ok(text) => {
+                let _ = app.emit("voice_transcript", text);
+            }
+            Err(err) => {
+                let _ = app.emit("voice_recording_error", err);
+            }
+        }
+    });
+}
+
+fn start_native_voice_capture(
+    app: Option<tauri::AppHandle>,
+    session_id: u64,
+) -> Result<(), String> {
     let (ready_tx, ready_rx) = std::sync::mpsc::sync_channel(1);
     let (stop_tx, stop_rx) =
         std::sync::mpsc::channel::<std::sync::mpsc::Sender<Result<CapturedVoiceSamples, String>>>();
@@ -368,11 +472,31 @@ fn start_native_voice_capture() -> Result<(), String> {
                 return;
             }
             let _ = ready_tx.send(Ok(()));
-            if let Ok(reply_tx) = stop_rx.recv() {
-                // stream은 이 스레드에서 drop되어 CoreAudio 캡처가 즉시 멈춘다.
-                drop(stream);
-                let captured = recover_native_samples(samples);
-                let _ = reply_tx.send(captured);
+            loop {
+                match stop_rx.recv_timeout(Duration::from_millis(50)) {
+                    Ok(reply_tx) => {
+                        // stream은 이 스레드에서 drop되어 CoreAudio 캡처가 즉시 멈춘다.
+                        drop(stream);
+                        let captured = recover_native_samples(samples);
+                        let _ = reply_tx.send(captured);
+                        return;
+                    }
+                    Err(std::sync::mpsc::RecvTimeoutError::Timeout)
+                        if native_vad_stop_requested(&samples) =>
+                    {
+                        drop(stream);
+                        let captured = recover_native_samples(samples);
+                        let _ = finish_stop(false, 0);
+                        clear_native_voice_capture();
+                        if let Some(app) = app {
+                            let _ = app.emit("voice_recording_state", false);
+                            emit_native_auto_transcript(app, session_id, captured);
+                        }
+                        return;
+                    }
+                    Err(std::sync::mpsc::RecvTimeoutError::Timeout) => {}
+                    Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => return,
+                }
             }
         })
         .map_err(|e| {
@@ -884,8 +1008,9 @@ async fn run_voice_hook_capture(hook: &VoiceHook, timeout_ms: u64) -> Result<Str
 /// - `LUM_VOICE_START_CMD`가 있으면 실행 (예: 외부 녹음 프로세스 시작)
 /// - 미설정 시 `~/.lum_whisper/start.(sh|cmd)`가 있으면 자동 실행
 /// - 둘 다 없으면 앱 내 캡처 후 `whisper.cpp`로 전사한다.
-async fn start_voice_recording_inner() -> Result<(), String> {
+async fn start_voice_recording_with_app(app: Option<tauri::AppHandle>) -> Result<(), String> {
     let started_ms = mark_recording_started()?;
+    let session_id = voice_state_snapshot()?.session_id;
 
     // 이전 세션의 잔여 전사 파일을 남기면 잘못된 텍스트가 재사용될 수 있어 정리.
     let _ = std::fs::remove_file(transcript_file_path());
@@ -903,7 +1028,7 @@ async fn start_voice_recording_inner() -> Result<(), String> {
                 format!("음성 시작 훅 실패: {e}"),
             ));
         }
-    } else if let Err(e) = start_native_voice_capture() {
+    } else if let Err(e) = start_native_voice_capture(app, session_id) {
         // 네이티브 마이크 권한 거부/장치 부재도 기존 상태 머신을 남기지 않는다.
         set_voice_state(false, 0)?;
         return Err(e);
@@ -915,9 +1040,14 @@ async fn start_voice_recording_inner() -> Result<(), String> {
     Ok(())
 }
 
+#[cfg(test)]
+async fn start_voice_recording_inner() -> Result<(), String> {
+    start_voice_recording_with_app(None).await
+}
+
 #[tauri::command]
 pub async fn start_voice_recording(app: tauri::AppHandle) -> Result<(), String> {
-    match start_voice_recording_inner().await {
+    match start_voice_recording_with_app(Some(app.clone())).await {
         Ok(()) => {
             let _ = app.emit("voice_recording_state", true);
             if let Ok(state) = voice_state_snapshot() {
@@ -1193,12 +1323,56 @@ mod tests {
             samples: Vec::with_capacity(160),
             phase: 0.0,
             truncated: false,
+            speech_detected: false,
+            silent_input_frames: 0,
+            auto_stop: false,
         }));
         let input = vec![0.25_f32; 480]; // 48kHz에서 10ms = 16kHz에서 160 samples
         append_native_samples(&target, &input, 1, 48_000, 160, |v| v);
         let buffer = target.lock().unwrap();
         assert_eq!(buffer.samples.len(), 160);
         assert!(!buffer.truncated);
+    }
+
+    #[test]
+    fn native_vad는_발화후_800ms_무음에서만_자동종료한다() {
+        let _g = AUDIO_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        std::env::remove_var("LUM_VOICE_VAD_SILENCE_MS");
+        std::env::remove_var("LUM_VOICE_VAD_THRESHOLD");
+        let mut buffer = NativeSampleBuffer {
+            samples: Vec::new(),
+            phase: 0.0,
+            truncated: false,
+            speech_detected: false,
+            silent_input_frames: 0,
+            auto_stop: false,
+        };
+
+        update_native_vad(&mut buffer, 0.0, 48_000, 48_000);
+        assert!(!buffer.auto_stop, "발화 전 무음만으로는 종료하면 안 된다");
+        update_native_vad(&mut buffer, 0.1, 1, 48_000);
+        update_native_vad(&mut buffer, 0.0, 38_399, 48_000);
+        assert!(!buffer.auto_stop);
+        update_native_vad(&mut buffer, 0.0, 1, 48_000);
+        assert!(buffer.auto_stop);
+    }
+
+    #[test]
+    fn native_vad는_임계값_이상_발화면_무음카운터를_초기화한다() {
+        let _g = AUDIO_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        let mut buffer = NativeSampleBuffer {
+            samples: Vec::new(),
+            phase: 0.0,
+            truncated: false,
+            speech_detected: false,
+            silent_input_frames: 0,
+            auto_stop: false,
+        };
+        update_native_vad(&mut buffer, 0.1, 1, 48_000);
+        update_native_vad(&mut buffer, 0.0, 10_000, 48_000);
+        update_native_vad(&mut buffer, 0.1, 1, 48_000);
+        assert_eq!(buffer.silent_input_frames, 0);
+        assert!(!buffer.auto_stop);
     }
 
     #[test]

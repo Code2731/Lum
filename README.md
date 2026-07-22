@@ -383,7 +383,7 @@ LUM은 시작/종료 훅이 없으면 기본 마이크를 앱 안에서 캡처�
 
 1. `whisper.cpp`의 `whisper-cli` 실행 파일을 `~/.lum_whisper/whisper-cli`에 둡니다. Windows는 `whisper-cli.exe`를 사용합니다.
 2. 다국어 모델 `ggml-base.bin`을 `~/.lum_whisper/models/ggml-base.bin`에 둡니다. 다른 위치를 쓸 때는 `LUM_WHISPER_MODEL`에 모델 경로를 설정합니다.
-3. 마이크 버튼을 누르고 말한 뒤 다시 누르면 전사 결과가 입력창에 들어갑니다.
+3. 마이크 버튼을 누르고 말하면, 발화 뒤 약 0.8초 무음에서 자동으로 녹음·전사가 끝나 입력창에 결과가 들어갑니다. 필요하면 마이크 버튼을 다시 눌러 수동으로 끝낼 수도 있습니다. `LUM_VOICE_VAD_SILENCE_MS`와 `LUM_VOICE_VAD_THRESHOLD`로 자동 종료 감도를 조정할 수 있습니다.
 
 사용자별 실행 명령을 쓰려면 `LUM_WHISPER_CPP_CMD`를 설정할 수 있습니다. 명령에는 `{audio}`와 `{model}` 자리표시자가 모두 필요하며, 전사 텍스트를 stdout으로 출력해야 합니다.
 
