@@ -53,22 +53,22 @@ export function getActionFlowBarFlowMeta(
 function getBadgeClass(tone: ActionFlowBarTone) {
   switch (tone) {
     case "amber":
-      return "rounded-full border border-amber-300/20 bg-amber-400/10 px-2 py-0.5 text-[10px] font-medium text-amber-200/90";
+      return "rounded-md border border-amber-300/18 bg-amber-400/[0.07] px-1.5 py-0.5 text-[10px] font-medium text-amber-200/85";
     case "cyan":
-      return "rounded-full border border-cyan-300/20 bg-cyan-400/10 px-2 py-0.5 text-[10px] font-medium text-cyan-200/90";
+      return "rounded-md border border-cyan-300/18 bg-cyan-400/[0.07] px-1.5 py-0.5 text-[10px] font-medium text-cyan-200/85";
     default:
-      return "rounded-full border border-white/10 bg-white/[0.05] px-2 py-0.5 text-[10px] font-medium text-white/58";
+      return "rounded-md border border-white/[0.08] bg-white/[0.035] px-1.5 py-0.5 text-[10px] font-medium text-white/56";
   }
 }
 
 function getContainerClass(tone: ActionFlowBarTone) {
   switch (tone) {
     case "amber":
-      return "border-amber-300/12 bg-amber-500/[0.045]";
+      return "text-amber-100/75";
     case "cyan":
-      return "border-cyan-300/12 bg-cyan-500/[0.045]";
+      return "text-cyan-100/75";
     default:
-      return "border-white/8 bg-white/[0.03]";
+      return "text-white/70";
   }
 }
 
@@ -82,34 +82,31 @@ export function ActionFlowBar(props: ActionFlowBarProps) {
 
     return (
       <div
-        className={`rounded-xl border px-2.5 py-2 ${containerClass}`}
+        className={`flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1 ${containerClass}`}
         aria-label={flowMeta.ariaLabel}
       >
-        <div className="flex flex-wrap items-center gap-1.5" role="list">
+        <div className="flex min-w-0 flex-wrap items-center gap-1" role="list">
           {flowMeta.badges.map((item, index) => (
             <React.Fragment key={`${index}-${item}`}>
               <span
                 role="listitem"
-                className={`inline-flex items-center gap-1.5 ${badgeClass}`}
+                className={`inline-flex items-center ${badgeClass}`}
               >
-                <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-black/20 px-1 text-[9px] font-semibold text-current">
-                  {index + 1}
-                </span>
                 <span>{item}</span>
               </span>
               {index < flowMeta.badges.length - 1 && (
                 <span
                   aria-hidden="true"
-                  className="text-[10px] font-semibold text-white/20"
+                  className="text-[10px] text-white/22"
                 >
-                  →
+                  ·
                 </span>
               )}
             </React.Fragment>
           ))}
         </div>
         {flowMeta.helper && (
-          <p className="mt-1.5 text-[11px] leading-4 text-white/46">
+          <p className="min-w-0 flex-1 truncate text-[10px] leading-4 text-white/38">
             {flowMeta.helper}
           </p>
         )}
@@ -119,7 +116,7 @@ export function ActionFlowBar(props: ActionFlowBarProps) {
 
   return (
     <div
-      className={`flex items-center justify-between gap-3 rounded-xl border px-2.5 py-2 ${containerClass}`}
+      className={`flex items-center justify-between gap-3 ${containerClass}`}
     >
       <div className="min-w-0">
         <p className="text-[10px] font-semibold uppercase tracking-[0.06em] text-white/46">
