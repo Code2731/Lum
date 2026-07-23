@@ -84,6 +84,7 @@ export function ActionFlowBar(props: ActionFlowBarProps) {
       <div
         className={`flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1 ${containerClass}`}
         aria-label={flowMeta.ariaLabel}
+        title={flowMeta.helper}
       >
         <div className="flex min-w-0 flex-wrap items-center gap-1" role="list">
           {flowMeta.badges.map((item, index) => (
@@ -106,7 +107,7 @@ export function ActionFlowBar(props: ActionFlowBarProps) {
           ))}
         </div>
         {flowMeta.helper && (
-          <p className="min-w-0 flex-1 truncate text-xs leading-4 text-white/38">
+          <p className="sr-only">
             {flowMeta.helper}
           </p>
         )}
