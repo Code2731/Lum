@@ -4,7 +4,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Sparkles, Download, Trash2, Check, X as XIcon, Wrench, Copy } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete";
 import { Button } from "@/components/ui/button";
 import { IconButton } from "@/components/ui/icon-button";
@@ -124,6 +124,7 @@ const HealingDatasetPanel: React.FC<Props> = ({ onClose }) => {
         <div className="flex items-center gap-2.5 px-5 py-4 border-b border-white/8 shrink-0">
           <Sparkles size={15} className="text-accent" />
           <DialogTitle className="text-sm font-semibold">Auto-Heal 학습 데이터셋</DialogTitle>
+          <DialogDescription className="sr-only">승인과 거부된 자동 치유 기록을 확인하고 학습 데이터로 내보냅니다.</DialogDescription>
           <span className="text-xs text-white/35 ml-1">로컬 LoRA fine-tune용</span>
         </div>
 

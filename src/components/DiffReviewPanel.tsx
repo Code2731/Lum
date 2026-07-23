@@ -4,7 +4,7 @@ import {
   GitCompareArrows, Loader2, ChevronDown, ChevronRight,
   AlertTriangle, CheckCircle2, AlertCircle, RefreshCw, Copy,
 } from "lucide-react";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { IconButton } from "@/components/ui/icon-button";
 import { ActionFlowBar } from "@/components/ui/action-flow-bar";
 
@@ -123,6 +123,7 @@ const DiffReviewPanel: React.FC<Props> = ({ model, repoPat = "", onClose }) => {
         <div className="flex items-center gap-2.5 px-5 py-4 border-b border-white/8 shrink-0">
           <GitCompareArrows size={15} className="text-accent" />
           <DialogTitle className="text-sm font-semibold">AI Diff 검토기</DialogTitle>
+          <DialogDescription className="sr-only">스테이지 또는 작업 트리 변경 내용을 AI로 검토합니다.</DialogDescription>
           <div className="flex ml-3 gap-1">
             {(["staged", "unstaged"] as const).map(mode => (
               <button

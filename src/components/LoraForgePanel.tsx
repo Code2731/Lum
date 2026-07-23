@@ -7,7 +7,7 @@ import {
   Hammer, Play, Loader2, Trash2, FolderOpen, Copy, X as XIcon, CheckCircle2, XCircle, Clock,
   AlertTriangle, Zap, Sparkles,
 } from "lucide-react";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -143,6 +143,7 @@ const LoraForgePanel: React.FC<Props> = ({ onLoadAdapter, onRevealPath, onClose 
         <div className="flex items-center gap-2.5 px-5 py-4 border-b border-white/10 bg-white/[0.02] shrink-0">
           <Hammer size={15} className="text-accent" />
           <DialogTitle className="text-sm font-semibold">LoRA Forge</DialogTitle>
+          <DialogDescription className="sr-only">자동 치유 데이터셋으로 로컬 모델의 LoRA 학습을 관리합니다.</DialogDescription>
           <span className="text-xs text-white/35 ml-1">healing 데이터셋으로 내 모델 학습</span>
           <button
             type="button"

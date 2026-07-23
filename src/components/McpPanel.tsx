@@ -4,7 +4,7 @@ import {
   Plus, Plug, PlugZap, Trash2, RefreshCw, Download, Play, Copy,
   ChevronDown, ChevronRight, Loader2, AlertTriangle, CheckCircle2,
 } from "lucide-react";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { IconButton } from "@/components/ui/icon-button";
@@ -218,6 +218,7 @@ const McpPanel: React.FC<Props> = ({ onClose }) => {
           <div className="flex items-center gap-2">
             <PlugZap size={14} className="text-accent" />
             <DialogTitle className="text-sm font-semibold text-white/90">MCP 서버</DialogTitle>
+            <DialogDescription className="sr-only">Model Context Protocol 서버를 추가하고 연결 상태를 관리합니다.</DialogDescription>
             <span className="text-xs text-white/35">· Model Context Protocol</span>
           </div>
           <IconButton tooltip="새로고침" onClick={loadServers}

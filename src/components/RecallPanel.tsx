@@ -15,7 +15,7 @@ import {
   Clock,
   Copy,
 } from "lucide-react";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { IconButton } from "@/components/ui/icon-button";
 import { Button } from "@/components/ui/button";
@@ -118,6 +118,7 @@ const RecallPanel: React.FC<Props> = ({ model, onInjectToChat, onClose }) => {
         <div className="flex items-center gap-2.5 px-5 py-4 border-b border-white/8 shrink-0">
           <Library size={15} className="text-accent" />
           <DialogTitle className="text-sm font-semibold">메모리 검색</DialogTitle>
+          <DialogDescription className="sr-only">로컬에 저장된 명령, 치유 기록, 메모리를 의미 기반으로 검색합니다.</DialogDescription>
           <span className="text-xs text-white/35 ml-1">로컬 영구 저장 — 클라우드 전송 없음</span>
           {stats && (
             <span className="ml-auto text-xs text-white/40 tabular-nums">총 {totalEntries.toLocaleString()}건</span>

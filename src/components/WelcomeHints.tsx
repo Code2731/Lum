@@ -1,5 +1,5 @@
 import { Sparkles, Hash, HelpCircle, Search, GitBranch, FolderTree, Command } from "lucide-react";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { ActionFlowBar } from "@/components/ui/action-flow-bar";
 import { SMALL_ICON_SIZE } from "../constants/ui";
 
@@ -38,6 +38,7 @@ export default function WelcomeHints({ onClose }: Props) {
         <div className="flex items-center gap-2 px-4 py-3 border-b border-white/8">
           <Sparkles size={14} className="text-accent" />
           <DialogTitle className="text-sm font-semibold text-white/90">LUM — AI 터미널 힌트</DialogTitle>
+          <DialogDescription className="sr-only">LUM AI 터미널에서 사용할 수 있는 주요 입력 방식과 단축키를 안내합니다.</DialogDescription>
         </div>
 
         <div className="px-4 py-2.5 border-b border-white/10 bg-white/[0.02]">

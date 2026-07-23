@@ -4,7 +4,7 @@
 
 import React, { useState } from "react";
 import { Users, Plus, Trash2, FolderOpen, GitBranch, Copy } from "lucide-react";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete";
 import { Button } from "@/components/ui/button";
 import { IconButton } from "@/components/ui/icon-button";
@@ -105,6 +105,7 @@ const SquadPanel: React.FC<Props> = ({
         <div className="flex items-center gap-2.5 px-5 py-4 border-b border-white/8 shrink-0">
           <Users size={15} className="text-accent" />
           <DialogTitle className="text-sm font-semibold">워크트리 스쿼드</DialogTitle>
+          <DialogDescription className="sr-only">격리된 Git 워크트리에서 병렬 작업을 생성하고 관리합니다.</DialogDescription>
           <span className="text-xs text-white/35 ml-1">병렬 작업 격리</span>
         </div>
 

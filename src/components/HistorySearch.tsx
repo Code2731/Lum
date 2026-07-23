@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { CheckCircle2, XCircle } from "lucide-react";
 import {
-  Dialog, DialogContent, DialogTitle,
+  Dialog, DialogContent, DialogDescription, DialogTitle,
 } from "@/components/ui/dialog";
 import { ActionFlowBar } from "@/components/ui/action-flow-bar";
 import {
@@ -138,6 +138,7 @@ const HistorySearch: React.FC<Props> = ({ model, onSelect, onClose }) => {
     <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
       <DialogContent className="sm:max-w-2xl overflow-hidden p-0 gap-0 border-white/10">
         <DialogTitle className="sr-only">히스토리 검색</DialogTitle>
+        <DialogDescription className="sr-only">이전에 실행한 터미널 명령을 검색하고 다시 실행합니다.</DialogDescription>
         <Command shouldFilter={false}>
           <div className="px-3 py-2 border-b border-white/8 bg-white/[0.02]">
             <ActionFlowBar

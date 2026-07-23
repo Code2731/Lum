@@ -19,7 +19,7 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { invoke } from "@tauri-apps/api/core";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { GitBranch, RefreshCw, X, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -275,6 +275,7 @@ export function HistoryGraphPanel({ onClose }: Props) {
               </span>
             )}
           </DialogTitle>
+          <DialogDescription className="sr-only">명령 기록과 자동 치유 기록의 의미상 연관 관계를 그래프로 탐색합니다.</DialogDescription>
           <div className="flex items-center gap-2">
             <Button
               variant="ghost"

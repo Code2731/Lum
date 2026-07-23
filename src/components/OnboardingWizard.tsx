@@ -6,7 +6,7 @@ import {
   Zap, Cpu, Package, CheckCircle2, Loader2,
   ChevronRight, RefreshCw, Download, TerminalSquare, Shield, Gauge, Rocket,
 } from "lucide-react";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { IconButton } from "@/components/ui/icon-button";
 import { SMALL_ICON_SIZE } from "../constants/ui";
 import { ActionFlowBar } from "@/components/ui/action-flow-bar";
@@ -164,6 +164,7 @@ const OnboardingWizard: React.FC<Props> = ({ onComplete }) => {
         onEscapeKeyDown={(e) => e.preventDefault()}
       >
         <DialogTitle className="sr-only">LUM 온보딩</DialogTitle>
+        <DialogDescription className="sr-only">LUM 사용을 시작하기 위한 초기 환경 설정 단계를 안내합니다.</DialogDescription>
         {/* 진행 바 */}
         <div className="flex items-center gap-1.5 px-6 pt-5">
           {STEPS.map((_, i) => (

@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { GitCommit, Loader2, Copy, Play, FolderOpen } from "lucide-react";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { ActionFlowBar } from "@/components/ui/action-flow-bar";
 import { IconButton } from "@/components/ui/icon-button";
 import { Textarea } from "@/components/ui/textarea";
@@ -114,6 +114,7 @@ const CommitPanel: React.FC<Props> = ({ model, onExecute, onClose }) => {
         <div className="flex items-center gap-2 px-4 py-3 border-b border-white/5">
           <GitCommit size={SMALL_ICON_SIZE} className="text-accent shrink-0" />
           <DialogTitle className="text-xs font-semibold">AI 커밋 메시지 생성</DialogTitle>
+          <DialogDescription className="sr-only">변경 내용을 바탕으로 커밋 메시지를 생성하고 실행할 수 있습니다.</DialogDescription>
         </div>
 
         <div className="p-4 space-y-3">

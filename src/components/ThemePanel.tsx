@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Palette, Type, Check } from "lucide-react";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Slider } from "@/components/ui/slider";
 import { ActionFlowBar } from "@/components/ui/action-flow-bar";
 import { THEMES, FONT_FAMILIES, type TerminalAppearance } from "../hooks/useTerminalTheme";
@@ -38,6 +38,7 @@ const ThemePanel: React.FC<Props> = ({ appearance, onSave, onClose }) => {
         <div className="flex items-center gap-2.5 px-5 py-4 border-b border-white/8">
           <Palette size={15} className="text-accent" />
           <DialogTitle className="text-sm font-semibold">터미널 테마 설정</DialogTitle>
+          <DialogDescription className="sr-only">터미널의 색상, 글꼴, 크기 등 화면 모양을 조정합니다.</DialogDescription>
         </div>
 
         <div className="px-5 py-2.5 border-b border-white/10 bg-white/[0.02]">

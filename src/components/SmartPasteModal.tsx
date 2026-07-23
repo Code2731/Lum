@@ -3,6 +3,7 @@ import { Clipboard, Play, SkipForward, Square, ChevronRight } from "lucide-react
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -46,6 +47,7 @@ const SmartPasteModal: React.FC<Props> = ({
                 멀티라인 붙여넣기 감지
                 <span className="ml-auto text-xs font-normal text-white/45 tabular-nums">{lines.length}개 명령어</span>
               </DialogTitle>
+              <DialogDescription className="sr-only">여러 줄의 명령을 단계별로 확인하거나 한 번에 실행할 수 있습니다.</DialogDescription>
             </DialogHeader>
 
             <div className="max-h-[55vh] overflow-y-auto space-y-1 -mx-1 px-1">

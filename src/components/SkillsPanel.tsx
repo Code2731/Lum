@@ -6,7 +6,7 @@
 
 import React, { useCallback, useMemo, useState } from "react";
 import { Library, Plus, Trash2, Save, X as XIcon, Search, Sparkles, Copy } from "lucide-react";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete";
 import { Button } from "@/components/ui/button";
 import { IconButton } from "@/components/ui/icon-button";
@@ -224,6 +224,7 @@ const SkillsPanel: React.FC<Props> = ({ onClose }) => {
         <div className="flex items-center gap-2.5 px-5 py-4 border-b border-white/10 bg-white/[0.02] shrink-0">
           <Library size={15} className="text-accent" />
           <DialogTitle className="text-sm font-semibold">스킬 — 절차 라이브러리</DialogTitle>
+          <DialogDescription className="sr-only">재사용할 작업 절차를 저장하고 AI 에이전트에 자동으로 연결합니다.</DialogDescription>
           <span className="text-xs text-white/35 ml-1">자연어 매칭 → ReAct에 자동 주입</span>
           <button
             type="button"

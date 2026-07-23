@@ -3,7 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { Download, Trash2, HardDrive, ExternalLink, X, FolderOpen, Copy } from "lucide-react";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete";
 import { IconButton } from "@/components/ui/icon-button";
 import { Input } from "@/components/ui/input";
@@ -292,6 +292,7 @@ const ModelManager: React.FC<Props> = ({ onClose }) => {
         <div className="flex items-center gap-2 px-5 py-4 border-b border-white/5">
           <HardDrive size={16} className="text-accent" />
           <DialogTitle className="text-sm font-semibold">모델 관리</DialogTitle>
+          <DialogDescription className="sr-only">로컬 AI 모델을 다운로드, 선택, 삭제하고 상태를 확인합니다.</DialogDescription>
         </div>
 
         {/* 탭 */}
