@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Server, User, Key, Lock, Bookmark, Trash2 } from "lucide-react";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -101,6 +101,9 @@ const SshConnectModal: React.FC<Props> = ({ onConnect, onClose }) => {
         <div className="flex items-center gap-2.5 px-5 py-4 border-b border-white/8">
           <Lock size={14} className="text-accent" />
           <DialogTitle className="text-sm font-semibold">SSH 연결</DialogTitle>
+          <DialogDescription className="sr-only">
+            SSH 호스트와 사용자 인증 정보를 입력하거나 저장된 프로필을 선택해 연결합니다.
+          </DialogDescription>
         </div>
 
         <div className="px-5 py-2.5 border-b border-white/10 bg-white/[0.02]">

@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Plus, Trash2, ChevronUp, ChevronDown, Zap } from "lucide-react";
 import { ActionFlowBar } from "@/components/ui/action-flow-bar";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { IconButton } from "@/components/ui/icon-button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
@@ -75,6 +75,9 @@ const QuickActionsEditor: React.FC<Props> = ({
         <div className="flex items-center gap-2.5 px-5 py-4 border-b border-white/8 shrink-0">
           <Zap size={14} className="text-accent" />
           <DialogTitle className="text-sm font-semibold">빠른 액션 편집</DialogTitle>
+          <DialogDescription className="sr-only">
+            자주 사용하는 명령과 단축키를 추가, 수정, 삭제하거나 순서를 변경합니다.
+          </DialogDescription>
         </div>
 
         <div className="px-5 py-3 border-b border-white/8 shrink-0 space-y-2">
