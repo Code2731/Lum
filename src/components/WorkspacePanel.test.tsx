@@ -34,6 +34,10 @@ vi.mock("@/components/ui/dialog", () => {
       children,
       ...props
     }: React.HTMLAttributes<HTMLHeadingElement>) => <h2 {...props}>{children}</h2>,
+    DialogDescription: ({
+      children,
+      ...props
+    }: React.HTMLAttributes<HTMLParagraphElement>) => <p {...props}>{children}</p>,
   };
 });
 
@@ -256,8 +260,8 @@ describe("WorkspacePanel", () => {
     window.sessionStorage.setItem(
       "lum.workspaceRecentRestore.v1",
       JSON.stringify({
-        ws-older: { lastRestoredAt: 1000, restoreCount: 3 },
-        ws-recent: { lastRestoredAt: 2000, restoreCount: 1 },
+        "ws-older": { lastRestoredAt: 1000, restoreCount: 3 },
+        "ws-recent": { lastRestoredAt: 2000, restoreCount: 1 },
       }),
     );
 
