@@ -3,7 +3,7 @@ import { Command as CommandPrimitive } from "cmdk";
 import { Search } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 
 export function getCommandDialogTitle(title = "커맨드 팔레트"): string {
   return title;
@@ -42,15 +42,23 @@ interface CommandDialogProps extends React.ComponentProps<typeof Dialog> {
   children: React.ReactNode;
   /** sr-only로 숨겨진 ARIA title (필수 — Radix Dialog 접근성 요구) */
   title?: string;
+  /** sr-only로 숨겨진 ARIA 설명 */
+  description?: string;
 }
 
-const CommandDialog = ({ children, title = "커맨드 팔레트", ...props }: CommandDialogProps) => {
+const CommandDialog = ({
+  children,
+  title = "커맨드 팔레트",
+  description = "검색어를 입력해 항목을 선택하고 실행할 수 있습니다.",
+  ...props
+}: CommandDialogProps) => {
   const dialogTitle = getCommandDialogTitle(title);
 
   return (
     <Dialog {...props}>
       <DialogContent className="overflow-hidden p-0 sm:max-w-[600px] gap-0 border-white/10">
         <DialogTitle className="sr-only">{dialogTitle}</DialogTitle>
+        <DialogDescription className="sr-only">{description}</DialogDescription>
         <Command className="[&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-wider [&_[cmdk-group-heading]]:text-white/30">
           {children}
         </Command>
