@@ -53,11 +53,11 @@ export function getActionFlowBarFlowMeta(
 function getBadgeClass(tone: ActionFlowBarTone) {
   switch (tone) {
     case "amber":
-      return "rounded-md border border-amber-300/18 bg-amber-400/[0.07] px-1.5 py-0.5 text-[10px] font-medium text-amber-200/85";
+      return "rounded-md border border-amber-300/18 bg-amber-400/[0.07] px-1.5 py-0.5 text-xs font-medium text-amber-200/85";
     case "cyan":
-      return "rounded-md border border-cyan-300/18 bg-cyan-400/[0.07] px-1.5 py-0.5 text-[10px] font-medium text-cyan-200/85";
+      return "rounded-md border border-cyan-300/18 bg-cyan-400/[0.07] px-1.5 py-0.5 text-xs font-medium text-cyan-200/85";
     default:
-      return "rounded-md border border-white/[0.08] bg-white/[0.035] px-1.5 py-0.5 text-[10px] font-medium text-white/56";
+      return "rounded-md border border-white/[0.08] bg-white/[0.035] px-1.5 py-0.5 text-xs font-medium text-white/56";
   }
 }
 
@@ -97,7 +97,7 @@ export function ActionFlowBar(props: ActionFlowBarProps) {
               {index < flowMeta.badges.length - 1 && (
                 <span
                   aria-hidden="true"
-                  className="text-[10px] text-white/22"
+                  className="text-xs text-white/22"
                 >
                   ·
                 </span>
@@ -106,7 +106,7 @@ export function ActionFlowBar(props: ActionFlowBarProps) {
           ))}
         </div>
         {flowMeta.helper && (
-          <p className="min-w-0 flex-1 truncate text-[10px] leading-4 text-white/38">
+          <p className="min-w-0 flex-1 truncate text-xs leading-4 text-white/38">
             {flowMeta.helper}
           </p>
         )}
@@ -119,10 +119,10 @@ export function ActionFlowBar(props: ActionFlowBarProps) {
       className={`flex items-center justify-between gap-3 ${containerClass}`}
     >
       <div className="min-w-0">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.06em] text-white/46">
+        <p className="text-xs font-semibold uppercase tracking-[0.06em] text-white/46">
           {props.title}
         </p>
-        <p className="mt-0.5 text-[11px] leading-4 text-white/38">
+        <p className="mt-0.5 text-xs leading-4 text-white/38">
           {props.description}
         </p>
       </div>
