@@ -41,7 +41,8 @@ function createSquad(): Squad {
     task: "login bug",
     branch: "squads/login-fix",
     worktree_path: "/tmp/squads/login-fix",
-    base_branch: null,
+    base_branch: "main",
+    repo_root: "/tmp/project",
     created_at: Date.now(),
   };
 }

@@ -30,7 +30,7 @@ function setupClipboardWriteMock() {
   };
 }
 
-function ThrowingChild() {
+function ThrowingChild(): never {
   throw new Error("컴포넌트 렌더링 실패");
 }
 

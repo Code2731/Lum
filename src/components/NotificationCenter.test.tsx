@@ -70,7 +70,7 @@ function setupClipboardWriteMock(): ClipboardState {
           value: originalClipboard,
         });
       } else {
-        delete (globalThis.navigator as Navigator & { clipboard?: { writeText: WriteSpy } }).clipboard;
+        Reflect.deleteProperty(globalThis.navigator, "clipboard");
       }
     },
   };

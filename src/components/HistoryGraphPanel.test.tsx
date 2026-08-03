@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
-import HistoryGraphPanel, {
+import { HistoryGraphPanel,
   getHistoryGraphPanelErrorMeta,
   getHistoryGraphPanelFlowMeta,
 } from "./HistoryGraphPanel";

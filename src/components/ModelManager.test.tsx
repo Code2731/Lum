@@ -6,7 +6,7 @@ import ModelManager, {
 } from "./ModelManager";
 
 const invokeMock = vi.fn();
-const listenMock = vi.fn(async () => async () => {});
+const listenMock = vi.fn(async (_event: string, _handler: unknown) => async () => {});
 
 vi.mock("@tauri-apps/api/core", () => ({
   invoke: (cmd: string, args?: unknown) => invokeMock(cmd, args),

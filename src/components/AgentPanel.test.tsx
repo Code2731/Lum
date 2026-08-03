@@ -58,13 +58,13 @@ describe("AgentPanel", () => {
       task: "배포 준비",
       plan: [
         {
-          id: "step-1",
+          id: 1,
           cmd: "npm run build",
           description: "프론트엔드 빌드",
           risk: "safe",
         },
         {
-          id: "step-2",
+          id: 2,
           cmd: "git push",
           description: "원격 저장소로 푸시",
           risk: "danger",
