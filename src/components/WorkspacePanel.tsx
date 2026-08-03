@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { Check, Layers, Save, Trash2, TerminalSquare, Clock } from "lucide-react";
+import { Check, Layers, Save, Trash2, Clock } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { ActionFlowBar } from "@/components/ui/action-flow-bar";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete";

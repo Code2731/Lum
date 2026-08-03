@@ -9,7 +9,6 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import {
   getInspectorActiveFlow,
   getInspectorActivePrimaryAction,
-  getInspectorIdleContextFlow,
   getInspectorIdlePrimaryFlow,
 } from "./InspectorPanelSummary/utils";
 import type { InspectorPanelSummaryProps } from "./InspectorPanelSummary/types";
@@ -118,7 +117,6 @@ const InspectorPanelSummary: React.FC<InspectorPanelSummaryProps> = ({ data, lay
     onTabSelect,
   } = actions;
   const idlePrimaryFlow = getInspectorIdlePrimaryFlow();
-  const idleContextFlow = getInspectorIdleContextFlow(activeTabTitle);
   const emptyStateFlow = getInspectorPanelSummaryEmptyStateFlow(activeTabTitle);
   const activeFlow = getInspectorActiveFlow({
     failedBlockCount: failedBlocks.length,

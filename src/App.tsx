@@ -36,7 +36,6 @@ import type { InspectorAnalyzeCache, InspectorDensity, InspectorTab } from "./co
 import { isTextInputTarget } from "./utils/event";
 import { useInspectorPanelCommands } from "./hooks/useInspectorPanelCommands";
 import {
-  getInspectorPanelPropsBundleMeta,
   useInspectorPanelPropsBundle,
 } from "./hooks/useInspectorPanelPropsBundle";
 import { focusMainInput } from "./utils/focus";
@@ -1249,13 +1248,6 @@ const App: React.FC = () => {
       onOpenFailedBlock: inspectorPanelActionHandlers.onOpenFailedBlock,
     },
   });
-  const inspectorBundleMeta = getInspectorPanelPropsBundleMeta({
-    activeTab: activeInspectorTab,
-    cmdBlocks,
-    selectedBlockId: resolvedSelectedBlockId,
-    inspectorAnalyzeCache,
-  });
-
   return (
     <TooltipProvider delayDuration={300} skipDelayDuration={150}>
     <div className="app-root lum-app-shell text-white h-screen overflow-hidden flex flex-col">

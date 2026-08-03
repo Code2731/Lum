@@ -4,7 +4,7 @@ import { listen } from "@tauri-apps/api/event";
 import { openPath } from "@tauri-apps/plugin-opener";
 import {
   SlidersHorizontal, Loader2,
-  Zap, Sparkles, FolderOpen, Wifi, RefreshCw, Check, Database, Copy,
+  Zap, Sparkles, FolderOpen, Wifi, RefreshCw, Check, Database, Copy, X,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { IconButton } from "@/components/ui/icon-button";
@@ -1094,13 +1094,14 @@ const VoiceHookDiagnosticsSection: React.FC = () => {
     info?.transcript_modified_ms != null
       ? new Date(info.transcript_modified_ms).toLocaleString("ko-KR")
       : "수정 이력 없음";
-  const voiceHookFolderPath = info?.transcript_path.replace(/[\\/][^\\/]+$/, "") ?? "";
+  const voiceHookFolderPath = info?.transcript_path?.replace(/[\\/][^\\/]+$/, "") ?? "";
   const canOpenStartHookFile =
     Boolean(info?.start_hook_target) && info?.start_hook_kind !== "env";
   const canOpenStopHookFile =
     Boolean(info?.stop_hook_target) && info?.stop_hook_kind !== "env";
-  const canCreateDefaultTemplates =
-    Boolean(info) && (!info.start_hook_configured || !info.stop_hook_configured);
+  const canCreateDefaultTemplates = info
+    ? !info.start_hook_configured || !info.stop_hook_configured
+    : false;
   const chmodTargets = [
     info?.start_hook_kind === "script" && !info.start_hook_runnable ? info.start_hook_target : null,
     info?.stop_hook_kind === "script" && !info.stop_hook_runnable ? info.stop_hook_target : null,

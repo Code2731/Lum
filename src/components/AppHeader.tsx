@@ -544,7 +544,6 @@ const AppHeader: React.FC<Props> = ({
       .replace(/-\d+_\d+$/i, "");
   };
   const fastEmpty = !loadedModelId;
-  const fast = fastEmpty ? "Empty Model" : shortName(loadedModelId);
   const heavy = shortName(heavyModelId);
   const advancedOverflowRef = React.useRef<HTMLDivElement>(null);
   const advancedOverflowButtonRef = React.useRef<HTMLButtonElement>(null);
@@ -1538,7 +1537,7 @@ const AppHeader: React.FC<Props> = ({
         {toolbarShowAdvanced && !compactMode && (
           <ToolbarIconButton
             label="고급 기능 접기"
-            onClick={toggleToolbarAdvanced}
+            onClick={_toggleToolbarAdvanced}
           >
             <X size={14} />
           </ToolbarIconButton>

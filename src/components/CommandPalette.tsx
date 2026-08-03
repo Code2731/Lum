@@ -19,10 +19,7 @@ import type { Workspace } from "../hooks/useWorkspace";
 import type { QuickAction } from "../hooks/useQuickActions";
 import { shortPath } from "../utils";
 import { countWorkspaceProjects } from "../utils/workspaceSummary";
-import {
-  getWorkspaceRecommendationReason,
-  getWorkspaceSectionDescription,
-} from "../utils/workspace-recommendation";
+import { getWorkspaceSectionDescription } from "../utils/workspace-recommendation";
 import {
   getLatestRestoredWorkspaceId,
   getMostRestoredWorkspaceId,
