@@ -16,6 +16,7 @@ interface Props {
   selectedModel: string;
   xllmOnline: boolean;
   context: { cwd: string; git_branch: string | null };
+  voiceEnabled?: boolean;
 }
 
 export function getCommandInputRouteFlowSummary(isAI: boolean): {
@@ -137,6 +138,7 @@ const CommandInput = ({
   selectedModel,
   xllmOnline,
   context,
+  voiceEnabled = true,
 }: Props) => {
   const [value, setValue] = useState("");
   const [isComposing, setIsComposing] = useState(false);
@@ -435,6 +437,7 @@ const CommandInput = ({
 
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const { isRecording, voiceBusy, voiceError, voicePartialTranscript, voiceStatus, handleMicToggle, clearVoiceError } = useVoiceInput({
+    enabled: voiceEnabled,
     onTranscript: injectTranscript,
   });
   useEffect(() => {
@@ -804,7 +807,7 @@ const CommandInput = ({
                 marginLeft: 6,
                 marginRight: 2,
                 transform: "translateY(0)",
-                opacity: !voiceEnabled ? 0.82 : voiceStatus === "idle" ? 0.9 : 0.98,
+                opacity: !voiceEnabled ? 0.82 : 0.9,
                 gap: 3,
               }}
             >
@@ -815,14 +818,9 @@ const CommandInput = ({
                   borderRadius: 999,
                   background:
                     !voiceEnabled ? "rgba(255,255,255,0.46)" :
-                    voiceStatus === "listening" ? "rgba(142,241,160,0.98)" :
-                    voiceStatus === "processing" ? "rgba(145,205,255,0.98)" :
                     "rgba(255,255,255,0.72)",
                   flexShrink: 0,
-                  animation:
-                    voiceEnabled && (voiceStatus === "listening" || voiceStatus === "processing")
-                      ? VOICE_PULSE_ANIMATION
-                      : "none",
+                  animation: "none",
                 }}
               />
               <span>{voiceStatusDisplayLabel}</span>
@@ -862,7 +860,6 @@ const CommandInput = ({
             role="alert"
             className="voice-error-banner"
             style={{
-              margin: "0 10px 6px 10px",
               margin: VOICE_INLINE_BANNER_MARGIN,
               padding: VOICE_INLINE_BANNER_PADDING,
               borderRadius: 6,
