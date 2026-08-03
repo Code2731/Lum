@@ -330,7 +330,7 @@ describe("useAIChat — 스트리밍 취소 경합 방지", () => {
     act(() => {
       result.current.cancel();
     });
-    releaseFirstStream?.();
+    (releaseFirstStream as (() => void) | null)?.();
     await firstSendPromise;
 
     expect(result.current.streaming).toBe(false);
@@ -372,7 +372,7 @@ describe("useAIChat — 스트리밍 취소 경합 방지", () => {
         expect(invokeMock.mock.calls.some(([cmd]) => cmd === "stream_ai_command")).toBe(true);
       });
       result.current.cancel();
-      releaseStream?.();
+      (releaseStream as (() => void) | null)?.();
       await sendPromise!;
     });
 
@@ -414,7 +414,7 @@ describe("useAIChat — 스트리밍 취소 경합 방지", () => {
 
     const currentMessage = result.current.messages[result.current.messages.length - 1];
     const prevMessageContent = currentMessage?.content ?? "";
-    listener?.({ payload: "stale token" });
+    (listener as ((event: { payload: string }) => void) | null)?.({ payload: "stale token" });
 
     expect(listeners).toHaveLength(0);
     expect(result.current.messages[result.current.messages.length - 1]?.content).toBe(prevMessageContent);

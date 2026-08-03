@@ -148,7 +148,7 @@ describe("useAIProcessing — JSON 응답 파싱", () => {
     const { result } = renderHook(() => useAIProcessing());
     const pending = result.current.verifyVisionGoal("goal", "img", "model", 1);
     expect(result.current.phase).toBe("verifying");
-    releaseVerify?.();
+    (releaseVerify as (() => void) | null)?.();
     await expect(pending).resolves.toEqual({ achieved: true, reason: "ok", nextActions: [] });
     expect(result.current.phase).toBe("idle");
   });

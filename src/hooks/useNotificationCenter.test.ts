@@ -9,7 +9,7 @@ import {
 
 describe("useNotificationCenter helpers", () => {
   it("알림 엔트리를 읽지 않음 상태로 생성한다", () => {
-    const uuidSpy = vi.spyOn(globalThis.crypto, "randomUUID").mockReturnValue("notif-1");
+    const uuidSpy = vi.spyOn(globalThis.crypto, "randomUUID").mockReturnValue("00000000-0000-4000-8000-000000000001");
     try {
       expect(
         createNotificationEntry(
@@ -21,7 +21,7 @@ describe("useNotificationCenter helpers", () => {
           1234,
         ),
       ).toEqual({
-        id: "notif-1",
+        id: "00000000-0000-4000-8000-000000000001",
         type: "command",
         title: "빌드 완료",
         body: "빌드가 끝났습니다",
@@ -95,7 +95,7 @@ describe("useNotificationCenter helpers", () => {
   });
 
   it("새 알림은 앞에 추가되고 읽지 않음 개수 계산에 반영된다", () => {
-    const uuidSpy = vi.spyOn(globalThis.crypto, "randomUUID").mockReturnValue("notif-2");
+    const uuidSpy = vi.spyOn(globalThis.crypto, "randomUUID").mockReturnValue("00000000-0000-4000-8000-000000000002");
     try {
       const next = upsertNotificationList(
         [
