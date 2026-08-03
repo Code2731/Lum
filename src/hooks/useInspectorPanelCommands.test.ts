@@ -346,6 +346,7 @@ describe("useInspectorPanelCommands", () => {
       result.current.setAiChat({
         messages: [
           {
+            id: "assistant-success",
             role: "assistant",
             content: [
               "실패 원인: snapshot mismatch",
@@ -389,6 +390,7 @@ describe("useInspectorPanelCommands", () => {
       result.current.setAiChat({
         messages: [
           {
+            id: "assistant-error",
             role: "assistant",
             content: "❌ model timeout",
             timestamp: 201,

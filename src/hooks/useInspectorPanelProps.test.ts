@@ -14,7 +14,7 @@ function makeRef<T>(value: T): { current: T } {
   return { current: value };
 }
 
-function createScriptLibrary() {
+function createScriptLibrary(): InspectorPanelProps["scriptLibrary"] {
   return {
     scripts: [],
     loading: false,

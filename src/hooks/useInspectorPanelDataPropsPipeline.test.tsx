@@ -131,9 +131,9 @@ describe("Inspector panel data + props pipeline", () => {
       },
       {
         initialProps: {
-          selectedBlockId: null,
-          cmdBlocks: [],
-          inspectorAnalyzeCache: null,
+          selectedBlockId: null as string | null,
+          cmdBlocks: [] as CommandBlock[],
+          inspectorAnalyzeCache: null as InspectorAnalyzeCache | null,
         },
       },
     );
