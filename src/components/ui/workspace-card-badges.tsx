@@ -1,4 +1,3 @@
-import React from "react";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { WorkspaceRestoreBadges } from "@/components/ui/workspace-restore-badges";
 

@@ -1,4 +1,3 @@
-import React from "react";
 import { TerminalSquare } from "lucide-react";
 import { shortPath } from "@/utils";
 

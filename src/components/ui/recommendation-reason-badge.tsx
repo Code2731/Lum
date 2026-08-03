@@ -1,4 +1,3 @@
-import React from "react";
 import { StatusBadge } from "@/components/ui/status-badge";
 
 export type RecommendationReasonTone = "neutral" | "cyan" | "emerald" | "violet" | "amber";

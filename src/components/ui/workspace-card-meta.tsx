@@ -1,4 +1,3 @@
-import React from "react";
 import type { WorkspaceTab } from "@/hooks/useWorkspace";
 import { shortPath } from "@/utils";
 import {
