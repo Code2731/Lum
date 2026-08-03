@@ -32,6 +32,8 @@ export interface IconButtonAccessibleMeta {
 interface IconButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   /** 호버 툴팁 텍스트 — 비우면 툴팁 없이 일반 button */
   tooltip?: React.ReactNode;
+  /** 툴팁의 보조 설명 — 아이콘 동작을 구체적으로 안내 */
+  description?: React.ReactNode;
   /** 툴팁 위치. default "bottom". */
   side?: "top" | "right" | "bottom" | "left";
   /** 툴팁에 함께 노출할 단축키 힌트 */
@@ -68,7 +70,7 @@ export function getIconButtonAccessibleMeta(input: {
  *   </IconButton>
  */
 const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(
-  ({ tooltip, side = "bottom", shortcut, confirm, onClick, className, children, title, ...props }, ref) => {
+  ({ tooltip, description, side = "bottom", shortcut, confirm, onClick, className, children, title, ...props }, ref) => {
     const accessibleMeta = getIconButtonAccessibleMeta({
       tooltip,
       title,
@@ -105,13 +107,16 @@ const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(
         <Tooltip>
           <TooltipTrigger asChild>{core}</TooltipTrigger>
           <TooltipContent side={side}>
-            <span className="flex items-center gap-2">
-              <span>{tooltip}</span>
-              {shortcut && (
-                <kbd className="rounded border border-white/12 bg-white/[0.06] px-1.5 py-0.5 text-[10px] font-medium text-white/62">
-                  {shortcut}
-                </kbd>
-              )}
+            <span className="flex flex-col gap-0.5">
+              <span className="flex items-center gap-2">
+                <span>{tooltip}</span>
+                {shortcut && (
+                  <kbd className="rounded border border-white/12 bg-white/[0.06] px-1.5 py-0.5 text-[10px] font-medium text-white/62">
+                    {shortcut}
+                  </kbd>
+                )}
+              </span>
+              {description && <span className="text-white/60">{description}</span>}
             </span>
           </TooltipContent>
         </Tooltip>

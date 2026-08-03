@@ -77,7 +77,7 @@ export function ActionFlowBar(props: ActionFlowBarProps) {
   const badgeClass = getBadgeClass(tone);
   const containerClass = getContainerClass(tone);
 
-  if ("badges" in props) {
+  if (Array.isArray(props.badges)) {
     const flowMeta = getActionFlowBarFlowMeta(props.badges, props.helper);
 
     return (
