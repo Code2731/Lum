@@ -1,7 +1,7 @@
 import React from "react";
 import { cn } from "@/lib/utils";
 
-type StatusBadgeTone = "neutral" | "cyan" | "emerald" | "violet" | "amber";
+type StatusBadgeTone = "neutral" | "cyan" | "emerald" | "violet" | "amber" | "warn";
 
 export interface StatusBadgeAccessibleText {
   title?: string;
@@ -13,6 +13,7 @@ const toneClass: Record<StatusBadgeTone, string> = {
   emerald: "border-emerald-300/18 bg-emerald-400/10 text-emerald-200/90",
   violet: "border-violet-300/18 bg-violet-400/10 text-violet-200/90",
   amber: "border-amber-300/18 bg-amber-400/10 text-amber-200/90",
+  warn: "border-amber-300/18 bg-amber-400/10 text-amber-200/90",
 };
 
 interface StatusBadgeProps extends React.HTMLAttributes<HTMLSpanElement> {

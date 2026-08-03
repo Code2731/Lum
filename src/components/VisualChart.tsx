@@ -30,7 +30,7 @@ interface VisualData {
 }
 
 export interface VisualChartFlowSummary {
-  badges: [string, string, string];
+  badges: readonly [string, string, string];
   helper: string;
 }
 

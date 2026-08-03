@@ -12,7 +12,7 @@ type LegacyActionFlowBarProps = {
 };
 
 type ModernActionFlowBarProps = {
-  badges: string[];
+  badges: readonly string[];
   helper?: string;
   tone?: ActionFlowBarTone;
   title?: never;
@@ -25,13 +25,13 @@ export type ActionFlowBarProps =
   | ModernActionFlowBarProps;
 
 export interface ActionFlowBarFlowMeta {
-  badges: string[];
+  badges: readonly string[];
   helper?: string;
   ariaLabel: string;
 }
 
 export function getActionFlowBarFlowMeta(
-  badges: string[],
+  badges: readonly string[],
   helper?: string,
 ): ActionFlowBarFlowMeta {
   const normalizedBadges = badges

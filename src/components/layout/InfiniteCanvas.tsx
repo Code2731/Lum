@@ -100,8 +100,8 @@ const InfiniteCanvas: React.FC<Props> = ({ blocks, onNodeMove }) => {
         <Controls />
         {blocks.length === 0 && (
           <Panel
-            position="center"
-            className="w-[min(420px,calc(100vw-40px))] rounded-2xl border border-white/10 bg-[#11161d]/92 p-4 shadow-lg"
+            position="top-left"
+            className="!left-1/2 !top-1/2 w-[min(420px,calc(100vw-40px))] -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-white/10 bg-[#11161d]/92 p-4 shadow-lg"
           >
             <div className="flex items-center gap-2 text-sm font-semibold text-white/88">
               <Sparkles size={14} className="text-accent" />

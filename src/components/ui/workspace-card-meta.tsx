@@ -16,7 +16,7 @@ interface WorkspaceCardMetaProps {
   projectSummaryClassName: string;
   recentTabsClassName: string;
   pathClassName: string;
-  lastRestoredClassName: string;
+  lastRestoredClassName?: string;
 }
 
 export function getWorkspaceCardMetaSummary(
@@ -42,7 +42,7 @@ export function WorkspaceCardMeta({
   projectSummaryClassName,
   recentTabsClassName,
   pathClassName,
-  lastRestoredClassName,
+  lastRestoredClassName = "text-xs text-white/32",
 }: WorkspaceCardMetaProps) {
   const projectSummary = `탭 ${tabs.length}개 · 프로젝트 ${countWorkspaceProjects(tabs)}곳${restoreCount ? ` · 복원 ${restoreCount}회` : ""}`;
   const primaryCwd = getPrimaryWorkspaceCwd(tabs);
