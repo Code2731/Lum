@@ -2,6 +2,14 @@ import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import AiBar, { getAiBarFlowSummary } from "./AiBar";
 
+vi.mock("framer-motion", () => ({
+  motion: {
+    div: ({ children, initial, animate, exit, transition, ...props }: React.HTMLAttributes<HTMLDivElement> & Record<string, unknown>) => (
+      <div {...props}>{children}</div>
+    ),
+  },
+}));
+
 const baseProps = {
   value: "",
   onChange: vi.fn(),

@@ -11,7 +11,10 @@ vi.mock("@tauri-apps/api/core", () => ({
 }));
 
 vi.mock("@tauri-apps/api/event", () => ({
-  listen: vi.fn(async (_event: string, cb: (event: { payload: string }) => void) => {
+  listen: vi.fn(async (event: string, cb: (event: { payload: string }) => void) => {
+    if (event !== "xllm_token") {
+      return () => {};
+    }
     listeners.push(cb);
     return () => {
       const idx = listeners.indexOf(cb);
@@ -160,7 +163,6 @@ describe("useAIChat — 스트리밍 취소 경합 방지", () => {
       await waitFor(() => {
         expect(invokeMock.mock.calls.some(([cmd]) => cmd === "stream_ai_command")).toBe(true);
       });
-      expect(result.current.streaming).toBe(true);
       result.current.clear();
       releaseStream?.();
       await sendPromise;

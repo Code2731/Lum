@@ -109,8 +109,8 @@ describe("LoraForgePanel", () => {
     expect(
       screen.getByText("healing 데이터셋과 베이스 모델을 먼저 확인하고, Forge 실행 후 완료된 어댑터를 추론이나 후속 학습 흐름에 연결합니다."),
     ).toBeInTheDocument();
-    expect(screen.getByText("작업 이름")).toBeInTheDocument();
-    expect(screen.getByText("런타임·모델")).toBeInTheDocument();
+    expect(screen.getAllByText("작업 이름").length).toBeGreaterThan(0);
+    expect(screen.getByText("런타임·모델 확인")).toBeInTheDocument();
     expect(screen.getByText("iters·rank·lr")).toBeInTheDocument();
     expect(screen.getByText("첫 Forge 시작")).toBeInTheDocument();
     expect(screen.getByText("로그 확인")).toBeInTheDocument();

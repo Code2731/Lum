@@ -22,16 +22,18 @@ describe("Slider", () => {
 
     const slider = screen.getByRole("slider", { name: "투명도" });
     expect(slider.className).toContain("focus-visible:ring-1");
-    expect(slider.parentElement).toHaveAttribute("title", "투명도");
-    expect(slider.parentElement?.className ?? "").toContain("disabled:cursor-not-allowed");
-    expect(slider.parentElement?.className ?? "").toContain("disabled:opacity-50");
+    const root = slider.closest("[title]");
+    expect(root).toHaveAttribute("title", "투명도");
+    expect(root?.className ?? "").toContain("disabled:cursor-not-allowed");
+    expect(root?.className ?? "").toContain("disabled:opacity-50");
   });
 
   it("busy 상태 피드백 클래스를 제공한다", () => {
     render(<Slider aria-label="학습 진행률" defaultValue={[25]} aria-busy="true" />);
 
     const slider = screen.getByRole("slider", { name: "학습 진행률" });
-    expect(slider.parentElement?.className ?? "").toContain("aria-[busy=true]:cursor-progress");
-    expect(slider.parentElement?.className ?? "").toContain("aria-[busy=true]:opacity-70");
+    const root = slider.closest("[title]");
+    expect(root?.className ?? "").toContain("aria-[busy=true]:cursor-progress");
+    expect(root?.className ?? "").toContain("aria-[busy=true]:opacity-70");
   });
 });

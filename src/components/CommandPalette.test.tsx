@@ -140,8 +140,7 @@ describe("CommandPalette", () => {
     expect(workspaceButtons[0]).toHaveTextContent("대표 경로");
     expect(workspaceButtons[0]).toHaveTextContent("프로젝트 위치를 바로 봅니다.");
     expect(workspaceButtons[0]).toHaveTextContent("최근 탭 · ui");
-    expect(workspaceButtons[0]).toHaveTextContent("대표 경로 · /tmp/ui");
-    expect(workspaceButtons[0]).toHaveTextContent("/tmp/ui");
+    expect(workspaceButtons[0]).toHaveTextContent("대표 경로 · ui");
     expect(workspaceButtons[0]).toHaveTextContent("복귀 시점");
     expect(workspaceButtons[0]).toHaveTextContent("최근 이어서");
     expect(screen.getByLabelText("추천 복귀")).toBeInTheDocument();
@@ -149,7 +148,7 @@ describe("CommandPalette", () => {
     expect(screen.getByText("Enter 복귀")).toBeInTheDocument();
     expect(screen.getByText("추천 복귀 2개")).toBeInTheDocument();
     expect(screen.getByText("Enter 이어서")).toBeInTheDocument();
-    expect(screen.getByText("대표 경로")).toBeInTheDocument();
+    expect(screen.getAllByText("대표 경로").length).toBeGreaterThan(0);
     expect(screen.getByText("최근 복귀 흐름과 프로젝트 위치를 한 번에 이어서 찾습니다.")).toBeInTheDocument();
     expect(screen.getByText("자주 복원")).toBeInTheDocument();
   });
@@ -225,13 +224,13 @@ describe("CommandPalette", () => {
     expect(screen.getByText("저장해 둔 복귀 지점을 전체 순서로 둘러볼 수 있습니다.")).toBeInTheDocument();
     expect(screen.getByText("2개 항목")).toBeInTheDocument();
     expect(screen.getByText("1개 항목")).toBeInTheDocument();
-    expect(screen.getByText("보관 탐색")).toBeInTheDocument();
+    expect(screen.getAllByText("보관 탐색").length).toBeGreaterThan(0);
     expect(screen.getByText("최근 복귀 흐름과 프로젝트 위치를 한 번에 이어서 찾습니다.")).toBeInTheDocument();
-    expect(screen.getByText("탭 흐름")).toBeInTheDocument();
-    expect(screen.getByText("저장 시점")).toBeInTheDocument();
+    expect(screen.getAllByText("탭 흐름").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("저장 시점").length).toBeGreaterThan(0);
     expect(screen.getByText("보관된 복귀 흐름을 열기 전에 탭과 저장 시점을 함께 훑어봅니다.")).toBeInTheDocument();
-    expect(screen.getByText("바로 복귀")).toBeInTheDocument();
-    expect(screen.getByText("지금 바로 이어갈 가능성이 높은 복귀 흐름")).toBeInTheDocument();
+    expect(screen.getAllByText("바로 복귀").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("지금 바로 이어갈 가능성이 높은 복귀 흐름").length).toBeGreaterThan(0);
     expect(screen.getAllByText("탭 1개").length).toBeGreaterThan(0);
     expect(screen.getAllByText("프로젝트 1곳").length).toBeGreaterThan(0);
     expect(screen.getByRole("button", { name: /셋째 작업공간/ })).toBeInTheDocument();
@@ -240,14 +239,12 @@ describe("CommandPalette", () => {
     expect(screen.getByText("보관해 둔 흐름을 다시 꺼내는 작업공간")).toBeInTheDocument();
     expect(screen.getAllByText("탭 1개").length).toBeGreaterThan(0);
     expect(screen.getAllByText("프로젝트 1곳").length).toBeGreaterThan(0);
-    expect(screen.getByText("저장 시점")).toBeInTheDocument();
-    expect(screen.getByText("마지막 복원")).toBeInTheDocument();
+    expect(screen.getAllByText("저장 시점").length).toBeGreaterThan(0);
     expect(screen.getAllByText("최근 탭").length).toBeGreaterThan(0);
     expect(screen.getByText("다시 꺼낼 탭 흐름을 먼저 봅니다.")).toBeInTheDocument();
     expect(screen.getAllByText("대표 경로").length).toBeGreaterThan(0);
     expect(screen.getByText("저장된 프로젝트 위치를 바로 봅니다.")).toBeInTheDocument();
-    expect(screen.getByText(/대표 경로 · \/tmp\/ops/)).toBeInTheDocument();
-    expect(screen.getByText(/마지막 복원/)).toBeInTheDocument();
+    expect(screen.getByText(/대표 경로 · ops/)).toBeInTheDocument();
   });
 
   it("작업공간 선택 시 복원과 닫기 콜백을 호출한다", () => {

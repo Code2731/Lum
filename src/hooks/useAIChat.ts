@@ -345,6 +345,9 @@ export function useAIChat(model: string, getTerminalContext: () => string) {
   );
 
   const stopStream = useCallback(() => {
+    if (!isStreamingRef.current && !streaming) {
+      return;
+    }
     clearCurrentListener();
     requestIdRef.current += 1;
     invoke("cancel_ai_stream").catch(() => {});

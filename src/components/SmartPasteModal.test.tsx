@@ -16,7 +16,7 @@ describe("SmartPasteModal", () => {
     render(<SmartPasteModal {...baseProps} />);
 
     expect(screen.getByText("2개 명령 감지")).toBeInTheDocument();
-    expect(screen.getByText("git status")).toBeInTheDocument();
+    expect(screen.getAllByText("git status").length).toBeGreaterThan(0);
     expect(screen.getByText("마지막 붙여넣기 결정")).toBeInTheDocument();
     expect(
       screen.getByText(/여러 줄 명령으로 인식되어 순서대로 검토하거나 실행할 수 있습니다/),

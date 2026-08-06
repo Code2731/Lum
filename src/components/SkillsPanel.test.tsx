@@ -39,11 +39,12 @@ function setupClipboardWriteMock() {
   };
 }
 
-const useSkillsMock = vi.fn();
+const { useSkillsMock } = vi.hoisted(() => ({ useSkillsMock: vi.fn() }));
 
-vi.mock("../hooks/useSkills", () => ({
-  useSkills: () => useSkillsMock(),
-}));
+vi.mock("../hooks/useSkills", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../hooks/useSkills")>();
+  return { ...actual, useSkills: () => useSkillsMock() };
+});
 
 const createHookState = () => ({
   skills: [] as Skill[],

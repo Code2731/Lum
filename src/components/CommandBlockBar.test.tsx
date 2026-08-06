@@ -56,7 +56,7 @@ describe("CommandBlockBar", () => {
     );
 
     expect(screen.getByText("성공 블록 탐색")).toBeInTheDocument();
-    expect(screen.getByText("1/2")).toBeInTheDocument();
+    expect(screen.getAllByText("1/2").length).toBeGreaterThan(0);
     expect(screen.getByText("마지막 복사·재실행")).toBeInTheDocument();
     expect(screen.getByText("npm test 결과를 확인한 뒤 복사하거나 다시 실행할 수 있습니다.")).toBeInTheDocument();
     expect(screen.getByLabelText("이전 블록 (Cmd/Ctrl+Shift+↑)")).toBeInTheDocument();

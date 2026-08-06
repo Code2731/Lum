@@ -25,6 +25,12 @@ function collectLineCandidate(rawLine: string): string | null {
     return isLikelyShellCommand(candidate) ? candidate : null;
   }
 
+  const runMatch = line.match(/^(?:[-*]\s*)?(?:\d+[.)]\s*)?RUN\s*:\s*(.+)$/i);
+  if (runMatch?.[1]) {
+    const candidate = normalizeCandidate(runMatch[1]);
+    return isLikelyShellCommand(candidate) ? candidate : null;
+  }
+
   const inlineCodeMatch = line.match(/^(?:[-*]\s*)?(?:\d+[.)]\s*)?`([^`\n]+)`/);
   if (inlineCodeMatch?.[1]) {
     const candidate = normalizeCandidate(inlineCodeMatch[1]);

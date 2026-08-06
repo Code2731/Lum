@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { getWorkspaceCardMetaSummary, WorkspaceCardMeta } from "./workspace-card-meta";
 
 describe("WorkspaceCardMeta", () => {
@@ -37,10 +37,13 @@ describe("WorkspaceCardMeta", () => {
         name: "작업공간 메타 정보: 탭 2개, 프로젝트 2곳, 복원 3회, 마지막 복원 방금",
       }),
     ).toBeInTheDocument();
-    expect(screen.getAllByRole("listitem")).toHaveLength(4);
+    const metaList = screen.getByRole("list", {
+      name: "작업공간 메타 정보: 탭 2개, 프로젝트 2곳, 복원 3회, 마지막 복원 방금",
+    });
+    expect(within(metaList).getAllByRole("listitem")).toHaveLength(4);
     expect(screen.getByText("탭 2개 · 프로젝트 2곳 · 복원 3회")).toHaveAttribute("title", "탭 2개 · 프로젝트 2곳 · 복원 3회");
-    expect(screen.getByText("최근 탭 · 백엔드, 프론트")).toHaveAttribute("title", "최근 탭 · 백엔드, 프론트");
-    expect(screen.getByText("~/project/backend")).toHaveAttribute("title", "주 경로 · ~/project/backend");
+    expect(screen.getByText("최근 탭 · 백엔드 · 프론트")).toHaveAttribute("title", "최근 탭 · 백엔드 · 프론트");
+    expect(within(metaList).getByTitle("주 경로 · backend")).toHaveTextContent("주 경로 · backend");
     expect(screen.getByText("마지막 복원 · 방금")).toHaveAttribute("title", "마지막 복원 · 방금");
   });
 

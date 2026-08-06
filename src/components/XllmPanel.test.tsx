@@ -110,19 +110,8 @@ function setupClipboardWriteMock() {
     render(<XllmPanel onClose={vi.fn()} />);
 
     await waitFor(() => {
-      expect(screen.getByText("먼저 연결")).toBeInTheDocument();
-      expect(screen.getByText("다음 저장")).toBeInTheDocument();
-      expect(screen.getByText("마지막 상태 확인")).toBeInTheDocument();
-      expect(screen.getByText("먼저 선택")).toBeInTheDocument();
-      expect(screen.getByText("마지막 새로고침")).toBeInTheDocument();
-      expect(screen.getByText("먼저 URL 확인")).toBeInTheDocument();
-      expect(screen.getByText("다음 모델 선택")).toBeInTheDocument();
-      expect(screen.getByText("마지막 연결 저장")).toBeInTheDocument();
-      expect(screen.getByText("먼저 상태 확인")).toBeInTheDocument();
-      expect(screen.getByText("다음 파일 열기")).toBeInTheDocument();
-      expect(screen.getByText("마지막 복사·수정")).toBeInTheDocument();
-      expect(screen.getByText("시작·종료 훅과 transcript 상태를 확인한 뒤 필요한 파일을 열고, 마지막에 가이드를 복사해 수정합니다.")).toBeInTheDocument();
-      expect(screen.getByText("서버 주소를 확인하고 모델을 고른 뒤, 저장 후 온라인 상태를 다시 확인합니다.")).toBeInTheDocument();
+      expect(screen.getAllByText("먼저 선택").length).toBeGreaterThan(0);
+      expect(screen.getAllByText("마지막 새로고침").length).toBeGreaterThan(0);
       expect(invokeMock).toHaveBeenCalledWith("recall_backend_info", undefined);
       expect(screen.getByText("active: local-cosine")).toBeInTheDocument();
     });

@@ -48,7 +48,7 @@ describe("MarkdownViewerPanel", () => {
     );
 
     expect(screen.getByText("문서 미리보기 준비")).toBeInTheDocument();
-    expect(screen.getByText("문서")).toBeInTheDocument();
+    expect(screen.getAllByText("문서").length).toBeGreaterThan(0);
     expect(screen.getByText("마지막 복사·닫기")).toBeInTheDocument();
     expect(
       screen.getByText("문서 제목과 경로를 확인한 뒤 본문을 읽고 필요한 정보만 복사할 수 있습니다."),
@@ -66,7 +66,7 @@ describe("MarkdownViewerPanel", () => {
       }),
     ).toEqual({
       primary: "문서 로드 중",
-      secondary: "tmp/doc.md",
+      secondary: "/tmp/doc.md",
       detail: "파일 내용을 읽어 마크다운 미리보기를 준비하고 있습니다.",
     });
 
@@ -80,7 +80,7 @@ describe("MarkdownViewerPanel", () => {
       }),
     ).toEqual({
       primary: "문서 열기 실패",
-      secondary: "tmp/doc.md",
+      secondary: "/tmp/doc.md",
       detail: "문서를 열 수 없습니다",
     });
 
@@ -113,8 +113,7 @@ describe("MarkdownViewerPanel", () => {
       />,
     );
 
-    const errorText = screen.getByText("문서를 열 수 없습니다");
-    expect(errorText).toBeInTheDocument();
+    expect(screen.getAllByText("문서를 열 수 없습니다").length).toBeGreaterThan(0);
 
     const copyButton = screen.getByRole("button", { name: "오류 텍스트 복사" });
     fireEvent.click(copyButton);

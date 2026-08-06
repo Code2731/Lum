@@ -30,8 +30,8 @@ function createProps(overrides: Partial<React.ComponentProps<typeof InspectorRec
 describe("InspectorRecentBlocksCard", () => {
   it("최근 블록 흐름 요약을 계산한다", () => {
     expect(getInspectorRecentBlocksFlowSummary(failedRecentBlocks)).toEqual({
-      badges: ["최근 블록 1개", "분석 가능 1개", "마지막 블록 선택"],
-      helper: "방금 실행한 흐름을 먼저 읽고, 실패한 명령은 다시 실행하거나 분석한 뒤 필요한 블록을 작업 대상으로 고릅니다.",
+      badges: ["최근 블록 1개", "후속 확인 1개", "필요 시 재실행"],
+      helper: "복구와 분석이 끝난 뒤, 최근 흐름에서 다시 확인할 블록이나 재실행할 명령을 후속 후보로 고릅니다.",
     });
 
     expect(
@@ -45,19 +45,19 @@ describe("InspectorRecentBlocksCard", () => {
         },
       ]),
     ).toEqual({
-      badges: ["최근 블록 1개", "성공 흐름 1개", "마지막 블록 선택"],
-      helper: "최근 성공 흐름을 빠르게 훑고 필요한 명령을 다시 실행한 뒤, 이어서 볼 블록을 선택합니다.",
+      badges: ["최근 블록 1개", "성공 흐름 1개", "필요 시 재실행"],
+      helper: "최근 성공 흐름을 훑고 필요한 명령만 후속으로 다시 실행하거나 참조할 블록을 고릅니다.",
     });
   });
 
   it("최근 블록 정보와 실행 시간을 렌더링한다", () => {
     render(<InspectorRecentBlocksCard {...createProps()} />);
 
-    expect(screen.getByText("최근 블록")).toBeInTheDocument();
+    expect(screen.getByText("최근 흐름 재확인")).toBeInTheDocument();
     expect(screen.getByText("최근 블록 1개")).toBeInTheDocument();
-    expect(screen.getByText("분석 가능 1개")).toBeInTheDocument();
-    expect(screen.getByText("마지막 블록 선택")).toBeInTheDocument();
-    expect(screen.getByText("방금 실행한 흐름을 먼저 읽고, 실패한 명령은 다시 실행하거나 분석한 뒤 필요한 블록을 작업 대상으로 고릅니다.")).toBeInTheDocument();
+    expect(screen.getByText("후속 확인 1개")).toBeInTheDocument();
+    expect(screen.getByText("필요 시 재실행")).toBeInTheDocument();
+    expect(screen.getByText("복구와 분석이 끝난 뒤, 최근 흐름에서 다시 확인할 블록이나 재실행할 명령을 후속 후보로 고릅니다.")).toBeInTheDocument();
     expect(screen.getByText("npm run build")).toBeInTheDocument();
     expect(screen.getByText("실패 1")).toBeInTheDocument();
     expect(screen.getByText("2.3s")).toBeInTheDocument();
@@ -123,7 +123,7 @@ describe("InspectorRecentBlocksCard", () => {
 
     fireEvent.click(screen.getByText("블록 선택"));
     fireEvent.click(screen.getByText("다시 실행"));
-    fireEvent.click(screen.getByText("분석 열기"));
+    fireEvent.click(screen.getByText("후속 분석"));
 
     expect(onSelectBlock).toHaveBeenCalledWith("block-1");
     expect(onRerunBlock).toHaveBeenCalledWith("npm run build");

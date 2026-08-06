@@ -53,19 +53,13 @@ export function WorkspaceCardBadges({
         </span>
       )}
       {recommended && (
-        <span role="listitem">
-          <WorkspaceRestoreBadges recommended compact={compact} />
-        </span>
+        <WorkspaceRestoreBadges recommended compact={compact} asListItems />
       )}
       {latest && (
-        <span role="listitem">
-          <WorkspaceRestoreBadges latest compact={compact} />
-        </span>
+        <WorkspaceRestoreBadges latest compact={compact} asListItems />
       )}
       {frequent && (
-        <span role="listitem">
-          <WorkspaceRestoreBadges frequent compact={compact} />
-        </span>
+        <WorkspaceRestoreBadges frequent compact={compact} asListItems />
       )}
     </span>
   );

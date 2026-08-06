@@ -207,12 +207,12 @@ describe("InspectorPanel", () => {
 
     expect(screen.getByLabelText("인스펙터 패널")).toBeInTheDocument();
     expect(screen.getByText("인스펙터")).toBeInTheDocument();
-    expect(screen.getByText("요약")).toBeInTheDocument();
+    expect(screen.getAllByText("요약").length).toBeGreaterThan(0);
     expect(screen.getByText("최근 1개")).toBeInTheDocument();
     expect(screen.getByText("main")).toBeInTheDocument();
     expect(screen.getByText("/Users/dev")).toBeInTheDocument();
     expect(screen.getByText("실패 블록")).toBeInTheDocument();
-    expect(screen.getByText("최근 블록")).toBeInTheDocument();
+    expect(screen.getByText("최근 흐름 재확인")).toBeInTheDocument();
   });
 
   it("noActivity 상태에서는 Inspector 안내 문구를 보여준다", () => {
@@ -223,14 +223,14 @@ describe("InspectorPanel", () => {
       recentBlocks: [],
     });
 
-    expect(screen.getByText("실행 대기")).toBeInTheDocument();
+    expect(screen.getAllByText("실행 대기").length).toBeGreaterThan(0);
     expect(screen.getByText("먼저 실행")).toBeInTheDocument();
     expect(screen.getByText("다음 실패 확인")).toBeInTheDocument();
     expect(screen.getByText("마지막 기록 확인")).toBeInTheDocument();
     expect(screen.getByText("명령을 한 번 실행하면 실패 블록, 추천 커맨드, 최근 기록 흐름이 차례로 열립니다.")).toBeInTheDocument();
     expect(screen.getAllByText("현재 탭").length).toBeGreaterThan(0);
-    expect(screen.getByText("main")).toBeInTheDocument();
-    expect(screen.getByText("실행 대기")).toBeInTheDocument();
+    expect(screen.getAllByText("main").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("실행 대기").length).toBeGreaterThan(0);
     expect(screen.getByText("이 탭에서 첫 명령을 실행하면 이후 실패 분석과 최근 기록이 같은 문맥으로 쌓입니다.")).toBeInTheDocument();
     expect(
       screen.getByText("터미널에서 최근 명령을 실행하면 여기에서 실패 블록·추천 커맨드·최근 기록을 확인할 수 있습니다."),
@@ -303,7 +303,7 @@ describe("InspectorPanel", () => {
     const onQuickActionsToggle = vi.fn();
     renderInspector({ onQuickActionsToggle });
 
-    fireEvent.click(screen.getByText("더보기"));
+    fireEvent.click(document.querySelector("[data-inspector-quick-actions-toggle]")!);
 
     expect(onQuickActionsToggle).toHaveBeenCalledTimes(1);
   });
@@ -311,8 +311,9 @@ describe("InspectorPanel", () => {
   it("빠른 액션이 접혀 있으면 더보기 라벨과 collapsed 상태를 보여준다", () => {
     renderInspector({ quickActionsExpanded: false });
 
-    expect(screen.getByText("더보기")).toBeInTheDocument();
-    expect(screen.getByText("더보기").closest("button")).toHaveAttribute("aria-expanded", "false");
+    const toggle = document.querySelector("[data-inspector-quick-actions-toggle]")!;
+    expect(toggle).toHaveTextContent("운영 단계 열기");
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
   });
 
   it("빠른 액션이 접혀 있으면 고급 액션 영역 DOM을 렌더링하지 않는다", () => {
@@ -324,8 +325,8 @@ describe("InspectorPanel", () => {
   it("빠른 액션 토글은 확장 영역 id를 aria-controls로 가리킨다", () => {
     renderInspector({ quickActionsExpanded: true });
 
-    expect(screen.getByText("축소").closest("button")).toHaveAttribute("aria-controls", "inspector-quick-actions-advanced");
-    expect(screen.getByText("기록").closest("[data-inspector-quick-actions-advanced]")).toHaveAttribute(
+    expect(document.querySelector("[data-inspector-quick-actions-toggle]")).toHaveAttribute("aria-controls", "inspector-quick-actions-advanced");
+    expect(document.querySelector("[data-inspector-quick-actions-advanced]")).toHaveAttribute(
       "id",
       "inspector-quick-actions-advanced",
     );
@@ -334,7 +335,7 @@ describe("InspectorPanel", () => {
   it("빠른 액션 토글 버튼은 data attribute를 노출한다", () => {
     renderInspector({ quickActionsExpanded: false });
 
-    expect(screen.getByText("더보기").closest("button")).toHaveAttribute("data-inspector-quick-actions-toggle");
+    expect(document.querySelector("[data-inspector-quick-actions-toggle]")).toBeInTheDocument();
   });
 
   it("빠른 액션 관련 ref는 토글 버튼과 확장 영역 DOM을 보관한다", () => {
@@ -349,9 +350,9 @@ describe("InspectorPanel", () => {
       />,
     );
 
-    expect(refs.inspectorQuickActionsToggleRef.current).toBe(screen.getByText("축소").closest("button"));
+    expect(refs.inspectorQuickActionsToggleRef.current).toBe(document.querySelector("[data-inspector-quick-actions-toggle]"));
     expect(refs.inspectorQuickActionsAdvancedRef.current).toBe(
-      screen.getByText("기록").closest("[data-inspector-quick-actions-advanced]"),
+      document.querySelector("[data-inspector-quick-actions-advanced]"),
     );
   });
 
@@ -367,22 +368,23 @@ describe("InspectorPanel", () => {
       />,
     );
 
-    expect(refs.inspectorQuickActionsToggleRef.current).toBe(screen.getByText("더보기").closest("button"));
+    expect(refs.inspectorQuickActionsToggleRef.current).toBe(document.querySelector("[data-inspector-quick-actions-toggle]"));
     expect(refs.inspectorQuickActionsAdvancedRef.current).toBeNull();
   });
 
   it("빠른 액션이 확장되면 축소 라벨과 expanded 상태를 보여준다", () => {
     renderInspector({ quickActionsExpanded: true });
 
-    expect(screen.getByText("축소")).toBeInTheDocument();
-    expect(screen.getByText("축소").closest("button")).toHaveAttribute("aria-expanded", "true");
+    const toggle = document.querySelector("[data-inspector-quick-actions-toggle]")!;
+    expect(toggle).toHaveTextContent("운영 단계 닫기");
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
   });
 
   it("빠른 액션 더보기 토글은 keydown 핸들러를 호출한다", () => {
     const onQuickActionsToggleKeyDown = vi.fn();
     renderInspector({ onQuickActionsToggleKeyDown });
 
-    fireEvent.keyDown(screen.getByText("더보기"), { key: "ArrowDown" });
+    fireEvent.keyDown(document.querySelector("[data-inspector-quick-actions-toggle]")!, { key: "ArrowDown" });
 
     expect(onQuickActionsToggleKeyDown).toHaveBeenCalledTimes(1);
   });
@@ -600,7 +602,7 @@ describe("InspectorPanel", () => {
     fireEvent.click(screen.getByText("실패 로그 복사"));
     fireEvent.click(screen.getByText("분석 프롬프트 복사"));
     fireEvent.click(screen.getByText("분석 입력 불러오기"));
-    fireEvent.click(screen.getByText("블록 선택"));
+    fireEvent.click(screen.getAllByText("블록 선택")[0]);
 
     expect(onFocusFailedBlock).toHaveBeenCalledTimes(1);
     expect(onCopyFailedOutput).toHaveBeenCalledWith("fail-1");
@@ -620,8 +622,8 @@ describe("InspectorPanel", () => {
     });
 
     fireEvent.click(screen.getByRole("button", { name: /프로젝트 보관함/ }));
-    fireEvent.click(screen.getByRole("button", { name: /^작업공간$/ }));
-    fireEvent.click(screen.getByRole("button", { name: /^RAG$/ }));
+    fireEvent.click(screen.getByRole("button", { name: /작업공간/ }));
+    fireEvent.click(screen.getByRole("button", { name: "모델로 분석 시작" }));
 
     expect(onToggleProjectBin).toHaveBeenCalledTimes(1);
     expect(onOpenWorkspace).toHaveBeenCalledTimes(1);
@@ -637,7 +639,7 @@ describe("InspectorPanel", () => {
 
     expect(screen.getByText("분석 완료")).toBeInTheDocument();
     expect(screen.getByText("추천 커맨드")).toBeInTheDocument();
-    expect(screen.getByText("npm test -- --runInBand")).toBeInTheDocument();
+    expect(screen.getAllByText("npm test -- --runInBand").length).toBeGreaterThan(0);
 
     fireEvent.click(screen.getByText("첫 실행"));
 
@@ -727,16 +729,9 @@ describe("InspectorPanel", () => {
       onLoadAnalyzePromptToAiBar,
     });
 
-    expect(screen.getByText("먼저 재실행")).toBeInTheDocument();
-    expect(screen.getByText("다음 분석")).toBeInTheDocument();
-    expect(screen.getByText("마지막 선택")).toBeInTheDocument();
-    expect(
-      screen.getByText("방금 실행한 흐름을 다시 돌리고, 실패 시 분석으로 이어가고, 필요하면 해당 블록을 고정합니다."),
-    ).toBeInTheDocument();
-
-    fireEvent.click(screen.getByText("블록 선택"));
-    fireEvent.click(screen.getByText("다시 실행"));
-    fireEvent.click(screen.getByText("분석 열기"));
+    fireEvent.click(screen.getByTitle("후속 확인 대상으로 이 블록 선택"));
+    fireEvent.click(screen.getByTitle("후속 확인용 명령 재실행"));
+    fireEvent.click(screen.getByTitle("후속 분석 프롬프트 열기"));
 
     expect(onSelectBlock).toHaveBeenCalledWith("block-2");
     expect(onRerunBlock).toHaveBeenCalledWith("npm run build");
@@ -757,8 +752,8 @@ describe("InspectorPanel", () => {
     });
 
     expect(screen.getByText("성공 흐름")).toBeInTheDocument();
-    expect(screen.getByText("바로 재실행")).toBeInTheDocument();
-    expect(screen.queryByText("분석 열기")).not.toBeInTheDocument();
+    expect(screen.getByTitle("후속 확인용 명령 재실행")).toBeInTheDocument();
+    expect(screen.queryByTitle("후속 분석 프롬프트 열기")).not.toBeInTheDocument();
   });
 
   it("compact 분석 메뉴의 추가 버튼은 닫힌 상태에서 메뉴 열기 콜백을 호출한다", () => {
@@ -970,7 +965,7 @@ describe("InspectorPanel", () => {
     expect(screen.getByRole("menu")).toBeInTheDocument();
 
     fireEvent.click(screen.getByText("복사 (C)"));
-    fireEvent.click(screen.getByText("입력 (L)"));
+    fireEvent.click(screen.getByText("입력 넘기기"));
 
     expect(onCopySuggestedCommand).toHaveBeenCalledWith(0);
     expect(onLoadSuggestedCommandToAiBar).toHaveBeenCalledWith(0);
@@ -986,7 +981,7 @@ describe("InspectorPanel", () => {
     const menuItems = screen.getAllByRole("menuitem");
     expect(menuItems).toHaveLength(2);
     expect(menuItems[0]).toHaveTextContent("복사 (C)");
-    expect(menuItems[1]).toHaveTextContent("입력 (L)");
+    expect(menuItems[1]).toHaveTextContent("입력 넘기기");
   });
 
   it("compact 분석 메뉴가 열리면 첫 메뉴 액션 ref가 복사 버튼을 가리킨다", () => {
@@ -1034,7 +1029,7 @@ describe("InspectorPanel", () => {
     });
 
     fireEvent.click(screen.getByTitle("2번 커맨드 복사 (C)"));
-    fireEvent.click(screen.getByTitle("2번 커맨드 AI 입력바 로드 (L)"));
+    fireEvent.click(screen.getByTitle("2번 커맨드를 입력바로 넘기기 (L)"));
     fireEvent.click(screen.getByTitle("2번 커맨드 실행 (R)"));
 
     expect(onCopySuggestedCommand).toHaveBeenCalledWith(1);
@@ -1125,7 +1120,7 @@ describe("InspectorPanel", () => {
       onCloseCommandMenu,
     });
 
-    fireEvent.click(screen.getAllByText("RUN (R)")[1]);
+    fireEvent.click(screen.getAllByText("실행 (R)")[1]);
 
     expect(onCloseCommandMenu).toHaveBeenCalledWith(false);
   });

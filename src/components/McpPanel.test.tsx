@@ -92,22 +92,22 @@ describe("McpPanel", () => {
     expect(screen.getByText("다음 도구 확인")).toBeInTheDocument();
     expect(screen.getByText("마지막 정리")).toBeInTheDocument();
     expect(screen.getByText("서버를 켜고 도구 목록을 확인한 뒤, 필요 없는 연결만 정리합니다.")).toBeInTheDocument();
-    expect(await screen.findByRole("button", { name: "filesystem" })).toBeInTheDocument();
-    fireEvent.click(await screen.findByRole("button", { name: "filesystem" }));
+    const serverName = await screen.findByText("filesystem");
+    fireEvent.click(serverName.closest("button")!);
 
     expect(await screen.findByText("현재 서버")).toBeInTheDocument();
     expect(screen.getByText("활성 연결")).toBeInTheDocument();
     expect(screen.getAllByText("도구 확인").length).toBeGreaterThan(0);
     expect(screen.getByText("실행 명령과 도구 목록을 먼저 보고, 필요한 서버만 유지합니다.")).toBeInTheDocument();
-    expect(await screen.findByText("툴 조회 실패")).toBeInTheDocument();
-    const copyButton = screen.getByRole("button", { name: "오류 텍스트 복사" });
+    expect(await screen.findByText(/툴 조회 실패/)).toBeInTheDocument();
+    const copyButton = screen.getByTitle("오류 텍스트 복사");
     fireEvent.click(copyButton);
 
     await waitFor(() => {
       if (clipboardMock.restore) {
-        expect(clipboardMock.restore).toHaveBeenCalledWith("툴 조회 실패");
+        expect(clipboardMock.restore).toHaveBeenCalledWith("Error: 툴 조회 실패");
       } else {
-        expect(clipboardMock.writeText).toHaveBeenCalledWith("툴 조회 실패");
+        expect(clipboardMock.writeText).toHaveBeenCalledWith("Error: 툴 조회 실패");
       }
     });
 

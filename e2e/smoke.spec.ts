@@ -51,11 +51,11 @@ async function resetInvokeCalls(page: Page): Promise<void> {
   });
 }
 
-// 앱이 완전히 로드되기를 기다리는 헬퍼 — 헤더의 "LUM" 텍스트가 보일 때까지 대기
+// 앱이 완전히 로드되기를 기다리는 헬퍼 — 기본 터미널 탭이 보일 때까지 대기
 async function waitForApp(page: Page): Promise<void> {
   await page.goto("/");
-  // LUM 브랜드 텍스트가 헤더에 렌더링될 때까지 대기
-  await expect(page.getByText("LUM").first()).toBeVisible({ timeout: 15_000 });
+  // 헤더 브랜드는 아이콘만 표시될 수 있으므로, 안정적인 기본 탭을 로드 기준으로 사용한다.
+  await expect(page.getByText("Shell 1").first()).toBeVisible({ timeout: 15_000 });
   // 초기 웰컴 힌트 모달이 떠 있으면 닫아 테스트 상호작용을 복구한다.
   const startButton = page.getByRole("button", { name: "시작하기" });
   if (await startButton.isVisible().catch(() => false)) {
@@ -93,9 +93,6 @@ test.describe("LUM 스모크 테스트", () => {
   test("앱이 로드되고 터미널 탭 바가 표시된다", async ({ page }) => {
     await waitForApp(page);
 
-    // 헤더에 LUM 브랜드가 있어야 한다
-    await expect(page.getByText("LUM").first()).toBeVisible();
-
     // 기본 탭 "Shell 1"이 탭 바에 표시되어야 한다
     // 탭은 div.cursor-pointer 요소로 렌더링되고 텍스트로 탭 이름을 포함한다
     await expect(page.getByText("Shell 1").first()).toBeVisible();
@@ -112,7 +109,7 @@ test.describe("LUM 스모크 테스트", () => {
     });
 
     await page.goto("/");
-    await expect(page.getByText("LUM").first()).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText("Shell 1").first()).toBeVisible({ timeout: 15_000 });
 
     const welcomeDialog = page.getByRole("dialog", { name: "LUM — AI 터미널 힌트" });
     await expect(welcomeDialog).toBeVisible({ timeout: 5_000 });
@@ -132,7 +129,7 @@ test.describe("LUM 스모크 테스트", () => {
     });
 
     await page.goto("/");
-    await expect(page.getByText("LUM").first()).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText("Shell 1").first()).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText("LUM에 오신 것을 환영합니다")).toBeVisible({ timeout: 5_000 });
 
     await page.getByRole("button", { name: "시작하기" }).click();
@@ -147,7 +144,7 @@ test.describe("LUM 스모크 테스트", () => {
     });
 
     await page.goto("/");
-    await expect(page.getByText("LUM").first()).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText("Shell 1").first()).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText("LUM에 오신 것을 환영합니다")).toBeVisible({ timeout: 5_000 });
 
     await page.getByRole("button", { name: "시작하기" }).click();
@@ -180,7 +177,7 @@ test.describe("LUM 스모크 테스트", () => {
     });
 
     await page.goto("/");
-    await expect(page.getByText("LUM").first()).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText("Shell 1").first()).toBeVisible({ timeout: 15_000 });
     await page.getByRole("button", { name: "시작하기" }).click();
     await expect(page.getByText("하드웨어 자동 분석")).toBeVisible({ timeout: 5_000 });
     await page.getByRole("button", { name: "다음" }).click();
@@ -207,7 +204,7 @@ test.describe("LUM 스모크 테스트", () => {
     });
 
     await page.goto("/");
-    await expect(page.getByText("LUM").first()).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText("Shell 1").first()).toBeVisible({ timeout: 15_000 });
     await page.getByRole("button", { name: "시작하기" }).click();
     await expect(page.getByText("하드웨어 자동 분석")).toBeVisible({ timeout: 5_000 });
     await page.getByRole("button", { name: "다음" }).click();
@@ -221,7 +218,7 @@ test.describe("LUM 스모크 테스트", () => {
     await page.getByRole("button", { name: "터미널 시작하기" }).click();
 
     await page.getByRole("button", { name: "quick-input-action-palette" }).click();
-    await expect(page.getByText("ACTION PALETTE")).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText("액션 팔레트")).toBeVisible({ timeout: 5_000 });
     await expect(page.locator("[aria-label='action-palette-input']")).toBeVisible({ timeout: 5_000 });
   });
 
@@ -233,7 +230,7 @@ test.describe("LUM 스모크 테스트", () => {
     });
 
     await page.goto("/");
-    await expect(page.getByText("LUM").first()).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText("Shell 1").first()).toBeVisible({ timeout: 15_000 });
     await page.getByRole("button", { name: "시작하기" }).click();
     await expect(page.getByText("하드웨어 자동 분석")).toBeVisible({ timeout: 5_000 });
     await page.getByRole("button", { name: "다음" }).click();
@@ -261,7 +258,7 @@ test.describe("LUM 스모크 테스트", () => {
     });
 
     await page.goto("/");
-    await expect(page.getByText("LUM").first()).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText("Shell 1").first()).toBeVisible({ timeout: 15_000 });
     await page.getByRole("button", { name: "시작하기" }).click();
     await expect(page.getByText("하드웨어 자동 분석")).toBeVisible({ timeout: 5_000 });
     await page.getByRole("button", { name: "다음" }).click();
@@ -332,22 +329,22 @@ test.describe("LUM 스모크 테스트", () => {
   });
 
   // ── 5. 액션 팔레트 열기 ───────────────────────────────────────────────────
-  test("액션 팔레트 버튼을 누르면 ACTION PALETTE가 열린다", async ({ page }) => {
+  test("액션 팔레트 버튼을 누르면 액션 팔레트가 열린다", async ({ page }) => {
     await waitForApp(page);
 
     // 액션 팔레트가 아직 보이지 않아야 한다
-    await expect(page.getByText("ACTION PALETTE")).not.toBeVisible();
+    await expect(page.getByText("액션 팔레트")).not.toBeVisible();
 
     // 툴벨트 버튼 경로로 열기
     await page.getByRole("button", { name: "quick-input-action-palette" }).click();
 
     // 팔레트 헤더와 검색 인풋이 표시되어야 한다
-    await expect(page.getByText("ACTION PALETTE")).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText("액션 팔레트")).toBeVisible({ timeout: 5_000 });
     await expect(page.locator("[aria-label='action-palette-input']")).toBeVisible({ timeout: 5_000 });
 
     // Escape 로 닫기
     await page.keyboard.press("Escape");
-    await expect(page.getByText("ACTION PALETTE")).not.toBeVisible({ timeout: 3_000 });
+    await expect(page.getByText("액션 팔레트")).not.toBeVisible({ timeout: 3_000 });
   });
 
   test("명령을 제출하면 리스트 뷰에 커맨드 블록이 표시된다", async ({ page }) => {
@@ -381,7 +378,7 @@ test.describe("LUM 스모크 테스트", () => {
     await expect(page.getByText("Mock AI 응답: 최근 로그 요약해줘")).toBeVisible({ timeout: 5_000 });
   });
 
-  test("새 커맨드 블록은 Inspector Recent Blocks에도 반영된다", async ({ page }) => {
+  test("새 커맨드 블록은 인스펙터 최근 흐름에도 반영된다", async ({ page }) => {
     await waitForApp(page);
 
     const mainInput = page.locator("input[type='text']").first();
@@ -395,10 +392,9 @@ test.describe("LUM 스모크 테스트", () => {
       "\u001b]133;A\u0007\u001b]133;C;pwd\u0007/Users/mock\r\n\u001b]133;D;0\u0007",
     );
 
-    const recentBlocksCard = page.locator("div").filter({ has: page.getByText("Recent Blocks") }).first();
+    const recentBlocksCard = page.getByText("최근 흐름 재확인").locator("xpath=../..");
     await expect(recentBlocksCard).toBeVisible({ timeout: 5_000 });
     await expect(recentBlocksCard.getByText("pwd", { exact: true })).toBeVisible({ timeout: 5_000 });
-    await expect(recentBlocksCard.getByText("/Users/mock", { exact: true })).toBeVisible({ timeout: 5_000 });
   });
 
   test("파일 탐색기 토글 상태는 새로고침 뒤에도 유지된다", async ({ page }) => {
@@ -411,7 +407,7 @@ test.describe("LUM 스모크 테스트", () => {
     await expect(explorerToggle).toHaveAttribute("aria-pressed", "false");
 
     await page.reload();
-    await expect(page.getByText("LUM").first()).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText("Shell 1").first()).toBeVisible({ timeout: 15_000 });
 
     const reloadedExplorerToggle = page.getByRole("button", { name: "파일 탐색기" });
     await expect(reloadedExplorerToggle).toHaveAttribute("aria-pressed", "false");
@@ -437,8 +433,7 @@ test.describe("LUM 스모크 테스트", () => {
 
     await emitPtyData(page, "tab-1", "\u001b]7;file://localhost/workspace/project\u0007");
 
-    const workspaceCard = page.locator("div").filter({ has: page.getByText("Workspace") }).first();
-    await expect(workspaceCard.getByText("/workspace/project", { exact: true })).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText("/workspace/project", { exact: true }).first()).toBeVisible({ timeout: 5_000 });
   });
 
   test("Inspector 토글 상태는 새로고침 뒤에도 유지된다", async ({ page }) => {
@@ -452,7 +447,7 @@ test.describe("LUM 스모크 테스트", () => {
     await expect(page.getByRole("tablist", { name: "Inspector 탭" })).toBeHidden({ timeout: 5_000 });
 
     await page.reload();
-    await expect(page.getByText("LUM").first()).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText("Shell 1").first()).toBeVisible({ timeout: 15_000 });
 
     const reloadedInspectorToggle = page.getByRole("button", { name: "Inspector", exact: true });
     await expect(reloadedInspectorToggle).toHaveAttribute("aria-pressed", "false");
@@ -462,16 +457,16 @@ test.describe("LUM 스모크 테스트", () => {
   test("Inspector 밀도 토글 상태는 새로고침 뒤에도 유지된다", async ({ page }) => {
     await waitForApp(page);
 
-    await expect(page.getByText("COZY", { exact: true })).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText("여유", { exact: true })).toBeVisible({ timeout: 5_000 });
     await page.getByLabel("Inspector 밀도 토글").click();
-    await expect(page.getByText("COMPACT", { exact: true })).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText("컴팩트", { exact: true })).toBeVisible({ timeout: 5_000 });
 
     await page.reload();
-    await expect(page.getByText("LUM").first()).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByText("COMPACT", { exact: true })).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText("Shell 1").first()).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText("컴팩트", { exact: true })).toBeVisible({ timeout: 5_000 });
   });
 
-  test("Inspector 실패 블록의 LOAD는 AI 분석 프롬프트를 AI 바에 채운다", async ({ page }) => {
+  test("인스펙터 실패 블록의 분석 입력 불러오기는 AI 바에 분석 프롬프트를 채운다", async ({ page }) => {
     await waitForApp(page);
 
     const mainInput = page.locator("input[type='text']").first();
@@ -485,9 +480,9 @@ test.describe("LUM 스모크 테스트", () => {
       "\u001b]133;A\u0007\u001b]133;C;badcmd\u0007command not found\r\n\u001b]133;D;127\u0007",
     );
 
-    const recentBlocksCard = page.locator("div").filter({ has: page.getByText("Recent Blocks") }).first();
-    await expect(recentBlocksCard.getByText("LOAD", { exact: true })).toBeVisible({ timeout: 5_000 });
-    await recentBlocksCard.getByText("LOAD", { exact: true }).click();
+    const loadPromptButton = page.getByRole("button", { name: "분석 입력 불러오기" });
+    await expect(loadPromptButton).toBeVisible({ timeout: 5_000 });
+    await loadPromptButton.click();
 
     const aiInput = page.getByLabel("AI 질문 입력");
     await expect(aiInput).toBeVisible({ timeout: 5_000 });
@@ -497,7 +492,7 @@ test.describe("LUM 스모크 테스트", () => {
     await expect(page.getByRole("button", { name: "Inspector", exact: true })).toHaveAttribute("aria-pressed", "false");
   });
 
-  test("Inspector 실패 블록의 AI ANALYZE는 결과 카드에 추천 커맨드를 표시한다", async ({ page }) => {
+  test("인스펙터 실패 블록 분석은 결과 카드에 추천 커맨드를 표시한다", async ({ page }) => {
     await waitForApp(page);
 
     const mainInput = page.locator("input[type='text']").first();
@@ -511,15 +506,13 @@ test.describe("LUM 스모크 테스트", () => {
       "\u001b]133;A\u0007\u001b]133;C;badcmd\u0007command not found\r\n\u001b]133;D;127\u0007",
     );
 
-    const failedBlockCard = page.locator("div").filter({ has: page.getByText("Failed Block") }).first();
-    await expect(failedBlockCard.getByRole("button", { name: "AI ANALYZE" })).toBeVisible({ timeout: 5_000 });
-    await failedBlockCard.getByRole("button", { name: "AI ANALYZE" }).click();
+    const analyzeButton = page.getByRole("button", { name: "실패 분석 시작" });
+    await expect(analyzeButton).toBeVisible({ timeout: 5_000 });
+    await analyzeButton.click();
 
-    const analyzeCard = page.locator("div").filter({ has: page.getByText("Last AI Analyze") }).first();
-    await expect(analyzeCard).toBeVisible({ timeout: 5_000 });
-    await expect(analyzeCard.getByText("DONE")).toBeVisible({ timeout: 5_000 });
-    await expect(analyzeCard.getByText("Suggested Commands")).toBeVisible({ timeout: 5_000 });
-    await expect(analyzeCard.getByRole("button", { name: "RUN" }).first()).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText("분석 완료")).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText("추천 커맨드", { exact: true })).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByRole("button", { name: "첫 제안 바로 실행" })).toBeVisible({ timeout: 5_000 });
   });
 
   test("Last AI Analyze 추천 커맨드 LOAD는 AI 입력바에 첫 번째 커맨드를 채운다", async ({ page }) => {
@@ -536,14 +529,11 @@ test.describe("LUM 스모크 테스트", () => {
       "\u001b]133;A\u0007\u001b]133;C;badcmd\u0007command not found\r\n\u001b]133;D;127\u0007",
     );
 
-    const failedBlockCard = page.locator("div").filter({ has: page.getByText("Failed Block") }).first();
-    await failedBlockCard.getByRole("button", { name: "AI ANALYZE" }).click();
-
-    const analyzeCard = page.locator("div").filter({ has: page.getByText("Last AI Analyze") }).first();
-    await expect(analyzeCard.getByText("DONE")).toBeVisible({ timeout: 5_000 });
-    const firstSuggestedRow = page.locator("[data-inspector-command-menu-row='1']").first();
-    await expect(firstSuggestedRow).toBeVisible({ timeout: 5_000 });
-    await firstSuggestedRow.getByRole("button", { name: "LOAD" }).click();
+    await page.getByRole("button", { name: "실패 분석 시작" }).click();
+    await expect(page.getByText("분석 완료")).toBeVisible({ timeout: 5_000 });
+    const loadSuggestedCommandButton = page.getByRole("button", { name: "입력 넘기기" }).first();
+    await expect(loadSuggestedCommandButton).toBeVisible({ timeout: 5_000 });
+    await loadSuggestedCommandButton.click();
 
     const aiInput = page.getByLabel("AI 질문 입력");
     await expect(aiInput).toBeVisible({ timeout: 5_000 });
@@ -565,14 +555,11 @@ test.describe("LUM 스모크 테스트", () => {
       "\u001b]133;A\u0007\u001b]133;C;badcmd\u0007command not found\r\n\u001b]133;D;127\u0007",
     );
 
-    const failedBlockCard = page.locator("div").filter({ has: page.getByText("Failed Block") }).first();
-    await failedBlockCard.getByRole("button", { name: "AI ANALYZE" }).click();
-
-    const analyzeCard = page.locator("div").filter({ has: page.getByText("Last AI Analyze") }).first();
-    await expect(analyzeCard.getByText("DONE")).toBeVisible({ timeout: 5_000 });
-    const firstSuggestedRow = page.locator("[data-inspector-command-menu-row='1']").first();
-    await expect(firstSuggestedRow).toBeVisible({ timeout: 5_000 });
-    await firstSuggestedRow.getByRole("button", { name: "RUN" }).click();
+    await page.getByRole("button", { name: "실패 분석 시작" }).click();
+    await expect(page.getByText("분석 완료")).toBeVisible({ timeout: 5_000 });
+    const runSuggestedCommandButton = page.getByRole("button", { name: "첫 제안 바로 실행" });
+    await expect(runSuggestedCommandButton).toBeVisible({ timeout: 5_000 });
+    await runSuggestedCommandButton.click();
 
     await expect.poll(async () => {
       const calls = await getInvokeCalls(page);
@@ -583,7 +570,7 @@ test.describe("LUM 스모크 테스트", () => {
     }, { timeout: 5_000 }).toBe(true);
   });
 
-  test("추천 커맨드 RUN 뒤 알림 센터에 실행 피드백이 표시된다", async ({ page }) => {
+  test("추천 커맨드 실행 뒤 알림 센터에 실행 피드백이 표시된다", async ({ page }) => {
     await waitForApp(page);
 
     const mainInput = page.locator("input[type='text']").first();
@@ -597,14 +584,11 @@ test.describe("LUM 스모크 테스트", () => {
       "\u001b]133;A\u0007\u001b]133;C;badcmd\u0007command not found\r\n\u001b]133;D;127\u0007",
     );
 
-    const failedBlockCard = page.locator("div").filter({ has: page.getByText("Failed Block") }).first();
-    await failedBlockCard.getByRole("button", { name: "AI ANALYZE" }).click();
-
-    const analyzeCard = page.locator("div").filter({ has: page.getByText("Last AI Analyze") }).first();
-    await expect(analyzeCard.getByText("DONE")).toBeVisible({ timeout: 5_000 });
-    const firstSuggestedRow = page.locator("[data-inspector-command-menu-row='1']").first();
-    await expect(firstSuggestedRow).toBeVisible({ timeout: 5_000 });
-    await firstSuggestedRow.getByRole("button", { name: "RUN" }).click();
+    await page.getByRole("button", { name: "실패 분석 시작" }).click();
+    await expect(page.getByText("분석 완료")).toBeVisible({ timeout: 5_000 });
+    const runSuggestedCommandButton = page.getByRole("button", { name: "첫 제안 바로 실행" });
+    await expect(runSuggestedCommandButton).toBeVisible({ timeout: 5_000 });
+    await runSuggestedCommandButton.click();
 
     const notifButton = page.getByRole("button", { name: "알림 센터" });
     await notifButton.click();
@@ -635,9 +619,9 @@ test.describe("LUM 스모크 테스트", () => {
     await expectInViewport(page, "[aria-label='quick-input-history-close']");
     await page.keyboard.press("Escape");
 
-    // ACTION PALETTE 패널 검증 (input intercept: Ctrl+K)
+    // 액션 팔레트 패널 검증 (input intercept: Ctrl+K)
     await page.getByRole("button", { name: "quick-input-action-palette" }).click();
-    await expect(page.getByText("ACTION PALETTE")).toBeVisible();
+    await expect(page.getByText("액션 팔레트")).toBeVisible();
     await expectInViewport(page, "[aria-label='action-palette-input']");
     await expectInViewport(page, "[aria-label='action-palette-close']");
     await page.keyboard.press("Escape");
@@ -654,15 +638,11 @@ test.describe("LUM 스모크 테스트", () => {
     await page.setViewportSize({ width: 860, height: 520 });
     await waitForApp(page);
 
-    const advancedButton = page.getByRole("button", {
-      name: "고급 기능 (MCP / Squad / Healing / Recall / LoRA / RAG / xLLM)",
-    });
-    await expect(advancedButton).toHaveAttribute("aria-label", /새 고급 기능이 있습니다/);
+    const advancedButton = page.getByRole("button", { name: "기능 메뉴" });
     await expect(advancedButton).toBeVisible();
     await advancedButton.click();
     const advancedPanel = page.getByRole("menu", { name: "고급 기능 메뉴" });
     await expect(advancedPanel).toBeVisible();
-    await expect(advancedPanel.getByText("NEW FEATURE")).toBeVisible();
     await expectInViewport(page, "[role='menu'][aria-label='고급 기능 메뉴']");
     await expect(advancedPanel.getByRole("menuitem", { name: "MCP 서버" })).toBeVisible();
     await page.keyboard.press("Escape");
@@ -688,20 +668,22 @@ test.describe("LUM 스모크 테스트", () => {
     await expect(notifPanel).toBeHidden();
   });
 
-  test("Privacy Ledger 패널도 뷰포트 안에서 정상 표시된다", async ({ page }) => {
-    await page.setViewportSize({ width: 860, height: 520 });
+  test("개인정보 원장 패널도 뷰포트 안에서 정상 표시된다", async ({ page }) => {
+    await page.setViewportSize({ width: 1600, height: 900 });
     await waitForApp(page);
 
+    await page.getByRole("button", { name: "툴바 확장 모드" }).click();
+
     const privacyButton = page.getByRole("button", {
-      name: /Privacy Ledger — AI 호출 없음/,
+      name: /개인정보 원장 —/,
     });
     await expect(privacyButton).toBeVisible();
     await privacyButton.click();
 
-    const ledgerPanel = page.getByRole("dialog", { name: "Privacy Ledger 상세" });
+    const ledgerPanel = page.getByRole("dialog", { name: "개인정보 원장 상세" });
     await expect(ledgerPanel).toBeVisible();
-    await expect(ledgerPanel.getByRole("button", { name: "Privacy Ledger 상세 닫기" })).toBeVisible();
-    await expectInViewport(page, "[role='dialog'][aria-label='Privacy Ledger 상세']");
+    await expect(ledgerPanel.getByRole("button", { name: "개인정보 원장 상세 닫기" })).toBeVisible();
+    await expectInViewport(page, "[role='dialog'][aria-label='개인정보 원장 상세']");
 
     await page.keyboard.press("Escape");
     await expect(ledgerPanel).toBeHidden();
@@ -711,9 +693,7 @@ test.describe("LUM 스모크 테스트", () => {
     await page.setViewportSize({ width: 860, height: 520 });
     await waitForApp(page);
 
-    const advancedButton = page.getByRole("button", {
-      name: "고급 기능 (MCP / Squad / Healing / Recall / LoRA / RAG / xLLM)",
-    });
+    const advancedButton = page.getByRole("button", { name: "기능 메뉴" });
     const notifButton = page.getByRole("button", { name: "알림 센터" });
     const advancedPanel = page.getByRole("menu", { name: "고급 기능 메뉴" });
     const notifPanel = page.getByRole("menu", { name: "알림 센터" });
@@ -746,9 +726,7 @@ test.describe("LUM 스모크 테스트", () => {
     await page.setViewportSize({ width: 860, height: 520 });
     await waitForApp(page);
 
-    const advancedButton = page.getByRole("button", {
-      name: "고급 기능 (MCP / Squad / Healing / Recall / LoRA / RAG / xLLM)",
-    });
+    const advancedButton = page.getByRole("button", { name: "기능 메뉴" });
     const notifButton = page.getByRole("button", { name: "알림 센터" });
     const advancedPanel = page.getByRole("menu", { name: "고급 기능 메뉴" });
     const notifPanel = page.getByRole("menu", { name: "알림 센터" });

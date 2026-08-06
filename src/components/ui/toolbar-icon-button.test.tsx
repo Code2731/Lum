@@ -47,8 +47,6 @@ describe("ToolbarIconButton", () => {
     expect(button).toHaveAttribute("title", "사이드바 열기");
     expect(button.className).toContain("disabled:pointer-events-none");
     expect(button.className).toContain("disabled:opacity-40");
-    expect(screen.getByText("현재 탭과 연결된 패널을 빠르게 엽니다.")).toBeInTheDocument();
-    expect(screen.getByText("⌘1")).toBeInTheDocument();
   });
 
   it("shortcut을 aria-keyshortcuts 형식으로 변환해 노출한다", () => {

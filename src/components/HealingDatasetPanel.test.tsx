@@ -75,20 +75,20 @@ describe("HealingDatasetPanel", () => {
     expect(screen.getByText("먼저 검토")).toBeInTheDocument();
     expect(screen.getByText("다음 사유 확인")).toBeInTheDocument();
     expect(screen.getByText("마지막 export 정리")).toBeInTheDocument();
-    expect(screen.getByText("제안 대기")).toBeInTheDocument();
+    expect(await screen.findByText("제안 대기")).toBeInTheDocument();
     expect(screen.getByText("승인·거부 누적")).toBeInTheDocument();
     expect(screen.getByText("학습 준비")).toBeInTheDocument();
-    const errorText = await screen.findByText("Error: 치유 데이터 조회 실패");
+    const errorText = await screen.findByText("치유 데이터 조회 실패");
     expect(errorText).toBeInTheDocument();
 
     const copyButton = screen.getByRole("button", { name: "오류 텍스트 복사" });
     fireEvent.click(copyButton);
 
     if (clipboardMock.restore) {
-      expect(clipboardMock.restore).toHaveBeenCalledWith("Error: 치유 데이터 조회 실패");
+      expect(clipboardMock.restore).toHaveBeenCalledWith("치유 데이터 조회 실패");
       clipboardMock.restore.mockRestore();
     } else {
-      expect(clipboardMock.writeText).toHaveBeenCalledWith("Error: 치유 데이터 조회 실패");
+      expect(clipboardMock.writeText).toHaveBeenCalledWith("치유 데이터 조회 실패");
     }
   });
 });

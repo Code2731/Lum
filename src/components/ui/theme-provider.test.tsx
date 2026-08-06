@@ -2,6 +2,18 @@ import { describe, expect, it, beforeEach, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { getThemeLabel, ThemeProvider, useTheme } from "./theme-provider";
 
+const storage = new Map<string, string>();
+const localStorageMock: Storage = {
+  get length() {
+    return storage.size;
+  },
+  clear: () => storage.clear(),
+  getItem: (key) => storage.get(key) ?? null,
+  key: (index) => [...storage.keys()][index] ?? null,
+  removeItem: (key) => storage.delete(key),
+  setItem: (key, value) => storage.set(key, String(value)),
+};
+
 function Consumer() {
   const { theme, setTheme } = useTheme();
   return (
@@ -16,7 +28,12 @@ function Consumer() {
 
 describe("ThemeProvider", () => {
   beforeEach(() => {
-    window.localStorage.clear();
+    storage.clear();
+    vi.stubGlobal("localStorage", localStorageMock);
+    Object.defineProperty(window, "localStorage", {
+      configurable: true,
+      value: localStorageMock,
+    });
     document.documentElement.className = "";
     document.documentElement.style.colorScheme = "";
   });
@@ -28,7 +45,7 @@ describe("ThemeProvider", () => {
   });
 
   it("잘못된 저장값이 있어도 기본 테마로 안전하게 시작한다", () => {
-    window.localStorage.setItem("lum-ui-theme", "invalid");
+    localStorageMock.setItem("lum-ui-theme", "invalid");
 
     render(
       <ThemeProvider defaultTheme="dark">
@@ -36,7 +53,7 @@ describe("ThemeProvider", () => {
       </ThemeProvider>,
     );
 
-    expect(screen.getByText("dark")).toBeInTheDocument();
+    expect(screen.getAllByText("dark").length).toBeGreaterThan(0);
     expect(document.documentElement.classList.contains("dark")).toBe(true);
     expect(document.documentElement.style.colorScheme).toBe("dark");
   });
@@ -50,8 +67,8 @@ describe("ThemeProvider", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "light" }));
 
-    expect(screen.getByText("light")).toBeInTheDocument();
-    expect(window.localStorage.getItem("lum-ui-theme")).toBe("light");
+    expect(screen.getAllByText("light").length).toBeGreaterThan(0);
+    expect(localStorageMock.getItem("lum-ui-theme")).toBe("light");
     expect(document.documentElement.classList.contains("light")).toBe(true);
     expect(document.documentElement.style.colorScheme).toBe("light");
   });

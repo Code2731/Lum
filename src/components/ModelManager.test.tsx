@@ -165,8 +165,8 @@ describe("ModelManager", () => {
     render(<ModelManager onClose={vi.fn()} />);
 
     expect(await screen.findByText("먼저 다운로드")).toBeInTheDocument();
-    expect(screen.getByText("다음 역할 지정")).toBeInTheDocument();
-    expect(screen.getByText("마지막 관리")).toBeInTheDocument();
+    expect(screen.getAllByText("다음 역할 지정").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("마지막 관리").length).toBeGreaterThan(0);
     expect(screen.getByText("설치된 모델이 없습니다.")).toBeInTheDocument();
     expect(screen.getByText("다운로드 탭에서 mistral.rs용 모델을 받으세요.")).toBeInTheDocument();
     expect(screen.getByText("모델을 받은 뒤 코딩·문서 역할을 정하고, 필요 없는 모델만 남겨 관리합니다.")).toBeInTheDocument();

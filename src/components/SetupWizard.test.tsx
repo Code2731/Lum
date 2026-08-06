@@ -70,7 +70,7 @@ describe("SetupWizard", () => {
     render(<SetupWizard {...baseProps} step={2} />);
 
     expect(screen.getByText("추천 모델 준비")).toBeInTheDocument();
-    expect(screen.getByText("Qwen2.5-Coder-7B-Instruct-EXL2-4bpw")).toBeInTheDocument();
+    expect(screen.getAllByText("Qwen2.5-Coder-7B-Instruct-EXL2-4bpw")).toHaveLength(2);
     expect(screen.getByText("마지막 시작")).toBeInTheDocument();
   });
 

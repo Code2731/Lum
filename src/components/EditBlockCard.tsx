@@ -7,7 +7,7 @@ import type { EditBlock } from "../utils/editBlockParser";
 import { getEditBlockParseFlowSummary } from "../utils/editBlockParser";
 import TestResultCard from "./TestResultCard";
 import { SMALL_ICON_SIZE } from "../constants/ui";
-import { isRoutingError } from "../utils/errorMessage";
+import { isRoutingError, toErrorMessage } from "../utils/errorMessage";
 
 interface Props {
   block: EditBlock;
@@ -103,7 +103,7 @@ const EditBlockCard: React.FC<Props> = ({ block, cwd, onAskAIForFix, onOpenXllmP
       setFuzzy(result.fuzzy);
     } catch (e) {
       setStatus("error");
-      setError(String(e).slice(0, 200));
+      setError(toErrorMessage(e).slice(0, 200));
     }
   };
 

@@ -59,7 +59,7 @@ describe("DynamicUIRenderer", () => {
     expect(screen.getByText("JSX 변환")).toBeInTheDocument();
     expect(screen.getByText("샌드박스 주입")).toBeInTheDocument();
     expect(screen.getByText("미리보기 확인")).toBeInTheDocument();
-    expect(screen.getByTitle("AI 생성 UI 미리보기")).toBeInTheDocument();
+    expect(screen.getByTitle("AI 생성 UI 샌드박스")).toBeInTheDocument();
   });
 
   it("렌더 오류가 발생하면 오류 텍스트 복사 버튼을 통해 클립보드로 복사할 수 있다", async () => {
@@ -68,19 +68,17 @@ describe("DynamicUIRenderer", () => {
 
     render(<DynamicUIRenderer code={invalidCode} />);
 
-    const errorText = await screen.findByText((content) =>
-      content.includes("Unexpected token") || content.length > 0,
-    );
-    expect(screen.getByRole("alert")).toBeInTheDocument();
+    const errorAlert = await screen.findByRole("alert");
+    expect(errorAlert).toHaveTextContent("Unexpected token");
     expect(screen.getByText("오류 확인")).toBeInTheDocument();
-    const copyButton = screen.getByRole("button", { name: "오류 텍스트 복사" });
+    const copyButton = screen.getByTitle("오류 텍스트 복사");
 
     fireEvent.click(copyButton);
 
     await waitFor(() => {
       expect(clipboardMock.writeText).toHaveBeenCalledTimes(1);
     });
-    expect(clipboardMock.writeText).toHaveBeenCalledWith(errorText.textContent ?? "");
+    expect(clipboardMock.writeText).toHaveBeenCalledWith(errorAlert.textContent ?? "");
 
     clipboardMock.restore();
   });

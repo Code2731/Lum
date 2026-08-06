@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, fireEvent, act, screen } from "@testing-library/react";
+import { render, fireEvent, act, screen, waitFor } from "@testing-library/react";
 import { createRef } from "react";
 import WarpInputBar, {
   getWarpActiveModeHint,
@@ -79,7 +79,7 @@ function setup(overrides: Partial<React.ComponentProps<typeof WarpInputBar>> = {
       {...overrides}
     />,
   );
-  const input = utils.container.querySelector("input")!;
+  const input = utils.container.querySelector<HTMLInputElement>('input[data-lum-main-input="true"]')!;
   return { input, onSubmit, onInterrupt, onTab, onChange, ref, ...utils };
 }
 
@@ -95,8 +95,8 @@ describe("WarpInputBar — dumb input, 라우팅은 상위에서", () => {
   });
 
   it("기본 입력 힌트와 활성 모드 힌트를 계산한다", () => {
-    expect(getWarpDefaultInputHint(true)).toBe("먼저 자연어/명령 · 필요 시 !/@/>>/#/?");
-    expect(getWarpDefaultInputHint(false)).toContain("먼저 자연어는 AI, 명령어는 실행");
+    expect(getWarpDefaultInputHint(true)).toBe("질문·명령 입력 · 필요 시 ! @ >>");
+    expect(getWarpDefaultInputHint(false)).toContain("질문은 AI, 명령은 실행");
     expect(
       getWarpActiveModeHint({
         activeBackend: "local",
@@ -108,7 +108,7 @@ describe("WarpInputBar — dumb input, 라우팅은 상위에서", () => {
         isForceShell: false,
         isForceAI: true,
       }),
-    ).toContain("LOCAL 백엔드가 먼저 선택되어 있습니다.");
+    ).toContain("LOCAL(mistral.rs 엔진)이 선택되었습니다.");
     expect(
       getWarpActiveModeHint({
         activeBackend: null,
@@ -120,7 +120,7 @@ describe("WarpInputBar — dumb input, 라우팅은 상위에서", () => {
         isForceShell: true,
         isForceAI: false,
       }),
-    ).toBe("셸 강제 모드: ! 뒤에 실행할 명령어를 입력하면 바로 터미널로 보냅니다.");
+    ).toBe("셸 강제 모드입니다. 입력 내용을 바로 터미널 명령으로 실행합니다.");
   });
 
   it("Enter → onSubmit(input 원본) 호출, 입력 비워짐", () => {
@@ -220,16 +220,12 @@ describe("WarpInputBar — dumb input, 라우팅은 상위에서", () => {
     expect(screen.queryByText("백엔드 GEMINI")).not.toBeInTheDocument();
   });
 
-  it("백엔드 배지 tooltip은 direct 지정·해제와 순환 단축키를 안내한다", () => {
+  it("백엔드 배지 tooltip은 현재 강제 백엔드 해제 단축키를 안내한다", () => {
     const { input } = setup();
     fireEvent.change(input, { target: { value: "@local 로그 요약해줘" } });
     expect(screen.getByRole("button", { name: "clear-backend-badge" })).toHaveAttribute(
       "title",
-      expect.stringContaining("Cmd/Ctrl+1~4/0 직접 지정·해제"),
-    );
-    expect(screen.getByRole("button", { name: "clear-backend-badge" })).toHaveAttribute(
-      "title",
-      expect.stringContaining("Cmd/Ctrl+./, 직접 순환"),
+      expect.stringContaining("Cmd/Ctrl+0"),
     );
   });
 
@@ -249,16 +245,15 @@ describe("WarpInputBar — dumb input, 라우팅은 상위에서", () => {
 
   it("빈 입력 도움말은 간결한 라우팅/백엔드 안내를 노출한다", () => {
     setup();
-    expect(screen.getByText(/먼저 자연어는 AI, 명령어는 실행/)).toBeInTheDocument();
-    expect(screen.getByText(/백엔드 @local\/@ollama\/@xllm\/@gemini/)).toBeInTheDocument();
-    expect(screen.getByText(/Cmd\/Ctrl\+1~4\/0 선택·해제/)).toBeInTheDocument();
-    expect(screen.getByText(/Cmd\/Ctrl\+\./)).toBeInTheDocument();
+    expect(screen.getByText("자동 라우팅")).toBeInTheDocument();
+    expect(screen.getByText("! 셸 · @ AI · >> 에이전트")).toBeInTheDocument();
+    expect(screen.getByText(/예: 버그 원인 분석해줘/)).toBeInTheDocument();
   });
 
   it("공백만 입력된 상태에서도 빈 입력 도움말을 유지한다", () => {
     const { input } = setup();
     fireEvent.change(input, { target: { value: "   " } });
-    expect(screen.getByText(/먼저 자연어는 AI, 명령어는 실행/)).toBeInTheDocument();
+    expect(screen.getByText("자동 라우팅")).toBeInTheDocument();
   });
 
   it("백엔드 단독 상태일 때 백엔드 모드 안내가 표시된다", () => {
@@ -266,10 +261,7 @@ describe("WarpInputBar — dumb input, 라우팅은 상위에서", () => {
     act(() => {
       fireEvent.change(input, { target: { value: "@local " } });
     });
-    expect(screen.getByText(/LOCAL 백엔드가 먼저 선택되어 있습니다/)).toBeInTheDocument();
-    expect(screen.getByText(/Cmd\/Ctrl\+0으로 해제/)).toBeInTheDocument();
-    expect(screen.getByText(/Cmd\/Ctrl\+\./)).toBeInTheDocument();
-    expect(screen.getByText(/바로 순환할 수 있습니다/)).toBeInTheDocument();
+    expect(screen.getByText(/LOCAL\(mistral.rs 엔진\)이 선택되었습니다/)).toBeInTheDocument();
   });
 
   it("강제 셸 모드 단독 입력일 때 셸 모드 안내가 표시된다", () => {
@@ -614,7 +606,7 @@ describe("WarpInputBar — dumb input, 라우팅은 상위에서", () => {
       await new Promise((resolve) => setTimeout(resolve, 40));
     });
     expect(invokeMock).toHaveBeenCalledWith("stop_voice_recording", undefined);
-    expect(input).toHaveValue("git status");
+    await waitFor(() => expect(input).toHaveValue("git status"));
     expect(onChange).toHaveBeenLastCalledWith("git status");
   });
 
@@ -639,8 +631,8 @@ describe("WarpInputBar — dumb input, 라우팅은 상위에서", () => {
     await act(async () => {
       fireEvent.click(getByLabelText("음성 녹음 중지"));
     });
-    // stop 대기 중엔 start로 깜빡이지 않고 중지 라벨 유지
-    const pendingStopBtn = getByLabelText("음성 녹음 중지");
+    // stop 대기 중엔 시작으로 되돌아가지 않고 준비 상태를 유지한다.
+    const pendingStopBtn = getByLabelText("음성 준비 중");
     expect(pendingStopBtn).toBeDisabled();
 
     await act(async () => {
@@ -684,6 +676,7 @@ describe("WarpInputBar — dumb input, 라우팅은 상위에서", () => {
       return;
     });
     const { getByLabelText, input, onChange } = setup();
+    await waitFor(() => expect(voiceListeners).not.toHaveLength(0));
 
     await act(async () => {
       fireEvent.click(getByLabelText("음성 녹음 시작"));
@@ -769,13 +762,12 @@ describe("WarpInputBar — dumb input, 라우팅은 상위에서", () => {
       if (cmd === "start_voice_recording") throw new Error("mic permission denied");
       return;
     });
-    const { getByLabelText, findByText } = setup();
+    const { getByLabelText, findByRole } = setup();
     const startBtn = getByLabelText("음성 녹음 시작");
     await act(async () => {
       fireEvent.click(startBtn);
     });
-    expect(await findByText(/음성 입력 오류:/)).toBeInTheDocument();
-    expect(await findByText(/마이크 권한이 거부되었습니다\./)).toBeInTheDocument();
+    expect(await findByRole("button", { name: "닫기" })).toBeInTheDocument();
     // 실패 후에도 시작 상태여야 함(녹음중 아님).
     expect(getByLabelText("음성 녹음 시작")).toBeInTheDocument();
   });
@@ -785,16 +777,16 @@ describe("WarpInputBar — dumb input, 라우팅은 상위에서", () => {
       if (cmd === "start_voice_recording") throw new Error("mic permission denied");
       return;
     });
-    const { getByLabelText, findByText, queryByText } = setup();
+    const { getByLabelText, findByRole, queryByRole } = setup();
 
     await act(async () => {
       fireEvent.click(getByLabelText("음성 녹음 시작"));
     });
 
-    expect(await findByText(/음성 입력 오류:/)).toBeInTheDocument();
+    expect(await findByRole("button", { name: "닫기" })).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "음성 입력 오류 닫기" }));
-    expect(queryByText(/음성 입력 오류:/)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "닫기" }));
+    await waitFor(() => expect(queryByRole("button", { name: "닫기" })).not.toBeInTheDocument());
   });
 
   it("음성 입력 오류 배지에서 바로 다시 시도할 수 있다", async () => {
@@ -809,16 +801,16 @@ describe("WarpInputBar — dumb input, 라우팅은 상위에서", () => {
       }
       return;
     });
-    const { getByLabelText, findByText } = setup();
+    const { getByLabelText, findByRole } = setup();
 
     await act(async () => {
       fireEvent.click(getByLabelText("음성 녹음 시작"));
     });
 
-    expect(await findByText(/음성 입력 오류:/)).toBeInTheDocument();
+    expect(await findByRole("button", { name: "닫기" })).toBeInTheDocument();
 
     await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: "음성 입력 다시 시도" }));
+      fireEvent.click(screen.getByRole("button", { name: "다시 시도" }));
     });
 
     expect(getByLabelText("음성 녹음 중지")).toBeInTheDocument();
@@ -831,16 +823,18 @@ describe("WarpInputBar — dumb input, 라우팅은 상위에서", () => {
       if (cmd === "start_voice_recording") throw new Error("mic permission denied");
       return;
     });
-    const { getByLabelText, findByText, input, queryByText } = setup();
+    const { getByLabelText, findByRole, input, queryByRole } = setup();
 
     await act(async () => {
       fireEvent.click(getByLabelText("음성 녹음 시작"));
     });
 
-    expect(await findByText(/음성 입력 오류:/)).toBeInTheDocument();
+    expect(await findByRole("button", { name: "닫기" })).toBeInTheDocument();
 
-    fireEvent.change(input, { target: { value: "hello again" } });
-    expect(queryByText(/음성 입력 오류:/)).not.toBeInTheDocument();
+    await act(async () => {
+      fireEvent.change(input, { target: { value: "hello again" } });
+    });
+    await waitFor(() => expect(queryByRole("button", { name: "닫기" })).not.toBeInTheDocument());
   });
 
   it("마이크 중지 실패 시 voice_recording_status 재조회로 상태를 동기화", async () => {
@@ -858,7 +852,7 @@ describe("WarpInputBar — dumb input, 라우팅은 상위에서", () => {
       }
       return;
     });
-    const { getByLabelText, findByText } = setup();
+    const { getByLabelText, findByRole } = setup();
 
     await act(async () => {
       fireEvent.click(getByLabelText("음성 녹음 시작"));
@@ -870,7 +864,7 @@ describe("WarpInputBar — dumb input, 라우팅은 상위에서", () => {
       await Promise.resolve();
     });
 
-    expect(await findByText(/음성 입력 오류:/)).toBeInTheDocument();
+    expect(await findByRole("button", { name: "닫기" })).toBeInTheDocument();
     expect(getByLabelText("음성 녹음 중지")).toBeInTheDocument();
   });
 
@@ -882,25 +876,25 @@ describe("WarpInputBar — dumb input, 라우팅은 상위에서", () => {
       return;
     });
 
-    const { getByLabelText, findByText } = setup();
+    const { getByLabelText, findByRole } = setup();
     const startBtn = getByLabelText("음성 녹음 시작");
 
     await act(async () => {
       fireEvent.click(startBtn);
     });
 
-    expect(await findByText(/음성 입력 오류:/)).toBeInTheDocument();
-    const copyBtn = await screen.findByRole("button", { name: "오류 텍스트 복사" });
+    expect(await findByRole("button", { name: "닫기" })).toBeInTheDocument();
+    const copyBtn = await screen.findByRole("button", { name: "복사" });
     fireEvent.click(copyBtn);
 
     if (clipboardMock.restore) {
       expect(clipboardMock.restore).toHaveBeenCalledWith(
-        expect.stringContaining("음성 입력 오류: 마이크 권한이 거부되었습니다"),
+        expect.stringContaining("음성 오류: 마이크 권한이 거부되었습니다"),
       );
       clipboardMock.restore.mockRestore();
     } else {
       expect(clipboardMock.writeText).toHaveBeenCalledWith(
-        expect.stringContaining("음성 입력 오류: 마이크 권한이 거부되었습니다"),
+        expect.stringContaining("음성 오류: 마이크 권한이 거부되었습니다"),
       );
     }
   });
@@ -960,13 +954,14 @@ describe("WarpInputBar — dumb input, 라우팅은 상위에서", () => {
 
   it("voice_transcript 이벤트 수신 시 입력창에 주입", async () => {
     const { input, onChange } = setup();
+    await waitFor(() => expect(voiceListeners).not.toHaveLength(0));
     await act(async () => {
       const cb = voiceListeners[voiceListeners.length - 1];
       cb?.({ payload: "cargo test" });
     });
-    expect(input).toHaveValue("cargo test");
+    await waitFor(() => expect(input).toHaveValue("cargo test"));
     expect(onChange).toHaveBeenLastCalledWith("cargo test");
-    expect(screen.getByText("음성 입력 반영됨")).toBeInTheDocument();
+    expect(screen.getAllByText("음성 반영 완료 · cargo test").length).toBeGreaterThan(0);
   });
 
   it("voice_recording_state 이벤트 수신 시 마이크 라벨 동기화", async () => {

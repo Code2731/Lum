@@ -2045,6 +2045,7 @@ const TerminalPane: React.FC<Props> = ({
         aria-label="터미널 입력 도크"
         className={`lum-input-dock ${inputDockNarrow ? "lum-input-dock--narrow" : ""} ${inputDockCompact ? "lum-input-dock--compact" : ""} ${inputFocusCompact ? "lum-input-dock--focus" : ""}`}
         style={{
+          flex: "0 0 auto",
           padding: "6px 10px 8px",
           borderTop: "1px solid rgba(255,255,255,0.08)",
           display: "flex",

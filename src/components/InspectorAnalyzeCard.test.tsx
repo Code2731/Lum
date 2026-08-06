@@ -168,8 +168,8 @@ describe("InspectorAnalyzeCard", () => {
     );
 
     expect(screen.getByText("실행 · 복사 · 입력")).toBeInTheDocument();
-    expect(screen.getByText("먼저 실행")).toBeInTheDocument();
-    expect(screen.getByText("대안")).toBeInTheDocument();
+    expect(screen.getAllByText("먼저 실행").length).toBeGreaterThan(0);
+    expect(screen.getByText("추가 점검")).toBeInTheDocument();
     expect(screen.getByText("첫 제안 바로 실행")).toBeInTheDocument();
     expect(screen.getByText("필요시 복사")).toBeInTheDocument();
     expect(screen.getByText("AI 입력 전환")).toBeInTheDocument();
@@ -177,14 +177,14 @@ describe("InspectorAnalyzeCard", () => {
     expect(screen.getByText("R 실행 · C 복사 · L 입력")).toBeInTheDocument();
     expect(screen.getByText("대안 1개가 더 준비되어 있습니다.")).toBeInTheDocument();
     expect(screen.getByText("다음 대안")).toBeInTheDocument();
-    expect(screen.getByText("npm run lint")).toBeInTheDocument();
+    expect(screen.getAllByText("npm run lint").length).toBeGreaterThan(0);
     expect(screen.getByTitle("첫 번째 추천 커맨드 복사")).toBeInTheDocument();
-    expect(screen.getByTitle("첫 번째 추천 커맨드 입력바 로드")).toBeInTheDocument();
+    expect(screen.getByTitle("첫 번째 추천 커맨드를 입력바로 넘기기")).toBeInTheDocument();
     fireEvent.click(screen.getByTitle("2번 커맨드 복사 (C)"));
-    fireEvent.click(screen.getByTitle("2번 커맨드 AI 입력바 로드 (L)"));
+    fireEvent.click(screen.getByTitle("2번 커맨드를 입력바로 넘기기 (L)"));
     fireEvent.click(screen.getByTitle("2번 커맨드 실행 (R)"));
     fireEvent.click(screen.getByTitle("첫 번째 추천 커맨드 복사"));
-    fireEvent.click(screen.getByTitle("첫 번째 추천 커맨드 입력바 로드"));
+    fireEvent.click(screen.getByTitle("첫 번째 추천 커맨드를 입력바로 넘기기"));
     fireEvent.click(screen.getByTitle("첫 번째 추천 커맨드 바로 실행"));
     fireEvent.click(screen.getByText("첫 실행"));
 
@@ -242,7 +242,7 @@ describe("InspectorAnalyzeCard", () => {
     fireEvent.click(screen.getAllByText("추가")[0]);
     fireEvent.keyDown(screen.getAllByText("추가")[1], { key: "ArrowDown" });
     fireEvent.click(screen.getByText("복사 (C)"));
-    fireEvent.click(screen.getByText("입력 (L)"));
+    fireEvent.click(screen.getByText("입력 넘기기"));
     fireEvent.keyDown(screen.getByRole("menu"), { key: "ArrowRight" });
 
     expect(onCloseCommandMenu).toHaveBeenCalledWith(true);

@@ -3,13 +3,15 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import WindowControls, { getWindowControlMeta } from "./WindowControls";
 
-const mockWindow = {
-  close: vi.fn().mockResolvedValue(undefined),
-  minimize: vi.fn().mockResolvedValue(undefined),
-  toggleMaximize: vi.fn().mockResolvedValue(undefined),
-  isMaximized: vi.fn().mockResolvedValue(false),
-  onResized: vi.fn().mockResolvedValue(() => {}),
-};
+const { mockWindow } = vi.hoisted(() => ({
+  mockWindow: {
+    close: vi.fn().mockResolvedValue(undefined),
+    minimize: vi.fn().mockResolvedValue(undefined),
+    toggleMaximize: vi.fn().mockResolvedValue(undefined),
+    isMaximized: vi.fn().mockResolvedValue(false),
+    onResized: vi.fn().mockResolvedValue(() => {}),
+  },
+}));
 
 vi.mock("@tauri-apps/api/window", () => ({
   getCurrentWindow: () => mockWindow,

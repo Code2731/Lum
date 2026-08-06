@@ -140,7 +140,7 @@ describe("WarpListView delta actions", () => {
     );
 
     fireEvent.click(screen.getByText("Δ +1/-1"));
-    fireEvent.click(screen.getByRole("button", { name: "Diff 복사" }));
+    fireEvent.click(screen.getByRole("button", { name: "복사 Diff" }));
 
     expect(writeText).toHaveBeenCalledTimes(1);
     const copied = String(writeText.mock.calls[0]?.[0] ?? "");
@@ -211,10 +211,10 @@ describe("WarpListView delta actions", () => {
     );
 
     fireEvent.keyDown(window, { key: "]", ctrlKey: true, shiftKey: true });
-    expect(screen.getByText(/재시도+비교/)).toBeInTheDocument();
+    expect(screen.getByText(/재시도\+비교/)).toBeInTheDocument();
 
     fireEvent.keyDown(window, { key: "[", ctrlKey: true, shiftKey: true });
-    expect(screen.getByText(/재시도+비교/)).toBeInTheDocument();
+    expect(screen.getByText(/재시도\+비교/)).toBeInTheDocument();
   });
 
   it("Cmd/Ctrl+Alt+Shift+[ ] 단축키는 비교 블록 탐색이 동작하지 않는다", () => {
@@ -277,9 +277,9 @@ describe("WarpListView delta actions", () => {
     );
 
     fireEvent.click(screen.getByText("Δ +1/-1"));
-    expect(screen.getByText(/재시도+비교/)).toBeInTheDocument();
+    expect(screen.getByText(/재시도\+비교/)).toBeInTheDocument();
     fireEvent.pointerDown(document.body);
-    expect(screen.queryByText(/재시도+비교/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/재시도\+비교/)).not.toBeInTheDocument();
   });
 
   it("Δ 팝오버 내부 포인터 다운은 바깥 클릭으로 처리되지 않는다", () => {
@@ -300,9 +300,9 @@ describe("WarpListView delta actions", () => {
     );
 
     fireEvent.click(screen.getByText("Δ +1/-1"));
-    const heading = screen.getByText(/재시도+비교/);
+    const heading = screen.getByText(/재시도\+비교/);
     fireEvent.pointerDown(heading);
-    expect(screen.getByText(/재시도+비교/)).toBeInTheDocument();
+    expect(screen.getByText(/재시도\+비교/)).toBeInTheDocument();
   });
 
   it("Δ 팝오버는 Escape로 닫힘", () => {
@@ -323,9 +323,9 @@ describe("WarpListView delta actions", () => {
     );
 
     fireEvent.click(screen.getByText("Δ +1/-1"));
-    expect(screen.getByText(/재시도+비교/)).toBeInTheDocument();
+    expect(screen.getByText(/재시도\+비교/)).toBeInTheDocument();
     fireEvent.keyDown(window, { key: "Escape" });
-    expect(screen.queryByText(/재시도+비교/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/재시도\+비교/)).not.toBeInTheDocument();
   });
   it("Δ 팝오버에서 Escape는 상위 키 핸들러로 전파되지 않음", () => {
     const onParentEscape = vi.fn();
@@ -353,10 +353,10 @@ describe("WarpListView delta actions", () => {
       );
 
       fireEvent.click(screen.getByText("Δ +1/-1"));
-      expect(screen.getByText(/재시도+비교/)).toBeInTheDocument();
+      expect(screen.getByText(/재시도\+비교/)).toBeInTheDocument();
       window.addEventListener("keydown", onParentKeyDown);
       fireEvent.keyDown(window, { key: "Escape" });
-      expect(screen.queryByText(/재시도+비교/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/재시도\+비교/)).not.toBeInTheDocument();
       expect(onParentEscape).not.toHaveBeenCalled();
     } finally {
       window.removeEventListener("keydown", onParentKeyDown);
@@ -382,7 +382,7 @@ describe("WarpListView delta actions", () => {
 
     const deltaButton = screen.getByRole("button", { name: "Δ +1/-1" });
     fireEvent.click(deltaButton);
-    expect(screen.getByText(/재시도+비교/)).toBeInTheDocument();
+    expect(screen.getByText(/재시도\+비교/)).toBeInTheDocument();
     fireEvent.keyDown(window, { key: "Escape" });
 
     await waitFor(() => {
@@ -2083,7 +2083,7 @@ describe("WarpListView delta actions", () => {
         }}
       />,
     );
-    expect(screen.getByText("실행 중 · wait 1")).toBeInTheDocument();
+    expect(screen.getByText("실행 중 · 대기 1")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Δ Timeline (1)" }));
     fireEvent.click(screen.getByRole("button", { name: "큐 비우기" }));
     expect(onClearRetryCompareQueue).toHaveBeenCalledTimes(1);
@@ -2960,7 +2960,7 @@ describe("WarpListView delta actions", () => {
         }}
       />,
     );
-    expect(screen.getByText("done 5")).toBeInTheDocument();
+    expect(screen.getByText("완료 5")).toBeInTheDocument();
   });
 
   it("재시도+비교 완료 카운트 리셋 액션", () => {
@@ -2982,7 +2982,7 @@ describe("WarpListView delta actions", () => {
         }}
       />,
     );
-    fireEvent.click(screen.getByRole("button", { name: "done 5" }));
+    fireEvent.click(screen.getByRole("button", { name: "완료 5" }));
     expect(onResetRetryCompareCompletedCount).toHaveBeenCalledTimes(1);
   });
 

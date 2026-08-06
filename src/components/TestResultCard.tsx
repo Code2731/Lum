@@ -3,6 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { Play, CheckCircle2, XCircle, Loader2, Clock, RefreshCw, Send, Copy } from "lucide-react";
 import { IconButton } from "@/components/ui/icon-button";
 import { ActionFlowBar } from "@/components/ui/action-flow-bar";
+import { toErrorMessage } from "../utils/errorMessage";
 
 interface TestCommand {
   command: string;
@@ -97,7 +98,7 @@ const TestResultCard: React.FC<Props> = ({ cwd, autoDetect = true, onAskAIForFix
       setResult({
         command: detected?.command ?? "?",
         stdout: "",
-        stderr: String(e).slice(0, 500),
+        stderr: toErrorMessage(e).slice(0, 500),
         exit_code: null,
         duration_ms: 0,
         passed: false,

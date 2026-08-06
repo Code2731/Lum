@@ -42,7 +42,9 @@ const readStoredTheme = (storageKey: string, fallback: Theme): Theme => {
 };
 
 const getSystemTheme = (): "dark" | "light" =>
-  window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  typeof window.matchMedia === "function" && !window.matchMedia("(prefers-color-scheme: dark)").matches
+    ? "light"
+    : "dark";
 
 const ThemeProviderContext = createContext<ThemeProviderState>(initialState);
 
@@ -56,7 +58,9 @@ export function ThemeProvider({
 
   useEffect(() => {
     const root = window.document.documentElement;
-    const media = window.matchMedia("(prefers-color-scheme: dark)");
+    const media = typeof window.matchMedia === "function"
+      ? window.matchMedia("(prefers-color-scheme: dark)")
+      : null;
 
     const applyTheme = (nextTheme: "dark" | "light") => {
       root.classList.remove("light", "dark");
@@ -68,12 +72,12 @@ export function ThemeProvider({
       applyTheme(getSystemTheme());
 
       const onChange = () => applyTheme(getSystemTheme());
-      if (typeof media.addEventListener === "function") {
+      if (typeof media?.addEventListener === "function") {
         media.addEventListener("change", onChange);
         return () => media.removeEventListener("change", onChange);
       }
-      media.addListener?.(onChange);
-      return () => media.removeListener?.(onChange);
+      media?.addListener?.(onChange);
+      return () => media?.removeListener?.(onChange);
     }
 
     applyTheme(theme);

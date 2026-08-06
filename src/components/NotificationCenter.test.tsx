@@ -76,6 +76,10 @@ function setupClipboardWriteMock(): ClipboardState {
   };
 }
 
+function getNotificationCardContaining(text: string): HTMLElement | undefined {
+  return screen.getAllByRole("alert").find((element) => element.textContent?.includes(text));
+}
+
 describe("NotificationCenter", () => {
   const baseProps = {
     notifications: [] as AppNotification[],
@@ -530,8 +534,8 @@ describe("NotificationCenter", () => {
       />,
     );
 
-    expect(screen.getByText("에이전트").className).toContain("bg-cyan-400/[0.1]");
-    expect(screen.getByText("치유").className).toContain("bg-amber-400/[0.1]");
+    expect(screen.getAllByText("에이전트").find((element) => element.tagName === "SPAN")?.className).toContain("bg-cyan-400/[0.1]");
+    expect(screen.getAllByText("치유").find((element) => element.tagName === "SPAN")?.className).toContain("bg-amber-400/[0.1]");
   });
 
   it("알림 카드는 메타 줄에서 흐름과 확인 상태를 함께 보여준다", () => {
@@ -868,7 +872,7 @@ describe("NotificationCenter", () => {
       );
 
       fireEvent.mouseOver(screen.getByText("실패 알림 메시지"));
-      const copyButton = screen.getByRole("button", { name: "알림 텍스트 복사" });
+      const copyButton = screen.getByRole("button", { name: "cmd 알림 복사" });
       fireEvent.click(copyButton);
       expect(clipboardMock.writeText).toHaveBeenCalledWith("cmd\n실패 알림 메시지");
     } finally {
@@ -1044,9 +1048,9 @@ describe("NotificationCenter", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "미확인 알림만 보기" }));
 
-    expect(screen.getByRole("button", { name: /전체 \(2\)/ })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /커맨드 \(1\)/ })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /에이전트 \(1\)/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /전체\(2\)/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /커맨드\(1\)/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /에이전트\(1\)/ })).toBeInTheDocument();
   });
 
   it("타입 필터로 알림 종류만 표시할 수 있다", () => {
@@ -1296,7 +1300,7 @@ describe("NotificationCenter", () => {
     fireEvent.click(commandFilter);
 
     fireEvent.click(screen.getByRole("button", { name: /현재 보기 항목 삭제/ }));
-    expect(onDismissByIds).toHaveBeenCalledWith(["1", "2"]);
+    expect(onDismissByIds).toHaveBeenCalledWith(["2", "1"]);
   });
 
   it("검색어 입력으로 알림 제목/본문을 필터링할 수 있다", () => {
@@ -1340,10 +1344,10 @@ describe("NotificationCenter", () => {
     const searchInput = screen.getByLabelText("알림 검색");
     fireEvent.change(searchInput, { target: { value: "치유" } });
 
-    expect(screen.getByText("치유 제안")).toBeInTheDocument();
-    expect(screen.getByText("치명적 경로에서 복구를 시도")).toBeInTheDocument();
-    expect(screen.queryByText("빌드 실패")).not.toBeInTheDocument();
-    expect(screen.queryByText("에이전트 완료")).not.toBeInTheDocument();
+    expect(getNotificationCardContaining("치유 제안")).toBeInTheDocument();
+    expect(getNotificationCardContaining("치명적 경로에서 복구를 시도")).toBeInTheDocument();
+    expect(getNotificationCardContaining("빌드 실패")).toBeUndefined();
+    expect(getNotificationCardContaining("에이전트 완료")).toBeUndefined();
   });
 
   it("검색어 매칭 개수를 제목/본문으로 분리해 표시한다", () => {
@@ -1445,7 +1449,7 @@ describe("NotificationCenter", () => {
     expect(screen.getAllByText("다음 필터").length).toBeGreaterThan(0);
     expect(screen.getAllByText("마지막 정리").length).toBeGreaterThan(0);
     expect(screen.getByText("현재 결과")).toBeInTheDocument();
-    expect(screen.getByText("검색 반영")).toBeInTheDocument();
+    expect(screen.getByText("전체 흐름")).toBeInTheDocument();
     expect(screen.getByText("먼저 찾고, 다음으로 좁히고, 마지막에 현재 보기를 정리합니다.")).toBeInTheDocument();
   });
 
@@ -1742,8 +1746,8 @@ describe("NotificationCenter", () => {
 
     fireEvent.change(screen.getByLabelText("알림 검색"), { target: { value: "\"빌드 실패\"" } });
 
-    expect(screen.getByText("빌드 실패 알림")).toBeInTheDocument();
-    expect(screen.queryByText("성능 알림")).not.toBeInTheDocument();
+    expect(getNotificationCardContaining("빌드 실패 알림")).toBeInTheDocument();
+    expect(getNotificationCardContaining("성능 알림")).toBeUndefined();
     expect(screen.getByText(/제목:\s*1건,\s*본문:\s*0건/)).toBeInTheDocument();
   });
 
@@ -1843,8 +1847,8 @@ describe("NotificationCenter", () => {
       target: { value: "에러|완료" },
     });
 
-    expect(screen.getByText("빌드 에러 코드 500")).toBeInTheDocument();
-    expect(screen.getByText("알림 처리 완료")).toBeInTheDocument();
+    expect(getNotificationCardContaining("빌드 에러 코드 500")).toBeInTheDocument();
+    expect(getNotificationCardContaining("알림 처리 완료")).toBeInTheDocument();
   });
 
   it("정규식 모드에서 유효하지 않은 패턴이면 오류를 표시한다", () => {
@@ -1913,11 +1917,14 @@ describe("NotificationCenter", () => {
       target: { value: "에러|메시지" },
     });
 
-    const highlights = container.querySelectorAll("mark");
-    expect(highlights).toHaveLength(3);
-    expect(highlights[0]).toHaveTextContent("에러");
-    expect(highlights[1]).toHaveTextContent("에러");
-    expect(highlights[2]).toHaveTextContent("메시지");
+    const highlights = container.querySelectorAll('[role="alert"] mark');
+    expect(highlights).toHaveLength(4);
+    expect(Array.from(highlights).map((highlight) => highlight.textContent)).toEqual([
+      "메시지",
+      "에러",
+      "에러",
+      "메시지",
+    ]);
     expect(screen.getByText("/에러|메시지/")).toBeInTheDocument();
   });
 
@@ -1956,8 +1963,8 @@ describe("NotificationCenter", () => {
       target: { value: "/에러/" },
     });
 
-    expect(screen.getByText("빌드 에러 코드 500")).toBeInTheDocument();
-    expect(screen.queryByText("작업 처리 완료")).not.toBeInTheDocument();
+    expect(getNotificationCardContaining("빌드 에러 코드 500")).toBeInTheDocument();
+    expect(getNotificationCardContaining("작업 처리 완료")).toBeUndefined();
     expect(screen.getByText("/에러/")).toBeInTheDocument();
   });
 
@@ -1996,7 +2003,7 @@ describe("NotificationCenter", () => {
       target: { value: "/에러|메시지/i" },
     });
 
-    expect(screen.getByText("빌드 에러 코드 500")).toBeInTheDocument();
+    expect(getNotificationCardContaining("빌드 에러 코드 500")).toBeInTheDocument();
     expect(screen.getByText("/에러|메시지/i")).toBeInTheDocument();
   });
 
@@ -2649,7 +2656,7 @@ describe("NotificationCenter", () => {
     );
 
     fireEvent.keyDown(screen.getByRole("dialog", { name: "알림 센터" }), { key: "Enter" });
-    expect(screen.getByLabelText("cmd-1 알림 닫기")).toHaveFocus();
+    expect(screen.getByLabelText("agent-2 알림 닫기")).toHaveFocus();
   });
 
   it("현재 표시된 목록의 미확인 항목만 일괄 읽음 처리할 수 있다", () => {
@@ -2773,7 +2780,7 @@ describe("NotificationCenter", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: /현재 보기 항목 삭제/ }));
-    expect(onDismissByIds).toHaveBeenCalledWith(["2", "1"]);
+    expect(onDismissByIds).toHaveBeenCalledWith(["1", "2"]);
   });
 
   it("D 키로 현재 표시된 목록을 일괄 삭제할 수 있다", () => {
@@ -2809,7 +2816,7 @@ describe("NotificationCenter", () => {
     );
 
     fireEvent.keyDown(container.querySelector("[role=\"dialog\"]") as HTMLElement, { key: "d" });
-    expect(onDismissByIds).toHaveBeenCalledWith(["2", "1"]);
+    expect(onDismissByIds).toHaveBeenCalledWith(["1", "2"]);
   });
 
   it("R 키로 현재 보이는 알림 전체를 읽음 처리할 수 있다", () => {
@@ -2878,7 +2885,7 @@ describe("NotificationCenter", () => {
     );
 
     fireEvent.keyDown(screen.getByRole("dialog", { name: "알림 센터" }), { key: "f" });
-    expect(screen.getByRole("button", { name: "전체 보기" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "전체 알림 보기" })).toBeInTheDocument();
     fireEvent.keyDown(screen.getByRole("dialog", { name: "알림 센터" }), { key: "f" });
     expect(screen.getByRole("button", { name: /미확인 알림만 보기/ })).toBeInTheDocument();
   });
@@ -2949,7 +2956,7 @@ describe("NotificationCenter", () => {
       />,
     );
 
-    expect(screen.getByText("에이전트")).toBeInTheDocument();
+    expect(screen.getAllByText("에이전트")).toHaveLength(2);
     expect(screen.getByText("미확인")).toBeInTheDocument();
   });
 

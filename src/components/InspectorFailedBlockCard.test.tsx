@@ -45,7 +45,7 @@ describe("InspectorFailedBlockCard", () => {
   it("실패 블록 정보와 개수를 렌더링한다", () => {
     render(<InspectorFailedBlockCard {...createProps()} />);
 
-    expect(screen.getByText("실패 블록")).toBeInTheDocument();
+    expect(screen.getByText("실패 블록 확인")).toBeInTheDocument();
     expect(screen.getByText("1개")).toBeInTheDocument();
     expect(screen.getByText("npm test")).toBeInTheDocument();
     expect(screen.getByText("실패 1")).toBeInTheDocument();
@@ -109,12 +109,12 @@ describe("InspectorFailedBlockCard", () => {
       />,
     );
 
-    fireEvent.click(screen.getByText("다음 실패"));
-    fireEvent.click(screen.getByText("AI 분석"));
-    fireEvent.click(screen.getByText("로그 복사"));
-    fireEvent.click(screen.getByText("프롬프트 복사"));
-    fireEvent.click(screen.getByText("프롬프트 불러오기"));
-    fireEvent.click(screen.getByText("선택"));
+    fireEvent.click(screen.getByText("다음 실패 확인"));
+    fireEvent.click(screen.getByText("실패 분석 열기"));
+    fireEvent.click(screen.getByText("실패 로그 복사"));
+    fireEvent.click(screen.getByText("분석 프롬프트 복사"));
+    fireEvent.click(screen.getByText("분석 입력 불러오기"));
+    fireEvent.click(screen.getByText("블록 선택"));
 
     expect(onFocusFailedBlock).toHaveBeenCalledTimes(1);
     expect(onAnalyzeFailedBlock).toHaveBeenCalledWith("fail-1");

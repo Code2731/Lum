@@ -2657,7 +2657,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
             disabled={!voiceEnabled || voiceBusy}
             onMouseEnter={() => setMicHovered(true)}
             onMouseLeave={() => setMicHovered(false)}
-            aria-label={`${micActionLabel} · ${micAssistLabel}`}
+            aria-label={micActionLabel}
             aria-pressed={voiceEnabled ? isRecording : undefined}
             title={`${micActionLabel} · ${micAssistLabel}`}
             style={{

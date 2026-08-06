@@ -58,7 +58,8 @@ describe("HealingPanel", () => {
   it("초기 상태에서 자동 복구 흐름 안내를 보여준다", () => {
     render(
       <HealingPanel
-        errorSnippet="failed to execute\nline2"
+        errorSnippet={`failed to execute
+line2`}
         result={null}
         isAnalyzing={false}
         onAnalyze={vi.fn()}
@@ -81,9 +82,11 @@ describe("HealingPanel", () => {
   it("오류 스니펫을 클립보드에 복사할 수 있다", () => {
     const clipboardMock = setupClipboardWriteMock();
 
+    const snippet = ["failed to execute", "line2"].join("\n");
+
     render(
       <HealingPanel
-        errorSnippet="failed to execute\nline2"
+        errorSnippet={snippet}
         result={null}
         isAnalyzing={false}
         onAnalyze={vi.fn()}
@@ -96,10 +99,10 @@ describe("HealingPanel", () => {
     fireEvent.click(copyButton);
 
     if (clipboardMock.restore) {
-      expect(clipboardMock.restore).toHaveBeenCalledWith("failed to execute\nline2");
+      expect(clipboardMock.restore).toHaveBeenCalledWith(snippet);
       clipboardMock.restore.mockRestore();
     } else {
-      expect(clipboardMock.writeText).toHaveBeenCalledWith("failed to execute\nline2");
+      expect(clipboardMock.writeText).toHaveBeenCalledWith(snippet);
     }
   });
 });

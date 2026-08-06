@@ -27,10 +27,10 @@ describe("EditBlockCard", () => {
 
     render(<EditBlockCard block={block} cwd="/tmp" onOpenXllmPanel={onOpenXllmPanel} />);
     expect(screen.getByText("1개 편집 블록 감지")).toBeInTheDocument();
-    expect(screen.getByText("src/main.ts")).toBeInTheDocument();
+    expect(screen.getAllByText("src/main.ts").length).toBeGreaterThan(0);
     expect(screen.getByText("마지막 테스트·복구")).toBeInTheDocument();
     expect(screen.getByText(/첫 번째 변경안을 바로 검토할 수 있습니다/)).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "적용" }));
+    fireEvent.click(screen.getByRole("button", { name: "파일에 변경 적용" }));
 
     expect(await screen.findByText("오류 확인")).toBeInTheDocument();
     expect(screen.getByText("설정 점검")).toBeInTheDocument();
@@ -55,7 +55,7 @@ describe("EditBlockCard", () => {
     invokeMock.mockRejectedValueOnce({ message: "MCP 응답 타임아웃 (3000 ms)" });
     render(<EditBlockCard block={block} cwd="/tmp" />);
 
-    fireEvent.click(screen.getByRole("button", { name: "적용" }));
+    fireEvent.click(screen.getByRole("button", { name: "파일에 변경 적용" }));
     await screen.findByLabelText("오류 텍스트 복사");
     fireEvent.click(screen.getByLabelText("오류 텍스트 복사"));
 
@@ -70,7 +70,7 @@ describe("EditBlockCard", () => {
     invokeMock.mockRejectedValueOnce({ message: "임베디드 모델이 로드되지 않았습니다" });
 
     render(<EditBlockCard block={block} cwd="/tmp" />);
-    fireEvent.click(screen.getByRole("button", { name: "적용" }));
+    fireEvent.click(screen.getByRole("button", { name: "파일에 변경 적용" }));
 
     fireEvent.click(await screen.findByRole("button", { name: "다시 적용" }));
     expect(invokeMock).toHaveBeenCalledTimes(2);

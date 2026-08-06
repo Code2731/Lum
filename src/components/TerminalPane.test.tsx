@@ -2750,13 +2750,13 @@ describe("TerminalPane — 입력 라우팅", () => {
 
       const { container } = render(<TerminalPane id="tab-1" />);
       const input = container.querySelector("input")!;
-      fireEvent.change(input, { target: { value: "#로그 요약해줘" } });
-      fireEvent.keyDown(input, { key: "Enter" });
+      fireEvent.change(input, { target: { value: "# 로그 요약해줘" } });
+      await new Promise((resolve) => setTimeout(resolve, 650));
 
       expect(await screen.findByText("⚠ AI")).toBeInTheDocument();
       expect(screen.getByText("Error: AI 추천 생성 실패")).toBeInTheDocument();
 
-      const copyButton = screen.getByRole("button", { name: "오류 텍스트 복사" });
+      const copyButton = screen.getByTitle("오류 텍스트 복사");
       fireEvent.click(copyButton);
       expect(clipboardMock.writeText).toHaveBeenCalledWith("Error: AI 추천 생성 실패");
     } finally {

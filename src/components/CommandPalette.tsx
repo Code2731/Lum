@@ -10,7 +10,6 @@ import {
 } from "@/components/ui/command";
 import { WorkspaceCardBadges } from "@/components/ui/workspace-card-badges";
 import { WorkspaceCardMeta } from "@/components/ui/workspace-card-meta";
-import { RecommendationCardAction } from "@/components/ui/recommendation-card-action";
 import { RecommendationCard } from "@/components/ui/recommendation-card";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { ActionFlowBar } from "@/components/ui/action-flow-bar";
@@ -279,13 +278,13 @@ const CommandPalette: React.FC<Props> = ({
                     </>
                   )}
                   action={(
-                    <RecommendationCardAction compact>
+                    <span className="shrink-0 rounded-lg bg-accent/18 px-2.5 py-1.5 text-[10px] font-medium text-accent">
                       {ws.id === latestRestoredWorkspaceId
                         ? "최근 이어서"
                         : ws.id === mostRestoredWorkspaceId && (workspaceRestoreMeta[ws.id]?.restoreCount ?? 0) > 1
                           ? "자주 복귀"
                           : "바로 복귀"}
-                    </RecommendationCardAction>
+                    </span>
                   )}
                   actionAlign="center"
                   surfaceTone="cyan"
@@ -390,11 +389,7 @@ const CommandPalette: React.FC<Props> = ({
                       />
                     </>
                   )}
-                  action={(
-                    <RecommendationCardAction compact>
-                      보관 열기
-                    </RecommendationCardAction>
-                  )}
+                  action={<span className="shrink-0 rounded-lg bg-accent/18 px-2.5 py-1.5 text-[10px] font-medium text-accent">보관 열기</span>}
                   actionAlign="center"
                   surfaceTone="neutral"
                   density="compact"

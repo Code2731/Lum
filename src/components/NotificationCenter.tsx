@@ -646,10 +646,18 @@ const NotificationCenter: React.FC<Props> = ({
     const afterTypeFilter = typeFilter === "all"
       ? afterUnreadFilter
       : afterUnreadFilter.filter((n) => n.type === typeFilter);
+    const prioritizeRecovery = (items: AppNotification[]) => {
+      if (!highlightRecovery) return items;
+      return [...items].sort((left, right) => {
+        const leftHealingScore = left.type === "healing" ? (left.read ? 1 : 2) : 0;
+        const rightHealingScore = right.type === "healing" ? (right.read ? 1 : 2) : 0;
+        return rightHealingScore - leftHealingScore;
+      });
+    };
 
     if (!hasSearchQuery) {
       return {
-        displayedNotifications: afterTypeFilter,
+        displayedNotifications: prioritizeRecovery(afterTypeFilter),
         matchedTitleCount: 0,
         matchedBodyCount: 0,
       };
@@ -715,25 +723,8 @@ const NotificationCenter: React.FC<Props> = ({
       })
       .map((item) => item.notification);
 
-    if (!highlightRecovery) {
-      return {
-        displayedNotifications: matched,
-        matchedTitleCount: titleMatchCount,
-        matchedBodyCount: bodyMatchCount,
-      };
-    }
-
-    const recoveryPrioritized = [...matched].sort((left, right) => {
-      const leftHealingScore = left.type === "healing" ? (left.read ? 1 : 2) : 0;
-      const rightHealingScore = right.type === "healing" ? (right.read ? 1 : 2) : 0;
-      if (rightHealingScore !== leftHealingScore) {
-        return rightHealingScore - leftHealingScore;
-      }
-      return 0;
-    });
-
     return {
-      displayedNotifications: recoveryPrioritized,
+      displayedNotifications: prioritizeRecovery(matched),
       matchedTitleCount: titleMatchCount,
       matchedBodyCount: bodyMatchCount,
     };
@@ -1263,8 +1254,9 @@ const NotificationCenter: React.FC<Props> = ({
               </span>
             )}
             {searchMode === "regex" && regexSearchError && (
-              <span className="text-[10px] text-rose-300/90">
-                정규식이 유효하지 않습니다.
+              <span className="inline-flex items-center gap-1 text-[10px] text-rose-300/90">
+                <span>정규식이 유효하지 않습니다.</span>
+                <span className="text-rose-200/75">{regexSearchError}</span>
               </span>
             )}
             {searchMode === "token" && hasUnclosedQuote && (

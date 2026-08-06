@@ -22,7 +22,7 @@ describe("advanced-recommendation-card", () => {
         "amber",
       ),
     ).toEqual({
-      description: "설명이 조금 길어서 보조 카드에서는 잘…",
+      description: "설명이 조금 길어서 보조 카드에서는 잘린 형태로…",
       helper: "다음 후보로 빠르게 살펴볼 수 있습니다. 설명이 조금 길어서 보조 카드에서는 잘린 형태로 보일 수 있습니다.",
       priorityTone: "neutral",
       className: "bg-white/[0.04]",

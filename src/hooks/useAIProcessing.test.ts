@@ -114,9 +114,15 @@ describe("useAIProcessing — JSON 응답 파싱", () => {
     });
 
     const { result } = renderHook(() => useAIProcessing());
-    const pending = result.current.processAICommand("p", "m", "c");
+    let pending: Promise<unknown>;
+    act(() => {
+      pending = result.current.processAICommand("p", "m", "c");
+    });
     expect(result.current.phase).toBe("generating");
-    const parsed = await pending;
+    let parsed: unknown;
+    await act(async () => {
+      parsed = await pending;
+    });
     expect(parsed).toEqual({ action: "run", command: "npm test" });
     expect(result.current.phase).toBe("idle");
   });
@@ -146,10 +152,15 @@ describe("useAIProcessing — JSON 응답 파싱", () => {
     });
 
     const { result } = renderHook(() => useAIProcessing());
-    const pending = result.current.verifyVisionGoal("goal", "img", "model", 1);
+    let pending: Promise<unknown>;
+    act(() => {
+      pending = result.current.verifyVisionGoal("goal", "img", "model", 1);
+    });
     expect(result.current.phase).toBe("verifying");
-    (releaseVerify as (() => void) | null)?.();
-    await expect(pending).resolves.toEqual({ achieved: true, reason: "ok", nextActions: [] });
+    await act(async () => {
+      (releaseVerify as (() => void) | null)?.();
+      await expect(pending).resolves.toEqual({ achieved: true, reason: "ok", nextActions: [] });
+    });
     expect(result.current.phase).toBe("idle");
   });
 });

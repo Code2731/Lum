@@ -53,6 +53,9 @@ vi.mock("@/components/ui/dialog", () => ({
   DialogTitle: ({ children, className }: { children: React.ReactNode; className?: string }) => (
     <div className={className}>{children}</div>
   ),
+  DialogDescription: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+    <div className={className}>{children}</div>
+  ),
 }));
 
 describe("Command UI primitives", () => {

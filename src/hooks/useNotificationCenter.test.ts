@@ -113,7 +113,7 @@ describe("useNotificationCenter helpers", () => {
       );
 
       expect(next[0]).toEqual({
-        id: "notif-2",
+        id: "00000000-0000-4000-8000-000000000002",
         type: "healing",
         title: "복구 제안",
         body: "권한 수정 제안",

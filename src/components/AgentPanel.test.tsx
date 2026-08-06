@@ -117,8 +117,8 @@ describe("AgentPanel", () => {
     expect(screen.getByText("현재 결과")).toBeInTheDocument();
     expect(screen.getByText("다음 기록 확인")).toBeInTheDocument();
     expect(
-      screen.getByText("오류를 복사해 공유하거나, 아래에서 어디까지 실행됐는지 확인한 뒤 같은 작업을 다시 정리할 수 있습니다."),
-    ).toBeInTheDocument();
+      screen.getAllByText("오류를 복사해 공유하거나, 아래에서 어디까지 실행됐는지 확인한 뒤 같은 작업을 다시 정리할 수 있습니다.").length,
+    ).toBeGreaterThan(0);
 
     const copyButton = screen.getByRole("button", { name: "오류 텍스트 복사" });
     fireEvent.click(copyButton);

@@ -20,6 +20,7 @@ export const ActionHintButton: React.FC<{
     <button
       type="button"
       onClick={onClick}
+      aria-label={label}
       title={buttonTitle}
       className={
         tone === "primary"
@@ -72,7 +73,7 @@ export const ActionHintGroup: React.FC<{
     <div className="flex flex-wrap gap-1.5" role="group" aria-label="실행 가능한 작업">
       {items.map((item, index) => (
         <ActionHintButton
-          key={item.label}
+          key={`${item.label}-${index}`}
           label={item.label}
           onClick={item.onClick}
           tone={item.tone ?? (index === 0 ? "primary" : "secondary")}
@@ -81,8 +82,8 @@ export const ActionHintGroup: React.FC<{
       ))}
     </div>
     <div className="mt-2 space-y-1" role="list" aria-label="작업 이유">
-      {items.map((item) => (
-        <div role="listitem">
+      {items.map((item, index) => (
+        <div key={`${item.label}-${index}`} role="listitem">
           <ActionReasonText label={getActionReasonLabel(item.label)}>{item.reason}</ActionReasonText>
         </div>
       ))}

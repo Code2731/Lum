@@ -183,7 +183,7 @@ describe("CommandInput Component", () => {
       cb?.({ payload: "npm test" });
     });
     expect(input).toHaveValue("npm test");
-    expect(screen.getByText("음성 입력 반영됨")).toBeInTheDocument();
+    expect(screen.getAllByText("음성 반영 완료 · npm test").length).toBeGreaterThan(0);
   });
 
   it("unmount 이후 voice_transcript 이벤트는 무시되어야 함", async () => {
@@ -213,7 +213,7 @@ describe("CommandInput Component", () => {
       const cb = voiceStateListeners[voiceStateListeners.length - 1];
       cb?.({ payload: true });
     });
-    expect(screen.getByLabelText("음성 녹음 중지")).toHaveClass("active");
+    expect(screen.getByLabelText("음성 녹음 중지")).toHaveAttribute("aria-pressed", "true");
   });
 
   it("마이크 시작 실패 시 사용자 친화 오류를 표시해야 함", async () => {
@@ -229,12 +229,12 @@ describe("CommandInput Component", () => {
       fireEvent.click(micButton);
     });
     expect(await screen.findByRole("alert")).toHaveTextContent("마이크 권한이 거부되었습니다.");
-    expect(micButton).not.toHaveClass("active");
+    expect(micButton).toHaveAttribute("aria-pressed", "false");
 
-    const copyButton = screen.getByRole("button", { name: "오류 텍스트 복사" });
+    const copyButton = screen.getByTitle("복사");
     fireEvent.click(copyButton);
     expect(clipboardMock.writeText).toHaveBeenCalledWith(
-      "음성 입력 오류: 마이크 권한이 거부되었습니다. 시스템 설정에서 권한을 허용해 주세요.",
+      "음성 오류: 마이크 권한이 거부되었습니다. 시스템 설정에서 권한을 허용해 주세요.",
     );
 
     clipboardMock.restore();
@@ -253,7 +253,7 @@ describe("CommandInput Component", () => {
     });
 
     expect(await screen.findByRole("alert")).toHaveTextContent("마이크 권한이 거부되었습니다.");
-    fireEvent.click(screen.getByRole("button", { name: "음성 입력 오류 닫기" }));
+    fireEvent.click(screen.getByTitle("닫기"));
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
@@ -279,10 +279,10 @@ describe("CommandInput Component", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("마이크 권한이 거부되었습니다.");
 
     await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: "음성 입력 다시 시도" }));
+      fireEvent.click(screen.getByTitle("다시 시도"));
     });
 
-    expect(screen.getByLabelText("음성 녹음 중지")).toHaveClass("active");
+    expect(screen.getByLabelText("음성 녹음 중지")).toHaveAttribute("aria-pressed", "true");
     const startCalls = invokeMock.mock.calls.filter(([cmd]) => cmd === "start_voice_recording");
     expect(startCalls).toHaveLength(2);
   });

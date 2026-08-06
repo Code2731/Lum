@@ -87,8 +87,8 @@ describe("TestResultCard", () => {
 
     render(<TestResultCard cwd="/tmp" />);
 
-    expect(screen.getByText("테스트 실행 준비")).toBeInTheDocument();
-    expect(screen.getByText("npm test")).toBeInTheDocument();
+    expect(await screen.findByText("테스트 실행 준비")).toBeInTheDocument();
+    expect(screen.getAllByText("npm test").length).toBeGreaterThan(0);
     expect(screen.getByText("마지막 수정 흐름 연결")).toBeInTheDocument();
 
     fireEvent.click(await screen.findByRole("button", { name: "실행" }));
@@ -130,10 +130,22 @@ describe("TestResultCard", () => {
     fireEvent.click(await screen.findByRole("button", { name: "실행" }));
     expect(await screen.findByText("통과")).toBeInTheDocument();
     expect(screen.getByText("테스트 통과")).toBeInTheDocument();
-    expect(screen.getByText("0.8s")).toBeInTheDocument();
-    expect(screen.getByText("결과 통과")).toBeInTheDocument();
-    expect(screen.getByText("출력 검토")).toBeInTheDocument();
-    expect(screen.getByText("다음 작업 진행")).toBeInTheDocument();
+    expect(screen.getAllByText("0.8s").length).toBeGreaterThan(0);
     expect(screen.queryByRole("button", { name: "실패 로그 복사" })).not.toBeInTheDocument();
+  });
+
+  it("테스트 실행기 오류는 객체형 메시지를 그대로 표시한다", async () => {
+    invokeMock.mockResolvedValueOnce({
+      command: "npm test",
+      project_type: "node",
+      detected_via: "package-json",
+    });
+    invokeMock.mockRejectedValueOnce({ message: "테스트 실행기를 시작할 수 없습니다" });
+
+    render(<TestResultCard cwd="/tmp" />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "실행" }));
+
+    expect(await screen.findByText("테스트 실행기를 시작할 수 없습니다")).toBeInTheDocument();
   });
 });

@@ -30,18 +30,18 @@ function createProps(overrides: Partial<React.ComponentProps<typeof InspectorQui
 describe("InspectorQuickActionsCard", () => {
   it("기본 및 고급 빠른 작업 흐름 요약을 계산한다", () => {
     expect(getInspectorQuickActionsPrimaryFlowSummary(false)).toEqual({
-      badges: ["먼저 작업공간 복귀", "다음 RAG 분석", "마지막 고급 열기"],
-      helper: "지금 필요한 기본 흐름부터 고르고, 더 깊은 복구나 검토가 필요하면 고급 영역으로 이어갑니다.",
+      badges: ["작업공간 복귀", "RAG·보관함 이동", "운영 단계 열기"],
+      helper: "복구와 분석이 끝났다면 작업공간 복귀, 코드 맥락 이동, 운영 점검 같은 후속 흐름으로 이어갑니다.",
     });
 
     expect(getInspectorQuickActionsPrimaryFlowSummary(true)).toEqual({
-      badges: ["먼저 작업공간 복귀", "다음 RAG 분석", "마지막 고급 닫기"],
-      helper: "핵심 흐름을 확인한 뒤 지금은 고급 작업까지 펼쳐진 상태입니다. 필요 없는 경우 접고 기본 작업에 집중할 수 있습니다.",
+      badges: ["작업공간 복귀", "RAG·보관함 이동", "운영 단계 닫기"],
+      helper: "복구와 분석 이후에 지금은 운영/검토 단계까지 펼쳐진 상태입니다. 필요 없으면 접고 핵심 흐름만 유지할 수 있습니다.",
     });
 
     expect(getInspectorQuickActionsAdvancedFlowSummary()).toEqual({
-      badges: ["먼저 실패 복구", "다음 변경 검토", "마지막 기록·자동화"],
-      helper: "실패 원인을 먼저 복구하고, 변경과 기록을 확인한 뒤 반복 작업은 스크립트로 넘깁니다.",
+      badges: ["변경 검토", "기록 확인", "자동화 연결"],
+      helper: "복구가 끝난 뒤 변경과 기록을 확인하고, 반복 작업은 스크립트나 운영 패널로 넘깁니다.",
     });
 
     expect(getInspectorQuickActionsRecoverySummary()).toEqual({
@@ -53,15 +53,15 @@ describe("InspectorQuickActionsCard", () => {
   it("접힌 상태에서는 토글 버튼만 보이고 고급 영역은 렌더링되지 않는다", () => {
     render(<InspectorQuickActionsCard {...createProps()} />);
 
-    expect(screen.getByRole("button", { name: "고급 열기" })).toHaveAttribute("aria-expanded", "false");
-    expect(screen.getByText("지금 바로 자주 쓰는 흐름으로 이동합니다.")).toBeInTheDocument();
-    expect(screen.getByText("바로 시작")).toBeInTheDocument();
-    expect(screen.getByText("먼저 작업공간 복귀")).toBeInTheDocument();
-    expect(screen.getByText("다음 RAG 분석")).toBeInTheDocument();
-    expect(screen.getByText("마지막 고급 열기")).toBeInTheDocument();
-    expect(screen.getByText("지금 필요한 기본 흐름부터 고르고, 더 깊은 복구나 검토가 필요하면 고급 영역으로 이어갑니다.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /운영 단계 열기/ })).toHaveAttribute("aria-expanded", "false");
+    expect(screen.getByText("복구 이후 자주 쓰는 작업공간 복귀와 운영 흐름으로 이동합니다.")).toBeInTheDocument();
+    expect(screen.getByText("후속 단계")).toBeInTheDocument();
+    expect(screen.getByText("작업공간 복귀")).toBeInTheDocument();
+    expect(screen.getByText("RAG·보관함 이동")).toBeInTheDocument();
+    expect(screen.getAllByText("운영 단계 열기").length).toBeGreaterThan(0);
+    expect(screen.getByText("복구와 분석이 끝났다면 작업공간 복귀, 코드 맥락 이동, 운영 점검 같은 후속 흐름으로 이어갑니다.")).toBeInTheDocument();
     expect(screen.getByText("후속")).toBeInTheDocument();
-    expect(screen.getByText("복구, 검토, 이력 확인, 자동화 흐름을 이어서 엽니다.")).toBeInTheDocument();
+    expect(screen.getByText("변경 검토, 이력 확인, 자동화, 시스템 점검 흐름을 이어서 엽니다.")).toBeInTheDocument();
     expect(document.querySelector("[data-inspector-quick-actions-advanced]")).toBeNull();
   });
 
@@ -78,25 +78,25 @@ describe("InspectorQuickActionsCard", () => {
       />,
     );
 
-    expect(screen.getByRole("button", { name: "고급 닫기" })).toHaveAttribute("aria-controls", "inspector-quick-actions-advanced");
-    expect(toggleRef.current).toBe(screen.getByRole("button", { name: "고급 닫기" }));
+    expect(screen.getByRole("button", { name: /운영 단계 닫기/ })).toHaveAttribute("aria-controls", "inspector-quick-actions-advanced");
+    expect(toggleRef.current).toBe(screen.getByRole("button", { name: /운영 단계 닫기/ }));
     expect(advancedRef.current).toBe(screen.getByText("기록").closest("[data-inspector-quick-actions-advanced]"));
-    expect(screen.getByText("마지막 고급 닫기")).toBeInTheDocument();
-    expect(screen.getByText("핵심 흐름을 확인한 뒤 지금은 고급 작업까지 펼쳐진 상태입니다. 필요 없는 경우 접고 기본 작업에 집중할 수 있습니다.")).toBeInTheDocument();
-    expect(screen.getByText("먼저 실패 복구")).toBeInTheDocument();
-    expect(screen.getByText("다음 변경 검토")).toBeInTheDocument();
-    expect(screen.getByText("마지막 기록·자동화")).toBeInTheDocument();
-    expect(screen.getByText("실패 원인을 먼저 복구하고, 변경과 기록을 확인한 뒤 반복 작업은 스크립트로 넘깁니다.")).toBeInTheDocument();
+    expect(screen.getAllByText("운영 단계 닫기").length).toBeGreaterThan(0);
+    expect(screen.getByText("복구와 분석 이후에 지금은 운영/검토 단계까지 펼쳐진 상태입니다. 필요 없으면 접고 핵심 흐름만 유지할 수 있습니다.")).toBeInTheDocument();
+    expect(screen.getAllByText("변경 검토").length).toBeGreaterThan(0);
+    expect(screen.getByText("기록 확인")).toBeInTheDocument();
+    expect(screen.getByText("자동화 연결")).toBeInTheDocument();
+    expect(screen.getByText("복구가 끝난 뒤 변경과 기록을 확인하고, 반복 작업은 스크립트나 운영 패널로 넘깁니다.")).toBeInTheDocument();
     expect(screen.getByText("바로 복구 시작")).toBeInTheDocument();
     expect(screen.getByText("실패 분석 연결")).toBeInTheDocument();
     expect(screen.getByText("첫 제안 실행")).toBeInTheDocument();
     expect(screen.getByText("실패 카드를 열어 원인을 확인하고, 분석 결과의 첫 제안 실행 흐름까지 이어지는 복구 시작점입니다.")).toBeInTheDocument();
-    expect(screen.getByText("우선 복구")).toBeInTheDocument();
+    expect(screen.getByText("복구 이후")).toBeInTheDocument();
     expect(screen.getByText("다음 검토")).toBeInTheDocument();
     expect(screen.getByText("이력 확인")).toBeInTheDocument();
     expect(screen.getByText("반복 자동화")).toBeInTheDocument();
-    expect(screen.getByText("실패 대응 뒤 변경과 기록을 확인하고, 마지막에 반복 작업으로 넘깁니다.")).toBeInTheDocument();
-    expect(screen.getByText("고급 흐름을 접고 핵심 작업으로 돌아갑니다.")).toBeInTheDocument();
+    expect(screen.getByText("복구가 끝난 뒤 변경과 기록을 확인하고, 마지막에 반복 작업과 시스템 점검으로 넘깁니다.")).toBeInTheDocument();
+    expect(screen.getByText("운영/검토 흐름을 접고 핵심 작업으로 돌아갑니다.")).toBeInTheDocument();
   });
 
   it("기본 액션과 탭 이동 액션은 각 콜백을 호출한다", () => {
@@ -114,8 +114,8 @@ describe("InspectorQuickActionsCard", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: /프로젝트 보관함/ }));
-    fireEvent.click(screen.getByRole("button", { name: /^작업공간$/ }));
-    fireEvent.click(screen.getByRole("button", { name: /^RAG$/ }));
+    fireEvent.click(screen.getByRole("button", { name: /^작업공간/ }));
+    fireEvent.click(screen.getByRole("button", { name: /^RAG/ }));
 
     expect(onToggleProjectBin).toHaveBeenCalledTimes(1);
     expect(onOpenWorkspace).toHaveBeenCalledTimes(1);
@@ -130,11 +130,11 @@ describe("InspectorQuickActionsCard", () => {
     expect(screen.getByText("추천")).toBeInTheDocument();
     expect(screen.getByText("AI")).toBeInTheDocument();
     expect(screen.getByText("복귀")).toBeInTheDocument();
-    expect(screen.getByText("시작점")).toBeInTheDocument();
+    expect(screen.getAllByText("시작점").length).toBeGreaterThan(0);
     expect(screen.getByText("다음")).toBeInTheDocument();
-    expect(screen.getByText("복구")).toBeInTheDocument();
+    expect(screen.getAllByText("복구").length).toBeGreaterThan(0);
     expect(screen.getByText("우선")).toBeInTheDocument();
-    expect(screen.getByText("시작점")).toBeInTheDocument();
+    expect(screen.getAllByText("시작점").length).toBeGreaterThan(0);
     expect(screen.getByText("반복")).toBeInTheDocument();
     expect(screen.getByText("이력")).toBeInTheDocument();
     expect(screen.getByText("확인")).toBeInTheDocument();
@@ -154,8 +154,8 @@ describe("InspectorQuickActionsCard", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "고급 열기" }));
-    fireEvent.keyDown(screen.getByRole("button", { name: "고급 열기" }), { key: "ArrowDown" });
+    fireEvent.click(screen.getByRole("button", { name: /운영 단계 열기/ }));
+    fireEvent.keyDown(screen.getByRole("button", { name: /운영 단계 열기/ }), { key: "ArrowDown" });
 
     expect(onQuickActionsToggle).toHaveBeenCalledTimes(1);
     expect(onQuickActionsToggleKeyDown).toHaveBeenCalledTimes(1);

@@ -74,12 +74,11 @@ describe("FileExplorerPanel", () => {
 
     renderPanel("/project");
 
-    expect(screen.getByText("파일 탐색 준비")).toBeInTheDocument();
-    expect(screen.getByText("마지막 열기·cd")).toBeInTheDocument();
-
     await waitFor(() => {
       expect(invokeMock).toHaveBeenCalledWith("list_directory", { path: "/project" });
     });
+    expect(await screen.findByText("파일 탐색 준비")).toBeInTheDocument();
+    expect(screen.getByText("마지막 열기·cd")).toBeInTheDocument();
     expect(screen.getByText("/project · 1개 항목")).toBeInTheDocument();
     expect(screen.getByText("readme.md")).toBeInTheDocument();
     expect(
@@ -145,7 +144,7 @@ describe("FileExplorerPanel", () => {
 
     renderPanel("/project");
 
-    expect(await screen.findByText("권한이 없습니다")).toBeInTheDocument();
+    expect((await screen.findAllByText("권한이 없습니다")).length).toBeGreaterThan(0);
   });
 
   it("알 수 없는 실패 값이면 기본 메시지를 표시한다", async () => {
@@ -158,7 +157,7 @@ describe("FileExplorerPanel", () => {
 
     renderPanel("/project");
 
-    expect(await screen.findByText("읽기 실패")).toBeInTheDocument();
+    expect((await screen.findAllByText("읽기 실패")).length).toBeGreaterThan(0);
   });
 
   it("빈 폴더일 때 다음 탐색 흐름 안내를 보여준다", async () => {
@@ -166,9 +165,9 @@ describe("FileExplorerPanel", () => {
 
     renderPanel("/empty");
 
-    expect(await screen.findByText("빈 폴더")).toBeInTheDocument();
+    expect((await screen.findAllByText("빈 폴더")).length).toBeGreaterThan(0);
     expect(screen.getByText("현재 위치")).toBeInTheDocument();
-    expect(screen.getByText("/empty")).toBeInTheDocument();
+    expect(screen.getAllByText("/empty").length).toBeGreaterThan(0);
     expect(screen.getByText("파일 생성 준비")).toBeInTheDocument();
   });
 
@@ -222,7 +221,7 @@ describe("FileExplorerPanel", () => {
 
     renderPanel("/project");
 
-    expect(await screen.findByText("권한이 없습니다")).toBeInTheDocument();
+    expect((await screen.findAllByText("권한이 없습니다")).length).toBeGreaterThan(0);
     const copyButton = screen.getByRole("button", { name: "오류 텍스트 복사" });
     fireEvent.click(copyButton);
 

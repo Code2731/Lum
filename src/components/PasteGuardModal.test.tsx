@@ -11,7 +11,7 @@ describe("PasteGuardModal", () => {
         pattern: "rm -rf /important/path",
       }),
     ).toEqual({
-      badges: ["단일 명령 감지", "위험 명령 포함", "마지막 실행 여부 재확인"],
+      badges: ["단일 명령 감지", "rm -rf /important/path", "마지막 실행 여부 재확인"],
       helper: "첫 명령 하나만 바로 실행 후보로 사용할 수 있습니다. 탐지된 이유를 읽고 정말 실행할지 한 번 더 확인합니다.",
     });
   });
@@ -30,7 +30,7 @@ describe("PasteGuardModal", () => {
     );
 
     expect(screen.getByText("단일 명령 감지")).toBeInTheDocument();
-    expect(screen.getByText("rm -rf /important/path")).toBeInTheDocument();
+    expect(screen.getAllByText("rm -rf /important/path").length).toBeGreaterThan(0);
     expect(screen.getByText("마지막 실행 여부 재확인")).toBeInTheDocument();
     expect(
       screen.getByText(/첫 명령 하나만 바로 실행 후보로 사용할 수 있습니다\./),

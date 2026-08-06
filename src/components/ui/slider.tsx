@@ -39,7 +39,10 @@ const Slider = React.forwardRef<
       <SliderPrimitive.Track className="relative h-1 w-full grow overflow-hidden rounded-full bg-white/10">
         <SliderPrimitive.Range className="absolute h-full bg-accent" />
       </SliderPrimitive.Track>
-      <SliderPrimitive.Thumb className="block h-3 w-3 cursor-pointer rounded-full border border-accent bg-[#0d1117] shadow transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent disabled:pointer-events-none disabled:opacity-50" />
+      <SliderPrimitive.Thumb
+        aria-label={props["aria-label"]}
+        className="block h-3 w-3 cursor-pointer rounded-full border border-accent bg-[#0d1117] shadow transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent disabled:pointer-events-none disabled:opacity-50"
+      />
     </SliderPrimitive.Root>
   );
 });

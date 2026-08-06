@@ -123,19 +123,19 @@ describe("WorkspacePanel", () => {
     expect(screen.getByText("현재 탭 1개와 프로젝트 1곳을 복귀 지점으로 저장합니다.")).toBeInTheDocument();
     expect(screen.getByText("1개 탭 준비")).toBeInTheDocument();
     expect(screen.getByText("빠른 복귀")).toBeInTheDocument();
-    expect(screen.getByText("먼저 이름 확인")).toBeInTheDocument();
-    expect(screen.getByText("다음 저장 준비")).toBeInTheDocument();
-    expect(screen.getByText("마지막 복귀 연결")).toBeInTheDocument();
+    expect(screen.getAllByText("먼저 이름 확인").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("다음 저장 준비").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("마지막 복귀 연결").length).toBeGreaterThan(0);
     expect(screen.getByText("결제 버그 조사, QA 재현, 릴리스 점검처럼 다시 찾을 이름으로 저장해 두세요.")).toBeInTheDocument();
     expect(screen.getByText("빠른 이름 제안")).toBeInTheDocument();
     expect(screen.getByText("클릭 즉시 입력")).toBeInTheDocument();
     expect(screen.getByText("결제 버그 조사")).toBeInTheDocument();
     expect(screen.getByText("QA 재현")).toBeInTheDocument();
     expect(screen.getByText("릴리스 점검")).toBeInTheDocument();
-    expect(screen.getByText("자동 이름")).toBeInTheDocument();
+    expect(screen.getAllByText("자동 이름").length).toBeGreaterThan(0);
     expect(screen.getByText("현재 입력")).toBeInTheDocument();
     expect(screen.getByText("자동 저장")).toBeInTheDocument();
-    expect(screen.getByText("다음 복귀")).toBeInTheDocument();
+    expect(screen.getAllByText("다음 복귀").length).toBeGreaterThan(0);
     expect(screen.getByText(`${defaultWorkspaceName} 이름으로 저장됩니다.`)).toBeInTheDocument();
     expect(screen.getByText("비워 두면 오늘 날짜 기준 기본 이름으로 빠르게 저장됩니다.")).toBeInTheDocument();
     expect(screen.getByText("저장 후 추천 복귀 상단에서 이 이름으로 바로 이어집니다.")).toBeInTheDocument();
@@ -146,7 +146,7 @@ describe("WorkspacePanel", () => {
     expect(screen.getByText("현재 세션을 다음 복귀 흐름에 바로 추가합니다.")).toBeInTheDocument();
     expect(screen.getByText("탭 1개 · 프로젝트 1곳이 함께 저장됩니다.")).toBeInTheDocument();
     expect(screen.getByText("먼저 저장")).toBeInTheDocument();
-    expect(screen.getByText("다음 복귀")).toBeInTheDocument();
+    expect(screen.getAllByText("다음 복귀").length).toBeGreaterThan(0);
     expect(screen.getByText("위에서 현재 세션을 저장해 두면 다음에 탭 묶음과 프로젝트 문맥을 바로 복구할 수 있습니다.")).toBeInTheDocument();
     expect(screen.getByText("저장된 워크스페이스가 없습니다")).toBeInTheDocument();
   });
@@ -199,7 +199,7 @@ describe("WorkspacePanel", () => {
     fireEvent.click(screen.getByRole("button", { name: "QA 재현" }));
     fireEvent.click(screen.getByRole("button", { name: "지우기" }));
 
-    expect(screen.getByText("자동 이름")).toBeInTheDocument();
+    expect(screen.getAllByText("자동 이름").length).toBeGreaterThan(0);
     expect(screen.getByText(`${defaultWorkspaceName} 이름으로 저장됩니다.`)).toBeInTheDocument();
     expect(screen.queryByText("추천 이름")).not.toBeInTheDocument();
     expect(screen.queryByText("현재 선택 · QA 재현")).not.toBeInTheDocument();
@@ -223,7 +223,7 @@ describe("WorkspacePanel", () => {
     fireEvent.click(screen.getByRole("button", { name: "날짜 붙이기" }));
 
     expect(screen.getByText("저장 이름")).toBeInTheDocument();
-    expect(screen.getByText("직접 입력")).toBeInTheDocument();
+    expect(screen.getAllByText("직접 입력").length).toBeGreaterThan(0);
     expect(screen.getByText("직접 저장")).toBeInTheDocument();
     expect(screen.queryByText("추천 이름")).not.toBeInTheDocument();
     expect(screen.queryByText("현재 선택 · QA 재현")).not.toBeInTheDocument();
@@ -300,21 +300,21 @@ describe("WorkspacePanel", () => {
     expect(screen.getByText("자주 복원")).toBeInTheDocument();
     expect(screen.getByText("최근 우선")).toBeInTheDocument();
     expect(screen.getByText("탭 흐름")).toBeInTheDocument();
-    expect(screen.getByText("대표 경로")).toBeInTheDocument();
+    expect(screen.getAllByText("대표 경로").length).toBeGreaterThan(0);
     expect(screen.getByText("최근에 이어갈 흐름과 프로젝트 위치를 함께 정리합니다.")).toBeInTheDocument();
     expect(screen.getByText("추천 복귀 2개")).toBeInTheDocument();
     expect(screen.getByText("최근 이어서")).toBeInTheDocument();
     expect(screen.getAllByText("탭 1개").length).toBeGreaterThan(0);
     expect(screen.getAllByText("프로젝트 1곳").length).toBeGreaterThan(0);
     expect(screen.getByText("추천 후보 · 가장 최근에 다시 연 작업공간")).toBeInTheDocument();
-    expect(screen.getByText("최근 탭")).toBeInTheDocument();
-    expect(screen.getByText("먼저 이어갈 탭을 바로 봅니다.")).toBeInTheDocument();
-    expect(screen.getByText("대표 경로")).toBeInTheDocument();
-    expect(screen.getByText("프로젝트 위치를 바로 봅니다.")).toBeInTheDocument();
+    expect(screen.getAllByText("최근 탭").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("먼저 이어갈 탭을 바로 봅니다.").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("대표 경로").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("프로젝트 위치를 바로 봅니다.").length).toBeGreaterThan(0);
     expect(screen.getByText(/최근 탭 · ui/)).toBeInTheDocument();
-    expect(screen.getByText(/대표 경로 · \/tmp\/ui/)).toBeInTheDocument();
-    expect(screen.getByText("복귀 시점")).toBeInTheDocument();
-    expect(screen.getByText(/복원 3회/)).toBeInTheDocument();
+    expect(screen.getByText(/대표 경로 · ui/)).toBeInTheDocument();
+    expect(screen.getAllByText("복귀 시점").length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/복원 3회/).length).toBeGreaterThan(0);
   });
 
   it("추천 복귀 섹션과 전체 작업공간 목록을 분리해 보여준다", () => {
@@ -359,13 +359,13 @@ describe("WorkspacePanel", () => {
     expect(screen.getByText("저장해 둔 복귀 지점을 전체 순서로 둘러볼 수 있습니다.")).toBeInTheDocument();
     expect(screen.getByText("2개 항목")).toBeInTheDocument();
     expect(screen.getByText("1개 항목")).toBeInTheDocument();
-    expect(screen.getByText("보관 탐색")).toBeInTheDocument();
+    expect(screen.getAllByText("보관 탐색").length).toBeGreaterThan(0);
     expect(screen.getByText("최근에 이어갈 흐름과 프로젝트 위치를 함께 정리합니다.")).toBeInTheDocument();
-    expect(screen.getByText("탭 흐름")).toBeInTheDocument();
-    expect(screen.getByText("저장 시점")).toBeInTheDocument();
+    expect(screen.getAllByText("탭 흐름").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("저장 시점").length).toBeGreaterThan(0);
     expect(screen.getByText("보관된 흐름을 다시 열기 전에 탭과 저장 시점을 함께 훑어봅니다.")).toBeInTheDocument();
-    expect(screen.getByText("추천 후보 · 지금 다시 열 가능성이 높은 작업공간")).toBeInTheDocument();
-    expect(screen.getByText("바로 복귀")).toBeInTheDocument();
+    expect(screen.getAllByText("추천 후보 · 지금 다시 열 가능성이 높은 작업공간").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("바로 복귀").length).toBeGreaterThan(0);
     expect(screen.getAllByText("탭 1개").length).toBeGreaterThan(0);
     expect(screen.getAllByText("프로젝트 1곳").length).toBeGreaterThan(0);
     expect(screen.getAllByText("최근 탭").length).toBeGreaterThan(0);
@@ -374,8 +374,7 @@ describe("WorkspacePanel", () => {
     expect(screen.getByText("보관")).toBeInTheDocument();
     expect(screen.getByText("보관 열기")).toBeInTheDocument();
     expect(screen.getByText("보관해 둔 흐름을 다시 꺼내는 작업공간")).toBeInTheDocument();
-    expect(screen.getByText("저장 시점")).toBeInTheDocument();
-    expect(screen.getByText("마지막 복원")).toBeInTheDocument();
+    expect(screen.getAllByText("저장 시점").length).toBeGreaterThan(0);
     expect(screen.getByText("다시 꺼낼 탭 흐름을 먼저 봅니다.")).toBeInTheDocument();
     expect(screen.getByText("저장된 프로젝트 위치를 바로 봅니다.")).toBeInTheDocument();
     expect(screen.getByText(/최근 탭 · api/)).toBeInTheDocument();

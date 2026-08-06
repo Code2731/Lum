@@ -67,7 +67,7 @@ describe("TabBar", () => {
       />,
     );
 
-    expect(screen.getByRole("tab", { name: "main 탭 · Git 작업공간" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "main 탭 · 일반 터미널" })).toBeInTheDocument();
   });
 
   it("새 탭 버튼 클릭 시 onAddTab이 호출된다", () => {

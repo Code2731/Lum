@@ -58,9 +58,6 @@ export function parseVoiceError(raw: unknown): string {
   ) {
     return "다른 앱이 이미 마이크를 사용 중입니다. 사용 중인 녹음 앱을 닫고 다시 시도해 주세요.";
   }
-  if (lower.includes("not found") || lower.includes("no such file")) {
-    return "음성 모델/전사 파일을 찾지 못했습니다.";
-  }
   if (
     lower.includes("command not found")
     || lower.includes("executable file not found")
@@ -69,6 +66,9 @@ export function parseVoiceError(raw: unknown): string {
     || lower.includes("whisper")
   ) {
     return "음성 입력 실행 환경을 찾지 못했습니다. Python/Whisper 설정을 확인해 주세요.";
+  }
+  if (lower.includes("not found") || lower.includes("no such file")) {
+    return "음성 모델/전사 파일을 찾지 못했습니다.";
   }
   if (lower.includes("timed out") || lower.includes("timeout")) {
     return "음성 입력 처리 시간이 오래 걸리고 있습니다. 잠시 후 다시 시도해 주세요.";

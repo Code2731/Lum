@@ -74,11 +74,11 @@ function holdMockStream(
 
 async function ensureInspectorOpen(): Promise<HTMLButtonElement> {
   const inspectorButton = screen.getByLabelText("Inspector") as HTMLButtonElement;
-  if (!screen.queryByRole("tablist", { name: "Inspector 탭" })) {
+  if (!screen.queryByRole("tablist", { name: "인스펙터 탭" })) {
     fireEvent.click(inspectorButton);
   }
   await waitFor(() => {
-    expect(screen.getByRole("tablist", { name: "Inspector 탭" })).toBeInTheDocument();
+    expect(screen.getByRole("tablist", { name: "인스펙터 탭" })).toBeInTheDocument();
   });
   return inspectorButton;
 }
@@ -659,6 +659,14 @@ describe("App (LUM 터미널)", () => {
     });
 
     try {
+      setMockCommandBlocks([{
+        id: "workspace-restore-flow",
+        command: "pwd",
+        output: "/workspace",
+        exitCode: 0,
+        startedAt: 1,
+        endedAt: 2,
+      }]);
       render(<App />);
       await waitFor(() => {
         expect(invoke).toHaveBeenCalledWith("load_app_config");
@@ -736,7 +744,7 @@ describe("App (LUM 터미널)", () => {
     render(<App />);
 
     fireEvent.keyDown(window, { key: "R", ctrlKey: true, shiftKey: true });
-    expect(await screen.findByText("AI Diff Reviewer")).toBeInTheDocument();
+    expect(await screen.findByText("AI Diff 검토기")).toBeInTheDocument();
     expect(screen.queryByPlaceholderText(/자연어로 검색/)).not.toBeInTheDocument();
   });
 
@@ -744,7 +752,7 @@ describe("App (LUM 터미널)", () => {
     render(<App />);
 
     fireEvent.keyDown(window, { key: "R", ctrlKey: true, altKey: true, shiftKey: true });
-    expect(screen.queryByText("AI Diff Reviewer")).not.toBeInTheDocument();
+    expect(screen.queryByText("AI Diff 검토기")).not.toBeInTheDocument();
   });
 
   it("Ctrl+Alt 단축키는 App 전역 단축키로 소비되지 않는다", () => {
@@ -998,7 +1006,7 @@ describe("App (LUM 터미널)", () => {
     render(<App />);
 
     fireEvent.keyDown(window, { key: "R", metaKey: true, shiftKey: true });
-    expect(await screen.findByText("AI Diff Reviewer")).toBeInTheDocument();
+    expect(await screen.findByText("AI Diff 검토기")).toBeInTheDocument();
     expect(screen.queryByPlaceholderText(/자연어로 검색/)).not.toBeInTheDocument();
   });
 
@@ -1006,7 +1014,7 @@ describe("App (LUM 터미널)", () => {
     render(<App />);
 
     fireEvent.keyDown(window, { key: "R", metaKey: true, altKey: true, shiftKey: true });
-    expect(screen.queryByText("AI Diff Reviewer")).not.toBeInTheDocument();
+    expect(screen.queryByText("AI Diff 검토기")).not.toBeInTheDocument();
   });
 
   it("Cmd/Ctrl+Shift+G는 커밋 패널이 열리고, Alt 조합은 처리되지 않는다", async () => {
@@ -1103,7 +1111,7 @@ describe("App (LUM 터미널)", () => {
       render(<App />);
 
       fireEvent.keyDown(window, { key: "M", metaKey: true, shiftKey: true });
-      expect(await screen.findByText("시스템 모니터")).toBeInTheDocument();
+      expect(await screen.findAllByText("시스템 모니터")).toHaveLength(2);
       expect(screen.getByText("18.5%")).toBeInTheDocument();
 
       const beforeCount = screen.getAllByText("시스템 모니터").length;
@@ -1143,7 +1151,7 @@ describe("App (LUM 터미널)", () => {
       render(<App />);
 
       fireEvent.keyDown(window, { key: "M", ctrlKey: true, shiftKey: true });
-      expect(await screen.findByText("시스템 모니터")).toBeInTheDocument();
+      expect(await screen.findAllByText("시스템 모니터")).toHaveLength(2);
       expect(screen.getByText("21.0%")).toBeInTheDocument();
 
       const beforeCount = screen.getAllByText("시스템 모니터").length;
@@ -1187,13 +1195,13 @@ describe("App (LUM 터미널)", () => {
     render(<App />);
 
     fireEvent.keyDown(window, { key: "f", metaKey: true, shiftKey: true });
-    expect(await screen.findByText("3/3")).toBeInTheDocument();
+    expect(await screen.findAllByText("3/3")).toHaveLength(2);
     expect(screen.getByLabelText("이전 블록 (Cmd/Ctrl+Shift+↑)")).not.toBeDisabled();
     expect(screen.getByLabelText("다음 블록 (Cmd/Ctrl+Shift+↓)")).toBeDisabled();
 
     fireEvent.keyDown(window, { key: "f", metaKey: true, shiftKey: true });
     await waitFor(() => {
-      expect(screen.getByText("2/3")).toBeInTheDocument();
+      expect(screen.getAllByText("2/3")).toHaveLength(2);
       expect(screen.getByLabelText("이전 블록 (Cmd/Ctrl+Shift+↑)")).not.toBeDisabled();
       expect(screen.getByLabelText("다음 블록 (Cmd/Ctrl+Shift+↓)")).not.toBeDisabled();
     });
@@ -1224,17 +1232,17 @@ describe("App (LUM 터미널)", () => {
       render(<App />);
 
       fireEvent.keyDown(window, { key: "f", metaKey: true, shiftKey: true });
-      expect(await screen.findByText("2/2")).toBeInTheDocument();
+      expect((await screen.findAllByText("2/2")).length).toBeGreaterThan(0);
 
       await ensureInspectorOpen();
 
     const summaryPanel = document.querySelector<HTMLElement>("#inspector-tabpanel-summary");
       expect(summaryPanel).not.toBeNull();
-      const analyzeButton = within(summaryPanel as HTMLElement).getByRole("button", { name: "AI ANALYZE" });
+      const analyzeButton = within(summaryPanel as HTMLElement).getByRole("button", { name: "실패 분석 시작" });
       fireEvent.click(analyzeButton);
 
       await waitFor(() => {
-        expect(within(summaryPanel as HTMLElement).getByText("STREAMING")).toBeInTheDocument();
+        expect(within(summaryPanel as HTMLElement).getByText("진행 중")).toBeInTheDocument();
       });
     } finally {
       releaseStream();
@@ -1258,17 +1266,17 @@ describe("App (LUM 터미널)", () => {
       render(<App />);
 
       fireEvent.keyDown(window, { key: "f", metaKey: true, shiftKey: true });
-      expect(await screen.findByText("1/1")).toBeInTheDocument();
+      expect((await screen.findAllByText("1/1")).length).toBeGreaterThan(0);
 
       await ensureInspectorOpen();
 
       const summaryPanel = document.querySelector("#inspector-tabpanel-summary");
       expect(summaryPanel).not.toBeNull();
-      const analyzeButton = within(summaryPanel as HTMLElement).getByRole("button", { name: "AI ANALYZE" });
+      const analyzeButton = within(summaryPanel as HTMLElement).getByRole("button", { name: "실패 분석 시작" });
       fireEvent.click(analyzeButton);
 
       await waitFor(() => {
-        expect(within(summaryPanel as HTMLElement).getByText("STREAMING")).toBeInTheDocument();
+        expect(within(summaryPanel as HTMLElement).getByText("진행 중")).toBeInTheDocument();
       });
     } finally {
       releaseStream();
@@ -1292,17 +1300,17 @@ describe("App (LUM 터미널)", () => {
       render(<App />);
 
       fireEvent.keyDown(window, { key: "f", metaKey: true, shiftKey: true });
-      expect(await screen.findByText("1/1")).toBeInTheDocument();
+      expect((await screen.findAllByText("1/1")).length).toBeGreaterThan(0);
 
       await ensureInspectorOpen();
 
       const summaryPanel = document.querySelector("#inspector-tabpanel-summary");
       expect(summaryPanel).not.toBeNull();
-      const analyzeButton = within(summaryPanel as HTMLElement).getByRole("button", { name: "AI ANALYZE" });
+      const analyzeButton = within(summaryPanel as HTMLElement).getByRole("button", { name: "실패 분석 시작" });
       fireEvent.click(analyzeButton);
 
       await waitFor(() => {
-        expect(within(summaryPanel as HTMLElement).getByText("STREAMING")).toBeInTheDocument();
+        expect(within(summaryPanel as HTMLElement).getByText("진행 중")).toBeInTheDocument();
       });
     } finally {
       releaseStream();
@@ -1340,12 +1348,12 @@ describe("App (LUM 터미널)", () => {
     render(<App />);
 
     fireEvent.keyDown(window, { key: "f", ctrlKey: true, shiftKey: true });
-    expect(await screen.findByText("3/3")).toBeInTheDocument();
+    expect(await screen.findAllByText("3/3")).toHaveLength(2);
     expect(screen.getByLabelText("이전 블록 (Cmd/Ctrl+Shift+↑)")).not.toBeDisabled();
 
     fireEvent.keyDown(window, { key: "f", ctrlKey: true, shiftKey: true });
     await waitFor(() => {
-      expect(screen.getByText("2/3")).toBeInTheDocument();
+      expect(screen.getAllByText("2/3")).toHaveLength(2);
       expect(screen.getByLabelText("이전 블록 (Cmd/Ctrl+Shift+↑)")).not.toBeDisabled();
       expect(screen.getByLabelText("다음 블록 (Cmd/Ctrl+Shift+↓)")).not.toBeDisabled();
     });
@@ -1382,12 +1390,12 @@ describe("App (LUM 터미널)", () => {
     render(<App />);
 
     fireEvent.keyDown(window, { key: "ArrowDown", metaKey: true, shiftKey: true });
-    expect(await screen.findByText("3/3")).toBeInTheDocument();
+    expect(await screen.findAllByText("3/3")).toHaveLength(2);
     expect(screen.getByLabelText("다음 블록 (Cmd/Ctrl+Shift+↓)")).toBeDisabled();
 
     fireEvent.keyDown(window, { key: "ArrowUp", metaKey: true, shiftKey: true });
     await waitFor(() => {
-      expect(screen.getByText("2/3")).toBeInTheDocument();
+      expect(screen.getAllByText("2/3")).toHaveLength(2);
       expect(screen.getByLabelText("다음 블록 (Cmd/Ctrl+Shift+↓)")).not.toBeDisabled();
     });
   });
@@ -1406,10 +1414,10 @@ describe("App (LUM 터미널)", () => {
 
     render(<App />);
 
-    expect(screen.getByText("1/1")).toBeInTheDocument();
+    expect(screen.getAllByText("1/1").length).toBeGreaterThan(0);
     fireEvent.keyDown(window, { key: "f", metaKey: true, shiftKey: true, altKey: true });
     fireEvent.keyDown(window, { key: "f", ctrlKey: true, shiftKey: true, altKey: true });
-    expect(screen.getByText("1/1")).toBeInTheDocument();
+    expect(screen.getAllByText("1/1").length).toBeGreaterThan(0);
   });
 
   it("Cmd/Ctrl+Shift+D는 Alt가 함께면 split 토글이 처리되지 않는다", () => {
@@ -1458,10 +1466,10 @@ describe("App (LUM 터미널)", () => {
 
     render(<App />);
 
-    expect(screen.getByText("2/2")).toBeInTheDocument();
+    expect(screen.getAllByText("2/2").length).toBeGreaterThan(0);
     fireEvent.keyDown(window, { key: "ArrowDown", metaKey: true, shiftKey: true, altKey: true });
     fireEvent.keyDown(window, { key: "ArrowUp", metaKey: true, shiftKey: true, altKey: true });
-    expect(screen.getByText("2/2")).toBeInTheDocument();
+    expect(screen.getAllByText("2/2").length).toBeGreaterThan(0);
   });
 
   it("Cmd/Ctrl+Shift+O는 워크스페이스 패널을 열고, Alt 조합은 처리되지 않는다", async () => {
@@ -1509,14 +1517,18 @@ describe("App (LUM 터미널)", () => {
     render(<App />);
 
     fireEvent.keyDown(window, { key: "i", metaKey: true });
-    expect(await screen.findByText("개요")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(document.querySelector("#inspector-tabpanel-summary")).toBeInTheDocument();
+    });
   });
 
   it("Ctrl+I는 Inspector 요약 탭을 연다", async () => {
     render(<App />);
 
     fireEvent.keyDown(window, { key: "i", ctrlKey: true });
-    expect(await screen.findByText("개요")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(document.querySelector("#inspector-tabpanel-summary")).toBeInTheDocument();
+    });
   });
 
   it("Cmd+Alt+I는 Inspector 토글로 처리되지 않는다", async () => {
@@ -1623,7 +1635,7 @@ describe("App (LUM 터미널)", () => {
       render(<App />);
 
       fireEvent.keyDown(window, { key: "L", metaKey: true, shiftKey: true });
-      expect(await screen.findByText("스크립트 라이브러리")).toBeInTheDocument();
+      expect((await screen.findAllByText("스크립트 라이브러리")).length).toBeGreaterThan(0);
     } finally {
       mockedInvoke.mockImplementation(baseImpl);
     }
@@ -1668,7 +1680,7 @@ describe("App (LUM 터미널)", () => {
       render(<App />);
 
       fireEvent.keyDown(window, { key: "L", ctrlKey: true, shiftKey: true });
-      expect(await screen.findByText("스크립트 라이브러리")).toBeInTheDocument();
+      expect((await screen.findAllByText("스크립트 라이브러리")).length).toBeGreaterThan(0);
     } finally {
       mockedInvoke.mockImplementation(baseImpl);
     }
@@ -1724,7 +1736,7 @@ describe("App (LUM 터미널)", () => {
     }
   });
 
-  it("입력 포커스 중에는 Cmd/Ctrl+Shift+R이 AI Diff Reviewer를 열지 않는다", () => {
+  it("입력 포커스 중에는 Cmd/Ctrl+Shift+R이 AI Diff 검토기를 열지 않는다", () => {
     const input = document.createElement("input");
     document.body.appendChild(input);
 
@@ -1735,7 +1747,7 @@ describe("App (LUM 터미널)", () => {
 
       fireEvent.keyDown(input, { key: "R", metaKey: true, shiftKey: true });
       fireEvent.keyDown(input, { key: "r", ctrlKey: true, shiftKey: true });
-      expect(screen.queryByText("AI Diff Reviewer")).not.toBeInTheDocument();
+      expect(screen.queryByText("AI Diff 검토기")).not.toBeInTheDocument();
     } finally {
       input.remove();
     }
@@ -1804,16 +1816,16 @@ describe("App (LUM 터미널)", () => {
     expect(screen.getByLabelText("알림 센터")).toBeInTheDocument();
   });
 
-  it("스크립트 라이브러리 버튼이 툴바에 있어야 함", () => {
+  it("스크립트 라이브러리 액션은 기능 메뉴에서 제공된다", () => {
     render(<App />);
-    // 툴바 그룹화 이후: aria-label은 기능 이름만, 단축키는 Tooltip kbd로 분리
-    expect(screen.getByLabelText("스크립트 라이브러리")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /기능 메뉴|고급 기능/ }));
+    expect(screen.getByRole("menuitem", { name: "스크립트 라이브러리" })).toBeInTheDocument();
   });
 
-  it("Inspector 탭은 키보드 탐색과 단축키 속성을 갖는다", async () => {
+  it("인스펙터 탭은 키보드 탐색과 단축키 속성을 갖는다", async () => {
     render(<App />);
 
-    const tablist = screen.getByRole("tablist", { name: "Inspector 탭" });
+    const tablist = screen.getByRole("tablist", { name: "인스펙터 탭" });
     const tabRoles = within(tablist).getAllByRole("tab");
     expect(tabRoles).toHaveLength(4);
 
@@ -1932,8 +1944,8 @@ describe("App (LUM 터미널)", () => {
 
     const beforeInspectorPressed = screen.getByLabelText("Inspector").getAttribute("aria-pressed");
     const beforePanes = screen.getAllByTestId(/^terminal-pane-/).length;
-    const beforeQuickActionHint = screen.getByText("빠른 실행 없음 · 오른쪽 설정에서 추가").textContent;
-    const beforeScriptButtonCount = screen.getAllByRole("button", { name: "스크립트 라이브러리" }).length;
+    const beforeQuickActionHint = screen.queryByText("빠른 실행 없음 · 오른쪽 설정에서 추가")?.textContent ?? null;
+    const beforeScriptButtonCount = screen.queryAllByRole("menuitem", { name: "스크립트 라이브러리" }).length;
 
     try {
       input.focus();
@@ -1957,9 +1969,9 @@ describe("App (LUM 터미널)", () => {
       expect(screen.getByLabelText("Inspector").getAttribute("aria-pressed")).toBe(beforeInspectorPressed);
       expect(screen.queryByPlaceholderText("AI에게 질문하세요… (Enter 전송 · Esc 닫기)")).not.toBeInTheDocument();
       expect(screen.queryByPlaceholderText(/자연어로 검색/)).not.toBeInTheDocument();
-      expect(screen.queryByText("AI Diff Reviewer")).not.toBeInTheDocument();
-      expect(screen.getByText("빠른 실행 없음 · 오른쪽 설정에서 추가")).toHaveTextContent(beforeQuickActionHint ?? "");
-      expect(screen.getAllByRole("button", { name: "스크립트 라이브러리" })).toHaveLength(beforeScriptButtonCount);
+      expect(screen.queryByText("AI Diff 검토기")).not.toBeInTheDocument();
+      expect(screen.queryByText("빠른 실행 없음 · 오른쪽 설정에서 추가")?.textContent ?? null).toBe(beforeQuickActionHint);
+      expect(screen.queryAllByRole("menuitem", { name: "스크립트 라이브러리" })).toHaveLength(beforeScriptButtonCount);
       expect(document.activeElement).toBe(input);
     } finally {
       input.remove();
@@ -2000,7 +2012,7 @@ describe("App (LUM 터미널)", () => {
       const editablePlaintextEvent = new KeyboardEvent("keydown", { bubbles: true, cancelable: true, key: "i", ctrlKey: true });
       expect(editablePlaintext.dispatchEvent(editablePlaintextEvent)).toBe(true);
       expect(screen.getAllByTestId(/^terminal-pane-/).length).toBe(beforePanes);
-      expect(screen.queryByText("AI Diff Reviewer")).not.toBeInTheDocument();
+      expect(screen.queryByText("AI Diff 검토기")).not.toBeInTheDocument();
 
       editable.focus();
       expect(document.activeElement).toBe(editable);
@@ -2046,7 +2058,7 @@ describe("App (LUM 터미널)", () => {
     fireEvent.keyDown(window, { key: "S", metaKey: true, shiftKey: true });
     expect(await screen.findByText("워크스페이스")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Close" }));
+    fireEvent.keyDown(screen.getByRole("dialog", { name: "워크스페이스" }), { key: "Escape" });
     await waitFor(() => {
       expect(screen.queryByText("워크스페이스")).not.toBeInTheDocument();
     });
@@ -2344,19 +2356,19 @@ describe("App (LUM 터미널)", () => {
     }
   });
 
-  it("Inspector 닫기 버튼은 트리거 버튼으로 포커스를 되돌린다", async () => {
+  it("인스펙터 닫기 버튼은 트리거 버튼으로 포커스를 되돌린다", async () => {
     render(<App />);
 
     const inspectorButton = screen.getByLabelText("Inspector");
-    let inspectorCloseButton = screen.queryByLabelText("Inspector 닫기");
+    let inspectorCloseButton = screen.queryByLabelText("인스펙터 닫기");
 
     if (!inspectorCloseButton) {
       fireEvent.click(inspectorButton);
     }
     await waitFor(() => {
-      expect(screen.getByLabelText("Inspector 닫기")).toBeInTheDocument();
+      expect(screen.getByLabelText("인스펙터 닫기")).toBeInTheDocument();
     });
-    inspectorCloseButton = screen.getByLabelText("Inspector 닫기");
+    inspectorCloseButton = screen.getByLabelText("인스펙터 닫기");
 
     inspectorCloseButton.focus();
     inspectorCloseButton.blur();
@@ -2364,7 +2376,7 @@ describe("App (LUM 터미널)", () => {
     fireEvent.click(inspectorCloseButton);
 
     await waitFor(() => {
-      expect(screen.queryByRole("tablist", { name: "Inspector 탭" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("tablist", { name: "인스펙터 탭" })).not.toBeInTheDocument();
       expect(inspectorButton).toHaveAttribute("aria-pressed", "false");
       expect(inspectorButton).toHaveFocus();
     });
@@ -2374,7 +2386,7 @@ describe("App (LUM 터미널)", () => {
     const { container } = render(<App />);
 
     const inspectorButton = screen.getByLabelText("Inspector");
-    const inspectorCloseButton = screen.queryByLabelText("Inspector 닫기");
+    const inspectorCloseButton = screen.queryByLabelText("인스펙터 닫기");
 
     if (inspectorCloseButton) {
       fireEvent.click(inspectorCloseButton);
@@ -2392,53 +2404,16 @@ describe("App (LUM 터미널)", () => {
       throw new Error("Inspector summary panel not found");
     }
 
-    expect(screen.getByRole("tablist", { name: "Inspector 탭" })).toBeInTheDocument();
+    expect(screen.getByRole("tablist", { name: "인스펙터 탭" })).toBeInTheDocument();
     expect(within(inspectorSummaryPanel as HTMLElement).getByText(/실패 블록[\s·\-]*추천 커맨드/)).toBeInTheDocument();
-    expect(within(inspectorSummaryPanel as HTMLElement).getByText("Quick Actions")).toBeInTheDocument();
+    expect(within(inspectorSummaryPanel as HTMLElement).getAllByLabelText("추천 작업").length).toBeGreaterThan(0);
   });
 
-  it("요약에서 Quick Actions의 Project Bin 버튼을 누르면 파일 탐색기가 열린다", async () => {
-    render(<App />);
-
-    const fileExplorerToggle = screen.getByLabelText("파일 탐색기");
-    const inspectorButton = screen.getByLabelText("Inspector");
-
-    const inspectorSummaryPanel = async () => {
-      let panel = document.querySelector("#inspector-tabpanel-summary");
-      if (!panel) {
-        await waitFor(() => {
-          panel = document.querySelector("#inspector-tabpanel-summary");
-          expect(panel).not.toBeNull();
-        });
-      }
-      return panel;
-    };
-
-    fireEvent.click(fileExplorerToggle);
-    await waitFor(() => {
-      expect(screen.queryByTestId("file-explorer-mock")).not.toBeInTheDocument();
-    });
-
-    const inspectorCloseButton = screen.queryByLabelText("Inspector 닫기");
-    if (!inspectorCloseButton) {
-      fireEvent.click(inspectorButton);
-    }
-    await waitFor(() => {
-      expect(screen.getByLabelText("Inspector 닫기")).toBeInTheDocument();
-    });
-
-    const panel = await inspectorSummaryPanel();
-    const projectBinButton = within(panel as HTMLElement).getByRole("button", { name: "Project Bin" });
-    fireEvent.click(projectBinButton);
-
-    expect(within(panel as HTMLElement).getByRole("button", { name: "Project Bin" })).toBeInTheDocument();
-  });
-
-  it("Inspector 탭은 클릭으로 Summary/RAG/Scripts/System을 전환한다", async () => {
+  it("인스펙터 탭은 클릭으로 Summary/RAG/Scripts/System을 전환한다", async () => {
     render(<App />);
 
     const inspectorButton = screen.getByLabelText("Inspector");
-    const inspectorCloseButton = screen.queryByLabelText("Inspector 닫기");
+    const inspectorCloseButton = screen.queryByLabelText("인스펙터 닫기");
 
     if (inspectorCloseButton) {
       fireEvent.click(inspectorCloseButton);
@@ -2446,7 +2421,7 @@ describe("App (LUM 터미널)", () => {
     fireEvent.click(inspectorButton);
 
     await waitFor(() => {
-      expect(screen.getByRole("tablist", { name: "Inspector 탭" })).toBeInTheDocument();
+      expect(screen.getByRole("tablist", { name: "인스펙터 탭" })).toBeInTheDocument();
     });
 
     const summaryTab = screen.getByRole("tab", { name: /개요/ });
@@ -2486,124 +2461,11 @@ describe("App (LUM 터미널)", () => {
     });
   });
 
-  it("요약 Quick Actions에서 Workspace를 열고 불러오기로 워크스페이스를 재개한다", async () => {
-    const baseImpl = mockedInvoke.getMockImplementation() as
-      ((cmd: string, args?: unknown, options?: unknown) => Promise<unknown>);
-    if (!baseImpl) throw new Error("invoke mock implementation not found");
-
-    const savedWorkspaces = [{
-      id: "ws-1",
-      name: "CI 체크",
-      tabs: [
-        {
-          id: "ws-tab-1",
-          title: "Shell 9",
-          cwd: "/Users/me/project/frontend",
-        },
-        {
-          id: "ws-tab-2",
-          title: "Shell 10",
-          cwd: "/Users/me/project/backend",
-        },
-      ],
-      active_tab_id: "ws-tab-2",
-      created_at: 1700000000,
-    }];
-
-    mockedInvoke.mockImplementation((cmd: string, ...args: unknown[]) => {
-      if (cmd === "list_workspaces") return Promise.resolve(savedWorkspaces);
-      if (cmd === "load_app_config") {
-        return Promise.resolve({
-          show_reasoning: true,
-          vision_enabled: false,
-          toolbar_show_advanced: false,
-          ui_compact_toolbar: true,
-          ui_show_file_explorer: true,
-          ui_show_inspector: true,
-          ui_inspector_density: "compact",
-          ui_hints_shown: true,
-          ui_seen_advanced_features: [],
-          quick_actions: [],
-          mistral_rs_enabled: false,
-          mistral_rs_model: null,
-        });
-      }
-      return baseImpl(cmd, args[0], args[1]);
-    });
-
-    try {
-      render(<App />);
-
-      const inspectorButton = screen.getByLabelText("Inspector");
-      const inspectorCloseButton = screen.queryByLabelText("Inspector 닫기");
-
-      if (inspectorCloseButton) {
-        fireEvent.click(inspectorCloseButton);
-      }
-      fireEvent.click(inspectorButton);
-
-      await waitFor(() => {
-        expect(screen.getByRole("tablist", { name: "Inspector 탭" })).toBeInTheDocument();
-      });
-
-      const panel = await waitFor(() => document.querySelector("#inspector-tabpanel-summary"));
-      const workspaceButton = await waitFor(() => within(panel as HTMLElement).getByRole("button", { name: "Workspace" }));
-      fireEvent.click(workspaceButton);
-
-      expect(await screen.findByText("워크스페이스")).toBeInTheDocument();
-      expect(screen.getByText("CI 체크")).toBeInTheDocument();
-
-      const restoreButton = screen.getAllByRole("button", { name: "불러오기" })[0];
-      fireEvent.click(restoreButton);
-
-      await waitFor(() => {
-        expect(screen.queryByText("워크스페이스")).not.toBeInTheDocument();
-      });
-      expect(screen.getAllByTestId(/^terminal-pane-/).length).toBe(2);
-    } finally {
-      mockedInvoke.mockImplementation(baseImpl);
-    }
-  });
-
-  it("Quick Actions 더보기에서 History를 누르면 히스토리 검색이 열린다", async () => {
-    render(<App />);
-
-    const inspectorButton = screen.getByLabelText("Inspector");
-    const inspectorCloseButton = screen.queryByLabelText("Inspector 닫기");
-
-    if (inspectorCloseButton) {
-      fireEvent.click(inspectorCloseButton);
-    }
-    fireEvent.click(inspectorButton);
-
-    await waitFor(() => {
-      expect(screen.getByRole("tablist", { name: "Inspector 탭" })).toBeInTheDocument();
-    });
-
-    const summaryPanel = document.querySelector<HTMLElement>("#inspector-tabpanel-summary");
-    if (!summaryPanel) {
-      throw new Error("Inspector summary panel not found");
-    }
-
-    const moreButton = within(summaryPanel).getByRole("button", { name: "더보기" });
-    fireEvent.click(moreButton);
-
-    await waitFor(() => {
-      expect(within(summaryPanel).getByRole("button", { name: "History" })).toBeInTheDocument();
-    });
-
-    const historyButton = within(summaryPanel).getByRole("button", { name: "History" });
-    fireEvent.click(historyButton);
-
-    expect(await screen.findByPlaceholderText("자연어로 검색: '지난번에 빌드 어떻게 했더라…'"))
-      .toBeInTheDocument();
-  });
-
   it("요약에서 실패 블록이 없으면 빈 상태 문구가 노출된다", async () => {
     const { container } = render(<App />);
 
     const inspectorButton = screen.getByLabelText("Inspector");
-    const inspectorCloseButton = screen.queryByLabelText("Inspector 닫기");
+    const inspectorCloseButton = screen.queryByLabelText("인스펙터 닫기");
 
     if (inspectorCloseButton) {
       fireEvent.click(inspectorCloseButton);
@@ -2645,11 +2507,11 @@ describe("App (LUM 터미널)", () => {
       expect(summaryPanel).not.toBeNull();
     });
 
-    const analyzeButton = within(summaryPanel as HTMLElement).getByRole("button", { name: "AI ANALYZE" });
+    const analyzeButton = within(summaryPanel as HTMLElement).getByRole("button", { name: "실패 분석 시작" });
     fireEvent.click(analyzeButton);
 
     await waitFor(() => {
-      expect(within(summaryPanel as HTMLElement).getByText("STREAMING")).toBeInTheDocument();
+      expect(within(summaryPanel as HTMLElement).getByText("진행 중")).toBeInTheDocument();
     });
   });
 
@@ -2674,11 +2536,11 @@ describe("App (LUM 터미널)", () => {
         expect(summaryPanel).not.toBeNull();
       });
 
-      const analyzeButton = within(summaryPanel as HTMLElement).getByRole("button", { name: "AI ANALYZE" });
+      const analyzeButton = within(summaryPanel as HTMLElement).getByRole("button", { name: "실패 분석 시작" });
       fireEvent.click(analyzeButton);
 
       await waitFor(() => {
-        expect(within(summaryPanel as HTMLElement).getByText("STREAMING")).toBeInTheDocument();
+        expect(within(summaryPanel as HTMLElement).getByText("진행 중")).toBeInTheDocument();
       });
     } finally {
       releaseStream();
@@ -2706,11 +2568,11 @@ describe("App (LUM 터미널)", () => {
         expect(summaryPanel).not.toBeNull();
       });
 
-      const analyzeButton = within(summaryPanel as HTMLElement).getByRole("button", { name: "AI ANALYZE" });
+      const analyzeButton = within(summaryPanel as HTMLElement).getByRole("button", { name: "실패 분석 시작" });
       fireEvent.click(analyzeButton);
 
       await waitFor(() => {
-        expect(within(summaryPanel as HTMLElement).getByText("STREAMING")).toBeInTheDocument();
+        expect(within(summaryPanel as HTMLElement).getByText("진행 중")).toBeInTheDocument();
       });
     } finally {
       releaseStream();
@@ -2738,11 +2600,11 @@ describe("App (LUM 터미널)", () => {
         expect(summaryPanel).not.toBeNull();
       });
 
-      const analyzeButton = within(summaryPanel as HTMLElement).getByRole("button", { name: "AI ANALYZE" });
+      const analyzeButton = within(summaryPanel as HTMLElement).getByRole("button", { name: "실패 분석 시작" });
       fireEvent.click(analyzeButton);
 
       await waitFor(() => {
-        expect(within(summaryPanel as HTMLElement).getByText("STREAMING")).toBeInTheDocument();
+        expect(within(summaryPanel as HTMLElement).getByText("진행 중")).toBeInTheDocument();
       });
     } finally {
       releaseStream();
@@ -2786,19 +2648,19 @@ describe("App (LUM 터미널)", () => {
         expect(summaryPanel).not.toBeNull();
       });
 
-      const analyzeButton = within(summaryPanel as HTMLElement).getByRole("button", { name: "AI ANALYZE" });
+      const analyzeButton = within(summaryPanel as HTMLElement).getByRole("button", { name: "실패 분석 시작" });
       fireEvent.click(analyzeButton);
 
       await waitFor(() => {
-        expect(within(summaryPanel as HTMLElement).getByText("STREAMING")).toBeInTheDocument();
+        expect(within(summaryPanel as HTMLElement).getByText("진행 중")).toBeInTheDocument();
       });
 
       await emitAnalysisResult(tokenHandlers, resolveStream, "```bash\necho npm run build --fix\nnpm run test -- --watch\n```\n",);
 
       await waitFor(() => {
-        expect(screen.getByRole("tablist", { name: "Inspector 탭" })).toBeInTheDocument();
-        expect(within(summaryPanel as HTMLElement).getByText("DONE")).toBeInTheDocument();
-        expect(within(summaryPanel as HTMLElement).getAllByRole("button", { name: "RUN (R)" })[0]).toBeInTheDocument();
+        expect(screen.getByRole("tablist", { name: "인스펙터 탭" })).toBeInTheDocument();
+        expect(within(summaryPanel as HTMLElement).getByText("분석 완료")).toBeInTheDocument();
+        expect(within(summaryPanel as HTMLElement).getAllByRole("button", { name: "실행 (R)" })[0]).toBeInTheDocument();
       });
     } finally {
       mockedListen.mockImplementation(mockedBaseListen as any);
@@ -2842,20 +2704,20 @@ describe("App (LUM 터미널)", () => {
         summaryPanel = container.querySelector("#inspector-tabpanel-summary");
         expect(summaryPanel).not.toBeNull();
       });
-      const analyzeButton = within(summaryPanel as HTMLElement).getByRole("button", { name: "AI ANALYZE" });
+      const analyzeButton = within(summaryPanel as HTMLElement).getByRole("button", { name: "실패 분석 시작" });
       fireEvent.click(analyzeButton);
 
       await waitFor(() => {
-        expect(within(summaryPanel as HTMLElement).getByText("STREAMING")).toBeInTheDocument();
+        expect(within(summaryPanel as HTMLElement).getByText("진행 중")).toBeInTheDocument();
       });
 
       await emitAnalysisResult(tokenHandlers, resolveStream, "```bash\necho pnpm test --watch\nnpm run lint\n```\n",);
 
-      const runFirstButton = await waitFor(() => within(summaryPanel as HTMLElement).getAllByRole("button", { name: "RUN (R)" })[0]);
+      const runFirstButton = await waitFor(() => within(summaryPanel as HTMLElement).getAllByRole("button", { name: "실행 (R)" })[0]);
       fireEvent.click(runFirstButton);
 
       await waitFor(() => {
-        expect(screen.queryByRole("tablist", { name: "Inspector 탭" })).not.toBeInTheDocument();
+        expect(screen.queryByRole("tablist", { name: "인스펙터 탭" })).not.toBeInTheDocument();
       });
     } finally {
       mockedListen.mockImplementation(mockedBaseListen as any);
@@ -2905,20 +2767,20 @@ describe("App (LUM 터미널)", () => {
         summaryPanel = container.querySelector("#inspector-tabpanel-summary");
         expect(summaryPanel).not.toBeNull();
       });
-      const analyzeButton = within(summaryPanel as HTMLElement).getByRole("button", { name: "AI ANALYZE" });
+      const analyzeButton = within(summaryPanel as HTMLElement).getByRole("button", { name: "실패 분석 시작" });
       fireEvent.click(analyzeButton);
 
       await waitFor(() => {
-        expect(within(summaryPanel as HTMLElement).getByText("STREAMING")).toBeInTheDocument();
+        expect(within(summaryPanel as HTMLElement).getByText("진행 중")).toBeInTheDocument();
       });
 
       await emitAnalysisResult(tokenHandlers, resolveStream, "```bash\nflutter analyze\nflutter test\n```\n",);
 
-      const runFirstButton = await waitFor(() => within(summaryPanel as HTMLElement).getAllByRole("button", { name: "RUN (R)" })[0]);
+      const runFirstButton = await waitFor(() => within(summaryPanel as HTMLElement).getAllByRole("button", { name: "실행 (R)" })[0]);
       fireEvent.click(runFirstButton);
 
       await waitFor(() => {
-        expect(screen.getByRole("tablist", { name: "Inspector 탭" })).toBeInTheDocument();
+        expect(screen.getByRole("tablist", { name: "인스펙터 탭" })).toBeInTheDocument();
       });
       expect(screen.queryByTestId("ai-bar-input")).not.toBeInTheDocument();
       expect(invoke).toHaveBeenCalledWith("verify_command_safety", { command: "flutter analyze" });
@@ -2970,20 +2832,20 @@ describe("App (LUM 터미널)", () => {
         summaryPanel = container.querySelector("#inspector-tabpanel-summary");
         expect(summaryPanel).not.toBeNull();
       });
-      const analyzeButton = within(summaryPanel as HTMLElement).getByRole("button", { name: "AI ANALYZE" });
+      const analyzeButton = within(summaryPanel as HTMLElement).getByRole("button", { name: "실패 분석 시작" });
       fireEvent.click(analyzeButton);
 
       await waitFor(() => {
-        expect(within(summaryPanel as HTMLElement).getByText("STREAMING")).toBeInTheDocument();
+        expect(within(summaryPanel as HTMLElement).getByText("진행 중")).toBeInTheDocument();
       });
 
       await emitAnalysisResult(tokenHandlers, resolveStream, "```bash\nnpm run lint --fix\nnpm run test\n```\n",);
 
-      const runFirstButton = await waitFor(() => within(summaryPanel as HTMLElement).getAllByRole("button", { name: "RUN (R)" })[0]);
+      const runFirstButton = await waitFor(() => within(summaryPanel as HTMLElement).getAllByRole("button", { name: "실행 (R)" })[0]);
       fireEvent.click(runFirstButton);
 
       await waitFor(() => {
-        expect(screen.queryByRole("tablist", { name: "Inspector 탭" })).not.toBeInTheDocument();
+        expect(screen.queryByRole("tablist", { name: "인스펙터 탭" })).not.toBeInTheDocument();
       });
       expect(invoke).toHaveBeenCalledWith("verify_command_safety", { command: "npm run lint --fix" });
     } finally {
@@ -3034,20 +2896,20 @@ describe("App (LUM 터미널)", () => {
         summaryPanel = container.querySelector("#inspector-tabpanel-summary");
         expect(summaryPanel).not.toBeNull();
       });
-      const analyzeButton = within(summaryPanel as HTMLElement).getByRole("button", { name: "AI ANALYZE" });
+      const analyzeButton = within(summaryPanel as HTMLElement).getByRole("button", { name: "실패 분석 시작" });
       fireEvent.click(analyzeButton);
 
       await waitFor(() => {
-        expect(within(summaryPanel as HTMLElement).getByText("STREAMING")).toBeInTheDocument();
+        expect(within(summaryPanel as HTMLElement).getByText("진행 중")).toBeInTheDocument();
       });
 
       await emitAnalysisResult(tokenHandlers, resolveStream, "```bash\nyarn test\nnpm run lint\n```\n",);
 
-      const runFirstButton = await waitFor(() => within(summaryPanel as HTMLElement).getAllByRole("button", { name: "RUN (R)" })[0]);
+      const runFirstButton = await waitFor(() => within(summaryPanel as HTMLElement).getAllByRole("button", { name: "실행 (R)" })[0]);
       fireEvent.click(runFirstButton);
 
       await waitFor(() => {
-        expect(screen.queryByRole("tablist", { name: "Inspector 탭" })).not.toBeInTheDocument();
+        expect(screen.queryByRole("tablist", { name: "인스펙터 탭" })).not.toBeInTheDocument();
       });
       expect(screen.queryByTestId("ai-bar-input")).not.toBeInTheDocument();
       expect(invoke).toHaveBeenCalledWith("verify_command_safety", { command: "yarn test" });
@@ -3099,20 +2961,20 @@ describe("App (LUM 터미널)", () => {
         summaryPanel = container.querySelector("#inspector-tabpanel-summary");
         expect(summaryPanel).not.toBeNull();
       });
-      const analyzeButton = within(summaryPanel as HTMLElement).getByRole("button", { name: "AI ANALYZE" });
+      const analyzeButton = within(summaryPanel as HTMLElement).getByRole("button", { name: "실패 분석 시작" });
       fireEvent.click(analyzeButton);
 
       await waitFor(() => {
-        expect(within(summaryPanel as HTMLElement).getByText("STREAMING")).toBeInTheDocument();
+        expect(within(summaryPanel as HTMLElement).getByText("진행 중")).toBeInTheDocument();
       });
 
       await emitAnalysisResult(tokenHandlers, resolveStream, "```bash\npnpm update\npnpm install\n```\n",);
 
-      const runFirstButton = await waitFor(() => within(summaryPanel as HTMLElement).getAllByRole("button", { name: "RUN (R)" })[0]);
+      const runFirstButton = await waitFor(() => within(summaryPanel as HTMLElement).getAllByRole("button", { name: "실행 (R)" })[0]);
       fireEvent.click(runFirstButton);
 
       await waitFor(() => {
-        expect(screen.queryByRole("tablist", { name: "Inspector 탭" })).not.toBeInTheDocument();
+        expect(screen.queryByRole("tablist", { name: "인스펙터 탭" })).not.toBeInTheDocument();
       });
       expect(screen.queryByTestId("ai-bar-input")).not.toBeInTheDocument();
       expect(invoke).toHaveBeenCalledWith("verify_command_safety", { command: "pnpm update" });
@@ -3161,19 +3023,19 @@ describe("App (LUM 터미널)", () => {
         summaryPanel = container.querySelector("#inspector-tabpanel-summary");
         expect(summaryPanel).not.toBeNull();
       });
-      const analyzeButton = within(summaryPanel as HTMLElement).getByRole("button", { name: "AI ANALYZE" });
+      const analyzeButton = within(summaryPanel as HTMLElement).getByRole("button", { name: "실패 분석 시작" });
       fireEvent.click(analyzeButton);
 
       await waitFor(() => {
-        expect(within(summaryPanel as HTMLElement).getByText("STREAMING")).toBeInTheDocument();
+        expect(within(summaryPanel as HTMLElement).getByText("진행 중")).toBeInTheDocument();
       });
 
       await emitAnalysisResult(tokenHandlers, resolveStream, "```bash\ngo test ./... -run TestX\n```\n",);
 
-      const runFirstButton = await waitFor(() => within(summaryPanel as HTMLElement).getAllByRole("button", { name: "RUN (R)" })[0]);
+      const runFirstButton = await waitFor(() => within(summaryPanel as HTMLElement).getAllByRole("button", { name: "실행 (R)" })[0]);
       fireEvent.click(runFirstButton);
 
-      expect(await screen.findByRole("tablist", { name: "Inspector 탭" })).toBeInTheDocument();
+      expect(await screen.findByRole("tablist", { name: "인스펙터 탭" })).toBeInTheDocument();
       expect(screen.queryByTestId("ai-bar-input")).not.toBeInTheDocument();
     } finally {
       mockedListen.mockImplementation(mockedBaseListen as any);
@@ -3218,17 +3080,17 @@ describe("App (LUM 터미널)", () => {
         expect(summaryPanel).not.toBeNull();
       });
 
-      const analyzeButton = within(summaryPanel as HTMLElement).getByRole("button", { name: "AI ANALYZE" });
+      const analyzeButton = within(summaryPanel as HTMLElement).getByRole("button", { name: "실패 분석 시작" });
       fireEvent.click(analyzeButton);
 
       await waitFor(() => {
-        expect(within(summaryPanel as HTMLElement).getByText("STREAMING")).toBeInTheDocument();
+        expect(within(summaryPanel as HTMLElement).getByText("진행 중")).toBeInTheDocument();
       });
 
       await emitAnalysisResult(tokenHandlers, resolveStream, "추천 가능한 명령이 없습니다.");
 
       await waitFor(() => {
-        expect(within(summaryPanel as HTMLElement).getByText("DONE")).toBeInTheDocument();
+        expect(within(summaryPanel as HTMLElement).getByText("분석 완료")).toBeInTheDocument();
       });
       expect(within(summaryPanel as HTMLElement).queryAllByRole("button", { name: /^RUN #/i })).toHaveLength(0);
       expect(summaryPanel?.querySelector("[data-inspector-command-menu-row='1']")).toBeNull();
@@ -3275,23 +3137,23 @@ describe("App (LUM 터미널)", () => {
         expect(summaryPanel).not.toBeNull();
       });
 
-      const analyzeButton = within(summaryPanel as HTMLElement).getByRole("button", { name: "AI ANALYZE" });
+      const analyzeButton = within(summaryPanel as HTMLElement).getByRole("button", { name: "실패 분석 시작" });
       fireEvent.click(analyzeButton);
 
       await waitFor(() => {
-        expect(within(summaryPanel as HTMLElement).getByText("STREAMING")).toBeInTheDocument();
+        expect(within(summaryPanel as HTMLElement).getByText("진행 중")).toBeInTheDocument();
       });
 
       await emitAnalysisResult(tokenHandlers, resolveStream, "```bash\ncmd1\ncmd2\ncmd3\ncmd4\ncmd5\n```\n",);
 
       await waitFor(() => {
-        expect(within(summaryPanel as HTMLElement).getByText("DONE")).toBeInTheDocument();
+        expect(within(summaryPanel as HTMLElement).getByText("분석 완료")).toBeInTheDocument();
       });
       const commandRows = Array.from(
         (summaryPanel as HTMLElement).querySelectorAll("[data-inspector-command-menu-row]"),
       );
       expect(commandRows).toHaveLength(3);
-      expect(within(summaryPanel as HTMLElement).getAllByRole("button", { name: "RUN (R)" })).toHaveLength(3);
+      expect(within(summaryPanel as HTMLElement).getAllByRole("button", { name: "실행 (R)" })).toHaveLength(3);
       expect(within(summaryPanel as HTMLElement).getByText("cmd3")).toBeInTheDocument();
       expect(within(summaryPanel as HTMLElement).queryByText("cmd4")).not.toBeInTheDocument();
     } finally {
@@ -3343,22 +3205,22 @@ describe("App (LUM 터미널)", () => {
         summaryPanel = container.querySelector("#inspector-tabpanel-summary");
         expect(summaryPanel).not.toBeNull();
       });
-      const analyzeButton = within(summaryPanel as HTMLElement).getByRole("button", { name: "AI ANALYZE" });
+      const analyzeButton = within(summaryPanel as HTMLElement).getByRole("button", { name: "실패 분석 시작" });
       fireEvent.click(analyzeButton);
 
       await waitFor(() => {
-        expect(within(summaryPanel as HTMLElement).getByText("STREAMING")).toBeInTheDocument();
+        expect(within(summaryPanel as HTMLElement).getByText("진행 중")).toBeInTheDocument();
       });
 
       await emitAnalysisResult(tokenHandlers, resolveStream, "```bash\nnpm run build\nnpm run lint\n```\n",);
 
       await waitFor(() => {
-        expect(within(summaryPanel as HTMLElement).getByText("DONE")).toBeInTheDocument();
+        expect(within(summaryPanel as HTMLElement).getByText("분석 완료")).toBeInTheDocument();
       });
 
       const firstRow = container.querySelector("[data-inspector-command-menu-row='1']");
       expect(firstRow).not.toBeNull();
-      fireEvent.click(within(firstRow as HTMLElement).getByRole("button", { name: "MORE" }));
+      fireEvent.click(within(firstRow as HTMLElement).getByRole("button", { name: "추가" }));
       (firstRow as HTMLElement).focus();
       fireEvent.keyDown(firstRow as HTMLElement, { key: "r", code: "KeyR" });
 
@@ -3411,20 +3273,20 @@ describe("App (LUM 터미널)", () => {
         expect(summaryPanel).not.toBeNull();
       });
 
-      const analyzeButton = within(summaryPanel as HTMLElement).getByRole("button", { name: "AI ANALYZE" });
+      const analyzeButton = within(summaryPanel as HTMLElement).getByRole("button", { name: "실패 분석 시작" });
       fireEvent.click(analyzeButton);
 
       await waitFor(() => {
-        expect(within(summaryPanel as HTMLElement).getByText("STREAMING")).toBeInTheDocument();
+        expect(within(summaryPanel as HTMLElement).getByText("진행 중")).toBeInTheDocument();
       });
 
       await emitAnalysisResult(tokenHandlers, resolveStream, "```bash\nnpm run test\nnpm run lint\n```\n",);
 
       await waitFor(() => {
-        expect(within(summaryPanel as HTMLElement).getByText("DONE")).toBeInTheDocument();
+        expect(within(summaryPanel as HTMLElement).getByText("분석 완료")).toBeInTheDocument();
       });
 
-      const moreButton = within(summaryPanel as HTMLElement).getAllByRole("button", { name: "MORE" })[0];
+      const moreButton = within(summaryPanel as HTMLElement).getAllByRole("button", { name: "추가" })[0];
       fireEvent.click(moreButton);
 
       const firstRow = container.querySelector("[data-inspector-command-menu-row='1']");
@@ -3435,7 +3297,7 @@ describe("App (LUM 터미널)", () => {
 
       fireEvent.keyDown(firstRow as HTMLElement, { key: "l" });
       await waitFor(() => {
-        expect(screen.queryByRole("tablist", { name: "Inspector 탭" })).not.toBeInTheDocument();
+        expect(screen.queryByRole("tablist", { name: "인스펙터 탭" })).not.toBeInTheDocument();
       });
     } finally {
       mockedListen.mockImplementation(mockedBaseListen as any);
@@ -3486,20 +3348,20 @@ describe("App (LUM 터미널)", () => {
         expect(summaryPanel).not.toBeNull();
       });
 
-      const analyzeButton = within(summaryPanel as HTMLElement).getByRole("button", { name: "AI ANALYZE" });
+      const analyzeButton = within(summaryPanel as HTMLElement).getByRole("button", { name: "실패 분석 시작" });
       fireEvent.click(analyzeButton);
 
       await waitFor(() => {
-        expect(within(summaryPanel as HTMLElement).getByText("STREAMING")).toBeInTheDocument();
+        expect(within(summaryPanel as HTMLElement).getByText("진행 중")).toBeInTheDocument();
       });
 
       await emitAnalysisResult(tokenHandlers, resolveStream, "```bash\nnpm run test\nnpm run lint\n```\n",);
 
       await waitFor(() => {
-        expect(within(summaryPanel as HTMLElement).getByText("DONE")).toBeInTheDocument();
+        expect(within(summaryPanel as HTMLElement).getByText("분석 완료")).toBeInTheDocument();
       });
 
-      const moreButtonSecond = within(summaryPanel as HTMLElement).getAllByRole("button", { name: "MORE" })[1];
+      const moreButtonSecond = within(summaryPanel as HTMLElement).getAllByRole("button", { name: "추가" })[1];
       fireEvent.click(moreButtonSecond);
 
       const secondRow = container.querySelector("[data-inspector-command-menu-row='2']");
@@ -3510,7 +3372,7 @@ describe("App (LUM 터미널)", () => {
 
       fireEvent.keyDown(secondRow as HTMLElement, { key: "l" });
       await waitFor(() => {
-        expect(screen.queryByRole("tablist", { name: "Inspector 탭" })).not.toBeInTheDocument();
+        expect(screen.queryByRole("tablist", { name: "인스펙터 탭" })).not.toBeInTheDocument();
       });
     } finally {
       mockedListen.mockImplementation(mockedBaseListen as any);
@@ -3567,17 +3429,17 @@ describe("App (LUM 터미널)", () => {
         expect(summaryPanel).not.toBeNull();
       });
 
-      const analyzeButton = within(summaryPanel as HTMLElement).getByRole("button", { name: "AI ANALYZE" });
+      const analyzeButton = within(summaryPanel as HTMLElement).getByRole("button", { name: "실패 분석 시작" });
       fireEvent.click(analyzeButton);
 
       await waitFor(() => {
-        expect(within(summaryPanel as HTMLElement).getByText("STREAMING")).toBeInTheDocument();
+        expect(within(summaryPanel as HTMLElement).getByText("진행 중")).toBeInTheDocument();
       });
 
       await emitAnalysisResult(tokenHandlers, resolveStream, "```bash\nnpm run test\nnpm run lint\n```\n",);
 
       await waitFor(() => {
-        expect(within(summaryPanel as HTMLElement).getByText("DONE")).toBeInTheDocument();
+        expect(within(summaryPanel as HTMLElement).getByText("분석 완료")).toBeInTheDocument();
       });
 
       const secondRow = container.querySelector("[data-inspector-command-menu-row='2']");
@@ -3640,22 +3502,22 @@ describe("App (LUM 터미널)", () => {
         expect(summaryPanel).not.toBeNull();
       });
 
-      const analyzeButton = within(summaryPanel as HTMLElement).getByRole("button", { name: "AI ANALYZE" });
+      const analyzeButton = within(summaryPanel as HTMLElement).getByRole("button", { name: "실패 분석 시작" });
       fireEvent.click(analyzeButton);
 
       await waitFor(() => {
-        expect(within(summaryPanel as HTMLElement).getByText("STREAMING")).toBeInTheDocument();
+        expect(within(summaryPanel as HTMLElement).getByText("진행 중")).toBeInTheDocument();
       });
 
       await emitAnalysisResult(tokenHandlers, resolveStream, "```bash\nnpm run test\nnpm run lint\n```\n",);
 
       await waitFor(() => {
-        expect(within(summaryPanel as HTMLElement).getByText("DONE")).toBeInTheDocument();
+        expect(within(summaryPanel as HTMLElement).getByText("분석 완료")).toBeInTheDocument();
       });
 
       const secondRow = container.querySelector("[data-inspector-command-menu-row='2']");
       expect(secondRow).not.toBeNull();
-      fireEvent.click(within(secondRow as HTMLElement).getByRole("button", { name: "MORE" }));
+      fireEvent.click(within(secondRow as HTMLElement).getByRole("button", { name: "추가" }));
       fireEvent.keyDown(secondRow as HTMLElement, { key: "r", code: "KeyR" });
 
       expect(invoke).toHaveBeenCalledWith("verify_command_safety", { command: "npm run lint" });
@@ -3706,19 +3568,17 @@ describe("App (LUM 터미널)", () => {
         expect(summaryPanel).not.toBeNull();
       });
 
-      const analyzeButton = within(summaryPanel as HTMLElement).getByRole("button", { name: "AI ANALYZE" });
+      const analyzeButton = within(summaryPanel as HTMLElement).getByRole("button", { name: "실패 분석 시작" });
       fireEvent.click(analyzeButton);
 
       await waitFor(() => {
-        expect(within(summaryPanel as HTMLElement).getByText("STREAMING")).toBeInTheDocument();
+        expect(within(summaryPanel as HTMLElement).getByText("진행 중")).toBeInTheDocument();
       });
 
       await emitAnalysisResult(tokenHandlers, resolveStream, "추천 수정: `npm run test` 를 다시 실행");
 
-      const analyzeCard = within(summaryPanel as HTMLElement).getByText("Last AI Analyze").closest("div");
-      expect(analyzeCard).not.toBeNull();
       const copyAnalyzeButton = await waitFor(
-        () => within(analyzeCard as HTMLElement).getAllByRole("button", { name: "COPY" })[0],
+        () => within(summaryPanel as HTMLElement).getAllByRole("button", { name: "결과 복사" })[0],
       );
       fireEvent.click(copyAnalyzeButton);
 
@@ -3773,25 +3633,23 @@ describe("App (LUM 터미널)", () => {
         expect(summaryPanel).not.toBeNull();
       });
 
-      const analyzeButton = within(summaryPanel as HTMLElement).getByRole("button", { name: "AI ANALYZE" });
+      const analyzeButton = within(summaryPanel as HTMLElement).getByRole("button", { name: "실패 분석 시작" });
       fireEvent.click(analyzeButton);
 
       await waitFor(() => {
-        expect(within(summaryPanel as HTMLElement).getByText("STREAMING")).toBeInTheDocument();
+        expect(within(summaryPanel as HTMLElement).getByText("진행 중")).toBeInTheDocument();
       });
 
       await emitAnalysisResult(tokenHandlers, resolveStream, "추천 수정: 타입 에러를 수정해보세요");
 
-      const analyzeCard = within(summaryPanel as HTMLElement).getByText("Last AI Analyze").closest("div");
-      expect(analyzeCard).not.toBeNull();
       const copyAnalyzeButton = await waitFor(
-        () => within(analyzeCard as HTMLElement).getAllByRole("button", { name: "COPY" })[0],
+        () => within(summaryPanel as HTMLElement).getAllByRole("button", { name: "결과 복사" })[0],
       );
       fireEvent.click(copyAnalyzeButton);
 
       await waitFor(() => {
         expect(writeText).toHaveBeenCalledTimes(1);
-        expect(screen.getByRole("tablist", { name: "Inspector 탭" })).toBeInTheDocument();
+        expect(screen.getByRole("tablist", { name: "인스펙터 탭" })).toBeInTheDocument();
       });
     } finally {
       mockedListen.mockImplementation(mockedBaseListen as any);
@@ -3840,23 +3698,23 @@ describe("App (LUM 터미널)", () => {
         expect(summaryPanel).not.toBeNull();
       });
 
-      const analyzeButton = within(summaryPanel as HTMLElement).getByRole("button", { name: "AI ANALYZE" });
+      const analyzeButton = within(summaryPanel as HTMLElement).getByRole("button", { name: "실패 분석 시작" });
       fireEvent.click(analyzeButton);
 
       await waitFor(() => {
-        expect(within(summaryPanel as HTMLElement).getByText("STREAMING")).toBeInTheDocument();
+        expect(within(summaryPanel as HTMLElement).getByText("진행 중")).toBeInTheDocument();
       });
 
       await emitAnalysisResult(tokenHandlers, resolveStream, "```bash\ncargo fmt\ncargo check\ncargo test -q\n```\n",);
 
       const firstRow = await waitFor(() => container.querySelector("[data-inspector-command-menu-row='1']"));
-      const moreButton = within(firstRow as HTMLElement).getByRole("button", { name: "MORE" });
+      const moreButton = within(firstRow as HTMLElement).getByRole("button", { name: "추가" });
       fireEvent.click(moreButton);
-      const rowCopyButton = await waitFor(() => within(firstRow as HTMLElement).getByRole("menuitem", { name: "COPY (C)" }));
+      const rowCopyButton = await waitFor(() => within(firstRow as HTMLElement).getByRole("menuitem", { name: "복사 (C)" }));
       fireEvent.click(rowCopyButton);
 
       fireEvent.click(moreButton);
-      const rowLoadButton = await waitFor(() => within(firstRow as HTMLElement).getByRole("menuitem", { name: "LOAD (L)" }));
+      const rowLoadButton = await waitFor(() => within(firstRow as HTMLElement).getByRole("menuitem", { name: "입력 넘기기" }));
       fireEvent.click(rowLoadButton);
 
       expect(writeText).toHaveBeenCalledWith("cargo fmt");
@@ -3904,17 +3762,17 @@ describe("App (LUM 터미널)", () => {
         expect(summaryPanel).not.toBeNull();
       });
 
-      const analyzeButton = within(summaryPanel as HTMLElement).getByRole("button", { name: "AI ANALYZE" });
+      const analyzeButton = within(summaryPanel as HTMLElement).getByRole("button", { name: "실패 분석 시작" });
       fireEvent.click(analyzeButton);
 
       await waitFor(() => {
-        expect(within(summaryPanel as HTMLElement).getByText("STREAMING")).toBeInTheDocument();
+        expect(within(summaryPanel as HTMLElement).getByText("진행 중")).toBeInTheDocument();
       });
 
       await emitAnalysisResult(tokenHandlers, resolveStream, "❌ 분석 실행 실패");
 
       await waitFor(() => {
-        expect(within(summaryPanel as HTMLElement).getByText("ERROR")).toBeInTheDocument();
+        expect(within(summaryPanel as HTMLElement).getByText("분석 오류")).toBeInTheDocument();
       });
     } finally {
       mockedListen.mockImplementation(mockedBaseListen as any);
@@ -3942,11 +3800,11 @@ describe("App (LUM 터미널)", () => {
       expect(summaryPanel).not.toBeNull();
     });
 
-    const loadPromptButton = within(summaryPanel as HTMLElement).getByRole("button", { name: "LOAD PROMPT" });
+    const loadPromptButton = within(summaryPanel as HTMLElement).getByRole("button", { name: "분석 입력 불러오기" });
     fireEvent.click(loadPromptButton);
 
     await waitFor(() => {
-      expect(screen.queryByRole("tablist", { name: "Inspector 탭" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("tablist", { name: "인스펙터 탭" })).not.toBeInTheDocument();
     });
   });
 
@@ -3982,20 +3840,22 @@ describe("App (LUM 터미널)", () => {
 
     let summaryPanel = container.querySelector("#inspector-tabpanel-summary");
     await waitFor(() => {
-      expect(screen.getByRole("tablist", { name: "Inspector 탭" })).toBeInTheDocument();
+      expect(screen.getByRole("tablist", { name: "인스펙터 탭" })).toBeInTheDocument();
       summaryPanel = container.querySelector("#inspector-tabpanel-summary");
       expect(summaryPanel).not.toBeNull();
     });
 
-    const recentBlocksCard = within(summaryPanel as HTMLElement).getByText("Recent Blocks").closest("div");
+    const recentBlocksCard = within(summaryPanel as HTMLElement)
+      .getByText("최근 흐름 재확인")
+      .closest("div")?.parentElement;
     expect(recentBlocksCard).not.toBeNull();
     const badBlockCommand = within(recentBlocksCard as HTMLElement).getByText("npm lint");
     const badBlockRow = badBlockCommand.closest("div")?.parentElement;
     expect(badBlockRow).not.toBeNull();
-    fireEvent.click(within(badBlockRow as HTMLElement).getByText("LOAD"));
+    fireEvent.click(within(badBlockRow as HTMLElement).getByText("후속 분석"));
 
     await waitFor(() => {
-      expect(screen.queryByRole("tablist", { name: "Inspector 탭" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("tablist", { name: "인스펙터 탭" })).not.toBeInTheDocument();
     });
   });
 
@@ -4025,12 +3885,12 @@ describe("App (LUM 터미널)", () => {
 
       let summaryPanel = container.querySelector("#inspector-tabpanel-summary");
       await waitFor(() => {
-        expect(screen.getByRole("tablist", { name: "Inspector 탭" })).toBeInTheDocument();
+        expect(screen.getByRole("tablist", { name: "인스펙터 탭" })).toBeInTheDocument();
         summaryPanel = container.querySelector("#inspector-tabpanel-summary");
         expect(summaryPanel).not.toBeNull();
       });
 
-      const copyLogButton = within(summaryPanel as HTMLElement).getByRole("button", { name: "COPY LOG" });
+      const copyLogButton = within(summaryPanel as HTMLElement).getByRole("button", { name: "실패 로그 복사" });
       fireEvent.click(copyLogButton);
 
       expect(writeText).toHaveBeenCalledWith(expect.stringContaining("Command: npm lint"));
@@ -4067,12 +3927,12 @@ describe("App (LUM 터미널)", () => {
 
       let summaryPanel = container.querySelector("#inspector-tabpanel-summary");
       await waitFor(() => {
-        expect(screen.getByRole("tablist", { name: "Inspector 탭" })).toBeInTheDocument();
+        expect(screen.getByRole("tablist", { name: "인스펙터 탭" })).toBeInTheDocument();
         summaryPanel = container.querySelector("#inspector-tabpanel-summary");
         expect(summaryPanel).not.toBeNull();
       });
 
-      const copyPromptButton = within(summaryPanel as HTMLElement).getByRole("button", { name: "COPY PROMPT" });
+      const copyPromptButton = within(summaryPanel as HTMLElement).getByRole("button", { name: "분석 프롬프트 복사" });
       fireEvent.click(copyPromptButton);
 
       expect(writeText).toHaveBeenCalledWith(expect.stringContaining("아래 실패한 터미널 실행을 분석해줘."));
@@ -4083,7 +3943,7 @@ describe("App (LUM 터미널)", () => {
     }
   });
 
-  it("COPY LOG가 실패해도 실패 블록 패널이 유지된다", async () => {
+  it("실패 로그 복사가 실패해도 실패 블록 패널이 유지된다", async () => {
     const writeText = vi.fn().mockRejectedValue(new Error("clipboard denied"));
     const baseClipboard = navigator.clipboard;
     Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
@@ -4104,17 +3964,17 @@ describe("App (LUM 터미널)", () => {
 
       let summaryPanel = container.querySelector("#inspector-tabpanel-summary");
       await waitFor(() => {
-        expect(screen.getByRole("tablist", { name: "Inspector 탭" })).toBeInTheDocument();
+        expect(screen.getByRole("tablist", { name: "인스펙터 탭" })).toBeInTheDocument();
         summaryPanel = container.querySelector("#inspector-tabpanel-summary");
         expect(summaryPanel).not.toBeNull();
       });
 
-      const copyLogButton = within(summaryPanel as HTMLElement).getByRole("button", { name: "COPY LOG" });
+      const copyLogButton = within(summaryPanel as HTMLElement).getByRole("button", { name: "실패 로그 복사" });
       fireEvent.click(copyLogButton);
 
       await waitFor(() => {
         expect(writeText).toHaveBeenCalledTimes(1);
-        expect(screen.getByRole("tablist", { name: "Inspector 탭" })).toBeInTheDocument();
+        expect(screen.getByRole("tablist", { name: "인스펙터 탭" })).toBeInTheDocument();
       });
       expect(writeText.mock.calls[0]?.[0]).toContain("Command: npm run test");
       expect(within(summaryPanel as HTMLElement).getAllByText("npm run test").length).toBeGreaterThan(0);
@@ -4123,7 +3983,7 @@ describe("App (LUM 터미널)", () => {
     }
   });
 
-  it("COPY PROMPT가 실패해도 실패 블록 패널이 유지된다", async () => {
+  it("분석 프롬프트 복사가 실패해도 실패 블록 패널이 유지된다", async () => {
     const writeText = vi.fn().mockRejectedValue(new Error("clipboard denied"));
     const baseClipboard = navigator.clipboard;
     Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
@@ -4144,17 +4004,17 @@ describe("App (LUM 터미널)", () => {
 
       let summaryPanel = container.querySelector("#inspector-tabpanel-summary");
       await waitFor(() => {
-        expect(screen.getByRole("tablist", { name: "Inspector 탭" })).toBeInTheDocument();
+        expect(screen.getByRole("tablist", { name: "인스펙터 탭" })).toBeInTheDocument();
         summaryPanel = container.querySelector("#inspector-tabpanel-summary");
         expect(summaryPanel).not.toBeNull();
       });
 
-      const copyPromptButton = within(summaryPanel as HTMLElement).getByRole("button", { name: "COPY PROMPT" });
+      const copyPromptButton = within(summaryPanel as HTMLElement).getByRole("button", { name: "분석 프롬프트 복사" });
       fireEvent.click(copyPromptButton);
 
       await waitFor(() => {
         expect(writeText).toHaveBeenCalledTimes(1);
-        expect(screen.getByRole("tablist", { name: "Inspector 탭" })).toBeInTheDocument();
+        expect(screen.getByRole("tablist", { name: "인스펙터 탭" })).toBeInTheDocument();
       });
       expect(writeText.mock.calls[0]?.[0]).toContain("아래 실패한 터미널 실행을 분석해줘.");
       expect(writeText.mock.calls[0]?.[0]).toContain("Command: pnpm lint");
@@ -4182,13 +4042,13 @@ describe("App (LUM 터미널)", () => {
     expect(summaryPanel).not.toBeNull();
     expect(screen.getByText("실패 블록이 없습니다.")).toBeInTheDocument();
 
-    expect(within(summaryPanel as HTMLElement).queryByRole("button", { name: "AI ANALYZE" })).not.toBeInTheDocument();
+    expect(within(summaryPanel as HTMLElement).queryByRole("button", { name: "실패 분석 시작" })).not.toBeInTheDocument();
     expect(within(summaryPanel as HTMLElement).queryByRole("button", { name: "COPY LOG" })).not.toBeInTheDocument();
     expect(within(summaryPanel as HTMLElement).queryByRole("button", { name: "COPY PROMPT" })).not.toBeInTheDocument();
     expect(within(summaryPanel as HTMLElement).queryByRole("button", { name: "LOAD PROMPT" })).not.toBeInTheDocument();
   });
 
-  it("성공한 최근 블록만 있을 때 Recent Blocks LOAD 버튼을 노출하지 않는다", async () => {
+  it("성공한 최근 블록만 있을 때 후속 분석 버튼을 노출하지 않는다", async () => {
     setMockCommandBlocks([
       {
         id: "ok-1",
@@ -4214,12 +4074,12 @@ describe("App (LUM 터미널)", () => {
 
     const summaryPanel = document.querySelector("#inspector-tabpanel-summary");
     expect(summaryPanel).not.toBeNull();
-    const recentBlocksCard = within(summaryPanel as HTMLElement).getByText("Recent Blocks").closest("div");
+    const recentBlocksCard = within(summaryPanel as HTMLElement).getByText("최근 흐름 재확인").closest("div")?.parentElement;
     expect(recentBlocksCard).not.toBeNull();
-    expect(within(recentBlocksCard as HTMLElement).queryByRole("button", { name: "LOAD" })).not.toBeInTheDocument();
+    expect(within(recentBlocksCard as HTMLElement).queryByRole("button", { name: "후속 분석" })).not.toBeInTheDocument();
   });
 
-  it("실패한 최근 블록이 있으면 Recent Blocks LOAD 버튼을 노출한다", async () => {
+  it("실패한 최근 블록이 있으면 후속 분석 버튼을 노출한다", async () => {
     setMockCommandBlocks([
       {
         id: "ok-1",
@@ -4245,13 +4105,13 @@ describe("App (LUM 터미널)", () => {
 
     const summaryPanel = document.querySelector("#inspector-tabpanel-summary");
     expect(summaryPanel).not.toBeNull();
-    const recentBlocksCard = within(summaryPanel as HTMLElement).getByText("Recent Blocks").closest("div");
+    const recentBlocksCard = within(summaryPanel as HTMLElement).getByText("최근 흐름 재확인").closest("div")?.parentElement;
     expect(recentBlocksCard).not.toBeNull();
     expect(within(recentBlocksCard as HTMLElement).getByText("pnpm lint")).toBeInTheDocument();
-    expect(within(recentBlocksCard as HTMLElement).getByRole("button", { name: "LOAD" })).toBeInTheDocument();
+    expect(within(recentBlocksCard as HTMLElement).getByRole("button", { name: "후속 분석" })).toBeInTheDocument();
   });
 
-  it("Recent Blocks의 SEL을 누르면 해당 블록이 선택된다", async () => {
+  it("최근 블록의 블록 선택을 누르면 해당 블록이 선택된다", async () => {
     setMockCommandBlocks([
       {
         id: "block-1",
@@ -4278,20 +4138,20 @@ describe("App (LUM 터미널)", () => {
     const summaryPanel = document.querySelector("#inspector-tabpanel-summary");
     expect(summaryPanel).not.toBeNull();
 
-    const recentBlocksCard = within(summaryPanel as HTMLElement).getByText("Recent Blocks").closest("div");
+    const recentBlocksCard = within(summaryPanel as HTMLElement).getByText("최근 흐름 재확인").closest("div")?.parentElement;
     expect(recentBlocksCard).not.toBeNull();
     const firstRecentBlockCommand = within(recentBlocksCard as HTMLElement).getByText("npm test");
     const firstRecentBlockRow = firstRecentBlockCommand.closest("div")?.parentElement;
     expect(firstRecentBlockRow).not.toBeNull();
 
-    fireEvent.click(within(firstRecentBlockRow as HTMLElement).getByText("SEL"));
+    fireEvent.click(within(firstRecentBlockRow as HTMLElement).getByText("블록 선택"));
 
     await waitFor(() => {
-      expect(screen.getByText("1/2")).toBeInTheDocument();
+      expect(screen.getAllByText("1/2").length).toBeGreaterThan(0);
     });
   });
 
-  it("Recent Blocks의 RUN을 누르면 해당 명령을 PTY에 다시 보낸다", async () => {
+  it("최근 블록의 다시 실행을 누르면 해당 명령을 PTY에 다시 보낸다", async () => {
     setMockCommandBlocks([
       {
         id: "block-1",
@@ -4318,13 +4178,13 @@ describe("App (LUM 터미널)", () => {
     const summaryPanel = document.querySelector("#inspector-tabpanel-summary");
     expect(summaryPanel).not.toBeNull();
 
-    const recentBlocksCard = within(summaryPanel as HTMLElement).getByText("Recent Blocks").closest("div");
+    const recentBlocksCard = within(summaryPanel as HTMLElement).getByText("최근 흐름 재확인").closest("div")?.parentElement;
     expect(recentBlocksCard).not.toBeNull();
     const secondRecentBlockCommand = within(recentBlocksCard as HTMLElement).getByText("pnpm lint");
     const secondRecentBlockRow = secondRecentBlockCommand.closest("div")?.parentElement;
     expect(secondRecentBlockRow).not.toBeNull();
 
-    fireEvent.click(within(secondRecentBlockRow as HTMLElement).getByText("RUN"));
+    fireEvent.click(within(secondRecentBlockRow as HTMLElement).getByText("다시 실행"));
 
     const writes = Array.from(terminalWriteMocks.values());
     expect(writes.length).toBeGreaterThan(0);
@@ -4357,19 +4217,19 @@ describe("App (LUM 터미널)", () => {
 
     const summaryPanel = document.querySelector("#inspector-tabpanel-summary");
     expect(summaryPanel).not.toBeNull();
-    const failedBlockHeading = within(summaryPanel as HTMLElement).getByText("Failed Block");
-    const failedBlockCard = failedBlockHeading.closest("div")?.parentElement;
+    const failedBlockHeading = within(summaryPanel as HTMLElement).getByText("실패 블록 확인");
+    const failedBlockCard = failedBlockHeading.closest("div")?.parentElement?.parentElement;
     expect(failedBlockCard).not.toBeNull();
     expect(within(failedBlockCard as HTMLElement).getByText("pnpm lint")).toBeInTheDocument();
 
-    fireEvent.click(within(failedBlockCard as HTMLElement).getByText("SELECT"));
+    fireEvent.click(within(failedBlockCard as HTMLElement).getByText("블록 선택"));
 
     await waitFor(() => {
-      expect(screen.getByText("2/2")).toBeInTheDocument();
+      expect(screen.getAllByText("2/2").length).toBeGreaterThan(0);
     });
   });
 
-  it("Failed Block의 NEXT FAIL을 누르면 이전 실패 블록으로 순환한다", async () => {
+  it("실패 블록의 다음 실패 확인을 누르면 이전 실패 블록으로 순환한다", async () => {
     setMockCommandBlocks([
       {
         id: "ok-1",
@@ -4404,14 +4264,14 @@ describe("App (LUM 터미널)", () => {
     const summaryPanel = document.querySelector("#inspector-tabpanel-summary");
     expect(summaryPanel).not.toBeNull();
 
-    fireEvent.click(within(summaryPanel as HTMLElement).getByText("NEXT FAIL"));
+    fireEvent.click(within(summaryPanel as HTMLElement).getByText("다음 실패 확인"));
 
     await waitFor(() => {
       expect(within(summaryPanel as HTMLElement).getAllByText("pnpm lint").length).toBeGreaterThan(0);
     });
   });
 
-  it("Failed Block의 NEXT FAIL 뒤 LOAD PROMPT는 이동된 실패 블록 기준으로 AI 바를 채운다", async () => {
+  it("실패 블록의 다음 실패 확인 뒤 분석 입력 불러오기는 이동된 실패 블록 기준으로 AI 바를 채운다", async () => {
     setMockCommandBlocks([
       {
         id: "ok-1",
@@ -4449,20 +4309,20 @@ describe("App (LUM 터미널)", () => {
       expect(summaryPanel).not.toBeNull();
     });
 
-    fireEvent.click(within(summaryPanel as HTMLElement).getByText("NEXT FAIL"));
+    fireEvent.click(within(summaryPanel as HTMLElement).getByText("다음 실패 확인"));
 
     await waitFor(() => {
       expect(within(summaryPanel as HTMLElement).getAllByText("pnpm lint").length).toBeGreaterThan(0);
     });
 
-    fireEvent.click(within(summaryPanel as HTMLElement).getByRole("button", { name: "LOAD PROMPT" }));
+    fireEvent.click(within(summaryPanel as HTMLElement).getByRole("button", { name: "분석 입력 불러오기" }));
 
     await waitFor(() => {
-      expect(screen.queryByRole("tablist", { name: "Inspector 탭" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("tablist", { name: "인스펙터 탭" })).not.toBeInTheDocument();
     });
   });
 
-  it("Failed Block의 NEXT FAIL 뒤 AI ANALYZE는 이동된 실패 블록 기준으로 STREAMING에 진입한다", async () => {
+  it("실패 블록의 다음 실패 확인 뒤 분석 시작은 이동된 실패 블록 기준으로 진행 상태에 진입한다", async () => {
     const mockedListen = vi.mocked(listen);
     const mockedBaseListen = mockedListen.getMockImplementation();
 
@@ -4506,23 +4366,23 @@ describe("App (LUM 터미널)", () => {
         expect(summaryPanel).not.toBeNull();
       });
 
-      fireEvent.click(within(summaryPanel as HTMLElement).getByText("NEXT FAIL"));
+      fireEvent.click(within(summaryPanel as HTMLElement).getByText("다음 실패 확인"));
 
       await waitFor(() => {
         expect(within(summaryPanel as HTMLElement).getAllByText("pnpm lint").length).toBeGreaterThan(0);
       });
 
-      fireEvent.click(within(summaryPanel as HTMLElement).getByRole("button", { name: "AI ANALYZE" }));
+      fireEvent.click(within(summaryPanel as HTMLElement).getByRole("button", { name: "실패 분석 시작" }));
 
       await waitFor(() => {
-        expect(within(summaryPanel as HTMLElement).getByText("STREAMING")).toBeInTheDocument();
+        expect(within(summaryPanel as HTMLElement).getByText("진행 중")).toBeInTheDocument();
       });
     } finally {
       mockedListen.mockImplementation(mockedBaseListen as any);
     }
   });
 
-  it("Failed Block의 NEXT FAIL 뒤 COPY LOG는 이동된 실패 블록 기준으로 복사된다", async () => {
+  it("실패 블록의 다음 실패 확인 뒤 실패 로그 복사는 이동된 실패 블록 기준으로 복사된다", async () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     const baseClipboard = navigator.clipboard;
     Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
@@ -4565,13 +4425,13 @@ describe("App (LUM 터미널)", () => {
         expect(summaryPanel).not.toBeNull();
       });
 
-      fireEvent.click(within(summaryPanel as HTMLElement).getByText("NEXT FAIL"));
+      fireEvent.click(within(summaryPanel as HTMLElement).getByText("다음 실패 확인"));
 
       await waitFor(() => {
         expect(within(summaryPanel as HTMLElement).getAllByText("pnpm lint").length).toBeGreaterThan(0);
       });
 
-      fireEvent.click(within(summaryPanel as HTMLElement).getByRole("button", { name: "COPY LOG" }));
+      fireEvent.click(within(summaryPanel as HTMLElement).getByRole("button", { name: "실패 로그 복사" }));
 
       expect(writeText).toHaveBeenCalledWith(expect.stringContaining("Command: pnpm lint"));
       expect(writeText).not.toHaveBeenCalledWith(expect.stringContaining("Command: npm test"));
@@ -4580,7 +4440,7 @@ describe("App (LUM 터미널)", () => {
     }
   });
 
-  it("Failed Block의 NEXT FAIL 뒤 COPY PROMPT는 이동된 실패 블록 기준으로 복사된다", async () => {
+  it("실패 블록의 다음 실패 확인 뒤 분석 프롬프트 복사는 이동된 실패 블록 기준으로 복사된다", async () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     const baseClipboard = navigator.clipboard;
     Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
@@ -4623,13 +4483,13 @@ describe("App (LUM 터미널)", () => {
         expect(summaryPanel).not.toBeNull();
       });
 
-      fireEvent.click(within(summaryPanel as HTMLElement).getByText("NEXT FAIL"));
+      fireEvent.click(within(summaryPanel as HTMLElement).getByText("다음 실패 확인"));
 
       await waitFor(() => {
         expect(within(summaryPanel as HTMLElement).getAllByText("pnpm lint").length).toBeGreaterThan(0);
       });
 
-      fireEvent.click(within(summaryPanel as HTMLElement).getByRole("button", { name: "COPY PROMPT" }));
+      fireEvent.click(within(summaryPanel as HTMLElement).getByRole("button", { name: "분석 프롬프트 복사" }));
 
       expect(writeText).toHaveBeenCalledWith(expect.stringContaining("아래 실패한 터미널 실행을 분석해줘."));
       expect(writeText).toHaveBeenCalledWith(expect.stringContaining("Command: pnpm lint"));
@@ -4643,7 +4503,7 @@ describe("App (LUM 터미널)", () => {
     render(<App />);
 
     const inspectorButton = screen.getByLabelText("Inspector");
-    const inspectorCloseButton = screen.queryByLabelText("Inspector 닫기");
+    const inspectorCloseButton = screen.queryByLabelText("인스펙터 닫기");
 
     if (inspectorCloseButton) {
       fireEvent.click(inspectorCloseButton);
@@ -4651,12 +4511,12 @@ describe("App (LUM 터미널)", () => {
     fireEvent.click(inspectorButton);
 
     await waitFor(() => {
-      expect(screen.getByRole("tablist", { name: "Inspector 탭" })).toBeInTheDocument();
+      expect(screen.getByRole("tablist", { name: "인스펙터 탭" })).toBeInTheDocument();
     });
 
     const panel = document.querySelector("#inspector-tabpanel-summary");
     expect(panel).toBeTruthy();
-    const ragButton = within(panel as HTMLElement).getByRole("button", { name: "RAG" });
+    const ragButton = within(panel as HTMLElement).getByRole("button", { name: "RAG 분석" });
     fireEvent.click(ragButton);
 
     await waitFor(() => {
@@ -4669,7 +4529,7 @@ describe("App (LUM 터미널)", () => {
     render(<App />);
 
     const inspectorButton = screen.getByLabelText("Inspector");
-    const inspectorCloseButton = screen.queryByLabelText("Inspector 닫기");
+    const inspectorCloseButton = screen.queryByLabelText("인스펙터 닫기");
 
     if (inspectorCloseButton) {
       fireEvent.click(inspectorCloseButton);
@@ -4677,25 +4537,25 @@ describe("App (LUM 터미널)", () => {
     fireEvent.click(inspectorButton);
 
     await waitFor(() => {
-      expect(screen.getByRole("tablist", { name: "Inspector 탭" })).toBeInTheDocument();
+      expect(screen.getByRole("tablist", { name: "인스펙터 탭" })).toBeInTheDocument();
     });
 
     const panel = document.querySelector("#inspector-tabpanel-summary");
     expect(panel).toBeTruthy();
     const summary = panel as HTMLElement;
 
-    expect(within(summary).queryByRole("button", { name: "Diff" })).toBeNull();
+    expect(within(summary).queryByRole("button", { name: /변경내역/ })).toBeNull();
 
-    const moreButton = within(summary).getByRole("button", { name: "더보기" });
+    const moreButton = within(summary).getByRole("button", { name: /운영 단계 열기/ });
     fireEvent.click(moreButton);
 
     await waitFor(() => {
-      expect(within(summary).getByRole("button", { name: "Diff" })).toBeInTheDocument();
+      expect(within(summary).getByRole("button", { name: /변경내역/ })).toBeInTheDocument();
     });
 
-    fireEvent.click(within(summary).getByRole("button", { name: "축소" }));
+    fireEvent.click(within(summary).getByRole("button", { name: /운영 단계 닫기/ }));
     await waitFor(() => {
-      expect(within(summary).queryByRole("button", { name: "Diff" })).toBeNull();
+      expect(within(summary).queryByRole("button", { name: /변경내역/ })).toBeNull();
     });
   });
 
@@ -4703,7 +4563,7 @@ describe("App (LUM 터미널)", () => {
     render(<App />);
 
     const inspectorButton = screen.getByLabelText("Inspector");
-    const inspectorCloseButton = screen.queryByLabelText("Inspector 닫기");
+    const inspectorCloseButton = screen.queryByLabelText("인스펙터 닫기");
 
     if (inspectorCloseButton) {
       fireEvent.click(inspectorCloseButton);
@@ -4711,24 +4571,24 @@ describe("App (LUM 터미널)", () => {
     fireEvent.click(inspectorButton);
 
     await waitFor(() => {
-      expect(screen.getByRole("tablist", { name: "Inspector 탭" })).toBeInTheDocument();
+      expect(screen.getByRole("tablist", { name: "인스펙터 탭" })).toBeInTheDocument();
     });
 
     const panel = document.querySelector("#inspector-tabpanel-summary");
     expect(panel).toBeTruthy();
     const summary = panel as HTMLElement;
 
-    const moreButton = within(summary).getByRole("button", { name: "더보기" });
+    const moreButton = within(summary).getByRole("button", { name: /운영 단계 열기/ });
     fireEvent.click(moreButton);
 
     await waitFor(() => {
-      expect(within(summary).getByRole("button", { name: "Diff" })).toBeInTheDocument();
+      expect(within(summary).getByRole("button", { name: /변경내역/ })).toBeInTheDocument();
     });
 
     fireEvent.keyDown(window, { key: "Escape" });
 
     await waitFor(() => {
-      expect(within(summary).queryByRole("button", { name: "Diff" })).toBeNull();
+      expect(within(summary).queryByRole("button", { name: /변경내역/ })).toBeNull();
       expect(moreButton).toHaveFocus();
     });
   });
@@ -4737,7 +4597,7 @@ describe("App (LUM 터미널)", () => {
     render(<App />);
 
     const inspectorButton = screen.getByLabelText("Inspector");
-    const inspectorCloseButton = screen.queryByLabelText("Inspector 닫기");
+    const inspectorCloseButton = screen.queryByLabelText("인스펙터 닫기");
 
     if (inspectorCloseButton) {
       fireEvent.click(inspectorCloseButton);
@@ -4745,22 +4605,22 @@ describe("App (LUM 터미널)", () => {
     fireEvent.click(inspectorButton);
 
     await waitFor(() => {
-      expect(screen.getByRole("tablist", { name: "Inspector 탭" })).toBeInTheDocument();
+      expect(screen.getByRole("tablist", { name: "인스펙터 탭" })).toBeInTheDocument();
     });
 
     const panel = document.querySelector("#inspector-tabpanel-summary");
     expect(panel).toBeTruthy();
     const summary = panel as HTMLElement;
-    const moreButton = within(summary).getByRole("button", { name: "더보기" });
+    const moreButton = within(summary).getByRole("button", { name: /운영 단계 열기/ });
 
     fireEvent.keyDown(moreButton, { key: "Enter", code: "Enter" });
     await waitFor(() => {
-      expect(within(summary).getByRole("button", { name: "Diff" })).toBeInTheDocument();
+      expect(within(summary).getByRole("button", { name: /변경내역/ })).toBeInTheDocument();
     });
 
     fireEvent.keyDown(moreButton, { key: " ", code: "Space" });
     await waitFor(() => {
-      expect(within(summary).queryByRole("button", { name: "Diff" })).toBeNull();
+      expect(within(summary).queryByRole("button", { name: /변경내역/ })).toBeNull();
     });
   });
 
@@ -4768,7 +4628,7 @@ describe("App (LUM 터미널)", () => {
     render(<App />);
 
     const inspectorButton = screen.getByLabelText("Inspector");
-    const inspectorCloseButton = screen.queryByLabelText("Inspector 닫기");
+    const inspectorCloseButton = screen.queryByLabelText("인스펙터 닫기");
 
     if (inspectorCloseButton) {
       fireEvent.click(inspectorCloseButton);
@@ -4776,23 +4636,23 @@ describe("App (LUM 터미널)", () => {
     fireEvent.click(inspectorButton);
 
     await waitFor(() => {
-      expect(screen.getByRole("tablist", { name: "Inspector 탭" })).toBeInTheDocument();
+      expect(screen.getByRole("tablist", { name: "인스펙터 탭" })).toBeInTheDocument();
     });
 
     const panel = document.querySelector("#inspector-tabpanel-summary");
     expect(panel).toBeTruthy();
     const summary = panel as HTMLElement;
 
-    const moreButton = within(summary).getByRole("button", { name: "더보기" });
+    const moreButton = within(summary).getByRole("button", { name: /운영 단계 열기/ });
     fireEvent.keyDown(moreButton, { key: "Enter", code: "Enter" });
 
-    const historyButton = await waitFor(() => within(summary).getByRole("button", { name: "History" }));
+    const historyButton = await waitFor(() => within(summary).getByRole("button", { name: /실패/ }));
     expect(historyButton).toBeInTheDocument();
 
     await waitFor(() => {
       expect(historyButton).toHaveFocus();
     });
-    const diffButton = within(summary).getByRole("button", { name: "Diff" });
+    const diffButton = within(summary).getByRole("button", { name: /변경내역/ });
     fireEvent.keyDown(historyButton, { key: "ArrowRight", code: "ArrowRight" });
     await waitFor(() => {
       expect(diffButton).toHaveFocus();
@@ -4803,7 +4663,7 @@ describe("App (LUM 터미널)", () => {
     render(<App />);
 
     const inspectorButton = screen.getByLabelText("Inspector");
-    const inspectorCloseButton = screen.queryByLabelText("Inspector 닫기");
+    const inspectorCloseButton = screen.queryByLabelText("인스펙터 닫기");
 
     if (inspectorCloseButton) {
       fireEvent.click(inspectorCloseButton);
@@ -4811,17 +4671,17 @@ describe("App (LUM 터미널)", () => {
     fireEvent.click(inspectorButton);
 
     await waitFor(() => {
-      expect(screen.getByRole("tablist", { name: "Inspector 탭" })).toBeInTheDocument();
+      expect(screen.getByRole("tablist", { name: "인스펙터 탭" })).toBeInTheDocument();
     });
 
     const panel = document.querySelector("#inspector-tabpanel-summary");
     expect(panel).toBeTruthy();
     const summary = panel as HTMLElement;
 
-    const moreButton = within(summary).getByRole("button", { name: "더보기" });
+    const moreButton = within(summary).getByRole("button", { name: /운영 단계 열기/ });
     fireEvent.keyDown(moreButton, { key: "Enter", code: "Enter" });
 
-    const historyButton = await waitFor(() => within(summary).getByRole("button", { name: "History" }));
+    const historyButton = await waitFor(() => within(summary).getByRole("button", { name: /실패/ }));
     await waitFor(() => {
       expect(historyButton).toHaveFocus();
     });
@@ -4831,7 +4691,7 @@ describe("App (LUM 터미널)", () => {
     render(<App />);
 
     const inspectorButton = screen.getByLabelText("Inspector");
-    const inspectorCloseButton = screen.queryByLabelText("Inspector 닫기");
+    const inspectorCloseButton = screen.queryByLabelText("인스펙터 닫기");
 
     if (inspectorCloseButton) {
       fireEvent.click(inspectorCloseButton);
@@ -4839,23 +4699,23 @@ describe("App (LUM 터미널)", () => {
     fireEvent.click(inspectorButton);
 
     await waitFor(() => {
-      expect(screen.getByRole("tablist", { name: "Inspector 탭" })).toBeInTheDocument();
+      expect(screen.getByRole("tablist", { name: "인스펙터 탭" })).toBeInTheDocument();
     });
 
     const panel = document.querySelector("#inspector-tabpanel-summary");
     expect(panel).toBeTruthy();
     const summary = panel as HTMLElement;
 
-    const moreButton = within(summary).getByRole("button", { name: "더보기" });
+    const moreButton = within(summary).getByRole("button", { name: /운영 단계 열기/ });
     fireEvent.click(moreButton);
     await waitFor(() => {
-      expect(within(summary).getByRole("button", { name: "Diff" })).toBeInTheDocument();
+      expect(within(summary).getByRole("button", { name: /변경내역/ })).toBeInTheDocument();
     });
 
     fireEvent.pointerDown(document.body);
 
     await waitFor(() => {
-      expect(within(summary).queryByRole("button", { name: "Diff" })).toBeNull();
+      expect(within(summary).queryByRole("button", { name: /변경내역/ })).toBeNull();
     });
   });
 
@@ -4863,7 +4723,7 @@ describe("App (LUM 터미널)", () => {
     render(<App />);
 
     const inspectorButton = screen.getByLabelText("Inspector");
-    const inspectorCloseButton = screen.queryByLabelText("Inspector 닫기");
+    const inspectorCloseButton = screen.queryByLabelText("인스펙터 닫기");
 
     if (inspectorCloseButton) {
       fireEvent.click(inspectorCloseButton);
@@ -4871,20 +4731,20 @@ describe("App (LUM 터미널)", () => {
     fireEvent.click(inspectorButton);
 
     await waitFor(() => {
-      expect(screen.getByRole("tablist", { name: "Inspector 탭" })).toBeInTheDocument();
+      expect(screen.getByRole("tablist", { name: "인스펙터 탭" })).toBeInTheDocument();
     });
 
     const panel = document.querySelector("#inspector-tabpanel-summary");
     expect(panel).toBeTruthy();
     const summary = panel as HTMLElement;
 
-    const moreButton = within(summary).getByRole("button", { name: "더보기" });
+    const moreButton = within(summary).getByRole("button", { name: /운영 단계 열기/ });
     fireEvent.click(moreButton);
-    const diffButton = await waitFor(() => within(summary).getByRole("button", { name: "Diff" }));
+    const diffButton = await waitFor(() => within(summary).getByRole("button", { name: /변경내역/ }));
 
     fireEvent.pointerDown(diffButton);
 
-    expect(within(summary).getByRole("button", { name: "Diff" })).toBeInTheDocument();
+    expect(within(summary).getByRole("button", { name: /변경내역/ })).toBeInTheDocument();
   });
 
   it("Inspector는 Escape 키로 닫히고 포커스가 트리거로 되돌아간다", async () => {
@@ -4895,7 +4755,7 @@ describe("App (LUM 터미널)", () => {
     fireEvent.keyDown(window, { key: "Escape" });
 
     await waitFor(() => {
-      expect(screen.queryByRole("tablist", { name: "Inspector 탭" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("tablist", { name: "인스펙터 탭" })).not.toBeInTheDocument();
       expect(inspectorButton).toHaveAttribute("aria-pressed", "false");
       expect(inspectorButton).toHaveFocus();
     });

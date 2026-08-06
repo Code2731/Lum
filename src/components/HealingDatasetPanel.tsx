@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { IconButton } from "@/components/ui/icon-button";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { fmtShortDate } from "../utils";
+import { toErrorMessage } from "../utils/errorMessage";
 
 type SafetyLevel = "Safe" | "Warning" | "Dangerous" | "Blocked";
 
@@ -81,7 +82,7 @@ const HealingDatasetPanel: React.FC<Props> = ({ onClose }) => {
       rows.sort((a, b) => b.ts_ms - a.ts_ms);
       setRecords(rows);
     } catch (e) {
-      setError(String(e));
+      setError(toErrorMessage(e));
     } finally {
       setLoading(false);
     }
@@ -98,7 +99,7 @@ const HealingDatasetPanel: React.FC<Props> = ({ onClose }) => {
       });
       setExportInfo({ count, path });
     } catch (e) {
-      setError(String(e));
+      setError(toErrorMessage(e));
     }
   };
 
@@ -109,7 +110,7 @@ const HealingDatasetPanel: React.FC<Props> = ({ onClose }) => {
       setRecords([]);
       setExportInfo(null);
     } catch (e) {
-      setError(String(e));
+      setError(toErrorMessage(e));
     }
   };
 

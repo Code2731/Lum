@@ -767,7 +767,7 @@ const CommandInput = ({
             onMouseEnter={() => setMicHovered(true)}
             onMouseLeave={() => setMicHovered(false)}
             aria-pressed={voiceEnabled ? isRecording : undefined}
-            aria-label={`${micActionLabel} · ${micAssistLabel}`}
+            aria-label={micActionLabel}
             style={{
               animation: voiceEnabled && voicePulseActive ? VOICE_PULSE_ANIMATION : "none",
               background:

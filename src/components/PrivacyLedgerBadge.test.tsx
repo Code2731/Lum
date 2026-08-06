@@ -128,9 +128,9 @@ describe("PrivacyLedgerBadge", () => {
       />,
     );
 
-    expect(screen.getByText("온디바이스 100%")).toBeInTheDocument();
-    expect(screen.getByText("2건")).toBeInTheDocument();
-    expect(screen.getByText("로컬")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "개인정보 원장 — 온디바이스 100%" })).toBeInTheDocument();
+    expect(screen.getByText("온디바이스")).toBeInTheDocument();
+    expect(screen.getByText("2")).toBeInTheDocument();
   });
 
   it("호출이 없으면 호출 대기 상태를 보여준다", () => {
@@ -142,7 +142,8 @@ describe("PrivacyLedgerBadge", () => {
       />,
     );
 
-    expect(screen.getByText("호출 대기")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "개인정보 원장 — 호출 대기" })).toBeInTheDocument();
+    expect(screen.getByText("대기")).toBeInTheDocument();
   });
 
   it("클라우드 호출이 섞이면 트리거에서 클라우드 건수를 바로 보여준다", () => {
@@ -183,9 +184,9 @@ describe("PrivacyLedgerBadge", () => {
       />,
     );
 
-    expect(screen.getByText("클라우드 33%")).toBeInTheDocument();
-    expect(screen.getByText("3건")).toBeInTheDocument();
-    expect(screen.getByText("클라우드 1")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "개인정보 원장 — 클라우드 33%" })).toBeInTheDocument();
+    expect(screen.getByText("혼합")).toBeInTheDocument();
+    expect(screen.getByText("3")).toBeInTheDocument();
   });
 
   it("초기화 버튼이 표시되고 동작한다", () => {

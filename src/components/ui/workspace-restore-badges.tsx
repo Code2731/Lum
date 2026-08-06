@@ -6,6 +6,7 @@ interface WorkspaceRestoreBadgesProps {
   latest?: boolean;
   frequent?: boolean;
   compact?: boolean;
+  asListItems?: boolean;
 }
 
 export function getWorkspaceRestoreBadgeSummary({
@@ -27,12 +28,13 @@ export const WorkspaceRestoreBadges: React.FC<WorkspaceRestoreBadgesProps> = ({
   latest,
   frequent,
   compact = false,
+  asListItems = false,
 }) => {
   const compactClassName = compact ? "px-1" : undefined;
   const summary = getWorkspaceRestoreBadgeSummary({ recommended, latest, frequent });
 
-  return (
-    <span role="list" aria-label={summary} title={summary} className="inline-flex flex-wrap items-center gap-1">
+  const badges = (
+    <>
       {recommended && (
         <span role="listitem">
           <StatusBadge
@@ -66,6 +68,16 @@ export const WorkspaceRestoreBadges: React.FC<WorkspaceRestoreBadgesProps> = ({
           </StatusBadge>
         </span>
       )}
+    </>
+  );
+
+  if (asListItems) {
+    return badges;
+  }
+
+  return (
+    <span role="list" aria-label={summary} title={summary} className="inline-flex flex-wrap items-center gap-1">
+      {badges}
     </span>
   );
 };

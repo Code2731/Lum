@@ -46,6 +46,18 @@ describe("extractInspectorAnalyzeCommands", () => {
     ]);
   });
 
+  it("RUN: 형식의 추천 커맨드도 추출한다", () => {
+    const content = [
+      "RUN: npm test -- --runInBand",
+      "2) RUN: npm run lint",
+    ].join("\n");
+
+    expect(extractInspectorAnalyzeCommands(content)).toEqual([
+      "npm test -- --runInBand",
+      "npm run lint",
+    ]);
+  });
+
   it("중복 커맨드는 제거한다", () => {
     const content = [
       "```bash",

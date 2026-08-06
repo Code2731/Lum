@@ -8,7 +8,7 @@ import {
 describe("WorkspaceTabChip", () => {
   it("탭 칩 접근성 라벨을 계산한다", () => {
     expect(getWorkspaceTabChipAccessibleLabel("백엔드", "/Users/test/project/backend")).toBe(
-      "작업공간 탭: 백엔드, ~/project/backend",
+      "작업공간 탭: 백엔드, backend",
     );
     expect(getWorkspaceTabChipAccessibleLabel("프론트엔드", undefined, true)).toBe(
       "현재 작업공간 탭: 프론트엔드",
@@ -23,10 +23,10 @@ describe("WorkspaceTabChip", () => {
       />,
     );
 
-    const chip = screen.getByRole("status", { name: "작업공간 탭: 백엔드, ~/project/backend" });
-    expect(chip).toHaveAttribute("title", "백엔드 · ~/project/backend");
+    const chip = screen.getByRole("status", { name: "작업공간 탭: 백엔드, backend" });
+    expect(chip).toHaveAttribute("title", "백엔드 · backend");
     expect(screen.getByText("백엔드")).toBeInTheDocument();
-    expect(screen.getByText("~/project/backend")).toBeInTheDocument();
+    expect(screen.getByText("backend")).toBeInTheDocument();
   });
 
   it("활성 상태는 별도 라벨로 노출한다", () => {
