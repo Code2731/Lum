@@ -6,6 +6,7 @@ import {
   isModelError,
   isNetworkError,
   isRoutingError,
+  isRuntimeUnavailableError,
   toErrorMessage,
 } from "./errorMessage";
 
@@ -47,5 +48,12 @@ describe("errorMessage", () => {
     expect(isModelError("model not found")).toBe(true);
     expect(msg).toContain("모델 설정 확인 필요");
     expect(msg).toContain("모델 이름을 다시 선택");
+  });
+
+  it("런타임 제약 오류를 감지해 안내 가이드를 붙인다", () => {
+    const msg = formatAIErrorMessage("[metal::load_device] No Metal device available");
+    expect(isRuntimeUnavailableError("[metal::load_device] No Metal device available")).toBe(true);
+    expect(msg).toContain("런타임 제약으로 백엔드가 실행되지 않습니다");
+    expect(msg).toContain("해결: GPU/Metal 사용 가능한 환경");
   });
 });

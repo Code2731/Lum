@@ -485,6 +485,51 @@ describe("useAIChat — 스트림 실패 메시지 처리", () => {
     expect(result.current.messages[result.current.messages.length - 1]?.content).toContain("❌ 라우팅 실패");
   });
 
+  it("메탈/런타임 제약 오류는 런타임 가이드를 붙여 노출한다", async () => {
+    invokeMock.mockImplementation(async (cmd: string) => {
+      if (cmd === "reset_ai_stream") return;
+      if (cmd === "cancel_ai_stream") return;
+      if (cmd === "mcp_system_prompt") return "";
+      if (cmd === "stream_ai_command") {
+        throw new Error("RuntimeError: [metal::load_device] No Metal device available");
+      }
+      return "";
+    });
+
+    const { result } = renderHook(() => useAIChat("model", () => "CWD: /tmp"));
+    await act(async () => {
+      await result.current.sendMessage("안녕");
+    });
+
+    expect(result.current.error).toContain("런타임 제약으로 백엔드가 실행되지 않습니다");
+    expect(result.current.error).toContain("해결: GPU/Metal 사용 가능한 환경");
+    expect(result.current.messages[result.current.messages.length - 1]?.content).toContain(
+      "❌ 런타임 제약으로 백엔드가 실행되지 않습니다",
+    );
+  });
+
+  it("문자열로 전달되는 런타임 제약 오류도 런타임 가이드를 붙여 노출한다", async () => {
+    invokeMock.mockImplementation(async (cmd: string) => {
+      if (cmd === "reset_ai_stream") return;
+      if (cmd === "cancel_ai_stream") return;
+      if (cmd === "mcp_system_prompt") return "";
+      if (cmd === "stream_ai_command") {
+        throw "No Metal device available. This is a headless environment.";
+      }
+      return "";
+    });
+
+    const { result } = renderHook(() => useAIChat("model", () => "CWD: /tmp"));
+    await act(async () => {
+      await result.current.sendMessage("안녕");
+    });
+
+    expect(result.current.error).toContain("런타임 제약으로 백엔드가 실행되지 않습니다");
+    expect(result.current.messages[result.current.messages.length - 1]?.content).toContain(
+      "❌ 런타임 제약으로 백엔드가 실행되지 않습니다",
+    );
+  });
+
   it("취소 오류는 에러 배너를 남기지 않는다", async () => {
     invokeMock.mockImplementation(async (cmd: string) => {
       if (cmd === "reset_ai_stream") return;
