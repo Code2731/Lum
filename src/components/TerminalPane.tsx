@@ -16,6 +16,7 @@ import SmartPasteModal from "./SmartPasteModal";
 import TerminalContextMenu from "./TerminalContextMenu";
 import WarpInputBar, { type WarpInputBarHandle } from "./WarpInputBar";
 import AIBlockStream from "./AIBlockStream";
+import { ErrorBoundary } from "./ErrorBoundary";
 import { routeInput, type AiBackend } from "../utils/inputRouter";
 import {
   applyBackendPrefixToInput,
@@ -2098,11 +2099,11 @@ const TerminalPane: React.FC<Props> = ({
             gap: inputDockNarrow ? 6 : 8,
           }}
         >
-          <div
-            className={`lum-toolbelt-rail ${inputDockNarrow ? "lum-toolbelt-rail--narrow" : ""} ${inputDockCompact ? "lum-toolbelt-rail--compact" : ""} ${inputFocusCompact ? "lum-toolbelt-rail--focus" : ""}`}
-            style={{
-              display: "flex",
-              alignItems: "center",
+        <div
+          className={`lum-toolbelt-rail ${inputDockNarrow ? "lum-toolbelt-rail--narrow" : ""} ${inputDockCompact ? "lum-toolbelt-rail--compact" : ""} ${inputFocusCompact ? "lum-toolbelt-rail--focus" : ""}`}
+          style={{
+            display: "flex",
+            alignItems: "center",
               alignContent: "flex-start",
               columnGap: inputDockCompact ? 4 : 6,
               rowGap: inputDockNarrow ? 4 : 0,
@@ -2137,20 +2138,22 @@ const TerminalPane: React.FC<Props> = ({
           </div>
         </div>
         {/* Warp 입력바 — 입력 필드, 라우팅은 handleSubmit */}
-        <WarpInputBar
-          ref={warpInputRef}
-          fontFamily={fontFamily ? `"${fontFamily}", ${FONT_FAMILY}` : FONT_FAMILY}
-          fontSize={fontSize ?? DEFAULT_TERMINAL_FONT_SIZE}
-          voiceHistoryScope={cwd}
-          onSubmit={handleSubmit}
-          onInterrupt={handleInterrupt}
-          onKeyDownIntercept={handleInputKeyDownIntercept}
-          onTab={handleTab}
-          onChange={handleInputChange}
-          onFocusChange={setWarpInputFocused}
-          contextChips={visibleInputChips}
-          compactContextChips
-        />
+        <ErrorBoundary label="입력 바">
+          <WarpInputBar
+            ref={warpInputRef}
+            fontFamily={fontFamily ? `"${fontFamily}", ${FONT_FAMILY}` : FONT_FAMILY}
+            fontSize={fontSize ?? DEFAULT_TERMINAL_FONT_SIZE}
+            voiceHistoryScope={cwd}
+            onSubmit={handleSubmit}
+            onInterrupt={handleInterrupt}
+            onKeyDownIntercept={handleInputKeyDownIntercept}
+            onTab={handleTab}
+            onChange={handleInputChange}
+            onFocusChange={setWarpInputFocused}
+            contextChips={visibleInputChips}
+            compactContextChips
+          />
+        </ErrorBoundary>
       </div>
 
       {actionPaletteOpen && (
