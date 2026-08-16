@@ -2,6 +2,7 @@ import React, { useCallback, useRef } from "react";
 import { X, Plus, Lock, Columns2, Rows2, GitBranch, TerminalSquare, Package, Cpu, Container, Zap } from "lucide-react";
 import type { Tab } from "../hooks/useTabManager";
 import { TAB_COLORS } from "../hooks/useTabManager";
+import { getTabIconFlowSummary } from "../utils/tabIcon";
 
 interface GitTabInfo {
   branch: string;
@@ -29,16 +30,7 @@ interface TabBarProps {
 }
 
 function getTabIconSummaryLabel(cwd: string): string {
-  const value = cwd.trim().toLowerCase();
-  if (!value) return "일반 터미널";
-  if (value.includes("docker") || value.includes("container")) return "Docker 작업공간";
-  if (value.includes("go/") || value.includes("/go") || value.endsWith("/go")) return "Go 작업공간";
-  if (value.includes("python") || value.includes("venv") || value.includes(".py")) return "Python 작업공간";
-  if (value.includes("java") || value.includes("maven") || value.includes("gradle")) return "Java 작업공간";
-  if (value.includes("rust") || value.includes("cargo") || value.includes(".rs")) return "Rust 작업공간";
-  if (value.includes("node") || value.includes("npm") || value.includes(".js") || value.includes(".ts")) return "Node 작업공간";
-  if (value.includes(".git") || value.includes("git/")) return "Git 작업공간";
-  return "일반 터미널";
+  return getTabIconFlowSummary(cwd).secondary;
 }
 
 const TabIconComponent: React.FC<{ icon?: string }> = ({ icon }) => {
