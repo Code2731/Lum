@@ -116,15 +116,18 @@ function voiceStatus() {
     /transcribe_native_wav/.test(text) &&
     /WHISPER_SAMPLE_RATE/.test(text);
   const hasVad = /native_vad_stop_requested/.test(text) && /DEFAULT_VAD_SILENCE_MS/.test(text);
+  const hasLazyModelDownload = /ensure_native_whisper_model/.test(text) && /MODEL_DOWNLOAD_FAILED/.test(text);
 
   if (!hasApi) {
     return { status: "FAIL", detail: "음성 시작/중지 API 없음" };
   }
   if (hasNativeCapture) {
     return {
-      status: "PARTIAL",
+      status: hasVad && hasLazyModelDownload ? "PASS" : "PARTIAL",
       detail: hasVad
-        ? "CPAL 로컬 캡처 + VAD 자동 종료 + whisper.cpp 전사 경로(모델 자동 배포 대기)"
+        ? hasLazyModelDownload
+          ? "CPAL 로컬 캡처 + VAD 자동 종료 + whisper.cpp 전사 + 모델 lazy download"
+          : "CPAL 로컬 캡처 + VAD 자동 종료 + whisper.cpp 전사 경로(모델 자동 배포 대기)"
         : "CPAL 로컬 캡처 + whisper.cpp 전사 경로(VAD·모델 자동 배포 대기)",
     };
   }

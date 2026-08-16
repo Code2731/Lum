@@ -11143,6 +11143,7 @@ dependencies = [
  "screenshots",
  "serde",
  "serde_json",
+ "sha1",
  "sysinfo 0.32.1",
  "tauri",
  "tauri-build",

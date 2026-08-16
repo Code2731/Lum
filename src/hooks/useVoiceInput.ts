@@ -196,6 +196,7 @@ export function useVoiceInput({
     let unlistenPartial: (() => void) | null = null;
     let unlistenState: (() => void) | null = null;
     let unlistenError: (() => void) | null = null;
+    let unlistenModelDownload: (() => void) | null = null;
     let disposed = false;
 
     const transcriptPromise = listen<string>("voice_transcript", (event) => {
@@ -311,16 +312,32 @@ export function useVoiceInput({
       })
       .catch(() => {});
 
+    const modelDownloadPromise = listen("voice_model_download_progress", () => {
+      if (!mountedRef.current) return;
+      setVoiceError(null);
+      setVoiceStatus("processing");
+    })
+      .then((off) => {
+        if (disposed) {
+          off();
+          return;
+        }
+        unlistenModelDownload = off;
+      })
+      .catch(() => {});
+
     return () => {
       disposed = true;
       unlistenTranscript?.();
       unlistenPartial?.();
       unlistenState?.();
       unlistenError?.();
+      unlistenModelDownload?.();
       void transcriptPromise;
       void partialPromise;
       void statePromise;
       void errorPromise;
+      void modelDownloadPromise;
     };
   }, [clearPartialTranscript, enabled, emitTranscript, flushPendingPartialTranscript]);
 

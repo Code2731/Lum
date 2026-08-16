@@ -2,9 +2,11 @@ use crate::platform;
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use cpal::{SampleFormat, StreamConfig};
 use serde::Serialize;
+use sha1::{Digest, Sha1};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, OnceLock};
 use tauri::Emitter;
+use tokio::io::AsyncWriteExt;
 use tokio::process::Command as TokioCommand;
 use tokio::time::{timeout, Duration};
 
@@ -42,9 +44,15 @@ struct NativeVoiceCaptureController {
 
 static NATIVE_VOICE_CAPTURE: OnceLock<Mutex<Option<NativeVoiceCaptureController>>> =
     OnceLock::new();
+/// 첫 사용 모델 다운로드가 겹쳐 손상된 파일을 만들지 않도록 단일 작업으로 직렬화한다.
+static NATIVE_MODEL_DOWNLOAD: OnceLock<tokio::sync::Mutex<()>> = OnceLock::new();
 
 fn native_voice_capture_lock() -> &'static Mutex<Option<NativeVoiceCaptureController>> {
     NATIVE_VOICE_CAPTURE.get_or_init(|| Mutex::new(None))
+}
+
+fn native_model_download_lock() -> &'static tokio::sync::Mutex<()> {
+    NATIVE_MODEL_DOWNLOAD.get_or_init(|| tokio::sync::Mutex::new(()))
 }
 
 fn voice_state_lock() -> &'static Mutex<VoiceState> {
@@ -188,6 +196,206 @@ const DEFAULT_NATIVE_MAX_SECONDS: u32 = 10 * 60;
 const MAX_NATIVE_SECONDS: u32 = 30 * 60;
 const DEFAULT_VAD_SILENCE_MS: u64 = 800;
 const DEFAULT_VAD_THRESHOLD: f32 = 0.015;
+const DEFAULT_WHISPER_MODEL_DOWNLOAD_URL: &str =
+    "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.bin";
+// whisper.cpp models/README.md의 ggml-base.bin 공개 SHA-1.
+const DEFAULT_WHISPER_MODEL_SHA1: &str = "465707469ff3a37a2b9b8d8f89f2f99de7299dac";
+
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct VoiceModelDownloadProgress {
+    downloaded_bytes: u64,
+    total_bytes: Option<u64>,
+}
+
+fn native_model_auto_download_enabled() -> bool {
+    !matches!(
+        std::env::var("LUM_WHISPER_AUTO_DOWNLOAD").as_deref(),
+        Ok("0") | Ok("false") | Ok("FALSE") | Ok("off") | Ok("OFF")
+    )
+}
+
+fn native_model_download_url() -> String {
+    std::env::var("LUM_WHISPER_MODEL_DOWNLOAD_URL")
+        .ok()
+        .filter(|url| url.starts_with("https://"))
+        .unwrap_or_else(|| DEFAULT_WHISPER_MODEL_DOWNLOAD_URL.to_string())
+}
+
+fn native_model_expected_sha1(url: &str) -> Option<&'static str> {
+    (url == DEFAULT_WHISPER_MODEL_DOWNLOAD_URL).then_some(DEFAULT_WHISPER_MODEL_SHA1)
+}
+
+fn native_model_download_temp_path(model: &Path) -> PathBuf {
+    model.with_extension(format!("bin.part-{}-{}", std::process::id(), now_ms()))
+}
+
+async fn ensure_native_whisper_model(app: Option<&tauri::AppHandle>) -> Result<(), String> {
+    // 사용자가 명시한 경로는 임의 URL로 보완하지 않는다. 의도치 않은 대용량 다운로드를 막는다.
+    if let Ok(raw_model) = std::env::var("LUM_WHISPER_MODEL") {
+        let model = PathBuf::from(raw_model);
+        return model.is_file().then_some(()).ok_or_else(|| {
+            voice_error(
+                "WHISPER_MODEL_NOT_FOUND",
+                format!("설정한 Whisper 모델을 찾지 못했습니다: {}", model.display()),
+            )
+        });
+    }
+
+    let model = default_whisper_model_path();
+    if model.is_file() {
+        return Ok(());
+    }
+    if !native_model_auto_download_enabled() {
+        return Err(voice_error(
+            "WHISPER_MODEL_NOT_FOUND",
+            "Whisper 기본 모델이 없고 자동 다운로드가 꺼져 있습니다. ggml-base.bin을 배치하거나 LUM_WHISPER_AUTO_DOWNLOAD=1로 설정하세요.",
+        ));
+    }
+    if std::env::var("LUM_WHISPER_CPP_CMD").is_err() && !default_whisper_cli_path().is_file() {
+        return Err(voice_error(
+            "WHISPER_CLI_NOT_FOUND",
+            format!(
+                "whisper-cli를 찾지 못했습니다: {}. 모델 다운로드 전에 whisper.cpp를 설치하세요.",
+                default_whisper_cli_path().display()
+            ),
+        ));
+    }
+
+    let _download_guard = native_model_download_lock().lock().await;
+    // 대기 중 다른 요청이 다운로드를 끝냈을 수 있다.
+    if model.is_file() {
+        return Ok(());
+    }
+    let parent = model.parent().ok_or_else(|| {
+        voice_error(
+            "MODEL_DIR_INVALID",
+            "Whisper 모델 저장 경로의 상위 폴더를 찾지 못했습니다.",
+        )
+    })?;
+    tokio::fs::create_dir_all(parent).await.map_err(|e| {
+        voice_error(
+            "MODEL_DIR_CREATE_FAILED",
+            format!("Whisper 모델 폴더 생성 실패: {e}"),
+        )
+    })?;
+
+    let url = native_model_download_url();
+    let response = reqwest::Client::builder()
+        .connect_timeout(Duration::from_secs(15))
+        .build()
+        .map_err(|e| {
+            voice_error(
+                "MODEL_DOWNLOAD_CLIENT_FAILED",
+                format!("다운로드 클라이언트 생성 실패: {e}"),
+            )
+        })?
+        .get(&url)
+        .send()
+        .await
+        .map_err(|e| {
+            voice_error(
+                "MODEL_DOWNLOAD_FAILED",
+                format!("Whisper 모델 다운로드 연결 실패: {e}"),
+            )
+        })?
+        .error_for_status()
+        .map_err(|e| {
+            voice_error(
+                "MODEL_DOWNLOAD_FAILED",
+                format!("Whisper 모델 다운로드 응답 오류: {e}"),
+            )
+        })?;
+    let total_bytes = response.content_length();
+    if total_bytes == Some(0) {
+        return Err(voice_error(
+            "MODEL_DOWNLOAD_FAILED",
+            "Whisper 모델 다운로드가 비어 있습니다.",
+        ));
+    }
+
+    let temp = native_model_download_temp_path(&model);
+    let mut output = tokio::fs::File::create(&temp).await.map_err(|e| {
+        voice_error(
+            "MODEL_DOWNLOAD_WRITE_FAILED",
+            format!("임시 모델 파일 생성 실패: {e}"),
+        )
+    })?;
+    let mut downloaded_bytes = 0_u64;
+    let mut hasher = Sha1::new();
+    let mut stream = response.bytes_stream();
+    let download_result = async {
+        use futures_util::StreamExt;
+        while let Some(chunk) = stream.next().await {
+            let chunk = chunk.map_err(|e| {
+                voice_error(
+                    "MODEL_DOWNLOAD_FAILED",
+                    format!("Whisper 모델 다운로드 중단: {e}"),
+                )
+            })?;
+            output.write_all(&chunk).await.map_err(|e| {
+                voice_error(
+                    "MODEL_DOWNLOAD_WRITE_FAILED",
+                    format!("모델 파일 쓰기 실패: {e}"),
+                )
+            })?;
+            hasher.update(&chunk);
+            downloaded_bytes = downloaded_bytes.saturating_add(chunk.len() as u64);
+            if let Some(app) = app {
+                let _ = app.emit(
+                    "voice_model_download_progress",
+                    VoiceModelDownloadProgress {
+                        downloaded_bytes,
+                        total_bytes,
+                    },
+                );
+            }
+        }
+        output.flush().await.map_err(|e| {
+            voice_error(
+                "MODEL_DOWNLOAD_WRITE_FAILED",
+                format!("모델 파일 저장 실패: {e}"),
+            )
+        })?;
+        if downloaded_bytes == 0 {
+            return Err(voice_error(
+                "MODEL_DOWNLOAD_FAILED",
+                "Whisper 모델 다운로드가 비어 있습니다.",
+            ));
+        }
+        if let Some(total) = total_bytes.filter(|total| *total > 0) {
+            if downloaded_bytes != total {
+                return Err(voice_error(
+                    "MODEL_DOWNLOAD_INCOMPLETE",
+                    format!(
+                        "Whisper 모델 다운로드가 불완전합니다 ({downloaded_bytes}/{total} bytes)."
+                    ),
+                ));
+            }
+        }
+        if let Some(expected_sha1) = native_model_expected_sha1(&url) {
+            let actual_sha1 = format!("{:x}", hasher.finalize());
+            if actual_sha1 != expected_sha1 {
+                return Err(voice_error(
+                    "MODEL_DOWNLOAD_CHECKSUM_FAILED",
+                    "Whisper 모델 무결성 검증에 실패했습니다.",
+                ));
+            }
+        }
+        Ok(())
+    }
+    .await;
+    if let Err(err) = download_result {
+        let _ = tokio::fs::remove_file(&temp).await;
+        return Err(err);
+    }
+    tokio::fs::rename(&temp, &model).await.map_err(|e| {
+        voice_error(
+            "MODEL_DOWNLOAD_FINALIZE_FAILED",
+            format!("Whisper 모델 저장 완료 처리 실패: {e}"),
+        )
+    })
+}
 
 fn native_max_samples() -> usize {
     let seconds = std::env::var("LUM_VOICE_NATIVE_MAX_SECONDS")
@@ -1028,10 +1236,16 @@ async fn start_voice_recording_with_app(app: Option<tauri::AppHandle>) -> Result
                 format!("음성 시작 훅 실패: {e}"),
             ));
         }
-    } else if let Err(e) = start_native_voice_capture(app, session_id) {
-        // 네이티브 마이크 권한 거부/장치 부재도 기존 상태 머신을 남기지 않는다.
-        set_voice_state(false, 0)?;
-        return Err(e);
+    } else {
+        if let Err(e) = ensure_native_whisper_model(app.as_ref()).await {
+            set_voice_state(false, 0)?;
+            return Err(e);
+        }
+        if let Err(e) = start_native_voice_capture(app, session_id) {
+            // 네이티브 마이크 권한 거부/장치 부재도 기존 상태 머신을 남기지 않는다.
+            set_voice_state(false, 0)?;
+            return Err(e);
+        }
     }
 
     // started_ms는 실패 롤백/디버깅 추적용으로 내부에서만 사용.
@@ -1373,6 +1587,48 @@ mod tests {
         update_native_vad(&mut buffer, 0.1, 1, 48_000);
         assert_eq!(buffer.silent_input_frames, 0);
         assert!(!buffer.auto_stop);
+    }
+
+    #[test]
+    fn whisper_모델_lazy_download_기본값과_옵트아웃을_해석한다() {
+        let _g = AUDIO_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        std::env::remove_var("LUM_WHISPER_MODEL_DOWNLOAD_URL");
+        std::env::remove_var("LUM_WHISPER_AUTO_DOWNLOAD");
+        assert_eq!(
+            native_model_download_url(),
+            DEFAULT_WHISPER_MODEL_DOWNLOAD_URL
+        );
+        assert!(native_model_auto_download_enabled());
+        assert_eq!(
+            native_model_expected_sha1(DEFAULT_WHISPER_MODEL_DOWNLOAD_URL),
+            Some(DEFAULT_WHISPER_MODEL_SHA1)
+        );
+
+        std::env::set_var(
+            "LUM_WHISPER_MODEL_DOWNLOAD_URL",
+            "http://unsafe.example/model.bin",
+        );
+        std::env::set_var("LUM_WHISPER_AUTO_DOWNLOAD", "off");
+        assert_eq!(
+            native_model_download_url(),
+            DEFAULT_WHISPER_MODEL_DOWNLOAD_URL
+        );
+        assert_eq!(
+            native_model_expected_sha1("https://example.com/model.bin"),
+            None
+        );
+        assert!(!native_model_auto_download_enabled());
+        std::env::remove_var("LUM_WHISPER_MODEL_DOWNLOAD_URL");
+        std::env::remove_var("LUM_WHISPER_AUTO_DOWNLOAD");
+    }
+
+    #[test]
+    fn whisper_모델_lazy_download_임시파일은_원본을_덮어쓰지_않는다() {
+        let _g = AUDIO_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        let model = PathBuf::from("/tmp/ggml-base.bin");
+        let temp = native_model_download_temp_path(&model);
+        assert_ne!(temp, model);
+        assert!(temp.to_string_lossy().contains("ggml-base.bin.part-"));
     }
 
     #[test]
