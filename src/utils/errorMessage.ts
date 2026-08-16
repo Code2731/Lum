@@ -82,6 +82,15 @@ const MODEL_INDICATORS: string[] = [
   "model missing",
 ];
 
+const RUNTIME_INDICATORS: string[] = [
+  "no metal device available",
+  "metal::load_device",
+  "metal device",
+  "metal not available",
+  "gpu 장치가 없습니다",
+  "gpu 장치가 연결되지 않았습니다",
+];
+
 export function isNetworkError(error: unknown): boolean {
   const message = toErrorMessage(error).toLowerCase();
   return networkIndicators.some((keyword) => message.includes(keyword));
@@ -124,6 +133,11 @@ export function isModelError(error: unknown): boolean {
   return MODEL_INDICATORS.some((keyword) => message.includes(keyword));
 }
 
+export function isRuntimeUnavailableError(error: unknown): boolean {
+  const message = toErrorMessage(error).toLowerCase();
+  return RUNTIME_INDICATORS.some((keyword) => message.includes(keyword));
+}
+
 export function formatAIErrorMessage(error: unknown): string {
   const message = toErrorMessage(error);
 
@@ -131,6 +145,9 @@ export function formatAIErrorMessage(error: unknown): string {
   if (isCancelError(error)) return "";
   if (isAuthError(error)) {
     return `인증/API 키 확인 필요: ${message}\n해결: 사용 중인 백엔드의 API 키와 권한 범위를 확인한 뒤 다시 시도해 주세요.`;
+  }
+  if (isRuntimeUnavailableError(error)) {
+    return `런타임 제약으로 백엔드가 실행되지 않습니다: ${message}\n해결: GPU/Metal 사용 가능한 환경(또는 xLLM 서버 URL)에서 재실행하거나, 임시로 xLLM 원격/웹 fallback으로 전환해 주세요.`;
   }
   if (isRoutingError(message)) {
     return `라우팅 실패: ${message}\n해결: 백엔드 설정(모델/URL/API 키) 확인 후 다시 시도해 주세요.`;
