@@ -73,7 +73,10 @@ const InspectorPanelHeader: React.FC<InspectorPanelHeaderProps> = ({
           </button>
         </div>
       </div>
-      <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-2.5 py-1.5">
+      <div
+        className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-2.5 py-1.5"
+        style={{ writingMode: "horizontal-tb", direction: "ltr" }}
+      >
         <StatusBadge tone="neutral">현재 탭</StatusBadge>
         <StatusBadge tone="neutral">{activeTabMeta?.label ?? "요약"}</StatusBadge>
         <StatusBadge tone="neutral">{headerMeta.densityLabel}</StatusBadge>
@@ -82,11 +85,14 @@ const InspectorPanelHeader: React.FC<InspectorPanelHeaderProps> = ({
           탭, 보기 밀도, 단축키를 먼저 확인하고 바로 아래에서 전환합니다.
         </span>
       </div>
-      <div className="flex min-w-0 items-center gap-2 pl-0.5" style={{ writingMode: "horizontal-tb" }}>
+        <div
+          className="flex min-w-0 items-center gap-2 pl-0.5"
+          style={{ writingMode: "horizontal-tb", direction: "ltr" }}
+        >
         <StatusBadge tone="neutral" className="shrink-0">바로 전환</StatusBadge>
           <div
             className="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto pb-0.5"
-            style={{ writingMode: "horizontal-tb" }}
+            style={{ writingMode: "horizontal-tb", direction: "ltr" }}
           role="tablist"
           aria-label="인스펙터 탭"
           onKeyDown={onTabKeyDown}
