@@ -7,8 +7,8 @@
 | 영역 | 확인 근거 | 상태 |
 | --- | --- | --- |
 | 프론트엔드 빌드 | `npm run build` 성공 | 완료 |
-| 프론트엔드 단위 테스트 | 최근 `WindowControls` 4건, 입력 라우터 152건, 음성 훅 6건 통과. 전체 테스트는 이번 라운드 미실행 | 부분 확인 |
-| Rust 단위 테스트 | 음성 모듈 27건 통과. 전체 테스트는 이번 라운드 미실행 | 부분 확인 |
+| 프론트엔드 단위 테스트 | 전체 `npm test -- --run` 159 파일, 2154 테스트 통과 | 완료 |
+| Rust 단위 테스트 | 전체 `cargo test --lib` 419건 통과 | 완료 |
 | 네이티브 UI | Metal 경로로 Tauri 창 기동, 입력창 표시, 인스펙터 가로 탭 렌더링 확인 | 완료 |
 | 입력 도크 | AI 대화가 열린 상태에서도 입력 도크가 축소되지 않도록 `flex: 0 0 auto` 적용 | 완료 |
 | 인스펙터 개요 | 최대 344px 폭의 인스펙터에서 2열 카드를 1열로 변경 | 완료 |
@@ -49,6 +49,11 @@
 - `npx playwright test`: `29 passed`
 - `@local`: LUM UI에서 `실제 응답: mistral.rs · 로컬` 및 `LOCAL_READY77` 확인
 - `@xllm`: LUM UI에서 `실제 응답: xLLM` 및 `XLLM_READY77` 확인
+- 냉시작 ReAct: 새 Metal 프로세스 직후 `>> Reply only COLD_AGENT_READY` 실행. 15초 시점 조기 오류 없이 대기했고 약 3분 후 `COLD_AGENT_READY` 및 `Plan 완료` 확인
+- 임베디드 준비 대기: 14B BF16→ISQ 자동 복원에 수 분이 걸리는 환경을 반영해 준비 timeout을 6초에서 10분으로 확장하고, 스트리밍 중단 시 대기도 취소되도록 보강
+- ReAct UTF-8: 한국어 관찰 문자열의 문자 경계 회귀 테스트와 실제 `query_codebase` 관찰 경로를 통과해 바이트 슬라이싱 panic을 제거
+- `cargo check --features embedded-ai`: 성공
+- `cargo test --features embedded-ai --lib commands::ai`: `16 passed`
 - 설정 저장은 임시 파일 작성 후 `rename`하는 원자적 교체 방식으로 보강해, 읽기 중 빈 설정 파일을 관측할 수 있는 기존 race를 차단했다.
 - 신규 UI는 파일 탐색기를 기본 접힘으로 시작해 터미널과 입력 도크를 우선하고, 저장된 패널 설정은 계속 복원한다. 입력 안내 문구의 대비와 `터미널 입력` 접근성 라벨도 보강했다.
 

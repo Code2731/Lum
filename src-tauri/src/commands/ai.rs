@@ -15,7 +15,9 @@ const SSE_MAX_LINE_BUF: usize = 64 * 1024;
 const STREAM_POLL_TIMEOUT_MS: u64 = 250;
 const CONNECT_CANCEL_POLL_MS: u64 = 60;
 #[cfg(feature = "embedded-ai")]
-const EMBEDDED_READY_TIMEOUT_MS: u64 = 6_000;
+// 14B BF16 모델의 Metal ISQ 초기화는 수 분이 걸릴 수 있다. 앱 시작 직후
+// 요청한 AI/에이전트가 6초 만에 실패하지 않도록 충분한 준비 시간을 둔다.
+const EMBEDDED_READY_TIMEOUT_MS: u64 = 10 * 60 * 1_000;
 #[cfg(feature = "embedded-ai")]
 const EMBEDDED_READY_POLL_MS: u64 = 120;
 
@@ -278,12 +280,16 @@ fn embedded_engine_busy() -> bool {
 }
 
 #[cfg(feature = "embedded-ai")]
-async fn wait_for_embedded_ready() {
+async fn wait_for_embedded_ready(cancel: Option<&Arc<AtomicBool>>) -> bool {
     let deadline =
         std::time::Instant::now() + std::time::Duration::from_millis(EMBEDDED_READY_TIMEOUT_MS);
     while embedded_engine_busy() && std::time::Instant::now() < deadline {
+        if cancel.is_some_and(|flag| flag.load(Ordering::Relaxed)) {
+            return false;
+        }
         tokio::time::sleep(std::time::Duration::from_millis(EMBEDDED_READY_POLL_MS)).await;
     }
+    !embedded_engine_busy()
 }
 
 /// 임베디드 mistralrs가 로드돼있고 이미지 입력이 없으면 in-process 추론 시도.
@@ -295,7 +301,7 @@ async fn try_embedded_inference(prompt: &str, images: &[String]) -> Option<Resul
     }
     if !embedded_can_serve(images) {
         if embedded_engine_busy() {
-            wait_for_embedded_ready().await;
+            wait_for_embedded_ready(None).await;
             if embedded_can_serve(images) {
                 // 로드 완료를 잠깐 기다린 뒤 임베디드로 진행.
                 return Some(
@@ -371,8 +377,11 @@ async fn try_embedded_inference_stream(
     }
     if !embedded_can_serve(images) {
         if embedded_engine_busy() {
-            wait_for_embedded_ready().await;
-            if embedded_can_serve(images) {
+            let ready = wait_for_embedded_ready(Some(cancel)).await;
+            if cancel.load(Ordering::Relaxed) {
+                return Some(Err(LumError::AiEngine("요청이 취소되었습니다.".to_string())));
+            }
+            if ready && embedded_can_serve(images) {
                 return Some(
                     crate::commands::mistralrs_inline::infer_stream(
                         app,
