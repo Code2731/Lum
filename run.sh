@@ -18,6 +18,19 @@ else
     echo "xLLM 서버 오프라인 — 앱 내 xLLM 패널에서 시작하세요."
 fi
 
+# Ollama는 xLLM과 별도 fallback 백엔드이므로 서버와 모델 목록을 따로 안내한다.
+OLLAMA_URL="${OLLAMA_URL:-http://127.0.0.1:11434}"
+OLLAMA_TAGS="$(curl -sf --max-time 2 "${OLLAMA_URL}/api/tags" 2>/dev/null || true)"
+if [ -n "${OLLAMA_TAGS}" ]; then
+    if printf '%s' "${OLLAMA_TAGS}" | rg -q '"models"[[:space:]]*:[[:space:]]*\[[[:space:]]*\]'; then
+        echo "Ollama 온라인 (${OLLAMA_URL}) — 설치된 모델 없음"
+    else
+        echo "Ollama 온라인 (${OLLAMA_URL}) — 모델 목록 확인됨"
+    fi
+else
+    echo "Ollama 오프라인 — Ollama fallback을 사용하려면 서버를 실행하세요."
+fi
+
 # 로컬 음성 입력 준비 상태 확인. 모델은 첫 녹음 시 자동 다운로드할 수 있지만,
 # whisper.cpp 실행 파일이 없으면 자동 다운로드도 시작할 수 없다.
 VOICE_DIR="${LUM_WHISPER_DIR:-${HOME}/.lum_whisper}"
