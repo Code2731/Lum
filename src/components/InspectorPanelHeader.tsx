@@ -74,7 +74,7 @@ const InspectorPanelHeader: React.FC<InspectorPanelHeaderProps> = ({
         </div>
       </div>
       <div
-        className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-2.5 py-1.5"
+        className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-2.5 py-1.5 inspector-header-summary-row"
         style={{ writingMode: "horizontal-tb", direction: "ltr" }}
       >
         <StatusBadge tone="neutral">현재 탭</StatusBadge>
@@ -86,17 +86,18 @@ const InspectorPanelHeader: React.FC<InspectorPanelHeaderProps> = ({
         </span>
       </div>
         <div
-          className="flex min-w-0 items-center gap-2 pl-0.5"
+          className="flex min-w-0 items-center gap-2 pl-0.5 inspector-header-tab-row"
           style={{ writingMode: "horizontal-tb", direction: "ltr" }}
         >
-        <StatusBadge tone="neutral" className="shrink-0">바로 전환</StatusBadge>
+          <StatusBadge tone="neutral" className="shrink-0">바로 전환</StatusBadge>
           <div
-            className="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto pb-0.5"
+            className="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto pb-0.5 inspector-header-tablist"
             style={{ writingMode: "horizontal-tb", direction: "ltr" }}
-          role="tablist"
-          aria-label="인스펙터 탭"
-          onKeyDown={onTabKeyDown}
-        >
+            role="tablist"
+            aria-orientation="horizontal"
+            aria-label="인스펙터 탭"
+            onKeyDown={onTabKeyDown}
+          >
           {inspectorTabs.map((tab) => (
             <button
               key={tab.id}

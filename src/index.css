@@ -162,6 +162,17 @@ select {
   background: linear-gradient(180deg, rgba(15, 22, 32, 0.95), rgba(13, 17, 23, 0.88));
 }
 
+.inspector-header-summary-row,
+.inspector-header-tab-row,
+.inspector-header-tablist {
+  writing-mode: horizontal-tb !important;
+  direction: ltr !important;
+}
+
+.inspector-header-tablist {
+  text-orientation: mixed;
+}
+
 .lum-input-dock {
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0)),
