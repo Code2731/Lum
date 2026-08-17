@@ -241,12 +241,6 @@ pub const DISABLED_MSG: &str =
 pub const DISABLED_MSG: &str =
     "embedded-ai feature 비활성 — scripts/cargo-check-cuda.bat 또는 npm run tauri:dev:cuda";
 
-/// 마지막 로드 모델이 없거나 포맷이 맞지 않으면, 로컬에 설치된 첫 번째 mistral 모델을 기본 복원 대상으로 사용.
-#[cfg(feature = "embedded-ai")]
-fn pick_default_local_embed_key() -> Option<ParsedEmbedKey> {
-    pick_default_local_embed_key_with_hint(None)
-}
-
 #[cfg(feature = "embedded-ai")]
 fn pick_default_local_embed_key_with_hint(hint: Option<&str>) -> Option<ParsedEmbedKey> {
     let hint = hint
@@ -322,7 +316,6 @@ pub async fn restore_last_embedded_model(app: tauri::AppHandle) -> Result<bool, 
         let preferred_hint_ref = preferred_hint.as_deref();
 
         let mut tried_saved_key = false;
-        let mut saved_key_loaded = false;
         if let Some(target) = saved_key.as_deref().and_then(|k| ParsedEmbedKey::parse(k)) {
             tried_saved_key = true;
             match target {
@@ -334,7 +327,6 @@ pub async fn restore_last_embedded_model(app: tauri::AppHandle) -> Result<bool, 
                     if let Ok(_) =
                         embed_load_lora(app.clone(), model_dir, gguf_file, lora_adapter).await
                     {
-                        saved_key_loaded = true;
                         return Ok(true);
                     }
                 }
@@ -343,7 +335,6 @@ pub async fn restore_last_embedded_model(app: tauri::AppHandle) -> Result<bool, 
                     isq_type,
                 } => {
                     if let Ok(_) = embed_load_normal(app.clone(), model_path, isq_type).await {
-                        saved_key_loaded = true;
                         return Ok(true);
                     }
                 }
@@ -352,7 +343,6 @@ pub async fn restore_last_embedded_model(app: tauri::AppHandle) -> Result<bool, 
                     gguf_file,
                 } => {
                     if let Ok(_) = embed_load_gguf(app.clone(), model_dir, gguf_file).await {
-                        saved_key_loaded = true;
                         return Ok(true);
                     }
                 }
@@ -361,7 +351,7 @@ pub async fn restore_last_embedded_model(app: tauri::AppHandle) -> Result<bool, 
 
         let target = pick_default_local_embed_key_with_hint(preferred_hint_ref);
 
-        if tried_saved_key && !saved_key_loaded {
+        if tried_saved_key {
             let _ = app.emit(
                 "embed_load_progress",
                 "⚠️ 저장 키 복원 실패 — 로컬 모델 재탐색으로 전환".to_string(),
