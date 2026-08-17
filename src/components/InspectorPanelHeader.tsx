@@ -82,10 +82,11 @@ const InspectorPanelHeader: React.FC<InspectorPanelHeaderProps> = ({
           탭, 보기 밀도, 단축키를 먼저 확인하고 바로 아래에서 전환합니다.
         </span>
       </div>
-      <div className="flex min-w-0 items-center gap-2 pl-0.5">
+      <div className="flex min-w-0 items-center gap-2 pl-0.5" style={{ writingMode: "horizontal-tb" }}>
         <StatusBadge tone="neutral" className="shrink-0">바로 전환</StatusBadge>
-        <div
-          className="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto pb-0.5"
+          <div
+            className="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto pb-0.5"
+            style={{ writingMode: "horizontal-tb" }}
           role="tablist"
           aria-label="인스펙터 탭"
           onKeyDown={onTabKeyDown}
@@ -110,11 +111,12 @@ const InspectorPanelHeader: React.FC<InspectorPanelHeaderProps> = ({
                   onTabSelect(tab.id);
                 }
               }}
-              className={`shrink-0 whitespace-nowrap px-2.5 py-1.5 rounded-md text-xs border transition-colors ${
+              className={`inline-flex shrink-0 items-center gap-1 whitespace-nowrap px-2.5 py-1.5 rounded-md text-xs border transition-colors ${
                 inspectorTab === tab.id
                   ? "border-cyan-300/42 bg-cyan-400/[0.22] text-cyan-50 shadow-[0_8px_24px_rgba(34,211,238,0.16)]"
                   : "border-white/10 bg-white/[0.03] text-white/58 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)] hover:border-white/18 hover:text-white/84 hover:bg-white/[0.08]"
               } focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring`}
+              style={{ writingMode: "horizontal-tb" }}
               title={getInspectorTabTitle(tab)}
             >
               <span>{tab.label}</span>
