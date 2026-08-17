@@ -2764,7 +2764,13 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
               whiteSpace: "pre",
               overflow: "hidden",
               lineHeight: 1.4,
-              opacity: isVoiceProcessing ? 0.78 : showOverlayHint ? 0.94 : 1,
+              opacity: isFocused
+                ? 0
+                : isVoiceProcessing
+                  ? 0.78
+                  : showOverlayHint
+                    ? 0.94
+                    : 1,
               transform: showOverlayHint ? "translateY(0.5px)" : "translateY(0)",
               transition: "opacity 160ms ease, transform 160ms ease",
             }}
@@ -2845,7 +2851,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
               background: "transparent",
               border: "none",
               outline: "none",
-              color: "transparent",
+              color: isFocused ? TOKEN_COLORS.text : "transparent",
               caretColor: promptColor,
               fontFamily,
               fontSize,
