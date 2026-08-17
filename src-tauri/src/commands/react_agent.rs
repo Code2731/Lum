@@ -79,7 +79,7 @@ impl ProgressLedger {
         if first.len() < 5 {
             return;
         }
-        let fact = format!("[{}] {}", tool, &first[..first.len().min(120)]);
+        let fact = format!("[{}] {}", tool, char_prefix(first, 120));
         if !self.key_facts.contains(&fact) {
             self.key_facts.push(fact);
         }
@@ -2678,14 +2678,21 @@ async fn run_command_with_cancel(command: &mut TokioCommand) -> std::result::Res
     })
 }
 
+fn char_prefix(s: &str, max_chars: usize) -> &str {
+    s.char_indices()
+        .nth(max_chars)
+        .map_or(s, |(boundary, _)| &s[..boundary])
+}
+
 fn truncate(s: &str) -> String {
-    if s.len() <= TOOL_OUTPUT_LIMIT {
+    let char_count = s.chars().count();
+    if char_count <= TOOL_OUTPUT_LIMIT {
         s.to_string()
     } else {
         format!(
             "{}…({}자 생략)",
-            &s[..TOOL_OUTPUT_LIMIT],
-            s.len() - TOOL_OUTPUT_LIMIT
+            char_prefix(s, TOOL_OUTPUT_LIMIT),
+            char_count - TOOL_OUTPUT_LIMIT
         )
     }
 }
@@ -4027,6 +4034,14 @@ mod tests {
     fn truncate_짧으면_그대로() {
         let short = "hello";
         assert_eq!(truncate(short), short);
+    }
+
+    #[test]
+    fn truncate_한국어_문자경계에서_안전하게_자른다() {
+        let long = "사".repeat(TOOL_OUTPUT_LIMIT + 100);
+        let result = truncate(&long);
+        assert!(result.starts_with(&"사".repeat(TOOL_OUTPUT_LIMIT)));
+        assert!(result.contains("100자 생략"));
     }
 
     #[test]
@@ -7026,6 +7041,17 @@ ANSWER: 2 + 2는 4입니다."#,
         assert_eq!(l.key_facts.len(), 1);
         assert!(l.key_facts[0].contains("line1"), "{:?}", l.key_facts[0]);
         assert!(!l.key_facts[0].contains("line2"), "첫 줄만");
+    }
+
+    #[test]
+    fn progress_ledger_absorb_한국어_문자경계에서_안전하다() {
+        let mut l = ProgressLedger::new();
+        l.absorb_observation(
+            "query_codebase",
+            &format!("{} 결과입니다", "사".repeat(119)),
+        );
+        assert_eq!(l.key_facts.len(), 1);
+        assert!(l.key_facts[0].starts_with("[query_codebase]"));
     }
 
     #[test]
