@@ -2,7 +2,18 @@ import { useEffect, useState } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { IconButton } from "@/components/ui/icon-button";
 
-const win = getCurrentWindow();
+type TauriWindow = ReturnType<typeof getCurrentWindow>;
+
+function resolveCurrentWindow(): TauriWindow | null {
+  try {
+    return getCurrentWindow();
+  } catch {
+    // 브라우저 미리보기/단위 테스트에서는 Tauri window bridge가 없다.
+    return null;
+  }
+}
+
+const win = resolveCurrentWindow();
 
 export interface WindowControlMeta {
   ariaLabel: string;
@@ -50,12 +61,16 @@ export default function WindowControls() {
   const maximizeMeta = getWindowControlMeta("maximize", isMaximized);
 
   useEffect(() => {
+    if (!win) return;
+
     win.isMaximized().then(setIsMaximized).catch(() => {});
     const unlisten = win.onResized(() => {
       win.isMaximized().then((v) => setIsMaximized(prev => prev === v ? prev : v)).catch(() => {});
     });
     return () => { unlisten.then(fn => fn()); };
   }, []);
+
+  if (!win) return null;
 
   return (
     <div className="flex items-center gap-1.5 ml-2 shrink-0 group">
