@@ -151,8 +151,35 @@ pub struct AIResponse {
 
 // ─── xLLM (TabbyAPI / MLX-LM / OpenAI 호환) ────────────────────────────────
 
-/// 서버에서 현재 로드된 첫 번째 모델 ID 조회 (MLX-LM·TabbyAPI 공통)
-async fn get_server_model_id(client: &reqwest::Client, base_url: &str) -> String {
+/// 서버 모델 목록에서 설정된 모델을 우선 선택하고, 없으면 첫 모델로 폴백한다.
+/// MLX-LM은 캐시된 여러 모델을 함께 노출할 수 있으므로 첫 항목을 무조건 쓰면
+/// 사용자가 선택한 모델과 다른 모델로 요청할 수 있다.
+fn select_server_model_id(json: &serde_json::Value, preferred: Option<&str>) -> String {
+    let Some(models) = json["data"].as_array() else {
+        return "default".to_string();
+    };
+    if let Some(preferred) = preferred.map(str::trim).filter(|value| !value.is_empty()) {
+        if let Some(id) = models
+            .iter()
+            .filter_map(|model| model["id"].as_str())
+            .find(|id| *id == preferred)
+        {
+            return id.to_string();
+        }
+    }
+    models
+        .iter()
+        .find_map(|model| model["id"].as_str())
+        .unwrap_or("default")
+        .to_string()
+}
+
+/// 서버에서 모델 ID 조회 (MLX-LM·TabbyAPI 공통)
+async fn get_server_model_id(
+    client: &reqwest::Client,
+    base_url: &str,
+    preferred: Option<&str>,
+) -> String {
     let url = format!("{}/v1/models", base_url);
     let Ok(resp) = client
         .get(&url)
@@ -165,10 +192,7 @@ async fn get_server_model_id(client: &reqwest::Client, base_url: &str) -> String
     let Ok(json) = resp.json::<serde_json::Value>().await else {
         return "default".to_string();
     };
-    json["data"][0]["id"]
-        .as_str()
-        .unwrap_or("default")
-        .to_string()
+    select_server_model_id(&json, preferred)
 }
 
 /// 공통 요청 바디 생성 — PD Disaggregation / SSD / Sparse Attention / KV Cache.
@@ -555,7 +579,7 @@ async fn call_xllm_http_once(
     let url = format!("{}/v1/chat/completions", base_url);
 
     // 서버의 실제 로드된 모델 ID 사용 (MLX-LM·TabbyAPI 공통)
-    let actual_model = get_server_model_id(client, &base_url).await;
+    let actual_model = get_server_model_id(client, &base_url, config.coding_model.as_deref()).await;
     let body = xllm_body(&config, &actual_model, prompt, false, &[]);
 
     let mut req = client.post(&url).json(&body);
@@ -693,7 +717,7 @@ async fn call_compat_stream_one(
 ) -> Result<String> {
     let config = load_config()?;
     let url = format!("{}/v1/chat/completions", base_url);
-    let actual_model = get_server_model_id(client, base_url).await;
+    let actual_model = get_server_model_id(client, base_url, config.coding_model.as_deref()).await;
     let body = xllm_body(&config, &actual_model, prompt, true, images);
 
     let mut req = client.post(&url).json(&body);
@@ -818,6 +842,21 @@ mod tests {
         let mut c = AppConfig::default();
         f(&mut c);
         c
+    }
+
+    #[test]
+    fn server_model_selection은_설정_model을_우선하고_없으면_첫_항목을_쓴다() {
+        let models = serde_json::json!({
+            "data": [
+                {"id": "cached-model"},
+                {"id": "selected-local-model"}
+            ]
+        });
+        assert_eq!(
+            select_server_model_id(&models, Some("selected-local-model")),
+            "selected-local-model"
+        );
+        assert_eq!(select_server_model_id(&models, Some("missing")), "cached-model");
     }
 
     #[test]

@@ -1,8 +1,11 @@
 use crate::error::{LumError, Result};
 use crate::platform;
 use serde::{Deserialize, Serialize};
+use std::io::Write;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 const CONFIG_FILE: &str = ".lum_config.json";
+static CONFIG_WRITE_SEQUENCE: AtomicU64 = AtomicU64::new(0);
 
 /// xLLM(TabbyAPI) 기본 주소 — 로컬 실행 기본값
 pub const XLLM_DEFAULT_URL: &str = "http://127.0.0.1:8080";
@@ -243,7 +246,27 @@ pub fn load_config() -> Result<AppConfig> {
 
 pub fn save_config(config: &AppConfig) -> Result<()> {
     let json = serde_json::to_string_pretty(config).map_err(|e| LumError::Config(e.to_string()))?;
-    std::fs::write(config_path(), json).map_err(|e| LumError::Io(e.to_string()))
+    let path = config_path();
+    let sequence = CONFIG_WRITE_SEQUENCE.fetch_add(1, Ordering::Relaxed);
+    let temp_path = path.with_file_name(format!(
+        ".{CONFIG_FILE}.tmp-{}-{sequence}",
+        std::process::id()
+    ));
+
+    let write_result = (|| -> std::io::Result<()> {
+        let mut file = std::fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&temp_path)?;
+        file.write_all(json.as_bytes())?;
+        file.sync_all()?;
+        std::fs::rename(&temp_path, &path)
+    })();
+
+    if write_result.is_err() {
+        let _ = std::fs::remove_file(&temp_path);
+    }
+    write_result.map_err(|e| LumError::Io(e.to_string()))
 }
 
 /// 프론트엔드에서 설정 조회
@@ -662,6 +685,29 @@ mod tests {
             .unwrap_or(content_with_bom);
         let cfg: AppConfig = serde_json::from_str(stripped).expect("BOM 제거 후 파싱 성공해야 함");
         assert_eq!(cfg.theme.as_deref(), Some("Solarized Dark"));
+    }
+
+    #[test]
+    fn save_config은_완성된_임시파일을_원자적으로_교체하고_잔여물을_남기지_않는다() {
+        with_temp_home(|| {
+            let mut config = AppConfig::default();
+            config.theme = Some("Atomic Test".to_string());
+            save_config(&config).expect("원자적 설정 저장");
+
+            let loaded = load_config().expect("저장 직후 설정 로드");
+            assert_eq!(loaded.theme.as_deref(), Some("Atomic Test"));
+
+            let temp_leftover = std::fs::read_dir(config_path().parent().unwrap())
+                .unwrap()
+                .filter_map(|entry| entry.ok())
+                .any(|entry| {
+                    entry
+                        .file_name()
+                        .to_string_lossy()
+                        .starts_with(".lum_config.json.tmp-")
+                });
+            assert!(!temp_leftover, "설정 임시 파일이 남아 있으면 안 됨");
+        });
     }
 
     #[test]
