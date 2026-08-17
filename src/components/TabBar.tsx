@@ -2,7 +2,7 @@ import React, { useCallback, useRef } from "react";
 import { X, Plus, Lock, Columns2, Rows2, GitBranch, TerminalSquare, Package, Cpu, Container, Zap } from "lucide-react";
 import type { Tab } from "../hooks/useTabManager";
 import { TAB_COLORS } from "../hooks/useTabManager";
-import { getTabIconFlowSummary } from "../utils/tabIcon";
+import * as tabIcon from "../utils/tabIcon";
 
 interface GitTabInfo {
   branch: string;
@@ -30,7 +30,32 @@ interface TabBarProps {
 }
 
 function getTabIconSummaryLabel(cwd: string): string {
-  return getTabIconFlowSummary(cwd).secondary;
+  const safeCwd = typeof cwd === "string" ? cwd : "";
+  const summary = tabIcon.getTabIconFlowSummary?.(safeCwd);
+  if (summary && typeof summary === "object" && "secondary" in summary) {
+    const secondary = (summary as { secondary?: unknown }).secondary;
+    if (typeof secondary === "string" && secondary.trim()) {
+      return secondary;
+    }
+  }
+
+  const infer = tabIcon.inferTabIcon?.(safeCwd);
+  const fallbackSummary: Record<string, string> = {
+    docker: "Docker 작업공간",
+    go: "Go 작업공간",
+    python: "Python 작업공간",
+    java: "Java 작업공간",
+    rust: "Rust 작업공간",
+    node: "Node 작업공간",
+    git: "Git 작업공간",
+    terminal: "일반 터미널",
+  };
+
+  if (infer && typeof infer === "string") {
+    return fallbackSummary[infer] ?? "일반 터미널";
+  }
+
+  return "일반 터미널";
 }
 
 const TabIconComponent: React.FC<{ icon?: string }> = ({ icon }) => {
@@ -91,7 +116,12 @@ const TabBar: React.FC<TabBarProps> = ({
 
   return (
     <div className="border-b border-white/10 shrink-0">
-      <div className="lum-tabbar flex items-center overflow-x-auto" role="tablist" aria-label="터미널 탭">
+      <div
+        className="lum-tabbar flex items-center overflow-x-auto"
+        role="tablist"
+        aria-label="터미널 탭"
+        aria-orientation="horizontal"
+      >
         {tabs.map((tab) => (
           <div
             key={tab.id}

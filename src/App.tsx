@@ -1344,25 +1344,27 @@ const App: React.FC = () => {
 
       {/* ── 탭 바 ─────────────────────────────────────────────── */}
       {viewMode === "terminal" && (
-        <TabBar
-          tabs={tabs}
-          activeTabId={activeTabId}
-          activeTab={activeTab}
-          tabGitInfo={tabGitInfo}
-          renamingTabId={renamingTabId}
-          renameValue={renameValue}
-          onSwitchTab={switchTabWithReset}
-          onStartRename={(id, title) => { setRenamingTabId(id); setRenameValue(title); }}
-          onRenameChange={setRenameValue}
-          onRenameSubmit={(id) => { renameTab(id, renameValue); setRenamingTabId(null); }}
-          onRenameCancel={() => setRenamingTabId(null)}
-          onCloseTab={closeTabWithReset}
-          onAddTab={addTabWithReset}
-          onOpenSshModal={() => setShowSshModal(true)}
-          onToggleSplitH={() => toggleSplit("h")}
-          onToggleSplitV={() => toggleSplit("v")}
-          onContextMenu={(e, tabId) => { e.preventDefault(); setTabCtxMenu({ tabId, x: e.clientX, y: e.clientY }); }}
-        />
+        <ErrorBoundary label="탭 바">
+          <TabBar
+            tabs={tabs}
+            activeTabId={activeTabId}
+            activeTab={activeTab}
+            tabGitInfo={tabGitInfo}
+            renamingTabId={renamingTabId}
+            renameValue={renameValue}
+            onSwitchTab={switchTabWithReset}
+            onStartRename={(id, title) => { setRenamingTabId(id); setRenameValue(title); }}
+            onRenameChange={setRenameValue}
+            onRenameSubmit={(id) => { renameTab(id, renameValue); setRenamingTabId(null); }}
+            onRenameCancel={() => setRenamingTabId(null)}
+            onCloseTab={closeTabWithReset}
+            onAddTab={addTabWithReset}
+            onOpenSshModal={() => setShowSshModal(true)}
+            onToggleSplitH={() => toggleSplit("h")}
+            onToggleSplitV={() => toggleSplit("v")}
+            onContextMenu={(e, tabId) => { e.preventDefault(); setTabCtxMenu({ tabId, x: e.clientX, y: e.clientY }); }}
+          />
+        </ErrorBoundary>
       )}
 
       {/* ── Quick Actions 바 ─────────────────────────────────── */}
