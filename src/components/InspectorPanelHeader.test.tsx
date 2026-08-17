@@ -117,6 +117,14 @@ describe("InspectorPanelHeader", () => {
     expect(ragTab).toHaveAttribute("title", "Alt+2 : RAG");
   });
 
+  it("탭 리스트는 수평 탭 리스트로 aria-orientation이 설정된다", () => {
+    render(<InspectorPanelHeader {...createProps()} />);
+
+    const tabList = screen.getByRole("tablist", { name: "인스펙터 탭" });
+    expect(tabList).toHaveAttribute("aria-orientation", "horizontal");
+    expect(tabList.className).toContain("inspector-header-tablist");
+  });
+
   it("탭 클릭과 Enter/Space 입력은 onTabSelect를 호출한다", () => {
     const onTabSelect = vi.fn();
     render(<InspectorPanelHeader {...createProps({ onTabSelect })} />);
