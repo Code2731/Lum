@@ -188,7 +188,23 @@ fn default_whisper_cli_path() -> PathBuf {
     } else {
         "whisper-cli"
     };
-    platform::home_dir().join(".lum_whisper").join(name)
+    let local_path = platform::home_dir().join(".lum_whisper").join(name);
+    if local_path.is_file() {
+        return local_path;
+    }
+
+    // Homebrew·시스템 패키지 설치 경로도 별도 환경변수 없이 사용할 수 있게 한다.
+    if let Some(path_var) = std::env::var_os("PATH") {
+        for directory in std::env::split_paths(&path_var) {
+            let candidate = directory.join(name);
+            if candidate.is_file() {
+                return candidate;
+            }
+        }
+    }
+
+    // 설치되지 않은 경우 기존 오류 메시지가 안내하는 사용자 경로를 유지한다.
+    local_path
 }
 
 const WHISPER_SAMPLE_RATE: u32 = 16_000;

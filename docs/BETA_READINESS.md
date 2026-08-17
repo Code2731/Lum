@@ -14,13 +14,13 @@
 | 인스펙터 개요 | 최대 344px 폭의 인스펙터에서 2열 카드를 1열로 변경 | 완료 |
 | 임베디드 AI | Metal shim을 통한 `cargo check --features embedded-ai`와 Tauri 빌드·기동 성공. 실제 `@local` 응답은 아직 미확인 | 부분 확인 |
 | xLLM 서버 | 현재 xLLM `8080/1234`는 미실행. Ollama `11434`는 온라인이지만 모델 목록이 비어 있고 LM Studio 로드 모델도 0개 | 미검증 |
-| Whisper 실행 환경 | 음성 프론트 6건·Rust 27건 통과. 현재 오디오 장치와 `~/.lum_whisper` 자산 없음 | 환경 미준비 |
+| Whisper 실행 환경 | 음성 프론트 6건·Rust 27건 통과. Homebrew `whisper-cli`와 `ggml-base.bin`(SHA-1 검증)을 설치했고 MacBook Pro 마이크를 감지함. LUM 앱에서 CPAL 캡처 후 전사 텍스트가 입력창에 반영되는 것까지 확인했지만, 한국어 품질은 미확인 | 부분 확인 |
 
 ## 현재 머신 실환경 판정
 
 - `mistral.rs`는 모델명이 아니라 임베디드 추론 엔진이며, 현재 로컬 모델 설정은 Qwen safetensors입니다.
 - Metal Toolchain은 shim 경로에서 정상 탐지되며, 새 실행 경로는 빌드 전에 이를 검사합니다.
-- xLLM와 음성은 코드 경로는 존재하지만, 현재 머신에서 실제 xLLM 응답·Ollama 모델 응답·마이크 전사는 입증되지 않았습니다.
+- xLLM와 Ollama 모델 응답은 아직 입증되지 않았습니다. 음성은 현재 머신에서 마이크 캡처·Whisper 전사 경로까지 입증됐고, 한국어 문장 품질은 추가 확인이 필요합니다.
 
 ## 남은 수동 확인
 
@@ -28,11 +28,12 @@
 | --- | --- | --- |
 | 임베디드 로컬 라우팅 | 입력 바에 `@local Reply only LOCAL_READY77` 입력 | `LOCAL_READY77` 응답과 embedded 백엔드 표시 확인 |
 | 앱 내 xLLM 라우팅 | 입력 바에 `@xllm Reply only XLLM_READY77` 입력 | `XLLM_READY77` 응답과 xLLM 백엔드 표시 확인 |
-| 실제 마이크 입력 | 마이크 버튼을 눌러 macOS 권한 승인 후 한국어 문장 입력 | 전사 텍스트가 입력 바에 삽입되고 AI/셸 실행 가능 |
+| 실제 한국어 마이크 입력 | 마이크 버튼을 눌러 한국어 문장을 직접 입력 | 한국어 전사 텍스트가 입력 바에 삽입되고 AI/셸 실행 가능 |
 | 전체 Vitest 재실행 | 리소스가 한가한 상태에서 `npm test -- --run` 실행 | 159 파일 전체 요약이 성공으로 종료 |
 
 ## 알려진 품질·운영 메모
 
 - Vite 빌드는 메인 번들이 500kB를 초과한다는 경고를 낸다. 현재 기능 오류는 아니며, 베타 이후 화면 단위 코드 분할 대상으로 관리한다.
-- Whisper `tiny` 모델은 짧은 영어 문장도 부정확했다. `base` 모델은 전사 파이프라인을 정상 실행했지만, 한국어 품질은 실제 마이크로 확인해야 한다.
+- Whisper `base` 모델은 Metal CLI·무음 WAV 스모크와 실제 CPAL 캡처 후 전사 입력까지 정상 실행했다. 시스템 음성 스모크 결과는 `(people chattering)- Kids status.`였으므로 한국어 품질은 아직 확인해야 한다.
+- `~/.lum_whisper/whisper-cli`가 없어도 PATH의 `whisper-cli`를 자동 탐색하도록 백엔드와 `run.sh`를 맞췄다. Homebrew 설치만으로도 별도 명령 템플릿 없이 기본 음성 경로를 사용할 수 있다.
 - 테스트 목적으로 기동한 Metal 앱은 검증 후 종료했다. 현재 확인 시 xLLM `127.0.0.1:8080`은 실행 중이지 않았고, Ollama는 모델 없이 온라인이었다.

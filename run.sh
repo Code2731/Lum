@@ -36,6 +36,9 @@ fi
 VOICE_DIR="${LUM_WHISPER_DIR:-${HOME}/.lum_whisper}"
 VOICE_CLI="${LUM_WHISPER_CPP_CMD:-${VOICE_DIR}/whisper-cli}"
 VOICE_MODEL="${LUM_WHISPER_MODEL:-${VOICE_DIR}/models/ggml-base.bin}"
+if [ -z "${LUM_WHISPER_CPP_CMD:-}" ] && [ ! -f "${VOICE_CLI}" ]; then
+    VOICE_CLI="$(command -v whisper-cli 2>/dev/null || true)"
+fi
 if [ -x "${VOICE_CLI}" ] && [ -f "${VOICE_MODEL}" ]; then
     echo "음성 입력 준비됨 (whisper.cpp + base 모델)"
 elif [ -x "${VOICE_CLI}" ]; then
