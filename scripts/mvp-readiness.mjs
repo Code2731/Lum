@@ -200,6 +200,7 @@ function printHuman(report) {
   lines.push(
     `${statusIcon(report.deferred.status)} ${report.deferred.name} — ${report.deferred.detail}`,
   );
+  lines.push("참고: 이 검사는 소스 구현 경로만 확인하며, 실제 서버·GPU·마이크·모델 응답은 별도 검증이 필요합니다.");
   lines.push("");
   lines.push(
     `요약: 필수 ${report.summary.requiredPass}/${report.summary.requiredTotal} PASS` +

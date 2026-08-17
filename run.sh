@@ -18,6 +18,19 @@ else
     echo "xLLM 서버 오프라인 — 앱 내 xLLM 패널에서 시작하세요."
 fi
 
+# 로컬 음성 입력 준비 상태 확인. 모델은 첫 녹음 시 자동 다운로드할 수 있지만,
+# whisper.cpp 실행 파일이 없으면 자동 다운로드도 시작할 수 없다.
+VOICE_DIR="${LUM_WHISPER_DIR:-${HOME}/.lum_whisper}"
+VOICE_CLI="${LUM_WHISPER_CPP_CMD:-${VOICE_DIR}/whisper-cli}"
+VOICE_MODEL="${LUM_WHISPER_MODEL:-${VOICE_DIR}/models/ggml-base.bin}"
+if [ -x "${VOICE_CLI}" ] && [ -f "${VOICE_MODEL}" ]; then
+    echo "음성 입력 준비됨 (whisper.cpp + base 모델)"
+elif [ -x "${VOICE_CLI}" ]; then
+    echo "음성 입력 부분 준비 — base 모델은 첫 녹음 시 자동 다운로드 대상 (${VOICE_MODEL})"
+else
+    echo "음성 입력 준비 안 됨 — whisper-cli를 ${VOICE_DIR}에 설치하세요."
+fi
+
 # 실행 모드 안내
 cat <<'EOF'
 ----------------------------------------
