@@ -568,9 +568,9 @@ const App: React.FC = () => {
   // Phase 116 — Worktree Squad
   const squadStore = useSquads();
 
-  // 파일 탐색기 사이드바 (기본 열림)
+  // 파일 탐색기는 터미널 입력 공간을 우선한다. 저장된 사용자 설정이 있으면 그대로 복원한다.
   const [showFileExplorer, setShowFileExplorer] = useState(() => {
-    try { return localStorage.getItem("lum.fileExplorer") !== "0"; } catch { return true; }
+    try { return localStorage.getItem("lum.fileExplorer") === "1"; } catch { return false; }
   });
   // Welcome 힌트 — 최초 실행 시 1회만
   const [showWelcome, setShowWelcome] = useState(() => {

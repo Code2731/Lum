@@ -2776,11 +2776,11 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
             }}
           >
             {modeHint ? (
-              <span style={{ color: "rgba(255,255,255,0.28)", ...overlayContentTransitionStyle }}>
+              <span style={{ color: "rgba(255,255,255,0.46)", ...overlayContentTransitionStyle }}>
                 {modeHint}
               </span>
             ) : input.length === 0 ? (
-              <span style={{ color: "rgba(255,255,255,0.26)", ...overlayContentTransitionStyle }}>
+              <span style={{ color: "rgba(255,255,255,0.42)", ...overlayContentTransitionStyle }}>
                 {defaultInputHint}
               </span>
             ) : body !== null ? (
@@ -2825,6 +2825,7 @@ const WarpInputBar = forwardRef<WarpInputBarHandle, Props>(
             type="text"
             data-lum-main-input="true"
             value={input}
+            aria-label="터미널 입력"
             readOnly={isVoiceProcessing}
             aria-busy={isVoiceProcessing}
             onChange={handleChange}
