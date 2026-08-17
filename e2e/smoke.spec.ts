@@ -458,7 +458,7 @@ test.describe("LUM 스모크 테스트", () => {
     await waitForApp(page);
 
     await expect(page.getByText("여유", { exact: true })).toBeVisible({ timeout: 5_000 });
-    await page.getByLabel("Inspector 밀도 토글").click();
+    await page.getByLabel("인스펙터 밀도 토글").click();
     await expect(page.getByText("컴팩트", { exact: true })).toBeVisible({ timeout: 5_000 });
 
     await page.reload();
@@ -614,7 +614,7 @@ test.describe("LUM 스모크 테스트", () => {
     // INPUT HISTORY 패널 검증
     await page.getByRole("button", { name: "quick-input-action-palette" }).click();
     await page.getByRole("button", { name: "action-palette-item-history_open" }).click();
-    await expect(page.getByText("INPUT HISTORY")).toBeVisible();
+    await expect(page.getByText("입력 히스토리")).toBeVisible();
     await expectInViewport(page, "[aria-label='input-history-search']");
     await expectInViewport(page, "[aria-label='quick-input-history-close']");
     await page.keyboard.press("Escape");
@@ -629,7 +629,7 @@ test.describe("LUM 스모크 테스트", () => {
     // SHORTCUT CHEATSHEET 패널 검증 (input intercept: Ctrl+/)
     await mainInput.click();
     await page.keyboard.press("Control+/");
-    await expect(page.getByText("SHORTCUT CHEATSHEET")).toBeVisible();
+    await expect(page.getByText("단축키 치트시트")).toBeVisible();
     await expectInViewport(page, "[aria-label='shortcut-help-close']");
     await page.keyboard.press("Escape");
   });

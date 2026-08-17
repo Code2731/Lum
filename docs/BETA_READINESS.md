@@ -46,6 +46,7 @@
 - `cargo test --lib`: `417 passed, 0 failed`
 - `npm test -- --run`: `159 files passed, 2154 tests passed`
 - `npm run build`: 성공
+- `npx playwright test`: `29 passed`
 - `@local`: LUM UI에서 `실제 응답: mistral.rs · 로컬` 및 `LOCAL_READY77` 확인
 - `@xllm`: LUM UI에서 `실제 응답: xLLM` 및 `XLLM_READY77` 확인
 - 설정 저장은 임시 파일 작성 후 `rename`하는 원자적 교체 방식으로 보강해, 읽기 중 빈 설정 파일을 관측할 수 있는 기존 race를 차단했다.
