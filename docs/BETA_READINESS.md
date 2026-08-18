@@ -55,7 +55,7 @@
 - ReAct UTF-8: 한국어 관찰 문자열의 문자 경계 회귀 테스트와 실제 `query_codebase` 관찰 경로를 통과해 바이트 슬라이싱 panic을 제거
 - `cargo check --features embedded-ai`: 성공
 - `cargo test --features embedded-ai --lib commands::ai`: `16 passed`
-- 실제 MacBook Pro 마이크를 LUM UI에서 6초 녹음하고 중지해 한국어 전사 결과가 입력창에 삽입되는 전체 경로를 확인. 당시 재생 중인 배경 영상이 섞여 통제된 문장 품질은 보류
+- `say -v Yuna` 기준 문장(`안녕하세요. 오늘은 LUM 음성 입력을 검증합니다.`)을 `whisper-cli -l ko`에서 직접 전사해 한국어 모델 경로를 확인. LUM UI에서도 동일 음성을 스피커→MacBook 마이크로 넣어 입력창 삽입까지 확인했으며, `LUM` 고유명사가 `늘럼/운량`으로 흔들려 정확도는 베타 수준으로 기록
 - 기본 Whisper CLI 호출에 한국어(`-l ko`)를 명시하고 `LUM_WHISPER_LANGUAGE` 재정의를 추가해 영어 기본값으로 인한 한국어 전사 저하를 방지
 - Ollama `list`: `qwen2.5:3b`(1.9 GB) 설치 확인. 직접 추론과 LUM `@ollama` 강제 라우팅 모두 `OLLAMA_READY77` 응답 및 `실제 응답: Ollama` 배지로 확인
 - 설정 저장은 임시 파일 작성 후 `rename`하는 원자적 교체 방식으로 보강해, 읽기 중 빈 설정 파일을 관측할 수 있는 기존 race를 차단했다.
