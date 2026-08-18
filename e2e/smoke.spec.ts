@@ -347,6 +347,30 @@ test.describe("LUM 스모크 테스트", () => {
     await expect(page.getByText("액션 팔레트")).not.toBeVisible({ timeout: 3_000 });
   });
 
+  test("빠른 액션 편집은 헤더 버튼으로 열리고 빈 상태 입력 폼을 표시한다", async ({ page }) => {
+    await waitForApp(page);
+
+    const quickBarToggle = page.getByRole("button", { name: "빠른 액션" });
+    await expect(quickBarToggle).toBeVisible({ timeout: 5_000 });
+    await quickBarToggle.click();
+
+    const quickBar = page.locator(".lum-quickbar");
+    await expect(quickBar).toBeVisible({ timeout: 5_000 });
+    const editButton = page.getByRole("button", { name: "빠른 액션 편집" });
+    await expect(editButton).toBeVisible({ timeout: 5_000 });
+    await editButton.click();
+
+    const editor = page.getByRole("dialog");
+    await expect(editor).toBeVisible({ timeout: 5_000 });
+    await expect(editor.getByText("빠른 액션 편집")).toBeVisible();
+    await expect(editor.getByText("아직 등록된 액션이 없습니다")).toBeVisible();
+    await expect(editor.getByPlaceholder("이름")).toBeVisible();
+    await expect(editor.getByPlaceholder("실행할 커맨드 (예: npm run dev)")).toBeVisible();
+
+    await page.keyboard.press("Escape");
+    await expect(editor).toBeHidden({ timeout: 3_000 });
+  });
+
   test("명령을 제출하면 리스트 뷰에 커맨드 블록이 표시된다", async ({ page }) => {
     await waitForApp(page);
 

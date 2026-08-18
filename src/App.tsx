@@ -1274,6 +1274,8 @@ const App: React.FC = () => {
           if (showInspector) closeInspector();
           else openInspectorTab("summary");
         }}
+        showQuickBar={showQuickBar}
+        onToggleQuickBar={() => setShowQuickBar(v => !v)}
         showReasoning={showReasoning}
         toggleReasoning={toggleReasoning}
         toolbarShowAdvanced={toolbarShowAdvanced}

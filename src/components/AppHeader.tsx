@@ -10,7 +10,7 @@ import {
   Cpu, Loader2, TerminalSquare, LayoutList, MousePointer2,
   Package, Database, X, SlidersHorizontal, GitCompareArrows, Palette,
   BookOpen, Bell, Activity, FolderTree, Brain, PlugZap, Users, Sparkles, Library, Hammer, Layers, BookMarked, GitBranch,
-  PanelRightOpen,
+  PanelRightOpen, Zap,
 } from "lucide-react";
 import { RecommendationReasonBadge } from "@/components/ui/recommendation-reason-badge";
 import { SectionIntroHeader } from "@/components/ui/section-intro-header";
@@ -145,6 +145,8 @@ interface Props {
   showInspector: boolean;
   onToggleInspector: () => void;
   inspectorToggleButtonRef?: React.Ref<HTMLButtonElement>;
+  showQuickBar?: boolean;
+  onToggleQuickBar?: () => void;
   // reasoning toggle
   showReasoning: boolean;
   toggleReasoning: () => void;
@@ -242,6 +244,7 @@ const AppHeader: React.FC<Props> = ({
   showFileExplorer, setShowFileExplorer,
   showInspector, onToggleInspector,
   inspectorToggleButtonRef,
+  showQuickBar = false, onToggleQuickBar = () => {},
   showReasoning, toggleReasoning,
   compactMode, toggleCompactMode,
   toolbarShowAdvanced, toggleToolbarAdvanced: _toggleToolbarAdvanced,
@@ -1187,6 +1190,14 @@ const AppHeader: React.FC<Props> = ({
           onClick={onToggleInspector}
         >
           <PanelRightOpen size={14} />
+        </ToolbarIconButton>
+        <ToolbarIconButton
+          label="빠른 액션"
+          shortcut="⌘⇧Q"
+          active={showQuickBar}
+          onClick={onToggleQuickBar}
+        >
+          <Zap size={14} />
         </ToolbarIconButton>
         {!compactMode && compactQuickAccessActions
           .slice(0, 2)
