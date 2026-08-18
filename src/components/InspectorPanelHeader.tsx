@@ -86,7 +86,7 @@ const InspectorPanelHeader: React.FC<InspectorPanelHeaderProps> = ({
         </span>
       </div>
         <div
-          className="flex min-w-0 items-center gap-2 pl-0.5 inspector-header-tab-row"
+          className="flex min-w-0 flex-nowrap items-center gap-2 pl-0.5 inspector-header-tab-row"
           style={{ writingMode: "horizontal-tb", direction: "ltr" }}
         >
           <StatusBadge tone="neutral" className="shrink-0">바로 전환</StatusBadge>

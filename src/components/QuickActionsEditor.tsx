@@ -70,7 +70,7 @@ const QuickActionsEditor: React.FC<Props> = ({
 
   return (
     <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent className="sm:max-w-[560px] max-h-[80vh] flex flex-col gap-0 p-0 overflow-hidden border-white/10 rounded-2xl">
+      <DialogContent className="w-[calc(100vw-1rem)] max-w-[560px] h-[min(80vh,640px)] max-h-[80vh] flex flex-col gap-0 p-0 overflow-hidden border-white/10 rounded-2xl">
         {/* Header */}
         <div className="flex items-center gap-2.5 px-5 py-4 border-b border-white/8 shrink-0">
           <Zap size={14} className="text-accent" />
@@ -168,7 +168,7 @@ const QuickActionsEditor: React.FC<Props> = ({
             <p className="text-xs text-white/30">새 액션 추가</p>
             <p className="text-[10px] text-white/24">이름과 명령을 입력한 뒤 Enter 또는 추가 버튼으로 저장</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Input value={newLabel} onChange={e => setNewLabel(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
@@ -186,7 +186,7 @@ const QuickActionsEditor: React.FC<Props> = ({
                   handleAdd();
                 }
               }}
-              placeholder="실행할 커맨드 (예: npm run dev)" className="flex-1 px-2 font-mono" />
+              placeholder="실행할 커맨드 (예: npm run dev)" className="min-w-0 flex-1 px-2 font-mono" />
             <Select
               value={newShortcut != null ? String(newShortcut) : "none"}
               onValueChange={v => setNewShortcut(v !== "none" ? Number(v) : undefined)}
