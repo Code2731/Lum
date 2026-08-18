@@ -56,6 +56,7 @@
 - `cargo check --features embedded-ai`: 성공
 - `cargo test --features embedded-ai --lib commands::ai`: `16 passed`
 - 실제 MacBook Pro 마이크 10초 캡처를 `whisper-cli` Metal 경로로 전사해 한국어 결과 생성 확인. 배경 음성이 섞여 통제된 문장 품질은 보류
+- 기본 Whisper CLI 호출에 한국어(`-l ko`)를 명시하고 `LUM_WHISPER_LANGUAGE` 재정의를 추가해 영어 기본값으로 인한 한국어 전사 저하를 방지
 - Ollama `list`: 설치 모델 0개, `127.0.0.1:11434` 연결 실패. 모델 다운로드·실응답은 별도 환경 준비 후 검증 필요
 - 설정 저장은 임시 파일 작성 후 `rename`하는 원자적 교체 방식으로 보강해, 읽기 중 빈 설정 파일을 관측할 수 있는 기존 race를 차단했다.
 - 신규 UI는 파일 탐색기를 기본 접힘으로 시작해 터미널과 입력 도크를 우선하고, 저장된 패널 설정은 계속 복원한다. 입력 안내 문구의 대비와 `터미널 입력` 접근성 라벨도 보강했다.

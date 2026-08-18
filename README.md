@@ -385,6 +385,8 @@ LUM은 시작/종료 훅이 없으면 기본 마이크를 앱 안에서 캡처�
 2. 다국어 모델 `ggml-base.bin`은 첫 마이크 시작 때 `~/.lum_whisper/models/ggml-base.bin`으로 자동 다운로드됩니다(약 142 MiB, HTTPS·공식 SHA-1 검증). 다른 위치를 쓸 때는 `LUM_WHISPER_MODEL`에 모델 경로를 설정합니다. 자동 다운로드를 끄려면 `LUM_WHISPER_AUTO_DOWNLOAD=0`을 설정하세요.
 3. 마이크 버튼을 누르고 말하면, 발화 뒤 약 0.8초 무음에서 자동으로 녹음·전사가 끝나 입력창에 결과가 들어갑니다. 필요하면 마이크 버튼을 다시 눌러 수동으로 끝낼 수도 있습니다. `LUM_VOICE_VAD_SILENCE_MS`와 `LUM_VOICE_VAD_THRESHOLD`로 자동 종료 감도를 조정할 수 있습니다.
 
+기본 전사 언어는 한국어(`ko`)입니다. 다른 언어를 사용하려면 `LUM_WHISPER_LANGUAGE=en`처럼 설정할 수 있습니다.
+
 사용자별 실행 명령을 쓰려면 `LUM_WHISPER_CPP_CMD`를 설정할 수 있습니다. 명령에는 `{audio}`와 `{model}` 자리표시자가 모두 필요하며, 전사 텍스트를 stdout으로 출력해야 합니다.
 
 기존의 외부 녹음/STT 파이프라인도 계속 지원합니다. `LUM_VOICE_START_CMD` 또는 `~/.lum_whisper/start.(sh|cmd)`가 있으면 아래 훅 경로가 우선됩니다.

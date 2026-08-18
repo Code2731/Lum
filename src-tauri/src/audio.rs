@@ -208,6 +208,7 @@ fn default_whisper_cli_path() -> PathBuf {
 }
 
 const WHISPER_SAMPLE_RATE: u32 = 16_000;
+const DEFAULT_WHISPER_LANGUAGE: &str = "ko";
 const DEFAULT_NATIVE_MAX_SECONDS: u32 = 10 * 60;
 const MAX_NATIVE_SECONDS: u32 = 30 * 60;
 const DEFAULT_VAD_SILENCE_MS: u64 = 800;
@@ -216,6 +217,20 @@ const DEFAULT_WHISPER_MODEL_DOWNLOAD_URL: &str =
     "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.bin";
 // whisper.cpp models/README.md의 ggml-base.bin 공개 SHA-1.
 const DEFAULT_WHISPER_MODEL_SHA1: &str = "465707469ff3a37a2b9b8d8f89f2f99de7299dac";
+
+fn whisper_language() -> String {
+    std::env::var("LUM_WHISPER_LANGUAGE")
+        .ok()
+        .map(|raw| raw.trim().to_ascii_lowercase())
+        .filter(|value| {
+            !value.is_empty()
+                && value.len() <= 16
+                && value
+                    .chars()
+                    .all(|ch| ch.is_ascii_alphanumeric() || ch == '-' || ch == '_')
+        })
+        .unwrap_or_else(|| DEFAULT_WHISPER_LANGUAGE.to_string())
+}
 
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -840,17 +855,23 @@ async fn transcribe_native_wav_inner(wav: &Path) -> Result<String, String> {
         if !cli.is_file() {
             return Err(voice_error("WHISPER_CLI_NOT_FOUND", format!("whisper-cli를 찾지 못했습니다: {}. 설치하거나 LUM_WHISPER_CPP_CMD를 설정하세요.", cli.display())));
         }
+        let model_arg = model.to_string_lossy().into_owned();
+        let audio_arg = wav.to_string_lossy().into_owned();
+        let output_arg = output_base.to_string_lossy().into_owned();
+        let language = whisper_language();
         let out = timeout(
             Duration::from_millis(parse_voice_timeout_ms("LUM_WHISPER_CPP_TIMEOUT_MS", 90_000)),
             TokioCommand::new(&cli)
                 .args([
                     "-m",
-                    model.to_string_lossy().as_ref(),
+                    model_arg.as_str(),
                     "-f",
-                    wav.to_string_lossy().as_ref(),
+                    audio_arg.as_str(),
+                    "-l",
+                    language.as_str(),
                     "-otxt",
                     "-of",
-                    output_base.to_string_lossy().as_ref(),
+                    output_arg.as_str(),
                 ])
                 .output(),
         )
@@ -1658,6 +1679,19 @@ mod tests {
         }));
         assert!(default_whisper_model_path().ends_with("models/ggml-base.bin"));
         restore_home(old_home);
+    }
+
+    #[test]
+    fn whisper_언어는_한국어_기본값과_환경변수_재정의를_지원한다() {
+        let _g = AUDIO_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        std::env::remove_var("LUM_WHISPER_LANGUAGE");
+        assert_eq!(whisper_language(), "ko");
+
+        std::env::set_var("LUM_WHISPER_LANGUAGE", " EN ");
+        assert_eq!(whisper_language(), "en");
+        std::env::set_var("LUM_WHISPER_LANGUAGE", "ko kr");
+        assert_eq!(whisper_language(), "ko");
+        std::env::remove_var("LUM_WHISPER_LANGUAGE");
     }
 
     #[tokio::test]
