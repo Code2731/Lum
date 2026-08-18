@@ -20,7 +20,7 @@
 
 - `mistral.rs`는 모델명이 아니라 임베디드 추론 엔진이며, 현재 로컬 모델 설정은 Qwen safetensors입니다.
 - Metal Toolchain은 shim 경로에서 정상 탐지되며, 새 실행 경로는 빌드 전에 이를 검사합니다.
-- LUM의 `@local` 임베디드 응답, `@xllm` 외부 서버 응답, `@ollama` 응답은 실제 UI에서 입증됐습니다. 음성은 현재 머신에서 마이크 캡처·Whisper 전사 경로까지 입증됐고, 통제된 한국어 문장 품질은 추가 확인이 필요합니다.
+- LUM의 `@local` 임베디드 응답, `@xllm` 외부 서버 응답, `@ollama` 응답은 실제 UI에서 입증됐습니다. 음성은 LUM UI에서 마이크 시작·중지, `듣는 중` 상태, 한국어 전사 결과의 입력창 삽입까지 실제로 입증됐고, 통제된 한국어 문장 정확도는 추가 확인이 필요합니다.
 
 ## 남은 수동 확인
 
@@ -55,7 +55,7 @@
 - ReAct UTF-8: 한국어 관찰 문자열의 문자 경계 회귀 테스트와 실제 `query_codebase` 관찰 경로를 통과해 바이트 슬라이싱 panic을 제거
 - `cargo check --features embedded-ai`: 성공
 - `cargo test --features embedded-ai --lib commands::ai`: `16 passed`
-- 실제 MacBook Pro 마이크 10초 캡처를 `whisper-cli` Metal 경로로 전사해 한국어 결과 생성 확인. 배경 음성이 섞여 통제된 문장 품질은 보류
+- 실제 MacBook Pro 마이크를 LUM UI에서 6초 녹음하고 중지해 한국어 전사 결과가 입력창에 삽입되는 전체 경로를 확인. 당시 재생 중인 배경 영상이 섞여 통제된 문장 품질은 보류
 - 기본 Whisper CLI 호출에 한국어(`-l ko`)를 명시하고 `LUM_WHISPER_LANGUAGE` 재정의를 추가해 영어 기본값으로 인한 한국어 전사 저하를 방지
 - Ollama `list`: `qwen2.5:3b`(1.9 GB) 설치 확인. 직접 추론과 LUM `@ollama` 강제 라우팅 모두 `OLLAMA_READY77` 응답 및 `실제 응답: Ollama` 배지로 확인
 - 설정 저장은 임시 파일 작성 후 `rename`하는 원자적 교체 방식으로 보강해, 읽기 중 빈 설정 파일을 관측할 수 있는 기존 race를 차단했다.
