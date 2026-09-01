@@ -379,7 +379,9 @@ async fn try_embedded_inference_stream(
         if embedded_engine_busy() {
             let ready = wait_for_embedded_ready(Some(cancel)).await;
             if cancel.load(Ordering::Relaxed) {
-                return Some(Err(LumError::AiEngine("요청이 취소되었습니다.".to_string())));
+                return Some(Err(LumError::AiEngine(
+                    "요청이 취소되었습니다.".to_string(),
+                )));
             }
             if ready && embedded_can_serve(images) {
                 return Some(
@@ -569,10 +571,7 @@ fn summarize_xllm_request_error(base_url: &str, action: &str, err: &reqwest::Err
             }
         })
         .filter(|raw| !raw.contains(base_url))
-        .map_or_else(
-            || state.to_string(),
-            |raw| format!("{state}: {raw}"),
-        );
+        .map_or_else(|| state.to_string(), |raw| format!("{state}: {raw}"));
 
     format!(
         "xLLM {action} 요청 실패 ({base_url}) - {detail}. xLLM 패널에서 서버 URL과 API 경로를 확인하세요",
@@ -865,7 +864,10 @@ mod tests {
             select_server_model_id(&models, Some("selected-local-model")),
             "selected-local-model"
         );
-        assert_eq!(select_server_model_id(&models, Some("missing")), "cached-model");
+        assert_eq!(
+            select_server_model_id(&models, Some("missing")),
+            "cached-model"
+        );
     }
 
     #[test]
@@ -1022,7 +1024,8 @@ mod tests {
     #[tokio::test]
     async fn await_with_cancel_이미_취소된_상태면_즉시_중단() {
         let cancel = Arc::new(AtomicBool::new(true));
-        let result = await_with_cancel(async { Ok::<_, LumError>("ok".to_string()) }, &cancel).await;
+        let result =
+            await_with_cancel(async { Ok::<_, LumError>("ok".to_string()) }, &cancel).await;
         match result {
             Err(LumError::AiEngine(msg)) => assert!(msg.contains("취소")),
             other => panic!("unexpected result: {other:?}"),

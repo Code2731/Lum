@@ -21,7 +21,10 @@ fn backup_corrupt_workspace(path: &PathBuf, err: &str) {
     }
 
     if std::fs::copy(path, &backup).is_ok() {
-        eprintln!("workspace parse error: {err} (backup: {})", backup.display());
+        eprintln!(
+            "workspace parse error: {err} (backup: {})",
+            backup.display()
+        );
     }
 }
 

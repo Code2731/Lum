@@ -118,9 +118,8 @@ fn gguf_default_rank(file: &str) -> Option<usize> {
     }
 
     let priorities = [
-        "q4_k_m", "q4_k_s", "q4_0", "q4_1", "iq4_xs", "iq4_nl", "q5_k_m", "q5_k_s", "q6_k",
-        "q8_0", "q3_k_m", "q3_k_s", "ud-q4", "ud-iq4", "ud-q5", "ud-q3", "ud-iq3", "ud-q2",
-        "ud-iq2",
+        "q4_k_m", "q4_k_s", "q4_0", "q4_1", "iq4_xs", "iq4_nl", "q5_k_m", "q5_k_s", "q6_k", "q8_0",
+        "q3_k_m", "q3_k_s", "ud-q4", "ud-iq4", "ud-q5", "ud-q3", "ud-iq3", "ud-q2", "ud-iq2",
     ];
 
     priorities
@@ -610,7 +609,10 @@ mod gguf_selection_tests {
             "model-Q4_K_S.gguf".to_string(),
         ];
 
-        assert_eq!(preferred_gguf_file(&files), Some("model-Q4_K_S.gguf".to_string()));
+        assert_eq!(
+            preferred_gguf_file(&files),
+            Some("model-Q4_K_S.gguf".to_string())
+        );
     }
 }
 

@@ -713,7 +713,8 @@ async fn run_tool(
         "apply_patch" => apply_patch_tool(args, cwd),
         "delete_file" => delete_file_tool(args, cwd),
         "screenshot" | "mouse" | "click" | "type" | "key_combo" | "scroll" => {
-            run_async_tool_with_cancel(run_desktop_tool(tool, args, desktop_tools_enabled), tool).await
+            run_async_tool_with_cancel(run_desktop_tool(tool, args, desktop_tools_enabled), tool)
+                .await
         }
         "mcp" => run_async_tool_with_cancel(run_mcp_tool(app, args), "mcp").await,
         _ => format!("알 수 없는 도구: {tool}"),
@@ -2630,7 +2631,9 @@ struct CommandOutput {
     cancelled: bool,
 }
 
-async fn run_command_with_cancel(command: &mut TokioCommand) -> std::result::Result<CommandOutput, String> {
+async fn run_command_with_cancel(
+    command: &mut TokioCommand,
+) -> std::result::Result<CommandOutput, String> {
     use tokio::time::{timeout, Duration};
 
     command.stdout(Stdio::piped()).stderr(Stdio::piped());
@@ -3836,7 +3839,10 @@ mod tests {
     #[test]
     fn 도구_취소_문구_일관성() {
         assert_eq!(tool_cancel_message("mcp"), "mcp 실행 취소됨");
-        assert_eq!(tool_cancel_message("query_graph"), "query_graph 실행 취소됨");
+        assert_eq!(
+            tool_cancel_message("query_graph"),
+            "query_graph 실행 취소됨"
+        );
     }
 
     #[test]
@@ -3867,11 +3873,7 @@ mod tests {
             "read_file",
             Some(&wl)
         ));
-        assert!(is_whitelisted_in_act(
-            ReactMode::Act,
-            "list_dir",
-            Some(&wl)
-        ));
+        assert!(is_whitelisted_in_act(ReactMode::Act, "list_dir", Some(&wl)));
         assert!(!is_whitelisted_in_act(ReactMode::Act, "shell", Some(&wl)));
     }
 
@@ -5567,7 +5569,10 @@ fn sample() {}
         });
         let out = apply_patch_tool(&args, &td.cwd());
         assert!(out.contains("백업 준비 실패"), "메시지 검증 필요: {out}");
-        assert_eq!(std::fs::read_to_string(&target).unwrap(), "fn x() -> i32 { 1 }");
+        assert_eq!(
+            std::fs::read_to_string(&target).unwrap(),
+            "fn x() -> i32 { 1 }"
+        );
         assert!(
             out.contains("백업 디렉터리 생성 실패"),
             "실제 실패 원인을 그대로 노출해야 함: {out}"
@@ -6515,9 +6520,15 @@ ANSWER: 2 + 2는 4입니다."#,
         init_react_backup(&td.cwd());
 
         // 정렬 검증을 위해 생성/삭제가 섞인 순서로 기록.
-        write_file_tool(&serde_json::json!({"path": "fresh.rs", "content": "new"}), &td.cwd());
+        write_file_tool(
+            &serde_json::json!({"path": "fresh.rs", "content": "new"}),
+            &td.cwd(),
+        );
         delete_file_tool(&serde_json::json!({"path": "zeta.rs"}), &td.cwd());
-        write_file_tool(&serde_json::json!({"path": "a.rs", "content": "new"}), &td.cwd());
+        write_file_tool(
+            &serde_json::json!({"path": "a.rs", "content": "new"}),
+            &td.cwd(),
+        );
         delete_file_tool(&serde_json::json!({"path": "alpha.rs"}), &td.cwd());
 
         let report = restore_react_backup().unwrap();
@@ -6678,11 +6689,14 @@ ANSWER: 2 + 2는 4입니다."#,
         );
 
         let changes = list_tracked_changes();
-        assert_eq!(changes, vec![
-            td.path().join("alpha.txt").display().to_string(),
-            td.path().join("middle.txt").display().to_string(),
-            td.path().join("zeta.txt").display().to_string(),
-        ]);
+        assert_eq!(
+            changes,
+            vec![
+                td.path().join("alpha.txt").display().to_string(),
+                td.path().join("middle.txt").display().to_string(),
+                td.path().join("zeta.txt").display().to_string(),
+            ]
+        );
 
         cleanup_backup_state();
     }

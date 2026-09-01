@@ -798,7 +798,10 @@ mod tests {
             None
         );
         assert_eq!(normalize_recall_backend_for_storage(Some("cosine")), None);
-        assert_eq!(normalize_recall_backend_for_storage(Some("custom-db")), None);
+        assert_eq!(
+            normalize_recall_backend_for_storage(Some("custom-db")),
+            None
+        );
     }
 
     #[test]
