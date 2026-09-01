@@ -44,3 +44,7 @@ clang-module-cache
 
 # 내부 R&D 로드맵 — 미공개 전략 문서
 R_AND_D_ITEMS.md
+
+# Playwright 테스트 산출물
+playwright-report/
+test-results/
