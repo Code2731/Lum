@@ -7,6 +7,13 @@ use std::sync::atomic::{AtomicU64, Ordering};
 const CONFIG_FILE: &str = ".lum_config.json";
 static CONFIG_WRITE_SEQUENCE: AtomicU64 = AtomicU64::new(0);
 
+#[cfg(test)]
+thread_local! {
+    /// 설정 파일 테스트가 실제 사용자 홈을 건드리지 않도록 테스트 스레드만 경로를 교체한다.
+    static TEST_CONFIG_PATH_OVERRIDE: std::cell::RefCell<Option<std::path::PathBuf>> =
+        const { std::cell::RefCell::new(None) };
+}
+
 /// xLLM(TabbyAPI) 기본 주소 — 로컬 실행 기본값
 pub const XLLM_DEFAULT_URL: &str = "http://127.0.0.1:8080";
 pub const XLLM_DEFAULT_URLS: [&str; 2] = ["http://127.0.0.1:8080", "http://127.0.0.1:5000"];
@@ -212,6 +219,11 @@ impl AppConfig {
 }
 
 fn config_path() -> std::path::PathBuf {
+    #[cfg(test)]
+    if let Some(path) = TEST_CONFIG_PATH_OVERRIDE.with(|slot| slot.borrow().clone()) {
+        return path;
+    }
+
     platform::home_dir().join(CONFIG_FILE)
 }
 
@@ -588,48 +600,23 @@ pub fn save_terminal_appearance(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::ffi::OsString;
-    use std::sync::Mutex;
     use std::time::{SystemTime, UNIX_EPOCH};
 
-    static HOME_ENV_TEST_LOCK: Mutex<()> = Mutex::new(());
+    struct ConfigPathGuard;
 
-    struct HomeEnvGuard {
-        old_home: Option<OsString>,
-        #[cfg(windows)]
-        user_profile: Option<OsString>,
-    }
-
-    impl HomeEnvGuard {
-        fn set(home: &std::path::Path) -> Self {
-            let home = std::ffi::OsString::from(home.to_string_lossy().into_owned());
-            let old_home = std::env::var_os("HOME");
-            #[cfg(windows)]
-            let old_user_profile = std::env::var_os("USERPROFILE");
-            std::env::set_var("HOME", &home);
-            #[cfg(windows)]
-            std::env::set_var("USERPROFILE", &home);
-            Self {
-                old_home,
-                #[cfg(windows)]
-                user_profile: old_user_profile,
-            }
+    impl ConfigPathGuard {
+        fn set(path: std::path::PathBuf) -> Self {
+            TEST_CONFIG_PATH_OVERRIDE.with(|slot| {
+                let previous = slot.replace(Some(path));
+                assert!(previous.is_none(), "설정 경로 오버라이드가 중첩되면 안 됨");
+            });
+            Self
         }
     }
 
-    impl Drop for HomeEnvGuard {
+    impl Drop for ConfigPathGuard {
         fn drop(&mut self) {
-            if let Some(home) = self.old_home.take() {
-                std::env::set_var("HOME", home);
-            } else {
-                std::env::remove_var("HOME");
-            }
-            #[cfg(windows)]
-            if let Some(user_profile) = self.user_profile.take() {
-                std::env::set_var("USERPROFILE", user_profile);
-            } else {
-                std::env::remove_var("USERPROFILE");
-            }
+            TEST_CONFIG_PATH_OVERRIDE.with(|slot| slot.replace(None));
         }
     }
 
@@ -637,7 +624,6 @@ mod tests {
     where
         F: FnOnce() -> R,
     {
-        let _lock = HOME_ENV_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         let nanos = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()
@@ -645,7 +631,7 @@ mod tests {
         let home = std::env::temp_dir().join(format!("lum_config_home_{nanos}"));
         std::fs::create_dir_all(&home).unwrap();
 
-        let _guard = HomeEnvGuard::set(&home);
+        let _guard = ConfigPathGuard::set(home.join(CONFIG_FILE));
         let result = f();
         let _ = std::fs::remove_dir_all(&home);
         result

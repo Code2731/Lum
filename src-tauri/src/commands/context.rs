@@ -387,15 +387,20 @@ pub fn parent_directory(path: String) -> Option<String> {
 
 #[cfg(test)]
 mod tests {
+    #[cfg(unix)]
     use super::*;
+    #[cfg(unix)]
     use std::sync::atomic::{AtomicU64, Ordering};
 
+    #[cfg(unix)]
     static TEMP_COUNTER: AtomicU64 = AtomicU64::new(0);
 
+    #[cfg(unix)]
     struct TempDir {
         path: PathBuf,
     }
 
+    #[cfg(unix)]
     impl TempDir {
         fn new(label: &str) -> Self {
             let id = TEMP_COUNTER.fetch_add(1, Ordering::SeqCst);
@@ -418,6 +423,7 @@ mod tests {
         }
     }
 
+    #[cfg(unix)]
     impl Drop for TempDir {
         fn drop(&mut self) {
             let _ = std::fs::remove_dir_all(&self.path);

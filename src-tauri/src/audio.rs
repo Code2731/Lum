@@ -986,14 +986,14 @@ fn voice_hook_descriptor(env_key: &str, kind: &str) -> (String, bool, String) {
 fn voice_hook_runtime_status(env_key: &str, kind: &str) -> (bool, String) {
     match resolve_voice_hook(env_key, kind) {
         Some(VoiceHook::Shell(_)) => (true, "env 명령".into()),
-        Some(VoiceHook::Script(path)) => {
+        Some(VoiceHook::Script(_path)) => {
             if cfg!(windows) {
                 (true, "파일 준비됨".into())
             } else {
                 #[cfg(unix)]
                 {
                     use std::os::unix::fs::PermissionsExt;
-                    let runnable = std::fs::metadata(&path)
+                    let runnable = std::fs::metadata(&_path)
                         .ok()
                         .map(|meta| meta.permissions().mode() & 0o111 != 0)
                         .unwrap_or(false);
@@ -1870,6 +1870,7 @@ mod tests {
 
     #[test]
     fn parse_voice_timeout_ms_기본값_및_잘못된_값_보완() {
+        let _g = AUDIO_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         std::env::remove_var("LUM_VOICE_START_CMD_TIMEOUT_MS");
         assert_eq!(
             parse_voice_timeout_ms("LUM_VOICE_START_CMD_TIMEOUT_MS", 9_000),
@@ -2055,7 +2056,12 @@ mod tests {
         if let Some(parent) = script_path.parent() {
             std::fs::create_dir_all(parent).unwrap();
         }
-        std::fs::write(&script_path, "echo scripted transcript").unwrap();
+        let script = if cfg!(windows) {
+            "@echo off\r\necho scripted transcript\r\n"
+        } else {
+            "echo scripted transcript\n"
+        };
+        std::fs::write(&script_path, script).unwrap();
 
         if let Ok(mut s) = voice_state_lock().lock() {
             s.recording = true;

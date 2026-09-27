@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 
 import { spawnSync } from "node:child_process";
-import { join } from "node:path";
+import { existsSync, readFileSync } from "node:fs";
+import { delimiter, dirname, extname, isAbsolute, join } from "node:path";
 
 const args = process.argv.slice(2);
 const baseArgs = args.length ? ["test", ...args] : ["test"];
@@ -204,6 +205,98 @@ const buildCommandEnv = (profile) => ({
   ...profile.env,
 });
 
+const pathValueFromEnv = (env) => {
+  if (Object.prototype.hasOwnProperty.call(env, "PATH")) {
+    return env.PATH ?? "";
+  }
+
+  const pathKey = Object.keys(env).find((key) => key.toLowerCase() === "path");
+  return pathKey ? (env[pathKey] ?? "") : "";
+};
+
+const normalizeWindowsSpawnEnv = (env) => {
+  if (process.platform !== "win32") {
+    return env;
+  }
+
+  const normalized = { ...env };
+  const pathValue = pathValueFromEnv(normalized);
+  for (const key of Object.keys(normalized)) {
+    if (key.toLowerCase() === "path") {
+      delete normalized[key];
+    }
+  }
+
+  // Windows는 PATH/Path 중복과 긴 PATH에서 cmd shim이 node를 잃을 수 있다.
+  normalized.PATH = [dirname(process.execPath), pathValue].filter(Boolean).join(delimiter);
+  return normalized;
+};
+
+const resolveWindowsCommand = (command, args, env) => {
+  const hasPath = isAbsolute(command) || command.includes("/") || command.includes("\\");
+  const candidates = hasPath
+    ? [command]
+    : pathValueFromEnv(env)
+        .split(delimiter)
+        .filter(Boolean)
+        .flatMap((dir) => [
+          join(dir, command),
+          join(dir, `${command}.cmd`),
+          join(dir, `${command}.bat`),
+          join(dir, `${command}.exe`),
+        ]);
+
+  for (const candidate of candidates) {
+    if (!existsSync(candidate)) {
+      continue;
+    }
+
+    const extension = extname(candidate).toLowerCase();
+    if (extension === ".cmd" || extension === ".bat") {
+      return {
+        command: process.env.ComSpec || "cmd.exe",
+        args: ["/d", "/s", "/c", candidate, ...args],
+      };
+    }
+
+    if ([".js", ".mjs", ".cjs"].includes(extension)) {
+      return { command: process.execPath, args: [candidate, ...args] };
+    }
+
+    try {
+      const firstLine = readFileSync(candidate, "utf8").split(/\r?\n/, 1)[0];
+      if (firstLine.startsWith("#!") && /\bnode(?:\.exe)?\b/i.test(firstLine)) {
+        return { command: process.execPath, args: [candidate, ...args] };
+      }
+      if (firstLine.startsWith("#!")) {
+        continue;
+      }
+    } catch {
+      // 실행 파일은 텍스트로 읽히지 않아도 직접 실행할 수 있다.
+    }
+
+    return { command: candidate, args };
+  }
+
+  return null;
+};
+
+const resolveSpawnCommand = (command, args, env) => {
+  if (process.platform !== "win32") {
+    return { command, args, env };
+  }
+
+  const resolved = resolveWindowsCommand(command, args, env);
+  if (!resolved) {
+    return null;
+  }
+
+  return {
+    ...resolved,
+    env: normalizeWindowsSpawnEnv(env),
+  };
+};
+
 const printInfo = (...messages) => {
   if (isVerbose || isDryRun) {
     for (const message of messages) {
@@ -250,7 +343,16 @@ for (const command of candidates) {
     for (const profileIndex of launchFallbackProfiles.keys()) {
       const profile = launchFallbackProfiles[profileIndex];
       const spawnArgs = isNpx ? [runner, ...testArgs] : testArgs;
-      const result = spawnSync(command, spawnArgs, { stdio: "pipe", env: buildCommandEnv(profile) });
+      const commandEnv = buildCommandEnv(profile);
+      const resolvedCommand = resolveSpawnCommand(command, spawnArgs, commandEnv);
+      if (!resolvedCommand) {
+        commandUnavailable = true;
+        break;
+      }
+      const result = spawnSync(resolvedCommand.command, resolvedCommand.args, {
+        stdio: "pipe",
+        env: resolvedCommand.env,
+      });
       const stdout = result.stdout ? new TextDecoder().decode(result.stdout) : "";
       const stderr = result.stderr ? new TextDecoder().decode(result.stderr) : "";
       const output = stdout + stderr;

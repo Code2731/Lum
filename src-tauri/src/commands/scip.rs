@@ -1219,6 +1219,8 @@ mod tests {
         let normalized = normalize_workspace_path(Some(""));
         let expected = std::env::current_dir()
             .unwrap()
+            .canonicalize()
+            .unwrap()
             .to_string_lossy()
             .to_string();
         assert_eq!(
